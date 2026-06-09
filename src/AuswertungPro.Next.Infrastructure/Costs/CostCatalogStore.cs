@@ -204,7 +204,17 @@ public sealed class CostCatalogStore
             if (string.IsNullOrWhiteSpace(key))
                 continue;
 
-            map[key] = CloneItem(item with { Key = key });
+            var merged = CloneItem(item with { Key = key });
+            // NPK-Metadaten aus dem Default behalten, falls ein (evtl. aelterer) Preis-Override
+            // sie nicht traegt - sonst gehen NpkCode/Chapter beim Mergen verloren.
+            if (map.TryGetValue(key, out var def))
+            {
+                if (string.IsNullOrWhiteSpace(merged.NpkCode))
+                    merged.NpkCode = def.NpkCode;
+                if (string.IsNullOrWhiteSpace(merged.Chapter))
+                    merged.Chapter = def.Chapter;
+            }
+            map[key] = merged;
         }
 
         return new CostCatalog

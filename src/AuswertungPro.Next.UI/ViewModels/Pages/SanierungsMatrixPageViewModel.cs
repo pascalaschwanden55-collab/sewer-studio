@@ -145,6 +145,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     private decimal _vatRate = 0.081m;
     private string _projectPath = "";
 
+    // Haltungen, die in dieser Sitzung auf "keine" gesetzt wurden -> beim Speichern
+    // muessen ihre Tabellenfelder (Kosten, Massnahmen, Mengen) geleert werden.
+    private readonly HashSet<string> _clearedHoldings = new(StringComparer.OrdinalIgnoreCase);
+
     public ObservableCollection<SanierungMatrixRowVm> Rows { get; } = new();
     public ObservableCollection<MeasureOption> MeasureOptions { get; } = new();
 
@@ -261,12 +265,15 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         var measureId = row.SelectedMeasure?.Id;
         if (string.IsNullOrWhiteSpace(measureId))
         {
-            _store.ByHolding.Remove(row.Holding);
+            if (_store.ByHolding.Remove(row.Holding))
+                _clearedHoldings.Add(row.Holding); // beim Speichern Tabellenfelder leeren
             row.Total = 0m;
             row.Hinweis = "";
             RecomputeGesamt();
             return;
         }
+
+        _clearedHoldings.Remove(row.Holding); // wieder belegt
 
         var extras = new List<string>();
         if (row.OptVerkehrsdienst) extras.Add(KeyVd);
@@ -343,7 +350,16 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         {
             if (_store.ByHolding.TryGetValue(row.Holding, out var cost))
                 DataPageSanierungCostMapper.ApplyCosts(row.Record, cost);
+            else if (_clearedHoldings.Contains(row.Holding))
+                // Massnahme wurde auf "keine" gesetzt -> alte Kosten/Massnahmen-Felder leeren.
+                DataPageSanierungCostMapper.ApplyCosts(row.Record, new HoldingCost
+                {
+                    Holding = row.Holding,
+                    MwstRate = _vatRate,
+                    Measures = new List<MeasureCost>()
+                });
         }
+        _clearedHoldings.Clear();
 
         if (!_costRepo.Save(_projectPath, _store, out var error))
         {

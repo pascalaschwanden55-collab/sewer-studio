@@ -13,6 +13,8 @@ public sealed class ProjectPositionAggregatorTests
         {
             ["VORARBEIT_REINIGUNG"] = new() { Key = "VORARBEIT_REINIGUNG", NpkCode = "211.110", Chapter = "200", Type = "Fixed" },
             ["SCHLAUCHLINER_NADELFILZ"] = new() { Key = "SCHLAUCHLINER_NADELFILZ", NpkCode = "612.110", Chapter = "600", Type = "ByDN" },
+            // GFK teilt sich die NPK-Nummer 612.110 mit Nadelfilz, ist aber eine andere Leistung.
+            ["SCHLAUCHLINER_GFK"] = new() { Key = "SCHLAUCHLINER_GFK", NpkCode = "612.110", Chapter = "600", Type = "ByDN" },
         };
 
     private static CostLine Line(string itemKey, string text, string unit, decimal qty, decimal price, bool selected = true) =>
@@ -120,6 +122,25 @@ public sealed class ProjectPositionAggregatorTests
         var result = ProjectPositionAggregator.Aggregate(new[] { holding }, Catalog());
 
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public void Aggregate_SameNpkCode_DifferentItemKey_StaysSeparate()
+    {
+        // Nadelfilz und GFK haben dieselbe NPK 612.110 und denselben DN, sind aber
+        // verschiedene Leistungen -> duerfen NICHT in eine LV-Zeile verschmelzen.
+        var holdings = new[]
+        {
+            Holding("H1", 250, Line("SCHLAUCHLINER_NADELFILZ", "Nadelfilz", "m", 40m, 300m)),
+            Holding("H2", 250, Line("SCHLAUCHLINER_GFK", "GFK", "m", 30m, 200m)),
+        };
+
+        var result = ProjectPositionAggregator.Aggregate(holdings, Catalog());
+
+        var liner = result.Where(p => p.NpkCode == "612.110").ToList();
+        Assert.Equal(2, liner.Count);
+        Assert.Contains(liner, p => p.ItemKey == "SCHLAUCHLINER_NADELFILZ" && p.TotalQty == 40m);
+        Assert.Contains(liner, p => p.ItemKey == "SCHLAUCHLINER_GFK" && p.TotalQty == 30m);
     }
 
     [Fact]

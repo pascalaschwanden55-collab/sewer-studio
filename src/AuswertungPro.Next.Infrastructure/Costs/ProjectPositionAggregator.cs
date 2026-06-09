@@ -68,10 +68,13 @@ public static class ProjectPositionAggregator
                         : line.Text.Trim();
                     var unit = (line.Unit ?? "").Trim();
 
-                    // Identitaet: NPK-Code wenn vorhanden, sonst ItemKey, sonst Text.
+                    // Identitaet: ItemKey ist die echte Leistung (z.B. Nadelfilz vs GFK), darum
+                    // PRIMAER. Mehrere App-Positionen teilen sich dieselbe NPK-Nummer (z.B. Nadelfilz,
+                    // Open-End und GFK alle 612.110) - wuerde man nur nach NpkCode buendeln, verschmelzen
+                    // fachlich verschiedene Leistungen in eine LV-Zeile. NpkCode bleibt nur Anzeige/Kapitel.
                     // DN nur bei ByDN-Positionen Teil des Schluessels.
-                    var idPart = npk.Length > 0 ? "NPK:" + npk
-                        : !string.IsNullOrWhiteSpace(line.ItemKey) ? "KEY:" + line.ItemKey.Trim()
+                    var idPart = !string.IsNullOrWhiteSpace(line.ItemKey) ? "KEY:" + line.ItemKey.Trim()
+                        : npk.Length > 0 ? "NPK:" + npk
                         : "TXT:" + text;
                     var key = $"{idPart}|{unit}|DN:{(dn?.ToString() ?? "-")}";
 
