@@ -475,14 +475,11 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void OpenPriceCatalog()
     {
-        var projectRoot = System.AppContext.BaseDirectory;
-        var costService = new Infrastructure.Costs.CostCalculationService(projectRoot);
-        var vm = new Windows.PriceCatalogEditorViewModel(costService);
-        var window = new Views.Windows.PriceCatalogEditorWindow
-        {
-            DataContext = vm
-        };
-        window.ShowDialog();
+        // EIN Preis-Katalog: derselbe, den Kostenrechner und Sanierungs-Matrix nutzen
+        // (cost_catalog.json über CostCatalogStore). Der alte PriceCatalogEditor wird
+        // bewusst nicht mehr geöffnet, damit es nur einen anwendbaren Katalog gibt.
+        var dialog = new Dialogs.CostCatalogEditorDialog(_sp.Settings.LastProjectPath);
+        dialog.ShowDialog();
     }
 
     private void OpenTemplateEditor()

@@ -8,6 +8,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.UI.Dialogs;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
@@ -299,6 +300,34 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     {
         GesamtTotal = Rows.Sum(r => r.Total);
         BelegteHaltungen = Rows.Count(r => r.SelectedMeasure?.Id is not null);
+    }
+
+    /// <summary>
+    /// Öffnet den (einen) Preis-Katalog. Nach dem Schliessen werden die geänderten
+    /// Preise sofort auf alle Zeilen mit Massnahme angewendet (Totals neu gerechnet).
+    /// </summary>
+    [RelayCommand]
+    private void KatalogBearbeiten()
+    {
+        var dialog = new CostCatalogEditorDialog(string.IsNullOrWhiteSpace(_projectPath) ? null : _projectPath);
+        dialog.ShowDialog();
+        ReloadCatalogAndApplyPrices();
+    }
+
+    private void ReloadCatalogAndApplyPrices()
+    {
+        var catalog = _catalogStore.LoadMerged(_projectPath);
+        _vatRate = catalog.VatRate > 0m ? catalog.VatRate : 0.081m;
+        _catalog = catalog.Items
+            .Where(i => !string.IsNullOrWhiteSpace(i.Key))
+            .GroupBy(i => i.Key.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var row in Rows.Where(r => r.SelectedMeasure?.Id is not null))
+            RecomputeRow(row);
+
+        RecomputeGesamt();
+        Status = "Preise aus Katalog angewendet.";
     }
 
     [RelayCommand]

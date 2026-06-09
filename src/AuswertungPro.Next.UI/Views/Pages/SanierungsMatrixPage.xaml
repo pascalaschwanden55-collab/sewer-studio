@@ -25,6 +25,8 @@
                         <TextBlock Text="{Binding BelegteHaltungen, StringFormat='{}{0} Haltungen mit Massnahme'}"
                                    Opacity="0.7" HorizontalAlignment="Right"/>
                     </StackPanel>
+                    <Button Content="Preise / Katalog" Command="{Binding KatalogBearbeitenCommand}" Margin="0,0,8,0"
+                            ToolTip="Den (einen) Preis-Katalog bearbeiten — Preise pro m / Stk / DN. Wird nach dem Schliessen sofort angewendet."/>
                     <Button Content="Neu laden" Command="{Binding ReloadCommand}" Margin="0,0,8,0"/>
                     <Button Content="Speichern" Command="{Binding SpeichernCommand}"
                             Style="{StaticResource PrimaryButton}"/>
