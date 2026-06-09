@@ -487,6 +487,10 @@
                             </Style>
                         </Button.Style>
                     </Button>
+                    <Button Content="NPK-Leistungsverzeichnis (CSV)"
+                            Command="{Binding ExportNpkLeistungsverzeichnisCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            ToolTip="Eine NPK-Positionsliste ueber alle gefilterten Haltungen (Mengen zusammengezaehlt, ByDN je DN getrennt)."/>
                 </StackPanel>
             </DockPanel>
         </Border>

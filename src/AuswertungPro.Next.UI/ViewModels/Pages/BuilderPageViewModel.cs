@@ -259,6 +259,71 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// Exportiert EIN NPK-Leistungsverzeichnis ueber alle gefilterten Haltungen:
+    /// gleiche NPK-Position wird zusammengezaehlt (ByDN-Positionen je DN getrennt),
+    /// als CSV (Semikolon, gruppiert nach NPK-Kapitel, mit Zwischentotalen).
+    /// </summary>
+    [RelayCommand]
+    private void ExportNpkLeistungsverzeichnis()
+    {
+        RefreshData();
+        var filteredRows = Rows.ToList();
+        if (filteredRows.Count == 0)
+        {
+            _sp.Dialogs.Info("Keine Daten fuer den aktuellen Filter gefunden.", "Druckcenter");
+            return;
+        }
+
+        var entries = BuildSummaryEntries(filteredRows);
+        var holdings = entries
+            .Where(e => e.Cost is not null)
+            .Select(e => e.Cost!)
+            .ToList();
+
+        var projectPath = _sp.Settings.LastProjectPath ?? "";
+        var catalog = _catalogStore.LoadMerged(projectPath);
+        var catalogDict = catalog.Items
+            .Where(i => !string.IsNullOrWhiteSpace(i.Key))
+            .GroupBy(i => i.Key.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        var positions = ProjectPositionAggregator.Aggregate(holdings, catalogDict);
+        if (positions.Count == 0)
+        {
+            _sp.Dialogs.Info(
+                "Keine NPK-Positionen gefunden. Die gefilterten Haltungen haben keine Massnahmen-Positionen mit Mengen.",
+                "Druckcenter");
+            return;
+        }
+
+        var safeProjectName = SanitizeFilePart(_shell.Project.Name);
+        var defaultName = $"NPK-Leistungsverzeichnis_{safeProjectName}_{DateTime.Now:yyyyMMdd}.csv";
+        var output = _sp.Dialogs.SaveFile(
+            "NPK-Leistungsverzeichnis speichern",
+            "CSV (*.csv)|*.csv",
+            defaultExt: "csv",
+            defaultFileName: defaultName);
+        if (string.IsNullOrWhiteSpace(output))
+            return;
+
+        try
+        {
+            var csv = NpkLeistungsverzeichnisExporter.BuildCsv(positions, "CHF");
+            File.WriteAllText(output, csv, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            LastResult = $"Leistungsverzeichnis erstellt: {Path.GetFileName(output)} ({positions.Count} Positionen)";
+            _shell.SetStatus("NPK-Leistungsverzeichnis erstellt");
+            _sp.Dialogs.Info(
+                $"NPK-Leistungsverzeichnis wurde erstellt:\n{output}\n\n{positions.Count} Positionen ueber {holdings.Count} Haltung(en).",
+                "Druckcenter");
+        }
+        catch (Exception ex)
+        {
+            LastResult = $"Fehler: {ex.Message}";
+            _sp.Dialogs.Error($"Leistungsverzeichnis konnte nicht erstellt werden:\n{ex.Message}", "Druckcenter");
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanPrintPdf))]
     private void PrintPdf()
     {

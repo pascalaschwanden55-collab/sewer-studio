@@ -836,6 +836,12 @@ public sealed partial class MeasureBlockVm : ObservableObject
     private bool _suppressConnectionsUpdate;
     private bool _applyingPrices;
     private bool _enforcingInstallationRule;
+    private bool _enforcingEndManschetteRule;
+
+    // Linerende-Manschette: Standard 2 Stk (Anfang + Ende), aber erst ab DN 200.
+    private const string LinerEndManschetteKey = "LINERENDMANSCHETTE_LEM";
+    private const int EndManschetteMinDn = 200;
+    private const decimal EndManschetteDefaultQty = 2m;
 
     public string MeasureId { get; }
     public string MeasureName { get; }
@@ -985,6 +991,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
             DnText = dn;
             _suppressDnUpdate = false;
             ApplyCatalogPrices();
+            EnforceEndManschetteRule();
         }
     }
 
@@ -1016,6 +1023,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
             return;
 
         ApplyCatalogPrices();
+        EnforceEndManschetteRule();
     }
 
     partial void OnLengthTextChanged(string value)
@@ -1564,6 +1572,64 @@ public sealed partial class MeasureBlockVm : ObservableObject
         finally
         {
             _enforcingInstallationRule = false;
+        }
+
+        if (changed)
+            UpdateTotal();
+    }
+
+    // Linerende-Manschette nur ab DN 200 automatisch (2 Stk = Anfang + Ende).
+    // Unter DN 200 wird die Endmanschetten-Zeile deaktiviert. Manuelle Mengen
+    // (IsQtyOverridden) bleiben unangetastet; bei unbekanntem DN greift keine Regel.
+    private void EnforceEndManschetteRule()
+    {
+        if (_enforcingEndManschetteRule)
+            return;
+
+        var lemLines = Lines.Where(l => IsItemKey(l, LinerEndManschetteKey)).ToList();
+        if (lemLines.Count == 0)
+            return;
+
+        var dn = ParseDn(DnText);
+        if (dn is null)
+            return; // DN unbekannt -> Regel nicht anwenden
+
+        var allowed = dn.Value >= EndManschetteMinDn;
+        var changed = false;
+        _enforcingEndManschetteRule = true;
+        try
+        {
+            foreach (var line in lemLines)
+            {
+                if (!allowed)
+                {
+                    // Unter DN 200: keine Endmanschette.
+                    if (line.Selected || line.Qty != 0m)
+                    {
+                        line.SetSuggestedQty(0m);
+                        line.IsQtyOverridden = false;
+                        line.Selected = false;
+                        changed = true;
+                    }
+                    continue;
+                }
+
+                // Ab DN 200: frisch deaktivierte Zeile reaktivieren und Standardmenge setzen.
+                if (!line.Selected && line.Qty == 0m)
+                {
+                    line.Selected = true;
+                    changed = true;
+                }
+                if (!line.IsQtyOverridden && line.Qty <= 0m)
+                {
+                    line.SetSuggestedQty(EndManschetteDefaultQty);
+                    changed = true;
+                }
+            }
+        }
+        finally
+        {
+            _enforcingEndManschetteRule = false;
         }
 
         if (changed)

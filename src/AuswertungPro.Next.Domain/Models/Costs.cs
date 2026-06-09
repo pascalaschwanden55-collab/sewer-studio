@@ -21,6 +21,12 @@ public sealed record CostCatalogItem
     public List<DnPrice> DnPrices { get; set; } = new();
     public bool Active { get; set; } = true;
     public List<string> Aliases { get; set; } = new();
+
+    // NPK-135-Positionsnummer (CRB), z.B. "612.110". Leer = noch nicht zugeordnet.
+    public string NpkCode { get; set; } = "";
+    // NPK-Kapitel: 100 Einrichtung, 200 Reinigung/Zustand, 300 Vorarbeiten,
+    // 400 Wasserhaltung, 500 Reparatur, 600 Renovierung. Leer = unbestimmt.
+    public string Chapter { get; set; } = "";
 }
 
 public sealed record DnPrice
@@ -118,3 +124,21 @@ public sealed record PositionTemplate
     public decimal Price { get; set; }
     public bool IsCustom { get; set; } = true;
 }
+
+/// <summary>
+/// Eine über alle Haltungen aggregierte NPK-Position für das Leistungsverzeichnis.
+/// Gleiche NPK-Position (ByDN: + DN) wird über alle Haltungen zu einer Zeile mit
+/// Gesamtmenge zusammengezählt. UnitPrice = null bedeutet "variabel" (mehrere EP).
+/// </summary>
+public sealed record AggregatedPosition(
+    string NpkCode,
+    string Chapter,
+    string ItemKey,
+    string Text,
+    string Unit,
+    int? Dn,
+    decimal TotalQty,
+    decimal TotalNet,
+    int HoldingCount,
+    bool IsVariablePrice,
+    decimal? UnitPrice);

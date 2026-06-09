@@ -179,6 +179,8 @@ public sealed class CostCatalogStore
             item.Name ??= "";
             item.Unit ??= "";
             item.Type ??= "Fixed";
+            item.NpkCode ??= "";
+            item.Chapter ??= "";
             normalized.Items.Add(item);
         }
 
@@ -250,6 +252,8 @@ public sealed class CostCatalogStore
                 Price = p.Price
             }).ToList(),
             Active = item.Active,
-            Aliases = (item.Aliases ?? new List<string>()).Select(a => a).ToList()
+            Aliases = (item.Aliases ?? new List<string>()).Select(a => a).ToList(),
+            NpkCode = item.NpkCode ?? "",
+            Chapter = item.Chapter ?? ""
         };
 }
