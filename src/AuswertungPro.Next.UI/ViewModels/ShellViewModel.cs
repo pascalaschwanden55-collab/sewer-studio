@@ -89,6 +89,7 @@ public sealed partial class ShellViewModel : ObservableObject
             new("\uE898", "Export", () => new Pages.ExportPageViewModel(this, _sp), canOpenWithoutProject: true),
             new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(this, _sp)),
             new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this)),
+            new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(this)),
             new("\uE128", "VSA", () => new Pages.VsaPageViewModel(this, _sp)),
             new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp)),
             new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp), canOpenWithoutProject: true)

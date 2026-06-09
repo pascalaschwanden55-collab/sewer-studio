@@ -45,6 +45,10 @@
                 <views:BuilderPage/>
             </DataTemplate>
 
+            <DataTemplate DataType="{x:Type vm:SanierungsMatrixPageViewModel}">
+                <views:SanierungsMatrixPage/>
+            </DataTemplate>
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>
