@@ -190,4 +190,35 @@ public sealed class HoldingMeasureFactoryTests
         Assert.True(main.Selected);   // bleibt aktiv trotz 0 erkannter Anschluesse
         Assert.Equal(2m, main.Qty);
     }
+
+    [Fact]
+    public void Build_HauptarbeitItemKey_OverridesRobotHours()
+    {
+        // Kanalroboter: Hauptarbeit-Zeile ist HAUPTARBEIT_HINDERNISSE_ROBOTER (h), nicht die
+        // Massnahmen-Id KANALROBOTER. Der Stunden-Override muss die richtige Zeile treffen.
+        var tpl = new MeasureTemplate
+        {
+            Id = "KANALROBOTER",
+            Name = "Kanalroboter",
+            Lines = new List<MeasureLineTemplate>
+            {
+                new() { Group = "Hauptarbeit", ItemKey = "HAUPTARBEIT_HINDERNISSE_ROBOTER", Enabled = true, DefaultQty = 1 },
+            }
+        };
+        var templates = new Dictionary<string, MeasureTemplate>(StringComparer.OrdinalIgnoreCase) { [tpl.Id] = tpl };
+        var catalog = new Dictionary<string, CostCatalogItem>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["HAUPTARBEIT_HINDERNISSE_ROBOTER"] = new() { Key = "HAUPTARBEIT_HINDERNISSE_ROBOTER", Unit = "h", Type = "Fixed", Price = 290m },
+        };
+        var record = Record("H8", "250", "40.00");
+
+        var cost = HoldingMeasureFactory.Build("H8", record, "KANALROBOTER", templates, catalog, 0.081m,
+            hauptarbeitMenge: 3m, hauptarbeitItemKey: "HAUPTARBEIT_HINDERNISSE_ROBOTER");
+
+        Assert.NotNull(cost);
+        var roboter = cost!.Measures[0].Lines.First(l => l.ItemKey == "HAUPTARBEIT_HINDERNISSE_ROBOTER");
+        Assert.True(roboter.Selected);
+        Assert.Equal(3m, roboter.Qty);                       // 3 Stunden
+        Assert.Equal(870m, roboter.Qty * roboter.UnitPrice); // 3h * 290.-
+    }
 }

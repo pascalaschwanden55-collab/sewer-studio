@@ -30,7 +30,8 @@ public static class HoldingMeasureFactory
         IReadOnlyDictionary<string, CostCatalogItem> catalog,
         decimal vatRate,
         IReadOnlyCollection<string>? extraOptionKeys = null,
-        decimal? hauptarbeitMenge = null)
+        decimal? hauptarbeitMenge = null,
+        string? hauptarbeitItemKey = null)
     {
         if (string.IsNullOrWhiteSpace(measureId) || templates is null || catalog is null)
             return null;
@@ -74,8 +75,11 @@ public static class HoldingMeasureFactory
         // bei 0 erkannten Anschlüssen deaktiviert hätte (z.B. ANSCHLUSS_EINBINDEN).
         if (hauptarbeitMenge.HasValue && hauptarbeitMenge.Value > 0m)
         {
+            // Hauptarbeit-Zeile: meist == measureId, bei Kanalroboter aber eine eigene
+            // Katalog-Position (HAUPTARBEIT_HINDERNISSE_ROBOTER) -> explizit uebergeben.
+            var hauptKey = string.IsNullOrWhiteSpace(hauptarbeitItemKey) ? measureId : hauptarbeitItemKey;
             foreach (var line in block.Lines.Where(l =>
-                         string.Equals(l.ItemKey, measureId, System.StringComparison.OrdinalIgnoreCase)))
+                         string.Equals(l.ItemKey, hauptKey, System.StringComparison.OrdinalIgnoreCase)))
             {
                 line.Selected = true;
                 line.Qty = hauptarbeitMenge.Value;

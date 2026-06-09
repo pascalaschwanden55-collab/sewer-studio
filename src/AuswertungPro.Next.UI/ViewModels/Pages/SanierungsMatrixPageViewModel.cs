@@ -15,8 +15,12 @@ using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-/// <summary>Eine waehlbare Hauptarbeit (Id=null = keine). Kategorie = Renovierung/Reparatur.</summary>
-public sealed record MeasureOption(string? Id, string Name, string Kategorie, bool IsStk)
+/// <summary>
+/// Eine waehlbare Hauptarbeit (Id=null = keine). Kategorie = Renovierung/Reparatur.
+/// ManuelleMenge = Menge wird vom Anwender eingegeben (Stk oder Stunden), sonst = Haltungslaenge.
+/// HauptItemKey = Katalog-Key der Hauptarbeit-Zeile (weicht bei Kanalroboter von Id ab).
+/// </summary>
+public sealed record MeasureOption(string? Id, string Name, string Kategorie, bool ManuelleMenge, string HauptItemKey)
 {
     public override string ToString() => Name;
 }
@@ -64,7 +68,7 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
     {
         _suppress = true;
         SelectedMeasure = option;
-        IsMengeEditierbar = option?.IsStk == true;
+        IsMengeEditierbar = option?.ManuelleMenge == true;
         Menge = menge;
         OptVerkehrsdienst = vd;
         OptWasserhaltung = wasser;
@@ -80,10 +84,10 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
         if (_suppress)
             return;
 
-        // Menge passend vorbelegen: Stk-Hauptarbeit -> 1 (editierbar), m-Hauptarbeit -> Laenge.
+        // Menge passend vorbelegen: manuelle Menge (Stk/h) -> 1 (editierbar), sonst Laenge.
         _suppress = true;
-        IsMengeEditierbar = value?.IsStk == true;
-        if (value?.IsStk == true)
+        IsMengeEditierbar = value?.ManuelleMenge == true;
+        if (value?.ManuelleMenge == true)
         {
             if (Menge <= 0m) Menge = 1m;
         }
@@ -132,7 +136,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         ("KURZLINER_PARTLINER", "Reparatur"),
         ("MANSCHETTE_EDELSTAHL", "Reparatur"),
         ("KANALROBOTER", "Reparatur"),
-        ("ANSCHLUSS_EINBINDEN", "Reparatur"),
+        ("ANSCHLUSS_DICHTEN", "Reparatur"),
+        ("ANSCHLUSS_VERSCHLIESSEN", "Reparatur"),
     };
 
     // Zusatzoptionen -> Katalog-ItemKey.
@@ -223,7 +228,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     private void BuildMeasureOptions()
     {
         MeasureOptions.Clear();
-        MeasureOptions.Add(new MeasureOption(null, "— keine —", "", false));
+        MeasureOptions.Add(new MeasureOption(null, "— keine —", "", false, ""));
 
         var options = new List<MeasureOption>();
         foreach (var (id, kategorie) in MatrixMeasures)
@@ -231,11 +236,19 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
             if (!_templates.TryGetValue(id, out var tpl))
                 continue;
 
-            _catalog.TryGetValue(id, out var item);
-            var isStk = string.Equals(item?.Unit, "Stk", StringComparison.OrdinalIgnoreCase);
+            // Hauptarbeit-Zeile bestimmen (ItemKey + Einheit). Bei Kanalroboter weicht der
+            // Hauptarbeit-ItemKey von der Massnahmen-Id ab (HAUPTARBEIT_HINDERNISSE_ROBOTER).
+            var hauptLine = tpl.Lines.FirstOrDefault(l =>
+                string.Equals(l.Group, "Hauptarbeit", StringComparison.OrdinalIgnoreCase));
+            var hauptKey = string.IsNullOrWhiteSpace(hauptLine?.ItemKey) ? id : hauptLine!.ItemKey.Trim();
+            _catalog.TryGetValue(hauptKey, out var hauptItem);
+            var unit = hauptItem?.Unit ?? "";
+            // Manuelle Menge bei Stk (Reparatur) ODER h (Roboter-Stunden); m -> Haltungslaenge.
+            var manuelleMenge = string.Equals(unit, "Stk", StringComparison.OrdinalIgnoreCase)
+                             || string.Equals(unit, "h", StringComparison.OrdinalIgnoreCase);
             var baseName = string.IsNullOrWhiteSpace(tpl.Name) ? id : tpl.Name;
             // Name ohne Praefix - die Kategorie zeigt der ComboBox-Gruppen-Header.
-            options.Add(new MeasureOption(id, baseName, kategorie, isStk));
+            options.Add(new MeasureOption(id, baseName, kategorie, manuelleMenge, hauptKey));
         }
 
         foreach (var o in options
@@ -295,11 +308,12 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         if (row.OptDichtheit) extras.Add(KeyDichtheit);
         if (row.OptDokumentation) extras.Add(KeyDoku);
 
-        // Bei Stk-Hauptarbeit (Reparatur) die manuell eingegebene Menge uebersteuern.
-        decimal? hauptMenge = row.SelectedMeasure?.IsStk == true && row.Menge > 0m ? row.Menge : null;
+        // Bei manueller Menge (Reparatur-Stk oder Roboter-Stunden) den Wert uebersteuern.
+        decimal? hauptMenge = row.SelectedMeasure?.ManuelleMenge == true && row.Menge > 0m ? row.Menge : null;
+        var hauptKey = row.SelectedMeasure?.HauptItemKey;
 
         var cost = HoldingMeasureFactory.Build(row.Holding, row.Record, measureId,
-            _templates, _catalog, _vatRate, extras, hauptMenge);
+            _templates, _catalog, _vatRate, extras, hauptMenge, hauptKey);
 
         if (cost is null)
         {
