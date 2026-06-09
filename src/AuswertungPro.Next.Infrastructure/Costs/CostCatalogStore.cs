@@ -207,14 +207,8 @@ public sealed class CostCatalogStore
             var merged = CloneItem(item with { Key = key });
             // NPK-Metadaten aus dem Default behalten, falls ein (evtl. aelterer) Preis-Override
             // sie nicht traegt - sonst gehen NpkCode/Chapter beim Mergen verloren.
-            if (map.TryGetValue(key, out var def))
-            {
-                if (string.IsNullOrWhiteSpace(merged.NpkCode))
-                    merged.NpkCode = def.NpkCode;
-                if (string.IsNullOrWhiteSpace(merged.Chapter))
-                    merged.Chapter = def.Chapter;
-            }
-            map[key] = merged;
+            map.TryGetValue(key, out var def);
+            map[key] = PreserveNpkMetadata(merged, def);
         }
 
         return new CostCatalog
@@ -227,6 +221,23 @@ public sealed class CostCatalogStore
                 .ThenBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
                 .ToList()
         };
+    }
+
+    /// <summary>
+    /// Behält NpkCode/Chapter aus dem Default-Item (<paramref name="fallback"/>), wenn der
+    /// Override sie nicht trägt — z.B. ein vor der NPK-Erweiterung gespeicherter Preis-Override.
+    /// Preis, DN-Preise, Aktiv etc. aus dem Override bleiben unverändert.
+    /// </summary>
+    public static CostCatalogItem PreserveNpkMetadata(CostCatalogItem item, CostCatalogItem? fallback)
+    {
+        if (fallback is not null)
+        {
+            if (string.IsNullOrWhiteSpace(item.NpkCode))
+                item.NpkCode = fallback.NpkCode;
+            if (string.IsNullOrWhiteSpace(item.Chapter))
+                item.Chapter = fallback.Chapter;
+        }
+        return item;
     }
 
     private static string NormalizeKey(string? key, string? name)

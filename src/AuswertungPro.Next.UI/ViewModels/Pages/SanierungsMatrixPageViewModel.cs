@@ -351,13 +351,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
             if (_store.ByHolding.TryGetValue(row.Holding, out var cost))
                 DataPageSanierungCostMapper.ApplyCosts(row.Record, cost);
             else if (_clearedHoldings.Contains(row.Holding))
-                // Massnahme wurde auf "keine" gesetzt -> alte Kosten/Massnahmen-Felder leeren.
-                DataPageSanierungCostMapper.ApplyCosts(row.Record, new HoldingCost
-                {
-                    Holding = row.Holding,
-                    MwstRate = _vatRate,
-                    Measures = new List<MeasureCost>()
-                });
+                // Massnahme wurde auf "keine" gesetzt -> alte Kosten/Massnahmen-Felder echt leeren.
+                DataPageSanierungCostMapper.ClearCosts(row.Record);
         }
         _clearedHoldings.Clear();
 

@@ -42,6 +42,36 @@ public sealed class DataPageSanierungCostMapperTests
         Assert.Equal("4", record.GetFieldValue("Reparatur_Kurzliner"));
     }
 
+    // --- ClearCosts (Matrix: Massnahme auf "keine" zurueckgesetzt) ---
+
+    [Fact]
+    public void ClearCosts_leert_alle_kostenfelder_auf_leer()
+    {
+        var record = new HaltungRecord();
+        DataPageSanierungCostMapper.ApplyRecommendation(record, new MeasureRecommendationResult(
+            Measures: new[] { "Inliner" },
+            EstimatedTotalCost: 1234.5m,
+            RenovierungInlinerM: 12.3m,
+            RenovierungInlinerStk: 1,
+            AnschluesseVerpressen: 2,
+            ReparaturManschette: 3,
+            ReparaturKurzliner: 4,
+            SimilarCasesCount: 0,
+            UsedTrainedModel: false));
+        Assert.Equal("1234.50", record.GetFieldValue("Kosten")); // Vorbedingung: gefuellt
+
+        DataPageSanierungCostMapper.ClearCosts(record);
+
+        // Echt leer, NICHT "0.00".
+        Assert.Equal("", record.GetFieldValue("Kosten"));
+        Assert.Equal("", record.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
+        Assert.Equal("", record.GetFieldValue("Renovierung_Inliner_m"));
+        Assert.Equal("", record.GetFieldValue("Renovierung_Inliner_Stk"));
+        Assert.Equal("", record.GetFieldValue("Anschluesse_verpressen"));
+        Assert.Equal("", record.GetFieldValue("Reparatur_Manschette"));
+        Assert.Equal("", record.GetFieldValue("Reparatur_Kurzliner"));
+    }
+
     [Fact]
     public void ApplyRecommendation_ueberspringt_null_felder()
     {

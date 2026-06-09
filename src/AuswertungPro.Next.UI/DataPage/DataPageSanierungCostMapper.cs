@@ -78,6 +78,33 @@ public static class DataPageSanierungCostMapper
         record.SetFieldValue("Reparatur_Kurzliner", FormatInt(kurzliner), FieldSource.Manual, userEdited: true);
     }
 
+    /// <summary>
+    /// Leert alle von <see cref="ApplyCosts"/> gesetzten Kosten-/Massnahmen-/Mengenfelder
+    /// (auf leer, NICHT auf 0.00). Für Haltungen, die in der Matrix auf "keine Massnahme"
+    /// zurückgesetzt wurden — damit keine alten Werte stehen bleiben.
+    /// </summary>
+    public static void ClearCosts(HaltungRecord record)
+    {
+        if (record is null)
+            return;
+
+        foreach (var field in CostFieldNames)
+            record.SetFieldValue(field, "", FieldSource.Manual, userEdited: true);
+    }
+
+    /// <summary>Alle Felder, die <see cref="ApplyCosts"/> schreibt (für <see cref="ClearCosts"/>).</summary>
+    private static readonly string[] CostFieldNames =
+    {
+        "Kosten",
+        "Empfohlene_Sanierungsmassnahmen",
+        "Renovierung_Inliner_m",
+        "Renovierung_Inliner_Stk",
+        "Anschluesse_verpressen",
+        "Reparatur_Manschette",
+        "Linerendmanschette_LEM",
+        "Reparatur_Kurzliner",
+    };
+
     private static decimal ResolveNetTotal(HoldingCost cost)
     {
         if (cost.Total > 0m)
