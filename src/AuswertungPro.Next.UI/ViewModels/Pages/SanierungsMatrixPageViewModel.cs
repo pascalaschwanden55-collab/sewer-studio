@@ -326,6 +326,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
 
         if (cost is null)
         {
+            // Massnahme nicht (mehr) baubar (Template fehlt) -> Store-Eintrag nicht stehen lassen,
+            // sonst zeigt die UI "nicht gefunden", waehrend beim Speichern der alte Wert bliebe.
+            if (_store.ByHolding.Remove(row.Holding))
+                _clearedHoldings.Add(row.Holding);
             row.Hinweis = "Massnahme nicht gefunden";
             row.Total = 0m;
         }
