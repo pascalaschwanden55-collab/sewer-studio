@@ -28,6 +28,8 @@ public sealed class HoldingMeasureFactoryTests
             Lines = new List<MeasureLineTemplate>
             {
                 new() { Group = "Vorarbeiten", ItemKey = "VORARBEIT_REINIGUNG", Enabled = true, DefaultQty = 1 },
+                new() { Group = "Vorarbeiten", ItemKey = "VORARBEIT_FRAESEN", Enabled = false, DefaultQty = 1 },
+                new() { Group = "Vorarbeiten", ItemKey = "VORARBEIT_VD", Enabled = false, DefaultQty = 1 },
                 new() { Group = "Hauptarbeit", ItemKey = "SCHLAUCHLINER_NADELFILZ", Enabled = true, DefaultQty = 1 },
                 new() { Group = "Hauptarbeit", ItemKey = "LINERENDMANSCHETTE_LEM", Enabled = true, DefaultQty = 2 },
                 new() { Group = "Hauptarbeit", ItemKey = "ANSCHLUSS_AUFFRAESEN", Enabled = true, DefaultQty = 1 },
@@ -53,6 +55,8 @@ public sealed class HoldingMeasureFactoryTests
                 DnPrices = new List<DnPrice> { new() { DnFrom = 250, DnTo = 250, Price = 490m } }
             },
             ["ANSCHLUSS_AUFFRAESEN"] = new() { Key = "ANSCHLUSS_AUFFRAESEN", Unit = "Stk", Type = "Fixed", Price = 100m },
+            ["VORARBEIT_FRAESEN"] = new() { Key = "VORARBEIT_FRAESEN", Unit = "m", Type = "Fixed", Price = 29m },
+            ["VORARBEIT_VD"] = new() { Key = "VORARBEIT_VD", Unit = "pro Tag", Type = "Fixed", Price = 1000m },
         };
         return (templates, catalog);
     }
@@ -119,5 +123,39 @@ public sealed class HoldingMeasureFactoryTests
         var cost = HoldingMeasureFactory.Build("H4", record, "GIBT_ES_NICHT", templates, catalog, 0.081m);
 
         Assert.Null(cost);
+    }
+
+    [Fact]
+    public void Build_ExtraOption_ActivatesLine_WithLengthForMeterUnit()
+    {
+        var (templates, catalog) = Setup();
+        var record = Record("H5", "250", "45.00");
+
+        var cost = HoldingMeasureFactory.Build("H5", record, "SCHLAUCHLINER_NADELFILZ", templates, catalog, 0.081m,
+            extraOptionKeys: new[] { "VORARBEIT_FRAESEN", "VORARBEIT_VD" });
+
+        Assert.NotNull(cost);
+        var lines = cost!.Measures[0].Lines;
+
+        var fraesen = lines.First(l => l.ItemKey == "VORARBEIT_FRAESEN");
+        Assert.True(fraesen.Selected);
+        Assert.Equal(45m, fraesen.Qty);      // m-Option = Haltungslänge
+
+        var vd = lines.First(l => l.ItemKey == "VORARBEIT_VD");
+        Assert.True(vd.Selected);            // Verkehrsdienst aktiviert
+    }
+
+    [Fact]
+    public void Build_HauptarbeitMenge_OverridesMainLineQty()
+    {
+        var (templates, catalog) = Setup();
+        var record = Record("H6", "250", "45.00");
+
+        var cost = HoldingMeasureFactory.Build("H6", record, "SCHLAUCHLINER_NADELFILZ", templates, catalog, 0.081m,
+            hauptarbeitMenge: 5m);
+
+        Assert.NotNull(cost);
+        var liner = cost!.Measures[0].Lines.First(l => l.ItemKey == "SCHLAUCHLINER_NADELFILZ");
+        Assert.Equal(5m, liner.Qty);         // manuelle Menge übersteuert Auto-Länge
     }
 }

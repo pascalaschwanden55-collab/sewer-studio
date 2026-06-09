@@ -55,6 +55,29 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
+                <!-- Menge: bei Liner = Laenge (gesperrt), bei Reparatur Stueckzahl eingebbar -->
+                <DataGridTemplateColumn Header="Menge" Width="70">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding Menge, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                                     IsReadOnly="{Binding IsMengeReadOnly}"
+                                     BorderThickness="0" Background="Transparent"
+                                     HorizontalContentAlignment="Right"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridCheckBoxColumn Header="VD" Width="44"
+                                        Binding="{Binding OptVerkehrsdienst, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <DataGridCheckBoxColumn Header="Wasser" Width="60"
+                                        Binding="{Binding OptWasserhaltung, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <DataGridCheckBoxColumn Header="Fraesen" Width="62"
+                                        Binding="{Binding OptFraesen, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <DataGridCheckBoxColumn Header="Dicht." Width="52"
+                                        Binding="{Binding OptDichtheit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <DataGridCheckBoxColumn Header="Doku" Width="48"
+                                        Binding="{Binding OptDokumentation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
                 <DataGridTextColumn Header="Total CHF" Binding="{Binding Total, StringFormat=N2}"
                                     IsReadOnly="True" Width="110">
                     <DataGridTextColumn.ElementStyle>
