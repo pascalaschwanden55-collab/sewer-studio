@@ -271,15 +271,24 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         var opt = MeasureOptions.FirstOrDefault(o => string.Equals(o.Id, firstId, StringComparison.OrdinalIgnoreCase));
         if (opt is null)
         {
-            // Gespeicherte Massnahme ist keine Matrix-Hauptarbeit -> nur Total zeigen.
-            row.InitFrom(MeasureOptions[0], existing.Total, 0m, false, false, false, false, false);
+            // Gespeicherte Massnahme ist (mehr) keine Matrix-Hauptarbeit (alte Daten oder aus dem
+            // Einzelfenster). Als Ad-hoc-Option anzeigen statt "keine" -> kein Datenverlust, UI bleibt
+            // konsistent zum Store. Bei Aenderung baut RecomputeRow neu (oder zeigt "nicht gefunden").
+            var name = string.IsNullOrWhiteSpace(existing.Measures[0].MeasureName)
+                ? firstId : existing.Measures[0].MeasureName;
+            var adhoc = MeasureOptions.FirstOrDefault(o => string.Equals(o.Id, firstId, StringComparison.OrdinalIgnoreCase))
+                        ?? new MeasureOption(firstId, name + " (gespeichert)", "Übrige", false, firstId);
+            if (!MeasureOptions.Contains(adhoc))
+                MeasureOptions.Add(adhoc);
+            row.InitFrom(adhoc, existing.Total, 0m, false, false, false, false, false);
             return;
         }
 
         var lines = existing.Measures[0].Lines;
         bool Sel(string key) => lines.Any(l => l.Selected &&
             string.Equals(l.ItemKey, key, StringComparison.OrdinalIgnoreCase));
-        var hauptLine = lines.FirstOrDefault(l => string.Equals(l.ItemKey, firstId, StringComparison.OrdinalIgnoreCase));
+        // Hauptmenge ueber den HauptItemKey der Option (bei Kanalroboter != MeasureId).
+        var hauptLine = lines.FirstOrDefault(l => string.Equals(l.ItemKey, opt.HauptItemKey, StringComparison.OrdinalIgnoreCase));
         var menge = hauptLine?.Qty ?? 0m;
 
         row.InitFrom(opt, existing.Total, menge,

@@ -62,8 +62,10 @@ public static class DataPageSanierungCostMapper
             "SCHLAUCHLINER_GFK");
         // Domain rule: if a liner is selected, count exactly 1 piece.
         var inlinerStk = HasSelectedLiner(cost) ? 1 : 0;
+        // Anzahl Anschluesse = max ueber alle Anschluss-Arten (jeder Anschluss zaehlt
+        // einmal; Auffraesen + Einbinden am selben Anschluss nicht doppelt).
         var anschluesse = Math.Max(
-            SumSelectedQty(cost, "ANSCHLUSS_EINBINDEN"),
+            SumSelectedQty(cost, "ANSCHLUSS_EINBINDEN", "ANSCHLUSS_DICHTEN", "ANSCHLUSS_VERSCHLIESSEN"),
             SumSelectedQty(cost, "ANSCHLUSS_AUFFRAESEN"));
         // LEM is not a repair manschette and must not fill Reparatur_Manschette.
         var manschette = SumSelectedQty(cost, "MANSCHETTE_PER_ST", "MANSCHETTE_EDELSTAHL");

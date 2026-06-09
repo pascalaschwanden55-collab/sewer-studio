@@ -65,6 +65,7 @@ public static class NpkLeistungsverzeichnisExporter
     public static string ChapterTitle(string? chapter) => (chapter ?? "").Trim() switch
     {
         "100" => "NPK 100 — Einrichtung",
+        "112" => "NPK 112 — Prüfungen (Dichtheit)",
         "200" => "NPK 200 — Reinigung / Zustandserfassung",
         "300" => "NPK 300 — Vorarbeiten",
         "400" => "NPK 400 — Wasserhaltung",

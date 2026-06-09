@@ -160,4 +160,12 @@ public sealed class ProjectPositionAggregatorTests
         Assert.Contains("612.110", csv);
         Assert.Contains("TOTAL", csv);
     }
+
+    [Fact]
+    public void ChapterTitle_112_IsPruefung()
+    {
+        var title = NpkLeistungsverzeichnisExporter.ChapterTitle("112");
+        Assert.Contains("112", title);
+        Assert.Contains("Prüfung", title);
+    }
 }

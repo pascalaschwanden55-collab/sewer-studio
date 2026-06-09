@@ -73,6 +73,30 @@ public sealed class DataPageSanierungCostMapperTests
     }
 
     [Fact]
+    public void ApplyCosts_zaehlt_ANSCHLUSS_DICHTEN_in_Anschluesse_verpressen()
+    {
+        var record = new HaltungRecord();
+        var cost = new HoldingCost
+        {
+            Measures = new System.Collections.Generic.List<MeasureCost>
+            {
+                new()
+                {
+                    Lines = new System.Collections.Generic.List<CostLine>
+                    {
+                        new() { ItemKey = "ANSCHLUSS_DICHTEN", Qty = 3m, UnitPrice = 750m, Selected = true }
+                    }
+                }
+            }
+        };
+
+        DataPageSanierungCostMapper.ApplyCosts(record, cost);
+
+        // Neue Anschluss-Reparatur-Keys muessen das Tabellenfeld fuellen (frueher nur EINBINDEN/AUFFRAESEN).
+        Assert.Equal("3", record.GetFieldValue("Anschluesse_verpressen"));
+    }
+
+    [Fact]
     public void ApplyRecommendation_ueberspringt_null_felder()
     {
         var record = new HaltungRecord();
