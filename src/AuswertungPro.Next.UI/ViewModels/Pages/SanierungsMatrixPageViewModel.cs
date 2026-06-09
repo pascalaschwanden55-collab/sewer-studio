@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
+using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
@@ -152,6 +154,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     public ObservableCollection<SanierungMatrixRowVm> Rows { get; } = new();
     public ObservableCollection<MeasureOption> MeasureOptions { get; } = new();
 
+    /// <summary>Gruppierte Sicht (Renovierung/Reparatur) fuer die ComboBox-Gruppen-Header.</summary>
+    public ICollectionView GroupedMeasureOptions { get; }
+
     [ObservableProperty] private decimal _gesamtTotal;
     [ObservableProperty] private int _belegteHaltungen;
     [ObservableProperty] private string _status = "";
@@ -159,6 +164,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     public SanierungsMatrixPageViewModel(ShellViewModel shell)
     {
         _shell = shell;
+        GroupedMeasureOptions = CollectionViewSource.GetDefaultView(MeasureOptions);
+        GroupedMeasureOptions.GroupDescriptions.Add(new PropertyGroupDescription(nameof(MeasureOption.Kategorie)));
         Reload();
     }
 
@@ -222,7 +229,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
             var kategorie = chapter == "600" ? "Renovierung" : chapter == "500" ? "Reparatur" : "Weitere";
             var isStk = string.Equals(item?.Unit, "Stk", StringComparison.OrdinalIgnoreCase);
             var baseName = string.IsNullOrWhiteSpace(tpl.Name) ? id : tpl.Name;
-            options.Add(new MeasureOption(id, $"{kategorie} · {baseName}", kategorie, isStk));
+            // Name ohne Praefix - die Kategorie zeigt der ComboBox-Gruppen-Header.
+            options.Add(new MeasureOption(id, baseName, kategorie, isStk));
         }
 
         foreach (var o in options
