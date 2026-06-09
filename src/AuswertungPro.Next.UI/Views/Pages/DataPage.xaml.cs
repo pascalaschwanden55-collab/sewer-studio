@@ -49,6 +49,13 @@ public partial class DataPage : System.Windows.Controls.UserControl
         HaltungsansichtView.DetailBuilder = BuildHaltungRecordDetailsForAnsicht;
         HaltungsansichtView.ActionRequested = RouteHaltungsansichtAction;
 
+        // Standardansicht beim Oeffnen der Haltungen-Seite: Haltungsansicht (Liste + Detail)
+        // statt der Tabelle. IsChecked loest HaltungsansichtToggle_Changed; die Sichtbarkeiten
+        // werden zusaetzlich explizit gesetzt (robust gegen Event-Timing).
+        HaltungsansichtToggle.IsChecked = true;
+        HaltungsansichtView.Visibility = Visibility.Visible;
+        Grid.Visibility = Visibility.Collapsed;
+
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(180) };
         _searchDebounceTimer.Tick += (_, __) =>
         {
