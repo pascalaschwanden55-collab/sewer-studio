@@ -121,11 +121,18 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
 /// </summary>
 public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
 {
-    // Hauptarbeiten, die in der Matrix waehlbar sind (Renovierung + Reparatur).
-    private static readonly string[] MatrixMeasureIds =
+    // Waehlbare Hauptarbeiten mit fachlicher Kategorie. Kanalroboter (nur Ablagerungen
+    // fraesen) und Anschluss einbinden zaehlen zur REPARATUR, auch wenn ihre Katalog-
+    // Position ein anderes Kapitel traegt.
+    private static readonly (string Id, string Kategorie)[] MatrixMeasures =
     {
-        "SCHLAUCHLINER_NADELFILZ", "SCHLAUCHLINER_NADELFILZ_OPENEND", "SCHLAUCHLINER_GFK",
-        "KURZLINER_PARTLINER", "MANSCHETTE_EDELSTAHL"
+        ("SCHLAUCHLINER_NADELFILZ", "Renovierung"),
+        ("SCHLAUCHLINER_NADELFILZ_OPENEND", "Renovierung"),
+        ("SCHLAUCHLINER_GFK", "Renovierung"),
+        ("KURZLINER_PARTLINER", "Reparatur"),
+        ("MANSCHETTE_EDELSTAHL", "Reparatur"),
+        ("KANALROBOTER", "Reparatur"),
+        ("ANSCHLUSS_EINBINDEN", "Reparatur"),
     };
 
     // Zusatzoptionen -> Katalog-ItemKey.
@@ -219,14 +226,12 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         MeasureOptions.Add(new MeasureOption(null, "— keine —", "", false));
 
         var options = new List<MeasureOption>();
-        foreach (var id in MatrixMeasureIds)
+        foreach (var (id, kategorie) in MatrixMeasures)
         {
             if (!_templates.TryGetValue(id, out var tpl))
                 continue;
 
             _catalog.TryGetValue(id, out var item);
-            var chapter = item?.Chapter ?? "";
-            var kategorie = chapter == "600" ? "Renovierung" : chapter == "500" ? "Reparatur" : "Weitere";
             var isStk = string.Equals(item?.Unit, "Stk", StringComparison.OrdinalIgnoreCase);
             var baseName = string.IsNullOrWhiteSpace(tpl.Name) ? id : tpl.Name;
             // Name ohne Praefix - die Kategorie zeigt der ComboBox-Gruppen-Header.

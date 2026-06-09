@@ -70,11 +70,14 @@ public static class HoldingMeasureFactory
 
         // Hauptarbeit-Menge manuell übersteuern (Stückzahl bei Reparatur). Direkte
         // Qty-Zuweisung setzt IsQtyOverridden, sodass die Auto-Mengen sie nicht zurücksetzen.
+        // Selected=true erzwingen, falls die Anschluss-Auto-Logik die (gewählte!) Hauptarbeit
+        // bei 0 erkannten Anschlüssen deaktiviert hätte (z.B. ANSCHLUSS_EINBINDEN).
         if (hauptarbeitMenge.HasValue && hauptarbeitMenge.Value > 0m)
         {
             foreach (var line in block.Lines.Where(l =>
                          string.Equals(l.ItemKey, measureId, System.StringComparison.OrdinalIgnoreCase)))
             {
+                line.Selected = true;
                 line.Qty = hauptarbeitMenge.Value;
             }
         }

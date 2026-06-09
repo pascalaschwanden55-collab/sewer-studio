@@ -157,5 +157,37 @@ public sealed class HoldingMeasureFactoryTests
         Assert.NotNull(cost);
         var liner = cost!.Measures[0].Lines.First(l => l.ItemKey == "SCHLAUCHLINER_NADELFILZ");
         Assert.Equal(5m, liner.Qty);         // manuelle Menge übersteuert Auto-Länge
+        Assert.True(liner.Selected);
+    }
+
+    [Fact]
+    public void Build_ConnectionMainWork_StaysSelected_WhenNoConnections()
+    {
+        // ANSCHLUSS_EINBINDEN als Hauptarbeit ist eine Anschluss-Zeile; bei 0 erkannten
+        // Anschluessen wuerde die Auto-Logik sie deaktivieren — der manuelle Mengen-Override
+        // muss die (gewaehlte) Hauptarbeit aktiv halten.
+        var tpl = new MeasureTemplate
+        {
+            Id = "ANSCHLUSS_EINBINDEN",
+            Name = "Anschluss einbinden",
+            Lines = new List<MeasureLineTemplate>
+            {
+                new() { Group = "Hauptarbeit", ItemKey = "ANSCHLUSS_EINBINDEN", Enabled = true, DefaultQty = 1 },
+            }
+        };
+        var templates = new Dictionary<string, MeasureTemplate>(StringComparer.OrdinalIgnoreCase) { [tpl.Id] = tpl };
+        var catalog = new Dictionary<string, CostCatalogItem>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ANSCHLUSS_EINBINDEN"] = new() { Key = "ANSCHLUSS_EINBINDEN", Unit = "Stk", Type = "Fixed", Price = 900m },
+        };
+        var record = Record("H7", "250", "40.00"); // keine Schaeden -> 0 Anschluesse
+
+        var cost = HoldingMeasureFactory.Build("H7", record, "ANSCHLUSS_EINBINDEN", templates, catalog, 0.081m,
+            hauptarbeitMenge: 2m);
+
+        Assert.NotNull(cost);
+        var main = cost!.Measures[0].Lines.First(l => l.ItemKey == "ANSCHLUSS_EINBINDEN");
+        Assert.True(main.Selected);   // bleibt aktiv trotz 0 erkannter Anschluesse
+        Assert.Equal(2m, main.Qty);
     }
 }
