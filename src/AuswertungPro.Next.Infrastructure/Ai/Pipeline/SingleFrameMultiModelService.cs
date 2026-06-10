@@ -21,14 +21,24 @@ public sealed class SingleFrameMultiModelService
 
     public SingleFrameMultiModelService(
         VisionPipelineClient client,
-        double yoloConfidence = 0.25,
-        double dinoBoxThreshold = 0.30,
-        double dinoTextThreshold = 0.25)
+        double? yoloConfidence = null,
+        double? dinoBoxThreshold = null,
+        double? dinoTextThreshold = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
-        _yoloConfidence = yoloConfidence;
-        _dinoBoxThreshold = dinoBoxThreshold;
-        _dinoTextThreshold = dinoTextThreshold;
+        // Defaults respektieren dieselben Env-Vars wie der Batch-Pfad (AiSettingsFactory),
+        // damit der DINO-Schwellen-A/B (0.25/0.20) auch den Live-Codiermodus erreicht.
+        _yoloConfidence = yoloConfidence ?? EnvDouble("SEWERSTUDIO_YOLO_CONFIDENCE") ?? 0.25;
+        _dinoBoxThreshold = dinoBoxThreshold ?? EnvDouble("SEWERSTUDIO_DINO_BOX_THRESHOLD") ?? 0.30;
+        _dinoTextThreshold = dinoTextThreshold ?? EnvDouble("SEWERSTUDIO_DINO_TEXT_THRESHOLD") ?? 0.25;
+    }
+
+    private static double? EnvDouble(string name)
+    {
+        var value = Environment.GetEnvironmentVariable(name)
+                    ?? Environment.GetEnvironmentVariable("AUSWERTUNGPRO_" + name["SEWERSTUDIO_".Length..]);
+        return double.TryParse(value?.Trim(), System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
     }
 
     /// <summary>

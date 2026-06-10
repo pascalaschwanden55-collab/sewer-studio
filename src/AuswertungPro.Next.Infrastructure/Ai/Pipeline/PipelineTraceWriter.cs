@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
@@ -51,7 +52,45 @@ public static class PipelineTraceWriter
         }
     }
 
+    /// <summary>
+    /// Schreibt die aggregierte TelemetrySummary eines Laufs als JSON neben die
+    /// Trace-Datei (pipeline_summary_{runId}.json) — Stufen-Latenzen
+    /// (YOLO/DINO/SAM/Qwen) werden so ohne Log-Parsing auswertbar.
+    /// </summary>
+    public static async Task WriteSummaryAsync(string runId, TelemetrySummary summary)
+    {
+        try
+        {
+            var path = ResolveSummaryPath(runId);
+            if (path is null)
+                return;
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var json = JsonSerializer.Serialize(summary, JsonOptions);
+
+            await WriteLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await File.WriteAllTextAsync(path, json).ConfigureAwait(false);
+            }
+            finally
+            {
+                WriteLock.Release();
+            }
+        }
+        catch
+        {
+            // Trace darf die eigentliche Analyse niemals stoeren.
+        }
+    }
+
     public static string? ResolvePath(string runId)
+        => ResolveFile(runId, "pipeline_trace_", ".jsonl");
+
+    public static string? ResolveSummaryPath(string runId)
+        => ResolveFile(runId, "pipeline_summary_", ".json");
+
+    private static string? ResolveFile(string runId, string prefix, string extension)
     {
         // RunId fliesst in den Dateinamen — gegen Path-Traversal absichern
         // (RunId ist ein public settable Property; "..\\.." o.ae. darf nicht durchschlagen).
@@ -67,7 +106,7 @@ public static class PipelineTraceWriter
 
         return string.IsNullOrWhiteSpace(root)
             ? null
-            : Path.Combine(root, "SewerStudio", "Telemetry", $"pipeline_trace_{runId}.jsonl");
+            : Path.Combine(root, "SewerStudio", "Telemetry", $"{prefix}{runId}{extension}");
     }
 }
 
@@ -83,7 +122,7 @@ public sealed class PipelineFrameTrace
     public double TimeSec { get; set; }
     public double Meter { get; set; }
 
-    /// <summary>Welcher Pfad der Frame genommen hat: processed / empty_frame / yolo_cls_skip / yolo_error / yolo_irrelevant / dino_error / dino_no_boxes / sam_error.</summary>
+    /// <summary>Welcher Pfad der Frame genommen hat: processed / empty_frame / cls_quality_skip / yolo_cls_skip / yolo_error / yolo_irrelevant / dino_error / dino_no_boxes / sam_error.</summary>
     public string Path { get; set; } = "processed";
 
     public bool YoloBypass { get; set; }
@@ -110,7 +149,7 @@ public sealed class PipelineFrameTrace
     /// <summary>Bisher abgeschlossene Detections (laufende Summe).</summary>
     public int DetectionsTotal { get; set; }
 
-    /// <summary>Grund, falls (Teil-)Befunde verloren gehen: empty_frame, yolo_cls_normal, yolo_error, yolo_irrelevant, dino_error, dino_no_boxes, dino_degraded, sam_error, sam_degraded, image_quality_bad, all_findings_missing_code, no_findings.</summary>
+    /// <summary>Grund, falls (Teil-)Befunde verloren gehen: empty_frame, frame_too_dark/too_bright/too_uniform/too_blurry (Quality-Gate), yolo_cls_normal, yolo_error, yolo_irrelevant, dino_error, dino_no_boxes, dino_degraded, sam_error, sam_degraded, image_quality_bad, all_findings_missing_code, no_findings.</summary>
     public string? DropReason { get; set; }
 
     /// <summary>True, wenn der Sidecar einen degraded-Befund meldete (Modell-/Inferenzfehler bzw.

@@ -22,7 +22,10 @@ public sealed record PipelineRequest(
     string? ProjectFolderAbs = null,
     string? RequestedBy = null,
     double FrameStepSeconds = 3.0,
-    int DedupWindowFrames = 3);
+    int DedupWindowFrames = 3,
+    // Echte Haltungslaenge aus den Stammdaten (Haltungslaenge_m). null = unbekannt,
+    // dann gilt die 50m-Annahme der Meter-Schaetzung.
+    double? ReachLengthM = null);
 
 public sealed record PipelineResult(
     ProtocolDocument? Document,

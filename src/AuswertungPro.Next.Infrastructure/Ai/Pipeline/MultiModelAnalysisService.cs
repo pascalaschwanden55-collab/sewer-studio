@@ -41,6 +41,13 @@ public sealed class MultiModelAnalysisService
     /// <summary>YOLO-cls Vorfilter aktivieren/deaktivieren (Fallback: aus wenn kein Modell).</summary>
     public bool UseClsPrefilter { get; set; } = true;
 
+    // Erwartete Eigengewichte fuer die COCO-Fallback-Warnung. Liefert der Sidecar
+    // einen anderen Modellnamen (z.B. yolo11m.pt), wird einmal pro Lauf gewarnt.
+    private static readonly string ExpectedYoloModel =
+        Environment.GetEnvironmentVariable("SEWERSTUDIO_EXPECTED_YOLO_MODEL")?.Trim() is { Length: > 0 } expected
+            ? expected
+            : "yolo26m";
+
     // Letzter Befund fuer Qwen-Kontext (Frame-uebergreifende Kohärenz)
     private (string Code, string Description, double Meter, double Confidence)? _lastFinding;
 
@@ -97,6 +104,7 @@ public sealed class MultiModelAnalysisService
         int frameIndex = 0;
         int skippedFrames = 0;
         double lastMeter = 0;
+        bool yoloFallbackWarned = false;
 
         // Pipe diameter: from config override or default 300mm
         int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
@@ -161,18 +169,80 @@ public sealed class MultiModelAnalysisService
             trace.Meter = estimatedMeter;
             trace.YoloBypass = telemetryBypass;
 
-            // ── Step 1: YOLO Pre-Screening ──
+            // ── YOLO-cls Vorfilter + Frame-Quality-Gate (CPU-billig) ──
+            // Gilt bewusst AUCH fuer Sweep-/BCD-/BCE-Frames: vorher konnten schwarze
+            // oder strukturlose Bypass-Frames ungefiltert bis zu Qwen (120s-Cap) laufen.
             var phaseSw = Stopwatch.StartNew();
+            if (UseClsPrefilter) try
+            {
+                var clsResult = await _client.ClassifyYoloAsync(
+                    new YoloClassifyRequest(frameBase64, 3), ct).ConfigureAwait(false);
+
+                if (!clsResult.Usable)
+                {
+                    // Frame unbrauchbar (schwarz/ueberbelichtet/strukturlos/unscharf)
+                    skippedFrames++;
+                    _logger.LogDebug("Frame {Frame}: Quality-Gate '{Reason}' → skip",
+                        frameIndex, clsResult.QualityReason);
+                    progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                        $"Frame {frameIndex}/{totalFrames} – unbrauchbar ({clsResult.QualityReason}) → skip"));
+                    telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0,
+                        frameSw.ElapsedMilliseconds, Skipped: true));
+                    trace.Path = "cls_quality_skip";
+                    trace.YoloRelevant = false;
+                    trace.DropReason = $"frame_{clsResult.QualityReason}";
+                    await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                    detections.AddRange(deduplicator.AdvanceAll());
+                    continue;
+                }
+
+                var topPred = clsResult.Predictions.Count > 0 ? clsResult.Predictions[0] : null;
+
+                if (topPred?.ClassName is "OTHER" or "other" or "NORMAL" or "normal"
+                    && topPred.Confidence > 0.70)
+                {
+                    // Frame ist normal → ueberspringen (spart DINO/SAM/Qwen).
+                    // Auch im Sweep korrekt: Grundgeruest-Elemente (BCD/BCE/BCA/...)
+                    // haetten eine eigene cls-Klasse, nicht OTHER/NORMAL.
+                    skippedFrames++;
+                    _logger.LogDebug("Frame {Frame}: YOLO-cls '{Class}' ({Conf:F0}%) → skip",
+                        frameIndex, topPred.ClassName, topPred.Confidence * 100);
+                    progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                        $"Frame {frameIndex}/{totalFrames} – cls: {topPred.ClassName} ({topPred.Confidence:P0}) → skip"));
+                    telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0,
+                        frameSw.ElapsedMilliseconds, Skipped: true));
+                    trace.Path = "yolo_cls_skip";
+                    trace.YoloRelevant = false;
+                    trace.DropReason = "yolo_cls_normal";
+                    await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                    detections.AddRange(deduplicator.AdvanceAll());
+                    continue;
+                }
+
+                if (topPred != null)
+                    _logger.LogDebug("Frame {Frame}: YOLO-cls '{Class}' ({Conf:F0}%) → weiter zur Detektion",
+                        frameIndex, topPred.ClassName, topPred.Confidence * 100);
+            }
+            catch (Exception ex)
+            {
+                // cls-Modell nicht verfuegbar → normal weiter (kein harter Fehler)
+                _logger.LogDebug(ex, "Frame {Frame}: YOLO-cls nicht verfuegbar, ueberspringe Vorfilter", frameIndex);
+            }
+
+            // ── Step 1: YOLO Pre-Screening ──
+            phaseSw.Restart();
             YoloResponse yoloResult;
             long yoloMs;
 
             if (telemetryBypass)
             {
-                // YOLO ueberspringen — Frame direkt an DINO/Qwen weiterleiten
+                // YOLO-Detect ueberspringen — Frame direkt an DINO/Qwen weiterleiten.
+                // frame_class ehrlich als "sweep" markieren: BCD/BCE sind hier nur
+                // Zonen-Heuristiken, keine Detektionen.
                 yoloResult = new YoloResponse(
                     IsRelevant: true,
                     Detections: Array.Empty<YoloDetectionDto>(),
-                    FrameClass: isBcdZone ? "BCD" : "BCE",
+                    FrameClass: "sweep",
                     InferenceTimeMs: 0);
                 yoloMs = 0;
                 var zone = isBcdZone ? "BCD-Zone (Rohranfang)"
@@ -186,42 +256,6 @@ public sealed class MultiModelAnalysisService
             }
             else
             {
-                // ── YOLO-cls Vorfilter: 90% der normalen Frames ueberspringen ──
-                if (UseClsPrefilter) try
-                {
-                    var clsResult = await _client.ClassifyYoloAsync(
-                        new YoloClassifyRequest(frameBase64, 3), ct).ConfigureAwait(false);
-                    var topPred = clsResult.Predictions.Count > 0 ? clsResult.Predictions[0] : null;
-
-                    if (topPred?.ClassName is "OTHER" or "other" or "NORMAL" or "normal"
-                        && topPred.Confidence > 0.70)
-                    {
-                        // Frame ist normal → ueberspringen (spart DINO/SAM/Qwen)
-                        skippedFrames++;
-                        _logger.LogDebug("Frame {Frame}: YOLO-cls '{Class}' ({Conf:F0}%) → skip",
-                            frameIndex, topPred.ClassName, topPred.Confidence * 100);
-                        progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
-                            $"Frame {frameIndex}/{totalFrames} – cls: {topPred.ClassName} ({topPred.Confidence:P0}) → skip"));
-                        telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0,
-                            frameSw.ElapsedMilliseconds, Skipped: true));
-                        trace.Path = "yolo_cls_skip";
-                        trace.YoloRelevant = false;
-                        trace.DropReason = "yolo_cls_normal";
-                        await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
-                        detections.AddRange(deduplicator.AdvanceAll());
-                        continue;
-                    }
-
-                    if (topPred != null)
-                        _logger.LogDebug("Frame {Frame}: YOLO-cls '{Class}' ({Conf:F0}%) → weiter zur Detektion",
-                            frameIndex, topPred.ClassName, topPred.Confidence * 100);
-                }
-                catch (Exception ex)
-                {
-                    // cls-Modell nicht verfuegbar → normal weiter (kein harter Fehler)
-                    _logger.LogDebug(ex, "Frame {Frame}: YOLO-cls nicht verfuegbar, ueberspringe Vorfilter", frameIndex);
-                }
-
                 progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
                     $"Frame {frameIndex}/{totalFrames} – YOLO Pre-Screening...",
                     FramePreviewPng: frameBytes));
@@ -234,15 +268,32 @@ public sealed class MultiModelAnalysisService
                     yoloResult = await _client.DetectYoloAsync(
                         new YoloRequest(frameBase64, minConf), ct).ConfigureAwait(false);
 
+                    // COCO-Fallback sichtbar machen: laeuft der Sidecar nicht mit den
+                    // eigenen Gewichten (yolo26m), ist die Schadenserkennung faktisch
+                    // blind — das darf nie wieder still passieren (realer Vorfall 2026-06-09).
+                    if (!yoloFallbackWarned && yoloResult.ModelName is { Length: > 0 } yoloModelName
+                        && !yoloModelName.Contains(ExpectedYoloModel, StringComparison.OrdinalIgnoreCase))
+                    {
+                        yoloFallbackWarned = true;
+                        _logger.LogWarning(
+                            "YOLO laeuft mit '{Model}' statt der eigenen Gewichte ({Expected}) – COCO-Fallback, Schadenserkennung stark eingeschraenkt!",
+                            yoloModelName, ExpectedYoloModel);
+                        progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                            $"WARNUNG: YOLO-Fallback aktiv ('{yoloModelName}' statt {ExpectedYoloModel}) – Schadenserkennung eingeschraenkt!"));
+                    }
+
                     // Klassenspezifische Filterung: Jede Klasse hat ihren eigenen Schwellenwert
                     if (yoloResult.Detections.Count > 0 && _config.YoloClassConfidence.Count > 0)
                     {
                         var filtered = yoloResult.Detections
                             .Where(d =>
                             {
-                                // VSA-Hauptcode aus YOLO-Klassenname extrahieren (z.B. "BAB_crack" → "BAB")
-                                var baseCode = d.ClassName.Split('_')[0].ToUpperInvariant();
-                                var threshold = _config.YoloClassConfidence.GetValueOrDefault(baseCode, _config.YoloConfidence);
+                                // VSA-Hauptcode aus YOLO-Klassenname ableiten ("crack" → BAB,
+                                // legacy "BAB_crack" → BAB); ohne Zuordnung gilt die Default-Schwelle
+                                var baseCode = YoloClassVsaMapper.ToVsaMainCode(d.ClassName);
+                                var threshold = baseCode is not null
+                                    ? _config.YoloClassConfidence.GetValueOrDefault(baseCode, _config.YoloConfidence)
+                                    : _config.YoloConfidence;
                                 return d.Confidence >= threshold;
                             })
                             .ToList();
@@ -624,6 +675,7 @@ public sealed class MultiModelAnalysisService
             summary.WallClockMs, summary.Extraction.MeanMs, summary.Extraction.P95Ms,
             summary.Yolo.MeanMs, summary.Yolo.P95Ms, summary.Dino.MeanMs,
             summary.Sam.MeanMs, summary.Qwen.MeanMs);
+        await PipelineTraceWriter.WriteSummaryAsync(runId, summary).ConfigureAwait(false);
 
         return new VideoAnalysisResult(videoPath, duration, frameIndex,
             detections.OrderBy(d => d.MeterStart).ToList(), null, summary);

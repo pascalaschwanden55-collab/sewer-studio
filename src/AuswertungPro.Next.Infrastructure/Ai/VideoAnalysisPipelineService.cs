@@ -108,6 +108,13 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
             multiModel.FrameStepSeconds = request.FrameStepSeconds;
             multiModel.DedupWindowFrames = request.DedupWindowFrames;
 
+            // Echte Haltungslaenge statt 50m-Annahme fuer die lineare Meter-Schaetzung
+            if (request.ReachLengthM is > 0.0 and double reachLength)
+            {
+                multiModel.EstimatedReachLengthM = reachLength;
+                _logger.LogInformation("Meter-Schaetzung nutzt echte Haltungslaenge: {Length:F2} m", reachLength);
+            }
+
             videoResult = await multiModel.AnalyzeAsync(
                 request.VideoPath, analysisProgress, ct).ConfigureAwait(false);
         }

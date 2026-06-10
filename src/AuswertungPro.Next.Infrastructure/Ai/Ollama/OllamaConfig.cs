@@ -15,8 +15,10 @@ public sealed record OllamaConfig(
     string KeepAlive = OllamaConfig.DefaultKeepAlive,
     int NumCtx = OllamaConfig.DefaultNumCtx)
 {
-    public const string DefaultVisionModel = "qwen2.5vl:3b";
-    public const string DefaultTextModel = "qwen2.5:3b";
+    // A/B Juni 2026: Qwen2.5-VL lieferte 0% (Parse-Fehler) — Defaults duerfen
+    // nie wieder still auf die 2.5-Familie zurueckfallen (qwen3-vl ist freigegeben).
+    public const string DefaultVisionModel = "qwen3-vl:2b";
+    public const string DefaultTextModel = "qwen3-vl:2b";
     public const string DefaultEmbedModel = "nomic-embed-text";
     public const string DefaultKeepAlive = "24h";
     public const int DefaultNumCtx = 8192;

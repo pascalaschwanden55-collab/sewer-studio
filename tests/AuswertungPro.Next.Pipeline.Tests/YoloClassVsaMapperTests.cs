@@ -1,0 +1,106 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using Xunit;
+
+namespace AuswertungPro.Next.Pipeline.Tests;
+
+public sealed class YoloClassVsaMapperTests
+{
+    // Klassen, die bewusst KEINE Zuordnung haben (laufen auf der Default-Schwelle)
+    private static readonly HashSet<string> BewusstOhneMapping =
+        new(StringComparer.OrdinalIgnoreCase) { "structural_other" };
+
+    [Theory]
+    [InlineData("crack", "BAB")]
+    [InlineData("fracture", "BAC")]
+    [InlineData("deformation", "BAA")]
+    [InlineData("displacement", "BAJ")]
+    [InlineData("intrusion", "BAI")]
+    [InlineData("root", "BBA")]
+    [InlineData("roots", "BBA")]
+    [InlineData("deposit", "BBC")]
+    [InlineData("infiltration", "BBF")]
+    [InlineData("connection", "BCA")]
+    public void ToVsaMainCode_MapptEnglischeKlassennamen(string className, string expected)
+    {
+        Assert.Equal(expected, YoloClassVsaMapper.ToVsaMainCode(className));
+    }
+
+    [Theory]
+    [InlineData("BAB_crack", "BAB")]
+    [InlineData("bab_crack", "BAB")]
+    [InlineData("BCA_connection", "BCA")]
+    public void ToVsaMainCode_UnterstuetztLegacyVsaPraefix(string className, string expected)
+    {
+        Assert.Equal(expected, YoloClassVsaMapper.ToVsaMainCode(className));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("structural_other")]
+    [InlineData("unbekannte_klasse")]
+    public void ToVsaMainCode_LiefertNullOhneZuordnung(string? className)
+    {
+        Assert.Null(YoloClassVsaMapper.ToVsaMainCode(className));
+    }
+
+    [Fact]
+    public void AlleProduktivenYoloKlassenSindGemapptOderBewusstAusgenommen()
+    {
+        // Schutz gegen stilles Zurueckfallen auf die Default-Schwelle:
+        // Jede Klasse der produktiven Gewichte muss entweder einen VSA-Hauptcode
+        // liefern oder explizit in der Ausnahmen-Liste stehen.
+        var namesPath = FindNamesJsonPath();
+        using var doc = JsonDocument.Parse(File.ReadAllText(namesPath));
+        var classNames = doc.RootElement
+            .GetProperty("names")
+            .EnumerateObject()
+            .Select(p => p.Value.GetString()!)
+            .ToList();
+
+        Assert.NotEmpty(classNames);
+
+        foreach (var className in classNames)
+        {
+            var code = YoloClassVsaMapper.ToVsaMainCode(className);
+            if (BewusstOhneMapping.Contains(className))
+            {
+                Assert.Null(code);
+            }
+            else
+            {
+                Assert.False(string.IsNullOrEmpty(code),
+                    $"YOLO-Klasse '{className}' aus {Path.GetFileName(namesPath)} hat keine VSA-Zuordnung — " +
+                    "Mapping in YoloClassVsaMapper ergaenzen oder Klasse bewusst ausnehmen.");
+                Assert.Matches("^B[A-Z]{2}$", code);
+            }
+        }
+    }
+
+    private static string FindNamesJsonPath()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            var candidate = Path.Combine(
+                current.FullName,
+                "sidecar",
+                "models",
+                "yolo26m",
+                "yolo26m.names.json");
+
+            if (File.Exists(candidate))
+                return candidate;
+
+            current = current.Parent;
+        }
+
+        throw new FileNotFoundException("yolo26m.names.json wurde nicht gefunden.");
+    }
+}

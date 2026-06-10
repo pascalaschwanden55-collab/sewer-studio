@@ -748,7 +748,18 @@ public sealed partial class DataPageViewModel : ObservableObject
         var pipeline = _sp.CreateVideoAnalysisPipeline(cfg, plausibility, http);
 
         var haltungId = record.GetFieldValue("Haltungsname") ?? record.Id.ToString();
-        var request = new PipelineRequest(haltungId, videoPath, allowedCodes);
+
+        // Echte Haltungslaenge aus den Stammdaten fuer die Meter-Schaetzung
+        // (sonst rechnet die Pipeline mit der 50m-Annahme)
+        double? reachLengthM = null;
+        var reachLengthRaw = record.GetFieldValue("Haltungslaenge_m")?.Replace(',', '.');
+        if (double.TryParse(reachLengthRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var reachLength)
+            && reachLength > 0)
+        {
+            reachLengthM = reachLength;
+        }
+
+        var request = new PipelineRequest(haltungId, videoPath, allowedCodes, ReachLengthM: reachLengthM);
 
         var win = new VideoAnalysisPipelineWindow(request, pipeline)
         {

@@ -218,8 +218,11 @@ public sealed class VideoFullAnalysisService
         progress?.Report(new VideoAnalysisProgress(totalFrames, totalFrames,
             $"Fertig â€“ {detections.Count} SchÃ¤den erkannt."));
 
+        var summary = telemetry.GetSummary();
+        await PipelineTraceWriter.WriteSummaryAsync(runId, summary).ConfigureAwait(false);
+
         return new VideoAnalysisResult(videoPath, duration, frameIndex,
-            detections.OrderBy(d => d.MeterStart).ToList(), null, telemetry.GetSummary());
+            detections.OrderBy(d => d.MeterStart).ToList(), null, summary);
     }
 
     // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

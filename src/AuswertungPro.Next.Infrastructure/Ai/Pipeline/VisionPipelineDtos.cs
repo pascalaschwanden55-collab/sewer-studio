@@ -67,7 +67,11 @@ public sealed record YoloClassifyPrediction(
 
 public sealed record YoloClassifyResponse(
     [property: JsonPropertyName("predictions")] IReadOnlyList<YoloClassifyPrediction> Predictions,
-    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs
+    [property: JsonPropertyName("inference_time_ms")] double InferenceTimeMs,
+    // Frame-Quality-Gate des Sidecars: usable=false -> Frame ist schwarz/ueberbelichtet/
+    // strukturlos/unscharf und soll gar nicht erst durch DINO/SAM/Qwen laufen.
+    [property: JsonPropertyName("usable")] bool Usable = true,
+    [property: JsonPropertyName("quality_reason")] string QualityReason = "ok"
 );
 
 // ── Grounding DINO ─────────────────────────────────────────────────────────
@@ -139,6 +143,8 @@ public sealed record SamResponse(
     [property: JsonPropertyName("degraded")] bool Degraded = false,
     [property: JsonPropertyName("requested_boxes")] int RequestedBoxes = 0,
     [property: JsonPropertyName("skipped_boxes")] int SkippedBoxes = 0,
+    // Teilmenge von skipped_boxes: Masken unterhalb des SAM-Score-Gates (sam_min_score)
+    [property: JsonPropertyName("low_score_boxes")] int LowScoreBoxes = 0,
     [property: JsonPropertyName("error")] string? Error = null
 );
 

@@ -9,17 +9,22 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Ollama;
 /// automatisch das passende Qwen-Modell.
 ///
 /// Profil-Logik:
-///   >= 24 GB VRAM → qwen2.5vl:32b  (Workstation, ~26 GB bei Q5)
-///   >=  8 GB VRAM → qwen2.5vl:7b   (Laptop, ~6 GB bei Q4)
-///   sonst         → deaktiviert (kein Vision-Modell)
+///   >= 24 GB VRAM → qwen3-vl:8b-q8  (Workstation, ~11.7 GB — laesst Platz fuer YOLO/DINO/SAM)
+///   >=  8 GB VRAM → qwen3-vl:2b     (Laptop, ~2 GB)
+///   sonst         → kleines Modell, KI-Vision evtl. eingeschraenkt
+///
+/// A/B Juni 2026: Qwen2.5-VL lieferte 0% (Parse-Fehler) — der Auto-Modus darf
+/// NIE wieder still auf die 2.5-Familie zurueckfallen.
 /// </summary>
 public static class GpuModelSelector
 {
-    /// <summary>Modell fuer grosse GPUs (RTX 5090, 4090, A6000 etc.)</summary>
-    public const string LargeModel = "qwen2.5vl:32b";
+    /// <summary>Modell fuer grosse GPUs (RTX 5090, 4090, A6000 etc.).
+    /// Bewusst 8B-Q8 statt 32B: das 32B laeuft nur als RAM-Referenz, und auf der GPU
+    /// muss neben dem VLM der Sidecar-Stack (YOLO/DINO/SAM) Platz haben (VRAM-Budget 29 GB).</summary>
+    public const string LargeModel = "qwen3-vl:8b-q8";
 
     /// <summary>Modell fuer kleinere GPUs (RTX 4070, 3060 12GB etc.)</summary>
-    public const string SmallModel = "qwen2.5vl:7b";
+    public const string SmallModel = "qwen3-vl:2b";
 
     /// <summary>VRAM-Schwelle in MB ab der das grosse Modell verwendet wird.</summary>
     public const long LargeModelThresholdMb = 24_000;
@@ -95,14 +100,14 @@ public static class GpuModelSelector
             {
                 return new GpuProfile(
                     LargeModel, LargeModelNumCtx, vramMb, gpuName,
-                    $"GPU {gpuName} mit {vramMb} MB VRAM erkannt — verwende grosses Modell (32B)");
+                    $"GPU {gpuName} mit {vramMb} MB VRAM erkannt — verwende grosses Modell ({LargeModel})");
             }
 
             if (vramMb >= SmallModelThresholdMb)
             {
                 return new GpuProfile(
                     SmallModel, SmallModelNumCtx, vramMb, gpuName,
-                    $"GPU {gpuName} mit {vramMb} MB VRAM erkannt — verwende kleines Modell (7B)");
+                    $"GPU {gpuName} mit {vramMb} MB VRAM erkannt — verwende kleines Modell ({SmallModel})");
             }
 
             return new GpuProfile(
