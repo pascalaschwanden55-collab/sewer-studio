@@ -24,8 +24,9 @@ public class PipelineConfigTests
             Assert.Null(config.SidecarToken);
             Assert.Equal(PipelineMode.OllamaOnly, config.Mode);
             Assert.Equal(0.25, config.YoloConfidence);
-            Assert.Equal(0.30, config.DinoBoxThreshold);
-            Assert.Equal(0.25, config.DinoTextThreshold);
+            // 0.25/0.20 seit DINO-Schwellen-A/B auf 57er-clean (2026-06-10)
+            Assert.Equal(0.25, config.DinoBoxThreshold);
+            Assert.Equal(0.20, config.DinoTextThreshold);
             Assert.Equal(300, config.SidecarTimeoutSec);
             Assert.Null(config.PipeDiameterMmOverride);
         }

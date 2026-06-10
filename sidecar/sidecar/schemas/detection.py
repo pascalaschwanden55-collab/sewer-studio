@@ -40,8 +40,10 @@ class YoloResponse(BaseModel):
 class DinoRequest(BaseModel):
     image_base64: str
     text_prompt: str | None = None
-    box_threshold: float = Field(default=0.30, ge=0.0, le=1.0)
-    text_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
+    # Defaults konsistent zu config.py (0.25/0.20) — der C#-Client sendet die
+    # Schwellen ohnehin explizit; A/B auf 57er-clean 2026-06-10 bestaetigt.
+    box_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
+    text_threshold: float = Field(default=0.20, ge=0.0, le=1.0)
 
 
 class DinoDetection(BaseModel):

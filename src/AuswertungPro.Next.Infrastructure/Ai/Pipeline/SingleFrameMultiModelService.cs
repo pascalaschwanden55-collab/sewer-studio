@@ -26,11 +26,11 @@ public sealed class SingleFrameMultiModelService
         double? dinoTextThreshold = null)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
-        // Defaults respektieren dieselben Env-Vars wie der Batch-Pfad (AiSettingsFactory),
-        // damit der DINO-Schwellen-A/B (0.25/0.20) auch den Live-Codiermodus erreicht.
+        // Defaults respektieren dieselben Env-Vars wie der Batch-Pfad (AiSettingsFactory).
+        // 0.25/0.20 seit A/B auf 57er-clean (2026-06-10) — gleiche Werte wie AiSettingsFactory.
         _yoloConfidence = yoloConfidence ?? EnvDouble("SEWERSTUDIO_YOLO_CONFIDENCE") ?? 0.25;
-        _dinoBoxThreshold = dinoBoxThreshold ?? EnvDouble("SEWERSTUDIO_DINO_BOX_THRESHOLD") ?? 0.30;
-        _dinoTextThreshold = dinoTextThreshold ?? EnvDouble("SEWERSTUDIO_DINO_TEXT_THRESHOLD") ?? 0.25;
+        _dinoBoxThreshold = dinoBoxThreshold ?? EnvDouble("SEWERSTUDIO_DINO_BOX_THRESHOLD") ?? 0.25;
+        _dinoTextThreshold = dinoTextThreshold ?? EnvDouble("SEWERSTUDIO_DINO_TEXT_THRESHOLD") ?? 0.20;
     }
 
     private static double? EnvDouble(string name)

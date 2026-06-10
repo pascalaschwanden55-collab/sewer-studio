@@ -33,8 +33,8 @@ public sealed class AiSettingsFactoryTests
         Assert.Equal(new Uri("http://localhost:8100"), config.SidecarUrl);
         Assert.Equal(PipelineMode.OllamaOnly, config.PipelineMode);
         Assert.Equal(0.25, config.YoloConfidence);
-        Assert.Equal(0.30, config.DinoBoxThreshold);
-        Assert.Equal(0.25, config.DinoTextThreshold);
+        Assert.Equal(0.25, config.DinoBoxThreshold);
+        Assert.Equal(0.20, config.DinoTextThreshold);
         Assert.Equal(300, config.SidecarTimeoutSec);
         Assert.Null(config.PipeDiameterMmOverride);
         Assert.Equal("ffmpeg", config.FfmpegPath);

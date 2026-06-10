@@ -72,8 +72,10 @@ public static class AiSettingsFactory
             PipelineMode: ParsePipelineMode(FirstNonEmpty(source.PipelineMode, Env("SEWERSTUDIO_PIPELINE_MODE"))),
             YoloConfidence: source.YoloConfidence ?? ParseDouble(Env("SEWERSTUDIO_YOLO_CONFIDENCE")) ?? 0.25,
             YoloClassConfidence: yoloClassConf,
-            DinoBoxThreshold: source.DinoBoxThreshold ?? ParseDouble(Env("SEWERSTUDIO_DINO_BOX_THRESHOLD")) ?? 0.30,
-            DinoTextThreshold: source.DinoTextThreshold ?? ParseDouble(Env("SEWERSTUDIO_DINO_TEXT_THRESHOLD")) ?? 0.25,
+            // 0.25/0.20 statt 0.30/0.25 seit A/B auf 57er-clean (2026-06-10): Befund-Frames
+            // ohne DINO-Box 3->0, Grundgeruest 15->5; LEER-Boxen moderat hoeher (max 7).
+            DinoBoxThreshold: source.DinoBoxThreshold ?? ParseDouble(Env("SEWERSTUDIO_DINO_BOX_THRESHOLD")) ?? 0.25,
+            DinoTextThreshold: source.DinoTextThreshold ?? ParseDouble(Env("SEWERSTUDIO_DINO_TEXT_THRESHOLD")) ?? 0.20,
             SidecarTimeoutSec: ParseInt(Env("SEWERSTUDIO_SIDECAR_TIMEOUT_SEC")) ?? 300,
             PipeDiameterMmOverride: source.PipeDiameterMm ?? ParseInt(Env("SEWERSTUDIO_PIPE_DIAMETER_MM")),
             FfmpegPath: FirstNonEmpty(source.FfmpegPath, Env("SEWERSTUDIO_FFMPEG")) ?? "ffmpeg");
