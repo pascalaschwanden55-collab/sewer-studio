@@ -120,3 +120,6 @@ xtf_korrektur/
 
 # Lokale Sidecar-Requirement-Backups
 sidecar/requirements.before-*.txt
+
+# Modell-Governance (Laufzeit-Zustand, nur model-promotion-warden schreibt)
+sidecar/models/active.json
