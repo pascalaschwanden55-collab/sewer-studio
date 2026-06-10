@@ -136,6 +136,17 @@ public sealed class PipelineFrameTrace
     /// <summary>Codes vor Validierung/Qwen: aus dem DINO-Label abgeleitete VSA-Codes.</summary>
     public int CodesFromLabel { get; set; }
 
+    // ── Klassifikator-Entscheidung (Paket 2) ──
+    /// <summary>Vom Klassifikator aufgeloester Code (vor Voting), inkl. LEER.</summary>
+    public string? ClassifierCode { get; set; }
+    public double? ClassifierConfidence { get; set; }
+    /// <summary>Begruendung aus ResolveFromClassifier (z.B. "Meter 0.3m + YOLO BCD 85%").</summary>
+    public string? ClassifierSource { get; set; }
+    /// <summary>Modellversion: name@sha12 aus der Sidecar-Response (active.json-Governance).</summary>
+    public string? ClassifierModel { get; set; }
+    /// <summary>True, wenn das Temporal-Voting den Code bestaetigt hat (Code wurde angewendet).</summary>
+    public bool? ClassifierVoteConfirmed { get; set; }
+
     public bool QwenCalled { get; set; }
     public string? QwenImageQuality { get; set; }
     public int QwenRawFindingCount { get; set; }

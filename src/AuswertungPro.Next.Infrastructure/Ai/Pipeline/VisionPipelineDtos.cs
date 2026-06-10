@@ -71,7 +71,14 @@ public sealed record YoloClassifyResponse(
     // Frame-Quality-Gate des Sidecars: usable=false -> Frame ist schwarz/ueberbelichtet/
     // strukturlos/unscharf und soll gar nicht erst durch DINO/SAM/Qwen laufen.
     [property: JsonPropertyName("usable")] bool Usable = true,
-    [property: JsonPropertyName("quality_reason")] string QualityReason = "ok"
+    [property: JsonPropertyName("quality_reason")] string QualityReason = "ok",
+    // Modell-Governance (active.json-Weg): welches cls-Modell hat geantwortet
+    [property: JsonPropertyName("model_name")] string ModelName = "",
+    [property: JsonPropertyName("model_source")] string ModelSource = "",
+    [property: JsonPropertyName("model_sha256")] string ModelSha256 = "",
+    [property: JsonPropertyName("imgsz")] int Imgsz = 0,
+    [property: JsonPropertyName("preprocessing")] string Preprocessing = "",
+    [property: JsonPropertyName("device")] string Device = ""
 );
 
 // ── Grounding DINO ─────────────────────────────────────────────────────────

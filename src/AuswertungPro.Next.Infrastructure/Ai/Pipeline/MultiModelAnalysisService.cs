@@ -41,6 +41,19 @@ public sealed class MultiModelAnalysisService
     /// <summary>YOLO-cls Vorfilter aktivieren/deaktivieren (Fallback: aus wenn kein Modell).</summary>
     public bool UseClsPrefilter { get; set; } = true;
 
+    /// <summary>
+    /// Klassifikator als fuehrende Code-Quelle (Paket 2): ResolveFromClassifier +
+    /// Temporal-Voting setzen den VSA-Code, Qwen liefert nur noch OSD/Beschreibung
+    /// und fuellt unsichere Faelle. Default AUS, bis der End-to-End-Eval gruen ist
+    /// (Env: SEWERSTUDIO_CLASSIFIER_DECISION=1).
+    /// </summary>
+    public bool ClassifierDecisionEnabled { get; set; } =
+        Configuration.AiSettingsFactory.ParseBool(
+            Environment.GetEnvironmentVariable("SEWERSTUDIO_CLASSIFIER_DECISION"));
+
+    // Temporal-Voting gegen Einzelbild-Ausreisser (Paket 2, Schritt 5)
+    private readonly ITemporalCodeVotingService _codeVoting = new TemporalCodeVotingService();
+
     // Erwartete Eigengewichte fuer die COCO-Fallback-Warnung. Liefert der Sidecar
     // einen anderen Modellnamen (z.B. yolo11m.pt), wird einmal pro Lauf gewarnt.
     private static readonly string ExpectedYoloModel =
@@ -105,6 +118,7 @@ public sealed class MultiModelAnalysisService
         int skippedFrames = 0;
         double lastMeter = 0;
         bool yoloFallbackWarned = false;
+        _codeVoting.Reset();   // Voting-Fenster gilt pro Video-Lauf
 
         // Pipe diameter: from config override or default 300mm
         int pipeDiameterMm = _config.PipeDiameterMmOverride ?? 300;
@@ -173,9 +187,10 @@ public sealed class MultiModelAnalysisService
             // Gilt bewusst AUCH fuer Sweep-/BCD-/BCE-Frames: vorher konnten schwarze
             // oder strukturlose Bypass-Frames ungefiltert bis zu Qwen (120s-Cap) laufen.
             var phaseSw = Stopwatch.StartNew();
+            YoloClassifyResponse? clsResult = null;
             if (UseClsPrefilter) try
             {
-                var clsResult = await _client.ClassifyYoloAsync(
+                clsResult = await _client.ClassifyYoloAsync(
                     new YoloClassifyRequest(frameBase64, 3), ct).ConfigureAwait(false);
 
                 if (!clsResult.Usable)
@@ -197,6 +212,31 @@ public sealed class MultiModelAnalysisService
                 }
 
                 var topPred = clsResult.Predictions.Count > 0 ? clsResult.Predictions[0] : null;
+
+                // LEER-Skip nur im Klassifikator-Regime (Paket 2): das promotete
+                // 11-Klassen-Modell kennt kein OTHER/NORMAL, sondern LEER.
+                if (ClassifierDecisionEnabled
+                    && topPred?.ClassName is "LEER" or "leer"
+                    && topPred.Confidence > 0.70)
+                {
+                    skippedFrames++;
+                    _codeVoting.RegisterAndVote(null, estimatedMeter);   // Fenster altern lassen
+                    _logger.LogDebug("Frame {Frame}: Klassifikator LEER ({Conf:F0}%) → skip",
+                        frameIndex, topPred.Confidence * 100);
+                    progress?.Report(new VideoAnalysisProgress(frameIndex, totalFrames,
+                        $"Frame {frameIndex}/{totalFrames} – Klassifikator: LEER ({topPred.Confidence:P0}) → skip"));
+                    telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, 0, 0, 0, 0,
+                        frameSw.ElapsedMilliseconds, Skipped: true));
+                    trace.Path = "cls_leer_skip";
+                    trace.YoloRelevant = false;
+                    trace.DropReason = "classifier_leer";
+                    trace.ClassifierCode = "LEER";
+                    trace.ClassifierConfidence = topPred.Confidence;
+                    trace.ClassifierModel = ClassifierModelTag(clsResult);
+                    await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
+                    detections.AddRange(deduplicator.AdvanceAll());
+                    continue;
+                }
 
                 if (topPred?.ClassName is "OTHER" or "other" or "NORMAL" or "normal"
                     && topPred.Confidence > 0.70)
@@ -493,6 +533,37 @@ public sealed class MultiModelAnalysisService
             trace.FindingsBuilt = findings.Count;
             trace.CodesFromLabel = findings.Count(f => !string.IsNullOrWhiteSpace(f.VsaCodeHint));
 
+            // ── Klassifikator-Entscheidung (Paket 2): fuehrende Code-Quelle vor Qwen ──
+            // ResolveFromClassifier (Top-K + Meter + BCD/BCE-Regeln) + Temporal-Voting.
+            // Erst ein im Fenster bestaetigter Code ueberschreibt die Label-Heuristik;
+            // Qwen darf bestaetigte Codes danach nicht mehr aendern.
+            string? classifierCode = null;
+            if (ClassifierDecisionEnabled && clsResult is { Predictions.Count: > 0 })
+            {
+                var resolved = VsaCodeResolver.ResolveFromClassifier(
+                    clsResult.Predictions, meter, EstimatedReachLengthM);
+                var frameDecision = resolved is not null && resolved.Code != "LEER"
+                    ? resolved.Code
+                    : null;
+                var confirmed = _codeVoting.RegisterAndVote(frameDecision, meter);
+
+                trace.ClassifierCode = resolved?.Code;
+                trace.ClassifierConfidence = resolved?.Confidence;
+                trace.ClassifierSource = resolved?.Source;
+                trace.ClassifierModel = ClassifierModelTag(clsResult);
+                trace.ClassifierVoteConfirmed = confirmed is not null;
+
+                if (confirmed is not null && findings.Count > 0)
+                {
+                    classifierCode = confirmed;
+                    for (var i = 0; i < findings.Count; i++)
+                        findings[i] = findings[i] with { VsaCodeHint = confirmed };
+                    _logger.LogDebug(
+                        "Frame {Frame}: Klassifikator-Code {Code} bestaetigt ({Source}) → fuehrende Quelle",
+                        frameIndex, confirmed, resolved?.Source);
+                }
+            }
+
             // Build per-frame EvidenceVector with pipeline signals
             var frameEvidence = new EvidenceVector(
                 YoloConf: yoloResult.IsRelevant ? 1.0 : 0.0,
@@ -574,7 +645,10 @@ public sealed class MultiModelAnalysisService
                                 qf.Label.Contains(f.Label, StringComparison.OrdinalIgnoreCase) ||
                                 f.Label.Contains(qf.Label, StringComparison.OrdinalIgnoreCase));
 
-                            if (match is not null && !string.IsNullOrWhiteSpace(qf.VsaCodeHint))
+                            // Klassifikator fuehrt (Paket 2): bestaetigte Codes darf Qwen
+                            // nicht ueberschreiben — nur noch leere Hints fuellen.
+                            if (match is not null && !string.IsNullOrWhiteSpace(qf.VsaCodeHint)
+                                && (classifierCode is null || string.IsNullOrWhiteSpace(match.VsaCodeHint)))
                             {
                                 var idx = findings.IndexOf(match);
                                 // Replace with enriched finding (keep SAM quantification, add Qwen VSA code)
@@ -679,6 +753,15 @@ public sealed class MultiModelAnalysisService
 
         return new VideoAnalysisResult(videoPath, duration, frameIndex,
             detections.OrderBy(d => d.MeterStart).ToList(), null, summary);
+    }
+
+    /// <summary>Modell-Tag fuer den Trace: Name + Kurz-Hash aus der Sidecar-Response.</summary>
+    private static string? ClassifierModelTag(YoloClassifyResponse? cls)
+    {
+        if (cls is null || string.IsNullOrEmpty(cls.ModelName))
+            return null;
+        var sha = cls.ModelSha256;
+        return string.IsNullOrEmpty(sha) ? cls.ModelName : $"{cls.ModelName}@{sha[..Math.Min(12, sha.Length)]}";
     }
 
     // ── Conversion helper ──────────────────────────────────────────────
