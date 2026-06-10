@@ -17,6 +17,7 @@ Beispiel:
 """
 import argparse
 import glob
+import hashlib
 import json
 import os
 import subprocess
@@ -26,6 +27,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 PY = sys.executable
 
+DEF_EVAL_MANIFEST = r"C:\KI_BRAIN\eval_set\_manifest.json"
 DEF_DATA = r"C:\KI_BRAIN\yolo_vsa_cls_dataset_bal"
 DEF_EVAL = r"C:\Sewer-Studio_KI_4.4\EvalVisibilityReview_20260525\eval_visible_clean_eval_set"
 DEF_HIDDEN = r"C:\Sewer-Studio_KI_4.4\EvalVisibilityReview_20260525\eval_unclean_or_hidden_eval_set"
@@ -47,6 +49,43 @@ def contamination_name_check(eval_root, data_root):
     eval_names = {os.path.basename(p) for p in glob.glob(os.path.join(eval_root, "images", "*.png"))}
     return sum(1 for p in glob.glob(os.path.join(data_root, "**", "*.png"), recursive=True)
                if os.path.basename(p) in eval_names)
+
+
+def _sha256_file(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest().lower()
+
+
+def contamination_hash_check(manifest_path, data_root):
+    """Leitplanke 2: kein Eval-Bild per SHA-256 im Datensatz.
+
+    Faengt UMBENANNTE Eval-Kopien, die der Namens-Check nicht sieht (der
+    Dataset-Builder fand 35 solcher Kopien im alten yolo_seg_dataset).
+    Quelle der Wahrheit: das eingefrorene Voll-Manifest (120er, deckt die
+    57er-clean- und 63er-hidden-Teilmengen mit ab).
+    """
+    if not os.path.isfile(manifest_path):
+        raise SystemExit(f"ABBRUCH: Eval-Manifest fehlt ({manifest_path}) — Hash-Check unmoeglich.")
+    with open(manifest_path, encoding="utf-8") as f:
+        m = json.load(f)
+    eval_hashes = set()
+    for rel, info in (m.get("hashes") or {}).items():
+        if rel.startswith("images/"):
+            sha = info.get("sha256") if isinstance(info, dict) else str(info)
+            if sha:
+                eval_hashes.add(str(sha).lower())
+    if not eval_hashes:
+        raise SystemExit("ABBRUCH: Eval-Manifest ohne Bild-Hashes — Hash-Check unmoeglich.")
+
+    hits = 0
+    for p in glob.glob(os.path.join(data_root, "**", "*.png"), recursive=True):
+        if _sha256_file(p) in eval_hashes:
+            hits += 1
+            print(f"  KONTAMINIERT (Hash, ggf. umbenannt): {p}", flush=True)
+    return hits
 
 
 def eval_model(weights, eval_root, imgsz, tag):
@@ -95,6 +134,8 @@ def main():
     ap.add_argument("--balance", action="store_true", default=True)
     ap.add_argument("--no-balance", dest="balance", action="store_false")
     ap.add_argument("--leer-target", type=float, default=0.38)
+    ap.add_argument("--eval-manifest", default=DEF_EVAL_MANIFEST,
+                    help="Eingefrorenes Voll-Manifest fuer den SHA-256-Kontaminations-Check")
     args = ap.parse_args()
 
     os.makedirs(REPORT_DIR, exist_ok=True)
@@ -102,11 +143,15 @@ def main():
     stamp = time.strftime("%Y%m%d_%H%M%S")
     print(f"=== AUTOPILOT {args.name} (LEER-Ziel {args.leer_target:.0%}) ===", flush=True)
 
-    # 1) Leitplanke: Kontamination
+    # 1) Leitplanke: Kontamination (Name UND SHA-256 — Hash faengt umbenannte Kopien)
     c = contamination_name_check(args.eval, args.data)
     print(f"Kontamination (Eval-Name im Datensatz): {c}  (MUSS 0)", flush=True)
     if c != 0:
         raise SystemExit("ABBRUCH: Kontamination im Datensatz!")
+    ch = contamination_hash_check(args.eval_manifest, args.data)
+    print(f"Kontamination (Eval-SHA256 im Datensatz): {ch}  (MUSS 0)", flush=True)
+    if ch != 0:
+        raise SystemExit("ABBRUCH: Umbenannte Eval-Kopien im Datensatz (SHA-256-Treffer)!")
 
     # 2) Trainieren (No-Crop/Letterbox + optional Balance)
     tcmd = [PY, os.path.join(HERE, "train_cls.py"), "--data", args.data, "--imgsz", str(args.imgsz),
