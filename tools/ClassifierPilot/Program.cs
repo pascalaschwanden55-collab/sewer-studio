@@ -59,6 +59,21 @@ var reachLength = Math.Max(gt.Max(e => Math.Max(e.MeterStart, e.MeterEnd)), 5.0)
 Console.WriteLine($"Haltungslaenge (aus GT): ~{reachLength:F1} m | DN {dnMm}");
 
 // ── 2) Pipeline aufbauen (gleiche Konfiguration wie die App) ──
+// VSA-Katalog wie in der App konfigurieren — OHNE ihn liefert NormalizeFindingCode
+// null und die Dedup-Schluessel degradieren auf Labels (Pilot 3c: BAJ-Duplikate
+// am selben Meter trotz funktionierender Voting-Hysterese).
+var manifestPath = Path.Combine("src", "AuswertungPro.Next.UI", "Data", "vsa_kek_2020_catalog_manifest.json");
+if (File.Exists(manifestPath))
+{
+    VsaCodeResolver.ConfigureCatalog(
+        new AuswertungPro.Next.Application.Protocol.ManifestCodeCatalogProvider(manifestPath));
+    Console.WriteLine("VSA-Katalog konfiguriert (Dedup-Schluessel nutzen Codes).");
+}
+else
+{
+    Console.WriteLine($"WARNUNG: Katalog-Manifest fehlt ({manifestPath}) — Dedup-Schluessel degradieren auf Labels!");
+}
+
 var settings = AiSettingsFactory.Load();
 var pipelineCfg = settings.ToPipelineConfig();
 using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
