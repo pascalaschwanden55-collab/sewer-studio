@@ -56,6 +56,23 @@ public sealed class ClassifierDatasetPlanTests
     }
 
     [Fact]
+    public void ParseFrame_gold_suffix_vom_VideoLabelTool_liefert_sauberen_Code()
+    {
+        // VideoLabelTool speichert <haltung>_<zeit>s_<CODE>_gold.png
+        Assert.True(ClassifierDatasetPlan.TryParseFrame("07.1028055-10285_45.3s_BCCAY_gold.png", out var info));
+        Assert.Equal("BCCAY", info.Code);
+        Assert.Equal("BCC", info.TrainingClass);
+        Assert.Equal("07.1028055-10285", info.Haltung);
+    }
+
+    [Fact]
+    public void ParseFrame_gold_Negativbeispiel_LEER_wird_LEER()
+    {
+        Assert.True(ClassifierDatasetPlan.TryParseFrame("80628-80622_75.2s_LEER_gold.png", out var info));
+        Assert.Equal("LEER", info.TrainingClass);
+    }
+
+    [Fact]
     public void Split_haelt_eine_Haltung_komplett_in_einem_Split()
     {
         var frames = new[]

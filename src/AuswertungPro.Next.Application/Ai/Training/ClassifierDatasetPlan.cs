@@ -32,14 +32,17 @@ public static class ClassifierDatasetPlan
         if (string.IsNullOrWhiteSpace(code)) return null;
         var c = code.Trim();
         if (c.Equals("kein_schaden", StringComparison.OrdinalIgnoreCase)) return "LEER";
+        // VideoLabelTool speichert Negativbeispiele direkt als Code "LEER".
+        if (c.Equals("LEER", StringComparison.OrdinalIgnoreCase)) return "LEER";
         if (c.Length < 3) return null;
         var main = c[..3].ToUpperInvariant();
         return TargetClasses.Contains(main) ? main : null;
     }
 
-    // <haltung>_<zeit>s_<code>[_t+/-N].png  — Haltung kann '.' und '-' enthalten, aber kein '_'.
+    // <haltung>_<zeit>s_<code>[_t+/-N|_gold].png  — Haltung kann '.' und '-' enthalten, aber kein '_'.
+    // "_gold" ist der Marker des VideoLabelTools (Fachauge-kuratierte Frames).
     private static readonly Regex FramePattern =
-        new(@"^(?<haltung>.+?)_(?<zeit>[0-9.]+)s_(?<code>.+?)(_t[+-]\d+)?\.png$",
+        new(@"^(?<haltung>.+?)_(?<zeit>[0-9.]+)s_(?<code>.+?)(_t[+-]\d+|_gold)?\.png$",
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     /// <summary>Zerlegt einen Frame-Dateinamen in Haltung/Zeit/Code und mappt die Klasse.</summary>

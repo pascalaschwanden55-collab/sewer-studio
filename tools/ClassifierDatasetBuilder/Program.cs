@@ -11,6 +11,9 @@ string? Arg(string name) { var i = Array.IndexOf(args, name); return (i >= 0 && 
 bool Flag(string name) => Array.IndexOf(args, name) >= 0;
 
 string framesRoot = Arg("--frames") ?? @"C:\KI_BRAIN\training_frames";
+// Paket 5/v9: zusaetzliche Quelle, z.B. C:\KI_BRAIN\gold_labels (Fachauge-kuratierte
+// _gold-Frames aus dem VideoLabelTool). Gleiche Filter/Schutzmechanismen wie --frames.
+string? extraFrames = Arg("--extra-frames");
 string evalSet    = Arg("--eval-set") ?? @"C:\KI_BRAIN\eval_set";
 string outDir     = Arg("--out") ?? @"C:\KI_BRAIN\yolo_vsa_cls_dataset";
 double valFraction = double.TryParse(Arg("--val-fraction"), NumberStyles.Float, CultureInfo.InvariantCulture, out var vf) ? vf : 0.2;
@@ -35,6 +38,7 @@ var excludeNames = excludeListPath is not null
     : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 Console.WriteLine($"Frames:   {framesRoot}");
+if (extraFrames is not null) Console.WriteLine($"Extra:    {extraFrames}");
 Console.WriteLine($"Eval-Set: {evalSet}");
 Console.WriteLine($"Ausgabe:  {outDir}{(dryRun ? "   (DRY-RUN, schreibt nichts)" : "")}");
 Console.WriteLine($"Split:    val={valFraction:P0}, seed={seed}");
@@ -68,9 +72,20 @@ var evalNames = Directory.Exists(evalImagesDir)
     : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 // 2) Frames lesen, parsen, mappen, Eval hart ausschliessen
+var sourceRoots = new List<string> { framesRoot };
+if (extraFrames is not null)
+{
+    if (!Directory.Exists(extraFrames))
+    {
+        Console.Error.WriteLine($"ABBRUCH: --extra-frames Ordner fehlt: {extraFrames}");
+        return 1;
+    }
+    sourceRoots.Add(extraFrames);
+}
+
 var kept = new List<(FrameInfo Info, string Path)>();
 int total = 0, exclEvalName = 0, exclEvalHash = 0, exclCode = 0, exclUnparsed = 0, exclClass = 0, exclList = 0;
-foreach (var path in Directory.EnumerateFiles(framesRoot, "*.png", SearchOption.AllDirectories))
+foreach (var path in sourceRoots.SelectMany(r => Directory.EnumerateFiles(r, "*.png", SearchOption.AllDirectories)))
 {
     total++;
     var name = Path.GetFileName(path);
@@ -135,7 +150,7 @@ var classes = ClassifierDatasetPlan.TargetClasses
 var report = new
 {
     created_utc = DateTimeOffset.UtcNow.ToString("O"),
-    frames_root = framesRoot, eval_set = evalSet, out_dir = outDir,
+    frames_root = framesRoot, extra_frames = extraFrames, eval_set = evalSet, out_dir = outDir,
     seed, val_fraction = valFraction, dry_run = dryRun, leer_oversample = leerOversample,
     frames_total = total,
     excluded_eval_by_name = exclEvalName,
