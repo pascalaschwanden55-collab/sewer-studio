@@ -18,11 +18,29 @@ int seed = int.TryParse(Arg("--seed"), out var sd) ? sd : 42;
 bool dryRun = Flag("--dry-run");
 int leerOversample = int.TryParse(Arg("--leer-oversample"), out var lo) ? Math.Max(1, lo) : 1;
 
+// Paket 5: Zielklassen fuer ein Experiment ausklammern (z.B. "BBC,BAA"), ohne die
+// Whitelist in ClassifierDatasetPlan anzufassen.
+var excludeClasses = (Arg("--exclude-classes") ?? "")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    .Select(c => c.ToUpperInvariant())
+    .ToHashSet(StringComparer.Ordinal);
+// Paket 5: kuratierte Ausschluss-Liste (eine Bild-Dateinamen-Zeile pro Frame),
+// z.B. aus dem v5-LEER-Scoring (score_frames.py) — Frames ohne sichtbares Merkmal.
+string? excludeListPath = Arg("--exclude-list");
+var excludeNames = excludeListPath is not null
+    ? File.ReadAllLines(excludeListPath)
+        .Select(l => l.Trim())
+        .Where(l => l.Length > 0 && !l.StartsWith('#'))
+        .ToHashSet(StringComparer.OrdinalIgnoreCase)
+    : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
 Console.WriteLine($"Frames:   {framesRoot}");
 Console.WriteLine($"Eval-Set: {evalSet}");
 Console.WriteLine($"Ausgabe:  {outDir}{(dryRun ? "   (DRY-RUN, schreibt nichts)" : "")}");
 Console.WriteLine($"Split:    val={valFraction:P0}, seed={seed}");
 Console.WriteLine($"LEER-Oversample (nur train): {leerOversample}x");
+if (excludeClasses.Count > 0) Console.WriteLine($"Klassen ausgeklammert: {string.Join(", ", excludeClasses)}");
+if (excludeNames.Count > 0) Console.WriteLine($"Ausschluss-Liste: {excludeNames.Count} Dateinamen ({excludeListPath})");
 Console.WriteLine();
 
 // Schutz (User-Bedingung): bestehenden, nicht-leeren Zielordner NICHT ueberschreiben.
@@ -51,7 +69,7 @@ var evalNames = Directory.Exists(evalImagesDir)
 
 // 2) Frames lesen, parsen, mappen, Eval hart ausschliessen
 var kept = new List<(FrameInfo Info, string Path)>();
-int total = 0, exclEvalName = 0, exclEvalHash = 0, exclCode = 0, exclUnparsed = 0;
+int total = 0, exclEvalName = 0, exclEvalHash = 0, exclCode = 0, exclUnparsed = 0, exclClass = 0, exclList = 0;
 foreach (var path in Directory.EnumerateFiles(framesRoot, "*.png", SearchOption.AllDirectories))
 {
     total++;
@@ -59,6 +77,8 @@ foreach (var path in Directory.EnumerateFiles(framesRoot, "*.png", SearchOption.
     if (evalNames.Contains(name)) { exclEvalName++; continue; }
     if (!ClassifierDatasetPlan.TryParseFrame(name, out var info)) { exclUnparsed++; continue; }
     if (info.TrainingClass is null) { exclCode++; continue; }
+    if (excludeClasses.Contains(info.TrainingClass)) { exclClass++; continue; }
+    if (excludeNames.Contains(name)) { exclList++; continue; }
     if (evalHashes.Contains(Sha256Hex(path))) { exclEvalHash++; continue; }
     kept.Add((info, path));
 }
@@ -101,7 +121,9 @@ var weak = haltungenPerClass.Where(kv => kv.Value.Count < WeakHaltungThreshold)
     .ToDictionary(kv => kv.Key, kv => kv.Value.Count, StringComparer.Ordinal);
 
 // 6) Report
-var classes = ClassifierDatasetPlan.TargetClasses.OrderBy(c => c, StringComparer.Ordinal).Select(c => new
+var classes = ClassifierDatasetPlan.TargetClasses
+    .Where(c => !excludeClasses.Contains(c))
+    .OrderBy(c => c, StringComparer.Ordinal).Select(c => new
 {
     klasse = c,
     train = trainTally.GetValueOrDefault(c),
@@ -120,6 +142,10 @@ var report = new
     excluded_eval_by_hash = exclEvalHash,
     excluded_non_target = exclCode,
     excluded_unparsed = exclUnparsed,
+    excluded_classes = excludeClasses.OrderBy(c => c, StringComparer.Ordinal).ToArray(),
+    excluded_by_class = exclClass,
+    exclude_list = excludeListPath,
+    excluded_by_list = exclList,
     kept_total = kept.Count,
     weak_classes = weak,
     classes
@@ -136,6 +162,8 @@ Console.WriteLine($"Frames gesamt:           {total}");
 Console.WriteLine($"Eval ausgeschlossen:     {exclEvalName} per Name + {exclEvalHash} per Hash  (zusammen sollte ~120 sein)");
 Console.WriteLine($"Nicht-Zielcode raus:     {exclCode}");
 Console.WriteLine($"Unparsebar raus:         {exclUnparsed}");
+if (excludeClasses.Count > 0) Console.WriteLine($"Klasse ausgeklammert:    {exclClass}");
+if (excludeNames.Count > 0) Console.WriteLine($"Ausschluss-Liste raus:   {exclList}");
 Console.WriteLine($"Behalten (trainierbar):  {kept.Count}");
 Console.WriteLine();
 Console.WriteLine($"{"Klasse",-8} {"train",7} {"val",6} {"Haltungen",10}  Hinweis");

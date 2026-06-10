@@ -16,7 +16,11 @@ from collections import Counter, defaultdict
 
 from ultralytics import YOLO
 
-TARGET = {"BCD", "BCE", "BDA", "BDD", "BAJ", "BAF", "BAB", "BAI", "BBB", "BBA", "LEER"}
+# Paket 5: BCA/BCC/BBC/BAA ergaenzt. Im 57er-clean kommen sie nicht vor (Messung dort
+# unveraendert, 57 Frames); im 63er-hidden werden damit 9 bisher uebersprungene Frames
+# mitgemessen (hidden-frames steigt 49 -> 58, alte hidden-Reports nicht 1:1 vergleichbar).
+TARGET = {"BCD", "BCE", "BDA", "BDD", "BAJ", "BAF", "BAB", "BAI", "BBB", "BBA", "LEER",
+          "BCA", "BCC", "BBC", "BAA"}
 FNAME_RE = re.compile(r"^(?P<haltung>.+?)_(?P<zeit>[0-9.]+)s_(?P<code>.+?)(_t[+-]\d+)?\.png$", re.IGNORECASE)
 
 

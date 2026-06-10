@@ -11,10 +11,15 @@ namespace AuswertungPro.Next.Application.Ai.Training;
 /// </summary>
 public static class ClassifierDatasetPlan
 {
-    /// <summary>Zielklassen v1 (Hauptcode-Ebene). BBA bewusst klein/schwach, aber im Eval vorhanden.</summary>
+    /// <summary>
+    /// Zielklassen v2 (Hauptcode-Ebene). BBA bewusst klein/schwach, aber im Eval vorhanden.
+    /// Paket 5: BCA/BCC/BBC/BAA ergaenzt — die Pilot-Fehlmuster (Anschluss als BAC/BAI,
+    /// Bogen als BAJ) brauchen diese Klassen im Modell.
+    /// </summary>
     public static readonly IReadOnlySet<string> TargetClasses = new HashSet<string>(StringComparer.Ordinal)
     {
-        "BCD", "BCE", "BDA", "BDD", "BAJ", "BAF", "BAB", "BAI", "BBB", "BBA", "LEER"
+        "BCD", "BCE", "BDA", "BDD", "BAJ", "BAF", "BAB", "BAI", "BBB", "BBA", "LEER",
+        "BCA", "BCC", "BBC", "BAA"
     };
 
     /// <summary>

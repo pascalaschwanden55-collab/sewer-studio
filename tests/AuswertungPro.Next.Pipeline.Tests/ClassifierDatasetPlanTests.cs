@@ -14,6 +14,10 @@ public sealed class ClassifierDatasetPlanTests
     [InlineData("BBAA", "BBA")]
     [InlineData("BCD", "BCD")]
     [InlineData("BDA", "BDA")]
+    [InlineData("BCAAA", "BCA")] // Paket 5: Anschluss
+    [InlineData("BCCBY", "BCC")] // Paket 5: Bogen
+    [InlineData("BBCC", "BBC")]  // Paket 5: Anhaftende Stoffe
+    [InlineData("BAAB", "BAA")]  // Paket 5: Verformung
     [InlineData("kein_schaden", "LEER")]
     public void MapCode_bekannte_Codes_werden_auf_Klasse_abgebildet(string code, string expected)
         => Assert.Equal(expected, ClassifierDatasetPlan.MapCodeToClass(code));
@@ -22,8 +26,7 @@ public sealed class ClassifierDatasetPlanTests
     [InlineData("axial")]
     [InlineData("schacht")]
     [InlineData("AECXC")]
-    [InlineData("BCAAA")]   // BCA nicht in v1-Whitelist
-    [InlineData("BDBA")]    // BDB nicht in v1-Whitelist
+    [InlineData("BDBA")]    // BDB nicht in v2-Whitelist
     public void MapCode_ausgeschlossene_Codes_geben_null(string code)
         => Assert.Null(ClassifierDatasetPlan.MapCodeToClass(code));
 
