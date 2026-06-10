@@ -91,3 +91,7 @@ class YoloClassifyPrediction(BaseModel):
 class YoloClassifyResponse(BaseModel):
     predictions: list[YoloClassifyPrediction] = []
     inference_time_ms: float = 0.0
+    # Frame-Quality-Gate: usable=False bedeutet schwarz/ueberbelichtet/strukturlos/
+    # unscharf -> Frame gar nicht erst durch DINO/SAM/Qwen schicken.
+    usable: bool = True
+    quality_reason: str = "ok"

@@ -137,6 +137,59 @@ def test_sam_not_degraded_on_clean_success(client, monkeypatch):
     assert len(data["masks"]) == 1
 
 
+def test_sam_low_score_mask_wird_verworfen(client, monkeypatch):
+    """Score-Gate: Maske unter sam_min_score -> skipped/low_score/degraded, kein Befund."""
+    class LowScorePredictor:
+        def set_image(self, arr):
+            pass
+
+        def predict(self, **kw):
+            mask = np.zeros((240, 320), dtype=bool)
+            mask[20:40, 20:40] = True
+            return mask[None, :, :], np.array([0.2]), None
+
+    from sidecar.config import settings
+    monkeypatch.setattr(settings, "sam_min_score", 0.5)
+    _fake_sam(monkeypatch, LowScorePredictor())
+    resp = client.post("/segment/sam", json={
+        "image_base64": _img(),
+        "bounding_boxes": [_box()],
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["requested_boxes"] == 1
+    assert data["skipped_boxes"] == 1
+    assert data["low_score_boxes"] == 1
+    assert data["degraded"] is True
+    assert data["masks"] == []
+
+
+def test_sam_score_gate_aus_behaelt_altverhalten(client, monkeypatch):
+    """sam_min_score=0.0 schaltet das Gate ab: auch unsichere Masken kommen durch."""
+    class LowScorePredictor:
+        def set_image(self, arr):
+            pass
+
+        def predict(self, **kw):
+            mask = np.zeros((240, 320), dtype=bool)
+            mask[20:40, 20:40] = True
+            return mask[None, :, :], np.array([0.2]), None
+
+    from sidecar.config import settings
+    monkeypatch.setattr(settings, "sam_min_score", 0.0)
+    _fake_sam(monkeypatch, LowScorePredictor())
+    resp = client.post("/segment/sam", json={
+        "image_base64": _img(),
+        "bounding_boxes": [_box()],
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["skipped_boxes"] == 0
+    assert data["low_score_boxes"] == 0
+    assert data["degraded"] is False
+    assert len(data["masks"]) == 1
+
+
 def test_sam_empty_boxes_is_clean_not_degraded(client, monkeypatch):
     class UnusedPredictor:
         def set_image(self, arr):

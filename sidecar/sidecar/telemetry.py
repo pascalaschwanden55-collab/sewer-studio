@@ -30,32 +30,20 @@ def telemetry_path() -> Path:
     return telemetry_dir / "sidecar.jsonl"
 
 
-def write_yolo_detection(
-    response: YoloResponse,
-    *,
-    confidence_threshold: float,
-    roundtrip_ms: float,
-) -> None:
+def write_event(event_type: str, fields: dict) -> None:
+    """Generisches Telemetrie-Event (JSONL, append-only) — fuer alle Pipeline-Stufen.
+
+    Schreibfehler werden geloggt, aber nie zum Request-Fehler — Telemetrie
+    darf die Inferenz nicht gefaehrden.
+    """
     if not settings.telemetry_enabled:
         return
 
     try:
         event = {
             "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-            "event": "yolo_detect",
-            "model_name": response.model_name,
-            "backend": _backend(response),
-            "device": response.device,
-            "roundtrip_ms": round(roundtrip_ms, 1),
-            "inference_time_ms": response.inference_time_ms,
-            "queue_wait_ms": response.queue_wait_ms,
-            "gpu_utilization_percent": response.gpu_utilization_percent,
-            "vram_allocated_gb": response.vram_allocated_gb,
-            "vram_total_gb": response.vram_total_gb,
-            "detection_count": len(response.detections or []),
-            "confidence_threshold": confidence_threshold,
-            "frame_class": response.frame_class,
-            "is_relevant": response.is_relevant,
+            "event": event_type,
+            **fields,
         }
 
         path = telemetry_path()
@@ -68,6 +56,29 @@ def write_yolo_detection(
                 handle.write("\n")
     except Exception as exc:
         logger.warning("Could not write sidecar telemetry: %s", exc)
+
+
+def write_yolo_detection(
+    response: YoloResponse,
+    *,
+    confidence_threshold: float,
+    roundtrip_ms: float,
+) -> None:
+    write_event("yolo_detect", {
+        "model_name": response.model_name,
+        "backend": _backend(response),
+        "device": response.device,
+        "roundtrip_ms": round(roundtrip_ms, 1),
+        "inference_time_ms": response.inference_time_ms,
+        "queue_wait_ms": response.queue_wait_ms,
+        "gpu_utilization_percent": response.gpu_utilization_percent,
+        "vram_allocated_gb": response.vram_allocated_gb,
+        "vram_total_gb": response.vram_total_gb,
+        "detection_count": len(response.detections or []),
+        "confidence_threshold": confidence_threshold,
+        "frame_class": response.frame_class,
+        "is_relevant": response.is_relevant,
+    })
 
 
 def _backend(response: YoloResponse) -> str | None:

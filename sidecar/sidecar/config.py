@@ -75,6 +75,9 @@ class SidecarSettings(BaseSettings):
 
     # SAM
     sam_model_type: str = "vit_h"
+    # Score-Gate: Masken mit Predictor-Score darunter werden verworfen (skipped/degraded)
+    # statt still als Befund-Basis akzeptiert. 0.0 = Gate aus (Alt-Verhalten).
+    sam_min_score: float = 0.5
 
     model_config = {"env_prefix": "SEWER_SIDECAR_"}
 

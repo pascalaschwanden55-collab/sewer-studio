@@ -39,6 +39,8 @@ class SamResponse(BaseModel):
     degraded: bool = False
     requested_boxes: int = 0
     skipped_boxes: int = 0
+    # Teilmenge von skipped_boxes: Masken, die am Score-Gate (sam_min_score) scheiterten
+    low_score_boxes: int = 0
     error: str | None = None
 
 

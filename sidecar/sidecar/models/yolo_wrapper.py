@@ -477,13 +477,32 @@ def _get_cls_model():
         return _cls_model
 
 
-def classify(image_base64: str, top_k: int = 5) -> list[tuple[str, float]]:
+def classify_with_quality(
+    image_base64: str, top_k: int = 5
+) -> tuple[list[tuple[str, float, float]], bool, str]:
+    """Quality-Gate + Whole-Frame-Klassifikation mit einem einzigen Decode.
+
+    Liefert (predictions, usable, quality_reason). Unbrauchbare Frames
+    (schwarz/ueberbelichtet/strukturlos/unscharf) werden NICHT klassifiziert —
+    der Aufrufer kann sie verwerfen, bevor DINO/SAM/Qwen Zeit kosten.
+    """
+    img = decode_image(image_base64)
+    usable, reason = _is_frame_usable(img)
+    if not usable:
+        return [], False, reason
+    return _classify_image(img, top_k), True, "ok"
+
+
+def classify(image_base64: str, top_k: int = 5) -> list[tuple[str, float, float]]:
     """Whole-Frame-Klassifikation: Gibt Top-K Klassen mit Konfidenz zurueck."""
+    img = decode_image(image_base64)
+    return _classify_image(img, top_k)
+
+
+def _classify_image(img: Image.Image, top_k: int) -> list[tuple[str, float, float]]:
     model = _get_cls_model()
     if model is None:
         return []
-
-    img = decode_image(image_base64)
 
     t0 = time.perf_counter()
     results = model.predict(source=np.array(img), verbose=False)

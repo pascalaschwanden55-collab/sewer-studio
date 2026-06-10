@@ -8,13 +8,16 @@ from ..schemas.detection import (
     YoloClassifyRequest, YoloClassifyResponse, YoloClassifyPrediction,
 )
 from ..models import yolo_wrapper
-from ..telemetry import write_yolo_detection
+from ..telemetry import write_event, write_yolo_detection
 
 router = APIRouter()
 
 
+# Bewusst sync (def): FastAPI fuehrt sync-Handler im Threadpool aus.
+# Als async def wuerde die blockierende GPU-Inferenz den Event-Loop
+# und damit auch /health waehrend jeder Analyse blockieren.
 @router.post("/detect/yolo", response_model=YoloResponse)
-async def detect_yolo(req: YoloRequest) -> YoloResponse:
+def detect_yolo(req: YoloRequest) -> YoloResponse:
     started = time.perf_counter()
     response = yolo_wrapper.detect(
         image_base64=req.image_base64,
@@ -30,11 +33,15 @@ async def detect_yolo(req: YoloRequest) -> YoloResponse:
 
 
 @router.post("/classify/yolo", response_model=YoloClassifyResponse)
-async def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
-    """Whole-Frame-Klassifikation: BCD/BCE/BCA/BCC/BAB/... erkennen."""
-    import time
+def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
+    """Whole-Frame-Klassifikation: BCD/BCE/BCA/BCC/BAB/... erkennen.
+
+    Enthaelt das Frame-Quality-Gate: unbrauchbare Frames (schwarz, ueberbelichtet,
+    strukturlos, unscharf) kommen mit usable=False zurueck, ohne Klassifikation.
+    """
     t0 = time.perf_counter()
-    preds = yolo_wrapper.classify(req.image_base64, top_k=req.top_k)
+    preds, usable, quality_reason = yolo_wrapper.classify_with_quality(
+        req.image_base64, top_k=req.top_k)
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
     predictions = [
@@ -42,7 +49,18 @@ async def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
         for name, conf, _ in preds
     ]
 
+    write_event("yolo_classify", {
+        "roundtrip_ms": round(elapsed_ms, 1),
+        "top_k": req.top_k,
+        "usable": usable,
+        "quality_reason": quality_reason,
+        "top1_class": predictions[0].class_name if predictions else None,
+        "top1_confidence": predictions[0].confidence if predictions else None,
+    })
+
     return YoloClassifyResponse(
         predictions=predictions,
         inference_time_ms=round(elapsed_ms, 1),
+        usable=usable,
+        quality_reason=quality_reason,
     )

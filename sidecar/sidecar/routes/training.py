@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import random
 import logging
 from pathlib import Path
@@ -21,6 +23,25 @@ logger = logging.getLogger(__name__)
 async def export_yolo(req: TrainingExportRequest) -> TrainingExportResponse:
     """Export training samples to YOLO format (images + labels + data.yaml)."""
     out = _resolve_output_dir(req.output_dir)
+
+    # Vorab-Validierung VOR dem Anlegen der Export-Ordner: fehlerhafte Requests
+    # (zu gross / kein gueltiges base64) duerfen keinen halb angelegten Export
+    # hinterlassen. Groessen-Formel wie decode_image_safe; dekodierte Bytes
+    # werden sofort verworfen (ein Bild zur Zeit, kein RAM-Spike).
+    max_base64_chars = ((max(1, settings.training_max_image_bytes) + 2) // 3) * 4
+    for sample in req.samples:
+        if len(sample.image_base64) > max_base64_chars:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="image exceeds size limit",
+            )
+        try:
+            base64.b64decode(sample.image_base64, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="image is not valid base64",
+            ) from exc
 
     img_train = out / "images" / "train"
     img_val = out / "images" / "val"

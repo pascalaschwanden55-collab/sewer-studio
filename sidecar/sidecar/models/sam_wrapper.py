@@ -103,6 +103,7 @@ def segment(
     masks_out: list[MaskResult] = []
     requested_boxes = len(bounding_boxes)
     skipped_boxes = 0
+    low_score_boxes = 0
 
     for bbox in bounding_boxes:
         clamped = clamp_box(bbox.x1, bbox.y1, bbox.x2, bbox.y2, w, h)
@@ -129,6 +130,17 @@ def segment(
         # Take best mask
         mask = pred_masks[0]  # (H, W) bool
         score = float(scores[0])
+
+        # Score-Gate: unsichere Masken (Score < sam_min_score) nicht still als
+        # Befund-Basis akzeptieren, sondern sichtbar verwerfen (skipped/degraded).
+        if score < settings.sam_min_score:
+            skipped_boxes += 1
+            low_score_boxes += 1
+            logger.warning(
+                "SAM-Maske verworfen (Score %.3f < sam_min_score %.2f) fuer Box %s",
+                score, settings.sam_min_score, bbox,
+            )
+            continue
 
         # Compute mask statistics
         mask_area = int(mask.sum())
@@ -165,5 +177,6 @@ def segment(
         inference_time_ms=round(elapsed_ms, 1),
         requested_boxes=requested_boxes,
         skipped_boxes=skipped_boxes,
+        low_score_boxes=low_score_boxes,
         degraded=skipped_boxes > 0,
     )
