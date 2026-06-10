@@ -72,4 +72,68 @@ public sealed class TemporalCodeVotingServiceTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new TemporalCodeVotingService(windowSize: 0));
         Assert.Throws<ArgumentOutOfRangeException>(() => new TemporalCodeVotingService(windowSize: 3, minAgreement: 4));
     }
+
+    // ── Hysterese (Pilot 2026-06-10: 6x BAJ am selben Meter durch Flattern) ──
+
+    [Fact]
+    public void HystereseHaeltCodeBeiStehenderKameraUeberKipperHinweg()
+    {
+        var voting = new TemporalCodeVotingService(windowSize: 3, minAgreement: 2, meterRadius: 1.5);
+
+        voting.RegisterAndVote("BAJ", 0.42);
+        Assert.Equal("BAJ", voting.RegisterAndVote("BAJ", 0.43));   // bestaetigt
+        // Kamera steht, einzelne Frames kippen weg — Code muss aktiv bleiben
+        Assert.Equal("BAJ", voting.RegisterAndVote(null, 0.43));
+        Assert.Equal("BAJ", voting.RegisterAndVote("BAJ", 0.43));
+        Assert.Equal("BAJ", voting.RegisterAndVote(null, 0.43));
+        Assert.Equal("BAJ", voting.RegisterAndVote(null, 0.43));    // BAJ noch im 3er-Fenster
+    }
+
+    [Fact]
+    public void HystereseFaelltWennFensterDenCodeVerliert()
+    {
+        var voting = new TemporalCodeVotingService(windowSize: 3, minAgreement: 2, meterRadius: 1.5);
+
+        voting.RegisterAndVote("BAJ", 0.42);
+        voting.RegisterAndVote("BAJ", 0.43);
+        voting.RegisterAndVote(null, 0.43);
+        voting.RegisterAndVote(null, 0.43);
+        // Fenster = [BAJ, null, null] -> letzter BAJ faellt jetzt raus
+        Assert.Null(voting.RegisterAndVote(null, 0.43));
+    }
+
+    [Fact]
+    public void HystereseFaelltWennKameraWeiterfaehrt()
+    {
+        var voting = new TemporalCodeVotingService(windowSize: 3, minAgreement: 2, meterRadius: 1.5);
+
+        voting.RegisterAndVote("BAJ", 0.42);
+        Assert.Equal("BAJ", voting.RegisterAndVote("BAJ", 0.43));
+        // 3m weiter: andere Stelle, kein Festhalten
+        Assert.Null(voting.RegisterAndVote(null, 3.50));
+    }
+
+    [Fact]
+    public void NeuerCodeVerdraengtAltenErstMitEigenerMehrheit()
+    {
+        var voting = new TemporalCodeVotingService(windowSize: 3, minAgreement: 2, meterRadius: 1.5);
+
+        voting.RegisterAndVote("BAJ", 0.42);
+        Assert.Equal("BAJ", voting.RegisterAndVote("BAJ", 0.43));
+        // Erster BCC-Frame: noch keine Mehrheit -> BAJ haelt
+        Assert.Equal("BAJ", voting.RegisterAndVote("BCC", 0.45));
+        // Zweiter BCC-Frame: Mehrheit -> Wechsel
+        Assert.Equal("BCC", voting.RegisterAndVote("BCC", 0.47));
+    }
+
+    [Fact]
+    public void ResetLoeschtAuchDieHysterese()
+    {
+        var voting = new TemporalCodeVotingService(windowSize: 3, minAgreement: 2, meterRadius: 1.5);
+
+        voting.RegisterAndVote("BAJ", 0.42);
+        voting.RegisterAndVote("BAJ", 0.43);
+        voting.Reset();
+        Assert.Null(voting.RegisterAndVote(null, 0.43));
+    }
 }

@@ -18,6 +18,12 @@ public sealed class TemporalCodeVotingService : ITemporalCodeVotingService
 
     private readonly Queue<Entry> _window = new();
 
+    // Hysterese: zuletzt bestaetigter Code + Ort. Verhindert das "Flattern"
+    // (Pilot 2026-06-10: 6x BAJ am selben Meter als getrennte Befunde, weil die
+    // Bestaetigung bei stehender Kamera frame-weise kippte).
+    private string? _lastConfirmedCode;
+    private double _lastConfirmedMeter;
+
     /// <summary>Fenstergroesse in Frame-Entscheidungen.</summary>
     public int WindowSize { get; }
 
@@ -43,17 +49,40 @@ public sealed class TemporalCodeVotingService : ITemporalCodeVotingService
         while (_window.Count > WindowSize)
             _window.Dequeue();
 
-        if (normalized is null)
-            return null;
+        if (normalized is not null)
+        {
+            // Treffer desselben Codes im Fenster, beschraenkt auf das Meterfenster
+            // um die aktuelle Position (Kamera faehrt — alte Treffer weit hinter
+            // der aktuellen Stelle duerfen nicht mitstimmen).
+            var votes = _window.Count(e =>
+                e.Code == normalized && Math.Abs(e.Meter - meter) <= MeterRadius);
 
-        // Treffer desselben Codes im Fenster, beschraenkt auf das Meterfenster
-        // um die aktuelle Position (Kamera faehrt — alte Treffer weit hinter
-        // der aktuellen Stelle duerfen nicht mitstimmen).
-        var votes = _window.Count(e =>
-            e.Code == normalized && Math.Abs(e.Meter - meter) <= MeterRadius);
+            if (votes >= MinAgreement)
+            {
+                _lastConfirmedCode = normalized;
+                _lastConfirmedMeter = meter;
+                return normalized;
+            }
+        }
 
-        return votes >= MinAgreement ? normalized : null;
+        // Hysterese: ein bereits bestaetigter Code bleibt an derselben Stelle aktiv,
+        // solange das Fenster noch mindestens eine Stimme fuer ihn enthaelt — einzelne
+        // Kipper (LEER/anderer Code) reissen den laufenden Befund nicht mehr auf.
+        // Er faellt erst, wenn die Kamera weiterfaehrt oder das Fenster ihn verliert
+        // (bzw. ein anderer Code selbst die Mehrheit erreicht, siehe oben).
+        if (_lastConfirmedCode is not null
+            && Math.Abs(meter - _lastConfirmedMeter) <= MeterRadius
+            && _window.Any(e => e.Code == _lastConfirmedCode && Math.Abs(e.Meter - meter) <= MeterRadius))
+        {
+            return _lastConfirmedCode;
+        }
+
+        return null;
     }
 
-    public void Reset() => _window.Clear();
+    public void Reset()
+    {
+        _window.Clear();
+        _lastConfirmedCode = null;
+    }
 }
