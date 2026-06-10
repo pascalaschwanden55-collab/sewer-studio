@@ -437,17 +437,78 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
 # ── YOLO Classify (Whole-Frame-Klassifikator) ──────────────────────────
 
 _cls_model = None
+_cls_meta: dict | None = None
 _cls_lock = threading.Lock()
 
 
-def _resolve_cls_model_path() -> str | None:
-    """Suche best.pt aus dem YOLO-cls Trainingslauf."""
-    # Relativer Pfad vom Sidecar-Root (portabel, kein absoluter Pfad)
-    project_root = Path(__file__).resolve().parent.parent.parent.parent
-    configured_path = Path(settings.yolo_cls_model_path) if settings.yolo_cls_model_path else None
-    if configured_path is not None:
-        return str(configured_path) if configured_path.exists() else None
+def _sha256_of(path: Path) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
+
+def _resolve_cls_model() -> dict | None:
+    """Aufloesung des cls-Modells als Metadaten-Dict.
+
+    Reihenfolge:
+      1) models/active.json (Eintrag "classifier") — der reale Promotions-Weg.
+         SHA-256 wird gegen die Datei verifiziert; Mismatch = FEHLER, kein Laden.
+      2) settings.yolo_cls_model_path — expliziter manueller Override.
+      3) Legacy-Kandidaten (grundgeruest) — mit DEUTLICHER Warnung statt still.
+    Liefert {path, source, sha256, imgsz, preprocessing} oder None.
+    """
+    # 1) active.json — einziger Schreiber ist der model-promotion-warden
+    active_path = Path(settings.models_dir) / "active.json"
+    if active_path.is_file():
+        try:
+            data = json.loads(active_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.error("active.json nicht lesbar (%s) — Klassifikator bleibt AUS.", exc)
+            return None
+        entry = data.get("classifier")
+        if entry and entry.get("weights_path"):
+            weights = Path(entry["weights_path"])
+            if not weights.is_absolute():
+                weights = Path(settings.models_dir) / weights
+            if not weights.is_file():
+                logger.error("active.json zeigt auf fehlende Gewichte: %s — Klassifikator bleibt AUS.", weights)
+                return None
+            sha = _sha256_of(weights)
+            expected = (entry.get("sha256") or "").lower()
+            if expected and sha.lower() != expected:
+                logger.error(
+                    "active.json SHA-256-Mismatch fuer %s (erwartet %s…, ist %s…) — Klassifikator bleibt AUS.",
+                    weights, expected[:8], sha[:8])
+                return None
+            return {
+                "path": str(weights),
+                "source": "active.json",
+                "name": entry.get("name") or weights.parent.parent.name,
+                "sha256": sha,
+                "imgsz": int(entry.get("imgsz") or settings.yolo_cls_imgsz),
+                "preprocessing": entry.get("preprocessing") or "letterbox",
+            }
+
+    # 2) Expliziter Override per Env/Settings
+    if settings.yolo_cls_model_path:
+        p = Path(settings.yolo_cls_model_path)
+        if not p.is_file():
+            logger.error("yolo_cls_model_path zeigt auf fehlende Datei: %s — Klassifikator bleibt AUS.", p)
+            return None
+        return {
+            "path": str(p),
+            "source": "configured",
+            "name": p.parent.parent.name if p.parent.name == "weights" else p.stem,
+            "sha256": _sha256_of(p),
+            "imgsz": settings.yolo_cls_imgsz,
+            "preprocessing": settings.yolo_cls_preprocessing,
+        }
+
+    # 3) Legacy-Fallback (Grundgeruest-Laeufe) — NICHT mehr still
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
     candidates = [
         Path(settings.models_dir) / "yolo_cls_best.pt",
         project_root / "yolo_cls_runs" / "grundgeruest_v2" / "weights" / "best.pt",
@@ -455,25 +516,79 @@ def _resolve_cls_model_path() -> str | None:
     ]
     for p in candidates:
         if p.exists():
-            return str(p)
+            logger.warning(
+                "KEIN models/active.json — Legacy-Fallback auf %s. Der Promotions-Weg "
+                "(model-promotion-warden -> active.json) ist fuer dieses Modell nie gelaufen.", p)
+            return {
+                "path": str(p),
+                "source": "legacy_fallback",
+                "name": p.parent.parent.name,
+                "sha256": _sha256_of(p),
+                # Grundgeruest-Laeufe wurden MIT Ultralytics-Crop trainiert ->
+                # bisheriges predict-Verhalten beibehalten (kein Letterbox).
+                "imgsz": 0,
+                "preprocessing": "default",
+            }
+    logger.warning("Kein YOLO-cls Modell gefunden (weder active.json noch Fallback) — Klassifikator AUS.")
     return None
 
 
+def _resolve_cls_device() -> str:
+    device = settings.effective_cls_device
+    if device.startswith("cuda") and not _cuda_available_cls():
+        return "cpu"
+    return device
+
+
+def _cuda_available_cls() -> bool:
+    try:
+        import torch
+        return torch.cuda.is_available()
+    except Exception:
+        return False
+
+
+def classifier_metadata() -> dict:
+    """Metadaten des geladenen cls-Modells (fuer Response/Telemetrie); leer wenn keins."""
+    return dict(_cls_meta) if _cls_meta else {}
+
+
+def _ensure_nocrop_module() -> None:
+    """no-crop-Checkpoints picklen Transforms aus dem Trainings-Modul 'nocrop_patch'.
+
+    Damit torch.load sie ausserhalb des Trainings-Verzeichnisses laden kann,
+    registrieren wir die identische Sidecar-Kopie unter genau diesem Namen.
+    """
+    import sys as _sys
+    if "nocrop_patch" in _sys.modules:
+        return
+    from . import nocrop_compat
+    _sys.modules["nocrop_patch"] = nocrop_compat
+
+
 def _get_cls_model():
-    """Lazy-load des Classify-Modells (CPU, ~3 MB)."""
-    global _cls_model
+    """Lazy-load des Classify-Modells (Device via SEWER_SIDECAR_YOLO_CLS_DEVICE)."""
+    global _cls_model, _cls_meta
     if _cls_model is not None:
         return _cls_model
     with _cls_lock:
         if _cls_model is not None:
             return _cls_model
-        path = _resolve_cls_model_path()
-        if path is None:
+        meta = _resolve_cls_model()
+        if meta is None:
             return None
+        _ensure_nocrop_module()
         from ultralytics import YOLO
-        _cls_model = YOLO(path)
-        _cls_model.to("cpu")  # Leichtgewicht, CPU reicht
-        logger.info("YOLO-cls Modell geladen: %s", path)
+        model = YOLO(meta["path"])
+        device = _resolve_cls_device()
+        model.to(device)
+        meta["device"] = device
+        logger.info(
+            "YOLO-cls Modell geladen: %s (quelle=%s, sha256=%s…, imgsz=%s, preprocessing=%s, device=%s)",
+            meta["name"], meta["source"], meta["sha256"][:12], meta["imgsz"] or "default",
+            meta["preprocessing"], device)
+        _cls_meta = meta
+        _cls_model = model
         return _cls_model
 
 
@@ -499,13 +614,43 @@ def classify(image_base64: str, top_k: int = 5) -> list[tuple[str, float, float]
     return _classify_image(img, top_k)
 
 
+def _letterbox_rgb(img: Image.Image, size: int) -> Image.Image:
+    """Proportional skalieren + schwarz padden (kein Crop, keine Verzerrung).
+
+    Identisch zu training/vsa_classifier/nocrop_patch.letterbox_pil — Pflicht
+    fuer Paritaet zwischen Sidecar-Inferenz und eval_cls.py (Ultralytics wuerde
+    sonst Resize+CenterCrop fahren und die seitlichen Rand-Schaeden abschneiden).
+    """
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+    w, h = img.size
+    if w == size and h == size:
+        return img
+    scale = min(size / w, size / h)
+    nw, nh = max(1, round(w * scale)), max(1, round(h * scale))
+    img = img.resize((nw, nh), Image.BILINEAR)
+    canvas = Image.new("RGB", (size, size), (0, 0, 0))
+    canvas.paste(img, ((size - nw) // 2, (size - nh) // 2))
+    return canvas
+
+
 def _classify_image(img: Image.Image, top_k: int) -> list[tuple[str, float, float]]:
     model = _get_cls_model()
     if model is None:
         return []
+    meta = _cls_meta or {}
 
     t0 = time.perf_counter()
-    results = model.predict(source=np.array(img), verbose=False)
+    if meta.get("preprocessing") == "letterbox":
+        # Wie eval_cls.py --no-crop: Letterbox in PIL, dann RGB->BGR-Array
+        # (predict behandelt numpy-Eingaben als BGR und konvertiert intern).
+        imgsz = int(meta.get("imgsz") or settings.yolo_cls_imgsz)
+        lb = _letterbox_rgb(img, imgsz)
+        src = np.asarray(lb)[:, :, ::-1]
+        results = model.predict(source=src, imgsz=imgsz, verbose=False)
+    else:
+        # Legacy (Grundgeruest, mit Crop trainiert): bisheriges Verhalten
+        results = model.predict(source=np.array(img), verbose=False)
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
     if not results or len(results) == 0:

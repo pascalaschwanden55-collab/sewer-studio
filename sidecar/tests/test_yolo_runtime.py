@@ -48,24 +48,26 @@ def test_resolve_yolo_model_path_strict_mode_raises_without_weights(tmp_path: Pa
         yolo_wrapper._resolve_yolo_model_path()
 
 
-def test_resolve_cls_model_path_uses_configured_weights(tmp_path: Path, restore_yolo_settings):
+def test_resolve_cls_model_uses_configured_weights(tmp_path: Path, restore_yolo_settings):
     weights = tmp_path / "manual1286.pt"
     weights.write_bytes(b"weights")
 
+    settings.models_dir = str(tmp_path)   # kein active.json hier -> Override greift
     settings.yolo_cls_model_path = str(weights)
 
-    model_path = yolo_wrapper._resolve_cls_model_path()
+    meta = yolo_wrapper._resolve_cls_model()
 
-    assert model_path == str(weights)
+    assert meta is not None
+    assert meta["path"] == str(weights)
+    assert meta["source"] == "configured"
 
 
-def test_resolve_cls_model_path_ignores_missing_configured_weights(tmp_path: Path, restore_yolo_settings):
+def test_resolve_cls_model_blocks_missing_configured_weights(tmp_path: Path, restore_yolo_settings):
     settings.models_dir = str(tmp_path)
     settings.yolo_cls_model_path = str(tmp_path / "missing.pt")
 
-    model_path = yolo_wrapper._resolve_cls_model_path()
-
-    assert model_path is None
+    # Fehlende konfigurierte Gewichte -> kein stiller Fallback, Klassifikator AUS
+    assert yolo_wrapper._resolve_cls_model() is None
 
 
 def test_tensorrt_names_json_maps_class_ids_to_yolo_names(tmp_path: Path, restore_yolo_settings):

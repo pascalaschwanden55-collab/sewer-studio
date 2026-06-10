@@ -48,6 +48,7 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
         YoloClassifyPrediction(class_name=name, confidence=conf)
         for name, conf, _ in preds
     ]
+    meta = yolo_wrapper.classifier_metadata()
 
     write_event("yolo_classify", {
         "roundtrip_ms": round(elapsed_ms, 1),
@@ -56,6 +57,11 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
         "quality_reason": quality_reason,
         "top1_class": predictions[0].class_name if predictions else None,
         "top1_confidence": predictions[0].confidence if predictions else None,
+        "model_name": meta.get("name"),
+        "model_source": meta.get("source"),
+        "imgsz": meta.get("imgsz"),
+        "preprocessing": meta.get("preprocessing"),
+        "device": meta.get("device"),
     })
 
     return YoloClassifyResponse(
@@ -63,4 +69,10 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
         inference_time_ms=round(elapsed_ms, 1),
         usable=usable,
         quality_reason=quality_reason,
+        model_name=meta.get("name") or "",
+        model_source=meta.get("source") or "",
+        model_sha256=meta.get("sha256") or "",
+        imgsz=int(meta.get("imgsz") or 0),
+        preprocessing=meta.get("preprocessing") or "",
+        device=meta.get("device") or "",
     )

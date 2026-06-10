@@ -97,3 +97,11 @@ class YoloClassifyResponse(BaseModel):
     # unscharf -> Frame gar nicht erst durch DINO/SAM/Qwen schicken.
     usable: bool = True
     quality_reason: str = "ok"
+    # Modell-Governance: welches cls-Modell hat geantwortet (active.json-Weg).
+    # Leere Werte = kein Modell geladen.
+    model_name: str = ""
+    model_source: str = ""        # active.json | configured | legacy_fallback
+    model_sha256: str = ""
+    imgsz: int = 0
+    preprocessing: str = ""       # letterbox | default
+    device: str = ""

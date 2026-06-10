@@ -45,8 +45,19 @@ class SidecarSettings(BaseSettings):
     yolo_confidence: float = 0.25
     yolo_imgsz: int = 1280  # Inferenz-Aufloesung: 1280 statt Default 640 -> kleine Schaeden besser sichtbar
     yolo_model_name: str = "yolo26m.pt"
-    yolo_cls_model_path: str = ""
     require_custom_yolo: bool = False
+
+    # YOLO-cls (VSA-Klassifikator). Modellwahl primaer ueber models/active.json
+    # (einziger Schreiber: model-promotion-warden); diese Settings sind der
+    # manuelle Override bzw. die Defaults fuer Eintraege ohne Metadaten.
+    yolo_cls_model_path: str = ""
+    yolo_cls_imgsz: int = 1024            # v5_nocrop wurde mit imgsz 1024 trainiert
+    yolo_cls_preprocessing: str = "letterbox"  # nur fuer yolo_cls_model_path-Override
+    yolo_cls_device: str = ""             # leer = gpu_device (CPU-Fallback wenn kein CUDA)
+
+    @property
+    def effective_cls_device(self) -> str:
+        return self.yolo_cls_device if self.yolo_cls_device else self.gpu_device
 
     # Frame-Quality-Gate (_is_frame_usable) -- env-konfigurierbar, entschaerft fuer
     # dunkle Kanaele: gueltige dunkle Frames mit Inhalt wurden frueher hart verworfen.
