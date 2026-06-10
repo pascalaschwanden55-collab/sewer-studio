@@ -69,4 +69,41 @@ public sealed class TemporalFindingDeduplicatorKeyTests
         var key = Assert.IsType<string>(method!.Invoke(deduplicator, new object[] { finding }));
         Assert.Equal(expectedCode, key);
     }
+
+    [Theory]
+    [InlineData(true, "BAB|6:00")]   // Default: Uhrlage trennt Befunde
+    [InlineData(false, "BAB")]       // Klassifikator-Regime: Ganzbild-Code, Uhrlage kein Split-Kriterium
+    public void BuildFindingKey_RespektiertClockInKey(bool clockInKey, string expectedKey)
+    {
+        var finding = new EnhancedFinding(
+            Label: "crack",
+            VsaCodeHint: "BAB",
+            Severity: 2,
+            PositionClock: "6:00",
+            ExtentPercent: 30,
+            HeightMm: null,
+            WidthMm: null,
+            IntrusionPercent: null,
+            CrossSectionReductionPercent: null,
+            DiameterReductionMm: null,
+            BboxX1: null,
+            BboxY1: null,
+            BboxX2: null,
+            BboxY2: null,
+            Notes: null);
+
+        var infrastructure = typeof(VsaCodeResolver).Assembly;
+        var optionsType = infrastructure.GetType(
+            "AuswertungPro.Next.Infrastructure.Ai.Pipeline.TemporalDedupOptions")!;
+        var options = Activator.CreateInstance(optionsType)!;
+        optionsType.GetProperty("ClockInKey")!.SetValue(options, clockInKey);
+
+        var dedupType = infrastructure.GetType(
+            "AuswertungPro.Next.Infrastructure.Ai.Pipeline.TemporalFindingDeduplicator")!;
+        var deduplicator = Activator.CreateInstance(dedupType, options);
+        var method = dedupType.GetMethod("BuildFindingKey", BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+        var key = Assert.IsType<string>(method.Invoke(deduplicator, new object[] { finding }));
+        Assert.Equal(expectedKey, key);
+    }
 }

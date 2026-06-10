@@ -20,6 +20,15 @@ if (args.Length < 2)
     return 1;
 }
 
+// --gt-only <pdf>: nur Protokoll-Codes anzeigen (zur Pilot-Fall-Auswahl)
+if (args[0] == "--gt-only")
+{
+    var gtOnly = await new PdfProtocolExtractor().ExtractAsync(args[1]);
+    Console.WriteLine($"{Path.GetFileName(args[1])}: " + string.Join(", ",
+        gtOnly.Select(e => $"{e.VsaCode}@{e.MeterStart:F1}")));
+    return 0;
+}
+
 var videoPath = args[0];
 var pdfPath = args[1];
 var dnMm = args.Length > 2 && int.TryParse(args[2], out var dn) ? dn : 300;

@@ -274,6 +274,16 @@ public static class VsaCodeResolver
             }
         }
 
+        // ── Negativ-Gate: Grundgeruest-Codes sind ortsgebunden ──
+        // BCD existiert nur am Rohranfang, BCE nur am Rohrende. Ein "BCE" mitten
+        // im Rohr ist meist ein offener Anschluss (BCA kennt das Modell nicht) —
+        // Pilot 2026-06-10: 7x BCE @ 1.7m von 12.5m. Dann lieber KEINE
+        // Klassifikator-Entscheidung (Qwen/Label-Heuristik uebernimmt).
+        if (top1Code == "BCD" && currentMeter > 1.5)
+            return null;
+        if (top1Code == "BCE" && totalLength > 1 && currentMeter < totalLength * 0.85)
+            return null;
+
         // ── Reine YOLO-Klassifikation (ohne Boost) ──
         if (top1Code != "OTHER" && top1Conf > 0.40)
         {

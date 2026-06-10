@@ -110,6 +110,9 @@ public sealed class MultiModelAnalysisService
         {
             DedupWindowFrames = DedupWindowFrames,
             NormalizeFallbackLabels = true,
+            // Klassifikator-Regime: Ganzbild-Code darf nicht ueber Masken-Uhrlagen
+            // aufsplitten (Pilot 2026-06-10: 12x BDD statt 1 Befund)
+            ClockInKey = !ClassifierDecisionEnabled,
             NormalizeOutputClock = false,
             MinStretchLengthMeters = 1.0,
             MeterMergeGapMaxMeters = 1.0

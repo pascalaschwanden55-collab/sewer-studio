@@ -16,6 +16,13 @@ internal sealed class TemporalDedupOptions
     public bool NormalizeOutputClock { get; init; }
     public double MinStretchLengthMeters { get; init; } = 1.0;
     public double? MeterMergeGapMaxMeters { get; init; }
+
+    /// <summary>
+    /// Uhrlage in den Dedup-Schluessel aufnehmen (Default). Im Klassifikator-Regime
+    /// (Ganzbild-Code) fuehrt das zu Duplikaten — derselbe Befund splittet sich
+    /// ueber die Masken-Uhrlagen (Pilot 2026-06-10: 12x BDD statt 1) — dort false.
+    /// </summary>
+    public bool ClockInKey { get; init; } = true;
 }
 
 internal sealed class TemporalFindingDeduplicator
@@ -43,8 +50,13 @@ internal sealed class TemporalFindingDeduplicator
         foreach (var finding in current)
         {
             var key = BuildFindingKey(finding);
-            if (!currentMap.ContainsKey(key))
+            // Bei Schluessel-Kollision im selben Frame gewinnt der dominante Befund
+            // (groesste Ausdehnung) — er traegt die repraesentative Quantifizierung.
+            if (!currentMap.TryGetValue(key, out var existing)
+                || (finding.ExtentPercent ?? 0) > (existing.ExtentPercent ?? 0))
+            {
                 currentMap[key] = finding;
+            }
         }
 
         foreach (var key in _active.Keys.ToList())
@@ -158,7 +170,7 @@ internal sealed class TemporalFindingDeduplicator
             ?? (_options.NormalizeFallbackLabels
                 ? NormalizeFindingLabel(finding.Label.Trim())
                 : finding.Label.Trim());
-        var clock = NormalizeClock(finding.PositionClock);
+        var clock = _options.ClockInKey ? NormalizeClock(finding.PositionClock) : null;
         return string.IsNullOrWhiteSpace(clock) ? label : $"{label}|{clock}";
     }
 
