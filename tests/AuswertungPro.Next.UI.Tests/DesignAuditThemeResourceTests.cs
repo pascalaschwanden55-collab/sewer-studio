@@ -80,6 +80,26 @@ public sealed class DesignAuditThemeResourceTests
             "#2EA043");
     }
 
+    [Fact]
+    public void HydraulikPrintDialog_uses_theme_resources_for_surface_and_text_colors()
+    {
+        var xaml = ReadUiFile("Views", "Windows", "HydraulikPrintDialog.xaml");
+
+        Assert.Contains("Background=\"{DynamicResource BgBrush}\"", xaml);
+        Assert.Contains("Style=\"{StaticResource SecondaryButton}\"", xaml);
+        Assert.Contains("Style=\"{StaticResource SuccessButton}\"", xaml);
+        AssertDoesNotContainAny(xaml,
+            "#FF0D1117",
+            "#E6EDF3",
+            "#21262D",
+            "#30363D",
+            "#58A6FF",
+            "#1A3A5C",
+            "#C9D1D9",
+            "#238636",
+            "#2EA043");
+    }
+
     private static void AssertDoesNotContainAny(string text, params string[] forbidden)
     {
         foreach (var value in forbidden)
