@@ -14,7 +14,7 @@
         </Grid.RowDefinitions>
 
         <!-- Export Toolbar Card -->
-        <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 Padding="6,4" CornerRadius="8" Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal">
                 <Button Command="{Binding ExportCommand}"
@@ -27,7 +27,7 @@
                 <Button Command="{Binding ExportSchaechteCommand}"
                         Style="{StaticResource ToolbarButton}" Margin="0,0,4,0">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE78C;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="&#xE78C;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="Export Schächte.xlsx" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -35,16 +35,16 @@
         </Border>
 
         <!-- Verteilungs-Card -->
-        <Border Grid.Row="1" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+        <Border Grid.Row="1" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 Padding="6,4" CornerRadius="8" Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal">
                 <Button Click="DropdownButton_Click"
                         Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                         ToolTip="Haltungen und Schächte in Ordner verteilen">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE72D;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="&#xE72D;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="Verteilen" VerticalAlignment="Center"/>
-                        <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{StaticResource MutedBrush}"/>
+                        <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                     </StackPanel>
                     <Button.ContextMenu>
                         <ContextMenu>
@@ -80,16 +80,16 @@
         </Border>
 
         <!-- Fortschrittsanzeige -->
-        <Border Grid.Row="2" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+        <Border Grid.Row="2" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 Padding="10" Margin="0,0,0,8" CornerRadius="8"
                 Visibility="{Binding IsDistributionInProgress, Converter={StaticResource BoolToVis}}">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="{Binding DistributionProgress}" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
+                    <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding DistributionProgress}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                 </StackPanel>
                 <TextBlock Text="{Binding DistributionPercent, StringFormat=Fortschritt: {0:0}%}"
-                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
                            Margin="0,0,0,4"/>
                 <ProgressBar Height="6" Margin="0,2,0,0"
                              Minimum="0" Maximum="100"
@@ -101,6 +101,6 @@
         <!-- Ergebnis -->
         <TextBox Grid.Row="3" Text="{Binding LastResult}" AcceptsReturn="True" TextWrapping="Wrap"
                  IsReadOnly="True" VerticalScrollBarVisibility="Auto"
-                 Foreground="{StaticResource MutedBrush}"/>
+                 Foreground="{DynamicResource MutedBrush}"/>
     </Grid>
 </UserControl>

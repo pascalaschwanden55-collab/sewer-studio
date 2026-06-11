@@ -18,14 +18,14 @@
             <Setter Property="MinHeight" Value="26"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Margin" Value="0,0,4,0"/>
-            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Style.Triggers>
                 <Trigger Property="IsChecked" Value="True">
-                    <Setter Property="BorderBrush" Value="{StaticResource NeonCyanBrush}"/>
-                    <Setter Property="Background" Value="{StaticResource HeaderBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource NeonCyanBrush}"/>
+                    <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -35,10 +35,10 @@
             <Setter Property="Padding" Value="24,12"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
-            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
         <Style x:Key="CompactButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
@@ -53,17 +53,17 @@
             <Setter Property="Padding" Value="10,4"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
-            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
         <Style x:Key="LinkButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource NeonCyanBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource NeonCyanBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -79,7 +79,7 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -92,7 +92,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Orientation="Vertical" Margin="0,0,0,4">
-            <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     Padding="8" Margin="0,0,0,8" CornerRadius="6">
                 <Border.Style>
                     <Style TargetType="Border">
@@ -104,10 +104,10 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <TextBlock Text="{Binding SaveStatus}" Foreground="{StaticResource TextBrush}" />
+                <TextBlock Text="{Binding SaveStatus}" Foreground="{DynamicResource TextBrush}" />
             </Border>
 
-            <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     Padding="8" Margin="0,0,0,8" CornerRadius="6">
                 <Border.Style>
                     <Style TargetType="Border">
@@ -120,10 +120,10 @@
                     </Style>
                 </Border.Style>
                 <TextBlock Text="Bitte zuerst Projekt speichern (Datei anlegen), dann ist Bearbeitung moeglich."
-                           Foreground="{StaticResource TextBrush}" />
+                           Foreground="{DynamicResource TextBrush}" />
             </Border>
 
-            <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     Padding="8" Margin="0,0,0,8" CornerRadius="6">
                 <Border.Style>
                     <Style TargetType="Border">
@@ -136,13 +136,13 @@
                     </Style>
                 </Border.Style>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Ellipse Width="12" Height="12" Fill="{Binding LearningTrafficLightColor}" Margin="0,0,8,0" Stroke="{StaticResource NeonCyanBrush}" StrokeThickness="1"/>
-                    <TextBlock Text="{Binding LearningTrafficLightText}" Foreground="{StaticResource TextBrush}" Margin="0,0,12,0" />
-                    <TextBlock Text="{Binding LearningInfo}" Foreground="{StaticResource TextBrush}" />
+                    <Ellipse Width="12" Height="12" Fill="{Binding LearningTrafficLightColor}" Margin="0,0,8,0" Stroke="{DynamicResource NeonCyanBrush}" StrokeThickness="1"/>
+                    <TextBlock Text="{Binding LearningTrafficLightText}" Foreground="{DynamicResource TextBrush}" Margin="0,0,12,0" />
+                    <TextBlock Text="{Binding LearningInfo}" Foreground="{DynamicResource TextBrush}" />
                 </StackPanel>
             </Border>
 
-            <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     Padding="4,3" CornerRadius="8">
                 <StackPanel Orientation="Horizontal">
                     <ToggleButton x:Name="HaltungsansichtToggle"
@@ -158,7 +158,7 @@
                         </StackPanel>
                     </ToggleButton>
 
-                    <Border Width="1" Background="{StaticResource BorderBrush}" Margin="6,4"/>
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
 
                     <Button Command="{Binding SaveCommand}"
                             Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,2,0">
@@ -170,7 +170,7 @@
                     <Button Command="{Binding AddCommand}" IsEnabled="{Binding IsProjectReady}"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource NeonGreenBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource NeonGreenBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Neu" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -182,15 +182,15 @@
                         </StackPanel>
                     </Button>
 
-                    <Border Width="1" Background="{StaticResource BorderBrush}" Margin="6,4"/>
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
 
                     <Button x:Name="KiToolsDropdown" Click="DropdownButton_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="KI-Funktionen: Protokoll, Status, Videoanalyse">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="KI-Tools" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{StaticResource MutedBrush}"/>
+                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
@@ -235,9 +235,9 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Sanierungsmassnahmen und Kostenvorschlaege">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Sanierungsmassnahmen" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{StaticResource MutedBrush}"/>
+                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
@@ -254,7 +254,7 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Videos und PDFs automatisch suchen und mit Haltungen verlinken">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Medien suchen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -265,7 +265,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#x1F4A7;" FontFamily="Segoe UI Emoji" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Hydraulik" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{StaticResource MutedBrush}"/>
+                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
@@ -280,7 +280,7 @@
                                 <MenuItem Click="HydraulikPrint_Click">
                                     <MenuItem.Header>
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE749;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                            <TextBlock Text="&#xE749;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                             <TextBlock Text="Hydraulik PDF" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </MenuItem.Header>
@@ -293,18 +293,18 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Haltungsdossier als PDF drucken (Sektionen auswaehlbar)">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Dossier" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
-                    <Border Width="1" Background="{StaticResource BorderBrush}" Margin="6,4"/>
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
 
                     <Button x:Name="UndockButton" Click="UndockGrid_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="DataGrid in separatem Fenster oeffnen (Multi-Monitor)">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Abdocken" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -316,7 +316,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE7B3;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Ansicht" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{StaticResource MutedBrush}"/>
+                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
@@ -344,7 +344,7 @@
                                 <MenuItem StaysOpenOnClick="True">
                                     <MenuItem.Header>
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
-                                            <TextBlock Text="Zeilenhoehe:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Width="92"/>
+                                            <TextBlock Text="Zeilenhoehe:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="92"/>
                                             <Slider Width="130"
                                                     Minimum="24"
                                                     Maximum="240"
@@ -354,7 +354,7 @@
                                                     IsSnapToTickEnabled="False"
                                                     VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding GridMinRowHeight, StringFormat={}{0:0}px}"
-                                                       Foreground="{StaticResource TextBrush}"
+                                                       Foreground="{DynamicResource TextBrush}"
                                                        VerticalAlignment="Center"
                                                        Margin="8,0,0,0"
                                                        MinWidth="36"/>
@@ -364,7 +364,7 @@
                                 <MenuItem StaysOpenOnClick="True">
                                     <MenuItem.Header>
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
-                                            <TextBlock Text="Zoom:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Width="92"/>
+                                            <TextBlock Text="Zoom:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="92"/>
                                             <Slider Width="130"
                                                     Minimum="0.5"
                                                     Maximum="2.0"
@@ -374,7 +374,7 @@
                                                     IsSnapToTickEnabled="False"
                                                     VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding GridZoom, StringFormat={}{0:0%}}"
-                                                       Foreground="{StaticResource TextBrush}"
+                                                       Foreground="{DynamicResource TextBrush}"
                                                        VerticalAlignment="Center"
                                                        Margin="8,0,0,0"
                                                        MinWidth="36"/>
@@ -385,7 +385,7 @@
                                 <MenuItem StaysOpenOnClick="True">
                                     <MenuItem.Header>
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
-                                            <TextBlock Text="Ausrichtung:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Width="92"/>
+                                            <TextBlock Text="Ausrichtung:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="92"/>
                                             <StackPanel Orientation="Vertical">
                                                 <StackPanel Orientation="Horizontal">
                                                     <ToggleButton x:Name="AlignLeftButton" Style="{StaticResource AlignToggleButtonStyle}"
@@ -444,7 +444,7 @@
                                                 </StackPanel>
                                             </StackPanel>
                                             <TextBlock Text="Zelle oder Spaltenkopf auswaehlen"
-                                                       Foreground="{StaticResource MutedBrush}"
+                                                       Foreground="{DynamicResource MutedBrush}"
                                                        VerticalAlignment="Center"
                                                        Margin="10,0,0,0"/>
                                         </StackPanel>
@@ -459,11 +459,11 @@
                 </StackPanel>
             </Border>
 
-            <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     Padding="4" Margin="0,4,0,0" CornerRadius="4">
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="Suche Schacht:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Suche Schacht:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBox x:Name="SearchBox" Width="200" VerticalAlignment="Center"
                                  Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                  TextChanged="SearchBox_TextChanged"/>
@@ -471,9 +471,9 @@
                                 Command="{Binding ClearSearchCommand}" ToolTip="Suche zurücksetzen">
                             <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
                         </Button>
-                        <TextBlock Text="{Binding SearchResultInfo}" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                        <TextBlock Text="{Binding SearchResultInfo}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
 
-                        <TextBlock Text="Verschieben auf Pos.:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="20,0,6,0"/>
+                        <TextBlock Text="Verschieben auf Pos.:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="20,0,6,0"/>
                         <TextBox x:Name="MoveToPositionBox" Width="60" VerticalAlignment="Center"
                                  VerticalContentAlignment="Center" Padding="4,2"
                                  ToolTip="Zielposition eingeben (1-basiert) und Enter druecken"
@@ -483,9 +483,9 @@
                                 ToolTip="Selektierte Zeile an Position verschieben"
                                 Click="MoveToPosition_Click"/>
 
-                        <Border Width="1" Background="{StaticResource BorderBrush}" Margin="8,4"/>
+                        <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="8,4"/>
 
-                        <TextBlock Text="Gehe zu Zeile:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Gehe zu Zeile:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBox x:Name="GoToRowBox" Width="60" VerticalAlignment="Center"
                                  VerticalContentAlignment="Center" Padding="4,2"
                                  ToolTip="Zeilennummer eingeben und Enter druecken"
@@ -503,16 +503,16 @@
         <Grid x:Name="GridHost" Grid.Row="1">
             <!-- Platzhalter (sichtbar wenn DataGrid abgedockt) -->
             <Border x:Name="UndockedPlaceholder" Visibility="Collapsed"
-                    Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}"
+                    Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1" CornerRadius="8" Margin="8" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="40,30">
                     <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="40"
-                               Foreground="{StaticResource NeonCyanBrush}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                               Foreground="{DynamicResource NeonCyanBrush}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                     <TextBlock Text="DataGrid ist in separatem Fenster geoeffnet"
-                               Foreground="{StaticResource TextBrush}" FontSize="16" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}" FontSize="16" FontWeight="SemiBold"
                                HorizontalAlignment="Center" Margin="0,0,0,8"/>
                     <TextBlock Text="Ziehen Sie das Fenster auf einen anderen Monitor fuer Multi-Monitor-Betrieb."
-                               Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"
+                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"
                                HorizontalAlignment="Center" Margin="0,0,0,16" TextWrapping="Wrap" TextAlignment="Center"/>
                     <Button x:Name="DockBackPlaceholderButton" Click="DockBackFromPlaceholder_Click"
                             Style="{StaticResource ToolbarButtonAccent}" HorizontalAlignment="Center">
@@ -535,8 +535,8 @@
                       CanUserReorderColumns="{Binding IsColumnReorderEnabled}"
                       HeadersVisibility="All"
                       GridLinesVisibility="All"
-                      VerticalGridLinesBrush="{StaticResource BorderBrush}"
-                      HorizontalGridLinesBrush="{StaticResource BorderBrush}"
+                      VerticalGridLinesBrush="{DynamicResource BorderBrush}"
+                      HorizontalGridLinesBrush="{DynamicResource BorderBrush}"
                       FrozenColumnCount="2"
                       RowHeaderWidth="24"
                       MinRowHeight="{Binding GridMinRowHeight}"

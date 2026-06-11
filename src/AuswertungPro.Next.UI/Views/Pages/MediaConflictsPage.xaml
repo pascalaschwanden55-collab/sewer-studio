@@ -3,8 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <Style x:Key="MetricCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource HeaderBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="10"/>
             <Setter Property="Padding" Value="12,10"/>
@@ -12,13 +12,13 @@
         </Style>
 
         <Style x:Key="DetailLabelStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Margin" Value="0,0,0,2"/>
         </Style>
 
         <Style x:Key="DetailValueStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>
@@ -32,8 +32,8 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Background="{StaticResource CardGlassBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
+        <Border Background="{DynamicResource CardGlassBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 CornerRadius="14"
                 Padding="18"
@@ -52,7 +52,7 @@
                                TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding SummaryText}"
                                Margin="0,10,0,0"
-                               Foreground="{StaticResource MutedBrush}"
+                               Foreground="{DynamicResource MutedBrush}"
                                TextWrapping="Wrap"/>
                 </StackPanel>
 
@@ -89,8 +89,8 @@
         </Border>
 
         <Border Grid.Row="1"
-                Background="{StaticResource CardBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
+                Background="{DynamicResource CardBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
                 Padding="8"
                 CornerRadius="10"
@@ -147,8 +147,8 @@
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0"
-                    Background="{StaticResource CardBrush}"
-                    BorderBrush="{StaticResource BorderBrush}"
+                    Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
                     CornerRadius="10"
                     Padding="12">
@@ -157,7 +157,7 @@
                         <TextBlock Text="Offene Faelle" FontSize="16" FontWeight="SemiBold"/>
                         <TextBlock Text="Links siehst du alle Konflikte. Rechts kannst du Quellen oeffnen, Videos pruefen und die Zuordnung direkt speichern."
                                    Margin="0,4,0,0"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
 
@@ -182,8 +182,8 @@
 
             <Border Grid.Column="1"
                     Margin="8,0,0,0"
-                    Background="{StaticResource CardBrush}"
-                    BorderBrush="{StaticResource BorderBrush}"
+                    Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
                     CornerRadius="10"
                     Padding="12">
@@ -192,7 +192,7 @@
                         <TextBlock Text="Konfliktdetails" FontSize="16" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding Path=SelectedConflict.TypeHint, TargetNullValue='Waehle links einen Konflikt aus, um Details und Aktionen zu sehen.'}"
                                    Margin="0,4,0,12"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
 
                         <TextBlock Text="Konflikttyp" Style="{StaticResource DetailLabelStyle}"/>
@@ -210,8 +210,8 @@
                         <TextBlock Text="PDF-Protokoll" Style="{StaticResource DetailLabelStyle}"/>
                         <TextBlock Text="{Binding SelectedConflict.SourcePdfText, TargetNullValue=-}" Style="{StaticResource DetailValueStyle}"/>
 
-                        <Border Background="{StaticResource HeaderBrush}"
-                                BorderBrush="{StaticResource BorderBrush}"
+                        <Border Background="{DynamicResource HeaderBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="10"
                                 Padding="12"
@@ -222,7 +222,7 @@
                                            Margin="0,6,0,2"
                                            TextWrapping="Wrap"/>
                                 <TextBlock Text="{Binding SelectedConflict.SuggestedSourcePathText, TargetNullValue=-}"
-                                           Foreground="{StaticResource MutedBrush}"
+                                           Foreground="{DynamicResource MutedBrush}"
                                            FontSize="11"
                                            TextWrapping="Wrap"/>
                             </StackPanel>
@@ -231,7 +231,7 @@
                         <TextBlock Text="Kandidaten" FontSize="14" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding SelectedConflict.CandidateSummaryText, TargetNullValue=Keine Auswahl}"
                                    Margin="0,4,0,8"
-                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
 
                         <ListBox ItemsSource="{Binding SelectedConflict.Candidates}"
                                  SelectedItem="{Binding SelectedConflict.SelectedCandidate, Mode=TwoWay}"
@@ -245,7 +245,7 @@
                                             <TextBlock Text="{Binding DirectoryName}"
                                                        Margin="0,2,0,0"
                                                        FontSize="11"
-                                                       Foreground="{StaticResource MutedBrush}"
+                                                       Foreground="{DynamicResource MutedBrush}"
                                                        TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </Border>
@@ -338,6 +338,6 @@
                  TextWrapping="Wrap"
                  IsReadOnly="True"
                  VerticalScrollBarVisibility="Auto"
-                 Foreground="{StaticResource MutedBrush}"/>
+                 Foreground="{DynamicResource MutedBrush}"/>
     </Grid>
 </UserControl>

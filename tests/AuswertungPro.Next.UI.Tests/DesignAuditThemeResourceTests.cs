@@ -5,6 +5,44 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DesignAuditThemeResourceTests
 {
+    private static readonly string[] ThemeBrushKeys =
+    [
+        "BgBrush",
+        "BgLightBrush",
+        "CardBrush",
+        "CardGlassBrush",
+        "BorderBrush",
+        "BorderLightBrush",
+        "HeaderBrush",
+        "HeaderTextBrush",
+        "TextBrush",
+        "TextSecondaryBrush",
+        "MutedBrush",
+        "AccentBrush",
+        "AccentHoverBrush",
+        "AccentSubtleBrush",
+        "HoverBrush",
+        "SurfaceSubtleBrush",
+        "OverlayBrush",
+        "NavPanelBrush",
+        "GlassBrush",
+        "SuccessBrush",
+        "DangerBrush",
+        "WarningBrush",
+        "InfoBrush",
+        "NeonCyanBrush",
+        "NeonBlueBrush",
+        "NeonPinkBrush",
+        "NeonPurpleBrush",
+        "NeonGreenBrush",
+        "NeonOrangeBrush",
+        "LcarsAmberBrush",
+        "LcarsPeachBrush",
+        "LcarsLavenderBrush",
+        "LcarsBlueBrush",
+        "LcarsTanBrush"
+    ];
+
     [Fact]
     public void VideoAnalysisPipelineWindow_uses_theme_resources_for_surface_and_text_colors()
     {
@@ -158,39 +196,22 @@ public sealed class DesignAuditThemeResourceTests
     {
         var controls = ReadUiFile("Theme", "Controls.xaml");
         var mainWindow = ReadUiFile("MainWindow.xaml");
-        var themeBrushKeys = new[]
-        {
-            "BgBrush",
-            "BgLightBrush",
-            "CardBrush",
-            "CardGlassBrush",
-            "BorderBrush",
-            "BorderLightBrush",
-            "HeaderBrush",
-            "HeaderTextBrush",
-            "TextBrush",
-            "TextSecondaryBrush",
-            "MutedBrush",
-            "AccentBrush",
-            "AccentHoverBrush",
-            "AccentSubtleBrush",
-            "HoverBrush",
-            "SurfaceSubtleBrush",
-            "OverlayBrush",
-            "NavPanelBrush",
-            "GlassBrush",
-            "SuccessBrush",
-            "DangerBrush",
-            "WarningBrush",
-            "InfoBrush"
-        };
 
-        foreach (var key in themeBrushKeys)
+        AssertNoStaticThemeBrushResources("Theme/Controls.xaml", controls);
+        AssertNoStaticThemeBrushResources("MainWindow.xaml", mainWindow);
+    }
+
+    [Fact]
+    public void Theme_styles_and_pages_do_not_pin_theme_brushes_for_live_theme_switching()
+    {
+        AssertNoStaticThemeBrushResources("Theme/ThemeLight.xaml", ReadUiFile("Theme", "ThemeLight.xaml"));
+        AssertNoStaticThemeBrushResources("Theme/Theme.xaml", ReadUiFile("Theme", "Theme.xaml"));
+
+        var root = Path.Combine(FindRepoRoot(), "src", "AuswertungPro.Next.UI", "Views", "Pages");
+        foreach (var file in Directory.EnumerateFiles(root, "*.xaml", SearchOption.AllDirectories))
         {
-            Assert.DoesNotContain($"{{StaticResource {key}}}", controls);
-            Assert.DoesNotContain($"{{StaticResource {key}}}", mainWindow);
-            Assert.DoesNotContain($"<StaticResource ResourceKey=\"{key}\"", controls);
-            Assert.DoesNotContain($"<StaticResource ResourceKey=\"{key}\"", mainWindow);
+            var relative = Path.GetRelativePath(Path.Combine(FindRepoRoot(), "src", "AuswertungPro.Next.UI"), file);
+            AssertNoStaticThemeBrushResources(relative, File.ReadAllText(file));
         }
     }
 
@@ -228,6 +249,15 @@ public sealed class DesignAuditThemeResourceTests
     {
         foreach (var value in forbidden)
             Assert.DoesNotContain(value, text);
+    }
+
+    private static void AssertNoStaticThemeBrushResources(string path, string xaml)
+    {
+        foreach (var key in ThemeBrushKeys)
+        {
+            Assert.DoesNotContain($"{{StaticResource {key}}}", xaml, StringComparison.Ordinal);
+            Assert.DoesNotContain($"<StaticResource ResourceKey=\"{key}\"", xaml, StringComparison.Ordinal);
+        }
     }
 
     private static string ReadUiFile(params string[] relativeParts)

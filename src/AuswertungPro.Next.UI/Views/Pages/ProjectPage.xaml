@@ -23,16 +23,16 @@
             </StackPanel>
         </Grid>
 
-        <Border Grid.Row="1" Style="{StaticResource Card}" Background="{StaticResource CardBrush}">
+        <Border Grid.Row="1" Style="{StaticResource Card}" Background="{DynamicResource CardBrush}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <TextBlock Text="Projekt-Infos" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
-                    <TextBlock Text="Name" Margin="0,12,0,4" Foreground="{StaticResource MutedBrush}"/>
+                    <TextBlock Text="Projekt-Infos" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    <TextBlock Text="Name" Margin="0,12,0,4" Foreground="{DynamicResource MutedBrush}"/>
                     <TextBox Text="{Binding Project.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Text="Beschreibung" Margin="0,12,0,4" Foreground="{StaticResource MutedBrush}"/>
+                    <TextBlock Text="Beschreibung" Margin="0,12,0,4" Foreground="{DynamicResource MutedBrush}"/>
                     <TextBox Text="{Binding Project.Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="120"/>
 
-                    <TextBlock Text="Projektdaten" Margin="0,16,0,6" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
+                    <TextBlock Text="Projektdaten" Margin="0,16,0,6" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -50,38 +50,38 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Auftraggeber" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,4"/>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Auftraggeber" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="1" Grid.Column="0" Text="{Binding Project.Metadata[Auftraggeber], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBlock Grid.Row="0" Grid.Column="2" Text="Auftrag Nr." Foreground="{StaticResource MutedBrush}" Margin="0,8,0,4"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="Auftrag Nr." Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding Project.Metadata[AuftragNr], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Gemeinde" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,4"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Gemeinde" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="3" Grid.Column="0" Text="{Binding Project.Metadata[Gemeinde], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBlock Grid.Row="2" Grid.Column="2" Text="Zone" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,4"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="Zone" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding Project.Metadata[Zone], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Strasse" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,4"/>
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Strasse" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="5" Grid.Column="0" Text="{Binding Project.Metadata[Strasse], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBlock Grid.Row="4" Grid.Column="2" Text="Bearbeiter" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,4"/>
+                        <TextBlock Grid.Row="4" Grid.Column="2" Text="Bearbeiter" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="5" Grid.Column="2" Text="{Binding Project.Metadata[Bearbeiter], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
-                        <TextBlock Grid.Row="6" Grid.Column="0" Text="Inspektionsdatum" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,4"/>
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="Inspektionsdatum" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="7" Grid.Column="0" Text="{Binding Project.Metadata[InspektionsDatum], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        <TextBlock Grid.Row="6" Grid.Column="2" Text="Firma" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,4"/>
+                        <TextBlock Grid.Row="6" Grid.Column="2" Text="Firma" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="7" Grid.Column="2" Text="{Binding Project.Metadata[FirmaName], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </Grid>
 
                     <!-- Sanieren & Eigentuemer entfernt -->
 
-                    <TextBlock Text="Firma &amp; Kontakt" Margin="0,12,0,6" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
-                    <TextBlock Text="Adresse" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,4"/>
+                    <TextBlock Text="Firma &amp; Kontakt" Margin="0,12,0,6" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
+                    <TextBlock Text="Adresse" Foreground="{DynamicResource MutedBrush}" Margin="0,4,0,4"/>
                     <TextBox Text="{Binding Project.Metadata[FirmaAdresse], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Text="Telefon" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,4"/>
+                    <TextBlock Text="Telefon" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                     <TextBox Text="{Binding Project.Metadata[FirmaTelefon], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Text="E-Mail" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,4"/>
+                    <TextBlock Text="E-Mail" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                     <TextBox Text="{Binding Project.Metadata[FirmaEmail], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
-                    <TextBlock Text="{Binding Project.Data.Count, StringFormat=Records: {0}}" Margin="0,12,0,0" Foreground="{StaticResource MutedBrush}"/>
+                    <TextBlock Text="{Binding Project.Data.Count, StringFormat=Records: {0}}" Margin="0,12,0,0" Foreground="{DynamicResource MutedBrush}"/>
                 </StackPanel>
             </ScrollViewer>
         </Border>

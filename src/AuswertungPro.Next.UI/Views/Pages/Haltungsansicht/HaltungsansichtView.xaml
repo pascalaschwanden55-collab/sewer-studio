@@ -27,8 +27,8 @@
                  SelectedItem="{Binding Selected, Mode=TwoWay}"
                  SelectionChanged="HaltungList_SelectionChanged"
                  PreviewMouseRightButtonDown="HaltungList_PreviewMouseRightButtonDown"
-                 Background="{StaticResource CardBrush}"
-                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                 Background="{DynamicResource CardBrush}"
+                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  VirtualizingStackPanel.IsVirtualizing="True"
@@ -58,12 +58,12 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding Fields[NR]}" Foreground="{StaticResource TextSecondaryBrush}"
+                                <TextBlock Text="{Binding Fields[NR]}" Foreground="{DynamicResource TextSecondaryBrush}"
                                            FontSize="11" Margin="0,0,8,0"/>
-                                <TextBlock Text="{Binding Fields[Haltungsname]}" Foreground="{StaticResource TextBrush}"
+                                <TextBlock Text="{Binding Fields[Haltungsname]}" Foreground="{DynamicResource TextBrush}"
                                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
-                            <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"
+                            <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"
                                        TextTrimming="CharacterEllipsis" Margin="0,2,0,0">
                                 <TextBlock.Text>
                                     <MultiBinding Converter="{StaticResource SummaryConv}">
@@ -85,7 +85,7 @@
         </ListBox>
 
         <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
-                      Background="{StaticResource BorderBrush}"/>
+                      Background="{DynamicResource BorderBrush}"/>
 
         <!-- Detail rechts: Feld-Karten oben, Primaere-Schaeden-Tabelle unten (per Splitter hoehenverstellbar) -->
         <Grid Grid.Column="2" Margin="8,0,0,0">
@@ -101,17 +101,17 @@
             <GridSplitter Grid.Row="1" Height="6" Margin="0,4,0,0"
                           HorizontalAlignment="Stretch" VerticalAlignment="Center"
                           ResizeDirection="Rows" ResizeBehavior="PreviousAndNext"
-                          Background="{StaticResource BorderBrush}"
+                          Background="{DynamicResource BorderBrush}"
                           DragCompleted="SchadenSplitter_DragCompleted"
                           ToolTip="Ziehen, um die Höhe von &quot;Primäre Schäden&quot; einzustellen"/>
 
             <Border Grid.Row="2" Margin="0,4,0,0" Padding="12"
-                    Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}"
+                    Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1" CornerRadius="10">
                 <DockPanel>
                     <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="0,0,0,8">
                         <TextBlock DockPanel.Dock="Left" Text="Primäre Schäden" FontSize="14" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
                         <Button DockPanel.Dock="Right" x:Name="SchadenAddButton" Content="+"
                                 Width="28" Height="24" FontSize="16" Padding="0"
                                 Click="SchadenAdd_Click" ToolTip="Neue Beobachtung codieren"/>
@@ -127,7 +127,7 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Margin="0,2" Padding="8,5"
-                                        Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource BorderBrush}"
+                                        Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}"
                                         BorderThickness="1" CornerRadius="6">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -137,19 +137,19 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="12"
-                                                   Foreground="{StaticResource NeonGreenBrush}"
+                                                   Foreground="{DynamicResource NeonGreenBrush}"
                                                    Text="{Binding Converter={StaticResource SchadenMeterConv}}"/>
                                         <Border Grid.Column="1" VerticalAlignment="Center" Margin="6,0" Padding="6,2"
                                                 CornerRadius="4" Background="#1E3A8A">
                                             <TextBlock Text="{Binding Code}" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
                                         </Border>
                                         <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="6,0" FontWeight="SemiBold"
-                                                   TextTrimming="CharacterEllipsis" Foreground="{StaticResource TextBrush}"
+                                                   TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextBrush}"
                                                    Text="{Binding Converter={StaticResource SchadenKlartextConv}}"/>
                                         <Border Grid.Column="3" VerticalAlignment="Center" Padding="6,2" CornerRadius="4"
-                                                Background="{StaticResource HeaderBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                                Background="{DynamicResource HeaderBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                             <TextBlock Text="{Binding Converter={StaticResource SchadenKategorieConv}}"
-                                                       FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                       FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         </Border>
                                     </Grid>
                                 </Border>

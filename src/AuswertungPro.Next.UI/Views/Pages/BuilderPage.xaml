@@ -45,7 +45,7 @@
                     <StackPanel Width="260"
                                 Margin="0,0,10,8">
                         <TextBlock Text="Suche"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
                     </StackPanel>
@@ -53,7 +53,7 @@
                     <StackPanel Width="180"
                                 Margin="0,0,10,8">
                         <TextBlock Text="Eigentuemer"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <ComboBox ItemsSource="{Binding OwnerFilterOptions}"
                                   SelectedItem="{Binding SelectedOwnerFilter, Mode=TwoWay}"/>
@@ -62,7 +62,7 @@
                     <StackPanel Width="180"
                                 Margin="0,0,10,8">
                         <TextBlock Text="Ausgefuehrt durch"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <ComboBox ItemsSource="{Binding ExecutedByFilterOptions}"
                                   SelectedItem="{Binding SelectedExecutedByFilter, Mode=TwoWay}"/>
@@ -71,7 +71,7 @@
                     <StackPanel Width="150"
                                 Margin="0,0,10,8">
                         <TextBlock Text="Sanieren"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <ComboBox ItemsSource="{Binding SanierenFilterOptions}"
                                   SelectedItem="{Binding SelectedSanierenFilter, Mode=TwoWay}"/>
@@ -80,7 +80,7 @@
                     <StackPanel Width="170"
                                 Margin="0,0,10,8">
                         <TextBlock Text="Material"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <ComboBox ItemsSource="{Binding MaterialFilterOptions}"
                                   SelectedItem="{Binding SelectedMaterialFilter, Mode=TwoWay}"/>
@@ -89,7 +89,7 @@
                     <StackPanel Width="160"
                                 Margin="0,0,10,8">
                         <TextBlock Text="Status"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <ComboBox ItemsSource="{Binding StatusFilterOptions}"
                                   SelectedItem="{Binding SelectedStatusFilter, Mode=TwoWay}"/>
@@ -98,7 +98,7 @@
                     <StackPanel Width="120"
                                 Margin="0,0,10,8">
                         <TextBlock Text="Jahr"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <ComboBox ItemsSource="{Binding YearFilterOptions}"
                                   SelectedItem="{Binding SelectedYearFilter, Mode=TwoWay}"/>
@@ -114,7 +114,7 @@
                 </WrapPanel>
 
                 <TextBlock Text="{Binding ActiveFilterText}"
-                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
                            FontStyle="Italic"/>
             </StackPanel>
         </Border>
@@ -145,7 +145,7 @@
                                 Grid.Column="0"
                                 Margin="0,0,0,8">
                         <TextBlock Text="Haltungen (gesamt)"
-                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding TotalRows}"
                                    FontSize="18"
                                    FontWeight="SemiBold"/>
@@ -155,7 +155,7 @@
                                 Grid.Column="1"
                                 Margin="0,0,0,8">
                         <TextBlock Text="Haltungen (Filter)"
-                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding FilteredRowsCount}"
                                    FontSize="18"
                                    FontWeight="SemiBold"/>
@@ -165,17 +165,17 @@
                                 Grid.Column="2"
                                 Margin="0,0,0,8">
                         <TextBlock Text="Netto total"
-                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding NetTotalText}"
                                    FontSize="18"
                                    FontWeight="SemiBold"
-                                   Foreground="{StaticResource NeonCyanBrush}"/>
+                                   Foreground="{DynamicResource NeonCyanBrush}"/>
                     </StackPanel>
 
                     <StackPanel Grid.Row="1"
                                 Grid.Column="0">
                         <TextBlock Text="Mit Positionsdetails"
-                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding RowsWithDetailedCosts}"
                                    FontSize="16"
                                    FontWeight="SemiBold"/>
@@ -184,7 +184,7 @@
                     <StackPanel Grid.Row="1"
                                 Grid.Column="1">
                         <TextBlock Text="Ohne Kosten"
-                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding RowsWithoutCosts}"
                                    FontSize="16"
                                    FontWeight="SemiBold"/>
@@ -193,7 +193,7 @@
                     <StackPanel Grid.Row="1"
                                 Grid.Column="2">
                         <TextBlock Text="Ohne Eigentuemer"
-                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding RowsWithoutOwner}"
                                    FontSize="16"
                                    FontWeight="SemiBold"/>
@@ -207,7 +207,7 @@
                 <StackPanel>
                     <TextBlock Text="Spezialstatistik"
                                FontWeight="SemiBold"
-                               Foreground="{StaticResource NeonCyanBrush}"
+                               Foreground="{DynamicResource NeonCyanBrush}"
                                Margin="0,0,0,8"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -244,7 +244,7 @@
 
                     <TextBlock Text="Sanierungsquote (alle Haltungen)"
                                FontWeight="SemiBold"
-                               Foreground="{StaticResource NeonCyanBrush}"
+                               Foreground="{DynamicResource NeonCyanBrush}"
                                Margin="0,12,0,6"/>
                     <ItemsControl ItemsSource="{Binding RehabilitationShareChart}">
                         <ItemsControl.ItemTemplate>
@@ -252,7 +252,7 @@
                                 <StackPanel Margin="0,2,0,2">
                                     <DockPanel LastChildFill="True">
                                         <TextBlock Text="{Binding Label}"
-                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                                    DockPanel.Dock="Left"/>
                                         <TextBlock Text="{Binding ValueText}"
                                                    FontWeight="SemiBold"
@@ -268,14 +268,14 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <TextBlock Text="{Binding RehabilitationShareHint}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                FontStyle="Italic"
                                TextWrapping="Wrap"
                                Margin="0,6,0,0"/>
 
                     <TextBlock Text="Kosten nach Ausgefuehrt durch"
                                FontWeight="SemiBold"
-                               Foreground="{StaticResource NeonCyanBrush}"
+                               Foreground="{DynamicResource NeonCyanBrush}"
                                Margin="0,12,0,6"/>
                     <ItemsControl ItemsSource="{Binding CostByExecutorChart}">
                         <ItemsControl.ItemTemplate>
@@ -283,7 +283,7 @@
                                 <StackPanel Margin="0,2,0,2">
                                     <DockPanel LastChildFill="True">
                                         <TextBlock Text="{Binding Label}"
-                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                                    DockPanel.Dock="Left"/>
                                         <TextBlock Text="{Binding ValueText}"
                                                    FontWeight="SemiBold"
@@ -299,20 +299,20 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <TextBlock Text="{Binding CostByExecutorHint}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                FontStyle="Italic"
                                TextWrapping="Wrap"
                                Margin="0,6,0,0"/>
 
                     <TextBlock Text="{Binding SpecialStatsHint}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                FontStyle="Italic"
                                TextWrapping="Wrap"
                                Margin="0,8,0,0"/>
                     <TextBlock Text="{Binding SpecialPositionStatsHint}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                Margin="0,8,0,4"/>
-                    <Border BorderBrush="{StaticResource BorderBrush}"
+                    <Border BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1"
                             CornerRadius="6"
                             Padding="6">
@@ -331,7 +331,7 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0"
                                                        Text="{Binding Category}"
-                                                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             <TextBlock Grid.Column="1"
                                                        Text="{Binding Position}"
                                                        TextWrapping="Wrap"/>
@@ -342,7 +342,7 @@
                                             <TextBlock Grid.Column="3"
                                                        Text="{Binding HoldingCountText}"
                                                        HorizontalAlignment="Right"
-                                                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -363,8 +363,8 @@
                       CanUserResizeRows="False"
                       CanUserSortColumns="True"
                       GridLinesVisibility="All"
-                      VerticalGridLinesBrush="{StaticResource BorderBrush}"
-                      HorizontalGridLinesBrush="{StaticResource BorderBrush}"
+                      VerticalGridLinesBrush="{DynamicResource BorderBrush}"
+                      HorizontalGridLinesBrush="{DynamicResource BorderBrush}"
                       EnableRowVirtualization="True"
                       EnableColumnVirtualization="True"
                       VirtualizingPanel.IsVirtualizing="True"
@@ -428,7 +428,7 @@
                             </Style>
                         </StackPanel.Style>
                         <TextBlock Text="{Binding PdfExportProgress}"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <ProgressBar Width="180"
                                      Height="8"
@@ -438,11 +438,11 @@
                                 MaxWidth="360"
                                 VerticalAlignment="Center">
                         <TextBlock Text="{Binding ExportStateText}"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"
                                    ToolTip="{Binding LastExportedPdfPath}"/>
                         <TextBlock Text="{Binding LastResult}"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextTrimming="CharacterEllipsis"
                                    ToolTip="{Binding LastResult}"/>
                     </StackPanel>

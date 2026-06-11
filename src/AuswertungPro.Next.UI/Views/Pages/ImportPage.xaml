@@ -11,7 +11,7 @@
 
         <StackPanel Margin="0,0,0,16">
             <!-- Import Toolbar Card -->
-            <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     Padding="6,4" CornerRadius="8">
                 <StackPanel Orientation="Horizontal">
                     <Button Command="{Binding ImportPdfCommand}"
@@ -22,15 +22,15 @@
                         </StackPanel>
                     </Button>
 
-                    <Border Width="1" Background="{StaticResource BorderBrush}" Margin="4,4"/>
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,4"/>
 
                     <Button Click="DropdownButton_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
                             ToolTip="XTF/M150/MDB, WinCan, IBAK, KINS importieren">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource NeonGreenBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource NeonGreenBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Weitere Quellen" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{StaticResource MutedBrush}"/>
+                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
@@ -70,12 +70,12 @@
                         </Button.ContextMenu>
                     </Button>
 
-                    <Border Width="1" Background="{StaticResource BorderBrush}" Margin="4,4"/>
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,4"/>
 
                     <Button Command="{Binding ExportImportSummaryCommand}"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,4,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE9F9;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE9F9;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Import-Report" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -84,7 +84,7 @@
                             Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
                             ToolTip="Letzten Import-Bericht oeffnen">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Letzter Bericht" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -93,7 +93,7 @@
                             Style="{StaticResource ToolbarButton}"
                             ToolTip="Bericht-Ordner oeffnen">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Berichte" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -103,18 +103,18 @@
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                 <CheckBox Content="Nur fehlende Felder ergaenzen (vorhandene Daten nicht ueberschreiben)"
                           IsChecked="{Binding FillMissingOnly}"
-                          Foreground="{StaticResource TextBrush}"
+                          Foreground="{DynamicResource TextBrush}"
                           ToolTip="Beim Re-Import werden nur leere Felder aufgefuellt. Bereits vorhandene Werte bleiben unveraendert."/>
 
                 <CheckBox Content="Erst Vorschau anzeigen"
                           IsChecked="{Binding ShowPreviewFirst}"
-                          Foreground="{StaticResource TextBrush}"
+                          Foreground="{DynamicResource TextBrush}"
                           Margin="16,0,0,0"
                           ToolTip="Fuehrt einen Dry-Run durch und zeigt die erwarteten Aenderungen, bevor der eigentliche Import startet."/>
             </StackPanel>
         </StackPanel>
 
-        <Border Grid.Row="1" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+        <Border Grid.Row="1" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 Padding="8" Margin="0,0,0,8" CornerRadius="8">
             <Border.Style>
                 <Style TargetType="Border">
@@ -133,9 +133,9 @@
                             IsEnabled="{Binding CanCancel}"
                             Style="{StaticResource ToolbarButton}"/>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="{Binding ImportPhase}" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="{Binding ImportProgress}" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding ImportPhase}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding ImportProgress}" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                 </DockPanel>
                 <ProgressBar Height="6" Maximum="100" Value="{Binding ImportProgressPercent}"/>
@@ -143,7 +143,7 @@
         </Border>
 
         <StackPanel Grid.Row="2">
-            <TextBlock Text="Zusammenfassung" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+            <TextBlock Text="Zusammenfassung" Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="SemiBold" Margin="0,0,0,6"/>
             <TextBox Text="{Binding SummaryText}" AcceptsReturn="True" TextWrapping="Wrap"
                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                      MinHeight="120"/>
