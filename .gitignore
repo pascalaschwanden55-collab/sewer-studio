@@ -70,6 +70,8 @@ sidecar/models/candidates/
 sidecar/models/yolo26l-seg/
 sidecar/test_export_tmp/
 sidecar/training_export/
+test_export_tmp/
+training_export/
 sidecar/yolo11m.engine
 
 # Superpowers Brainstorm-/Arbeitsordner (Mockups, Sessions)
