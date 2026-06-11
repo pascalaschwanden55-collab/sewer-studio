@@ -22,6 +22,18 @@ public sealed class DesignAuditThemeResourceTests
             "#60A5FA");
     }
 
+    [Fact]
+    public void TrainingCenterWindow_uses_theme_resources_for_slate_surfaces_and_text()
+    {
+        var xaml = ReadUiFile("Views", "Windows", "TrainingCenterWindow.xaml");
+
+        AssertDoesNotContainAny(xaml,
+            "#1E293B",
+            "#0F172A",
+            "#94A3B8",
+            "#64748B");
+    }
+
     private static void AssertDoesNotContainAny(string text, params string[] forbidden)
     {
         foreach (var value in forbidden)
