@@ -32,16 +32,18 @@ public sealed class MediaDistributionService
         Project project,
         IProgress<CopyProgress>? progress = null,
         CancellationToken ct = default,
-        bool dryRun = false)
+        bool dryRun = false,
+        object? collectionLock = null)
     {
         var copied = 0;
         var skipped = 0;
         var errors = 0;
         var messages = new List<string>();
         var processed = 0;
-        var total = project.Data.Count;
+        var records = SnapshotRecords(project, collectionLock);
+        var total = records.Count;
 
-        foreach (var record in project.Data)
+        foreach (var record in records)
         {
             ct.ThrowIfCancellationRequested();
             var haltungsname = record.GetFieldValue("Haltungsname")?.Trim();
@@ -99,12 +101,13 @@ public sealed class MediaDistributionService
 
             // Datei nicht gefunden - nach Dateiname in Haltungen-Ordner suchen
             var fileName = Path.GetFileName(rawPath);
-            var found = SearchFileInHaltungen(projectFolder, fileName);
+            var found = SearchFileInHaltungen(projectFolder, holdingRoot, fileName, messages, fieldName);
             if (found != null)
             {
                 var newRelative = ProjectPathResolver.MakeRelative(found, projectFolder);
-                record.SetFieldValue(fieldName, newRelative, FieldSource.Legacy, userEdited: false);
-                messages.Add($"{fieldName}: Repariert: {rawPath} -> {newRelative}");
+                if (!dryRun)
+                    record.SetFieldValue(fieldName, newRelative, FieldSource.Legacy, userEdited: false);
+                messages.Add($"{fieldName}: {(dryRun ? "Wuerde reparieren" : "Repariert")}: {rawPath} -> {newRelative}");
                 copied++;
             }
             else
@@ -167,14 +170,14 @@ public sealed class MediaDistributionService
 
                 // Datei nicht gefunden - suchen
                 var fn = Path.GetFileName(trimmed);
-                var found = SearchFileInHaltungen(projectFolder, fn);
+                var found = SearchFileInHaltungen(projectFolder, holdingRoot, fn, messages, fieldName);
                 if (found != null)
                 {
                     var newRel = ProjectPathResolver.MakeRelative(found, projectFolder);
-                    newPaths.Add(newRel);
+                    newPaths.Add(dryRun ? trimmed : newRel);
                     anyChanged = true;
                     copied++;
-                    messages.Add($"{fieldName}: Repariert: {trimmed} -> {newRel}");
+                    messages.Add($"{fieldName}: {(dryRun ? "Wuerde reparieren" : "Repariert")}: {trimmed} -> {newRel}");
                 }
                 else
                 {
@@ -243,12 +246,14 @@ public sealed class MediaDistributionService
                         continue; // OK
 
                     var fn = Path.GetFileName(rawPath);
-                    var found = SearchFileInHaltungen(projectFolder, fn);
+                    var found = SearchFileInHaltungen(projectFolder, holdingRoot, fn, messages, "Foto");
                     if (found != null)
                     {
-                        entry.FotoPaths[i] = ProjectPathResolver.MakeRelative(found, projectFolder);
+                        var newRel = ProjectPathResolver.MakeRelative(found, projectFolder);
+                        if (!dryRun)
+                            entry.FotoPaths[i] = newRel;
                         copied++;
-                        messages.Add($"Foto repariert: {rawPath} -> {entry.FotoPaths[i]}");
+                        messages.Add($"Foto {(dryRun ? "wuerde repariert" : "repariert")}: {rawPath} -> {newRel}");
                     }
                     else
                     {
@@ -298,12 +303,14 @@ public sealed class MediaDistributionService
                     continue; // OK
 
                 var fn = Path.GetFileName(finding.FotoPath);
-                var found = SearchFileInHaltungen(projectFolder, fn);
+                var found = SearchFileInHaltungen(projectFolder, holdingRoot, fn, messages, "VsaFinding Foto");
                 if (found != null)
                 {
-                    finding.FotoPath = ProjectPathResolver.MakeRelative(found, projectFolder);
+                    var newRel = ProjectPathResolver.MakeRelative(found, projectFolder);
+                    if (!dryRun)
+                        finding.FotoPath = newRel;
                     copied++;
-                    messages.Add($"VsaFinding Foto repariert: {fn}");
+                    messages.Add($"VsaFinding Foto {(dryRun ? "wuerde repariert" : "repariert")}: {fn} -> {newRel}");
                 }
                 else
                 {
@@ -335,28 +342,68 @@ public sealed class MediaDistributionService
         }
     }
 
+    private static IReadOnlyList<HaltungRecord> SnapshotRecords(Project project, object? collectionLock)
+    {
+        if (collectionLock is null)
+            return project.Data.ToList();
+
+        lock (collectionLock)
+            return project.Data.ToList();
+    }
+
     /// <summary>
-    /// Sucht eine Datei anhand ihres Namens im gesamten Haltungen-Ordner des Projekts.
-    /// Durchsucht Video/, Fotos/, PDF/ Unterordner aller Haltungen.
+    /// Repariert relative Medienpfade vorsichtig: zuerst in der eigenen Haltung suchen;
+    /// global nur verwenden, wenn genau ein Treffer existiert.
     /// </summary>
-    private static string? SearchFileInHaltungen(string projectFolder, string fileName)
+    private static string? SearchFileInHaltungen(
+        string projectFolder,
+        string holdingRoot,
+        string fileName,
+        List<string> messages,
+        string context)
     {
         if (string.IsNullOrWhiteSpace(fileName))
             return null;
+
+        if (Directory.Exists(holdingRoot))
+        {
+            var ownMatches = FindMatchingFiles(holdingRoot, fileName, max: 2);
+            if (ownMatches.Count == 1)
+                return ownMatches[0];
+            if (ownMatches.Count > 1)
+            {
+                messages.Add($"{context}: Mehrere Treffer in eigener Haltung fuer {fileName} - Pfad nicht automatisch repariert.");
+                return null;
+            }
+        }
 
         var haltungenRoot = Path.Combine(projectFolder, "Haltungen");
         if (!Directory.Exists(haltungenRoot))
             return null;
 
+        var globalMatches = FindMatchingFiles(haltungenRoot, fileName, max: 2);
+        if (globalMatches.Count == 1)
+            return globalMatches[0];
+        if (globalMatches.Count > 1)
+        {
+            messages.Add($"{context}: Mehrere globale Treffer fuer {fileName} - Pfad nicht automatisch repariert.");
+            return null;
+        }
+
+        return null;
+    }
+
+    private static List<string> FindMatchingFiles(string root, string fileName, int max)
+    {
         try
         {
-            // Direkte Suche nach Dateiname in allen Unterordnern
-            return Directory.EnumerateFiles(haltungenRoot, fileName, SearchOption.AllDirectories)
-                .FirstOrDefault();
+            return Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories)
+                .Take(max)
+                .ToList();
         }
         catch
         {
-            return null;
+            return new List<string>();
         }
     }
 
