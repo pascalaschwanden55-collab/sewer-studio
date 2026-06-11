@@ -190,6 +190,12 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("SelectedItem=\"{Binding SelectedRow, Mode=TwoWay}\"", xaml);
         Assert.Contains("ItemsSource=\"{Binding SelectedDetailMeasures}\"", xaml);
         Assert.Contains("Text=\"{Binding MeasuresSummary}\"", xaml);
+        Assert.Contains("Command=\"{Binding DetailUebernehmenCommand}\"", xaml);
+        Assert.Contains("Command=\"{Binding DetailVerwerfenCommand}\"", xaml);
+        Assert.Contains("IsEnabled=\"{Binding IsDetailDirty}\"", xaml);
+        Assert.Contains("IsChecked=\"{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml);
+        Assert.Contains("Text=\"{Binding Qty, Mode=TwoWay, UpdateSourceTrigger=LostFocus", xaml);
+        Assert.Contains("Text=\"{Binding UnitPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus", xaml);
         Assert.DoesNotContain("DataContext.GroupedMeasureOptions", xaml);
         Assert.DoesNotContain("<ComboBox.GroupStyle>", xaml);
         Assert.Contains("PreviewMouseLeftButtonDown=\"MeasureComboBox_PreviewMouseLeftButtonDown\"", xaml);

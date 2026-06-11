@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -98,6 +99,206 @@ public static class SanierungsMatrixMeasureSummaryFormatter
     }
 }
 
+public sealed partial class SanierungsMatrixDetailEditLineVm : ObservableObject
+{
+    private readonly Action _changed;
+
+    public string Group { get; }
+    public string ItemKey { get; }
+    public string Text { get; }
+    public string Unit { get; }
+    public bool IsPriceOverridden { get; }
+    public bool IsQtyOverridden { get; }
+
+    [ObservableProperty] private bool _selected;
+    [ObservableProperty] private bool _transferMarked;
+    [ObservableProperty] private decimal _qty;
+    [ObservableProperty] private decimal _unitPrice;
+
+    public decimal LineTotal => Selected ? Qty * UnitPrice : 0m;
+
+    public SanierungsMatrixDetailEditLineVm(CostLine line, Action changed)
+    {
+        _changed = changed;
+        Group = line.Group;
+        ItemKey = line.ItemKey;
+        Text = line.Text;
+        Unit = line.Unit;
+        Selected = line.Selected;
+        TransferMarked = line.TransferMarked;
+        Qty = line.Qty;
+        UnitPrice = line.UnitPrice;
+        IsPriceOverridden = line.IsPriceOverridden;
+        IsQtyOverridden = line.IsQtyOverridden;
+    }
+
+    public CostLine ToModel()
+    {
+        return new CostLine
+        {
+            Group = Group,
+            ItemKey = ItemKey,
+            Text = Text,
+            Unit = Unit,
+            Qty = Qty,
+            UnitPrice = UnitPrice,
+            Selected = Selected,
+            TransferMarked = TransferMarked,
+            IsPriceOverridden = IsPriceOverridden,
+            IsQtyOverridden = IsQtyOverridden,
+        };
+    }
+
+    partial void OnSelectedChanged(bool value) => NotifyChanged();
+    partial void OnTransferMarkedChanged(bool value) => NotifyChanged();
+    partial void OnQtyChanged(decimal value) => NotifyChanged();
+    partial void OnUnitPriceChanged(decimal value) => NotifyChanged();
+
+    private void NotifyChanged()
+    {
+        OnPropertyChanged(nameof(LineTotal));
+        _changed();
+    }
+}
+
+public sealed partial class SanierungsMatrixDetailEditMeasureVm : ObservableObject
+{
+    private readonly Action _changed;
+
+    public string MeasureName { get; }
+    public string MeasureId { get; }
+    public int? Dn { get; }
+    public decimal? LengthMeters { get; }
+    public ObservableCollection<SanierungsMatrixDetailEditLineVm> Lines { get; } = new();
+
+    [ObservableProperty] private decimal _total;
+
+    public SanierungsMatrixDetailEditMeasureVm(MeasureCost measure, Action changed)
+    {
+        _changed = changed;
+        MeasureName = string.IsNullOrWhiteSpace(measure.MeasureName) ? measure.MeasureId : measure.MeasureName;
+        MeasureId = measure.MeasureId;
+        Dn = measure.Dn;
+        LengthMeters = measure.LengthMeters;
+
+        foreach (var line in measure.Lines)
+            Lines.Add(new SanierungsMatrixDetailEditLineVm(line, LineChanged));
+
+        Recalculate(markDirty: false);
+    }
+
+    public MeasureCost ToModel()
+    {
+        return new MeasureCost
+        {
+            MeasureId = MeasureId,
+            MeasureName = MeasureName,
+            Dn = Dn,
+            LengthMeters = LengthMeters,
+            Lines = Lines.Select(l => l.ToModel()).ToList(),
+            Total = Total,
+        };
+    }
+
+    private void LineChanged()
+    {
+        Recalculate(markDirty: true);
+    }
+
+    private void Recalculate(bool markDirty)
+    {
+        Total = Lines.Sum(l => l.LineTotal);
+        if (markDirty)
+            _changed();
+    }
+}
+
+public sealed partial class SanierungsMatrixDetailEditSession : ObservableObject
+{
+    private readonly decimal _vatRate;
+
+    public ObservableCollection<SanierungsMatrixDetailEditMeasureVm> Measures { get; } = new();
+
+    [ObservableProperty] private decimal _total;
+    [ObservableProperty] private decimal _mwstAmount;
+    [ObservableProperty] private decimal _totalInclMwst;
+    [ObservableProperty] private bool _isDirty;
+
+    private SanierungsMatrixDetailEditSession(decimal vatRate)
+    {
+        _vatRate = vatRate;
+    }
+
+    public static SanierungsMatrixDetailEditSession FromCost(HoldingCost? cost, decimal vatRate)
+    {
+        var session = new SanierungsMatrixDetailEditSession(vatRate);
+        if (cost is not null)
+        {
+            foreach (var measure in cost.Measures)
+                session.Measures.Add(new SanierungsMatrixDetailEditMeasureVm(CloneMeasure(measure), session.MeasureChanged));
+        }
+
+        session.Recalculate();
+        session.MarkClean();
+        return session;
+    }
+
+    public HoldingCost ToHoldingCost(string holding, DateTime? date, decimal vatRate)
+    {
+        var measures = Measures.Select(m => m.ToModel()).ToList();
+        return CostCalculatorLogicService.BuildHoldingCost(holding, date, measures, vatRate);
+    }
+
+    public void MarkClean()
+    {
+        IsDirty = false;
+    }
+
+    private void MeasureChanged()
+    {
+        Recalculate();
+        IsDirty = true;
+    }
+
+    private void Recalculate()
+    {
+        var totals = CostCalculatorLogicService.CalculateTotals(Measures.Sum(m => m.Total), _vatRate);
+        Total = totals.Total;
+        MwstAmount = totals.MwstAmount;
+        TotalInclMwst = totals.TotalInclMwst;
+    }
+
+    private static MeasureCost CloneMeasure(MeasureCost measure)
+    {
+        return new MeasureCost
+        {
+            MeasureId = measure.MeasureId,
+            MeasureName = measure.MeasureName,
+            Dn = measure.Dn,
+            LengthMeters = measure.LengthMeters,
+            Total = measure.Total,
+            Lines = measure.Lines.Select(CloneLine).ToList(),
+        };
+    }
+
+    private static CostLine CloneLine(CostLine line)
+    {
+        return new CostLine
+        {
+            Group = line.Group,
+            ItemKey = line.ItemKey,
+            Text = line.Text,
+            Unit = line.Unit,
+            Qty = line.Qty,
+            UnitPrice = line.UnitPrice,
+            Selected = line.Selected,
+            TransferMarked = line.TransferMarked,
+            IsPriceOverridden = line.IsPriceOverridden,
+            IsQtyOverridden = line.IsQtyOverridden,
+        };
+    }
+}
+
 /// <summary>Eine Haltungs-Zeile in der Sanierungs-Matrix.</summary>
 public sealed partial class SanierungMatrixRowVm : ObservableObject
 {
@@ -166,7 +367,7 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
     public void MarkMultipleStoredMeasures()
     {
         HasMultipleStoredMeasures = true;
-        Hinweis = "Mehrfach-Massnahme: im Einzelfenster bearbeiten";
+        Hinweis = "Mehrfach-Massnahme: im Detail bearbeiten";
     }
 
     partial void OnSelectedMeasureChanged(MeasureOption? value)
@@ -252,6 +453,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     private ProjectCostStore _store = new();
     private decimal _vatRate = 0.081m;
     private string _projectPath = "";
+    private SanierungMatrixRowVm? _detailRow;
+    private SanierungsMatrixDetailEditSession? _detailSession;
+    private bool _suppressSelectionGuard;
 
     // Haltungen, die in dieser Sitzung auf "keine" gesetzt wurden -> beim Speichern
     // muessen ihre Tabellenfelder (Kosten, Massnahmen, Mengen) geleert werden.
@@ -267,9 +471,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     [ObservableProperty] private string _detailTitle = "Keine Haltung gewaehlt";
     [ObservableProperty] private string _detailSubtitle = "Links eine Haltung waehlen.";
     [ObservableProperty] private string _detailTotal = "";
+    [ObservableProperty] private string _detailEditStatus = "";
+    [ObservableProperty] private bool _isDetailDirty;
 
-    public IReadOnlyList<SanierungMatrixDetailMeasureVm> SelectedDetailMeasures { get; private set; } =
-        Array.Empty<SanierungMatrixDetailMeasureVm>();
+    public ObservableCollection<SanierungsMatrixDetailEditMeasureVm> SelectedDetailMeasures { get; private set; } = new();
 
     public SanierungsMatrixPageViewModel(ShellViewModel shell)
     {
@@ -466,32 +671,140 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
 
     partial void OnSelectedRowChanged(SanierungMatrixRowVm? value)
     {
-        RefreshSelectedDetail();
+        if (_suppressSelectionGuard)
+            return;
+
+        if (_detailRow is not null && !ReferenceEquals(value, _detailRow) && IsDetailDirty)
+        {
+            var decision = _sp.Dialogs.ConfirmCancel(
+                "Es gibt nicht uebernommene Aenderungen im Detailbereich.\n\nJa = uebernehmen, Nein = verwerfen, Abbrechen = auf der aktuellen Haltung bleiben.",
+                "Sanierungs-Matrix");
+
+            if (decision == DialogConfirm.Cancel)
+            {
+                _suppressSelectionGuard = true;
+                SelectedRow = _detailRow;
+                _suppressSelectionGuard = false;
+                return;
+            }
+
+            if (decision == DialogConfirm.Yes)
+                DetailUebernehmen();
+            else
+                DetailVerwerfen();
+        }
+
+        LoadDetailForRow(value);
     }
 
     private void RefreshSelectedDetailIfNeeded(SanierungMatrixRowVm row)
     {
-        if (ReferenceEquals(SelectedRow, row))
-            RefreshSelectedDetail();
+        if (ReferenceEquals(_detailRow, row))
+            LoadDetailForRow(row);
     }
 
-    private void RefreshSelectedDetail()
+    private void LoadDetailForRow(SanierungMatrixRowVm? row)
     {
-        if (SelectedRow is null)
+        if (_detailSession is not null)
+            _detailSession.PropertyChanged -= DetailSession_PropertyChanged;
+
+        _detailRow = row;
+        if (row is null)
         {
-            SelectedDetailMeasures = Array.Empty<SanierungMatrixDetailMeasureVm>();
+            _detailSession = null;
+            SelectedDetailMeasures = new ObservableCollection<SanierungsMatrixDetailEditMeasureVm>();
             DetailTitle = "Keine Haltung gewaehlt";
             DetailSubtitle = "Links eine Haltung waehlen.";
             DetailTotal = "";
+            DetailEditStatus = "";
+            IsDetailDirty = false;
             OnPropertyChanged(nameof(SelectedDetailMeasures));
+            NotifyDetailCommands();
             return;
         }
 
-        SelectedDetailMeasures = SanierungsMatrixMeasureSummaryFormatter.BuildDetailMeasures(SelectedRow.StoredCost);
-        DetailTitle = $"Haltung {SelectedRow.Holding}";
-        DetailSubtitle = SelectedRow.MeasuresSummary;
-        DetailTotal = $"Total: {SelectedRow.Total:N2} CHF";
+        _detailSession = SanierungsMatrixDetailEditSession.FromCost(row.StoredCost, _vatRate);
+        _detailSession.PropertyChanged += DetailSession_PropertyChanged;
+        SelectedDetailMeasures = _detailSession.Measures;
+        DetailTitle = $"Haltung {row.Holding}";
+        DetailSubtitle = row.MeasuresSummary;
+        UpdateDetailStateFromSession();
         OnPropertyChanged(nameof(SelectedDetailMeasures));
+    }
+
+    private void DetailSession_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(SanierungsMatrixDetailEditSession.Total)
+            or nameof(SanierungsMatrixDetailEditSession.MwstAmount)
+            or nameof(SanierungsMatrixDetailEditSession.TotalInclMwst)
+            or nameof(SanierungsMatrixDetailEditSession.IsDirty))
+        {
+            UpdateDetailStateFromSession();
+        }
+    }
+
+    private void UpdateDetailStateFromSession()
+    {
+        if (_detailSession is null)
+        {
+            DetailTotal = "";
+            DetailEditStatus = "";
+            IsDetailDirty = false;
+        }
+        else
+        {
+            DetailTotal = $"Total: {_detailSession.Total:N2} CHF";
+            DetailEditStatus = _detailSession.IsDirty ? "Aenderungen offen" : "";
+            IsDetailDirty = _detailSession.IsDirty;
+        }
+
+        NotifyDetailCommands();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanApplyDetailChanges))]
+    private void DetailUebernehmen()
+    {
+        if (_detailRow is null || _detailSession is null)
+            return;
+
+        var updated = _detailSession.ToHoldingCost(_detailRow.Holding, _detailRow.StoredCost?.Date, _vatRate);
+        _store.ByHolding[_detailRow.Holding] = updated;
+        _clearedHoldings.Remove(_detailRow.Holding);
+
+        _detailRow.SetStoredCost(updated);
+        _detailRow.Total = updated.Total;
+        _detailRow.Hinweis = updated.Measures.Count > 1
+            ? "Mehrfach-Massnahme: im Detail bearbeiten"
+            : _detailRow.Anschluesse > 0 ? $"{_detailRow.Anschluesse} Anschluss(e)" : "";
+
+        _detailSession.MarkClean();
+        DetailSubtitle = _detailRow.MeasuresSummary;
+        UpdateDetailStateFromSession();
+        RecomputeGesamt();
+        Status = $"Detail uebernommen: {_detailRow.Holding}, Total {_detailRow.Total:N2} CHF.";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanApplyDetailChanges))]
+    private void DetailVerwerfen()
+    {
+        if (_detailRow is null)
+            return;
+
+        LoadDetailForRow(_detailRow);
+        Status = $"Detail verworfen: {_detailRow.Holding}.";
+    }
+
+    private bool CanApplyDetailChanges() => IsDetailDirty && _detailRow is not null && _detailSession is not null;
+
+    partial void OnIsDetailDirtyChanged(bool value)
+    {
+        NotifyDetailCommands();
+    }
+
+    private void NotifyDetailCommands()
+    {
+        DetailUebernehmenCommand.NotifyCanExecuteChanged();
+        DetailVerwerfenCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>
