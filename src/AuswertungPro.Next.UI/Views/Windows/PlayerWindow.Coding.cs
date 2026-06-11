@@ -85,6 +85,7 @@ public partial class PlayerWindow
     // Multi-Model Pipeline (YOLO â†’ DINO â†’ SAM) fuer Einzelframe-Analyse
     private SingleFrameMultiModelService? _codingMultiModel;
     private VisionPipelineClient? _codingVisionClient;
+    private AuswertungPro.Next.Application.Ai.PipelineConfig? _codingPipelineConfig;
     private bool _codingUseMultiModel;
     private AuswertungPro.Next.Application.Ai.IPipelineHealthMonitor? _codingHealthMonitor;
     private bool _codingAiEnabled;
@@ -1743,8 +1744,7 @@ public partial class PlayerWindow
             File.WriteAllBytes(dlg.FileName, pdf);
 
             // PDF oeffnen
-            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(dlg.FileName) { UseShellExecute = true }); }
-            catch { }
+            AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(dlg.FileName, out _);
 
             ShowOverlay("PDF-Protokoll erstellt", TimeSpan.FromSeconds(4));
         }
@@ -2571,9 +2571,11 @@ public partial class PlayerWindow
     {
         try
         {
-            var config = new AppSettingsAiSettingsProvider()
-                .Load()
-                .ToRuntimeSettings();
+            var platformConfig = new AppSettingsAiSettingsProvider().Load();
+            var config = platformConfig.ToRuntimeSettings();
+            _codingPipelineConfig = App.Services is ServiceProvider sp
+                ? sp.PipelineCfg
+                : platformConfig.ToPipelineConfig();
             _codingAiModelName = config.VisionModel;
             if (!config.Enabled)
             {
@@ -2595,10 +2597,10 @@ public partial class PlayerWindow
             // Multi-Model Pipeline (YOLO â†’ DINO â†’ SAM) initialisieren
             try
             {
-                var sidecarUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_URL")
-                    ?? "http://localhost:8100";
-                _codingVisionClient = new VisionPipelineClient(new Uri(sidecarUrl));
-                _codingMultiModel = new SingleFrameMultiModelService(_codingVisionClient);
+                _codingVisionClient = new VisionPipelineClient(
+                    _codingPipelineConfig.SidecarUrl,
+                    sidecarToken: _codingPipelineConfig.SidecarToken);
+                _codingMultiModel = new SingleFrameMultiModelService(_codingVisionClient, _codingPipelineConfig);
                 _codingAiEnabled = true;
 
                 // Kontrollsicherung: Monitor pollt laufend und haelt den Modus aktuell
@@ -2662,7 +2664,9 @@ public partial class PlayerWindow
     {
         _codingUseMultiModel = status.MultiModelActive;
         if (status.MultiModelActive && _codingMultiModel == null && _codingVisionClient != null)
-            _codingMultiModel = new SingleFrameMultiModelService(_codingVisionClient);
+            _codingMultiModel = _codingPipelineConfig is null
+                ? new SingleFrameMultiModelService(_codingVisionClient)
+                : new SingleFrameMultiModelService(_codingVisionClient, _codingPipelineConfig);
 
         var color = status.Level switch
         {
@@ -2872,7 +2876,7 @@ public partial class PlayerWindow
             {
                 double checkMeter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
                 // BCD/BCE/BDC: Einmal-Codes â€” Meter egal
-                bool isEinmalCode = codeHint is "BCD" or "BCE" or "BDC";
+                bool isEinmalCode = CodingDedupPolicy.IsOneTimeCode(codeHint);
                 var existingDup = _codingVm.Events.FirstOrDefault(e =>
                     CodesMatchForDedup(e.Entry.Code, codeHint) &&
                     (isEinmalCode || Math.Abs(e.MeterAtCapture - checkMeter) < 1.0));
@@ -3268,8 +3272,7 @@ public partial class PlayerWindow
 
             // BCD/BCE existieren pro Haltung nur EINMAL â€” Meterstand-unabhaengige Dedup
             // Primaer gegen session.Events pruefen (wird nie gecleared).
-            if ((string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
-                 || string.Equals(code, "BCE", StringComparison.OrdinalIgnoreCase))
+            if (CodingDedupPolicy.IsOneTimeCode(code)
                 && (codingSessionService.ActiveSession?.Events.Any(e =>
                         CodesMatchForDedup(e.Entry.Code, code)) == true
                     || codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
@@ -3445,9 +3448,7 @@ public partial class PlayerWindow
     {
         // Einmal-Codes: BCD (Rohranfang), BCE (Rohrende), BDC (Abbruch) duerfen
         // nur 1Ã— pro Session vorkommen â€” Meter-Distanz ist irrelevant
-        var existBaseCode = existing.Entry.Code?.Length >= 3
-            ? existing.Entry.Code[..3].ToUpperInvariant() : "";
-        if (existBaseCode is "BCD" or "BCE" or "BDC")
+        if (CodingDedupPolicy.IsOneTimeCode(existing.Entry.Code))
             return true; // IMMER Duplikat, egal bei welchem Meter
 
         // Streckenschaden: der ganze Bereich MeterStart..MeterEnd ist abgedeckt
@@ -3527,19 +3528,7 @@ public partial class PlayerWindow
     /// </summary>
     private static bool CodesMatchForDedup(string? existingCode, string newCode)
     {
-        if (string.IsNullOrWhiteSpace(existingCode) || string.IsNullOrWhiteSpace(newCode))
-            return false;
-
-        // Exakter Match
-        if (string.Equals(existingCode, newCode, StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        // Hauptcode-Match: gleicher 3-Zeichen-Prefix = gleiche Schadensgruppe
-        if (existingCode.Length >= 3 && newCode.Length >= 3)
-            return string.Equals(
-                existingCode[..3], newCode[..3], StringComparison.OrdinalIgnoreCase);
-
-        return false;
+        return CodingDedupPolicy.CodesMatch(existingCode, newCode);
     }
 
     /// <summary>
@@ -3566,15 +3555,13 @@ public partial class PlayerWindow
             // BCD/BCE: Live-Check bei JEDEM Finding (nicht gecacht!).
             // Wichtig weil zwischen Analyse-Start und diesem Punkt der Eingabemarker
             // bereits ein BCD erzeugt haben kann (async Timing).
-            if (code != null
-                && (string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(code, "BCE", StringComparison.OrdinalIgnoreCase)))
+            if (code != null && CodingDedupPolicy.IsOneTimeCode(code))
             {
                 bool alreadyExists =
                     _codingSessionService?.ActiveSession?.Events.Any(e =>
-                        string.Equals(e.Entry.Code, code, StringComparison.OrdinalIgnoreCase)) == true
+                        CodesMatchForDedup(e.Entry.Code, code)) == true
                     || _codingVm?.Events.Any(e =>
-                        string.Equals(e.Entry.Code, code, StringComparison.OrdinalIgnoreCase)) == true;
+                        CodesMatchForDedup(e.Entry.Code, code)) == true;
                 if (alreadyExists)
                 {
                     System.Diagnostics.Debug.WriteLine($"[KI-Filter] {code} uebersprungen (bereits vorhanden, live-check)");
@@ -3790,8 +3777,7 @@ public partial class PlayerWindow
 
             // BCD/BCE existieren pro Haltung nur EINMAL â€” Meterstand-unabhaengige Dedup.
             // Primaer gegen session.Events pruefen (wird nie gecleared, im Gegensatz zu _codingVm.Events).
-            if ((string.Equals(code, "BCD", StringComparison.OrdinalIgnoreCase)
-                 || string.Equals(code, "BCE", StringComparison.OrdinalIgnoreCase))
+            if (CodingDedupPolicy.IsOneTimeCode(code)
                 && (codingSessionService.ActiveSession?.Events.Any(e =>
                         CodesMatchForDedup(e.Entry.Code, code)) == true
                     || codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
@@ -4749,11 +4735,13 @@ public partial class PlayerWindow
 
             if (pngBytes == null || pngBytes.Length == 0) return null;
 
-            // Leichtgewichtiger OSD-Request: nur Meterstand, keine volle Analyse
+            // Leichtgewichtiger OSD-Request: nur Meterstand, keine volle Analyse.
+            // using: OllamaClient besitzt einen eigenen HttpClient — ohne Dispose
+            // leckt jede OSD-Lesung eine Verbindung (Socket-Exhaustion ueber lange Sessions).
             var config = new AppSettingsAiSettingsProvider()
                 .Load()
                 .ToRuntimeSettings();
-            var client = new OllamaClient(
+            using var client = new OllamaClient(
                 config.OllamaBaseUri,
                 ownedTimeout: config.OllamaRequestTimeout,
                 keepAlive: config.OllamaKeepAlive,
