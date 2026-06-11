@@ -35,16 +35,35 @@
 
         <!-- Matrix -->
         <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="3*"/>
                 <ColumnDefinition Width="420"/>
             </Grid.ColumnDefinitions>
 
-            <DataGrid Grid.Column="0"
+            <DataGrid x:Name="MatrixRowsGrid"
                       ItemsSource="{Binding Rows}"
                       SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
                       AutoGenerateColumns="False" CanUserAddRows="False" CanUserResizeRows="False"
                       GridLinesVisibility="All" HeadersVisibility="Column">
+                <DataGrid.Style>
+                    <Style TargetType="{x:Type DataGrid}" BasedOn="{StaticResource {x:Type DataGrid}}">
+                        <Setter Property="Grid.Row" Value="0"/>
+                        <Setter Property="Grid.RowSpan" Value="2"/>
+                        <Setter Property="Grid.Column" Value="0"/>
+                        <Setter Property="Grid.ColumnSpan" Value="1"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSingleHoldingMode}" Value="True">
+                                <Setter Property="Grid.RowSpan" Value="1"/>
+                                <Setter Property="Grid.ColumnSpan" Value="2"/>
+                                <Setter Property="MaxHeight" Value="120"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.Style>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Haltung" Binding="{Binding Holding}" IsReadOnly="True" Width="2*"/>
                     <DataGridTextColumn Header="DN" Binding="{Binding Dn}" IsReadOnly="True" Width="60"/>
@@ -188,7 +207,27 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <Border Grid.Column="1" Style="{StaticResource Card}" Padding="12" Margin="10,0,0,0">
+            <Border x:Name="DetailPanel" Padding="12">
+                <Border.Style>
+                    <Style TargetType="{x:Type Border}" BasedOn="{StaticResource Card}">
+                        <Setter Property="Grid.Row" Value="0"/>
+                        <Setter Property="Grid.RowSpan" Value="2"/>
+                        <Setter Property="Grid.Column" Value="1"/>
+                        <Setter Property="Grid.ColumnSpan" Value="1"/>
+                        <Setter Property="Margin" Value="10,0,0,0"/>
+                        <Setter Property="MinWidth" Value="420"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSingleHoldingMode}" Value="True">
+                                <Setter Property="Grid.Row" Value="1"/>
+                                <Setter Property="Grid.RowSpan" Value="1"/>
+                                <Setter Property="Grid.Column" Value="0"/>
+                                <Setter Property="Grid.ColumnSpan" Value="2"/>
+                                <Setter Property="Margin" Value="0,10,0,0"/>
+                                <Setter Property="MinWidth" Value="760"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>

@@ -195,6 +195,12 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("Command=\"{Binding DetailUebernehmenCommand}\"", xaml);
         Assert.Contains("Command=\"{Binding DetailVerwerfenCommand}\"", xaml);
         Assert.Contains("IsEnabled=\"{Binding IsDetailDirty}\"", xaml);
+        Assert.Contains("x:Name=\"MatrixRowsGrid\"", xaml);
+        Assert.Contains("x:Name=\"DetailPanel\"", xaml);
+        Assert.Contains("<DataTrigger Binding=\"{Binding IsSingleHoldingMode}\" Value=\"True\">", xaml);
+        Assert.Contains("<Setter Property=\"Grid.ColumnSpan\" Value=\"2\"/>", xaml);
+        Assert.Contains("<Setter Property=\"Grid.Row\" Value=\"1\"/>", xaml);
+        Assert.Contains("<Setter Property=\"MinWidth\" Value=\"760\"/>", xaml);
         Assert.Contains("IsChecked=\"{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml);
         Assert.Contains("Text=\"{Binding Qty, Mode=TwoWay, UpdateSourceTrigger=LostFocus", xaml);
         Assert.Contains("Text=\"{Binding UnitPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus", xaml);
