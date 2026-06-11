@@ -253,7 +253,7 @@ public static partial class HoldingFolderDistributor
                         var videoExt = Path.GetExtension(videoFind.VideoPath);
                         var destVideoName = $"{dateStamp}_{haltung}{videoExt}";
                         destVideoPath = EnsureUniquePath(Path.Combine(holdingFolder, destVideoName), overwrite);
-                        MoveOrCopy(videoFind.VideoPath, destVideoPath, moveInsteadOfCopy);
+                        MoveOrCopy(videoFind.VideoPath, destVideoPath, moveInsteadOfCopy, overwrite);
                     }
 
                     if (project != null && !string.IsNullOrWhiteSpace(destVideoPath))
@@ -442,7 +442,7 @@ public static partial class HoldingFolderDistributor
                 {
                     var destPath = EnsureUniquePath(
                         Path.Combine(holdingFolder, Path.GetFileName(pdfPath)), overwrite);
-                    MoveOrCopy(pdfPath, destPath, moveInsteadOfCopy);
+                    MoveOrCopy(pdfPath, destPath, moveInsteadOfCopy, overwrite);
                     results.Add(new DistributionResult(true, "OK (Begleit-PDF)", pdfPath, null, destPath, null, null, holdingFolder, VideoMatchStatus.NotChecked));
                 }
                 catch (Exception ex)
@@ -468,7 +468,7 @@ public static partial class HoldingFolderDistributor
                     try
                     {
                         var destSidecarPath = EnsureUniquePath(Path.Combine(destGemeindeFolder, Path.GetFileName(sidecarPath)), overwrite);
-                        MoveOrCopy(sidecarPath, destSidecarPath, moveInsteadOfCopy);
+                        MoveOrCopy(sidecarPath, destSidecarPath, moveInsteadOfCopy, overwrite);
                         results.Add(new DistributionResult(true, $"Quelldatei kopiert: {Path.GetFileName(sidecarPath)}", sidecarPath, null, destSidecarPath, null, null, destGemeindeFolder, VideoMatchStatus.NotChecked));
                     }
                     catch (Exception ex)
@@ -520,15 +520,17 @@ public static partial class HoldingFolderDistributor
         return sb.ToString();
     }
 
-    private static void MoveOrCopy(string source, string dest, bool move)
+    // overwrite muss durchgereicht werden: EnsureUniquePath gibt bei overwrite=true den
+    // existierenden Pfad zurueck — ohne Overwrite-Flag wuerde hier eine IOException fliegen.
+    private static void MoveOrCopy(string source, string dest, bool move, bool overwrite)
     {
         if (move)
         {
-            File.Move(source, dest);
+            File.Move(source, dest, overwrite);
         }
         else
         {
-            File.Copy(source, dest, overwrite: false);
+            File.Copy(source, dest, overwrite);
         }
     }
     public static IReadOnlyList<DistributionResult> DistributeShafts(
@@ -834,7 +836,7 @@ public static partial class HoldingFolderDistributor
                     var destPdfName = $"{dateStamp}_{haltung}_DP.pdf";
                     var destPath = EnsureUniquePath(
                         Path.Combine(holdingFolder, destPdfName), overwrite);
-                    MoveOrCopy(pdfPath, destPath, moveInsteadOfCopy);
+                    MoveOrCopy(pdfPath, destPath, moveInsteadOfCopy, overwrite);
 
                     results.Add(new DistributionResult(true, $"OK -> {haltung}",
                         pdfPath, null, destPath, null, null, holdingFolder, VideoMatchStatus.NotChecked));
@@ -967,7 +969,7 @@ public static partial class HoldingFolderDistributor
 
             var destPdfName = $"{dateStamp}_{haltung}.pdf";
             var destPdfPath = EnsureUniquePath(Path.Combine(holdingFolder, destPdfName), overwrite);
-            MoveOrCopy(pdfSourceToStorePath, destPdfPath, moveInsteadOfCopy);
+            MoveOrCopy(pdfSourceToStorePath, destPdfPath, moveInsteadOfCopy, overwrite);
 
             if (removeOriginalAfterStore
                 && File.Exists(pdfToStorePath)
@@ -1005,7 +1007,7 @@ public static partial class HoldingFolderDistributor
                 else
                 {
                     destVideoPath = EnsureUniquePath(destVideoPath, overwrite);
-                    MoveOrCopy(videoFind.VideoPath, destVideoPath, moveInsteadOfCopy);
+                    MoveOrCopy(videoFind.VideoPath, destVideoPath, moveInsteadOfCopy, overwrite);
                 }
                 videoPaths.Add(destVideoPath);
 
@@ -1039,7 +1041,7 @@ public static partial class HoldingFolderDistributor
                     var videoExtG = Path.GetExtension(videoFindG.VideoPath);
                     var destVideoNameG = $"{dateStamp}_{haltung}-g{videoExtG}";
                     destVideoPathG = EnsureUniquePath(Path.Combine(holdingFolder, destVideoNameG), overwrite);
-                    MoveOrCopy(videoFindG.VideoPath, destVideoPathG, moveInsteadOfCopy);
+                    MoveOrCopy(videoFindG.VideoPath, destVideoPathG, moveInsteadOfCopy, overwrite);
                 }
                 videoPaths.Add(destVideoPathG);
             }
@@ -1197,7 +1199,7 @@ public static partial class HoldingFolderDistributor
             else
             {
                 destPdfPath = EnsureUniquePath(Path.Combine(shaftFolder, destPdfName), overwrite);
-                MoveOrCopy(pdfSourceToStorePath, destPdfPath, moveInsteadOfCopy);
+                MoveOrCopy(pdfSourceToStorePath, destPdfPath, moveInsteadOfCopy, overwrite);
                 shaftOutputPathByKey[shaftKey] = destPdfPath;
             }
 
