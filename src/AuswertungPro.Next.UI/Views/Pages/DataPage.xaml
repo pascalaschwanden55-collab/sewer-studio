@@ -259,22 +259,34 @@
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="HydraulikButton" Click="HydraulikMenu_Click"
+                    <Button x:Name="HydraulikDropdown" Click="DropdownButton_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Hydraulik-Berechnung nach DWA-A 110 (Kreisquerschnitt)">
+                            ToolTip="Hydraulik-Berechnung und Bericht">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#x1F4A7;" FontFamily="Segoe UI Emoji" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Hydraulik" VerticalAlignment="Center"/>
+                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{StaticResource MutedBrush}"/>
                         </StackPanel>
-                    </Button>
-
-                    <Button x:Name="HydraulikPrintButton" Click="HydraulikPrint_Click"
-                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Hydraulik-Bericht als PDF drucken">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE749;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Hydraulik PDF" VerticalAlignment="Center"/>
-                        </StackPanel>
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Click="HydraulikMenu_Click">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#x1F4A7;" FontFamily="Segoe UI Emoji" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Hydraulik berechnen" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <MenuItem Click="HydraulikPrint_Click">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE749;" FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Hydraulik PDF" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                            </ContextMenu>
+                        </Button.ContextMenu>
                     </Button>
 
                     <Button x:Name="DossierPrintButton" Click="DossierPrint_Click"
@@ -329,6 +341,116 @@
                                 <MenuItem x:Name="ClearColumnMenuItem" Header="Spalte leeren" IsCheckable="True"
                                           ToolTip="Aktivieren, dann auf Spaltentitel rechtsklicken"/>
                                 <Separator/>
+                                <MenuItem StaysOpenOnClick="True">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal" Margin="0,2">
+                                            <TextBlock Text="Zeilenhoehe:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Width="92"/>
+                                            <Slider Width="130"
+                                                    Minimum="24"
+                                                    Maximum="240"
+                                                    Value="{Binding GridMinRowHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    SmallChange="2"
+                                                    LargeChange="10"
+                                                    IsSnapToTickEnabled="False"
+                                                    VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding GridMinRowHeight, StringFormat={}{0:0}px}"
+                                                       Foreground="{StaticResource TextBrush}"
+                                                       VerticalAlignment="Center"
+                                                       Margin="8,0,0,0"
+                                                       MinWidth="36"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <MenuItem StaysOpenOnClick="True">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal" Margin="0,2">
+                                            <TextBlock Text="Zoom:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Width="92"/>
+                                            <Slider Width="130"
+                                                    Minimum="0.5"
+                                                    Maximum="2.0"
+                                                    Value="{Binding GridZoom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    SmallChange="0.05"
+                                                    LargeChange="0.1"
+                                                    IsSnapToTickEnabled="False"
+                                                    VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding GridZoom, StringFormat={}{0:0%}}"
+                                                       Foreground="{StaticResource TextBrush}"
+                                                       VerticalAlignment="Center"
+                                                       Margin="8,0,0,0"
+                                                       MinWidth="36"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem StaysOpenOnClick="True">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal" Margin="0,2">
+                                            <TextBlock Text="Ausrichtung:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Width="92"/>
+                                            <StackPanel Orientation="Vertical">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <ToggleButton x:Name="AlignLeftButton" Style="{StaticResource AlignToggleButtonStyle}"
+                                                                  ToolTip="Horizontal links" Click="AlignLeftButton_Click">
+                                                        <StackPanel Width="14" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                            <Border Height="1.6" Width="12" HorizontalAlignment="Left" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                            <Border Height="1.6" Width="9" HorizontalAlignment="Left" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                            <Border Height="1.6" Width="11" HorizontalAlignment="Left" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                        </StackPanel>
+                                                    </ToggleButton>
+                                                    <ToggleButton x:Name="AlignCenterButton" Style="{StaticResource AlignToggleButtonStyle}"
+                                                                  ToolTip="Horizontal zentriert" Click="AlignCenterButton_Click">
+                                                        <StackPanel Width="14" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                            <Border Height="1.6" Width="12" HorizontalAlignment="Center" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                            <Border Height="1.6" Width="9" HorizontalAlignment="Center" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                            <Border Height="1.6" Width="11" HorizontalAlignment="Center" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                        </StackPanel>
+                                                    </ToggleButton>
+                                                    <ToggleButton x:Name="AlignRightButton" Style="{StaticResource AlignToggleButtonStyle}"
+                                                                  ToolTip="Horizontal rechts" Click="AlignRightButton_Click">
+                                                        <StackPanel Width="14" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                            <Border Height="1.6" Width="12" HorizontalAlignment="Right" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                            <Border Height="1.6" Width="9" HorizontalAlignment="Right" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                            <Border Height="1.6" Width="11" HorizontalAlignment="Right" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                        </StackPanel>
+                                                    </ToggleButton>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                    <ToggleButton x:Name="AlignTopButton" Style="{StaticResource AlignToggleButtonStyle}"
+                                                                  ToolTip="Vertikal oben" Click="AlignTopButton_Click">
+                                                        <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <Border BorderThickness="1" CornerRadius="1"
+                                                                    BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                            <Border Height="2" Width="8" VerticalAlignment="Top" Margin="0,2,0,0"
+                                                                    Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                        </Grid>
+                                                    </ToggleButton>
+                                                    <ToggleButton x:Name="AlignMiddleButton" Style="{StaticResource AlignToggleButtonStyle}"
+                                                                  ToolTip="Vertikal mitte" Click="AlignMiddleButton_Click">
+                                                        <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <Border BorderThickness="1" CornerRadius="1"
+                                                                    BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                            <Border Height="2" Width="8" VerticalAlignment="Center"
+                                                                    Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                        </Grid>
+                                                    </ToggleButton>
+                                                    <ToggleButton x:Name="AlignBottomButton" Style="{StaticResource AlignToggleButtonStyle}"
+                                                                  ToolTip="Vertikal unten" Click="AlignBottomButton_Click">
+                                                        <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <Border BorderThickness="1" CornerRadius="1"
+                                                                    BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                            <Border Height="2" Width="8" VerticalAlignment="Bottom" Margin="0,0,0,2"
+                                                                    Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
+                                                        </Grid>
+                                                    </ToggleButton>
+                                                </StackPanel>
+                                            </StackPanel>
+                                            <TextBlock Text="Zelle oder Spaltenkopf auswaehlen"
+                                                       Foreground="{StaticResource MutedBrush}"
+                                                       VerticalAlignment="Center"
+                                                       Margin="10,0,0,0"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <Separator/>
                                 <MenuItem Header="Fokusmodus (F11)" IsCheckable="True"
                                           IsChecked="{Binding PlacementTarget.Tag.IsFocusMode, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=TwoWay}"/>
                             </ContextMenu>
@@ -372,104 +494,6 @@
                                 Style="{StaticResource IconButton}" Margin="4,0,0,0"
                                 ToolTip="Zu Zeile springen"
                                 Click="GoToRow_Click"/>
-
-                        <TextBlock Text="Zeilenhoehe:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="16,0,8,0"/>
-                        <Slider Width="100"
-                                Minimum="24"
-                                Maximum="240"
-                                Value="{Binding GridMinRowHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                SmallChange="2"
-                                LargeChange="10"
-                                IsSnapToTickEnabled="False"
-                                VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding GridMinRowHeight, StringFormat={}{0:0}px}"
-                                   Foreground="{StaticResource TextBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="4,0,0,0"
-                                   MinWidth="32"/>
-
-                        <TextBlock Text="Zoom:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="12,0,8,0"/>
-                        <Slider Width="100"
-                                Minimum="0.5"
-                                Maximum="2.0"
-                                Value="{Binding GridZoom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                SmallChange="0.05"
-                                LargeChange="0.1"
-                                IsSnapToTickEnabled="False"
-                                VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding GridZoom, StringFormat={}{0:0%}}"
-                                   Foreground="{StaticResource TextBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="4,0,0,0"
-                                   MinWidth="32"/>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,6,0,0">
-                        <TextBlock Text="Ausrichtung:" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-
-                        <StackPanel Orientation="Vertical">
-                            <StackPanel Orientation="Horizontal">
-                                <ToggleButton x:Name="AlignLeftButton" Style="{StaticResource AlignToggleButtonStyle}"
-                                              ToolTip="Horizontal links" Click="AlignLeftButton_Click">
-                                    <StackPanel Width="14" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                        <Border Height="1.6" Width="12" HorizontalAlignment="Left" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                        <Border Height="1.6" Width="9" HorizontalAlignment="Left" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                        <Border Height="1.6" Width="11" HorizontalAlignment="Left" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                    </StackPanel>
-                                </ToggleButton>
-                                <ToggleButton x:Name="AlignCenterButton" Style="{StaticResource AlignToggleButtonStyle}"
-                                              ToolTip="Horizontal zentriert" Click="AlignCenterButton_Click">
-                                    <StackPanel Width="14" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                        <Border Height="1.6" Width="12" HorizontalAlignment="Center" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                        <Border Height="1.6" Width="9" HorizontalAlignment="Center" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                        <Border Height="1.6" Width="11" HorizontalAlignment="Center" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                    </StackPanel>
-                                </ToggleButton>
-                                <ToggleButton x:Name="AlignRightButton" Style="{StaticResource AlignToggleButtonStyle}"
-                                              ToolTip="Horizontal rechts" Click="AlignRightButton_Click">
-                                    <StackPanel Width="14" Height="12" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                        <Border Height="1.6" Width="12" HorizontalAlignment="Right" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                        <Border Height="1.6" Width="9" HorizontalAlignment="Right" Margin="0,0,0,2" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                        <Border Height="1.6" Width="11" HorizontalAlignment="Right" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                    </StackPanel>
-                                </ToggleButton>
-                            </StackPanel>
-
-                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                <ToggleButton x:Name="AlignTopButton" Style="{StaticResource AlignToggleButtonStyle}"
-                                              ToolTip="Vertikal oben" Click="AlignTopButton_Click">
-                                    <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Border BorderThickness="1" CornerRadius="1"
-                                                BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                        <Border Height="2" Width="8" VerticalAlignment="Top" Margin="0,2,0,0"
-                                                Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                    </Grid>
-                                </ToggleButton>
-                                <ToggleButton x:Name="AlignMiddleButton" Style="{StaticResource AlignToggleButtonStyle}"
-                                              ToolTip="Vertikal mitte" Click="AlignMiddleButton_Click">
-                                    <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Border BorderThickness="1" CornerRadius="1"
-                                                BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                        <Border Height="2" Width="8" VerticalAlignment="Center"
-                                                Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                    </Grid>
-                                </ToggleButton>
-                                <ToggleButton x:Name="AlignBottomButton" Style="{StaticResource AlignToggleButtonStyle}"
-                                              ToolTip="Vertikal unten" Click="AlignBottomButton_Click">
-                                    <Grid Width="14" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                        <Border BorderThickness="1" CornerRadius="1"
-                                                BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                        <Border Height="2" Width="8" VerticalAlignment="Bottom" Margin="0,0,0,2"
-                                                Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"/>
-                                    </Grid>
-                                </ToggleButton>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <TextBlock Text="(Zelle oder Spaltenkopf auswaehlen)"
-                                   Foreground="{StaticResource MutedBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="10,0,0,0"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
