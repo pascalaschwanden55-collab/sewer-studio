@@ -88,6 +88,42 @@ def contamination_hash_check(manifest_path, data_root):
     return hits
 
 
+def verify_eval_subset_manifest(eval_root):
+    """Stellt sicher, dass das verwendete Eval-Subset exakt zu seinem _manifest.json passt."""
+    manifest_path = os.path.join(eval_root, "_manifest.json")
+    if not os.path.isfile(manifest_path):
+        raise SystemExit(f"ABBRUCH: Eval-Subset-Manifest fehlt: {manifest_path}")
+
+    with open(manifest_path, encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    hashes = manifest.get("hashes") or {}
+    if not isinstance(hashes, dict) or not hashes:
+        raise SystemExit(f"ABBRUCH: Eval-Subset-Manifest ohne Hashes: {manifest_path}")
+
+    errors = []
+    for rel, info in hashes.items():
+        expected = info.get("sha256") if isinstance(info, dict) else str(info)
+        if not expected:
+            errors.append(f"{rel}: kein sha256 im Manifest")
+            continue
+        path = os.path.join(eval_root, rel.replace("/", os.sep))
+        if not os.path.isfile(path):
+            errors.append(f"{rel}: Datei fehlt")
+            continue
+        actual = _sha256_file(path)
+        if actual != str(expected).lower():
+            errors.append(f"{rel}: SHA mismatch {actual} != {expected}")
+
+    if errors:
+        print("Eval-Subset-Manifest verletzt:", flush=True)
+        for e in errors[:20]:
+            print(f"  {e}", flush=True)
+        raise SystemExit(f"ABBRUCH: Eval-Subset veraendert ({len(errors)} Fehler): {eval_root}")
+
+    print(f"Eval-Subset-Manifest OK: {eval_root} ({len(hashes)} Hashes)", flush=True)
+
+
 def eval_model(weights, eval_root, imgsz, tag):
     out = os.path.join(REPORT_DIR, f"_autopilot_{tag}.json")
     run([PY, os.path.join(HERE, "eval_cls.py"), "--weights", weights,
@@ -152,6 +188,8 @@ def main():
     print(f"Kontamination (Eval-SHA256 im Datensatz): {ch}  (MUSS 0)", flush=True)
     if ch != 0:
         raise SystemExit("ABBRUCH: Umbenannte Eval-Kopien im Datensatz (SHA-256-Treffer)!")
+    verify_eval_subset_manifest(args.eval)
+    verify_eval_subset_manifest(args.hidden)
 
     # 2) Trainieren (No-Crop/Letterbox + optional Balance)
     tcmd = [PY, os.path.join(HERE, "train_cls.py"), "--data", args.data, "--imgsz", str(args.imgsz),
