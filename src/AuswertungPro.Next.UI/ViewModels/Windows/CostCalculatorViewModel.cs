@@ -700,8 +700,11 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         }
 
         // Set Length from import data
+        // Kulturunabhaengig parsen: "45.30" darf auf Komma-Locales nicht zu 4530 werden.
         var lengthValue = haltungRecord.GetFieldValue("Haltungslaenge_m");
-        if (!string.IsNullOrWhiteSpace(lengthValue) && decimal.TryParse(lengthValue, out var length))
+        if (!string.IsNullOrWhiteSpace(lengthValue) && decimal.TryParse(
+                lengthValue.Trim().Replace(',', '.'),
+                NumberStyles.Float, CultureInfo.InvariantCulture, out var length))
         {
             foreach (var measure in SelectedMeasures)
             {

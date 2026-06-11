@@ -46,8 +46,11 @@ public static class HoldingMeasureFactory
             block.SetDnFromImport(dn.ToString());
 
         // Länge (m) — füllt alle m-Zeilen (auch noch deaktivierte Optionen wie Fräsen)
+        // Kulturunabhaengig parsen: "45.30" darf auf Komma-Locales nicht zu 4530 werden.
         var lengthValue = record?.GetFieldValue("Haltungslaenge_m");
-        if (!string.IsNullOrWhiteSpace(lengthValue) && decimal.TryParse(lengthValue, out var length))
+        if (!string.IsNullOrWhiteSpace(lengthValue) && decimal.TryParse(
+                lengthValue.Trim().Replace(',', '.'),
+                NumberStyles.Float, CultureInfo.InvariantCulture, out var length))
             block.SetLengthFromImport(length.ToString("0.00"));
 
         // Anschlüsse aus Schadenscodierung (Dedup); kein Wert -> 0 (deaktiviert Anschluss-Zeilen).
