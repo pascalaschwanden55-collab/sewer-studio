@@ -185,6 +185,9 @@ public sealed class DesignAuditThemeResourceTests
         var code = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml.cs");
 
         Assert.Contains("Header=\"Hauptarbeit\"", xaml);
+        Assert.Contains("DataContext.MeasureOptions", xaml);
+        Assert.DoesNotContain("DataContext.GroupedMeasureOptions", xaml);
+        Assert.DoesNotContain("<ComboBox.GroupStyle>", xaml);
         Assert.Contains("PreviewMouseLeftButtonDown=\"MeasureComboBox_PreviewMouseLeftButtonDown\"", xaml);
         Assert.Contains("combo.IsDropDownOpen = true;", code);
         Assert.Contains("e.Handled = true;", code);

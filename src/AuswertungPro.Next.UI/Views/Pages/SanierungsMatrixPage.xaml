@@ -46,7 +46,7 @@
                 <DataGridTemplateColumn Header="Hauptarbeit" Width="2*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <ComboBox ItemsSource="{Binding DataContext.GroupedMeasureOptions,
+                            <ComboBox ItemsSource="{Binding DataContext.MeasureOptions,
                                           RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                       DisplayMemberPath="Name"
                                       SelectedItem="{Binding SelectedMeasure, Mode=TwoWay,
@@ -54,18 +54,7 @@
                                       IsEnabled="{Binding IsMatrixEditable}"
                                       IsSynchronizedWithCurrentItem="False"
                                       PreviewMouseLeftButtonDown="MeasureComboBox_PreviewMouseLeftButtonDown"
-                                      Margin="2">
-                                <ComboBox.GroupStyle>
-                                    <GroupStyle>
-                                        <GroupStyle.HeaderTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding Name}" FontWeight="Bold"
-                                                           Opacity="0.6" Margin="2,4,0,2"/>
-                                            </DataTemplate>
-                                        </GroupStyle.HeaderTemplate>
-                                    </GroupStyle>
-                                </ComboBox.GroupStyle>
-                            </ComboBox>
+                                      Margin="2"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

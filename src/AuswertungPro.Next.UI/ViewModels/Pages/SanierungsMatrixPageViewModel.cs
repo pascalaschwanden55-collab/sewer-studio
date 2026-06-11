@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
-using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
@@ -131,7 +129,7 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
 
 /// <summary>
 /// Massen-Ansicht: alle Haltungen einer Zone als Tabelle, pro Zeile EINE Hauptarbeit
-/// (gruppiert Renovierung/Reparatur) plus ankreuzbare Zusatzoptionen (Verkehrsdienst,
+/// plus ankreuzbare Zusatzoptionen (Verkehrsdienst,
 /// Wasserhaltung, Fraesen, Dichtheitspruefung, Dokumentation). Mengen (DN, Laenge,
 /// Anschluesse-Dedup) kommen automatisch; bei Stk-Reparaturen gibt der Anwender die
 /// Stueckzahl selbst ein. Speichern legt alles in costs.json ab; das aggregierte
@@ -180,9 +178,6 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     public ObservableCollection<SanierungMatrixRowVm> Rows { get; } = new();
     public ObservableCollection<MeasureOption> MeasureOptions { get; } = new();
 
-    /// <summary>Gruppierte Sicht (Renovierung/Reparatur) fuer die ComboBox-Gruppen-Header.</summary>
-    public ICollectionView GroupedMeasureOptions { get; }
-
     [ObservableProperty] private decimal _gesamtTotal;
     [ObservableProperty] private int _belegteHaltungen;
     [ObservableProperty] private string _status = "";
@@ -190,8 +185,6 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     public SanierungsMatrixPageViewModel(ShellViewModel shell)
     {
         _shell = shell;
-        GroupedMeasureOptions = CollectionViewSource.GetDefaultView(MeasureOptions);
-        GroupedMeasureOptions.GroupDescriptions.Add(new PropertyGroupDescription(nameof(MeasureOption.Kategorie)));
         Reload();
     }
 
