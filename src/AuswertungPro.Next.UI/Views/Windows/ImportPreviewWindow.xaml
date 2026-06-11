@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Import-Vorschau" Width="900" Height="620"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource BackgroundBrush}">
+        Background="{DynamicResource BgLightBrush}">
 
     <Grid Margin="16">
         <Grid.RowDefinitions>
@@ -32,7 +32,7 @@
                   BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
                   Background="{StaticResource CardBrush}"
                   RowBackground="{StaticResource CardBrush}"
-                  AlternatingRowBackground="{StaticResource BackgroundBrush}"
+                  AlternatingRowBackground="{DynamicResource BgLightBrush}"
                   Foreground="{StaticResource TextBrush}">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Haltung" Binding="{Binding RecordKey}" Width="180"/>
@@ -52,7 +52,7 @@
                       BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
                       Background="{StaticResource CardBrush}"
                       RowBackground="{StaticResource CardBrush}"
-                      AlternatingRowBackground="{StaticResource BackgroundBrush}"
+                      AlternatingRowBackground="{DynamicResource BgLightBrush}"
                       Foreground="{StaticResource TextBrush}">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Haltung" Binding="{Binding RecordKey}" Width="180"/>
