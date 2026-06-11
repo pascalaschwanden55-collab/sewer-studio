@@ -487,6 +487,17 @@ public static class KnowledgeBackupService
                 yield return (png, "knowledge/frames/" + Path.GetFileName(png));
         }
 
+        // Fachauge-kuratierte Gold-Labels fuer Klassifikator-Training.
+        var goldLabelsDir = Path.Combine(knowledgeRoot, "gold_labels");
+        if (Directory.Exists(goldLabelsDir))
+        {
+            foreach (var file in Directory.EnumerateFiles(goldLabelsDir, "*.*", SearchOption.AllDirectories))
+            {
+                var relPath = Path.GetRelativePath(goldLabelsDir, file).Replace('\\', '/');
+                yield return (file, "knowledge/gold_labels/" + relPath);
+            }
+        }
+
         // Few-Shot-Bibliothek (Qwen-Beispiele)
         yield return (Path.Combine(knowledgeRoot, "fewshot_examples.json"), "knowledge/fewshot_examples.json");
         var fewshotImagesDir = Path.Combine(knowledgeRoot, "fewshot_images");

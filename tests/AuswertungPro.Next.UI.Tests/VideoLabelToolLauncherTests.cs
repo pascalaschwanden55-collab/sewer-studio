@@ -58,13 +58,19 @@ public sealed class VideoLabelToolLauncherTests : IDisposable
         Directory.CreateDirectory(otherDirectory);
         var launcher = new VideoLabelToolLauncher(new CapturingProcessStarter(), () => otherDirectory, () => explicitToolDirectory);
 
-        var plan = launcher.CreateLaunchPlan(new VideoLabelToolLaunchOptions(Port: 8220, PriorityPath: @"C:\tmp\priority.json", Limit: 25));
+        var plan = launcher.CreateLaunchPlan(new VideoLabelToolLaunchOptions(
+            Port: 8220,
+            PriorityPath: @"C:\tmp\priority.json",
+            Limit: 25,
+            Classes: "BCA,BCC"));
 
         Assert.Equal(explicitToolDirectory, plan.ToolDirectory);
         Assert.Contains("--priority", plan.ServerStartInfo.ArgumentList);
         Assert.Contains(@"C:\tmp\priority.json", plan.ServerStartInfo.ArgumentList);
         Assert.Contains("--limit", plan.ServerStartInfo.ArgumentList);
         Assert.Contains("25", plan.ServerStartInfo.ArgumentList);
+        Assert.Contains("--classes", plan.ServerStartInfo.ArgumentList);
+        Assert.Contains("BCA,BCC", plan.ServerStartInfo.ArgumentList);
     }
 
     [Fact]

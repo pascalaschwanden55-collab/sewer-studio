@@ -8,6 +8,7 @@ public sealed record VideoLabelToolLaunchOptions(
     int Port = 8200,
     string? PriorityPath = null,
     int? Limit = null,
+    string? Classes = null,
     bool OpenBrowser = true);
 
 public sealed record VideoLabelToolLaunchPlan(
@@ -79,6 +80,12 @@ public sealed class VideoLabelToolLauncher
         {
             serverStartInfo.ArgumentList.Add("--limit");
             serverStartInfo.ArgumentList.Add(options.Limit.Value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.Classes))
+        {
+            serverStartInfo.ArgumentList.Add("--classes");
+            serverStartInfo.ArgumentList.Add(options.Classes);
         }
 
         var browserStartInfo = options.OpenBrowser

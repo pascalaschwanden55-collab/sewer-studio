@@ -13,7 +13,10 @@ import re
 
 from ultralytics import YOLO
 
-TARGET = {"BCD", "BCE", "BDA", "BDD", "BAJ", "BAF", "BAB", "BAI", "BBB", "BBA", "LEER"}
+# Paket 5: gleiche Zielmenge wie eval_cls.py, damit threshold_select.py die
+# neuen v8-Klassen nicht aus der Ground Truth herausfiltert.
+TARGET = {"BCD", "BCE", "BDA", "BDD", "BAJ", "BAF", "BAB", "BAI", "BBB", "BBA", "LEER",
+          "BCA", "BCC", "BBC", "BAA"}
 FNAME_RE = re.compile(r"^(?P<haltung>.+?)_(?P<zeit>[0-9.]+)s_(?P<code>.+?)(_t[+-]\d+)?\.png$", re.IGNORECASE)
 
 

@@ -15,6 +15,11 @@ python tools/VideoLabelTool/server.py
 ```
 Dann im Browser **http://localhost:8200/** oeffnen.
 
+Fuer Paket 5 gezielt Anschluss/Bogen labeln:
+```
+python tools/VideoLabelTool/server.py --dataset C:\KI_BRAIN\yolo_vsa_cls_dataset_v3_bal --classes BCA,BCC --limit 300
+```
+
 ## Bedienung
 - Der Server schneidet pro Befund mit ffmpeg ein **Fenster (Zeit ± 10 s)** als browser-faehiges mp4.
 - Rechts steht der **Original-Frame** (was das Protokoll am Meter gegriffen hat) als Kontext.

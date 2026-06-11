@@ -37,7 +37,7 @@ VIDEO_ROOT = r"D:\Haltungen"
 DATASET = r"C:\KI_BRAIN\yolo_vsa_cls_dataset_bal"
 GOLD_ROOT = r"C:\KI_BRAIN\gold_labels"
 CLIP_CACHE = r"C:\tmp\video_label_clips"
-WEAK = ["BAI", "BBA", "BAB", "BAJ", "BDD"]
+DEFAULT_CLASSES = ["BAI", "BBA", "BAB", "BAJ", "BDD"]
 # browser-native zuerst; der Rest wird transkodiert (Clip ist sowieso re-encoded)
 VIDEO_EXT = (".mp4", ".m4v", ".mov", ".mpg", ".mpeg", ".avi", ".wmv", ".mkv", ".mp2")
 NAME_RE = re.compile(r"^(.+?)_([0-9.]+)s_([A-Za-z][A-Za-z0-9]*)(?:_t[+-]\d+)?\.png$")
@@ -144,9 +144,21 @@ def resolve_video(haltung):
     return sorted(cands, key=score)[0]
 
 
-def build_findings(priority_path, limit):
+def parse_classes(value):
+    classes = []
+    for part in (value or "").split(","):
+        code = part.strip().upper()
+        if not code:
+            continue
+        if not re.fullmatch(r"[A-Z0-9]{2,8}", code):
+            raise ValueError(f"ungueltige Klasse: {code}")
+        classes.append(code)
+    return classes or list(DEFAULT_CLASSES)
+
+
+def build_findings(priority_path, limit, classes):
     findings = {}
-    for cls in WEAK:
+    for cls in classes:
         for p in glob.glob(os.path.join(DATASET, "train", cls, "*.png")):
             m = NAME_RE.match(os.path.basename(p))
             if not m:
@@ -445,15 +457,27 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    global FINDINGS, ORDER, DATASET, VIDEO_ROOT
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8200)
     ap.add_argument("--priority", default=None, help="JSON-Liste von Befund-Keys (zuerst zeigen)")
     ap.add_argument("--limit", type=int, default=0, help="max. Anzahl Befunde (0=alle)")
+    ap.add_argument("--classes", default=",".join(DEFAULT_CLASSES),
+                    help="Kommagetrennte Trainingsklassen, z.B. BCA,BCC oder BCA,BCC,LEER")
+    ap.add_argument("--dataset", default=DATASET,
+                    help="ImageFolder-Datensatz mit train/<Klasse>/*.png")
+    ap.add_argument("--video-root", default=VIDEO_ROOT,
+                    help="Root-Ordner der Haltungs-Videos")
     args = ap.parse_args()
-    global FINDINGS, ORDER
-    print("Baue Befund-Liste (schwache Klassen, Video-Aufloesung)...", flush=True)
+    try:
+        classes = parse_classes(args.classes)
+    except ValueError as ex:
+        raise SystemExit(str(ex))
+    DATASET = args.dataset
+    VIDEO_ROOT = args.video_root
+    print(f"Baue Befund-Liste ({','.join(classes)}, Video-Aufloesung)...", flush=True)
     t0 = time.time()
-    FINDINGS, ORDER = build_findings(args.priority, args.limit or 0)
+    FINDINGS, ORDER = build_findings(args.priority, args.limit or 0, classes)
     n_vid = sum(1 for k in ORDER if FINDINGS[k]["video_available"])
     print(f"Befunde: {len(ORDER)}  (mit Video: {n_vid})  in {time.time()-t0:.1f}s", flush=True)
     print(f"ffmpeg: {FFMPEG}", flush=True)
