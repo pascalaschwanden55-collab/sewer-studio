@@ -148,6 +148,11 @@ public partial class PlayerWindow : Window
         Action<ProtocolEntry>? onEntryCreated = null,
         HaltungRecord? haltungRecord = null)
     {
+        // Frueh pruefen, bevor irgendein Zustand (insb. _lastOpened) gesetzt wird:
+        // wirft der Konstruktor spaeter, bliebe sonst ein halb-konstruiertes Fenster zurueck.
+        if (string.IsNullOrWhiteSpace(videoPath) || !File.Exists(videoPath))
+            throw new FileNotFoundException("Video nicht gefunden", videoPath);
+
         InitializeComponent();
         WireCodingSidePanelEvents();
         WindowStateManager.Track(this);
@@ -160,7 +165,6 @@ public partial class PlayerWindow : Window
         _onEntryCreated = onEntryCreated;
         _haltungRecord = haltungRecord;
         _initialOverlayText = initialOverlayText;
-        _lastOpened = this;
         Loaded += (_, _) => EnsureVisibleOnScreen();
 
         // Overlay suspendieren wenn ein FREMDES Fenster den Fokus bekommt (z.B. Snipping Tool).
@@ -185,9 +189,6 @@ public partial class PlayerWindow : Window
         Title = $"Video - {displayName}";
         VideoNameText.Text = displayName;
         VideoPathText.Text = videoPath;
-
-        if (string.IsNullOrWhiteSpace(videoPath) || !File.Exists(videoPath))
-            throw new FileNotFoundException("Video nicht gefunden", videoPath);
 
         Core.Initialize();
 
@@ -310,6 +311,10 @@ public partial class PlayerWindow : Window
         };
 
         AddHandler(Keyboard.PreviewKeyDownEvent, new KeyEventHandler(PlayerWindow_PreviewKeyDown), true);
+
+        // Erst ganz am Ende setzen: TryShowOverlayOnLast darf nie ein Fenster sehen,
+        // dessen Konstruktor fehlgeschlagen ist (_player/_libVlc waeren dann null).
+        _lastOpened = this;
     }
 
 
