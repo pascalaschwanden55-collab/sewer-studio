@@ -70,6 +70,7 @@ var evalImagesDir = Path.Combine(evalSet, "images");
 var evalNames = Directory.Exists(evalImagesDir)
     ? Directory.EnumerateFiles(evalImagesDir).Select(f => Path.GetFileName(f)!).ToHashSet(StringComparer.OrdinalIgnoreCase)
     : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+var evalHaltungen = EvalContaminationGuard.LoadEvalHaltungKeys(evalSet);
 
 // 2) Frames lesen, parsen, mappen, Eval hart ausschliessen
 var sourceRoots = new List<string> { framesRoot };
@@ -84,13 +85,14 @@ if (extraFrames is not null)
 }
 
 var kept = new List<(FrameInfo Info, string Path)>();
-int total = 0, exclEvalName = 0, exclEvalHash = 0, exclCode = 0, exclUnparsed = 0, exclClass = 0, exclList = 0;
+int total = 0, exclEvalName = 0, exclEvalHash = 0, exclEvalHaltung = 0, exclCode = 0, exclUnparsed = 0, exclClass = 0, exclList = 0;
 foreach (var path in sourceRoots.SelectMany(r => Directory.EnumerateFiles(r, "*.png", SearchOption.AllDirectories)))
 {
     total++;
     var name = Path.GetFileName(path);
     if (evalNames.Contains(name)) { exclEvalName++; continue; }
     if (!ClassifierDatasetPlan.TryParseFrame(name, out var info)) { exclUnparsed++; continue; }
+    if (EvalContaminationGuard.IsEvalHaltung(evalHaltungen, info.Haltung)) { exclEvalHaltung++; continue; }
     if (info.TrainingClass is null) { exclCode++; continue; }
     if (excludeClasses.Contains(info.TrainingClass)) { exclClass++; continue; }
     if (excludeNames.Contains(name)) { exclList++; continue; }
@@ -155,6 +157,7 @@ var report = new
     frames_total = total,
     excluded_eval_by_name = exclEvalName,
     excluded_eval_by_hash = exclEvalHash,
+    excluded_eval_by_haltung = exclEvalHaltung,
     excluded_non_target = exclCode,
     excluded_unparsed = exclUnparsed,
     excluded_classes = excludeClasses.OrderBy(c => c, StringComparer.Ordinal).ToArray(),
@@ -174,7 +177,7 @@ if (!dryRun)
 
 // 7) Konsolen-Zusammenfassung
 Console.WriteLine($"Frames gesamt:           {total}");
-Console.WriteLine($"Eval ausgeschlossen:     {exclEvalName} per Name + {exclEvalHash} per Hash  (zusammen sollte ~120 sein)");
+Console.WriteLine($"Eval ausgeschlossen:     {exclEvalName} per Name + {exclEvalHash} per Hash + {exclEvalHaltung} per Haltung");
 Console.WriteLine($"Nicht-Zielcode raus:     {exclCode}");
 Console.WriteLine($"Unparsebar raus:         {exclUnparsed}");
 if (excludeClasses.Count > 0) Console.WriteLine($"Klasse ausgeklammert:    {exclClass}");
