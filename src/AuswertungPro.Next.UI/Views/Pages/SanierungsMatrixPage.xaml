@@ -13,10 +13,9 @@
             <DockPanel LastChildFill="False">
                 <StackPanel DockPanel.Dock="Left">
                     <TextBlock Text="Sanierungs-Matrix"
-                               FontSize="22" FontWeight="SemiBold"
-                               Foreground="{StaticResource NeonCyanBrush}"/>
+                               Style="{StaticResource PageTitle}"/>
                     <TextBlock Text="Pro Haltung eine Hauptarbeit waehlen — Meter, DN und Anschluesse kommen automatisch."
-                               Opacity="0.7" Margin="0,2,0,0"/>
+                               Style="{StaticResource Caption}" Margin="0,2,0,0"/>
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                     <StackPanel Margin="0,0,18,0" VerticalAlignment="Center">

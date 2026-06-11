@@ -45,10 +45,10 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel>
-                    <TextBlock Text="Medienkonflikte" FontSize="24" FontWeight="SemiBold"/>
+                    <TextBlock Text="Medienkonflikte" Style="{StaticResource PageTitle}"/>
                     <TextBlock Text="Fehlende oder mehrdeutige Videozuordnungen zentral pruefen, oeffnen und direkt aufloesen."
                                Margin="0,4,0,0"
-                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Style="{StaticResource Body}"
                                TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding SummaryText}"
                                Margin="0,10,0,0"

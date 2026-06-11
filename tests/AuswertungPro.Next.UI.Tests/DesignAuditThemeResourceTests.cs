@@ -100,6 +100,76 @@ public sealed class DesignAuditThemeResourceTests
             "#2EA043");
     }
 
+    [Fact]
+    public void Themes_define_explicit_textblock_styles_for_page_typography()
+    {
+        var themeLight = ReadUiFile("Theme", "ThemeLight.xaml");
+        var themeDark = ReadUiFile("Theme", "Theme.xaml");
+
+        foreach (var theme in new[] { themeLight, themeDark })
+        {
+            AssertStyleContains(theme, "PageTitle",
+                "TargetType=\"TextBlock\"",
+                "Property=\"FontSize\" Value=\"20\"",
+                "Property=\"FontWeight\" Value=\"SemiBold\"",
+                "Property=\"Foreground\" Value=\"{DynamicResource TextBrush}\"");
+            AssertStyleContains(theme, "SectionTitle",
+                "TargetType=\"TextBlock\"",
+                "Property=\"FontSize\" Value=\"14\"",
+                "Property=\"FontWeight\" Value=\"SemiBold\"",
+                "Property=\"Foreground\" Value=\"{DynamicResource TextBrush}\"");
+            AssertStyleContains(theme, "Body",
+                "TargetType=\"TextBlock\"",
+                "Property=\"FontSize\" Value=\"12\"",
+                "Property=\"Foreground\" Value=\"{DynamicResource TextBrush}\"");
+            AssertStyleContains(theme, "Caption",
+                "TargetType=\"TextBlock\"",
+                "Property=\"FontSize\" Value=\"11\"",
+                "Property=\"Foreground\" Value=\"{DynamicResource TextSecondaryBrush}\"");
+        }
+    }
+
+    [Fact]
+    public void Key_page_titles_use_page_title_style_without_accent_foreground()
+    {
+        AssertPageTitle(ReadUiFile("Views", "Pages", "BuilderPage.xaml"), "Druckcenter");
+        AssertPageTitle(ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml"), "Sanierungs-Matrix");
+        AssertPageTitle(ReadUiFile("Views", "Pages", "MediaConflictsPage.xaml"), "Medienkonflikte");
+        AssertPageTitle(ReadUiFile("Views", "Pages", "OverviewPage.xaml"), "Projektuebersicht");
+        AssertPageTitle(ReadUiFile("Views", "Pages", "SettingsPage.xaml"), "Einstellungen");
+        AssertPageTitle(ReadUiFile("Views", "Pages", "VsaPage.xaml"), "VSA-Bewertung");
+    }
+
+    private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
+    {
+        var marker = $"x:Key=\"{key}\"";
+        var start = xaml.IndexOf(marker, StringComparison.Ordinal);
+        Assert.True(start >= 0, $"Style {key} was not found.");
+
+        var end = xaml.IndexOf("</Style>", start, StringComparison.Ordinal);
+        Assert.True(end >= 0, $"Style {key} has no closing tag.");
+        var style = xaml[start..end];
+
+        foreach (var expected in expectedParts)
+            Assert.Contains(expected, style);
+    }
+
+    private static void AssertPageTitle(string xaml, string title)
+    {
+        var marker = $"Text=\"{title}\"";
+        var textIndex = xaml.IndexOf(marker, StringComparison.Ordinal);
+        Assert.True(textIndex >= 0, $"Title {title} was not found.");
+
+        var elementStart = xaml.LastIndexOf("<TextBlock", textIndex, StringComparison.Ordinal);
+        var elementEnd = xaml.IndexOf("/>", textIndex, StringComparison.Ordinal);
+        Assert.True(elementStart >= 0 && elementEnd > elementStart, $"Title {title} TextBlock could not be read.");
+        var element = xaml[elementStart..elementEnd];
+
+        Assert.Contains("Style=\"{StaticResource PageTitle}\"", element);
+        Assert.DoesNotContain("NeonCyanBrush", element);
+        Assert.DoesNotContain("AccentBrush", element);
+    }
+
     private static void AssertDoesNotContainAny(string text, params string[] forbidden)
     {
         foreach (var value in forbidden)

@@ -17,11 +17,9 @@
             <DockPanel LastChildFill="False">
                 <StackPanel DockPanel.Dock="Left">
                     <TextBlock Text="Druckcenter"
-                               FontSize="22"
-                               FontWeight="SemiBold"
-                               Foreground="{StaticResource NeonCyanBrush}"/>
+                               Style="{StaticResource PageTitle}"/>
                     <TextBlock Text="Filterbarer Ausdruck mit Kosten-, Eigentuemer- und Positionszusammenfassung"
-                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                               Style="{StaticResource Caption}"/>
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Right"

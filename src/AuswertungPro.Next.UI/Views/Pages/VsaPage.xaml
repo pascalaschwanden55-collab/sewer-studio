@@ -24,8 +24,8 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <TextBlock Text="&#xE8EF;" FontFamily="Segoe MDL2 Assets" FontSize="20"
                                    Foreground="{StaticResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="VSA-Bewertung" FontSize="16" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="VSA-Bewertung" Style="{StaticResource PageTitle}"
+                                   VerticalAlignment="Center"/>
                     </StackPanel>
                     <TextBlock Text="Berechnet die VSA-Zustandsbewertung für alle Haltungen und Schächte basierend auf den erfassten Schadencodes und dem Regelwerk (SN EN 13508-2)."
                                TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"
