@@ -55,6 +55,18 @@ public sealed class ResolveFromClassifierTests
         Assert.Equal("BAB", r!.Code);
     }
 
+    [Theory]
+    [InlineData("BCA")]
+    [InlineData("BCC")]
+    [InlineData("BBC")]
+    [InlineData("BAA")]
+    public void Paket5KlassenMitHoherKonfidenzWerdenUebernommen(string code)
+    {
+        var r = VsaCodeResolver.ResolveFromClassifier(Preds((code, 0.41)), currentMeter: 5.0, totalLength: 50);
+        Assert.NotNull(r);
+        Assert.Equal(code, r!.Code);
+    }
+
     [Fact]
     public void NiedrigeKonfidenzLiefertKeineEntscheidung()
     {

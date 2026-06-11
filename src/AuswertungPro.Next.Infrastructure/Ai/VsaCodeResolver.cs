@@ -276,7 +276,7 @@ public static class VsaCodeResolver
 
         // ── Negativ-Gate: Grundgeruest-Codes sind ortsgebunden ──
         // BCD existiert nur am Rohranfang, BCE nur am Rohrende. Ein "BCE" mitten
-        // im Rohr ist meist ein offener Anschluss (BCA kennt das Modell nicht) —
+        // im Rohr ist meist ein offener Anschluss (vor v8 kannte das Modell BCA nicht) —
         // Pilot 2026-06-10: 7x BCE @ 1.7m von 12.5m. Dann lieber KEINE
         // Klassifikator-Entscheidung (Qwen/Label-Heuristik uebernimmt).
         if (top1Code == "BCD" && currentMeter > 1.5)
