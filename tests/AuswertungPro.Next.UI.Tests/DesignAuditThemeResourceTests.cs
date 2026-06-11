@@ -153,6 +153,47 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("Header=\"Speichern\" Command=\"{Binding SaveCommand}\" InputGestureText=\"Strg+S\"", xaml);
     }
 
+    [Fact]
+    public void Controls_and_main_window_use_dynamic_theme_brush_resources_for_live_theme_switching()
+    {
+        var controls = ReadUiFile("Theme", "Controls.xaml");
+        var mainWindow = ReadUiFile("MainWindow.xaml");
+        var themeBrushKeys = new[]
+        {
+            "BgBrush",
+            "BgLightBrush",
+            "CardBrush",
+            "CardGlassBrush",
+            "BorderBrush",
+            "BorderLightBrush",
+            "HeaderBrush",
+            "HeaderTextBrush",
+            "TextBrush",
+            "TextSecondaryBrush",
+            "MutedBrush",
+            "AccentBrush",
+            "AccentHoverBrush",
+            "AccentSubtleBrush",
+            "HoverBrush",
+            "SurfaceSubtleBrush",
+            "OverlayBrush",
+            "NavPanelBrush",
+            "GlassBrush",
+            "SuccessBrush",
+            "DangerBrush",
+            "WarningBrush",
+            "InfoBrush"
+        };
+
+        foreach (var key in themeBrushKeys)
+        {
+            Assert.DoesNotContain($"{{StaticResource {key}}}", controls);
+            Assert.DoesNotContain($"{{StaticResource {key}}}", mainWindow);
+            Assert.DoesNotContain($"<StaticResource ResourceKey=\"{key}\"", controls);
+            Assert.DoesNotContain($"<StaticResource ResourceKey=\"{key}\"", mainWindow);
+        }
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";

@@ -77,8 +77,8 @@
         </Grid.ColumnDefinitions>
 
         <!-- Sidebar -->
-        <Border Grid.Column="0" Background="{StaticResource NavPanelBrush}" BorderThickness="0,0,1,0"
-                BorderBrush="{StaticResource BorderBrush}">
+        <Border Grid.Column="0" Background="{DynamicResource NavPanelBrush}" BorderThickness="0,0,1,0"
+                BorderBrush="{DynamicResource BorderBrush}">
             <Border.Style>
                 <Style TargetType="Border">
                     <Setter Property="Visibility" Value="Visible"/>
@@ -93,13 +93,13 @@
                 <StackPanel DockPanel.Dock="Top" Margin="16,16,16,8">
                     <StackPanel Orientation="Horizontal">
                         <Border Width="4" Height="20" CornerRadius="2" Margin="0,0,10,0"
-                                Background="{StaticResource AccentBrush}"/>
+                                Background="{DynamicResource AccentBrush}"/>
                         <TextBlock Text="SEWER STUDIO" FontSize="15" FontWeight="Bold"
-                                   Foreground="{StaticResource TextBrush}"
+                                   Foreground="{DynamicResource TextBrush}"
                                    FontFamily="Consolas, Segoe UI"/>
                     </StackPanel>
                     <TextBlock Text="{Binding Subtitle}" Margin="14,3,0,0"
-                               Foreground="{StaticResource TextSecondaryBrush}" FontSize="11"/>
+                               Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"/>
                     <Border Height="2" Margin="0,12,0,0" CornerRadius="1">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
@@ -113,16 +113,16 @@
 
                 <!-- System Monitor -->
                 <Border DockPanel.Dock="Bottom" Margin="12,4,12,12" Padding="10,8" CornerRadius="6"
-                        BorderThickness="1" BorderBrush="{StaticResource BorderBrush}">
+                        BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
                     <Border.Background>
-                        <StaticResource ResourceKey="BgLightBrush"/>
+                        <DynamicResource ResourceKey="BgLightBrush"/>
                     </Border.Background>
                     <StackPanel>
                         <TextBlock Text="LEISTUNGSMONITOR" FontSize="9" FontWeight="Bold" FontFamily="Consolas"
-                                   Foreground="{StaticResource AccentBrush}" Margin="0,0,0,8"/>
+                                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
 
                         <!-- ═══════════════ CPU ═══════════════ -->
-                        <TextBlock FontSize="8" FontFamily="Consolas" Foreground="{StaticResource MutedBrush}" Opacity="0.6"
+                        <TextBlock FontSize="8" FontFamily="Consolas" Foreground="{DynamicResource MutedBrush}" Opacity="0.6"
                                    Text="{Binding Monitor.CpuName, Mode=OneWay}" TextTrimming="CharacterEllipsis" Margin="0,0,0,3"/>
                         <!-- CPU Bar -->
                         <Grid Margin="0,0,0,2">
@@ -132,9 +132,9 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="CPU" FontSize="10" FontWeight="SemiBold" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                             <Border Grid.Column="1" Height="5" CornerRadius="2.5"
-                                    Background="{StaticResource SurfaceSubtleBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
+                                    Background="{DynamicResource SurfaceSubtleBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
                                 <Border CornerRadius="2.5" HorizontalAlignment="Left"
                                         Background="{Binding DataContext.Monitor.CpuPercent, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource PercentToColorConverter}}">
                                     <Border.Width>
@@ -158,7 +158,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="{DynamicResource MutedBrush}" Opacity="0.7">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -172,7 +172,7 @@
                                 <Run Text="Takt: "/><Run Text="{Binding Monitor.CpuClockMhz, Mode=OneWay, StringFormat=N0}"/><Run Text=" MHz"/>
                             </TextBlock>
                             <TextBlock Grid.Column="0" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="{DynamicResource MutedBrush}" Opacity="0.7">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Visible"/>
@@ -192,7 +192,7 @@
                                 </TextBlock.ToolTip>
                             </TextBlock>
                             <TextBlock Grid.Column="1" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="{DynamicResource MutedBrush}" Opacity="0.7">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -206,7 +206,7 @@
                                 <Run Text="Temp: "/><Run Text="{Binding Monitor.CpuTempC, Mode=OneWay}"/><Run Text=" °C"/>
                             </TextBlock>
                             <TextBlock Grid.Column="1" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="{DynamicResource MutedBrush}" Opacity="0.7">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Visible"/>
@@ -228,7 +228,7 @@
                         </Grid>
 
                         <!-- ═══════════════ RAM ═══════════════ -->
-                        <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,0,0,8" Opacity="0.3"/>
+                        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,8" Opacity="0.3"/>
                         <!-- RAM Bar -->
                         <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
@@ -237,9 +237,9 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="RAM" FontSize="10" FontWeight="SemiBold" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                                       Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                             <Border Grid.Column="1" Height="5" CornerRadius="2.5"
-                                    Background="{StaticResource SurfaceSubtleBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
+                                    Background="{DynamicResource SurfaceSubtleBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
                                 <Border CornerRadius="2.5" HorizontalAlignment="Left"
                                         Background="{Binding DataContext.Monitor.RamPercent, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource PercentToColorConverter}}">
                                     <Border.Width>
@@ -263,7 +263,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="{DynamicResource MutedBrush}" Opacity="0.7">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -277,7 +277,7 @@
                                 <Run Text="Takt: "/><Run Text="{Binding Monitor.RamClockMhz, Mode=OneWay, StringFormat=N0}"/><Run Text=" MHz"/>
                             </TextBlock>
                             <TextBlock Grid.Column="0" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="{DynamicResource MutedBrush}" Opacity="0.7">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Visible"/>
@@ -297,7 +297,7 @@
                                 </TextBlock.ToolTip>
                             </TextBlock>
                             <TextBlock Grid.Column="1" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="{DynamicResource MutedBrush}" Opacity="0.7">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -311,7 +311,7 @@
                                 <Run Text="Temp: "/><Run Text="{Binding Monitor.RamTempC, Mode=OneWay}"/><Run Text=" °C"/>
                             </TextBlock>
                             <TextBlock Grid.Column="1" FontSize="9" FontFamily="Consolas"
-                                       Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                       Foreground="{DynamicResource MutedBrush}" Opacity="0.7">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Visible"/>
@@ -331,16 +331,16 @@
                                 </TextBlock.ToolTip>
                             </TextBlock>
                         </Grid>
-                        <TextBlock FontSize="9" FontFamily="Consolas" Foreground="{StaticResource MutedBrush}" Opacity="0.7" Margin="34,0,0,8">
+                        <TextBlock FontSize="9" FontFamily="Consolas" Foreground="{DynamicResource MutedBrush}" Opacity="0.7" Margin="34,0,0,8">
                             <Run Text="{Binding Monitor.RamUsedMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" / "/>
                             <Run Text="{Binding Monitor.RamTotalMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" MB"/>
                         </TextBlock>
 
                         <!-- ═══════════════ GPU ═══════════════ -->
                         <StackPanel>
-                            <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,0,0,8" Opacity="0.3"/>
+                            <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,8" Opacity="0.3"/>
 
-                            <TextBlock FontSize="8" FontFamily="Consolas" Foreground="{StaticResource MutedBrush}" Opacity="0.6"
+                            <TextBlock FontSize="8" FontFamily="Consolas" Foreground="{DynamicResource MutedBrush}" Opacity="0.6"
                                        Text="{Binding Monitor.GpuName, Mode=OneWay}" TextTrimming="CharacterEllipsis" Margin="0,0,0,3">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
@@ -353,7 +353,7 @@
                                     </Style>
                                 </TextBlock.Style>
                             </TextBlock>
-                            <TextBlock FontSize="8" FontFamily="Consolas" Foreground="{StaticResource MutedBrush}" Opacity="0.6"
+                            <TextBlock FontSize="8" FontFamily="Consolas" Foreground="{DynamicResource MutedBrush}" Opacity="0.6"
                                        Text="GPU nicht erkannt" Margin="0,0,0,3">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
@@ -375,9 +375,9 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="GPU" FontSize="10" FontWeight="SemiBold" FontFamily="Consolas"
-                                           Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                                 <Border Grid.Column="1" Height="5" CornerRadius="2.5"
-                                        Background="{StaticResource SurfaceSubtleBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
+                                        Background="{DynamicResource SurfaceSubtleBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
                                     <Border CornerRadius="2.5" HorizontalAlignment="Left"
                                             Background="{Binding DataContext.Monitor.GpuPercent, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource PercentToColorConverter}}">
                                         <Border.Width>
@@ -404,7 +404,7 @@
                                     <Run Text="{Binding Monitor.GpuPercent, Mode=OneWay}"/><Run Text="%"/>
                                 </TextBlock>
                                 <TextBlock Grid.Column="2" FontSize="10" FontWeight="SemiBold" FontFamily="Consolas" MinWidth="28"
-                                           Foreground="{StaticResource MutedBrush}" TextAlignment="Right"
+                                           Foreground="{DynamicResource MutedBrush}" TextAlignment="Right"
                                            VerticalAlignment="Center" Text="n/a">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
@@ -425,7 +425,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" FontSize="9" FontFamily="Consolas"
-                                           Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                           Foreground="{DynamicResource MutedBrush}" Opacity="0.7">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -439,7 +439,7 @@
                                     <Run Text="Takt: "/><Run Text="{Binding Monitor.GpuClockMhz, Mode=OneWay, StringFormat=N0}"/><Run Text=" MHz"/>
                                 </TextBlock>
                                 <TextBlock Grid.Column="0" FontSize="9" FontFamily="Consolas"
-                                           Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                           Foreground="{DynamicResource MutedBrush}" Opacity="0.7">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Visible"/>
@@ -459,7 +459,7 @@
                                     </TextBlock.ToolTip>
                                 </TextBlock>
                                 <TextBlock Grid.Column="1" FontSize="9" FontFamily="Consolas"
-                                           Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                           Foreground="{DynamicResource MutedBrush}" Opacity="0.7">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -473,7 +473,7 @@
                                     <Run Text="Temp: "/><Run Text="{Binding Monitor.GpuTempC, Mode=OneWay}"/><Run Text=" °C"/>
                                 </TextBlock>
                                 <TextBlock Grid.Column="1" FontSize="9" FontFamily="Consolas"
-                                           Foreground="{StaticResource MutedBrush}" Opacity="0.7">
+                                           Foreground="{DynamicResource MutedBrush}" Opacity="0.7">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Visible"/>
@@ -502,9 +502,9 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="VRAM" FontSize="9" FontWeight="SemiBold" FontFamily="Consolas"
-                                           Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                                           Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
                                 <Border Grid.Column="1" Height="5" CornerRadius="2.5"
-                                        Background="{StaticResource SurfaceSubtleBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
+                                        Background="{DynamicResource SurfaceSubtleBrush}" Margin="0,0,6,0" VerticalAlignment="Center">
                                     <Border CornerRadius="2.5" HorizontalAlignment="Left"
                                             Background="{Binding DataContext.Monitor.GpuMemPercent, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource PercentToColorConverter}}">
                                         <Border.Width>
@@ -521,7 +521,7 @@
                                     <Run Text="{Binding Monitor.GpuMemPercent, Mode=OneWay}"/><Run Text="%"/>
                                 </TextBlock>
                             </Grid>
-                            <TextBlock FontSize="9" FontFamily="Consolas" Foreground="{StaticResource MutedBrush}" Opacity="0.7" Margin="34,0,0,0">
+                            <TextBlock FontSize="9" FontFamily="Consolas" Foreground="{DynamicResource MutedBrush}" Opacity="0.7" Margin="34,0,0,0">
                                 <Run Text="{Binding Monitor.GpuMemUsedMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" / "/>
                                 <Run Text="{Binding Monitor.GpuMemTotalMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" MB"/>
                             </TextBlock>
@@ -546,14 +546,14 @@
                             StatusText="{Binding AiStatusLabel}" Width="160" Height="160"/>
                         <TextBlock Text="KI AKTIV" FontSize="10" FontWeight="Bold"
                             HorizontalAlignment="Center" Margin="0,2,0,0"
-                            Foreground="{StaticResource AccentBrush}"/>
+                            Foreground="{DynamicResource AccentBrush}"/>
                         <TextBlock Text="{Binding AiLoadedModels}" FontSize="9" FontWeight="SemiBold"
                             HorizontalAlignment="Center" Margin="0,1,0,0"
-                            Foreground="{StaticResource AccentBrush}"
+                            Foreground="{DynamicResource AccentBrush}"
                             TextTrimming="CharacterEllipsis" MaxWidth="150"/>
                         <TextBlock Text="{Binding AiStatusLabel}" FontSize="9"
                             HorizontalAlignment="Center" Margin="0,1,0,0"
-                            Foreground="{StaticResource MutedBrush}"
+                            Foreground="{DynamicResource MutedBrush}"
                             TextTrimming="CharacterEllipsis" MaxWidth="150"/>
                     </StackPanel>
                 </Border>
@@ -569,52 +569,52 @@
                                                FontFamily="Segoe MDL2 Assets"
                                                FontSize="16"
                                                Width="24"
-                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Center"/>
 
                                     <Canvas x:Name="PipeNavIcon" Width="28" Height="20" Visibility="Collapsed">
                                         <Ellipse Canvas.Left="1.5" Canvas.Top="4" Width="7.5" Height="12"
-                                                 Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1.6"/>
+                                                 Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.6"/>
                                         <Line X1="5.5" Y1="4" X2="22.5" Y2="4"
-                                              Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1.6"/>
+                                              Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.6"/>
                                         <Line X1="5.5" Y1="16" X2="22.5" Y2="16"
-                                              Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1.6"/>
+                                              Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.6"/>
                                         <Ellipse Canvas.Left="19" Canvas.Top="4" Width="7.5" Height="12"
-                                                 Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1.6"/>
+                                                 Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.6"/>
                                     </Canvas>
 
                                     <Canvas x:Name="ShaftNavIcon" Width="28" Height="20" Visibility="Collapsed">
                                         <Ellipse Canvas.Left="6" Canvas.Top="2" Width="16" Height="4.5"
-                                                 Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1.6"/>
+                                                 Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.6"/>
                                         <Rectangle Canvas.Left="8" Canvas.Top="4.5" Width="12" Height="10.5"
-                                                   Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1.6"/>
+                                                   Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.6"/>
                                         <Ellipse Canvas.Left="8" Canvas.Top="13" Width="12" Height="4.5"
-                                                 Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1.6"/>
+                                                 Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.6"/>
                                         <Line X1="2" Y1="10" X2="8" Y2="10"
-                                              Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1.6"/>
+                                              Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.6"/>
                                         <Line X1="20" Y1="10" X2="26" Y2="10"
-                                              Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1.6"/>
+                                              Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.6"/>
                                     </Canvas>
 
                                     <Canvas x:Name="VsaNavIcon" Width="28" Height="20" Visibility="Collapsed">
                                         <Ellipse Canvas.Left="1" Canvas.Top="10.5" Width="7" Height="7"
-                                                 Fill="{StaticResource TextSecondaryBrush}"/>
+                                                 Fill="{DynamicResource TextSecondaryBrush}"/>
                                         <Ellipse Canvas.Left="2.5" Canvas.Top="4.5" Width="5.5" Height="5.5"
-                                                 Fill="{StaticResource TextSecondaryBrush}"/>
+                                                 Fill="{DynamicResource TextSecondaryBrush}"/>
                                         <Ellipse Canvas.Left="6.5" Canvas.Top="1.5" Width="4.5" Height="4.5"
-                                                 Fill="{StaticResource TextSecondaryBrush}"/>
+                                                 Fill="{DynamicResource TextSecondaryBrush}"/>
                                         <Ellipse Canvas.Left="11.5" Canvas.Top="0.5" Width="3.8" Height="3.8"
-                                                 Fill="{StaticResource TextSecondaryBrush}"/>
+                                                 Fill="{DynamicResource TextSecondaryBrush}"/>
                                         <Ellipse Canvas.Left="16.5" Canvas.Top="2.3" Width="3.2" Height="3.2"
-                                                 Fill="{StaticResource TextSecondaryBrush}"/>
+                                                 Fill="{DynamicResource TextSecondaryBrush}"/>
                                         <Ellipse Canvas.Left="20.5" Canvas.Top="6" Width="2.8" Height="2.8"
-                                                 Fill="{StaticResource TextSecondaryBrush}"/>
+                                                 Fill="{DynamicResource TextSecondaryBrush}"/>
                                         <Ellipse Canvas.Left="22.8" Canvas.Top="10.8" Width="2.2" Height="2.2"
-                                                 Fill="{StaticResource TextSecondaryBrush}"/>
+                                                 Fill="{DynamicResource TextSecondaryBrush}"/>
                                         <TextBlock Canvas.Left="12.5" Canvas.Top="12.5" Text="V"
                                                    FontSize="7" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
                                     </Canvas>
                                 </Grid>
                                 <TextBlock Text="{Binding Title}" Margin="10,0,0,0" FontSize="13.5"
@@ -640,7 +640,7 @@
                         <Style TargetType="ListBoxItem">
                             <Setter Property="Margin" Value="0,1"/>
                             <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                             <Setter Property="IsEnabled" Value="True"/>
                             <Setter Property="IsHitTestVisible" Value="True"/>
@@ -655,7 +655,7 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Border x:Name="AccentStrip" Grid.Column="0"
-                                                    Background="{StaticResource AccentBrush}"
+                                                    Background="{DynamicResource AccentBrush}"
                                                     CornerRadius="1.5" Margin="0,6" Opacity="0"/>
                                             <Border x:Name="bd" Grid.Column="1" Background="Transparent"
                                                     CornerRadius="6" Padding="2"
@@ -665,12 +665,12 @@
                                         </Grid>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentSubtleBrush}"/>
+                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
                                                 <Setter TargetName="AccentStrip" Property="Opacity" Value="1"/>
-                                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                                             </Trigger>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="bd" Property="Background" Value="{StaticResource HoverBrush}"/>
+                                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource HoverBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -705,7 +705,7 @@
             <Border Style="{StaticResource Card}">
                 <Grid>
                     <ctrl:AnimatedContentControl Content="{Binding CurrentPage}"/>
-                    <Border Background="{StaticResource OverlayBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="8">
+                    <Border Background="{DynamicResource OverlayBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -718,9 +718,9 @@
                         </Border.Style>
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="420">
                             <TextBlock Text="Bitte zuerst ein Projekt speichern (Datei anlegen)." FontSize="16"
-                                       FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" TextAlignment="Center"/>
+                                       FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" TextAlignment="Center"/>
                             <TextBlock Text="Danach sind alle Funktionen freigeschaltet." Margin="0,6,0,0"
-                                       Foreground="{StaticResource MutedBrush}" TextAlignment="Center"/>
+                                       Foreground="{DynamicResource MutedBrush}" TextAlignment="Center"/>
                         </StackPanel>
                     </Border>
                 </Grid>
