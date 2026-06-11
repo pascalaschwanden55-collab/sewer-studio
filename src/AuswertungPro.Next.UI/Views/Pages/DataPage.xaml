@@ -233,15 +233,15 @@
 
                     <Button x:Name="MassnahmenDropdown" Click="DropdownButton_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Sanierungsmassnahmen und Kostenvorschlaege">
+                            ToolTip="Sanierungs-Matrix und Kostenvorschlaege">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Sanierungsmassnahmen" VerticalAlignment="Center"/>
+                            <TextBlock Text="Sanierungs-Matrix" VerticalAlignment="Center"/>
                             <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="9" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Header="Sanierungsmassnahmen" Click="CostsMenu_Click"/>
+                                <MenuItem Header="Sanierungs-Matrix" Click="CostsMenu_Click"/>
                                 <MenuItem Header="Vorschlag aus Schadenscodes" Click="SuggestMeasuresMenu_Click"/>
                                 <Separator/>
                                 <MenuItem Header="Alle Massnahmen vorschlagen" Click="SuggestAllMeasuresMenu_Click"

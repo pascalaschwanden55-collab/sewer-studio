@@ -260,6 +260,14 @@ public sealed partial class ShellViewModel : ObservableObject
             SelectedNavItem = target;
     }
 
+    public void NavigateToSanierungsMatrix(string? holding)
+    {
+        NavigateTo("Sanierungs-Matrix");
+
+        if (CurrentPage is Pages.SanierungsMatrixPageViewModel matrix)
+            matrix.SelectHolding(holding);
+    }
+
     public void NewProject()
     {
         if (!ConfirmDiscardUnsavedChanges())

@@ -204,6 +204,19 @@ public sealed class DesignAuditThemeResourceTests
     }
 
     [Fact]
+    public void DataPage_normaler_massnahmen_einstieg_navigiert_zur_matrix()
+    {
+        var viewModel = ReadUiFile("ViewModels", "Pages", "DataPageViewModel.cs");
+        var dataPage = ReadUiFile("Views", "Pages", "DataPage.xaml");
+        var shell = ReadUiFile("ViewModels", "ShellViewModel.cs");
+
+        Assert.Contains("Header=\"Sanierungs-Matrix\"", dataPage);
+        Assert.Contains("NavigateToSanierungsMatrix", shell);
+        Assert.Contains("OpenSanierungsMatrix(record);", viewModel);
+        Assert.DoesNotContain("OpenSanierungsmassnahmenWindow(record, InitialFocusMode.CostCalculator)", viewModel);
+    }
+
+    [Fact]
     public void MainWindow_defines_standard_project_shortcuts()
     {
         var xaml = ReadUiFile("MainWindow.xaml");

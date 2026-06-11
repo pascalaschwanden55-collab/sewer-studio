@@ -25,6 +25,24 @@ public sealed record MeasureOption(string? Id, string Name, string Kategorie, bo
     public override string ToString() => Name;
 }
 
+public static class SanierungsMatrixNavigationTarget
+{
+    public static string? FromRecord(HaltungRecord? record)
+    {
+        var holding = (record?.GetFieldValue("Haltungsname") ?? "").Trim();
+        return string.IsNullOrWhiteSpace(holding) ? null : holding;
+    }
+
+    public static SanierungMatrixRowVm? FindRow(IEnumerable<SanierungMatrixRowVm> rows, string? holding)
+    {
+        var target = (holding ?? "").Trim();
+        if (target.Length == 0)
+            return null;
+
+        return rows.FirstOrDefault(r => string.Equals(r.Holding, target, StringComparison.OrdinalIgnoreCase));
+    }
+}
+
 public sealed record SanierungMatrixDetailLineVm(
     string Group,
     string Text,
@@ -480,6 +498,21 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     {
         _shell = shell;
         Reload();
+    }
+
+    public bool SelectHolding(string? holding)
+    {
+        var row = SanierungsMatrixNavigationTarget.FindRow(Rows, holding);
+        if (row is null)
+        {
+            if (!string.IsNullOrWhiteSpace(holding))
+                Status = $"Haltung in Sanierungs-Matrix nicht gefunden: {holding.Trim()}";
+            return false;
+        }
+
+        SelectedRow = row;
+        Status = $"Sanierungs-Matrix: {row.Holding} gewaehlt.";
+        return true;
     }
 
     [RelayCommand]

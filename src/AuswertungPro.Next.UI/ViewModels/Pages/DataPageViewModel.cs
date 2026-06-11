@@ -972,7 +972,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private void OpenCosts(HaltungRecord? record)
     {
-        OpenSanierungsmassnahmenWindow(record, InitialFocusMode.CostCalculator);
+        OpenSanierungsMatrix(record);
     }
 
     private void SuggestMeasures(HaltungRecord? record)
@@ -1083,6 +1083,24 @@ public sealed partial class DataPageViewModel : ObservableObject
     private void OpenSanierungOptimizationWindow(HaltungRecord? record)
     {
         OpenSanierungsmassnahmenWindow(record, InitialFocusMode.AiOptimization);
+    }
+
+    private void OpenSanierungsMatrix(HaltungRecord? record)
+    {
+        record ??= Selected;
+        if (record is null)
+            return;
+
+        var holding = SanierungsMatrixNavigationTarget.FromRecord(record);
+        if (string.IsNullOrWhiteSpace(holding))
+        {
+            _sp.Dialogs.Warn("Haltungsname fehlt in der Zeile.", "Sanierungs-Matrix");
+            return;
+        }
+
+        Selected = record;
+        _shell.NavigateToSanierungsMatrix(holding);
+        _shell.SetStatus($"Sanierungs-Matrix geoeffnet: {holding}");
     }
 
     private void OpenSanierungsmassnahmenWindow(HaltungRecord? record, InitialFocusMode focus)
