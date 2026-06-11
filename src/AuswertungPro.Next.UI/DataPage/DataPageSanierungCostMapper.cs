@@ -74,7 +74,7 @@ public static class DataPageSanierungCostMapper
 
         record.SetFieldValue("Renovierung_Inliner_m", FormatDecimal(inlinerMeters), FieldSource.Manual, userEdited: true);
         record.SetFieldValue("Renovierung_Inliner_Stk", FormatInt(inlinerStk), FieldSource.Manual, userEdited: true);
-        record.SetFieldValue("Anschluesse_verpressen", FormatNonNegativeInt(anschluesse), FieldSource.Manual, userEdited: true);
+        record.SetFieldValue("Anschluesse_verpressen", FormatInt(anschluesse), FieldSource.Manual, userEdited: true);
         record.SetFieldValue("Reparatur_Manschette", FormatInt(manschette), FieldSource.Manual, userEdited: true);
         record.SetFieldValue("Linerendmanschette_LEM", FormatInt(lem), FieldSource.Manual, userEdited: true);
         record.SetFieldValue("Reparatur_Kurzliner", FormatInt(kurzliner), FieldSource.Manual, userEdited: true);
@@ -307,6 +307,4 @@ public static class DataPageSanierungCostMapper
     private static string FormatInt(int value)
         => value <= 0 ? "" : value.ToString(CultureInfo.InvariantCulture);
 
-    private static string FormatNonNegativeInt(int value)
-        => Math.Max(0, value).ToString(CultureInfo.InvariantCulture);
 }

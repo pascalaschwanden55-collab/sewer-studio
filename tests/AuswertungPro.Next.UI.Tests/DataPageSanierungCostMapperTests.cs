@@ -97,6 +97,29 @@ public sealed class DataPageSanierungCostMapperTests
     }
 
     [Fact]
+    public void ApplyCosts_schreibt_keine_explizite_null_fuer_anschluesse()
+    {
+        var record = new HaltungRecord();
+        var cost = new HoldingCost
+        {
+            Measures = new System.Collections.Generic.List<MeasureCost>
+            {
+                new()
+                {
+                    Lines = new System.Collections.Generic.List<CostLine>
+                    {
+                        new() { ItemKey = "SCHLAUCHLINER_NADELFILZ", Qty = 10m, Unit = "m", Selected = true }
+                    }
+                }
+            }
+        };
+
+        DataPageSanierungCostMapper.ApplyCosts(record, cost);
+
+        Assert.Equal("", record.GetFieldValue("Anschluesse_verpressen"));
+    }
+
+    [Fact]
     public void ApplyRecommendation_ueberspringt_null_felder()
     {
         var record = new HaltungRecord();
