@@ -119,7 +119,7 @@ public sealed class CostCalculationService
     {
         EnsureUserDataDirectory();
         var json = JsonSerializer.Serialize(catalog, Application.Common.JsonDefaults.Indented);
-        File.WriteAllText(_userCatalogPath, json);
+        AtomicJsonFileWriter.WriteAllText(_userCatalogPath, json);
     }
 
     public MeasureTemplates LoadTemplates()
@@ -165,7 +165,7 @@ public sealed class CostCalculationService
     {
         EnsureUserDataDirectory();
         var json = JsonSerializer.Serialize(templates, Application.Common.JsonDefaults.Indented);
-        File.WriteAllText(_userTemplatesPath, json);
+        AtomicJsonFileWriter.WriteAllText(_userTemplatesPath, json);
     }
 
     public string GetCatalogPath() => _userCatalogPath;

@@ -42,7 +42,7 @@ public sealed class PositionTemplateStore
 
             var json = JsonSerializer.Serialize(catalog, Application.Common.JsonDefaults.IndentedCamel);
             
-            File.WriteAllText(userPath, json);
+            AtomicJsonFileWriter.WriteAllText(userPath, json);
             return true;
         }
         catch (Exception ex)

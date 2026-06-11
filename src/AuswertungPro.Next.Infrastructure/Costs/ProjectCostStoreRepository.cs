@@ -61,7 +61,7 @@ public sealed class ProjectCostStoreRepository
             Directory.CreateDirectory(folder);
             var path = GetStorePath(dir);
             var json = JsonSerializer.Serialize(store, JsonOptions);
-            File.WriteAllText(path, json);
+            AtomicJsonFileWriter.WriteAllText(path, json);
             return true;
         }
         catch (Exception ex)

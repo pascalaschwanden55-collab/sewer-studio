@@ -44,7 +44,7 @@ public sealed class CostCatalogStore
                 Directory.CreateDirectory(dir);
 
             var json = JsonSerializer.Serialize(catalog, Application.Common.JsonDefaults.Indented);
-            File.WriteAllText(path, json);
+            AtomicJsonFileWriter.WriteAllText(path, json);
             return true;
         }
         catch (Exception ex)
