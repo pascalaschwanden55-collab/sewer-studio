@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -31,6 +32,15 @@ public sealed class SingleFrameMultiModelService
         _yoloConfidence = yoloConfidence ?? EnvDouble("SEWERSTUDIO_YOLO_CONFIDENCE") ?? 0.25;
         _dinoBoxThreshold = dinoBoxThreshold ?? EnvDouble("SEWERSTUDIO_DINO_BOX_THRESHOLD") ?? 0.25;
         _dinoTextThreshold = dinoTextThreshold ?? EnvDouble("SEWERSTUDIO_DINO_TEXT_THRESHOLD") ?? 0.20;
+    }
+
+    public SingleFrameMultiModelService(VisionPipelineClient client, PipelineConfig config)
+        : this(
+            client,
+            config.YoloConfidence,
+            config.DinoBoxThreshold,
+            config.DinoTextThreshold)
+    {
     }
 
     private static double? EnvDouble(string name)
