@@ -30,4 +30,30 @@ public sealed class SanierungsMatrixNavigationTargetTests
 
         Assert.Same(row, SanierungsMatrixNavigationTarget.FindRow(new[] { other, row }, "  07.a-08.b  "));
     }
+
+    [Fact]
+    public void FilterRows_gibt_in_uebersicht_alle_zeilen_zurueck()
+    {
+        var rows = new[]
+        {
+            new SanierungMatrixRowVm(new HaltungRecord(), "H1", "300", "12.0", 0, _ => { }),
+            new SanierungMatrixRowVm(new HaltungRecord(), "H2", "300", "12.0", 0, _ => { }),
+        };
+
+        var filtered = SanierungsMatrixNavigationTarget.FilterRows(rows, "H1", singleHoldingMode: false);
+
+        Assert.Equal(rows, filtered);
+    }
+
+    [Fact]
+    public void FilterRows_gibt_im_einzelhaltungsmodus_nur_die_zielhaltung_zurueck()
+    {
+        var target = new SanierungMatrixRowVm(new HaltungRecord(), "H1", "300", "12.0", 0, _ => { });
+        var other = new SanierungMatrixRowVm(new HaltungRecord(), "H2", "300", "12.0", 0, _ => { });
+
+        var filtered = SanierungsMatrixNavigationTarget.FilterRows(new[] { other, target }, "h1", singleHoldingMode: true);
+
+        var only = Assert.Single(filtered);
+        Assert.Same(target, only);
+    }
 }

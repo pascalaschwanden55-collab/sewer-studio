@@ -41,6 +41,19 @@ public static class SanierungsMatrixNavigationTarget
 
         return rows.FirstOrDefault(r => string.Equals(r.Holding, target, StringComparison.OrdinalIgnoreCase));
     }
+
+    public static IReadOnlyList<SanierungMatrixRowVm> FilterRows(
+        IEnumerable<SanierungMatrixRowVm> rows,
+        string? holding,
+        bool singleHoldingMode)
+    {
+        var list = rows.ToList();
+        if (!singleHoldingMode)
+            return list;
+
+        var row = FindRow(list, holding);
+        return row is null ? Array.Empty<SanierungMatrixRowVm>() : new[] { row };
+    }
 }
 
 public sealed record SanierungMatrixDetailLineVm(
@@ -471,6 +484,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     private ProjectCostStore _store = new();
     private decimal _vatRate = 0.081m;
     private string _projectPath = "";
+    private readonly string? _singleHoldingTarget;
     private SanierungMatrixRowVm? _detailRow;
     private SanierungsMatrixDetailEditSession? _detailSession;
     private bool _suppressSelectionGuard;
@@ -482,6 +496,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     public ObservableCollection<SanierungMatrixRowVm> Rows { get; } = new();
     public ObservableCollection<MeasureOption> MeasureOptions { get; } = new();
 
+    [ObservableProperty] private bool _isSingleHoldingMode;
+    [ObservableProperty] private string _pageTitle = "Sanierungs-Matrix";
+    [ObservableProperty] private string _pageSubtitle = "Pro Haltung eine Hauptarbeit waehlen - Meter, DN und Anschluesse kommen automatisch.";
     [ObservableProperty] private decimal _gesamtTotal;
     [ObservableProperty] private int _belegteHaltungen;
     [ObservableProperty] private string _status = "";
@@ -495,8 +512,16 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     public ObservableCollection<SanierungsMatrixDetailEditMeasureVm> SelectedDetailMeasures { get; private set; } = new();
 
     public SanierungsMatrixPageViewModel(ShellViewModel shell)
+        : this(shell, null, singleHoldingMode: false)
+    {
+    }
+
+    public SanierungsMatrixPageViewModel(ShellViewModel shell, string? holding, bool singleHoldingMode)
     {
         _shell = shell;
+        _singleHoldingTarget = string.IsNullOrWhiteSpace(holding) ? null : holding.Trim();
+        IsSingleHoldingMode = singleHoldingMode;
+        UpdatePageTexts();
         Reload();
     }
 
@@ -537,7 +562,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
 
         _store = _costRepo.Load(_projectPath);
 
-        Rows.Clear();
+        var loadedRows = new List<SanierungMatrixRowVm>();
         foreach (var record in _shell.Project.Data)
         {
             var holding = (record.GetFieldValue("Haltungsname") ?? "").Trim();
@@ -550,14 +575,46 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
 
             var row = new SanierungMatrixRowVm(record, holding, dn, laenge, anschluesse, RecomputeRow);
             InitRowFromStore(row, holding);
+            loadedRows.Add(row);
+        }
+
+        Rows.Clear();
+        foreach (var row in SanierungsMatrixNavigationTarget.FilterRows(
+                     loadedRows,
+                     _singleHoldingTarget,
+                     IsSingleHoldingMode))
+        {
             Rows.Add(row);
         }
 
         RecomputeGesamt();
         SelectedRow = Rows.FirstOrDefault();
+        if (IsSingleHoldingMode && Rows.Count == 0)
+        {
+            Status = string.IsNullOrWhiteSpace(_singleHoldingTarget)
+                ? "Keine Haltung fuer Einzelansicht angegeben."
+                : $"Haltung in Sanierungsmassnahme nicht gefunden: {_singleHoldingTarget}.";
+            return;
+        }
+
         Status = Rows.Count == 0
             ? "Keine Haltungen geladen (Projekt mit Haltungen oeffnen)."
-            : $"{Rows.Count} Haltungen geladen.";
+            : IsSingleHoldingMode
+                ? $"Sanierungsmassnahme geladen: {SelectedRow?.Holding}"
+                : $"{Rows.Count} Haltungen geladen.";
+    }
+
+    private void UpdatePageTexts()
+    {
+        if (IsSingleHoldingMode)
+        {
+            PageTitle = "Sanierungsmassnahme";
+            PageSubtitle = "Einzelhaltung bearbeiten - Positionen im Detail pruefen, anpassen und uebernehmen.";
+            return;
+        }
+
+        PageTitle = "Sanierungs-Matrix";
+        PageSubtitle = "Pro Haltung eine Hauptarbeit waehlen - Meter, DN und Anschluesse kommen automatisch.";
     }
 
     private void BuildMeasureOptions()

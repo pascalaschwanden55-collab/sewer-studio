@@ -171,7 +171,7 @@ public sealed class DesignAuditThemeResourceTests
     public void Key_page_titles_use_page_title_style_without_accent_foreground()
     {
         AssertPageTitle(ReadUiFile("Views", "Pages", "BuilderPage.xaml"), "Druckcenter");
-        AssertPageTitle(ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml"), "Sanierungs-Matrix");
+        AssertPageTitleBinding(ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml"), "PageTitle");
         AssertPageTitle(ReadUiFile("Views", "Pages", "MediaConflictsPage.xaml"), "Medienkonflikte");
         AssertPageTitle(ReadUiFile("Views", "Pages", "OverviewPage.xaml"), "Projektuebersicht");
         AssertPageTitle(ReadUiFile("Views", "Pages", "SettingsPage.xaml"), "Einstellungen");
@@ -186,6 +186,8 @@ public sealed class DesignAuditThemeResourceTests
 
         Assert.Contains("Header=\"Massnahmen\"", xaml);
         Assert.DoesNotContain("Header=\"Hauptarbeit\"", xaml);
+        Assert.Contains("Text=\"{Binding PageTitle}\"", xaml);
+        Assert.Contains("Text=\"{Binding PageSubtitle}\"", xaml);
         Assert.Contains("DataContext.MeasureOptions", xaml);
         Assert.Contains("SelectedItem=\"{Binding SelectedRow, Mode=TwoWay}\"", xaml);
         Assert.Contains("ItemsSource=\"{Binding SelectedDetailMeasures}\"", xaml);
@@ -210,9 +212,18 @@ public sealed class DesignAuditThemeResourceTests
         var dataPage = ReadUiFile("Views", "Pages", "DataPage.xaml");
         var shell = ReadUiFile("ViewModels", "ShellViewModel.cs");
 
-        Assert.Contains("Header=\"Sanierungs-Matrix\"", dataPage);
+        Assert.Contains("Header=\"Sanierungsmassnahme bearbeiten\"", dataPage);
+        Assert.Contains("Text=\"Sanierungsmassnahme\"", dataPage);
         Assert.Contains("NavigateToSanierungsMatrix", shell);
         Assert.Contains("OpenSanierungsMatrix(record);", viewModel);
+        Assert.Contains("singleHoldingMode: true", viewModel);
+        var singleModeIndex = shell.IndexOf("if (singleHoldingMode)", StringComparison.Ordinal);
+        Assert.True(singleModeIndex >= 0, "Single-holding navigation branch was not found.");
+        var singleModeReturnIndex = shell.IndexOf("return;", singleModeIndex, StringComparison.Ordinal);
+        Assert.True(singleModeReturnIndex > singleModeIndex, "Single-holding navigation branch has no return.");
+        var singleModeBlock = shell[singleModeIndex..singleModeReturnIndex];
+        Assert.Contains("SelectedNavItem = null;", singleModeBlock);
+        Assert.DoesNotContain("SelectedNavItem = target;", singleModeBlock);
         Assert.DoesNotContain("OpenSanierungsmassnahmenWindow(record, InitialFocusMode.CostCalculator)", viewModel);
     }
 
@@ -276,6 +287,22 @@ public sealed class DesignAuditThemeResourceTests
         var elementStart = xaml.LastIndexOf("<TextBlock", textIndex, StringComparison.Ordinal);
         var elementEnd = xaml.IndexOf("/>", textIndex, StringComparison.Ordinal);
         Assert.True(elementStart >= 0 && elementEnd > elementStart, $"Title {title} TextBlock could not be read.");
+        var element = xaml[elementStart..elementEnd];
+
+        Assert.Contains("Style=\"{StaticResource PageTitle}\"", element);
+        Assert.DoesNotContain("NeonCyanBrush", element);
+        Assert.DoesNotContain("AccentBrush", element);
+    }
+
+    private static void AssertPageTitleBinding(string xaml, string binding)
+    {
+        var marker = $"Text=\"{{Binding {binding}}}\"";
+        var textIndex = xaml.IndexOf(marker, StringComparison.Ordinal);
+        Assert.True(textIndex >= 0, $"Title binding {binding} was not found.");
+
+        var elementStart = xaml.LastIndexOf("<TextBlock", textIndex, StringComparison.Ordinal);
+        var elementEnd = xaml.IndexOf("/>", textIndex, StringComparison.Ordinal);
+        Assert.True(elementStart >= 0 && elementEnd > elementStart, $"Title binding {binding} TextBlock could not be read.");
         var element = xaml[elementStart..elementEnd];
 
         Assert.Contains("Style=\"{StaticResource PageTitle}\"", element);

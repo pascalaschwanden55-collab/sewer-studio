@@ -1099,8 +1099,8 @@ public sealed partial class DataPageViewModel : ObservableObject
         }
 
         Selected = record;
-        _shell.NavigateToSanierungsMatrix(holding);
-        _shell.SetStatus($"Sanierungs-Matrix geoeffnet: {holding}");
+        _shell.NavigateToSanierungsMatrix(holding, singleHoldingMode: true);
+        _shell.SetStatus($"Sanierungsmassnahme geoeffnet: {holding}");
     }
 
     private void OpenSanierungsmassnahmenWindow(HaltungRecord? record, InitialFocusMode focus)

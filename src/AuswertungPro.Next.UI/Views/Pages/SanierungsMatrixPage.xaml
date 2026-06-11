@@ -12,9 +12,9 @@
         <Border Grid.Row="0" Style="{StaticResource Card}" Padding="14" Margin="0,0,0,10">
             <DockPanel LastChildFill="False">
                 <StackPanel DockPanel.Dock="Left">
-                    <TextBlock Text="Sanierungs-Matrix"
+                    <TextBlock Text="{Binding PageTitle}"
                                Style="{StaticResource PageTitle}"/>
-                    <TextBlock Text="Pro Haltung eine Hauptarbeit waehlen — Meter, DN und Anschluesse kommen automatisch."
+                    <TextBlock Text="{Binding PageSubtitle}"
                                Style="{StaticResource Caption}" Margin="0,2,0,0"/>
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
