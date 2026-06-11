@@ -53,6 +53,7 @@
                                           UpdateSourceTrigger=PropertyChanged}"
                                       IsEnabled="{Binding IsMatrixEditable}"
                                       IsSynchronizedWithCurrentItem="False"
+                                      PreviewMouseLeftButtonDown="MeasureComboBox_PreviewMouseLeftButtonDown"
                                       Margin="2">
                                 <ComboBox.GroupStyle>
                                     <GroupStyle>

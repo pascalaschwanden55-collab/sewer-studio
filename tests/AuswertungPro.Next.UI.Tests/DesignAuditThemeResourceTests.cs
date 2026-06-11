@@ -179,6 +179,18 @@ public sealed class DesignAuditThemeResourceTests
     }
 
     [Fact]
+    public void SanierungsMatrixPage_opens_hauptarbeit_combo_on_first_click()
+    {
+        var xaml = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml");
+        var code = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml.cs");
+
+        Assert.Contains("Header=\"Hauptarbeit\"", xaml);
+        Assert.Contains("PreviewMouseLeftButtonDown=\"MeasureComboBox_PreviewMouseLeftButtonDown\"", xaml);
+        Assert.Contains("combo.IsDropDownOpen = true;", code);
+        Assert.Contains("e.Handled = true;", code);
+    }
+
+    [Fact]
     public void MainWindow_defines_standard_project_shortcuts()
     {
         var xaml = ReadUiFile("MainWindow.xaml");
