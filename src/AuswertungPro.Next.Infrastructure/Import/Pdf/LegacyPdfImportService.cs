@@ -80,7 +80,7 @@ public sealed class LegacyPdfImportService
 
             if (LooksLikeSchachtProtokoll(fullText))
             {
-                ImportSchachtPdf(pdfPath, fullText, project, stats);
+                ImportSchachtPdf(pdfPath, fullText, project, stats, ctx);
                 return stats;
             }
 
@@ -179,7 +179,7 @@ public sealed class LegacyPdfImportService
                     {
                         target = new HaltungRecord();
                         target.SetFieldValue("Haltungsname", key, FieldSource.Pdf, userEdited: false);
-                        project.Data.Add(target);
+                        AddHoldingRecord(project, target, ctx);
                         created = true;
                         stats.CreatedRecords++;
                     }
@@ -260,7 +260,7 @@ public sealed class LegacyPdfImportService
             project.ModifiedAtUtc = DateTime.UtcNow;
             project.Dirty = true;
 
-            CleanupCorruptPlaceholderRecords(project, stats);
+            CleanupCorruptPlaceholderRecords(project, stats, ctx);
 
             stats.Messages.Add(new ImportMessage
             {
@@ -331,7 +331,7 @@ public sealed class LegacyPdfImportService
         {
             target = new HaltungRecord();
             target.SetFieldValue("Haltungsname", key, FieldSource.Pdf, userEdited: false);
-            project.Data.Add(target);
+            AddHoldingRecord(project, target, ctx);
             stats.CreatedRecords++;
             created = true;
         }
@@ -497,7 +497,7 @@ public sealed class LegacyPdfImportService
         return text.Contains("Schachtprotokoll", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void ImportSchachtPdf(string pdfPath, string fullText, Project project, ImportStats stats)
+    private static void ImportSchachtPdf(string pdfPath, string fullText, Project project, ImportStats stats, ImportRunContext? ctx = null)
     {
         var parsed = ParseSchachtFields(fullText);
         stats.Found = 1;
@@ -524,7 +524,7 @@ public sealed class LegacyPdfImportService
         if (target is null)
         {
             target = new SchachtRecord();
-            project.SchaechteData.Add(target);
+            AddSchachtRecord(project, target, ctx);
             stats.CreatedRecords++;
             created = true;
         }
@@ -1057,7 +1057,7 @@ public sealed class LegacyPdfImportService
                Regex.IsMatch(key, @"(?i)\bAuftrag\s*Nr\.?\s*:");
     }
 
-    private static int CleanupCorruptPlaceholderRecords(Project project, ImportStats stats)
+    private static int CleanupCorruptPlaceholderRecords(Project project, ImportStats stats, ImportRunContext? ctx = null)
     {
         var placeholders = project.Data
             .Where(r =>
@@ -1098,8 +1098,7 @@ public sealed class LegacyPdfImportService
         if (toRemove.Count == 0)
             return 0;
 
-        foreach (var row in toRemove)
-            project.Data.Remove(row);
+        RemoveHoldingRecords(project, toRemove, ctx);
 
         project.ModifiedAtUtc = DateTime.UtcNow;
         project.Dirty = true;
@@ -1112,7 +1111,7 @@ public sealed class LegacyPdfImportService
         return toRemove.Count;
     }
 
-    private static int CleanupOrphanPlaceholderRecords(Project project, ImportStats stats)
+    private static int CleanupOrphanPlaceholderRecords(Project project, ImportStats stats, ImportRunContext? ctx = null)
     {
         var toRemove = project.Data
             .Where(r =>
@@ -1134,8 +1133,7 @@ public sealed class LegacyPdfImportService
         if (toRemove.Count == 0)
             return 0;
 
-        foreach (var row in toRemove)
-            project.Data.Remove(row);
+        RemoveHoldingRecords(project, toRemove, ctx);
 
         project.ModifiedAtUtc = DateTime.UtcNow;
         project.Dirty = true;
@@ -1146,6 +1144,47 @@ public sealed class LegacyPdfImportService
             Message = $"Bereinigt (erweitert): {toRemove.Count} verwaiste Header/Placeholder-Zeilen."
         });
         return toRemove.Count;
+    }
+
+    private static void AddHoldingRecord(Project project, HaltungRecord record, ImportRunContext? ctx)
+    {
+        if (ctx is null)
+        {
+            project.Data.Add(record);
+            return;
+        }
+
+        ctx.WithCollectionLock(() => project.Data.Add(record));
+    }
+
+    private static void AddSchachtRecord(Project project, SchachtRecord record, ImportRunContext? ctx)
+    {
+        if (ctx is null)
+        {
+            project.SchaechteData.Add(record);
+            return;
+        }
+
+        ctx.WithCollectionLock(() => project.SchaechteData.Add(record));
+    }
+
+    private static void RemoveHoldingRecords(Project project, IReadOnlyCollection<HaltungRecord> rows, ImportRunContext? ctx)
+    {
+        if (rows.Count == 0)
+            return;
+
+        if (ctx is null)
+        {
+            foreach (var row in rows)
+                project.Data.Remove(row);
+            return;
+        }
+
+        ctx.WithCollectionLock(() =>
+        {
+            foreach (var row in rows)
+                project.Data.Remove(row);
+        });
     }
 
     private static bool HasMeaningfulInspectionPayload(HaltungRecord r)

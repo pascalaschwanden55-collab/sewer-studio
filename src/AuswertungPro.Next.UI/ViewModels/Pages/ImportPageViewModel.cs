@@ -102,8 +102,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     {
         if (!string.IsNullOrWhiteSpace(_lastReportPath) && File.Exists(_lastReportPath))
         {
-            try { Process.Start(new ProcessStartInfo(_lastReportPath) { UseShellExecute = true }); }
-            catch { /* ignore */ }
+            AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(_lastReportPath, out _);
         }
         else
         {
@@ -116,8 +115,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var dir = GetReportDir();
         if (dir != null && Directory.Exists(dir))
         {
-            try { Process.Start(new ProcessStartInfo(dir) { UseShellExecute = true }); }
-            catch { /* ignore */ }
+            AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(dir, out _);
         }
         else
         {
@@ -169,7 +167,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
                 _shell.SetStatus($"{label}: {p.CurrentFile}");
         });
 
-        var ctx = new ImportRunContext(_importCts.Token, progress, runLog, dryRun);
+        var ctx = new ImportRunContext(_importCts.Token, progress, runLog, dryRun, _shell.CollectionLock);
 
         try
         {
@@ -307,13 +305,14 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var paths = _sp.Dialogs.OpenFiles("PDF importieren", "PDF (*.pdf)|*.pdf");
         if (paths.Length == 0) return;
 
+        // Auto-Save nach Commit wie bei WinCan/IBAK/KINS — Import-Arbeit nicht nur im RAM (Audit H4)
         if (ShowPreviewFirst)
         {
-            await RunImportAsync("PDF", paths, ImportPdfCore, dryRun: true, postImportAsync: PostImportPdfAsync);
+            await RunImportAsync("PDF", paths, ImportPdfCore, dryRun: true, postImportAsync: PostImportPdfAsync, saveProjectAfterCommit: true);
         }
         else
         {
-            await RunImportAsync("PDF", paths, ImportPdfCore, postImportAsync: PostImportPdfAsync);
+            await RunImportAsync("PDF", paths, ImportPdfCore, postImportAsync: PostImportPdfAsync, saveProjectAfterCommit: true);
         }
     }
 
@@ -373,13 +372,14 @@ public sealed partial class ImportPageViewModel : ObservableObject
             "Daten (*.xtf;*.m150;*.mdb;*.xml)|*.xtf;*.m150;*.mdb;*.xml|XTF (*.xtf)|*.xtf|M150/XML (*.m150;*.xml)|*.m150;*.xml|MDB (*.mdb)|*.mdb|Alle Dateien|*.*");
         if (paths.Length == 0) return;
 
+        // Auto-Save nach Commit wie bei WinCan/IBAK/KINS (Audit H4)
         if (ShowPreviewFirst)
         {
-            await RunImportAsync("XTF", paths, ImportXtfCore, dryRun: true, postImportAsync: PostImportXtfAsync);
+            await RunImportAsync("XTF", paths, ImportXtfCore, dryRun: true, postImportAsync: PostImportXtfAsync, saveProjectAfterCommit: true);
         }
         else
         {
-            await RunImportAsync("XTF", paths, ImportXtfCore, postImportAsync: PostImportXtfAsync);
+            await RunImportAsync("XTF", paths, ImportXtfCore, postImportAsync: PostImportXtfAsync, saveProjectAfterCommit: true);
         }
     }
 
@@ -602,7 +602,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var ct = ctx?.CancellationToken ?? CancellationToken.None;
         var dryRun = ctx?.DryRun ?? false;
         var distResult = await Task.Run(() =>
-            distService.DistributeImportedMedia(projectFolder, _shell.Project, distProgress, ct, dryRun));
+            distService.DistributeImportedMedia(projectFolder, _shell.Project, distProgress, ct, dryRun, _shell.CollectionLock));
 
         var distSummary = $"\nMedien-Verteilung ({haltungCount} Haltungen):\n  {distResult.FilesCopied} Dateien kopiert\n  {distResult.FilesSkipped} uebersprungen\n  {distResult.Errors} Fehler";
         SummaryText += distSummary;

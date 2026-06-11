@@ -258,7 +258,10 @@ public sealed class LegacyXtfImportService
         {
             target = new HaltungRecord();
             target.SetFieldValue("Haltungsname", key, importSource, userEdited: false);
-            project.Data.Add(target);
+            if (ctx is null)
+                project.Data.Add(target);
+            else
+                ctx.WithCollectionLock(() => project.Data.Add(target));
             created = true;
             stats.CreatedRecords++;
         }

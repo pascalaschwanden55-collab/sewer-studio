@@ -114,7 +114,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
                 {
                     record = project.CreateNewRecord();
                     record.SetFieldValue("Haltungsname", section.Key, FieldSource.Legacy, userEdited: false);
-                    project.AddRecord(record);
+                    AddRecord(project, record, ctx);
                     created++;
                     messages.Add($"Haltung neu angelegt: {section.Key}");
                 }
@@ -203,7 +203,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
                 updated++;
             }
 
-            ImportNodes(project, nodes, fileIndex, messages, ref found, ref created, ref updated, ref uncertain);
+            ImportNodes(project, nodes, fileIndex, messages, ref found, ref created, ref updated, ref uncertain, ctx);
         }
         catch (Exception ex)
         {
@@ -327,7 +327,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             {
                 target = project.CreateNewRecord();
                 target.SetFieldValue("Haltungsname", key, FieldSource.Legacy, userEdited: false);
-                project.AddRecord(target);
+                AddRecord(project, target, ctx);
                 created++;
             }
 
@@ -569,7 +569,8 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         ref int found,
         ref int created,
         ref int updated,
-        ref int uncertain)
+        ref int uncertain,
+        ImportRunContext? ctx)
     {
         if (nodes.Count == 0)
             return;
@@ -589,7 +590,10 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             if (record is null)
             {
                 record = new SchachtRecord();
-                project.SchaechteData.Add(record);
+                if (ctx is null)
+                    project.SchaechteData.Add(record);
+                else
+                    ctx.WithCollectionLock(() => project.SchaechteData.Add(record));
                 created++;
                 messages.Add($"Schacht neu angelegt: {rawKey}");
             }
@@ -599,6 +603,14 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             LinkNodePdf(record, rawKey, index);
             updated++;
         }
+    }
+
+    private static void AddRecord(Project project, HaltungRecord record, ImportRunContext? ctx)
+    {
+        if (ctx is null)
+            project.AddRecord(record);
+        else
+            ctx.WithCollectionLock(() => project.AddRecord(record));
     }
 
     private static SchachtRecord? FindSchachtRecord(IEnumerable<SchachtRecord> records, string key)

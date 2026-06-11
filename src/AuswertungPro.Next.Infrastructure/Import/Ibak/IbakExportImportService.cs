@@ -75,7 +75,10 @@ public sealed class IbakExportImportService : IIbakImportService
                     record = new HaltungRecord();
                     record.SetFieldValue("Haltungsname", holding.Holding, FieldSource.Legacy, userEdited: false);
                     ApplyHeaderFields(record, holding.Entries);
-                    project.Data.Add(record);
+                    if (ctx is null)
+                        project.Data.Add(record);
+                    else
+                        ctx.WithCollectionLock(() => project.Data.Add(record));
                     created++;
                     messages.Add($"Haltung neu erstellt aus IBAK: {holding.Holding}");
                 }

@@ -79,7 +79,7 @@ public sealed class KinsImportService : IKinsImportService
         if (runKinsTxt)
         {
             executed++;
-            MergeResult("KINS-TXT", ImportKinsDvdText(exportRoot, project), messages,
+            MergeResult("KINS-TXT", ImportKinsDvdText(exportRoot, project, ctx), messages,
                 ref found, ref created, ref updated, ref errors, ref uncertain, ref successCount);
         }
 
@@ -112,7 +112,7 @@ public sealed class KinsImportService : IKinsImportService
         return Result<ImportStats>.Success(stats);
     }
 
-    private static Result<ImportStats> ImportKinsDvdText(string exportRoot, Project project)
+    private static Result<ImportStats> ImportKinsDvdText(string exportRoot, Project project, ImportRunContext? ctx = null)
     {
         var dataFiles = EnumerateFilesSafe(exportRoot, "kiDVDaten.txt");
         if (dataFiles.Count == 0)
@@ -152,7 +152,10 @@ public sealed class KinsImportService : IKinsImportService
                     if (record is null)
                     {
                         record = project.CreateNewRecord();
-                        project.AddRecord(record);
+                        if (ctx is null)
+                            project.AddRecord(record);
+                        else
+                            ctx.WithCollectionLock(() => project.AddRecord(record));
                         created++;
                     }
 
