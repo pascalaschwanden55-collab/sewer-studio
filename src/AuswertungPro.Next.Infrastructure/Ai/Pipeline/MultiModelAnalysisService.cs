@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using VsaCodeResolver = AuswertungPro.Next.Infrastructure.Ai.VsaCodeResolver;
@@ -29,6 +30,7 @@ public sealed class MultiModelAnalysisService
     private readonly ILogger _logger;
     private readonly string _ffmpegPath;
     private readonly string _ffprobePath;
+    private readonly VideoProbeService _videoProbe;
 
     public double FrameStepSeconds { get; set; } = 3.0;
     public int DedupWindowFrames { get; set; } = 3;
@@ -80,6 +82,7 @@ public sealed class MultiModelAnalysisService
         _logger = logger ?? NullLogger.Instance;
         _ffmpegPath = ffmpegPath;
         _ffprobePath = DeriveFfprobePath(ffmpegPath);
+        _videoProbe = new VideoProbeService(ffprobePath: _ffprobePath, ffmpegPath: _ffmpegPath);
         _minClassConfidence = config.YoloClassConfidence.Count > 0
             ? config.YoloClassConfidence.Values.Min()
             : config.YoloConfidence;
@@ -269,7 +272,10 @@ public sealed class MultiModelAnalysisService
             catch (Exception ex)
             {
                 // cls-Modell nicht verfuegbar → normal weiter (kein harter Fehler)
-                _logger.LogDebug(ex, "Frame {Frame}: YOLO-cls nicht verfuegbar, ueberspringe Vorfilter", frameIndex);
+                if (ClassifierDecisionEnabled)
+                    _logger.LogWarning(ex, "Frame {Frame}: YOLO-cls im Klassifikator-Entscheidungsmodus nicht verfuegbar; falle auf Detektionspfad zurueck", frameIndex);
+                else
+                    _logger.LogDebug(ex, "Frame {Frame}: YOLO-cls nicht verfuegbar, ueberspringe Vorfilter", frameIndex);
             }
 
             // ── Step 1: YOLO Pre-Screening ──
@@ -876,36 +882,11 @@ public sealed class MultiModelAnalysisService
 
     private async Task<double> GetVideoDurationAsync(string videoPath, CancellationToken ct)
     {
-        var probePath = DeriveFfprobePath(_ffmpegPath);
-        var psi = new ProcessStartInfo
-        {
-            FileName = probePath,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-        psi.ArgumentList.Add("-v");
-        psi.ArgumentList.Add("error");
-        psi.ArgumentList.Add("-show_entries");
-        psi.ArgumentList.Add("format=duration");
-        psi.ArgumentList.Add("-of");
-        psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
-        psi.ArgumentList.Add(videoPath);
+        var result = await _videoProbe.ProbeAsync(videoPath, ct).ConfigureAwait(false);
+        if (result.Success)
+            return result.DurationSeconds;
 
-        try
-        {
-            using var p = Process.Start(psi);
-            if (p is null) return 0;
-            var stdout = await p.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
-            await p.WaitForExitAsync(ct).ConfigureAwait(false);
-            if (double.TryParse(stdout.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var dur))
-                return dur;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[MultiModelAnalysis] ffprobe fehlgeschlagen: {ex.Message}");
-        }
+        _logger.LogWarning("Videodauer konnte nicht ermittelt werden: {Error}", result.Error);
         return 0;
     }
 

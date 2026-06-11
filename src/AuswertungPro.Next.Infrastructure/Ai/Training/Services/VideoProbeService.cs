@@ -68,9 +68,13 @@ public sealed class VideoProbeService
             using var p = Process.Start(psi);
             if (p is null) return VideoProbeResult.Fail("ffprobe: Process.Start returned null");
 
-            var stdout = await p.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
-            var stderr = await p.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
+            var stdoutTask = p.StandardOutput.ReadToEndAsync(ct);
+            var stderrTask = p.StandardError.ReadToEndAsync(ct);
+            await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
             await p.WaitForExitAsync(ct).ConfigureAwait(false);
+
+            var stdout = stdoutTask.Result;
+            var stderr = stderrTask.Result;
 
             if (p.ExitCode != 0)
                 return VideoProbeResult.Fail($"ffprobe ExitCode {p.ExitCode}: {stderr.Trim()}");
@@ -103,8 +107,12 @@ public sealed class VideoProbeService
             using var p = Process.Start(psi);
             if (p is null) return VideoProbeResult.Fail("ffmpeg: Process.Start returned null");
 
-            var stderr = await p.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
+            var stdoutTask = p.StandardOutput.ReadToEndAsync(ct);
+            var stderrTask = p.StandardError.ReadToEndAsync(ct);
+            await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
             await p.WaitForExitAsync(ct).ConfigureAwait(false);
+
+            var stderr = stderrTask.Result;
 
             var m = Regex.Match(stderr, @"Duration:\s*(\d+):(\d{2}):(\d{2}(?:\.\d+)?)");
             if (m.Success
