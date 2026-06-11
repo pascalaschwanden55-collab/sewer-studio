@@ -52,6 +52,7 @@
                                       DisplayMemberPath="Name"
                                       SelectedItem="{Binding SelectedMeasure, Mode=TwoWay,
                                           UpdateSourceTrigger=PropertyChanged}"
+                                      IsEnabled="{Binding IsMatrixEditable}"
                                       IsSynchronizedWithCurrentItem="False"
                                       Margin="2">
                                 <ComboBox.GroupStyle>
@@ -75,6 +76,7 @@
                         <DataTemplate>
                             <TextBox Text="{Binding Menge, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
                                      IsReadOnly="{Binding IsMengeReadOnly}"
+                                     IsEnabled="{Binding IsMatrixEditable}"
                                      BorderThickness="0" Background="Transparent"
                                      HorizontalContentAlignment="Right"/>
                         </DataTemplate>
@@ -82,15 +84,70 @@
                 </DataGridTemplateColumn>
 
                 <DataGridCheckBoxColumn Header="VD" Width="44"
-                                        Binding="{Binding OptVerkehrsdienst, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        Binding="{Binding OptVerkehrsdienst, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <DataGridCheckBoxColumn.ElementStyle>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                        </Style>
+                    </DataGridCheckBoxColumn.ElementStyle>
+                    <DataGridCheckBoxColumn.EditingElementStyle>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                        </Style>
+                    </DataGridCheckBoxColumn.EditingElementStyle>
+                </DataGridCheckBoxColumn>
                 <DataGridCheckBoxColumn Header="Wasser" Width="60"
-                                        Binding="{Binding OptWasserhaltung, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        Binding="{Binding OptWasserhaltung, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <DataGridCheckBoxColumn.ElementStyle>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                        </Style>
+                    </DataGridCheckBoxColumn.ElementStyle>
+                    <DataGridCheckBoxColumn.EditingElementStyle>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                        </Style>
+                    </DataGridCheckBoxColumn.EditingElementStyle>
+                </DataGridCheckBoxColumn>
                 <DataGridCheckBoxColumn Header="Fraesen" Width="62"
-                                        Binding="{Binding OptFraesen, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        Binding="{Binding OptFraesen, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <DataGridCheckBoxColumn.ElementStyle>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                        </Style>
+                    </DataGridCheckBoxColumn.ElementStyle>
+                    <DataGridCheckBoxColumn.EditingElementStyle>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                        </Style>
+                    </DataGridCheckBoxColumn.EditingElementStyle>
+                </DataGridCheckBoxColumn>
                 <DataGridCheckBoxColumn Header="Dicht." Width="52"
-                                        Binding="{Binding OptDichtheit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        Binding="{Binding OptDichtheit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <DataGridCheckBoxColumn.ElementStyle>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                        </Style>
+                    </DataGridCheckBoxColumn.ElementStyle>
+                    <DataGridCheckBoxColumn.EditingElementStyle>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                        </Style>
+                    </DataGridCheckBoxColumn.EditingElementStyle>
+                </DataGridCheckBoxColumn>
                 <DataGridCheckBoxColumn Header="Doku" Width="48"
-                                        Binding="{Binding OptDokumentation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        Binding="{Binding OptDokumentation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <DataGridCheckBoxColumn.ElementStyle>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                        </Style>
+                    </DataGridCheckBoxColumn.ElementStyle>
+                    <DataGridCheckBoxColumn.EditingElementStyle>
+                        <Style TargetType="CheckBox">
+                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                        </Style>
+                    </DataGridCheckBoxColumn.EditingElementStyle>
+                </DataGridCheckBoxColumn>
 
                 <DataGridTextColumn Header="Total CHF" Binding="{Binding Total, StringFormat=N2}"
                                     IsReadOnly="True" Width="110">

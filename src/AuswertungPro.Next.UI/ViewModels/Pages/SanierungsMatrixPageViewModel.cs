@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -50,6 +51,9 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
     [ObservableProperty] private bool _optDokumentation;
     [ObservableProperty] private decimal _total;
     [ObservableProperty] private string _hinweis = "";
+    [ObservableProperty] private bool _hasMultipleStoredMeasures;
+
+    public bool IsMatrixEditable => !HasMultipleStoredMeasures;
 
     public SanierungMatrixRowVm(HaltungRecord record, string holding, string dn, string laenge,
         int anschluesse, Action<SanierungMatrixRowVm>? onChanged)
@@ -79,6 +83,12 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
         _suppress = false;
     }
 
+    public void MarkMultipleStoredMeasures()
+    {
+        HasMultipleStoredMeasures = true;
+        Hinweis = "Mehrfach-Massnahme: im Einzelfenster bearbeiten";
+    }
+
     partial void OnSelectedMeasureChanged(MeasureOption? value)
     {
         if (_suppress)
@@ -93,7 +103,10 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
         }
         else
         {
-            Menge = decimal.TryParse(Laenge, out var l) ? l : 0m;
+            // Kulturunabhaengig parsen: "45.30" darf auf Komma-Locales nicht zu 4530 werden.
+            Menge = decimal.TryParse(
+                Laenge?.Trim().Replace(',', '.'),
+                NumberStyles.Float, CultureInfo.InvariantCulture, out var l) ? l : 0m;
         }
         _suppress = false;
 
@@ -101,6 +114,7 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
     }
 
     partial void OnIsMengeEditierbarChanged(bool value) => OnPropertyChanged(nameof(IsMengeReadOnly));
+    partial void OnHasMultipleStoredMeasuresChanged(bool value) => OnPropertyChanged(nameof(IsMatrixEditable));
     partial void OnMengeChanged(decimal value) => Recalc();
     partial void OnOptVerkehrsdienstChanged(bool value) => Recalc();
     partial void OnOptWasserhaltungChanged(bool value) => Recalc();
@@ -267,6 +281,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
             return;
         }
 
+        var hasMultipleMeasures = existing.Measures.Count > 1;
         var firstId = existing.Measures[0].MeasureId;
         var opt = MeasureOptions.FirstOrDefault(o => string.Equals(o.Id, firstId, StringComparison.OrdinalIgnoreCase));
         if (opt is null)
@@ -281,6 +296,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
             if (!MeasureOptions.Contains(adhoc))
                 MeasureOptions.Add(adhoc);
             row.InitFrom(adhoc, existing.Total, 0m, false, false, false, false, false);
+            if (hasMultipleMeasures)
+                row.MarkMultipleStoredMeasures();
             return;
         }
 
@@ -293,10 +310,18 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
 
         row.InitFrom(opt, existing.Total, menge,
             Sel(KeyVd), Sel(KeyWasser), Sel(KeyFraesen), Sel(KeyDichtheit), Sel(KeyDoku));
+        if (hasMultipleMeasures)
+            row.MarkMultipleStoredMeasures();
     }
 
     private void RecomputeRow(SanierungMatrixRowVm row)
     {
+        if (row.HasMultipleStoredMeasures)
+        {
+            row.Hinweis = "Mehrfach-Massnahme geschuetzt";
+            return;
+        }
+
         var measureId = row.SelectedMeasure?.Id;
         if (string.IsNullOrWhiteSpace(measureId))
         {
@@ -370,11 +395,22 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
             .GroupBy(i => i.Key.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
+        var protectedRows = 0;
         foreach (var row in Rows.Where(r => r.SelectedMeasure?.Id is not null))
+        {
+            if (row.HasMultipleStoredMeasures)
+            {
+                protectedRows++;
+                continue;
+            }
+
             RecomputeRow(row);
+        }
 
         RecomputeGesamt();
-        Status = "Preise aus Katalog angewendet.";
+        Status = protectedRows == 0
+            ? "Preise aus Katalog angewendet."
+            : $"Preise angewendet; {protectedRows} Mehrfach-Massnahme(n) geschuetzt.";
     }
 
     [RelayCommand]
