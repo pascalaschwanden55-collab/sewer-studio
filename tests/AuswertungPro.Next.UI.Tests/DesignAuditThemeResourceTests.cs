@@ -201,6 +201,11 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("<Setter Property=\"Grid.ColumnSpan\" Value=\"2\"/>", xaml);
         Assert.Contains("<Setter Property=\"Grid.Row\" Value=\"1\"/>", xaml);
         Assert.Contains("<Setter Property=\"MinWidth\" Value=\"760\"/>", xaml);
+        Assert.Contains("AlternationCount=\"2\"", xaml);
+        Assert.Contains("x:Name=\"DetailLineRow\"", xaml);
+        Assert.Contains("Margin=\"0,0,18,0\"", xaml);
+        Assert.Contains("TextWrapping=\"Wrap\"", xaml);
+        Assert.Contains("<ColumnDefinition Width=\"112\"/>", xaml);
         Assert.Contains("IsChecked=\"{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml);
         Assert.Contains("Text=\"{Binding Qty, Mode=TwoWay, UpdateSourceTrigger=LostFocus", xaml);
         Assert.Contains("Text=\"{Binding UnitPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus", xaml);

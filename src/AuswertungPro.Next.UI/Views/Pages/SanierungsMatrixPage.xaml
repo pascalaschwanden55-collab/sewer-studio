@@ -264,13 +264,17 @@
                                Style="{StaticResource Caption}"
                                Margin="0,10,0,4"/>
 
-                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding SelectedDetailMeasures}">
+                    <ScrollViewer Grid.Row="2"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding SelectedDetailMeasures}"
+                                      Margin="0,0,18,0">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border BorderBrush="{DynamicResource BorderLightBrush}"
                                             BorderThickness="0,0,0,1"
-                                            Padding="0,8">
+                                            Padding="0,8"
+                                            Margin="0,0,0,8">
                                         <StackPanel>
                                             <DockPanel LastChildFill="True">
                                                 <TextBlock Text="{Binding Total, StringFormat='{}{0:N2} CHF'}"
@@ -283,62 +287,90 @@
                                                            TextTrimming="CharacterEllipsis"/>
                                             </DockPanel>
 
-                                            <Grid Margin="0,6,0,0">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="28"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="64"/>
-                                                    <ColumnDefinition Width="44"/>
-                                                    <ColumnDefinition Width="76"/>
-                                                    <ColumnDefinition Width="82"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="1" Text="Position" Style="{StaticResource Caption}"/>
-                                                <TextBlock Grid.Column="2" Text="Menge" Style="{StaticResource Caption}" TextAlignment="Right"/>
-                                                <TextBlock Grid.Column="3" Text="EH" Style="{StaticResource Caption}" TextAlignment="Center"/>
-                                                <TextBlock Grid.Column="4" Text="EP" Style="{StaticResource Caption}" TextAlignment="Right"/>
-                                                <TextBlock Grid.Column="5" Text="Total" Style="{StaticResource Caption}" TextAlignment="Right"/>
-                                            </Grid>
+                                            <Border Background="{DynamicResource SurfaceSubtleBrush}"
+                                                    BorderBrush="{DynamicResource BorderLightBrush}"
+                                                    BorderThickness="0,1,0,1"
+                                                    Padding="8,5"
+                                                    Margin="0,8,0,0">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="34"/>
+                                                        <ColumnDefinition Width="3*"/>
+                                                        <ColumnDefinition Width="96"/>
+                                                        <ColumnDefinition Width="70"/>
+                                                        <ColumnDefinition Width="110"/>
+                                                        <ColumnDefinition Width="112"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="1" Text="Position" Style="{StaticResource Caption}"/>
+                                                    <TextBlock Grid.Column="2" Text="Menge" Style="{StaticResource Caption}" TextAlignment="Right"/>
+                                                    <TextBlock Grid.Column="3" Text="EH" Style="{StaticResource Caption}" TextAlignment="Center"/>
+                                                    <TextBlock Grid.Column="4" Text="EP" Style="{StaticResource Caption}" TextAlignment="Right"/>
+                                                    <TextBlock Grid.Column="5" Text="Total" Style="{StaticResource Caption}" TextAlignment="Right" Margin="0,0,8,0"/>
+                                                </Grid>
+                                            </Border>
 
-                                            <ItemsControl ItemsSource="{Binding Lines}" Margin="0,2,0,0">
+                                            <ItemsControl ItemsSource="{Binding Lines}"
+                                                          AlternationCount="2">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Grid Margin="0,4,0,0">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="28"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="64"/>
-                                                                <ColumnDefinition Width="44"/>
-                                                                <ColumnDefinition Width="76"/>
-                                                                <ColumnDefinition Width="82"/>
-                                                            </Grid.ColumnDefinitions>
-                                                            <CheckBox IsChecked="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                      HorizontalAlignment="Center"
-                                                                      VerticalAlignment="Center"/>
-                                                            <TextBlock Text="{Binding Text}"
-                                                                       Grid.Column="1"
-                                                                       Style="{StaticResource Caption}"
-                                                                       TextTrimming="CharacterEllipsis"/>
-                                                            <TextBox Grid.Column="2"
-                                                                     Text="{Binding Qty, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                                                     HorizontalContentAlignment="Right"
-                                                                     MinWidth="54"
-                                                                     Margin="4,0,0,0"/>
-                                                            <TextBlock Grid.Column="3"
-                                                                       Text="{Binding Unit}"
-                                                                       Style="{StaticResource Caption}"
-                                                                       TextAlignment="Center"
-                                                                       VerticalAlignment="Center"/>
-                                                            <TextBox Grid.Column="4"
-                                                                     Text="{Binding UnitPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                                                     HorizontalContentAlignment="Right"
-                                                                     MinWidth="66"
-                                                                     Margin="4,0,0,0"/>
-                                                            <TextBlock Grid.Column="5"
-                                                                       Text="{Binding LineTotal, StringFormat='{}{0:N2}'}"
-                                                                       Style="{StaticResource Caption}"
-                                                                       VerticalAlignment="Center"
-                                                                       TextAlignment="Right"/>
-                                                        </Grid>
+                                                        <Border x:Name="DetailLineRow"
+                                                                BorderBrush="{DynamicResource BorderLightBrush}"
+                                                                BorderThickness="0,0,0,1"
+                                                                MinHeight="38"
+                                                                Padding="8,6">
+                                                            <Border.Style>
+                                                                <Style TargetType="{x:Type Border}">
+                                                                    <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                                                                    <Style.Triggers>
+                                                                        <Trigger Property="ItemsControl.AlternationIndex" Value="1">
+                                                                            <Setter Property="Background" Value="{DynamicResource SurfaceSubtleBrush}"/>
+                                                                        </Trigger>
+                                                                        <DataTrigger Binding="{Binding Selected}" Value="True">
+                                                                            <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="34"/>
+                                                                    <ColumnDefinition Width="3*"/>
+                                                                    <ColumnDefinition Width="96"/>
+                                                                    <ColumnDefinition Width="70"/>
+                                                                    <ColumnDefinition Width="110"/>
+                                                                    <ColumnDefinition Width="112"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <CheckBox IsChecked="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                          HorizontalAlignment="Center"
+                                                                          VerticalAlignment="Center"/>
+                                                                <TextBlock Text="{Binding Text}"
+                                                                           Grid.Column="1"
+                                                                           Style="{StaticResource Body}"
+                                                                           TextWrapping="Wrap"
+                                                                           VerticalAlignment="Center"/>
+                                                                <TextBox Grid.Column="2"
+                                                                         Text="{Binding Qty, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                                                                         HorizontalContentAlignment="Right"
+                                                                         MinWidth="70"
+                                                                         Margin="8,0,0,0"/>
+                                                                <TextBlock Grid.Column="3"
+                                                                           Text="{Binding Unit}"
+                                                                           Style="{StaticResource Caption}"
+                                                                           TextAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                                                <TextBox Grid.Column="4"
+                                                                         Text="{Binding UnitPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                                                                         HorizontalContentAlignment="Right"
+                                                                         MinWidth="80"
+                                                                         Margin="8,0,0,0"/>
+                                                                <TextBlock Grid.Column="5"
+                                                                           Text="{Binding LineTotal, StringFormat='{}{0:N2}'}"
+                                                                           Style="{StaticResource Body}"
+                                                                           VerticalAlignment="Center"
+                                                                           TextAlignment="Right"
+                                                                           Margin="8,0,8,0"/>
+                                                            </Grid>
+                                                        </Border>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
