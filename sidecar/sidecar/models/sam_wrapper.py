@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 import logging
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +17,7 @@ from .image_decode import decode_image_safe
 from .box_utils import clamp_box
 
 logger = logging.getLogger(__name__)
+_sam_predict_lock = threading.Lock()
 
 
 def _find_sam_weights() -> str:
@@ -97,76 +99,72 @@ def segment(
 
     t0 = time.perf_counter()
 
-    # Set image once for all boxes
-    predictor.set_image(img_array)
-
     masks_out: list[MaskResult] = []
     requested_boxes = len(bounding_boxes)
     skipped_boxes = 0
     low_score_boxes = 0
 
-    for bbox in bounding_boxes:
-        clamped = clamp_box(bbox.x1, bbox.y1, bbox.x2, bbox.y2, w, h)
-        if clamped is None:
-            # aus dem Bild ragende oder Null-Flaechen-Box -> sichtbar als uebersprungen
-            skipped_boxes += 1
-            logger.warning("SAM-Box uebersprungen (ausserhalb Bild / Null-Flaeche): %s", bbox)
-            continue
-        bx1, by1, bx2, by2 = clamped
-        try:
-            box_np = np.array([bx1, by1, bx2, by2])
+    # SamPredictor ist stateful: set_image und predict muessen pro Request atomar bleiben.
+    with _sam_predict_lock:
+        predictor.set_image(img_array)
 
-            pred_masks, scores, _ = predictor.predict(
-                point_coords=None,
-                point_labels=None,
-                box=box_np[None, :],  # (1, 4)
-                multimask_output=False,
-            )
-        except Exception as exc:
-            logger.warning("SAM prediction failed for box %s: %s", bbox, exc)
-            skipped_boxes += 1
-            continue
+        for bbox in bounding_boxes:
+            clamped = clamp_box(bbox.x1, bbox.y1, bbox.x2, bbox.y2, w, h)
+            if clamped is None:
+                skipped_boxes += 1
+                logger.warning("SAM-Box uebersprungen (ausserhalb Bild / Null-Flaeche): %s", bbox)
+                continue
+            bx1, by1, bx2, by2 = clamped
+            try:
+                box_np = np.array([bx1, by1, bx2, by2])
 
-        # Take best mask
-        mask = pred_masks[0]  # (H, W) bool
-        score = float(scores[0])
+                pred_masks, scores, _ = predictor.predict(
+                    point_coords=None,
+                    point_labels=None,
+                    box=box_np[None, :],  # (1, 4)
+                    multimask_output=False,
+                )
+            except Exception as exc:
+                logger.warning("SAM prediction failed for box %s: %s", bbox, exc)
+                skipped_boxes += 1
+                continue
 
-        # Score-Gate: unsichere Masken (Score < sam_min_score) nicht still als
-        # Befund-Basis akzeptieren, sondern sichtbar verwerfen (skipped/degraded).
-        if score < settings.sam_min_score:
-            skipped_boxes += 1
-            low_score_boxes += 1
-            logger.warning(
-                "SAM-Maske verworfen (Score %.3f < sam_min_score %.2f) fuer Box %s",
-                score, settings.sam_min_score, bbox,
-            )
-            continue
+            mask = pred_masks[0]  # (H, W) bool
+            score = float(scores[0])
 
-        # Compute mask statistics
-        mask_area = int(mask.sum())
-        ys, xs = np.where(mask)
+            if score < settings.sam_min_score:
+                skipped_boxes += 1
+                low_score_boxes += 1
+                logger.warning(
+                    "SAM-Maske verworfen (Score %.3f < sam_min_score %.2f) fuer Box %s",
+                    score, settings.sam_min_score, bbox,
+                )
+                continue
 
-        if len(xs) == 0:
-            skipped_boxes += 1
-            continue
+            mask_area = int(mask.sum())
+            ys, xs = np.where(mask)
 
-        mask_h = int(ys.max() - ys.min() + 1)
-        mask_w = int(xs.max() - xs.min() + 1)
-        centroid_x = float(xs.mean())
-        centroid_y = float(ys.mean())
+            if len(xs) == 0:
+                skipped_boxes += 1
+                continue
 
-        masks_out.append(MaskResult(
-            label=bbox.label,
-            confidence=round(score, 4),
-            bbox=[bx1, by1, bx2, by2],
-            mask_rle=_rle_encode(mask.astype(np.uint8)),
-            mask_area_pixels=mask_area,
-            image_area_pixels=h * w,
-            height_pixels=mask_h,
-            width_pixels=mask_w,
-            centroid_x=round(centroid_x, 1),
-            centroid_y=round(centroid_y, 1),
-        ))
+            mask_h = int(ys.max() - ys.min() + 1)
+            mask_w = int(xs.max() - xs.min() + 1)
+            centroid_x = float(xs.mean())
+            centroid_y = float(ys.mean())
+
+            masks_out.append(MaskResult(
+                label=bbox.label,
+                confidence=round(score, 4),
+                bbox=[bx1, by1, bx2, by2],
+                mask_rle=_rle_encode(mask.astype(np.uint8)),
+                mask_area_pixels=mask_area,
+                image_area_pixels=h * w,
+                height_pixels=mask_h,
+                width_pixels=mask_w,
+                centroid_x=round(centroid_x, 1),
+                centroid_y=round(centroid_y, 1),
+            ))
 
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
