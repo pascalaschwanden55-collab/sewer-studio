@@ -6,91 +6,35 @@
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="#0D1117">
+        Background="{DynamicResource BgBrush}">
 
     <Window.Resources>
         <!-- Einheitlicher Stil fuer Eingabefelder -->
         <Style x:Key="DarkTextBox" TargetType="TextBox">
-            <Setter Property="Background" Value="#161B22"/>
-            <Setter Property="Foreground" Value="#E6EDF3"/>
-            <Setter Property="BorderBrush" Value="#30363D"/>
+            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="6,4"/>
             <Setter Property="FontSize" Value="13"/>
-            <Setter Property="CaretBrush" Value="#58A6FF"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}"/>
         </Style>
 
         <!-- ListBox-Eintrag-Stil -->
         <Style x:Key="CodeListItem" TargetType="ListBoxItem">
             <Setter Property="Padding" Value="8,5"/>
-            <Setter Property="Foreground" Value="#E6EDF3"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#21262D"/>
+                    <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
                 </Trigger>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#1F3A5F"/>
-                    <Setter Property="Foreground" Value="#58A6FF"/>
+                    <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                 </Trigger>
             </Style.Triggers>
-        </Style>
-
-        <!-- Schaltflaechen-Stil -->
-        <Style x:Key="PrimaryButton" TargetType="Button">
-            <Setter Property="Background" Value="#238636"/>
-            <Setter Property="Foreground" Value="#FFFFFF"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,6"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="4" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Background" Value="#21262D"/>
-                                <Setter Property="Foreground" Value="#484F58"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#2EA043"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="SecondaryButton" TargetType="Button">
-            <Setter Property="Background" Value="#21262D"/>
-            <Setter Property="Foreground" Value="#E6EDF3"/>
-            <Setter Property="BorderBrush" Value="#30363D"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="16,6"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#30363D"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
         </Style>
     </Window.Resources>
 
@@ -105,9 +49,9 @@
         <!-- Kopfzeile -->
         <StackPanel Grid.Row="0" Margin="0,0,0,12">
             <TextBlock Text="Richtigen VSA-Code w&#228;hlen"
-                       Foreground="#E6EDF3" FontSize="15" FontWeight="SemiBold"/>
+                       Foreground="{DynamicResource TextBrush}" FontSize="15" FontWeight="SemiBold"/>
             <TextBlock Text="Suche oder w&#228;hle den korrekten Code aus dem Katalog."
-                       Foreground="#8B949E" FontSize="11" Margin="0,4,0,0"/>
+                       Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,4,0,0"/>
         </StackPanel>
 
         <!-- Suche -->
@@ -127,7 +71,7 @@
                                     <VisualBrush Stretch="None" AlignmentX="Left">
                                         <VisualBrush.Visual>
                                             <TextBlock Text="Suche (Code oder Bezeichnung)..."
-                                                       Foreground="#484F58" FontSize="13"
+                                                       Foreground="{DynamicResource MutedBrush}" FontSize="13"
                                                        Margin="6,4"/>
                                         </VisualBrush.Visual>
                                     </VisualBrush>
@@ -141,7 +85,7 @@
 
         <!-- Code-Liste -->
         <Border Grid.Row="2"
-                Background="#161B22" BorderBrush="#30363D" BorderThickness="1"
+                Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 CornerRadius="4" Margin="0,0,0,12">
             <ListBox x:Name="CodeListBox"
                      Background="Transparent"
@@ -173,7 +117,7 @@
                     Content="OK"
                     IsDefault="True"
                     IsEnabled="False"
-                    Style="{StaticResource PrimaryButton}"
+                    Style="{StaticResource SuccessButton}"
                     Click="BtnOk_Click"/>
         </StackPanel>
     </Grid>

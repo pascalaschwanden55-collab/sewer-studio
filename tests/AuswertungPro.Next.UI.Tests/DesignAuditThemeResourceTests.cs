@@ -34,6 +34,31 @@ public sealed class DesignAuditThemeResourceTests
             "#64748B");
     }
 
+    [Fact]
+    public void CorrectionDialog_uses_theme_resources_and_does_not_shadow_button_styles()
+    {
+        var xaml = ReadUiFile("Views", "Windows", "CorrectionDialog.xaml");
+        var themeLight = ReadUiFile("Theme", "ThemeLight.xaml");
+        var themeDark = ReadUiFile("Theme", "Theme.xaml");
+
+        Assert.DoesNotContain("x:Key=\"PrimaryButton\"", xaml);
+        Assert.DoesNotContain("x:Key=\"SecondaryButton\"", xaml);
+        Assert.Contains("x:Key=\"SuccessButton\"", themeLight);
+        Assert.Contains("x:Key=\"SuccessButton\"", themeDark);
+        Assert.Contains("Style=\"{StaticResource SuccessButton}\"", xaml);
+        AssertDoesNotContainAny(xaml,
+            "#0D1117",
+            "#161B22",
+            "#21262D",
+            "#30363D",
+            "#E6EDF3",
+            "#8B949E",
+            "#484F58",
+            "#58A6FF",
+            "#238636",
+            "#2EA043");
+    }
+
     private static void AssertDoesNotContainAny(string text, params string[] forbidden)
     {
         foreach (var value in forbidden)

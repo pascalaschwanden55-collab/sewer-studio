@@ -223,7 +223,12 @@
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
 
-    <!-- Secondary Button — Subtle surface -->
+    <!-- Success Button - gruene Bestaetigung -->
+    <Style x:Key="SuccessButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
+        <Setter Property="Background" Value="{DynamicResource SuccessBrush}"/>
+    </Style>
+
+    <!-- Secondary Button - Subtle surface -->
     <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Background" Value="{StaticResource CardBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
