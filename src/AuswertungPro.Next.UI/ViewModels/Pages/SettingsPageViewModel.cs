@@ -170,12 +170,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
             Directory.CreateDirectory(path);
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = $"\"{path}\"",
-                UseShellExecute = true
-            });
+            if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(path, out var error))
+                throw new InvalidOperationException(error);
         }
         catch (Exception ex)
         {

@@ -1636,13 +1636,9 @@ public sealed partial class DataPageViewModel : ObservableObject
             return;
         }
 
-        try
+        if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(paths[0], out var error))
         {
-            Process.Start(new ProcessStartInfo(paths[0]) { UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            _sp.Dialogs.Warn($"PDF konnte nicht geoeffnet werden:\n{ex.Message}",
+            _sp.Dialogs.Warn($"PDF konnte nicht geoeffnet werden:\n{error}",
                 "Fehler");
         }
     }

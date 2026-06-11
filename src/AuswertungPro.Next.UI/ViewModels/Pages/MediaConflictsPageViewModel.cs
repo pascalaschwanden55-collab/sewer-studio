@@ -401,25 +401,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
 
     private static bool TryOpenWithShell(string? path)
     {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(path))
-                return false;
-
-            if (!File.Exists(path) && !Directory.Exists(path))
-                return false;
-
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = path,
-                UseShellExecute = true
-            });
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
+        return AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(path, out _);
     }
 
     private static void TryOpenFolder(string folder)
@@ -429,12 +411,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
             if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
                 return;
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                Arguments = $"\"{folder}\"",
-                UseShellExecute = true
-            });
+            AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(folder, out _);
         }
         catch
         {
@@ -455,7 +432,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
                 {
                     FileName = "explorer.exe",
                     Arguments = $"/select,\"{path}\"",
-                    UseShellExecute = true
+                    UseShellExecute = false
                 });
                 return;
             }

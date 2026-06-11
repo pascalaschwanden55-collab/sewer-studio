@@ -387,22 +387,16 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             return;
         }
 
-        try
+        if (AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(LastExportedPdfPath, out var error))
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = LastExportedPdfPath,
-                UseShellExecute = true
-            });
             LastResult = $"PDF geoeffnet: {Path.GetFileName(LastExportedPdfPath)}";
+            return;
         }
-        catch (Exception ex)
-        {
-            LastResult = $"Fehler beim Oeffnen: {ex.Message}";
-            _sp.Dialogs.Error(
-                $"PDF konnte nicht geoeffnet werden:\n{ex.Message}",
-                "Druckcenter");
-        }
+
+        LastResult = $"Fehler beim Oeffnen: {error}";
+        _sp.Dialogs.Error(
+            $"PDF konnte nicht geoeffnet werden:\n{error}",
+            "Druckcenter");
     }
 
     partial void OnSelectedOwnerFilterChanged(string value) => ApplyFiltersIfReady();
