@@ -12,6 +12,9 @@
     </Window.Resources>
     <Window.InputBindings>
         <KeyBinding Key="F11" Command="{Binding ToggleFocusModeCommand}"/>
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}"/>
+        <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenProjectCommand}"/>
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewProjectCommand}"/>
     </Window.InputBindings>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
@@ -26,9 +29,9 @@
                 </Style>
             </Menu.Style>
             <MenuItem Header="_Datei">
-                <MenuItem Header="Neues Projekt" Command="{Binding NewProjectCommand}"/>
-                <MenuItem Header="Projekt öffnen..." Command="{Binding OpenProjectCommand}"/>
-                <MenuItem Header="Speichern" Command="{Binding SaveCommand}"/>
+                <MenuItem Header="Neues Projekt" Command="{Binding NewProjectCommand}" InputGestureText="Strg+N"/>
+                <MenuItem Header="Projekt öffnen..." Command="{Binding OpenProjectCommand}" InputGestureText="Strg+O"/>
+                <MenuItem Header="Speichern" Command="{Binding SaveCommand}" InputGestureText="Strg+S"/>
                 <MenuItem Header="Speichern unter..." Command="{Binding SaveAsProjectCommand}"/>
                 <Separator/>
                 <MenuItem Header="Beenden" Click="Exit_Click"/>

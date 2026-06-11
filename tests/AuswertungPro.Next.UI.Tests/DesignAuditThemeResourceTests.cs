@@ -140,6 +140,19 @@ public sealed class DesignAuditThemeResourceTests
         AssertPageTitle(ReadUiFile("Views", "Pages", "VsaPage.xaml"), "VSA-Bewertung");
     }
 
+    [Fact]
+    public void MainWindow_defines_standard_project_shortcuts()
+    {
+        var xaml = ReadUiFile("MainWindow.xaml");
+
+        Assert.Contains("<KeyBinding Key=\"S\" Modifiers=\"Control\" Command=\"{Binding SaveCommand}\"/>", xaml);
+        Assert.Contains("<KeyBinding Key=\"O\" Modifiers=\"Control\" Command=\"{Binding OpenProjectCommand}\"/>", xaml);
+        Assert.Contains("<KeyBinding Key=\"N\" Modifiers=\"Control\" Command=\"{Binding NewProjectCommand}\"/>", xaml);
+        Assert.Contains("Header=\"Neues Projekt\" Command=\"{Binding NewProjectCommand}\" InputGestureText=\"Strg+N\"", xaml);
+        Assert.Contains("Command=\"{Binding OpenProjectCommand}\" InputGestureText=\"Strg+O\"", xaml);
+        Assert.Contains("Header=\"Speichern\" Command=\"{Binding SaveCommand}\" InputGestureText=\"Strg+S\"", xaml);
+    }
+
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
     {
         var marker = $"x:Key=\"{key}\"";
