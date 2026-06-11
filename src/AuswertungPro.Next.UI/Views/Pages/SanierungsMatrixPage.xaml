@@ -34,123 +34,232 @@
         </Border>
 
         <!-- Matrix -->
-        <DataGrid Grid.Row="1" ItemsSource="{Binding Rows}"
-                  AutoGenerateColumns="False" CanUserAddRows="False" CanUserResizeRows="False"
-                  GridLinesVisibility="All" HeadersVisibility="Column">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Haltung" Binding="{Binding Holding}" IsReadOnly="True" Width="2*"/>
-                <DataGridTextColumn Header="DN" Binding="{Binding Dn}" IsReadOnly="True" Width="60"/>
-                <DataGridTextColumn Header="Laenge m" Binding="{Binding Laenge}" IsReadOnly="True" Width="80"/>
-                <DataGridTextColumn Header="Anschl." Binding="{Binding Anschluesse}" IsReadOnly="True" Width="70"/>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="420"/>
+            </Grid.ColumnDefinitions>
 
-                <DataGridTemplateColumn Header="Hauptarbeit" Width="2*">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <ComboBox ItemsSource="{Binding DataContext.MeasureOptions,
-                                          RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                      DisplayMemberPath="Name"
-                                      SelectedItem="{Binding SelectedMeasure, Mode=TwoWay,
-                                          UpdateSourceTrigger=PropertyChanged}"
-                                      IsEnabled="{Binding IsMatrixEditable}"
-                                      IsSynchronizedWithCurrentItem="False"
-                                      PreviewMouseLeftButtonDown="MeasureComboBox_PreviewMouseLeftButtonDown"
-                                      Margin="2"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
+            <DataGrid Grid.Column="0"
+                      ItemsSource="{Binding Rows}"
+                      SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
+                      AutoGenerateColumns="False" CanUserAddRows="False" CanUserResizeRows="False"
+                      GridLinesVisibility="All" HeadersVisibility="Column">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Haltung" Binding="{Binding Holding}" IsReadOnly="True" Width="2*"/>
+                    <DataGridTextColumn Header="DN" Binding="{Binding Dn}" IsReadOnly="True" Width="60"/>
+                    <DataGridTextColumn Header="Laenge m" Binding="{Binding Laenge}" IsReadOnly="True" Width="80"/>
+                    <DataGridTextColumn Header="Anschl." Binding="{Binding Anschluesse}" IsReadOnly="True" Width="70"/>
 
-                <!-- Menge: bei Liner = Laenge (gesperrt), bei Reparatur Stueckzahl eingebbar -->
-                <DataGridTemplateColumn Header="Menge" Width="70">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBox Text="{Binding Menge, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
-                                     IsReadOnly="{Binding IsMengeReadOnly}"
-                                     IsEnabled="{Binding IsMatrixEditable}"
-                                     BorderThickness="0" Background="Transparent"
-                                     HorizontalContentAlignment="Right"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Massnahmen" Width="2*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <TextBlock Text="{Binding MeasuresSummary}"
+                                               Margin="6,0"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource Body}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasMultipleStoredMeasures}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <ComboBox ItemsSource="{Binding DataContext.MeasureOptions,
+                                                  RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                              DisplayMemberPath="Name"
+                                              SelectedItem="{Binding SelectedMeasure, Mode=TwoWay,
+                                                  UpdateSourceTrigger=PropertyChanged}"
+                                              IsEnabled="{Binding IsMatrixEditable}"
+                                              IsSynchronizedWithCurrentItem="False"
+                                              PreviewMouseLeftButtonDown="MeasureComboBox_PreviewMouseLeftButtonDown"
+                                              Margin="2">
+                                        <ComboBox.Style>
+                                            <Style TargetType="{x:Type ComboBox}" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding HasMultipleStoredMeasures}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ComboBox.Style>
+                                    </ComboBox>
+                                </Grid>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
-                <DataGridCheckBoxColumn Header="VD" Width="44"
-                                        Binding="{Binding OptVerkehrsdienst, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                    <DataGridCheckBoxColumn.ElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.ElementStyle>
-                    <DataGridCheckBoxColumn.EditingElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.EditingElementStyle>
-                </DataGridCheckBoxColumn>
-                <DataGridCheckBoxColumn Header="Wasser" Width="60"
-                                        Binding="{Binding OptWasserhaltung, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                    <DataGridCheckBoxColumn.ElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.ElementStyle>
-                    <DataGridCheckBoxColumn.EditingElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.EditingElementStyle>
-                </DataGridCheckBoxColumn>
-                <DataGridCheckBoxColumn Header="Fraesen" Width="62"
-                                        Binding="{Binding OptFraesen, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                    <DataGridCheckBoxColumn.ElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.ElementStyle>
-                    <DataGridCheckBoxColumn.EditingElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.EditingElementStyle>
-                </DataGridCheckBoxColumn>
-                <DataGridCheckBoxColumn Header="Dicht." Width="52"
-                                        Binding="{Binding OptDichtheit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                    <DataGridCheckBoxColumn.ElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.ElementStyle>
-                    <DataGridCheckBoxColumn.EditingElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.EditingElementStyle>
-                </DataGridCheckBoxColumn>
-                <DataGridCheckBoxColumn Header="Doku" Width="48"
-                                        Binding="{Binding OptDokumentation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                    <DataGridCheckBoxColumn.ElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.ElementStyle>
-                    <DataGridCheckBoxColumn.EditingElementStyle>
-                        <Style TargetType="CheckBox">
-                            <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
-                        </Style>
-                    </DataGridCheckBoxColumn.EditingElementStyle>
-                </DataGridCheckBoxColumn>
+                    <!-- Menge: bei Liner = Laenge (gesperrt), bei Reparatur Stueckzahl eingebbar -->
+                    <DataGridTemplateColumn Header="Menge" Width="70">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding Menge, Mode=TwoWay, UpdateSourceTrigger=LostFocus, StringFormat=N2}"
+                                         IsReadOnly="{Binding IsMengeReadOnly}"
+                                         IsEnabled="{Binding IsMatrixEditable}"
+                                         BorderThickness="0" Background="Transparent"
+                                         HorizontalContentAlignment="Right"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
-                <DataGridTextColumn Header="Total CHF" Binding="{Binding Total, StringFormat=N2}"
-                                    IsReadOnly="True" Width="110">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="HorizontalAlignment" Value="Right"/>
-                            <Setter Property="TextAlignment" Value="Right"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
+                    <DataGridCheckBoxColumn Header="VD" Width="44"
+                                            Binding="{Binding OptVerkehrsdienst, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <DataGridCheckBoxColumn.ElementStyle>
+                            <Style TargetType="CheckBox">
+                                <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                            </Style>
+                        </DataGridCheckBoxColumn.ElementStyle>
+                        <DataGridCheckBoxColumn.EditingElementStyle>
+                            <Style TargetType="CheckBox">
+                                <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                            </Style>
+                        </DataGridCheckBoxColumn.EditingElementStyle>
+                    </DataGridCheckBoxColumn>
+                    <DataGridCheckBoxColumn Header="Wasser" Width="60"
+                                            Binding="{Binding OptWasserhaltung, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <DataGridCheckBoxColumn.ElementStyle>
+                            <Style TargetType="CheckBox">
+                                <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                            </Style>
+                        </DataGridCheckBoxColumn.ElementStyle>
+                        <DataGridCheckBoxColumn.EditingElementStyle>
+                            <Style TargetType="CheckBox">
+                                <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                            </Style>
+                        </DataGridCheckBoxColumn.EditingElementStyle>
+                    </DataGridCheckBoxColumn>
+                    <DataGridCheckBoxColumn Header="Fraesen" Width="62"
+                                            Binding="{Binding OptFraesen, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <DataGridCheckBoxColumn.ElementStyle>
+                            <Style TargetType="CheckBox">
+                                <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                            </Style>
+                        </DataGridCheckBoxColumn.ElementStyle>
+                        <DataGridCheckBoxColumn.EditingElementStyle>
+                            <Style TargetType="CheckBox">
+                                <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                            </Style>
+                        </DataGridCheckBoxColumn.EditingElementStyle>
+                    </DataGridCheckBoxColumn>
+                    <DataGridCheckBoxColumn Header="Dicht." Width="52"
+                                            Binding="{Binding OptDichtheit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <DataGridCheckBoxColumn.ElementStyle>
+                            <Style TargetType="CheckBox">
+                                <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                            </Style>
+                        </DataGridCheckBoxColumn.ElementStyle>
+                        <DataGridCheckBoxColumn.EditingElementStyle>
+                            <Style TargetType="CheckBox">
+                                <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                            </Style>
+                        </DataGridCheckBoxColumn.EditingElementStyle>
+                    </DataGridCheckBoxColumn>
+                    <DataGridCheckBoxColumn Header="Doku" Width="48"
+                                            Binding="{Binding OptDokumentation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <DataGridCheckBoxColumn.ElementStyle>
+                            <Style TargetType="CheckBox">
+                                <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                            </Style>
+                        </DataGridCheckBoxColumn.ElementStyle>
+                        <DataGridCheckBoxColumn.EditingElementStyle>
+                            <Style TargetType="CheckBox">
+                                <Setter Property="IsEnabled" Value="{Binding IsMatrixEditable}"/>
+                            </Style>
+                        </DataGridCheckBoxColumn.EditingElementStyle>
+                    </DataGridCheckBoxColumn>
 
-                <DataGridTextColumn Header="Hinweis" Binding="{Binding Hinweis}" IsReadOnly="True" Width="150"/>
-            </DataGrid.Columns>
-        </DataGrid>
+                    <DataGridTextColumn Header="Total CHF" Binding="{Binding Total, StringFormat=N2}"
+                                        IsReadOnly="True" Width="110">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                <Setter Property="TextAlignment" Value="Right"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="Hinweis" Binding="{Binding Hinweis}" IsReadOnly="True" Width="150"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Border Grid.Column="1" Style="{StaticResource Card}" Padding="12" Margin="10,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="{Binding DetailTitle}" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Text="{Binding DetailSubtitle}" Style="{StaticResource Caption}" Margin="0,3,0,0"/>
+                        <TextBlock Text="{Binding DetailTotal}" Style="{StaticResource Body}" Margin="0,8,0,0"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1"
+                               Text="Lesemodus: Mehrfach-Massnahmen bleiben vor Schnellbearbeitung geschuetzt."
+                               Style="{StaticResource Caption}"
+                               Margin="0,10,0,4"
+                               TextWrapping="Wrap"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding SelectedDetailMeasures}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{DynamicResource BorderLightBrush}"
+                                            BorderThickness="0,0,0,1"
+                                            Padding="0,8">
+                                        <StackPanel>
+                                            <DockPanel LastChildFill="True">
+                                                <TextBlock Text="{Binding Total, StringFormat='{}{0:N2} CHF'}"
+                                                           DockPanel.Dock="Right"
+                                                           Style="{StaticResource Caption}"
+                                                           Margin="10,0,0,0"/>
+                                                <TextBlock Text="{Binding MeasureName}"
+                                                           Style="{StaticResource Body}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </DockPanel>
+
+                                            <ItemsControl ItemsSource="{Binding Lines}" Margin="0,4,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,4,0,0">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="72"/>
+                                                                <ColumnDefinition Width="82"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="{Binding Text}"
+                                                                       Style="{StaticResource Caption}"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{Binding Qty, StringFormat='{}{0:N2}'}"
+                                                                       Style="{StaticResource Caption}"
+                                                                       TextAlignment="Right"/>
+                                                            <TextBlock Grid.Column="2"
+                                                                       Text="{Binding LineTotal, StringFormat='{}{0:N2}'}"
+                                                                       Style="{StaticResource Caption}"
+                                                                       TextAlignment="Right"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
 
         <!-- Status -->
         <TextBlock Grid.Row="2" Text="{Binding Status}" Opacity="0.7" Margin="2,8,0,0"/>

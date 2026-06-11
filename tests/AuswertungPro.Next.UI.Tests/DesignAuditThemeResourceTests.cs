@@ -179,13 +179,17 @@ public sealed class DesignAuditThemeResourceTests
     }
 
     [Fact]
-    public void SanierungsMatrixPage_opens_hauptarbeit_combo_on_first_click()
+    public void SanierungsMatrixPage_zeigt_massnahmen_spalte_und_lesedetail()
     {
         var xaml = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml");
         var code = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml.cs");
 
-        Assert.Contains("Header=\"Hauptarbeit\"", xaml);
+        Assert.Contains("Header=\"Massnahmen\"", xaml);
+        Assert.DoesNotContain("Header=\"Hauptarbeit\"", xaml);
         Assert.Contains("DataContext.MeasureOptions", xaml);
+        Assert.Contains("SelectedItem=\"{Binding SelectedRow, Mode=TwoWay}\"", xaml);
+        Assert.Contains("ItemsSource=\"{Binding SelectedDetailMeasures}\"", xaml);
+        Assert.Contains("Text=\"{Binding MeasuresSummary}\"", xaml);
         Assert.DoesNotContain("DataContext.GroupedMeasureOptions", xaml);
         Assert.DoesNotContain("<ComboBox.GroupStyle>", xaml);
         Assert.Contains("PreviewMouseLeftButtonDown=\"MeasureComboBox_PreviewMouseLeftButtonDown\"", xaml);

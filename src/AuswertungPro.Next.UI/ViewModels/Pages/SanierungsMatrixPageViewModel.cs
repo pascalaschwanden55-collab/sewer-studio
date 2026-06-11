@@ -24,6 +24,80 @@ public sealed record MeasureOption(string? Id, string Name, string Kategorie, bo
     public override string ToString() => Name;
 }
 
+public sealed record SanierungMatrixDetailLineVm(
+    string Group,
+    string Text,
+    string Unit,
+    decimal Qty,
+    decimal UnitPrice,
+    decimal LineTotal);
+
+public sealed record SanierungMatrixDetailMeasureVm(
+    string MeasureName,
+    string MeasureId,
+    decimal Total,
+    IReadOnlyList<SanierungMatrixDetailLineVm> Lines);
+
+public static class SanierungsMatrixMeasureSummaryFormatter
+{
+    public const string EmptySummary = "- keine -";
+
+    public static string FormatSummary(HoldingCost? cost)
+    {
+        var names = MeasureNames(cost).ToList();
+        return names.Count switch
+        {
+            0 => EmptySummary,
+            1 => names[0],
+            2 => $"{names[0]} + {names[1]}",
+            _ => $"{names[0]} + {names[1]} + {names.Count - 2} weitere",
+        };
+    }
+
+    public static IReadOnlyList<SanierungMatrixDetailMeasureVm> BuildDetailMeasures(HoldingCost? cost)
+    {
+        if (cost?.Measures is null || cost.Measures.Count == 0)
+            return Array.Empty<SanierungMatrixDetailMeasureVm>();
+
+        return cost.Measures
+            .Select(m => new SanierungMatrixDetailMeasureVm(
+                CleanMeasureName(m),
+                m.MeasureId,
+                m.Total,
+                m.Lines
+                    .Where(l => l.Selected)
+                    .Select(l => new SanierungMatrixDetailLineVm(
+                        l.Group,
+                        l.Text,
+                        l.Unit,
+                        l.Qty,
+                        l.UnitPrice,
+                        l.Qty * l.UnitPrice))
+                    .ToList()))
+            .ToList();
+    }
+
+    private static IEnumerable<string> MeasureNames(HoldingCost? cost)
+    {
+        if (cost?.Measures is null)
+            yield break;
+
+        foreach (var measure in cost.Measures)
+            yield return CleanMeasureName(measure);
+    }
+
+    private static string CleanMeasureName(MeasureCost measure)
+    {
+        if (!string.IsNullOrWhiteSpace(measure.MeasureName))
+            return measure.MeasureName.Trim();
+
+        if (!string.IsNullOrWhiteSpace(measure.MeasureId))
+            return measure.MeasureId.Trim();
+
+        return "Massnahme";
+    }
+}
+
 /// <summary>Eine Haltungs-Zeile in der Sanierungs-Matrix.</summary>
 public sealed partial class SanierungMatrixRowVm : ObservableObject
 {
@@ -35,6 +109,7 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
     public string Dn { get; }
     public string Laenge { get; }
     public int Anschluesse { get; }
+    public HoldingCost? StoredCost { get; private set; }
 
     [ObservableProperty] private MeasureOption? _selectedMeasure;
     [ObservableProperty] private decimal _menge;
@@ -50,6 +125,7 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
     [ObservableProperty] private decimal _total;
     [ObservableProperty] private string _hinweis = "";
     [ObservableProperty] private bool _hasMultipleStoredMeasures;
+    [ObservableProperty] private string _measuresSummary = SanierungsMatrixMeasureSummaryFormatter.EmptySummary;
 
     public bool IsMatrixEditable => !HasMultipleStoredMeasures;
 
@@ -79,6 +155,12 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
         OptDokumentation = doku;
         Total = total;
         _suppress = false;
+    }
+
+    public void SetStoredCost(HoldingCost? cost)
+    {
+        StoredCost = cost;
+        MeasuresSummary = SanierungsMatrixMeasureSummaryFormatter.FormatSummary(cost);
     }
 
     public void MarkMultipleStoredMeasures()
@@ -181,6 +263,13 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     [ObservableProperty] private decimal _gesamtTotal;
     [ObservableProperty] private int _belegteHaltungen;
     [ObservableProperty] private string _status = "";
+    [ObservableProperty] private SanierungMatrixRowVm? _selectedRow;
+    [ObservableProperty] private string _detailTitle = "Keine Haltung gewaehlt";
+    [ObservableProperty] private string _detailSubtitle = "Links eine Haltung waehlen.";
+    [ObservableProperty] private string _detailTotal = "";
+
+    public IReadOnlyList<SanierungMatrixDetailMeasureVm> SelectedDetailMeasures { get; private set; } =
+        Array.Empty<SanierungMatrixDetailMeasureVm>();
 
     public SanierungsMatrixPageViewModel(ShellViewModel shell)
     {
@@ -227,6 +316,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         }
 
         RecomputeGesamt();
+        SelectedRow = Rows.FirstOrDefault();
         Status = Rows.Count == 0
             ? "Keine Haltungen geladen (Projekt mit Haltungen oeffnen)."
             : $"{Rows.Count} Haltungen geladen.";
@@ -270,10 +360,12 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     {
         if (!_store.ByHolding.TryGetValue(holding, out var existing) || existing.Measures.Count == 0)
         {
+            row.SetStoredCost(null);
             row.InitFrom(MeasureOptions[0], 0m, 0m, false, false, false, false, false);
             return;
         }
 
+        row.SetStoredCost(existing);
         var hasMultipleMeasures = existing.Measures.Count > 1;
         var firstId = existing.Measures[0].MeasureId;
         var opt = MeasureOptions.FirstOrDefault(o => string.Equals(o.Id, firstId, StringComparison.OrdinalIgnoreCase));
@@ -320,8 +412,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         {
             if (_store.ByHolding.Remove(row.Holding))
                 _clearedHoldings.Add(row.Holding); // beim Speichern Tabellenfelder leeren
+            row.SetStoredCost(null);
             row.Total = 0m;
             row.Hinweis = "";
+            RefreshSelectedDetailIfNeeded(row);
             RecomputeGesamt();
             return;
         }
@@ -348,16 +442,19 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
             // sonst zeigt die UI "nicht gefunden", waehrend beim Speichern der alte Wert bliebe.
             if (_store.ByHolding.Remove(row.Holding))
                 _clearedHoldings.Add(row.Holding);
+            row.SetStoredCost(null);
             row.Hinweis = "Massnahme nicht gefunden";
             row.Total = 0m;
         }
         else
         {
             _store.ByHolding[row.Holding] = cost;
+            row.SetStoredCost(cost);
             row.Total = cost.Total;
             row.Hinweis = row.Anschluesse > 0 ? $"{row.Anschluesse} Anschluss(e)" : "";
         }
 
+        RefreshSelectedDetailIfNeeded(row);
         RecomputeGesamt();
     }
 
@@ -365,6 +462,36 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     {
         GesamtTotal = Rows.Sum(r => r.Total);
         BelegteHaltungen = Rows.Count(r => r.SelectedMeasure?.Id is not null);
+    }
+
+    partial void OnSelectedRowChanged(SanierungMatrixRowVm? value)
+    {
+        RefreshSelectedDetail();
+    }
+
+    private void RefreshSelectedDetailIfNeeded(SanierungMatrixRowVm row)
+    {
+        if (ReferenceEquals(SelectedRow, row))
+            RefreshSelectedDetail();
+    }
+
+    private void RefreshSelectedDetail()
+    {
+        if (SelectedRow is null)
+        {
+            SelectedDetailMeasures = Array.Empty<SanierungMatrixDetailMeasureVm>();
+            DetailTitle = "Keine Haltung gewaehlt";
+            DetailSubtitle = "Links eine Haltung waehlen.";
+            DetailTotal = "";
+            OnPropertyChanged(nameof(SelectedDetailMeasures));
+            return;
+        }
+
+        SelectedDetailMeasures = SanierungsMatrixMeasureSummaryFormatter.BuildDetailMeasures(SelectedRow.StoredCost);
+        DetailTitle = $"Haltung {SelectedRow.Holding}";
+        DetailSubtitle = SelectedRow.MeasuresSummary;
+        DetailTotal = $"Total: {SelectedRow.Total:N2} CHF";
+        OnPropertyChanged(nameof(SelectedDetailMeasures));
     }
 
     /// <summary>
