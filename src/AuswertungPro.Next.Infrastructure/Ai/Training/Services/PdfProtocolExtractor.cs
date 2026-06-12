@@ -27,9 +27,21 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 /// </summary>
 public sealed class PdfProtocolExtractor
 {
-    private readonly ILogger _logger;
+    private const int OcrFallbackMaxPages = 40;
 
-    public PdfProtocolExtractor(ILogger? logger = null) => _logger = logger ?? NullLogger.Instance;
+    private readonly ILogger _logger;
+    private readonly IPdfProtocolOcrFallback _ocrFallback;
+
+    public PdfProtocolExtractor(ILogger? logger = null)
+        : this(logger, PdfProtocolOcrFallback.Instance)
+    {
+    }
+
+    internal PdfProtocolExtractor(ILogger? logger, IPdfProtocolOcrFallback ocrFallback)
+    {
+        _logger = logger ?? NullLogger.Instance;
+        _ocrFallback = ocrFallback;
+    }
 
     // ── Regex-Muster ────────────────────────────────────────────────────────
 
@@ -220,10 +232,25 @@ public sealed class PdfProtocolExtractor
             PdfImportSafetyPolicy.ThrowIfTooManyPages(doc.NumberOfPages);
 
             var text = ExtractTextFromPdfDoc(doc);
-            if (string.IsNullOrWhiteSpace(text))
+            var usedOcrFallback = false;
+            if (IsEmptyOrNearlyEmptyPdfText(text))
             {
-                NoteProblemPdf(path, "kein extrahierbarer Text (evtl. gescannt -> OCR noetig)");
-                return Array.Empty<GroundTruthEntry>();
+                var ocrText = TryExtractTextWithOcrFallback(path, doc.NumberOfPages);
+                if (ocrText.SkippedByBudget)
+                {
+                    NoteProblemPdf(path, $"OCR uebersprungen (Budget): {ocrText.Message}");
+                    return Array.Empty<GroundTruthEntry>();
+                }
+
+                if (string.IsNullOrWhiteSpace(ocrText.Text))
+                {
+                    var detail = string.IsNullOrWhiteSpace(ocrText.Message) ? "" : $": {ocrText.Message}";
+                    NoteProblemPdf(path, $"OCR versucht, kein verwertbarer Text{detail}");
+                    return Array.Empty<GroundTruthEntry>();
+                }
+
+                text = ocrText.Text;
+                usedOcrFallback = true;
             }
 
             // Diagnose: extrahierten Text speichern
@@ -245,7 +272,12 @@ public sealed class PdfProtocolExtractor
             // Stille 0-Befund-Faelle sichtbar machen: Text war da, aber keine Strategie griff
             // -> moeglicherweise ein neues/unbekanntes Format (nicht zwingend schadenfrei).
             if (entries.Count == 0)
-                NoteProblemPdf(path, "Text vorhanden, aber 0 Befunde erkannt (evtl. unbekanntes Format)");
+            {
+                var reason = usedOcrFallback
+                    ? "OCR versucht, 0 Befunde"
+                    : "Text vorhanden, aber 0 Befunde erkannt (evtl. unbekanntes Format)";
+                NoteProblemPdf(path, reason);
+            }
 
             // Fotos aus PDF-Bildbericht extrahieren und Einträgen zuordnen
             if (entries.Count > 0 && !string.IsNullOrWhiteSpace(framesDir))
@@ -261,6 +293,52 @@ public sealed class PdfProtocolExtractor
             NoteProblemPdf(path, "Lesefehler: " + ex.GetType().Name + " - " + ex.Message);
             return Array.Empty<GroundTruthEntry>();
         }
+    }
+
+    private sealed record OcrFallbackTextResult(
+        string Text,
+        bool SkippedByBudget,
+        string? Message);
+
+    private OcrFallbackTextResult TryExtractTextWithOcrFallback(string path, int pageCount)
+    {
+        var fileBudget = PdfImportSafetyPolicy.CheckFileBudget(path);
+        if (!fileBudget.Allowed)
+            return new OcrFallbackTextResult("", true, fileBudget.Message);
+
+        var pageBudget = PdfImportSafetyPolicy.CheckPageBudget(pageCount, OcrFallbackMaxPages);
+        if (!pageBudget.Allowed)
+            return new OcrFallbackTextResult("", true, pageBudget.Message);
+
+        var pages = new List<string>();
+        string? firstError = null;
+
+        for (var pageNumber = 1; pageNumber <= pageCount; pageNumber++)
+        {
+            var ocr = _ocrFallback.TryExtractPageText(path, pageNumber);
+            if (ocr.Success && !string.IsNullOrWhiteSpace(ocr.Text))
+            {
+                pages.Add(ocr.Text.Replace("\r\n", "\n").Trim());
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(firstError) && !string.IsNullOrWhiteSpace(ocr.Message))
+                firstError = ocr.Message;
+        }
+
+        if (pages.Count == 0)
+            return new OcrFallbackTextResult("", false, firstError ?? "OCR lieferte keinen verwertbaren Text.");
+
+        return new OcrFallbackTextResult(string.Join("\n\n", pages), false, firstError);
+    }
+
+    private static bool IsEmptyOrNearlyEmptyPdfText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return true;
+
+        var meaningfulChars = text.Count(ch => !char.IsWhiteSpace(ch) && !char.IsControl(ch));
+        return meaningfulChars < 40;
     }
 
     /// <summary>

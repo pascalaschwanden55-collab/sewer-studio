@@ -13,6 +13,8 @@ public sealed class PdfBudgetUsageTests
         Assert.Contains("PdfImportSafetyPolicy.ThrowIfTooManyPages", textExtractor);
         Assert.Contains("PdfImportSafetyPolicy.ThrowIfFileTooLarge", protocolExtractor);
         Assert.Contains("PdfImportSafetyPolicy.ThrowIfTooManyPages", protocolExtractor);
+        Assert.Contains("PdfImportSafetyPolicy.CheckFileBudget(path)", protocolExtractor);
+        Assert.Contains("PdfImportSafetyPolicy.CheckPageBudget(pageCount, OcrFallbackMaxPages)", protocolExtractor);
         Assert.Contains("PdfImportSafetyPolicy.ThrowIfFileTooLarge", holdingParser);
         Assert.Contains("PdfImportSafetyPolicy.ThrowIfTooManyPages", holdingParser);
     }
