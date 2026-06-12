@@ -14,7 +14,13 @@ public sealed class XtfManholeExtractor
 {
     public IEnumerable<ManholeGeometry> Extract(string xtfPath)
     {
-        var settings = new XmlReaderSettings { IgnoreWhitespace = true, IgnoreComments = true };
+        var settings = new XmlReaderSettings
+        {
+            IgnoreWhitespace = true,
+            IgnoreComments = true,
+            DtdProcessing = DtdProcessing.Prohibit,
+            XmlResolver = null
+        };
         using var reader = XmlReader.Create(xtfPath, settings);
 
         string? name = null;
