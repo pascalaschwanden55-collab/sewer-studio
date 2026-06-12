@@ -79,6 +79,19 @@ public sealed class PdfProtocolExtractor
         $@"Foto\s+\d+\s+Zustand\s+(?<code>{CodePattern})\s+Entf\.?\s+(?:in|gegen)\s+Flie.{{1,2}}r\.?\s+(?<meter>\d{{1,4}}[.,]\d{{1,3}})\s*m",
         RegexOptions.Compiled);
 
+    // Bildbericht 2-spaltig MEHRZEILIG (IBAK "Haltungsbildbericht", Sanierungsabnahmen
+    // 2016-2025): "Zustand <CODE>" und "Entf. <m> m" stehen in GETRENNTEN Zeilen, pro Zeile
+    // bis zu ZWEI Spalten (zwei Fotos nebeneinander). Die aelteren Bildbericht-Muster sind
+    // mit $ ans Zeilenende verankert und treffen darum NICHTS, sobald rechts noch eine
+    // zweite Spalte steht (Coverage-Befund 2026-06-12: 15 PDFs mit 0 Befunden trotz Codes).
+    // Kein ^/$-Anker: pro Zeile mehrere Treffer; Code endet an Spaltenluecke oder Zeilenende.
+    private static readonly Regex BildberichtSpaltenCodePattern = new(
+        $@"Zustand\s+(?<code>{CodePattern})(?=\s\s|\s*$)",
+        RegexOptions.Compiled);
+    private static readonly Regex BildberichtSpaltenMeterPattern = new(
+        @"Entf\.?\s+(?:(?:in|gegen)\s+Flie.{1,2}r\.?\s+)?(?<meter>\d{1,4}[.,]\d{1,3})\s*m(?=\s|$)",
+        RegexOptions.Compiled);
+
     // Pallon-Format (app.pallon.com): "[Meter]  HH:MM:SS  CODE  Text  [Uhr]  [Foto]"
     // Reihenfolge: Meter ZUERST, dann ZEIT, dann CODE (anders als alle anderen Formate).
     // Meter ist optional - Folgezeilen ohne Meter erben den vorherigen Meter.
@@ -628,6 +641,14 @@ public sealed class PdfProtocolExtractor
         if (results.Count > 0)
             return results;
 
+        // Strategie 4b: Bildbericht 2-spaltig MEHRZEILIG — "Zustand CODE" und "Entf. m" in
+        // getrennten Zeilen, zwei Foto-Spalten nebeneinander. MUSS vor Strategie 4 laufen,
+        // weil deren Naehe-Paarung im 2-Spalten-Layout die rechte Spalte mit dem linken
+        // Meter verkuppeln wuerde. Greift nur bei echtem 2-Spalten-Layout (Schutzgitter).
+        results = ParseZweispaltigerBildbericht(text);
+        if (results.Count > 0)
+            return results;
+
         // Strategie 4: Bildbericht (Label-Value Blöcke)
         results = ParseBildberichtBlocks(text, seen);
         if (results.Count > 0)
@@ -691,6 +712,81 @@ public sealed class PdfProtocolExtractor
                 NumberStyles.Float, CultureInfo.InvariantCulture, out var mv) ? mv : 0.0;
 
             var entry = BuildEntryDirect(meter, meter, m.Groups["code"].Value, "", null);
+            if (entry is not null && seen.Add(Sig(entry)))
+                results.Add(entry);
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Strategie 4b: IBAK-"Haltungsbildbericht" mit ZWEI Foto-Spalten nebeneinander.
+    /// "Zustand CODE" und "Entf. METER m" stehen in getrennten Zeilen; die Zuordnung
+    /// erfolgt ueber die SPALTE (Zeichenoffset des Labels), nicht ueber Textnaehe —
+    /// sonst bekommt die rechte Spalte den linken Meter. Schutzgitter: greift nur,
+    /// wenn mindestens eine Zeile ZWEI Zustand-Treffer hat (echtes 2-Spalten-Layout);
+    /// einspaltige Berichte laufen unveraendert in Strategie 4 (inkl. Video-Zeit).
+    /// </summary>
+    internal static List<GroundTruthEntry> ParseZweispaltigerBildbericht(string text)
+    {
+        var results = new List<GroundTruthEntry>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var lines = text.Replace("\r\n", "\n").Split('\n');
+
+        // Alle Code- und Meter-Treffer mit Zeile + Spalte einsammeln.
+        var codes = new List<(int Line, int Col, string Code)>();
+        var meters = new List<(int Line, int Col, double Meter)>();
+        var hasTwoColumnLine = false;
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var codeMatches = BildberichtSpaltenCodePattern.Matches(lines[i]);
+            if (codeMatches.Count >= 2)
+                hasTwoColumnLine = true;
+            foreach (Match m in codeMatches)
+                codes.Add((i, m.Index, m.Groups["code"].Value));
+
+            foreach (Match m in BildberichtSpaltenMeterPattern.Matches(lines[i]))
+            {
+                if (double.TryParse(
+                        m.Groups["meter"].Value.Replace(',', '.'),
+                        NumberStyles.Float, CultureInfo.InvariantCulture, out var mv))
+                    meters.Add((i, m.Index, mv));
+            }
+        }
+
+        if (!hasTwoColumnLine || codes.Count == 0 || meters.Count == 0)
+            return results;
+
+        // Pro Code den Meter derselben Spalte in den naechsten Zeilen suchen.
+        var meterUsed = new bool[meters.Count];
+        foreach (var (line, col, code) in codes)
+        {
+            var bestIdx = -1;
+            var bestKey = (LineDist: int.MaxValue, ColDist: int.MaxValue);
+            for (var k = 0; k < meters.Count; k++)
+            {
+                if (meterUsed[k])
+                    continue;
+                var lineDist = meters[k].Line - line;
+                if (lineDist < 0 || lineDist > 4)
+                    continue; // Meter steht im Layout unterhalb des Zustands
+                var colDist = Math.Abs(meters[k].Col - col);
+                if (colDist > 20)
+                    continue; // andere Spalte
+                var key = (lineDist, colDist);
+                if (key.CompareTo(bestKey) < 0)
+                {
+                    bestKey = key;
+                    bestIdx = k;
+                }
+            }
+
+            if (bestIdx < 0)
+                continue;
+            meterUsed[bestIdx] = true;
+
+            var entry = BuildEntryDirect(meters[bestIdx].Meter, meters[bestIdx].Meter, code, "", null);
             if (entry is not null && seen.Add(Sig(entry)))
                 results.Add(entry);
         }
