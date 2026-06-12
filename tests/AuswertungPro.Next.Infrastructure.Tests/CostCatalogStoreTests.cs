@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 
@@ -5,6 +7,21 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 
 public sealed class CostCatalogStoreTests
 {
+    [Fact]
+    public void SaveUserOverrides_IsBlocked_WhenExistingUserOverrideCouldNotBeLoaded()
+    {
+        using var temp = new TempDir();
+        var overridePath = Path.Combine(temp.Path, "cost_catalog.user.json");
+        File.WriteAllText(overridePath, "{ kaputt");
+        var store = new CostCatalogStore(overridePath);
+
+        _ = store.LoadUserOverrides();
+        var ok = store.SaveUserOverrides(new CostCatalog(), out var error);
+
+        Assert.False(ok);
+        Assert.Contains("konnte nicht geladen werden", error, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void PreserveNpkMetadata_FillsFromDefault_WhenOverrideEmpty()
     {
@@ -83,5 +100,29 @@ public sealed class CostCatalogStoreTests
         var item = Assert.Single(toSave.Items);
         Assert.Equal("612.111", item.NpkCode);
         Assert.Equal("", item.Chapter);
+    }
+
+    private sealed class TempDir : IDisposable
+    {
+        public string Path { get; }
+
+        public TempDir()
+        {
+            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cost_catalog_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path);
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                if (Directory.Exists(Path))
+                    Directory.Delete(Path, recursive: true);
+            }
+            catch
+            {
+                // ignore cleanup failures
+            }
+        }
     }
 }

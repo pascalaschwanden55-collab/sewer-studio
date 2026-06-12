@@ -7,10 +7,19 @@ namespace AuswertungPro.Next.Infrastructure.Costs;
 
 public sealed class PositionTemplateStore
 {
+    private readonly string? _userOverridePath;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
+
+    public PositionTemplateStore(string? userOverridePath = null)
+    {
+        _userOverridePath = userOverridePath;
+    }
+
+    public string? LastUserOverrideLoadError { get; private set; }
 
     public PositionTemplateCatalog Load(string? projectPath)
     {
@@ -21,18 +30,25 @@ public sealed class PositionTemplateStore
     public PositionTemplateCatalog LoadMerged(string? projectPath)
     {
         var defaultCatalog = Load(projectPath);
+        LastUserOverrideLoadError = null;
         var userCatalogPath = GetUserOverridePath();
         
         if (!File.Exists(userCatalogPath))
             return defaultCatalog;
 
-        var userCatalog = ReadCatalog(userCatalogPath);
+        var userCatalog = ReadCatalog(userCatalogPath, rememberUserOverrideError: true);
         return MergeCatalogs(defaultCatalog, userCatalog);
     }
 
     public bool SaveUserOverride(PositionTemplateCatalog catalog, out string? error)
     {
         error = null;
+        if (!string.IsNullOrWhiteSpace(LastUserOverrideLoadError))
+        {
+            error = $"User-Override konnte nicht geladen werden; Speichern ist gesperrt: {LastUserOverrideLoadError}";
+            return false;
+        }
+
         try
         {
             var userPath = GetUserOverridePath();
@@ -68,13 +84,16 @@ public sealed class PositionTemplateStore
         return Path.Combine(AppContext.BaseDirectory, "Config", fileName);
     }
 
-    private static string GetUserOverridePath()
+    private string GetUserOverridePath()
     {
+        if (!string.IsNullOrWhiteSpace(_userOverridePath))
+            return _userOverridePath;
+
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         return Path.Combine(appDataPath, "AuswertungPro", "position_templates.user.json");
     }
 
-    private static PositionTemplateCatalog ReadCatalog(string path)
+    private PositionTemplateCatalog ReadCatalog(string path, bool rememberUserOverrideError = false)
     {
         try
         {
@@ -84,8 +103,10 @@ public sealed class PositionTemplateStore
             var json = File.ReadAllText(path);
             return JsonSerializer.Deserialize<PositionTemplateCatalog>(json, JsonOptions) ?? new PositionTemplateCatalog();
         }
-        catch
+        catch (Exception ex)
         {
+            if (rememberUserOverrideError)
+                LastUserOverrideLoadError = ex.Message;
             return new PositionTemplateCatalog();
         }
     }

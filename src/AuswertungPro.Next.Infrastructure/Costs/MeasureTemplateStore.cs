@@ -8,10 +8,19 @@ namespace AuswertungPro.Next.Infrastructure.Costs;
 
 public sealed class MeasureTemplateStore
 {
+    private readonly string? _userOverridePath;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
+
+    public MeasureTemplateStore(string? userOverridePath = null)
+    {
+        _userOverridePath = userOverridePath;
+    }
+
+    public string? LastUserOverrideLoadError { get; private set; }
 
     public MeasureTemplateCatalog LoadMerged(string? projectPath)
     {
@@ -28,13 +37,20 @@ public sealed class MeasureTemplateStore
 
     public MeasureTemplateCatalog LoadUserOverrides()
     {
+        LastUserOverrideLoadError = null;
         var path = ResolveUserOverridePath();
-        return ReadCatalog(path);
+        return ReadCatalog(path, rememberUserOverrideError: true);
     }
 
     public bool SaveUserOverrides(MeasureTemplateCatalog catalog, out string error)
     {
         error = "";
+        if (!string.IsNullOrWhiteSpace(LastUserOverrideLoadError))
+        {
+            error = $"User-Override konnte nicht geladen werden; Speichern ist gesperrt: {LastUserOverrideLoadError}";
+            return false;
+        }
+
         try
         {
             var path = ResolveUserOverridePath();
@@ -146,13 +162,16 @@ public sealed class MeasureTemplateStore
         return Path.Combine(AppContext.BaseDirectory, "Config", fileName);
     }
 
-    private static string ResolveUserOverridePath()
+    private string ResolveUserOverridePath()
     {
+        if (!string.IsNullOrWhiteSpace(_userOverridePath))
+            return _userOverridePath;
+
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         return Path.Combine(appData, "AuswertungPro", "measure_templates.user.json");
     }
 
-    private static MeasureTemplateCatalog ReadCatalog(string path)
+    private MeasureTemplateCatalog ReadCatalog(string path, bool rememberUserOverrideError = false)
     {
         try
         {
@@ -163,8 +182,10 @@ public sealed class MeasureTemplateStore
             var model = JsonSerializer.Deserialize<MeasureTemplateCatalog>(json, JsonOptions) ?? new MeasureTemplateCatalog();
             return Normalize(model);
         }
-        catch
+        catch (Exception ex)
         {
+            if (rememberUserOverrideError)
+                LastUserOverrideLoadError = ex.Message;
             return new MeasureTemplateCatalog();
         }
     }

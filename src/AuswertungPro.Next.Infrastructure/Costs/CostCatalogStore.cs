@@ -9,10 +9,19 @@ namespace AuswertungPro.Next.Infrastructure.Costs;
 
 public sealed class CostCatalogStore
 {
+    private readonly string? _userOverridePath;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
+
+    public CostCatalogStore(string? userOverridePath = null)
+    {
+        _userOverridePath = userOverridePath;
+    }
+
+    public string? LastUserOverrideLoadError { get; private set; }
 
     public CostCatalog LoadMerged(string? projectPath)
     {
@@ -29,13 +38,20 @@ public sealed class CostCatalogStore
 
     public CostCatalog LoadUserOverrides()
     {
+        LastUserOverrideLoadError = null;
         var path = ResolveUserOverridePath();
-        return ReadCatalog(path);
+        return ReadCatalog(path, rememberUserOverrideError: true);
     }
 
     public bool SaveUserOverrides(CostCatalog catalog, out string error)
     {
         error = "";
+        if (!string.IsNullOrWhiteSpace(LastUserOverrideLoadError))
+        {
+            error = $"User-Override konnte nicht geladen werden; Speichern ist gesperrt: {LastUserOverrideLoadError}";
+            return false;
+        }
+
         try
         {
             var path = ResolveUserOverridePath();
@@ -184,13 +200,16 @@ public sealed class CostCatalogStore
         return Path.Combine(AppContext.BaseDirectory, "Config", fileName);
     }
 
-    private static string ResolveUserOverridePath()
+    private string ResolveUserOverridePath()
     {
+        if (!string.IsNullOrWhiteSpace(_userOverridePath))
+            return _userOverridePath;
+
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         return Path.Combine(appData, "AuswertungPro", "cost_catalog.user.json");
     }
 
-    private static CostCatalog ReadCatalog(string path)
+    private CostCatalog ReadCatalog(string path, bool rememberUserOverrideError = false)
     {
         try
         {
@@ -201,8 +220,10 @@ public sealed class CostCatalogStore
             var model = JsonSerializer.Deserialize<CostCatalog>(json, JsonOptions) ?? new CostCatalog();
             return Normalize(model);
         }
-        catch
+        catch (Exception ex)
         {
+            if (rememberUserOverrideError)
+                LastUserOverrideLoadError = ex.Message;
             return new CostCatalog();
         }
     }
