@@ -214,9 +214,10 @@ public sealed class IbakExportImportService : IIbakImportService
             .Where(k => videoExtensions.Any(ext => k.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
             .Select(k => ResolveFile(index, k))
             .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        if (matches.Count == 0)
+        if (matches.Count != 1)
             return;
 
         record.SetFieldValue("Link", matches[0]!, FieldSource.Legacy, userEdited: false);
@@ -752,7 +753,7 @@ public sealed class IbakExportImportService : IIbakImportService
             return null;
         if (list.Count == 1)
             return list[0];
-        return list[0];
+        return null;
     }
 
     private static string? FindDatenTxt(string root)

@@ -10,6 +10,27 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class HoldingFolderDistributorVideoMatchingTests
 {
     [Fact]
+    public void FindVideoByHaltungDate_DoesNotMatchHaltungOnlyFallback()
+    {
+        var method = Type.GetType("AuswertungPro.Next.Infrastructure.HoldingVideoMatching, AuswertungPro.Next.Infrastructure")!
+            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var files = new List<string>
+        {
+            Path.Combine(Path.GetTempPath(), "20230101_06-001.mp4")
+        };
+
+        var result = (HoldingFolderDistributor.VideoFindResult?)method!.Invoke(
+            null,
+            new object?[] { "06-001", "20240630", files });
+
+        Assert.NotNull(result);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotFound, result!.Status);
+        Assert.Contains("Haltung-only", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void SidecarLinkLookup_UsesReversedHolding_WhenPdfDirectionIsOpposite()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"video-match-{Guid.NewGuid():N}");

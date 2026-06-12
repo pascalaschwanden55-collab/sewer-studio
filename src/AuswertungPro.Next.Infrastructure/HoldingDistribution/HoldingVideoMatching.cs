@@ -113,24 +113,12 @@ internal static class HoldingVideoMatching
             return nameKey.Contains(hKey, StringComparison.OrdinalIgnoreCase);
         }).ToList();
 
-        // Wenn es unter den Haltung-only-Treffern welche gibt, die das Datum enthalten,
-        // bevorzuge diese gegenueber reinen Namens-Treffern.
-        if (haltungOnly.Count > 1 && !string.IsNullOrWhiteSpace(dateStamp))
-        {
-            var withDate = haltungOnly.Where(f =>
-            {
-                var nameKey = NormalizeKey(Path.GetFileNameWithoutExtension(f));
-                return nameKey.Contains(dateKey, StringComparison.OrdinalIgnoreCase);
-            }).ToList();
-            if (withDate.Count >= 1)
-                haltungOnly = withDate;
-        }
-
-        if (haltungOnly.Count == 1)
-            return new HoldingFolderDistributor.VideoFindResult(HoldingFolderDistributor.VideoMatchStatus.Matched, haltungOnly[0], Array.Empty<string>(),
-                "Warnung: Zuordnung nur ueber Haltungsname (ohne Datumsabgleich)");
-        if (haltungOnly.Count > 1)
-            return new HoldingFolderDistributor.VideoFindResult(HoldingFolderDistributor.VideoMatchStatus.Ambiguous, null, haltungOnly, "Multiple haltung-only matches (Datum nicht geprueft)");
+        if (haltungOnly.Count > 0)
+            return new HoldingFolderDistributor.VideoFindResult(
+                HoldingFolderDistributor.VideoMatchStatus.NotFound,
+                null,
+                haltungOnly,
+                "Haltung-only candidates found, but not auto-matched without date validation");
 
         return new HoldingFolderDistributor.VideoFindResult(HoldingFolderDistributor.VideoMatchStatus.NotFound, null, Array.Empty<string>(), "No video found (fallback)");
     }

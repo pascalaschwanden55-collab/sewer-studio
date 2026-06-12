@@ -426,11 +426,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         if (list.Count == 1)
             return list[0];
 
-        // Prefer Video or Picture folders when ambiguous.
-        var best = list.FirstOrDefault(p => p.IndexOf(Path.DirectorySeparatorChar + "Video" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) >= 0)
-                   ?? list.FirstOrDefault(p => p.IndexOf(Path.DirectorySeparatorChar + "Picture" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) >= 0)
-                   ?? list[0];
-        return best;
+        return null;
     }
 
     private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, ProtocolService protocolService)
@@ -888,23 +884,27 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             var existingLink = record.GetFieldValue("Link");
             if (!string.IsNullOrWhiteSpace(existingLink)) continue;
 
-            // Suche Video-Datei die den Haltungsnamen enthaelt
-            foreach (var kv in fileIndex)
-            {
-                if (!kv.Key.Contains(haltungsname, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                foreach (var filePath in kv.Value)
+            var candidates = fileIndex
+                .Where(kv => kv.Key.Contains(haltungsname, StringComparison.OrdinalIgnoreCase))
+                .SelectMany(kv => kv.Value)
+                .Where(filePath =>
                 {
                     var ext = Path.GetExtension(filePath);
-                    if (MediaExtensions.Contains(ext) && MediaFileTypes.VideoExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
-                    {
-                        record.SetFieldValue("Link", filePath, Domain.Models.FieldSource.Legacy, userEdited: false);
-                        linked++;
-                        break;
-                    }
-                }
-                break;
+                    return MediaExtensions.Contains(ext)
+                           && MediaFileTypes.VideoExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
+                })
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(2)
+                .ToList();
+
+            if (candidates.Count == 1)
+            {
+                record.SetFieldValue("Link", candidates[0], Domain.Models.FieldSource.Legacy, userEdited: false);
+                linked++;
+            }
+            else if (candidates.Count > 1)
+            {
+                messages.Add($"Medien nicht verknuepft: mehrere Video-Kandidaten fuer {haltungsname}.");
             }
         }
 

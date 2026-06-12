@@ -177,10 +177,15 @@ public sealed class KinsImportService : IKinsImportService
                     if (maxMeter > 0)
                         ApplyImportedField(record, "Haltungslaenge_m", maxMeter.ToString("0.0", CultureInfo.InvariantCulture));
 
-                    var videoPath = ResolveVideoPath(videoIndex, header.VideoFile);
-                    if (!string.IsNullOrWhiteSpace(videoPath))
+                    var video = ResolveVideoPath(videoIndex, header.VideoFile);
+                    if (video.IsMatched)
                     {
-                        ApplyImportedField(record, "Link", videoPath);
+                        ApplyImportedField(record, "Link", video.Path);
+                    }
+                    else if (video.IsAmbiguous)
+                    {
+                        uncertain++;
+                        messages.Add($"KINS-TXT: Video mehrdeutig fuer {holdingName}: {header.VideoFile} ({video.Candidates.Count} Kandidaten)");
                     }
                     else
                     {
@@ -497,13 +502,22 @@ public sealed class KinsImportService : IKinsImportService
         return index;
     }
 
-    private static string? ResolveVideoPath(Dictionary<string, List<string>> index, string fileName)
+    private sealed record VideoResolveResult(string? Path, IReadOnlyList<string> Candidates)
+    {
+        public bool IsMatched => !string.IsNullOrWhiteSpace(Path);
+        public bool IsAmbiguous => string.IsNullOrWhiteSpace(Path) && Candidates.Count > 1;
+    }
+
+    private static VideoResolveResult ResolveVideoPath(Dictionary<string, List<string>> index, string fileName)
     {
         var key = Path.GetFileName(fileName.Trim());
-        if (index.TryGetValue(key, out var list) && list.Count > 0)
-            return list[0];
+        if (!index.TryGetValue(key, out var list) || list.Count == 0)
+            return new VideoResolveResult(null, Array.Empty<string>());
 
-        return null;
+        if (list.Count == 1)
+            return new VideoResolveResult(list[0], Array.Empty<string>());
+
+        return new VideoResolveResult(null, list);
     }
 
     private static DateTime? TryReadRecordingDate(string exportRoot)

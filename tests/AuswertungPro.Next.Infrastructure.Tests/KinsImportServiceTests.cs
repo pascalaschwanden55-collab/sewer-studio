@@ -116,6 +116,37 @@ public sealed class KinsImportServiceTests
         Assert.Equal("2014", rec.GetFieldValue("Datum_Jahr"));
     }
 
+    [Fact]
+    public void ImportKinsExport_DoesNotLinkVideo_WhenFileNameIsAmbiguous()
+    {
+        using var dir = new TempDir();
+        var videoA = Path.Combine(dir.Path, "A", "A001.MPG");
+        var videoB = Path.Combine(dir.Path, "B", "A001.MPG");
+        Directory.CreateDirectory(Path.GetDirectoryName(videoA)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(videoB)!);
+        File.WriteAllText(videoA, "dummy-video-a");
+        File.WriteAllText(videoB, "dummy-video-b");
+
+        var content = string.Join(Environment.NewLine, new[]
+        {
+            "Schmutzwasser 23654 -> 23038 UV 450 @Datei=A001.MPG",
+            "   0.0m Rohranfang  @Pos=0:00:00"
+        });
+        File.WriteAllText(Path.Combine(dir.Path, "kiDVDaten.txt"), content);
+
+        var sut = new KinsImportService(
+            new FakeWinCanImport(Result<ImportStats>.Fail("X", "should not run")),
+            new FakeIbakImport(Result<ImportStats>.Fail("X", "should not run")));
+        var project = new Project();
+
+        var res = sut.ImportKinsExport(dir.Path, project);
+
+        Assert.True(res.Ok, res.ErrorMessage);
+        var rec = Assert.Single(project.Data);
+        Assert.True(string.IsNullOrWhiteSpace(rec.GetFieldValue("Link")));
+        Assert.Contains(res.Value!.Messages, m => m.Contains("mehrdeutig", StringComparison.OrdinalIgnoreCase));
+    }
+
     private sealed class FakeWinCanImport : IWinCanDbImportService
     {
         private readonly Result<ImportStats> _result;
