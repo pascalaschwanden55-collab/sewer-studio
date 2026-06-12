@@ -110,7 +110,7 @@ public sealed partial class ShellViewModel : ObservableObject
         ToggleFocusModeCommand = new RelayCommand(() => IsFocusMode = !IsFocusMode);
 
         SelectedNavItem = NavItems[0];
-        CurrentPage = SelectedNavItem.CreatePage();
+        SetCurrentPage(SelectedNavItem.CreatePage());
         ApplyGuideStep();
         Monitor.Start();
 
@@ -143,7 +143,7 @@ public sealed partial class ShellViewModel : ObservableObject
                 return;
 
             // Seiten mit ungespeichertem Zustand duerfen den Wechsel stoppen (Audit W2).
-            if (CurrentPage is IConfirmLeave guard && !guard.ConfirmLeave())
+            if (!ShellLeaveGuard.CanLeave(CurrentPage))
             {
                 _suppressLeaveGuard = true;
                 SelectedNavItem = _navItemBeforeChange;
@@ -152,7 +152,7 @@ public sealed partial class ShellViewModel : ObservableObject
             }
 
             _navItemBeforeChange = SelectedNavItem;
-            CurrentPage = SelectedNavItem.CreatePage();
+            SetCurrentPage(SelectedNavItem.CreatePage());
         };
     }
 
@@ -160,6 +160,16 @@ public sealed partial class ShellViewModel : ObservableObject
     // wenn eine Seite den Wechsel per IConfirmLeave ablehnt.
     private NavItem? _navItemBeforeChange;
     private bool _suppressLeaveGuard;
+
+    private void SetCurrentPage(object? nextPage)
+    {
+        var previousPage = CurrentPage;
+        if (ReferenceEquals(previousPage, nextPage))
+            return;
+
+        CurrentPage = nextPage;
+        ShellPageLifecycle.DisposeIfReplaced(previousPage, nextPage);
+    }
 
     partial void OnGuideStepIndexChanged(int value)
     {
@@ -286,7 +296,7 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
 
         // Direkter Seitenwechsel am Nav-Handler vorbei -> Leave-Guard hier ebenfalls (Audit W2).
-        if (CurrentPage is IConfirmLeave guard && !guard.ConfirmLeave())
+        if (!ShellLeaveGuard.CanLeave(CurrentPage))
             return;
 
         if (singleHoldingMode)
@@ -295,7 +305,7 @@ public sealed partial class ShellViewModel : ObservableObject
             SelectedNavItem = null;
             _suppressLeaveGuard = false;
             _navItemBeforeChange = null;
-            CurrentPage = new Pages.SanierungsMatrixPageViewModel(this, holding, singleHoldingMode: true, targetRecord);
+            SetCurrentPage(new Pages.SanierungsMatrixPageViewModel(this, holding, singleHoldingMode: true, targetRecord));
             return;
         }
 
@@ -385,7 +395,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         // Erst die aktive Seite fragen — die Sanierungs-Matrix haelt ihren Kosten-Stand
         // ausserhalb von Project.Dirty (costs.json), siehe Audit K1/W2.
-        if (CurrentPage is IConfirmLeave guard && !guard.ConfirmLeave())
+        if (!ShellLeaveGuard.CanLeave(CurrentPage))
             return false;
 
         if (Project is null || !Project.Dirty)

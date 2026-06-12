@@ -17,6 +17,12 @@ public partial class MainWindow : Window
 
     private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
+        if (DataContext is ShellViewModel closeVm && !ShellLeaveGuard.CanLeave(closeVm.CurrentPage))
+        {
+            e.Cancel = true;
+            return;
+        }
+
         if (DataContext is ShellViewModel vm && vm.Project.Dirty)
         {
             var result = MessageBox.Show(

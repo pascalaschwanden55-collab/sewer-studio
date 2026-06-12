@@ -1,3 +1,5 @@
+using System;
+
 namespace AuswertungPro.Next.UI.ViewModels;
 
 /// <summary>
@@ -10,4 +12,22 @@ public interface IConfirmLeave
 {
     /// <summary>true = verlassen erlaubt; false = auf der Seite bleiben.</summary>
     bool ConfirmLeave();
+}
+
+public static class ShellLeaveGuard
+{
+    public static bool CanLeave(object? currentPage)
+        => currentPage is not IConfirmLeave guard || guard.ConfirmLeave();
+}
+
+public static class ShellPageLifecycle
+{
+    public static void DisposeIfReplaced(object? previousPage, object? nextPage)
+    {
+        if (ReferenceEquals(previousPage, nextPage))
+            return;
+
+        if (previousPage is IDisposable disposable)
+            disposable.Dispose();
+    }
 }
