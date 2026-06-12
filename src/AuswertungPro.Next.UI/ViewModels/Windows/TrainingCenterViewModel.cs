@@ -638,16 +638,18 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         try
         {
-            var state = new TrainingCenterState
-            {
-                Cases = Cases.ToList(),
-                RootFolders = new List<string>(_rootFolders),
-                UpdatedUtc = DateTime.UtcNow
-            };
-            await _store.SaveAsync(state);
+            await _store.SaveAsync(BuildState());
         }
         catch { /* stilles Speichern */ }
     }
+
+    private TrainingCenterState BuildState()
+        => new()
+        {
+            Cases = Cases.ToList(),
+            RootFolders = new List<string>(_rootFolders),
+            UpdatedUtc = DateTime.UtcNow
+        };
 
     [RelayCommand]
     private async Task SaveAsync()
@@ -656,13 +658,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         try
         {
             IsBusy = true;
-            var state = new TrainingCenterState
-            {
-                Cases = Cases.ToList(),
-                RootFolders = new List<string>(_rootFolders),
-                UpdatedUtc = DateTime.UtcNow
-            };
-            await _store.SaveAsync(state);
+            await _store.SaveAsync(BuildState());
             StatusText = $"Gespeichert: {Cases.Count} Fälle, {_rootFolders.Count} Ordner";
         }
         finally
@@ -1467,11 +1463,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                     {
                         try
                         {
-                            await _store.SaveAsync(new TrainingCenterState
-                            {
-                                Cases = Cases.ToList(),
-                                UpdatedUtc = DateTime.UtcNow
-                            });
+                            await _store.SaveAsync(BuildState());
                         }
                         catch { /* best-effort, Samples sind bereits gesichert */ }
                     }
@@ -1511,11 +1503,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             await RefreshKbStatusAsync();
 
             // 5. Save cases
-            await _store.SaveAsync(new TrainingCenterState
-            {
-                Cases = Cases.ToList(),
-                UpdatedUtc = DateTime.UtcNow
-            });
+            await _store.SaveAsync(BuildState());
             Log("Fälle gespeichert. Batch-Import abgeschlossen.");
         }
         catch (OperationCanceledException)

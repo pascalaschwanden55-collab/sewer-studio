@@ -2,12 +2,15 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
 
 public sealed class TrainingCenterStore
 {
+    private readonly SemaphoreSlim _saveLock = new(1, 1);
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -72,6 +75,19 @@ public sealed class TrainingCenterStore
     /// </summary>
     public async Task SaveAsync(TrainingCenterState state)
     {
+        await _saveLock.WaitAsync();
+        try
+        {
+            await SaveCoreAsync(state);
+        }
+        finally
+        {
+            _saveLock.Release();
+        }
+    }
+
+    private async Task SaveCoreAsync(TrainingCenterState state)
+    {
         var dir = Path.GetDirectoryName(StoreFilePath)!;
         Directory.CreateDirectory(dir);
 
@@ -85,7 +101,7 @@ public sealed class TrainingCenterStore
         }
 
         // In temp-Datei schreiben, dann atomar umbenennen
-        var tempPath = StoreFilePath + ".tmp";
+        var tempPath = $"{StoreFilePath}.{Guid.NewGuid():N}.tmp";
         try
         {
             await using (var fs = File.Create(tempPath))
