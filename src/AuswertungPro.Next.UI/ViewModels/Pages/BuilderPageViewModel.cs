@@ -500,7 +500,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     {
         if (string.IsNullOrWhiteSpace(e.PropertyName))
         {
-            ScheduleRefreshData();
+            ScheduleRefreshDataOnUiThread();
             return;
         }
 
@@ -508,8 +508,19 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             e.PropertyName == nameof(HaltungRecord.ModifiedAtUtc) ||
             e.PropertyName.StartsWith("Fields[", StringComparison.Ordinal))
         {
-            ScheduleRefreshData();
+            ScheduleRefreshDataOnUiThread();
         }
+    }
+
+    private void ScheduleRefreshDataOnUiThread()
+    {
+        if (_refreshDebounceTimer.Dispatcher.CheckAccess())
+        {
+            ScheduleRefreshData();
+            return;
+        }
+
+        _refreshDebounceTimer.Dispatcher.BeginInvoke((Action)ScheduleRefreshData);
     }
 
     private void ScheduleRefreshData()
