@@ -138,6 +138,33 @@ public sealed class VisionPipelineClient
         string endpoint, TRequest request, CancellationToken ct)
     {
         var json = JsonSerializer.Serialize(request, JsonOpts);
+
+        // Gesamtaudit P3: genau EIN Retry bei transienten Fehlern (503 = Sidecar raeumt
+        // VRAM auf / laedt Modell um; Transportfehler = Sidecar startet gerade neu).
+        // Ohne Retry kippt ein einzelner Schluckauf den Frame unnoetig in den
+        // Degraded-/Skip-Pfad. Bewusst KEIN Retry bei Abbruch durch den Aufrufer und
+        // kein Mehrfach-Retry — echte Ausfaelle sollen schnell ehrlich scheitern.
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await PostOnceAsync<TResponse>(endpoint, json, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (attempt == 1 && !ct.IsCancellationRequested && IsTransientSidecarError(ex))
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(1500), ct).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private static bool IsTransientSidecarError(Exception ex)
+        => ex is HttpRequestException hre
+           && (hre.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable
+               || hre.StatusCode is null); // null = Transportfehler (Verbindung abgelehnt/abgerissen)
+
+    private async Task<TResponse> PostOnceAsync<TResponse>(
+        string endpoint, string json, CancellationToken ct)
+    {
         using var req = new HttpRequestMessage(HttpMethod.Post, BuildUri(endpoint))
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
@@ -152,7 +179,9 @@ public sealed class VisionPipelineClient
 
         if (!resp.IsSuccessStatusCode)
             throw new HttpRequestException(
-                $"Sidecar {endpoint} returned {(int)resp.StatusCode}: {body}");
+                $"Sidecar {endpoint} returned {(int)resp.StatusCode}: {body}",
+                inner: null,
+                statusCode: resp.StatusCode);
 
         var result = JsonSerializer.Deserialize<TResponse>(body, JsonOpts)
             ?? throw new InvalidOperationException($"Failed to deserialize response from {endpoint}");
