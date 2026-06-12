@@ -362,7 +362,7 @@ public partial class PlayerWindow
         CodingSidePanelColumn.Width = new GridLength(0);
         CodingToolbar.Visibility = Visibility.Collapsed;
         CodingTimelinePanel.Visibility = Visibility.Collapsed;
-        CodingDefectDetailPanel.Visibility = Visibility.Collapsed;
+        HideInlineDefectDetail();
         CodingCalibrationHint.Visibility = Visibility.Collapsed;
         CodingMeasurementPanel.Visibility = Visibility.Collapsed;
         OsdMeterBadge.Visibility = Visibility.Collapsed;
@@ -1985,7 +1985,6 @@ public partial class PlayerWindow
         _codingVm?.Events.Remove(codingEvent);
         if (_codingVm != null && ReferenceEquals(_codingVm.SelectedDefect, codingEvent))
             _codingVm.SelectedDefect = null;
-        CodingDefectDetailPanel.Visibility = Visibility.Collapsed;
         HideInlineDefectDetail();
         RefreshCodingEventsList();
     }
@@ -2024,13 +2023,11 @@ public partial class PlayerWindow
         if (LstCodingEvents.SelectedItem is CodingEvent ev)
         {
             if (_codingVm != null) _codingVm.SelectedDefect = ev;
-            UpdateCodingDefectDetailPanel(ev);
             UpdateInlineDefectDetail(ev);
         }
         else
         {
             if (_codingVm != null) _codingVm.SelectedDefect = null;
-            CodingDefectDetailPanel.Visibility = Visibility.Collapsed;
             HideInlineDefectDetail();
         }
     }
@@ -2173,7 +2170,7 @@ public partial class PlayerWindow
         _codingVm?.AcceptDefectCommand.Execute(null);
         if (_codingVm?.SelectedDefect != null)
         {
-            UpdateCodingDefectDetailPanel(_codingVm.SelectedDefect);
+            UpdateInlineDefectDetail(_codingVm.SelectedDefect);
             RefreshCodingEventsList();
             // Overlay kurz gruen blinken lassen, dann entfernen
             FadeOutAiOverlayAfterAction();
@@ -2223,7 +2220,7 @@ public partial class PlayerWindow
                 if (ev.AiContext != null)
                     _codingVm.EditDefectCommand.Execute(null);
                 RefreshCodingEventsList();
-                UpdateCodingDefectDetailPanel(ev);
+                UpdateInlineDefectDetail(ev);
             }
         }
         finally
@@ -2241,58 +2238,9 @@ public partial class PlayerWindow
         _codingSessionService?.RemoveEvent(ev.EventId);
         _codingVm.Events.Remove(ev);
         _codingVm.SelectedDefect = null;
-        CodingDefectDetailPanel.Visibility = Visibility.Collapsed;
+        HideInlineDefectDetail();
         RefreshCodingEventsList();
         FadeOutAiOverlayAfterAction();
-    }
-
-    /// <summary>Defekt-Detail-Panel mit Werten des ausgewaehlten Events befuellen.</summary>
-    /// Details werden jetzt oben im KI-BEFUNDE Panel angezeigt â€” unteres Panel bleibt collapsed.
-    private void UpdateCodingDefectDetailPanel(CodingEvent ev)
-    {
-        // CodingDefectDetailPanel.Visibility = Visibility.Visible; // Deaktiviert: Details sind im oberen Panel
-
-        TxtCodingDetailCode.Text = ev.Entry.Code;
-        TxtCodingDetailDescription.Text = ev.Entry.Beschreibung;
-        TxtCodingDetailDistance.Text = $"{ev.MeterAtCapture:F2}m";
-
-        // Uhrposition
-        TxtCodingDetailClock.Text = ev.Overlay?.ClockFrom != null
-            ? $"{ev.Overlay.ClockFrom:F0}h"
-            : "\u2013";
-
-        // Schweregrad
-        if (ev.Entry.CodeMeta?.Parameters != null &&
-            ev.Entry.CodeMeta.Parameters.TryGetValue("vsa.schweregrad", out var sev))
-            TxtCodingDetailSeverity.Text = sev;
-        else
-            TxtCodingDetailSeverity.Text = "\u2013";
-
-        // Konfidenz + Farbe
-        if (ev.AiContext != null)
-        {
-            double conf = ev.AiContext.Confidence;
-            TxtCodingDetailConfidence.Text = $"{conf * 100:F0}%";
-            TxtCodingDetailConfidence.Foreground = CodingSessionViewModel.GetConfidenceBrush(conf);
-            CodingDefectDetailBorderBrush.Color = ((SolidColorBrush)CodingSessionViewModel.GetZoneBrush(conf)).Color;
-        }
-        else
-        {
-            TxtCodingDetailConfidence.Text = "\u2013";
-            TxtCodingDetailConfidence.Foreground = new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8));
-            CodingDefectDetailBorderBrush.Color = Color.FromRgb(0x3B, 0x82, 0xF6);
-        }
-
-        // Status
-        var status = CodingSessionViewModel.GetDefectStatus(ev);
-        TxtCodingDetailStatus.Text = $"Status: {CodingStatusToDisplayText(status)}";
-
-        // Alle Aktionen immer verfuegbar â€” auch manuell codierte Events
-        // muessen bestaetigt werden bevor sie als Training-Signal gelten.
-        CodingDefectActionGrid.Visibility = Visibility.Visible;
-        BtnCodingAcceptDefect.Visibility = Visibility.Visible;
-        BtnCodingEditDefect.Visibility = Visibility.Visible;
-        BtnCodingRejectDefect.Visibility = Visibility.Visible;
     }
 
     private static string CodingStatusToDisplayText(DefectStatus status) => status switch

@@ -1,6 +1,5 @@
 using System.Windows.Controls;
 using System.Windows.Documents;
-using System.Windows.Media;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -22,19 +21,6 @@ public partial class PlayerWindow
     private Button BtnInlineReject => CodingSidePanelControl.BtnInlineReject;
     private Run RunImportDefectCount => CodingSidePanelControl.RunImportDefectCount;
     private ListBox LstImportEvents => CodingSidePanelControl.LstImportEvents;
-    private Border CodingDefectDetailPanel => CodingSidePanelControl.CodingDefectDetailPanel;
-    private SolidColorBrush CodingDefectDetailBorderBrush => CodingSidePanelControl.CodingDefectDetailBorderBrush;
-    private TextBlock TxtCodingDetailCode => CodingSidePanelControl.TxtCodingDetailCode;
-    private TextBlock TxtCodingDetailSeverity => CodingSidePanelControl.TxtCodingDetailSeverity;
-    private TextBlock TxtCodingDetailDescription => CodingSidePanelControl.TxtCodingDetailDescription;
-    private TextBlock TxtCodingDetailDistance => CodingSidePanelControl.TxtCodingDetailDistance;
-    private TextBlock TxtCodingDetailClock => CodingSidePanelControl.TxtCodingDetailClock;
-    private TextBlock TxtCodingDetailConfidence => CodingSidePanelControl.TxtCodingDetailConfidence;
-    private TextBlock TxtCodingDetailStatus => CodingSidePanelControl.TxtCodingDetailStatus;
-    private Grid CodingDefectActionGrid => CodingSidePanelControl.CodingDefectActionGrid;
-    private Button BtnCodingAcceptDefect => CodingSidePanelControl.BtnCodingAcceptDefect;
-    private Button BtnCodingEditDefect => CodingSidePanelControl.BtnCodingEditDefect;
-    private Button BtnCodingRejectDefect => CodingSidePanelControl.BtnCodingRejectDefect;
     private TextBlock TxtCodingCalibDn => CodingSidePanelControl.TxtCodingCalibDn;
     private TextBlock TxtCodingCalibStatus => CodingSidePanelControl.TxtCodingCalibStatus;
     private TextBlock TxtCodingQ1 => CodingSidePanelControl.TxtCodingQ1;
