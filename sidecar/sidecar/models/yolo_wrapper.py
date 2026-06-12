@@ -29,6 +29,9 @@ _tensorrt_class_warning_keys: set[tuple[str, int]] = set()
 # CPU-mode singleton (bypasses GpuModelManager when YOLO runs on CPU)
 _cpu_model = None
 _cpu_lock = threading.Lock()
+# Serialisiert YOLO-Detect-Inferenz (Gesamtaudit P7): parallele Threadpool-Requests
+# auf demselben Ultralytics-Modell koennen sich sonst verschraenken (Race/OOM).
+_yolo_predict_lock = threading.Lock()
 
 
 def _resolve_yolo_model_path() -> tuple[str, bool]:
@@ -386,12 +389,15 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
         )
 
     t0 = time.perf_counter()
-    results = model.predict(
-        source=np.array(img),
-        conf=confidence_threshold,
-        imgsz=settings.yolo_imgsz,
-        verbose=False,
-    )
+    # Ultralytics-Predict ist nicht thread-sicher; FastAPI fuehrt sync-Routen im
+    # Threadpool aus -> parallele Requests serialisieren (Gesamtaudit P7, wie SAM).
+    with _yolo_predict_lock:
+        results = model.predict(
+            source=np.array(img),
+            conf=confidence_threshold,
+            imgsz=settings.yolo_imgsz,
+            verbose=False,
+        )
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
     detections: list[YoloDetection] = []
@@ -439,6 +445,8 @@ def detect(image_base64: str, confidence_threshold: float) -> YoloResponse:
 _cls_model = None
 _cls_meta: dict | None = None
 _cls_lock = threading.Lock()
+# Serialisiert cls-Inferenz (Gesamtaudit P7) — _cls_lock selbst schuetzt nur das Laden.
+_cls_predict_lock = threading.Lock()
 
 
 def _sha256_of(path: Path) -> str:
@@ -634,6 +642,29 @@ def _letterbox_rgb(img: Image.Image, size: int) -> Image.Image:
     return canvas
 
 
+def get_classifier_status() -> dict:
+    """Klassifikator-Status fuer /health (Gesamtaudit P2; schliesst auch den Audit-Punkt
+    'cls-Metadaten fehlen in /health'). Geladen: name@sha des aktiven Modells. Nicht
+    geladen: nur Konfigurationslage — bewusst KEIN SHA-Hashing pro Health-Poll."""
+    meta = _cls_meta
+    if meta:
+        return {
+            "loaded": True,
+            "name": meta.get("name"),
+            "sha256_12": (meta.get("sha256") or "")[:12],
+            "source": meta.get("source"),
+            "imgsz": meta.get("imgsz"),
+            "preprocessing": meta.get("preprocessing"),
+        }
+
+    active = Path(settings.models_dir) / "active.json"
+    return {
+        "loaded": False,
+        "active_json_present": active.is_file(),
+        "override_configured": bool(settings.yolo_cls_model_path),
+    }
+
+
 def _classify_image(img: Image.Image, top_k: int) -> list[tuple[str, float, float]]:
     model = _get_cls_model()
     if model is None:
@@ -641,16 +672,18 @@ def _classify_image(img: Image.Image, top_k: int) -> list[tuple[str, float, floa
     meta = _cls_meta or {}
 
     t0 = time.perf_counter()
-    if meta.get("preprocessing") == "letterbox":
-        # Wie eval_cls.py --no-crop: Letterbox in PIL, dann RGB->BGR-Array
-        # (predict behandelt numpy-Eingaben als BGR und konvertiert intern).
-        imgsz = int(meta.get("imgsz") or settings.yolo_cls_imgsz)
-        lb = _letterbox_rgb(img, imgsz)
-        src = np.asarray(lb)[:, :, ::-1]
-        results = model.predict(source=src, imgsz=imgsz, verbose=False)
-    else:
-        # Legacy (Grundgeruest, mit Crop trainiert): bisheriges Verhalten
-        results = model.predict(source=np.array(img), verbose=False)
+    # Inferenz serialisieren (Gesamtaudit P7) — _cls_lock schuetzt nur das Laden.
+    with _cls_predict_lock:
+        if meta.get("preprocessing") == "letterbox":
+            # Wie eval_cls.py --no-crop: Letterbox in PIL, dann RGB->BGR-Array
+            # (predict behandelt numpy-Eingaben als BGR und konvertiert intern).
+            imgsz = int(meta.get("imgsz") or settings.yolo_cls_imgsz)
+            lb = _letterbox_rgb(img, imgsz)
+            src = np.asarray(lb)[:, :, ::-1]
+            results = model.predict(source=src, imgsz=imgsz, verbose=False)
+        else:
+            # Legacy (Grundgeruest, mit Crop trainiert): bisheriges Verhalten
+            results = model.predict(source=np.array(img), verbose=False)
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
     if not results or len(results) == 0:

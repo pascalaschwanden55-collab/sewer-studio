@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 import logging
 from pathlib import Path
@@ -14,6 +15,9 @@ from ..schemas.detection import DinoDetection, DinoResponse
 from .image_decode import decode_image_safe
 
 logger = logging.getLogger(__name__)
+
+# Serialisiert DINO-Inferenz (Gesamtaudit P7) — analog SAM-/YOLO-Predict-Lock.
+_dino_predict_lock = threading.Lock()
 
 _DINO_CONFIG: str | None = None
 _DINO_WEIGHTS: str | None = None
@@ -98,13 +102,16 @@ def detect(
         ])
         img_tensor = transform(img)
 
-        boxes, logits, phrases = predict(
-            model=model,
-            image=img_tensor,
-            caption=prompt,
-            box_threshold=box_threshold,
-            text_threshold=text_threshold,
-        )
+        # Inferenz serialisieren (Gesamtaudit P7): parallele Threadpool-Requests auf
+        # demselben DINO-Modell koennen sich verschraenken (Race/OOM) — wie SAM/YOLO.
+        with _dino_predict_lock:
+            boxes, logits, phrases = predict(
+                model=model,
+                image=img_tensor,
+                caption=prompt,
+                box_threshold=box_threshold,
+                text_threshold=text_threshold,
+            )
     except Exception as exc:
         # KEIN stilles "200 + leer": ein Inferenzfehler darf nicht wie "kein Befund"
         # aussehen. degraded=True + Fehlertext, voller Trace ins Log.
