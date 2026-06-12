@@ -142,6 +142,13 @@ public sealed class PdfProtocolExtractor
         @"\b(?:Schadensstufe|Schadenstufe|Schweregrad|Severity|Stufe|Klasse)\s*[:=]?\s*(?<severity>[1-5]|low|mid|mittel|high|hoch|niedrig|leicht|stark)\b|\bS(?<short>[1-5])\b",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    private static readonly string[] KnownTextAnchorWords =
+    {
+        "Leitung", "Video", "Foto", "Zustand", "Material",
+        "Schacht", "Kanal", "Haltung", "Inspektion", "Dimension",
+        "Profil", "Rohr", "Position", "Entf", "Strasse", "Wetter"
+    };
+
     // ── Öffentliche API ─────────────────────────────────────────────────────
 
     /// <param name="filePath">Pfad zur Protokoll-Datei (PDF oder JSON).</param>
@@ -275,6 +282,8 @@ public sealed class PdfProtocolExtractor
             {
                 var reason = usedOcrFallback
                     ? "OCR versucht, 0 Befunde"
+                    : LooksLikeUndecodableFontEncoding(text)
+                        ? "nicht dekodierbares Custom-Font-Encoding (hoher Steuerzeichenanteil, keine Textanker) -> OCR oder Re-Export noetig"
                     : "Text vorhanden, aber 0 Befunde erkannt (evtl. unbekanntes Format)";
                 NoteProblemPdf(path, reason);
             }
@@ -435,14 +444,7 @@ public sealed class PdfProtocolExtractor
         if (string.IsNullOrWhiteSpace(text))
             return text;
 
-        string[] knownWords =
-        {
-            "Leitung", "Video", "Foto", "Zustand", "Material",
-            "Schacht", "Kanal", "Haltung", "Inspektion", "Dimension",
-            "Profil", "Rohr", "Position", "Entf", "Strasse", "Wetter"
-        };
-
-        int existingMatches = CountWordMatches(text, knownWords);
+        int existingMatches = CountWordMatches(text, KnownTextAnchorWords);
         if (existingMatches >= 3)
             return text;
 
@@ -452,7 +454,7 @@ public sealed class PdfProtocolExtractor
         for (int shift = 1; shift <= 60; shift++)
         {
             var decoded = ShiftAllChars(text, shift);
-            int count = CountWordMatches(decoded, knownWords);
+            int count = CountWordMatches(decoded, KnownTextAnchorWords);
             if (count > bestCount)
             {
                 bestCount = count;
@@ -464,6 +466,37 @@ public sealed class PdfProtocolExtractor
             return ShiftAllChars(text, bestShift);
 
         return text;
+    }
+
+    internal static bool LooksLikeUndecodableFontEncoding(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        var chars = text.Where(ch => !char.IsWhiteSpace(ch)).ToList();
+        if (chars.Count < 80)
+            return false;
+
+        if (CountWordMatches(text, KnownTextAnchorWords) > 0)
+            return false;
+
+        var suspiciousChars = chars.Count(IsSuspiciousDecodedChar);
+        return suspiciousChars / (double)chars.Count >= 0.25;
+    }
+
+    private static bool IsSuspiciousDecodedChar(char ch)
+    {
+        if (char.IsControl(ch))
+            return true;
+
+        return char.GetUnicodeCategory(ch) switch
+        {
+            UnicodeCategory.Control => true,
+            UnicodeCategory.OtherNotAssigned => true,
+            UnicodeCategory.PrivateUse => true,
+            UnicodeCategory.Surrogate => true,
+            _ => false
+        };
     }
 
     private static int CountWordMatches(string text, string[] words)
