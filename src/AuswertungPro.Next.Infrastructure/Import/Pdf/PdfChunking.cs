@@ -200,13 +200,8 @@ public static class PdfChunking
     }
 
     private static string NormalizeMarkerId(string value)
-    {
-        var normalized = (value ?? "").Trim();
-        normalized = Regex.Replace(normalized, @"\s+", "");
-        normalized = normalized.Replace("/", "-");
-        return normalized;
-    }
+        => HoldingIdPlausibility.Normalize(value);
 
     private static bool IsLikelyHaltungId(string? value)
-        => !string.IsNullOrWhiteSpace(value) && Regex.IsMatch(value, @"^\d[\d\.]*-\d[\d\.]*$");
+        => HoldingIdPlausibility.IsLikelyHoldingId(value);
 }

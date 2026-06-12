@@ -548,7 +548,7 @@ public static partial class HoldingFolderDistributor
                 return false;
         }
 
-        return true;
+        return HoldingIdPlausibility.IsLikelyHoldingId(normalized);
     }
 
     /// <summary>

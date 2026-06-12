@@ -133,6 +133,19 @@ public sealed class LegacyPdfImportService
 
                     if (string.IsNullOrWhiteSpace(key))
                     {
+                        var implausibleCandidate = HoldingIdPlausibility.FindFirstImplausibleLabeledCandidate(chunk.Text);
+                        if (!string.IsNullOrWhiteSpace(implausibleCandidate))
+                        {
+                            stats.Uncertain++;
+                            stats.Messages.Add(new ImportMessage
+                            {
+                                Level = "Warn",
+                                Context = "PDF",
+                                Message = $"Chunk {chunk.Index} (Seiten {chunk.PageRange}) wegen unplausibler Haltungsnummer ignoriert: {implausibleCandidate}"
+                            });
+                            continue;
+                        }
+
                         if (ShouldSkipUnknownChunk(fields, chunk))
                         {
                             stats.Messages.Add(new ImportMessage
@@ -376,17 +389,18 @@ public sealed class LegacyPdfImportService
         stats.Uncertain++;
     }
 
-    private static string? TryExtractHoldingIdFromFileName(string pdfPath)
+    internal static string? TryExtractHoldingIdFromFileName(string pdfPath)
     {
         var name = Path.GetFileNameWithoutExtension(pdfPath) ?? "";
-        // e.g. 32953_1225 -> 32953-1225
-        var underscorePair = Regex.Match(name, @"(?<!\d)(\d{3,})_(\d{3,})(?!\d)");
-        if (underscorePair.Success)
-            return $"{underscorePair.Groups[1].Value}-{underscorePair.Groups[2].Value}";
-
         var dashPair = Regex.Match(name, @"(?<!\d)(\d[\d\.]*-\d[\d\.]*)(?!\d)");
         if (dashPair.Success)
             return NormalizeHoldingId(dashPair.Groups[1].Value);
+
+        // e.g. 32953_1225 -> 32953-1225. Must run after dash-pair extraction
+        // so dated names like 20250630_29120-03.27666 keep the real holding id.
+        var underscorePair = Regex.Match(name, @"(?<!\d)(\d{3,})_(\d{3,})(?!\d)");
+        if (underscorePair.Success)
+            return $"{underscorePair.Groups[1].Value}-{underscorePair.Groups[2].Value}";
 
         return null;
     }
@@ -476,20 +490,18 @@ public sealed class LegacyPdfImportService
         if (parsed.Success && parsed.Date is not null && IsLikelyHoldingId(parsed.Haltung))
             return NormalizeHoldingId(parsed.Haltung!);
 
+        var filenameHolding = TryExtractHoldingIdFromFileName(pdfPath);
+        if (IsLikelyHoldingId(filenameHolding))
+            return NormalizeHoldingId(filenameHolding!);
+
         return null;
     }
 
     private static bool IsLikelyHoldingId(string? value)
-        => !string.IsNullOrWhiteSpace(value)
-           && Regex.IsMatch(value!, @"^\s*\d[\d\.]*\s*[-/]\s*\d[\d\.]*\s*$");
+        => HoldingIdPlausibility.IsLikelyHoldingId(value);
 
     private static string NormalizeHoldingId(string value)
-    {
-        var normalized = value.Trim();
-        normalized = Regex.Replace(normalized, @"\s+", "");
-        normalized = normalized.Replace('/', '-');
-        return normalized;
-    }
+        => HoldingIdPlausibility.Normalize(value);
 
     private static bool LooksLikeSchachtProtokoll(string text)
     {

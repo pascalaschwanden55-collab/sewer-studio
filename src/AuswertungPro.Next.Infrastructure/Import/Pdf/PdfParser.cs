@@ -120,10 +120,12 @@ public sealed class PdfParser
                 result["Haltungsname"] = normalizedExisting;
                 return;
             }
+
+            result.Remove("Haltungsname");
         }
 
         var inferred = TryExtractHaltungsname(text);
-        if (!string.IsNullOrWhiteSpace(inferred))
+        if (!string.IsNullOrWhiteSpace(inferred) && IsLikelyHaltungId(inferred))
             result["Haltungsname"] = inferred!;
     }
 
@@ -170,19 +172,14 @@ public sealed class PdfParser
     }
 
     private static bool IsLikelyHaltungId(string? value)
-        => !string.IsNullOrWhiteSpace(value) && Regex.IsMatch(value, @"^\d[\d\.]*-\d[\d\.]*$");
+        => HoldingIdPlausibility.IsLikelyHoldingId(value);
 
     private static string NormalizeHaltungId(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return "";
 
-        var normalized = value.Trim();
-        normalized = Regex.Replace(normalized, @"\s+", "");
-        normalized = normalized.Replace("/", "-");
-        normalized = normalized.Replace("\u2013", "-"); // En-Dash
-        normalized = normalized.Replace("\u2014", "-"); // Em-Dash
-        return normalized;
+        return HoldingIdPlausibility.Normalize(value);
     }
 
     private static string ExtractLastGroup(Match m)
