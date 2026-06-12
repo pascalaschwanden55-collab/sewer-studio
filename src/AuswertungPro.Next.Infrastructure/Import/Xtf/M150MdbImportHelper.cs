@@ -1,9 +1,9 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Media;
@@ -935,46 +935,18 @@ finally {
 
             File.WriteAllText(tempScript, script, new UTF8Encoding(false));
 
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell",
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            psi.ArgumentList.Add("-NoProfile");
-            psi.ArgumentList.Add("-ExecutionPolicy");
-            psi.ArgumentList.Add("Bypass");
-            psi.ArgumentList.Add("-File");
-            psi.ArgumentList.Add(tempScript);
-            psi.ArgumentList.Add("-MdbPath");
-            psi.ArgumentList.Add(mdbPath);
-            psi.ArgumentList.Add("-OutPath");
-            psi.ArgumentList.Add(tempJson);
+            var result = ExternalProcessRunner.RunAsync(
+                "powershell",
+                ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", tempScript, "-MdbPath", mdbPath, "-OutPath", tempJson],
+                TimeSpan.FromSeconds(120),
+                Encoding.UTF8,
+                Encoding.UTF8).GetAwaiter().GetResult();
 
-            using var process = Process.Start(psi);
-            if (process is null)
+            if (!result.Success)
             {
-                error = "PowerShell konnte nicht gestartet werden.";
-                return false;
-            }
-
-            var stdoutTask = process.StandardOutput.ReadToEndAsync();
-            var stderrTask = process.StandardError.ReadToEndAsync();
-            if (!process.WaitForExit(120000))
-            {
-                try { process.Kill(entireProcessTree: true); } catch { }
-                error = "MDB-Import timeout nach 120 Sekunden.";
-                return false;
-            }
-
-            var stdout = stdoutTask.GetAwaiter().GetResult();
-            var stderr = stderrTask.GetAwaiter().GetResult();
-
-            if (process.ExitCode != 0)
-            {
-                error = string.IsNullOrWhiteSpace(stderr) ? stdout : stderr;
+                error = string.IsNullOrWhiteSpace(result.StdErr) ? result.StdOut : result.StdErr;
+                if (string.IsNullOrWhiteSpace(error))
+                    error = result.Message ?? "MDB-Import fehlgeschlagen.";
                 return false;
             }
 

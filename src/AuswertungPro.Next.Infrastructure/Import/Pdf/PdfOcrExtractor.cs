@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
@@ -11,6 +12,14 @@ internal static class PdfOcrExtractor
     {
         if (string.IsNullOrWhiteSpace(pdfPath) || !File.Exists(pdfPath))
             return new OcrPageExtractionResult(false, null, "PDF not found");
+        try
+        {
+            PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
+        }
+        catch (Exception ex)
+        {
+            return new OcrPageExtractionResult(false, null, ex.Message);
+        }
         if (pageNumber <= 0)
             return new OcrPageExtractionResult(false, null, "Invalid page number");
 
@@ -166,34 +175,14 @@ internal static class PdfOcrExtractor
 
     private static ProcessRunResult RunProcess(string exePath, string[] args, int timeoutMs)
     {
-        var psi = new ProcessStartInfo
-        {
-            FileName = exePath,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8
-        };
-        foreach (var a in args) psi.ArgumentList.Add(a);
+        var result = ExternalProcessRunner.RunAsync(
+            exePath,
+            args,
+            TimeSpan.FromMilliseconds(timeoutMs),
+            Encoding.UTF8,
+            Encoding.UTF8).GetAwaiter().GetResult();
 
-        using var process = Process.Start(psi);
-        if (process is null)
-            return new ProcessRunResult(false, "Failed to start process", string.Empty);
-
-        var stdOut = process.StandardOutput.ReadToEnd();
-        var stdErr = process.StandardError.ReadToEnd();
-        if (!process.WaitForExit(timeoutMs))
-        {
-            try { process.Kill(entireProcessTree: true); } catch { }
-            return new ProcessRunResult(false, "Timeout", stdOut);
-        }
-
-        if (process.ExitCode != 0)
-            return new ProcessRunResult(false, string.IsNullOrWhiteSpace(stdErr) ? $"ExitCode {process.ExitCode}" : stdErr.Trim(), stdOut);
-
-        return new ProcessRunResult(true, null, stdOut);
+        return new ProcessRunResult(result.Success, result.Message, result.StdOut);
     }
 
     private sealed record ProcessRunResult(bool Success, string? Message, string StdOut);

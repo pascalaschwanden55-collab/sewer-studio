@@ -9,12 +9,9 @@ public sealed class VsaKekCatalogBuilderTests
     private const string VsaKekXtfPath =
         @"D:\Videoprojekte\Erstfeld_Jagdmatt_38454_0426\Erstfeld_Jagdmatt_38454_0426_Export\Erstfeld_Jagdmatt_38454_0426.xtf";
 
-    [Fact]
+    [Fact(Skip = "Benoetigt lokale VSA-KEK-Export-Fixture unter D:\\Videoprojekte; nicht Teil des Repositorys.")]
     public void BuildFromVsaKekArchive_ProducesExpectedManifestRules()
     {
-        if (!File.Exists(VsaKekArchivePath) || !File.Exists(VsaKekXtfPath))
-            return;
-
         var manifest = BuildManifestFromVsaKekExport();
 
         Assert.Equal(322, manifest.Codes.Count(c =>

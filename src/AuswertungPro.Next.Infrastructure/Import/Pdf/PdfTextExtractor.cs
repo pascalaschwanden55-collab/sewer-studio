@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using AuswertungPro.Next.Application.Common;
 using UglyToad.PdfPig;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
@@ -64,6 +65,7 @@ public static class PdfTextExtractor
     {
         if (string.IsNullOrWhiteSpace(pdfPath) || !File.Exists(pdfPath))
             throw new FileNotFoundException($"PDF nicht gefunden: {pdfPath}");
+        PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
         try
         {
             return ExtractPagesWithPdfToText(pdfPath, explicitPdfToTextPath);
@@ -82,29 +84,15 @@ public static class PdfTextExtractor
 
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = pdftotext,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardError = true,
-                RedirectStandardOutput = true
-            };
-            psi.ArgumentList.Add("-enc");
-            psi.ArgumentList.Add("UTF-8");
-            psi.ArgumentList.Add("-layout");
-            psi.ArgumentList.Add(pdfPath);
-            psi.ArgumentList.Add(tempOut);
+            var result = ExternalProcessRunner.RunAsync(
+                pdftotext,
+                ["-enc", "UTF-8", "-layout", pdfPath, tempOut],
+                TimeSpan.FromSeconds(60),
+                Encoding.UTF8,
+                Encoding.UTF8).GetAwaiter().GetResult();
 
-            using var proc = Process.Start(psi);
-            if (proc is null)
-                throw new InvalidOperationException("pdftotext Prozess konnte nicht gestartet werden.");
-
-            var stderr = proc.StandardError.ReadToEnd();
-            proc.WaitForExit();
-
-            if (proc.ExitCode != 0)
-                throw new InvalidOperationException($"pdftotext fehlgeschlagen (ExitCode {proc.ExitCode}). {stderr}".Trim());
+            if (!result.Success)
+                throw new InvalidOperationException($"pdftotext fehlgeschlagen. {result.Message}".Trim());
 
             var content = File.ReadAllText(tempOut, Encoding.UTF8);
             content = (content ?? "").Replace("\r\n", "\n");
@@ -127,6 +115,7 @@ public static class PdfTextExtractor
     private static PdfTextExtraction ExtractPagesWithPdfPig(string pdfPath)
     {
         using var doc = PdfDocument.Open(pdfPath);
+        PdfImportSafetyPolicy.ThrowIfTooManyPages(doc.NumberOfPages);
         var pages = new List<string>();
 
         foreach (var page in doc.GetPages())

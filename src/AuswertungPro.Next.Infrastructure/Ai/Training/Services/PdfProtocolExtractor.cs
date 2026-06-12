@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.VsaCatalog;
+using AuswertungPro.Next.Infrastructure.Import.Pdf;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -201,7 +202,9 @@ public sealed class PdfProtocolExtractor
     {
         try
         {
+            PdfImportSafetyPolicy.ThrowIfFileTooLarge(path);
             using var doc = UglyToad.PdfPig.PdfDocument.Open(path);
+            PdfImportSafetyPolicy.ThrowIfTooManyPages(doc.NumberOfPages);
 
             var text = ExtractTextFromPdfDoc(doc);
             if (string.IsNullOrWhiteSpace(text))

@@ -1,7 +1,8 @@
 using System;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Text;
+using AuswertungPro.Next.Application.Common;
 namespace AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
 /// <summary>
@@ -69,22 +70,16 @@ public static class GpuModelSelector
 
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = nvidiaSmi,
-                Arguments = "--query-gpu=memory.total,name --format=csv,noheader,nounits",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-
-            using var proc = Process.Start(psi);
-            if (proc is null)
+            var result = ExternalProcessRunner.RunAsync(
+                nvidiaSmi,
+                ["--query-gpu=memory.total,name", "--format=csv,noheader,nounits"],
+                TimeSpan.FromSeconds(5),
+                Encoding.UTF8,
+                Encoding.UTF8).GetAwaiter().GetResult();
+            if (!result.Success)
                 return null;
 
-            var output = proc.StandardOutput.ReadToEnd();
-            proc.WaitForExit(5000);
+            var output = result.StdOut;
 
             // Format: "32768, NVIDIA GeForce RTX 5090"
             var parts = output.Trim().Split(',', StringSplitOptions.TrimEntries);
@@ -137,23 +132,14 @@ public static class GpuModelSelector
         // Fallback: PATH
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "nvidia-smi",
-                Arguments = "--version",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-            using var proc = Process.Start(psi);
-            if (proc is not null)
-            {
-                proc.StandardOutput.ReadToEnd();
-                proc.WaitForExit(3000);
-                if (proc.ExitCode == 0)
-                    return "nvidia-smi";
-            }
+            var result = ExternalProcessRunner.RunAsync(
+                "nvidia-smi",
+                ["--version"],
+                TimeSpan.FromSeconds(3),
+                Encoding.UTF8,
+                Encoding.UTF8).GetAwaiter().GetResult();
+            if (result.Success)
+                return "nvidia-smi";
         }
         catch { /* nicht im PATH */ }
 

@@ -444,7 +444,9 @@ public sealed class LegacyPdfImportService
     {
         try
         {
+            PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
             using var document = PdfDocument.Open(pdfPath);
+            PdfImportSafetyPolicy.ThrowIfTooManyPages(document.NumberOfPages);
             return document.NumberOfPages;
         }
         catch

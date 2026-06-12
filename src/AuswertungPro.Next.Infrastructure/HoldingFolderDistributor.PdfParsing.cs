@@ -148,7 +148,9 @@ public static partial class HoldingFolderDistributor
         {
             // Absoluter Fallback: page.Text (besser als nichts)
             var pages = new List<PageInfo>();
+            PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
             using var doc = PdfDocument.Open(pdfPath);
+            PdfImportSafetyPolicy.ThrowIfTooManyPages(doc.NumberOfPages);
             var pageNumber = 0;
             foreach (var page in doc.GetPages())
             {
@@ -164,7 +166,9 @@ public static partial class HoldingFolderDistributor
     private static string ReadPdfText(string pdfPath)
     {
         var sb = new StringBuilder();
+        PdfImportSafetyPolicy.ThrowIfFileTooLarge(pdfPath);
         using var doc = PdfDocument.Open(pdfPath);
+        PdfImportSafetyPolicy.ThrowIfTooManyPages(doc.NumberOfPages);
         foreach (var page in doc.GetPages())
             sb.AppendLine(page.Text);
         return sb.ToString();
@@ -1443,7 +1447,9 @@ public static partial class HoldingFolderDistributor
 
     private static void WritePdfPages(string sourcePdfPath, IReadOnlyList<int> pages, string destPdfPath)
     {
+        PdfImportSafetyPolicy.ThrowIfFileTooLarge(sourcePdfPath);
         using var doc = PdfDocument.Open(sourcePdfPath);
+        PdfImportSafetyPolicy.ThrowIfTooManyPages(doc.NumberOfPages);
         using var builder = new PdfDocumentBuilder();
 
         foreach (var pageNumber in pages)
@@ -1468,10 +1474,14 @@ public static partial class HoldingFolderDistributor
         var mergedTempPath = Path.Combine(Path.GetTempPath(), $"merge_{Guid.NewGuid():N}.pdf");
         try
         {
+            PdfImportSafetyPolicy.ThrowIfFileTooLarge(targetPdfPath);
+            PdfImportSafetyPolicy.ThrowIfFileTooLarge(additionalPdfPath);
             using (var targetDoc = PdfDocument.Open(targetPdfPath))
             using (var additionalDoc = PdfDocument.Open(additionalPdfPath))
             using (var builder = new PdfDocumentBuilder())
             {
+                PdfImportSafetyPolicy.ThrowIfTooManyPages(targetDoc.NumberOfPages);
+                PdfImportSafetyPolicy.ThrowIfTooManyPages(additionalDoc.NumberOfPages);
                 foreach (var page in targetDoc.GetPages())
                     builder.AddPage(targetDoc, page.Number);
 
@@ -1547,7 +1557,9 @@ public static partial class HoldingFolderDistributor
         var correctedTempPath = Path.Combine(Path.GetTempPath(), $"pdfcorr_{Guid.NewGuid():N}.pdf");
         try
         {
+            PdfImportSafetyPolicy.ThrowIfFileTooLarge(sourcePdfPath);
             using var sourceDocument = PdfDocument.Open(sourcePdfPath);
+            PdfImportSafetyPolicy.ThrowIfTooManyPages(sourceDocument.NumberOfPages);
             using var builder = new PdfDocumentBuilder();
             var overlayFont = builder.AddStandard14Font(Standard14Font.Helvetica);
 

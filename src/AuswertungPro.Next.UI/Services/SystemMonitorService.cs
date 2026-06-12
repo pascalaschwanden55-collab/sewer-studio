@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using AuswertungPro.Next.Application.Common;
 using LibreHardwareMonitor.Hardware;
 using Microsoft.Win32;
 
@@ -860,21 +861,15 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     {
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = "-NoProfile -NoLogo -Command \"$z = Get-CimInstance Win32_PerfFormattedData_Counters_ThermalZoneInformation -ErrorAction SilentlyContinue | Sort-Object Temperature -Descending | Select-Object -First 1; if($z -and $z.Temperature -gt 200){[math]::Round($z.Temperature - 273.15)}else{'0'}\"",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
+            var result = ExternalProcessRunner.RunAsync(
+                "powershell.exe",
+                ["-NoProfile", "-NoLogo", "-Command", "$z = Get-CimInstance Win32_PerfFormattedData_Counters_ThermalZoneInformation -ErrorAction SilentlyContinue | Sort-Object Temperature -Descending | Select-Object -First 1; if($z -and $z.Temperature -gt 200){[math]::Round($z.Temperature - 273.15)}else{'0'}"],
+                TimeSpan.FromSeconds(5),
+                Encoding.UTF8,
+                Encoding.UTF8).GetAwaiter().GetResult();
+            if (!result.Success) return;
 
-            using var proc = Process.Start(psi);
-            if (proc is null) return;
-
-            var output = proc.StandardOutput.ReadToEnd().Trim();
-            proc.WaitForExit(5000);
+            var output = result.StdOut.Trim();
 
             if (int.TryParse(output, NumberStyles.Integer, CultureInfo.InvariantCulture, out var celsius)
                 && celsius > 0 && celsius < 150)
@@ -914,21 +909,15 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     {
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = "-NoProfile -NoLogo -Command \"$t = Get-CimInstance -Namespace root/WMI -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue | Select-Object -First 1; if($t){$t.CurrentTemperature}else{'0'}\"",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
+            var result = ExternalProcessRunner.RunAsync(
+                "powershell.exe",
+                ["-NoProfile", "-NoLogo", "-Command", "$t = Get-CimInstance -Namespace root/WMI -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue | Select-Object -First 1; if($t){$t.CurrentTemperature}else{'0'}"],
+                TimeSpan.FromSeconds(5),
+                Encoding.UTF8,
+                Encoding.UTF8).GetAwaiter().GetResult();
+            if (!result.Success) return;
 
-            using var proc = Process.Start(psi);
-            if (proc is null) return;
-
-            var output = proc.StandardOutput.ReadToEnd().Trim();
-            proc.WaitForExit(5000);
+            var output = result.StdOut.Trim();
 
             if (int.TryParse(output, NumberStyles.Integer, CultureInfo.InvariantCulture, out var raw) && raw > 0)
             {
@@ -1096,21 +1085,15 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         {
             try
             {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = _nvidiaSmiPath!,
-                    Arguments = "--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,clocks.current.graphics,name --format=csv,noheader,nounits",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
+                var result = ExternalProcessRunner.RunAsync(
+                    _nvidiaSmiPath!,
+                    ["--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,clocks.current.graphics,name", "--format=csv,noheader,nounits"],
+                    TimeSpan.FromSeconds(3),
+                    Encoding.UTF8,
+                    Encoding.UTF8).GetAwaiter().GetResult();
+                if (!result.Success) return;
 
-                using var proc = Process.Start(psi);
-                if (proc is null) return;
-
-                var output = proc.StandardOutput.ReadToEnd();
-                proc.WaitForExit(3000);
+                var output = result.StdOut;
 
                 // Parse "82, 4521, 12288, 65, 1920, NVIDIA GeForce RTX 4070"
                 var parts = output.Trim().Split(',', StringSplitOptions.TrimEntries);
@@ -1191,23 +1174,14 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         // Fallback: try from PATH
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "nvidia-smi",
-                Arguments = "--version",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
-            using var proc = Process.Start(psi);
-            if (proc is not null)
-            {
-                proc.StandardOutput.ReadToEnd();
-                proc.WaitForExit(3000);
-                if (proc.ExitCode == 0)
-                    return "nvidia-smi";
-            }
+            var result = ExternalProcessRunner.RunAsync(
+                "nvidia-smi",
+                ["--version"],
+                TimeSpan.FromSeconds(3),
+                Encoding.UTF8,
+                Encoding.UTF8).GetAwaiter().GetResult();
+            if (result.Success)
+                return "nvidia-smi";
         }
         catch { /* not in PATH */ }
 

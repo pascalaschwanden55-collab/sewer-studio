@@ -1,7 +1,7 @@
-using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Protocol;
 
@@ -551,29 +551,16 @@ public static class VsaKekCatalogArchiveReader
         if (string.IsNullOrWhiteSpace(entryName))
             throw new ArgumentException("Archiveintrag fehlt.", nameof(entryName));
 
-        var psi = new ProcessStartInfo
-        {
-            FileName = "tar",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
-            CreateNoWindow = true
-        };
-        psi.ArgumentList.Add("-xOf");
-        psi.ArgumentList.Add(archivePath);
-        psi.ArgumentList.Add(entryName);
+        var result = ExternalProcessRunner.RunAsync(
+            "tar",
+            ["-xOf", archivePath, entryName],
+            TimeSpan.FromSeconds(30),
+            Encoding.UTF8,
+            Encoding.UTF8).GetAwaiter().GetResult();
 
-        using var process = Process.Start(psi)
-            ?? throw new InvalidOperationException("tar konnte nicht gestartet werden.");
-        var output = process.StandardOutput.ReadToEnd();
-        var error = process.StandardError.ReadToEnd();
-        process.WaitForExit();
+        if (!result.Success)
+            throw new InvalidOperationException($"Archiveintrag konnte nicht gelesen werden: {entryName}. {result.Message}");
 
-        if (process.ExitCode != 0)
-            throw new InvalidOperationException($"Archiveintrag konnte nicht gelesen werden: {entryName}. {error}");
-
-        return output;
+        return result.StdOut;
     }
 }
