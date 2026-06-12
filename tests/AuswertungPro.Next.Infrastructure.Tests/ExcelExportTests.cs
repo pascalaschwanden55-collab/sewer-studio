@@ -118,4 +118,23 @@ public sealed class ExcelExportTests
         Assert.Equal(12.5d, outWs.Cell(startRow, lenCol).GetDouble(), 3);
         Assert.Equal("In Fliessrichtung", outWs.Cell(startRow, flCol).GetString());
     }
+
+    [Theory]
+    [InlineData("1234.56", 1234.56)]
+    [InlineData("1'234.56", 1234.56)]
+    [InlineData("1.234,56", 1234.56)]
+    [InlineData("1234,56", 1234.56)]
+    public void TryParseExcelNumber_HandlesInvariantGermanAndSwissFormats(string raw, double expected)
+    {
+        var method = typeof(ExcelTemplateExportService).GetMethod(
+            "TryParseExcelNumber",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        Assert.NotNull(method);
+
+        object?[] args = [raw, null];
+        var ok = (bool)method!.Invoke(null, args)!;
+
+        Assert.True(ok);
+        Assert.Equal(expected, (double)args[1]!, 3);
+    }
 }

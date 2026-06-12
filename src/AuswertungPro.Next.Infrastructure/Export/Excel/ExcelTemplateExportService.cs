@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text;
 using ClosedXML.Excel;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Export;
@@ -186,8 +187,7 @@ public sealed class ExcelTemplateExportService : IExcelExportService
             return;
         }
 
-        s = s.Replace("'", "").Replace(",", ".");
-        if (double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
+        if (TryParseExcelNumber(s, out var d))
             ws.Cell(row, col).Value = d;
         else
             ws.Cell(row, col).Value = (value ?? "").Trim();
@@ -199,12 +199,50 @@ public sealed class ExcelTemplateExportService : IExcelExportService
         if (string.IsNullOrWhiteSpace(s))
             return false;
 
-        s = s.Replace("'", "").Replace(",", ".");
-        if (!double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
+        if (!TryParseExcelNumber(s, out var d))
             return false;
 
         ws.Cell(row, col).Value = d;
         return true;
+    }
+
+    private static bool TryParseExcelNumber(string? value, out double result)
+    {
+        result = 0;
+        var s = (value ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(s))
+            return false;
+
+        s = s.Replace("'", "").Replace(" ", "").Replace("\u00A0", "");
+        var lastComma = s.LastIndexOf(',');
+        var lastDot = s.LastIndexOf('.');
+        var decimalSeparator = lastComma >= 0 && lastDot >= 0
+            ? (lastComma > lastDot ? ',' : '.')
+            : (lastComma >= 0 ? ',' : '.');
+
+        var normalized = new StringBuilder(s.Length);
+        for (var i = 0; i < s.Length; i++)
+        {
+            var ch = s[i];
+            if (char.IsDigit(ch) || (i == 0 && ch is '+' or '-'))
+            {
+                normalized.Append(ch);
+                continue;
+            }
+
+            if (ch == decimalSeparator)
+            {
+                normalized.Append('.');
+                continue;
+            }
+
+            if (ch is '.' or ',')
+                continue;
+
+            return false;
+        }
+
+        return double.TryParse(normalized.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out result);
     }
 
     private static int? TryInt(string? s)
