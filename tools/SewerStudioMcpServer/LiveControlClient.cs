@@ -1,4 +1,5 @@
 using System.IO;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -42,12 +43,20 @@ public static class LiveControlClient
 
     private static async Task<object> SendAsync(string liveControlUrl, HttpMethod method, string path, object? body)
     {
-        var url = BuildUrl(liveControlUrl, path);
+        if (!TryBuildLoopbackUrl(liveControlUrl, path, out var url, out var urlError))
+        {
+            return new
+            {
+                ok = false,
+                live_control_url = liveControlUrl,
+                error = urlError
+            };
+        }
 
         try
         {
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
-            using var request = new HttpRequestMessage(method, url);
+            using var request = new HttpRequestMessage(method, url!);
 
             // Token: bevorzugt aus der Env-Var, sonst aus der vom App-Server erzeugten Token-Datei.
             var token = ResolveToken();
@@ -64,7 +73,7 @@ public static class LiveControlClient
             return new
             {
                 ok = response.IsSuccessStatusCode,
-                live_control_url = url.ToString(),
+                live_control_url = url!.ToString(),
                 status_code = (int)response.StatusCode,
                 response = doc.RootElement.Clone()
             };
@@ -74,7 +83,7 @@ public static class LiveControlClient
             return new
             {
                 ok = false,
-                live_control_url = url.ToString(),
+                live_control_url = url!.ToString(),
                 error = ex.Message
             };
         }
@@ -108,13 +117,58 @@ public static class LiveControlClient
         return null;
     }
 
-    private static Uri BuildUrl(string liveControlUrl, string path)
+    public static bool TryBuildLoopbackUrl(string? liveControlUrl, string path, out Uri? url, out string? error)
     {
+        url = null;
+        error = null;
+
         var baseUrl = string.IsNullOrWhiteSpace(liveControlUrl)
             ? "http://127.0.0.1:8765/"
             : liveControlUrl;
         if (!baseUrl.EndsWith('/'))
             baseUrl += "/";
-        return new Uri(new Uri(baseUrl), path);
+
+        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
+        {
+            error = "live_control_url ist keine gueltige absolute URL.";
+            return false;
+        }
+
+        if (baseUri.Scheme is not ("http" or "https"))
+        {
+            error = "live_control_url muss http/https verwenden und auf loopback zeigen.";
+            return false;
+        }
+
+        if (!IPAddressLoopbackPolicy.IsLoopbackHost(baseUri.Host))
+        {
+            error = "live_control_url muss auf loopback zeigen (localhost, 127.0.0.1 oder ::1).";
+            return false;
+        }
+
+        var relativePath = path.TrimStart('/');
+        var candidate = new Uri(baseUri, relativePath);
+        if (!IPAddressLoopbackPolicy.IsLoopbackHost(candidate.Host))
+        {
+            error = "live_control_url darf nicht auf einen externen Host umleiten.";
+            return false;
+        }
+
+        url = candidate;
+        return true;
+    }
+}
+
+public static class IPAddressLoopbackPolicy
+{
+    public static bool IsLoopbackHost(string? host)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+            return false;
+
+        if (string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return IPAddress.TryParse(host, out var address) && IPAddress.IsLoopback(address);
     }
 }

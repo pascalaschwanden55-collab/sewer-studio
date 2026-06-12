@@ -169,12 +169,18 @@ kbd{background:#0f172a;border:1px solid #475569;border-bottom-width:2px;border-r
 
 <script>
 const WIN=10;               // muss zum Server-Default (win=10) passen
-let ITEMS=[], KT={}, idx=0, dur=0, clipStart=0, activeCodeGroup='';
+let ITEMS=[], KT={}, idx=0, dur=0, clipStart=0, activeCodeGroup='', SESSION_TOKEN='';
 
 function el(id){return document.getElementById(id)}
 function toast(m){const t=el('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600)}
 function fmt(t){return t.toFixed(2)+'s'}
 function escHtml(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+function authHeaders(){return {'Content-Type':'application/json','X-Video-Label-Token':SESSION_TOKEN}}
+async function initSession(){
+  const r=await fetch('/session.json',{cache:'no-store'});
+  const d=await r.json();
+  SESSION_TOKEN=d.video_label_token||'';
+}
 function codeText(code){return code==='LEER'?'Kein Befund':(KT[code]||'')}
 function allCodes(){
   const set=new Set(Object.keys(KT).map(c=>String(c).trim().toUpperCase()).filter(Boolean));
@@ -217,6 +223,7 @@ function renderCodeBrowser(){
 }
 
 async function load(){
+  await initSession();
   const r=await fetch('/findings.json');const d=await r.json();
   ITEMS=d.items;KT=d.klartext||{};
   const dl=el('codelist');dl.innerHTML=Object.keys(KT).sort((a,b)=>a.localeCompare(b,'de'))
@@ -292,7 +299,7 @@ async function save(decision){
   const body={key:f.id,decision,chosen_code:(decision==='empty'?'LEER':chosen),
     chosen_time:chosenTime,note:el('notein').value,image_png_b64:img};
   try{
-    const r=await fetch('/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const r=await fetch('/save',{method:'POST',headers:authHeaders(),body:JSON.stringify(body)});
     const d=await r.json();
     if(!d.ok){toast('Fehler: '+(d.error||'?'));return}
     f.decision=decision;
@@ -350,7 +357,7 @@ async function runSam(){
   if(!bp){toast('Erst eine Box ziehen');return;}
   el('annostat').textContent='SAM läuft…';
   try{
-    const r=await fetch('/segment',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/segment',{method:'POST',headers:authHeaders(),
       body:JSON.stringify({key:f.id,frame_png_b64:anno.frameDataUrl,box_px:bp,code:el('anncode').value})});
     const d=await r.json();
     if(!d.ok){el('annostat').textContent='SAM: '+(d.error||'keine Maske');return;}
@@ -370,7 +377,7 @@ async function saveAnnotated(){
     image_png_b64:anno.frameDataUrl,box_norm:box_norm,box_px:bp,mask_rle:anno.maskRle,
     image_w:anno.natW,image_h:anno.natH,area_pixels:anno.area,note:el('notein').value};
   try{
-    const r=await fetch('/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const r=await fetch('/save',{method:'POST',headers:authHeaders(),body:JSON.stringify(body)});
     const d=await r.json();
     if(!d.ok){toast('Fehler: '+(d.error||'?'));return;}
     f.decision='confirm';toast(anno.maskRle?'✓ Gold + Maske gespeichert':'✓ Gold gespeichert');

@@ -23,6 +23,7 @@ import glob
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -52,6 +53,40 @@ KLARTEXT = {
 }
 FFMPEG = shutil.which("ffmpeg") or "ffmpeg"
 SIDECAR_URL = (os.environ.get("SEWER_SIDECAR_URL") or "http://127.0.0.1:8100").rstrip("/")
+MAX_POST_BYTES = 24 * 1024 * 1024
+VIDEO_LABEL_TOKEN = (os.environ.get("SEWERSTUDIO_VIDEO_LABEL_TOKEN") or secrets.token_urlsafe(32)).strip()
+
+
+def is_allowed_local_host(value):
+    host = (value or "").strip().lower()
+    if not host:
+        return False
+    if host.startswith("[::1]"):
+        return True
+    host = host.split(":", 1)[0]
+    return host in ("localhost", "127.0.0.1", "::1")
+
+
+def is_allowed_same_origin(value):
+    if not value:
+        return True
+    try:
+        parsed = urllib.parse.urlparse(value)
+    except Exception:
+        return False
+    return parsed.scheme in ("http", "https") and is_allowed_local_host(parsed.netloc)
+
+
+def require_post_auth(handler):
+    if not is_allowed_local_host(handler.headers.get("Host", "")):
+        return False, "ungueltiger Host"
+    if handler.headers.get("X-Video-Label-Token", "") != VIDEO_LABEL_TOKEN:
+        return False, "ungueltiges Token"
+    if not is_allowed_same_origin(handler.headers.get("Origin")):
+        return False, "ungueltiger Origin"
+    if not is_allowed_same_origin(handler.headers.get("Referer")):
+        return False, "ungueltiger Referer"
+    return True, ""
 
 
 def sidecar_token():
@@ -268,6 +303,8 @@ class Handler(BaseHTTPRequestHandler):
         if u.path in ("/", "/index.html"):
             with open(os.path.join(HERE, "app.html"), "rb") as fh:
                 self._send(200, fh.read(), "text/html; charset=utf-8")
+        elif u.path == "/session.json":
+            self._send(200, {"video_label_token": VIDEO_LABEL_TOKEN}, extra={"Cache-Control": "no-store"})
         elif u.path == "/findings.json":
             done = ledger_keys()
             items = [{**FINDINGS[k], "decision": done.get(k, "")} for k in ORDER]
@@ -358,8 +395,16 @@ class Handler(BaseHTTPRequestHandler):
         u = urllib.parse.urlparse(self.path)
         if u.path not in ("/save", "/segment"):
             return self._send(404, {"error": "not found"})
-        n = int(self.headers.get("Content-Length", "0"))
-        if n > 80 * 1024 * 1024:                       # Frame-PNG + ggf. Maske; grosszuegig
+
+        ok, reason = require_post_auth(self)
+        if not ok:
+            return self._send(403, {"error": reason})
+
+        try:
+            n = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return self._send(400, {"error": "ungueltige Content-Length"})
+        if n > MAX_POST_BYTES:
             return self._send(413, {"error": "Payload zu gross"})
         try:
             data = json.loads(self.rfile.read(n).decode("utf-8"))
