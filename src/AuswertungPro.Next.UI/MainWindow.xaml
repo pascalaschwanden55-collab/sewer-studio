@@ -103,8 +103,8 @@
                     <Border Height="2" Margin="0,12,0,0" CornerRadius="1">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="{StaticResource ColorAccent}" Offset="0"/>
-                                <GradientStop Color="{StaticResource ColorAccentLight}" Offset="0.4"/>
+                                <GradientStop Color="{DynamicResource ColorAccent}" Offset="0"/>
+                                <GradientStop Color="{DynamicResource ColorAccentLight}" Offset="0.4"/>
                                 <GradientStop Color="Transparent" Offset="1"/>
                             </LinearGradientBrush>
                         </Border.Background>
