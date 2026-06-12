@@ -721,7 +721,8 @@ public static class HaltungsDossierPdfBuilder
                         });
                         totalCol.Item().Row(row =>
                         {
-                            row.RelativeItem().Text($"MwSt ({holdingCost.MwstRate:0.0}%)").FontSize(10);
+                            // Rate ist als Faktor gespeichert (0.081) -> fuer die Anzeige *100 (Audit W10: "0.1%" statt "8.1%")
+                            row.RelativeItem().Text($"MwSt ({holdingCost.MwstRate * 100:0.0}%)").FontSize(10);
                             row.AutoItem().Text($"{FmtDec(holdingCost.MwstAmount)} CHF").FontSize(10);
                         });
                     }

@@ -95,7 +95,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
         var catalog = _catalogStore.LoadMerged(projectPath);
         _catalogItems = catalog.Items.ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
-        _vatRate = catalog.VatRate > 0 ? catalog.VatRate : 0.081m;
+        _vatRate = catalog.VatRate > 0 ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
 
         var templates = _templateStore.LoadMerged(projectPath);
         _templateItems = templates.Measures.ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);

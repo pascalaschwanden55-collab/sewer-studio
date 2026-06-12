@@ -484,7 +484,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     private ProjectCostStore _store = new();
     // != null wenn costs.json beim Laden nicht lesbar war -> Speichern gesperrt (Audit K3).
     private string? _storeLoadError;
-    private decimal _vatRate = 0.081m;
+    private decimal _vatRate = CostCalculatorLogicService.DefaultVatRate;
     private string _projectPath = "";
     private readonly string? _singleHoldingTarget;
     private SanierungMatrixRowVm? _detailRow;
@@ -548,7 +548,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         _projectPath = _sp.Settings.LastProjectPath ?? "";
 
         var catalog = _catalogStore.LoadMerged(_projectPath);
-        _vatRate = catalog.VatRate > 0m ? catalog.VatRate : 0.081m;
+        _vatRate = catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
         _catalog = catalog.Items
             .Where(i => !string.IsNullOrWhiteSpace(i.Key))
             .GroupBy(i => i.Key.Trim(), StringComparer.OrdinalIgnoreCase)
@@ -922,7 +922,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     private void ReloadCatalogAndApplyPrices()
     {
         var catalog = _catalogStore.LoadMerged(_projectPath);
-        _vatRate = catalog.VatRate > 0m ? catalog.VatRate : 0.081m;
+        _vatRate = catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
         _catalog = catalog.Items
             .Where(i => !string.IsNullOrWhiteSpace(i.Key))
             .GroupBy(i => i.Key.Trim(), StringComparer.OrdinalIgnoreCase)

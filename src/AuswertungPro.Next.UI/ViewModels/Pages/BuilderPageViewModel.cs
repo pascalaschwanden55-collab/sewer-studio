@@ -39,7 +39,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
     private List<DruckcenterRowVm> _allRows = new();
     private ProjectCostStore _costStore = new();
-    private decimal _vatRate = 0.081m;
+    private decimal _vatRate = CostCalculatorLogicService.DefaultVatRate;
     private ObservableCollection<HaltungRecord>? _attachedData;
     private bool _suspendFilterRefresh;
     private string _lastExportProjectPath = "";
@@ -545,7 +545,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         _costStore = _costRepo.Load(projectPath);
 
         var catalog = _catalogStore.LoadMerged(projectPath);
-        _vatRate = catalog.VatRate > 0m ? catalog.VatRate : 0.081m;
+        _vatRate = catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
 
         _suspendFilterRefresh = true;
         try
@@ -593,6 +593,11 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             var storedCost = TryGetCostByHolding(holding);
             var hasDetailedCost = storedCost is not null && HasSelectedLines(storedCost);
             var netCost = storedCost is null ? recordCost : ResolveNetTotal(storedCost);
+            // Store-Eintrag mit Total 0 (z.B. alles abgewaehlt) darf den manuell gepflegten
+            // Tabellenwert "Kosten" nicht verdraengen (Audit W11) — sonst fehlt die Haltung
+            // still in Netto-Summe und Druck.
+            if (netCost <= 0m && recordCost > 0m)
+                netCost = recordCost;
 
             if (netCost < 0m)
                 netCost = 0m;

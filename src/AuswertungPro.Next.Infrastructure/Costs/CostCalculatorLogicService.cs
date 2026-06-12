@@ -12,13 +12,18 @@ public sealed record CostCalculatorTotals(decimal Total, decimal MwstAmount, dec
 /// </summary>
 public static class CostCalculatorLogicService
 {
+    /// <summary>MwSt-Standardsatz (Schweiz, 8.1%) — EINZIGE Stelle fuer den Fallback-Wert.</summary>
+    public const decimal DefaultVatRate = 0.081m;
+
     public static CostCalculatorTotals CalculateTotals(decimal total, decimal vatRate)
     {
-        var mwst = Math.Round(total * vatRate, 2);
+        // Kaufmaennisch runden (AwayFromZero) wie alle Export-Pfade — vorher Banker's
+        // Rounding, das bis 1 Rappen vom PDF/Druckcenter abweichen konnte (Audit W12).
+        var mwst = Math.Round(total * vatRate, 2, MidpointRounding.AwayFromZero);
         return new CostCalculatorTotals(
             Total: total,
             MwstAmount: mwst,
-            TotalInclMwst: Math.Round(total + mwst, 2));
+            TotalInclMwst: Math.Round(total + mwst, 2, MidpointRounding.AwayFromZero));
     }
 
     public static HoldingCost BuildHoldingCost(
