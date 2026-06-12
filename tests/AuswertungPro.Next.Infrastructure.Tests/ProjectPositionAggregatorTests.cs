@@ -17,8 +17,8 @@ public sealed class ProjectPositionAggregatorTests
             ["SCHLAUCHLINER_GFK"] = new() { Key = "SCHLAUCHLINER_GFK", NpkCode = "612.110", Chapter = "600", Type = "ByDN" },
         };
 
-    private static CostLine Line(string itemKey, string text, string unit, decimal qty, decimal price, bool selected = true) =>
-        new() { ItemKey = itemKey, Text = text, Unit = unit, Qty = qty, UnitPrice = price, Selected = selected };
+    private static CostLine Line(string itemKey, string text, string unit, decimal qty, decimal price, bool selected = true, string priceHint = "") =>
+        new() { ItemKey = itemKey, Text = text, Unit = unit, Qty = qty, UnitPrice = price, Selected = selected, PriceHint = priceHint };
 
     private static HoldingCost Holding(string name, int? dn, params CostLine[] lines) =>
         new()
@@ -159,6 +159,25 @@ public sealed class ProjectPositionAggregatorTests
         Assert.Contains("NPK 200 — Reinigung", csv);
         Assert.Contains("612.110", csv);
         Assert.Contains("TOTAL", csv);
+    }
+
+    [Fact]
+    public void BuildCsv_AppendsPriceHintToPositionText()
+    {
+        var holdings = new[]
+        {
+            Holding("H1", 350, Line("SCHLAUCHLINER_NADELFILZ", "Nadelfilz", "m", 40m, 320m,
+                priceHint: "Preis von DN 300 uebernommen")),
+        };
+
+        var positions = ProjectPositionAggregator.Aggregate(holdings, Catalog());
+        var liner = Assert.Single(positions);
+
+        Assert.Equal("Preis von DN 300 uebernommen", liner.PriceHint);
+
+        var csv = NpkLeistungsverzeichnisExporter.BuildCsv(positions, "CHF");
+
+        Assert.Contains("Nadelfilz (Preis von DN 300 uebernommen)", csv);
     }
 
     [Fact]

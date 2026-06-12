@@ -30,4 +30,58 @@ public sealed class CostCatalogStoreTests
         Assert.Equal("999.999", merged.NpkCode); // Override gewinnt, wenn vorhanden
         Assert.Equal("900", merged.Chapter);
     }
+
+    [Fact]
+    public void BuildUserOverridesForSave_BlanksDefaultNpkMetadata_WhenUnchanged()
+    {
+        var defaults = new CostCatalog
+        {
+            Items =
+            {
+                new CostCatalogItem { Key = "X", Name = "Position X", NpkCode = "612.110", Chapter = "600", Price = 10m }
+            }
+        };
+        var edited = new CostCatalog
+        {
+            Version = 1,
+            Currency = "CHF",
+            VatRate = 0.081m,
+            Items =
+            {
+                new CostCatalogItem { Key = "X", Name = "Position X", NpkCode = "612.110", Chapter = "600", Price = 99m }
+            }
+        };
+
+        var toSave = CostCatalogStore.BuildUserOverridesForSave(edited, defaults);
+
+        var item = Assert.Single(toSave.Items);
+        Assert.Equal("", item.NpkCode);
+        Assert.Equal("", item.Chapter);
+        Assert.Equal(99m, item.Price);
+    }
+
+    [Fact]
+    public void BuildUserOverridesForSave_KeepsChangedNpkMetadata()
+    {
+        var defaults = new CostCatalog
+        {
+            Items =
+            {
+                new CostCatalogItem { Key = "X", Name = "Position X", NpkCode = "612.110", Chapter = "600" }
+            }
+        };
+        var edited = new CostCatalog
+        {
+            Items =
+            {
+                new CostCatalogItem { Key = "X", Name = "Position X", NpkCode = "612.111", Chapter = "600" }
+            }
+        };
+
+        var toSave = CostCatalogStore.BuildUserOverridesForSave(edited, defaults);
+
+        var item = Assert.Single(toSave.Items);
+        Assert.Equal("612.111", item.NpkCode);
+        Assert.Equal("", item.Chapter);
+    }
 }

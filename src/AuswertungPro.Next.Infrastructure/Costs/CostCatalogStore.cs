@@ -54,6 +54,52 @@ public sealed class CostCatalogStore
         }
     }
 
+    /// <summary>
+    /// Wie <see cref="SaveUserOverrides(CostCatalog, out string)"/>, aber NPK-Metadaten,
+    /// die unveraendert dem Default entsprechen, werden NICHT in den Override geschrieben
+    /// (leer gelassen; der Merge fuellt sie via <see cref="PreserveNpkMetadata"/> wieder
+    /// aus dem Default). Sonst friert der Override den heutigen Stand ein und spaetere
+    /// NPK-Korrekturen im Default-Katalog erreichen Bestandsnutzer nie (Audit W18).
+    /// Aktiv geaenderte NPK-Werte (abweichend vom Default) bleiben erhalten.
+    /// </summary>
+    public bool SaveUserOverrides(CostCatalog catalog, string? projectPath, out string error)
+    {
+        var toSave = BuildUserOverridesForSave(catalog, LoadDefault(projectPath));
+        return SaveUserOverrides(toSave, out error);
+    }
+
+    public static CostCatalog BuildUserOverridesForSave(CostCatalog catalog, CostCatalog defaults)
+    {
+        var defaultMap = new Dictionary<string, CostCatalogItem>(StringComparer.OrdinalIgnoreCase);
+        foreach (var d in defaults.Items)
+        {
+            var key = NormalizeKey(d.Key, d.Name);
+            if (!string.IsNullOrWhiteSpace(key))
+                defaultMap[key] = d;
+        }
+
+        var toSave = new CostCatalog
+        {
+            Version = catalog.Version,
+            Currency = catalog.Currency,
+            VatRate = catalog.VatRate,
+            Items = catalog.Items.Select(CloneItem).ToList()
+        };
+
+        foreach (var item in toSave.Items)
+        {
+            var key = NormalizeKey(item.Key, item.Name);
+            if (string.IsNullOrWhiteSpace(key) || !defaultMap.TryGetValue(key, out var def))
+                continue;
+            if (string.Equals((item.NpkCode ?? "").Trim(), (def.NpkCode ?? "").Trim(), StringComparison.OrdinalIgnoreCase))
+                item.NpkCode = "";
+            if (string.Equals((item.Chapter ?? "").Trim(), (def.Chapter ?? "").Trim(), StringComparison.OrdinalIgnoreCase))
+                item.Chapter = "";
+        }
+
+        return toSave;
+    }
+
     public bool ResetUserOverrides(out string error)
     {
         error = "";

@@ -33,8 +33,15 @@ public static class SanierungsMatrixNavigationTarget
         return string.IsNullOrWhiteSpace(holding) ? null : holding;
     }
 
-    public static SanierungMatrixRowVm? FindRow(IEnumerable<SanierungMatrixRowVm> rows, string? holding)
+    public static SanierungMatrixRowVm? FindRow(IEnumerable<SanierungMatrixRowVm> rows, string? holding, HaltungRecord? targetRecord = null)
     {
+        if (targetRecord is not null)
+        {
+            var byRecord = rows.FirstOrDefault(r => ReferenceEquals(r.Record, targetRecord));
+            if (byRecord is not null)
+                return byRecord;
+        }
+
         var target = (holding ?? "").Trim();
         if (target.Length == 0)
             return null;
@@ -45,13 +52,14 @@ public static class SanierungsMatrixNavigationTarget
     public static IReadOnlyList<SanierungMatrixRowVm> FilterRows(
         IEnumerable<SanierungMatrixRowVm> rows,
         string? holding,
-        bool singleHoldingMode)
+        bool singleHoldingMode,
+        HaltungRecord? targetRecord = null)
     {
         var list = rows.ToList();
         if (!singleHoldingMode)
             return list;
 
-        var row = FindRow(list, holding);
+        var row = FindRow(list, holding, targetRecord);
         return row is null ? Array.Empty<SanierungMatrixRowVm>() : new[] { row };
     }
 }
@@ -140,6 +148,7 @@ public sealed partial class SanierungsMatrixDetailEditLineVm : ObservableObject
     public string ItemKey { get; }
     public string Text { get; }
     public string Unit { get; }
+    public string PriceHint { get; private set; }
 
     // Audit W5: Im Detail editierte Preise/Mengen muessen als Override markiert werden,
     // sonst setzt der naechste Katalog-Preis-Apply sie still auf Katalogwerte zurueck.
@@ -160,6 +169,7 @@ public sealed partial class SanierungsMatrixDetailEditLineVm : ObservableObject
         ItemKey = line.ItemKey;
         Text = line.Text;
         Unit = line.Unit;
+        PriceHint = line.PriceHint;
         Selected = line.Selected;
         TransferMarked = line.TransferMarked;
         Qty = line.Qty;
@@ -183,6 +193,7 @@ public sealed partial class SanierungsMatrixDetailEditLineVm : ObservableObject
             TransferMarked = TransferMarked,
             IsPriceOverridden = IsPriceOverridden,
             IsQtyOverridden = IsQtyOverridden,
+            PriceHint = PriceHint,
         };
     }
 
@@ -199,7 +210,10 @@ public sealed partial class SanierungsMatrixDetailEditLineVm : ObservableObject
     partial void OnUnitPriceChanged(decimal value)
     {
         if (_initialized)
+        {
             IsPriceOverridden = true;
+            PriceHint = "";
+        }
         NotifyChanged();
     }
 
@@ -344,6 +358,7 @@ public sealed partial class SanierungsMatrixDetailEditSession : ObservableObject
             TransferMarked = line.TransferMarked,
             IsPriceOverridden = line.IsPriceOverridden,
             IsQtyOverridden = line.IsQtyOverridden,
+            PriceHint = line.PriceHint,
         };
     }
 }
@@ -505,6 +520,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     private decimal _vatRate = CostCalculatorLogicService.DefaultVatRate;
     private string _projectPath = "";
     private readonly string? _singleHoldingTarget;
+    private readonly HaltungRecord? _singleHoldingTargetRecord;
     private SanierungMatrixRowVm? _detailRow;
     private SanierungsMatrixDetailEditSession? _detailSession;
     private bool _suppressSelectionGuard;
@@ -545,10 +561,11 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     {
     }
 
-    public SanierungsMatrixPageViewModel(ShellViewModel shell, string? holding, bool singleHoldingMode)
+    public SanierungsMatrixPageViewModel(ShellViewModel shell, string? holding, bool singleHoldingMode, HaltungRecord? targetRecord = null)
     {
         _shell = shell;
         _singleHoldingTarget = string.IsNullOrWhiteSpace(holding) ? null : holding.Trim();
+        _singleHoldingTargetRecord = targetRecord;
         IsSingleHoldingMode = singleHoldingMode;
         UpdatePageTexts();
         Reload();
@@ -644,7 +661,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         foreach (var row in SanierungsMatrixNavigationTarget.FilterRows(
                      loadedRows,
                      _singleHoldingTarget,
-                     IsSingleHoldingMode))
+                     IsSingleHoldingMode,
+                     _singleHoldingTargetRecord))
         {
             Rows.Add(row);
         }
@@ -1118,10 +1136,19 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
                         continue;
 
                     var price = ResolveExactCatalogPrice(item, measure.Dn, line.Qty);
-                    if (price is decimal p && p != line.UnitPrice)
+                    if (price is decimal p)
                     {
-                        line.UnitPrice = p;
-                        measureChanged = true;
+                        if (p != line.UnitPrice)
+                        {
+                            line.UnitPrice = p;
+                            measureChanged = true;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(line.PriceHint))
+                        {
+                            line.PriceHint = "";
+                            measureChanged = true;
+                        }
                     }
                 }
 

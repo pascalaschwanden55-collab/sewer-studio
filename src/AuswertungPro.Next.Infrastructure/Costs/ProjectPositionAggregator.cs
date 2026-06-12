@@ -29,6 +29,7 @@ public static class ProjectPositionAggregator
         public decimal TotalNet;
         public readonly HashSet<string> Holdings = new(StringComparer.OrdinalIgnoreCase);
         public readonly HashSet<decimal> UnitPrices = new();
+        public readonly HashSet<string> PriceHints = new(StringComparer.OrdinalIgnoreCase);
     }
 
     public static IReadOnlyList<AggregatedPosition> Aggregate(
@@ -96,6 +97,8 @@ public static class ProjectPositionAggregator
                     bucket.TotalNet += line.Qty * line.UnitPrice;
                     bucket.Holdings.Add(holdingName);
                     bucket.UnitPrices.Add(line.UnitPrice);
+                    if (!string.IsNullOrWhiteSpace(line.PriceHint))
+                        bucket.PriceHints.Add(line.PriceHint.Trim());
                 }
             }
         }
@@ -110,9 +113,10 @@ public static class ProjectPositionAggregator
                 var distinctPrices = b.UnitPrices.Where(p => p > 0m).Distinct().ToList();
                 var variable = distinctPrices.Count > 1;
                 decimal? unitPrice = distinctPrices.Count == 1 ? distinctPrices[0] : null;
+                var priceHint = string.Join("; ", b.PriceHints.OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
                 return new AggregatedPosition(
                     b.NpkCode, b.Chapter, b.ItemKey, b.Text, b.Unit, b.Dn,
-                    b.TotalQty, b.TotalNet, b.Holdings.Count, variable, unitPrice);
+                    b.TotalQty, b.TotalNet, b.Holdings.Count, variable, unitPrice, priceHint);
             })
             .ToList();
     }

@@ -970,7 +970,8 @@ public sealed partial class MeasureBlockVm : ObservableObject
                 Selected = line.Selected,
                 TransferMarked = line.TransferMarked,
                 IsPriceOverridden = line.IsPriceOverridden,
-                IsQtyOverridden = line.IsQtyOverridden
+                IsQtyOverridden = line.IsQtyOverridden,
+                PriceHint = line.PriceHint
             };
             Lines.Add(vm);
         }
@@ -994,7 +995,8 @@ public sealed partial class MeasureBlockVm : ObservableObject
             Selected = l.Selected,
             TransferMarked = l.TransferMarked,
             IsPriceOverridden = l.IsPriceOverridden,
-            IsQtyOverridden = l.IsQtyOverridden
+            IsQtyOverridden = l.IsQtyOverridden,
+            PriceHint = l.PriceHint
         }).ToList();
 
         var total = lines.Where(l => l.Selected).Sum(l => l.Qty * l.UnitPrice);
@@ -1149,9 +1151,19 @@ public sealed partial class MeasureBlockVm : ObservableObject
             var dn = ParseDn(DnText);
             if (dn is not null)
             {
-                var match = item.DnPrices
-                    .FirstOrDefault(x => dn >= x.DnFrom && dn <= x.DnTo);
-                vm.SetSuggestedPrice(match?.Price, match is not null);
+                var candidates = item.DnPrices
+                    .Where(x => dn >= x.DnFrom && dn <= x.DnTo)
+                    .ToList();
+                var usedNearestFallback = false;
+                if (candidates.Count == 0)
+                {
+                    candidates = FindNearestDnCandidates(item.DnPrices, dn.Value);
+                    usedNearestFallback = candidates.Count > 0;
+                }
+
+                var match = candidates.FirstOrDefault();
+                vm.SetSuggestedPrice(match?.Price, match is not null,
+                    usedNearestFallback && match is not null ? BuildNearestDnPriceHint(match) : "");
             }
         }
 
@@ -1416,11 +1428,13 @@ public sealed partial class MeasureBlockVm : ObservableObject
                 var candidates = item.DnPrices
                     .Where(x => dn >= x.DnFrom && dn <= x.DnTo)
                     .ToList();
+                var usedNearestFallback = false;
 
                 if (candidates.Count == 0)
                 {
                     // Fallback: use nearest DN bucket when exact DN is not configured.
                     candidates = FindNearestDnCandidates(item.DnPrices, dn.Value);
+                    usedNearestFallback = candidates.Count > 0;
                     if (candidates.Count == 0)
                     {
                         if (!onlyQtyBased)
@@ -1444,7 +1458,8 @@ public sealed partial class MeasureBlockVm : ObservableObject
                     match = candidates[0];
                 }
 
-                line.SetSuggestedPrice(match?.Price, match is not null);
+                line.SetSuggestedPrice(match?.Price, match is not null,
+                    usedNearestFallback && match is not null ? BuildNearestDnPriceHint(match) : "");
             }
 
         }
@@ -1502,6 +1517,14 @@ public sealed partial class MeasureBlockVm : ObservableObject
             .OrderBy(x => x.DnFrom)
             .ThenBy(x => x.DnTo)
             .ToList();
+    }
+
+    private static string BuildNearestDnPriceHint(DnPrice price)
+    {
+        var dn = price.DnFrom == price.DnTo
+            ? price.DnFrom.ToString(CultureInfo.InvariantCulture)
+            : $"{price.DnFrom.ToString(CultureInfo.InvariantCulture)}-{price.DnTo.ToString(CultureInfo.InvariantCulture)}";
+        return $"Preis von DN {dn} uebernommen";
     }
 
     private static int? ParseDn(string? raw)
@@ -1758,17 +1781,19 @@ public sealed partial class CostLineVm : ObservableObject
     [ObservableProperty] private bool _isPriceOverridden;
     [ObservableProperty] private bool _isQtyOverridden;
     [ObservableProperty] private bool _priceMissing;
+    [ObservableProperty] private string _priceHint = "";
 
     public decimal LineTotal => Selected ? Qty * UnitPrice : 0m;
 
     public event Action? LineChanged;
 
-    public void SetSuggestedPrice(decimal? price, bool hasPrice)
+    public void SetSuggestedPrice(decimal? price, bool hasPrice, string priceHint = "")
     {
         _suppressOverride = true;
         UnitPrice = price ?? 0m;
         _suppressOverride = false;
         PriceMissing = !hasPrice;
+        PriceHint = hasPrice ? priceHint : "";
         OnPropertyChanged(nameof(LineTotal));
         LineChanged?.Invoke();
     }
@@ -1796,6 +1821,7 @@ public sealed partial class CostLineVm : ObservableObject
         {
             IsPriceOverridden = true;
             PriceMissing = false;
+            PriceHint = "";
         }
         OnPropertyChanged(nameof(LineTotal));
         LineChanged?.Invoke();

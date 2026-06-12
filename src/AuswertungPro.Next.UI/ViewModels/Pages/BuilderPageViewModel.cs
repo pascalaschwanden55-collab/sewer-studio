@@ -313,8 +313,13 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             File.WriteAllText(output, csv, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
             LastResult = $"Leistungsverzeichnis erstellt: {Path.GetFileName(output)} ({positions.Count} Positionen)";
             _shell.SetStatus("NPK-Leistungsverzeichnis erstellt");
+            // Audit W14: Der Export liest costs.json von Platte — den Daten-Stand ehrlich
+            // benennen, sonst druckt man nach Matrix-Aenderungen kommentarlos den alten Stand.
+            var standHinweis = _shell.Project.Dirty
+                ? "\n\nACHTUNG: Es gibt ungespeicherte Aenderungen im Projekt — das LV entspricht dem zuletzt GESPEICHERTEN Stand der Sanierungs-Matrix."
+                : "\n\nDaten-Stand: zuletzt gespeicherte Sanierungs-Matrix (costs.json).";
             _sp.Dialogs.Info(
-                $"NPK-Leistungsverzeichnis wurde erstellt:\n{output}\n\n{positions.Count} Positionen ueber {holdings.Count} Haltung(en).",
+                $"NPK-Leistungsverzeichnis wurde erstellt:\n{output}\n\n{positions.Count} Positionen ueber {holdings.Count} Haltung(en).{standHinweis}",
                 "Druckcenter");
         }
         catch (Exception ex)

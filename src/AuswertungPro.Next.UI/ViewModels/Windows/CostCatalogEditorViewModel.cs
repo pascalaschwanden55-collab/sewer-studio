@@ -85,7 +85,9 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
             .Select(i => i)
             .ToList();
 
-        if (!_store.SaveUserOverrides(_catalog, out var error))
+        // Audit W18: projectPath mitgeben, damit unveraenderte NPK-Metadaten nicht im
+        // Override eingefroren werden (Default-Korrekturen sollen weiter durchschlagen).
+        if (!_store.SaveUserOverrides(_catalog, _projectPath, out var error))
         {
             _dialogs.Error($"Speichern fehlgeschlagen: {error}", "Positionen");
             return;

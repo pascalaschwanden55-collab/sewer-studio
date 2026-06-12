@@ -56,4 +56,24 @@ public sealed class SanierungsMatrixNavigationTargetTests
         var only = Assert.Single(filtered);
         Assert.Same(target, only);
     }
+
+    [Fact]
+    public void FilterRows_bevorzugt_record_referenz_bei_doppeltem_haltungsnamen()
+    {
+        var firstRecord = new HaltungRecord();
+        var secondRecord = new HaltungRecord();
+        firstRecord.SetFieldValue("Haltungsname", "H1", FieldSource.Manual, userEdited: true);
+        secondRecord.SetFieldValue("Haltungsname", "H1", FieldSource.Manual, userEdited: true);
+        var first = new SanierungMatrixRowVm(firstRecord, "H1", "300", "12.0", 0, _ => { });
+        var second = new SanierungMatrixRowVm(secondRecord, "H1", "400", "13.0", 0, _ => { });
+
+        var filtered = SanierungsMatrixNavigationTarget.FilterRows(
+            new[] { first, second },
+            "H1",
+            singleHoldingMode: true,
+            targetRecord: secondRecord);
+
+        var only = Assert.Single(filtered);
+        Assert.Same(second, only);
+    }
 }

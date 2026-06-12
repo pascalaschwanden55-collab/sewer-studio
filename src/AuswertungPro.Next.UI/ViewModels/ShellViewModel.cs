@@ -279,7 +279,7 @@ public sealed partial class ShellViewModel : ObservableObject
             SelectedNavItem = target;
     }
 
-    public void NavigateToSanierungsMatrix(string? holding, bool singleHoldingMode = false)
+    public void NavigateToSanierungsMatrix(string? holding, bool singleHoldingMode = false, HaltungRecord? targetRecord = null)
     {
         var target = NavItems.FirstOrDefault(x => string.Equals(x.Title, "Sanierungs-Matrix", StringComparison.OrdinalIgnoreCase));
         if (target is null)
@@ -295,7 +295,7 @@ public sealed partial class ShellViewModel : ObservableObject
             SelectedNavItem = null;
             _suppressLeaveGuard = false;
             _navItemBeforeChange = null;
-            CurrentPage = new Pages.SanierungsMatrixPageViewModel(this, holding, singleHoldingMode: true);
+            CurrentPage = new Pages.SanierungsMatrixPageViewModel(this, holding, singleHoldingMode: true, targetRecord);
             return;
         }
 

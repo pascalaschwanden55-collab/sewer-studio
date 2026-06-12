@@ -30,6 +30,9 @@
                 <DataGridTextColumn Header="Bezeichnung" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
                 <DataGridTextColumn Header="Einheit" Binding="{Binding Unit, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
                 <DataGridTextColumn Header="Typ" Binding="{Binding Type, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                <!-- Audit W13: NPK-Zuordnung war nur per JSON-Handarbeit pflegbar und im UI unsichtbar -->
+                <DataGridTextColumn Header="NPK" Binding="{Binding NpkCode, UpdateSourceTrigger=PropertyChanged}" Width="90"/>
+                <DataGridTextColumn Header="Kapitel" Binding="{Binding Chapter, UpdateSourceTrigger=PropertyChanged}" Width="70"/>
                 <DataGridTextColumn Header="Preis" Binding="{Binding Price, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="90"/>
                 <DataGridCheckBoxColumn Header="Aktiv" Binding="{Binding Active, UpdateSourceTrigger=PropertyChanged}" Width="60"/>
             </DataGrid.Columns>

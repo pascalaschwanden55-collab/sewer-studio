@@ -72,6 +72,7 @@ public sealed record CostLine
     public bool TransferMarked { get; set; }
     public bool IsPriceOverridden { get; set; }
     public bool IsQtyOverridden { get; set; }
+    public string PriceHint { get; set; } = "";
 }
 
 public sealed record MeasureCost
@@ -141,4 +142,5 @@ public sealed record AggregatedPosition(
     decimal TotalNet,
     int HoldingCount,
     bool IsVariablePrice,
-    decimal? UnitPrice);
+    decimal? UnitPrice,
+    string PriceHint = "");

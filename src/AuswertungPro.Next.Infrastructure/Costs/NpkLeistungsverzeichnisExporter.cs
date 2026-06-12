@@ -49,9 +49,10 @@ public static class NpkLeistungsverzeichnisExporter
                 var lineTotal = Math.Round(p.TotalNet, 2, MidpointRounding.AwayFromZero);
                 var total = lineTotal.ToString("0.00", Nf);
                 chapterTotal += lineTotal;
+                var text = AppendPriceHint(p.Text, p.PriceHint);
 
                 sb.Append(CsvText(p.NpkCode)).Append(';')
-                    .Append(Csv(p.Text)).Append(';')
+                    .Append(Csv(text)).Append(';')
                     .Append(p.Dn?.ToString(CultureInfo.InvariantCulture) ?? "").Append(';')
                     .Append(p.TotalQty.ToString("0.###", Nf)).Append(';')
                     .Append(Csv(p.Unit)).Append(';')
@@ -90,6 +91,19 @@ public static class NpkLeistungsverzeichnisExporter
         if (v.IndexOf(';') >= 0 || v.IndexOf('"') >= 0 || v.IndexOf('\n') >= 0 || v.IndexOf('\r') >= 0)
             return "\"" + v.Replace("\"", "\"\"") + "\"";
         return v;
+    }
+
+    private static string AppendPriceHint(string? text, string? priceHint)
+    {
+        var t = (text ?? "").Trim();
+        var h = (priceHint ?? "").Trim();
+        if (h.Length == 0)
+            return t;
+        if (t.Length == 0)
+            return h;
+        return t.IndexOf(h, StringComparison.OrdinalIgnoreCase) >= 0
+            ? t
+            : $"{t} ({h})";
     }
 
     /// <summary>

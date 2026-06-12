@@ -126,7 +126,7 @@
     {
       "key": "SCHLAUCHLINER_NADELFILZ",
       "name": "Schlauchliner (Nadelfilz)",
-      "npkCode": "612.110",
+      "npkCode": "612.111",
       "chapter": "600",
       "unit": "m",
       "type": "ByDN",
@@ -144,7 +144,7 @@
     {
       "key": "SCHLAUCHLINER_NADELFILZ_OPENEND",
       "name": "Schlauchliner (Nadelfilz) Open-End",
-      "npkCode": "612.110",
+      "npkCode": "612.112",
       "chapter": "600",
       "unit": "m",
       "type": "ByDN",
@@ -162,7 +162,7 @@
     {
       "key": "SCHLAUCHLINER_GFK",
       "name": "Schlauchliner (GFK)",
-      "npkCode": "612.110",
+      "npkCode": "612.113",
       "chapter": "600",
       "unit": "m",
       "type": "ByDN",

@@ -161,6 +161,21 @@ public sealed class HoldingMeasureFactoryTests
     }
 
     [Fact]
+    public void Build_NearestDnFallback_MarksPriceHint()
+    {
+        var (templates, catalog) = Setup();
+        var record = Record("H9", "300", "45.00");
+
+        var cost = HoldingMeasureFactory.Build("H9", record, "SCHLAUCHLINER_NADELFILZ", templates, catalog, 0.081m);
+
+        Assert.NotNull(cost);
+        var liner = cost!.Measures[0].Lines.First(l => l.ItemKey == "SCHLAUCHLINER_NADELFILZ");
+        Assert.Equal(300m, liner.UnitPrice);
+        Assert.Equal("Preis von DN 250 uebernommen", liner.PriceHint);
+        Assert.False(liner.IsPriceOverridden);
+    }
+
+    [Fact]
     public void Build_ConnectionMainWork_StaysSelected_WhenNoConnections()
     {
         // ANSCHLUSS_EINBINDEN als Hauptarbeit ist eine Anschluss-Zeile; bei 0 erkannten
