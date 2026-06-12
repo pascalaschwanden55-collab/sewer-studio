@@ -32,6 +32,8 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     private readonly Dictionary<string, string> _ownerByHolding = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _selectedMeasureIds = new(StringComparer.OrdinalIgnoreCase);
     private ProjectCostStore _store = new();
+    // != null wenn costs.json beim Laden nicht lesbar war -> Speichern gesperrt (Audit K3).
+    private string? _storeLoadError;
     private readonly decimal _vatRate;
     private readonly CostConsistencyCheckService _consistencyChecker = new();
     private readonly HashSet<string> _suppressedWarnings = new(StringComparer.OrdinalIgnoreCase);
@@ -127,7 +129,11 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         foreach (var ci in AllCatalogItems)
             FilteredCatalogItems.Add(ci);
 
-        _store = _costRepo.Load(projectPath);
+        _store = _costRepo.Load(projectPath, out _storeLoadError);
+        if (_storeLoadError is not null)
+            _dialogs.Warn(
+                $"Kostendaten konnten nicht geladen werden:\n{_storeLoadError}\n\nSpeichern ist gesperrt, damit vorhandene Kosten nicht ueberschrieben werden.",
+                "Kosten");
         InitializeOwnerLookup(projectRecords, haltungRecord);
 
         var existing = GetExistingCost();
@@ -231,6 +237,16 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(_projectPath))
         {
             _dialogs.Info("Projekt bitte speichern, um Kosten abzulegen.", "Kosten");
+            return;
+        }
+
+        // Verlustschutz (Audit K3): Wenn costs.json nicht lesbar war, ist _store leer —
+        // ein Save wuerde alle Kostendaten des Projekts endgueltig ueberschreiben.
+        if (_storeLoadError is not null)
+        {
+            _dialogs.Error(
+                $"Speichern gesperrt: Die bestehende costs.json konnte beim Oeffnen nicht gelesen werden.\n{_storeLoadError}\n\nBitte Datei pruefen (costs\\costs.json bzw. .bak) und das Fenster neu oeffnen.",
+                "Kosten");
             return;
         }
 

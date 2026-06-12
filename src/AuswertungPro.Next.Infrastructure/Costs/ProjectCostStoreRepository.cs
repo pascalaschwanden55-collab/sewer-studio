@@ -14,8 +14,17 @@ public sealed class ProjectCostStoreRepository
         WriteIndented = true
     };
 
-    public ProjectCostStore Load(string? projectPath)
+    public ProjectCostStore Load(string? projectPath) => Load(projectPath, out _);
+
+    /// <summary>
+    /// Laedt den Store. loadError != null bedeutet: Datei existiert, konnte aber nicht
+    /// gelesen werden (beschaedigt ODER gesperrt, z.B. Virenscanner/Cloud-Sync). Der
+    /// Aufrufer darf dann NICHT speichern, sonst ueberschreibt der leere Store die
+    /// echten Kostendaten endgueltig (Audit 2026-06-12, K3).
+    /// </summary>
+    public ProjectCostStore Load(string? projectPath, out string? loadError)
     {
+        loadError = null;
         if (string.IsNullOrWhiteSpace(projectPath))
             return new ProjectCostStore();
 
@@ -33,8 +42,14 @@ public sealed class ProjectCostStoreRepository
             var store = JsonSerializer.Deserialize<ProjectCostStore>(json, JsonOptions) ?? new ProjectCostStore();
             return Normalize(store);
         }
-        catch
+        catch (JsonException ex)
         {
+            loadError = $"costs.json ist beschaedigt: {ex.Message}";
+            return new ProjectCostStore();
+        }
+        catch (Exception ex)
+        {
+            loadError = $"costs.json konnte nicht gelesen werden (Datei evtl. gesperrt): {ex.Message}";
             return new ProjectCostStore();
         }
     }

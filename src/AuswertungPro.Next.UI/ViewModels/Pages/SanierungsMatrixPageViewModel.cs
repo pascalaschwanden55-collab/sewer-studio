@@ -482,6 +482,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     private Dictionary<string, MeasureTemplate> _templates = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, CostCatalogItem> _catalog = new(StringComparer.OrdinalIgnoreCase);
     private ProjectCostStore _store = new();
+    // != null wenn costs.json beim Laden nicht lesbar war -> Speichern gesperrt (Audit K3).
+    private string? _storeLoadError;
     private decimal _vatRate = 0.081m;
     private string _projectPath = "";
     private readonly string? _singleHoldingTarget;
@@ -560,7 +562,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
 
         BuildMeasureOptions();
 
-        _store = _costRepo.Load(_projectPath);
+        _store = _costRepo.Load(_projectPath, out _storeLoadError);
 
         var loadedRows = new List<SanierungMatrixRowVm>();
         foreach (var record in _shell.Project.Data)
@@ -602,6 +604,14 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
             : IsSingleHoldingMode
                 ? $"Sanierungsmassnahme geladen: {SelectedRow?.Holding}"
                 : $"{Rows.Count} Haltungen geladen.";
+
+        if (_storeLoadError is not null)
+        {
+            Status = $"WARNUNG: {_storeLoadError} — Speichern ist gesperrt, bestehende Kosten bleiben unangetastet.";
+            _sp.Dialogs.Warn(
+                $"Kostendaten konnten nicht geladen werden:\n{_storeLoadError}\n\nSpeichern ist gesperrt, damit costs.json nicht mit einem leeren Stand ueberschrieben wird.\nBitte Datei pruefen (costs\\costs.json bzw. .bak) und danach 'Neu laden'.",
+                "Sanierungs-Matrix");
+        }
     }
 
     private void UpdatePageTexts()
@@ -942,6 +952,16 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(_projectPath))
         {
             _sp.Dialogs.Info("Projekt bitte zuerst speichern, um Kosten abzulegen.", "Sanierungs-Matrix");
+            return;
+        }
+
+        // Verlustschutz (Audit K3): costs.json war beim Laden nicht lesbar -> _store ist leer.
+        // Ein Save wuerde alle Kostendaten endgueltig ueberschreiben (.bak waere danach auch defekt).
+        if (_storeLoadError is not null)
+        {
+            _sp.Dialogs.Error(
+                $"Speichern gesperrt: costs.json konnte beim Laden nicht gelesen werden.\n{_storeLoadError}\n\nBitte Datei pruefen (costs\\costs.json bzw. .bak), dann 'Neu laden'.",
+                "Sanierungs-Matrix");
             return;
         }
 
