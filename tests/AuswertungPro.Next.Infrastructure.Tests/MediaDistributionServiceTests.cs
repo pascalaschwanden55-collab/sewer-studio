@@ -62,6 +62,25 @@ public sealed class MediaDistributionServiceTests
     }
 
     [Fact]
+    public void DistributeImportedMedia_RelativerTraversalPfad_WirdNichtAlsVorhandenAkzeptiert()
+    {
+        using var temp = new TempDir();
+        var projectFolder = temp.CreateSubdir("projekt");
+        var outside = temp.CreateSubdir("outside");
+        File.WriteAllText(Path.Combine(outside, "secret.mpg"), "video");
+
+        var traversal = Path.Combine("..", "outside", "secret.mpg");
+        var project = NewProject("06.123-456", "Link", traversal);
+
+        var result = new MediaDistributionService()
+            .DistributeImportedMedia(projectFolder, project);
+
+        Assert.Equal(0, result.FilesCopied);
+        Assert.Equal(traversal, project.Data[0].GetFieldValue("Link"));
+        Assert.Contains(result.Messages, m => m.Contains("Unsicherer relativer Pfad", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void DistributeImportedMedia_RelativerPfadFehlt_WirdUeberDateinamenRepariert()
     {
         using var temp = new TempDir();

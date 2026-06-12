@@ -95,8 +95,14 @@ public sealed class MediaDistributionService
         // Relativer Pfad: pruefen ob Datei existiert, sonst reparieren
         if (ProjectPathResolver.IsRelative(rawPath))
         {
-            var resolved = Path.GetFullPath(Path.Combine(projectFolder, rawPath));
-            if (File.Exists(resolved))
+            if (!ProjectPathResolver.IsSafeRelativeProjectPath(rawPath))
+            {
+                messages.Add($"{fieldName}: Unsicherer relativer Pfad: {rawPath}");
+                return;
+            }
+
+            var resolved = ProjectPathResolver.ResolveFilePathFromProjectFolder(rawPath, projectFolder);
+            if (resolved is not null)
                 return; // Alles OK, Datei existiert
 
             // Datei nicht gefunden - nach Dateiname in Haltungen-Ordner suchen
@@ -161,8 +167,15 @@ public sealed class MediaDistributionService
             // Relativer Pfad: pruefen ob Datei existiert, sonst reparieren
             if (ProjectPathResolver.IsRelative(trimmed))
             {
-                var resolved = Path.GetFullPath(Path.Combine(projectFolder, trimmed));
-                if (File.Exists(resolved))
+                if (!ProjectPathResolver.IsSafeRelativeProjectPath(trimmed))
+                {
+                    newPaths.Add(trimmed);
+                    messages.Add($"{fieldName}: Unsicherer relativer Pfad: {trimmed}");
+                    continue;
+                }
+
+                var resolved = ProjectPathResolver.ResolveFilePathFromProjectFolder(trimmed, projectFolder);
+                if (resolved is not null)
                 {
                     newPaths.Add(trimmed);
                     continue;
@@ -241,8 +254,14 @@ public sealed class MediaDistributionService
                 // Relativer Pfad: pruefen ob Datei existiert, sonst reparieren
                 if (ProjectPathResolver.IsRelative(rawPath))
                 {
-                    var resolved = Path.GetFullPath(Path.Combine(projectFolder, rawPath));
-                    if (File.Exists(resolved))
+                    if (!ProjectPathResolver.IsSafeRelativeProjectPath(rawPath))
+                    {
+                        messages.Add($"Foto unsicherer relativer Pfad: {rawPath}");
+                        continue;
+                    }
+
+                    var resolved = ProjectPathResolver.ResolveFilePathFromProjectFolder(rawPath, projectFolder);
+                    if (resolved is not null)
                         continue; // OK
 
                     var fn = Path.GetFileName(rawPath);
@@ -298,8 +317,14 @@ public sealed class MediaDistributionService
             // Relativer Pfad: pruefen ob Datei existiert, sonst reparieren
             if (ProjectPathResolver.IsRelative(finding.FotoPath))
             {
-                var resolved = Path.GetFullPath(Path.Combine(projectFolder, finding.FotoPath));
-                if (File.Exists(resolved))
+                if (!ProjectPathResolver.IsSafeRelativeProjectPath(finding.FotoPath))
+                {
+                    messages.Add($"VsaFinding Foto unsicherer relativer Pfad: {finding.FotoPath}");
+                    continue;
+                }
+
+                var resolved = ProjectPathResolver.ResolveFilePathFromProjectFolder(finding.FotoPath, projectFolder);
+                if (resolved is not null)
                     continue; // OK
 
                 var fn = Path.GetFileName(finding.FotoPath);

@@ -8,6 +8,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -595,9 +596,7 @@ public static class HaltungsDossierPdfBuilder
 
         if (!string.IsNullOrWhiteSpace(projectRootAbs))
         {
-            var combined = Path.Combine(projectRootAbs, path);
-            if (File.Exists(combined))
-                return combined;
+            return ProjectPathResolver.ResolveFilePathFromProjectFolder(path, projectRootAbs);
         }
 
         return null;

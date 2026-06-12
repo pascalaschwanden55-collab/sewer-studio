@@ -28,18 +28,34 @@ public static class ProjectPathResolver
         if (!Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(projectFilePath))
         {
             var baseDir = Path.GetDirectoryName(projectFilePath);
-            if (!string.IsNullOrWhiteSpace(baseDir))
-            {
-                var combined = Path.GetFullPath(Path.Combine(baseDir, path));
-                // Path-Traversal-Schutz: aufgeloester Pfad muss im Projektordner bleiben
-                var normalizedBase = Path.GetFullPath(baseDir) + Path.DirectorySeparatorChar;
-                if (combined.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase)
-                    && File.Exists(combined))
-                    return combined;
-            }
+            return ResolveFilePathFromProjectFolder(path, baseDir);
         }
 
         return null;
+    }
+
+    public static string? ResolveFilePathFromProjectFolder(string? rawPath, string? projectFolder)
+    {
+        var path = rawPath?.Trim();
+        if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(projectFolder))
+            return null;
+
+        if (!IsSafeRelativeProjectPath(path))
+            return null;
+
+        try
+        {
+            var combined = Path.GetFullPath(Path.Combine(projectFolder, path));
+            var normalizedBase = NormalizeDirectoryForContainment(projectFolder);
+            if (!combined.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            return File.Exists(combined) ? combined : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -57,11 +73,11 @@ public static class ProjectPathResolver
         if (!Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(projectFilePath))
         {
             var baseDir = Path.GetDirectoryName(projectFilePath);
-            if (!string.IsNullOrWhiteSpace(baseDir))
+            if (!string.IsNullOrWhiteSpace(baseDir) && IsSafeRelativeProjectPath(path))
             {
                 var combined = Path.GetFullPath(Path.Combine(baseDir, path));
                 // Path-Traversal-Schutz: aufgeloester Pfad muss im Projektordner bleiben
-                var normalizedBase = Path.GetFullPath(baseDir) + Path.DirectorySeparatorChar;
+                var normalizedBase = NormalizeDirectoryForContainment(baseDir);
                 if (combined.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase)
                     && Directory.Exists(combined))
                     return combined;
@@ -94,6 +110,20 @@ public static class ProjectPathResolver
     public static bool IsRelative(string? path)
         => !string.IsNullOrWhiteSpace(path) && !Path.IsPathRooted(path);
 
+    public static bool IsSafeRelativeProjectPath(string? path)
+    {
+        var trimmed = path?.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed) || Path.IsPathRooted(trimmed))
+            return false;
+
+        var parts = trimmed
+            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+            .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+
+        return parts.Length > 0
+            && parts.All(part => part is not "." and not "..");
+    }
+
     /// <summary>
     /// Entfernt ungueltige Dateinamen-Zeichen aus einem Pfadsegment (z.B. Haltungsname).
     /// Gibt "UNKNOWN" zurueck wenn der Wert null/leer ist.
@@ -122,5 +152,13 @@ public static class ProjectPathResolver
             return "UNKNOWN";
 
         return cleaned;
+    }
+
+    private static string NormalizeDirectoryForContainment(string directory)
+    {
+        var normalized = Path.GetFullPath(directory);
+        return normalized.EndsWith(Path.DirectorySeparatorChar)
+            ? normalized
+            : normalized + Path.DirectorySeparatorChar;
     }
 }
