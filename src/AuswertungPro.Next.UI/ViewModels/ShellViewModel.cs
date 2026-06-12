@@ -137,10 +137,29 @@ public sealed partial class ShellViewModel : ObservableObject
 
         PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(SelectedNavItem) && SelectedNavItem is not null)
-                CurrentPage = SelectedNavItem.CreatePage();
+            if (e.PropertyName != nameof(SelectedNavItem) || SelectedNavItem is null)
+                return;
+            if (_suppressLeaveGuard)
+                return;
+
+            // Seiten mit ungespeichertem Zustand duerfen den Wechsel stoppen (Audit W2).
+            if (CurrentPage is IConfirmLeave guard && !guard.ConfirmLeave())
+            {
+                _suppressLeaveGuard = true;
+                SelectedNavItem = _navItemBeforeChange;
+                _suppressLeaveGuard = false;
+                return;
+            }
+
+            _navItemBeforeChange = SelectedNavItem;
+            CurrentPage = SelectedNavItem.CreatePage();
         };
     }
+
+    // Letzter aktiver Nav-Eintrag (null im Einzelhaltungsmodus) — Ruecksprungziel,
+    // wenn eine Seite den Wechsel per IConfirmLeave ablehnt.
+    private NavItem? _navItemBeforeChange;
+    private bool _suppressLeaveGuard;
 
     partial void OnGuideStepIndexChanged(int value)
     {
@@ -266,9 +285,16 @@ public sealed partial class ShellViewModel : ObservableObject
         if (target is null)
             return;
 
+        // Direkter Seitenwechsel am Nav-Handler vorbei -> Leave-Guard hier ebenfalls (Audit W2).
+        if (CurrentPage is IConfirmLeave guard && !guard.ConfirmLeave())
+            return;
+
         if (singleHoldingMode)
         {
+            _suppressLeaveGuard = true;
             SelectedNavItem = null;
+            _suppressLeaveGuard = false;
+            _navItemBeforeChange = null;
             CurrentPage = new Pages.SanierungsMatrixPageViewModel(this, holding, singleHoldingMode: true);
             return;
         }
@@ -357,6 +383,11 @@ public sealed partial class ShellViewModel : ObservableObject
     /// </summary>
     private bool ConfirmDiscardUnsavedChanges()
     {
+        // Erst die aktive Seite fragen — die Sanierungs-Matrix haelt ihren Kosten-Stand
+        // ausserhalb von Project.Dirty (costs.json), siehe Audit K1/W2.
+        if (CurrentPage is IConfirmLeave guard && !guard.ConfirmLeave())
+            return false;
+
         if (Project is null || !Project.Dirty)
             return true;
 

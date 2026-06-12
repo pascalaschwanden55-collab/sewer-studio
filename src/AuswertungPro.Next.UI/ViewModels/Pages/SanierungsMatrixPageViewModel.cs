@@ -133,13 +133,18 @@ public static class SanierungsMatrixMeasureSummaryFormatter
 public sealed partial class SanierungsMatrixDetailEditLineVm : ObservableObject
 {
     private readonly Action _changed;
+    // Erst nach dem Konstruktor duerfen Qty-/Preis-Aenderungen als Override zaehlen.
+    private readonly bool _initialized;
 
     public string Group { get; }
     public string ItemKey { get; }
     public string Text { get; }
     public string Unit { get; }
-    public bool IsPriceOverridden { get; }
-    public bool IsQtyOverridden { get; }
+
+    // Audit W5: Im Detail editierte Preise/Mengen muessen als Override markiert werden,
+    // sonst setzt der naechste Katalog-Preis-Apply sie still auf Katalogwerte zurueck.
+    public bool IsPriceOverridden { get; private set; }
+    public bool IsQtyOverridden { get; private set; }
 
     [ObservableProperty] private bool _selected;
     [ObservableProperty] private bool _transferMarked;
@@ -161,6 +166,7 @@ public sealed partial class SanierungsMatrixDetailEditLineVm : ObservableObject
         UnitPrice = line.UnitPrice;
         IsPriceOverridden = line.IsPriceOverridden;
         IsQtyOverridden = line.IsQtyOverridden;
+        _initialized = true;
     }
 
     public CostLine ToModel()
@@ -182,8 +188,20 @@ public sealed partial class SanierungsMatrixDetailEditLineVm : ObservableObject
 
     partial void OnSelectedChanged(bool value) => NotifyChanged();
     partial void OnTransferMarkedChanged(bool value) => NotifyChanged();
-    partial void OnQtyChanged(decimal value) => NotifyChanged();
-    partial void OnUnitPriceChanged(decimal value) => NotifyChanged();
+
+    partial void OnQtyChanged(decimal value)
+    {
+        if (_initialized)
+            IsQtyOverridden = true;
+        NotifyChanged();
+    }
+
+    partial void OnUnitPriceChanged(decimal value)
+    {
+        if (_initialized)
+            IsPriceOverridden = true;
+        NotifyChanged();
+    }
 
     private void NotifyChanged()
     {
@@ -449,7 +467,7 @@ public sealed partial class SanierungMatrixRowVm : ObservableObject
 /// Stueckzahl selbst ein. Speichern legt alles in costs.json ab; das aggregierte
 /// NPK-Leistungsverzeichnis wird im Druckcenter exportiert.
 /// </summary>
-public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
+public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IConfirmLeave
 {
     // Waehlbare Hauptarbeiten mit fachlicher Kategorie. Kanalroboter (nur Ablagerungen
     // fraesen) und Anschluss einbinden zaehlen zur REPARATUR, auch wenn ihre Katalog-
@@ -490,6 +508,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     private SanierungMatrixRowVm? _detailRow;
     private SanierungsMatrixDetailEditSession? _detailSession;
     private bool _suppressSelectionGuard;
+    // In-Memory-Store weicht von costs.json ab (RecomputeRow/DetailUebernehmen/Preis-Apply)
+    // -> Leave-Guard fragt nach, Speichern setzt zurueck (Audit K1/W2).
+    private bool _hasUnsavedChanges;
 
     // Haltungen, die in dieser Sitzung auf "keine" gesetzt wurden -> beim Speichern
     // muessen ihre Tabellenfelder (Kosten, Massnahmen, Mengen) geleert werden.
@@ -545,6 +566,38 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     [RelayCommand]
     private void Reload()
     {
+        // Audit W1: Rows.Clear() drueckt via TwoWay-SelectedItem synchron SelectedRow=null —
+        // ohne Schutz feuert der Dirty-Guard mitten im Neuaufbau (Doppel-Dialoge, Store/UI-Drift).
+        // Darum: offene Aenderungen EINMAL vorab klaeren, dann Guard unterdruecken.
+        if (IsDetailDirty || _hasUnsavedChanges)
+        {
+            if (!_sp.Dialogs.Confirm(
+                    "Nicht gespeicherte Aenderungen gehen beim Neuladen verloren.\nTrotzdem neu laden?",
+                    PageTitle))
+            {
+                Status = "Neu laden abgebrochen (offene Aenderungen).";
+                return;
+            }
+        }
+
+        _suppressSelectionGuard = true;
+        try
+        {
+            ReloadCore();
+        }
+        finally
+        {
+            _suppressSelectionGuard = false;
+        }
+
+        // Detailbereich explizit nachziehen (der unterdrueckte Selection-Handler tat es nicht).
+        LoadDetailForRow(SelectedRow);
+    }
+
+    private void ReloadCore()
+    {
+        _hasUnsavedChanges = false;
+        _clearedHoldings.Clear();
         _projectPath = _sp.Settings.LastProjectPath ?? "";
 
         var catalog = _catalogStore.LoadMerged(_projectPath);
@@ -716,7 +769,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(measureId))
         {
             if (_store.ByHolding.Remove(row.Holding))
+            {
                 _clearedHoldings.Add(row.Holding); // beim Speichern Tabellenfelder leeren
+                _hasUnsavedChanges = true;
+            }
             row.SetStoredCost(null);
             row.Total = 0m;
             row.Hinweis = "";
@@ -746,7 +802,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
             // Massnahme nicht (mehr) baubar (Template fehlt) -> Store-Eintrag nicht stehen lassen,
             // sonst zeigt die UI "nicht gefunden", waehrend beim Speichern der alte Wert bliebe.
             if (_store.ByHolding.Remove(row.Holding))
+            {
                 _clearedHoldings.Add(row.Holding);
+                _hasUnsavedChanges = true;
+            }
             row.SetStoredCost(null);
             row.Hinweis = "Massnahme nicht gefunden";
             row.Total = 0m;
@@ -754,9 +813,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         else
         {
             _store.ByHolding[row.Holding] = cost;
+            _hasUnsavedChanges = true;
             row.SetStoredCost(cost);
             row.Total = cost.Total;
-            row.Hinweis = row.Anschluesse > 0 ? $"{row.Anschluesse} Anschluss(e)" : "";
+            row.Hinweis = BuildRowHinweis(row, cost);
         }
 
         RefreshSelectedDetailIfNeeded(row);
@@ -769,32 +829,87 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         BelegteHaltungen = Rows.Count(r => r.SelectedMeasure?.Id is not null);
     }
 
+    /// <summary>
+    /// Hinweis-Text der Zeile: Anschluss-Zahl plus Warnung bei fehlenden Katalogpreisen
+    /// (Audit W9: 0-CHF-Totals waren vorher unsichtbar).
+    /// </summary>
+    private static string BuildRowHinweis(SanierungMatrixRowVm row, HoldingCost cost)
+    {
+        var hints = new List<string>();
+        if (row.Anschluesse > 0)
+            hints.Add($"{row.Anschluesse} Anschluss(e)");
+        if (cost.Measures.SelectMany(m => m.Lines).Any(l => l.Selected && l.Qty > 0m && l.UnitPrice <= 0m))
+            hints.Add("Preis fehlt im Katalog");
+        return string.Join(" | ", hints);
+    }
+
     partial void OnSelectedRowChanged(SanierungMatrixRowVm? value)
     {
         if (_suppressSelectionGuard)
             return;
 
-        if (_detailRow is not null && !ReferenceEquals(value, _detailRow) && IsDetailDirty)
+        if (_detailRow is not null && !ReferenceEquals(value, _detailRow) && !ResolveDirtyDetail())
         {
-            var decision = _sp.Dialogs.ConfirmCancel(
-                "Es gibt nicht uebernommene Aenderungen im Detailbereich.\n\nJa = uebernehmen, Nein = verwerfen, Abbrechen = auf der aktuellen Haltung bleiben.",
-                "Sanierungs-Matrix");
-
-            if (decision == DialogConfirm.Cancel)
-            {
-                _suppressSelectionGuard = true;
-                SelectedRow = _detailRow;
-                _suppressSelectionGuard = false;
-                return;
-            }
-
-            if (decision == DialogConfirm.Yes)
-                DetailUebernehmen();
-            else
-                DetailVerwerfen();
+            // Abbrechen -> auf der aktuellen Haltung bleiben.
+            _suppressSelectionGuard = true;
+            SelectedRow = _detailRow;
+            _suppressSelectionGuard = false;
+            return;
         }
 
         LoadDetailForRow(value);
+    }
+
+    /// <summary>
+    /// Klaert eine offene (dirty) Detail-Session per Ja/Nein/Abbrechen-Dialog.
+    /// true = geklaert (uebernommen oder verworfen) bzw. nichts offen; false = Abbrechen.
+    /// </summary>
+    private bool ResolveDirtyDetail()
+    {
+        if (_detailRow is null || _detailSession is null || !IsDetailDirty)
+            return true;
+
+        var decision = _sp.Dialogs.ConfirmCancel(
+            "Es gibt nicht uebernommene Aenderungen im Detailbereich.\n\nJa = uebernehmen, Nein = verwerfen, Abbrechen = abbrechen.",
+            PageTitle);
+
+        if (decision == DialogConfirm.Cancel)
+            return false;
+
+        if (decision == DialogConfirm.Yes)
+            DetailUebernehmen();
+        else
+            DetailVerwerfen();
+        return true;
+    }
+
+    /// <summary>
+    /// Leave-Guard (Audit K1/W2): Beim Verlassen der Seite (Nav-Klick, Projektwechsel,
+    /// App-Schliessen) offene Detail-Edits und nicht gespeicherte Matrix-Aenderungen klaeren —
+    /// vorher gingen sie kommentarlos verloren.
+    /// </summary>
+    public bool ConfirmLeave()
+    {
+        if (!ResolveDirtyDetail())
+            return false;
+
+        if (!_hasUnsavedChanges)
+            return true;
+
+        var decision = _sp.Dialogs.ConfirmCancel(
+            $"{PageTitle}: Es gibt nicht gespeicherte Aenderungen (costs.json).\n\nJa = speichern, Nein = verwerfen, Abbrechen = auf der Seite bleiben.",
+            PageTitle);
+
+        if (decision == DialogConfirm.Cancel)
+            return false;
+
+        if (decision == DialogConfirm.Yes)
+        {
+            Speichern();
+            return !_hasUnsavedChanges; // Speichern kann verweigern (z.B. Load-Fehler) -> bleiben
+        }
+
+        return true; // Nein = bewusst verwerfen
     }
 
     private void RefreshSelectedDetailIfNeeded(SanierungMatrixRowVm row)
@@ -870,18 +985,20 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
         var updated = _detailSession.ToHoldingCost(_detailRow.Holding, _detailRow.StoredCost?.Date, _vatRate);
         _store.ByHolding[_detailRow.Holding] = updated;
         _clearedHoldings.Remove(_detailRow.Holding);
+        _hasUnsavedChanges = true; // erst "Speichern" schreibt costs.json (Audit K1)
 
         _detailRow.SetStoredCost(updated);
         _detailRow.Total = updated.Total;
         _detailRow.Hinweis = updated.Measures.Count > 1
             ? "Mehrfach-Massnahme: im Detail bearbeiten"
-            : _detailRow.Anschluesse > 0 ? $"{_detailRow.Anschluesse} Anschluss(e)" : "";
+            : BuildRowHinweis(_detailRow, updated);
 
         _detailSession.MarkClean();
         DetailSubtitle = _detailRow.MeasuresSummary;
         UpdateDetailStateFromSession();
+        DetailEditStatus = "Uebernommen - noch nicht gespeichert";
         RecomputeGesamt();
-        Status = $"Detail uebernommen: {_detailRow.Holding}, Total {_detailRow.Total:N2} CHF.";
+        Status = $"Detail uebernommen: {_detailRow.Holding}, Total {_detailRow.Total:N2} CHF - 'Speichern' schreibt costs.json.";
     }
 
     [RelayCommand(CanExecute = nameof(CanApplyDetailChanges))]
@@ -908,12 +1025,18 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Öffnet den (einen) Preis-Katalog. Nach dem Schliessen werden die geänderten
-    /// Preise sofort auf alle Zeilen mit Massnahme angewendet (Totals neu gerechnet).
+    /// Öffnet den (einen) Preis-Katalog. Nach dem Schliessen werden NUR die Katalogpreise
+    /// auf die bestehenden gespeicherten Positionen angewendet — KEIN Template-Rebuild mehr
+    /// (Audit K2: der Rebuild verwarf Detail-/Fenster-Anpassungen an Einzel-Massnahmen).
+    /// Overrides (IsPriceOverridden) bleiben unangetastet.
     /// </summary>
     [RelayCommand]
     private void KatalogBearbeiten()
     {
+        // Offene Detail-Edits zuerst klaeren, sonst ersetzt der Refresh die Session still (Audit W4).
+        if (!ResolveDirtyDetail())
+            return;
+
         var dialog = new CostCatalogEditorDialog(string.IsNullOrWhiteSpace(_projectPath) ? null : _projectPath);
         dialog.ShowDialog();
         ReloadCatalogAndApplyPrices();
@@ -928,22 +1051,99 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
             .GroupBy(i => i.Key.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        var protectedRows = 0;
-        foreach (var row in Rows.Where(r => r.SelectedMeasure?.Id is not null))
-        {
-            if (row.HasMultipleStoredMeasures)
-            {
-                protectedRows++;
-                continue;
-            }
+        var updatedHoldings = ApplyCatalogPricesToStoredCosts();
 
-            RecomputeRow(row);
+        // Zeilen-Anzeige nachziehen (Totals/Zusammenfassung) — ohne Rebuild.
+        foreach (var row in Rows)
+        {
+            if (_store.ByHolding.TryGetValue(row.Holding, out var cost))
+            {
+                row.SetStoredCost(cost);
+                row.Total = cost.Total;
+                if (!row.HasMultipleStoredMeasures)
+                    row.Hinweis = BuildRowHinweis(row, cost);
+            }
         }
 
         RecomputeGesamt();
-        Status = protectedRows == 0
-            ? "Preise aus Katalog angewendet."
-            : $"Preise angewendet; {protectedRows} Mehrfach-Massnahme(n) geschuetzt.";
+        if (_detailRow is not null)
+            LoadDetailForRow(_detailRow); // Session wurde vorab geklaert (ResolveDirtyDetail)
+
+        if (updatedHoldings > 0)
+            _hasUnsavedChanges = true;
+        Status = updatedHoldings == 0
+            ? "Katalog neu geladen - keine Preisaenderungen."
+            : $"Katalogpreise auf {updatedHoldings} Haltung(en) angewendet (manuelle Overrides unangetastet) - 'Speichern' schreibt costs.json.";
+    }
+
+    /// <summary>
+    /// Wendet die aktuellen Katalogpreise auf alle gespeicherten Positionen an (auch
+    /// Mehrfach-Buendel — reine Preisaktualisierung, kein Rebuild). Zeilen mit
+    /// IsPriceOverridden und Positionen ohne eindeutigen Katalogpreis bleiben unveraendert.
+    /// </summary>
+    private int ApplyCatalogPricesToStoredCosts()
+    {
+        var updated = 0;
+        foreach (var cost in _store.ByHolding.Values)
+        {
+            var changed = false;
+            foreach (var measure in cost.Measures)
+            {
+                var measureChanged = false;
+                foreach (var line in measure.Lines)
+                {
+                    if (line.IsPriceOverridden || string.IsNullOrWhiteSpace(line.ItemKey))
+                        continue;
+                    if (!_catalog.TryGetValue(line.ItemKey.Trim(), out var item) || !item.Active)
+                        continue;
+
+                    var price = ResolveExactCatalogPrice(item, measure.Dn, line.Qty);
+                    if (price is decimal p && p != line.UnitPrice)
+                    {
+                        line.UnitPrice = p;
+                        measureChanged = true;
+                    }
+                }
+
+                if (measureChanged)
+                {
+                    measure.Total = measure.Lines.Where(l => l.Selected).Sum(l => l.Qty * l.UnitPrice);
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                var totals = CostCalculatorLogicService.CalculateTotals(cost.Measures.Sum(m => m.Total), _vatRate);
+                cost.Total = totals.Total;
+                cost.MwstRate = _vatRate;
+                cost.MwstAmount = totals.MwstAmount;
+                cost.TotalInclMwst = totals.TotalInclMwst;
+                updated++;
+            }
+        }
+
+        return updated;
+    }
+
+    /// <summary>
+    /// Exakter Katalogpreis: Fixed-Positionen direkt, ByDN nur bei passendem DN-/Mengen-Bereich.
+    /// Bewusst KEIN Naechster-DN-Fallback — lieber Preis stehen lassen als still falsch ersetzen.
+    /// </summary>
+    private static decimal? ResolveExactCatalogPrice(CostCatalogItem item, int? dn, decimal qty)
+    {
+        if (item.DnPrices is { Count: > 0 })
+        {
+            if (dn is not int d)
+                return null;
+            var bucket = item.DnPrices.FirstOrDefault(b =>
+                d >= b.DnFrom && d <= b.DnTo
+                && (!b.QtyFrom.HasValue || qty >= b.QtyFrom.Value)
+                && (!b.QtyTo.HasValue || qty <= b.QtyTo.Value));
+            return bucket?.Price;
+        }
+
+        return item.Price;
     }
 
     [RelayCommand]
@@ -965,6 +1165,11 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
             return;
         }
 
+        // Audit K1: Offene Detail-Aenderungen gehoeren zum Speichern dazu — vorher zeigte
+        // der Erfolgs-Dialog "Gespeichert", waehrend die sichtbaren Edits fehlten.
+        if (IsDetailDirty && _detailRow is not null && _detailSession is not null)
+            DetailUebernehmen();
+
         foreach (var row in Rows)
         {
             if (_store.ByHolding.TryGetValue(row.Holding, out var cost))
@@ -981,6 +1186,9 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject
             return;
         }
 
+        _hasUnsavedChanges = false;
+        if (_detailSession is not null && !_detailSession.IsDirty)
+            DetailEditStatus = "";
         _shell.Project.Dirty = true;
         Status = $"Gespeichert: {BelegteHaltungen} Haltungen, Total {GesamtTotal:N2} CHF.";
         _sp.Dialogs.Info(
