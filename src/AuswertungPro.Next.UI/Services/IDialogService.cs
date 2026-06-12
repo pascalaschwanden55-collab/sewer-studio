@@ -24,6 +24,9 @@ public interface IDialogService
     /// <summary>Ja/Nein-Bestaetigung. true = Ja.</summary>
     bool Confirm(string message, string title = "Bestaetigung");
 
+    /// <summary>Warnende Ja/Nein-Bestaetigung. true = Ja.</summary>
+    bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true);
+
     /// <summary>Ja/Nein/Abbrechen-Bestaetigung.</summary>
     DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung");
 }

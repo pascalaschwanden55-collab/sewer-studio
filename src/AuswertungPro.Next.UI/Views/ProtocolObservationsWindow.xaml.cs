@@ -131,7 +131,7 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            MessageBox.Show("Bitte zuerst eine Beobachtung waehlen.", "Protokoll", MessageBoxButton.OK, MessageBoxImage.Information);
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Protokoll");
             return;
         }
 
@@ -160,12 +160,11 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            MessageBox.Show("Bitte zuerst eine Beobachtung waehlen.", "Protokoll", MessageBoxButton.OK, MessageBoxImage.Information);
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Protokoll");
             return;
         }
 
-        var confirm = MessageBox.Show("Beobachtung wirklich loeschen?", "Protokoll", MessageBoxButton.YesNo, MessageBoxImage.Question);
-        if (confirm != MessageBoxResult.Yes)
+        if (!_sp.Dialogs.Confirm("Beobachtung wirklich loeschen?", "Protokoll"))
             return;
 
         entry.IsDeleted = true;
@@ -209,7 +208,7 @@ public partial class ProtocolObservationsWindow : Window
     {
         if (_sp.CodeCatalog is null)
         {
-            MessageBox.Show("Code-Katalog ist nicht verfuegbar.", "Protokoll", MessageBoxButton.OK, MessageBoxImage.Information);
+            _sp.Dialogs.Info("Code-Katalog ist nicht verfuegbar.", "Protokoll");
             return false;
         }
 
@@ -240,13 +239,13 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            MessageBox.Show("Bitte zuerst eine Beobachtung waehlen.", "Protokoll", MessageBoxButton.OK, MessageBoxImage.Information);
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Protokoll");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(_videoPath))
         {
-            MessageBox.Show("Kein Video verlinkt. Bitte zuerst Video verknuepfen.", "Video", MessageBoxButton.OK, MessageBoxImage.Information);
+            _sp.Dialogs.Info("Kein Video verlinkt. Bitte zuerst Video verknuepfen.", "Video");
             return;
         }
 
@@ -269,7 +268,7 @@ public partial class ProtocolObservationsWindow : Window
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Video konnte nicht gestartet werden: {ex.Message}", "Video", MessageBoxButton.OK, MessageBoxImage.Error);
+                _sp.Dialogs.Error($"Video konnte nicht gestartet werden: {ex.Message}", "Video");
             }
         }
     }
@@ -296,9 +295,7 @@ public partial class ProtocolObservationsWindow : Window
 
     private void RestoreOriginal()
     {
-        var confirm = MessageBox.Show("Original-Protokoll wiederherstellen?", "Protokoll",
-            MessageBoxButton.YesNo, MessageBoxImage.Question);
-        if (confirm != MessageBoxResult.Yes)
+        if (!_sp.Dialogs.Confirm("Original-Protokoll wiederherstellen?", "Protokoll"))
             return;
 
         _sp.Protocols.RestoreOriginal(_doc, user: null);
@@ -326,12 +323,12 @@ public partial class ProtocolObservationsWindow : Window
         var entry = SelectedEntry;
         if (entry is null)
         {
-            MessageBox.Show("Bitte zuerst eine Beobachtung waehlen.", "Training", MessageBoxButton.OK, MessageBoxImage.Information);
+            _sp.Dialogs.Info("Bitte zuerst eine Beobachtung waehlen.", "Training");
             return;
         }
 
         ProtocolTrainingStore.AddSample(entry, _record.GetFieldValue("Haltungsname"));
-        MessageBox.Show("Trainingseintrag gespeichert.", "Training", MessageBoxButton.OK, MessageBoxImage.Information);
+        _sp.Dialogs.Info("Trainingseintrag gespeichert.", "Training");
     }
 
     private void ExportPdf()
@@ -361,11 +358,11 @@ public partial class ProtocolObservationsWindow : Window
             var pdf = _sp.ProtocolPdfExporter.BuildHaltungsprotokollPdf(_project, _record, _doc, root, options);
             File.WriteAllBytes(output, pdf);
 
-            MessageBox.Show($"PDF wurde erstellt:\n{output}", "PDF", MessageBoxButton.OK, MessageBoxImage.Information);
+            _sp.Dialogs.Info($"PDF wurde erstellt:\n{output}", "PDF");
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"PDF konnte nicht erstellt werden:\n{ex.Message}", "PDF", MessageBoxButton.OK, MessageBoxImage.Error);
+            _sp.Dialogs.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "PDF");
         }
     }
 

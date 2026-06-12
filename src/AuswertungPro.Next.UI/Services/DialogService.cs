@@ -19,6 +19,15 @@ public sealed class DialogService : IDialogService
         => MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question)
             == MessageBoxResult.Yes;
 
+    public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true)
+        => MessageBox.Show(
+            message,
+            title,
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            defaultNo ? MessageBoxResult.No : MessageBoxResult.Yes)
+            == MessageBoxResult.Yes;
+
     public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
         => MessageBox.Show(message, title, MessageBoxButton.YesNoCancel, MessageBoxImage.Question) switch
         {

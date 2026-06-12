@@ -26,6 +26,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 {
     private static readonly IValueConverter CostDisplayConverter = new ChfAccountingDisplayConverter();
     private static readonly IValueConverter HorizontalAlignmentToTextAlignmentConverter = new HorizontalAlignmentToTextAlignmentValueConverter();
+    private static IDialogService Dialogs => ((ServiceProvider)App.Services).Dialogs;
     private bool _columnsBuilt;
     private System.Windows.Point _dragStartPoint;
     private readonly DispatcherTimer _searchDebounceTimer;
@@ -948,21 +949,16 @@ public partial class DataPage : System.Windows.Controls.UserControl
             !string.IsNullOrEmpty(r.GetFieldValue(fieldName)));
         if (betroffen == 0)
         {
-            MessageBox.Show($"Spalte \"{displayName}\" ist bereits leer.",
-                "Spalte leeren", MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info($"Spalte \"{displayName}\" ist bereits leer.", "Spalte leeren");
             return;
         }
 
-        var result = MessageBox.Show(
+        if (!Dialogs.ConfirmWarn(
             $"ACHTUNG: Alle Werte in Spalte \"{displayName}\" werden geloescht.\n\n" +
             $"Betroffen: {betroffen} von {vm.Records.Count} Haltungen.\n" +
             "Auch manuell bearbeitete Werte gehen verloren und koennen nicht rueckgaengig gemacht werden.\n\n" +
             "Wirklich loeschen?",
-            "Spalte leeren",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No);
-        if (result != MessageBoxResult.Yes)
+            "Spalte leeren"))
             return;
 
         foreach (var record in vm.Records)
@@ -1151,10 +1147,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var items = Grid.SelectedItems.OfType<HaltungRecord>().ToList();
         if (items.Count == 0) return;
 
-        var result = MessageBox.Show(
-            $"{items.Count} Haltung(en) wirklich loeschen?",
-            "Loeschen", MessageBoxButton.YesNo, MessageBoxImage.Question);
-        if (result != MessageBoxResult.Yes) return;
+        if (!Dialogs.Confirm($"{items.Count} Haltung(en) wirklich loeschen?", "Loeschen")) return;
 
         foreach (var item in items)
             vm.Project.RemoveRecord(item.Id);
@@ -1375,15 +1368,13 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var resolved = AuswertungPro.Next.Application.Common.ProjectPathResolver.ResolveFilePath(rawPath, sp?.Settings.LastProjectPath) ?? rawPath;
         if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
         {
-            MessageBox.Show($"Foto nicht gefunden:\n{rawPath}", "Foto",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info($"Foto nicht gefunden:\n{rawPath}", "Foto");
             return;
         }
 
         if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(resolved, out var error))
         {
-            MessageBox.Show($"Foto konnte nicht geoeffnet werden:\n{error}", "Foto",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Error($"Foto konnte nicht geoeffnet werden:\n{error}", "Foto");
         }
     }
 
@@ -1395,16 +1386,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = vm.Selected;
         if (record is null)
         {
-            MessageBox.Show("Bitte zuerst eine Haltung waehlen.", "Video",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Bitte zuerst eine Haltung waehlen.", "Video");
             return;
         }
 
         var entry = ResolveProtocolEntry(sender);
         if (entry is null)
         {
-            MessageBox.Show("Keine Beobachtung erkannt.", "Video",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Beobachtung erkannt.", "Video");
             return;
         }
 
@@ -1534,9 +1523,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
                 if (!renameResult.Success)
                 {
-                    MessageBox.Show(
-                        $"Umbenennen fehlgeschlagen:\n{renameResult.ErrorMessage}",
-                        "Umbenennen", MessageBoxButton.OK, MessageBoxImage.Error);
+                    Dialogs.Error($"Umbenennen fehlgeschlagen:\n{renameResult.ErrorMessage}", "Umbenennen");
                     return;
                 }
 
@@ -1646,7 +1633,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         {
             // Bei Fehler: alles zuruecksetzen
             System.Diagnostics.Debug.WriteLine($"Undock error: {ex}");
-            MessageBox.Show($"Fehler beim Abdocken:\n{ex.Message}", "Abdocken", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Warn($"Fehler beim Abdocken:\n{ex.Message}", "Abdocken");
 
             // DataGrid zuruecksetzen falls es entfernt wurde
             if (!GridHost.Children.Contains(Grid))
@@ -1750,8 +1737,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Beobachtungen",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Beobachtungen");
             return;
         }
 
@@ -1767,13 +1753,11 @@ public partial class DataPage : System.Windows.Controls.UserControl
             if (res.Ok)
             {
                 vm.RefreshSelectedRecord();
-                MessageBox.Show($"VSA Zustand aktualisiert für {holdingName}.",
-                    "VSA", MessageBoxButton.OK, MessageBoxImage.Information);
+                Dialogs.Info($"VSA Zustand aktualisiert für {holdingName}.", "VSA");
             }
             else
             {
-                MessageBox.Show($"VSA Fehler: {res.ErrorMessage}",
-                    "VSA", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Dialogs.Warn($"VSA Fehler: {res.ErrorMessage}", "VSA");
             }
         };
 
@@ -1810,8 +1794,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Video",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Video");
             return;
         }
         vm.PlayVideoCommand.Execute(record);
@@ -1825,8 +1808,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = GetContextMenuRecord(sender) ?? vm.Selected;
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.", "Position",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.", "Position");
             return;
         }
 
@@ -1843,8 +1825,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = GetContextMenuRecord(sender) ?? vm.Selected;
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.", "Position",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.", "Position");
             return;
         }
 
@@ -1870,8 +1851,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Protokoll",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Protokoll");
             return;
         }
         vm.OpenProtocolCommand.Execute(record);
@@ -1884,8 +1864,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Video",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Video");
             return;
         }
         vm.RelinkVideoCommand.Execute(record);
@@ -1898,8 +1877,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Massnahmen",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Massnahmen");
             return;
         }
         vm.OpenCostsCommand.Execute(record);
@@ -1912,8 +1890,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Haltungsprotokoll AWU",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Haltungsprotokoll AWU");
             return;
         }
         vm.PrintAwuHaltungsprotokollCommand.Execute(record);
@@ -1926,8 +1903,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "PDF",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "PDF");
             return;
         }
         vm.OpenOriginalPdfCommand.Execute(record);
@@ -1940,8 +1916,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Kosten/Massnahmen",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Kosten/Massnahmen");
             return;
         }
         vm.RestoreCostsCommand.Execute(record);
@@ -1954,8 +1929,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Massnahmen",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Massnahmen");
             return;
         }
         vm.SuggestMeasuresCommand.Execute(record);
@@ -1982,8 +1956,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "KI Sanierung",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "KI Sanierung");
             return;
         }
         vm.OptimizeSanierungKiCommand.Execute(record);
@@ -1997,8 +1970,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var record = ResolveActionRecord(sender, vm);
         if (record is null)
         {
-            MessageBox.Show("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Videoanalyse KI",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Videoanalyse KI");
             return;
         }
 
@@ -2042,13 +2014,11 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
         if (!int.TryParse(MoveToPositionBox.Text.Trim(), out var pos))
         {
-            MessageBox.Show("Bitte eine gueltige Zahl eingeben.", "Position",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Bitte eine gueltige Zahl eingeben.", "Position");
             return;
         }
         if (!vm.MoveToPosition(pos))
-            MessageBox.Show("Verschieben nicht moeglich. Bitte Zeile auswaehlen.", "Position",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Verschieben nicht moeglich. Bitte Zeile auswaehlen.", "Position");
     }
 
     private void GoToRowBox_KeyDown(object sender, KeyEventArgs e)
@@ -2064,8 +2034,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
         if (!int.TryParse(GoToRowBox.Text.Trim(), out var row) || row < 1)
         {
-            MessageBox.Show("Bitte eine gueltige Zeilennummer eingeben.", "Gehe zu Zeile",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Bitte eine gueltige Zeilennummer eingeben.", "Gehe zu Zeile");
             return;
         }
         var idx = row - 1;
@@ -2204,16 +2173,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
         var project = vm.Project;
         if (project is null)
         {
-            MessageBox.Show("Kein Projekt geladen.", "Zustandsklasse",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Kein Projekt geladen.", "Zustandsklasse");
             return;
         }
 
         var res = sp.Vsa.Explain(project, record);
         if (!res.Ok || res.Value is null)
         {
-            MessageBox.Show(res.ErrorMessage ?? "Berechnung fehlgeschlagen.", "Zustandsklasse",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Error(res.ErrorMessage ?? "Berechnung fehlgeschlagen.", "Zustandsklasse");
             return;
         }
 

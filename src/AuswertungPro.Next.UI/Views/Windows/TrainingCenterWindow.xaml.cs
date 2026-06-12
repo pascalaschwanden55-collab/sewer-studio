@@ -36,6 +36,9 @@ public partial class TrainingCenterWindow : Window
     private static IVsaCodeSelectionCatalog? CodeSelectionCatalog
         => TryGetAppServiceProvider()?.CodeSelectionCatalog;
 
+    private static IDialogService Dialogs
+        => TryGetAppServiceProvider()?.Dialogs ?? new DialogService();
+
     // Pipeline-Dots und Service-Indikatoren fuer Animation
     private Ellipse[] _pipelineDots = Array.Empty<Ellipse>();
     private Border[] _serviceDots = Array.Empty<Border>();
@@ -264,22 +267,19 @@ public partial class TrainingCenterWindow : Window
         var card = Vm.SelectedReviewCard;
         if (card is null)
         {
-            MessageBox.Show("Bitte zuerst einen Review-Kandidaten waehlen.", "SAM",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Bitte zuerst einen Review-Kandidaten waehlen.", "SAM");
             return;
         }
 
         if (Vm.PendingBox is not { } box)
         {
-            MessageBox.Show("Bitte zuerst eine Box um den Schaden ziehen.", "SAM",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Bitte zuerst eine Box um den Schaden ziehen.", "SAM");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(card.FramePath) || !File.Exists(card.FramePath))
         {
-            MessageBox.Show("Der Review-Frame ist nicht verfuegbar.", "SAM",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Warn("Der Review-Frame ist nicht verfuegbar.", "SAM");
             return;
         }
 
@@ -315,8 +315,7 @@ public partial class TrainingCenterWindow : Window
         catch (Exception ex)
         {
             ReviewSamStatusText.Text = "SAM Fehler";
-            MessageBox.Show($"SAM-Segmentierung fehlgeschlagen:\n{ex.Message}", "SAM",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Warn($"SAM-Segmentierung fehlgeschlagen:\n{ex.Message}", "SAM");
         }
         finally
         {
@@ -482,19 +481,16 @@ public partial class TrainingCenterWindow : Window
         var n = Vm.StartdataCandidateCount;
         if (n == 0)
         {
-            MessageBox.Show("Keine Protokoll-Startdaten in der Queue.", "Sammel-Freigabe",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            Dialogs.Info("Keine Protokoll-Startdaten in der Queue.", "Sammel-Freigabe");
             return;
         }
-        var res = MessageBox.Show(
+        if (!Dialogs.ConfirmWarn(
             $"{n} Protokoll-Startdaten freigeben?\n\nDas schreibt {n} gepruefte Eintraege in die Knowledge Base (ueber Review, kein Auto-Index).",
-            "Sammel-Freigabe", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-        if (res != MessageBoxResult.Yes) return;
+            "Sammel-Freigabe")) return;
         try { await Vm.ApproveAllStartdataAsync(); }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler bei der Sammel-Freigabe: {ex.Message}", "Sammel-Freigabe",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Warn($"Fehler bei der Sammel-Freigabe: {ex.Message}", "Sammel-Freigabe");
         }
     }
 
@@ -508,8 +504,7 @@ public partial class TrainingCenterWindow : Window
         var catalog = CodeSelectionCatalog;
         if (catalog is null)
         {
-            MessageBox.Show("Code-Katalog nicht verfuegbar.", "Korrektur",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Warn("Code-Katalog nicht verfuegbar.", "Korrektur");
             return;
         }
 
@@ -527,8 +522,7 @@ public partial class TrainingCenterWindow : Window
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler bei der Korrektur: {ex.Message}", "Korrektur",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                Dialogs.Warn($"Fehler bei der Korrektur: {ex.Message}", "Korrektur");
             }
         }
     }
@@ -554,11 +548,9 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            Dialogs.Warn(
                 $"VideoLabelTool konnte nicht gestartet werden:\n{ex.Message}",
-                "Gold-Label-Tool",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+                "Gold-Label-Tool");
         }
         finally
         {
@@ -625,8 +617,7 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler beim Laden der Lehrer-Annotationen:\n{ex.Message}",
-                "Lehrer", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Warn($"Fehler beim Laden der Lehrer-Annotationen:\n{ex.Message}", "Lehrer");
         }
     }
 
@@ -704,8 +695,7 @@ public partial class TrainingCenterWindow : Window
 
         if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
         {
-            MessageBox.Show("Kein Bild fuer diese Annotation verfuegbar.",
-                "FewShot", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Dialogs.Warn("Kein Bild fuer diese Annotation verfuegbar.", "FewShot");
             return;
         }
 
@@ -730,13 +720,13 @@ public partial class TrainingCenterWindow : Window
                 $"teacher:{_selectedTeacherAnnotation.AnnotationId}",
                 1.0);
 
-            MessageBox.Show(
+            Dialogs.Info(
                 $"Annotation '{_selectedTeacherAnnotation.VsaCode}' als FewShot-Beispiel hinzugefuegt (quality=1.0).",
-                "FewShot", MessageBoxButton.OK, MessageBoxImage.Information);
+                "FewShot");
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler: {ex.Message}", "FewShot", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Error($"Fehler: {ex.Message}", "FewShot");
         }
     }
 
@@ -744,13 +734,10 @@ public partial class TrainingCenterWindow : Window
     {
         if (_selectedTeacherAnnotation is null) return;
 
-        var result = MessageBox.Show(
+        if (!Dialogs.ConfirmWarn(
             $"Annotation '{_selectedTeacherAnnotation.VsaCode}' bei {_selectedTeacherAnnotation.MeterPosition:F1}m wirklich loeschen?\n\n" +
             "Zugehoerige Dateien (Frame, Crop, YOLO-Label) werden ebenfalls entfernt.",
-            "Annotation loeschen",
-            MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
-        if (result != MessageBoxResult.Yes) return;
+            "Annotation loeschen")) return;
 
         try
         {
@@ -761,8 +748,7 @@ public partial class TrainingCenterWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler beim Loeschen: {ex.Message}",
-                "Lehrer", MessageBoxButton.OK, MessageBoxImage.Error);
+            Dialogs.Error($"Fehler beim Loeschen: {ex.Message}", "Lehrer");
         }
     }
 
