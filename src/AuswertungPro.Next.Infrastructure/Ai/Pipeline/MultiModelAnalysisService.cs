@@ -88,6 +88,9 @@ public sealed class MultiModelAnalysisService
             : config.YoloConfidence;
     }
 
+    public static (string MeterSource, bool IsMeterEstimated) GetDedupMeterMetadata(bool qwenMeterAccepted)
+        => qwenMeterAccepted ? ("QwenOsd", false) : ("LinearEstimate", true);
+
     /// <summary>
     /// Run the full multi-model pipeline on a video file.
     /// Returns the same <see cref="VideoAnalysisResult"/> as the Ollama-only path.
@@ -584,6 +587,7 @@ public sealed class MultiModelAnalysisService
 
             // ── Step 5: Qwen VSA-Code enrichment (optional) ──
             long qwenMs = 0;
+            var qwenMeterAccepted = false;
             if (_qwenVision is not null && findings.Count > 0)
             {
                 trace.QwenCalled = true;
@@ -628,6 +632,7 @@ public sealed class MultiModelAnalysisService
                     {
                         meter = qwenResult.Meter.Value;
                         lastMeter = meter;
+                        qwenMeterAccepted = true;
                     }
                     else if (qwenResult.Meter.HasValue)
                     {
@@ -713,12 +718,13 @@ public sealed class MultiModelAnalysisService
             )).ToList();
 
             // Update active findings (dedup)
+            var (meterSource, isMeterEstimated) = GetDedupMeterMetadata(qwenMeterAccepted);
             detections.AddRange(deduplicator.Update(
                 findings,
                 meter,
                 frameEvidence,
-                meterSource: "LinearEstimate",
-                isMeterEstimated: true));
+                meterSource: meterSource,
+                isMeterEstimated: isMeterEstimated));
 
             trace.Meter = meter;
             trace.FindingsEndOfFrame = findings.Count;

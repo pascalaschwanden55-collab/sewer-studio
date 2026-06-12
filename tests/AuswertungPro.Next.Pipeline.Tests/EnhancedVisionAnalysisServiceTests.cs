@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai;
 using Xunit;
 
@@ -9,6 +10,16 @@ namespace AuswertungPro.Next.Pipeline.Tests;
 
 public sealed class EnhancedVisionAnalysisServiceTests
 {
+    [Fact]
+    public void EmptyResult_ForQwenError_DoesNotClaimBadImageQuality()
+    {
+        var result = EnhancedFrameAnalysis.Empty("timeout");
+
+        Assert.Equal("unbekannt", result.ImageQuality);
+        Assert.Equal("timeout", result.Error);
+        Assert.True(result.IsEmptyFrame);
+    }
+
     [Fact]
     public async Task AnalyzeAsync_with_import_context_prompt_discourages_empty_frame_for_known_findings()
     {

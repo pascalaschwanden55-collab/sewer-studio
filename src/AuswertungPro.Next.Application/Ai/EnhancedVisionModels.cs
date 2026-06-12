@@ -13,7 +13,7 @@ public sealed record EnhancedFrameAnalysis(
 
     public static EnhancedFrameAnalysis Empty(string? error = null) =>
         new(null, "unbekannt", null,
-            Array.Empty<EnhancedFinding>(), "schlecht", true, error);
+            Array.Empty<EnhancedFinding>(), "unbekannt", true, error);
 }
 
 public sealed record EnhancedFinding(

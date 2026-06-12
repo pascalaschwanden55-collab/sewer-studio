@@ -13,6 +13,20 @@ public sealed class MultiModelAnalysisServiceTests
         VsaResolverTestCatalog.ConfigureDefault();
     }
 
+    [Theory]
+    [InlineData(false, "LinearEstimate", true)]
+    [InlineData(true, "QwenOsd", false)]
+    public void GetDedupMeterMetadata_ReflectsAcceptedQwenMeter(
+        bool qwenMeterAccepted,
+        string expectedSource,
+        bool expectedEstimated)
+    {
+        var (source, estimated) = MultiModelAnalysisService.GetDedupMeterMetadata(qwenMeterAccepted);
+
+        Assert.Equal(expectedSource, source);
+        Assert.Equal(expectedEstimated, estimated);
+    }
+
     [Fact]
     public void ToEnhancedAnalysis_PreservesNormalizedBboxAndInferredCode()
     {
