@@ -1,8 +1,8 @@
 <Window x:Class="AuswertungPro.Next.UI.Views.Windows.DossierPrintDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Haltungsdossier - Druckoptionen"
-        Width="480" Height="620"
+        Title="SewerStudio — Haltungsdossier drucken"
+        Width="480" Height="620" MinWidth="480" MinHeight="620"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgBrush}">

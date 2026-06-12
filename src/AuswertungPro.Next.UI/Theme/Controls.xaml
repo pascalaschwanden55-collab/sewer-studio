@@ -289,7 +289,8 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock x:Name="Glyph"
                                Grid.Column="0"
-                               Text="✓"
+                               Text="&#xE73E;"
+                               FontFamily="Segoe MDL2 Assets"
                                Visibility="Collapsed"
                                Foreground="{DynamicResource AccentBrush}"
                                FontWeight="Bold"
@@ -369,7 +370,8 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock x:Name="Glyph"
                            Grid.Column="0"
-                           Text="✓"
+                           Text="&#xE73E;"
+                           FontFamily="Segoe MDL2 Assets"
                            Visibility="Collapsed"
                            Foreground="{DynamicResource AccentBrush}"
                            FontWeight="Bold"

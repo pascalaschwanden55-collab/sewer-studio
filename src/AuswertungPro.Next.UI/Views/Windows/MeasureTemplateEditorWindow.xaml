@@ -4,8 +4,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Maßnahmen bearbeiten" 
-        Height="800" Width="1600" 
+        Title="SewerStudio — Maßnahmen bearbeiten" 
+        Height="800" Width="1600" MinWidth="1100" MinHeight="620"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="10">
         <Grid.ColumnDefinitions>
@@ -66,8 +66,13 @@
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
                 <Button Content="+ Position" Width="110" Margin="0,0,6,0"
                         Command="{Binding AddCatalogItemCommand}"/>
-                <Button Content="✕ Löschen" Width="110" Margin="0,0,6,0"
-                        Command="{Binding RemoveCatalogItemCommand}"/>
+                <Button Width="110" Margin="0,0,6,0"
+                        Command="{Binding RemoveCatalogItemCommand}">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
+                        <TextBlock Text="Löschen"/>
+                    </StackPanel>
+                </Button>
                 <Button Content="Positionen speichern" Width="150"
                         Command="{Binding SaveCatalogCommand}"/>
             </StackPanel>

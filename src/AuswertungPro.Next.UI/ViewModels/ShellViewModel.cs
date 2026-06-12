@@ -20,7 +20,6 @@ public static class ShellNavigationPolicy
 public sealed partial class ShellViewModel : ObservableObject
 {
     private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
-    private readonly List<GuideStep> _guideSteps;
 
     [ObservableProperty] private string _title = "SewerStudio";
     [ObservableProperty] private string _subtitle = "Bereit";
@@ -45,25 +44,12 @@ public sealed partial class ShellViewModel : ObservableObject
     public IRelayCommand SaveAsProjectCommand { get; }
     public IRelayCommand OpenPriceCatalogCommand { get; }
     public IRelayCommand OpenTemplateEditorCommand { get; }
-    public IRelayCommand GuideNextCommand { get; }
-    public IRelayCommand GuidePreviousCommand { get; }
-    public IRelayCommand GuideHideCommand { get; }
-    public IRelayCommand GuideShowCommand { get; }
-    public IRelayCommand GuideRestartCommand { get; }
     public IRelayCommand ToggleFocusModeCommand { get; }
     [ObservableProperty] private bool _isProjectReady;
-    [ObservableProperty] private bool _isGuideVisible = true;
     [ObservableProperty] private bool _isFocusMode;
     [ObservableProperty] private bool _isAiWorking;
     [ObservableProperty] private string _aiStatusLabel = "";
     [ObservableProperty] private string _aiLoadedModels = "";
-    [ObservableProperty] private int _guideStepIndex;
-    [ObservableProperty] private string _guideStepTitle = "Ratten-Assistent";
-    [ObservableProperty] private string _guideMessage = "Willkommen in SewerStudio.";
-
-    public string GuideStepCounter => _guideSteps.Count == 0 ? "0/0" : $"{GuideStepIndex + 1}/{_guideSteps.Count}";
-    public bool HasGuidePrevious => GuideStepIndex > 0;
-    public bool HasGuideNext => GuideStepIndex < _guideSteps.Count - 1;
 
     // Lock-Objekt fuer thread-sichere ObservableCollection-Zugriffe
     private readonly object _collectionLock = new();
@@ -75,7 +61,6 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public ShellViewModel()
     {
-        _guideSteps = BuildGuideSteps();
         EnableCollectionSync(_project);
 
         NavItems = new List<NavItem>
@@ -102,16 +87,10 @@ public sealed partial class ShellViewModel : ObservableObject
         SaveAsProjectCommand = new RelayCommand(SaveProjectAs);
         OpenPriceCatalogCommand = new RelayCommand(OpenPriceCatalog);
         OpenTemplateEditorCommand = new RelayCommand(OpenTemplateEditor);
-        GuideNextCommand = new RelayCommand(GuideNext);
-        GuidePreviousCommand = new RelayCommand(GuidePrevious);
-        GuideHideCommand = new RelayCommand(() => IsGuideVisible = false);
-        GuideShowCommand = new RelayCommand(() => IsGuideVisible = true);
-        GuideRestartCommand = new RelayCommand(RestartGuide);
         ToggleFocusModeCommand = new RelayCommand(() => IsFocusMode = !IsFocusMode);
 
         SelectedNavItem = NavItems[0];
         SetCurrentPage(SelectedNavItem.CreatePage());
-        ApplyGuideStep();
         Monitor.Start();
 
         AiActivityTracker.ActiveChanged += (active, label) =>
@@ -171,15 +150,9 @@ public sealed partial class ShellViewModel : ObservableObject
         ShellPageLifecycle.DisposeIfReplaced(previousPage, nextPage);
     }
 
-    partial void OnGuideStepIndexChanged(int value)
-    {
-        ApplyGuideStep();
-    }
-
     partial void OnIsProjectReadyChanged(bool value)
     {
         RefreshNavigationAvailability();
-        ApplyGuideStep();
         RefreshTitleAndDirty();
     }
 
@@ -198,67 +171,6 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         foreach (var item in NavItems)
             item.UpdateAvailability(IsProjectReady);
-    }
-
-    private void RestartGuide()
-    {
-        GuideStepIndex = 0;
-        IsGuideVisible = true;
-        ApplyGuideStep();
-    }
-
-    private void GuideNext()
-    {
-        if (HasGuideNext)
-            GuideStepIndex++;
-    }
-
-    private void GuidePrevious()
-    {
-        if (HasGuidePrevious)
-            GuideStepIndex--;
-    }
-
-    private void ApplyGuideStep()
-    {
-        if (_guideSteps.Count == 0)
-            return;
-
-        var index = Math.Max(0, Math.Min(GuideStepIndex, _guideSteps.Count - 1));
-        if (index != GuideStepIndex)
-        {
-            GuideStepIndex = index;
-            return;
-        }
-
-        var step = _guideSteps[index];
-        GuideStepTitle = step.Title;
-
-        var message = step.Message;
-        if (step.RequiresProject && !IsProjectReady)
-            message += "\n\nHinweis: Bitte zuerst ein Projekt speichern (Datei -> Speichern).";
-        GuideMessage = message;
-
-        if (!string.IsNullOrWhiteSpace(step.NavTitle) && (!step.RequiresProject || IsProjectReady))
-            NavigateTo(step.NavTitle!);
-
-        OnPropertyChanged(nameof(GuideStepCounter));
-        OnPropertyChanged(nameof(HasGuidePrevious));
-        OnPropertyChanged(nameof(HasGuideNext));
-    }
-
-    private static List<GuideStep> BuildGuideSteps()
-    {
-        return new List<GuideStep>
-        {
-            new("Willkommen", "Ich bin die Ratte und fuehre dich durch SewerStudio. Mit Weiter/Zurueck gehst du Schritt fuer Schritt.", "Uebersicht"),
-            new("Projekt anlegen", "Waehle 'Neues Projekt' und bestimme einen Projektordner. Das Projekt wird sofort dort gespeichert.", "Projekt"),
-            new("Daten pruefen", "Auf 'Haltungen' findest du die Haltungen und kannst Videos pro Haltung oeffnen.", "Haltungen", RequiresProject: true),
-            new("Import", "Auf 'Import' importierst du PDF/XTF und verteilst Dateien in die Haltungsstruktur.", "Import", RequiresProject: true),
-            new("Massnahmen", "Nutze in 'Haltungen' den Knopf 'Vorschlag aus Schadenscodes'. Das lernt aus bewerteten Haltungen."),
-            new("Lernen", "Wenn du Kosten/Massnahmen uebernimmst oder speicherst, werden vorhandene Schadenscodes und Massnahmen als Lernbeispiel gesichert."),
-            new("Fertig", "Wenn du willst, starte den Assistenten jederzeit neu ueber Hilfe -> Ratten-Assistent neu starten.")
-        };
     }
 
     public void SetStatus(string text) => Subtitle = text;
@@ -592,5 +504,4 @@ public sealed partial class ShellViewModel : ObservableObject
             => IsAvailable = isProjectReady || CanOpenWithoutProject;
     }
 
-    private sealed record GuideStep(string Title, string Message, string? NavTitle = null, bool RequiresProject = false);
 }
