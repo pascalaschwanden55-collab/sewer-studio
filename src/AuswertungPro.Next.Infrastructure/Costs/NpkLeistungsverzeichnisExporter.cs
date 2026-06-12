@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -8,15 +9,18 @@ namespace AuswertungPro.Next.Infrastructure.Costs;
 
 /// <summary>
 /// Baut aus den aggregierten Positionen ein NPK-Leistungsverzeichnis als CSV
-/// (Semikolon-getrennt, de-CH-Zahlen). Gruppiert nach NPK-Kapitel mit
-/// Zwischentotalen und Gesamttotal. Die EP-Spalte bleibt leer, wo der Preis
-/// variabel ist (mehrere DN/Haltungen) — dort trägt der Anwender den Fixwert ein.
+/// (Semikolon-getrennt, de-CH-Zahlen mit Dezimal-PUNKT — Schweizer Excel erwartet
+/// den Punkt, sonst kommen Betraege als Text an; Audit K5). Gruppiert nach
+/// NPK-Kapitel mit Zwischentotalen und Gesamttotal. Die EP-Spalte bleibt leer, wo
+/// der Preis variabel ist (mehrere DN/Haltungen) — dort trägt der Anwender den
+/// Fixwert ein. Zwischentotale werden aus den GERUNDETEN Zeilen-Totalen gebildet,
+/// damit Ausdruck und Nachrechnung auf den Rappen uebereinstimmen (Audit W15).
 /// </summary>
 public static class NpkLeistungsverzeichnisExporter
 {
     private static readonly NumberFormatInfo Nf = new()
     {
-        NumberDecimalSeparator = ",",
+        NumberDecimalSeparator = ".",
         NumberGroupSeparator = ""
     };
 
@@ -40,10 +44,13 @@ public static class NpkLeistungsverzeichnisExporter
             foreach (var p in chapterGroup)
             {
                 var ep = p.UnitPrice.HasValue ? p.UnitPrice.Value.ToString("0.00", Nf) : "";
-                var total = p.TotalNet.ToString("0.00", Nf);
-                chapterTotal += p.TotalNet;
+                // Zeilen-Total auf Rappen festziehen und NUR die gerundeten Werte summieren —
+                // sonst weicht das gedruckte Zwischentotal von den gedruckten Zeilen ab (W15).
+                var lineTotal = Math.Round(p.TotalNet, 2, MidpointRounding.AwayFromZero);
+                var total = lineTotal.ToString("0.00", Nf);
+                chapterTotal += lineTotal;
 
-                sb.Append(Csv(p.NpkCode)).Append(';')
+                sb.Append(CsvText(p.NpkCode)).Append(';')
                     .Append(Csv(p.Text)).Append(';')
                     .Append(p.Dn?.ToString(CultureInfo.InvariantCulture) ?? "").Append(';')
                     .Append(p.TotalQty.ToString("0.###", Nf)).Append(';')
@@ -84,4 +91,11 @@ public static class NpkLeistungsverzeichnisExporter
             return "\"" + v.Replace("\"", "\"\"") + "\"";
         return v;
     }
+
+    /// <summary>
+    /// Excel-feste Text-Zelle: NPK-Nummern wie "612.110" wuerden von Excel als Zahl
+    /// gelesen (612.11 bzw. 612110 je nach Locale). Das ="..."-Muster erzwingt Text (Audit K4).
+    /// </summary>
+    private static string CsvText(string? value)
+        => string.IsNullOrEmpty(value) ? "" : "=\"" + value.Replace("\"", "\"\"") + "\"";
 }
