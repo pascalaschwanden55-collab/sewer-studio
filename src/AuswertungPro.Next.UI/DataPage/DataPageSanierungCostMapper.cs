@@ -64,9 +64,12 @@ public static class DataPageSanierungCostMapper
         var inlinerStk = HasSelectedLiner(cost) ? 1 : 0;
         // Anzahl Anschluesse = max ueber alle Anschluss-Arten (jeder Anschluss zaehlt
         // einmal; Auffraesen + Einbinden am selben Anschluss nicht doppelt).
+        // Audit W7: pro Massnahme zaehlen und Maximum nehmen — die Anschluss-Zahl wird
+        // in JEDES Massnahmen-Buendel injiziert, Summieren wuerde sie mehrfach zaehlen
+        // (2 Buendel x 3 Anschluesse ergaben 6 statt 3).
         var anschluesse = Math.Max(
-            SumSelectedQty(cost, "ANSCHLUSS_EINBINDEN", "ANSCHLUSS_DICHTEN", "ANSCHLUSS_VERSCHLIESSEN"),
-            SumSelectedQty(cost, "ANSCHLUSS_AUFFRAESEN"));
+            MaxMeasureQty(cost, "ANSCHLUSS_EINBINDEN", "ANSCHLUSS_DICHTEN", "ANSCHLUSS_VERSCHLIESSEN"),
+            MaxMeasureQty(cost, "ANSCHLUSS_AUFFRAESEN"));
         // LEM is not a repair manschette and must not fill Reparatur_Manschette.
         var manschette = SumSelectedQty(cost, "MANSCHETTE_PER_ST", "MANSCHETTE_EDELSTAHL");
         var lem = SumSelectedQty(cost, "LINERENDMANSCHETTE_LEM");
@@ -299,6 +302,31 @@ public static class DataPageSanierungCostMapper
             }
         }
         return (int)Math.Round(total, 0, MidpointRounding.AwayFromZero);
+    }
+
+    /// <summary>
+    /// Teilsumme pro Massnahme, dann Maximum ueber die Massnahmen — fuer Mengen, die
+    /// (wie die Anschluss-Zahl) in jedes Buendel injiziert werden und darum nicht
+    /// ueber Massnahmen summiert werden duerfen (Audit W7).
+    /// </summary>
+    private static int MaxMeasureQty(HoldingCost cost, params string[] itemKeys)
+    {
+        var max = 0m;
+        foreach (var measure in cost.Measures)
+        {
+            var sub = 0m;
+            foreach (var line in measure.Lines)
+            {
+                if (!line.Selected)
+                    continue;
+                if (!itemKeys.Any(key => string.Equals(line.ItemKey, key, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+                sub += line.Qty;
+            }
+            if (sub > max)
+                max = sub;
+        }
+        return (int)Math.Round(max, 0, MidpointRounding.AwayFromZero);
     }
 
     private static string FormatDecimal(decimal value)

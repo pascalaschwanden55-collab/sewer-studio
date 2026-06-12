@@ -516,6 +516,12 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     // muessen ihre Tabellenfelder (Kosten, Massnahmen, Mengen) geleert werden.
     private readonly HashSet<string> _clearedHoldings = new(StringComparer.OrdinalIgnoreCase);
 
+    // Haltungen, die in dieser Sitzung wirklich geaendert wurden — nur deren Tabellen-
+    // felder werden beim Speichern gestempelt (Audit W6: vorher bekam JEDE Haltung
+    // userEdited/Manual, auch unberuehrte) und nur sie werden in den frischen Store
+    // gemergt (Audit W8: Last-Write-Wins gegen das Kostenfenster vermeiden).
+    private readonly HashSet<string> _touchedHoldings = new(StringComparer.OrdinalIgnoreCase);
+
     public ObservableCollection<SanierungMatrixRowVm> Rows { get; } = new();
     public ObservableCollection<MeasureOption> MeasureOptions { get; } = new();
 
@@ -598,6 +604,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     {
         _hasUnsavedChanges = false;
         _clearedHoldings.Clear();
+        _touchedHoldings.Clear();
         _projectPath = _sp.Settings.LastProjectPath ?? "";
 
         var catalog = _catalogStore.LoadMerged(_projectPath);
@@ -771,6 +778,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             if (_store.ByHolding.Remove(row.Holding))
             {
                 _clearedHoldings.Add(row.Holding); // beim Speichern Tabellenfelder leeren
+                _touchedHoldings.Add(row.Holding);
                 _hasUnsavedChanges = true;
             }
             row.SetStoredCost(null);
@@ -804,6 +812,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             if (_store.ByHolding.Remove(row.Holding))
             {
                 _clearedHoldings.Add(row.Holding);
+                _touchedHoldings.Add(row.Holding);
                 _hasUnsavedChanges = true;
             }
             row.SetStoredCost(null);
@@ -813,6 +822,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         else
         {
             _store.ByHolding[row.Holding] = cost;
+            _touchedHoldings.Add(row.Holding);
             _hasUnsavedChanges = true;
             row.SetStoredCost(cost);
             row.Total = cost.Total;
@@ -828,6 +838,15 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         GesamtTotal = Rows.Sum(r => r.Total);
         BelegteHaltungen = Rows.Count(r => r.SelectedMeasure?.Id is not null);
     }
+
+    /// <summary>
+    /// Record zu einer Haltung — zuerst ueber die sichtbaren Zeilen, sonst im Projekt
+    /// (im Einzelmodus kann der Preis-Apply auch unsichtbare Haltungen aendern).
+    /// </summary>
+    private HaltungRecord? FindRecordForHolding(string holding)
+        => Rows.FirstOrDefault(r => string.Equals(r.Holding, holding, StringComparison.OrdinalIgnoreCase))?.Record
+           ?? _shell.Project.Data.FirstOrDefault(rec =>
+               string.Equals((rec.GetFieldValue("Haltungsname") ?? "").Trim(), holding, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Hinweis-Text der Zeile: Anschluss-Zahl plus Warnung bei fehlenden Katalogpreisen
@@ -985,6 +1004,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         var updated = _detailSession.ToHoldingCost(_detailRow.Holding, _detailRow.StoredCost?.Date, _vatRate);
         _store.ByHolding[_detailRow.Holding] = updated;
         _clearedHoldings.Remove(_detailRow.Holding);
+        _touchedHoldings.Add(_detailRow.Holding);
         _hasUnsavedChanges = true; // erst "Speichern" schreibt costs.json (Audit K1)
 
         _detailRow.SetStoredCost(updated);
@@ -1084,7 +1104,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     private int ApplyCatalogPricesToStoredCosts()
     {
         var updated = 0;
-        foreach (var cost in _store.ByHolding.Values)
+        foreach (var (holding, cost) in _store.ByHolding)
         {
             var changed = false;
             foreach (var measure in cost.Measures)
@@ -1119,6 +1139,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
                 cost.MwstRate = _vatRate;
                 cost.MwstAmount = totals.MwstAmount;
                 cost.TotalInclMwst = totals.TotalInclMwst;
+                _touchedHoldings.Add(holding);
                 updated++;
             }
         }
@@ -1170,21 +1191,47 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         if (IsDetailDirty && _detailRow is not null && _detailSession is not null)
             DetailUebernehmen();
 
-        foreach (var row in Rows)
+        // Audit W8: Frisch von Platte laden und NUR die eigenen Aenderungen hineinmergen —
+        // sonst ueberschreibt der Seiten-Snapshot Aenderungen anderer Schreiber (Kostenfenster).
+        var fresh = _costRepo.Load(_projectPath, out var freshError);
+        if (freshError is not null)
         {
-            if (_store.ByHolding.TryGetValue(row.Holding, out var cost))
-                DataPageSanierungCostMapper.ApplyCosts(row.Record, cost);
-            else if (_clearedHoldings.Contains(row.Holding))
-                // Massnahme wurde auf "keine" gesetzt -> alte Kosten/Massnahmen-Felder echt leeren.
-                DataPageSanierungCostMapper.ClearCosts(row.Record);
+            _sp.Dialogs.Error(
+                $"Speichern gesperrt: costs.json konnte nicht frisch gelesen werden.\n{freshError}",
+                "Sanierungs-Matrix");
+            return;
         }
-        _clearedHoldings.Clear();
+        foreach (var holding in _touchedHoldings)
+        {
+            if (_store.ByHolding.TryGetValue(holding, out var ownCost))
+                fresh.ByHolding[holding] = ownCost;
+            else
+                fresh.ByHolding.Remove(holding);
+        }
+        _store = fresh;
+
+        // Audit W6: Nur in dieser Sitzung geaenderte Haltungen stempeln (userEdited/Manual) —
+        // vorher wurden ALLE Haltungen mit Store-Eintrag bei jedem Speichern ueberschrieben.
+        foreach (var holding in _touchedHoldings)
+        {
+            var record = FindRecordForHolding(holding);
+            if (record is null)
+                continue;
+            if (_store.ByHolding.TryGetValue(holding, out var cost))
+                DataPageSanierungCostMapper.ApplyCosts(record, cost);
+            else if (_clearedHoldings.Contains(holding))
+                // Massnahme wurde auf "keine" gesetzt -> alte Kosten/Massnahmen-Felder echt leeren.
+                DataPageSanierungCostMapper.ClearCosts(record);
+        }
 
         if (!_costRepo.Save(_projectPath, _store, out var error))
         {
             _sp.Dialogs.Error($"Speichern fehlgeschlagen: {error}", "Sanierungs-Matrix");
             return;
         }
+
+        _clearedHoldings.Clear();
+        _touchedHoldings.Clear();
 
         _hasUnsavedChanges = false;
         if (_detailSession is not null && !_detailSession.IsDirty)

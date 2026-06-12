@@ -258,7 +258,20 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         }
 
         var holdingCost = BuildHoldingCost(key);
-        _store.ByHolding[key] = holdingCost;
+
+        // Audit W8: Frisch laden und nur die EIGENE Haltung mergen — der Fenster-Snapshot
+        // vom Oeffnen wuerde sonst zwischenzeitliche Aenderungen anderer Schreiber
+        // (Sanierungs-Matrix) per Last-Write-Wins ueberschreiben.
+        var fresh = _costRepo.Load(_projectPath, out var freshError);
+        if (freshError is not null)
+        {
+            _dialogs.Error(
+                $"Speichern gesperrt: costs.json konnte nicht frisch gelesen werden.\n{freshError}",
+                "Kosten");
+            return;
+        }
+        fresh.ByHolding[key] = holdingCost;
+        _store = fresh;
 
         if (!_costRepo.Save(_projectPath, _store, out var error))
         {
