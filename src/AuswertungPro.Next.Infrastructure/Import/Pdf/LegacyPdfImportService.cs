@@ -108,7 +108,7 @@ public sealed class LegacyPdfImportService
             }
 
             stats.Found = chunks.Count;
-            stats.Uncertain = chunks.Count(c => c.IsUncertain);
+            stats.Uncertain = 0;
             var importedChunks = 0;
 
             foreach (var chunk in chunks)
@@ -164,6 +164,7 @@ public sealed class LegacyPdfImportService
                     }
 
                     key = key.Split('\n')[0].Trim();
+                    ApplyPathDateFallback(fields, key, pdfPath);
 
                     var source = new HaltungRecord();
                     // Nur geparste Felder setzen (Rest leer lassen)
@@ -245,7 +246,7 @@ public sealed class LegacyPdfImportService
                         ["detectedId"] = chunk.DetectedId ?? "",
                         ["usedKey"] = key,
                         ["timestampUtc"] = DateTime.UtcNow.ToString("o"),
-                        ["uncertain"] = chunk.IsUncertain
+                        ["uncertain"] = chunk.IsUncertain && !IsLikelyHoldingId(key)
                     };
                     project.ImportHistory.Add(hist);
 
@@ -318,7 +319,7 @@ public sealed class LegacyPdfImportService
         var fallbackHolding = IsLikelyHoldingId(parsed.Haltung)
             ? NormalizeHoldingId(parsed.Haltung!)
             : TryExtractHoldingIdFromFileName(pdfPath);
-        var fallbackDate = parsed.Date ?? TryExtractDateFromFileName(pdfPath);
+        var fallbackDate = parsed.Date ?? TryExtractDateFromPath(pdfPath);
 
         if (!IsLikelyHoldingId(fallbackHolding))
         {
@@ -386,12 +387,44 @@ public sealed class LegacyPdfImportService
             Context = "PDF",
             Message = $"Fallback-Import angewendet: {Path.GetFileName(pdfPath)} -> {key}"
         });
-        stats.Uncertain++;
+        if (fallbackDate is null)
+            stats.Uncertain++;
     }
 
     internal static string? TryExtractHoldingIdFromFileName(string pdfPath)
     {
         var name = Path.GetFileNameWithoutExtension(pdfPath) ?? "";
+        return TryExtractHoldingIdFromName(name);
+    }
+
+    internal static string? TryExtractHoldingIdFromPath(string pdfPath)
+    {
+        var fromFileName = TryExtractHoldingIdFromFileName(pdfPath);
+        if (IsLikelyHoldingId(fromFileName))
+            return NormalizeHoldingId(fromFileName!);
+
+        var dir = Path.GetDirectoryName(pdfPath);
+        while (!string.IsNullOrWhiteSpace(dir))
+        {
+            var segment = Path.GetFileName(dir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            var fromSegment = TryExtractHoldingIdFromName(segment);
+            if (IsLikelyHoldingId(fromSegment))
+                return NormalizeHoldingId(fromSegment!);
+
+            var parent = Directory.GetParent(dir);
+            if (parent is null || string.Equals(parent.FullName, dir, StringComparison.OrdinalIgnoreCase))
+                break;
+            dir = parent.FullName;
+        }
+
+        return null;
+    }
+
+    private static string? TryExtractHoldingIdFromName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return null;
+
         var dashPair = Regex.Match(name, @"(?<!\d)(\d[\d\.]*-\d[\d\.]*)(?!\d)");
         if (dashPair.Success)
             return NormalizeHoldingId(dashPair.Groups[1].Value);
@@ -408,6 +441,37 @@ public sealed class LegacyPdfImportService
     private static DateTime? TryExtractDateFromFileName(string pdfPath)
     {
         var name = Path.GetFileNameWithoutExtension(pdfPath) ?? "";
+        return TryExtractDateFromName(name);
+    }
+
+    private static DateTime? TryExtractDateFromPath(string pdfPath)
+    {
+        var fromFileName = TryExtractDateFromFileName(pdfPath);
+        if (fromFileName is not null)
+            return fromFileName;
+
+        var dir = Path.GetDirectoryName(pdfPath);
+        while (!string.IsNullOrWhiteSpace(dir))
+        {
+            var segment = Path.GetFileName(dir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            var fromSegment = TryExtractDateFromName(segment);
+            if (fromSegment is not null)
+                return fromSegment;
+
+            var parent = Directory.GetParent(dir);
+            if (parent is null || string.Equals(parent.FullName, dir, StringComparison.OrdinalIgnoreCase))
+                break;
+            dir = parent.FullName;
+        }
+
+        return null;
+    }
+
+    private static DateTime? TryExtractDateFromName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return null;
+
         var ymd = Regex.Match(name, @"(?<!\d)(\d{4})(\d{2})(\d{2})(?!\d)");
         if (ymd.Success && DateTime.TryParseExact(ymd.Value, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateYmd))
             return dateYmd;
@@ -422,6 +486,25 @@ public sealed class LegacyPdfImportService
         }
 
         return null;
+    }
+
+    private static void ApplyPathDateFallback(Dictionary<string, string> fields, string? key, string pdfPath)
+    {
+        if (!IsLikelyHoldingId(key) || !string.IsNullOrWhiteSpace(fields.GetValueOrDefault("Datum_Jahr")))
+            return;
+
+        var pathDate = TryExtractDateFromPath(pdfPath);
+        if (pathDate is null)
+            return;
+
+        var pathHolding = TryExtractHoldingIdFromPath(pdfPath);
+        if (IsLikelyHoldingId(pathHolding)
+            && !string.Equals(NormalizeHoldingId(pathHolding!), NormalizeHoldingId(key!), StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        fields["Datum_Jahr"] = pathDate.Value.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
     }
 
     private sealed record OcrImportFallback(IReadOnlyList<string> Pages, string? Message);
@@ -490,9 +573,13 @@ public sealed class LegacyPdfImportService
         if (parsed.Success && parsed.Date is not null && IsLikelyHoldingId(parsed.Haltung))
             return NormalizeHoldingId(parsed.Haltung!);
 
-        var filenameHolding = TryExtractHoldingIdFromFileName(pdfPath);
-        if (IsLikelyHoldingId(filenameHolding))
-            return NormalizeHoldingId(filenameHolding!);
+        var fileNameHolding = TryExtractHoldingIdFromFileName(pdfPath);
+        if (IsLikelyHoldingId(fileNameHolding))
+            return NormalizeHoldingId(fileNameHolding!);
+
+        var pathHolding = TryExtractHoldingIdFromPath(pdfPath);
+        if (IsLikelyHoldingId(pathHolding) && !ShouldSkipUnknownChunk(fields, chunk))
+            return NormalizeHoldingId(pathHolding!);
 
         return null;
     }
