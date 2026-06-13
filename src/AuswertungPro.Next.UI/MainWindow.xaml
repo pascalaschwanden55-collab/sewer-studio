@@ -112,8 +112,15 @@
                 </StackPanel>
 
                 <!-- System Monitor -->
-                <Border DockPanel.Dock="Bottom" Margin="12,4,12,12" Padding="10,8" CornerRadius="6"
-                        BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+                <Expander DockPanel.Dock="Bottom"
+                          Header="Leistung"
+                          IsExpanded="False"
+                          Margin="12,4,12,12"
+                          Foreground="{DynamicResource TextBrush}"
+                          Background="{DynamicResource BgLightBrush}"
+                          BorderBrush="{DynamicResource BorderBrush}">
+                    <Border Padding="10,8" CornerRadius="6"
+                            BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
                     <Border.Background>
                         <DynamicResource ResourceKey="BgLightBrush"/>
                     </Border.Background>
@@ -527,7 +534,8 @@
                             </TextBlock>
                         </StackPanel>
                     </StackPanel>
-                </Border>
+                    </Border>
+                </Expander>
 
                 <!-- KI Neural Sphere -->
                 <Border DockPanel.Dock="Bottom" Margin="12,4,12,4" HorizontalAlignment="Center">
