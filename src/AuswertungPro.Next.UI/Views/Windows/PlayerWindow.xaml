@@ -451,33 +451,35 @@
                                 <ScaleTransform ScaleX="1" ScaleY="1"/>
                             </Ellipse.RenderTransform>
                         </Ellipse>
-                        <Ellipse x:Name="CodingAiDot" Width="10" Height="10" Fill="#94A3B8"/>
+                        <Ellipse x:Name="CodingAiDot" Width="10" Height="10" Fill="{DynamicResource MutedBrush}"/>
                     </Grid>
                     <TextBlock x:Name="TxtCodingAiStatus" FontSize="11"
                                Foreground="{DynamicResource TextBrush}"
                                Text="Kuenstliche Intelligenz bereit" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                    <TextBlock x:Name="TxtCodingAiStage" FontSize="9"
-                               Foreground="#94A3B8"
+                    <TextBlock x:Name="TxtCodingAiStage" FontSize="11"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                Text="" VerticalAlignment="Center" Margin="0,0,8,0"/>
 
                     <!-- Pipeline-Kontrollsicherung: ausklappbare Detailanzeige -->
-                    <ToggleButton x:Name="CodingHealthToggle" Content="Details" FontSize="9"
+                    <ToggleButton x:Name="CodingHealthToggle" Content="Details"
+                                  Style="{StaticResource SpeedToggleButton}"
+                                  FontSize="11"
                                   Margin="0,0,8,0" Padding="6,2" VerticalAlignment="Center"
                                   ToolTip="Zeigt, welche Teile der KI-Pipeline aktiv sind"/>
                     <Popup PlacementTarget="{Binding ElementName=CodingHealthToggle}" Placement="Bottom"
                            IsOpen="{Binding IsChecked, ElementName=CodingHealthToggle}"
                            StaysOpen="False" AllowsTransparency="True">
-                        <Border Background="#FF0B1018" BorderBrush="#FF243A46" BorderThickness="1"
+                        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                 CornerRadius="6" Padding="10" Margin="0,4,0,0">
                             <StackPanel MinWidth="220">
-                                <TextBlock Text="KI-Pipeline" Foreground="#FFFAFCFF" FontSize="12"
+                                <TextBlock Text="KI-Pipeline" Foreground="{DynamicResource TextBrush}" FontSize="12"
                                            FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <TextBlock x:Name="Hd_Sidecar" Foreground="#FFD7E3F0" FontSize="11" Text="Sidecar: -"/>
-                                <TextBlock x:Name="Hd_Token"   Foreground="#FFD7E3F0" FontSize="11" Text="Token: -"/>
-                                <TextBlock x:Name="Hd_Yolo"    Foreground="#FFD7E3F0" FontSize="11" Text="YOLO: -"/>
-                                <TextBlock x:Name="Hd_Dino"    Foreground="#FFD7E3F0" FontSize="11" Text="DINO: -"/>
-                                <TextBlock x:Name="Hd_Sam"     Foreground="#FFD7E3F0" FontSize="11" Text="SAM: -"/>
-                                <TextBlock x:Name="Hd_Mode"    Foreground="#FF91A8BD" FontSize="10"
+                                <TextBlock x:Name="Hd_Sidecar" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Text="Sidecar: -"/>
+                                <TextBlock x:Name="Hd_Token"   Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Text="Token: -"/>
+                                <TextBlock x:Name="Hd_Yolo"    Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Text="YOLO: -"/>
+                                <TextBlock x:Name="Hd_Dino"    Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Text="DINO: -"/>
+                                <TextBlock x:Name="Hd_Sam"     Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Text="SAM: -"/>
+                                <TextBlock x:Name="Hd_Mode"    Foreground="{DynamicResource MutedBrush}" FontSize="11"
                                            Margin="0,4,0,0" Text="Modus: -"/>
                             </StackPanel>
                         </Border>
@@ -496,13 +498,11 @@
                         <TextBlock Text="Aktuellen Frame analysieren"/>
                     </Button>
                     <Button x:Name="BtnCodingClearOverlays"
+                            Style="{StaticResource PlayerButton}"
                             Padding="8,5" FontSize="11" Margin="6,0,0,0"
-                            Background="#334155" Foreground="#94A3B8"
-                            BorderBrush="#475569" BorderThickness="1"
-                            Cursor="Hand"
                             Click="CodingClearOverlays_Click"
                             ToolTip="Alle Einblendungen/Markierungen vom Video entfernen">
-                        <TextBlock Text="&#x2716; Overlays aus" FontSize="10"/>
+                        <TextBlock Text="&#x2716; Overlays aus" FontSize="11"/>
                     </Button>
 
                     <!-- Eingabemarker: Klick auf Stelle + Stichwort → KI analysiert -->
@@ -519,15 +519,15 @@
                     <!-- Eingabemarker: Freitext + Schnellauswahl -->
                     <Border x:Name="EingabemarkerPopup" Visibility="Collapsed"
                             Margin="6,0,0,0" VerticalAlignment="Center"
-                            Background="#1E293B" CornerRadius="6"
-                            BorderBrush="#3B82F6" BorderThickness="2"
+                            Background="{DynamicResource HeaderBrush}" CornerRadius="6"
+                            BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2"
                             Padding="6,4">
                         <StackPanel Orientation="Horizontal">
                             <!-- Freitext-Eingabe (primaer) -->
                             <TextBox x:Name="TxtEingabemarker"
                                      FontSize="12" Width="220"
-                                     Background="#0F172A" Foreground="White"
-                                     BorderBrush="#475569" BorderThickness="1"
+                                     Background="{DynamicResource CardBrush}" Foreground="{DynamicResource TextBrush}"
+                                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                      Padding="4,3" VerticalContentAlignment="Center"
                                      KeyDown="CmbEingabemarker_KeyDown">
                                 <TextBox.ToolTip>
@@ -541,8 +541,8 @@
                             <!-- Schnellauswahl (Dropdown) -->
                             <ComboBox x:Name="CmbEingabemarker"
                                       FontSize="11" Width="130" Margin="4,0,0,0"
-                                      Background="#0F172A" Foreground="White"
-                                      BorderBrush="#475569"
+                                      Background="{DynamicResource CardBrush}" Foreground="{DynamicResource TextBrush}"
+                                      BorderBrush="{DynamicResource BorderBrush}"
                                       SelectionChanged="CmbEingabemarker_SelectionChanged">
                                 <ComboBox.ToolTip>Schnellauswahl: Haeufigste Codes</ComboBox.ToolTip>
                                 <ComboBoxItem Content="Rohranfang" FontWeight="SemiBold"/>
@@ -560,7 +560,7 @@
                                 <ComboBoxItem Content="Wasserstand"/>
                                 <ComboBoxItem Content="Abbruch"/>
                             </ComboBox>
-                            <TextBlock Text="Enter &#x2714;" Foreground="#64748B" FontSize="9"
+                            <TextBlock Text="Enter &#x2714;" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11"
                                        VerticalAlignment="Center" Margin="6,0,0,0"/>
                         </StackPanel>
                     </Border>
