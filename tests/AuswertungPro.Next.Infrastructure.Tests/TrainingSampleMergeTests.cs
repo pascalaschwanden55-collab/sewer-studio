@@ -49,4 +49,43 @@ public sealed class TrainingSampleMergeTests
 
         Assert.Equal("PdfPhoto", t.SourceType); // null in source -> bestehender Wert bleibt
     }
+
+    [Fact]
+    public void ApplyUpdatableFields_UebernimmtGoldFelder()
+    {
+        var target = new TrainingSample { SampleId = "s1", Code = "BCA" };
+        var source = new TrainingSample
+        {
+            SampleId = "s1", Code = "BCA",
+            HumanConfirmed = true, Corrected = true,
+            ConfirmedByUser = "tester",
+            ConfirmedAtUtc = new System.DateTime(2026, 6, 13, 9, 0, 0, System.DateTimeKind.Utc),
+            QualityGateLevel = "Green"
+        };
+
+        TrainingSampleMerge.ApplyUpdatableFields(target, source);
+
+        Assert.True(target.HumanConfirmed);
+        Assert.True(target.Corrected);
+        Assert.Equal("tester", target.ConfirmedByUser);
+        Assert.Equal("Green", target.QualityGateLevel);
+    }
+
+    [Fact]
+    public void ApplyUpdatableFields_EntwertetGesetztesGoldNichtBeiTeilUpdate()
+    {
+        var target = new TrainingSample
+        {
+            SampleId = "s1", Code = "BCA",
+            HumanConfirmed = true, Corrected = false,
+            ConfirmedByUser = "tester", QualityGateLevel = "Green"
+        };
+        var source = new TrainingSample { SampleId = "s1", Code = "BCA" }; // HumanConfirmed/Corrected = null
+
+        TrainingSampleMerge.ApplyUpdatableFields(target, source);
+
+        Assert.True(target.HumanConfirmed);
+        Assert.Equal("tester", target.ConfirmedByUser);
+        Assert.Equal("Green", target.QualityGateLevel);
+    }
 }

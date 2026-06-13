@@ -101,6 +101,20 @@ public sealed class TrainingSample
     /// <summary>Grund, warum ein Sample nicht ins Training darf.</summary>
     public string? TrainingEligibilityReason { get; set; }
 
+    // ── Gold-Fund-Metadaten (nullable/default — alte JSON-Samples bleiben gueltig) ──
+    /// <summary>true=Mensch bestaetigt (Accept/Edit), false=abgelehnt, null=nie menschlich beurteilt.</summary>
+    public bool? HumanConfirmed { get; set; }
+    /// <summary>true=Mensch hat den KI-Code korrigiert (Edit+Accept). null=nie beurteilt.</summary>
+    public bool? Corrected { get; set; }
+    /// <summary>Name des Bestaetigers (Bearbeiter). Null = unbekannt/alt.</summary>
+    public string? ConfirmedByUser { get; set; }
+    /// <summary>UTC-Zeitpunkt der Bestaetigung. Null = unbekannt/alt.</summary>
+    public DateTime? ConfirmedAtUtc { get; set; }
+    /// <summary>QualityGate-Ampel zum Bestaetigungszeitpunkt: "Green"/"Yellow"/"Red". Null = unbekannt.</summary>
+    public string? QualityGateLevel { get; set; }
+    /// <summary>Grund, falls der Snapshot beim Akzeptieren nicht gezogen werden konnte. Null = ok.</summary>
+    public string? SnapshotError { get; set; }
+
     /// <summary>BBox X-Center, normiert 0-1. Null = keine BBox vorhanden.</summary>
     public double? BboxXCenter { get; set; }
 

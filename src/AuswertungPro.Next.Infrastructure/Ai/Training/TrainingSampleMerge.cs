@@ -51,5 +51,13 @@ public static class TrainingSampleMerge
             target.SamMaskConfidence = source.SamMaskConfidence;
             target.SamMaskLabel = source.SamMaskLabel;
         }
+        // Gold-Fund-Metadaten: nur uebernehmen, wenn die Quelle wirklich eine Aussage macht
+        // (bool? null = "keine Entscheidung" -> gesetzten Gold-Fund nicht entwerten).
+        if (source.HumanConfirmed.HasValue) target.HumanConfirmed = source.HumanConfirmed;
+        if (source.Corrected.HasValue) target.Corrected = source.Corrected;
+        if (source.ConfirmedByUser is not null) target.ConfirmedByUser = source.ConfirmedByUser;
+        if (source.ConfirmedAtUtc is not null) target.ConfirmedAtUtc = source.ConfirmedAtUtc;
+        if (source.QualityGateLevel is not null) target.QualityGateLevel = source.QualityGateLevel;
+        if (source.SnapshotError is not null) target.SnapshotError = source.SnapshotError;
     }
 }
