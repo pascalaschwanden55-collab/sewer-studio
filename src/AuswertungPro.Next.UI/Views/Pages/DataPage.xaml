@@ -11,24 +11,6 @@
         <local:PhotoIndexToVisibilityConverter x:Key="PhotoIndexVisible"/>
         <local:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyVisible"/>
         <local:AnyValueToVisibilityConverter x:Key="AnyValueVisible"/>
-        <Style x:Key="AlignToggleButtonStyle" TargetType="ToggleButton">
-            <Setter Property="Width" Value="30"/>
-            <Setter Property="Height" Value="26"/>
-            <Setter Property="MinWidth" Value="30"/>
-            <Setter Property="MinHeight" Value="26"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="0,0,4,0"/>
-            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Style.Triggers>
-                <Trigger Property="IsChecked" Value="True">
-                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                    <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
         <Style x:Key="SecondaryToggleButton" TargetType="ToggleButton">
             <Setter Property="MinHeight" Value="48"/>
             <Setter Property="MinWidth" Value="140"/>
@@ -58,30 +40,6 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-        <Style x:Key="LinkButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <TextBlock Text="{TemplateBinding Content}"
-                                   Foreground="{TemplateBinding Foreground}"
-                                   TextDecorations="Underline"
-                                   TextTrimming="CharacterEllipsis"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Center"/>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
-                </Trigger>
-            </Style.Triggers>
         </Style>
     </UserControl.Resources>
 
