@@ -328,15 +328,15 @@
                         <StackPanel Orientation="Horizontal">
                             <Ellipse x:Name="DotYolo" Width="6" Height="6" Fill="#94A3B8"
                                      VerticalAlignment="Center" Margin="0,0,3,0"/>
-                            <TextBlock Text="YOLO" FontSize="9" Foreground="#94A3B8"
+                            <TextBlock Text="YOLO" FontSize="10" Foreground="#94A3B8"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <Ellipse x:Name="DotQwen" Width="6" Height="6" Fill="#94A3B8"
                                      VerticalAlignment="Center" Margin="0,0,3,0"/>
-                            <TextBlock Text="Qwen" FontSize="9" Foreground="#94A3B8"
+                            <TextBlock Text="Qwen" FontSize="10" Foreground="#94A3B8"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <Ellipse x:Name="DotTracker" Width="6" Height="6" Fill="#94A3B8"
                                      VerticalAlignment="Center" Margin="0,0,3,0"/>
-                            <TextBlock Text="Tracker" FontSize="9" Foreground="#94A3B8"
+                            <TextBlock Text="Tracker" FontSize="10" Foreground="#94A3B8"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -786,7 +786,7 @@
                                   Checked="BtnCalibrate_Checked" Unchecked="BtnCalibrate_Unchecked">
                         <StackPanel>
                             <TextBlock Text="&#x2295;" FontSize="18" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Kalib." FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                            <TextBlock Text="Kalib." FontSize="10" HorizontalAlignment="Center" Opacity="0.8"/>
                         </StackPanel>
                     </ToggleButton>
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,6"/>
@@ -796,7 +796,7 @@
                                   Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
                         <StackPanel>
                             <TextBlock Text="&#x25A2;" FontSize="18" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Markieren" FontSize="9" HorizontalAlignment="Center" Opacity="0.8"/>
+                            <TextBlock Text="Markieren" FontSize="10" HorizontalAlignment="Center" Opacity="0.8"/>
                         </StackPanel>
                     </ToggleButton>
                     <!-- Alle Messwerkzeuge im PhotoAssistant (Foto vermessen) -->

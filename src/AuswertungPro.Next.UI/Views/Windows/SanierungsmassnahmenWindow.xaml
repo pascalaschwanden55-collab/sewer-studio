@@ -132,7 +132,7 @@
 
                             <TextBlock Text="{Binding OptimizationVm.StatusText}"
                                        Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="9" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                                       FontSize="10" Margin="0,0,0,8" TextWrapping="Wrap"/>
 
                             <!-- AI Result (visible when HasResult) -->
                             <Grid>
@@ -196,7 +196,7 @@
                                            VerticalAlignment="Top"/>
                                 <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding OptimizationVm.AiReasoning}"
                                            Foreground="{StaticResource TextBrush}"
-                                           TextWrapping="Wrap" FontSize="9" Margin="0,0,0,6"/>
+                                           TextWrapping="Wrap" FontSize="10" Margin="0,0,0,6"/>
 
                                 <Button Grid.Row="4" Grid.ColumnSpan="2"
                                         Content="KI uebernehmen >>"
@@ -227,7 +227,7 @@
                                        Foreground="{StaticResource NeonCyanBrush}"
                                        Margin="0,0,0,8"/>
                             <TextBlock Text="{Binding OptimizationVm.RiskText}"
-                                       TextWrapping="Wrap" FontSize="9">
+                                       TextWrapping="Wrap" FontSize="10">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
@@ -245,7 +245,7 @@
                             <Border Visibility="{Binding OptimizationVm.IsFallback, Converter={StaticResource BoolToVis}}"
                                     Background="#7F2F00" Margin="0,8,0,0" Padding="8,4" CornerRadius="3">
                                 <TextBlock Text="FALLBACK AKTIV - KI-Vorschlag wurde durch Regelpruefung verworfen"
-                                           Foreground="#FF8C00" FontSize="9" FontWeight="Bold"/>
+                                           Foreground="#FF8C00" FontSize="10" FontWeight="Bold"/>
                             </Border>
                         </StackPanel>
                     </Border>
@@ -318,7 +318,7 @@
                                             </Button.Template>
                                             <DockPanel>
                                                 <TextBlock DockPanel.Dock="Left" VerticalAlignment="Top" Margin="0,0,6,0"
-                                                           FontSize="9" FontWeight="Bold" Width="32">
+                                                           FontSize="10" FontWeight="Bold" Width="32">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="Foreground" Value="{StaticResource NeonCyanBrush}"/>
@@ -343,7 +343,7 @@
                             </ItemsControl>
 
                             <TextBlock Margin="0,4,0,0" HorizontalAlignment="Right"
-                                       FontSize="9" Cursor="Hand"
+                                       FontSize="10" Cursor="Hand"
                                        Foreground="{StaticResource TextSecondaryBrush}"
                                        MouseLeftButtonUp="ResetSuppressedWarnings_Click"
                                        ToolTip="Alle unterdrueckten Warnungen wieder anzeigen">

@@ -53,22 +53,22 @@
                 <UniformGrid Columns="4" Margin="0,0,0,2">
                     <StackPanel Margin="0,0,4,0">
                         <Border x:Name="ProgressBar0" Height="3" CornerRadius="1"/>
-                        <TextBlock x:Name="ProgressLabel0" Text="Gruppe" FontSize="9"
+                        <TextBlock x:Name="ProgressLabel0" Text="Gruppe" FontSize="10"
                                    Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
                     </StackPanel>
                     <StackPanel Margin="0,0,4,0">
                         <Border x:Name="ProgressBar1" Height="3" CornerRadius="1"/>
-                        <TextBlock x:Name="ProgressLabel1" Text="Hauptcode" FontSize="9"
+                        <TextBlock x:Name="ProgressLabel1" Text="Hauptcode" FontSize="10"
                                    Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
                     </StackPanel>
                     <StackPanel Margin="0,0,4,0">
                         <Border x:Name="ProgressBar2" Height="3" CornerRadius="1"/>
-                        <TextBlock x:Name="ProgressLabel2" Text="Char 1" FontSize="9"
+                        <TextBlock x:Name="ProgressLabel2" Text="Char 1" FontSize="10"
                                    Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
                     </StackPanel>
                     <StackPanel>
                         <Border x:Name="ProgressBar3" Height="3" CornerRadius="1"/>
-                        <TextBlock x:Name="ProgressLabel3" Text="Char 2" FontSize="9"
+                        <TextBlock x:Name="ProgressLabel3" Text="Char 2" FontSize="10"
                                    Foreground="{StaticResource MutedBrush}" Margin="0,2,0,0"/>
                     </StackPanel>
                 </UniformGrid>
@@ -231,7 +231,7 @@
                                     BorderBrush="{StaticResource BorderBrush}"
                                     Background="{StaticResource CardBrush}">
                                 <StackPanel>
-                                    <TextBlock Text="QUANTIFIZIERUNG" FontSize="9" FontWeight="Bold"
+                                    <TextBlock Text="QUANTIFIZIERUNG" FontSize="10" FontWeight="Bold"
                                                Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
 
                                     <!-- Q1 -->
@@ -241,7 +241,7 @@
                                                        Foreground="{StaticResource TextBrush}"/>
                                             <Border x:Name="BadgeQ1Pflicht" CornerRadius="2" Padding="4,1"
                                                     Margin="6,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
-                                                <TextBlock FontSize="8" FontWeight="Bold"/>
+                                                <TextBlock FontSize="10" FontWeight="Bold"/>
                                             </Border>
                                         </DockPanel>
                                         <DockPanel>
@@ -249,11 +249,11 @@
                                             <TextBlock x:Name="TxtQ1Unit" FontSize="12" FontWeight="Bold"
                                                        Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center" FontFamily="Consolas"/>
-                                            <TextBlock x:Name="TxtQ1Range" FontSize="9"
+                                            <TextBlock x:Name="TxtQ1Range" FontSize="10"
                                                        Foreground="{StaticResource MutedBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center"/>
                                         </DockPanel>
-                                        <TextBlock x:Name="TxtQ1Error" FontSize="9" Foreground="{StaticResource DangerBrush}"
+                                        <TextBlock x:Name="TxtQ1Error" FontSize="10" Foreground="{StaticResource DangerBrush}"
                                                    Margin="0,2,0,0" Visibility="Collapsed"/>
                                     </StackPanel>
 
@@ -267,7 +267,7 @@
                                                 <Border.Background>
                                                     <SolidColorBrush Color="{StaticResource ColorWarning}" Opacity="0.15"/>
                                                 </Border.Background>
-                                                <TextBlock Text="OPTIONAL" FontSize="8" FontWeight="Bold"
+                                                <TextBlock Text="OPTIONAL" FontSize="10" FontWeight="Bold"
                                                            Foreground="{StaticResource WarningBrush}"/>
                                             </Border>
                                         </DockPanel>
@@ -277,7 +277,7 @@
                                                        Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0"
                                                        VerticalAlignment="Center" FontFamily="Consolas"/>
                                         </DockPanel>
-                                        <TextBlock x:Name="TxtQ2Error" FontSize="9" Foreground="{StaticResource DangerBrush}"
+                                        <TextBlock x:Name="TxtQ2Error" FontSize="10" Foreground="{StaticResource DangerBrush}"
                                                    Margin="0,2,0,0" Visibility="Collapsed"/>
                                     </StackPanel>
 
@@ -293,9 +293,9 @@
                                     BorderBrush="{StaticResource BorderBrush}"
                                     Background="{StaticResource CardBrush}">
                                 <StackPanel>
-                                    <TextBlock x:Name="TxtClockTitle" FontSize="9" FontWeight="Bold"
+                                    <TextBlock x:Name="TxtClockTitle" FontSize="10" FontWeight="Bold"
                                                Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
-                                    <TextBlock x:Name="TxtClockHint" FontSize="9"
+                                    <TextBlock x:Name="TxtClockHint" FontSize="10"
                                                Foreground="{StaticResource SuccessBrush}" Margin="0,0,0,6"
                                                Visibility="Collapsed"/>
 
@@ -322,24 +322,24 @@
 
                                         <!-- Schnellwahl + Von/Bis (rechts) -->
                                         <StackPanel Grid.Column="2">
-                                            <TextBlock Text="SCHNELLWAHL" FontSize="8" FontWeight="Bold"
+                                            <TextBlock Text="SCHNELLWAHL" FontSize="10" FontWeight="Bold"
                                                        Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
                                             <WrapPanel Orientation="Horizontal">
                                                 <Button x:Name="BtnClockScheitel" Content="12 00 Scheitel"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="12,00"/>
+                                                        FontSize="10" Padding="5,3" Margin="0,0,3,3" Tag="12,00"/>
                                                 <Button x:Name="BtnClockSohle" Content="06 00 Sohle"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="06,00"/>
+                                                        FontSize="10" Padding="5,3" Margin="0,0,3,3" Tag="06,00"/>
                                                 <Button x:Name="BtnClockRechts" Content="09 03 Rechts"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="09,03"/>
+                                                        FontSize="10" Padding="5,3" Margin="0,0,3,3" Tag="09,03"/>
                                                 <Button x:Name="BtnClockGesamt" Content="12 12 Gesamt"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="12,12"/>
+                                                        FontSize="10" Padding="5,3" Margin="0,0,3,3" Tag="12,12"/>
                                                 <Button x:Name="BtnClockKeine" Content="00 00 Keine"
                                                         Style="{StaticResource ToolbarButton}" FontFamily="Consolas"
-                                                        FontSize="9" Padding="5,3" Margin="0,0,3,3" Tag="00,00"/>
+                                                        FontSize="10" Padding="5,3" Margin="0,0,3,3" Tag="00,00"/>
                                             </WrapPanel>
 
                                             <!-- Von/Bis Anzeige -->
@@ -351,7 +351,7 @@
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Grid.Column="0">
-                                                    <TextBlock Text="VON" FontSize="8" Foreground="{StaticResource MutedBrush}"/>
+                                                    <TextBlock Text="VON" FontSize="10" Foreground="{StaticResource MutedBrush}"/>
                                                     <TextBox x:Name="TxtClockVon" Width="45" FontFamily="Consolas"
                                                              FontSize="14" FontWeight="Bold" Padding="3,3"/>
                                                 </StackPanel>
@@ -360,18 +360,18 @@
                                                            HorizontalAlignment="Center" VerticalAlignment="Bottom"
                                                            Margin="0,0,0,4"/>
                                                 <StackPanel Grid.Column="2">
-                                                    <TextBlock Text="BIS" FontSize="8" Foreground="{StaticResource MutedBrush}"/>
+                                                    <TextBlock Text="BIS" FontSize="10" Foreground="{StaticResource MutedBrush}"/>
                                                     <TextBox x:Name="TxtClockBis" Width="45" FontFamily="Consolas"
                                                              FontSize="14" FontWeight="Bold" Padding="3,3"/>
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="3" x:Name="TxtClockTransfer"
-                                                           FontSize="9" Foreground="{StaticResource MutedBrush}"
+                                                           FontSize="10" Foreground="{StaticResource MutedBrush}"
                                                            VerticalAlignment="Bottom" Margin="8,0,0,4"
                                                            FontFamily="Consolas"/>
                                             </Grid>
 
                                             <!-- Bedienhinweis -->
-                                            <TextBlock x:Name="TxtClockUsageHint" FontSize="8"
+                                            <TextBlock x:Name="TxtClockUsageHint" FontSize="10"
                                                        Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0"
                                                        TextWrapping="Wrap"/>
                                         </StackPanel>
@@ -399,7 +399,7 @@
                                 BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
                                 Background="{StaticResource CardBrush}">
                             <StackPanel>
-                                <TextBlock Text="POSITION" FontSize="9" FontWeight="Bold"
+                                <TextBlock Text="POSITION" FontSize="10" FontWeight="Bold"
                                            Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -448,7 +448,7 @@
                                 BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
                                 Background="{StaticResource CardBrush}">
                             <StackPanel>
-                                <TextBlock Text="BEMERKUNGEN" FontSize="9" FontWeight="Bold"
+                                <TextBlock Text="BEMERKUNGEN" FontSize="10" FontWeight="Bold"
                                            Foreground="{StaticResource MutedBrush}" Margin="0,0,0,4"/>
                                 <TextBox x:Name="TxtBemerkungen" AcceptsReturn="True"
                                          TextWrapping="Wrap" MinHeight="40" MaxHeight="80"
@@ -461,7 +461,7 @@
                                 BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
                                 Background="{StaticResource CardBrush}">
                             <StackPanel>
-                                <TextBlock Text="FOTOS" FontSize="9" FontWeight="Bold"
+                                <TextBlock Text="FOTOS" FontSize="10" FontWeight="Bold"
                                            Foreground="{StaticResource MutedBrush}" Margin="0,0,0,8"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>

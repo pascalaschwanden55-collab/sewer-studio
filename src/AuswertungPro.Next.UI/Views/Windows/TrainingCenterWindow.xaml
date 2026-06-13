@@ -528,7 +528,7 @@
                                                         <!-- Farbiger Level-Indikator -->
                                                         <Border Grid.Column="3" HorizontalAlignment="Right" Padding="4,1" CornerRadius="3"
                                                                 x:Name="LevelBorder">
-                                                            <TextBlock Text="{Binding Level}" FontSize="9" Foreground="{DynamicResource TextBrush}" FontWeight="Bold"/>
+                                                            <TextBlock Text="{Binding Level}" FontSize="10" Foreground="{DynamicResource TextBrush}" FontWeight="Bold"/>
                                                         </Border>
                                                     </Grid>
                                                 </Border>

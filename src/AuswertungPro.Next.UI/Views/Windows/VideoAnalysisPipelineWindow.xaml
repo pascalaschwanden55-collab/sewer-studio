@@ -161,7 +161,7 @@
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="S E W E R  S T U D I O" FontWeight="Bold" FontSize="11"
                                    FontFamily="Consolas" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,1"/>
-                        <TextBlock Text="PIPELINE ANALYSIS" FontSize="8" FontWeight="SemiBold"
+                        <TextBlock Text="PIPELINE ANALYSIS" FontSize="10" FontWeight="SemiBold"
                                    FontFamily="Consolas" Foreground="{DynamicResource MutedBrush}"/>
                     </StackPanel>
                 </StackPanel>
@@ -203,7 +203,7 @@
                     <Border CornerRadius="4" Padding="10,4"
                             Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="● " Foreground="#2563EB" FontSize="8"
+                            <TextBlock Text="● " Foreground="#2563EB" FontSize="10"
                                        VerticalAlignment="Center"
                                        Visibility="{Binding VideoPhaseActive,
                                            Converter={StaticResource BoolToVis}}"/>
@@ -271,7 +271,7 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Style="{StaticResource LabelSmall}" Text="ERKENNEN"/>
-                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="{DynamicResource MutedBrush}" Text="Detection"/>
+                                    <TextBlock Grid.Row="2" FontSize="10" Foreground="{DynamicResource MutedBrush}" Text="Detection"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarDetectionCount}"
                                                Foreground="{DynamicResource AccentBrush}"/>
@@ -306,7 +306,7 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Style="{StaticResource LabelSmall}" Text="QUANTIFIZIERUNG"/>
-                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="{DynamicResource MutedBrush}" Text="Messung"/>
+                                    <TextBlock Grid.Row="2" FontSize="10" Foreground="{DynamicResource MutedBrush}" Text="Messung"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarQuantCount}"
                                                Foreground="#16A34A"/>
@@ -341,7 +341,7 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Row="0" Style="{StaticResource LabelSmall}" Text="LOKALISIERUNG"/>
-                                    <TextBlock Grid.Row="2" FontSize="9" Foreground="{DynamicResource MutedBrush}" Text="Position"/>
+                                    <TextBlock Grid.Row="2" FontSize="10" Foreground="{DynamicResource MutedBrush}" Text="Position"/>
                                     <TextBlock Grid.Row="4" Style="{StaticResource ValueLarge}"
                                                Text="{Binding PillarLocalCount}"
                                                Foreground="#F59E0B"/>
@@ -374,7 +374,7 @@
                             <!-- Speed Selector (rechts) -->
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                                         VerticalAlignment="Center" Margin="12,0,0,0">
-                                <TextBlock Text="Tempo" FontSize="9" Foreground="{DynamicResource TextSecondaryBrush}"
+                                <TextBlock Text="Tempo" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
                                            VerticalAlignment="Center" Margin="0,0,6,0"/>
                                 <ComboBox x:Name="SpeedModeCombo"
                                           Width="58" Height="22"
@@ -416,7 +416,7 @@
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <!-- Video-Analyse -->
                             <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                                <TextBlock FontSize="8" VerticalAlignment="Center" Margin="0,0,4,0">
+                                <TextBlock FontSize="10" VerticalAlignment="Center" Margin="0,0,4,0">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="●"/>
@@ -441,7 +441,7 @@
                                        VerticalAlignment="Center" Margin="0,0,16,0"/>
                             <!-- Code-Mapping -->
                             <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                                <TextBlock FontSize="8" VerticalAlignment="Center" Margin="0,0,4,0">
+                                <TextBlock FontSize="10" VerticalAlignment="Center" Margin="0,0,4,0">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="○"/>
@@ -470,7 +470,7 @@
                                        VerticalAlignment="Center" Margin="0,0,16,0"/>
                             <!-- Protokoll -->
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock FontSize="8" VerticalAlignment="Center" Margin="0,0,4,0">
+                                <TextBlock FontSize="10" VerticalAlignment="Center" Margin="0,0,4,0">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="○"/>
@@ -757,7 +757,7 @@
 
                                         <!-- Quantifizierung (nur wenn vorhanden) -->
                                         <TextBlock Grid.Row="4"
-                                                   FontSize="9"
+                                                   FontSize="10"
                                                    Foreground="{DynamicResource MutedBrush}"
                                                    Text="{Binding QuantSummary}"
                                                    Visibility="{Binding HasQuantification,
