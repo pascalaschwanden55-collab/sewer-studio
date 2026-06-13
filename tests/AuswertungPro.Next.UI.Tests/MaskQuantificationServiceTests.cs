@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 
@@ -5,6 +6,44 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public class MaskQuantificationServiceTests
 {
+    // Standard-Maske fuer die Kalibrierungs-Herkunft-Tests.
+    private static SamMaskResult BuildMask() => new(
+        Label: "crack",
+        Confidence: 0.9,
+        Bbox: [100, 100, 200, 200],
+        MaskRle: "",
+        MaskAreaPixels: 5000,
+        ImageAreaPixels: 1920 * 1080,
+        HeightPixels: 100,
+        WidthPixels: 50,
+        CentroidX: 960,
+        CentroidY: 540);
+
+    [Fact]
+    public void Quantify_OhneKalibrierung_HerkunftNone()
+    {
+        var mask = BuildMask();
+        var q = MaskQuantificationService.Quantify(mask, 1920, 1080, 300);
+        Assert.Equal(CalibrationSource.None, q.CalibrationSource);
+    }
+
+    [Fact]
+    public void Quantify_MitManuellerKalibrierung_HerkunftManual()
+    {
+        var mask = BuildMask();
+        var cal = new PipeCalibration { NominalDiameterMm = 300, NormalizedDiameter = 0.6, Source = CalibrationSource.Manual };
+        var q = MaskQuantificationService.Quantify(mask, 1920, 1080, 300, cal);
+        Assert.Equal(CalibrationSource.Manual, q.CalibrationSource);
+    }
+
+    [Fact]
+    public void Quantify_MitAutoKalibrierung_HerkunftAuto()
+    {
+        var mask = BuildMask();
+        var cal = new PipeCalibration { NominalDiameterMm = 300, NormalizedDiameter = 0.6, Source = CalibrationSource.Auto };
+        var q = MaskQuantificationService.Quantify(mask, 1920, 1080, 300, cal);
+        Assert.Equal(CalibrationSource.Auto, q.CalibrationSource);
+    }
     [Fact]
     public void Quantify_DN300_KnownPixelDimensions_ReturnsCorrectMm()
     {

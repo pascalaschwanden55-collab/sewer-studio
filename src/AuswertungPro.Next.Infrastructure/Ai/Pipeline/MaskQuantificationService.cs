@@ -23,7 +23,8 @@ public static class MaskQuantificationService
         int? ExtentPercent,
         int? CrossSectionReductionPercent,
         int? IntrusionPercent,
-        string? ClockPosition
+        string? ClockPosition,
+        CalibrationSource CalibrationSource = CalibrationSource.None
     );
 
     /// <summary>
@@ -150,7 +151,8 @@ public static class MaskQuantificationService
             ExtentPercent: extentPercent,
             CrossSectionReductionPercent: crossSectionReduction,
             IntrusionPercent: intrusionPercent,
-            ClockPosition: ComputeClockPosition(mask.CentroidX, mask.CentroidY, imageWidth, imageHeight, calibration));
+            ClockPosition: ComputeClockPosition(mask.CentroidX, mask.CentroidY, imageWidth, imageHeight, calibration),
+            CalibrationSource: calibration?.Source ?? CalibrationSource.None);
     }
 
     /// <summary>
