@@ -353,10 +353,10 @@
                 </Border>
             </Grid>
 
-            <!-- â"€â"€ CODING SEITENPANEL (Mockup-Design) â"€â"€ -->
+            <!-- CODING SEITENPANEL (Mockup-Design) -->
             <win:PlayerCodingSidePanel x:Name="CodingSidePanelControl" Grid.Column="1"/>
         </Grid>
-        <!-- â•â•â•â•â•â•â• CODING-WERKZEUGE (nur im Codier-Modus sichtbar) â•â•â•â•â•â•â• -->
+        <!-- CODING-WERKZEUGE (nur im Codier-Modus sichtbar) -->
         <Border x:Name="CodingToolbar" Grid.Row="2"
                 Visibility="Collapsed"
                 Style="{StaticResource PlayerCard}"
@@ -637,7 +637,7 @@
             </Grid>
         </Border>
 
-        <!-- â•â•â•â•â•â•â• PIPE GRAPH TIMELINE (nur im Codier-Modus sichtbar) â•â•â•â•â•â•â• -->
+        <!-- PIPE GRAPH TIMELINE (nur im Codier-Modus sichtbar) -->
         <StackPanel Grid.Row="3" x:Name="CodingTimelinePanel" Visibility="Collapsed">
             <ctrl:PipeGraphTimeline x:Name="PipeTimeline" Visibility="Collapsed" Height="0"/>
 
