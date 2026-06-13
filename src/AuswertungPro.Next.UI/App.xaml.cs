@@ -34,6 +34,7 @@ namespace AuswertungPro.Next.UI
 
         private static ServiceProvider? _services;
         private static int _handlingException;
+        private static bool _typographyDefaultsApplied;
         private LiveControlServer? _liveControlServer;
 
         // Tageslogs aelter als dieser Wert werden beim Start geloescht (Aufbewahrung).
@@ -49,6 +50,7 @@ namespace AuswertungPro.Next.UI
             try
             {
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                ApplyTypographyDefaults();
 
                 splash = new StartupSplashWindow();
                 splash.Show();
@@ -217,6 +219,50 @@ namespace AuswertungPro.Next.UI
             anim.Completed += (_, _) => tcs.TrySetResult(null);
             element.BeginAnimation(UIElement.OpacityProperty, anim);
             return tcs.Task;
+        }
+
+        private static void ApplyTypographyDefaults()
+        {
+            if (_typographyDefaultsApplied)
+            {
+                return;
+            }
+
+            _typographyDefaultsApplied = true;
+            var fontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Display, Segoe UI, Aptos, Arial");
+
+            TryOverrideMetadata(
+                System.Windows.Documents.TextElement.FontFamilyProperty,
+                typeof(System.Windows.Documents.TextElement),
+                fontFamily);
+            TryOverrideMetadata(
+                System.Windows.Documents.TextElement.FontSizeProperty,
+                typeof(System.Windows.Documents.TextElement),
+                14.0);
+            TryOverrideMetadata(
+                System.Windows.Controls.Control.FontFamilyProperty,
+                typeof(System.Windows.Controls.Control),
+                fontFamily);
+            TryOverrideMetadata(
+                System.Windows.Controls.Control.FontSizeProperty,
+                typeof(System.Windows.Controls.Control),
+                14.0);
+        }
+
+        private static void TryOverrideMetadata(DependencyProperty property, Type targetType, object value)
+        {
+            try
+            {
+                property.OverrideMetadata(targetType, new FrameworkPropertyMetadata(value));
+            }
+            catch (InvalidOperationException)
+            {
+                // Test- und Design-Hosts koennen Metadata bereits versiegelt haben.
+            }
+            catch (ArgumentException)
+            {
+                // Einzelne Owner-Typen sind je nach WPF-Host schon registriert.
+            }
         }
 
         private void HandleException(Exception ex, string context)
