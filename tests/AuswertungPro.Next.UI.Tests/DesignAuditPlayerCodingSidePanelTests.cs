@@ -28,11 +28,45 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("Style=\"{DynamicResource SectionLabel}\"", sidePanel);
     }
 
+    [Fact]
+    public void Player_keeps_coding_overlay_visible_when_window_loses_focus()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var suspendBody = ExtractMethodBody(coding, "private void SuspendCodingOverlayInput()");
+
+        Assert.DoesNotContain("CodingOverlayPopup.IsOpen = false", suspendBody);
+        Assert.Contains("CodingOverlayCanvas.IsHitTestVisible = false", suspendBody);
+    }
+
     private static string ReadUiFile(params string[] relativeParts)
     {
         var root = FindRepoRoot();
         var path = Path.Combine(new[] { root, "src", "AuswertungPro.Next.UI" }.Concat(relativeParts).ToArray());
         return File.ReadAllText(path);
+    }
+
+    private static string ExtractMethodBody(string source, string signature)
+    {
+        var start = source.IndexOf(signature, StringComparison.Ordinal);
+        Assert.True(start >= 0, $"Method signature not found: {signature}");
+
+        var braceStart = source.IndexOf('{', start);
+        Assert.True(braceStart >= 0, $"Method body not found: {signature}");
+
+        var depth = 0;
+        for (var i = braceStart; i < source.Length; i++)
+        {
+            if (source[i] == '{')
+                depth++;
+            else if (source[i] == '}')
+            {
+                depth--;
+                if (depth == 0)
+                    return source[braceStart..(i + 1)];
+            }
+        }
+
+        throw new InvalidDataException($"Method body not closed: {signature}");
     }
 
     private static string FindRepoRoot()

@@ -960,8 +960,6 @@ public partial class PlayerWindow
         _codingOverlayWasOpenBeforeSuspend = CodingOverlayPopup.IsOpen;
         CodingOverlayCanvas.IsHitTestVisible = false;
         CodingOverlayCanvas.Cursor = Cursors.Arrow;
-        if (_codingOverlayWasOpenBeforeSuspend)
-            CodingOverlayPopup.IsOpen = false;
     }
 
     private void ResumeCodingOverlayInput()

@@ -167,7 +167,8 @@ public partial class PlayerWindow : Window
         _initialOverlayText = initialOverlayText;
         Loaded += (_, _) => EnsureVisibleOnScreen();
 
-        // Overlay suspendieren wenn ein FREMDES Fenster den Fokus bekommt (z.B. Snipping Tool).
+        // Overlay-Eingabe suspendieren wenn ein FREMDES Fenster den Fokus bekommt (z.B. Snipping Tool).
+        // Das sichtbare Overlay bleibt stehen, damit Screenshots/Screenrecordings es erfassen koennen.
         // Nicht bei eigenen Child-Dialogen (MessageBox, VsaCodeExplorer) â€” die verwenden
         // SuspendCodingOverlayInput/ResumeCodingOverlayInput direkt.
         Deactivated += (_, _) =>
