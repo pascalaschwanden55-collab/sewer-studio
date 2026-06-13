@@ -28,4 +28,36 @@ public sealed class VsaCodeValidatorTests
     {
         Assert.False(VsaCodeValidator.IsKnownCode(code));
     }
+
+    [Theory]
+    [InlineData("BCA.F.A", "BCAFA")]   // Punkt-Trenner entfernen
+    [InlineData("BCD0.00.0", "BCD")]    // Meter-Suffix abschneiden
+    [InlineData("BCAFA0.00.0", "BCAFA")] // Punkte + Meter gemischt
+    [InlineData("bca.eb", "BCAEB")]     // Grossschreibung
+    [InlineData("  BAB  ", "BAB")]      // Trim
+    public void TryNormalizeKnownCode_repairs_dot_and_meter_artifacts(string raw, string expected)
+    {
+        Assert.Equal(expected, VsaCodeValidator.TryNormalizeKnownCode(raw));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("0.00.0")]   // nur Meter, kein Code
+    [InlineData("XYZ123")]   // unbekannte Gruppe
+    [InlineData("BB")]       // zu kurz / kein Hauptcode
+    public void TryNormalizeKnownCode_returns_null_for_unknown_or_noise(string? raw)
+    {
+        Assert.Null(VsaCodeValidator.TryNormalizeKnownCode(raw));
+    }
+
+    [Theory]
+    [InlineData("BCAFAFOO")]  // gueltiger Hauptcode BCA, aber Untercode-Muell -> > 5 Zeichen
+    [InlineData("BCDXYZ")]     // gueltiger Hauptcode BCD, aber > 5 Zeichen
+    [InlineData("BCA.F.A.FOO")] // mit Punkten getarnter Muell -> nach Normalisierung > 5
+    public void TryNormalizeKnownCode_rejects_valid_main_code_with_junk_tail(string raw)
+    {
+        Assert.Null(VsaCodeValidator.TryNormalizeKnownCode(raw));
+    }
 }

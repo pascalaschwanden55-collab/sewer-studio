@@ -10,6 +10,7 @@ using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Media;
 
@@ -149,9 +150,17 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
                     var entries = new List<ProtocolEntry>();
                     foreach (var obs in obsList.OrderBy(o => o.SortOrder))
                     {
+                        // Wurzel-Fix: rohen WinCan-OpCode normalisieren (Punkt-Trenner und Meter-Suffixe
+                        // entfernen, Hauptcode + Laenge gegen Katalog pruefen), damit typischer Parsing-Muell
+                        // nicht ins Protokoll und spaeter ins Training gelangt. CodeMeta.Code erbt entry.Code.
+                        var rawCode = obs.OpCode ?? "";
+                        var normalizedCode = VsaCodeValidator.TryNormalizeKnownCode(rawCode) ?? "";
+                        if (normalizedCode.Length == 0 && !string.IsNullOrWhiteSpace(rawCode))
+                            messages.Add($"WinCan: Code '{rawCode}' unbekannt/ungueltig - leer uebernommen (Haltung {section.Key}).");
+
                         var entry = new ProtocolEntry
                         {
-                            Code = obs.OpCode ?? "",
+                            Code = normalizedCode,
                             Beschreibung = obs.Observation ?? "",
                             MeterStart = obs.Distance,
                             MeterEnd = obs.Distance.HasValue && obs.ContDefectLength.HasValue && obs.ContDefectLength.Value > 0
