@@ -31,6 +31,7 @@ public sealed class ReviewApprovalService : IReviewApprovalService
         string sampleId,
         BoundingBox? box,
         CancellationToken ct,
+        string confirmedByUser,
         TrainingSegmentationMask? mask = null)
     {
         var allSamples = await _store.LoadAsync().ConfigureAwait(false);
@@ -48,6 +49,12 @@ public sealed class ReviewApprovalService : IReviewApprovalService
         match.Status = TrainingSampleStatus.Approved;
         match.KbIndexState = KbIndexState.Pending;
         match.MatchLevel = MatchLevelNames.ReviewApproved;
+
+        // Gold-Fund: Review-Queue-Bestaetigung = menschlich bestaetigt (nicht korrigiert)
+        match.HumanConfirmed = true;
+        match.Corrected = false;
+        match.ConfirmedByUser = confirmedByUser;
+        match.ConfirmedAtUtc = DateTime.UtcNow;
 
         // Inkrementell in KB indexieren
         var indexedIds = await _indexer.IndexAsync(
@@ -71,6 +78,7 @@ public sealed class ReviewApprovalService : IReviewApprovalService
         string sampleId,
         string? correctedCode,
         CancellationToken ct,
+        string confirmedByUser,
         string? correctedDescription = null)
     {
         var allSamples = await _store.LoadAsync().ConfigureAwait(false);
@@ -87,6 +95,12 @@ public sealed class ReviewApprovalService : IReviewApprovalService
 
         // T3-Invariante: Ablehnen raeumt KB-Eintrag weg — auch im Review-Queue-Pfad
         _indexer.Deindex(match.SampleId);
+
+        // Gold-Fund: abgelehnt = nicht bestaetigt, Bearbeiter dennoch dokumentieren
+        match.HumanConfirmed = false;   // abgelehnt = nicht bestaetigt
+        match.Corrected = false;
+        match.ConfirmedByUser = confirmedByUser;
+        match.ConfirmedAtUtc = DateTime.UtcNow;
 
         string? correctedSampleId = null;
 
@@ -125,7 +139,23 @@ public sealed class ReviewApprovalService : IReviewApprovalService
                 InspectionDate = match.InspectionDate,
                 TrainingEligible = match.TrainingEligible,
                 TrainingEligibilityReason = match.TrainingEligibilityReason,
-                Notes = $"Korrektur aus Review: {originalCode} → {correctedCode}"
+                Notes = $"Korrektur aus Review: {originalCode} → {correctedCode}",
+                // Gold-Fund: korrigiertes Sample = bestaetigter, korrigierter Gold-Fund
+                HumanConfirmed = true,
+                Corrected = true,
+                ConfirmedByUser = confirmedByUser,
+                ConfirmedAtUtc = DateTime.UtcNow,
+                // Box/Maske aus dem Original uebernehmen (duerfen nicht verloren gehen)
+                BboxXCenter = match.BboxXCenter,
+                BboxYCenter = match.BboxYCenter,
+                BboxWidth = match.BboxWidth,
+                BboxHeight = match.BboxHeight,
+                SamMaskRle = match.SamMaskRle,
+                SamMaskImageWidth = match.SamMaskImageWidth,
+                SamMaskImageHeight = match.SamMaskImageHeight,
+                SamMaskAreaPixels = match.SamMaskAreaPixels,
+                SamMaskConfidence = match.SamMaskConfidence,
+                SamMaskLabel = match.SamMaskLabel,
             };
 
             // Korrigiertes Sample per Merge speichern (Race-Condition-sicher)

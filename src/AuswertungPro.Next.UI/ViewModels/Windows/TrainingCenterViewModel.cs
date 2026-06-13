@@ -1771,7 +1771,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             {
                 var svc = BuildReviewApprovalService();
                 // box uebergeben: wenn Reviewer eine Box gezeichnet hat, wird HasBbox=true gesetzt (B5)
-                var result = await svc.ApproveSelfTrainingAsync(sampleId, box, ct, mask).ConfigureAwait(false);
+                var result = await svc.ApproveSelfTrainingAsync(sampleId, box, ct, System.Environment.UserName, mask).ConfigureAwait(false);
                 if (result.Found)
                 {
                     var bboxInfo = box.HasValue ? " (Box gesetzt)" : "";
@@ -1818,6 +1818,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                     sampleId,
                     correctedCode,
                     ct,
+                    System.Environment.UserName,
                     correctedDescription).ConfigureAwait(false);
                 if (result.Found)
                 {

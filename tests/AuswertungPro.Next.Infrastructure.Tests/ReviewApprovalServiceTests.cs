@@ -107,7 +107,7 @@ public sealed class ReviewApprovalServiceTests
         var svc = new ReviewApprovalService(store, indexer);
 
         // Act
-        var result = await svc.ApproveSelfTrainingAsync("S-001", box: null, CancellationToken.None);
+        var result = await svc.ApproveSelfTrainingAsync("S-001", box: null, CancellationToken.None, confirmedByUser: "test");
 
         // Assert – Rueckgabe
         Assert.True(result.Found);
@@ -145,6 +145,7 @@ public sealed class ReviewApprovalServiceTests
             "S-MASK",
             box: null,
             CancellationToken.None,
+            confirmedByUser: "test",
             mask);
 
         Assert.True(result.Found);
@@ -174,7 +175,7 @@ public sealed class ReviewApprovalServiceTests
         var box = new BoundingBox(0.5, 0.5, 0.2, 0.2);
 
         // Act
-        var result = await svc.ApproveSelfTrainingAsync("S-002", box, CancellationToken.None);
+        var result = await svc.ApproveSelfTrainingAsync("S-002", box, CancellationToken.None, confirmedByUser: "test");
 
         // Assert – BBox wurde gesetzt
         var stored = store.Find("S-002");
@@ -196,7 +197,7 @@ public sealed class ReviewApprovalServiceTests
         var svc = new ReviewApprovalService(store, indexer);
 
         // Act
-        var result = await svc.RejectSelfTrainingAsync("S-003", correctedCode: null, CancellationToken.None);
+        var result = await svc.RejectSelfTrainingAsync("S-003", correctedCode: null, CancellationToken.None, confirmedByUser: "test");
 
         // Assert – Rueckgabe
         Assert.True(result.Found);
@@ -234,6 +235,7 @@ public sealed class ReviewApprovalServiceTests
             "S-004",
             correctedCode: "BAB",
             CancellationToken.None,
+            confirmedByUser: "test",
             correctedDescription: "Riss");
 
         // Assert – Rueckgabe
@@ -288,7 +290,7 @@ public sealed class ReviewApprovalServiceTests
         var svc = new ReviewApprovalService(store, indexer);
 
         // Act
-        var result = await svc.ApproveSelfTrainingAsync("UNBEKANNT", box: null, CancellationToken.None);
+        var result = await svc.ApproveSelfTrainingAsync("UNBEKANNT", box: null, CancellationToken.None, confirmedByUser: "test");
 
         // Assert
         Assert.False(result.Found);
@@ -311,7 +313,7 @@ public sealed class ReviewApprovalServiceTests
         var svc = new ReviewApprovalService(store, indexer);
 
         // Act
-        var result = await svc.RejectSelfTrainingAsync("UNBEKANNT", correctedCode: "BAB", CancellationToken.None);
+        var result = await svc.RejectSelfTrainingAsync("UNBEKANNT", correctedCode: "BAB", CancellationToken.None, confirmedByUser: "test");
 
         // Assert
         Assert.False(result.Found);
@@ -319,5 +321,52 @@ public sealed class ReviewApprovalServiceTests
         Assert.Empty(indexer.IndexCalls);
         Assert.Empty(indexer.DeindexCalls);
         Assert.Single(store.All);
+    }
+
+    // ── Test 6: Gold-Felder beim Approve (Review-Queue-Pfad) ────────────
+
+    [Fact]
+    public async Task ApproveSelfTraining_SetztGoldFelderMitBearbeiter()
+    {
+        // Arrange – Sample "s1" mit Status=New, wie die vorhandenen Tests
+        var sample = MakeSample("s1");
+        var store = new FakeStore(new[] { sample });
+        var indexer = new FakeIndexer();
+        var svc = new ReviewApprovalService(store, indexer);
+
+        // Act
+        await svc.ApproveSelfTrainingAsync("s1", box: null, ct: CancellationToken.None, confirmedByUser: "tester");
+
+        // Assert – Gold-Felder gesetzt (menschlich bestaetigt, nicht korrigiert)
+        var saved = store.Find("s1");
+        Assert.NotNull(saved);
+        Assert.Equal(true, saved.HumanConfirmed);
+        Assert.Equal(false, saved.Corrected);
+        Assert.Equal("tester", saved.ConfirmedByUser);
+        Assert.NotNull(saved.ConfirmedAtUtc);
+        Assert.Equal(TrainingSampleStatus.Approved, saved.Status);
+    }
+
+    // ── Test 7: Gold-Felder beim Reject (Review-Queue-Pfad) ─────────────
+
+    [Fact]
+    public async Task RejectSelfTraining_SetztBearbeiterUndNegativ()
+    {
+        // Arrange
+        var sample = MakeSample("s1");
+        var store = new FakeStore(new[] { sample });
+        var indexer = new FakeIndexer();
+        var svc = new ReviewApprovalService(store, indexer);
+
+        // Act
+        await svc.RejectSelfTrainingAsync("s1", correctedCode: null, ct: CancellationToken.None, confirmedByUser: "tester");
+
+        // Assert – abgelehnt = nicht bestaetigt, Bearbeiter dokumentiert
+        var saved = store.Find("s1");
+        Assert.NotNull(saved);
+        Assert.Equal(TrainingSampleStatus.Rejected, saved.Status);
+        Assert.Equal(false, saved.HumanConfirmed);
+        Assert.Equal("tester", saved.ConfirmedByUser);
+        Assert.NotNull(saved.ConfirmedAtUtc);
     }
 }

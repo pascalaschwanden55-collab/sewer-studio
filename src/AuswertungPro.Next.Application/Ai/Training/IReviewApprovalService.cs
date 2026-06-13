@@ -22,20 +22,26 @@ public interface IReviewApprovalService
     /// <summary>
     /// Setzt ein Self-Training-Sample auf Approved und indexiert es in die KB.
     /// Optional wird eine BoundingBox auf dem Sample gesetzt (vor der Indexierung).
+    /// <paramref name="confirmedByUser"/> ist Pflicht (Gold-Fund): dokumentiert den
+    /// menschlichen Bearbeiter der Bestaetigung.
     /// </summary>
     Task<ReviewApplyResult> ApproveSelfTrainingAsync(
         string sampleId,
         BoundingBox? box,
         CancellationToken ct,
+        string confirmedByUser,
         TrainingSegmentationMask? mask = null);
 
     /// <summary>
     /// Setzt ein Self-Training-Sample auf Rejected und entfernt es aus der KB.
     /// Bei correctedCode wird ein neues korrigiertes Sample angelegt und indexiert.
+    /// <paramref name="confirmedByUser"/> ist Pflicht (Gold-Fund): dokumentiert den
+    /// menschlichen Bearbeiter der Ablehnung/Korrektur.
     /// </summary>
     Task<ReviewApplyResult> RejectSelfTrainingAsync(
         string sampleId,
         string? correctedCode,
         CancellationToken ct,
+        string confirmedByUser,
         string? correctedDescription = null);
 }
