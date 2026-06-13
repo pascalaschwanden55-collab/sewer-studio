@@ -217,7 +217,7 @@ public partial class PlayerWindow
         UpdateCodingOverlayCursor();
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(UpdateCodingOverlayViewport));
         CodingSidePanel.Visibility = Visibility.Visible;
-        CodingSidePanelColumn.Width = new GridLength(700);
+        CodingSidePanelColumn.Width = new GridLength(GetCodingSidePanelWidth());
         CodingToolbar.Visibility = Visibility.Visible;
 
         // PipeGraphTimeline einrichten und einblenden
@@ -2052,7 +2052,18 @@ public partial class PlayerWindow
 
         // Mittlere Spalte einblenden
         CodingDefectDetailInline.Visibility = Visibility.Visible;
-        ColDefectDetail.Width = new GridLength(180);
+        ColDefectDetail.Width = new GridLength(220);
+    }
+
+    private double GetCodingSidePanelWidth()
+    {
+        var availableWidth = ActualWidth > 0 ? ActualWidth : Width;
+        if (double.IsNaN(availableWidth) || availableWidth <= 0)
+        {
+            return 760;
+        }
+
+        return Math.Clamp(availableWidth * 0.46, 760, 840);
     }
 
     private void HideInlineDefectDetail()
@@ -2939,9 +2950,19 @@ public partial class PlayerWindow
                     "Schritt 2 von 4: YOLO und DINO", pulse: true);
 
                 int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
+                var currentMeterForClassifier = _codingLastOsdMeter
+                    ?? _codingVm?.CurrentMeter
+                    ?? GetMeterFromVideoPosition()
+                    ?? 0;
+                var reachLengthForClassifier = _codingVm?.EndMeter > 0
+                    ? _codingVm.EndMeter
+                    : Math.Max(currentMeterForClassifier, 1);
+
                 var mmResult = await _codingMultiModel.AnalyzeFrameAsync(
                     pngBytes, dn, _codingOverlayService?.Calibration,
-                    _codingAnalysisCts.Token);
+                    _codingAnalysisCts.Token,
+                    currentMeterForClassifier,
+                    reachLengthForClassifier);
 
                 if (mmResult.Error != null)
                 {
@@ -2949,6 +2970,9 @@ public partial class PlayerWindow
                         "Multi-Model");
                     return;
                 }
+
+                if (TryHandleBoundaryClassifierResult(mmResult, captureTimestampSec))
+                    return;
 
                 if (!mmResult.IsRelevant || !mmResult.HasDetections)
                 {
@@ -3048,6 +3072,51 @@ public partial class PlayerWindow
             if (disableAnalyzeButton)
                 BtnCodingAnalyze.IsEnabled = true;
         }
+    }
+
+    private bool TryHandleBoundaryClassifierResult(SingleFrameResult mmResult, double captureTimestampSec)
+    {
+        var code = mmResult.ClassifierCode;
+        if (code is not ("BCD" or "BCE"))
+            return false;
+        if (_codingVm == null || _codingSessionService == null)
+            return false;
+
+        var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);
+        var meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
+        var beforeCount = _codingVm.Events.Count;
+        var anyAdded = false;
+
+        if (code == "BCD")
+        {
+            EnsureRohranfangExists(meter, videoTime, ref anyAdded);
+        }
+        else
+        {
+            EnsureRohrendeExists(_codingVm.EndMeter, videoTime);
+        }
+
+        var label = LookupVsaLabel(code) ?? (code == "BCD" ? "Rohranfang" : "Rohrende");
+        var added = anyAdded || _codingVm.Events.Count > beforeCount;
+        var confidence = mmResult.ClassifierConfidence.HasValue
+            ? $" {mmResult.ClassifierConfidence.Value:P0}"
+            : "";
+        var statusText = added ? $"{label} erkannt" : $"{label} bereits vorhanden";
+
+        SetCodingAiState(statusText, Color.FromRgb(0x22, 0xC5, 0x5E),
+            $"Klassifikator{confidence}");
+
+        CodingFindingsList.ItemsSource = new[]
+        {
+            new AiFindingDisplayItem(new LiveFrameFinding(
+                Label: label,
+                Severity: 4,
+                PositionClock: null,
+                ExtentPercent: null,
+                VsaCodeHint: code))
+        };
+
+        return true;
     }
 
     /// <summary>

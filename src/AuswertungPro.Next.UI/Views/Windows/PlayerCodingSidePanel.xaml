@@ -9,7 +9,7 @@
                     CornerRadius="10" Padding="6,4,6,4"
                     BorderThickness="1">
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
+                              HorizontalScrollBarVisibility="Auto">
                     <StackPanel>
 
                         <!-- == 1. Legende: Punkt = Pruef-Status, % = Konfidenz == -->
@@ -34,11 +34,11 @@
                         <!-- == 2. Drei-Spalten-Ansicht: KI-Befunde | Details | Import == -->
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="1.15*" MinWidth="250"/>
                                 <ColumnDefinition Width="4"/>
                                 <ColumnDefinition x:Name="ColDefectDetail" Width="0"/>
                                 <ColumnDefinition Width="4"/>
-                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*" MinWidth="230"/>
                             </Grid.ColumnDefinitions>
 
                             <!-- Linke Spalte: KI-erkannte Befunde -->
@@ -93,6 +93,7 @@
                                                 <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
                                                 <Setter Property="Margin" Value="0,1"/>
                                                 <Setter Property="Padding" Value="4,3"/>
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                                                 <Setter Property="Template">
                                                     <Setter.Value>
                                                         <ControlTemplate TargetType="ListBoxItem">
@@ -131,18 +132,18 @@
                                                         <Ellipse x:Name="ZoneDot" Grid.Column="0"
                                                                  Width="7" Height="7"
                                                                  Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                        <TextBlock
+                                                        <TextBlock Grid.Column="1"
                                                                    Text="{Binding Entry.Code}"
                                                                    FontFamily="Consolas"
                                                                    FontWeight="Bold" FontSize="11"
-                                                                   VerticalAlignment="Center"
+                                                                   VerticalAlignment="Top"
                                                                    Margin="0,0,4,0"/>
                                                         <TextBlock Grid.Column="2"
                                                                    Text="{Binding Entry.Beschreibung}"
                                                                    FontSize="10"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                   TextTrimming="CharacterEllipsis"
-                                                                   VerticalAlignment="Center"/>
+                                                                   TextWrapping="Wrap"
+                                                                   VerticalAlignment="Top"/>
                                                         <TextBlock Grid.Column="3" x:Name="TxtStatusIcon"
                                                                    FontSize="11" Margin="2,0,0,0"
                                                                    VerticalAlignment="Center"/>
@@ -266,6 +267,7 @@
                                                 <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
                                                 <Setter Property="Margin" Value="0,1"/>
                                                 <Setter Property="Padding" Value="4,3"/>
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                                                 <Setter Property="Template">
                                                     <Setter.Value>
                                                         <ControlTemplate TargetType="ListBoxItem">
@@ -304,18 +306,18 @@
                                                                 CornerRadius="4"
                                                                 Background="#6366F1"
                                                                 Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                                        <TextBlock
+                                                        <TextBlock Grid.Column="1"
                                                                    Text="{Binding Entry.Code}"
                                                                    FontFamily="Consolas"
                                                                    FontWeight="Bold" FontSize="11"
-                                                                   VerticalAlignment="Center"
+                                                                   VerticalAlignment="Top"
                                                                    Margin="0,0,4,0"/>
                                                         <TextBlock Grid.Column="2"
                                                                    Text="{Binding Entry.Beschreibung}"
                                                                    FontSize="10"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                   TextTrimming="CharacterEllipsis"
-                                                                   VerticalAlignment="Center"/>
+                                                                   TextWrapping="Wrap"
+                                                                   VerticalAlignment="Top"/>
                                                     </Grid>
                                                           <TextBlock Margin="11,1,0,0" FontSize="10"
                                                                Foreground="{DynamicResource TextSecondaryBrush}">

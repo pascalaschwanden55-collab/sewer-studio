@@ -62,16 +62,64 @@ public sealed class SingleFrameMultiModelService
         byte[] pngBytes,
         int pipeDiameterMm,
         PipeCalibration? calibration = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        double? currentMeterM = null,
+        double? reachLengthM = null)
     {
         if (pngBytes == null || pngBytes.Length == 0)
             return SingleFrameResult.Empty("Kein Frame-Bild");
 
         var b64 = Convert.ToBase64String(pngBytes);
-        double yoloMs = 0, dinoMs = 0, samMs = 0;
+        double yoloMs = 0, dinoMs = 0, samMs = 0, classifierMs = 0;
 
         try
         {
+            VsaCodeResolver.ResolvedCode? classifierDecision = null;
+            IReadOnlyList<YoloClassifyPrediction> classifierPredictions = Array.Empty<YoloClassifyPrediction>();
+            try
+            {
+                var clsResp = await _client.ClassifyYoloAsync(new YoloClassifyRequest(b64, 5), ct);
+                classifierMs = clsResp.InferenceTimeMs;
+
+                if (clsResp.Usable && currentMeterM.HasValue && reachLengthM.HasValue)
+                {
+                    classifierPredictions = clsResp.Predictions;
+                    classifierDecision = VsaCodeResolver.ResolveFromClassifier(
+                        classifierPredictions,
+                        currentMeterM.Value,
+                        reachLengthM.Value);
+
+                    var boundaryDecision = ResolveBoundaryFromPosition(
+                        currentMeterM,
+                        reachLengthM,
+                        classifierDecision,
+                        classifierPredictions);
+
+                    if (boundaryDecision?.Code is "BCD" or "BCE")
+                    {
+                        return new SingleFrameResult(
+                            IsRelevant: true,
+                            DinoDetections: Array.Empty<DinoDetectionDto>(),
+                            SamResponse: null,
+                            QuantifiedMasks: Array.Empty<MaskQuantificationService.QuantifiedMask>(),
+                            YoloTimeMs: 0,
+                            DinoTimeMs: 0,
+                            SamTimeMs: 0,
+                            Error: null,
+                            YoloMaxConfidence: null,
+                            ClassifierCode: boundaryDecision.Code,
+                            ClassifierConfidence: boundaryDecision.Confidence,
+                            ClassifierSource: boundaryDecision.Source,
+                            ClassifierTimeMs: classifierMs);
+                    }
+                }
+            }
+            catch
+            {
+                // Klassifizierer ist ein Zusatzsignal. Wenn er nicht verfuegbar ist,
+                // bleibt der bisherige YOLO->DINO->SAM-Pfad unveraendert.
+            }
+
             // 1. YOLO Pre-Screening
             var yoloReq = new YoloRequest(b64, _yoloConfidence);
             var yoloResp = await _client.DetectYoloAsync(yoloReq, ct);
@@ -90,7 +138,11 @@ public sealed class SingleFrameMultiModelService
                     SamResponse: null,
                     QuantifiedMasks: Array.Empty<MaskQuantificationService.QuantifiedMask>(),
                     YoloTimeMs: yoloMs, DinoTimeMs: 0, SamTimeMs: 0,
-                    Error: null, YoloMaxConfidence: yoloMax);
+                    Error: null, YoloMaxConfidence: yoloMax,
+                    ClassifierCode: classifierDecision?.Code,
+                    ClassifierConfidence: classifierDecision?.Confidence,
+                    ClassifierSource: classifierDecision?.Source,
+                    ClassifierTimeMs: classifierMs);
             }
 
             // 2. DINO Open-Vocabulary Detection
@@ -106,7 +158,11 @@ public sealed class SingleFrameMultiModelService
                     SamResponse: null,
                     QuantifiedMasks: Array.Empty<MaskQuantificationService.QuantifiedMask>(),
                     YoloTimeMs: yoloMs, DinoTimeMs: dinoMs, SamTimeMs: 0,
-                    Error: null, YoloMaxConfidence: yoloMax);
+                    Error: null, YoloMaxConfidence: yoloMax,
+                    ClassifierCode: classifierDecision?.Code,
+                    ClassifierConfidence: classifierDecision?.Confidence,
+                    ClassifierSource: classifierDecision?.Source,
+                    ClassifierTimeMs: classifierMs);
             }
 
             // 3. SAM Segmentation (DINO-Boxes als Input)
@@ -133,13 +189,54 @@ public sealed class SingleFrameMultiModelService
                 SamResponse: samResp,
                 QuantifiedMasks: quantified,
                 YoloTimeMs: yoloMs, DinoTimeMs: dinoMs, SamTimeMs: samMs,
-                Error: null, YoloMaxConfidence: yoloMax);
+                Error: null, YoloMaxConfidence: yoloMax,
+                ClassifierCode: classifierDecision?.Code,
+                ClassifierConfidence: classifierDecision?.Confidence,
+                ClassifierSource: classifierDecision?.Source,
+                ClassifierTimeMs: classifierMs);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return SingleFrameResult.Empty($"Multi-Model Fehler: {ex.Message}");
         }
+    }
+
+    private static VsaCodeResolver.ResolvedCode? ResolveBoundaryFromPosition(
+        double? currentMeterM,
+        double? reachLengthM,
+        VsaCodeResolver.ResolvedCode? classifierDecision,
+        IReadOnlyList<YoloClassifyPrediction> predictions)
+    {
+        if (!currentMeterM.HasValue || !reachLengthM.HasValue)
+            return classifierDecision;
+
+        if (classifierDecision?.Code is "BCD" or "BCE")
+            return classifierDecision;
+
+        if (classifierDecision is { Code: not ("LEER" or "OTHER") })
+            return classifierDecision;
+
+        if (predictions.Count == 0)
+            return classifierDecision;
+
+        var meter = currentMeterM.Value;
+        var length = reachLengthM.Value;
+        if (length <= 1)
+            return classifierDecision;
+
+        var endToleranceM = Math.Max(0.5, length * 0.02);
+        if (meter < length - endToleranceM)
+            return classifierDecision;
+
+        var bceConfidence = predictions
+            .FirstOrDefault(p => string.Equals(p.ClassName, "BCE", StringComparison.OrdinalIgnoreCase))
+            ?.Confidence ?? 0;
+
+        return new VsaCodeResolver.ResolvedCode(
+            "BCE",
+            Math.Max(bceConfidence, 0.80),
+            $"Endzone {meter:F2}/{length:F1}m + YOLO BCE {bceConfidence:P0}");
     }
 }
 
@@ -155,11 +252,15 @@ public sealed record SingleFrameResult(
     double DinoTimeMs,
     double SamTimeMs,
     string? Error,
-    double? YoloMaxConfidence = null)
+    double? YoloMaxConfidence = null,
+    string? ClassifierCode = null,
+    double? ClassifierConfidence = null,
+    string? ClassifierSource = null,
+    double ClassifierTimeMs = 0)
 {
     public bool HasDetections => DinoDetections.Count > 0;
     public bool HasMasks => SamResponse?.Masks.Count > 0;
-    public double TotalTimeMs => YoloTimeMs + DinoTimeMs + SamTimeMs;
+    public double TotalTimeMs => ClassifierTimeMs + YoloTimeMs + DinoTimeMs + SamTimeMs;
 
     public static SingleFrameResult Empty(string? error = null) => new(
         false, Array.Empty<DinoDetectionDto>(), null,
