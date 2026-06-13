@@ -3,10 +3,7 @@
     "sewerstudio": {
       "command": "dotnet",
       "args": [
-        "run",
-        "--project",
-        "tools/SewerStudioMcpServer/SewerStudioMcpServer.csproj",
-        "--"
+        "tools/SewerStudioMcpServer/bin/Debug/net10.0/SewerStudio.McpServer.dll"
       ]
     }
   }
