@@ -49,6 +49,15 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.DoesNotContain("AddMultiModelFindingsAsEvents(\r\n                    segmented.Where(s => s.Proximity.IsCodierbar).ToList()", coding);
     }
 
+    [Fact]
+    public void Player_status_mentions_background_masks_suppressed()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+
+        Assert.Contains("Hintergrundmasken ausgeblendet", coding);
+        Assert.Contains("BuildOverlaySuppressionText", coding);
+    }
+
     private static string ReadUiFile(params string[] relativeParts)
     {
         var root = FindRepoRoot();

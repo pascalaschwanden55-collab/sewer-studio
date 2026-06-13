@@ -2993,6 +2993,12 @@ public partial class PlayerWindow
                 // Masken/Overlay rendern (alle; "Voraus" optisch abgesetzt).
                 ShowMultiModelResults(mmResult, segmented);
 
+                // Overlay-Policy einmalig anwenden: nur sichtbare codierbare Befunde zaehlen
+                // als echte Befunde. Als Hintergrund (Hidden) verworfene Masken werden gemeldet.
+                var visibleCodierbar = BuildVisibleCodingFindings(segmented);
+                var suppressedBackgroundCount = segmented.Count(s => s.Proximity.IsCodierbar) - visibleCodierbar.Count;
+                var overlaySuppressionText = BuildOverlaySuppressionText(suppressedBackgroundCount);
+
                 // DINO hatte Detektionen (sonst waeren wir oben raus), aber SAM lieferte keine Maske
                 // -> Befund verloren (degraded). Nicht als sauberen Negativbefund (gruen) tarnen.
                 if (segmented.Count == 0)
@@ -3013,13 +3019,15 @@ public partial class PlayerWindow
                     return;
                 }
 
+                var timingText = $"YOLO {mmResult.YoloTimeMs:F0}ms | DINO {mmResult.DinoTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms";
+                if (!string.IsNullOrEmpty(overlaySuppressionText))
+                    timingText += $" | {overlaySuppressionText}";
                 SetCodingAiState(
                     $"{codierbarCount} Befunde erkannt" + (vorausCount > 0 ? $" ({vorausCount} voraus ignoriert)" : ""),
                     Color.FromRgb(0x22, 0xC5, 0x5E),
-                    $"YOLO {mmResult.YoloTimeMs:F0}ms | DINO {mmResult.DinoTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms");
+                    timingText);
 
                 // Nur sichtbare codierbare Befunde als Events (Hintergrundmasken raus).
-                var visibleCodierbar = BuildVisibleCodingFindings(segmented);
                 AddMultiModelFindingsAsEvents(
                     visibleCodierbar,
                     mmResult.SamResponse?.ImageWidth ?? 1, mmResult.SamResponse?.ImageHeight ?? 1,
@@ -3149,6 +3157,20 @@ public partial class PlayerWindow
                 return decision.Mode != Ai.Pipeline.SamMaskRenderer.MaskVisualMode.Hidden;
             })
             .ToList();
+    }
+
+    /// <summary>
+    /// Statustext fuer ausgeblendete Hintergrundmasken (Policy = Hidden).
+    /// Leerer String, wenn nichts unterdrueckt wurde.
+    /// </summary>
+    private static string BuildOverlaySuppressionText(int suppressedBackgroundCount)
+    {
+        if (suppressedBackgroundCount <= 0)
+            return "";
+
+        return suppressedBackgroundCount == 1
+            ? "1 Hintergrundmaske ausgeblendet"
+            : $"{suppressedBackgroundCount} Hintergrundmasken ausgeblendet";
     }
 
     /// <summary>
