@@ -1,6 +1,7 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.MediaConflictsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="MediaConflictsRoot">
     <UserControl.Resources>
         <Style x:Key="MetricCardStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
@@ -117,26 +118,25 @@
                     </StackPanel>
                 </Button>
 
-                <Button Command="{Binding ResolveSuggestedCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Gelernte Quelle zuordnen" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-
-                <Button Command="{Binding AutoResolveLearnedCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Auto-Resolve (gelernt)" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-
-                <Button Command="{Binding ClearLearnedMappingsCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Mappings loeschen" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                <Menu Margin="0,0,4,4"
+                      VerticalAlignment="Center"
+                      Background="Transparent">
+                    <MenuItem>
+                        <MenuItem.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE712;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Weitere" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </MenuItem.Header>
+                        <MenuItem Header="Gelernte Quelle zuordnen"
+                                  Command="{Binding DataContext.ResolveSuggestedCommand, ElementName=MediaConflictsRoot}"/>
+                        <MenuItem Header="Auto-Resolve (gelernt)"
+                                  Command="{Binding DataContext.AutoResolveLearnedCommand, ElementName=MediaConflictsRoot}"/>
+                        <Separator/>
+                        <MenuItem Header="Mappings loeschen"
+                                  Command="{Binding DataContext.ClearLearnedMappingsCommand, ElementName=MediaConflictsRoot}"/>
+                    </MenuItem>
+                </Menu>
             </WrapPanel>
         </Border>
 
@@ -276,54 +276,33 @@
                                 </StackPanel>
                             </Button>
 
-                            <Button Command="{Binding PlaySuggestedSourceCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
-                                    <TextBlock Text="Gelernte Quelle abspielen"/>
-                                </StackPanel>
-                            </Button>
-
-                            <Button Command="{Binding ResolveSuggestedCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
-                                    <TextBlock Text="Gelernte Quelle uebernehmen"/>
-                                </StackPanel>
-                            </Button>
-
-                            <Button Command="{Binding OpenPdfCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
-                                    <TextBlock Text="PDF oeffnen"/>
-                                </StackPanel>
-                            </Button>
-
-                            <Button Command="{Binding OpenSelectedCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
-                                    <TextBlock Text="Kandidat im Explorer"/>
-                                </StackPanel>
-                            </Button>
-
-                            <Button Command="{Binding OpenSuggestedSourceCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
-                                    <TextBlock Text="Gelernte Quelle im Explorer"/>
-                                </StackPanel>
-                            </Button>
-
-                            <Button Command="{Binding OpenInfoCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
-                                    <TextBlock Text="Info-Datei"/>
-                                </StackPanel>
-                            </Button>
-
-                            <Button Command="{Binding OpenHoldingFolderCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
-                                    <TextBlock Text="Haltungsordner"/>
-                                </StackPanel>
-                            </Button>
+                            <Menu Margin="0,0,6,6"
+                                  VerticalAlignment="Center"
+                                  Background="Transparent">
+                                <MenuItem>
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Oeffnen"/>
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                    <MenuItem Header="Gelernte Quelle abspielen"
+                                              Command="{Binding DataContext.PlaySuggestedSourceCommand, ElementName=MediaConflictsRoot}"/>
+                                    <MenuItem Header="PDF oeffnen"
+                                              Command="{Binding DataContext.OpenPdfCommand, ElementName=MediaConflictsRoot}"/>
+                                    <MenuItem Header="Kandidat im Explorer"
+                                              Command="{Binding DataContext.OpenSelectedCandidateCommand, ElementName=MediaConflictsRoot}"/>
+                                    <MenuItem Header="Gelernte Quelle im Explorer"
+                                              Command="{Binding DataContext.OpenSuggestedSourceCommand, ElementName=MediaConflictsRoot}"/>
+                                    <MenuItem Header="Info-Datei"
+                                              Command="{Binding DataContext.OpenInfoCommand, ElementName=MediaConflictsRoot}"/>
+                                    <MenuItem Header="Haltungsordner"
+                                              Command="{Binding DataContext.OpenHoldingFolderCommand, ElementName=MediaConflictsRoot}"/>
+                                    <Separator/>
+                                    <MenuItem Header="Gelernte Quelle uebernehmen"
+                                              Command="{Binding DataContext.ResolveSuggestedCommand, ElementName=MediaConflictsRoot}"/>
+                                </MenuItem>
+                            </Menu>
                         </WrapPanel>
                     </StackPanel>
                 </ScrollViewer>
