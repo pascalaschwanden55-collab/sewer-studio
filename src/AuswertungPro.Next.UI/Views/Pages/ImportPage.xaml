@@ -146,6 +146,7 @@
             <TextBlock Text="Zusammenfassung" Foreground="{DynamicResource TextSecondaryBrush}" FontWeight="SemiBold" Margin="0,0,0,6"/>
             <TextBox Text="{Binding SummaryText}" AcceptsReturn="True" TextWrapping="Wrap"
                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                     IsReadOnly="True"
                      MinHeight="120"/>
             <Expander Header="Details" Margin="0,8,0,0">
                 <TextBox Text="{Binding DetailsText}" AcceptsReturn="True" TextWrapping="Wrap"
