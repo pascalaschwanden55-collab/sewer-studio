@@ -324,8 +324,8 @@ public sealed class KnowledgeBaseManager(
         ExecuteNonQuery("""
             INSERT OR REPLACE INTO Samples
                 (SampleId, CaseId, VsaCode, Beschreibung, MeterStart, MeterEnd,
-                 IsStreck, FramePath, ExportedUtc, VersionId, SourceType)
-            VALUES ($id, $caseId, $code, $desc, $ms, $me, $streck, $frame, $exp, $ver, $source)
+                 IsStreck, FramePath, ExportedUtc, VersionId, SourceType, QualityGateLevel)
+            VALUES ($id, $caseId, $code, $desc, $ms, $me, $streck, $frame, $exp, $ver, $source, $qg)
             """,
             ("$id",     s.SampleId),
             ("$caseId", s.CaseId),
@@ -337,7 +337,8 @@ public sealed class KnowledgeBaseManager(
             ("$frame",  s.FramePath),
             ("$exp",    s.ExportedUtc?.ToString("O") ?? DateTime.UtcNow.ToString("O")),
             ("$ver",    versionId),
-            ("$source", s.SourceType ?? ""));
+            ("$source", s.SourceType ?? ""),
+            ("$qg",     s.QualityGateLevel ?? ""));
     }
 
     private void UpsertEmbedding(string sampleId, float[] vector)
