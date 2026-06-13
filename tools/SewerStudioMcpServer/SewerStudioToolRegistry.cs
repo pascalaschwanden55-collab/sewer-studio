@@ -80,6 +80,21 @@ public sealed class SewerStudioToolRegistry
                     additionalProperties = false
                 })),
             new McpToolDefinition(
+                "get_kb_summary",
+                "Reads the SewerStudio KnowledgeBase (SQLite) strictly read-only and returns sample/embedding counts, distinct VSA codes, the most frequent codes, and under-represented codes (training gaps). Never modifies the database.",
+                Schema(new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        db_path = new { type = "string", description = "Optional explicit path to KnowledgeBase.db. Default: <knowledge_root>/KnowledgeBase.db." },
+                        knowledge_root = new { type = "string", description = "Optional KnowledgeRoot override; KnowledgeBase.db is read from here. Default C:\\KI_BRAIN or SEWERSTUDIO_KNOWLEDGE_ROOT." },
+                        top_codes = new { type = "integer", minimum = 1, maximum = 200, description = "How many most-frequent codes to return. Default 20." },
+                        gap_threshold = new { type = "integer", minimum = 1, maximum = 100, description = "Codes with fewer than this many samples count as under-represented. Default 3." }
+                    },
+                    additionalProperties = false
+                })),
+            new McpToolDefinition(
                 "live_control_health",
                 "Checks whether the running SewerStudio app exposes the local Live-Control endpoint.",
                 Schema(new
@@ -168,6 +183,11 @@ public sealed class SewerStudioToolRegistry
                 GetString(arguments, "benchmarks_dir") ?? _options.BenchmarksDir,
                 GetString(arguments, "name_contains"),
                 GetInt(arguments, "max_codes") ?? 12),
+            "get_kb_summary" => KbSummaryReader.Read(
+                GetString(arguments, "db_path")
+                    ?? Path.Combine(GetString(arguments, "knowledge_root") ?? _options.KnowledgeRoot, "KnowledgeBase.db"),
+                GetInt(arguments, "top_codes") ?? 20,
+                GetInt(arguments, "gap_threshold") ?? 3),
             "live_control_health" => await LiveControlClient.HealthAsync(
                 GetString(arguments, "live_control_url") ?? _options.LiveControlUrl).ConfigureAwait(false),
             "live_set_resource_brush" => await LiveControlClient.SetResourceBrushAsync(

@@ -15,6 +15,7 @@ Implemented tools:
 - `get_diagnostic_report`
 - `list_training_samples`
 - `get_latest_benchmark`
+- `get_kb_summary`
 - `live_control_health`
 - `live_set_resource_brush`
 - `live_set_button_background`
@@ -26,6 +27,13 @@ understands classifier autopilot/verify runs (`per_class`) and Qwen-VL runs
 (`summary`); unknown formats are passed through in `raw`. Use the optional
 `name_contains` filter (e.g. `autopilot`, `clean`, `hidden`, `v10_gold`, `qwen`)
 to pick the newest matching run.
+
+`get_kb_summary` opens `KnowledgeBase.db` STRICTLY read-only (`Mode=ReadOnly`)
+and returns sample/embedding counts, distinct VSA codes, the most frequent
+codes and under-represented codes (training gaps). It does not use
+`KnowledgeBaseContext` (whose constructor would run `EnsureSchema()` and open the
+DB for writing); it never modifies the database. The DB path defaults to
+`<knowledge-root>/KnowledgeBase.db`.
 
 Marking samples reviewed remains out of scope.
 

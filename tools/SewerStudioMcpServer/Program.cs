@@ -12,6 +12,7 @@ if (args.Any(a => string.Equals(a, "--help", StringComparison.OrdinalIgnoreCase)
       - get_diagnostic_report
       - list_training_samples
       - get_latest_benchmark
+      - get_kb_summary
       - live_control_health
       - live_set_resource_brush
       - live_set_button_background

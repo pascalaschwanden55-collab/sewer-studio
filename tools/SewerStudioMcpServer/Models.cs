@@ -67,6 +67,26 @@ public sealed record BenchmarkRunInfo(
     [property: JsonPropertyName("modified_utc")] string ModifiedUtc,
     [property: JsonPropertyName("headline_accuracy")] double? HeadlineAccuracy);
 
+// Ein VSA-Code mit Anzahl Samples in der KnowledgeBase.
+public sealed record KbCodeCount(
+    [property: JsonPropertyName("code")] string Code,
+    [property: JsonPropertyName("count")] int Count);
+
+// Read-only Gesamtuebersicht der KnowledgeBase (SQLite) fuer Trainingsplanung.
+public sealed record KbSummaryResult(
+    [property: JsonPropertyName("db_path")] string DbPath,
+    [property: JsonPropertyName("found")] bool Found,
+    [property: JsonPropertyName("sample_count")] int SampleCount,
+    [property: JsonPropertyName("embedding_count")] int EmbeddingCount,
+    [property: JsonPropertyName("distinct_codes")] int DistinctCodes,
+    [property: JsonPropertyName("version_count")] int VersionCount,
+    [property: JsonPropertyName("latest_version_utc")] string? LatestVersionUtc,
+    [property: JsonPropertyName("latest_version_sample_count")] int LatestVersionSampleCount,
+    [property: JsonPropertyName("gap_threshold")] int GapThreshold,
+    [property: JsonPropertyName("top_codes")] IReadOnlyList<KbCodeCount> TopCodes,
+    [property: JsonPropertyName("under_represented")] IReadOnlyList<KbCodeCount> UnderRepresented,
+    [property: JsonPropertyName("note")] string? Note);
+
 // Normalisiertes Ergebnis des neuesten Benchmark-Laufs aus docs/benchmarks.
 public sealed record LatestBenchmarkResult(
     [property: JsonPropertyName("benchmarks_dir")] string BenchmarksDir,
