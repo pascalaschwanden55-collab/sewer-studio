@@ -6,23 +6,9 @@
         Width="920" Height="780"
         MinWidth="800" MinHeight="650"
         WindowStartupLocation="CenterOwner"
-        Background="#FFF5F7FA">
+        Background="{DynamicResource BgLightBrush}">
 
     <Window.Resources>
-        <!-- Brushes (helles Layout) -->
-        <SolidColorBrush x:Key="HBg" Color="#FFF5F7FA"/>
-        <SolidColorBrush x:Key="HCard" Color="#FFFFFFFF"/>
-        <SolidColorBrush x:Key="HBorder" Color="#FFD0D7DE"/>
-        <SolidColorBrush x:Key="HInputBg" Color="#FFFFFFFF"/>
-        <SolidColorBrush x:Key="HInputBorder" Color="#FFB0B8C1"/>
-        <SolidColorBrush x:Key="HAccent" Color="#FF0969DA"/>
-        <SolidColorBrush x:Key="HTextPrimary" Color="#FF1F2328"/>
-        <SolidColorBrush x:Key="HTextSecondary" Color="#FF57606A"/>
-        <SolidColorBrush x:Key="HTextDim" Color="#FF8C959F"/>
-        <SolidColorBrush x:Key="HGreen" Color="#FF1A7F37"/>
-        <SolidColorBrush x:Key="HRed" Color="#FFCF222E"/>
-        <SolidColorBrush x:Key="HYellow" Color="#FF9A6700"/>
-
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <local:InvertBoolConverter x:Key="InvertBool"/>
         <local:InvertBoolToVisibilityConverter x:Key="InvertBoolToVis"/>
@@ -30,22 +16,22 @@
 
         <!-- ComboBox light theme -->
         <Style x:Key="HComboBox" TargetType="ComboBox">
-            <Setter Property="Background" Value="{StaticResource HInputBg}"/>
-            <Setter Property="Foreground" Value="{StaticResource HTextPrimary}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource HInputBorder}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Padding" Value="8,5"/>
             <Setter Property="ItemContainerStyle">
                 <Setter.Value>
                     <Style TargetType="ComboBoxItem">
-                        <Setter Property="Background" Value="#FFFFFFFF"/>
-                        <Setter Property="Foreground" Value="#FF1F2328"/>
+                        <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                         <Setter Property="Padding" Value="8,5"/>
                         <Style.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter Property="Background" Value="#FFDDF4FF"/>
-                                <Setter Property="Foreground" Value="#FF0969DA"/>
+                                <Setter Property="Background" Value="{DynamicResource HoverBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -57,18 +43,18 @@
         <Style x:Key="SectionHeader" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{StaticResource HAccent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Margin" Value="12,10,12,6"/>
         </Style>
 
         <!-- Result row template -->
         <Style x:Key="ResultLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource HTextSecondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         <Style x:Key="ResultValue" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource HTextPrimary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="FontFamily" Value="Consolas"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="Medium"/>
@@ -76,7 +62,7 @@
             <Setter Property="HorizontalAlignment" Value="Right"/>
         </Style>
         <Style x:Key="ResultUnit" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource HTextDim}"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="4,0,0,0"/>
@@ -84,7 +70,7 @@
 
         <!-- Input label -->
         <Style x:Key="InputLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource HTextSecondary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="Width" Value="110"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -92,21 +78,21 @@
 
         <!-- Input TextBox -->
         <Style x:Key="HInput" TargetType="TextBox">
-            <Setter Property="Background" Value="{StaticResource HInputBg}"/>
-            <Setter Property="Foreground" Value="{StaticResource HTextPrimary}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource HInputBorder}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="8,5"/>
             <Setter Property="FontFamily" Value="Consolas"/>
             <Setter Property="FontSize" Value="13"/>
-            <Setter Property="CaretBrush" Value="{StaticResource HAccent}"/>
+            <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}"/>
         </Style>
 
         <!-- Toggle button -->
         <Style x:Key="HToggle" TargetType="ToggleButton">
-            <Setter Property="Background" Value="{StaticResource HInputBg}"/>
-            <Setter Property="Foreground" Value="{StaticResource HTextSecondary}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource HInputBorder}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="10,5"/>
             <Setter Property="FontSize" Value="12"/>
@@ -125,12 +111,12 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#FFDDF4FF"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource HAccent}"/>
-                                <Setter Property="Foreground" Value="{StaticResource HAccent}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource HAccent}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -147,22 +133,17 @@
 
         <!-- ═══ HEADER ═══ -->
         <Border Grid.Row="0" Margin="0,0,0,16" Padding="0,0,0,14"
-                BorderThickness="0,0,0,1" BorderBrush="{StaticResource HBorder}">
+                BorderThickness="0,0,0,1" BorderBrush="{DynamicResource BorderBrush}">
             <StackPanel Orientation="Horizontal">
-                <Border Width="38" Height="38" CornerRadius="8" Margin="0,0,14,0">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#FF0969DA" Offset="0"/>
-                            <GradientStop Color="#FF54AEFF" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Border.Background>
+                <Border Width="38" Height="38" CornerRadius="8" Margin="0,0,14,0"
+                        Background="{DynamicResource AccentBrush}">
                     <TextBlock Text="&#x1F4A7;" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="SewerStudio — Hydraulik-Panel"
-                               FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource HTextPrimary}"/>
+                               FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"/>
                     <TextBlock Text="DWA-A 110 · Kreisquerschnitt · Normalabfluss bei Teilfüllung"
-                               FontSize="12" Foreground="{StaticResource HTextDim}"/>
+                               FontSize="12" Foreground="{DynamicResource MutedBrush}"/>
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -179,7 +160,7 @@
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <!-- Haltungsdaten Card -->
-                    <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1" CornerRadius="10" Margin="0,0,0,14">
                         <StackPanel>
                             <TextBlock Style="{StaticResource SectionHeader}" Text="HALTUNGSDATEN"/>
@@ -188,7 +169,7 @@
                                 <!-- DN -->
                                 <DockPanel Margin="0,4">
                                     <TextBlock Style="{StaticResource InputLabel}" Text="Nennweite DN"/>
-                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="11"
+                                    <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11"
                                                DockPanel.Dock="Right" VerticalAlignment="Center" Width="40"
                                                TextAlignment="Right" Text="mm"/>
                                     <TextBox Style="{StaticResource HInput}"
@@ -219,7 +200,7 @@
                                 <!-- Gefälle -->
                                 <DockPanel Margin="0,4">
                                     <TextBlock Style="{StaticResource InputLabel}" Text="Gefälle"/>
-                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="11"
+                                    <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11"
                                                DockPanel.Dock="Right" VerticalAlignment="Center" Width="40"
                                                TextAlignment="Right" Text="{Binding GefaelleUnitLabel}"/>
                                     <TextBox Style="{StaticResource HInput}"
@@ -241,7 +222,7 @@
                                 <!-- Wasserstand -->
                                 <DockPanel Margin="0,4">
                                     <TextBlock Style="{StaticResource InputLabel}" Text="Wasserstand"/>
-                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="11"
+                                    <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11"
                                                DockPanel.Dock="Right" VerticalAlignment="Center" Width="40"
                                                TextAlignment="Right" Text="mm"/>
                                     <TextBox Style="{StaticResource HInput}"
@@ -263,7 +244,7 @@
                                 <!-- Temperatur -->
                                 <DockPanel Margin="0,4">
                                     <TextBlock Style="{StaticResource InputLabel}" Text="Temperatur"/>
-                                    <TextBlock Foreground="{StaticResource HTextDim}" FontSize="11"
+                                    <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11"
                                                DockPanel.Dock="Right" VerticalAlignment="Center" Width="40"
                                                TextAlignment="Right" Text="°C"/>
                                     <TextBox Style="{StaticResource HInput}"
@@ -274,13 +255,13 @@
                     </Border>
 
                     <!-- Querschnitt-Grafik -->
-                    <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1" CornerRadius="10" Padding="12" Margin="0,0,0,14">
                         <StackPanel HorizontalAlignment="Center">
                             <Canvas x:Name="PipeCrossSection" Width="180" Height="180"
                                     ClipToBounds="True"/>
                             <TextBlock HorizontalAlignment="Center" Margin="0,6,0,0"
-                                       FontSize="11" Foreground="{StaticResource HTextDim}">
+                                       FontSize="11" Foreground="{DynamicResource MutedBrush}">
                                 <Run Text="Auslastung: "/>
                                 <Run x:Name="AuslastungRun" Text="{Binding AuslastungDisplay}"
                                      FontWeight="SemiBold"/>
@@ -289,9 +270,9 @@
                     </Border>
 
                     <!-- Info-Hinweis -->
-                    <Border Background="#FFE8F4FD" BorderBrush="#FFB6D6F2"
+                    <Border Background="{DynamicResource BgLightBrush}" BorderBrush="{DynamicResource AccentBrush}"
                             BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,8">
-                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource HAccent}"
+                        <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource AccentBrush}"
                                    LineHeight="17">
                             <Run FontWeight="Bold" Text="Integration:"/>
                             <Run Text=" DN, Material und Wasserstand können direkt aus dem WinCan/IBAK-Protokoll geladen werden. Gefälle aus GEP-Kataster oder Sohlhöhen (Δh / L)."/>
@@ -304,18 +285,18 @@
             <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
                 <!-- No results placeholder -->
                 <StackPanel>
-                    <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                    <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1" CornerRadius="10" Padding="40"
                             Visibility="{Binding HasResult, Converter={StaticResource InvertBoolToVis}}">
                         <TextBlock Text="Bitte alle Eingabewerte ausfüllen"
-                                   Foreground="{StaticResource HTextDim}" FontSize="13"
+                                   Foreground="{DynamicResource MutedBrush}" FontSize="13"
                                    HorizontalAlignment="Center"/>
                     </Border>
 
                     <StackPanel Visibility="{Binding HasResult, Converter={StaticResource BoolToVis}}">
 
                         <!-- ── Teilfüllung ── -->
-                        <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1" CornerRadius="10" Margin="0,0,0,12">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionHeader}" Text="TEILFÜLLUNG (IST-ZUSTAND)"/>
@@ -355,7 +336,7 @@
                         </Border>
 
                         <!-- ── Vollfüllung ── -->
-                        <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1" CornerRadius="10" Margin="0,0,0,12">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionHeader}" Text="VOLLFÜLLUNG (REFERENZ)"/>
@@ -375,7 +356,7 @@
                         </Border>
 
                         <!-- ── Kennzahlen ── -->
-                        <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1" CornerRadius="10" Margin="0,0,0,12">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionHeader}" Text="HYDRAULISCHE KENNZAHLEN"/>
@@ -415,7 +396,7 @@
                         </Border>
 
                         <!-- ── Ablagerungsverhalten ── -->
-                        <Border Background="{StaticResource HCard}" CornerRadius="10" Margin="0,0,0,12"
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="10" Margin="0,0,0,12"
                                 x:Name="AblagerungBorder" BorderThickness="1">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionHeader}">
@@ -447,32 +428,32 @@
                         </Border>
 
                         <!-- ── VSA-Bewertung ── -->
-                        <Border Background="{StaticResource HCard}" BorderBrush="{StaticResource HBorder}"
+                        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
                                 BorderThickness="1" CornerRadius="10" Padding="14,12">
                             <StackPanel>
                                 <TextBlock Text="Hydraulische Bewertung (VSA)" FontSize="13"
-                                           FontWeight="SemiBold" Foreground="{StaticResource HTextPrimary}"
+                                           FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
                                            Margin="0,0,0,10"/>
                                 <UniformGrid Columns="2" Rows="2">
                                     <StackPanel Orientation="Horizontal" Margin="0,4">
                                         <Ellipse x:Name="IndV" Width="12" Height="12" Margin="0,0,6,0"/>
                                         <TextBlock Text="v ≥ 0.5 m/s (Selbstreinigung)"
-                                                   FontSize="12" Foreground="{StaticResource HTextSecondary}"/>
+                                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,4">
                                         <Ellipse x:Name="IndTau" Width="12" Height="12" Margin="0,0,6,0"/>
                                         <TextBlock Text="τ ≥ 2.5 N/m² (Mindest-Schub)"
-                                                   FontSize="12" Foreground="{StaticResource HTextSecondary}"/>
+                                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,4">
                                         <Ellipse x:Name="IndAbl" Width="12" Height="12" Margin="0,0,6,0"/>
                                         <TextBlock Text="Ablagerungsfrei nach DWA-A 110"
-                                                   FontSize="12" Foreground="{StaticResource HTextSecondary}"/>
+                                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Margin="0,4">
                                         <Ellipse x:Name="IndFr" Width="12" Height="12" Margin="0,0,6,0"/>
                                         <TextBlock Text="Fr ≤ 1 (strömend, kein Schiessen)"
-                                                   FontSize="12" Foreground="{StaticResource HTextSecondary}"/>
+                                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                                     </StackPanel>
                                 </UniformGrid>
                             </StackPanel>
