@@ -56,17 +56,33 @@ public sealed class IbakExportImportService : IIbakImportService
         var protocolService = new ProtocolService();
         var created = 0;
 
+        // Audit I2: Fehler pro Haltung isolieren — eine kaputte Haltung darf die
+        // restlichen nicht blockieren, und Abbruch darf nicht als Fehler enden.
+        List<IbakHolding> parsed;
         try
         {
-            var parsed = ParseDatenTxt(dataPath, messages);
-            var holdingIndex = 0;
-            foreach (var holding in parsed)
+            parsed = ParseDatenTxt(dataPath, messages);
+        }
+        catch (Exception ex)
+        {
+            errors++;
+            messages.Add($"Fehler beim Lesen der IBAK Daten.txt: {ex.Message}");
+            ctx?.Log.AddEntry("IBAK", "Parse", ImportLogStatus.Error,
+                sourceFile: dataPath, detail: ex.Message);
+            parsed = new List<IbakHolding>();
+        }
+
+        var holdingIndex = 0;
+        foreach (var holding in parsed)
+        {
+            ctx?.CancellationToken.ThrowIfCancellationRequested();
+            holdingIndex++;
+            ctx?.Progress?.Report(new ImportProgress(
+                "Haltungen importieren", holdingIndex, parsed.Count,
+                $"IBAK {holdingIndex}/{parsed.Count}", holding.Holding));
+
+            try
             {
-                ctx?.CancellationToken.ThrowIfCancellationRequested();
-                holdingIndex++;
-                ctx?.Progress?.Report(new ImportProgress(
-                    "Haltungen importieren", holdingIndex, parsed.Count,
-                    $"IBAK {holdingIndex}/{parsed.Count}", holding.Holding));
                 var key = NormalizeHoldingKey(holding.Holding);
                 var record = FindRecord(project, key);
                 if (record is null)
@@ -104,11 +120,14 @@ public sealed class IbakExportImportService : IIbakImportService
 
                 updated++;
             }
-        }
-        catch (Exception ex)
-        {
-            errors++;
-            messages.Add($"Fehler beim IBAK Import: {ex.Message}");
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                errors++;
+                messages.Add($"Fehler bei Haltung {holding.Holding} (IBAK): {ex.Message}");
+                ctx?.Log.AddEntry("IBAK", "Haltung", ImportLogStatus.Error,
+                    recordKey: holding.Holding, sourceFile: dataPath, detail: ex.Message);
+            }
         }
 
         project.ModifiedAtUtc = DateTime.UtcNow;
@@ -163,6 +182,10 @@ public sealed class IbakExportImportService : IIbakImportService
             record.Protocol = protocolService.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
             return;
         }
+
+        // Audit I1: identischer Re-Import erzeugt keine neue Revision
+        if (Common.ProtocolContentFingerprint.HasSameContent(record.Protocol.Current, entries))
+            return;
 
         record.Protocol.History.Add(record.Protocol.Current);
         record.Protocol.Current = new ProtocolRevision

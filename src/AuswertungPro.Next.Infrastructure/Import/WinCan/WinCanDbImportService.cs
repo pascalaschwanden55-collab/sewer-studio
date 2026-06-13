@@ -107,109 +107,125 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
                 if (string.IsNullOrWhiteSpace(section.Key))
                     continue;
 
-                var key = NormalizeHoldingKey(section.Key);
-                var record = project.Data.FirstOrDefault(r =>
-                    string.Equals(NormalizeHoldingKey(r.GetFieldValue("Haltungsname")), key, StringComparison.OrdinalIgnoreCase));
-                if (record is null)
+                // Audit I2: Fehler pro Haltung isolieren — eine kaputte Section darf
+                // weder die restlichen blockieren noch den MDB-Fallback ausloesen.
+                try
                 {
-                    record = project.CreateNewRecord();
-                    record.SetFieldValue("Haltungsname", section.Key, FieldSource.Legacy, userEdited: false);
-                    AddRecord(project, record, ctx);
-                    created++;
-                    messages.Add($"Haltung neu angelegt: {section.Key}");
-                }
-
-                found++;
-
-                var inspection = inspections
-                    .Where(i => i.SectionFk == section.Pk)
-                    .OrderByDescending(i => i.SortKey)
-                    .FirstOrDefault();
-
-                ApplySectionFields(record, section, inspection);
-
-                if (inspection is null)
-                {
-                    uncertain++;
-                    messages.Add($"Keine Inspektion in DB fuer Haltung {section.Key}");
-                    continue;
-                }
-
-                if (!obsByInspection.TryGetValue(inspection.Pk, out var obsList) || obsList.Count == 0)
-                {
-                    uncertain++;
-                    messages.Add($"Keine Beobachtungen in DB fuer Haltung {section.Key}");
-                    continue;
-                }
-
-                var entries = new List<ProtocolEntry>();
-                foreach (var obs in obsList.OrderBy(o => o.SortOrder))
-                {
-                    var entry = new ProtocolEntry
+                    var key = NormalizeHoldingKey(section.Key);
+                    var record = project.Data.FirstOrDefault(r =>
+                        string.Equals(NormalizeHoldingKey(r.GetFieldValue("Haltungsname")), key, StringComparison.OrdinalIgnoreCase));
+                    if (record is null)
                     {
-                        Code = obs.OpCode ?? "",
-                        Beschreibung = obs.Observation ?? "",
-                        MeterStart = obs.Distance,
-                        MeterEnd = obs.Distance.HasValue && obs.ContDefectLength.HasValue && obs.ContDefectLength.Value > 0
-                            ? obs.Distance.Value + obs.ContDefectLength.Value
-                            : obs.Distance,
-                        IsStreckenschaden = obs.ContDefectLength.HasValue && obs.ContDefectLength.Value > 0,
-                        Mpeg = obs.TimeCtr,
-                        Zeit = ParseTimeSpan(obs.TimeCtr),
-                        Source = ProtocolEntrySource.Imported
-                    };
-
-                    var parameters = BuildObsParameters(obs);
-                    if (parameters.Count > 0)
-                    {
-                        entry.CodeMeta = new ProtocolEntryCodeMeta
-                        {
-                            Code = entry.Code,
-                            Parameters = parameters,
-                            UpdatedAt = DateTimeOffset.UtcNow
-                        };
+                        record = project.CreateNewRecord();
+                        record.SetFieldValue("Haltungsname", section.Key, FieldSource.Legacy, userEdited: false);
+                        AddRecord(project, record, ctx);
+                        created++;
+                        messages.Add($"Haltung neu angelegt: {section.Key}");
                     }
 
-                    if (mediaByObs.TryGetValue(obs.Pk, out var mediaList))
-                    {
-                        foreach (var media in mediaList)
-                        {
-                            if (string.IsNullOrWhiteSpace(media.FileName))
-                                continue;
+                    found++;
 
-                            if (IsVideo(media.FileType))
+                    var inspection = inspections
+                        .Where(i => i.SectionFk == section.Pk)
+                        .OrderByDescending(i => i.SortKey)
+                        .FirstOrDefault();
+
+                    ApplySectionFields(record, section, inspection);
+
+                    if (inspection is null)
+                    {
+                        uncertain++;
+                        messages.Add($"Keine Inspektion in DB fuer Haltung {section.Key}");
+                        continue;
+                    }
+
+                    if (!obsByInspection.TryGetValue(inspection.Pk, out var obsList) || obsList.Count == 0)
+                    {
+                        uncertain++;
+                        messages.Add($"Keine Beobachtungen in DB fuer Haltung {section.Key}");
+                        continue;
+                    }
+
+                    var entries = new List<ProtocolEntry>();
+                    foreach (var obs in obsList.OrderBy(o => o.SortOrder))
+                    {
+                        var entry = new ProtocolEntry
+                        {
+                            Code = obs.OpCode ?? "",
+                            Beschreibung = obs.Observation ?? "",
+                            MeterStart = obs.Distance,
+                            MeterEnd = obs.Distance.HasValue && obs.ContDefectLength.HasValue && obs.ContDefectLength.Value > 0
+                                ? obs.Distance.Value + obs.ContDefectLength.Value
+                                : obs.Distance,
+                            IsStreckenschaden = obs.ContDefectLength.HasValue && obs.ContDefectLength.Value > 0,
+                            Mpeg = obs.TimeCtr,
+                            Zeit = ParseTimeSpan(obs.TimeCtr),
+                            Source = ProtocolEntrySource.Imported
+                        };
+
+                        var parameters = BuildObsParameters(obs);
+                        if (parameters.Count > 0)
+                        {
+                            entry.CodeMeta = new ProtocolEntryCodeMeta
                             {
-                                var videoPath = ResolveFile(fileIndex, media.FileName);
-                                if (!string.IsNullOrWhiteSpace(videoPath))
-                                    record.SetFieldValue("Link", videoPath, FieldSource.Legacy, userEdited: false);
-                            }
-                            else if (IsImage(media.FileType))
+                                Code = entry.Code,
+                                Parameters = parameters,
+                                UpdatedAt = DateTimeOffset.UtcNow
+                            };
+                        }
+
+                        if (mediaByObs.TryGetValue(obs.Pk, out var mediaList))
+                        {
+                            foreach (var media in mediaList)
                             {
-                                var photoPath = ResolveFile(fileIndex, media.FileName);
-                                if (!string.IsNullOrWhiteSpace(photoPath))
-                                    entry.FotoPaths.Add(photoPath);
+                                if (string.IsNullOrWhiteSpace(media.FileName))
+                                    continue;
+
+                                if (IsVideo(media.FileType))
+                                {
+                                    var videoPath = ResolveFile(fileIndex, media.FileName);
+                                    if (!string.IsNullOrWhiteSpace(videoPath))
+                                        record.SetFieldValue("Link", videoPath, FieldSource.Legacy, userEdited: false);
+                                }
+                                else if (IsImage(media.FileType))
+                                {
+                                    var photoPath = ResolveFile(fileIndex, media.FileName);
+                                    if (!string.IsNullOrWhiteSpace(photoPath))
+                                        entry.FotoPaths.Add(photoPath);
+                                }
                             }
                         }
+
+                        entries.Add(entry);
                     }
 
-                    entries.Add(entry);
+                    ApplyProtocol(record, entries, protocolService);
+                    UpdateFindings(record, entries);
+                    LinkSectionPdf(record, section.Key, fileIndex);
+                    BuildPrimaryDamagesText(record, entries);
+
+                    updated++;
                 }
-
-                ApplyProtocol(record, entries, protocolService);
-                UpdateFindings(record, entries);
-                LinkSectionPdf(record, section.Key, fileIndex);
-                BuildPrimaryDamagesText(record, entries);
-
-                updated++;
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    errors++;
+                    messages.Add($"Fehler bei Haltung {section.Key} (WinCan DB): {ex.Message}");
+                    ctx?.Log.AddEntry("WinCan", "Haltung", ImportLogStatus.Error,
+                        recordKey: section.Key, sourceFile: dbPath, detail: ex.Message);
+                }
             }
 
             ImportNodes(project, nodes, fileIndex, messages, ref found, ref created, ref updated, ref uncertain, ctx);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             db3ImportFailed = true;
             errors++;
             messages.Add($"Fehler beim WinCan-DB Import: {ex.Message}");
+            ctx?.Log.AddEntry("WinCan", "DB3", ImportLogStatus.Error,
+                sourceFile: dbPath, detail: ex.Message);
         }
 
         if (db3ImportFailed || found == 0)
@@ -442,6 +458,10 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             record.Protocol = protocolService.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
             return;
         }
+
+        // Audit I1: identischer Re-Import erzeugt keine neue Revision
+        if (Common.ProtocolContentFingerprint.HasSameContent(record.Protocol.Current, entries))
+            return;
 
         record.Protocol.History.Add(record.Protocol.Current);
         record.Protocol.Current = new ProtocolRevision

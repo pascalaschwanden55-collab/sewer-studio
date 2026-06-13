@@ -228,6 +228,7 @@ public sealed class KinsImportService : IKinsImportService
 
                 FlushCurrent();
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 errors++;
@@ -600,6 +601,10 @@ public sealed class KinsImportService : IKinsImportService
             record.Protocol = protocolService.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? string.Empty, cloned, null);
             return;
         }
+
+        // Audit I1: identischer Re-Import erzeugt keine neue Revision
+        if (Common.ProtocolContentFingerprint.HasSameContent(record.Protocol.Current, cloned))
+            return;
 
         record.Protocol.History.Add(record.Protocol.Current);
         record.Protocol.Current = new ProtocolRevision
