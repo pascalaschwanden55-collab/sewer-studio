@@ -3782,32 +3782,11 @@ public partial class PlayerWindow
     /// <summary>
     /// Traegt SAM-Quantifizierungsdaten in ProtocolEntry.CodeMeta ein.
     /// Gemeinsam genutzt von Qwen- und Multi-Model-Pfad.
+    /// Delegiert an QuantificationCodeMetaWriter (inkl. Herkunft + Status fuer den Gold-Fund).
     /// </summary>
     private static void ApplyQuantificationToEntry(
         ProtocolEntry entry, string code, MaskQuantificationService.QuantifiedMask quant)
-    {
-        if (!string.IsNullOrEmpty(quant.ClockPosition))
-        {
-            entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
-            entry.CodeMeta.Parameters["vsa.uhr.von"] = quant.ClockPosition;
-        }
-        if (quant.HeightMm.HasValue)
-        {
-            entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
-            entry.CodeMeta.Parameters["vsa.hoehe.mm"] = quant.HeightMm.Value.ToString(CultureInfo.InvariantCulture);
-        }
-        if (quant.WidthMm.HasValue)
-        {
-            entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
-            entry.CodeMeta.Parameters["vsa.breite.mm"] = quant.WidthMm.Value.ToString(CultureInfo.InvariantCulture);
-        }
-        if (quant.CrossSectionReductionPercent is > 0)
-        {
-            entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
-            entry.CodeMeta.Parameters["vsa.querschnitt.prozent"] =
-                quant.CrossSectionReductionPercent.Value.ToString(CultureInfo.InvariantCulture);
-        }
-    }
+        => AuswertungPro.Next.Infrastructure.Ai.Pipeline.QuantificationCodeMetaWriter.Apply(entry, code, quant);
 
     /// <summary>
     /// Schaetzt Severity (1-5) aus SAM-Quantifizierung.
