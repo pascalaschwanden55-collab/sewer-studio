@@ -124,4 +124,18 @@ public sealed class CodingEventToSampleMapperTests
         Assert.Null(s.HumanConfirmed);
         Assert.Null(s.Corrected);
     }
+
+    [Fact]
+    public void FromCodingEvent_TrenntRohbildUndMarkiertesBeweisbild()
+    {
+        var sample = CodingEventToSampleMapper.FromCodingEvent(
+            BuildEvent(CodingUserDecision.Accepted),
+            caseId: "H1",
+            framePath: @"C:\frames\raw.png",
+            evidenceFramePath: @"C:\frames\annotated.png");
+
+        Assert.Equal(@"C:\frames\raw.png", sample.FramePath);
+        Assert.Equal(@"C:\frames\annotated.png", sample.EvidenceFramePath);
+        Assert.Null(sample.AdditionalFramePaths);
+    }
 }

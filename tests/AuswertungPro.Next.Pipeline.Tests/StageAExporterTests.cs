@@ -271,6 +271,7 @@ public sealed class StageAExporterTests : IDisposable
         var source = new TrainingSample
         {
             SampleId = "s1", Code = "BCA",
+            EvidenceFramePath = @"C:\frames\s1_markiert.png",
             SamMaskRle = "1,2,3", SamMaskImageWidth = 640, SamMaskImageHeight = 480,
             SamMaskAreaPixels = 100, SamMaskConfidence = 0.9, SamMaskLabel = "crack",
             KbCheck = "KbAgreement",
@@ -281,6 +282,8 @@ public sealed class StageAExporterTests : IDisposable
         var clone = StageAExporter.CloneSample(source);
 
         Assert.Equal("1,2,3", clone.SamMaskRle);
+        Assert.Equal(@"C:\frames\s1_markiert.png", clone.EvidenceFramePath);
+        Assert.Null(clone.AdditionalFramePaths);
         Assert.Equal(640, clone.SamMaskImageWidth);
         Assert.Equal("crack", clone.SamMaskLabel);
         Assert.Equal("KbAgreement", clone.KbCheck);

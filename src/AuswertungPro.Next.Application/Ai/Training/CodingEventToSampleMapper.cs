@@ -29,7 +29,8 @@ public static class CodingEventToSampleMapper
         string? framePath,
         DateTime? inspectionDate = null,
         string? confirmedByUser = null,
-        DateTime? confirmedAtUtc = null)
+        DateTime? confirmedAtUtc = null,
+        string? evidenceFramePath = null)
     {
         // Ohne KI-Kontext landet das Sample in der Review-Queue (New), nicht direkt im Training.
         // Verhindert dass rein manuelle Codiereintraege ungesehen die Trainingsdaten erweitern.
@@ -56,6 +57,7 @@ public static class CodingEventToSampleMapper
             IsStreckenschaden = ev.Entry.IsStreckenschaden,
             TimeSeconds = ev.VideoTimestamp.TotalSeconds,
             FramePath = framePath ?? string.Empty,
+            EvidenceFramePath = evidenceFramePath,
             Status = status,
             SourceType = sourceType,
             KiCode = ev.AiContext?.SuggestedCode,

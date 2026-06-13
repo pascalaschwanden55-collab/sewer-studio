@@ -563,6 +563,7 @@ public sealed class StageAExporter
             DetectedMeter = source.DetectedMeter,
             MeterSource = source.MeterSource,
             FramePath = source.FramePath,
+            EvidenceFramePath = source.EvidenceFramePath,
             Status = source.Status,
             ExportedUtc = source.ExportedUtc,
             Notes = source.Notes,

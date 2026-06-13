@@ -631,6 +631,59 @@ public partial class PlayerWindow
         }
     }
 
+    private (string? path, string? error) TrySaveEvidenceFrame(CodingEvent ev, string? rawFramePath)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(rawFramePath) || !System.IO.File.Exists(rawFramePath))
+                return (null, "kein Rohbild fuer Beweisbild verfuegbar");
+
+            var dir = System.IO.Path.Combine(
+                AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBasePaths.GetRoot(),
+                "gold_frames_annotated");
+            var file = System.IO.Path.Combine(dir, $"{ev.EventId:N}_annotated.png");
+            var saved = EvidenceFrameRenderer.SaveAnnotatedFrame(
+                rawFramePath,
+                file,
+                BuildEvidenceAnnotation(ev));
+
+            return saved ? (file, null) : (null, "Beweisbild konnte nicht erstellt werden");
+        }
+        catch (System.Exception ex)
+        {
+            return (null, ex.Message);
+        }
+    }
+
+    private static EvidenceFrameAnnotation BuildEvidenceAnnotation(CodingEvent ev)
+    {
+        var (xCenter, yCenter, width, height) = ExtractEvidenceBbox(ev.Overlay);
+        return new EvidenceFrameAnnotation(
+            ev.Entry.Code,
+            ev.AiContext?.Confidence,
+            xCenter,
+            yCenter,
+            width,
+            height);
+    }
+
+    private static (double? XCenter, double? YCenter, double? Width, double? Height) ExtractEvidenceBbox(OverlayGeometry? overlay)
+    {
+        if (overlay?.Points == null || overlay.Points.Count < 2)
+            return (null, null, null, null);
+
+        var minX = overlay.Points.Min(p => p.X);
+        var minY = overlay.Points.Min(p => p.Y);
+        var maxX = overlay.Points.Max(p => p.X);
+        var maxY = overlay.Points.Max(p => p.Y);
+        var width = maxX - minX;
+        var height = maxY - minY;
+        if (width <= 0 || height <= 0)
+            return (null, null, null, null);
+
+        return (minX + width / 2.0, minY + height / 2.0, width, height);
+    }
+
     private async System.Threading.Tasks.Task PersistSingleEventAsTrainingSample(CodingEvent ev)
     {
         if (ev.Entry == null || string.IsNullOrWhiteSpace(ev.Entry.Code)) return;
@@ -649,10 +702,15 @@ public partial class PlayerWindow
                 snapshotError = snapErr;
             }
 
+            var (evidenceFramePath, evidenceError) = TrySaveEvidenceFrame(ev, framePath);
+            if (evidenceError != null)
+                System.Diagnostics.Debug.WriteLine($"[Training] Beweisbild nicht gespeichert: {evidenceError}");
+
             var sample = CodingEventToSampleMapper.FromCodingEvent(
                 ev, caseId, framePath, ResolveTrainingInspectionDate(),
                 confirmedByUser: System.Environment.UserName,
-                confirmedAtUtc: System.DateTime.UtcNow);
+                confirmedAtUtc: System.DateTime.UtcNow,
+                evidenceFramePath: evidenceFramePath);
             sample.SnapshotError = snapshotError;
 
             if (ev.Entry.FotoPaths.Count > 1)

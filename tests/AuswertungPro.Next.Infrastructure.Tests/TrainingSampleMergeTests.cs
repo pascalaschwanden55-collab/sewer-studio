@@ -88,4 +88,34 @@ public sealed class TrainingSampleMergeTests
         Assert.Equal("tester", target.ConfirmedByUser);
         Assert.Equal("Green", target.QualityGateLevel);
     }
+
+    [Fact]
+    public void ApplyUpdatableFields_BehaeltEvidenceFramePathBeiTeilUpdate()
+    {
+        var target = new TrainingSample
+        {
+            SampleId = "s1", Code = "BCA",
+            EvidenceFramePath = @"C:\frames\s1_markiert.png"
+        };
+        var source = new TrainingSample { SampleId = "s1", Code = "BCA", Status = TrainingSampleStatus.Approved };
+
+        TrainingSampleMerge.ApplyUpdatableFields(target, source);
+
+        Assert.Equal(@"C:\frames\s1_markiert.png", target.EvidenceFramePath);
+    }
+
+    [Fact]
+    public void ApplyUpdatableFields_UebernimmtEvidenceFramePathWennGesetzt()
+    {
+        var target = new TrainingSample { SampleId = "s1", Code = "BCA" };
+        var source = new TrainingSample
+        {
+            SampleId = "s1", Code = "BCA",
+            EvidenceFramePath = @"C:\frames\s1_markiert.png"
+        };
+
+        TrainingSampleMerge.ApplyUpdatableFields(target, source);
+
+        Assert.Equal(@"C:\frames\s1_markiert.png", target.EvidenceFramePath);
+    }
 }

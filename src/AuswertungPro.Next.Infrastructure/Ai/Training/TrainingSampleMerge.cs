@@ -59,5 +59,6 @@ public static class TrainingSampleMerge
         if (source.ConfirmedAtUtc is not null) target.ConfirmedAtUtc = source.ConfirmedAtUtc;
         if (source.QualityGateLevel is not null) target.QualityGateLevel = source.QualityGateLevel;
         if (source.SnapshotError is not null) target.SnapshotError = source.SnapshotError;
+        if (!string.IsNullOrWhiteSpace(source.EvidenceFramePath)) target.EvidenceFramePath = source.EvidenceFramePath;
     }
 }

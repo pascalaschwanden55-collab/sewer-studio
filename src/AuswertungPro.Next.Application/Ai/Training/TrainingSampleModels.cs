@@ -59,6 +59,8 @@ public sealed class TrainingSample
     public double? DetectedMeter { get; set; }
     public string MeterSource { get; set; } = string.Empty;
     public string FramePath { get; set; } = string.Empty;
+    /// <summary>Markiertes Beweisbild fuer Mensch/Protokoll. Kein Lernmaterial.</summary>
+    public string? EvidenceFramePath { get; set; }
     public TrainingSampleStatus Status { get; set; } = TrainingSampleStatus.New;
     public DateTime? ExportedUtc { get; set; }
     public string Notes { get; set; } = string.Empty;
