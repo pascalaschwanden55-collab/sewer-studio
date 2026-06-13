@@ -604,22 +604,64 @@ public partial class PlayerWindow
     /// Speichert ein einzelnes CodingEvent sofort als TrainingSample.
     /// Wird nach jeder Codierung aufgerufen â€” nicht erst beim Beenden.
     /// </summary>
-    private void PersistSingleEventAsTrainingSample(CodingEvent ev)
+    /// <summary>
+    /// Sichert den aktuell analysierten Frame als Gold-Snapshot (PNG) unter knowledge/gold_frames,
+    /// falls der Befund kein eigenes Foto hat. Liefert den Dateipfad oder eine Fehlermeldung zurueck.
+    /// </summary>
+    private async System.Threading.Tasks.Task<(string? path, string? error)> TrySaveGoldFrameAsync(CodingEvent ev)
+    {
+        try
+        {
+            var bytes = _detectionPendingFrameBytes;
+            if (bytes == null || bytes.Length == 0)
+                bytes = await CaptureCurrentFrameAsync();
+            if (bytes == null || bytes.Length == 0)
+                return (null, "kein Frame verfuegbar");
+
+            var dir = System.IO.Path.Combine(
+                AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBasePaths.GetRoot(), "gold_frames");
+            System.IO.Directory.CreateDirectory(dir);
+            var file = System.IO.Path.Combine(dir, $"{ev.EventId:N}.png");
+            await System.IO.File.WriteAllBytesAsync(file, bytes);
+            return (file, null);
+        }
+        catch (System.Exception ex)
+        {
+            return (null, ex.Message);
+        }
+    }
+
+    private async System.Threading.Tasks.Task PersistSingleEventAsTrainingSample(CodingEvent ev)
     {
         if (ev.Entry == null || string.IsNullOrWhiteSpace(ev.Entry.Code)) return;
         try
         {
             var caseId = _codingVm?.HaltungName ?? "unknown";
             var framePath = ev.Entry.FotoPaths.Count > 0 ? ev.Entry.FotoPaths[0] : null;
-            var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath, ResolveTrainingInspectionDate());
+
+            // Gold-Fund: Wenn der Befund kein eigenes Foto hat, aktuellen Frame als Snapshot sichern.
+            // framePath bleibt bei Fehler null â€” das Speichern laeuft trotzdem durch (SnapshotError haelt den Grund fest).
+            string? snapshotError = null;
+            if (string.IsNullOrWhiteSpace(framePath))
+            {
+                var (snapPath, snapErr) = await TrySaveGoldFrameAsync(ev);
+                framePath = snapPath;
+                snapshotError = snapErr;
+            }
+
+            var sample = CodingEventToSampleMapper.FromCodingEvent(
+                ev, caseId, framePath, ResolveTrainingInspectionDate(),
+                confirmedByUser: System.Environment.UserName,
+                confirmedAtUtc: System.DateTime.UtcNow);
+            sample.SnapshotError = snapshotError;
+
             if (ev.Entry.FotoPaths.Count > 1)
             {
                 sample.AdditionalFramePaths ??= new System.Collections.Generic.List<string>();
                 for (int i = 1; i < ev.Entry.FotoPaths.Count; i++)
                     sample.AdditionalFramePaths.Add(ev.Entry.FotoPaths[i]);
             }
-            InfraTraining.TrainingSamplesStore.MergeAndSaveAsync(new List<TrainingSample> { sample })
-                .SafeFireAndForget("TrainingSaveSingle");
+            await InfraTraining.TrainingSamplesStore.MergeAndSaveAsync(new List<TrainingSample> { sample });
         }
         catch (Exception ex)
         {
@@ -637,7 +679,10 @@ public partial class PlayerWindow
             foreach (var ev in _codingVm.Events)
             {
                 var framePath = ev.Entry.FotoPaths.Count > 0 ? ev.Entry.FotoPaths[0] : null;
-                var sample = CodingEventToSampleMapper.FromCodingEvent(ev, caseId, framePath, ResolveTrainingInspectionDate());
+                var sample = CodingEventToSampleMapper.FromCodingEvent(
+                    ev, caseId, framePath, ResolveTrainingInspectionDate(),
+                    confirmedByUser: System.Environment.UserName,
+                    confirmedAtUtc: System.DateTime.UtcNow);
 
                 // Alle Fotos als zusaetzliche Lernbilder referenzieren
                 // (Foto 1 = FramePath, Foto 2+ = AdditionalFrames)
@@ -2868,7 +2913,7 @@ public partial class PlayerWindow
                 // KEIN explizites _codingVm.Events.Add() â€” sonst doppelt!
                 RefreshCodingEventsList();
                 UpdateToolBadge();
-                PersistSingleEventAsTrainingSample(ev);
+                PersistSingleEventAsTrainingSample(ev).SafeFireAndForget("TrainingSaveSingle");
                 SetCodingAiState($"{codeHint} {label} bei {meter:F2}m eingetragen",
                     Color.FromRgb(0x22, 0xC5, 0x5E), "");
             }
@@ -4099,7 +4144,11 @@ public partial class PlayerWindow
         if (_codingPendingConfirmEvent?.AiContext != null)
         {
             _codingPendingConfirmEvent.AiContext.Decision = CodingUserDecision.Accepted;
-            PersistSingleEventAsTrainingSample(_codingPendingConfirmEvent);
+            // QualityGate-Ampel aufs Event schreiben, BEVOR das Panel _codingPendingGateResult auf null setzt.
+            if (_codingPendingGateResult != null)
+                _codingPendingConfirmEvent.AiContext.QualityGateLevel =
+                    _codingPendingGateResult.TrafficLight.ToString();
+            PersistSingleEventAsTrainingSample(_codingPendingConfirmEvent).SafeFireAndForget("TrainingSaveAccept");
         }
 
         CloseConfirmationAndResume();
@@ -4125,7 +4174,14 @@ public partial class PlayerWindow
         if (_codingPendingConfirmEvent != null)
         {
             _codingPendingConfirmEvent.AiContext!.Decision = CodingUserDecision.Rejected;
-            // Event entfernen
+            if (_codingPendingGateResult != null)
+                _codingPendingConfirmEvent.AiContext.QualityGateLevel =
+                    _codingPendingGateResult.TrafficLight.ToString();
+
+            // Gold-Fund: abgelehnten Befund als Negativbeispiel (Status=Rejected, inkl. Snapshot)
+            // sichern, BEVOR er aus der Session entfernt wird.
+            PersistSingleEventAsTrainingSample(_codingPendingConfirmEvent).SafeFireAndForget("TrainingSaveReject");
+
             _codingSessionService?.RemoveEvent(_codingPendingConfirmEvent.EventId);
             _codingVm?.Events.Remove(_codingPendingConfirmEvent);
             RefreshCodingEventsList();
