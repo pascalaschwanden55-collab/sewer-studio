@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -590,8 +590,8 @@ public partial class PlayerWindow
         DamageMarkerCanvas.Children.Clear();
         _damageMarkers.Clear();
 
-        var accentBrush = (System.Windows.Media.Brush)FindResource("NeonCyanBrush");
-        var accentColor = (System.Windows.Media.Color)FindResource("ColorNeonCyan");
+        var accentBrush = (System.Windows.Media.Brush)FindResource("AccentBrush");
+        var accentColor = (System.Windows.Media.Color)FindResource("ColorAccent");
 
         foreach (var info in _damageOverlay.Markers)
         {

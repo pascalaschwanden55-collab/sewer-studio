@@ -18,12 +18,12 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Accent Strip -->
-                <Border Background="{DynamicResource NeonCyanBrush}" CornerRadius="10,0,0,10"/>
+                <Border Background="{DynamicResource AccentBrush}" CornerRadius="10,0,0,10"/>
 
                 <StackPanel Grid.Column="1" Margin="16,14">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                         <TextBlock Text="&#xE8EF;" FontFamily="Segoe MDL2 Assets" FontSize="20"
-                                   Foreground="{DynamicResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                   Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <TextBlock Text="VSA-Bewertung" Style="{StaticResource PageTitle}"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
@@ -33,7 +33,7 @@
                     <Button Command="{Binding RunCommand}" Style="{StaticResource ActionCardButton}" HorizontalAlignment="Left">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                       Foreground="{DynamicResource NeonCyanBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                       Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBlock Text="VSA-Bewertung starten" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>

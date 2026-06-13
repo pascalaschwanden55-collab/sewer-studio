@@ -15,7 +15,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Style.Triggers>
                 <Trigger Property="IsChecked" Value="True">
-                    <Setter Property="BorderBrush" Value="{DynamicResource NeonCyanBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                     <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
                 </Trigger>
             </Style.Triggers>

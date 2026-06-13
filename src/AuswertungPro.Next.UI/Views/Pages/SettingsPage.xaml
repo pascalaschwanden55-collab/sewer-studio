@@ -166,10 +166,10 @@
              PROGRAMM-ANLEITUNG
              ═══════════════════════════════════════════════════════════════════ -->
         <Border Margin="0,0,0,0" Padding="0,0,0,4"
-                BorderThickness="0,0,0,2" BorderBrush="{DynamicResource NeonCyanBrush}">
+                BorderThickness="0,0,0,2" BorderBrush="{DynamicResource AccentBrush}">
             <TextBlock Text="Programm-Anleitung  SewerStudio"
                        FontSize="20" FontWeight="Bold"
-                       Foreground="{DynamicResource NeonCyanBrush}"/>
+                       Foreground="{DynamicResource AccentBrush}"/>
         </Border>
 
         <TextBlock Text="Vollstaendige Dokumentation aller Funktionen, KI-Module und Workflows."
@@ -181,7 +181,7 @@
                 Background="{DynamicResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="1. Programmueberblick" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource NeonCyanBrush}" Margin="0,0,0,8"/>
+                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20">
                     SewerStudio ist eine professionelle Anwendung fuer die Kanalinspektion und
                     Zustandsbewertung nach dem Schweizer Standard SN EN 13508-2 (bzw. DIN EN 13508-2).
@@ -202,7 +202,7 @@
                 Background="{DynamicResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="2. Seiten und Navigation" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="Uebersicht" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
@@ -289,7 +289,7 @@
                 Background="{DynamicResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="3. Fenster und Dialoge" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="Videoplayer" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
@@ -366,7 +366,7 @@
                 Background="{DynamicResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="4. KI-Module und Pipeline" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20" Margin="0,0,0,12">
                     SewerStudio verwendet eine Multi-Model KI-Pipeline, die vollstaendig lokal laeuft
@@ -472,7 +472,7 @@
                 Background="{DynamicResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="5. Unterstuetzte Import-Formate" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="PDF-Import" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
@@ -520,7 +520,7 @@
                 Background="{DynamicResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="6. Export und Berichte" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="Excel-Export" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
@@ -560,7 +560,7 @@
                 Background="{DynamicResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="7. VSA-Zustandsbewertung" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20">
                     Die VSA-Bewertung klassifiziert den baulichen und betrieblichen Zustand von
                     Kanaelen und Schaechten in 5 Klassen (0-4) gemaess SN EN 13508-2:
@@ -595,7 +595,7 @@
                 Background="{DynamicResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="8. Kostenrechner und Sanierung" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20">
                     Der integrierte Kostenrechner kalkuliert Sanierungskosten auf Basis eines
                     konfigurierbaren Katalogs mit Einheitspreisen.
@@ -628,7 +628,7 @@
                 Background="{DynamicResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="9. Tastaturkuerzel" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="Allgemein" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
@@ -662,7 +662,7 @@
                 Background="{DynamicResource CardBrush}" CornerRadius="6">
             <StackPanel>
                 <TextBlock Text="10. KI-Konfiguration (Umgebungsvariablen)" FontSize="15" FontWeight="Bold"
-                           Foreground="{DynamicResource NeonCyanBrush}" Margin="0,0,0,10"/>
+                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20" Margin="0,0,0,8">
                     Die KI-Module werden ueber Umgebungsvariablen konfiguriert.

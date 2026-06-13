@@ -169,7 +169,7 @@
                         <TextBlock Text="{Binding NetTotalText}"
                                    FontSize="18"
                                    FontWeight="SemiBold"
-                                   Foreground="{DynamicResource NeonCyanBrush}"/>
+                                   Foreground="{DynamicResource AccentBrush}"/>
                     </StackPanel>
 
                     <StackPanel Grid.Row="1"
@@ -207,7 +207,7 @@
                 <StackPanel>
                     <TextBlock Text="Spezialstatistik"
                                FontWeight="SemiBold"
-                               Foreground="{DynamicResource NeonCyanBrush}"
+                               Foreground="{DynamicResource AccentBrush}"
                                Margin="0,0,0,8"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -244,7 +244,7 @@
 
                     <TextBlock Text="Sanierungsquote (alle Haltungen)"
                                FontWeight="SemiBold"
-                               Foreground="{DynamicResource NeonCyanBrush}"
+                               Foreground="{DynamicResource AccentBrush}"
                                Margin="0,12,0,6"/>
                     <ItemsControl ItemsSource="{Binding RehabilitationShareChart}">
                         <ItemsControl.ItemTemplate>
@@ -275,7 +275,7 @@
 
                     <TextBlock Text="Kosten nach Ausgefuehrt durch"
                                FontWeight="SemiBold"
-                               Foreground="{DynamicResource NeonCyanBrush}"
+                               Foreground="{DynamicResource AccentBrush}"
                                Margin="0,12,0,6"/>
                     <ItemsControl ItemsSource="{Binding CostByExecutorChart}">
                         <ItemsControl.ItemTemplate>

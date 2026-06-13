@@ -137,7 +137,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="12"
-                                                   Foreground="{DynamicResource NeonGreenBrush}"
+                                                   Foreground="{DynamicResource SuccessBrush}"
                                                    Text="{Binding Converter={StaticResource SchadenMeterConv}}"/>
                                         <Border Grid.Column="1" VerticalAlignment="Center" Margin="6,0" Padding="6,2"
                                                 CornerRadius="4" Background="#1E3A8A">
