@@ -133,6 +133,9 @@ public sealed class CodingEventAiContext
     public double Confidence { get; set; }
     public string? Reason { get; set; }
     public CodingUserDecision Decision { get; set; } = CodingUserDecision.Ignored;
+
+    /// <summary>QualityGate-Ampel ("Green"/"Yellow"/"Red") zum Bestaetigungszeitpunkt, vom UI gesetzt. Null = unbekannt.</summary>
+    public string? QualityGateLevel { get; set; }
 }
 
 public enum CodingUserDecision

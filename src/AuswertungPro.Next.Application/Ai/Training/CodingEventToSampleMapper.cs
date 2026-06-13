@@ -23,7 +23,13 @@ public static class CodingEventToSampleMapper
     /// Erstellt ein TrainingSample aus einem CodingEvent.
     /// Enthaelt finalen Code, Meter-Position und KI-Kontext.
     /// </summary>
-    public static TrainingSample FromCodingEvent(CodingEvent ev, string caseId, string? framePath, DateTime? inspectionDate = null)
+    public static TrainingSample FromCodingEvent(
+        CodingEvent ev,
+        string caseId,
+        string? framePath,
+        DateTime? inspectionDate = null,
+        string? confirmedByUser = null,
+        DateTime? confirmedAtUtc = null)
     {
         // Ohne KI-Kontext landet das Sample in der Review-Queue (New), nicht direkt im Training.
         // Verhindert dass rein manuelle Codiereintraege ungesehen die Trainingsdaten erweitern.
@@ -65,7 +71,22 @@ public static class CodingEventToSampleMapper
             BboxXCenter = ExtractBboxField(ev.Overlay, bboxCenter: true, isX: true),
             BboxYCenter = ExtractBboxField(ev.Overlay, bboxCenter: true, isX: false),
             BboxWidth = ExtractBboxField(ev.Overlay, bboxCenter: false, isX: true),
-            BboxHeight = ExtractBboxField(ev.Overlay, bboxCenter: false, isX: false)
+            BboxHeight = ExtractBboxField(ev.Overlay, bboxCenter: false, isX: false),
+            HumanConfirmed = ev.AiContext?.Decision switch
+            {
+                CodingUserDecision.Accepted or CodingUserDecision.AcceptedWithEdit => true,
+                CodingUserDecision.Rejected => false,
+                _ => (bool?)null
+            },
+            Corrected = ev.AiContext?.Decision switch
+            {
+                CodingUserDecision.AcceptedWithEdit => true,
+                CodingUserDecision.Accepted or CodingUserDecision.Rejected => false,
+                _ => (bool?)null
+            },
+            ConfirmedByUser = confirmedByUser,
+            ConfirmedAtUtc = confirmedAtUtc,
+            QualityGateLevel = ev.AiContext?.QualityGateLevel
         };
     }
 
