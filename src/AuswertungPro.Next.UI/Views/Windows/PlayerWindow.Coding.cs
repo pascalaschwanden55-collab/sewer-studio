@@ -3018,9 +3018,10 @@ public partial class PlayerWindow
                     Color.FromRgb(0x22, 0xC5, 0x5E),
                     $"YOLO {mmResult.YoloTimeMs:F0}ms | DINO {mmResult.DinoTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms");
 
-                // Nur codierbare Befunde als Events.
+                // Nur sichtbare codierbare Befunde als Events (Hintergrundmasken raus).
+                var visibleCodierbar = BuildVisibleCodingFindings(segmented);
                 AddMultiModelFindingsAsEvents(
-                    segmented.Where(s => s.Proximity.IsCodierbar).ToList(),
+                    visibleCodierbar,
                     mmResult.SamResponse?.ImageWidth ?? 1, mmResult.SamResponse?.ImageHeight ?? 1,
                     mmResult.YoloMaxConfidence, captureTimestampSec);
                 return;
@@ -3127,6 +3128,30 @@ public partial class PlayerWindow
     // â”€â”€ Multi-Model Rendering (YOLO â†’ DINO â†’ SAM) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /// <summary>
+    /// Filtert codierbare Befunde auf die, die nach der Overlay-Policy auch sichtbar sind.
+    /// Hintergrundmasken (z. B. Wasserwand) im Hidden-Modus werden verworfen, damit
+    /// Rendering UND Event-Erzeugung dieselbe Sicht teilen (kein "Befund" aus Hintergrund).
+    /// </summary>
+    private static IReadOnlyList<SegmentedFinding> BuildVisibleCodingFindings(
+        IReadOnlyList<SegmentedFinding> segmented)
+    {
+        return segmented
+            .Where(s => s.Proximity.IsCodierbar)
+            .Where(s =>
+            {
+                var candidate = new Ai.Pipeline.SamMaskRenderer.MaskRenderCandidate(
+                    s.Mask,
+                    s.Quant,
+                    s.Dino?.Confidence);
+                var decision = Ai.Pipeline.SamMaskRenderer.DecideVisualMode(
+                    candidate,
+                    Ai.Pipeline.SamMaskRenderer.WinCanStyleOptions);
+                return decision.Mode != Ai.Pipeline.SamMaskRenderer.MaskVisualMode.Hidden;
+            })
+            .ToList();
+    }
+
+    /// <summary>
     /// Rendert Multi-Model Ergebnisse: SAM-Masken (gruene Konturen) + Label-Badges mit Messungen.
     /// </summary>
     private void ShowMultiModelResults(SingleFrameResult mmResult, IReadOnlyList<SegmentedFinding> segmented)
@@ -3139,17 +3164,25 @@ public partial class PlayerWindow
         // da sie bewusst nicht metriert werden).
         if (mmResult.SamResponse != null)
         {
-            var codierbar = segmented.Where(s => s.Proximity.IsCodierbar).ToList();
-            if (codierbar.Count > 0)
+            var visibleCodierbar = BuildVisibleCodingFindings(segmented);
+            if (visibleCodierbar.Count > 0)
             {
-                var filtered = mmResult.SamResponse with { Masks = codierbar.Select(s => s.Mask).ToList() };
-                Ai.Pipeline.SamMaskRenderer.RenderMasks(
+                var candidates = visibleCodierbar
+                    .Select(s => new Ai.Pipeline.SamMaskRenderer.MaskRenderCandidate(
+                        s.Mask,
+                        s.Quant,
+                        s.Dino?.Confidence))
+                    .ToList();
+
+                Ai.Pipeline.SamMaskRenderer.RenderCandidates(
                     CodingOverlayCanvas,
-                    filtered,
-                    codierbar.Select(s => s.Quant).ToList(),
+                    candidates,
+                    mmResult.SamResponse.ImageWidth,
+                    mmResult.SamResponse.ImageHeight,
                     CodingOverlayCanvas.ActualWidth,
                     CodingOverlayCanvas.ActualHeight,
-                    logger: _serviceProvider?.LoggerFactory.CreateLogger("SamMaskRenderer"));
+                    logger: _serviceProvider?.LoggerFactory.CreateLogger("SamMaskRenderer"),
+                    options: Ai.Pipeline.SamMaskRenderer.WinCanStyleOptions);
             }
         }
 

@@ -38,6 +38,17 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("CodingOverlayCanvas.IsHitTestVisible = false", suspendBody);
     }
 
+    [Fact]
+    public void Player_uses_same_overlay_policy_for_rendering_and_events()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+
+        Assert.Contains("BuildVisibleCodingFindings", coding);
+        Assert.Contains("SamMaskRenderer.RenderCandidates", coding);
+        Assert.Contains("visibleCodierbar", coding);
+        Assert.DoesNotContain("AddMultiModelFindingsAsEvents(\r\n                    segmented.Where(s => s.Proximity.IsCodierbar).ToList()", coding);
+    }
+
     private static string ReadUiFile(params string[] relativeParts)
     {
         var root = FindRepoRoot();
