@@ -81,10 +81,86 @@ public class SamMaskRendererTests
     }
 
     [Fact]
-    public void RenderMasks_LogsSkippedMaskViaLogger()
+    public void RenderCandidates_DoesNotDrawHiddenBackgroundMask()
+    {
+        Exception? threadError = null;
+        int childCount = -1;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var canvas = new Canvas();
+                var summary = SamMaskRenderer.RenderCandidates(
+                    canvas,
+                    [Candidate("water wall", 0.98, 0.32, 0.95)],
+                    imageWidth: 100,
+                    imageHeight: 100,
+                    canvasWidth: 100,
+                    canvasHeight: 100,
+                    options: SamMaskRenderer.WinCanStyleOptions);
+
+                childCount = canvas.Children.Count;
+                Assert.Equal(1, summary.Hidden);
+                Assert.Equal(0, summary.Rendered);
+            }
+            catch (Exception ex)
+            {
+                threadError = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(threadError);
+        Assert.Equal(0, childCount);
+    }
+
+    [Fact]
+    public void RenderCandidates_LargeDefectDrawsOutlineAndLabelOnly()
+    {
+        Exception? threadError = null;
+        int childCount = -1;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var canvas = new Canvas();
+                var summary = SamMaskRenderer.RenderCandidates(
+                    canvas,
+                    [Candidate("incrustation infiltration", 0.86, 0.26, 0.55)],
+                    imageWidth: 100,
+                    imageHeight: 100,
+                    canvasWidth: 100,
+                    canvasHeight: 100,
+                    options: SamMaskRenderer.WinCanStyleOptions);
+
+                childCount = canvas.Children.Count;
+                Assert.Equal(1, summary.Rendered);
+                Assert.Equal(1, summary.OutlineOnly);
+                Assert.Equal(0, summary.SubtleFill);
+            }
+            catch (Exception ex)
+            {
+                threadError = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(threadError);
+        Assert.Equal(2, childCount); // contour path + label, no fill path
+    }
+
+    [Fact]
+    public void RenderMasks_NullBboxRendersMaskWithoutLabelOrThrow()
     {
         var logger = new CapturingLogger();
         Exception? threadError = null;
+        int childCount = -1;
 
         var thread = new Thread(() =>
         {
@@ -114,6 +190,7 @@ public class SamMaskRendererTests
                 };
 
                 SamMaskRenderer.RenderMasks(canvas, response, quantified, 100, 100, logger);
+                childCount = canvas.Children.Count;
             }
             catch (Exception ex)
             {
@@ -125,10 +202,11 @@ public class SamMaskRendererTests
         thread.Join();
 
         Assert.Null(threadError);
-        var entry = Assert.Single(logger.Entries);
-        Assert.Equal(LogLevel.Warning, entry.Level);
-        Assert.Contains("Maske 0", entry.Message);
-        Assert.NotNull(entry.Exception);
+        // Maske rendert (Fuellung + Kontur), aber kein Label-Badge, weil die Bbox null ist.
+        // Bei samConfidence 0.9 (>= MinimumFillDetectionConfidence 0.60) und kleiner Flaeche
+        // greift SubtleFill -> Fuellungs-Pfad + Kontur-Pfad = 2 Kinder, kein Label.
+        Assert.Equal(2, childCount);
+        Assert.Empty(logger.Entries);
     }
 
     [Fact]

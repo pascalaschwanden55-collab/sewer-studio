@@ -81,6 +81,18 @@ public static class SamMaskRenderer
     /// <summary>Ergebnis der Render-Policy: Darstellungsmodus und Begruendung.</summary>
     public sealed record RenderDecision(MaskVisualMode Mode, string? Reason);
 
+    /// <summary>
+    /// Zusammenfassung eines Render-Durchlaufs: wie viele Masken gezeichnet,
+    /// versteckt, nur als Kontur oder mit Fuellung dargestellt wurden, samt
+    /// aufgeschluesselter Versteck-Gruende.
+    /// </summary>
+    public sealed record RenderSummary(
+        int Rendered,
+        int Hidden,
+        int OutlineOnly,
+        int SubtleFill,
+        IReadOnlyDictionary<string, int> HiddenReasons);
+
     /// <summary>Bequemer Zugriff auf die WinCan-Voreinstellung.</summary>
     public static RenderOptions WinCanStyleOptions => RenderOptions.WinCanStyle;
 
@@ -89,8 +101,7 @@ public static class SamMaskRenderer
 
     // ── Farben ──────────────────────────────────────────────────────
 
-    private static readonly Color MaskFill = Color.FromArgb(64, 0, 255, 0);       // Gruen, 25% opak
-    private static readonly Color MaskStroke = Color.FromArgb(204, 0, 255, 0);     // Gruen, 80% opak
+    private static readonly Color MaskStroke = Color.FromArgb(204, 0, 255, 0);     // Gruen, 80% opak (Label-Rahmen)
     private static readonly Color LabelBg = Color.FromArgb(220, 30, 30, 30);       // Dunkelgrau
     private static readonly Color LabelFg = Color.FromArgb(255, 255, 255, 255);    // Weiss
 
@@ -342,28 +353,56 @@ public static class SamMaskRenderer
     }
 
     /// <summary>
-    /// Rendert alle SAM-Masken als gruene Konturen + Fuellung auf den Canvas.
+    /// Rendert eine Liste von Kandidaten konturbasiert (WinCan-Stil): bestaetigter
+    /// Hintergrund wird versteckt, grosse Befunde nur als Kontur, kleine sichere
+    /// Befunde dezent gefuellt. Liefert eine Zusammenfassung zurueck.
     /// </summary>
-    public static void RenderMasks(
+    public static RenderSummary RenderCandidates(
         Canvas canvas,
-        SamResponse samResponse,
-        IReadOnlyList<MaskQuantificationService.QuantifiedMask> quantified,
+        IReadOnlyList<MaskRenderCandidate> candidates,
+        int imageWidth,
+        int imageHeight,
         double canvasWidth,
         double canvasHeight,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        RenderOptions? options = null)
     {
-        if (samResponse == null || samResponse.Masks.Count == 0) return;
+        if (candidates.Count == 0)
+            return new RenderSummary(0, 0, 0, 0, new Dictionary<string, int>());
 
-        int imgW = samResponse.ImageWidth;
-        int imgH = samResponse.ImageHeight;
+        int rendered = 0, hidden = 0, outlineOnly = 0, subtleFill = 0;
+        var hiddenReasons = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        options ??= WinCanStyleOptions;
 
-        for (int i = 0; i < samResponse.Masks.Count; i++)
+        for (var i = 0; i < candidates.Count; i++)
         {
             try
             {
-                var mask = samResponse.Masks[i];
-                var quant = i < quantified.Count ? quantified[i] : null;
-                RenderSingleMask(canvas, mask, quant, imgW, imgH, canvasWidth, canvasHeight);
+                var candidate = candidates[i];
+                var decision = DecideVisualMode(candidate, options);
+                if (decision.Mode == MaskVisualMode.Hidden)
+                {
+                    hidden++;
+                    var reason = decision.Reason ?? "hidden";
+                    hiddenReasons[reason] = hiddenReasons.TryGetValue(reason, out var count) ? count + 1 : 1;
+                    continue;
+                }
+
+                RenderSingleMask(
+                    canvas,
+                    candidate.Mask,
+                    candidate.Quant,
+                    imageWidth,
+                    imageHeight,
+                    canvasWidth,
+                    canvasHeight,
+                    decision.Mode,
+                    options);
+                rendered++;
+                if (decision.Mode == MaskVisualMode.OutlineOnly)
+                    outlineOnly++;
+                else
+                    subtleFill++;
             }
             catch (Exception ex)
             {
@@ -371,6 +410,42 @@ public static class SamMaskRenderer
                 logger?.LogWarning(ex, "SamMaskRenderer: Maske {MaskIndex} uebersprungen.", i);
             }
         }
+
+        return new RenderSummary(rendered, hidden, outlineOnly, subtleFill, hiddenReasons);
+    }
+
+    /// <summary>
+    /// Rueckwaertskompatible Bruecke: nimmt eine vollstaendige SAM-Antwort und
+    /// rendert sie ueber <see cref="RenderCandidates"/> konturbasiert.
+    /// </summary>
+    public static RenderSummary RenderMasks(
+        Canvas canvas,
+        SamResponse samResponse,
+        IReadOnlyList<MaskQuantificationService.QuantifiedMask> quantified,
+        double canvasWidth,
+        double canvasHeight,
+        ILogger? logger = null,
+        RenderOptions? options = null)
+    {
+        if (samResponse == null || samResponse.Masks.Count == 0)
+            return new RenderSummary(0, 0, 0, 0, new Dictionary<string, int>());
+
+        var candidates = samResponse.Masks
+            .Select((mask, index) => new MaskRenderCandidate(
+                mask,
+                index < quantified.Count ? quantified[index] : null,
+                DetectionConfidence: null))
+            .ToList();
+
+        return RenderCandidates(
+            canvas,
+            candidates,
+            samResponse.ImageWidth,
+            samResponse.ImageHeight,
+            canvasWidth,
+            canvasHeight,
+            logger,
+            options);
     }
 
     /// <summary>
@@ -381,36 +456,41 @@ public static class SamMaskRenderer
         SamMaskResult mask,
         MaskQuantificationService.QuantifiedMask? quant,
         int imgW, int imgH,
-        double canvasWidth, double canvasHeight)
+        double canvasWidth, double canvasHeight,
+        MaskVisualMode visualMode,
+        RenderOptions options)
     {
         // RLE dekodieren
         var decoded = DecodeRle(mask.MaskRle, imgW, imgH);
 
-        // Fuellung rendern (semi-transparent gruen)
-        var fillGeom = ExtractFillGeometry(decoded, imgW, imgH, canvasWidth, canvasHeight);
-        var fillPath = new Path
+        // Fuellung nur bei dezenter Fuellung (kleine, sichere Befunde) rendern.
+        if (visualMode == MaskVisualMode.SubtleFill)
         {
-            Data = fillGeom,
-            Fill = new SolidColorBrush(MaskFill),
-            Tag = MaskTag,
-            IsHitTestVisible = false
-        };
-        canvas.Children.Add(fillPath);
+            var fillGeom = ExtractFillGeometry(decoded, imgW, imgH, canvasWidth, canvasHeight);
+            var fillPath = new Path
+            {
+                Data = fillGeom,
+                Fill = new SolidColorBrush(Color.FromArgb(options.FillAlpha, 0, 255, 0)),
+                Tag = MaskTag,
+                IsHitTestVisible = false
+            };
+            canvas.Children.Add(fillPath);
+        }
 
         // Kontur rendern (gruene Linie)
         var contourGeom = ExtractContourGeometry(decoded, imgW, imgH, canvasWidth, canvasHeight);
         var contourPath = new Path
         {
             Data = contourGeom,
-            Stroke = new SolidColorBrush(MaskStroke),
+            Stroke = new SolidColorBrush(Color.FromArgb(options.StrokeAlpha, 0, 255, 0)),
             StrokeThickness = 2,
             Tag = MaskTag,
             IsHitTestVisible = false
         };
         canvas.Children.Add(contourPath);
 
-        // Label-Badge positionieren (ueber der BBox)
-        if (quant != null && mask.Bbox.Count >= 4)
+        // Label-Badge positionieren (ueber der BBox); null-sicherer Bbox-Zugriff.
+        if (quant != null && mask.Bbox is { Count: >= 4 })
         {
             double bboxX = mask.Bbox[0] / imgW * canvasWidth;
             double bboxY = mask.Bbox[1] / imgH * canvasHeight;
