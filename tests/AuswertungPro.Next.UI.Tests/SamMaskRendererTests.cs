@@ -131,6 +131,94 @@ public class SamMaskRendererTests
         Assert.NotNull(entry.Exception);
     }
 
+    [Fact]
+    public void DecideVisualMode_HidesConfirmedBackgroundWaterWall()
+    {
+        var candidate = Candidate("water wall", samConfidence: 0.98, dinoConfidence: 0.32, areaRatio: 0.95);
+
+        var decision = SamMaskRenderer.DecideVisualMode(candidate, SamMaskRenderer.WinCanStyleOptions);
+
+        Assert.Equal(SamMaskRenderer.MaskVisualMode.Hidden, decision.Mode);
+        Assert.Equal("background_label", decision.Reason);
+    }
+
+    [Fact]
+    public void DecideVisualMode_KeepsLargeDefectAsOutline()
+    {
+        var candidate = Candidate("incrustation infiltration", samConfidence: 0.86, dinoConfidence: 0.26, areaRatio: 0.55);
+
+        var decision = SamMaskRenderer.DecideVisualMode(candidate, SamMaskRenderer.WinCanStyleOptions);
+
+        Assert.Equal(SamMaskRenderer.MaskVisualMode.OutlineOnly, decision.Mode);
+        Assert.Equal("large_finding_outline", decision.Reason);
+    }
+
+    [Fact]
+    public void DecideVisualMode_KeepsDinoThresholdFindingVisible()
+    {
+        var candidate = Candidate("root ball seal", samConfidence: 0.96, dinoConfidence: 0.26, areaRatio: 0.064);
+
+        var decision = SamMaskRenderer.DecideVisualMode(candidate, SamMaskRenderer.WinCanStyleOptions);
+
+        Assert.NotEqual(SamMaskRenderer.MaskVisualMode.Hidden, decision.Mode);
+    }
+
+    [Fact]
+    public void DecideVisualMode_UsesSubtleFillForSmallHighConfidenceDefect()
+    {
+        var candidate = Candidate("root ball seal", samConfidence: 0.96, dinoConfidence: 0.72, areaRatio: 0.064);
+
+        var decision = SamMaskRenderer.DecideVisualMode(candidate, SamMaskRenderer.WinCanStyleOptions);
+
+        Assert.Equal(SamMaskRenderer.MaskVisualMode.SubtleFill, decision.Mode);
+    }
+
+    [Fact]
+    public void DecideVisualMode_IsNullSafeForMissingBbox()
+    {
+        var mask = new SamMaskResult(
+            Label: "root",
+            Confidence: 0.8,
+            Bbox: null!,
+            MaskRle: "1,1,9999",
+            MaskAreaPixels: 100,
+            ImageAreaPixels: 10_000,
+            HeightPixels: 10,
+            WidthPixels: 10,
+            CentroidX: 10,
+            CentroidY: 10);
+        var candidate = new SamMaskRenderer.MaskRenderCandidate(mask, Quant("root", 0.8), DetectionConfidence: 0.3);
+
+        var decision = SamMaskRenderer.DecideVisualMode(candidate, SamMaskRenderer.WinCanStyleOptions);
+
+        Assert.NotEqual(SamMaskRenderer.MaskVisualMode.Hidden, decision.Mode);
+    }
+
+    private static SamMaskRenderer.MaskRenderCandidate Candidate(
+        string label,
+        double samConfidence,
+        double? dinoConfidence,
+        double areaRatio)
+    {
+        var imageArea = 10_000;
+        var maskArea = (int)Math.Round(imageArea * areaRatio);
+        var mask = new SamMaskResult(
+            Label: label,
+            Confidence: samConfidence,
+            Bbox: [10, 10, 40, 40],
+            MaskRle: "1,1,9999",
+            MaskAreaPixels: maskArea,
+            ImageAreaPixels: imageArea,
+            HeightPixels: 30,
+            WidthPixels: 30,
+            CentroidX: 25,
+            CentroidY: 25);
+        return new SamMaskRenderer.MaskRenderCandidate(mask, Quant(label, samConfidence), dinoConfidence);
+    }
+
+    private static MaskQuantificationService.QuantifiedMask Quant(string label, double confidence)
+        => new(label, confidence, null, null, null, null, null, null);
+
     private sealed class CapturingLogger : ILogger
     {
         public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = new();
