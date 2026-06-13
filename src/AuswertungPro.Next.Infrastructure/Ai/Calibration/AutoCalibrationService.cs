@@ -64,7 +64,8 @@ public static class AutoCalibrationService
             NormalizedDiameter = diameterRatio,
             PipePixelDiameter = medianDiameter,
             PipeCenter = new NormalizedPoint(medianCenterX / width, 0.50),
-            WasManuallyCalibrated = true
+            // Bug-Fix: Auto-Kalibrierung ehrlich als Auto markieren (frueher faelschlich als manuell).
+            Source = CalibrationSource.Auto
         };
     }
 

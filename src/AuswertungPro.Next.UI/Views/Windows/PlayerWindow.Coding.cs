@@ -1504,7 +1504,8 @@ public partial class PlayerWindow
             PipePixelDiameter = pixelDiameter,
             NormalizedDiameter = normDiameter,
             PipeCenter = center,
-            WasManuallyCalibrated = true
+            WasManuallyCalibrated = true,
+            Source = CalibrationSource.Manual   // manuelle Referenzlinie = verlaesslich
         };
         _codingOverlayService.SetCalibration(cal);
         _codingSchemaManager.Active?.ApplyCalibration(cal);

@@ -522,6 +522,7 @@ public partial class PhotoMeasurementWindow : Window
         _calibration.PipeCenter = new NormalizedPoint(
             (start.X + end.X) / 2.0, (start.Y + end.Y) / 2.0);
         _calibration.WasManuallyCalibrated = true;
+        _calibration.Source = CalibrationSource.Manual;   // manuelle Referenzlinie = verlaesslich
 
         _overlayService.SetCalibration(_calibration);
         DrawPipeCircle();

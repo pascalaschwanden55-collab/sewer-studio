@@ -704,7 +704,8 @@ public partial class CodingModeWindow : Window
             PipePixelDiameter = pixelDiameter,
             NormalizedDiameter = normDiameter,
             PipeCenter = center,
-            WasManuallyCalibrated = true
+            WasManuallyCalibrated = true,
+            Source = CalibrationSource.Manual   // manuelle Referenzlinie = verlaesslich
         };
         _overlayService.SetCalibration(cal);
 

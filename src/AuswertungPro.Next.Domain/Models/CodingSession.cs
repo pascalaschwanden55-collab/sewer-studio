@@ -146,6 +146,9 @@ public enum CodingUserDecision
     Ignored             // Uebersprungen
 }
 
+/// <summary>Herkunft der Pixel→mm-Kalibrierung. None=70%-Schaetzung, Auto=Rohrkanten-Erkennung, Manual=Referenzlinie.</summary>
+public enum CalibrationSource { None, Auto, Manual }
+
 /// <summary>
 /// Kalibrierungsdaten fuer Pixel → Millimeter Umrechnung.
 /// Basiert auf bekanntem Rohrdurchmesser (DN).
@@ -157,11 +160,14 @@ public sealed class PipeCalibration
     public double NormalizedDiameter { get; set; }  // Rohrdurchmesser als normierter Wert (0.0–1.0)
     public NormalizedPoint PipeCenter { get; set; } = new(0.5, 0.5); // Rohrmitte (normiert)
 
+    /// <summary>Herkunft der Kalibrierung (3-Stufen-Verlaesslichkeit). Default None = 70%-Schaetzung.</summary>
+    public CalibrationSource Source { get; set; } = CalibrationSource.None;
+
     /// <summary>Manuell kalibriert (Referenzlinie wurde vom User gezogen)?</summary>
     public bool WasManuallyCalibrated { get; set; }
 
-    /// <summary>Ist kalibriert (Referenzlinie wurde gezeichnet)?</summary>
-    public bool IsCalibrated => WasManuallyCalibrated && NormalizedDiameter > 0;
+    /// <summary>Ist kalibriert (Auto-Erkennung ODER Referenzlinie wurde gezeichnet)?</summary>
+    public bool IsCalibrated => (Source != CalibrationSource.None || WasManuallyCalibrated) && NormalizedDiameter > 0;
 
     /// <summary>mm pro normiertem Pixel.</summary>
     public double MmPerNormUnit => NormalizedDiameter > 0
