@@ -35,6 +35,8 @@ namespace AuswertungPro.Next.UI
         private static ServiceProvider? _services;
         private static int _handlingException;
         private static bool _typographyDefaultsApplied;
+        private static bool _windowIconDefaultsRegistered;
+        private static System.Windows.Media.ImageSource? _appWindowIcon;
         private LiveControlServer? _liveControlServer;
 
         // Tageslogs aelter als dieser Wert werden beim Start geloescht (Aufbewahrung).
@@ -51,6 +53,7 @@ namespace AuswertungPro.Next.UI
             {
                 ShutdownMode = ShutdownMode.OnExplicitShutdown;
                 ApplyTypographyDefaults();
+                RegisterWindowIconDefaults();
 
                 splash = new StartupSplashWindow();
                 splash.Show();
@@ -262,6 +265,72 @@ namespace AuswertungPro.Next.UI
             catch (ArgumentException)
             {
                 // Einzelne Owner-Typen sind je nach WPF-Host schon registriert.
+            }
+        }
+
+        private static void RegisterWindowIconDefaults()
+        {
+            if (_windowIconDefaultsRegistered)
+            {
+                return;
+            }
+
+            _windowIconDefaultsRegistered = true;
+            EventManager.RegisterClassHandler(
+                typeof(Window),
+                FrameworkElement.LoadedEvent,
+                new RoutedEventHandler(ApplyDefaultWindowIcon));
+        }
+
+        private static void ApplyDefaultWindowIcon(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Window window || window.Icon is not null)
+            {
+                return;
+            }
+
+            var icon = LoadDefaultWindowIcon();
+            if (icon is not null)
+            {
+                window.Icon = icon;
+            }
+        }
+
+        private static System.Windows.Media.ImageSource? LoadDefaultWindowIcon()
+        {
+            if (_appWindowIcon is not null)
+            {
+                return _appWindowIcon;
+            }
+
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+            if (!File.Exists(iconPath))
+            {
+                return null;
+            }
+
+            try
+            {
+                var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+                bitmap.BeginInit();
+                bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                bitmap.UriSource = new Uri(iconPath, UriKind.Absolute);
+                bitmap.EndInit();
+                bitmap.Freeze();
+                _appWindowIcon = bitmap;
+                return _appWindowIcon;
+            }
+            catch (IOException)
+            {
+                return null;
+            }
+            catch (InvalidOperationException)
+            {
+                return null;
+            }
+            catch (NotSupportedException)
+            {
+                return null;
             }
         }
 
