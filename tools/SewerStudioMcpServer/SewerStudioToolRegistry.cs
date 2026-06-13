@@ -66,6 +66,20 @@ public sealed class SewerStudioToolRegistry
                     additionalProperties = false
                 })),
             new McpToolDefinition(
+                "get_latest_benchmark",
+                "Reads the newest eval-set benchmark result from docs/benchmarks read-only and returns normalized metrics plus the weakest VSA codes. Understands classifier autopilot/verify runs (per_class) and Qwen-VL runs (summary). Optional name_contains filter picks the newest matching file, e.g. autopilot, clean, v10_gold, qwen.",
+                Schema(new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        benchmarks_dir = new { type = "string", description = "Optional override; defaults to <repo>/docs/benchmarks or SEWERSTUDIO_BENCHMARKS_DIR." },
+                        name_contains = new { type = "string", description = "Optional filename filter (case-insensitive), e.g. autopilot, clean, hidden, v10_gold, qwen. Picks the newest matching file." },
+                        max_codes = new { type = "integer", minimum = 1, maximum = 100, description = "Maximum weakest codes to return. Default 12." }
+                    },
+                    additionalProperties = false
+                })),
+            new McpToolDefinition(
                 "live_control_health",
                 "Checks whether the running SewerStudio app exposes the local Live-Control endpoint.",
                 Schema(new
@@ -150,6 +164,10 @@ public sealed class SewerStudioToolRegistry
                     GetString(arguments, "knowledge_root") ?? _options.KnowledgeRoot,
                     RequireString(arguments, "case_id"))
             },
+            "get_latest_benchmark" => BenchmarkReader.ReadLatest(
+                GetString(arguments, "benchmarks_dir") ?? _options.BenchmarksDir,
+                GetString(arguments, "name_contains"),
+                GetInt(arguments, "max_codes") ?? 12),
             "live_control_health" => await LiveControlClient.HealthAsync(
                 GetString(arguments, "live_control_url") ?? _options.LiveControlUrl).ConfigureAwait(false),
             "live_set_resource_brush" => await LiveControlClient.SetResourceBrushAsync(

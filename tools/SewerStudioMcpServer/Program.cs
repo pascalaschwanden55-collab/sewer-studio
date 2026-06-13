@@ -11,6 +11,7 @@ if (args.Any(a => string.Equals(a, "--help", StringComparison.OrdinalIgnoreCase)
       - get_protocol_entries
       - get_diagnostic_report
       - list_training_samples
+      - get_latest_benchmark
       - live_control_health
       - live_set_resource_brush
       - live_set_button_background
@@ -20,6 +21,7 @@ if (args.Any(a => string.Equals(a, "--help", StringComparison.OrdinalIgnoreCase)
       --diagnostics-output <path>   Default: SEWERSTUDIO_DIAGNOSTICS_OUTPUT or tools/ProtocolPipelineDiagnostics/output
       --knowledge-root <path>       Default: SEWERSTUDIO_KNOWLEDGE_ROOT or C:\KI_BRAIN
       --live-control-url <url>      Default: SEWERSTUDIO_LIVE_CONTROL_URL or http://127.0.0.1:8765/
+      --benchmarks-dir <path>       Default: SEWERSTUDIO_BENCHMARKS_DIR or docs/benchmarks
 
     Important: stdout is reserved for MCP JSON-RPC messages. Diagnostics go to stderr.
     """);

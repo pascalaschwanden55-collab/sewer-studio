@@ -14,10 +14,18 @@ Implemented tools:
 - `get_protocol_entries`
 - `get_diagnostic_report`
 - `list_training_samples`
+- `get_latest_benchmark`
 - `live_control_health`
 - `live_set_resource_brush`
 - `live_set_button_background`
 - `retry_holding`
+
+`get_latest_benchmark` reads the newest benchmark JSON from `docs/benchmarks`
+(read-only) and returns normalized metrics plus the weakest VSA codes. It
+understands classifier autopilot/verify runs (`per_class`) and Qwen-VL runs
+(`summary`); unknown formats are passed through in `raw`. Use the optional
+`name_contains` filter (e.g. `autopilot`, `clean`, `hidden`, `v10_gold`, `qwen`)
+to pick the newest matching run.
 
 Marking samples reviewed remains out of scope.
 

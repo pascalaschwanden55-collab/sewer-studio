@@ -4,7 +4,8 @@ public sealed record SewerStudioMcpOptions(
     string HaltungenRoot,
     string DiagnosticsOutputDir,
     string KnowledgeRoot,
-    string LiveControlUrl)
+    string LiveControlUrl,
+    string BenchmarksDir)
 {
     public static SewerStudioMcpOptions FromArgs(IReadOnlyList<string> args)
     {
@@ -16,6 +17,8 @@ public sealed record SewerStudioMcpOptions(
                             ?? @"C:\KI_BRAIN";
         var liveControlUrl = Environment.GetEnvironmentVariable("SEWERSTUDIO_LIVE_CONTROL_URL")
                              ?? "http://127.0.0.1:8765/";
+        var benchmarksDir = Environment.GetEnvironmentVariable("SEWERSTUDIO_BENCHMARKS_DIR")
+                            ?? Path.Combine(FindRepoRoot(), "docs", "benchmarks");
 
         for (var i = 0; i < args.Count; i++)
         {
@@ -33,10 +36,13 @@ public sealed record SewerStudioMcpOptions(
                 case "--live-control-url" when i + 1 < args.Count:
                     liveControlUrl = args[++i];
                     break;
+                case "--benchmarks-dir" when i + 1 < args.Count:
+                    benchmarksDir = args[++i];
+                    break;
             }
         }
 
-        return new SewerStudioMcpOptions(haltungenRoot, diagnosticsOutput, knowledgeRoot, liveControlUrl);
+        return new SewerStudioMcpOptions(haltungenRoot, diagnosticsOutput, knowledgeRoot, liveControlUrl, benchmarksDir);
     }
 
     private static string FindRepoRoot()

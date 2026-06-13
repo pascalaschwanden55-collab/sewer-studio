@@ -53,3 +53,35 @@ public sealed record TrainingSampleDto(
     [property: JsonPropertyName("ki_code")] string? KiCode,
     [property: JsonPropertyName("source_type")] string? SourceType,
     [property: JsonPropertyName("kb_index_state")] string KbIndexState);
+
+// Ein einzelner schwacher VSA-Code aus einem Benchmark-Lauf (korrekt/gesamt + Quote).
+public sealed record BenchmarkWeakCode(
+    [property: JsonPropertyName("code")] string Code,
+    [property: JsonPropertyName("correct")] int Correct,
+    [property: JsonPropertyName("total")] int Total,
+    [property: JsonPropertyName("accuracy")] double Accuracy);
+
+// Kurzinfo zu einem verfuegbaren Benchmark-Lauf fuer die Uebersicht/den Vergleich.
+public sealed record BenchmarkRunInfo(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("modified_utc")] string ModifiedUtc,
+    [property: JsonPropertyName("headline_accuracy")] double? HeadlineAccuracy);
+
+// Normalisiertes Ergebnis des neuesten Benchmark-Laufs aus docs/benchmarks.
+public sealed record LatestBenchmarkResult(
+    [property: JsonPropertyName("benchmarks_dir")] string BenchmarksDir,
+    [property: JsonPropertyName("found")] bool Found,
+    [property: JsonPropertyName("file_name")] string? FileName,
+    [property: JsonPropertyName("file_path")] string? FilePath,
+    [property: JsonPropertyName("modified_utc")] string? ModifiedUtc,
+    [property: JsonPropertyName("format")] string Format,
+    [property: JsonPropertyName("frames")] int? Frames,
+    [property: JsonPropertyName("exact_accuracy")] double? ExactAccuracy,
+    [property: JsonPropertyName("findings_accuracy")] double? FindingsAccuracy,
+    [property: JsonPropertyName("leer_accuracy")] double? LeerAccuracy,
+    [property: JsonPropertyName("model_or_weights")] string? ModelOrWeights,
+    [property: JsonPropertyName("eval_root")] string? EvalRoot,
+    [property: JsonPropertyName("weakest_codes")] IReadOnlyList<BenchmarkWeakCode> WeakestCodes,
+    [property: JsonPropertyName("raw")] JsonElement? Raw,
+    [property: JsonPropertyName("available_runs")] IReadOnlyList<BenchmarkRunInfo> AvailableRuns,
+    [property: JsonPropertyName("note")] string? Note);
