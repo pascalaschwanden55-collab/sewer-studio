@@ -265,6 +265,30 @@ public sealed class StageAExporterTests : IDisposable
         Assert.False(Directory.Exists(output));
     }
 
+    [Fact]
+    public void CloneSample_KopiertSamMaskeUndGoldFelder()
+    {
+        var source = new TrainingSample
+        {
+            SampleId = "s1", Code = "BCA",
+            SamMaskRle = "1,2,3", SamMaskImageWidth = 640, SamMaskImageHeight = 480,
+            SamMaskAreaPixels = 100, SamMaskConfidence = 0.9, SamMaskLabel = "crack",
+            KbCheck = "KbAgreement",
+            HumanConfirmed = true, Corrected = false,
+            ConfirmedByUser = "tester", QualityGateLevel = "Green"
+        };
+
+        var clone = StageAExporter.CloneSample(source);
+
+        Assert.Equal("1,2,3", clone.SamMaskRle);
+        Assert.Equal(640, clone.SamMaskImageWidth);
+        Assert.Equal("crack", clone.SamMaskLabel);
+        Assert.Equal("KbAgreement", clone.KbCheck);
+        Assert.Equal(true, clone.HumanConfirmed);
+        Assert.Equal("tester", clone.ConfirmedByUser);
+        Assert.Equal("Green", clone.QualityGateLevel);
+    }
+
     private (string SamplesPath, string EvalRoot) PrepareSourceWithEvalOverlap()
     {
         Directory.CreateDirectory(_root);

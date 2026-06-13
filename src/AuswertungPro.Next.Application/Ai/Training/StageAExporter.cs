@@ -549,7 +549,7 @@ public sealed class StageAExporter
             : sanitized;
     }
 
-    private static TrainingSample CloneSample(TrainingSample source)
+    internal static TrainingSample CloneSample(TrainingSample source)
         => new()
         {
             SampleId = source.SampleId,
@@ -585,6 +585,20 @@ public sealed class StageAExporter
             BboxYCenter = source.BboxYCenter,
             BboxWidth = source.BboxWidth,
             BboxHeight = source.BboxHeight,
+            // Bisher fehlende Felder (latenter Bug) + Gold-Fund-Metadaten
+            KbCheck = source.KbCheck,
+            SamMaskRle = source.SamMaskRle,
+            SamMaskImageWidth = source.SamMaskImageWidth,
+            SamMaskImageHeight = source.SamMaskImageHeight,
+            SamMaskAreaPixels = source.SamMaskAreaPixels,
+            SamMaskConfidence = source.SamMaskConfidence,
+            SamMaskLabel = source.SamMaskLabel,
+            HumanConfirmed = source.HumanConfirmed,
+            Corrected = source.Corrected,
+            ConfirmedByUser = source.ConfirmedByUser,
+            ConfirmedAtUtc = source.ConfirmedAtUtc,
+            QualityGateLevel = source.QualityGateLevel,
+            SnapshotError = source.SnapshotError,
         };
 
     private static int GetDegreeOfParallelism(int requested)
