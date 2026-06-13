@@ -156,10 +156,16 @@
 
             <Button Content="Speichern" Command="{Binding SaveCommand}" Margin="0,18,0,0" Width="160"/>
 
+        <Expander Header="Programm-Handbuch"
+                  IsExpanded="False"
+                  Margin="0,32,0,0"
+                  Foreground="{DynamicResource TextBrush}">
+            <StackPanel Margin="0,8,0,0">
+
         <!-- ═══════════════════════════════════════════════════════════════════
              PROGRAMM-ANLEITUNG
              ═══════════════════════════════════════════════════════════════════ -->
-        <Border Margin="0,32,0,0" Padding="0,0,0,4"
+        <Border Margin="0,0,0,0" Padding="0,0,0,4"
                 BorderThickness="0,0,0,2" BorderBrush="{DynamicResource NeonCyanBrush}">
             <TextBlock Text="Programm-Anleitung  SewerStudio"
                        FontSize="20" FontWeight="Bold"
@@ -713,6 +719,9 @@
                 </TextBlock>
             </StackPanel>
         </Border>
+
+            </StackPanel>
+        </Expander>
 
         </StackPanel>
     </ScrollViewer>
