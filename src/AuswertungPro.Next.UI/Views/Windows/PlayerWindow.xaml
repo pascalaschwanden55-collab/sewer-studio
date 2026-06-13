@@ -20,7 +20,7 @@
             <Style x:Key="PlayerCard" TargetType="Border" BasedOn="{StaticResource Card}">
                 <Setter Property="Background" Value="{DynamicResource CardGlassBrush}"/>
                 <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-                <Setter Property="CornerRadius" Value="14"/>
+                <Setter Property="CornerRadius" Value="8"/>
                 <Setter Property="Padding" Value="16"/>
             </Style>
 
