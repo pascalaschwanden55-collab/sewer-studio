@@ -466,6 +466,26 @@
 
     <Style x:Key="CompactButton" TargetType="Button" BasedOn="{StaticResource ToolbarButton}"/>
 
+    <Style x:Key="CompactToggleButton" TargetType="ToggleButton">
+        <Setter Property="MinHeight" Value="30"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Style.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- ═══════════════════════════════════════════════════════════
          TEXTBOX — Clean input with blue focus border
          ═══════════════════════════════════════════════════════════ -->

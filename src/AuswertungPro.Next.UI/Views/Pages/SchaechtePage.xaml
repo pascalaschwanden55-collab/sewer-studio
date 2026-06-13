@@ -20,19 +20,6 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-
-        <Style x:Key="SecondaryToggleButton" TargetType="ToggleButton">
-            <Setter Property="MinHeight" Value="48"/>
-            <Setter Property="MinWidth" Value="140"/>
-            <Setter Property="Padding" Value="24,12"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -84,11 +71,11 @@
 
                     <ToggleButton Content="Spalten anordnen"
                                   Margin="0,0,2,0"
-                                  Style="{StaticResource SecondaryToggleButton}"
+                                  Style="{StaticResource CompactToggleButton}"
                                   IsChecked="{Binding IsColumnReorderEnabled}"/>
                     <ToggleButton x:Name="ClearColumnModeButton" Content="Spalte leeren"
                                   Margin="0,0,2,0"
-                                  Style="{StaticResource SecondaryToggleButton}"
+                                  Style="{StaticResource CompactToggleButton}"
                                   ToolTip="Aktivieren, dann auf Spaltentitel klicken um Spalte zu leeren"/>
                 </StackPanel>
             </Border>
