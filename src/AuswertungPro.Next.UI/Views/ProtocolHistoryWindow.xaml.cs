@@ -50,12 +50,11 @@ public sealed partial class ProtocolHistoryWindow : Window
         var row = HistoryGrid.SelectedItem as HistoryRow;
         if (row?.Revision is null)
         {
-            MessageBox.Show("Bitte eine Revision auswaehlen.", "Historie", MessageBoxButton.OK, MessageBoxImage.Information);
+            DialogHost.Current.Info("Bitte eine Revision auswaehlen.", "Historie");
             return;
         }
 
-        var confirm = MessageBox.Show("Diese Revision wiederherstellen?", "Historie", MessageBoxButton.YesNo, MessageBoxImage.Question);
-        if (confirm != MessageBoxResult.Yes)
+        if (!DialogHost.Current.Confirm("Diese Revision wiederherstellen?", "Historie"))
             return;
 
         _protocols.RestoreRevision(_doc, row.Revision, user: null, comment: "Wiederhergestellt aus Historie");

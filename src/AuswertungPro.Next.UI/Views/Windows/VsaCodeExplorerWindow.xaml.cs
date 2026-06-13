@@ -915,9 +915,9 @@ public partial class VsaCodeExplorerWindow : Window
             string.IsNullOrEmpty(_vm.FotoPaths[photoIndex]) ||
             !File.Exists(_vm.FotoPaths[photoIndex]))
         {
-            MessageBox.Show(
+            DialogHost.Current.Info(
                 "Kein Foto vorhanden. Bitte zuerst ein Foto aufnehmen.",
-                "PhotoAssistant", MessageBoxButton.OK, MessageBoxImage.Information);
+                "PhotoAssistant");
             return;
         }
 
@@ -990,7 +990,7 @@ public partial class VsaCodeExplorerWindow : Window
             {
                 if (string.IsNullOrWhiteSpace(_videoPath) || !File.Exists(_videoPath))
                 {
-                    MessageBox.Show("Kein Video geladen.", "Foto", MessageBoxButton.OK, MessageBoxImage.Information);
+                    DialogHost.Current.Info("Kein Video geladen.", "Foto");
                     return;
                 }
 
@@ -1009,7 +1009,7 @@ public partial class VsaCodeExplorerWindow : Window
 
                 if (bytes is null || bytes.Length == 0)
                 {
-                    MessageBox.Show("Frame-Extraktion fehlgeschlagen.", "Foto", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    DialogHost.Current.Warn("Frame-Extraktion fehlgeschlagen.", "Foto");
                     return;
                 }
 

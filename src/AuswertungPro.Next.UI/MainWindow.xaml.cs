@@ -25,19 +25,17 @@ public partial class MainWindow : Window
 
         if (DataContext is ShellViewModel vm && vm.Project.Dirty)
         {
-            var result = MessageBox.Show(
+            var result = DialogHost.Current.ConfirmCancel(
                 "Es gibt ungespeicherte Aenderungen. Jetzt speichern?",
-                "Projekt speichern",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Warning);
+                "Projekt speichern");
 
-            if (result == MessageBoxResult.Cancel)
+            if (result == DialogConfirm.Cancel)
             {
                 e.Cancel = true;
                 return;
             }
 
-            if (result == MessageBoxResult.Yes)
+            if (result == DialogConfirm.Yes)
             {
                 vm.TrySaveProject();
                 if (vm.Project.Dirty)

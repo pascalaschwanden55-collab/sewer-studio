@@ -108,10 +108,10 @@ public partial class PlayerWindow
     {
         if (_haltungRecord == null)
         {
-            MessageBox.Show(
+            DialogHost.Current.Info(
                 "Codier-Modus benoetigt eine Haltung.\n" +
                 "Bitte das Video ueber die Datenseite mit einer Haltung oeffnen.",
-                "Codier-Modus", MessageBoxButton.OK, MessageBoxImage.Information);
+                "Codier-Modus");
             return;
         }
 
@@ -171,7 +171,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Codier-Modus", MessageBoxButton.OK, MessageBoxImage.Warning);
+            DialogHost.Current.Warn(ex.Message, "Codier-Modus");
             ExitCodingMode();
             return;
         }
@@ -423,13 +423,10 @@ public partial class PlayerWindow
                 e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code));
             if (aktiveBefunde > 0)
             {
-                var antwort = MessageBox.Show(
-                    this,
+                var uebernehmen = DialogHost.Current.ConfirmWarn(
                     $"Die Befundliste ist leer.\n\n\"Uebernehmen\" wuerde {aktiveBefunde} bestehende(n) Befund(e) dieser Haltung loeschen und die primaeren Schaeden leeren.\n\nWirklich eine leere Codierung uebernehmen?",
-                    "Leere Codierung uebernehmen?",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Warning);
-                if (antwort != MessageBoxResult.Yes)
+                    "Leere Codierung uebernehmen?");
+                if (!uebernehmen)
                     return false;
             }
         }
@@ -507,26 +504,23 @@ public partial class PlayerWindow
             return true;
 
         SuspendCodingOverlayInput();
-        MessageBoxResult result;
+        DialogConfirm result;
         try
         {
-            result = MessageBox.Show(
+            result = DialogHost.Current.ConfirmCancel(
                 "Es gibt noch nicht uebernommene Codierungen.\n\n" +
                 "Ja = uebernehmen\nNein = verwerfen\nAbbrechen = Fenster offen lassen",
-                "Codier-Modus",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Warning,
-                MessageBoxResult.Cancel);
+                "Codier-Modus");
         }
         finally
         {
             ResumeCodingOverlayInput();
         }
 
-        if (result == MessageBoxResult.Cancel)
+        if (result == DialogConfirm.Cancel)
             return false;
 
-        if (result == MessageBoxResult.Yes)
+        if (result == DialogConfirm.Yes)
             return ApplyCodingChanges(showOverlay: false);
 
         return true;
@@ -1704,13 +1698,12 @@ public partial class PlayerWindow
     {
         if (_serviceProvider == null || _haltungRecord == null) return;
 
-        var result = MessageBox.Show(
+        var createPdf = DialogHost.Current.Confirm(
             $"Codier-Session abgeschlossen ({doc.Current.Entries.Count} Ereignisse).\n\n" +
-            "MÃƒÆ’Ã‚Â¶chten Sie jetzt ein PDF-Protokoll mit Grafik und Fotos erstellen?",
-            "PDF-Protokoll erstellen",
-            MessageBoxButton.YesNo, MessageBoxImage.Question);
+            "Moechten Sie jetzt ein PDF-Protokoll mit Grafik und Fotos erstellen?",
+            "PDF-Protokoll erstellen");
 
-        if (result != MessageBoxResult.Yes) return;
+        if (!createPdf) return;
 
         try
         {
@@ -1750,8 +1743,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Fehler",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            DialogHost.Current.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Fehler");
         }
     }
 
@@ -1930,9 +1922,9 @@ public partial class PlayerWindow
         double currentMeter = _codingVm.CurrentMeter;
         if (currentMeter <= (startEvent.MeterAtCapture + 0.01))
         {
-            MessageBox.Show(
+            DialogHost.Current.Info(
                 "Der aktuelle Meterstand muss groesser sein als der Anfang des Streckenschadens.",
-                "Streckenschaden", MessageBoxButton.OK, MessageBoxImage.Information);
+                "Streckenschaden");
             return;
         }
 
@@ -1969,17 +1961,16 @@ public partial class PlayerWindow
     {
         if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
         SuspendCodingOverlayInput();
-        MessageBoxResult confirm;
+        bool confirm;
         try
         {
-            confirm = MessageBox.Show($"Ereignis '{codingEvent.Entry.Code}' loeschen?", "Loeschen",
-                MessageBoxButton.YesNo, MessageBoxImage.Question);
+            confirm = DialogHost.Current.ConfirmWarn($"Ereignis '{codingEvent.Entry.Code}' loeschen?", "Loeschen");
         }
         finally
         {
             ResumeCodingOverlayInput();
         }
-        if (confirm != MessageBoxResult.Yes) return;
+        if (!confirm) return;
 
         _codingSessionService?.RemoveEvent(codingEvent.EventId);
         _codingVm?.Events.Remove(codingEvent);
@@ -2131,8 +2122,8 @@ public partial class PlayerWindow
         // 2. Frame capturen
         if (!TryTakeSnapshot(out var snapshotPath) || !System.IO.File.Exists(snapshotPath))
         {
-            MessageBox.Show("Frame konnte nicht aufgenommen werden.\nBitte prÃ¼fen Sie ob das Video lÃ¤uft.",
-                "Import bestÃ¤tigen", MessageBoxButton.OK, MessageBoxImage.Warning);
+            DialogHost.Current.Warn("Frame konnte nicht aufgenommen werden.\nBitte pruefen Sie ob das Video laeuft.",
+                "Import bestaetigen");
             return;
         }
 
@@ -2451,14 +2442,13 @@ public partial class PlayerWindow
     {
         if (_haltungRecord == null || _serviceProvider == null) return;
 
-        var result = MessageBox.Show(
+        var showProtocol = DialogHost.Current.Confirm(
             $"{doc.Current.Entries.Count} Beobachtungen protokolliert.\n\n" +
             "Protokoll jetzt anzeigen und bearbeiten?\n" +
             "(Aenderungen werden in Primaere Schaeden uebernommen)",
-            "Codier-Session abgeschlossen",
-            MessageBoxButton.YesNo, MessageBoxImage.Question);
+            "Codier-Session abgeschlossen");
 
-        if (result != MessageBoxResult.Yes) return;
+        if (!showProtocol) return;
 
         var project = ((ViewModels.ShellViewModel?)App.Current.MainWindow?.DataContext)?.Project;
         if (project == null) return;
@@ -4560,21 +4550,19 @@ public partial class PlayerWindow
         sb.AppendLine($"Sollen alle offenen Streckenschaeden bei {currentMeter:F2}m geschlossen werden?");
 
         SuspendCodingOverlayInput();
-        MessageBoxResult result;
+        DialogConfirm result;
         try
         {
-            result = MessageBox.Show(
+            result = DialogHost.Current.ConfirmCancel(
                 sb.ToString(),
-                "Offene Streckenschaeden",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Warning);
+                "Offene Streckenschaeden");
         }
         finally
         {
             ResumeCodingOverlayInput();
         }
 
-        if (result == MessageBoxResult.Yes)
+        if (result == DialogConfirm.Yes)
         {
             // Alle offenen Streckenschaeden schliessen.
             // MeterEnd = letzte Sichtung (MeterAtCapture) oder aktueller Meter
@@ -4590,7 +4578,7 @@ public partial class PlayerWindow
             return true;
         }
 
-        if (result == MessageBoxResult.Cancel)
+        if (result == DialogConfirm.Cancel)
             return false; // User will weiter codieren â€” Exit abbrechen
 
         return true; // "Nein" â†’ weiter ohne Schliessen

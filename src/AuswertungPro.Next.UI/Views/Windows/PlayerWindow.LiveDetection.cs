@@ -53,16 +53,14 @@ public partial class PlayerWindow
         }
         catch
         {
-            MessageBox.Show("KI-Konfiguration konnte nicht geladen werden.", "Schnell-Scan",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            DialogHost.Current.Warn("KI-Konfiguration konnte nicht geladen werden.", "Schnell-Scan");
             QuickScanButton.IsChecked = false;
             return;
         }
 
         if (!cfg.Enabled)
         {
-            MessageBox.Show("KI ist deaktiviert. Bitte in den Einstellungen aktivieren.", "Schnell-Scan",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            DialogHost.Current.Info("KI ist deaktiviert. Bitte in den Einstellungen aktivieren.", "Schnell-Scan");
             QuickScanButton.IsChecked = false;
             return;
         }
@@ -383,16 +381,14 @@ public partial class PlayerWindow
         }
         catch
         {
-            MessageBox.Show("KI-Konfiguration konnte nicht geladen werden.", "Live-KI",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            DialogHost.Current.Warn("KI-Konfiguration konnte nicht geladen werden.", "Live-KI");
             LiveDetectionButton.IsChecked = false;
             return;
         }
 
         if (!cfg.Enabled)
         {
-            MessageBox.Show("KI ist deaktiviert. Bitte in den Einstellungen aktivieren.", "Live-KI",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            DialogHost.Current.Info("KI ist deaktiviert. Bitte in den Einstellungen aktivieren.", "Live-KI");
             LiveDetectionButton.IsChecked = false;
             return;
         }
@@ -448,8 +444,7 @@ public partial class PlayerWindow
         catch (Exception ex)
         {
             LiveDetectionButton.IsChecked = false;
-            MessageBox.Show($"Live-KI konnte nicht gestartet werden: {ex.Message}", "Live-KI",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            DialogHost.Current.Warn($"Live-KI konnte nicht gestartet werden: {ex.Message}", "Live-KI");
         }
     }
 
@@ -1584,10 +1579,10 @@ public partial class PlayerWindow
 
         if (sp?.CodeCatalog is null)
         {
-            MessageBox.Show(
+            DialogHost.Current.Info(
                 "Schadenscode-Katalog nicht verfuegbar.\n" +
                 "Bitte die App neu starten oder KI-Einstellungen pruefen.",
-                "Markieren", MessageBoxButton.OK, MessageBoxImage.Information);
+                "Markieren");
             return;
         }
 

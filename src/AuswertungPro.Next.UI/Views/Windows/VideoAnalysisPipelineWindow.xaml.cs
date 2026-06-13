@@ -916,8 +916,7 @@ public partial class VideoAnalysisPipelineWindow : Window
     {
         if (_result is null || !_result.IsSuccess || _result.Document is null)
         {
-            MessageBox.Show("Kein gültiges Ergebnis zum Übertragen vorhanden.", "Videoanalyse KI",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            DialogHost.Current.Info("Kein gültiges Ergebnis zum Übertragen vorhanden.", "Videoanalyse KI");
             return;
         }
 

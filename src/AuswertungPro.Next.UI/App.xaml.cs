@@ -170,11 +170,9 @@ namespace AuswertungPro.Next.UI
 
                 try
                 {
-                    MessageBox.Show(
+                    DialogHost.Current.Error(
                         $"SewerStudio konnte nicht gestartet werden.\n\n{ex.Message}\n\nDetails: {fallbackLog}",
-                        "SewerStudio",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
+                        "SewerStudio");
                 }
                 catch
                 {
@@ -240,19 +238,15 @@ namespace AuswertungPro.Next.UI
                 {
                     if (realSp.Diagnostics.EnableDiagnostics)
                     {
-                        MessageBox.Show(
+                        realSp.Dialogs.Error(
                             $"Es ist ein Fehler aufgetreten.\n\nCode: {code}\n{ex.Message}\n\nDetails: siehe Log-Datei",
-                            "SewerStudio",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Error);
+                            "SewerStudio");
                     }
                     else
                     {
-                        MessageBox.Show(
+                        realSp.Dialogs.Error(
                             "Es ist ein Fehler aufgetreten.",
-                            "SewerStudio",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Error);
+                            "SewerStudio");
                     }
                 }
                 catch

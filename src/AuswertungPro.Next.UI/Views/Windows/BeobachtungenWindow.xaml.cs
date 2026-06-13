@@ -96,15 +96,13 @@ public partial class BeobachtungenWindow : Window
         var resolved = TryResolvePath(rawPath, sp?.Settings.LastProjectPath) ?? rawPath;
         if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
         {
-            MessageBox.Show($"Foto nicht gefunden:\n{rawPath}", "Foto",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            DialogHost.Current.Info($"Foto nicht gefunden:\n{rawPath}", "Foto");
             return;
         }
 
         if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(resolved, out var error))
         {
-            MessageBox.Show($"Foto konnte nicht geoeffnet werden:\n{error}", "Foto",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            DialogHost.Current.Error($"Foto konnte nicht geoeffnet werden:\n{error}", "Foto");
         }
     }
 

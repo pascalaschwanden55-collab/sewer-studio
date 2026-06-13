@@ -1647,25 +1647,21 @@ public partial class CodingModeWindow : Window
     private async Task OfferPhotoCapture(CodingEvent codingEvent)
     {
         // Foto 1 anbieten
-        var result1 = MessageBox.Show(
+        var createFirstPhoto = DialogHost.Current.Confirm(
             $"Foto 1 fuer {codingEvent.Entry.Code} ({codingEvent.MeterAtCapture:F2}m) erstellen?",
-            "Foto erstellen",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            "Foto erstellen");
 
-        if (result1 == MessageBoxResult.Yes)
+        if (createFirstPhoto)
         {
             LstEvents.SelectedItem = codingEvent;
             await CapturePhotoForSelectedEvent(0);
 
             // Foto 2 anbieten nur wenn Foto 1 erstellt wurde
-            var result2 = MessageBox.Show(
+            var createSecondPhoto = DialogHost.Current.Confirm(
                 $"Foto 2 fuer {codingEvent.Entry.Code} ({codingEvent.MeterAtCapture:F2}m) erstellen?",
-                "Foto erstellen",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+                "Foto erstellen");
 
-            if (result2 == MessageBoxResult.Yes)
+            if (createSecondPhoto)
             {
                 await CapturePhotoForSelectedEvent(1);
             }
@@ -1691,8 +1687,7 @@ public partial class CodingModeWindow : Window
     {
         if (_vm.CurrentOverlay == null)
         {
-            MessageBox.Show("Bitte zuerst eine Markierung zeichnen.", "Keine Markierung",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            DialogHost.Current.Info("Bitte zuerst eine Markierung zeichnen.", "Keine Markierung");
             return;
         }
 
@@ -1705,11 +1700,10 @@ public partial class CodingModeWindow : Window
         };
         if (!allowedTools.Contains(_vm.CurrentOverlay.ToolType))
         {
-            MessageBox.Show(
+            DialogHost.Current.Warn(
                 $"Das Werkzeug \"{_vm.CurrentOverlay.ToolType}\" erzeugt keine Flaechenmarkierung.\n" +
                 "Fuer Lehrer-Annotationen bitte Rechteck, Ellipse oder Freihand verwenden.",
-                "Werkzeug nicht geeignet",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+                "Werkzeug nicht geeignet");
             return;
         }
 
@@ -1747,8 +1741,7 @@ public partial class CodingModeWindow : Window
             var pngBytes = await CaptureCurrentFrameAsync();
             if (pngBytes == null || pngBytes.Length == 0)
             {
-                MessageBox.Show("Frame konnte nicht extrahiert werden.", "Fehler",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                DialogHost.Current.Warn("Frame konnte nicht extrahiert werden.", "Fehler");
                 return;
             }
 
@@ -1767,11 +1760,10 @@ public partial class CodingModeWindow : Window
             if (bbox.Width < MinBboxDimension || bbox.Height < MinBboxDimension)
             {
                 try { System.IO.File.Delete(tempFrame); } catch { }
-                MessageBox.Show(
+                DialogHost.Current.Warn(
                     "Die Markierung ist zu klein oder hat keine Flaeche.\n" +
                     "Fuer Lehrer-Annotationen bitte Rechteck, Ellipse oder Freihand verwenden.",
-                    "Markierung ungueltig",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                    "Markierung ungueltig");
                 return;
             }
 
@@ -1788,10 +1780,9 @@ public partial class CodingModeWindow : Window
             // Fix 2: Nur bei erfolgreichem Export persistieren
             if (!exportResult.Success)
             {
-                MessageBox.Show(
+                DialogHost.Current.Error(
                     $"Export fehlgeschlagen:\n{exportResult.Error}\n\nAnnotation wird NICHT gespeichert.",
-                    "Export-Fehler",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                    "Export-Fehler");
                 return;
             }
 
@@ -1831,21 +1822,18 @@ public partial class CodingModeWindow : Window
             UpdateOverlayInfo(null);
 
             var count = await InfraTeacher.TeacherAnnotationStore.CountAsync();
-            MessageBox.Show(
+            DialogHost.Current.Info(
                 $"Lehrer-Annotation gespeichert:\n" +
                 $"Code: {selectedEntry.Code}\n" +
                 $"Meter: {captureMeter:F2}m\n" +
                 $"Tool: {annotation.ToolType}\n\n" +
                 $"Gesamt: {count} Annotationen\n" +
                 (exportResult.Success ? "YOLO-Export erfolgreich" : $"Export-Fehler: {exportResult.Error}"),
-                "Training gespeichert",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                "Training gespeichert");
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Fehler beim Speichern:\n{ex.Message}", "Fehler",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            DialogHost.Current.Error($"Fehler beim Speichern:\n{ex.Message}", "Fehler");
         }
         finally
         {
@@ -2091,14 +2079,12 @@ public partial class CodingModeWindow : Window
             if (entry.FotoPaths.Count > 0 && !string.IsNullOrEmpty(entry.FotoPaths[0])
                 && System.IO.File.Exists(entry.FotoPaths[0]))
             {
-                var answer = MessageBox.Show(
+                var markPhoto = DialogHost.Current.Confirm(
                     "Stelle auf dem Foto markieren fuer KI-Training?\n\n" +
                     "Das hilft der KI, den korrigierten Code beim naechsten Mal\n" +
                     "an der richtigen Stelle zu erkennen.",
-                    "KI-Training: Foto markieren",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-                if (answer == MessageBoxResult.Yes)
+                    "KI-Training: Foto markieren");
+                if (markPhoto)
                 {
                     var photoWin = new PhotoMeasurementWindow(
                         entry.FotoPaths[0], _overlayService.Calibration);
@@ -2121,13 +2107,12 @@ public partial class CodingModeWindow : Window
         if (_vm.SelectedDefect == null) return;
 
         var ev = _vm.SelectedDefect;
-        var result = System.Windows.MessageBox.Show(
-            $"Beobachtung \"{ev.Entry.Code}\" bei {ev.MeterAtCapture:F2}m wirklich löschen?",
-            "Beobachtung löschen",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-
-        if (result != MessageBoxResult.Yes) return;
+        if (!DialogHost.Current.ConfirmWarn(
+            $"Beobachtung \"{ev.Entry.Code}\" bei {ev.MeterAtCapture:F2}m wirklich loeschen?",
+            "Beobachtung loeschen"))
+        {
+            return;
+        }
 
         // Event aus Session und Liste entfernen
         _sessionService.RemoveEvent(ev.EventId);

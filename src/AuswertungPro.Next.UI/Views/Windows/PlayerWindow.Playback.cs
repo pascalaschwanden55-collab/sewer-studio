@@ -552,8 +552,7 @@ public partial class PlayerWindow
         var result = _player.SetRate(clamped);
         if (result != 0)
         {
-            MessageBox.Show($"SetRate({clamped:0.##}) nicht unterstuetzt fuer dieses Video.",
-                "Video", MessageBoxButton.OK, MessageBoxImage.Information);
+            DialogHost.Current.Info($"SetRate({clamped:0.##}) nicht unterstuetzt fuer dieses Video.", "Video");
         }
 
         UpdateRateLabel();

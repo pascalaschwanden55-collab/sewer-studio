@@ -78,11 +78,9 @@ public partial class DossierPrintDialog : Window
     {
         if (!HasAnySelection())
         {
-            MessageBox.Show(
+            DialogHost.Current.Info(
                 "Bitte mindestens eine Sektion fuer das Dossier auswaehlen.",
-                "Dossier",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+                "Dossier");
             return;
         }
 
