@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     AuswertungPro - Professionelles Haltungs-Verwaltungs-Tool
 .DESCRIPTION

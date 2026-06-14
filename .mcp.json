@@ -1,9 +1,13 @@
 {
   "mcpServers": {
     "sewerstudio": {
-      "command": "dotnet",
+      "command": "C:\\Program Files\\dotnet\\dotnet.exe",
       "args": [
-        "tools/SewerStudioMcpServer/bin/Debug/net10.0/SewerStudio.McpServer.dll"
+        "C:\\Sewer-Studio_KI_4.4\\tools\\SewerStudioMcpServer\\bin\\Debug\\net10.0\\SewerStudio.McpServer.dll",
+        "--knowledge-root",
+        "C:\\KI_BRAIN",
+        "--benchmarks-dir",
+        "C:\\Sewer-Studio_KI_4.4\\docs\\benchmarks"
       ]
     }
   }

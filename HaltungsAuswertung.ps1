@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Haltungs-Auswertungs-Tool
 .DESCRIPTION
