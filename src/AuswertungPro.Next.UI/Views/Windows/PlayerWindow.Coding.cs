@@ -2722,7 +2722,9 @@ public partial class PlayerWindow
         _codingOsdTimer.Tick += async (_, _) =>
         {
             if (_closing || _player is null) return;
-            if (!_isCodingMode || _codingOsdReading || _codingLiveDetection == null) return;
+            // Waehrend einer laufenden Live-Analyse liest diese bereits den OSD-Meter
+            // -> separaten 3s-OSD-Timer aussetzen, um doppelte Qwen-Last zu vermeiden.
+            if (!_isCodingMode || _codingOsdReading || _codingIsAnalyzing || _codingLiveDetection == null) return;
             _codingOsdReading = true;
             try
             {
@@ -3188,12 +3190,16 @@ public partial class PlayerWindow
                 }
                 _detectionPendingFrameBytes = pngBytes;
                 _detectionPendingTimestampSec = captureTimestampSec;
+                var frameOsdMeter = await TryReadAnalyzedFrameOsdMeterAsync(
+                    pngBytes,
+                    captureTimestampSec,
+                    _codingAnalysisCts.Token);
 
                 SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
                     "Schritt 2 von 4: YOLO und DINO", pulse: true);
 
                 int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
-                var currentMeterForClassifier = ResolveCodingMeterForFrame(captureTimestampSec);
+                var currentMeterForClassifier = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
                 var reachLengthForClassifier = _codingVm?.EndMeter > 0
                     ? _codingVm.EndMeter
                     : Math.Max(currentMeterForClassifier, 1);
@@ -3211,7 +3217,7 @@ public partial class PlayerWindow
                     return;
                 }
 
-                if (TryHandleBoundaryClassifierResult(mmResult, captureTimestampSec))
+                if (TryHandleBoundaryClassifierResult(mmResult, captureTimestampSec, frameOsdMeter))
                     return;
 
                 if (!mmResult.IsRelevant || !mmResult.HasDetections)
@@ -3271,7 +3277,7 @@ public partial class PlayerWindow
                 AddMultiModelFindingsAsEvents(
                     visibleCodierbar,
                     mmResult.SamResponse?.ImageWidth ?? 1, mmResult.SamResponse?.ImageHeight ?? 1,
-                    mmResult.YoloMaxConfidence, captureTimestampSec);
+                    mmResult.YoloMaxConfidence, captureTimestampSec, frameOsdMeter);
                 return;
             }
 
@@ -3289,6 +3295,10 @@ public partial class PlayerWindow
                 }
                 _detectionPendingFrameBytes = pngBytes;
                 _detectionPendingTimestampSec = captureTimestampSec;
+                var frameOsdMeter = await TryReadAnalyzedFrameOsdMeterAsync(
+                    pngBytes,
+                    captureTimestampSec,
+                    _codingAnalysisCts.Token);
 
                 SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
                     $"Schritt 2 von 3: Inferenz ({CompactModelName(_codingAiModelName)})", pulse: true);
@@ -3307,6 +3317,7 @@ public partial class PlayerWindow
                     result = await _codingLiveDetection!.AnalyzeFrameAsync(
                         pngBytes, captureTimestampSec, _codingAnalysisCts.Token);
                 }
+                result = result with { MeterReading = frameOsdMeter };
 
                 ShowCodingAiResults(result);
             }
@@ -3325,7 +3336,10 @@ public partial class PlayerWindow
         }
     }
 
-    private bool TryHandleBoundaryClassifierResult(SingleFrameResult mmResult, double captureTimestampSec)
+    private bool TryHandleBoundaryClassifierResult(
+        SingleFrameResult mmResult,
+        double captureTimestampSec,
+        double? frameOsdMeter)
     {
         var code = mmResult.ClassifierCode;
         if (code is not ("BCD" or "BCE"))
@@ -3334,7 +3348,7 @@ public partial class PlayerWindow
             return false;
 
         var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);
-        var meter = ResolveCodingMeterForFrame(captureTimestampSec);
+        var meter = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
         var beforeCount = _codingVm.Events.Count;
         var anyAdded = false;
 
@@ -3570,13 +3584,13 @@ public partial class PlayerWindow
     /// </summary>
     private void AddMultiModelFindingsAsEvents(
         IReadOnlyList<SegmentedFinding> segmented, double imageWidth, double imageHeight,
-        double? yoloMaxConfidence, double captureTimestampSec)
+        double? yoloMaxConfidence, double captureTimestampSec, double? frameOsdMeter)
     {
         var codingVm = _codingVm;
         var codingSessionService = _codingSessionService;
         if (codingVm == null || codingSessionService == null) return;
 
-        double meter = ResolveCodingMeterForFrame(captureTimestampSec);
+        double meter = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
         var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
         bool anyAdded = false;
 
@@ -3662,6 +3676,14 @@ public partial class PlayerWindow
                 MeterStart = meter,
                 Zeit = videoTime
             };
+
+            // Ehrlichkeit: stammt der Meter nicht aus dem OSD, sondern aus linearer Schaetzung,
+            // als "geschaetzt" markieren (Hinweis fuer Review und Trainingsdaten).
+            if (!_lastResolvedMeterIsOsd)
+            {
+                entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
+                entry.CodeMeta.Parameters["vsa.meter.quelle"] = "geschaetzt";
+            }
 
             // Messungen in CodeMeta (gleiche Logik wie Qwen-Pfad)
             ApplyQuantificationToEntry(entry, code, quant);
@@ -5051,6 +5073,10 @@ public partial class PlayerWindow
     /// </summary>
     private const double RecentOsdMeterMaxAgeSeconds = 1.5;
 
+    // Grosser Sprung der Videoposition (Seek / Sprung zu einem Befund) seit der letzten
+    // OSD-Lesung -> der Jump-Guard wird umgangen, weil ein grosser Meter-Sprung dann legitim ist.
+    private const double OsdSeekResetGapSeconds = 6.0;
+
     private double? GetMeterFromVideoPosition()
         => GetMeterFromVideoPositionAt(_player?.Time / 1000.0);
 
@@ -5067,14 +5093,27 @@ public partial class PlayerWindow
         return Math.Round(fraction * _codingVm.EndMeter, 2);
     }
 
+    // True, wenn der zuletzt von ResolveCodingMeterForFrame gelieferte Meter aus dem OSD stammt
+    // (Same-Frame oder frischer Cache), false bei linearer Schaetzung / CurrentMeter-Fallback.
+    private bool _lastResolvedMeterIsOsd;
+
     private double ResolveCodingMeterForFrame(double? frameTimestampSeconds, double? sameFrameOsdMeter = null)
     {
         if (sameFrameOsdMeter.HasValue && sameFrameOsdMeter.Value is >= 0 and <= 500)
+        {
+            _lastResolvedMeterIsOsd = true;
             return Math.Round(sameFrameOsdMeter.Value, 2);
+        }
 
         var recentOsdMeter = GetRecentOsdMeterForFrame(frameTimestampSeconds);
         if (recentOsdMeter.HasValue)
+        {
+            _lastResolvedMeterIsOsd = true;
             return recentOsdMeter.Value;
+        }
+
+        // Kein OSD-Wert -> lineare Schaetzung. Herkunft merken, damit der Befund als geschaetzt markiert wird.
+        _lastResolvedMeterIsOsd = false;
 
         var videoMeter = GetMeterFromVideoPositionAt(frameTimestampSeconds) ?? GetMeterFromVideoPosition();
         if (videoMeter.HasValue)
@@ -5106,16 +5145,84 @@ public partial class PlayerWindow
     /// Liest den OSD-Meterstand vom aktuellen Video-Frame (async, via KI).
     /// Wird bei Codier-Navigation und bei Event-Erstellung aufgerufen.
     /// </summary>
-    // OSD-Prompt: NUR Meterstand lesen, keine Analyse (schneller, praeziser)
-    private static readonly string OsdMeterPrompt = """
-        Kanalinspektion OSD (On-Screen-Display).
-        Lies NUR die Meterzahl UNTEN RECHTS im Bild.
-        Das ist eine Dezimalzahl wie "0.00", "7.90", "14.98" - die gefahrene Distanz.
-        IGNORIERE alle Zahlen im oberen Headertext (Knotennummern wie 74468, 80622 etc.).
-        IGNORIERE Datumsangaben und andere Texte.
-        Antworte NUR mit der Zahl, z.B.: 7.90
-        Falls kein Meterstand lesbar: 0.00
-        """;
+    private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync(
+        byte[] pngBytes,
+        double frameTimestampSec,
+        CancellationToken ct)
+    {
+        return await TryReadOsdMeterFromFrameBytesAsync(
+            pngBytes,
+            frameTimestampSec,
+            ct).ConfigureAwait(true);
+    }
+
+    private async Task<double?> TryReadOsdMeterFromFrameBytesAsync(
+        byte[] pngBytes,
+        double? frameTimestampSec,
+        CancellationToken ct)
+    {
+        if (pngBytes.Length == 0)
+            return null;
+
+        try
+        {
+            var croppedBytes = CodingOsdMeterReader.BuildOsdSearchImage(pngBytes);
+            var config = new AppSettingsAiSettingsProvider()
+                .Load()
+                .ToRuntimeSettings();
+            using var client = new OllamaClient(
+                config.OllamaBaseUri,
+                ownedTimeout: config.OllamaRequestTimeout,
+                keepAlive: config.OllamaKeepAlive,
+                numCtx: config.OllamaNumCtx);
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(8));
+
+            var b64 = Convert.ToBase64String(croppedBytes);
+            var messages = new[]
+            {
+                new OllamaClient.ChatMessage("user", CodingOsdMeterReader.Prompt, new[] { b64 })
+            };
+            var raw = await client.ChatAsync(config.VisionModel, messages, cts.Token);
+            var candidate = CodingOsdMeterReader.ParseMeterReply(raw);
+            // Jump-Guard nur bei fortlaufender Wiedergabe. Nach einem Video-Sprung
+            // (Seek / Sprung zu einem Befund) ist ein grosser Meter-Sprung legitim ->
+            // alten Wert wie Erstmessung behandeln, sonst friert der Meter nach dem Sprung ein.
+            var recentForJumpGuard = _codingLastOsdMeter;
+            if (recentForJumpGuard.HasValue && frameTimestampSec.HasValue && _codingLastOsdTimestampSec.HasValue
+                && Math.Abs(frameTimestampSec.Value - _codingLastOsdTimestampSec.Value) > OsdSeekResetGapSeconds)
+            {
+                recentForJumpGuard = null;
+            }
+            var meter = CodingOsdMeterReader.AcceptMeterCandidate(candidate, recentForJumpGuard);
+            if (!meter.HasValue)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[OSD] Meter verworfen. Raw='{raw}', Candidate={candidate?.ToString("F2", CultureInfo.InvariantCulture) ?? "null"}, Last={recentForJumpGuard?.ToString("F2", CultureInfo.InvariantCulture) ?? "null"}");
+                return null;
+            }
+
+            _codingLastOsdMeter = meter.Value;
+            _codingLastOsdTimestampSec = frameTimestampSec;
+            OsdMeterBadge.Visibility = Visibility.Visible;
+            TxtOsdMeter.Text = $"{meter.Value:F2}m (OSD)";
+            return meter.Value;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[OSD] Frame-Meter nicht lesbar: {ex.Message}");
+            return null;
+        }
+    }
 
     private async Task<double?> CodingReadOsdMeterAsync()
     {
@@ -5148,51 +5255,10 @@ public partial class PlayerWindow
             }
 
             if (pngBytes == null || pngBytes.Length == 0) return null;
-
-            // Leichtgewichtiger OSD-Request: nur Meterstand, keine volle Analyse.
-            // using: OllamaClient besitzt einen eigenen HttpClient — ohne Dispose
-            // leckt jede OSD-Lesung eine Verbindung (Socket-Exhaustion ueber lange Sessions).
-            var config = new AppSettingsAiSettingsProvider()
-                .Load()
-                .ToRuntimeSettings();
-            using var client = new OllamaClient(
-                config.OllamaBaseUri,
-                ownedTimeout: config.OllamaRequestTimeout,
-                keepAlive: config.OllamaKeepAlive,
-                numCtx: config.OllamaNumCtx);
-            var b64 = Convert.ToBase64String(pngBytes);
-
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            var messages = new[]
-            {
-                new OllamaClient.ChatMessage("user", OsdMeterPrompt, new[] { b64 })
-            };
-            var raw = await client.ChatAsync(config.VisionModel, messages, cts.Token);
-
-            // Parse: nur eine Zahl erwartet
-            var meterText = raw?.Trim().Replace(",", ".");
-            if (!string.IsNullOrWhiteSpace(meterText))
-            {
-                // Zahl extrahieren (erste Dezimalzahl im Text)
-                var match = System.Text.RegularExpressions.Regex.Match(
-                    meterText, @"(\d{1,3}(?:\.\d{1,2})?)");
-                if (match.Success && double.TryParse(match.Value,
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var meter))
-                {
-                    // Plausibilitaet: 0-500m (Knotennummern sind 5+ stellig)
-                    if (meter >= 0 && meter <= 500)
-                    {
-                        _codingLastOsdMeter = meter;
-                        _codingLastOsdTimestampSec = snapshotTimestampSec;
-                        OsdMeterBadge.Visibility = Visibility.Visible;
-                        TxtOsdMeter.Text = $"{meter:F2}m (OSD)";
-                        return meter;
-                    }
-                }
-            }
-
-            return null;
+            return await TryReadOsdMeterFromFrameBytesAsync(
+                pngBytes,
+                snapshotTimestampSec,
+                CancellationToken.None);
         }
         catch
         {

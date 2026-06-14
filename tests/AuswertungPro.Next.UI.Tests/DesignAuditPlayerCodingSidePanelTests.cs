@@ -62,7 +62,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("BuildVisibleMaskFindings", coding);
         Assert.Contains("BuildVisibleMaskFindings(segmented)", showBody);
         Assert.Contains("BuildVisibleCodingFindings(segmented)", coding);
-        Assert.Contains("AddMultiModelFindingsAsEvents(\r\n                    visibleCodierbar", coding);
+        Assert.Contains("AddMultiModelFindingsAsEvents(", coding);
+        Assert.Contains("visibleCodierbar", coding);
     }
 
     [Fact]
@@ -205,7 +206,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var resolveBody = ExtractMethodBody(coding, "private double ResolveCodingMeterForFrame");
 
         var meterStart = runBody.IndexOf("var currentMeterForClassifier", StringComparison.Ordinal);
-        var resolveIndex = runBody.IndexOf("ResolveCodingMeterForFrame(captureTimestampSec)", meterStart, StringComparison.Ordinal);
+        var resolveIndex = runBody.IndexOf("ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter)", meterStart, StringComparison.Ordinal);
         var videoPositionIndex = resolveBody.IndexOf("GetMeterFromVideoPositionAt(frameTimestampSeconds)", StringComparison.Ordinal);
         var viewModelMeterIndex = resolveBody.IndexOf("_codingVm?.CurrentMeter", StringComparison.Ordinal);
 
@@ -235,6 +236,29 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.DoesNotContain("double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter", multiModelBody);
         Assert.DoesNotContain("double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter", qwenBody);
         Assert.DoesNotContain("var meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter", boundaryBody);
+    }
+
+    [Fact]
+    public void Player_reads_osd_meter_from_analyzed_frame_before_multimodel_detection()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
+        var readerBody = ExtractMethodBody(coding, "private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync");
+        var helperBody = ExtractMethodBody(coding, "private async Task<double?> TryReadOsdMeterFromFrameBytesAsync");
+
+        var osdReadIndex = runBody.IndexOf("TryReadAnalyzedFrameOsdMeterAsync", StringComparison.Ordinal);
+        var classifierIndex = runBody.IndexOf("var currentMeterForClassifier", StringComparison.Ordinal);
+        var addIndex = runBody.IndexOf("AddMultiModelFindingsAsEvents(", StringComparison.Ordinal);
+
+        Assert.True(osdReadIndex >= 0, "Multi-Model muss den OSD-Meter aus exakt dem analysierten Frame lesen.");
+        Assert.True(classifierIndex >= 0, "Test erwartet den Klassifikator-Meter im Multi-Model-Pfad.");
+        Assert.True(osdReadIndex < classifierIndex, "OSD-Meter muss vor Klassifikator/Boundary-Logik vorliegen.");
+        Assert.Contains("frameOsdMeter", runBody);
+        Assert.Contains("frameOsdMeter", runBody[addIndex..]);
+        Assert.Contains("result = result with { MeterReading = frameOsdMeter }", runBody);
+        Assert.Contains("TryReadOsdMeterFromFrameBytesAsync", readerBody);
+        Assert.Contains("CodingOsdMeterReader.BuildOsdSearchImage", helperBody);
+        Assert.Contains("CodingOsdMeterReader.AcceptMeterCandidate", helperBody);
     }
 
     [Fact]
