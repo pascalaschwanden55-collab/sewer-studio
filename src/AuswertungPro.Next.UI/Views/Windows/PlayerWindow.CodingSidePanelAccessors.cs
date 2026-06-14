@@ -17,6 +17,8 @@ public partial class PlayerWindow
     private TextBlock TxtInlineDetailDistance => CodingSidePanelControl.TxtInlineDetailDistance;
     private TextBlock TxtInlineDetailConfidence => CodingSidePanelControl.TxtInlineDetailConfidence;
     private TextBlock TxtInlineDetailStatus => CodingSidePanelControl.TxtInlineDetailStatus;
+    private Image ImgInlineEvidencePreview => CodingSidePanelControl.ImgInlineEvidencePreview;
+    private TextBlock TxtInlineEvidencePreviewStatus => CodingSidePanelControl.TxtInlineEvidencePreviewStatus;
     private Button BtnInlineAccept => CodingSidePanelControl.BtnInlineAccept;
     private Button BtnInlineReject => CodingSidePanelControl.BtnInlineReject;
     private Run RunImportDefectCount => CodingSidePanelControl.RunImportDefectCount;

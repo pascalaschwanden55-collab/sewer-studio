@@ -64,6 +64,8 @@ namespace AuswertungPro.Next.UI
 
                 // Settings
                 var settings = AppSettings.Load();
+                if (settings.AiStartOnProgramStart && AiStartupService.ApplyRuntimeDefaults(settings))
+                    settings.SaveImmediate();
                 ThemeManager.ApplyTheme(Resources, settings.UiTheme);
 
                 // Logging
@@ -130,6 +132,8 @@ namespace AuswertungPro.Next.UI
                 };
                 MainWindow = mainWindow;
                 mainWindow.Show();
+                if (settings.AiStartOnProgramStart)
+                    _ = StartAiOnStartupAsync(settings, logger, mainWindow);
 
                 // Splash erst ausblenden, wenn der Fortschrittsbalken durchgelaufen ist –
                 // sonst wird die Startanimation bei schnellem Start abgeschnitten.
@@ -222,6 +226,28 @@ namespace AuswertungPro.Next.UI
             anim.Completed += (_, _) => tcs.TrySetResult(null);
             element.BeginAnimation(UIElement.OpacityProperty, anim);
             return tcs.Task;
+        }
+
+        private static async Task StartAiOnStartupAsync(AppSettings settings, ILogger logger, Window mainWindow)
+        {
+            if (mainWindow.DataContext is AuswertungPro.Next.UI.ViewModels.ShellViewModel shell)
+                shell.SetStatus("Starte KI...");
+
+            try
+            {
+                var result = await AiStartupService.StartAsync(settings);
+                settings.SaveImmediate();
+                logger.LogInformation("KI-Autostart abgeschlossen: {Summary}", result.Summary);
+
+                if (mainWindow.DataContext is AuswertungPro.Next.UI.ViewModels.ShellViewModel shellAfter)
+                    shellAfter.SetStatus(result.HasWarnings ? "KI-Start mit Warnung" : "KI gestartet");
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "KI-Autostart fehlgeschlagen.");
+                if (mainWindow.DataContext is AuswertungPro.Next.UI.ViewModels.ShellViewModel shellAfter)
+                    shellAfter.SetStatus($"KI-Autostart fehlgeschlagen: {ex.Message}");
+            }
         }
 
         private static void ApplyTypographyDefaults()

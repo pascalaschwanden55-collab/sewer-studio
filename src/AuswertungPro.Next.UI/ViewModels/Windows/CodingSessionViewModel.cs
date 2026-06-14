@@ -453,9 +453,7 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
 
     public bool HasSelectedDefect => SelectedDefect != null;
 
-    public bool SelectedDefectCanAct =>
-        SelectedDefect?.AiContext != null &&
-        GetDefectStatus(SelectedDefect) is DefectStatus.Pending or DefectStatus.ReviewRequired;
+    public bool SelectedDefectCanAct => CanActOnDefect(SelectedDefect);
 
     public string SelectedDefectCode => SelectedDefect?.Entry.Code ?? "";
     public string SelectedDefectDescription => SelectedDefect?.Entry.Beschreibung ?? "";
@@ -625,6 +623,16 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
                 _       => DefectStatus.ReviewRequired
             }
         };
+    }
+
+    public static bool CanActOnDefect(CodingEvent? ev)
+    {
+        if (ev == null) return false;
+
+        return GetDefectStatus(ev) is
+            DefectStatus.AutoAccepted or
+            DefectStatus.Pending or
+            DefectStatus.ReviewRequired;
     }
 
     public static Brush GetConfidenceBrush(double confidence) => confidence switch

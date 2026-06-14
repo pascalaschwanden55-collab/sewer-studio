@@ -121,6 +121,27 @@ public sealed class CodingSessionViewModelFeedbackTests
         Assert.Equal(CodingUserDecision.Accepted, vm.SelectedDefect!.AiContext!.Decision);
     }
 
+    [Fact]
+    public void SelectedDefectCanAct_is_true_for_open_event_without_ai_context()
+    {
+        using var vm = new CodingSessionViewModel(
+            new FakeCodingSessionService(),
+            new FakeOverlayToolService());
+        vm.SelectedDefect = new CodingEvent
+        {
+            Entry = new ProtocolEntry
+            {
+                Code = "BCCAY",
+                Beschreibung = "Bogen - links - ohne Hoehe",
+                MeterStart = 0.71,
+                Source = ProtocolEntrySource.Ai
+            },
+            MeterAtCapture = 0.71
+        };
+
+        Assert.True(vm.SelectedDefectCanAct);
+    }
+
     private static CodingEvent MakeAiEvent(string? suggestedCode, string finalCode)
         => new()
         {

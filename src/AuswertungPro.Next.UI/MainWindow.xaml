@@ -38,6 +38,7 @@
             </MenuItem>
             <MenuItem Header="_Werkzeuge">
                 <MenuItem Header="Code-Katalog..." Click="OpenCodeCatalog_Click"/>
+                <MenuItem Header="KI starten" Click="StartAi_Click"/>
                 <Separator/>
                 <MenuItem Header="KI Videoanalyse – Training Center..." Click="OpenTrainingCenter_Click"/>
                 <MenuItem Header="Karte..." Click="OpenKarte_Click"/>
@@ -543,7 +544,7 @@
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsAiWorking}" Value="True">
+                                <DataTrigger Binding="{Binding IsAiIndicatorVisible}" Value="True">
                                     <Setter Property="Visibility" Value="Visible"/>
                                 </DataTrigger>
                             </Style.Triggers>
@@ -551,15 +552,15 @@
                     </Border.Style>
                     <StackPanel>
                         <ctrl:NeuralSphereControl IsActive="{Binding IsAiWorking}"
-                            StatusText="{Binding AiStatusLabel}" Width="160" Height="160"/>
-                        <TextBlock Text="KI AKTIV" FontSize="10" FontWeight="Bold"
+                            StatusText="{Binding AiDisplayStatusLabel}" Width="160" Height="160"/>
+                        <TextBlock Text="{Binding AiIndicatorTitle}" FontSize="10" FontWeight="Bold"
                             HorizontalAlignment="Center" Margin="0,2,0,0"
                             Foreground="{DynamicResource AccentBrush}"/>
-                        <TextBlock Text="{Binding AiLoadedModels}" FontSize="10" FontWeight="SemiBold"
+                        <TextBlock Text="{Binding AiDisplayLoadedModels}" FontSize="10" FontWeight="SemiBold"
                             HorizontalAlignment="Center" Margin="0,1,0,0"
                             Foreground="{DynamicResource AccentBrush}"
                             TextTrimming="CharacterEllipsis" MaxWidth="150"/>
-                        <TextBlock Text="{Binding AiStatusLabel}" FontSize="10"
+                        <TextBlock Text="{Binding AiDisplayStatusLabel}" FontSize="10"
                             HorizontalAlignment="Center" Margin="0,1,0,0"
                             Foreground="{DynamicResource MutedBrush}"
                             TextTrimming="CharacterEllipsis" MaxWidth="150"/>

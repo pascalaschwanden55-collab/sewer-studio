@@ -29,11 +29,15 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     }
 
     [Fact]
-    public void Player_keeps_coding_overlay_visible_when_window_loses_focus()
+    public void Player_hides_coding_overlay_when_external_window_gets_focus()
     {
         var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var window = ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
         var suspendBody = ExtractMethodBody(coding, "private void SuspendCodingOverlayInput()");
 
+        Assert.Contains("HideCodingOverlayForExternalWindow", window);
+        Assert.Contains("CodingOverlayPopup.IsOpen = false", coding);
+        Assert.Contains("RestoreCodingOverlayAfterExternalWindow", window);
         Assert.DoesNotContain("CodingOverlayPopup.IsOpen = false", suspendBody);
         Assert.Contains("CodingOverlayCanvas.IsHitTestVisible = false", suspendBody);
     }
@@ -50,6 +54,18 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     }
 
     [Fact]
+    public void Player_renders_ahead_segment_masks_without_coding_them()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var showBody = ExtractMethodBody(coding, "private void ShowMultiModelResults");
+
+        Assert.Contains("BuildVisibleMaskFindings", coding);
+        Assert.Contains("BuildVisibleMaskFindings(segmented)", showBody);
+        Assert.Contains("BuildVisibleCodingFindings(segmented)", coding);
+        Assert.Contains("AddMultiModelFindingsAsEvents(\r\n                    visibleCodierbar", coding);
+    }
+
+    [Fact]
     public void Player_status_mentions_background_masks_suppressed()
     {
         var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
@@ -58,11 +74,245 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("BuildOverlaySuppressionText", coding);
     }
 
+    [Fact]
+    public void Player_coding_detail_shows_large_ai_evidence_preview()
+    {
+        var sidePanel = ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml");
+        var accessors = ReadUiFile("Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+
+        Assert.Contains("x:Name=\"ImgInlineEvidencePreview\"", sidePanel);
+        Assert.Contains("x:Name=\"TxtInlineEvidencePreviewStatus\"", sidePanel);
+        Assert.Contains("ImgInlineEvidencePreview", accessors);
+        Assert.Contains("CodingDefectPreviewService.BuildPreviewImagePath", coding);
+    }
+
+    [Fact]
+    public void Player_coding_detail_uses_open_decision_policy_for_confirm_buttons()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var detailBody = ExtractMethodBody(coding, "private void UpdateInlineDefectDetail");
+
+        Assert.Contains("CodingSessionViewModel.CanActOnDefect(ev)", detailBody);
+        Assert.Contains("BtnInlineAccept.Visibility = canAct ? Visibility.Visible : Visibility.Collapsed", detailBody);
+        Assert.Contains("BtnInlineReject.Visibility = canAct ? Visibility.Visible : Visibility.Collapsed", detailBody);
+    }
+
+    [Fact]
+    public void Player_photo_window_shows_segmented_evidence_preview_before_raw_photos()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var photoBody = ExtractMethodBody(coding, "private void CodingEventShowPhotos_Click");
+
+        Assert.Contains("CodingDefectPreviewService.BuildPreviewImagePath(codingEvent)", photoBody);
+        Assert.Contains("displayPhotoPaths", photoBody);
+        Assert.True(
+            photoBody.IndexOf("BuildPreviewImagePath", StringComparison.Ordinal)
+            < photoBody.IndexOf("foreach (var fotoPath in entry.FotoPaths)", StringComparison.Ordinal),
+            "Segmentierte Beweisvorschau muss vor den Rohfotos eingefuegt werden.");
+    }
+
+    [Fact]
+    public void Player_stops_ai_analysis_before_snapshot_after_rohrende()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
+
+        var stopIndex = runBody.IndexOf("IsCodingAfterTerminalBoundary", StringComparison.Ordinal);
+        var captureIndex = runBody.IndexOf("await CaptureSnapshotAsync()", StringComparison.Ordinal);
+
+        Assert.True(stopIndex >= 0, "RunCodingAnalysisAsync muss nach BCE/BDC stoppen.");
+        Assert.True(captureIndex >= 0, "RunCodingAnalysisAsync muss weiterhin Frames capturen koennen.");
+        Assert.True(stopIndex < captureIndex, "Stop-Pruefung muss vor Snapshot/SAM laufen.");
+        Assert.Contains("CodingDedupPolicy.ShouldStopAnalysisAfterTerminalCode", coding);
+    }
+
+    [Fact]
+    public void Player_defers_spatial_bogen_before_creating_protocol_event()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var addBody = ExtractMethodBody(coding, "private void AddMultiModelFindingsAsEvents");
+
+        Assert.Contains("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", addBody);
+        Assert.True(
+            addBody.IndexOf("ShouldDeferSpatialCodeUntilCloser", StringComparison.Ordinal)
+            < addBody.IndexOf("codingSessionService.AddEvent(entry)", StringComparison.Ordinal),
+            "Bogen-Vorschau muss vor AddEvent ausgesiebt werden.");
+    }
+
+    [Fact]
+    public void Player_rohranfang_photos_stay_on_event_frame()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var captureBody = ExtractMethodBody(coding, "private string? CodingCaptureSnapshot");
+        var goldBody = ExtractMethodBody(coding, "private async System.Threading.Tasks.Task<(string? path, string? error)> TrySaveGoldFrameAsync");
+
+        Assert.DoesNotContain("PlayerBoundaryPhotoPolicy.GetRequiredSnapshotTime(entry.Code", captureBody);
+        Assert.DoesNotContain("SeekToRequiredPhotoTime", captureBody);
+        Assert.DoesNotContain("CaptureFrameBytesAtRequiredPhotoTimeAsync", goldBody);
+        Assert.DoesNotContain("Rohranfang-Foto nach Datenblendung nicht verfuegbar", goldBody);
+    }
+
+    [Fact]
+    public void Player_coding_analysis_keeps_analyzed_frame_for_gold_snapshot()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
+
+        Assert.Contains("_detectionPendingFrameBytes = pngBytes", runBody);
+        Assert.Contains("_detectionPendingTimestampSec = captureTimestampSec", runBody);
+        Assert.True(
+            runBody.IndexOf("_detectionPendingFrameBytes = pngBytes", StringComparison.Ordinal)
+            < runBody.IndexOf("TryHandleBoundaryClassifierResult", StringComparison.Ordinal),
+            "Der Gold-Snapshot muss den analysierten Frame bekommen, bevor ein BCD/BCE-Event entstehen kann.");
+    }
+
+    [Fact]
+    public void Player_ai_findings_attach_analyzed_frame_photo_before_add_event()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var qwenBody = ExtractMethodBody(coding, "private void AddAiFindingsAsEvents");
+        var multiModelBody = ExtractMethodBody(coding, "private void AddMultiModelFindingsAsEvents");
+
+        AssertAnalyzedFrameAttachedBeforeAddEvent(qwenBody);
+        AssertAnalyzedFrameAttachedBeforeAddEvent(multiModelBody);
+    }
+
+    [Fact]
+    public void Player_boundary_classifier_passes_current_analyzed_frame_to_boundary_events()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var boundaryBody = ExtractMethodBody(coding, "private bool TryHandleBoundaryClassifierResult");
+
+        Assert.Contains("EnsureRohranfangExists(meter, videoTime, _detectionPendingFrameBytes, ref anyAdded)", boundaryBody);
+        Assert.Contains("EnsureRohrendeExists(_codingVm.EndMeter, videoTime, _detectionPendingFrameBytes)", boundaryBody);
+    }
+
+    [Fact]
+    public void Player_exit_coding_mode_passes_current_analyzed_frame_to_auto_rohrende()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var exitBody = ExtractMethodBody(coding, "private void ExitCodingMode");
+
+        Assert.Contains("EnsureRohrendeExists(_codingVm.EndMeter, endTime, _detectionPendingFrameBytes)", exitBody);
+    }
+
+    [Fact]
+    public void Player_coding_analysis_prefers_video_position_over_stale_viewmodel_meter_for_classifier()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
+        var resolveBody = ExtractMethodBody(coding, "private double ResolveCodingMeterForFrame");
+
+        var meterStart = runBody.IndexOf("var currentMeterForClassifier", StringComparison.Ordinal);
+        var resolveIndex = runBody.IndexOf("ResolveCodingMeterForFrame(captureTimestampSec)", meterStart, StringComparison.Ordinal);
+        var videoPositionIndex = resolveBody.IndexOf("GetMeterFromVideoPositionAt(frameTimestampSeconds)", StringComparison.Ordinal);
+        var viewModelMeterIndex = resolveBody.IndexOf("_codingVm?.CurrentMeter", StringComparison.Ordinal);
+
+        Assert.True(meterStart >= 0, "Analyse muss einen Meter fuer den Klassifikator bestimmen.");
+        Assert.True(resolveIndex >= 0, "Der Klassifikator muss den gemeinsamen Frame-Meter-Resolver verwenden.");
+        Assert.True(videoPositionIndex >= 0, "Video-Positions-Fallback muss fuer den Klassifikator genutzt werden.");
+        Assert.True(viewModelMeterIndex >= 0, "ViewModel-Meter darf nur als spaeter Fallback genutzt werden.");
+        Assert.True(
+            videoPositionIndex < viewModelMeterIndex,
+            "Staler CurrentMeter=0 darf die echte Videoposition nicht ueberstimmen, sonst blockiert BCD die Pipeline.");
+    }
+
+    [Fact]
+    public void Player_ai_events_use_analyzed_frame_meter_not_stale_selected_meter()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
+        var multiModelBody = ExtractMethodBody(coding, "private void AddMultiModelFindingsAsEvents");
+        var qwenBody = ExtractMethodBody(coding, "private void AddAiFindingsAsEvents");
+        var boundaryBody = ExtractMethodBody(coding, "private bool TryHandleBoundaryClassifierResult");
+
+        Assert.Contains("ResolveCodingMeterForFrame(captureTimestampSec", runBody);
+        Assert.Contains("ResolveCodingMeterForFrame(captureTimestampSec", multiModelBody);
+        Assert.Contains("ResolveCodingMeterForFrame(result.TimestampSeconds, result.MeterReading", qwenBody);
+        Assert.Contains("ResolveCodingMeterForFrame(captureTimestampSec", boundaryBody);
+
+        Assert.DoesNotContain("double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter", multiModelBody);
+        Assert.DoesNotContain("double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter", qwenBody);
+        Assert.DoesNotContain("var meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter", boundaryBody);
+    }
+
+    [Fact]
+    public void Player_auto_boundary_events_attach_passed_frame_before_add_event()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var bcdBody = ExtractMethodBody(coding, "private void EnsureRohranfangExists");
+        var bceBody = ExtractMethodBody(coding, "private void EnsureRohrendeExists");
+
+        AssertBoundaryFrameAttachedBeforeAddEvent(bcdBody);
+        AssertBoundaryFrameAttachedBeforeAddEvent(bceBody);
+    }
+
+    [Fact]
+    public void Player_event_seek_allows_zero_timestamp()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var seekBody = ExtractMethodBody(coding, "private void CodingEventSeek_Click");
+
+        Assert.Contains("codingEvent.VideoTimestamp.TotalMilliseconds >= 0", seekBody);
+        Assert.DoesNotContain("codingEvent.VideoTimestamp.TotalMilliseconds > 0", seekBody);
+    }
+
+    [Fact]
+    public void Player_import_seek_allows_zero_timestamp()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var seekBody = ExtractMethodBody(coding, "private void SeekToImportEvent");
+
+        Assert.Contains("importEvent.VideoTimestamp.TotalMilliseconds >= 0", seekBody);
+        Assert.DoesNotContain("importEvent.VideoTimestamp.TotalMilliseconds > 0", seekBody);
+    }
+
+    [Fact]
+    public void Player_manual_photo_aligns_event_time_to_current_frame_before_snapshot()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var photoBody = ExtractMethodBody(coding, "private void CodingTakePhotoForSelectedEvent");
+
+        var timeIndex = photoBody.IndexOf("GetCurrentPlayerTimestamp()", StringComparison.Ordinal);
+        var entryTimeIndex = photoBody.IndexOf("entry.Zeit = photoTime.Value", StringComparison.Ordinal);
+        var eventTimeIndex = photoBody.IndexOf("codingEvent.VideoTimestamp = photoTime.Value", StringComparison.Ordinal);
+        var snapshotIndex = photoBody.IndexOf("CodingCaptureSnapshot(entry)", StringComparison.Ordinal);
+
+        Assert.True(timeIndex >= 0, "Manuelles Foto muss den aktuellen Player-Zeitpunkt lesen.");
+        Assert.True(entryTimeIndex >= 0, "Befund-Zeit muss auf den Foto-Frame gesetzt werden.");
+        Assert.True(eventTimeIndex >= 0, "CodingEvent-Zeit muss auf den Foto-Frame gesetzt werden.");
+        Assert.True(snapshotIndex >= 0, "Manuelles Foto muss weiter den aktuellen Frame capturen.");
+        Assert.True(entryTimeIndex < snapshotIndex, "Dateiname und Befund muessen den Foto-Zeitpunkt verwenden.");
+        Assert.True(eventTimeIndex < snapshotIndex, "Event-Zeit muss vor dem Snapshot angepasst werden.");
+        Assert.Contains("_codingSessionService?.UpdateEvent(codingEvent.EventId, entry, codingEvent.Overlay)", photoBody);
+    }
+
     private static string ReadUiFile(params string[] relativeParts)
     {
         var root = FindRepoRoot();
         var path = Path.Combine(new[] { root, "src", "AuswertungPro.Next.UI" }.Concat(relativeParts).ToArray());
         return File.ReadAllText(path);
+    }
+
+    private static void AssertAnalyzedFrameAttachedBeforeAddEvent(string methodBody)
+    {
+        var attachIndex = methodBody.IndexOf("AttachAnalyzedFramePhoto(entry)", StringComparison.Ordinal);
+        var addIndex = methodBody.IndexOf("codingSessionService.AddEvent(entry)", StringComparison.Ordinal);
+
+        Assert.True(attachIndex >= 0, "KI-Befunde muessen den analysierten Frame in FotoPaths speichern.");
+        Assert.True(addIndex >= 0, "Test erwartet AddEvent(entry) im KI-Befundpfad.");
+        Assert.True(attachIndex < addIndex, "Der Frame muss vor AddEvent am ProtocolEntry haengen.");
+    }
+
+    private static void AssertBoundaryFrameAttachedBeforeAddEvent(string methodBody)
+    {
+        var attachIndex = methodBody.IndexOf("AttachBoundaryAnalyzedFramePhoto(entry, analyzedFrameBytes)", StringComparison.Ordinal);
+        var addIndex = methodBody.IndexOf("_codingSessionService.AddEvent(entry)", StringComparison.Ordinal);
+
+        Assert.True(attachIndex >= 0, "Auto-BCD/BCE muessen ihren eigenen analysierten Frame bekommen.");
+        Assert.True(addIndex >= 0, "Test erwartet AddEvent(entry) im Boundary-Pfad.");
+        Assert.True(attachIndex < addIndex, "Boundary-Frame muss vor AddEvent am ProtocolEntry haengen.");
     }
 
     private static string ExtractMethodBody(string source, string signature)

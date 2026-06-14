@@ -16,6 +16,8 @@ public sealed class LiveDetectionService
         Analysiere kurz:
         1. Lies den Meterstand aus dem OSD (On-Screen Display), falls sichtbar.
         2. Erkenne sichtbare Schaeden und markiere deren Position im Bild.
+        - Normal fliessendes oder nur truebes Abwasser ist KEIN Schaden.
+        - Wasserstand/BDDC nur melden, wenn sichtbar stehendes/angestautes Wasser oder Rueckstau vorliegt.
 
         WICHTIG zum Meterstand:
         - Der Meterstand steht UNTEN RECHTS im Bild als kleine Dezimalzahl (z.B. "2.64", "7.90", "14.98").

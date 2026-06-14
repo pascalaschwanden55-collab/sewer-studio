@@ -57,7 +57,7 @@ public sealed class DesignAuditChromeAndGlyphTests
             "MinHeight=\"720\"");
 
         var protocolRoot = GetRootWindowTag(ReadUiFile(Path.Combine("Views", "ProtocolObservationsWindow.xaml")));
-        Assert.Contains("Title=\"SewerStudio — Beobachtungen / Schaeden\"", protocolRoot);
+        Assert.Contains("Title=\"SewerStudio — Beobachtungen / Schäden\"", protocolRoot);
         Assert.Contains("WindowState=\"Maximized\"", protocolRoot);
         Assert.DoesNotContain("Width=\"980\"", protocolRoot);
         Assert.DoesNotContain("Height=\"620\"", protocolRoot);

@@ -27,11 +27,13 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty] private string _videoOutput = "direct3d11";
     [ObservableProperty] private string _uiTheme = ThemeManager.Light;
     [ObservableProperty] private bool _isDarkTheme;
+    [ObservableProperty] private bool _startAiOnProgramStart;
 
     [ObservableProperty] private string _dataFolderPath = string.Empty;
     [ObservableProperty] private string _logsFolderPath = string.Empty;
     [ObservableProperty] private string _restorePointsFolderPath = string.Empty;
     [ObservableProperty] private string _backupStatusText = string.Empty;
+    [ObservableProperty] private string _aiStartupStatusText = string.Empty;
     private bool _syncingThemeState;
 
     public IReadOnlyList<AutoSaveModeOption> AutoSaveModeOptions { get; } =
@@ -75,6 +77,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     public IRelayCommand OpenRestorePointsFolderCommand { get; }
     public IRelayCommand ApplyThemeCommand { get; }
     public IRelayCommand SaveCommand { get; }
+    public IAsyncRelayCommand StartAiCommand { get; }
     public IAsyncRelayCommand ExportBackupCommand { get; }
     public IAsyncRelayCommand ImportBackupCommand { get; }
 
@@ -96,6 +99,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         VideoOutput = NormalizeVideoOutput(_sp.Settings.VideoOutput);
         UiTheme = ThemeManager.NormalizeTheme(_sp.Settings.UiTheme);
         IsDarkTheme = string.Equals(UiTheme, ThemeManager.Dark, StringComparison.Ordinal);
+        StartAiOnProgramStart = _sp.Settings.AiStartOnProgramStart;
 
         DataFolderPath = AppSettings.AppDataDir;
         LogsFolderPath = Path.Combine(AppSettings.AppDataDir, "logs");
@@ -109,6 +113,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         OpenRestorePointsFolderCommand = new RelayCommand(OpenRestorePointsFolder);
         ApplyThemeCommand = new RelayCommand(ApplyTheme);
         SaveCommand = new RelayCommand(Save);
+        StartAiCommand = new AsyncRelayCommand(StartAiAsync);
         ExportBackupCommand = new AsyncRelayCommand(ExportBackupAsync);
         ImportBackupCommand = new AsyncRelayCommand(ImportBackupAsync);
     }
@@ -223,10 +228,35 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         _sp.Settings.VideoCodecThreads = ClampCodecThreads(VideoCodecThreads);
         _sp.Settings.VideoOutput = NormalizeVideoOutput(VideoOutput);
         _sp.Settings.UiTheme = ThemeManager.NormalizeTheme(UiTheme);
+        _sp.Settings.AiStartOnProgramStart = StartAiOnProgramStart;
         _sp.Settings.Save();
 
         _sp.Diagnostics.EnableDiagnostics = EnableDiagnostics;
         _sp.Diagnostics.ExplicitPdfToTextPath = PdfToTextPath;
+    }
+
+    private async Task StartAiAsync()
+    {
+        AiStartupStatusText = "Starte KI...";
+
+        try
+        {
+            var result = await AiStartupService.StartAsync(_sp.Settings);
+            _sp.Settings.SaveImmediate();
+
+            AiStartupStatusText = result.HasWarnings
+                ? "KI-Start mit Warnung."
+                : "KI gestartet.";
+
+            var summary = result.Summary;
+            if (result.HasWarnings)
+                _sp.Dialogs.Info(summary, "KI starten");
+        }
+        catch (Exception ex)
+        {
+            AiStartupStatusText = $"KI-Start fehlgeschlagen: {ex.Message}";
+            _sp.Dialogs.Error(AiStartupStatusText, "KI starten");
+        }
     }
 
     private void ApplyTheme()

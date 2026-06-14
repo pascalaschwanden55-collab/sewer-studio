@@ -63,4 +63,20 @@ public sealed class PlayerWindowVsaMappingTests
     {
         Assert.False(PlayerImportFallbackCodePolicy.IsAllowed(code));
     }
+
+    [Fact]
+    public void Import_fallback_allows_bogen_only_very_near_current_meter()
+    {
+        Assert.True(PlayerImportFallbackCodePolicy.IsWithinMeterWindow("BCC", 0.05));
+        Assert.True(PlayerImportFallbackCodePolicy.IsWithinMeterWindow("BCC", 0.25));
+        Assert.False(PlayerImportFallbackCodePolicy.IsWithinMeterWindow("BCC", 0.35));
+    }
+
+    [Fact]
+    public void Import_fallback_keeps_existing_window_for_normal_damage_codes()
+    {
+        Assert.True(PlayerImportFallbackCodePolicy.IsWithinMeterWindow("BAB", 1.5));
+        Assert.False(PlayerImportFallbackCodePolicy.IsWithinMeterWindow("BAB", 2.1));
+    }
+
 }

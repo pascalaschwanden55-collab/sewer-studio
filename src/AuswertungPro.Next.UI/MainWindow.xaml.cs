@@ -74,6 +74,30 @@ public partial class MainWindow : Window
         window.Show();
     }
 
+    private async void StartAi_Click(object sender, RoutedEventArgs e)
+    {
+        if (App.Services is not ServiceProvider sp)
+            return;
+
+        var shell = DataContext as ShellViewModel;
+        shell?.SetStatus("Starte KI...");
+
+        try
+        {
+            var result = await AiStartupService.StartAsync(sp.Settings);
+            sp.Settings.SaveImmediate();
+
+            shell?.SetStatus(result.HasWarnings ? "KI-Start mit Warnung" : "KI gestartet");
+            if (result.HasWarnings)
+                sp.Dialogs.Info(result.Summary, "KI starten");
+        }
+        catch (System.Exception ex)
+        {
+            shell?.SetStatus($"KI-Start fehlgeschlagen: {ex.Message}");
+            sp.Dialogs.Error($"KI konnte nicht gestartet werden:\n{ex.Message}", "KI starten");
+        }
+    }
+
     private void OpenKarte_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not ViewModels.ShellViewModel shell)

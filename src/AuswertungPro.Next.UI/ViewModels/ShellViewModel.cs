@@ -50,6 +50,15 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private bool _isAiWorking;
     [ObservableProperty] private string _aiStatusLabel = "";
     [ObservableProperty] private string _aiLoadedModels = "";
+    [ObservableProperty] private bool _isAiRuntimeVisible;
+    [ObservableProperty] private string _aiRuntimeTitle = "";
+    [ObservableProperty] private string _aiRuntimeStatusLabel = "";
+    [ObservableProperty] private string _aiRuntimeLoadedModels = "";
+
+    public bool IsAiIndicatorVisible => IsAiWorking || IsAiRuntimeVisible;
+    public string AiIndicatorTitle => IsAiWorking ? "KI AKTIV" : AiRuntimeTitle;
+    public string AiDisplayStatusLabel => IsAiWorking ? AiStatusLabel : AiRuntimeStatusLabel;
+    public string AiDisplayLoadedModels => IsAiWorking ? AiLoadedModels : AiRuntimeLoadedModels;
 
     // Lock-Objekt fuer thread-sichere ObservableCollection-Zugriffe
     private readonly object _collectionLock = new();
@@ -113,6 +122,8 @@ public sealed partial class ShellViewModel : ObservableObject
                 AiLoadedModels = "";
             }
         };
+        ApplyAiRuntimeStatus(AiRuntimeStatusTracker.Current);
+        AiRuntimeStatusTracker.Changed += ApplyAiRuntimeStatus;
 
         PropertyChanged += (_, e) =>
         {
@@ -133,6 +144,30 @@ public sealed partial class ShellViewModel : ObservableObject
             _navItemBeforeChange = SelectedNavItem;
             SetCurrentPage(SelectedNavItem.CreatePage());
         };
+    }
+
+    partial void OnIsAiWorkingChanged(bool value) => NotifyAiIndicatorChanged();
+    partial void OnAiStatusLabelChanged(string value) => NotifyAiIndicatorChanged();
+    partial void OnAiLoadedModelsChanged(string value) => NotifyAiIndicatorChanged();
+    partial void OnIsAiRuntimeVisibleChanged(bool value) => NotifyAiIndicatorChanged();
+    partial void OnAiRuntimeTitleChanged(string value) => NotifyAiIndicatorChanged();
+    partial void OnAiRuntimeStatusLabelChanged(string value) => NotifyAiIndicatorChanged();
+    partial void OnAiRuntimeLoadedModelsChanged(string value) => NotifyAiIndicatorChanged();
+
+    private void ApplyAiRuntimeStatus(AiRuntimeStatus status)
+    {
+        IsAiRuntimeVisible = status.IsVisible;
+        AiRuntimeTitle = status.Title;
+        AiRuntimeStatusLabel = status.StatusText;
+        AiRuntimeLoadedModels = status.ModelText;
+    }
+
+    private void NotifyAiIndicatorChanged()
+    {
+        OnPropertyChanged(nameof(IsAiIndicatorVisible));
+        OnPropertyChanged(nameof(AiIndicatorTitle));
+        OnPropertyChanged(nameof(AiDisplayStatusLabel));
+        OnPropertyChanged(nameof(AiDisplayLoadedModels));
     }
 
     // Letzter aktiver Nav-Eintrag (null im Einzelhaltungsmodus) — Ruecksprungziel,

@@ -136,6 +136,11 @@ public sealed class CodingEventAiContext
 
     /// <summary>QualityGate-Ampel ("Green"/"Yellow"/"Red") zum Bestaetigungszeitpunkt, vom UI gesetzt. Null = unbekannt.</summary>
     public string? QualityGateLevel { get; set; }
+
+    /// <summary>SAM-RLE-Maske fuer markierte Beweisbilder. Kein Trainingslabel, nur UI/Protokoll-Beleg.</summary>
+    public string? SamMaskRle { get; set; }
+    public int? SamMaskImageWidth { get; set; }
+    public int? SamMaskImageHeight { get; set; }
 }
 
 public enum CodingUserDecision

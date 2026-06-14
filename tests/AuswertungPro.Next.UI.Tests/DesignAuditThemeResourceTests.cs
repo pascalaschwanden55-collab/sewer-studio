@@ -173,7 +173,7 @@ public sealed class DesignAuditThemeResourceTests
         AssertPageTitle(ReadUiFile("Views", "Pages", "BuilderPage.xaml"), "Druckcenter");
         AssertPageTitleBinding(ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml"), "PageTitle");
         AssertPageTitle(ReadUiFile("Views", "Pages", "MediaConflictsPage.xaml"), "Medienkonflikte");
-        AssertPageTitle(ReadUiFile("Views", "Pages", "OverviewPage.xaml"), "Projektuebersicht");
+        AssertPageTitle(ReadUiFile("Views", "Pages", "OverviewPage.xaml"), "Projektübersicht");
         AssertPageTitle(ReadUiFile("Views", "Pages", "SettingsPage.xaml"), "Einstellungen");
         AssertPageTitle(ReadUiFile("Views", "Pages", "VsaPage.xaml"), "VSA-Bewertung");
     }
@@ -184,7 +184,7 @@ public sealed class DesignAuditThemeResourceTests
         var xaml = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml");
         var code = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml.cs");
 
-        Assert.Contains("Header=\"Massnahmen\"", xaml);
+        Assert.Contains("Header=\"Maßnahmen\"", xaml);
         Assert.DoesNotContain("Header=\"Hauptarbeit\"", xaml);
         Assert.Contains("Text=\"{Binding PageTitle}\"", xaml);
         Assert.Contains("Text=\"{Binding PageSubtitle}\"", xaml);
@@ -223,8 +223,8 @@ public sealed class DesignAuditThemeResourceTests
         var dataPage = ReadUiFile("Views", "Pages", "DataPage.xaml");
         var shell = ReadUiFile("ViewModels", "ShellViewModel.cs");
 
-        Assert.Contains("Header=\"Sanierungsmassnahme bearbeiten\"", dataPage);
-        Assert.Contains("Text=\"Sanierungsmassnahme\"", dataPage);
+        Assert.Contains("Header=\"Sanierungsmaßnahme bearbeiten\"", dataPage);
+        Assert.Contains("Text=\"Sanierungsmaßnahme\"", dataPage);
         Assert.Contains("NavigateToSanierungsMatrix", shell);
         Assert.Contains("OpenSanierungsMatrix(record);", viewModel);
         Assert.Contains("singleHoldingMode: true", viewModel);

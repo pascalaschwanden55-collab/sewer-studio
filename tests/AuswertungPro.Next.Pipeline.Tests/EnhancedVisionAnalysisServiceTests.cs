@@ -151,6 +151,33 @@ public sealed class EnhancedVisionAnalysisServiceTests
     }
 
     [Fact]
+    public async Task AnalyzeAsync_prompt_grenzt_truebes_abwasser_gegen_normalfluss_ab()
+    {
+        var content = """
+            {
+              "meter": null,
+              "time_in_video": null,
+              "pipe_material": "unbekannt",
+              "pipe_diameter_mm": null,
+              "findings": [],
+              "image_quality": "mittel",
+              "is_empty_frame": true
+            }
+            """;
+        using var http = new HttpClient(new StaticOllamaHandler(content))
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+        using var client = new OllamaClient(new Uri("http://localhost:11434"), http);
+        var service = new EnhancedVisionAnalysisService(client, "qwen-test");
+
+        await service.AnalyzeAsync(Convert.ToBase64String([1, 2, 3]));
+
+        Assert.Contains("BDDC nur bei sichtbar angestautem/stehendem Wasser oder Rueckstau", StaticOllamaHandler.LastRequestJson);
+        Assert.Contains("normal fliessendes/truebes Abwasser ist kein Befund", StaticOllamaHandler.LastRequestJson);
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_maps_snake_case_structured_json_fields()
     {
         var content = """

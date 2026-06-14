@@ -121,6 +121,8 @@ public static class VsaCodeResolver
             return null;
 
         var text = label.Trim().ToLowerInvariant()
+            .Replace("\u00e4", "ae").Replace("\u00f6", "oe")
+            .Replace("\u00fc", "ue").Replace("\u00df", "ss")
             .Replace("ä", "ae").Replace("ö", "oe")
             .Replace("ü", "ue").Replace("ß", "ss");
 
@@ -164,6 +166,8 @@ public static class VsaCodeResolver
         if (Has(text, "ablagerung") || HasWord(text, "sediment") || Has(text, "schlamm")
             || HasWord(text, "silt") || HasWord(text, "debris"))
             return CatalogValidated("BBC");
+        if (DescribesNormalWastewaterFlow(text) || MentionsTurbidWastewaterWithoutBackwater(text))
+            return null;
         if (Has(text, "wasserspiegel")
             || Has(text, "wasserstand")
             || Has(text, "wasserlinie")
@@ -306,6 +310,32 @@ public static class VsaCodeResolver
     }
 
     private static bool Has(string text, string term) => text.Contains(term);
+
+    private static bool DescribesNormalWastewaterFlow(string text)
+        => !DescribesBackwaterOrStandingWater(text)
+           && (Has(text, "normalfluss")
+               || Has(text, "normaler durchfluss")
+               || Has(text, "normaler abfluss")
+               || Has(text, "normaler abwasserfluss")
+               || Has(text, "normal fliess")
+               || Has(text, "normal flies")
+               || Has(text, "normal flow")
+               || Has(text, "flowing normally"));
+
+    private static bool MentionsTurbidWastewaterWithoutBackwater(string text)
+        => !DescribesBackwaterOrStandingWater(text)
+           && (Has(text, "trueb") || Has(text, "turbid") || Has(text, "murky"))
+           && (Has(text, "abwasser") || Has(text, "wastewater") || Has(text, "sewage"));
+
+    private static bool DescribesBackwaterOrStandingWater(string text)
+        => Has(text, "rueckstau")
+           || Has(text, "backwater")
+           || Has(text, "stauwasser")
+           || Has(text, "angestaut")
+           || Has(text, "aufgestaut")
+           || Has(text, "standing water")
+           || Has(text, "stehendes wasser")
+           || Has(text, "stehendes abwasser");
 
     private static string? CatalogValidated(string code)
     {

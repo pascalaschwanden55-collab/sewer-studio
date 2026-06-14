@@ -102,6 +102,7 @@ public partial class PlayerWindow
     private bool _codingOsdReading;
     private int _codingOverlaySuspendDepth;
     private bool _codingOverlayWasOpenBeforeSuspend;
+    private bool _codingOverlayWasOpenBeforeExternalHide;
     private string _codingBaselineSignature = string.Empty;
 
     private void CodingMode_Click(object sender, RoutedEventArgs e)
@@ -318,7 +319,7 @@ public partial class PlayerWindow
             if (!hasEndCode)
             {
                 var endTime = TimeSpan.FromMilliseconds(_player?.Length ?? 0);
-                EnsureRohrendeExists(_codingVm.EndMeter, endTime);
+                EnsureRohrendeExists(_codingVm.EndMeter, endTime, _detectionPendingFrameBytes);
             }
         }
 
@@ -613,6 +614,7 @@ public partial class PlayerWindow
         try
         {
             var bytes = _detectionPendingFrameBytes;
+
             if (bytes == null || bytes.Length == 0)
                 bytes = await CaptureCurrentFrameAsync();
             if (bytes == null || bytes.Length == 0)
@@ -664,7 +666,10 @@ public partial class PlayerWindow
             xCenter,
             yCenter,
             width,
-            height);
+            height,
+            ev.AiContext?.SamMaskRle,
+            ev.AiContext?.SamMaskImageWidth,
+            ev.AiContext?.SamMaskImageHeight);
     }
 
     private static (double? XCenter, double? YCenter, double? Width, double? Height) ExtractEvidenceBbox(OverlayGeometry? overlay)
@@ -979,6 +984,7 @@ public partial class PlayerWindow
             _player.SetPause(true);
             // OSD-Meter automatisch lesen nach Navigation
             _codingLastOsdMeter = null;
+            _codingLastOsdTimestampSec = null;
             await CodingReadOsdMeterAsync();
         }
         catch (Exception ex)
@@ -996,6 +1002,7 @@ public partial class PlayerWindow
             _codingVm.MovePreviousCommand.Execute(null);
             _player.SetPause(true);
             _codingLastOsdMeter = null;
+            _codingLastOsdTimestampSec = null;
             await CodingReadOsdMeterAsync();
         }
         catch (Exception ex)
@@ -1084,6 +1091,27 @@ public partial class PlayerWindow
         CodingOverlayCanvas.IsHitTestVisible = true;
         UpdateCodingOverlayCursor();
         _codingOverlayWasOpenBeforeSuspend = false;
+    }
+
+    private void HideCodingOverlayForExternalWindow()
+    {
+        _codingOverlayWasOpenBeforeExternalHide = CodingOverlayPopup.IsOpen;
+        SuspendCodingOverlayInput();
+        if (_codingOverlayWasOpenBeforeExternalHide)
+            CodingOverlayPopup.IsOpen = false;
+    }
+
+    private void RestoreCodingOverlayAfterExternalWindow()
+    {
+        ResumeCodingOverlayInput();
+        if (_codingOverlayWasOpenBeforeExternalHide)
+        {
+            CodingOverlayPopup.IsOpen = true;
+            UpdateCodingOverlayViewport();
+            RedrawCodingCanvas(includeManualOverlay: _codingVm?.CurrentOverlay != null);
+        }
+
+        _codingOverlayWasOpenBeforeExternalHide = false;
     }
 
     private void UpdateCodingOverlayCursor()
@@ -1755,6 +1783,41 @@ public partial class PlayerWindow
 
     // --- Coding Foto-Aufnahme vom Video ---
 
+    private string? AttachAnalyzedFramePhoto(ProtocolEntry entry)
+    {
+        var path = CodingAiFramePhotoService.AttachAnalyzedFramePhoto(
+            entry,
+            _detectionPendingFrameBytes,
+            _videoPath);
+        if (!string.IsNullOrWhiteSpace(path))
+            return path;
+
+        var fallback = CodingCaptureSnapshot(entry);
+        if (!string.IsNullOrWhiteSpace(fallback)
+            && !entry.FotoPaths.Contains(fallback, StringComparer.OrdinalIgnoreCase))
+        {
+            entry.FotoPaths.Add(fallback);
+        }
+
+        return fallback;
+    }
+
+    private string? AttachBoundaryAnalyzedFramePhoto(ProtocolEntry entry, byte[]? analyzedFrameBytes)
+    {
+        return CodingAiFramePhotoService.AttachAnalyzedFramePhoto(
+            entry,
+            analyzedFrameBytes,
+            _videoPath);
+    }
+
+    private TimeSpan? GetCurrentPlayerTimestamp()
+    {
+        if (_player == null || _player.Time < 0)
+            return null;
+
+        return TimeSpan.FromMilliseconds(_player.Time);
+    }
+
     /// <summary>
     /// Erstellt einen Snapshot vom aktuellen Video-Frame und speichert ihn im Projektordner.
     /// </summary>
@@ -1915,9 +1978,20 @@ public partial class PlayerWindow
         if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
 
         var entry = codingEvent.Entry;
+        var originalZeit = entry.Zeit;
+        var originalVideoTimestamp = codingEvent.VideoTimestamp;
+        var photoTime = GetCurrentPlayerTimestamp();
+        if (photoTime.HasValue)
+        {
+            entry.Zeit = photoTime.Value;
+            codingEvent.VideoTimestamp = photoTime.Value;
+        }
+
         var fotoPath = CodingCaptureSnapshot(entry);
         if (fotoPath == null)
         {
+            entry.Zeit = originalZeit;
+            codingEvent.VideoTimestamp = originalVideoTimestamp;
             ShowOverlay("Foto konnte nicht aufgenommen werden", TimeSpan.FromSeconds(3));
             return;
         }
@@ -1933,6 +2007,7 @@ public partial class PlayerWindow
             ShowOverlay($"Foto {entry.FotoPaths.Count}: {Path.GetFileName(fotoPath)}", TimeSpan.FromSeconds(3));
         }
 
+        _codingSessionService?.UpdateEvent(codingEvent.EventId, entry, codingEvent.Overlay);
         RefreshCodingEventsList();
     }
 
@@ -1968,8 +2043,18 @@ public partial class PlayerWindow
         var projectFolder = !string.IsNullOrEmpty(_serviceProvider?.Settings.LastProjectPath)
             ? Path.GetDirectoryName(_serviceProvider!.Settings.LastProjectPath) ?? ""
             : "";
+        var displayPhotoPaths = new List<string>();
+        var evidencePreviewPath = CodingDefectPreviewService.BuildPreviewImagePath(codingEvent);
+        if (!string.IsNullOrWhiteSpace(evidencePreviewPath) && File.Exists(evidencePreviewPath))
+            displayPhotoPaths.Add(evidencePreviewPath);
 
         foreach (var fotoPath in entry.FotoPaths)
+        {
+            if (!displayPhotoPaths.Contains(fotoPath, StringComparer.OrdinalIgnoreCase))
+                displayPhotoPaths.Add(fotoPath);
+        }
+
+        foreach (var fotoPath in displayPhotoPaths)
         {
             var resolved = Path.IsPathRooted(fotoPath) && File.Exists(fotoPath)
                 ? fotoPath
@@ -2007,7 +2092,9 @@ public partial class PlayerWindow
     private void CodingEventSeek_Click(object sender, RoutedEventArgs e)
     {
         if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
-        if (_player != null && codingEvent.VideoTimestamp.TotalMilliseconds > 0)
+        if (_player != null
+            && codingEvent.VideoTimestamp.TotalMilliseconds >= 0
+            && (codingEvent.Entry.Zeit.HasValue || codingEvent.VideoTimestamp != TimeSpan.Zero))
             _player.Time = (long)codingEvent.VideoTimestamp.TotalMilliseconds;
     }
 
@@ -2138,8 +2225,6 @@ public partial class PlayerWindow
             TxtInlineDetailConfidence.Text = $"{conf * 100:F0}%";
             TxtInlineDetailConfidence.Foreground =
                 ViewModels.Windows.CodingSessionViewModel.GetConfidenceBrush(conf);
-            BtnInlineAccept.Visibility = Visibility.Visible;
-            BtnInlineReject.Visibility = Visibility.Visible;
         }
         else
         {
@@ -2147,16 +2232,53 @@ public partial class PlayerWindow
             TxtInlineDetailConfidence.Foreground =
                 new System.Windows.Media.SolidColorBrush(
                     System.Windows.Media.Color.FromRgb(0x94, 0xA3, 0xB8));
-            BtnInlineAccept.Visibility = Visibility.Collapsed;
-            BtnInlineReject.Visibility = Visibility.Collapsed;
         }
 
         var status = ViewModels.Windows.CodingSessionViewModel.GetDefectStatus(ev);
+        var canAct = CodingSessionViewModel.CanActOnDefect(ev);
+        BtnInlineAccept.Visibility = canAct ? Visibility.Visible : Visibility.Collapsed;
+        BtnInlineReject.Visibility = canAct ? Visibility.Visible : Visibility.Collapsed;
         TxtInlineDetailStatus.Text = CodingStatusToDisplayText(status);
+        UpdateInlineEvidencePreview(ev);
 
         // Mittlere Spalte einblenden
         CodingDefectDetailInline.Visibility = Visibility.Visible;
-        ColDefectDetail.Width = new GridLength(220);
+        ColDefectDetail.Width = new GridLength(300);
+    }
+
+    private void UpdateInlineEvidencePreview(CodingEvent ev)
+    {
+        try
+        {
+            var previewPath = CodingDefectPreviewService.BuildPreviewImagePath(ev);
+            if (string.IsNullOrWhiteSpace(previewPath) || !File.Exists(previewPath))
+            {
+                ImgInlineEvidencePreview.Source = null;
+                ImgInlineEvidencePreview.Visibility = Visibility.Collapsed;
+                TxtInlineEvidencePreviewStatus.Text = "Kein Bild";
+                TxtInlineEvidencePreviewStatus.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var image = new System.Windows.Media.Imaging.BitmapImage();
+            image.BeginInit();
+            image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+            image.UriSource = new Uri(previewPath, UriKind.Absolute);
+            image.EndInit();
+            image.Freeze();
+
+            ImgInlineEvidencePreview.Source = image;
+            ImgInlineEvidencePreview.Visibility = Visibility.Visible;
+            TxtInlineEvidencePreviewStatus.Visibility = Visibility.Collapsed;
+        }
+        catch (Exception ex)
+        {
+            ImgInlineEvidencePreview.Source = null;
+            ImgInlineEvidencePreview.Visibility = Visibility.Collapsed;
+            TxtInlineEvidencePreviewStatus.Text = "Bild nicht ladbar";
+            TxtInlineEvidencePreviewStatus.Visibility = Visibility.Visible;
+            System.Diagnostics.Debug.WriteLine($"[CodingPreview] {ex.Message}");
+        }
     }
 
     private double GetCodingSidePanelWidth()
@@ -2172,6 +2294,9 @@ public partial class PlayerWindow
 
     private void HideInlineDefectDetail()
     {
+        ImgInlineEvidencePreview.Source = null;
+        ImgInlineEvidencePreview.Visibility = Visibility.Collapsed;
+        TxtInlineEvidencePreviewStatus.Visibility = Visibility.Visible;
         CodingDefectDetailInline.Visibility = Visibility.Collapsed;
         ColDefectDetail.Width = new GridLength(0);
     }
@@ -2210,7 +2335,9 @@ public partial class PlayerWindow
 
     private void SeekToImportEvent(CodingEvent importEvent)
     {
-        if (_player != null && importEvent.VideoTimestamp.TotalMilliseconds > 0)
+        if (_player != null
+            && importEvent.VideoTimestamp.TotalMilliseconds >= 0
+            && (importEvent.Entry.Zeit.HasValue || importEvent.VideoTimestamp != TimeSpan.Zero))
             _player.Time = (long)importEvent.VideoTimestamp.TotalMilliseconds;
         else if (_codingSessionService != null && importEvent.MeterAtCapture > 0)
         {
@@ -3035,6 +3162,16 @@ public partial class PlayerWindow
 
             // Zeitstempel VOR dem Capture festhalten (CaptureSnapshotAsync wartet bis zu 1s)
             var captureTimestampSec = _player.Time / 1000.0;
+            var currentMeterForStop = ResolveCodingMeterForFrame(captureTimestampSec);
+            var currentVideoTimeForStop = TimeSpan.FromSeconds(captureTimestampSec);
+            if (IsCodingAfterTerminalBoundary(currentMeterForStop, currentVideoTimeForStop))
+            {
+                ClearDetectionOverlays();
+                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+                SetCodingAiState("Rohrende erreicht - KI-Analyse gestoppt",
+                    Color.FromRgb(0x22, 0xC5, 0x5E), "Codierung abgeschlossen");
+                return;
+            }
 
             // â”€â”€ Multi-Model Pfad: YOLO â†’ DINO â†’ SAM â”€â”€
             if (_codingUseMultiModel && _codingMultiModel != null)
@@ -3049,15 +3186,14 @@ public partial class PlayerWindow
                         "Multi-Model");
                     return;
                 }
+                _detectionPendingFrameBytes = pngBytes;
+                _detectionPendingTimestampSec = captureTimestampSec;
 
                 SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
                     "Schritt 2 von 4: YOLO und DINO", pulse: true);
 
                 int dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
-                var currentMeterForClassifier = _codingLastOsdMeter
-                    ?? _codingVm?.CurrentMeter
-                    ?? GetMeterFromVideoPosition()
-                    ?? 0;
+                var currentMeterForClassifier = ResolveCodingMeterForFrame(captureTimestampSec);
                 var reachLengthForClassifier = _codingVm?.EndMeter > 0
                     ? _codingVm.EndMeter
                     : Math.Max(currentMeterForClassifier, 1);
@@ -3151,6 +3287,8 @@ public partial class PlayerWindow
                         $"Modell: {CompactModelName(_codingAiModelName)}");
                     return;
                 }
+                _detectionPendingFrameBytes = pngBytes;
+                _detectionPendingTimestampSec = captureTimestampSec;
 
                 SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
                     $"Schritt 2 von 3: Inferenz ({CompactModelName(_codingAiModelName)})", pulse: true);
@@ -3196,17 +3334,19 @@ public partial class PlayerWindow
             return false;
 
         var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);
-        var meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
+        var meter = ResolveCodingMeterForFrame(captureTimestampSec);
         var beforeCount = _codingVm.Events.Count;
         var anyAdded = false;
 
         if (code == "BCD")
         {
-            EnsureRohranfangExists(meter, videoTime, ref anyAdded);
+            EnsureRohranfangExists(meter, videoTime, _detectionPendingFrameBytes, ref anyAdded);
         }
         else
         {
-            EnsureRohrendeExists(_codingVm.EndMeter, videoTime);
+            EnsureRohrendeExists(_codingVm.EndMeter, videoTime, _detectionPendingFrameBytes);
+            ClearDetectionOverlays();
+            Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
         }
 
         var label = LookupVsaLabel(code) ?? (code == "BCD" ? "Rohranfang" : "Rohrende");
@@ -3232,6 +3372,39 @@ public partial class PlayerWindow
         return true;
     }
 
+    private bool IsCodingAfterTerminalBoundary(double? currentMeter, TimeSpan currentVideoTime)
+    {
+        return CodingDedupPolicy.ShouldStopAnalysisAfterTerminalCode(
+            EnumerateTerminalBoundaryCandidates(),
+            currentMeter,
+            currentVideoTime);
+    }
+
+    private IEnumerable<(string? Code, double? Meter, TimeSpan? VideoTime)> EnumerateTerminalBoundaryCandidates()
+    {
+        if (_codingSessionService?.ActiveSession?.Events is { } sessionEvents)
+        {
+            foreach (var ev in sessionEvents)
+                yield return ToTerminalBoundaryCandidate(ev);
+        }
+
+        if (_codingVm?.Events is { } uiEvents)
+        {
+            foreach (var ev in uiEvents)
+                yield return ToTerminalBoundaryCandidate(ev);
+        }
+
+        foreach (var ev in _codingImportEvents)
+            yield return ToTerminalBoundaryCandidate(ev);
+    }
+
+    private static (string? Code, double? Meter, TimeSpan? VideoTime) ToTerminalBoundaryCandidate(CodingEvent ev)
+    {
+        var meter = ev.Entry.MeterStart ?? (ev.MeterAtCapture > 0 ? ev.MeterAtCapture : null);
+        var videoTime = ev.Entry.Zeit ?? (ev.VideoTimestamp > TimeSpan.Zero ? ev.VideoTimestamp : null);
+        return (ev.Entry.Code, meter, videoTime);
+    }
+
     /// <summary>
     /// <summary>
     /// Sammelt alle Import-Eintraege als Erwartungshorizont fuer die KI-Analyse.
@@ -3247,8 +3420,19 @@ public partial class PlayerWindow
     private static IReadOnlyList<SegmentedFinding> BuildVisibleCodingFindings(
         IReadOnlyList<SegmentedFinding> segmented)
     {
-        return segmented
+        return BuildVisibleMaskFindings(segmented)
             .Where(s => s.Proximity.IsCodierbar)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Filtert alle SAM-Masken auf sichtbare Befunde. Auch "voraus"-Befunde bleiben
+    /// sichtbar, werden aber spaeter nicht als Ereignis codiert.
+    /// </summary>
+    private static IReadOnlyList<SegmentedFinding> BuildVisibleMaskFindings(
+        IReadOnlyList<SegmentedFinding> segmented)
+    {
+        return segmented
             .Where(s =>
             {
                 var candidate = new Ai.Pipeline.SamMaskRenderer.MaskRenderCandidate(
@@ -3285,18 +3469,17 @@ public partial class PlayerWindow
         // Alte Masken entfernen
         Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
 
-        // Gruene SAM-Masken (inkl. Mess-Label) NUR fuer codierbare Befunde.
-        // Voraus-Befunde bekommen weiter unten nur einen gestrichelten Hinweis (kein Mess-Label,
-        // da sie bewusst nicht metriert werden).
+        // Gruene SAM-Masken fuer alle sichtbaren Befunde.
+        // Voraus-Befunde bekommen kein Mess-Label, aber die Maske bleibt sichtbar.
         if (mmResult.SamResponse != null)
         {
-            var visibleCodierbar = BuildVisibleCodingFindings(segmented);
-            if (visibleCodierbar.Count > 0)
+            var visibleMasks = BuildVisibleMaskFindings(segmented);
+            if (visibleMasks.Count > 0)
             {
-                var candidates = visibleCodierbar
+                var candidates = visibleMasks
                     .Select(s => new Ai.Pipeline.SamMaskRenderer.MaskRenderCandidate(
                         s.Mask,
-                        s.Quant,
+                        s.Proximity.IsCodierbar ? s.Quant : null,
                         s.Dino?.Confidence))
                     .ToList();
 
@@ -3393,7 +3576,7 @@ public partial class PlayerWindow
         var codingSessionService = _codingSessionService;
         if (codingVm == null || codingSessionService == null) return;
 
-        double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter;
+        double meter = ResolveCodingMeterForFrame(captureTimestampSec);
         var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
         bool anyAdded = false;
 
@@ -3429,6 +3612,13 @@ public partial class PlayerWindow
             {
                 System.Diagnostics.Debug.WriteLine(
                     $"[Multi-Model] Kein VSA-Code fuer Label='{quant.Label}' â€” uebersprungen");
+                continue;
+            }
+
+            if (CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser(code, seg.Proximity))
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Multi-Model] {code} bei {meter:F2}m nur voraus erkannt - nicht protokolliert");
                 continue;
             }
 
@@ -3476,16 +3666,39 @@ public partial class PlayerWindow
             // Messungen in CodeMeta (gleiche Logik wie Qwen-Pfad)
             ApplyQuantificationToEntry(entry, code, quant);
 
+            AttachAnalyzedFramePhoto(entry);
+
             var codingEvent = codingSessionService.AddEvent(entry);
             codingEvent.AiContext = new CodingEventAiContext
             {
                 SuggestedCode = code,
                 Confidence = gateResult.CompositeConfidence,
                 Reason = $"{quant.Label} (DINO {dinoConf:P0})",
+                SamMaskRle = seg.Mask.MaskRle,
+                SamMaskImageWidth = (int)Math.Round(imageWidth),
+                SamMaskImageHeight = (int)Math.Round(imageHeight),
                 // KI darf in KEINEM Pfad selbst akzeptieren: Vorschlag bleibt
                 // unbestaetigt (Ignored), bis der Mensch ihn bestaetigt (identisch zum Qwen-Pfad).
                 Decision = CodingUserDecision.Ignored
             };
+            if (seg.Mask.Bbox is { Count: >= 4 })
+            {
+                var x1 = Math.Clamp(seg.Mask.Bbox[0] / imageWidth, 0, 1);
+                var y1 = Math.Clamp(seg.Mask.Bbox[1] / imageHeight, 0, 1);
+                var x2 = Math.Clamp(seg.Mask.Bbox[2] / imageWidth, 0, 1);
+                var y2 = Math.Clamp(seg.Mask.Bbox[3] / imageHeight, 0, 1);
+                codingEvent.Overlay = new OverlayGeometry
+                {
+                    ToolType = OverlayToolType.Rectangle,
+                    Points =
+                    [
+                        new NormalizedPoint(x1, y1),
+                        new NormalizedPoint(x2, y1),
+                        new NormalizedPoint(x2, y2),
+                        new NormalizedPoint(x1, y2)
+                    ]
+                };
+            }
 
             anyAdded = true;
         }
@@ -3564,6 +3777,7 @@ public partial class PlayerWindow
         if (result.MeterReading.HasValue && result.MeterReading.Value <= 500 && _codingVm != null)
         {
             _codingLastOsdMeter = result.MeterReading.Value;
+            _codingLastOsdTimestampSec = result.TimestampSeconds;
             _codingSessionService?.MoveToMeter(result.MeterReading.Value);
             OsdMeterBadge.Visibility = Visibility.Visible;
             TxtOsdMeter.Text = $"{result.MeterReading.Value:F2}m (OSD)";
@@ -3571,7 +3785,7 @@ public partial class PlayerWindow
 
         // â”€â”€ Findings filtern: VSA-Validierung + Deduplizierung â”€â”€
         // Eine einzige gefilterte Liste fuer UI, Overlays und Event-Erstellung.
-        var currentMeter = result.MeterReading ?? (_codingVm?.CurrentMeter ?? 0);
+        var currentMeter = ResolveCodingMeterForFrame(result.TimestampSeconds, result.MeterReading);
         var validFindings = FilterValidFindings(result.Findings, currentMeter);
 
         if (validFindings.Count == 0)
@@ -3852,7 +4066,7 @@ public partial class PlayerWindow
                 Code = ev.Entry.Code!.Trim().ToUpperInvariant(),
                 Distance = Math.Abs(ev.MeterAtCapture - currentMeter)
             })
-            .Where(x => x.Distance <= 2.0)
+            .Where(x => AuswertungPro.Next.UI.Player.PlayerImportFallbackCodePolicy.IsWithinMeterWindow(x.Code, x.Distance))
             .OrderBy(x => x.Distance)
             .ThenByDescending(x => x.Code.Length)
             .FirstOrDefault();
@@ -3872,7 +4086,7 @@ public partial class PlayerWindow
                 Code = ev.Entry!.Code.Trim().ToUpperInvariant(),
                 Distance = Math.Abs(ev.MeterAtCapture - currentMeter)
             })
-            .Where(x => x.Distance <= 2.0 && IsAllowedImportFallbackCode(x.Code))
+            .Where(x => AuswertungPro.Next.UI.Player.PlayerImportFallbackCodePolicy.IsWithinMeterWindow(x.Code, x.Distance))
             .OrderBy(x => x.Distance)
             .ThenByDescending(x => x.Code.Length)
             .FirstOrDefault();
@@ -3897,7 +4111,7 @@ public partial class PlayerWindow
         var codingSessionService = _codingSessionService;
         if (codingVm == null || codingSessionService == null) return;
 
-        double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter;
+        double meter = ResolveCodingMeterForFrame(result.TimestampSeconds, result.MeterReading);
         var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
         bool anyAdded = false;
         CodingEvent? firstUnsure = null;
@@ -3994,10 +4208,8 @@ public partial class PlayerWindow
                 entry.CodeMeta.Parameters["vsa.querschnitt.prozent"] = finding.IntrusionPercent.Value.ToString(CultureInfo.InvariantCulture);
             }
 
-            // Foto 1: Automatischer Snapshot vom Erkennungsframe
-            var fotoPath = CodingCaptureSnapshot(entry);
-            if (fotoPath != null)
-                entry.FotoPaths.Add(fotoPath);
+            // Foto 1: exakt der analysierte KI-Frame, damit die Vorschau sofort ein Bild hat.
+            AttachAnalyzedFramePhoto(entry);
 
             var codingEvent = codingSessionService.AddEvent(entry);
             codingEvent.AiContext = new CodingEventAiContext
@@ -4506,6 +4718,7 @@ public partial class PlayerWindow
         _codingOsdSkippedFrames = 0;
         _codingMeterConfirmCount = 0;
         _codingLastOsdMeter = null; // Stale Meter aus vorheriger Session verhindern
+        _codingLastOsdTimestampSec = null;
         _pendingWarmupResult = null;
     }
 
@@ -4582,7 +4795,7 @@ public partial class PlayerWindow
     /// Stellt sicher, dass BCD (Rohranfang) als erster Eintrag existiert.
     /// Meter und Timestamp werden automatisch aus OSD / Video entnommen.
     /// </summary>
-    private void EnsureRohranfangExists(double currentMeter, TimeSpan currentVideoTime, ref bool anyAdded)
+    private void EnsureRohranfangExists(double currentMeter, TimeSpan currentVideoTime, byte[]? analyzedFrameBytes, ref bool anyAdded)
     {
         if (_codingVm == null || _codingSessionService == null) return;
         // BCD bereits vorhanden? Alle moeglichen Quellen pruefen
@@ -4621,6 +4834,8 @@ public partial class PlayerWindow
             MeterStart = rohranfangMeter,
             Zeit = rohranfangTime
         };
+        AttachBoundaryAnalyzedFramePhoto(entry, analyzedFrameBytes);
+
         var ev = _codingSessionService.AddEvent(entry);
         ev.MeterAtCapture = rohranfangMeter;
         ev.VideoTimestamp = rohranfangTime;
@@ -4693,7 +4908,7 @@ public partial class PlayerWindow
     /// Meter und Timestamp werden automatisch aus OSD / Video entnommen.
     /// Aufgerufen beim Beenden der Codier-Session oder am Videoende.
     /// </summary>
-    private void EnsureRohrendeExists(double meterEnd, TimeSpan videoTime)
+    private void EnsureRohrendeExists(double meterEnd, TimeSpan videoTime, byte[]? analyzedFrameBytes = null)
     {
         if (_codingVm == null || _codingSessionService == null) return;
         // BCE bereits vorhanden?
@@ -4725,6 +4940,8 @@ public partial class PlayerWindow
             MeterStart = rohrEndMeter,
             Zeit = rohrEndTime
         };
+        AttachBoundaryAnalyzedFramePhoto(entry, analyzedFrameBytes);
+
         var ev = _codingSessionService.AddEvent(entry);
         ev.MeterAtCapture = rohrEndMeter;
         ev.VideoTimestamp = rohrEndTime;
@@ -4832,16 +5049,58 @@ public partial class PlayerWindow
     /// Berechnet den Meterstand aus der aktuellen Videoposition (linear interpoliert).
     /// Fallback wenn kein OSD-Wert verfuegbar.
     /// </summary>
+    private const double RecentOsdMeterMaxAgeSeconds = 1.5;
+
     private double? GetMeterFromVideoPosition()
+        => GetMeterFromVideoPositionAt(_player?.Time / 1000.0);
+
+    private double? GetMeterFromVideoPositionAt(double? timestampSeconds)
     {
         if (_player == null || _player.Length <= 0) return null;
         if (_codingVm == null || _codingVm.EndMeter <= 0) return null;
-        return Math.Round((_player.Time / (double)_player.Length) * _codingVm.EndMeter, 2);
+        if (!timestampSeconds.HasValue) return null;
+
+        var durationSeconds = _player.Length / 1000.0;
+        if (durationSeconds <= 0) return null;
+
+        var fraction = Math.Clamp(timestampSeconds.Value / durationSeconds, 0.0, 1.0);
+        return Math.Round(fraction * _codingVm.EndMeter, 2);
+    }
+
+    private double ResolveCodingMeterForFrame(double? frameTimestampSeconds, double? sameFrameOsdMeter = null)
+    {
+        if (sameFrameOsdMeter.HasValue && sameFrameOsdMeter.Value is >= 0 and <= 500)
+            return Math.Round(sameFrameOsdMeter.Value, 2);
+
+        var recentOsdMeter = GetRecentOsdMeterForFrame(frameTimestampSeconds);
+        if (recentOsdMeter.HasValue)
+            return recentOsdMeter.Value;
+
+        var videoMeter = GetMeterFromVideoPositionAt(frameTimestampSeconds) ?? GetMeterFromVideoPosition();
+        if (videoMeter.HasValue)
+            return videoMeter.Value;
+
+        return Math.Round(Math.Max(0, _codingVm?.CurrentMeter ?? 0), 2);
+    }
+
+    private double? GetRecentOsdMeterForFrame(double? frameTimestampSeconds)
+    {
+        if (!_codingLastOsdMeter.HasValue || _codingLastOsdMeter.Value is < 0 or > 500)
+            return null;
+        if (!frameTimestampSeconds.HasValue || !_codingLastOsdTimestampSec.HasValue)
+            return null;
+
+        var cachedOsdMeter = _codingLastOsdMeter.Value;
+        var ageSeconds = Math.Abs(frameTimestampSeconds.Value - _codingLastOsdTimestampSec.Value);
+        return ageSeconds <= RecentOsdMeterMaxAgeSeconds
+            ? Math.Round(cachedOsdMeter, 2)
+            : null;
     }
 
     // --- OSD Meter automatisch lesen beim Navigieren ---
 
     private double? _codingLastOsdMeter;
+    private double? _codingLastOsdTimestampSec;
 
     /// <summary>
     /// Liest den OSD-Meterstand vom aktuellen Video-Frame (async, via KI).
@@ -4864,6 +5123,9 @@ public partial class PlayerWindow
 
         try
         {
+            var snapshotTimestampSec = _player != null && _player.Time >= 0
+                ? _player.Time / 1000.0
+                : (double?)null;
             var tmpDir = Path.GetTempPath();
             var snapFile = Path.Combine(tmpDir, $"sewerstudio_osd_{Guid.NewGuid():N}.png");
             byte[]? pngBytes = null;
@@ -4922,6 +5184,7 @@ public partial class PlayerWindow
                     if (meter >= 0 && meter <= 500)
                     {
                         _codingLastOsdMeter = meter;
+                        _codingLastOsdTimestampSec = snapshotTimestampSec;
                         OsdMeterBadge.Visibility = Visibility.Visible;
                         TxtOsdMeter.Text = $"{meter:F2}m (OSD)";
                         return meter;

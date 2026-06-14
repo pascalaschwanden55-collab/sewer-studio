@@ -300,7 +300,7 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         sb.AppendLine();
 
         sb.AppendLine("SONSTIGES:");
-        AppendCodeLine(sb, codeCatalog, "BDDC", "Wasserspiegel/Wasserstand", null);
+        AppendCodeLine(sb, codeCatalog, "BDDC", "Wasserspiegel/Wasserstand", "BDDC nur bei sichtbar angestautem/stehendem Wasser oder Rueckstau; normal fliessendes/truebes Abwasser ist kein Befund");
         AppendCodeLine(sb, codeCatalog, "BABBA", "Riss laengs", "mit Uhrlage und Breite in mm");
         AppendCodeLine(sb, codeCatalog, "BABAA", "Riss quer", null);
 

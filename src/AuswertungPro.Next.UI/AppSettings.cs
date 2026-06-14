@@ -99,6 +99,7 @@ public sealed class AppSettings
     public int? PipelinePipeDiameterMm { get; set; }
 
     // AI / Ollama settings (overrides env vars if set)
+    public bool AiStartOnProgramStart { get; set; }
     public bool? AiEnabled { get; set; }
     public string? AiOllamaUrl { get; set; }
     public string? AiVisionModel { get; set; }

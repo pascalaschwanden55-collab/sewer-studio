@@ -167,8 +167,8 @@ public partial class PlayerWindow : Window
         _initialOverlayText = initialOverlayText;
         Loaded += (_, _) => EnsureVisibleOnScreen();
 
-        // Overlay-Eingabe suspendieren wenn ein FREMDES Fenster den Fokus bekommt (z.B. Snipping Tool).
-        // Das sichtbare Overlay bleibt stehen, damit Screenshots/Screenrecordings es erfassen koennen.
+        // Overlay-Popup schliessen, wenn ein FREMDES Fenster den Fokus bekommt.
+        // Sonst schwebt das WPF-Popup ueber VS Code/anderen Programmen weiter.
         // Nicht bei eigenen Child-Dialogen (MessageBox, VsaCodeExplorer) â€” die verwenden
         // SuspendCodingOverlayInput/ResumeCodingOverlayInput direkt.
         Deactivated += (_, _) =>
@@ -176,13 +176,13 @@ public partial class PlayerWindow : Window
             // Nur suspendieren wenn kein eigener Dialog den Fokus hat
             if (_codingOverlaySuspendDepth > 0) return;
             _deactivatedByExternalWindow = true;
-            SuspendCodingOverlayInput();
+            HideCodingOverlayForExternalWindow();
         };
         Activated += (_, _) =>
         {
             if (!_deactivatedByExternalWindow) return;
             _deactivatedByExternalWindow = false;
-            ResumeCodingOverlayInput();
+            RestoreCodingOverlayAfterExternalWindow();
         };
 
         var fileName = Path.GetFileName(videoPath);

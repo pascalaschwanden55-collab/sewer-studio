@@ -11,7 +11,7 @@ public sealed class DataPageToolbarLayoutTests
         var xaml = ReadDataPageXaml();
         var menu = ExtractContextMenu(xaml, "x:Name=\"AnsichtDropdown\"");
 
-        Assert.Contains("Zeilenhoehe:", menu);
+        Assert.Contains("Zeilenhöhe:", menu);
         Assert.Contains("GridMinRowHeight", menu);
         Assert.Contains("Zoom:", menu);
         Assert.Contains("GridZoom", menu);

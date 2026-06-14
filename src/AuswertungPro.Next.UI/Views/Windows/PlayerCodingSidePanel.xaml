@@ -213,6 +213,28 @@
                                     <TextBlock x:Name="TxtInlineDetailStatus" FontSize="10"
                                                Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
 
+                                    <!-- Markierte Vorschau des ausgewaehlten KI-Befunds -->
+                                    <Border Height="172"
+                                            Margin="0,0,0,8"
+                                            Background="#05070A"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            ClipToBounds="True">
+                                        <Grid>
+                                            <Image x:Name="ImgInlineEvidencePreview"
+                                                   Stretch="Uniform"
+                                                   SnapsToDevicePixels="True"
+                                                   Visibility="Collapsed"/>
+                                            <TextBlock x:Name="TxtInlineEvidencePreviewStatus"
+                                                       Text="Kein Bild"
+                                                       FontSize="10"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+
                                     <!-- Aktionsbuttons vertikal -->
                                     <StackPanel Margin="0,2,0,0">
                                         <Button x:Name="BtnInlineAccept"

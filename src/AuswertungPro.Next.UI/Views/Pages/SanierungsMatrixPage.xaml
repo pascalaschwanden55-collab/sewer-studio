@@ -21,7 +21,7 @@
                     <StackPanel Margin="0,0,18,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding GesamtTotal, StringFormat='Total: {0:N2} CHF'}"
                                    FontWeight="SemiBold" HorizontalAlignment="Right"/>
-                        <TextBlock Text="{Binding BelegteHaltungen, StringFormat='{}{0} Haltungen mit Massnahme'}"
+                        <TextBlock Text="{Binding BelegteHaltungen, StringFormat='{}{0} Haltungen mit Maßnahme'}"
                                    Opacity="0.7" HorizontalAlignment="Right"/>
                     </StackPanel>
                     <Button Content="Preise / Katalog" Command="{Binding KatalogBearbeitenCommand}" Margin="0,0,8,0"

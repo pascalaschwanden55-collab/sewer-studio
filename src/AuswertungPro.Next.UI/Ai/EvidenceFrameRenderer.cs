@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using AuswertungPro.Next.UI.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -12,7 +13,10 @@ public sealed record EvidenceFrameAnnotation(
     double? BboxXCenter,
     double? BboxYCenter,
     double? BboxWidth,
-    double? BboxHeight)
+    double? BboxHeight,
+    string? MaskRle = null,
+    int? MaskImageWidth = null,
+    int? MaskImageHeight = null)
 {
     public bool HasBbox =>
         BboxXCenter.HasValue
@@ -21,6 +25,11 @@ public sealed record EvidenceFrameAnnotation(
         && BboxHeight.HasValue
         && BboxWidth.Value > 0
         && BboxHeight.Value > 0;
+
+    public bool HasMask =>
+        !string.IsNullOrWhiteSpace(MaskRle)
+        && MaskImageWidth is > 0
+        && MaskImageHeight is > 0;
 }
 
 public static class EvidenceFrameRenderer
@@ -52,6 +61,7 @@ public static class EvidenceFrameRenderer
             dc.DrawImage(image, new Rect(0, 0, width, height));
 
             var labelAnchor = new Point(10, 10);
+            DrawMask(dc, annotation, width, height);
             if (TryBuildBbox(annotation, width, height, out var box))
             {
                 var stroke = new Pen(new SolidColorBrush(Color.FromRgb(0, 220, 80)), 4);
@@ -77,6 +87,44 @@ public static class EvidenceFrameRenderer
         using var stream = File.Create(outputImagePath);
         encoder.Save(stream);
         return true;
+    }
+
+    private static void DrawMask(DrawingContext dc, EvidenceFrameAnnotation annotation, int imageWidth, int imageHeight)
+    {
+        if (!annotation.HasMask)
+            return;
+
+        var mask = SamMaskRenderer.DecodeRle(
+            annotation.MaskRle!,
+            annotation.MaskImageWidth!.Value,
+            annotation.MaskImageHeight!.Value);
+        if (mask.GetLength(0) == 0 || mask.GetLength(1) == 0)
+            return;
+
+        var fill = new SolidColorBrush(Color.FromArgb(80, 0, 220, 80));
+        fill.Freeze();
+        var strokeBrush = new SolidColorBrush(Color.FromArgb(235, 0, 255, 0));
+        strokeBrush.Freeze();
+        var stroke = new Pen(strokeBrush, 3);
+        stroke.Freeze();
+
+        var fillGeometry = SamMaskRenderer.ExtractFillGeometry(
+            mask,
+            annotation.MaskImageWidth.Value,
+            annotation.MaskImageHeight.Value,
+            imageWidth,
+            imageHeight,
+            targetWidth: Math.Min(480, annotation.MaskImageWidth.Value));
+        dc.DrawGeometry(fill, null, fillGeometry);
+
+        var contourGeometry = SamMaskRenderer.ExtractContourGeometry(
+            mask,
+            annotation.MaskImageWidth.Value,
+            annotation.MaskImageHeight.Value,
+            imageWidth,
+            imageHeight,
+            targetWidth: Math.Min(480, annotation.MaskImageWidth.Value));
+        dc.DrawGeometry(null, stroke, contourGeometry);
     }
 
     private static BitmapImage LoadBitmap(string path)

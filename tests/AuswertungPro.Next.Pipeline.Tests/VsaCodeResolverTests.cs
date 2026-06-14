@@ -158,6 +158,17 @@ public sealed class VsaCodeResolverTests
     }
 
     [Fact]
+    public void InferCodeFromLabel_NormalerDurchflussIstKeinTruebesAbwasser()
+    {
+        Assert.Null(VsaCodeResolver.InferCodeFromLabel("truebes Abwasser bei normalem Durchfluss"));
+        Assert.Null(VsaCodeResolver.InferCodeFromLabel("normaler Abwasserfluss in der Sohle"));
+        Assert.Null(VsaCodeResolver.InferCodeFromLabel("water level from normal flow"));
+
+        Assert.Equal("BDDC", VsaCodeResolver.InferCodeFromLabel("sichtbarer Rueckstau mit truebem Abwasser"));
+        Assert.Equal("BDDC", VsaCodeResolver.InferCodeFromLabel("standing water at invert"));
+    }
+
+    [Fact]
     public void InferCodeFromLabel_GermanUmlauts_Handled()
     {
         // Umlaute werden intern zu ae/oe/ue konvertiert

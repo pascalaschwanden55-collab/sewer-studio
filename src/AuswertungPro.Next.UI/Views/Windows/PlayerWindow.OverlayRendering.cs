@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Ai;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -874,21 +875,24 @@ public partial class PlayerWindow
         double w = CodingOverlayCanvas.ActualWidth, h = CodingOverlayCanvas.ActualHeight;
         if (w <= 0 || h <= 0) return;
 
-        var center = CodingNormToPixel(cal.PipeCenter);
-        // Radius: halber normierter Durchmesser, skaliert auf Canvas-Breite
-        double radiusPxX = (cal.NormalizedDiameter / 2.0) * w;
-        double radiusPxY = (cal.NormalizedDiameter / 2.0) * h;
+        var circleRect = ReferenceDnGeometry.BuildCircleRect(
+            cal.PipeCenter,
+            cal.NormalizedDiameter,
+            w,
+            h);
+        if (circleRect.IsEmpty) return;
 
         var circle = new System.Windows.Shapes.Ellipse
         {
-            Width = radiusPxX * 2, Height = radiusPxY * 2,
+            Width = circleRect.Width,
+            Height = circleRect.Height,
             Stroke = new SolidColorBrush(Color.FromArgb(102, 255, 255, 255)),
             StrokeThickness = 1.5,
             StrokeDashArray = new DoubleCollection { 6, 3 },
             Tag = "ref_dn"
         };
-        Canvas.SetLeft(circle, center.X - radiusPxX);
-        Canvas.SetTop(circle, center.Y - radiusPxY);
+        Canvas.SetLeft(circle, circleRect.Left);
+        Canvas.SetTop(circle, circleRect.Top);
         CodingOverlayCanvas.Children.Add(circle);
 
         // Label
@@ -899,8 +903,8 @@ public partial class PlayerWindow
             Foreground = new SolidColorBrush(Color.FromArgb(128, 255, 255, 255)),
             Tag = "ref_dn"
         };
-        Canvas.SetLeft(lbl, center.X + radiusPxX + 4);
-        Canvas.SetTop(lbl, center.Y - 8);
+        Canvas.SetLeft(lbl, circleRect.Right + 4);
+        Canvas.SetTop(lbl, circleRect.Top + circleRect.Height / 2.0 - 8);
         CodingOverlayCanvas.Children.Add(lbl);
     }
 
