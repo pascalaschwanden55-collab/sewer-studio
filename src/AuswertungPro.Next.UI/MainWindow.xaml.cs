@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
@@ -8,6 +9,8 @@ namespace AuswertungPro.Next.UI;
 
 public partial class MainWindow : Window
 {
+    private bool _isDataContextDisposed;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -46,8 +49,20 @@ public partial class MainWindow : Window
             }
         }
 
+        DisposeDataContext();
+
         // App explizit beenden (ShutdownMode = OnExplicitShutdown)
         System.Windows.Application.Current.Shutdown();
+    }
+
+    private void DisposeDataContext()
+    {
+        if (_isDataContextDisposed)
+            return;
+
+        _isDataContextDisposed = true;
+        if (DataContext is IDisposable disposable)
+            disposable.Dispose();
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e)

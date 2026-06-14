@@ -17,9 +17,10 @@ public static class ShellNavigationPolicy
         => title is "Uebersicht" or "Projekt" or "Export" or "Einstellungen";
 }
 
-public sealed partial class ShellViewModel : ObservableObject
+public sealed partial class ShellViewModel : ObservableObject, IDisposable
 {
     private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
+    private bool _disposed;
 
     [ObservableProperty] private string _title = "SewerStudio";
     [ObservableProperty] private string _subtitle = "Bereit";
@@ -102,26 +103,7 @@ public sealed partial class ShellViewModel : ObservableObject
         SetCurrentPage(SelectedNavItem.CreatePage());
         Monitor.Start();
 
-        AiActivityTracker.ActiveChanged += (active, label) =>
-        {
-            IsAiWorking = active;
-            AiStatusLabel = active ? label : "";
-            if (active)
-            {
-                try
-                {
-                    var cfg = new AppSettingsAiSettingsProvider()
-                        .Load()
-                        .ToRuntimeSettings();
-                    AiLoadedModels = cfg.VisionModel ?? "Qwen2.5-VL";
-                }
-                catch { AiLoadedModels = ""; }
-            }
-            else
-            {
-                AiLoadedModels = "";
-            }
-        };
+        AiActivityTracker.ActiveChanged += OnAiActivityChanged;
         ApplyAiRuntimeStatus(AiRuntimeStatusTracker.Current);
         AiRuntimeStatusTracker.Changed += ApplyAiRuntimeStatus;
 
@@ -146,6 +128,19 @@ public sealed partial class ShellViewModel : ObservableObject
         };
     }
 
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        AiActivityTracker.ActiveChanged -= OnAiActivityChanged;
+        AiRuntimeStatusTracker.Changed -= ApplyAiRuntimeStatus;
+        Monitor.Dispose();
+        SetCurrentPage(null);
+        GC.SuppressFinalize(this);
+    }
+
     partial void OnIsAiWorkingChanged(bool value) => NotifyAiIndicatorChanged();
     partial void OnAiStatusLabelChanged(string value) => NotifyAiIndicatorChanged();
     partial void OnAiLoadedModelsChanged(string value) => NotifyAiIndicatorChanged();
@@ -156,10 +151,37 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void ApplyAiRuntimeStatus(AiRuntimeStatus status)
     {
+        if (_disposed)
+            return;
+
         IsAiRuntimeVisible = status.IsVisible;
         AiRuntimeTitle = status.Title;
         AiRuntimeStatusLabel = status.StatusText;
         AiRuntimeLoadedModels = status.ModelText;
+    }
+
+    private void OnAiActivityChanged(bool active, string label)
+    {
+        if (_disposed)
+            return;
+
+        IsAiWorking = active;
+        AiStatusLabel = active ? label : "";
+        if (active)
+        {
+            try
+            {
+                var cfg = new AppSettingsAiSettingsProvider()
+                    .Load()
+                    .ToRuntimeSettings();
+                AiLoadedModels = cfg.VisionModel ?? "Qwen2.5-VL";
+            }
+            catch { AiLoadedModels = ""; }
+        }
+        else
+        {
+            AiLoadedModels = "";
+        }
     }
 
     private void NotifyAiIndicatorChanged()

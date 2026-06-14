@@ -28,6 +28,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 {
     private readonly DispatcherTimer _timer;
     private readonly Dispatcher _dispatcher;
+    private int _disposed;
 
     // CPU delta tracking
     private long _prevIdleTicks;
@@ -55,6 +56,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     private bool _hwInfoAvailable = true;
     private int _hwInfoSkip;
     private bool _hwInfoLogged;
+    private volatile bool _hwInfoProvidesTemp; // true wenn HWiNFO aktuell eine CPU-Temp liefert (Live-Quelle)
 
     // HVCI detection
     private bool _hvciChecked;
@@ -122,6 +124,12 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     private bool _isCpuTempAvailable;
     public bool IsCpuTempAvailable { get => _isCpuTempAvailable; private set => Set(ref _isCpuTempAvailable, value); }
 
+    private string _cpuTempStatusText = "Temperatur wird gesucht";
+    public string CpuTempStatusText { get => _cpuTempStatusText; private set => Set(ref _cpuTempStatusText, value); }
+
+    private string _cpuTempSourceLabel = "Quelle: ausstehend";
+    public string CpuTempSourceLabel { get => _cpuTempSourceLabel; private set => Set(ref _cpuTempSourceLabel, value); }
+
     private string _cpuName = "";
     public string CpuName { get => _cpuName; private set => Set(ref _cpuName, value); }
 
@@ -180,6 +188,9 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
     public void Start()
     {
+        if (Volatile.Read(ref _disposed) != 0)
+            return;
+
         Poll(); // immediate first reading
         _timer.Start();
     }
@@ -192,6 +203,9 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
     private void Poll()
     {
+        if (Volatile.Read(ref _disposed) != 0)
+            return;
+
         PollCpu();
         PollCpuClock();
         PollRam();
@@ -201,10 +215,38 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         PollCpuTempFallback();
     }
 
+    private void SetCpuTempReading(int tempC, string source)
+    {
+        if (Volatile.Read(ref _disposed) != 0)
+            return;
+
+        CpuTempC = tempC;
+        IsCpuTempAvailable = true;
+        CpuTempSourceLabel = $"Quelle: {source}";
+        CpuTempStatusText = source == "Windows Thermal Zone"
+            ? "Fallback-Wert von Windows. Je nach PC ist das nicht immer die echte CPU-Package-Temperatur."
+            : "CPU-Temperatur aktiv";
+    }
+
+    private void SetCpuTempUnavailable(string reason)
+    {
+        if (Volatile.Read(ref _disposed) != 0)
+            return;
+
+        if (IsCpuTempAvailable)
+            return;
+
+        CpuTempSourceLabel = "Quelle: nicht verfügbar";
+        CpuTempStatusText = reason;
+    }
+
     // ── Diagnostic logging ───────────────────────────────────────────────
 
     private void Log(string message)
     {
+        if (Volatile.Read(ref _disposed) != 0)
+            return;
+
         var line = $"[Monitor] {message}";
         Trace.WriteLine(line);
         lock (_diagLog)
@@ -219,6 +261,9 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         {
             _dispatcher.BeginInvoke(() =>
             {
+                if (Volatile.Read(ref _disposed) != 0)
+                    return;
+
                 string summary;
                 lock (_diagLog)
                     summary = string.Join("\n", _diagLog);
@@ -232,6 +277,9 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
     private void InitHardwareMonitor()
     {
+        if (Volatile.Read(ref _disposed) != 0)
+            return;
+
         try
         {
             // Check HVCI once
@@ -290,6 +338,12 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
             if (hasAnySensors)
             {
+                if (Volatile.Read(ref _disposed) != 0)
+                {
+                    computer.Close();
+                    return;
+                }
+
                 _computer = computer;
                 Log($"LHM: OK — {totalSensors} Sensoren aktiv");
             }
@@ -307,6 +361,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                 {
                     IsSensorBlocked = true;
                     SensorBlockedReason = reason;
+                    SetCpuTempUnavailable("CPU-Temperatur nicht verfügbar: Sensorzugriff blockiert oder kein Hardware-Sensor gefunden.");
                 });
             }
         }
@@ -322,6 +377,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             {
                 IsSensorBlocked = true;
                 SensorBlockedReason = reason;
+                SetCpuTempUnavailable("CPU-Temperatur nicht verfügbar: Sensorzugriff fehlgeschlagen.");
             });
         }
         finally
@@ -595,8 +651,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
             if (cpuTempFound && cpuTempC > 0 && cpuTempC < 150)
             {
-                CpuTempC = cpuTempC;
-                IsCpuTempAvailable = true;
+                SetCpuTempReading(cpuTempC, "LibreHardwareMonitor");
                 _lhmProvidesTemp = true;
             }
 
@@ -689,6 +744,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
         try
         {
+            _hwInfoProvidesTemp = false;
             using var mmf = MemoryMappedFile.OpenExisting(HwInfoSensorsSm2, MemoryMappedFileRights.Read);
             using var accessor = mmf.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
 
@@ -755,8 +811,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                                         || label.Contains("core") || label.Contains("tctl")
                                         || label.Contains("die")))
                     {
-                        CpuTempC = tempC;
-                        IsCpuTempAvailable = true;
+                        SetCpuTempReading(tempC, "HWiNFO Shared Memory");
                         cpuTempSet = true;
                     }
                     else if (!gpuTempSet && (label.Contains("gpu") || label.Contains("graphics")))
@@ -792,6 +847,8 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                 IsSensorBlocked = false;
                 SensorBlockedReason = "";
             }
+
+            _hwInfoProvidesTemp = cpuTempSet;
         }
         catch (FileNotFoundException)
         {
@@ -805,6 +862,8 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                 {
                     SensorBlockedReason += "\nTipp: HWiNFO64 starten mit Shared Memory Support fuer Temp-Anzeige trotz HVCI.";
                 }
+
+                SetCpuTempUnavailable("CPU-Temperatur nicht verfügbar: HWiNFO Shared Memory ist nicht aktiv oder LHM liefert keinen CPU-Temperatursensor.");
             }
         }
         catch (Exception ex)
@@ -814,6 +873,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                 Log($"HWiNFO: Fehler — {ex.GetType().Name}: {ex.Message}");
                 _hwInfoLogged = true;
                 _hwInfoAvailable = false;
+                SetCpuTempUnavailable("CPU-Temperatur nicht verfügbar: HWiNFO Shared Memory konnte nicht gelesen werden.");
             }
         }
     }
@@ -826,8 +886,10 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
     private void PollCpuTempFallback()
     {
-        // Only use fallback when LHM is not providing CPU temp
-        if (IsCpuTempAvailable)
+        // Nur Fallback nutzen, wenn keine LIVE-Quelle (LHM/HWiNFO) die CPU-Temp liefert.
+        // NICHT auf IsCpuTempAvailable pruefen - das setzt der Fallback selbst und wuerde
+        // den Thermal-Zone-Wert nach der ersten Messung einfrieren (Bug-Fix).
+        if (_lhmProvidesTemp || _hwInfoProvidesTemp)
             return;
 
         // Don't run until LHM init is complete (give LHM a chance first)
@@ -877,8 +939,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                 _perfCounterTempFailCount = 0;
                 _dispatcher.BeginInvoke(() =>
                 {
-                    CpuTempC = celsius;
-                    IsCpuTempAvailable = true;
+                    SetCpuTempReading(celsius, "Windows Thermal Zone");
                 });
 
                 if (_wmiTempSkip <= 6)
@@ -890,6 +951,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             {
                 _perfCounterTempAvailable = false;
                 Log("PerfCounter CPU-Temp: nicht verfuegbar, versuche ACPI Fallback...");
+                SetCpuTempUnavailable("CPU-Temperatur noch nicht verfügbar: Windows Thermal-Zone-Fallback wird geprüft.");
             }
         }
         catch
@@ -898,6 +960,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             {
                 _perfCounterTempAvailable = false;
                 Log("PerfCounter CPU-Temp: fehlgeschlagen, versuche ACPI Fallback...");
+                SetCpuTempUnavailable("CPU-Temperatur noch nicht verfügbar: Windows Thermal-Zone-Fallback wird geprüft.");
             }
         }
     }
@@ -928,8 +991,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                     _wmiTempFailCount = 0;
                     _dispatcher.BeginInvoke(() =>
                     {
-                        CpuTempC = celsius;
-                        IsCpuTempAvailable = true;
+                        SetCpuTempReading(celsius, "Windows Thermal Zone");
                     });
 
                     if (_wmiTempSkip <= 6)
@@ -942,6 +1004,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             {
                 _wmiTempAvailable = false;
                 Log("ACPI CPU-Temp: nicht verfuegbar auf diesem System");
+                SetCpuTempUnavailable("CPU-Temperatur nicht verfügbar: Windows liefert keinen nutzbaren CPU-Thermalsensor.");
             }
         }
         catch
@@ -950,6 +1013,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             {
                 _wmiTempAvailable = false;
                 Log("ACPI CPU-Temp: PowerShell-Abfrage fehlgeschlagen");
+                SetCpuTempUnavailable("CPU-Temperatur nicht verfügbar: Windows-Thermalzone konnte nicht gelesen werden.");
             }
         }
     }
@@ -1083,6 +1147,9 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
         Task.Run(() =>
         {
+            if (Volatile.Read(ref _disposed) != 0)
+                return;
+
             try
             {
                 var result = ExternalProcessRunner.RunAsync(
@@ -1116,6 +1183,9 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
                 _dispatcher.BeginInvoke(() =>
                 {
+                    if (Volatile.Read(ref _disposed) != 0)
+                        return;
+
                     GpuPercent = gpuPct;
                     GpuMemUsedMb = memUsed;
                     GpuMemTotalMb = memTotal;
@@ -1255,7 +1325,12 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+
         _timer.Stop();
+        _timer.Tick -= OnTick;
         try { _computer?.Close(); } catch { }
+        _computer = null;
     }
 }
