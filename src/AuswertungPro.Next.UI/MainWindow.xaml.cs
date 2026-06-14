@@ -26,7 +26,7 @@ public partial class MainWindow : Window
         if (DataContext is ShellViewModel vm && vm.Project.Dirty)
         {
             var result = DialogHost.Current.ConfirmCancel(
-                "Es gibt ungespeicherte Aenderungen. Jetzt speichern?",
+                "Es gibt ungespeicherte Änderungen. Jetzt speichern?",
                 "Projekt speichern");
 
             if (result == DialogConfirm.Cancel)

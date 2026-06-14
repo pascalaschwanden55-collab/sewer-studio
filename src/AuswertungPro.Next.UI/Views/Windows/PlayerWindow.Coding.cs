@@ -110,8 +110,8 @@ public partial class PlayerWindow
         if (_haltungRecord == null)
         {
             DialogHost.Current.Info(
-                "Codier-Modus benoetigt eine Haltung.\n" +
-                "Bitte das Video ueber die Datenseite mit einer Haltung oeffnen.",
+                "Codier-Modus benötigt eine Haltung.\n" +
+                "Bitte das Video über die Datenseite mit einer Haltung öffnen.",
                 "Codier-Modus");
             return;
         }
@@ -425,8 +425,8 @@ public partial class PlayerWindow
             if (aktiveBefunde > 0)
             {
                 var uebernehmen = DialogHost.Current.ConfirmWarn(
-                    $"Die Befundliste ist leer.\n\n\"Uebernehmen\" wuerde {aktiveBefunde} bestehende(n) Befund(e) dieser Haltung loeschen und die primaeren Schaeden leeren.\n\nWirklich eine leere Codierung uebernehmen?",
-                    "Leere Codierung uebernehmen?");
+                    $"Die Befundliste ist leer.\n\n\"Übernehmen\" würde {aktiveBefunde} bestehende(n) Befund(e) dieser Haltung löschen und die primären Schäden leeren.\n\nWirklich eine leere Codierung übernehmen?",
+                    "Leere Codierung übernehmen?");
                 if (!uebernehmen)
                     return false;
             }
@@ -476,8 +476,8 @@ public partial class PlayerWindow
         if (showOverlay)
         {
             var message = _codingVm.Events.Count == 0
-                ? "Primaere Schaeden geleert"
-                : $"{_codingVm.Events.Count} Ereignisse in Primaere Schaeden uebernommen";
+                ? "Primäre Schäden geleert"
+                : $"{_codingVm.Events.Count} Ereignisse in Primäre Schäden übernommen";
             ShowOverlay(message, TimeSpan.FromSeconds(4));
         }
 
@@ -509,8 +509,8 @@ public partial class PlayerWindow
         try
         {
             result = DialogHost.Current.ConfirmCancel(
-                "Es gibt noch nicht uebernommene Codierungen.\n\n" +
-                "Ja = uebernehmen\nNein = verwerfen\nAbbrechen = Fenster offen lassen",
+                "Es gibt noch nicht übernommene Codierungen.\n\n" +
+                "Ja = übernehmen\nNein = verwerfen\nAbbrechen = Fenster offen lassen",
                 "Codier-Modus");
         }
         finally
@@ -618,7 +618,7 @@ public partial class PlayerWindow
             if (bytes == null || bytes.Length == 0)
                 bytes = await CaptureCurrentFrameAsync();
             if (bytes == null || bytes.Length == 0)
-                return (null, "kein Frame verfuegbar");
+                return (null, "kein Frame verfügbar");
 
             var dir = System.IO.Path.Combine(
                 AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBasePaths.GetRoot(), "gold_frames");
@@ -638,7 +638,7 @@ public partial class PlayerWindow
         try
         {
             if (string.IsNullOrWhiteSpace(rawFramePath) || !System.IO.File.Exists(rawFramePath))
-                return (null, "kein Rohbild fuer Beweisbild verfuegbar");
+                return (null, "kein Rohbild für Beweisbild verfügbar");
 
             var dir = System.IO.Path.Combine(
                 AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBasePaths.GetRoot(),
@@ -1142,7 +1142,7 @@ public partial class PlayerWindow
         UpdateCodingOverlayInfo(null);
 
         CodingCalibrationHint.Visibility = _codingIsCalibrating ? Visibility.Visible : Visibility.Collapsed;
-        TxtCodingCalibHint.Text = "Linie ueber den sichtbaren Rohrdurchmesser zeichnen";
+        TxtCodingCalibHint.Text = "Linie über den sichtbaren Rohrdurchmesser zeichnen";
         UpdateCodingOverlayCursor();
         RedrawCodingCanvas(includeManualOverlay: false);
     }
@@ -1689,7 +1689,7 @@ public partial class PlayerWindow
                 {
                     SuggestedCode = entry.Code,
                     Confidence = 1.0,
-                    Reason = "Manuell codiert â€” bitte bestaetigen",
+                    Reason = "Manuell codiert - bitte bestätigen",
                     Decision = CodingUserDecision.Ignored
                 };
 
@@ -1763,7 +1763,7 @@ public partial class PlayerWindow
         {
             SuggestedCode = entry.Code,
             Confidence = 1.0,
-            Reason = "Manuell codiert â€” bitte bestaetigen",
+            Reason = "Manuell codiert - bitte bestätigen",
             Decision = CodingUserDecision.Ignored
         };
 
@@ -1865,7 +1865,7 @@ public partial class PlayerWindow
 
         var createPdf = DialogHost.Current.Confirm(
             $"Codier-Session abgeschlossen ({doc.Current.Entries.Count} Ereignisse).\n\n" +
-            "Moechten Sie jetzt ein PDF-Protokoll mit Grafik und Fotos erstellen?",
+            "Möchten Sie jetzt ein PDF-Protokoll mit Grafik und Fotos erstellen?",
             "PDF-Protokoll erstellen");
 
         if (!createPdf) return;
@@ -2112,7 +2112,7 @@ public partial class PlayerWindow
         if (currentMeter <= (startEvent.MeterAtCapture + 0.01))
         {
             DialogHost.Current.Info(
-                "Der aktuelle Meterstand muss groesser sein als der Anfang des Streckenschadens.",
+                "Der aktuelle Meterstand muss größer sein als der Anfang des Streckenschadens.",
                 "Streckenschaden");
             return;
         }
@@ -2153,7 +2153,7 @@ public partial class PlayerWindow
         bool confirm;
         try
         {
-            confirm = DialogHost.Current.ConfirmWarn($"Ereignis '{codingEvent.Entry.Code}' loeschen?", "Loeschen");
+            confirm = DialogHost.Current.ConfirmWarn($"Ereignis '{codingEvent.Entry.Code}' löschen?", "Löschen");
         }
         finally
         {
@@ -2362,8 +2362,8 @@ public partial class PlayerWindow
         // 2. Frame capturen
         if (!TryTakeSnapshot(out var snapshotPath) || !System.IO.File.Exists(snapshotPath))
         {
-            DialogHost.Current.Warn("Frame konnte nicht aufgenommen werden.\nBitte pruefen Sie ob das Video laeuft.",
-                "Import bestaetigen");
+            DialogHost.Current.Warn("Frame konnte nicht aufgenommen werden.\nBitte prüfen Sie ob das Video läuft.",
+                "Import bestätigen");
             return;
         }
 
@@ -2685,7 +2685,7 @@ public partial class PlayerWindow
         var showProtocol = DialogHost.Current.Confirm(
             $"{doc.Current.Entries.Count} Beobachtungen protokolliert.\n\n" +
             "Protokoll jetzt anzeigen und bearbeiten?\n" +
-            "(Aenderungen werden in Primaere Schaeden uebernommen)",
+            "(Änderungen werden in Primäre Schäden übernommen)",
             "Codier-Session abgeschlossen");
 
         if (!showProtocol) return;
@@ -2757,7 +2757,7 @@ public partial class PlayerWindow
             _codingAiModelName = config.VisionModel;
             if (!config.Enabled)
             {
-                SetCodingAiState("Kuenstliche Intelligenz deaktiviert", Color.FromRgb(0x94, 0xA3, 0xB8), "Modell: aus");
+                SetCodingAiState("Künstliche Intelligenz deaktiviert", Color.FromRgb(0x94, 0xA3, 0xB8), "Modell: aus");
                 BtnCodingAnalyze.IsEnabled = false;
                 return;
             }
@@ -2797,7 +2797,7 @@ public partial class PlayerWindow
             catch (Exception ex)
             {
                 _codingUseMultiModel = false;
-                SetCodingAiState("Kuenstliche Intelligenz bereit (Qwen)", Color.FromRgb(0x22, 0xC5, 0x5E),
+                SetCodingAiState("Künstliche Intelligenz bereit (Qwen)", Color.FromRgb(0x22, 0xC5, 0x5E),
                     $"Monitor-Fehler: {ex.Message}");
             }
             SetYoloStatus("Bereit", Color.FromRgb(0x22, 0xC5, 0x5E), CompactModelName(_codingAiModelName));
@@ -3001,7 +3001,7 @@ public partial class PlayerWindow
         Dispatcher.BeginInvoke(new Action(() => TxtEingabemarker.Focus()),
             System.Windows.Threading.DispatcherPriority.Input);
 
-        SetCodingAiState("Beschreibung eingeben oder Stichwort waehlen, dann Enter",
+        SetCodingAiState("Beschreibung eingeben oder Stichwort wählen, dann Enter",
             Color.FromRgb(0x3B, 0x82, 0xF6), "z.B. \"Beule unten\", \"Riss bei 3 Uhr\", \"Anschluss offen\"");
     }
 
@@ -3253,7 +3253,7 @@ public partial class PlayerWindow
 
                 if (codierbarCount == 0 && vorausCount > 0)
                 {
-                    SetCodingAiState("Ereignis voraus erkannt - naeher heranfahren",
+                    SetCodingAiState("Ereignis voraus erkannt - näher heranfahren",
                         Color.FromRgb(0xF5, 0x9E, 0x0B),
                         $"{vorausCount} voraus");
                     return;
@@ -4303,7 +4303,7 @@ public partial class PlayerWindow
             _codingLiveAiBlinkTimer = null;
             BtnCodingLiveAi.ClearValue(System.Windows.Controls.Control.BackgroundProperty);
 
-            SetCodingAiState("Kuenstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+            SetCodingAiState("Künstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
                 $"Modell: {CompactModelName(_codingAiModelName)}");
         }
     }
@@ -4373,7 +4373,7 @@ public partial class PlayerWindow
 
         // Globale Ampel aktualisieren
         SetCodingAiState(TxtCodingAiStatus.Text, ampelColor,
-            gateResult.IsGreen ? "QualityGate: Gruen (kritisch)"
+            gateResult.IsGreen ? "QualityGate: Grün (kritisch)"
             : gateResult.IsYellow ? "QualityGate: Gelb" : "QualityGate: Rot");
 
         // Panel befuellen
@@ -4381,9 +4381,9 @@ public partial class PlayerWindow
         TxtConfirmConfidence.Text = $"({gateResult.CompositeConfidence:P0})";
         TxtConfirmDescription.Text = codingEvent.Entry.Beschreibung ?? codingEvent.AiContext?.Reason ?? "";
         TxtConfirmDetail.Text = gateResult.IsGreen
-            ? "Kritischer Befund \u2014 bitte bestaetigen oder korrigieren."
+            ? "Kritischer Befund \u2014 bitte bestätigen oder korrigieren."
             : gateResult.IsYellow
-                ? "KI ist unsicher \u2014 bitte pruefen."
+                ? "KI ist unsicher \u2014 bitte prüfen."
                 : "KI hat geringe Sicherheit \u2014 bitte Code korrigieren oder verwerfen.";
 
         CodingConfirmationPanel.Visibility = Visibility.Visible;
@@ -4471,7 +4471,7 @@ public partial class PlayerWindow
         }
         else
         {
-            SetCodingAiState("Kuenstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+            SetCodingAiState("Künstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
                 $"Modell: {CompactModelName(_codingAiModelName)}");
         }
     }
@@ -4972,7 +4972,7 @@ public partial class PlayerWindow
 
         // Hinweis-Dialog mit Liste der offenen Streckenschaeden
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine("Folgende Streckenschaeden sind noch offen (kein MeterEnde):");
+        sb.AppendLine("Folgende Streckenschäden sind noch offen (kein MeterEnde):");
         sb.AppendLine();
         foreach (var ev in offene)
         {
@@ -4980,7 +4980,7 @@ public partial class PlayerWindow
             sb.AppendLine($"    Start: {ev.MeterAtCapture:F2}m");
         }
         sb.AppendLine();
-        sb.AppendLine($"Sollen alle offenen Streckenschaeden bei {currentMeter:F2}m geschlossen werden?");
+        sb.AppendLine($"Sollen alle offenen Streckenschäden bei {currentMeter:F2}m geschlossen werden?");
 
         SuspendCodingOverlayInput();
         DialogConfirm result;
@@ -4988,7 +4988,7 @@ public partial class PlayerWindow
         {
             result = DialogHost.Current.ConfirmCancel(
                 sb.ToString(),
-                "Offene Streckenschaeden");
+                "Offene Streckenschäden");
         }
         finally
         {

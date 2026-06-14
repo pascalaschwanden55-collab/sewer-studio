@@ -62,7 +62,7 @@
                                         <Button Style="{DynamicResource PlayerButton}" Padding="4,2"
                                                 FontSize="10" Content="&#x1F4F7; Foto"
                                                 Click="CodingTakePhoto_Click"
-                                                ToolTip="Foto vom aktuellen Frame fuer ausgewaehltes Ereignis aufnehmen"/>
+                                                ToolTip="Foto vom aktuellen Frame für ausgewähltes Ereignis aufnehmen"/>
                                     </StackPanel>
 
                                     <ListBox x:Name="LstCodingEvents"
@@ -79,13 +79,13 @@
                                                 <MenuItem Header="Bearbeiten (Doppelklick)" Click="CodingEventEdit_Click"/>
                                                 <MenuItem Header="Fotos anzeigen" Click="CodingEventShowPhotos_Click"/>
                                                 <Separator/>
-                                                <MenuItem Header="Streckenschaden schliessen (Ende hier)"
+                                                <MenuItem Header="Streckenschaden schließen (Ende hier)"
                                                           Click="CodingEventCloseStretch_Click"
                                                           FontWeight="SemiBold"/>
                                                 <Separator/>
                                                 <MenuItem Header="Zum Zeitpunkt springen" Click="CodingEventSeek_Click"/>
                                                 <Separator/>
-                                                <MenuItem Header="Loeschen" Click="CodingEventDelete_Click" Foreground="OrangeRed"/>
+                                                <MenuItem Header="Löschen" Click="CodingEventDelete_Click" Foreground="OrangeRed"/>
                                             </ContextMenu>
                                         </ListBox.ContextMenu>
                                         <ListBox.ItemContainerStyle>
@@ -385,7 +385,7 @@
                                         Content="Neues Ereignis erfassen"
                                         Padding="8,6" FontSize="12"
                                         Click="CodingSelectCode_Click"
-                                        ToolTip="Oeffnet Editor mit Code-Auswahl, Fotos und VSA-Feldern"/>
+                                        ToolTip="Öffnet Editor mit Code-Auswahl, Fotos und VSA-Feldern"/>
                                 <TextBlock x:Name="TxtCodingSelectedCode"
                                            FontSize="11"
                                            Foreground="{DynamicResource TextSecondaryBrush}"
