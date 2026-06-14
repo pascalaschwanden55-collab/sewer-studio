@@ -42,7 +42,7 @@ public partial class FloatingGridWindow : Window
         RecordCountText.Text = $"{recordCount} Haltungen";
         SelectedInfoText.Text = string.IsNullOrWhiteSpace(selectedHaltung)
             ? ""
-            : $"Ausgewaehlt: {selectedHaltung}";
+            : $"Ausgewählt: {selectedHaltung}";
     }
 
     /// <summary>Stellt die Fensterposition aus gespeicherten Bounds wieder her.</summary>

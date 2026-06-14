@@ -1537,7 +1537,7 @@ public partial class PhotoMeasurementWindow : Window
             PhotoTool.CrossSection => "Polygon-Punkte klicken, Doppelklick = schließen.",
             PhotoTool.Lateral => "Position + Winkel per Slider einstellen.",
             PhotoTool.Bend => "Position + Winkel per Slider einstellen.",
-            PhotoTool.Connection => "Massstab-Linie auf Rohroberflaeche ziehen.",
+            PhotoTool.Connection => "Massstab-Linie auf Rohroberfläche ziehen.",
             _ => ""
         };
     }

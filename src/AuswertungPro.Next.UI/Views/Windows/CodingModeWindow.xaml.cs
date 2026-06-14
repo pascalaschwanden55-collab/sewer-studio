@@ -333,7 +333,7 @@ public partial class CodingModeWindow : Window
             TxtMeasurement.Text = overlay.Points.Count switch
             {
                 <= 2 => "PipeBend: Achse 1 setzen (P1 -> P2)",
-                3 => "PipeBend: Achse 2 vervollstaendigen (P4 setzen)",
+                3 => "PipeBend: Achse 2 vervollständigen (P4 setzen)",
                 _ => "PipeBend: Punkte setzen"
             };
             return;
@@ -1702,7 +1702,7 @@ public partial class CodingModeWindow : Window
         if (!allowedTools.Contains(_vm.CurrentOverlay.ToolType))
         {
             DialogHost.Current.Warn(
-                $"Das Werkzeug \"{_vm.CurrentOverlay.ToolType}\" erzeugt keine Flaechenmarkierung.\n" +
+                $"Das Werkzeug \"{_vm.CurrentOverlay.ToolType}\" erzeugt keine Flächenmarkierung.\n" +
                 "Für Lehrer-Annotationen bitte Rechteck, Ellipse oder Freihand verwenden.",
                 "Werkzeug nicht geeignet");
             return;
@@ -1762,7 +1762,7 @@ public partial class CodingModeWindow : Window
             {
                 try { System.IO.File.Delete(tempFrame); } catch { }
                 DialogHost.Current.Warn(
-                    "Die Markierung ist zu klein oder hat keine Flaeche.\n" +
+                    "Die Markierung ist zu klein oder hat keine Fläche.\n" +
                     "Für Lehrer-Annotationen bitte Rechteck, Ellipse oder Freihand verwenden.",
                     "Markierung ungültig");
                 return;

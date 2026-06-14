@@ -1077,7 +1077,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             _shell.Project.Dirty = true;
         }
 
-        _shell.SetStatus($"Maßnahmen: {filled} Haltungen befüllt, {skipped} uebersprungen, {noSuggestion} ohne Vorschlag");
+        _shell.SetStatus($"Maßnahmen: {filled} Haltungen befüllt, {skipped} übersprungen, {noSuggestion} ohne Vorschlag");
     }
 
     private void OpenSanierungOptimizationWindow(HaltungRecord? record)
@@ -1154,7 +1154,7 @@ public sealed partial class DataPageViewModel : ObservableObject
                 _shell.Project.Dirty         = true;
                 RefreshRecordInGrid(record);
                 ScheduleAutoSave();
-                _shell.SetStatus($"KI-Sanierungsvorschlag uebertragen: {holding}");
+                _shell.SetStatus($"KI-Sanierungsvorschlag übertragen: {holding}");
             };
         }
 
