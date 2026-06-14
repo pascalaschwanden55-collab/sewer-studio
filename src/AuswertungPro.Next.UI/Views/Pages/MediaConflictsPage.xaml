@@ -47,7 +47,7 @@
 
                 <StackPanel>
                     <TextBlock Text="Medienkonflikte" Style="{StaticResource PageTitle}"/>
-                    <TextBlock Text="Fehlende oder mehrdeutige Videozuordnungen zentral pruefen, oeffnen und direkt aufloesen."
+                    <TextBlock Text="Fehlende oder mehrdeutige Videozuordnungen zentral prüfen, öffnen und direkt auflösen."
                                Margin="0,4,0,0"
                                Style="{StaticResource Body}"
                                TextWrapping="Wrap"/>
@@ -114,7 +114,7 @@
                 <Button Command="{Binding ResolveManualCommand}" Style="{StaticResource ToolbarButton}" Margin="0,0,4,4">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="13" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Video waehlen" VerticalAlignment="Center"/>
+                        <TextBlock Text="Video wählen" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
@@ -133,7 +133,7 @@
                         <MenuItem Header="Auto-Resolve (gelernt)"
                                   Command="{Binding DataContext.AutoResolveLearnedCommand, ElementName=MediaConflictsRoot}"/>
                         <Separator/>
-                        <MenuItem Header="Mappings loeschen"
+                        <MenuItem Header="Mappings löschen"
                                   Command="{Binding DataContext.ClearLearnedMappingsCommand, ElementName=MediaConflictsRoot}"/>
                     </MenuItem>
                 </Menu>
@@ -154,8 +154,8 @@
                     Padding="12">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-                        <TextBlock Text="Offene Faelle" FontSize="16" FontWeight="SemiBold"/>
-                        <TextBlock Text="Links siehst du alle Konflikte. Rechts kannst du Quellen oeffnen, Videos pruefen und die Zuordnung direkt speichern."
+                        <TextBlock Text="Offene Fälle" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Text="Links siehst du alle Konflikte. Rechts kannst du Quellen öffnen, Videos prüfen und die Zuordnung direkt speichern."
                                    Margin="0,4,0,0"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
@@ -265,14 +265,14 @@
                             <Button Command="{Binding ResolveFromCandidateCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
-                                    <TextBlock Text="Kandidat uebernehmen"/>
+                                    <TextBlock Text="Kandidat übernehmen"/>
                                 </StackPanel>
                             </Button>
 
                             <Button Command="{Binding ResolveManualCommand}" Style="{StaticResource ActionCardButton}" Margin="0,0,6,6">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
-                                    <TextBlock Text="Video manuell waehlen"/>
+                                    <TextBlock Text="Video manuell wählen"/>
                                 </StackPanel>
                             </Button>
 
@@ -283,12 +283,12 @@
                                     <MenuItem.Header>
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Oeffnen"/>
+                                            <TextBlock Text="Öffnen"/>
                                         </StackPanel>
                                     </MenuItem.Header>
                                     <MenuItem Header="Gelernte Quelle abspielen"
                                               Command="{Binding DataContext.PlaySuggestedSourceCommand, ElementName=MediaConflictsRoot}"/>
-                                    <MenuItem Header="PDF oeffnen"
+                                    <MenuItem Header="PDF öffnen"
                                               Command="{Binding DataContext.OpenPdfCommand, ElementName=MediaConflictsRoot}"/>
                                     <MenuItem Header="Kandidat im Explorer"
                                               Command="{Binding DataContext.OpenSelectedCandidateCommand, ElementName=MediaConflictsRoot}"/>
@@ -299,7 +299,7 @@
                                     <MenuItem Header="Haltungsordner"
                                               Command="{Binding DataContext.OpenHoldingFolderCommand, ElementName=MediaConflictsRoot}"/>
                                     <Separator/>
-                                    <MenuItem Header="Gelernte Quelle uebernehmen"
+                                    <MenuItem Header="Gelernte Quelle übernehmen"
                                               Command="{Binding DataContext.ResolveSuggestedCommand, ElementName=MediaConflictsRoot}"/>
                                 </MenuItem>
                             </Menu>

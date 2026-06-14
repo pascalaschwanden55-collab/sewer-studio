@@ -137,7 +137,7 @@
             <WrapPanel Orientation="Horizontal">
                 <!-- 1. Kalibrierung (immer zuerst) -->
                 <ToggleButton x:Name="BtnToolCalib" Style="{StaticResource PhotoToolBtn}"
-                              ToolTip="Kalibrierung: Referenzlinie ueber bekannten Rohrdurchmesser ziehen (DN)">
+                              ToolTip="Kalibrierung: Referenzlinie über bekannten Rohrdurchmesser ziehen (DN)">
                     <StackPanel>
                         <Grid Width="24" Height="24">
                             <Line X1="2" Y1="12" X2="22" Y2="12" Stroke="#67E8F9" StrokeThickness="2"/>
@@ -152,7 +152,7 @@
 
                 <!-- 2. Markieren: Rechteck fuer KI-Korrektur -->
                 <ToggleButton x:Name="BtnToolMarkRect" Style="{StaticResource PhotoToolBtn}"
-                              ToolTip="Bereich markieren: Rechteck um Schaden/Beobachtung fuer KI-Training">
+                              ToolTip="Bereich markieren: Rechteck um Schaden/Beobachtung für KI-Training">
                     <StackPanel>
                         <Grid Width="24" Height="24">
                             <Rectangle Width="18" Height="14" Stroke="#4ADE80" StrokeThickness="2"
@@ -186,7 +186,7 @@
 
                 <!-- 3. Fuellstand-Werkzeuge -->
                 <ToggleButton x:Name="BtnToolWater" Style="{StaticResource PhotoToolBtn}"
-                              ToolTip="Wasserstand: Fuellhoehe in % vom Querschnitt">
+                              ToolTip="Wasserstand: Füllhöhe in % vom Querschnitt">
                     <StackPanel>
                         <Grid Width="24" Height="24">
                             <Ellipse Width="22" Height="22" Stroke="#93C5FD" StrokeThickness="1.5"
@@ -200,7 +200,7 @@
                     </StackPanel>
                 </ToggleButton>
                 <ToggleButton x:Name="BtnToolDeposit" Style="{StaticResource PhotoToolBtn}"
-                              ToolTip="Ablagerung: Sedimenthoehe in % vom Querschnitt">
+                              ToolTip="Ablagerung: Sedimenthöhe in % vom Querschnitt">
                     <StackPanel>
                         <Grid Width="24" Height="24">
                             <Ellipse Width="22" Height="22" Stroke="#F59E0B" StrokeThickness="1.5"
@@ -266,7 +266,7 @@
 
                 <!-- 6. Anschluss -->
                 <ToggleButton x:Name="BtnToolConnection" Style="{StaticResource PhotoToolBtn}"
-                              ToolTip="Anschluss: Hoehe und Breite der Oeffnung messen">
+                              ToolTip="Anschluss: Höhe und Breite der Öffnung messen">
                     <StackPanel>
                         <Grid Width="24" Height="24">
                             <Ellipse Width="14" Height="14" Stroke="#34D399" StrokeThickness="2"
@@ -279,7 +279,7 @@
 
                 <!-- 7. Abzweig -->
                 <ToggleButton x:Name="BtnToolLateral" Style="{StaticResource PhotoToolBtn}"
-                              ToolTip="Abzweig: Einmuendungswinkel messen">
+                              ToolTip="Abzweig: Einmündungswinkel messen">
                     <StackPanel>
                         <Grid Width="24" Height="24">
                             <Line X1="4" Y1="12" X2="20" Y2="12" Stroke="#FCA5A5" StrokeThickness="2"/>
@@ -293,7 +293,7 @@
 
                 <!-- 8. Bogen -->
                 <ToggleButton x:Name="BtnToolBend" Style="{StaticResource PhotoToolBtn}"
-                              ToolTip="Bogen: Kruemmungsradius abschaetzen">
+                              ToolTip="Bogen: Krümmungsradius abschätzen">
                     <StackPanel>
                         <Grid Width="24" Height="24">
                             <Path Data="M 4,18 Q 12,2 20,18" Stroke="#FDBA74" StrokeThickness="2" Fill="Transparent"/>
@@ -381,7 +381,7 @@
                     <Button x:Name="BtnUndo" Content="&#x21B6; Undo" Style="{StaticResource ActionBtn}"
                             Background="#6366F1" Click="BtnUndo_Click" Margin="0,8,0,0"
                             Visibility="Collapsed"/>
-                    <Button x:Name="BtnDelete" Content="&#x2716; Loeschen" Style="{StaticResource ActionBtn}"
+                    <Button x:Name="BtnDelete" Content="&#x2716; Löschen" Style="{StaticResource ActionBtn}"
                             Background="#EF4444" Click="BtnDelete_Click" Margin="0,4,0,0"
                             Visibility="Collapsed"/>
                 </StackPanel>
@@ -477,7 +477,7 @@
                 <SolidColorBrush Color="{DynamicResource ColorHeader}"/>
             </Border.Background>
             <TextBlock x:Name="TxtStatus"
-                       Text="Werkzeug waehlen, um mit der Messung zu beginnen."
+                       Text="Werkzeug wählen, um mit der Messung zu beginnen."
                        FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
         </Border>
     </Grid>

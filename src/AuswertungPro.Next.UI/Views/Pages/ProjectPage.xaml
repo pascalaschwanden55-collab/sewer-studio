@@ -14,12 +14,12 @@
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" Grid.Column="0">
                 <Button Content="Neues Projekt" Command="{Binding NewCommand}" />
-                <Button Content="Oeffnen" Command="{Binding OpenCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
+                <Button Content="Öffnen" Command="{Binding OpenCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
                 <Button Content="Speichern unter" Command="{Binding SaveAsCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Grid.Column="1" HorizontalAlignment="Right">
                 <Button Content="Projekt speichern" Command="{Binding SaveCommand}" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" Margin="0,0,8,0" />
-                <Button Content="Programm schliessen" Click="CloseButton_Click" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" />
+                <Button Content="Programm schließen" Click="CloseButton_Click" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" />
             </StackPanel>
         </Grid>
 
@@ -60,7 +60,7 @@
                         <TextBlock Grid.Row="2" Grid.Column="2" Text="Zone" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding Project.Metadata[Zone], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Strasse" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Straße" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="5" Grid.Column="0" Text="{Binding Project.Metadata[Strasse], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBlock Grid.Row="4" Grid.Column="2" Text="Bearbeiter" Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,4"/>
                         <TextBox Grid.Row="5" Grid.Column="2" Text="{Binding Project.Metadata[Bearbeiter], Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>

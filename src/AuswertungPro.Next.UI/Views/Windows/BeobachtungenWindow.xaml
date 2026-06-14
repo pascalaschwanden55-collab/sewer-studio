@@ -98,7 +98,7 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="m+" Binding="{Binding MeterStart, StringFormat=F2}" Width="60"/>
                     <DataGridTextColumn Header="m-" Binding="{Binding MeterEnd, StringFormat=F2}" Width="60"/>
-                    <DataGridTextColumn Header="OP Kuerzel" Binding="{Binding Code}" Width="80"/>
+                    <DataGridTextColumn Header="OP Kürzel" Binding="{Binding Code}" Width="80"/>
                     <DataGridTextColumn Header="Zustand" Binding="{Binding Beschreibung}" Width="*" MinWidth="180"/>
                     <DataGridTemplateColumn Header="Fotos" Width="200">
                         <DataGridTemplateColumn.CellTemplate>

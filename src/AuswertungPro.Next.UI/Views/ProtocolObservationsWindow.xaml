@@ -1,7 +1,7 @@
 <Window x:Class="AuswertungPro.Next.UI.Views.ProtocolObservationsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="SewerStudio — Beobachtungen / Schaeden"
+        Title="SewerStudio — Beobachtungen / Schäden"
         MinWidth="900"
         MinHeight="600"
         ResizeMode="CanResizeWithGrip"
@@ -125,11 +125,11 @@
             <WrapPanel HorizontalAlignment="Right">
                 <Button x:Name="NewButton" Content="Neu" Width="100" Style="{StaticResource FooterButtonStyle}"/>
                 <Button x:Name="CopyButton" Content="Kopieren" Width="110" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="DeleteButton" Content="Loeschen" Width="100" Style="{StaticResource FooterButtonStyle}"/>
+                <Button x:Name="DeleteButton" Content="Löschen" Width="100" Style="{StaticResource FooterButtonStyle}"/>
                 <Button x:Name="OverlayButton" Content="Im Video einblenden" Width="160" Style="{StaticResource FooterButtonStyle}"/>
                 <Button x:Name="TrainButton" Content="Als Training speichern" Width="160" Style="{StaticResource FooterButtonStyle}"/>
                 <Button x:Name="ExportPdfButton" Content="Haltungsprotokoll PDF" Width="180" Style="{StaticResource FooterButtonStyle}"/>
-                <Button x:Name="CloseButton" Content="Schliessen" Width="110" Style="{StaticResource FooterButtonStyle}" Margin="0" IsCancel="True"/>
+                <Button x:Name="CloseButton" Content="Schließen" Width="110" Style="{StaticResource FooterButtonStyle}" Margin="0" IsCancel="True"/>
             </WrapPanel>
         </Border>
     </Grid>

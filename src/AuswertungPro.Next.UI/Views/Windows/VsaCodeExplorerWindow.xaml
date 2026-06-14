@@ -385,7 +385,7 @@
                                 BorderThickness="1" BorderBrush="{StaticResource BorderBrush}"
                                 Background="{StaticResource BgLightBrush}">
                             <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="&#x2190; Code links waehlen" FontSize="13"
+                                <TextBlock Text="&#x2190; Code links wählen" FontSize="13"
                                            Foreground="{StaticResource MutedBrush}"
                                            HorizontalAlignment="Center" Margin="0,4,0,4"/>
                                 <TextBlock Text="Gruppe &#x2192; Hauptcode &#x2192; Charakterisierung"
@@ -549,7 +549,7 @@
                                Foreground="{StaticResource DangerBrush}"
                                VerticalAlignment="Center" Margin="0,0,12,0"
                                MaxWidth="300" TextWrapping="Wrap"/>
-                    <Button x:Name="BtnApply" Content="Uebernehmen" Width="130"
+                    <Button x:Name="BtnApply" Content="Übernehmen" Width="130"
                             Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"
                             IsEnabled="False"/>
                     <Button x:Name="BtnCancel" Content="Abbrechen" Width="100" IsCancel="True"/>

@@ -333,7 +333,7 @@
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="ApplyButton" Content="Uebernehmen" Width="130" Height="32"
+                <Button x:Name="ApplyButton" Content="Übernehmen" Width="130" Height="32"
                         FontWeight="SemiBold" Margin="0,0,8,0"/>
                 <Button x:Name="CancelButton" Content="Abbrechen" Width="130" Height="32" IsCancel="True"/>
             </StackPanel>

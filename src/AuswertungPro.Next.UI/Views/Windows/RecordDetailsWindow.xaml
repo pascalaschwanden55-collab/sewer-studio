@@ -21,9 +21,9 @@
         <DockPanel Grid.Row="1" Margin="0,14,0,0" LastChildFill="False">
             <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center"
                        Foreground="{StaticResource TextSecondaryBrush}"
-                       Text="Doppelklick oder Kontextmenue auf der Zeile oeffnet diese Detailansicht."/>
+                       Text="Doppelklick oder Kontextmenü auf der Zeile öffnet diese Detailansicht."/>
             <Button DockPanel.Dock="Right" Width="120" Command="{Binding CloseCommand, ElementName=Root}"
-                    Style="{StaticResource SecondaryButton}">Schliessen</Button>
+                    Style="{StaticResource SecondaryButton}">Schließen</Button>
         </DockPanel>
     </Grid>
 </Window>

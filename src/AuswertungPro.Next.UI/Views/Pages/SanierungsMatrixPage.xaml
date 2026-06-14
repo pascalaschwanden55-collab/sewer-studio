@@ -25,7 +25,7 @@
                                    Opacity="0.7" HorizontalAlignment="Right"/>
                     </StackPanel>
                     <Button Content="Preise / Katalog" Command="{Binding KatalogBearbeitenCommand}" Margin="0,0,8,0"
-                            ToolTip="Den (einen) Preis-Katalog bearbeiten — Preise pro m / Stk / DN. Wird nach dem Schliessen sofort angewendet."/>
+                            ToolTip="Den (einen) Preis-Katalog bearbeiten — Preise pro m / Stk / DN. Wird nach dem Schließen sofort angewendet."/>
                     <Button Content="Neu laden" Command="{Binding ReloadCommand}" Margin="0,0,8,0"/>
                     <Button Content="Speichern" Command="{Binding SpeichernCommand}"
                             Style="{StaticResource PrimaryButton}"/>
@@ -67,10 +67,10 @@
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Haltung" Binding="{Binding Holding}" IsReadOnly="True" Width="2*"/>
                     <DataGridTextColumn Header="DN" Binding="{Binding Dn}" IsReadOnly="True" Width="60"/>
-                    <DataGridTextColumn Header="Laenge m" Binding="{Binding Laenge}" IsReadOnly="True" Width="80"/>
+                    <DataGridTextColumn Header="Länge m" Binding="{Binding Laenge}" IsReadOnly="True" Width="80"/>
                     <DataGridTextColumn Header="Anschl." Binding="{Binding Anschluesse}" IsReadOnly="True" Width="70"/>
 
-                    <DataGridTemplateColumn Header="Massnahmen" Width="2*">
+                    <DataGridTemplateColumn Header="Maßnahmen" Width="2*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Grid>
@@ -153,7 +153,7 @@
                             </Style>
                         </DataGridCheckBoxColumn.EditingElementStyle>
                     </DataGridCheckBoxColumn>
-                    <DataGridCheckBoxColumn Header="Fraesen" Width="62"
+                    <DataGridCheckBoxColumn Header="Fräsen" Width="62"
                                             Binding="{Binding OptFraesen, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                         <DataGridCheckBoxColumn.ElementStyle>
                             <Style TargetType="CheckBox">
@@ -248,7 +248,7 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
-                            <Button Content="Uebernehmen"
+                            <Button Content="Übernehmen"
                                     Command="{Binding DetailUebernehmenCommand}"
                                     IsEnabled="{Binding IsDetailDirty}"
                                     Style="{StaticResource PrimaryButton}"

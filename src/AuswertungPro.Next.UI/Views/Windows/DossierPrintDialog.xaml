@@ -55,7 +55,7 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0">
-            <TextBlock Text="Dossier-Inhalte auswaehlen"
+            <TextBlock Text="Dossier-Inhalte auswählen"
                        FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
                        Margin="0,0,0,4"/>
             <TextBlock Text="Die Reihenfolge entspricht der Ausgabe im PDF."
@@ -66,13 +66,13 @@
             <StackPanel Margin="8,0,0,0">
                 <TextBlock Text="1) Haltung"
                            FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,2"/>
-                <CheckBox x:Name="ChkDeckblatt" Content="Deckblatt (Projekt- und Haltungsuebersicht)" IsChecked="True"/>
+                <CheckBox x:Name="ChkDeckblatt" Content="Deckblatt (Projekt- und Haltungsübersicht)" IsChecked="True"/>
                 <CheckBox x:Name="ChkHaltungsprotokoll" Content="Haltungsprotokoll (Beobachtungen / Codes)" IsChecked="True"/>
                 <CheckBox x:Name="ChkFotos" Content="Fotos aus Haltungsprotokoll" IsChecked="True"/>
 
                 <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,8,0,8"/>
 
-                <TextBlock Text="2) Schaechte"
+                <TextBlock Text="2) Schächte"
                            FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,2"/>
                 <CheckBox x:Name="ChkSchachtVon" Content="Schacht Von (Stammdaten + Befunde)" IsChecked="True"/>
                 <CheckBox x:Name="ChkSchachtBis" Content="Schacht Bis (Stammdaten + Befunde)" IsChecked="True"/>
@@ -82,11 +82,11 @@
                 <TextBlock Text="3) Auswertung"
                            FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,2"/>
                 <CheckBox x:Name="ChkHydraulik" Content="Hydraulik-Berechnung" IsChecked="True"/>
-                <CheckBox x:Name="ChkKostenschaetzung" Content="Kostenschaetzung / Massnahmen" IsChecked="True"/>
+                <CheckBox x:Name="ChkKostenschaetzung" Content="Kostenschätzung / Maßnahmen" IsChecked="True"/>
 
                 <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,8,0,8"/>
 
-                <TextBlock Text="4) Anhaenge"
+                <TextBlock Text="4) Anhänge"
                            FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,2"/>
                 <CheckBox x:Name="ChkOriginalProtokolle" Content="Original-Protokolle als PDF-Anhang" IsChecked="True"/>
             </StackPanel>
@@ -94,7 +94,7 @@
 
         <!-- Info-Labels -->
         <StackPanel Grid.Row="2" Margin="8,12,0,0">
-            <TextBlock Text="Verfuegbarkeit in den aktuellen Daten:"
+            <TextBlock Text="Verfügbarkeit in den aktuellen Daten:"
                        FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
             <TextBlock x:Name="InfoSchachtVon" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2"/>
             <TextBlock x:Name="InfoSchachtBis" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2"/>

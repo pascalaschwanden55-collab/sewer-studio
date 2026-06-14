@@ -78,7 +78,7 @@
 
         <!-- Row 4: Action buttons -->
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
-            <Button Content="Uebernehmen" Command="{Binding ApplyCommand}" IsDefault="True" Padding="20,6" MinWidth="120" FontWeight="SemiBold"/>
+            <Button Content="Übernehmen" Command="{Binding ApplyCommand}" IsDefault="True" Padding="20,6" MinWidth="120" FontWeight="SemiBold"/>
             <Button Content="Abbrechen" Command="{Binding CancelCommand}" IsCancel="True" Padding="20,6" MinWidth="100" Margin="10,0,0,0"/>
         </StackPanel>
     </Grid>

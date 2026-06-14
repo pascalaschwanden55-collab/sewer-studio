@@ -69,7 +69,7 @@
 
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                     <CheckBox x:Name="OverwriteCheck" Margin="90,0,20,0"
-                              Content="Bereits verlinkte ueberschreiben" FontSize="12"/>
+                              Content="Bereits verlinkte überschreiben" FontSize="12"/>
                     <CheckBox x:Name="PdfCheck" Margin="0,0,20,0"
                               Content="PDFs suchen" IsChecked="True" FontSize="12"/>
                     <CheckBox x:Name="FotoCheck" Margin="0,0,20,0"
@@ -95,7 +95,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <TextBlock x:Name="ProgressText" Grid.Row="0" Text="Suche laeuft..."
+                <TextBlock x:Name="ProgressText" Grid.Row="0" Text="Suche läuft..."
                            Style="{StaticResource LabelText}" Margin="0,0,0,6"/>
                 <ProgressBar x:Name="ProgressBar" Grid.Row="1" Height="10" Minimum="0" Maximum="100"
                              HorizontalAlignment="Stretch"/>
@@ -147,7 +147,7 @@
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
                     <Button x:Name="ApplyButton" Content="Anwenden" Click="Apply_Click"
                             Style="{DynamicResource PrimaryButton}" IsEnabled="False" Margin="0,0,8,0"/>
-                    <Button x:Name="CloseButton" Content="Schliessen" Click="Close_Click"
+                    <Button x:Name="CloseButton" Content="Schließen" Click="Close_Click"
                             Style="{DynamicResource SecondaryButton}"/>
                 </StackPanel>
                 <TextBlock x:Name="SummaryText" Style="{StaticResource LabelText}"

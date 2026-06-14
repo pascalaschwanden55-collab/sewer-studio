@@ -30,7 +30,7 @@
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button x:Name="DockBackButton" Click="DockBack_Click"
                             Style="{DynamicResource ToolbarButton}" Margin="0,0,4,0"
-                            ToolTip="Zurueck ins Hauptfenster andocken">
+                            ToolTip="Zurück ins Hauptfenster andocken">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE89F;" FontFamily="Segoe MDL2 Assets" FontSize="13"
                                        Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>

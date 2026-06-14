@@ -43,10 +43,10 @@
                     <Separator/>
                     <MenuItem Header="Play" Click="CtxPlay_Click"/>
                     <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="CtxPrintAwu_Click"/>
-                    <MenuItem Header="Haltungsprotokoll Original (PDF) oeffnen..." Click="CtxOpenPdf_Click"/>
+                    <MenuItem Header="Haltungsprotokoll Original (PDF) öffnen..." Click="CtxOpenPdf_Click"/>
                     <MenuItem Header="Sanierungsmassnahmen..." Click="CtxCosts_Click"/>
                     <Separator/>
-                    <MenuItem Header="Haltung loeschen" Click="CtxDelete_Click" Foreground="OrangeRed"/>
+                    <MenuItem Header="Haltung löschen" Click="CtxDelete_Click" Foreground="OrangeRed"/>
                 </ContextMenu>
             </ListBox.ContextMenu>
             <ListBox.ItemTemplate>

@@ -264,9 +264,9 @@
 
                         <!-- Aktionen -->
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button Content="&#x2713; Uebernehmen" Click="ConfirmAccept_Click"
+                            <Button Content="&#x2713; Übernehmen" Click="ConfirmAccept_Click"
                                     Style="{StaticResource PlayerPrimaryButton}" Padding="12,6" Margin="0,0,6,0"/>
-                            <Button Content="&#x270E; Code aendern" Click="ConfirmEdit_Click"
+                            <Button Content="&#x270E; Code ändern" Click="ConfirmEdit_Click"
                                     Style="{StaticResource PlayerButton}" Padding="12,6" Margin="0,0,6,0"
                                     Foreground="{DynamicResource AccentBrush}"/>
                             <Button Content="&#x2717; Verwerfen" Click="ConfirmReject_Click"
@@ -373,7 +373,7 @@
                 <!-- Meter-Navigation -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
                     <Button Style="{StaticResource PlayerButton}" Content="&#x25C0;" Padding="8,6"
-                            Click="CodingPrevious_Click" ToolTip="Zurueck (Step)"/>
+                            Click="CodingPrevious_Click" ToolTip="Zurück (Step)"/>
                     <TextBlock x:Name="TxtCodingMeter"
                                FontFamily="Consolas, Cascadia Mono" FontSize="15" FontWeight="Bold"
                                Foreground="{DynamicResource TextBrush}"
@@ -455,7 +455,7 @@
                     </Grid>
                     <TextBlock x:Name="TxtCodingAiStatus" FontSize="11"
                                Foreground="{DynamicResource TextBrush}"
-                               Text="Kuenstliche Intelligenz bereit" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                               Text="Künstliche Intelligenz bereit" VerticalAlignment="Center" Margin="0,0,4,0"/>
                     <TextBlock x:Name="TxtCodingAiStage" FontSize="11"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                Text="" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -533,8 +533,8 @@
                                 <TextBox.ToolTip>
                                     <TextBlock>
                                         Freitext: z.B. "Beule unten", "Riss bei 3 Uhr", "Anschluss offen 9h"
-                                        <LineBreak/>Oder Stichwort aus der Liste waehlen.
-                                        <LineBreak/>Enter = Bestaetigen | Esc = Abbrechen
+                                        <LineBreak/>Oder Stichwort aus der Liste wählen.
+                                        <LineBreak/>Enter = Bestätigen | Esc = Abbrechen
                                     </TextBlock>
                                 </TextBox.ToolTip>
                             </TextBox>
@@ -544,7 +544,7 @@
                                       Background="{DynamicResource CardBrush}" Foreground="{DynamicResource TextBrush}"
                                       BorderBrush="{DynamicResource BorderBrush}"
                                       SelectionChanged="CmbEingabemarker_SelectionChanged">
-                                <ComboBox.ToolTip>Schnellauswahl: Haeufigste Codes</ComboBox.ToolTip>
+                                <ComboBox.ToolTip>Schnellauswahl: Häufigste Codes</ComboBox.ToolTip>
                                 <ComboBoxItem Content="Rohranfang" FontWeight="SemiBold"/>
                                 <ComboBoxItem Content="Rohrende" FontWeight="SemiBold"/>
                                 <ComboBoxItem Content="Anschluss" FontWeight="SemiBold"/>
@@ -624,13 +624,13 @@
                     <Button Style="{StaticResource PlayerPrimaryButton}"
                             Padding="10,5"
                             Click="CodingApply_Click"
-                            ToolTip="Codierung in Primaere Schaeden uebernehmen">
-                        <TextBlock Text="Uebernehmen" FontSize="11" FontWeight="SemiBold"/>
+                            ToolTip="Codierung in Primäre Schäden übernehmen">
+                        <TextBlock Text="Übernehmen" FontSize="11" FontWeight="SemiBold"/>
                     </Button>
                     <Button Style="{StaticResource PlayerButton}"
                             Foreground="#EF4444" Margin="6,0,0,0"
                             Click="CodingModeExit_Click"
-                            ToolTip="Codier-Modus beenden ohne Uebernahme">
+                            ToolTip="Codier-Modus beenden ohne Übernahme">
                         <TextBlock Text="Beenden" FontSize="11"/>
                     </Button>
                 </StackPanel>
@@ -690,7 +690,7 @@
                             Margin="0,1"
                             IsMoveToPointEnabled="True"
                             ValueChanged="PositionSlider_ValueChanged"
-                            ToolTip="Videoposition - ziehen fuer Live-Vorschau, klicken zum Springen"/>
+                            ToolTip="Videoposition - ziehen für Live-Vorschau, klicken zum Springen"/>
                     <!-- Damage code marker overlay, positioned dynamically to match slider track -->
                     <Canvas x:Name="DamageMarkerCanvas"
                             IsHitTestVisible="True"
@@ -734,7 +734,7 @@
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource PlayerButton}" Click="Stop_Click"
-                            ToolTip="Wiedergabe stoppen und zum Anfang zuruecksetzen">
+                            ToolTip="Wiedergabe stoppen und zum Anfang zurücksetzen">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE71A;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Stop" VerticalAlignment="Center"/>
@@ -768,7 +768,7 @@
                                   Style="{StaticResource SpeedToggleButton}"
                                   Margin="0,0,6,0"
                                   Click="LiveDetection_Click"
-                                  ToolTip="Live-KI: Echtzeit-Schadenserkennung waehrend Wiedergabe (D)">
+                                  ToolTip="Live-KI: Echtzeit-Schadenserkennung während Wiedergabe (D)">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Live-KI" VerticalAlignment="Center"/>
@@ -779,7 +779,7 @@
                         <Button x:Name="ManualMarkButton"
                                 Style="{StaticResource PlayerButton}"
                                 Click="ManualMark_Click"
-                                ToolTip="Markieren: Werkzeug waehlen (M)">
+                                ToolTip="Markieren: Werkzeug wählen (M)">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE7C8;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                 <TextBlock x:Name="TxtMarkToolName" Text="Markieren" VerticalAlignment="Center"/>
@@ -832,7 +832,7 @@
                                Margin="0,0,0,6"/>
                     <WrapPanel>
                         <ToggleButton x:Name="Speed05Button" Style="{StaticResource SpeedToggleButton}" Content="0.5x" Click="Speed05_Click"
-                                      ToolTip="Halbe Geschwindigkeit - fuer detaillierte Inspektion"/>
+                                      ToolTip="Halbe Geschwindigkeit - für detaillierte Inspektion"/>
                         <ToggleButton x:Name="Speed1Button" Style="{StaticResource SpeedToggleButton}" Content="1x" Click="Speed1_Click"
                                       ToolTip="Normale Wiedergabegeschwindigkeit"/>
                         <ToggleButton x:Name="Speed15Button" Style="{StaticResource SpeedToggleButton}" Content="1.5x" Click="Speed15_Click"
@@ -840,7 +840,7 @@
                         <ToggleButton x:Name="Speed2Button" Style="{StaticResource SpeedToggleButton}" Content="2x" Click="Speed2_Click"
                                       ToolTip="Doppelte Geschwindigkeit"/>
                         <ToggleButton x:Name="Speed4Button" Style="{StaticResource SpeedToggleButton}" Content="4x" Click="Speed4_Click"
-                                      ToolTip="4-fache Geschwindigkeit - schneller Ueberblick"/>
+                                      ToolTip="4-fache Geschwindigkeit - schneller Überblick"/>
                         <ToggleButton x:Name="Speed8Button" Style="{StaticResource SpeedToggleButton}" Content="8x" Margin="0" Click="Speed8_Click"
                                       ToolTip="8-fache Geschwindigkeit - maximaler Schnellvorlauf"/>
                     </WrapPanel>

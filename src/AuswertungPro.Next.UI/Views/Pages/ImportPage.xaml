@@ -82,7 +82,7 @@
 
                     <Button Command="{Binding OpenLastReportCommand}"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,4,0"
-                            ToolTip="Letzten Import-Bericht oeffnen">
+                            ToolTip="Letzten Import-Bericht öffnen">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource InfoBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Letzter Bericht" VerticalAlignment="Center"/>
@@ -91,7 +91,7 @@
 
                     <Button Command="{Binding OpenReportFolderCommand}"
                             Style="{StaticResource ToolbarButton}"
-                            ToolTip="Bericht-Ordner oeffnen">
+                            ToolTip="Bericht-Ordner öffnen">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xED25;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Berichte" VerticalAlignment="Center"/>
@@ -101,16 +101,16 @@
             </Border>
 
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                <CheckBox Content="Nur fehlende Felder ergaenzen (vorhandene Daten nicht ueberschreiben)"
+                <CheckBox Content="Nur fehlende Felder ergänzen (vorhandene Daten nicht überschreiben)"
                           IsChecked="{Binding FillMissingOnly}"
                           Foreground="{DynamicResource TextBrush}"
-                          ToolTip="Beim Re-Import werden nur leere Felder aufgefuellt. Bereits vorhandene Werte bleiben unveraendert."/>
+                          ToolTip="Beim Re-Import werden nur leere Felder aufgefüllt. Bereits vorhandene Werte bleiben unverändert."/>
 
                 <CheckBox Content="Erst Vorschau anzeigen"
                           IsChecked="{Binding ShowPreviewFirst}"
                           Foreground="{DynamicResource TextBrush}"
                           Margin="16,0,0,0"
-                          ToolTip="Fuehrt einen Dry-Run durch und zeigt die erwarteten Aenderungen, bevor der eigentliche Import startet."/>
+                          ToolTip="Führt einen Dry-Run durch und zeigt die erwarteten Änderungen, bevor der eigentliche Import startet."/>
             </StackPanel>
         </StackPanel>
 

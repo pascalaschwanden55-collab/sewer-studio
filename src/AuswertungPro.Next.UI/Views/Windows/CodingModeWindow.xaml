@@ -252,7 +252,7 @@
                             <TextBlock Text="KALIBRIERUNG" FontSize="12" FontWeight="Bold"
                                        Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
                             <TextBlock x:Name="TxtCalibrationHint" FontSize="12" Foreground="White"
-                                       Text="Linie ueber den sichtbaren Rohrdurchmesser zeichnen"
+                                       Text="Linie über den sichtbaren Rohrdurchmesser zeichnen"
                                        TextWrapping="Wrap" MaxWidth="300"/>
                         </StackPanel>
                     </Border>
@@ -379,7 +379,7 @@
                                     <ContextMenu>
                                         <MenuItem Header="Bearbeiten (Doppelklick)" Click="ContextMenuEdit_Click"/>
                                         <Separator/>
-                                        <MenuItem Header="Loeschen" Click="ContextMenuDelete_Click" Foreground="OrangeRed"/>
+                                        <MenuItem Header="Löschen" Click="ContextMenuDelete_Click" Foreground="OrangeRed"/>
                                     </ContextMenu>
                                 </ListBox.ContextMenu>
                                 <ListBox.ItemContainerStyle>
@@ -540,7 +540,7 @@
 
                             <Button x:Name="BtnSelectCode"
                                     Style="{StaticResource CodingBtn}"
-                                    Content="Code waehlen..." Margin="0,0,0,6"
+                                    Content="Code wählen..." Margin="0,0,0,6"
                                     Click="BtnSelectCode_Click"/>
 
                             <TextBlock x:Name="TxtSelectedCode"
@@ -752,7 +752,7 @@
                                VerticalAlignment="Center" Margin="0,0,12,0"/>
                     <!-- Kalibrieren: DN-Referenzlinie -->
                     <ToggleButton x:Name="BtnCalibrate" Style="{StaticResource ToolButton}"
-                                  ToolTip="Kalibrieren: Linie ueber Rohrdurchmesser zeichnen"
+                                  ToolTip="Kalibrieren: Linie über Rohrdurchmesser zeichnen"
                                   Checked="BtnCalibrate_Checked" Unchecked="BtnCalibrate_Unchecked">
                         <StackPanel>
                             <TextBlock Text="&#x2295;" FontSize="18" HorizontalAlignment="Center"/>
@@ -762,7 +762,7 @@
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,6"/>
                     <!-- Rechteck: Bereich fuer KI markieren -->
                     <ToggleButton x:Name="BtnToolRect" Style="{StaticResource ToolButton}"
-                                  ToolTip="Rechteck: Bereich markieren fuer KI-Analyse"
+                                  ToolTip="Rechteck: Bereich markieren für KI-Analyse"
                                   Checked="ToolButton_Checked" Unchecked="ToolButton_Unchecked">
                         <StackPanel>
                             <TextBlock Text="&#x25A2;" FontSize="18" HorizontalAlignment="Center"/>
@@ -780,7 +780,7 @@
                 <!-- Links: Navigation -->
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
                     <Button x:Name="BtnPrevious" Style="{StaticResource CodingBtn}"
-                            Content="&#x25C0;Zurueck" Click="BtnPrevious_Click"/>
+                            Content="&#x25C0;Zurück" Click="BtnPrevious_Click"/>
                     <TextBlock x:Name="TxtCurrentMeter" Style="{StaticResource MeterText}"
                                Margin="12,0" VerticalAlignment="Center"
                                Text="0.00m"/>

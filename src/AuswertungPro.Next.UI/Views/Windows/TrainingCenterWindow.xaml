@@ -631,11 +631,11 @@
                         <TextBlock Text="{Binding ReviewStatusText}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,16,0"/>
                         <Button Content="Protokoll-Startdaten vorschlagen"
                                 Command="{Binding SuggestProtocolStartdataCommand}"
-                                ToolTip="Gepruefte Protokoll-Samples (Status=New) als Kandidaten einreihen — keine KI-Analyse"
+                                ToolTip="Geprüfte Protokoll-Samples (Status=New) als Kandidaten einreihen — keine KI-Analyse"
                                 Margin="0,0,6,0" Padding="8,3"/>
                         <Button Content="Alle Startdaten freigeben"
                                 Click="ReleaseStartdata_Click"
-                                ToolTip="Alle Protokoll-Startdaten-Kandidaten nach expliziter Bestaetigung freigeben"
+                                ToolTip="Alle Protokoll-Startdaten-Kandidaten nach expliziter Bestätigung freigeben"
                                 Padding="8,3"/>
                     </StackPanel>
 
@@ -774,7 +774,7 @@
                                     </StackPanel>
 
                                     <!-- Hinweis Box-Zeichnen (B5) -->
-                                    <TextBlock Text="Box ziehen -> SAM segmentieren -> Akzeptieren. Esc loescht Box und Maske."
+                                    <TextBlock Text="Box ziehen -> SAM segmentieren -> Akzeptieren. Esc löscht Box und Maske."
                                                Foreground="{DynamicResource MutedBrush}" FontSize="10" FontStyle="Italic"
                                                Margin="0,8,0,0"/>
                                     <TextBlock Text="Optional: Box ziehen (nur für YOLO) · Esc löscht"
@@ -858,7 +858,7 @@
                         <Border Background="{DynamicResource BgLightBrush}" CornerRadius="6" Padding="10">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="Match-Rate Trend (letzte Laeufe)" Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold" FontSize="13"/>
+                                    <TextBlock Text="Match-Rate Trend (letzte Läufe)" Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold" FontSize="13"/>
                                     <TextBlock Text="{Binding KbTrendDirection, Mode=OneWay}"
                                                Foreground="#4ADE80" FontSize="16" FontWeight="Bold" Margin="8,0,0,0"/>
                                 </StackPanel>
@@ -901,7 +901,7 @@
                                 <Button x:Name="BtnOpenVideoLabelTool" Content="Gold-Label-Tool starten"
                                         Click="VideoLabelToolOpen_Click" Margin="0,0,8,0"
                                         Padding="8,4" FontSize="12"
-                                        ToolTip="Startet das lokale VideoLabelTool fuer Frame, Box und SAM-Maske"/>
+                                        ToolTip="Startet das lokale VideoLabelTool für Frame, Box und SAM-Maske"/>
                                 <Button x:Name="BtnTeacherRefresh"
                                         Click="TeacherRefresh_Click" Margin="0,0,8,0"
                                         Padding="8,4" FontSize="12">
@@ -925,7 +925,7 @@
                                         Foreground="{DynamicResource DangerBrush}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0"/>
-                                        <TextBlock Text="Loeschen"/>
+                                        <TextBlock Text="Löschen"/>
                                     </StackPanel>
                                 </Button>
                             </StackPanel>

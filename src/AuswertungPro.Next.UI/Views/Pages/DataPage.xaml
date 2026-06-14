@@ -77,7 +77,7 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <TextBlock Text="Bitte zuerst Projekt speichern (Datei anlegen), dann ist Bearbeitung moeglich."
+                <TextBlock Text="Bitte zuerst Projekt speichern (Datei anlegen), dann ist Bearbeitung möglich."
                            Foreground="{DynamicResource TextBrush}" />
             </Border>
 
@@ -191,7 +191,7 @@
 
                     <Button x:Name="MassnahmenDropdown" Click="DropdownButton_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Sanierungsmassnahme fuer die gewaehlte Haltung bearbeiten">
+                            ToolTip="Sanierungsmassnahme für die gewählte Haltung bearbeiten">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Sanierungsmassnahme" VerticalAlignment="Center"/>
@@ -202,8 +202,8 @@
                                 <MenuItem Header="Sanierungsmassnahme bearbeiten" Click="CostsMenu_Click"/>
                                 <MenuItem Header="Vorschlag aus Schadenscodes" Click="SuggestMeasuresMenu_Click"/>
                                 <Separator/>
-                                <MenuItem Header="Alle Massnahmen vorschlagen" Click="SuggestAllMeasuresMenu_Click"
-                                          ToolTip="Sanierungsmassnahmen fuer alle Haltungen mit Sanierungsbedarf vorschlagen"/>
+                                <MenuItem Header="Alle Maßnahmen vorschlagen" Click="SuggestAllMeasuresMenu_Click"
+                                          ToolTip="Sanierungsmassnahmen für alle Haltungen mit Sanierungsbedarf vorschlagen"/>
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
@@ -249,7 +249,7 @@
 
                     <Button x:Name="DossierPrintButton" Click="DossierPrint_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Haltungsdossier als PDF drucken (Sektionen auswaehlbar)">
+                            ToolTip="Haltungsdossier als PDF drucken (Sektionen auswählbar)">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Dossier" VerticalAlignment="Center"/>
@@ -260,7 +260,7 @@
 
                     <Button x:Name="UndockButton" Click="UndockGrid_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="DataGrid in separatem Fenster oeffnen (Multi-Monitor)">
+                            ToolTip="DataGrid in separatem Fenster öffnen (Multi-Monitor)">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="Abdocken" VerticalAlignment="Center"/>
@@ -302,7 +302,7 @@
                                 <MenuItem StaysOpenOnClick="True">
                                     <MenuItem.Header>
                                         <StackPanel Orientation="Horizontal" Margin="0,2">
-                                            <TextBlock Text="Zeilenhoehe:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="92"/>
+                                            <TextBlock Text="Zeilenhöhe:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="92"/>
                                             <Slider Width="130"
                                                     Minimum="24"
                                                     Maximum="240"
@@ -401,7 +401,7 @@
                                                     </ToggleButton>
                                                 </StackPanel>
                                             </StackPanel>
-                                            <TextBlock Text="Zelle oder Spaltenkopf auswaehlen"
+                                            <TextBlock Text="Zelle oder Spaltenkopf auswählen"
                                                        Foreground="{DynamicResource MutedBrush}"
                                                        VerticalAlignment="Center"
                                                        Margin="10,0,0,0"/>
@@ -434,7 +434,7 @@
                         <TextBlock Text="Verschieben auf Pos.:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="20,0,6,0"/>
                         <TextBox x:Name="MoveToPositionBox" Width="60" VerticalAlignment="Center"
                                  VerticalContentAlignment="Center" Padding="4,2"
-                                 ToolTip="Zielposition eingeben (1-basiert) und Enter druecken"
+                                 ToolTip="Zielposition eingeben (1-basiert) und Enter drücken"
                                  KeyDown="MoveToPositionBox_KeyDown"/>
                         <Button Content="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="12"
                                 Style="{StaticResource IconButton}" Margin="4,0,0,0"
@@ -446,7 +446,7 @@
                         <TextBlock Text="Gehe zu Zeile:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBox x:Name="GoToRowBox" Width="60" VerticalAlignment="Center"
                                  VerticalContentAlignment="Center" Padding="4,2"
-                                 ToolTip="Zeilennummer eingeben und Enter druecken"
+                                 ToolTip="Zeilennummer eingeben und Enter drücken"
                                  KeyDown="GoToRowBox_KeyDown"/>
                         <Button Content="&#xE72A;" FontFamily="Segoe MDL2 Assets" FontSize="12"
                                 Style="{StaticResource IconButton}" Margin="4,0,0,0"
@@ -466,10 +466,10 @@
                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="40,30">
                     <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="40"
                                Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                    <TextBlock Text="DataGrid ist in separatem Fenster geoeffnet"
+                    <TextBlock Text="DataGrid ist in separatem Fenster geöffnet"
                                Foreground="{DynamicResource TextBrush}" FontSize="16" FontWeight="SemiBold"
                                HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                    <TextBlock Text="Ziehen Sie das Fenster auf einen anderen Monitor fuer Multi-Monitor-Betrieb."
+                    <TextBlock Text="Ziehen Sie das Fenster auf einen anderen Monitor für Multi-Monitor-Betrieb."
                                Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"
                                HorizontalAlignment="Center" Margin="0,0,0,16" TextWrapping="Wrap" TextAlignment="Center"/>
                     <Button x:Name="DockBackPlaceholderButton" Click="DockBackFromPlaceholder_Click"
@@ -535,10 +535,10 @@
                         <Separator/>
                         <MenuItem Header="Play" Click="PlayMenu_Click" />
                         <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="PrintAwuHaltungsprotokollMenu_Click" />
-                        <MenuItem Header="Haltungsprotokoll Original (PDF) oeffnen..." Click="OpenOriginalPdfMenu_Click" />
+                        <MenuItem Header="Haltungsprotokoll Original (PDF) öffnen..." Click="OpenOriginalPdfMenu_Click" />
                         <MenuItem Header="Sanierungsmassnahmen..." Click="CostsMenu_Click" />
                         <Separator/>
-                        <MenuItem Header="Markierte Zeilen loeschen" Click="DeleteSelectedRows_Click"
+                        <MenuItem Header="Markierte Zeilen löschen" Click="DeleteSelectedRows_Click"
                                   InputGestureText="Del" Foreground="OrangeRed"/>
                     </ContextMenu>
                 </DataGrid.ContextMenu>
@@ -569,7 +569,7 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <TextBlock Text="Noch keine Haltungen - ueber Import einlesen"
+                <TextBlock Text="Noch keine Haltungen - über Import einlesen"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            FontSize="14"
                            FontWeight="SemiBold"/>

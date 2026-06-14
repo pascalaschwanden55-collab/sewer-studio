@@ -18,7 +18,7 @@
                 <StackPanel DockPanel.Dock="Left">
                     <TextBlock Text="Druckcenter"
                                Style="{StaticResource PageTitle}"/>
-                    <TextBlock Text="Filterbarer Ausdruck mit Kosten-, Eigentuemer- und Positionszusammenfassung"
+                    <TextBlock Text="Filterbarer Ausdruck mit Kosten-, Eigentümer- und Positionszusammenfassung"
                                Style="{StaticResource Caption}"/>
                 </StackPanel>
 
@@ -29,7 +29,7 @@
                             Command="{Binding RefreshCommand}"
                             Style="{StaticResource SecondaryButton}"
                             Margin="0,0,8,0"/>
-                    <Button Content="Filter zuruecksetzen"
+                    <Button Content="Filter zurücksetzen"
                             Command="{Binding ResetFiltersCommand}"
                             Style="{StaticResource SecondaryButton}"/>
                 </StackPanel>
@@ -52,7 +52,7 @@
 
                     <StackPanel Width="180"
                                 Margin="0,0,10,8">
-                        <TextBlock Text="Eigentuemer"
+                        <TextBlock Text="Eigentümer"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <ComboBox ItemsSource="{Binding OwnerFilterOptions}"
@@ -61,7 +61,7 @@
 
                     <StackPanel Width="180"
                                 Margin="0,0,10,8">
-                        <TextBlock Text="Ausgefuehrt durch"
+                        <TextBlock Text="Ausgeführt durch"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <ComboBox ItemsSource="{Binding ExecutedByFilterOptions}"
@@ -109,7 +109,7 @@
                     <CheckBox Content="Nur mit Kosten"
                               IsChecked="{Binding OnlyWithCost, Mode=TwoWay}"
                               Margin="0,0,16,0"/>
-                    <CheckBox Content="Nur mit Massnahmen"
+                    <CheckBox Content="Nur mit Maßnahmen"
                               IsChecked="{Binding OnlyWithMeasures, Mode=TwoWay}"/>
                 </WrapPanel>
 
@@ -192,7 +192,7 @@
 
                     <StackPanel Grid.Row="1"
                                 Grid.Column="2">
-                        <TextBlock Text="Ohne Eigentuemer"
+                        <TextBlock Text="Ohne Eigentümer"
                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                         <TextBlock Text="{Binding RowsWithoutOwner}"
                                    FontSize="16"
@@ -273,7 +273,7 @@
                                TextWrapping="Wrap"
                                Margin="0,6,0,0"/>
 
-                    <TextBlock Text="Kosten nach Ausgefuehrt durch"
+                    <TextBlock Text="Kosten nach Ausgeführt durch"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource AccentBrush}"
                                Margin="0,12,0,6"/>
@@ -373,15 +373,15 @@
                       ScrollViewer.CanContentScroll="True">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Haltung" Binding="{Binding Holding}" Width="170"/>
-                    <DataGridTextColumn Header="Strasse" Binding="{Binding Street}" Width="170"/>
-                    <DataGridTextColumn Header="Eigentuemer" Binding="{Binding Owner}" Width="160"/>
-                    <DataGridTextColumn Header="Ausgefuehrt durch" Binding="{Binding ExecutedBy}" Width="160"/>
+                    <DataGridTextColumn Header="Straße" Binding="{Binding Street}" Width="170"/>
+                    <DataGridTextColumn Header="Eigentümer" Binding="{Binding Owner}" Width="160"/>
+                    <DataGridTextColumn Header="Ausgeführt durch" Binding="{Binding ExecutedBy}" Width="160"/>
                     <DataGridTextColumn Header="Sanieren" Binding="{Binding Sanieren}" Width="90"/>
                     <DataGridTextColumn Header="Material" Binding="{Binding Material}" Width="130"/>
                     <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="130"/>
                     <DataGridTextColumn Header="Jahr" Binding="{Binding Year}" Width="80"/>
                     <DataGridTextColumn Header="Zustand" Binding="{Binding Zustand}" Width="90"/>
-                    <DataGridTextColumn Header="Massnahmen (Vorschau)" Binding="{Binding MeasuresPreview}" Width="2*"/>
+                    <DataGridTextColumn Header="Maßnahmen (Vorschau)" Binding="{Binding MeasuresPreview}" Width="2*"/>
                     <DataGridTextColumn Header="Kostenquelle" Binding="{Binding CostSource}" Width="140"/>
                     <DataGridTextColumn Header="Netto" Binding="{Binding NetCostText}" Width="130">
                         <DataGridTextColumn.ElementStyle>
@@ -402,10 +402,10 @@
                 <StackPanel DockPanel.Dock="Left"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
-                    <CheckBox Content="Datenuebersicht drucken"
+                    <CheckBox Content="Datenübersicht drucken"
                               IsChecked="{Binding IncludeDataSection, Mode=TwoWay}"
                               Margin="0,0,16,0"/>
-                    <CheckBox Content="Eigentuemer-Zusammenfassung"
+                    <CheckBox Content="Eigentümer-Zusammenfassung"
                               IsChecked="{Binding IncludeOwnerSummarySection, Mode=TwoWay}"
                               Margin="0,0,16,0"/>
                     <CheckBox Content="Positions-Zusammenfassung"
@@ -446,7 +446,7 @@
                                    TextTrimming="CharacterEllipsis"
                                    ToolTip="{Binding LastResult}"/>
                     </StackPanel>
-                    <Button Content="PDF oeffnen"
+                    <Button Content="PDF öffnen"
                             Command="{Binding OpenLastExportedPdfCommand}"
                             Margin="0,0,8,0">
                         <Button.Style>
@@ -488,7 +488,7 @@
                     <Button Content="NPK-Leistungsverzeichnis (CSV)"
                             Command="{Binding ExportNpkLeistungsverzeichnisCommand}"
                             Style="{StaticResource PrimaryButton}"
-                            ToolTip="Eine NPK-Positionsliste ueber alle gefilterten Haltungen (Mengen zusammengezaehlt, ByDN je DN getrennt)."/>
+                            ToolTip="Eine NPK-Positionsliste über alle gefilterten Haltungen (Mengen zusammengezählt, ByDN je DN getrennt)."/>
                 </StackPanel>
             </DockPanel>
         </Border>

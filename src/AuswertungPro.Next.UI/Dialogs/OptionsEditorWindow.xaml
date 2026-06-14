@@ -12,7 +12,7 @@
             <TextBox Width="200"
                      IsEnabled="{Binding IsEditingEnabled}"
                      Text="{Binding NewItemText, UpdateSourceTrigger=PropertyChanged}"/>
-            <Button Content="+ Hinzufuegen"
+            <Button Content="+ Hinzufügen"
                     IsEnabled="{Binding IsEditingEnabled}"
                     Command="{Binding AddCommand}"
                     Margin="8,0,0,0"/>

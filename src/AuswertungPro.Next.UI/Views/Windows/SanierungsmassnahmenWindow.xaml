@@ -62,7 +62,7 @@
                                            Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
                                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Material}"
                                            Foreground="{StaticResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Laenge:"
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Länge:"
                                            Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Laenge}"
                                            Foreground="{StaticResource TextBrush}" Margin="0,0,0,4"/>
@@ -93,7 +93,7 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Massnahmen:"
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Maßnahmen:"
                                            Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"/>
                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding OptimizationVm.RuleMeasures}"
                                            Foreground="{StaticResource TextBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
@@ -106,7 +106,7 @@
                                     Command="{Binding ApplyRuleToCalcCommand}"
                                     Height="28" Margin="0,8,0,0"
                                     HorizontalAlignment="Left" Padding="12,2"
-                                    ToolTip="Regelbasierte Massnahmen in den Kostenrechner uebernehmen"/>
+                                    ToolTip="Regelbasierte Maßnahmen in den Kostenrechner übernehmen"/>
                         </StackPanel>
                     </Border>
 
@@ -127,7 +127,7 @@
                                         Command="{Binding OptimizationVm.OptimizeCommand}"
                                         Style="{StaticResource PrimaryButton}"
                                         Width="100" Height="28"
-                                        ToolTip="KI-Analyse starten - ermittelt optimale Sanierungsmassnahme und Kostenschaetzung"/>
+                                        ToolTip="KI-Analyse starten - ermittelt optimale Sanierungsmassnahme und Kostenschätzung"/>
                             </DockPanel>
 
                             <TextBlock Text="{Binding OptimizationVm.StatusText}"
@@ -191,7 +191,7 @@
                                     <Run Text=" CHF"/>
                                 </TextBlock>
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Begruendung:"
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Begründung:"
                                            Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,10,4"
                                            VerticalAlignment="Top"/>
                                 <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding OptimizationVm.AiReasoning}"
@@ -199,10 +199,10 @@
                                            TextWrapping="Wrap" FontSize="10" Margin="0,0,0,6"/>
 
                                 <Button Grid.Row="4" Grid.ColumnSpan="2"
-                                        Content="KI uebernehmen >>"
+                                        Content="KI übernehmen >>"
                                         Command="{Binding ApplyAiToCalcCommand}"
                                         Height="28" HorizontalAlignment="Left" Padding="12,2"
-                                        ToolTip="KI-Vorschlag als Massnahmen in den Kostenrechner uebernehmen"/>
+                                        ToolTip="KI-Vorschlag als Maßnahmen in den Kostenrechner übernehmen"/>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -222,7 +222,7 @@
                             </Style>
                         </Border.Style>
                         <StackPanel>
-                            <TextBlock Text="RISIKEN &amp; EINSCHRAENKUNGEN"
+                            <TextBlock Text="RISIKEN &amp; EINSCHRÄNKUNGEN"
                                        FontSize="11" FontWeight="Bold"
                                        Foreground="{StaticResource AccentBrush}"
                                        Margin="0,0,0,8"/>
@@ -244,7 +244,7 @@
                             </TextBlock>
                             <Border Visibility="{Binding OptimizationVm.IsFallback, Converter={StaticResource BoolToVis}}"
                                     Background="#7F2F00" Margin="0,8,0,0" Padding="8,4" CornerRadius="3">
-                                <TextBlock Text="FALLBACK AKTIV - KI-Vorschlag wurde durch Regelpruefung verworfen"
+                                <TextBlock Text="FALLBACK AKTIV - KI-Vorschlag wurde durch Regelprüfung verworfen"
                                            Foreground="#FF8C00" FontSize="10" FontWeight="Bold"/>
                             </Border>
                         </StackPanel>
@@ -293,7 +293,7 @@
                                                 Focusable="False">
                                             <Button.ContextMenu>
                                                 <ContextMenu>
-                                                    <MenuItem Header="Alles in Ordnung — Warnung unterdruecken"
+                                                    <MenuItem Header="Alles in Ordnung — Warnung unterdrücken"
                                                               Click="SuppressWarning_Click"/>
                                                 </ContextMenu>
                                             </Button.ContextMenu>
@@ -346,7 +346,7 @@
                                        FontSize="10" Cursor="Hand"
                                        Foreground="{StaticResource TextSecondaryBrush}"
                                        MouseLeftButtonUp="ResetSuppressedWarnings_Click"
-                                       ToolTip="Alle unterdrueckten Warnungen wieder anzeigen">
+                                       ToolTip="Alle unterdrückten Warnungen wieder anzeigen">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Style.Triggers>
@@ -357,7 +357,7 @@
                                         </Style.Triggers>
                                     </Style>
                                 </TextBlock.Style>
-                                <Run Text="Unterdrueckungen zuruecksetzen"/>
+                                <Run Text="Unterdrückungen zurücksetzen"/>
                             </TextBlock>
                         </StackPanel>
                     </Border>
@@ -380,7 +380,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Left: Massnahmen list -->
-                <GroupBox Header="Massnahmen" ToolTip="Verfuegbare Sanierungsmassnahmen - Doppelklick oder Auswahl zum Hinzufuegen">
+                <GroupBox Header="Maßnahmen" ToolTip="Verfügbare Sanierungsmassnahmen - Doppelklick oder Auswahl zum Hinzufügen">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*"/>
@@ -393,12 +393,12 @@
                                  DisplayMemberPath="DisplayName"
                                  SelectionChanged="MeasuresList_SelectionChanged"
                                  MouseDoubleClick="MeasuresList_MouseDoubleClick"
-                                 ToolTip="Massnahmen auswaehlen und Doppelklick zum Hinzufuegen zur Kalkulation"/>
+                                 ToolTip="Maßnahmen auswählen und Doppelklick zum Hinzufügen zur Kalkulation"/>
                         <StackPanel Grid.Row="1">
                             <Button Height="32" Margin="0,5,0,0"
                                     Content="Positionen verwalten..."
                                     Command="{Binding CostCalcVm.EditPositionTemplatesCommand}"
-                                    ToolTip="Massnahmen-Vorlagen und Positionen bearbeiten"/>
+                                    ToolTip="Maßnahmen-Vorlagen und Positionen bearbeiten"/>
                         </StackPanel>
                     </Grid>
                 </GroupBox>
@@ -420,7 +420,7 @@
                                     Height="28"
                                     Padding="10,2"
                                     Command="{Binding CostCalcVm.SortMeasuresCommand}"
-                                    ToolTip="Sortiert Massnahmen und Positionen in eine feste Reihenfolge"/>
+                                    ToolTip="Sortiert Maßnahmen und Positionen in eine feste Reihenfolge"/>
                         </DockPanel>
                         <ScrollViewer x:Name="CalcScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto">
                             <ItemsControl x:Name="CalcItemsControl" ItemsSource="{Binding CostCalcVm.SelectedMeasures}">
@@ -434,7 +434,7 @@
                                                             Foreground="Red" FontWeight="Bold" Style="{x:Null}"
                                                             Command="{Binding DataContext.CostCalcVm.RemoveMeasureCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                             CommandParameter="{Binding}"
-                                                            ToolTip="Massnahme entfernen" Margin="8,0,0,0"/>
+                                                            ToolTip="Maßnahme entfernen" Margin="8,0,0,0"/>
                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
                                                         <Button Content="^" Width="28" Height="28" Style="{x:Null}"
                                                                 Command="{Binding DataContext.CostCalcVm.MoveMeasureUpCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -454,16 +454,16 @@
                                                 <StackPanel Orientation="Horizontal" Margin="0,6,0,8">
                                                     <TextBlock Text="DN:" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                                     <TextBox Width="100" Text="{Binding DnText, UpdateSourceTrigger=PropertyChanged}"/>
-                                                    <TextBlock Text="Linerlaenge (m):" VerticalAlignment="Center" Margin="14,0,6,0"/>
+                                                    <TextBlock Text="Linerlänge (m):" VerticalAlignment="Center" Margin="14,0,6,0"/>
                                                     <TextBox Width="120" Text="{Binding LengthText, UpdateSourceTrigger=PropertyChanged}"/>
-                                                    <TextBlock Text="Anschluesse (Stk):" VerticalAlignment="Center" Margin="14,0,6,0"/>
+                                                    <TextBlock Text="Anschlüsse (Stk):" VerticalAlignment="Center" Margin="14,0,6,0"/>
                                                     <TextBox Width="90" Text="{Binding ConnectionsText, UpdateSourceTrigger=PropertyChanged}"/>
                                                     <TextBlock Text="{Binding PriceHint}" Foreground="{StaticResource DangerBrush}"
                                                                Margin="12,0,0,0" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                                 <DataGrid ItemsSource="{Binding Lines}" AutoGenerateColumns="False"
                                                           CanUserAddRows="False"
-                                                          ToolTip="Rechtsklick markiert Position fuer den Uebertrag (gruene Markierung)."
+                                                          ToolTip="Rechtsklick markiert Position für den Übertrag (grüne Markierung)."
                                                           PreviewMouseRightButtonDown="LinesGrid_PreviewMouseRightButtonDown">
                                                     <DataGrid.RowStyle>
                                                         <Style TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource {x:Type DataGridRow}}">
@@ -522,7 +522,7 @@
 
                 <!-- Right: Katalogpositionen (Drag source) -->
                 <GroupBox Grid.Column="4" Header="Katalogpositionen"
-                          ToolTip="Katalogpositionen per Drag-and-Drop in eine Massnahme ziehen">
+                          ToolTip="Katalogpositionen per Drag-and-Drop in eine Maßnahme ziehen">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -573,9 +573,9 @@
                 </StackPanel>
 
                 <WrapPanel Grid.Column="1" HorizontalAlignment="Right">
-                    <Button Content="Kosten &amp; Massnahmen uebernehmen" Width="260" Height="38" Margin="12,0,0,0"
+                    <Button Content="Kosten &amp; Maßnahmen übernehmen" Width="260" Height="38" Margin="12,0,0,0"
                             Command="{Binding CostCalcVm.ApplyTotalCommand}"
-                            ToolTip="Berechnete Kosten und gewaehlte Massnahmen in die Haltungsdaten schreiben"/>
+                            ToolTip="Berechnete Kosten und gewählte Maßnahmen in die Haltungsdaten schreiben"/>
                     <Button Content="PDF" Width="80" Height="38" Margin="8,0,0,0"
                             Command="{Binding CostCalcVm.ExportPdfCommand}"
                             CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"

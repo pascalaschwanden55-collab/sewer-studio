@@ -53,14 +53,14 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Abschnitte fuer den Druck auswaehlen:"
+        <TextBlock Grid.Row="0" Text="Abschnitte für den Druck auswählen:"
                    FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}"
                    Margin="0,0,0,12"/>
 
         <StackPanel Grid.Row="1" Margin="8,0,0,0">
-            <CheckBox x:Name="ChkTeilfuellung" Content="Teilfuellung (v, Q, A, Lu, Rhy, Bsp)"
+            <CheckBox x:Name="ChkTeilfuellung" Content="Teilfüllung (v, Q, A, Lu, Rhy, Bsp)"
                       IsChecked="True"/>
-            <CheckBox x:Name="ChkVollfuellung" Content="Vollfuellung (v_V, Q_V)"
+            <CheckBox x:Name="ChkVollfuellung" Content="Vollfüllung (v_V, Q_V)"
                       IsChecked="True"/>
             <CheckBox x:Name="ChkKennzahlen" Content="Kennzahlen (Re, Fr, Lambda, Ny, Tau)"
                       IsChecked="True"/>
@@ -68,7 +68,7 @@
                       IsChecked="True"/>
             <CheckBox x:Name="ChkAuslastung" Content="Auslastung (h/D)"
                       IsChecked="True"/>
-            <CheckBox x:Name="ChkBewertung" Content="Bewertung (Ampel-Uebersicht)"
+            <CheckBox x:Name="ChkBewertung" Content="Bewertung (Ampel-Übersicht)"
                       IsChecked="True"/>
         </StackPanel>
 
