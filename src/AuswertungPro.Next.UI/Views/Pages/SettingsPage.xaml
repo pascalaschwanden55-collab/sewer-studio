@@ -202,7 +202,7 @@
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20" Margin="0,8,0,0">
                     Der typische Arbeitsablauf: Projekt erstellen, Inspektionsdaten importieren (PDF/XTF/WinCan/IBAK),
-                    Videos verknüpfen, KI-Analyse durchführen, VSA-Bewertung berechnen, Sanierungsmassnahmen
+                    Videos verknüpfen, KI-Analyse durchführen, VSA-Bewertung berechnen, Sanierungsmaßnahmen
                     vorschlagen und Ergebnisse als Excel/PDF exportieren.
                 </TextBlock>
             </StackPanel>
@@ -233,9 +233,9 @@
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
                     Zentrale Datenseite für alle Kanalsegmente (Haltungen). Bearbeitbares DataGrid mit Suche,
                     Zoom, Zeilenhöhe, Spaltenausrichtung und Multi-Monitor-Support (Abdocken auf zweiten Bildschirm).
-                    Kontextmenü bietet Zugriff auf Protokolle, Videoanalyse, Sanierungsmassnahmen und Kostenrechner.
+                    Kontextmenü bietet Zugriff auf Protokolle, Videoanalyse, Sanierungsmaßnahmen und Kostenrechner.
                     Toolbar-Dropdowns: KI-Tools (Protokoll, KI-Status, Videoanalyse, KI-Sanierung),
-                    Sanierungsmassnahmen (Kostenrechner, Vorschlag aus Schadenscodes, Alle Maßnahmen vorschlagen)
+                    Sanierungsmaßnahmen (Kostenrechner, Vorschlag aus Schadenscodes, Alle Maßnahmen vorschlagen)
                     und Medien suchen (automatische Video/PDF-Verknüpfung).
                 </TextBlock>
 
@@ -311,7 +311,7 @@
                     Klick auf einen Code-Marker springt direkt zur Schadenstelle im Video.
                 </TextBlock>
 
-                <TextBlock Text="Sanierungsmassnahmen" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
+                <TextBlock Text="Sanierungsmaßnahmen" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
                     Vereinheitlichtes Fenster für Kostenberechnung und KI-Optimierung.
                     Linkes Panel: Haltungskontext (DN, Material, Länge, Zustandsklasse), regelbasierte
@@ -353,7 +353,7 @@
                 <TextBlock Text="Haltungsdetails" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
                     Kompakte Detailansicht einer einzelnen Haltung mit allen Feldern gruppiert nach
-                    Kategorie (Stammdaten, Inspektion, VSA, Kosten). Direktlink zu Sanierungsmassnahmen.
+                    Kategorie (Stammdaten, Inspektion, VSA, Kosten). Direktlink zu Sanierungsmaßnahmen.
                 </TextBlock>
 
                 <TextBlock Text="Beobachtungskatalog" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
@@ -458,7 +458,7 @@
                 <TextBlock Text="4.6 KI-Sanierungsoptimierung" FontWeight="SemiBold" FontSize="13"
                            Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Kombiniert regelbasierte und KI-gestützte Empfehlungen für Sanierungsmassnahmen.
+                    Kombiniert regelbasierte und KI-gestützte Empfehlungen für Sanierungsmaßnahmen.
                     Regelbasiert: Ableitung aus Schadenscodes, Zustandsklasse, Material und DN.
                     KI-Optimierung: Lokales LLM bewertet Kontext und empfiehlt kostenoptimale Maßnahmen
                     mit Konfidenzwert und Kostenband (Min/Erwartet/Max).

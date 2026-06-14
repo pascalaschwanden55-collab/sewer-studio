@@ -44,7 +44,7 @@
                     <MenuItem Header="Play" Click="CtxPlay_Click"/>
                     <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="CtxPrintAwu_Click"/>
                     <MenuItem Header="Haltungsprotokoll Original (PDF) öffnen..." Click="CtxOpenPdf_Click"/>
-                    <MenuItem Header="Sanierungsmassnahmen..." Click="CtxCosts_Click"/>
+                    <MenuItem Header="Sanierungsmaßnahmen..." Click="CtxCosts_Click"/>
                     <Separator/>
                     <MenuItem Header="Haltung löschen" Click="CtxDelete_Click" Foreground="OrangeRed"/>
                 </ContextMenu>

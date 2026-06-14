@@ -127,7 +127,7 @@
                                         Command="{Binding OptimizationVm.OptimizeCommand}"
                                         Style="{StaticResource PrimaryButton}"
                                         Width="100" Height="28"
-                                        ToolTip="KI-Analyse starten - ermittelt optimale Sanierungsmassnahme und Kostenschätzung"/>
+                                        ToolTip="KI-Analyse starten - ermittelt optimale Sanierungsmaßnahme und Kostenschätzung"/>
                             </DockPanel>
 
                             <TextBlock Text="{Binding OptimizationVm.StatusText}"
@@ -380,7 +380,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Left: Massnahmen list -->
-                <GroupBox Header="Maßnahmen" ToolTip="Verfügbare Sanierungsmassnahmen - Doppelklick oder Auswahl zum Hinzufügen">
+                <GroupBox Header="Maßnahmen" ToolTip="Verfügbare Sanierungsmaßnahmen - Doppelklick oder Auswahl zum Hinzufügen">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*"/>

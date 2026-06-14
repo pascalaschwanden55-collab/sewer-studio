@@ -181,7 +181,7 @@
                                     <MenuItem.Header>
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Sanierungsmassnahmen (KI)" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Sanierungsmaßnahmen (KI)" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </MenuItem.Header>
                                 </MenuItem>
@@ -191,19 +191,19 @@
 
                     <Button x:Name="MassnahmenDropdown" Click="DropdownButton_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="Sanierungsmassnahme für die gewählte Haltung bearbeiten">
+                            ToolTip="Sanierungsmaßnahme für die gewählte Haltung bearbeiten">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Sanierungsmassnahme" VerticalAlignment="Center"/>
+                            <TextBlock Text="Sanierungsmaßnahme" VerticalAlignment="Center"/>
                             <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
                         </StackPanel>
                         <Button.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Header="Sanierungsmassnahme bearbeiten" Click="CostsMenu_Click"/>
+                                <MenuItem Header="Sanierungsmaßnahme bearbeiten" Click="CostsMenu_Click"/>
                                 <MenuItem Header="Vorschlag aus Schadenscodes" Click="SuggestMeasuresMenu_Click"/>
                                 <Separator/>
                                 <MenuItem Header="Alle Maßnahmen vorschlagen" Click="SuggestAllMeasuresMenu_Click"
-                                          ToolTip="Sanierungsmassnahmen für alle Haltungen mit Sanierungsbedarf vorschlagen"/>
+                                          ToolTip="Sanierungsmaßnahmen für alle Haltungen mit Sanierungsbedarf vorschlagen"/>
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
@@ -536,7 +536,7 @@
                         <MenuItem Header="Play" Click="PlayMenu_Click" />
                         <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="PrintAwuHaltungsprotokollMenu_Click" />
                         <MenuItem Header="Haltungsprotokoll Original (PDF) öffnen..." Click="OpenOriginalPdfMenu_Click" />
-                        <MenuItem Header="Sanierungsmassnahmen..." Click="CostsMenu_Click" />
+                        <MenuItem Header="Sanierungsmaßnahmen..." Click="CostsMenu_Click" />
                         <Separator/>
                         <MenuItem Header="Markierte Zeilen löschen" Click="DeleteSelectedRows_Click"
                                   InputGestureText="Del" Foreground="OrangeRed"/>
