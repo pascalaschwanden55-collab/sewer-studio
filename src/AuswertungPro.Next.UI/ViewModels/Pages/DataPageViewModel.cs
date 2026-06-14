@@ -998,8 +998,8 @@ public sealed partial class DataPageViewModel : ObservableObject
         _shell.Project.Dirty = true;
         var sourceText = recommendation.UsedTrainedModel ? "KI-Modell" : "Lernlogik";
         _shell.SetStatus(recommendation.EstimatedTotalCost is null
-            ? $"Massnahmenvorschlag aus Schadenscodes gesetzt ({sourceText})"
-            : $"Massnahmenvorschlag mit Kostenschätzung gesetzt ({recommendation.EstimatedTotalCost.Value:0.00}, {sourceText})");
+            ? $"Maßnahmenvorschlag aus Schadenscodes gesetzt ({sourceText})"
+            : $"Maßnahmenvorschlag mit Kostenschätzung gesetzt ({recommendation.EstimatedTotalCost.Value:0.00}, {sourceText})");
         UpdateLearningInfo(recommendation.SimilarCasesCount, recommendation.EstimatedTotalCost);
 
         // Show result dialog so user sees the suggested measures
@@ -1077,7 +1077,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             _shell.Project.Dirty = true;
         }
 
-        _shell.SetStatus($"Maßnahmen: {filled} Haltungen befuellt, {skipped} uebersprungen, {noSuggestion} ohne Vorschlag");
+        _shell.SetStatus($"Maßnahmen: {filled} Haltungen befüllt, {skipped} uebersprungen, {noSuggestion} ohne Vorschlag");
     }
 
     private void OpenSanierungOptimizationWindow(HaltungRecord? record)
@@ -1100,7 +1100,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         Selected = record;
         _shell.NavigateToSanierungsMatrix(holding, singleHoldingMode: true, targetRecord: record);
-        _shell.SetStatus($"Sanierungsmassnahme geöffnet: {holding}");
+        _shell.SetStatus($"Sanierungsmaßnahme geöffnet: {holding}");
     }
 
     private void OpenSanierungsmassnahmenWindow(HaltungRecord? record, InitialFocusMode focus)

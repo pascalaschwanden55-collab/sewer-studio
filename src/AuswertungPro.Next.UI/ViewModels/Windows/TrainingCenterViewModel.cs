@@ -1228,9 +1228,9 @@ public partial class TrainingCenterViewModel : ObservableObject
         var bestaetigung = DialogHost.Current.ConfirmWarn(
             "Achtung: Der Batch-Import indexiert erkannte Samples OHNE manuelle Prüfung direkt in die Knowledge Base (Auto-Approve).\n\n" +
             "Falsche Code-/Meter-Zuordnungen verschlechtern dauerhaft alle kuenftigen KI-Vorschlaege. " +
-            "Für geprueftes Lernen stattdessen 'Selbsttraining' mit der Review-Queue nutzen.\n\n" +
-            "Trotzdem ungeprueft in die Knowledge Base lernen?",
-            "Batch-Import + KB (ungeprueft)");
+            "Für geprüftes Lernen stattdessen 'Selbsttraining' mit der Review-Queue nutzen.\n\n" +
+            "Trotzdem ungeprüft in die Knowledge Base lernen?",
+            "Batch-Import + KB (ungeprüft)");
         if (!bestaetigung)
         {
             StatusText = "Batch-Import abgebrochen.";

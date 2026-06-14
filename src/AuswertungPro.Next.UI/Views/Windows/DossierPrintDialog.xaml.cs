@@ -29,8 +29,8 @@ public partial class DossierPrintDialog : Window
         InfoSchachtBis.Foreground = MakeBrush(schachtBisFound);
 
         InfoHydraulik.Text = hydraulikAvailable
-            ? "Hydraulik: verfügbar (DN + Gefaelle vorhanden)"
-            : "Hydraulik: nicht verfügbar (DN oder Gefaelle fehlt)";
+            ? "Hydraulik: verfügbar (DN + Gefälle vorhanden)"
+            : "Hydraulik: nicht verfügbar (DN oder Gefälle fehlt)";
         InfoHydraulik.Foreground = MakeBrush(hydraulikAvailable);
 
         InfoKosten.Text = kostenAvailable
