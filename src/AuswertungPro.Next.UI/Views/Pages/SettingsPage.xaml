@@ -50,7 +50,7 @@
                     Margin="8,0,0,0"
                     Width="150"/>
         </DockPanel>
-        <TextBlock Text="Hinweis: fuer volle Umstellung ist ein Neustart noetig."
+        <TextBlock Text="Hinweis: für volle Umstellung ist ein Neustart nötig."
                    Margin="0,4,0,0"
                    Foreground="{DynamicResource MutedBrush}"
                    FontSize="11"/>
@@ -87,7 +87,7 @@
             <CheckBox Content="Wiederherstellungspunkte vor dem Speichern erstellen" IsChecked="{Binding EnableRestorePoints}"/>
             <DockPanel Margin="0,6,0,0">
                 <TextBox Text="{Binding RestorePointsFolderPath}" MinWidth="400" IsReadOnly="True" />
-                <Button Content="Wiederherstellung oeffnen" Command="{Binding OpenRestorePointsFolderCommand}" Margin="8,0,0,0" Width="180"/>
+                <Button Content="Wiederherstellung öffnen" Command="{Binding OpenRestorePointsFolderCommand}" Margin="8,0,0,0" Width="180"/>
             </DockPanel>
         </StackPanel>
 
@@ -135,17 +135,29 @@
         <TextBlock Text="Datenordner (Settings/Logs)" Margin="0,14,0,6" Foreground="{DynamicResource MutedBrush}"/>
         <DockPanel>
             <TextBox Text="{Binding DataFolderPath}" MinWidth="400" IsReadOnly="True" />
-            <Button Content="Ordner oeffnen" Command="{Binding OpenDataFolderCommand}" Margin="8,0,0,0" Width="120"/>
+            <Button Content="Ordner öffnen" Command="{Binding OpenDataFolderCommand}" Margin="8,0,0,0" Width="120"/>
         </DockPanel>
 
         <TextBlock Text="Logs" Margin="0,10,0,6" Foreground="{DynamicResource MutedBrush}"/>
         <DockPanel>
             <TextBox Text="{Binding LogsFolderPath}" MinWidth="400" IsReadOnly="True" />
-            <Button Content="Logs oeffnen" Command="{Binding OpenLogsFolderCommand}" Margin="8,0,0,0" Width="120"/>
+            <Button Content="Logs öffnen" Command="{Binding OpenLogsFolderCommand}" Margin="8,0,0,0" Width="120"/>
         </DockPanel>
 
+        <TextBlock Text="KI-Laufzeit" Margin="0,14,0,6" Foreground="{DynamicResource MutedBrush}"/>
+        <StackPanel>
+            <CheckBox Content="KI beim Programmstart starten" IsChecked="{Binding StartAiOnProgramStart}"/>
+            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                <Button Content="KI jetzt starten" Command="{Binding StartAiCommand}" Width="160"/>
+                <TextBlock Text="{Binding AiStartupStatusText}" Margin="10,0,0,0"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+        </StackPanel>
+
         <TextBlock Text="KI-Wissen Backup" Margin="0,14,0,6" Foreground="{DynamicResource MutedBrush}"/>
-        <TextBlock Text="Exportiert alle KI-Lerndaten, Trainingssamples, Einstellungen und Frames als ZIP. Fuer Backup oder PC-Migration."
+        <TextBlock Text="Exportiert alle KI-Lerndaten, Trainingssamples, Einstellungen und Frames als ZIP. Für Backup oder PC-Migration."
                    TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Margin="0,0,0,8"/>
         <StackPanel Orientation="Horizontal">
             <Button Content="KI-Wissen exportieren" Command="{Binding ExportBackupCommand}" Width="180"/>
@@ -172,7 +184,7 @@
                        Foreground="{DynamicResource AccentBrush}"/>
         </Border>
 
-        <TextBlock Text="Vollstaendige Dokumentation aller Funktionen, KI-Module und Workflows."
+        <TextBlock Text="Vollständige Dokumentation aller Funktionen, KI-Module und Workflows."
                    Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,6,0,20" FontSize="12"/>
 
         <!-- ── 1. Uebersicht ──────────────────────────────────────────── -->
@@ -180,17 +192,17 @@
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
                 Background="{DynamicResource CardBrush}" CornerRadius="6">
             <StackPanel>
-                <TextBlock Text="1. Programmueberblick" FontSize="15" FontWeight="Bold"
+                <TextBlock Text="1. Programmüberblick" FontSize="15" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20">
-                    SewerStudio ist eine professionelle Anwendung fuer die Kanalinspektion und
+                    SewerStudio ist eine professionelle Anwendung für die Kanalinspektion und
                     Zustandsbewertung nach dem Schweizer Standard SN EN 13508-2 (bzw. DIN EN 13508-2).
-                    Die Software vereint Datenerfassung, Videoanalyse, KI-gestuetzte Schadenserkennung,
+                    Die Software vereint Datenerfassung, Videoanalyse, KI-gestützte Schadenserkennung,
                     VSA-Zustandsbewertung und Sanierungskostenberechnung in einer einzigen Plattform.
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20" Margin="0,8,0,0">
                     Der typische Arbeitsablauf: Projekt erstellen, Inspektionsdaten importieren (PDF/XTF/WinCan/IBAK),
-                    Videos verknuepfen, KI-Analyse durchfuehren, VSA-Bewertung berechnen, Sanierungsmassnahmen
+                    Videos verknüpfen, KI-Analyse durchführen, VSA-Bewertung berechnen, Sanierungsmassnahmen
                     vorschlagen und Ergebnisse als Excel/PDF exportieren.
                 </TextBlock>
             </StackPanel>
@@ -204,10 +216,10 @@
                 <TextBlock Text="2. Seiten und Navigation" FontSize="15" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
 
-                <TextBlock Text="Uebersicht" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
+                <TextBlock Text="Übersicht" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Startseite mit Projektverwaltung. Zeigt alle gespeicherten Projekte, ermoeglicht das Erstellen
-                    neuer Projekte und das Oeffnen vorhandener *.json-Projektdateien. Das zuletzt geoeffnete Projekt
+                    Startseite mit Projektverwaltung. Zeigt alle gespeicherten Projekte, ermöglicht das Erstellen
+                    neuer Projekte und das Öffnen vorhandener *.json-Projektdateien. Das zuletzt geöffnete Projekt
                     kann per Schnellzugriff fortgesetzt werden.
                 </TextBlock>
 
@@ -219,60 +231,60 @@
 
                 <TextBlock Text="Haltungen" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Zentrale Datenseite fuer alle Kanalsegmente (Haltungen). Bearbeitbares DataGrid mit Suche,
-                    Zoom, Zeilenhoehe, Spaltenausrichtung und Multi-Monitor-Support (Abdocken auf zweiten Bildschirm).
-                    Kontextmenue bietet Zugriff auf Protokolle, Videoanalyse, Sanierungsmassnahmen und Kostenrechner.
+                    Zentrale Datenseite für alle Kanalsegmente (Haltungen). Bearbeitbares DataGrid mit Suche,
+                    Zoom, Zeilenhöhe, Spaltenausrichtung und Multi-Monitor-Support (Abdocken auf zweiten Bildschirm).
+                    Kontextmenü bietet Zugriff auf Protokolle, Videoanalyse, Sanierungsmassnahmen und Kostenrechner.
                     Toolbar-Dropdowns: KI-Tools (Protokoll, KI-Status, Videoanalyse, KI-Sanierung),
-                    Sanierungsmassnahmen (Kostenrechner, Vorschlag aus Schadenscodes, Alle Massnahmen vorschlagen)
-                    und Medien suchen (automatische Video/PDF-Verknuepfung).
+                    Sanierungsmassnahmen (Kostenrechner, Vorschlag aus Schadenscodes, Alle Maßnahmen vorschlagen)
+                    und Medien suchen (automatische Video/PDF-Verknüpfung).
                 </TextBlock>
 
-                <TextBlock Text="Schaechte" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
+                <TextBlock Text="Schächte" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Verwaltung der Schacht-Inspektionspunkte. Gleiche Funktionen wie Haltungen: Hinzufuegen,
-                    Loeschen, Verschieben, Suchen, Spaltenbearbeitung und Detailansicht.
-                    Unterstuetzt PDF-Protokollgenerierung und Foto-Verwaltung.
+                    Verwaltung der Schacht-Inspektionspunkte. Gleiche Funktionen wie Haltungen: Hinzufügen,
+                    Löschen, Verschieben, Suchen, Spaltenbearbeitung und Detailansicht.
+                    Unterstützt PDF-Protokollgenerierung und Foto-Verwaltung.
                 </TextBlock>
 
                 <TextBlock Text="Import" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
                     Importiert Inspektionsdaten aus verschiedenen Quellen:
-                    PDF (OCR via pdftotext oder Formularfelder), XTF/M150/MDB (Austauschformat fuer Kanalinspektion),
+                    PDF (OCR via pdftotext oder Formularfelder), XTF/M150/MDB (Austauschformat für Kanalinspektion),
                     WinCan (TV-Inspektionssoftware), IBAK (Roboter-Inspektionssystem) und KINS (Kombinationsformat).
-                    Option "Nur fehlende Felder auffuellen" ergaenzt Daten ohne vorhandene zu ueberschreiben.
+                    Option "Nur fehlende Felder auffüllen" ergänzt Daten ohne vorhandene zu überschreiben.
                 </TextBlock>
 
                 <TextBlock Text="Export" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Exportiert Haltungen und Schaechte als Excel-Dateien mit konfigurierbaren Vorlagen.
+                    Exportiert Haltungen und Schächte als Excel-Dateien mit konfigurierbaren Vorlagen.
                     Verteilungsfunktion sortiert exportierte Dateien in Ordnerstrukturen
-                    nach Haltung, Schacht oder Pruefstatus.
+                    nach Haltung, Schacht oder Prüfstatus.
                 </TextBlock>
 
                 <TextBlock Text="Medienkonflikte" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
                     Zeigt mehrdeutige oder fehlende Zuordnungen zwischen Videos/PDFs und Haltungen an.
-                    Ermoeglicht das manuelle Aufloesen von Konflikten bei der automatischen Medienverknuepfung.
+                    Ermöglicht das manuelle Auflösen von Konflikten bei der automatischen Medienverknüpfung.
                 </TextBlock>
 
                 <TextBlock Text="Druckcenter" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Filterbare Druckansicht mit Kosten-, Eigentuemer- und Positionszusammenfassung.
-                    Komplexe Filteroptionen (Suche, Eigentuemer, Material, Status, Jahr) mit
-                    Statistiken zu Rehabilitationsquoten und Kostenverteilung. Export als PDF moeglich.
+                    Filterbare Druckansicht mit Kosten-, Eigentümer- und Positionszusammenfassung.
+                    Komplexe Filteroptionen (Suche, Eigentümer, Material, Status, Jahr) mit
+                    Statistiken zu Rehabilitationsquoten und Kostenverteilung. Export als PDF möglich.
                 </TextBlock>
 
                 <TextBlock Text="VSA" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Berechnet die VSA-Zustandsbewertung (Klassen 0-4) fuer alle Haltungen und Schaechte
+                    Berechnet die VSA-Zustandsbewertung (Klassen 0-4) für alle Haltungen und Schächte
                     basierend auf den erfassten Schadencodes. Verwendet den Klassifikationskatalog nach
-                    SN EN 13508-2 mit separaten Regeln fuer Kanaele und Schaechte.
+                    SN EN 13508-2 mit separaten Regeln für Kanäle und Schächte.
                 </TextBlock>
 
                 <TextBlock Text="Diagnose" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Live-Protokoll mit Anwendungsmeldungen, Fehlern und KI-Diagnosen. Nuetzlich fuer
-                    Fehlersuche und Ueberwachung der KI-Pipeline-Ausfuehrung.
+                    Live-Protokoll mit Anwendungsmeldungen, Fehlern und KI-Diagnosen. Nützlich für
+                    Fehlersuche und Überwachung der KI-Pipeline-Ausführung.
                 </TextBlock>
 
                 <TextBlock Text="Einstellungen" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
@@ -293,7 +305,7 @@
 
                 <TextBlock Text="Videoplayer" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    VLC-basierter Player fuer Inspektionsvideos. Unterstuetzt variable Geschwindigkeit (0.5x-8x),
+                    VLC-basierter Player für Inspektionsvideos. Unterstützt variable Geschwindigkeit (0.5x-8x),
                     Live-Scrubbing (Schieberegler ziehen zeigt Bild in Echtzeit), Tastatursteuerung
                     (Leertaste=Pause, Pfeile=+/-5s, +/-=Geschwindigkeit) und Schadenscode-Marker auf der Zeitleiste.
                     Klick auf einen Code-Marker springt direkt zur Schadenstelle im Video.
@@ -301,39 +313,39 @@
 
                 <TextBlock Text="Sanierungsmassnahmen" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Vereinheitlichtes Fenster fuer Kostenberechnung und KI-Optimierung.
-                    Linkes Panel: Haltungskontext (DN, Material, Laenge, Zustandsklasse), regelbasierte
+                    Vereinheitlichtes Fenster für Kostenberechnung und KI-Optimierung.
+                    Linkes Panel: Haltungskontext (DN, Material, Länge, Zustandsklasse), regelbasierte
                     Empfehlung, KI-Optimierung mit Konfidenz und Kostenband, Risikobewertung.
-                    Rechtes Panel: Vollstaendiger Kostenrechner mit 5-Spalten-Layout (Massnahmen, Kalkulation,
-                    Katalogpositionen). Drag-and-Drop von Katalogpositionen in Massnahmen-Bloecke.
-                    Footer: Netto/MWST/Total-Summen, Uebernehmen, PDF-Export, Speichern.
+                    Rechtes Panel: Vollständiger Kostenrechner mit 5-Spalten-Layout (Maßnahmen, Kalkulation,
+                    Katalogpositionen). Drag-and-Drop von Katalogpositionen in Maßnahmen-Blöcke.
+                    Footer: Netto/MWST/Total-Summen, Übernehmen, PDF-Export, Speichern.
                 </TextBlock>
 
                 <TextBlock Text="Videoanalyse-Pipeline (KI)" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
                     Orchestriert die Multi-Model KI-Pipeline zur automatischen Schadenserkennung in Videos.
                     Zeigt Fortschritt der einzelnen Phasen (Frame-Extraktion, YOLO-Detektion, DINO-Beschreibung,
-                    SAM-Segmentierung, Qwen Vision-LLM), detektierte Schaeden mit Konfidenzwerten und
+                    SAM-Segmentierung, Qwen Vision-LLM), detektierte Schäden mit Konfidenzwerten und
                     generiert automatisch VSA-konforme Schadencodes. Quality-Gate filtert unsichere Ergebnisse.
                 </TextBlock>
 
                 <TextBlock Text="Medien-Suchprogramm" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Batch-Suche fuer Videos und PDFs mit automatischer Verknuepfung zu Haltungen.
-                    Durchsucht rekursiv Ordner, erkennt Haltungsnamen in Dateinamen und verknuepft
+                    Batch-Suche für Videos und PDFs mit automatischer Verknüpfung zu Haltungen.
+                    Durchsucht rekursiv Ordner, erkennt Haltungsnamen in Dateinamen und verknüpft
                     gefundene Medien. Filtermodus: Gefunden, Mehrdeutig, Nicht gefunden.
                 </TextBlock>
 
                 <TextBlock Text="Training Center" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
                     Verwaltung der KI-Trainingsdaten. Scannt PDF/Video-Ordner, generiert Ground-Truth-Samples
-                    aus bestehenden Inspektionsergebnissen, fuehrt Batch-Import durch und indexiert die
-                    Knowledge Base mit Embeddings. Auto-Approval-Funktion fuer hochkonfidente Ergebnisse.
+                    aus bestehenden Inspektionsergebnissen, führt Batch-Import durch und indexiert die
+                    Knowledge Base mit Embeddings. Auto-Approval-Funktion für hochkonfidente Ergebnisse.
                 </TextBlock>
 
                 <TextBlock Text="Beobachtungen" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Detailansicht fuer Inspektionsergebnisse einer Haltung mit Foto-Galerie (bis 3 Fotos),
+                    Detailansicht für Inspektionsergebnisse einer Haltung mit Foto-Galerie (bis 3 Fotos),
                     Beobachtungsliste und Kontext-Informationen. Direkter Zugang zur Bearbeitung und
                     Verwaltung von Schadenfeststellungen.
                 </TextBlock>
@@ -353,8 +365,8 @@
 
                 <TextBlock Text="Abgedocktes DataGrid" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12">
-                    Separates Fenster fuer das DataGrid bei Multi-Monitor-Setups. Das Grid wird aus der
-                    Hauptansicht herausgeloest und kann auf einem zweiten Bildschirm platziert werden.
+                    Separates Fenster für das DataGrid bei Multi-Monitor-Setups. Das Grid wird aus der
+                    Hauptansicht herausgelöst und kann auf einem zweiten Bildschirm platziert werden.
                     Alle Bearbeitungsfunktionen bleiben erhalten.
                 </TextBlock>
             </StackPanel>
@@ -369,9 +381,9 @@
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20" Margin="0,0,0,12">
-                    SewerStudio verwendet eine Multi-Model KI-Pipeline, die vollstaendig lokal laeuft
-                    (keine Cloud-Anbindung noetig). Die KI-Funktionen erfordern einen laufenden
-                    Ollama-Service und optional den Python-Sidecar-Service fuer die Vision-Pipeline.
+                    SewerStudio verwendet eine Multi-Model KI-Pipeline, die vollständig lokal läuft
+                    (keine Cloud-Anbindung nötig). Die KI-Funktionen erfordern einen laufenden
+                    Ollama-Service und optional den Python-Sidecar-Service für die Vision-Pipeline.
                 </TextBlock>
 
                 <TextBlock Text="4.1 Multi-Model Vision-Pipeline" FontWeight="SemiBold" FontSize="13"
@@ -383,15 +395,15 @@
                     1. Frame-Extraktion: FFmpeg extrahiert Einzelbilder aus dem Video in konfigurierbaren Intervallen.
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2">
-                    2. YOLO-Detektion: Erkennt und lokalisiert Schaeden in jedem Frame (Bounding Boxes).
+                    2. YOLO-Detektion: Erkennt und lokalisiert Schäden in jedem Frame (Bounding Boxes).
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2">
-                    3. DINO-Beschreibung: Beschreibungsbasierte Erkennung mit natuerlichsprachlichen Prompts
-                    (z.B. "Riss", "Wurzeleinwuchs", "Rohrbruch") fuer praezisere Klassifikation.
+                    3. DINO-Beschreibung: Beschreibungsbasierte Erkennung mit natürlichsprachlichen Prompts
+                    (z.B. "Riss", "Wurzeleinwuchs", "Rohrbruch") für präzisere Klassifikation.
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2">
-                    4. SAM-Segmentierung: Pixel-genaue Segmentierung der erkannten Schaeden fuer
-                    Flaechenberechnung und Quantifizierung.
+                    4. SAM-Segmentierung: Pixel-genaue Segmentierung der erkannten Schäden für
+                    Flächenberechnung und Quantifizierung.
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2">
                     5. Qwen Vision-LLM: Multimodales Sprachmodell bewertet jeden Befund im Kontext
@@ -399,66 +411,66 @@
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,10">
                     6. Quality-Gate: Kalman-Filter-basierte Fusion aller Modellergebnisse mit
-                    Unsicherheitsschaetzung und automatischer Filterung unplausibler Detektionen.
+                    Unsicherheitsschätzung und automatischer Filterung unplausibler Detektionen.
                 </TextBlock>
 
                 <TextBlock Text="4.2 Ollama-Integration (Lokales LLM)" FontWeight="SemiBold" FontSize="13"
                            Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Ollama laeuft als lokaler Service und stellt Vision- und Text-Modelle bereit.
-                    Konfigurierbar ueber Umgebungsvariablen: SEWERSTUDIO_AI_ENABLED (0/1),
+                    Ollama läuft als lokaler Service und stellt Vision- und Text-Modelle bereit.
+                    Konfigurierbar über Umgebungsvariablen: SEWERSTUDIO_AI_ENABLED (0/1),
                     SEWERSTUDIO_OLLAMA_URL (Standard: http://localhost:11434), SEWERSTUDIO_AI_VISION_MODEL,
                     SEWERSTUDIO_AI_TEXT_MODEL und SEWERSTUDIO_AI_EMBED_MODEL. Timeout und Keep-Alive sind einstellbar.
-                    Wird verwendet fuer: Protokolltexte, Schadensbeschreibungen, Code-Zuordnung und Embeddings.
+                    Wird verwendet für: Protokolltexte, Schadensbeschreibungen, Code-Zuordnung und Embeddings.
                 </TextBlock>
 
                 <TextBlock Text="4.3 Knowledge Base (Wissensbank)" FontWeight="SemiBold" FontSize="13"
                            Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    SQLite-basierter Speicher mit Vektor-Embeddings fuer semantische Suche.
+                    SQLite-basierter Speicher mit Vektor-Embeddings für semantische Suche.
                     Indexiert Trainingsbeispiele, Best Practices und historische Inspektionsergebnisse.
-                    Retrieval-Augmented Generation (RAG): Bei neuen Inspektionen werden aehnliche
-                    frueherer Faelle als Kontext fuer die KI-Bewertung herangezogen.
-                    Der Knowledge-Base-Manager fuehrt Batch-Indexing und Wartung durch.
+                    Retrieval-Augmented Generation (RAG): Bei neuen Inspektionen werden ähnliche
+                    früherer Fälle als Kontext für die KI-Bewertung herangezogen.
+                    Der Knowledge-Base-Manager führt Batch-Indexing und Wartung durch.
                 </TextBlock>
 
-                <TextBlock Text="4.4 Quality-Gate (Qualitaetssicherung)" FontWeight="SemiBold" FontSize="13"
+                <TextBlock Text="4.4 Quality-Gate (Qualitätssicherung)" FontWeight="SemiBold" FontSize="13"
                            Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Mehrstufige Qualitaetspruefung der KI-Ergebnisse:
+                    Mehrstufige Qualitätsprüfung der KI-Ergebnisse:
                     Evidence-Fusion kombiniert Konfidenzwerte aller Modelle mittels Kalman-Filter.
-                    Monte-Carlo-Dropout schaetzt Unsicherheit durch mehrfache Inferenz.
+                    Monte-Carlo-Dropout schätzt Unsicherheit durch mehrfache Inferenz.
                     Adaptive Gewichtung lernt automatisch, welchen Modellen bei welchen Schadenstypen
-                    am meisten vertraut werden kann. Kalibrierungsmetriken ueberwachen die Zuverlaessigkeit.
-                    Ergebnisse werden mit Ampelsystem (gruen/gelb/rot) klassifiziert.
+                    am meisten vertraut werden kann. Kalibrierungsmetriken überwachen die Zuverlässigkeit.
+                    Ergebnisse werden mit Ampelsystem (grün/gelb/rot) klassifiziert.
                 </TextBlock>
 
                 <TextBlock Text="4.5 Selbstlernende Pipeline" FontWeight="SemiBold" FontSize="13"
                            Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Auto-Approval: Hochkonfidente Ergebnisse (gruene Ampel) werden automatisch validiert
+                    Auto-Approval: Hochkonfidente Ergebnisse (grüne Ampel) werden automatisch validiert
                     und in die Knowledge Base aufgenommen.
-                    Review-Queue: Unsichere Ergebnisse (gelb/rot) werden zur manuellen Pruefung vorgelegt.
+                    Review-Queue: Unsichere Ergebnisse (gelb/rot) werden zur manuellen Prüfung vorgelegt.
                     Feedback-Ingestion: Nutzerkorrekturen werden als Trainingsbeispiele erfasst.
-                    KB-Quality: Automatische Bereinigung und Validierung der Wissensbank-Eintraege.
+                    KB-Quality: Automatische Bereinigung und Validierung der Wissensbank-Einträge.
                 </TextBlock>
 
                 <TextBlock Text="4.6 KI-Sanierungsoptimierung" FontWeight="SemiBold" FontSize="13"
                            Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,10">
-                    Kombiniert regelbasierte und KI-gestuetzte Empfehlungen fuer Sanierungsmassnahmen.
+                    Kombiniert regelbasierte und KI-gestützte Empfehlungen für Sanierungsmassnahmen.
                     Regelbasiert: Ableitung aus Schadenscodes, Zustandsklasse, Material und DN.
-                    KI-Optimierung: Lokales LLM bewertet Kontext und empfiehlt kostenoptimale Massnahmen
+                    KI-Optimierung: Lokales LLM bewertet Kontext und empfiehlt kostenoptimale Maßnahmen
                     mit Konfidenzwert und Kostenband (Min/Erwartet/Max).
-                    Validierung: Jeder KI-Vorschlag wird gegen VSA-Regelwerk geprueft.
-                    Fallback: Bei Regelverstoessen wird der KI-Vorschlag verworfen und die
+                    Validierung: Jeder KI-Vorschlag wird gegen VSA-Regelwerk geprüft.
+                    Fallback: Bei Regelverstößen wird der KI-Vorschlag verworfen und die
                     regelbasierte Empfehlung verwendet.
                 </TextBlock>
 
                 <TextBlock Text="4.7 Monitoring und Modellverwaltung" FontWeight="SemiBold" FontSize="13"
                            Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12">
-                    Accuracy-Dashboard: Echtzeit-Metriken fuer die Modell-Performance.
+                    Accuracy-Dashboard: Echtzeit-Metriken für die Modell-Performance.
                     Konfidenzverteilung: Histogramm der Vorhersage-Konfidenzwerte zur Drift-Erkennung.
                     Modell-Registry: Versionierung und Tracking aller eingesetzten KI-Modelle.
                     Pipeline-Telemetrie: Latenz, Durchsatz und Ressourcenverbrauch der KI-Pipeline.
@@ -471,27 +483,27 @@
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
                 Background="{DynamicResource CardBrush}" CornerRadius="6">
             <StackPanel>
-                <TextBlock Text="5. Unterstuetzte Import-Formate" FontSize="15" FontWeight="Bold"
+                <TextBlock Text="5. Unterstützte Import-Formate" FontSize="15" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="PDF-Import" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
-                    Inspektionsprotokolle aus PDF-Dateien. Verwendet pdftotext fuer OCR-Extraktion
+                    Inspektionsprotokolle aus PDF-Dateien. Verwendet pdftotext für OCR-Extraktion
                     oder liest strukturierte Formularfelder direkt. Automatisches Feldmapping erkennt
-                    Haltungsnamen, DN, Material, Laenge und Schadencodes aus dem PDF-Text.
+                    Haltungsnamen, DN, Material, Länge und Schadencodes aus dem PDF-Text.
                 </TextBlock>
 
                 <TextBlock Text="XTF / M150 / MDB" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
-                    Standard-Austauschformat fuer Kanalinspektion (eXtensible Transport Format).
-                    Unterstuetzt auch Legacy-Formate: M150-Standard und Microsoft Access MDB-Datenbanken
-                    aelterer Inspektionssysteme.
+                    Standard-Austauschformat für Kanalinspektion (eXtensible Transport Format).
+                    Unterstützt auch Legacy-Formate: M150-Standard und Microsoft Access MDB-Datenbanken
+                    älterer Inspektionssysteme.
                 </TextBlock>
 
                 <TextBlock Text="WinCan" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
                     Import kompletter WinCan-Projekte (Windows-basiertes TV-Inspektionssystem)
-                    mit allen Haltungen, Schaechten, Schadencodes und Medienverknuepfungen.
+                    mit allen Haltungen, Schächten, Schadencodes und Medienverknüpfungen.
                 </TextBlock>
 
                 <TextBlock Text="IBAK" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
@@ -502,14 +514,14 @@
 
                 <TextBlock Text="KINS" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
-                    Kombinationsformat das WinCan- und IBAK-Import-Services zusammenfuehrt.
+                    Kombinationsformat das WinCan- und IBAK-Import-Services zusammenführt.
                 </TextBlock>
 
                 <TextBlock Text="Merge-Engine" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12">
                     Alle Importformate verwenden die gleiche Merge-Engine: Importierte Daten werden
-                    intelligent mit lokalen Daten zusammengefuehrt. Option "Nur fehlende Felder auffuellen"
-                    ergaenzt leere Felder ohne vorhandene Werte zu ueberschreiben.
+                    intelligent mit lokalen Daten zusammengeführt. Option "Nur fehlende Felder auffüllen"
+                    ergänzt leere Felder ohne vorhandene Werte zu überschreiben.
                 </TextBlock>
             </StackPanel>
         </Border>
@@ -524,7 +536,7 @@
 
                 <TextBlock Text="Excel-Export" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
-                    Template-basierter Export aller Haltungen und Schaechte nach Excel.
+                    Template-basierter Export aller Haltungen und Schächte nach Excel.
                     Benutzerdefinierte Vorlagen steuern Spaltenzuordnung und Formatierung.
                 </TextBlock>
 
@@ -543,13 +555,13 @@
                 <TextBlock Text="KI-Dokumentation PDF" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,8">
                     Detaillierte Dokumentation der KI-Erkennung mit Evidence-Vektoren,
-                    Quality-Gate-Metriken und Modellkonfidenz fuer Nachvollziehbarkeit.
+                    Quality-Gate-Metriken und Modellkonfidenz für Nachvollziehbarkeit.
                 </TextBlock>
 
                 <TextBlock Text="Verteilung" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,2"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12">
                     Verteilt exportierte Dateien in Ordnerstrukturen sortiert nach Haltung,
-                    Schacht oder Pruefstatus fuer organisierte Archivierung.
+                    Schacht oder Prüfstatus für organisierte Archivierung.
                 </TextBlock>
             </StackPanel>
         </Border>
@@ -563,7 +575,7 @@
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20">
                     Die VSA-Bewertung klassifiziert den baulichen und betrieblichen Zustand von
-                    Kanaelen und Schaechten in 5 Klassen (0-4) gemaess SN EN 13508-2:
+                    Kanälen und Schächten in 5 Klassen (0-4) gemäß SN EN 13508-2:
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,8,0,2">
                     Klasse 0: Kein Schaden - Kein Handlungsbedarf
@@ -582,7 +594,7 @@
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20">
                     Die Berechnung basiert auf dem Klassifikationskatalog mit separaten Regelwerken
-                    fuer Kanaele (classification_channels.json) und Schaechte (classification_manholes.json).
+                    für Kanäle (classification_channels.json) und Schächte (classification_manholes.json).
                     Jeder erfasste Schadencode wird anhand seines Schweregrad-Faktors, der Quantifizierung
                     und des Rohr-Materials/DN bewertet. Der schlechteste Einzelwert bestimmt die Gesamtklasse.
                 </TextBlock>
@@ -601,23 +613,23 @@
                     konfigurierbaren Katalogs mit Einheitspreisen.
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,8,0,2">
-                    Massnahmen-Vorlagen: Vordefinierte Sanierungsverfahren (z.B. Inliner GFK, Inliner Nadelfilz,
+                    Maßnahmen-Vorlagen: Vordefinierte Sanierungsverfahren (z.B. Inliner GFK, Inliner Nadelfilz,
                     Kurzliner, Manschetten, Robotersanierung) mit voreingestellten Positionen.
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,2">
                     Katalogpositionen: Einzelne Leistungspositionen mit Einheit und Preis.
-                    Per Drag-and-Drop in Massnahmen-Bloecke ziehbar.
+                    Per Drag-and-Drop in Maßnahmen-Blöcke ziehbar.
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,2">
-                    Automatische Preisberechnung: DN-abhaengige Preise, laengenabhaengige Mengen
-                    und Anschluss-Zuschlaege werden automatisch berechnet.
+                    Automatische Preisberechnung: DN-abhängige Preise, längenabhängige Mengen
+                    und Anschluss-Zuschläge werden automatisch berechnet.
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,2">
-                    Vorlagen speichern: Angepasste Positionen koennen als neue Vorlage gespeichert werden.
+                    Vorlagen speichern: Angepasste Positionen können als neue Vorlage gespeichert werden.
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,2,0,0">
-                    Transfer-Markierung: Rechtsklick auf Positionen markiert sie gruen fuer den
-                    selektiven Uebertrag in andere Systeme.
+                    Transfer-Markierung: Rechtsklick auf Positionen markiert sie grün für den
+                    selektiven Übertrag in andere Systeme.
                 </TextBlock>
             </StackPanel>
         </Border>
@@ -627,14 +639,14 @@
                 BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
                 Background="{DynamicResource CardBrush}" CornerRadius="6">
             <StackPanel>
-                <TextBlock Text="9. Tastaturkuerzel" FontSize="15" FontWeight="Bold"
+                <TextBlock Text="9. Tastaturkürzel" FontSize="15" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock Text="Allgemein" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
                            FontFamily="Consolas" Text="F11          Fokusmodus ein/aus"/>
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,8"
-                           FontFamily="Consolas" Text="Doppelklick  Protokoll/KI oeffnen (auf Haltung)"/>
+                           FontFamily="Consolas" Text="Doppelklick  Protokoll/KI öffnen (auf Haltung)"/>
 
                 <TextBlock Text="Videoplayer" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,4"/>
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
@@ -642,9 +654,9 @@
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
                            FontFamily="Consolas" Text="Pfeil rechts +5 Sekunden vorspulen"/>
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
-                           FontFamily="Consolas" Text="Pfeil links  -5 Sekunden zurueckspulen"/>
+                           FontFamily="Consolas" Text="Pfeil links  -5 Sekunden zurückspulen"/>
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
-                           FontFamily="Consolas" Text="+            Geschwindigkeit erhoehen (+0.25x)"/>
+                           FontFamily="Consolas" Text="+            Geschwindigkeit erhöhen (+0.25x)"/>
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
                            FontFamily="Consolas" Text="-            Geschwindigkeit verringern (-0.25x)"/>
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="12,0,0,2"
@@ -665,7 +677,7 @@
                            Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,10"/>
 
                 <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextBrush}" FontSize="12" LineHeight="20" Margin="0,0,0,8">
-                    Die KI-Module werden ueber Umgebungsvariablen konfiguriert.
+                    Die KI-Module werden über Umgebungsvariablen konfiguriert.
                     Alle Variablen sind optional - Standardwerte werden verwendet wenn nicht gesetzt.
                 </TextBlock>
 
@@ -682,27 +694,27 @@
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,3" FontFamily="Consolas"
                            Text="SEWERSTUDIO_AI_VISION_MODEL=qwen3.5:27b"/>
                 <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="12,0,0,8"
-                           Text="Vision-Modell fuer Bildanalyse (Multimodal)"/>
+                           Text="Vision-Modell für Bildanalyse (Multimodal)"/>
 
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,3" FontFamily="Consolas"
                            Text="SEWERSTUDIO_AI_TEXT_MODEL=qwen3.5:27b"/>
                 <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="12,0,0,8"
-                           Text="Text-Modell fuer Protokolle und Beschreibungen"/>
+                           Text="Text-Modell für Protokolle und Beschreibungen"/>
 
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,3" FontFamily="Consolas"
                            Text="SEWERSTUDIO_AI_EMBED_MODEL=nomic-embed-text"/>
                 <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="12,0,0,8"
-                           Text="Embedding-Modell fuer Knowledge Base (Semantische Suche)"/>
+                           Text="Embedding-Modell für Knowledge Base (Semantische Suche)"/>
 
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,3" FontFamily="Consolas"
                            Text="SEWERSTUDIO_SIDECAR_URL=http://localhost:8100"/>
                 <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="12,0,0,8"
-                           Text="Python-Sidecar fuer YOLO/DINO/SAM Vision-Pipeline"/>
+                           Text="Python-Sidecar für YOLO/DINO/SAM Vision-Pipeline"/>
 
                 <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12" Margin="0,0,0,3" FontFamily="Consolas"
                            Text="SEWERSTUDIO_FFMPEG=ffmpeg"/>
                 <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="11" Margin="12,0,0,0"
-                           Text="Pfad zu FFmpeg fuer Video-Frame-Extraktion"/>
+                           Text="Pfad zu FFmpeg für Video-Frame-Extraktion"/>
             </StackPanel>
         </Border>
 
