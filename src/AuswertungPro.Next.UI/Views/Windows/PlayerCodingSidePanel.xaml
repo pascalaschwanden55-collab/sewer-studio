@@ -157,7 +157,7 @@
                                                           <TextBlock Grid.Column="0" FontSize="10"
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                                                    Margin="0,0,8,0">
-                                                            <Run Text="&#x1F4CD;"/>
+                                                            <Run Text="&#x1F4CD;&#160;&#160;"/>
                                                             <Run Text="{Binding MeterAtCapture, StringFormat='{}{0:F2}m', Mode=OneWay}"/>
                                                         </TextBlock>
                                                           <TextBlock FontSize="10"
@@ -343,7 +343,7 @@
                                                     </Grid>
                                                           <TextBlock Margin="11,1,0,0" FontSize="10"
                                                                Foreground="{DynamicResource TextSecondaryBrush}">
-                                                        <Run Text="&#x1F4CD;"/>
+                                                        <Run Text="&#x1F4CD;&#160;&#160;"/>
                                                         <Run Text="{Binding MeterAtCapture, StringFormat='{}{0:F2}m', Mode=OneWay}"/>
                                                     </TextBlock>
                                                 </StackPanel>
