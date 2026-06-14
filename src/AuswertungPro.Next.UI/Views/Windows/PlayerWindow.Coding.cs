@@ -1551,22 +1551,47 @@ public partial class PlayerWindow
             UpdateCodingSchemaOverlay(enableCreateEvent: true);
     }
 
+    // Breite/Hoehe des sichtbaren Videobildes (aus dem Analyse-Frame), 0 = unbekannt.
+    private double _codingVideoAspect;
+
+    // Das tatsaechlich sichtbare Video-Rechteck im Overlay-Canvas: VLC zeigt das Video
+    // formattreu (Letterbox/Pillarbox). Overlays muessen in DIESES Rechteck gerechnet werden,
+    // nicht in die volle Flaeche - sonst werden z.B. 4:3-Befunde in einer 16:9-Flaeche verzerrt.
+    private Rect GetCodingContentRect()
+    {
+        double w = CodingOverlayCanvas.ActualWidth;
+        double h = CodingOverlayCanvas.ActualHeight;
+        if (w <= 0 || h <= 0 || _codingVideoAspect <= 0)
+            return new Rect(0, 0, Math.Max(0, w), Math.Max(0, h));
+
+        double canvasAspect = w / h;
+        if (_codingVideoAspect > canvasAspect)
+        {
+            // Video breiter als die Flaeche -> fuellt die Breite, Balken oben/unten.
+            double contentH = w / _codingVideoAspect;
+            return new Rect(0, (h - contentH) / 2.0, w, contentH);
+        }
+
+        // Video schmaler (z.B. 4:3 in 16:9) -> fuellt die Hoehe, Balken links/rechts.
+        double contentW = h * _codingVideoAspect;
+        return new Rect((w - contentW) / 2.0, 0, contentW, h);
+    }
+
     private NormalizedPoint CodingPixelToNorm(Point pixel)
     {
-        double w = CodingOverlayCanvas.ActualWidth, h = CodingOverlayCanvas.ActualHeight;
-        if (w <= 0 || h <= 0)
-        {
+        if (CodingOverlayCanvas.ActualWidth <= 0 || CodingOverlayCanvas.ActualHeight <= 0)
             UpdateCodingOverlayViewport();
-            w = CodingOverlayCanvas.ActualWidth;
-            h = CodingOverlayCanvas.ActualHeight;
-            if (w <= 0 || h <= 0)
-                return new NormalizedPoint(0.5, 0.5);
-        }
-        return new NormalizedPoint(pixel.X / w, pixel.Y / h);
+        var r = GetCodingContentRect();
+        if (r.Width <= 0 || r.Height <= 0)
+            return new NormalizedPoint(0.5, 0.5);
+        return new NormalizedPoint((pixel.X - r.X) / r.Width, (pixel.Y - r.Y) / r.Height);
     }
 
     private Point CodingNormToPixel(NormalizedPoint norm)
-        => new(norm.X * CodingOverlayCanvas.ActualWidth, norm.Y * CodingOverlayCanvas.ActualHeight);
+    {
+        var r = GetCodingContentRect();
+        return new Point(r.X + norm.X * r.Width, r.Y + norm.Y * r.Height);
+    }
 
     private void ClearTransientCodingCanvas(bool clearManualOverlay)
     {
@@ -3487,6 +3512,9 @@ public partial class PlayerWindow
         // Voraus-Befunde bekommen kein Mess-Label, aber die Maske bleibt sichtbar.
         if (mmResult.SamResponse != null)
         {
+            if (mmResult.SamResponse is { ImageWidth: > 0, ImageHeight: > 0 } srAsp)
+                _codingVideoAspect = (double)srAsp.ImageWidth / srAsp.ImageHeight;
+
             var visibleMasks = BuildVisibleMaskFindings(segmented);
             if (visibleMasks.Count > 0)
             {
@@ -3497,29 +3525,35 @@ public partial class PlayerWindow
                         s.Dino?.Confidence))
                     .ToList();
 
+                var maskContent = GetCodingContentRect();
                 Ai.Pipeline.SamMaskRenderer.RenderCandidates(
                     CodingOverlayCanvas,
                     candidates,
                     mmResult.SamResponse.ImageWidth,
                     mmResult.SamResponse.ImageHeight,
-                    CodingOverlayCanvas.ActualWidth,
-                    CodingOverlayCanvas.ActualHeight,
+                    maskContent.Width,
+                    maskContent.Height,
                     logger: _serviceProvider?.LoggerFactory.CreateLogger("SamMaskRenderer"),
-                    options: Ai.Pipeline.SamMaskRenderer.WinCanStyleOptions);
+                    options: Ai.Pipeline.SamMaskRenderer.WinCanStyleOptions,
+                    offsetX: maskContent.X,
+                    offsetY: maskContent.Y);
             }
         }
 
         // "Voraus"-Befunde gestrichelt markieren (noch nicht codierbar -> kein Meter/Event).
-        double cw = CodingOverlayCanvas.ActualWidth, ch = CodingOverlayCanvas.ActualHeight;
         double iw = mmResult.SamResponse?.ImageWidth ?? 0;
         double ih = mmResult.SamResponse?.ImageHeight ?? 0;
+        if (iw > 0 && ih > 0)
+            _codingVideoAspect = iw / ih;
+        var vorausContent = GetCodingContentRect();
+        double cw = vorausContent.Width, ch = vorausContent.Height;
         if (iw > 0 && ih > 0)
         {
             foreach (var s in segmented)
             {
                 if (s.Proximity.IsCodierbar || s.Mask.Bbox.Count < 4) continue;
-                double left = s.Mask.Bbox[0] / iw * cw;
-                double top = s.Mask.Bbox[1] / ih * ch;
+                double left = vorausContent.X + s.Mask.Bbox[0] / iw * cw;
+                double top = vorausContent.Y + s.Mask.Bbox[1] / ih * ch;
                 var rect = new System.Windows.Shapes.Rectangle
                 {
                     Width = Math.Max(1, (s.Mask.Bbox[2] - s.Mask.Bbox[0]) / iw * cw),

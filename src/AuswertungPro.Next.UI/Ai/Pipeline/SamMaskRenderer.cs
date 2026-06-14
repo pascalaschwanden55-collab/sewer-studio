@@ -365,7 +365,9 @@ public static class SamMaskRenderer
         double canvasWidth,
         double canvasHeight,
         ILogger? logger = null,
-        RenderOptions? options = null)
+        RenderOptions? options = null,
+        double offsetX = 0,
+        double offsetY = 0)
     {
         if (candidates.Count == 0)
             return new RenderSummary(0, 0, 0, 0, new Dictionary<string, int>());
@@ -397,7 +399,9 @@ public static class SamMaskRenderer
                     canvasWidth,
                     canvasHeight,
                     decision.Mode,
-                    options);
+                    options,
+                    offsetX,
+                    offsetY);
                 rendered++;
                 if (decision.Mode == MaskVisualMode.OutlineOnly)
                     outlineOnly++;
@@ -458,7 +462,9 @@ public static class SamMaskRenderer
         int imgW, int imgH,
         double canvasWidth, double canvasHeight,
         MaskVisualMode visualMode,
-        RenderOptions options)
+        RenderOptions options,
+        double offsetX = 0,
+        double offsetY = 0)
     {
         // RLE dekodieren
         var decoded = DecodeRle(mask.MaskRle, imgW, imgH);
@@ -472,7 +478,8 @@ public static class SamMaskRenderer
                 Data = fillGeom,
                 Fill = new SolidColorBrush(Color.FromArgb(options.FillAlpha, 0, 255, 0)),
                 Tag = MaskTag,
-                IsHitTestVisible = false
+                IsHitTestVisible = false,
+                RenderTransform = new TranslateTransform(offsetX, offsetY)
             };
             canvas.Children.Add(fillPath);
         }
@@ -485,15 +492,16 @@ public static class SamMaskRenderer
             Stroke = new SolidColorBrush(Color.FromArgb(options.StrokeAlpha, 0, 255, 0)),
             StrokeThickness = 2,
             Tag = MaskTag,
-            IsHitTestVisible = false
+            IsHitTestVisible = false,
+            RenderTransform = new TranslateTransform(offsetX, offsetY)
         };
         canvas.Children.Add(contourPath);
 
         // Label-Badge positionieren (ueber der BBox); null-sicherer Bbox-Zugriff.
         if (quant != null && mask.Bbox is { Count: >= 4 })
         {
-            double bboxX = mask.Bbox[0] / imgW * canvasWidth;
-            double bboxY = mask.Bbox[1] / imgH * canvasHeight;
+            double bboxX = offsetX + mask.Bbox[0] / imgW * canvasWidth;
+            double bboxY = offsetY + mask.Bbox[1] / imgH * canvasHeight;
             RenderMaskLabel(canvas, quant, bboxX, Math.Max(0, bboxY - 40));
         }
     }

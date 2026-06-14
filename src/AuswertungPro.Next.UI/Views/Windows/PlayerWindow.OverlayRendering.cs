@@ -60,12 +60,12 @@ public partial class PlayerWindow
             case OverlayToolType.Rectangle:
                 if (overlay.Points.Count >= 4)
                 {
-                    var xs = overlay.Points.Select(p => p.X * w).ToList();
-                    var ys = overlay.Points.Select(p => p.Y * h).ToList();
-                    double minX = xs.Min();
-                    double maxX = xs.Max();
-                    double minY = ys.Min();
-                    double maxY = ys.Max();
+                    // Ueber das sichtbare Video-Rechteck rechnen (Letterbox-bewusst), nicht volle Flaeche.
+                    var pix = overlay.Points.Select(CodingNormToPixel).ToList();
+                    double minX = pix.Min(p => p.X);
+                    double maxX = pix.Max(p => p.X);
+                    double minY = pix.Min(p => p.Y);
+                    double maxY = pix.Max(p => p.Y);
 
                     var rect = new Rectangle
                     {
