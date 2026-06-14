@@ -62,7 +62,7 @@ public partial class MediaSearchWindow : Window
         var folder = FolderBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
         {
-            DialogHost.Current.Warn("Bitte einen gueltigen Ordner waehlen.", "Medien-Suche");
+            DialogHost.Current.Warn("Bitte einen gültigen Ordner wählen.", "Medien-Suche");
             return;
         }
 

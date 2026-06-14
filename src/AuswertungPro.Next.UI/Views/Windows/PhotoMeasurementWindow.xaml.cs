@@ -574,7 +574,7 @@ public partial class PhotoMeasurementWindow : Window
         OverlayCanvas.Children.Add(rect);
 
         TxtMeasureInfo.Text = "Markiert";
-        TxtStatus.Text = "Bereich markiert. OK = uebernehmen.";
+        TxtStatus.Text = "Bereich markiert. OK = übernehmen.";
     }
 
     // ═══════════════════════════════════════════════
@@ -898,7 +898,7 @@ public partial class PhotoMeasurementWindow : Window
 
         _undoFrames.Push(frame);
 
-        TxtStatus.Text = $"Querschnitt: {_clickPoints.Count} Punkte | Doppelklick = schliessen";
+        TxtStatus.Text = $"Querschnitt: {_clickPoints.Count} Punkte | Doppelklick = schließen";
     }
 
     private void ClosePolygon()
@@ -1526,15 +1526,15 @@ public partial class PhotoMeasurementWindow : Window
     {
         TxtStatus.Text = _activeTool switch
         {
-            PhotoTool.None => "Werkzeug waehlen, um mit der Messung zu beginnen.",
-            PhotoTool.Calibration => "Referenzlinie ueber sichtbaren Rohrdurchmesser ziehen.",
-            PhotoTool.MarkRect => "Rechteck um Schaden/Beobachtung ziehen (fuer KI-Training).",
-            PhotoTool.LevelWater => "Wasserstand: Slider links | Mausrad: Kreis-Groesse | Drag: Position",
-            PhotoTool.LevelDeposit => "Ablagerung: Slider links | Mausrad: Kreis-Groesse | Drag: Position",
-            PhotoTool.LevelObstacle => "Hindernis: Slider links | Mausrad: Kreis-Groesse | Drag: Position",
+            PhotoTool.None => "Werkzeug wählen, um mit der Messung zu beginnen.",
+            PhotoTool.Calibration => "Referenzlinie über sichtbaren Rohrdurchmesser ziehen.",
+            PhotoTool.MarkRect => "Rechteck um Schaden/Beobachtung ziehen (für KI-Training).",
+            PhotoTool.LevelWater => "Wasserstand: Slider links | Mausrad: Kreis-Größe | Drag: Position",
+            PhotoTool.LevelDeposit => "Ablagerung: Slider links | Mausrad: Kreis-Größe | Drag: Position",
+            PhotoTool.LevelObstacle => "Hindernis: Slider links | Mausrad: Kreis-Größe | Drag: Position",
             PhotoTool.Deformation => "4 Punkte auf Rohrwand klicken: Oben → Unten → Links → Rechts",
-            PhotoTool.Ruler => "Linie ziehen fuer Distanzmessung (Kalibrierung noetig).",
-            PhotoTool.CrossSection => "Polygon-Punkte klicken, Doppelklick = schliessen.",
+            PhotoTool.Ruler => "Linie ziehen für Distanzmessung (Kalibrierung nötig).",
+            PhotoTool.CrossSection => "Polygon-Punkte klicken, Doppelklick = schließen.",
             PhotoTool.Lateral => "Position + Winkel per Slider einstellen.",
             PhotoTool.Bend => "Position + Winkel per Slider einstellen.",
             PhotoTool.Connection => "Massstab-Linie auf Rohroberflaeche ziehen.",

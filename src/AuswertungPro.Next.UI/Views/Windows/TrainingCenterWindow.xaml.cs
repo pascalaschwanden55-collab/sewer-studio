@@ -286,7 +286,7 @@ public partial class TrainingCenterWindow : Window
         try
         {
             BtnReviewSegmentSam.IsEnabled = false;
-            ReviewSamStatusText.Text = "SAM laeuft...";
+            ReviewSamStatusText.Text = "SAM läuft...";
             SamMaskRenderer.ClearMasks(BoxCanvas);
             Vm.PendingSamMask = null;
 
@@ -544,7 +544,7 @@ public partial class TrainingCenterWindow : Window
             var result = _videoLabelToolLauncher.Launch(new VideoLabelToolLaunchOptions());
             VideoLabelToolStatusText.Text = result.ServerStarted
                 ? $"Gold-Label-Tool gestartet: {result.Url}"
-                : $"Gold-Label-Tool geoeffnet: {result.Url}";
+                : $"Gold-Label-Tool geöffnet: {result.Url}";
         }
         catch (Exception ex)
         {

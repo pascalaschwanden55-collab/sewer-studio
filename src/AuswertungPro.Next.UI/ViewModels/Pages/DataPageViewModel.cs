@@ -967,7 +967,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         }
 
         ApplyCostsToRecord(record, cost, learn: false);
-        _shell.SetStatus($"Kosten/Massnahmen wiederhergestellt: {holding}");
+        _shell.SetStatus($"Kosten/Maßnahmen wiederhergestellt: {holding}");
     }
 
     private void OpenCosts(HaltungRecord? record)
@@ -999,7 +999,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         var sourceText = recommendation.UsedTrainedModel ? "KI-Modell" : "Lernlogik";
         _shell.SetStatus(recommendation.EstimatedTotalCost is null
             ? $"Massnahmenvorschlag aus Schadenscodes gesetzt ({sourceText})"
-            : $"Massnahmenvorschlag mit Kostenschaetzung gesetzt ({recommendation.EstimatedTotalCost.Value:0.00}, {sourceText})");
+            : $"Massnahmenvorschlag mit Kostenschätzung gesetzt ({recommendation.EstimatedTotalCost.Value:0.00}, {sourceText})");
         UpdateLearningInfo(recommendation.SimilarCasesCount, recommendation.EstimatedTotalCost);
 
         // Show result dialog so user sees the suggested measures
@@ -1077,7 +1077,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             _shell.Project.Dirty = true;
         }
 
-        _shell.SetStatus($"Massnahmen: {filled} Haltungen befuellt, {skipped} uebersprungen, {noSuggestion} ohne Vorschlag");
+        _shell.SetStatus($"Maßnahmen: {filled} Haltungen befuellt, {skipped} uebersprungen, {noSuggestion} ohne Vorschlag");
     }
 
     private void OpenSanierungOptimizationWindow(HaltungRecord? record)
@@ -1100,7 +1100,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         Selected = record;
         _shell.NavigateToSanierungsMatrix(holding, singleHoldingMode: true, targetRecord: record);
-        _shell.SetStatus($"Sanierungsmassnahme geoeffnet: {holding}");
+        _shell.SetStatus($"Sanierungsmassnahme geöffnet: {holding}");
     }
 
     private void OpenSanierungsmassnahmenWindow(HaltungRecord? record, InitialFocusMode focus)

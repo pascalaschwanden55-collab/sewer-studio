@@ -19,28 +19,28 @@ public partial class DossierPrintDialog : Window
                                 int originalPdfCount)
     {
         InfoSchachtVon.Text = schachtVonFound
-            ? $"Schacht Von: verfuegbar ({schachtVonNr})"
-            : $"Schacht Von: nicht verfuegbar ({schachtVonNr ?? "-"})";
+            ? $"Schacht Von: verfügbar ({schachtVonNr})"
+            : $"Schacht Von: nicht verfügbar ({schachtVonNr ?? "-"})";
         InfoSchachtVon.Foreground = MakeBrush(schachtVonFound);
 
         InfoSchachtBis.Text = schachtBisFound
-            ? $"Schacht Bis: verfuegbar ({schachtBisNr})"
-            : $"Schacht Bis: nicht verfuegbar ({schachtBisNr ?? "-"})";
+            ? $"Schacht Bis: verfügbar ({schachtBisNr})"
+            : $"Schacht Bis: nicht verfügbar ({schachtBisNr ?? "-"})";
         InfoSchachtBis.Foreground = MakeBrush(schachtBisFound);
 
         InfoHydraulik.Text = hydraulikAvailable
-            ? "Hydraulik: verfuegbar (DN + Gefaelle vorhanden)"
-            : "Hydraulik: nicht verfuegbar (DN oder Gefaelle fehlt)";
+            ? "Hydraulik: verfügbar (DN + Gefaelle vorhanden)"
+            : "Hydraulik: nicht verfügbar (DN oder Gefaelle fehlt)";
         InfoHydraulik.Foreground = MakeBrush(hydraulikAvailable);
 
         InfoKosten.Text = kostenAvailable
-            ? "Kostenschaetzung: verfuegbar"
-            : "Kostenschaetzung: nicht verfuegbar";
+            ? "Kostenschätzung: verfügbar"
+            : "Kostenschätzung: nicht verfügbar";
         InfoKosten.Foreground = MakeBrush(kostenAvailable);
 
         InfoOriginalPdf.Text = originalPdfCount > 0
-            ? $"Original-Protokolle: verfuegbar ({originalPdfCount} PDF)"
-            : "Original-Protokolle: nicht verfuegbar";
+            ? $"Original-Protokolle: verfügbar ({originalPdfCount} PDF)"
+            : "Original-Protokolle: nicht verfügbar";
         InfoOriginalPdf.Foreground = MakeBrush(originalPdfCount > 0);
 
         if (!schachtVonFound)
@@ -79,7 +79,7 @@ public partial class DossierPrintDialog : Window
         if (!HasAnySelection())
         {
             DialogHost.Current.Info(
-                "Bitte mindestens eine Sektion fuer das Dossier auswaehlen.",
+                "Bitte mindestens eine Sektion für das Dossier auswählen.",
                 "Dossier");
             return;
         }

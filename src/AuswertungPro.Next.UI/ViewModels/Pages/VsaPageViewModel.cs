@@ -37,7 +37,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
         // AsyncRelayCommand sperrt Mehrfachstarts bereits selbst (CanExecute waehrend des Laufs).
         IsBusy = true;
         Summary = "VSA-Bewertung laeuft, bitte warten...";
-        _shell.SetStatus("VSA-Bewertung laeuft...");
+        _shell.SetStatus("VSA-Bewertung läuft...");
         try
         {
             // Import/Bewertung sind synchron und potenziell langlaufend -> in den Hintergrund.
@@ -155,7 +155,7 @@ public sealed partial class VsaPageViewModel : ObservableObject
                   (string.IsNullOrWhiteSpace(diag) ? "" : (diag + "\n")) +
                   measureInfo +
                   "\nHinweis: Klassifizierungstabellen sind im Skeleton nur beispielhaft.";
-        _shell.SetStatus("VSA berechnet" + (measureResult.Filled > 0 ? $" + {measureResult.Filled} Massnahmen" : ""));
+        _shell.SetStatus("VSA berechnet" + (measureResult.Filled > 0 ? $" + {measureResult.Filled} Maßnahmen" : ""));
     }
 
     private List<string> LoadStoredXtfFiles(string? projectPath)

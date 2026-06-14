@@ -1580,8 +1580,8 @@ public partial class PlayerWindow
         if (sp?.CodeCatalog is null)
         {
             DialogHost.Current.Info(
-                "Schadenscode-Katalog nicht verfuegbar.\n" +
-                "Bitte die App neu starten oder KI-Einstellungen pruefen.",
+                "Schadenscode-Katalog nicht verfügbar.\n" +
+                "Bitte die App neu starten oder KI-Einstellungen prüfen.",
                 "Markieren");
             return;
         }

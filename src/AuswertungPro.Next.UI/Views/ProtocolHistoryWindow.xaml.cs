@@ -50,7 +50,7 @@ public sealed partial class ProtocolHistoryWindow : Window
         var row = HistoryGrid.SelectedItem as HistoryRow;
         if (row?.Revision is null)
         {
-            DialogHost.Current.Info("Bitte eine Revision auswaehlen.", "Historie");
+            DialogHost.Current.Info("Bitte eine Revision auswählen.", "Historie");
             return;
         }
 

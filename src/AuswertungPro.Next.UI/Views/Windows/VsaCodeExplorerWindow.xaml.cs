@@ -453,7 +453,7 @@ public partial class VsaCodeExplorerWindow : Window
         {
             btn.Opacity = 0.7;
             codeTb.TextDecorations = TextDecorations.Strikethrough;
-            btn.ToolTip = "Als ungueltig markiert - Auswahl ist trotzdem erlaubt.";
+            btn.ToolTip = "Als ungültig markiert - Auswahl ist trotzdem erlaubt.";
         }
 
         btn.Click += (_, _) => onSelect(tile);
@@ -642,7 +642,7 @@ public partial class VsaCodeExplorerWindow : Window
         {
             btn.Opacity = 0.7;
             codeTb.TextDecorations = TextDecorations.Strikethrough;
-            btn.ToolTip = "Als ungueltig markiert - Auswahl ist trotzdem erlaubt.";
+            btn.ToolTip = "Als ungültig markiert - Auswahl ist trotzdem erlaubt.";
         }
 
         btn.Click += (_, _) => _vm.SelectTile(tile);

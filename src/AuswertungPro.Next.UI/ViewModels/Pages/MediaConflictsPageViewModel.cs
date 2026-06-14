@@ -271,7 +271,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
         SelectedConflict = Conflicts.FirstOrDefault();
         LearnedMappingCount = _service.GetMappingCount(_shell.Project);
         UpdateSummary();
-        _shell.SetStatus("Medienkonflikt aufgeloest");
+        _shell.SetStatus("Medienkonflikt aufgelöst");
     }
 
     private void AutoResolveLearned()

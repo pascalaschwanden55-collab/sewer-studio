@@ -102,7 +102,7 @@ public partial class BeobachtungenWindow : Window
 
         if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(resolved, out var error))
         {
-            DialogHost.Current.Error($"Foto konnte nicht geoeffnet werden:\n{error}", "Foto");
+            DialogHost.Current.Error($"Foto konnte nicht geöffnet werden:\n{error}", "Foto");
         }
     }
 

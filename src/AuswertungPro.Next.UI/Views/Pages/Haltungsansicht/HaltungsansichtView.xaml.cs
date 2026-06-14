@@ -142,7 +142,7 @@ public partial class HaltungsansichtView : UserControl
 
         if (HaltungList.SelectedItem is not HaltungRecord record || DetailBuilder is null)
         {
-            Detail.Header = "Keine Haltung gewaehlt";
+            Detail.Header = "Keine Haltung gewählt";
             Detail.SubHeader = "Links eine Haltung waehlen.";
             Detail.Groups = Array.Empty<RecordDetailGroup>();
             return;

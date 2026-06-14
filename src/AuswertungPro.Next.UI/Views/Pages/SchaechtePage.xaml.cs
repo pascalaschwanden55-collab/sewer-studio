@@ -1697,7 +1697,7 @@ public partial class SchaechtePage : UserControl
             return;
 
         if (!DialogHost.Current.ConfirmWarn(
-            $"Alle Werte in Spalte \"{displayName}\" loeschen?",
+            $"Alle Werte in Spalte \"{displayName}\" löschen?",
             "Spalte leeren"))
         {
             return;
@@ -1717,7 +1717,7 @@ public partial class SchaechtePage : UserControl
         var record = _vm.Selected;
         if (record is null)
         {
-            DialogHost.Current.Info("Keine Zeile ausgewaehlt. Bitte direkt auf eine Zeile rechtsklicken.", "Protokoll");
+            DialogHost.Current.Info("Keine Zeile ausgewählt. Bitte direkt auf eine Zeile rechtsklicken.", "Protokoll");
             return;
         }
 
@@ -1727,15 +1727,15 @@ public partial class SchaechtePage : UserControl
             var schacht = GetSchachtNumber(record);
             DialogHost.Current.Info(
                 string.IsNullOrWhiteSpace(schacht)
-                    ? "Kein Schachtprotokoll-PDF verknuepft."
-                    : $"Kein Schachtprotokoll-PDF verknuepft fuer Schacht {schacht}.",
+                    ? "Kein Schachtprotokoll-PDF verknüpft."
+                    : $"Kein Schachtprotokoll-PDF verknüpft für Schacht {schacht}.",
                 "Protokoll");
             return;
         }
 
         if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(pdfPath, out var error))
         {
-            DialogHost.Current.Error($"PDF konnte nicht geoeffnet werden:\n{error}", "Protokoll");
+            DialogHost.Current.Error($"PDF konnte nicht geöffnet werden:\n{error}", "Protokoll");
         }
     }
 
@@ -1749,7 +1749,7 @@ public partial class SchaechtePage : UserControl
         var record = _vm.Selected;
         if (record is null)
         {
-            DialogHost.Current.Info("Keine Zeile ausgewaehlt. Bitte direkt auf eine Zeile rechtsklicken.", "Details");
+            DialogHost.Current.Info("Keine Zeile ausgewählt. Bitte direkt auf eine Zeile rechtsklicken.", "Details");
             return;
         }
 

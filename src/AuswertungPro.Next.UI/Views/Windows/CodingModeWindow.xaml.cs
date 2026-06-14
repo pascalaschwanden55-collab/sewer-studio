@@ -653,7 +653,7 @@ public partial class CodingModeWindow : Window
         _isCalibrating = true;
         _calibStart = null;
         CalibrationHint.Visibility = Visibility.Visible;
-        TxtCalibrationHint.Text = "Linie ueber den sichtbaren Rohrdurchmesser zeichnen";
+        TxtCalibrationHint.Text = "Linie über den sichtbaren Rohrdurchmesser zeichnen";
         ClearAllDrawingShapes(includeCalibration: true);
 
         // Andere Werkzeuge deaktivieren
@@ -1649,7 +1649,7 @@ public partial class CodingModeWindow : Window
     {
         // Foto 1 anbieten
         var createFirstPhoto = DialogHost.Current.Confirm(
-            $"Foto 1 fuer {codingEvent.Entry.Code} ({codingEvent.MeterAtCapture:F2}m) erstellen?",
+            $"Foto 1 für {codingEvent.Entry.Code} ({codingEvent.MeterAtCapture:F2}m) erstellen?",
             "Foto erstellen");
 
         if (createFirstPhoto)
@@ -1659,7 +1659,7 @@ public partial class CodingModeWindow : Window
 
             // Foto 2 anbieten nur wenn Foto 1 erstellt wurde
             var createSecondPhoto = DialogHost.Current.Confirm(
-                $"Foto 2 fuer {codingEvent.Entry.Code} ({codingEvent.MeterAtCapture:F2}m) erstellen?",
+                $"Foto 2 für {codingEvent.Entry.Code} ({codingEvent.MeterAtCapture:F2}m) erstellen?",
                 "Foto erstellen");
 
             if (createSecondPhoto)
@@ -1703,7 +1703,7 @@ public partial class CodingModeWindow : Window
         {
             DialogHost.Current.Warn(
                 $"Das Werkzeug \"{_vm.CurrentOverlay.ToolType}\" erzeugt keine Flaechenmarkierung.\n" +
-                "Fuer Lehrer-Annotationen bitte Rechteck, Ellipse oder Freihand verwenden.",
+                "Für Lehrer-Annotationen bitte Rechteck, Ellipse oder Freihand verwenden.",
                 "Werkzeug nicht geeignet");
             return;
         }
@@ -1763,8 +1763,8 @@ public partial class CodingModeWindow : Window
                 try { System.IO.File.Delete(tempFrame); } catch { }
                 DialogHost.Current.Warn(
                     "Die Markierung ist zu klein oder hat keine Flaeche.\n" +
-                    "Fuer Lehrer-Annotationen bitte Rechteck, Ellipse oder Freihand verwenden.",
-                    "Markierung ungueltig");
+                    "Für Lehrer-Annotationen bitte Rechteck, Ellipse oder Freihand verwenden.",
+                    "Markierung ungültig");
                 return;
             }
 
@@ -1863,7 +1863,7 @@ public partial class CodingModeWindow : Window
 
         if (targetEvent == null)
         {
-            TxtFotoStatus.Text = "Kein Ereignis vorhanden – zuerst Code waehlen.";
+            TxtFotoStatus.Text = "Kein Ereignis vorhanden – zuerst Code wählen.";
             return;
         }
 
@@ -2081,8 +2081,8 @@ public partial class CodingModeWindow : Window
                 && System.IO.File.Exists(entry.FotoPaths[0]))
             {
                 var markPhoto = DialogHost.Current.Confirm(
-                    "Stelle auf dem Foto markieren fuer KI-Training?\n\n" +
-                    "Das hilft der KI, den korrigierten Code beim naechsten Mal\n" +
+                    "Stelle auf dem Foto markieren für KI-Training?\n\n" +
+                    "Das hilft der KI, den korrigierten Code beim nächsten Mal\n" +
                     "an der richtigen Stelle zu erkennen.",
                     "KI-Training: Foto markieren");
                 if (markPhoto)
@@ -2109,8 +2109,8 @@ public partial class CodingModeWindow : Window
 
         var ev = _vm.SelectedDefect;
         if (!DialogHost.Current.ConfirmWarn(
-            $"Beobachtung \"{ev.Entry.Code}\" bei {ev.MeterAtCapture:F2}m wirklich loeschen?",
-            "Beobachtung loeschen"))
+            $"Beobachtung \"{ev.Entry.Code}\" bei {ev.MeterAtCapture:F2}m wirklich löschen?",
+            "Beobachtung löschen"))
         {
             return;
         }

@@ -1226,9 +1226,9 @@ public partial class TrainingCenterViewModel : ObservableObject
         // Selbsttrainings). Falsche Labels verschlechtern damit dauerhaft alle kuenftigen
         // KI-Vorschlaege. Darum einmalige, bewusste Bestaetigung pro Lauf verlangen.
         var bestaetigung = DialogHost.Current.ConfirmWarn(
-            "Achtung: Der Batch-Import indexiert erkannte Samples OHNE manuelle Pruefung direkt in die Knowledge Base (Auto-Approve).\n\n" +
+            "Achtung: Der Batch-Import indexiert erkannte Samples OHNE manuelle Prüfung direkt in die Knowledge Base (Auto-Approve).\n\n" +
             "Falsche Code-/Meter-Zuordnungen verschlechtern dauerhaft alle kuenftigen KI-Vorschlaege. " +
-            "Fuer geprueftes Lernen stattdessen 'Selbsttraining' mit der Review-Queue nutzen.\n\n" +
+            "Für geprueftes Lernen stattdessen 'Selbsttraining' mit der Review-Queue nutzen.\n\n" +
             "Trotzdem ungeprueft in die Knowledge Base lernen?",
             "Batch-Import + KB (ungeprueft)");
         if (!bestaetigung)

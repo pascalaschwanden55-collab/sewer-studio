@@ -358,7 +358,7 @@ public partial class ProtocolEntryEditorDialog : Window
             .ToList();
 
         if (uniqueErrors.Count == 0)
-            ValidationStatus.Text = "Eingabe gueltig.";
+            ValidationStatus.Text = "Eingabe gültig.";
         else
             ValidationStatus.Text = string.Join(Environment.NewLine, uniqueErrors.Take(12));
 
@@ -603,7 +603,7 @@ public partial class ProtocolEntryEditorDialog : Window
 
         if (_sp is null || _sp.CodeCatalog is null)
         {
-            ValidationStatus.Text = "KI nicht verfuegbar: Service fehlt.";
+            ValidationStatus.Text = "KI nicht verfügbar: Service fehlt.";
             return;
         }
 
@@ -616,25 +616,25 @@ public partial class ProtocolEntryEditorDialog : Window
         var allowedCodes = _sp.CodeCatalog.AllowedCodes();
         if (allowedCodes.Count == 0)
         {
-            ValidationStatus.Text = "KI nicht moeglich: Code-Katalog ist leer.";
+            ValidationStatus.Text = "KI nicht möglich: Code-Katalog ist leer.";
             return;
         }
 
         if (!TryParseOptionalDouble(MeterStartTextBox.Text, out var meterStart))
         {
-            ValidationStatus.Text = "MeterStart ist ungueltig.";
+            ValidationStatus.Text = "MeterStart ist ungültig.";
             return;
         }
 
         if (!TryParseOptionalDouble(MeterEndTextBox.Text, out var meterEnd))
         {
-            ValidationStatus.Text = "MeterEnd ist ungueltig.";
+            ValidationStatus.Text = "MeterEnd ist ungültig.";
             return;
         }
 
         if (!TryParseOptionalTimeSpan(ZeitTextBox.Text, out var zeit))
         {
-            ValidationStatus.Text = "Zeit ist ungueltig.";
+            ValidationStatus.Text = "Zeit ist ungültig.";
             return;
         }
 
@@ -681,7 +681,7 @@ public partial class ProtocolEntryEditorDialog : Window
             else if (_sp.CodeCatalog.TryGet(suggestion.SuggestedCode, out _))
             {
                 CodeTextBox.Text = suggestion.SuggestedCode.Trim().ToUpperInvariant();
-                AiStatusText.Text = $"KI-Vorschlag uebernommen: {suggestion.SuggestedCode} ({suggestion.Confidence:P0}).";
+                AiStatusText.Text = $"KI-Vorschlag übernommen: {suggestion.SuggestedCode} ({suggestion.Confidence:P0}).";
             }
             else
             {
@@ -707,7 +707,7 @@ public partial class ProtocolEntryEditorDialog : Window
     {
         if (_sp?.CodeCatalog is null)
         {
-            ValidationStatus.Text = "Code-Katalog ist nicht verfuegbar.";
+            ValidationStatus.Text = "Code-Katalog ist nicht verfügbar.";
             return;
         }
 
@@ -721,7 +721,7 @@ public partial class ProtocolEntryEditorDialog : Window
         if (picker.ShowDialog() == true)
         {
             LoadFromEntry();
-            ValidationStatus.Text = "Code uebernommen.";
+            ValidationStatus.Text = "Code übernommen.";
         }
     }
 
@@ -733,19 +733,19 @@ public partial class ProtocolEntryEditorDialog : Window
 
         if (!TryParseOptionalDouble(MeterStartTextBox.Text, out var meterStart))
         {
-            ValidationStatus.Text = "MeterStart ist ungueltig.";
+            ValidationStatus.Text = "MeterStart ist ungültig.";
             return;
         }
 
         if (!TryParseOptionalDouble(MeterEndTextBox.Text, out var meterEnd))
         {
-            ValidationStatus.Text = "MeterEnd ist ungueltig.";
+            ValidationStatus.Text = "MeterEnd ist ungültig.";
             return;
         }
 
         if (!TryParseOptionalTimeSpan(ZeitTextBox.Text, out var zeit))
         {
-            ValidationStatus.Text = "Zeit ist ungueltig.";
+            ValidationStatus.Text = "Zeit ist ungültig.";
             return;
         }
 
@@ -777,7 +777,7 @@ public partial class ProtocolEntryEditorDialog : Window
             _paramVm.Validate();
             if (!_paramVm.IsValid)
             {
-                ValidationStatus.Text = "Pflicht-Parameter fehlen oder sind ungueltig.";
+                ValidationStatus.Text = "Pflicht-Parameter fehlen oder sind ungültig.";
                 ApplyLiveValidation();
                 return;
             }
@@ -800,7 +800,7 @@ public partial class ProtocolEntryEditorDialog : Window
             }
             if (_entryVm.MeterEnd < _entryVm.MeterStart)
             {
-                ValidationStatus.Text = "Streckenschaden: MeterEnde muss groesser/gleich MeterStart sein.";
+                ValidationStatus.Text = "Streckenschaden: MeterEnde muss größer/gleich MeterStart sein.";
                 return;
             }
         }
@@ -1132,21 +1132,21 @@ public partial class ProtocolEntryEditorDialog : Window
     {
         if (!PlayerWindow.TryGetCurrentTime(out var time))
         {
-            ValidationStatus.Text = "Kein Video aktiv. Bitte zuerst Video oeffnen.";
+            ValidationStatus.Text = "Kein Video aktiv. Bitte zuerst Video öffnen.";
             return;
         }
 
         ZeitTextBox.Text = FormatTime(time);
         if (string.IsNullOrWhiteSpace(MpegTextBox.Text))
             MpegTextBox.Text = FormatTime(time);
-        ValidationStatus.Text = "Zeit aus Video uebernommen.";
+        ValidationStatus.Text = "Zeit aus Video übernommen.";
     }
 
     private void SeekToZeit()
     {
         if (!TryParseOptionalTimeSpan(ZeitTextBox.Text, out var zeit) || zeit is null)
         {
-            ValidationStatus.Text = "Zeit ist ungueltig.";
+            ValidationStatus.Text = "Zeit ist ungültig.";
             return;
         }
 
