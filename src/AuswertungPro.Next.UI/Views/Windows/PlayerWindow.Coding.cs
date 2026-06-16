@@ -1126,6 +1126,12 @@ public partial class PlayerWindow
         _codingOverlayService?.CancelDraw();
         _codingOverlayWasOpenBeforeSuspend = CodingOverlayPopup.IsOpen;
         CodingOverlayCanvas.IsHitTestVisible = false;
+        // Das Popup ist ein eigenes transparentes Top-Level-HWND und liegt grafisch
+        // UEBER eigenen Dialogen (Loeschen-Bestaetigung, VsaCodeExplorer). IsHitTestVisible=false
+        // nimmt nur die Maus weg, der #01000000-Schleier + Kreise bleiben sichtbar und stoeren.
+        // Canvas-Inhalt zusaetzlich ausblenden (NICHT Popup.IsOpen togglen -> kein HWND-Flicker,
+        // depth-gezaehlt reentrant-sicher, kein Doppel-Redraw). Resume macht es wieder sichtbar.
+        CodingOverlayCanvas.Visibility = Visibility.Hidden;
         CodingOverlayCanvas.Cursor = Cursors.Arrow;
     }
 
@@ -1137,6 +1143,9 @@ public partial class PlayerWindow
         _codingOverlaySuspendDepth--;
         if (_codingOverlaySuspendDepth > 0)
             return;
+
+        // Canvas-Inhalt wieder einblenden (Gegenstueck zum Ausblenden in SuspendCodingOverlayInput).
+        CodingOverlayCanvas.Visibility = Visibility.Visible;
 
         if (_codingOverlayWasOpenBeforeSuspend)
         {
