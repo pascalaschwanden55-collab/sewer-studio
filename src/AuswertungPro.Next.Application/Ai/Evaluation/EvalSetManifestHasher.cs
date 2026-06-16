@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Ai.Evaluation;
 
@@ -90,7 +91,7 @@ public static class EvalSetManifestHasher
             if (!Directory.Exists(dir))
                 continue;
 
-            foreach (var file in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+            foreach (var file in SafeFileEnumeration.EnumerateFilesSafe(dir, "*", recursive: true))
                 yield return file;
         }
     }
@@ -156,7 +157,7 @@ public static class EvalSetManifestHasher
 
     private static int CountFiles(string directory)
         => Directory.Exists(directory)
-            ? Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories).Count()
+            ? SafeFileEnumeration.EnumerateFilesSafe(directory, "*", recursive: true).Count()
             : 0;
 
     private sealed record EvalSetArtifactCounts(

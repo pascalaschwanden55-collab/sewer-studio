@@ -212,15 +212,16 @@ public sealed class CodingSessionService : ICodingSessionService
     /// </summary>
     private async Task IndexApprovedSamplesToKbAsync(List<TrainingSample> samples)
     {
+        var approved = samples.Where(s => s.Status == TrainingSampleStatus.Approved).ToList();
+        if (approved.Count == 0) return;
+
+        var cfg = _ollamaConfigProvider();
+        if (cfg is null) return;
+
         try
         {
-            var approved = samples.Where(s => s.Status == TrainingSampleStatus.Approved).ToList();
-            if (approved.Count == 0) return;
-
-            var cfg = _ollamaConfigProvider();
-            if (cfg is null) return;
-
-            var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
+            // HttpClient besitzen + disponieren -> kein Socket-/Handle-Leck pro Session-Abschluss.
+            using var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new InfraKnowledgeBase.EmbeddingService(http, cfg);
 
             using var db = new InfraKnowledgeBase.KnowledgeBaseContext();
@@ -229,16 +230,54 @@ public sealed class CodingSessionService : ICodingSessionService
 
             foreach (var sample in approved)
             {
-                await kbManager.IndexSampleAsync(sample);
+                try
+                {
+                    await kbManager.IndexSampleAsync(sample);
+                }
+                catch (Exception ex) when (IsTransientOllamaFailure(ex))
+                {
+                    // Ollama offline/Timeout: KB-Embedding wird uebersprungen. Erwartet -> nur Debug.
+                    // Das Sample ist bereits in TrainingSamplesStore persistiert und kann spaeter
+                    // ueber "Batch-Import + KB" im TrainingCenter nachindexiert werden.
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[CodingSession] KB-Index uebersprungen (Ollama offline/Timeout): {sample.Code} @ {sample.CaseId}");
+                }
+                catch (Exception ex)
+                {
+                    // ECHTER KB-Schreibfehler (SQLite gesperrt/korrupt, Embedding-Dimension-Mismatch o.ae.).
+                    // NICHT als "offline" kaschieren — sonst glaubt der Nutzer faelschlich, der bestaetigte
+                    // Befund liege in der KB. Ein fehlerhaftes Sample blockiert die uebrigen nicht.
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[CodingSession] KB-SCHREIBFEHLER (NICHT offline) fuer {sample.Code} @ {sample.CaseId}: {ex.GetType().Name}: {ex.Message}");
+                }
             }
         }
-        catch
+        catch (Exception ex) when (IsTransientOllamaFailure(ex))
         {
-            // Ollama nicht verfuegbar oder anderer Fehler — KB-Update wird uebersprungen.
-            // Samples sind in TrainingSamplesStore persistiert und koennen spaeter ueber
-            // "Batch-Import + KB" im TrainingCenter nachindexiert werden.
+            // Aufbau (HttpClient/KB-Context/Embedder) scheiterte transient -> erwartet, nur Debug.
+            System.Diagnostics.Debug.WriteLine(
+                $"[CodingSession] KB-Update uebersprungen (Ollama offline/Timeout): {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            // Nicht-transienter Aufbaufehler -> sichtbar markieren, nicht als "offline" verschleiern.
+            System.Diagnostics.Debug.WriteLine(
+                $"[CodingSession] KB-Update fehlgeschlagen (NICHT offline): {ex.GetType().Name}: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// True bei voruebergehenden Ollama-/Netz-Fehlern (offline, Timeout) — diese sind beim
+    /// Session-Abschluss erwartet (KB-Embedding wird dann nur uebersprungen). Alles andere
+    /// (SQLite/IO/Embedding-Fehler) ist ein echter KB-Schreibfehler und darf NICHT als
+    /// "offline" verschluckt werden. Prueft auch verschachtelte InnerExceptions.
+    /// </summary>
+    private static bool IsTransientOllamaFailure(Exception ex)
+        => ex is System.Net.Http.HttpRequestException
+           || ex is System.Threading.Tasks.TaskCanceledException
+           || ex is OperationCanceledException
+           || ex is System.Net.Sockets.SocketException
+           || (ex.InnerException is not null && IsTransientOllamaFailure(ex.InnerException));
 
     // --- Navigation ---
 

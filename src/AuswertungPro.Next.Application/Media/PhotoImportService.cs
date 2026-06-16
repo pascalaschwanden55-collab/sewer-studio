@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Media;
@@ -14,7 +15,7 @@ public sealed class PhotoImportService : IPhotoImportService
 
         var result = new PhotoImportResult();
 
-        foreach (var file in Directory.EnumerateFiles(folderPath, "*.*", SearchOption.AllDirectories)
+        foreach (var file in SafeFileEnumeration.EnumerateFilesSafe(folderPath, "*.*", recursive: true)
                      .Where(f => Ext.Contains(Path.GetExtension(f).ToLowerInvariant())))
         {
             var destName = $"{Guid.NewGuid():N}{Path.GetExtension(file).ToLowerInvariant()}";

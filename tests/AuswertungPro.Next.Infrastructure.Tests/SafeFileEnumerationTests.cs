@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.Versioning;
 using System.Linq;
 using System.Security.AccessControl;
 using System.Security.Principal;
@@ -14,6 +15,7 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 /// darf den ganzen Lauf NICHT abbrechen (Lazy-Throw-Fix — der Zugriffsfehler entsteht erst
 /// beim Iterieren, muss aber gefangen und der Ordner uebersprungen werden).
 /// </summary>
+[SupportedOSPlatform("windows")]
 public sealed class SafeFileEnumerationTests
 {
     [Fact]
@@ -85,11 +87,13 @@ public sealed class SafeFileEnumerationTests
         }
     }
 
+    [SupportedOSPlatform("windows")]
     private static SecurityIdentifier CurrentUser() => WindowsIdentity.GetCurrent().User!;
 
     private static readonly FileSystemRights EnumerateRights =
         FileSystemRights.ListDirectory | FileSystemRights.ReadData | FileSystemRights.Traverse;
 
+    [SupportedOSPlatform("windows")]
     private static bool TryDenyEnumerate(string dir)
     {
         try
@@ -103,6 +107,7 @@ public sealed class SafeFileEnumerationTests
         catch { return false; }
     }
 
+    [SupportedOSPlatform("windows")]
     private static void TryRemoveDeny(string dir)
     {
         try

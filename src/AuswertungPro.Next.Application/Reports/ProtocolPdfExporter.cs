@@ -2578,10 +2578,7 @@ public sealed class ProtocolPdfExporter
         string? found = null;
         try
         {
-            // Deterministische Auswahl statt Dateisystem-Reihenfolge (kein "erster-Treffer-gewinnt").
-            // Hinweis: graceful-skip via SafeFileEnumeration entfaellt hier (liegt in Infrastructure;
-            // Application darf nicht darauf zugreifen) — separater Schritt.
-            found = Directory.EnumerateFiles(searchRoot, fileName, SearchOption.AllDirectories)
+            found = Common.SafeFileEnumeration.EnumerateFilesSafe(searchRoot, fileName, recursive: true)
                 .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault();
         }
