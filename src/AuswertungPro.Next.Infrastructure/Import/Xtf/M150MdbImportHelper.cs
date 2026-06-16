@@ -981,8 +981,8 @@ finally {
         }
         finally
         {
-            try { if (File.Exists(tempScript)) File.Delete(tempScript); } catch { }
-            try { if (File.Exists(tempJson)) File.Delete(tempJson); } catch { }
+            AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (File.Exists(tempScript)) File.Delete(tempScript); }, "M150-Import: Temp-Skript loeschen");
+            AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (File.Exists(tempJson)) File.Delete(tempJson); }, "M150-Import: Temp-JSON loeschen");
         }
     }
 

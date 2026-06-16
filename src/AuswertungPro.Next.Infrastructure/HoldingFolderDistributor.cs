@@ -417,7 +417,7 @@ public static partial class HoldingFolderDistributor
                     }
                     finally
                     {
-                        try { if (File.Exists(tempPdfPath)) File.Delete(tempPdfPath); } catch { }
+                        AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (File.Exists(tempPdfPath)) File.Delete(tempPdfPath); }, "PDF-Verteilung: Temp loeschen");
                     }
                 }
             }
@@ -635,7 +635,7 @@ public static partial class HoldingFolderDistributor
                     }
                     finally
                     {
-                        try { if (File.Exists(tempPdfPath)) File.Delete(tempPdfPath); } catch { }
+                        AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (File.Exists(tempPdfPath)) File.Delete(tempPdfPath); }, "PDF-Verteilung: Temp loeschen");
                     }
                 }
             }

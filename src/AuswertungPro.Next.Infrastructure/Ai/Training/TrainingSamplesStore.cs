@@ -220,8 +220,8 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                     var bak2 = path + ".bak.2";
                     var bak3 = path + ".bak.3";
                     // Rotation: .bak.2 → .bak.3, .bak → .bak.2, aktuell → .bak
-                    if (File.Exists(bak2)) { try { File.Copy(bak2, bak3, true); } catch { } }
-                    if (File.Exists(bak1)) { try { File.Copy(bak1, bak2, true); } catch { } }
+                    if (File.Exists(bak2)) AuswertungPro.Next.Application.Common.BestEffort.Try(() => File.Copy(bak2, bak3, true), "Trainingsdaten-Backup-Rotation .bak.2->.bak.3");
+                    if (File.Exists(bak1)) AuswertungPro.Next.Application.Common.BestEffort.Try(() => File.Copy(bak1, bak2, true), "Trainingsdaten-Backup-Rotation .bak->.bak.2");
                     File.Copy(path, bak1, overwrite: true);
                 }
                 catch { /* best-effort */ }

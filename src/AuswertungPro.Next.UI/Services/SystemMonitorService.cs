@@ -395,7 +395,10 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             if (key?.GetValue("Enabled") is int enabled)
                 return enabled == 1;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SystemMonitor] HVCI-Status nicht lesbar: {ex.GetType().Name}");
+        }
         return false;
     }
 
@@ -1339,7 +1342,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
         _timer.Stop();
         _timer.Tick -= OnTick;
-        try { _computer?.Close(); } catch { }
+        AuswertungPro.Next.Application.Common.BestEffort.Try(() => _computer?.Close(), "SystemMonitor: Hardware-Monitor schliessen");
         _computer = null;
     }
 }

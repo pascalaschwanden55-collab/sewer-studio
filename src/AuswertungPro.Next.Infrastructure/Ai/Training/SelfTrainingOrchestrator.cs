@@ -274,10 +274,10 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 var errMsg = $"[SelfTraining] EXCEPTION bei {entry.VsaCode}@{entry.MeterStart:F1}m: {ex.GetType().Name}: {ex.Message}";
-                try { File.AppendAllText(
+                AuswertungPro.Next.Application.Common.BestEffort.Try(() => File.AppendAllText(
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                         "SewerStudio", "logs", "selftraining_errors.log"),
-                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {errMsg}\n"); } catch { }
+                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {errMsg}\n"), "SelfTraining: Fehler-Log schreiben");
                 progress.Report(new SelfTrainingStep(
                     i, entries.Count, entry.VsaCode, entry.MeterStart,
                     SelfTrainingStage.Analyzing, null, null, framePath,
@@ -288,10 +288,10 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
             if (analysis.Error is not null)
             {
                 var errMsg = $"KI-Fehler: {analysis.Error}";
-                try { File.AppendAllText(
+                AuswertungPro.Next.Application.Common.BestEffort.Try(() => File.AppendAllText(
                     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                         "SewerStudio", "logs", "selftraining_errors.log"),
-                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [SelfTraining] {entry.VsaCode}@{entry.MeterStart:F1}m: {errMsg}\n"); } catch { }
+                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [SelfTraining] {entry.VsaCode}@{entry.MeterStart:F1}m: {errMsg}\n"), "SelfTraining: KI-Fehler-Log schreiben");
                 progress.Report(new SelfTrainingStep(
                     i, entries.Count, entry.VsaCode, entry.MeterStart,
                     SelfTrainingStage.Analyzing, null, null, framePath,
