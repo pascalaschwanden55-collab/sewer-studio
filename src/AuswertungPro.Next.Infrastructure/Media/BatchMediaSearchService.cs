@@ -169,9 +169,12 @@ public sealed class BatchMediaSearchService
                     }
                 }
             }
-            catch (UnauthorizedAccessException) { }
-            catch (DirectoryNotFoundException) { }
-            catch (IOException) { }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or DirectoryNotFoundException or IOException)
+            {
+                // Skip beibehalten, aber sichtbar: "gesperrt" ist sonst nicht von "keine Treffer" unterscheidbar.
+                System.Diagnostics.Trace.WriteLine(
+                    $"[BatchMediaSearch] Ordner nicht lesbar, uebersprungen: {dir}: {ex.GetType().Name}");
+            }
 
             if (recursive)
             {
@@ -180,9 +183,11 @@ public sealed class BatchMediaSearchService
                     foreach (var sub in Directory.EnumerateDirectories(dir))
                         stack.Push(sub);
                 }
-                catch (UnauthorizedAccessException) { }
-                catch (DirectoryNotFoundException) { }
-                catch (IOException) { }
+                catch (Exception ex) when (ex is UnauthorizedAccessException or DirectoryNotFoundException or IOException)
+                {
+                    System.Diagnostics.Trace.WriteLine(
+                        $"[BatchMediaSearch] Unterordner nicht auflistbar, uebersprungen: {dir}: {ex.GetType().Name}");
+                }
             }
         }
 

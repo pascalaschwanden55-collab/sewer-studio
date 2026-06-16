@@ -71,11 +71,14 @@ internal static class PdfOcrExtractor
                     var prefix = Path.GetFileName(tempBase);
                     foreach (var path in Directory.EnumerateFiles(tempDir, $"{prefix}*"))
                     {
-                        try { File.Delete(path); } catch { }
+                        AuswertungPro.Next.Application.Common.BestEffort.Try(() => File.Delete(path), "PDF-OCR: Temp-Datei loeschen");
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PdfOcr] Temp-Cleanup uebersprungen: {ex.GetType().Name}: {ex.Message}");
+            }
         }
     }
 

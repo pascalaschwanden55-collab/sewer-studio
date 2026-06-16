@@ -97,7 +97,13 @@ public sealed class TrainingCenterImportService
                     ProtocolPath: proto,
                     InspectionDate: inspectionDate));
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // Frueher still verschluckt -> stiller Verlust von Trainingsfaellen. Jetzt sichtbar
+                // (mit Ordnerpfad), damit nachvollziehbar ist, WELCHER Ordner und WARUM uebersprungen wurde.
+                System.Diagnostics.Trace.WriteLine(
+                    $"[TrainingCenterImport] Ordner uebersprungen: {folder}: {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         cases = cases.OrderBy(c => c.CaseId, StringComparer.OrdinalIgnoreCase).ToList();

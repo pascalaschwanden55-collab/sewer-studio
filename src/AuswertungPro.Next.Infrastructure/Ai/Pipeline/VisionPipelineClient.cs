@@ -56,6 +56,12 @@ public sealed class VisionPipelineClient
             var json = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return JsonSerializer.Deserialize<SidecarHealthResponse>(json, JsonOpts);
         }
+        catch (OperationCanceledException)
+        {
+            // Abbruch (Shutdown/Timeout) ist KEIN "Sidecar offline" — nicht als null kaschieren,
+            // sonst faellt die Pipeline faelschlich auf den schwaecheren Ollama-Only-Modus zurueck.
+            throw;
+        }
         catch
         {
             return null;
