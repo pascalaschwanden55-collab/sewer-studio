@@ -92,7 +92,7 @@ public partial class PlayerWindow
 
             // VLC-OSD-Anzeige (Dateipfad) vorher deaktivieren, damit der Pfad
             // nicht als Text auf dem Videobild erscheint
-            try { _player.SetMarqueeInt(VideoMarqueeOption.Enable, 0); } catch { }
+            AuswertungPro.Next.Application.Common.BestEffort.Try(() => _player.SetMarqueeInt(VideoMarqueeOption.Enable, 0), "VLC: Marquee deaktivieren");
             return _player.TakeSnapshot(0, filePath, width, height);
         }
         catch
@@ -103,7 +103,7 @@ public partial class PlayerWindow
         {
             if (wasPlaying && !_closing && !_playbackDisposed)
             {
-                try { _player.SetPause(false); } catch { }
+                AuswertungPro.Next.Application.Common.BestEffort.Try(() => _player.SetPause(false), "VLC: Pause aufheben");
             }
         }
     }
@@ -127,7 +127,7 @@ public partial class PlayerWindow
             t.Tick += (_, __) =>
             {
                 t.Stop();
-                try { _player.SetMarqueeInt(VideoMarqueeOption.Enable, 0); } catch { }
+                AuswertungPro.Next.Application.Common.BestEffort.Try(() => _player.SetMarqueeInt(VideoMarqueeOption.Enable, 0), "VLC: Marquee deaktivieren");
             };
             t.Start();
         }
@@ -369,10 +369,10 @@ public partial class PlayerWindow
         StopPipelineHealthMonitor();
 
         // 3. Player vom VideoView trennen (verhindert D3D-Zugriff nach Dispose).
-        try { if (VideoView != null) VideoView.MediaPlayer = null; } catch { }
+        AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (VideoView != null) VideoView.MediaPlayer = null; }, "VLC: VideoView trennen");
 
         // 4. Player sauber stoppen bevor Dispose (Cleanup macht dann nur noch Dispose).
-        try { _player.Stop(); } catch { }
+        AuswertungPro.Next.Application.Common.BestEffort.Try(() => _player.Stop(), "VLC: Player stoppen");
 
         try
         {
@@ -391,7 +391,7 @@ public partial class PlayerWindow
 
         _playbackDisposed = true;
         StopPlayerTimers();
-        try { if (VideoView != null) VideoView.MediaPlayer = null; } catch { }
+        AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (VideoView != null) VideoView.MediaPlayer = null; }, "VLC: VideoView trennen");
         try { _player.Dispose(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PlayerWindow] MediaPlayer Dispose error: {ex.Message}"); }
         try { _libVlc.Dispose(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PlayerWindow] LibVLC Dispose error: {ex.Message}"); }
     }

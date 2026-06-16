@@ -627,7 +627,8 @@ public partial class PlayerWindow
         }
         finally
         {
-            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+            AuswertungPro.Next.Application.Common.BestEffort.Try(
+                () => { if (File.Exists(tempPath)) File.Delete(tempPath); }, "Snapshot: Temp loeschen");
         }
     }
 
@@ -1234,7 +1235,8 @@ public partial class PlayerWindow
             var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
 
             // Temp aufrÃ¤umen
-            try { System.IO.File.Delete(tempFrame); } catch { }
+            AuswertungPro.Next.Application.Common.BestEffort.Try(
+                () => System.IO.File.Delete(tempFrame), "Mark-Training: Temp-Frame loeschen");
 
             // 5. TeacherAnnotation erstellen + persistieren
             var captureMeter = 0.0;
@@ -1400,7 +1402,8 @@ public partial class PlayerWindow
                 await System.IO.File.WriteAllBytesAsync(tempFrame, frameBytes);
 
                 var exportResult = await exportService.ExportAsync(tempFrame, bbox, code, classId, baseName);
-                try { System.IO.File.Delete(tempFrame); } catch { }
+                AuswertungPro.Next.Application.Common.BestEffort.Try(
+                () => System.IO.File.Delete(tempFrame), "Mark-Training: Temp-Frame loeschen");
 
                 // TeacherAnnotation erstellen
                 var annotation = new TeacherAnnotation
@@ -1497,7 +1500,8 @@ public partial class PlayerWindow
 
             var exportService = Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
             var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
-            try { System.IO.File.Delete(tempFrame); } catch { }
+            AuswertungPro.Next.Application.Common.BestEffort.Try(
+                () => System.IO.File.Delete(tempFrame), "Mark-Training: Temp-Frame loeschen");
 
             var annotation = new TeacherAnnotation
             {

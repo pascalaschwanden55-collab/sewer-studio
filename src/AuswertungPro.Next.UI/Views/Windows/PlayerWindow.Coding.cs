@@ -2579,7 +2579,7 @@ public partial class PlayerWindow
         await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
         // 5. Visuelles Feedback
-        try { System.IO.File.Delete(snapshotPath); } catch { }
+        AuswertungPro.Next.Application.Common.BestEffort.Try(() => System.IO.File.Delete(snapshotPath), "Foto/Snapshot: Temp loeschen");
         OsdMeterBadge.Visibility = Visibility.Visible;
         TxtOsdMeter.Text = $"âœ“ {importEvent.Entry.Code} @ {importEvent.MeterAtCapture:F1}m bestÃ¤tigt";
         var resetTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
@@ -4660,7 +4660,7 @@ public partial class PlayerWindow
         }
         finally
         {
-            try { if (File.Exists(snapFile)) File.Delete(snapFile); } catch { }
+            AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (File.Exists(snapFile)) File.Delete(snapFile); }, "Snapshot: Temp loeschen");
         }
     }
 
@@ -5541,7 +5541,7 @@ public partial class PlayerWindow
             }
             finally
             {
-                try { if (File.Exists(snapFile)) File.Delete(snapFile); } catch { }
+                AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (File.Exists(snapFile)) File.Delete(snapFile); }, "Snapshot: Temp loeschen");
             }
 
             if (pngBytes == null || pngBytes.Length == 0) return null;
