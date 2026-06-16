@@ -282,7 +282,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
                     i, entries.Count, entry.VsaCode, entry.MeterStart,
                     SelfTrainingStage.Analyzing, null, null, framePath,
                     ErrorMessage: errMsg));
-                analysis = EnhancedFrameAnalysis.Empty(ex.Message);
+                analysis = EnhancedFrameAnalysis.EmptyFromException(ex);
             }
 
             if (analysis.Error is not null)

@@ -72,7 +72,7 @@ public sealed class LiveDetectionService
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             return new LiveDetection(timestampSeconds, Array.Empty<LiveFrameFinding>(),
-                null, "Timeout");
+                null, "Timeout", AnalysisOutcome.Timeout);
         }
         catch (OperationCanceledException)
         {
@@ -81,7 +81,7 @@ public sealed class LiveDetectionService
         catch (Exception ex)
         {
             return new LiveDetection(timestampSeconds, Array.Empty<LiveFrameFinding>(),
-                null, ex.Message);
+                null, ex.Message, EnhancedFrameAnalysis.FromException(ex));
         }
     }
 
@@ -90,7 +90,12 @@ public sealed class LiveDetectionService
         // Extract JSON from potentially wrapped response (```json ... ``` or plain)
         var json = ExtractJson(raw);
         if (string.IsNullOrWhiteSpace(json))
-            return new LiveDetection(timestampSeconds, Array.Empty<LiveFrameFinding>(), null, null);
+            return new LiveDetection(
+                timestampSeconds,
+                Array.Empty<LiveFrameFinding>(),
+                null,
+                "KI-Antwort enthielt kein auswertbares JSON.",
+                AnalysisOutcome.ModelUnavailable);
 
         try
         {
@@ -165,12 +170,22 @@ public sealed class LiveDetectionService
                 }
             }
 
-            return new LiveDetection(timestampSeconds, findings, meter, null);
+            return new LiveDetection(
+                timestampSeconds,
+                findings,
+                meter,
+                null,
+                findings.Count == 0 ? AnalysisOutcome.NoFinding : AnalysisOutcome.Ok);
         }
         catch
         {
             // JSON parse failed — return empty
-            return new LiveDetection(timestampSeconds, Array.Empty<LiveFrameFinding>(), null, null);
+            return new LiveDetection(
+                timestampSeconds,
+                Array.Empty<LiveFrameFinding>(),
+                null,
+                "KI-Antwort konnte nicht als JSON gelesen werden.",
+                AnalysisOutcome.ModelUnavailable);
         }
     }
 

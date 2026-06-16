@@ -17,7 +17,7 @@ public static class LiveDetectionMapper
         double timestampSec)
     {
         if (enhanced.Error != null)
-            return new LiveDetection(timestampSec, Array.Empty<LiveFrameFinding>(), null, enhanced.Error);
+            return new LiveDetection(timestampSec, Array.Empty<LiveFrameFinding>(), null, enhanced.Error, enhanced.Outcome);
 
         var findings = new List<LiveFrameFinding>(enhanced.Findings.Count);
         foreach (var f in enhanced.Findings)
@@ -62,10 +62,10 @@ public static class LiveDetectionMapper
                 .Take(10) // Max 10 Findings bei schlechter Qualitaet (UI-Overflow verhindern)
                 .ToList();
 
-            return new LiveDetection(timestampSec, findings, enhanced.Meter, null);
+            return new LiveDetection(timestampSec, findings, enhanced.Meter, null, enhanced.Outcome);
         }
 
-        return new LiveDetection(timestampSec, findings, enhanced.Meter, null);
+        return new LiveDetection(timestampSec, findings, enhanced.Meter, null, enhanced.Outcome);
     }
 
 }

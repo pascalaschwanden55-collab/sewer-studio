@@ -168,4 +168,16 @@ public sealed class LiveDetectionMapperTests
         var finding = Assert.Single(result.Findings);
         Assert.Equal(expectedCode, finding.VsaCodeHint);
     }
+
+    [Fact]
+    public void FromEnhancedAnalysis_PropagatesTimeoutOutcome()
+    {
+        var analysis = EnhancedFrameAnalysis.Empty("Timeout (30s)", AnalysisOutcome.Timeout);
+
+        var result = LiveDetectionMapper.FromEnhancedAnalysis(analysis, 4.5);
+
+        Assert.Equal(AnalysisOutcome.Timeout, result.Outcome);
+        Assert.Equal("Timeout (30s)", result.Error);
+        Assert.Empty(result.Findings);
+    }
 }

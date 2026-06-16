@@ -4,7 +4,8 @@ public sealed record LiveDetection(
     double TimestampSeconds,
     IReadOnlyList<LiveFrameFinding> Findings,
     double? MeterReading,
-    string? Error);
+    string? Error,
+    AnalysisOutcome Outcome = AnalysisOutcome.Ok);
 
 public sealed record LiveFrameFinding(
     string Label,

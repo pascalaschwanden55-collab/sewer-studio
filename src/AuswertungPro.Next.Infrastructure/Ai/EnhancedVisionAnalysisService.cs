@@ -209,12 +209,14 @@ public sealed class EnhancedVisionAnalysisService
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            return EnhancedFrameAnalysis.Empty($"Timeout ({FrameTimeout.TotalSeconds:0}s)");
+            return EnhancedFrameAnalysis.Empty(
+                $"Timeout ({FrameTimeout.TotalSeconds:0}s)",
+                AnalysisOutcome.Timeout);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            return EnhancedFrameAnalysis.Empty(ex.Message);
+            return EnhancedFrameAnalysis.EmptyFromException(ex);
         }
 
         return MapToAnalysis(dto);
@@ -423,7 +425,10 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
             Findings: findings,
             ImageQuality: dto.ImageQuality ?? "mittel",
             IsEmptyFrame: dto.IsEmptyFrame,
-            Error: null);
+            Error: null,
+            Outcome: findings.Count == 0 || dto.IsEmptyFrame
+                ? AnalysisOutcome.NoFinding
+                : AnalysisOutcome.Ok);
     }
 
     /// <summary>
@@ -461,12 +466,14 @@ Falls kein Schaden erkennbar: findings=[], is_empty_frame=true.
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            return EnhancedFrameAnalysis.Empty($"Timeout ({FrameTimeout.TotalSeconds:0}s)");
+            return EnhancedFrameAnalysis.Empty(
+                $"Timeout ({FrameTimeout.TotalSeconds:0}s)",
+                AnalysisOutcome.Timeout);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            return EnhancedFrameAnalysis.Empty(ex.Message);
+            return EnhancedFrameAnalysis.EmptyFromException(ex);
         }
 
         return MapToAnalysis(dto);

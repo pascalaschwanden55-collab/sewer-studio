@@ -833,7 +833,10 @@ public sealed class MultiModelAnalysisService
             Findings: findings,
             ImageQuality: "gut",
             IsEmptyFrame: false,
-            Error: null);
+            Error: null,
+            Outcome: findings.Count == 0
+                ? AnalysisOutcome.NoFinding
+                : AnalysisOutcome.Ok);
     }
 
     // ── Private helpers ────────────────────────────────────────────────

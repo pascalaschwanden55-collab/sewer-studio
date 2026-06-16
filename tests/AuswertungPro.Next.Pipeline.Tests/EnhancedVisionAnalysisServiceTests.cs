@@ -21,6 +21,45 @@ public sealed class EnhancedVisionAnalysisServiceTests
     }
 
     [Fact]
+    public void EmptyResult_WithoutError_IsExplicitNoFinding()
+    {
+        var result = EnhancedFrameAnalysis.Empty();
+
+        Assert.Equal(AnalysisOutcome.NoFinding, result.Outcome);
+        Assert.True(result.IsTrainableNegative);
+    }
+
+    [Fact]
+    public void EmptyResult_WithTimeout_IsNotTrainableNegative()
+    {
+        var result = EnhancedFrameAnalysis.Empty(
+            "Timeout (30s)",
+            AnalysisOutcome.Timeout);
+
+        Assert.Equal(AnalysisOutcome.Timeout, result.Outcome);
+        Assert.False(result.IsTrainableNegative);
+    }
+
+    [Fact]
+    public void EmptyFromException_MapsHttpRequestToModelUnavailable()
+    {
+        var result = EnhancedFrameAnalysis.EmptyFromException(new HttpRequestException("connection refused"));
+
+        Assert.Equal(AnalysisOutcome.ModelUnavailable, result.Outcome);
+        Assert.False(result.IsTrainableNegative);
+        Assert.Contains("connection refused", result.Error);
+    }
+
+    [Fact]
+    public void EmptyFromException_MapsTimeoutExceptionToTimeout()
+    {
+        var result = EnhancedFrameAnalysis.EmptyFromException(new TimeoutException("too slow"));
+
+        Assert.Equal(AnalysisOutcome.Timeout, result.Outcome);
+        Assert.False(result.IsTrainableNegative);
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_with_import_context_prompt_discourages_empty_frame_for_known_findings()
     {
         var content = """

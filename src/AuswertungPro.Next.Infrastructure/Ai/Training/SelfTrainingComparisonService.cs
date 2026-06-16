@@ -34,6 +34,23 @@ public sealed class SelfTrainingComparisonService : ISelfTrainingComparisonServi
     {
         if (!analysis.HasFindings)
         {
+            if (!analysis.IsTrainableNegative)
+            {
+                var reason = string.IsNullOrWhiteSpace(analysis.Error)
+                    ? analysis.Outcome.ToString()
+                    : $"{analysis.Outcome}: {analysis.Error}";
+                return new ComparisonResult(
+                    Level: MatchLevel.Mismatch,
+                    ConfidenceScore: 0.0,
+                    Explanation: $"KI-Analyse nicht als echter Negativbefund wertbar ({reason}).",
+                    CodeMatched: false,
+                    MeterMatched: false,
+                    SeverityPlausible: false,
+                    ClockMatched: false,
+                    BestMatchCode: null,
+                    BestMatchMeter: null);
+            }
+
             return new ComparisonResult(
                 Level: MatchLevel.NoFindings,
                 ConfidenceScore: 0.0,
