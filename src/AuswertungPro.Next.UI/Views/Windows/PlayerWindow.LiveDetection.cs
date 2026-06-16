@@ -1187,7 +1187,7 @@ public partial class PlayerWindow
 
     /// <summary>
     /// Speichert eine Markierung als Teacher-Annotation (YOLO-Export + TeacherAnnotationStore).
-    /// Vereinfachte Version von CodingModeWindow.BtnSaveAsTraining_Click.
+    /// Eigenstaendige Implementierung im PlayerWindow-Codiermodus.
     /// </summary>
     /// <summary>Rueckgabe: true wenn gespeichert, false wenn abgebrochen.</summary>
     private async Task<bool> SaveMarkAsTrainingAsync(OverlayGeometry overlay, double timestampSec, string? clockPosition, byte[]? preCapturedFrame = null)

@@ -7,7 +7,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai;
 
 /// <summary>
 /// Gemeinsames Mapping fuer Enhanced/Qwen-Ergebnisse in das LiveDetection-Format.
-/// So nutzen PlayerWindow und CodingModeWindow denselben Vertrag fuer
+/// Liefert dem PlayerWindow-Codiermodus einen einheitlichen Vertrag fuer
 /// ImageQuality-Gate, Meteruebernahme und BBox-Weitergabe.
 /// </summary>
 public static class LiveDetectionMapper

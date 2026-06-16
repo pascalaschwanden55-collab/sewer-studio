@@ -11,7 +11,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai;
 /// <summary>
 /// Zentraler VSA-Code-Resolver fuer KI-Findings.
 /// Einzige Quelle fuer Code-Normalisierung, Label-Lookup und Clock-Normalisierung.
-/// Wird von PlayerWindow (Codiermodus) und CodingModeWindow gemeinsam genutzt.
+/// Wird vom PlayerWindow-Codiermodus genutzt.
 /// </summary>
 public static class VsaCodeResolver
 {
