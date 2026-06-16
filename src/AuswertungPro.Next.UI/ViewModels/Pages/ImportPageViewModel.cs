@@ -804,7 +804,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
             IEnumerable<string> files;
             try
             {
-                files = Directory.EnumerateFiles(baseDir, "*.*", SearchOption.AllDirectories);
+                files = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(baseDir, "*.*", recursive: true);
             }
             catch
             {

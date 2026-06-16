@@ -260,9 +260,10 @@ public sealed class AiStartupServiceTests
     private sealed class FakeAiStartupLauncher : IAiStartupLauncher
     {
         public bool OllamaReachable { get; set; }
-        public bool SidecarReachable { get; init; }
+        public bool SidecarReachable { get; set; }
         public List<AiStartupProcessRequest> StartedProcesses { get; } = new();
         public List<string> PreloadedModels { get; } = new();
+        public List<string> WarmedModels { get; } = new();
 
         public Task<bool> IsReachableAsync(
             Uri baseUri,
@@ -279,6 +280,8 @@ public sealed class AiStartupServiceTests
             StartedProcesses.Add(request);
             if (string.Equals(request.FileName, "ollama", StringComparison.OrdinalIgnoreCase))
                 OllamaReachable = true;
+            else if (request.Arguments.Contains("start_sidecar.ps1", StringComparison.OrdinalIgnoreCase))
+                SidecarReachable = true; // Sidecar kommt nach dem Start hoch (Simulation)
 
             error = null;
             return true;
@@ -291,6 +294,19 @@ public sealed class AiStartupServiceTests
         {
             PreloadedModels.Add(request.ModelName);
             return Task.FromResult(new AiStartupModelPreloadResult(true, null));
+        }
+
+        public Task<AiStartupWarmupResult> WarmupSidecarModelsAsync(
+            Uri sidecarBaseUri,
+            IReadOnlyDictionary<string, string>? headers,
+            CancellationToken ct)
+        {
+            if (!SidecarReachable)
+                return Task.FromResult(new AiStartupWarmupResult(false, Array.Empty<string>(), "nicht erreichbar"));
+
+            var models = new[] { "yolo", "dino", "sam" };
+            WarmedModels.AddRange(models);
+            return Task.FromResult(new AiStartupWarmupResult(true, models, null));
         }
     }
 }

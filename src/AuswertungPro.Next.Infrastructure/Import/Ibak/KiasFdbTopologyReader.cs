@@ -183,8 +183,11 @@ public static class KiasFdbTopologyReader
         try
         {
             // Audit 2026-05-17 (Nachzieh): SafeFileEnumeration.
-            var candidates = SafeFileEnumeration.EnumerateFilesSafe(exportRoot, "*.fdb", recursive: true).ToList();
-            // Bevorzuge Arizona.fdb (KIAS-Standard).
+            var candidates = SafeFileEnumeration.EnumerateFilesSafe(exportRoot, "*.fdb", recursive: true)
+                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            // Bevorzuge Arizona.fdb (KIAS-Standard), sonst deterministisch ersten sortierten Kandidaten
+            // (nicht dateisystem-abhaengig).
             return candidates.FirstOrDefault(p => string.Equals(Path.GetFileName(p), "Arizona.fdb", StringComparison.OrdinalIgnoreCase))
                    ?? candidates.FirstOrDefault();
         }

@@ -9,6 +9,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
+using AuswertungPro.Next.Infrastructure.Map;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
@@ -244,7 +245,8 @@ public static partial class HoldingFolderDistributor
     private static IReadOnlyList<DichtheitPageResult> ExtractDichtheitPerPage(
         IReadOnlyList<PageInfo> pages,
         Project? project,
-        string destGemeindeFolder)
+        string destGemeindeFolder,
+        IHaltungCadastreResolver? cadastre = null)
     {
         var results = new List<DichtheitPageResult>();
 
@@ -277,8 +279,12 @@ public static partial class HoldingFolderDistributor
 
             string? haltungId = null;
 
-            // Haltungspaar suchen: zwei 5-stellige Nummern auf einer Zeile
-            // (OCR kann ^ als diverse Zeichen rendern — deshalb robust: 2 Nummern auf gleicher Zeile)
+            // Haltungspaar suchen: zwei Schachtnummern, die durch ein (evtl. OCR-kaputtes)
+            // Trennzeichen verbunden sind, z.B. "865-864", "993170-^614445", "6927 -+ 6926",
+            // "6928 -> 6927". Schachtnummern im Uri-Netz sind 4- bis 6-stellig (6927, 993170)
+            // und koennen einen gepunkteten Praefix tragen ("07.993164"). Das Trenner-Muster ist
+            // praeziser als "zwei Zahlen pro Zeile" und vermeidet Fehltreffer (Auftrags-Nr,
+            // Messwerte, GPS).
             foreach (var line in text.Split('\n'))
             {
                 // Zeilen mit bekannten Nicht-Haltungs-Mustern ueberspringen
@@ -289,25 +295,26 @@ public static partial class HoldingFolderDistributor
                 // "gepruft bei 40693,6473" — nur eine Nummer vor Komma, kein Paar
                 if (Regex.IsMatch(line, @"gepr[uü]ft\s+bei", RegexOptions.IgnoreCase))
                     continue;
+                // Mess-/Fusszeilen mit Nicht-Schacht-Zahlen aussparen (Telefon, mbar, Software …)
+                if (IsNoiseLine(line))
+                    continue;
 
-                var nums = Regex.Matches(line, @"\b(\d{5})\b");
-                if (nums.Count >= 2)
+                var pair = TryMatchDichtheitPairLine(line);
+                if (pair is not null)
                 {
-                    var a = nums[0].Groups[1].Value;
-                    var b = nums[1].Groups[1].Value;
-                    if (!string.Equals(a, b, StringComparison.Ordinal))
-                    {
-                        haltungId = ResolveDichtheitHaltungOrder(a, b, project, destGemeindeFolder)
-                                    ?? $"{a}-{b}";
-                        break;
-                    }
+                    var (a, b) = pair.Value;
+                    haltungId = ResolveDichtheitHaltungOrder(a, b, project, destGemeindeFolder)
+                                ?? $"{a}-{b}";
+                    break;
                 }
             }
 
-            // Schacht: einzelne Nummer neben "Strang"
+            // Schacht: einzelne 4- bis 6-stellige Nummer vor "Strang".
+            // KIT rendert das als "993170 :Strang:SW" (Nummer VOR dem Doppelpunkt) oder
+            // ":993170 :Strang" — beide Varianten abdecken.
             if (haltungId == null && isSchacht)
             {
-                var schachtMatch = Regex.Match(text, @":\s*(\d{5})\s*:?\s*Strang", RegexOptions.IgnoreCase);
+                var schachtMatch = Regex.Match(text, @"(?<!\d)(\d{4,6})\s*:?\s*Strang", RegexOptions.IgnoreCase);
                 if (schachtMatch.Success)
                     haltungId = $"Schacht_{schachtMatch.Groups[1].Value}";
             }
@@ -323,6 +330,25 @@ public static partial class HoldingFolderDistributor
             if (haltungId == null)
                 haltungId = TryExtractFromShafts(text);
 
+            // Universeller Kataster-Abgleich (amtliche Wahrheit, formatunabhaengig):
+            //  - bekanntes Schacht-Paar -> korrekte Reihenfolge erzwingen (korrigiert oben/unten vertauscht)
+            //  - sonst aus den Kandidaten-Zahlen der Haltungs-/Schacht-Zeilen eindeutig aufloesen
+            if (cadastre is not null && cadastre.Count > 0)
+            {
+                var (pairA, pairB) = string.IsNullOrWhiteSpace(haltungId)
+                    ? ("", "")
+                    : HaltungCadastreExtractor.SplitShaftPair(haltungId!);
+
+                if (!string.IsNullOrEmpty(pairA) && cadastre.TryResolvePair(pairA, pairB, out var canonical))
+                {
+                    haltungId = canonical;
+                }
+                else if (string.IsNullOrWhiteSpace(haltungId))
+                {
+                    haltungId = ResolveViaCadastre(text, cadastre);
+                }
+            }
+
             results.Add(new DichtheitPageResult(
                 MainPage: page.PageNumber,
                 PageNumbers: new List<int> { page.PageNumber },
@@ -334,6 +360,169 @@ public static partial class HoldingFolderDistributor
         return results;
     }
 
+
+    private static readonly string[] ShaftLabelKeywords =
+        { "haltung", "schacht", "prüfgegenstand", "prufgegenstand", "pruefgegenstand", "prüfobj", "prufobj", "oberer", "unterer" };
+
+    /// <summary>
+    /// Loest eine Haltung ueber den Kataster auf: zuerst fokussiert (Zahlen auf Haltungs-/
+    /// Schacht-Zeilen inkl. Nachbarzeilen wegen Spalten-Versatz von pdftotext), sonst die
+    /// ganze Seite als Rueckfall. Genau ein Kataster-Treffer = sichere Zuordnung.
+    /// </summary>
+    private static string? ResolveViaCadastre(string text, IHaltungCadastreResolver? cadastre)
+    {
+        if (cadastre is null || cadastre.Count == 0 || string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var hits = cadastre.ResolveFromCandidates(GatherShaftCandidates(text));
+        if (hits.Count != 1)
+            hits = cadastre.ResolveFromCandidates(GatherAllNumberCandidates(text));
+        return hits.Count == 1 ? hits[0] : null;
+    }
+
+    // Haltungspaar in einer Zeile: Schacht A <Trenner> Schacht B.
+    // Schacht = optionaler gepunkteter Praefix (07.) + 4-6 Ziffern.
+    // Trenner = beliebige Mischung aus Pfeil-/Strich-/OCR-Resten ( - ^ + > < → . , Leerzeichen),
+    //   muss aber MINDESTENS ein echtes Verbindungszeichen (- ^ + > →) enthalten,
+    //   damit "70.51 m" o.ae. nicht faelschlich als Paar gilt.
+    private static readonly Regex DichtheitPairLineRx = new(
+        @"(?<a>(?:\d{1,2}\.)?\d{4,6})\s*(?<sep>[\^\+\-><→]+[\^\+\-><→.,\s]*)\s*(?<b>(?:\d{1,2}\.)?\d{4,6})",
+        RegexOptions.Compiled);
+
+    /// <summary>
+    /// Findet in einer Zeile ein Schacht-Paar "A &lt;Trenner&gt; B" und gibt beide Schaechte zurueck.
+    /// Toleriert OCR-kaputte Trenner ("-^", "-+", "->", "→") und 4- bis 6-stellige Nummern.
+    /// Liefert null, wenn kein plausibles Paar (gleiche Nummer, reine Dezimalzahl ohne Verbinder).
+    /// </summary>
+    private static (string A, string B)? TryMatchDichtheitPairLine(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+            return null;
+
+        var m = DichtheitPairLineRx.Match(line);
+        if (!m.Success)
+            return null;
+
+        var a = m.Groups["a"].Value.Trim();
+        var b = m.Groups["b"].Value.Trim();
+        if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)
+            || string.Equals(a, b, StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        return (a, b);
+    }
+
+    /// <summary>Name des Sammelordners fuer Haltungen, die im amtlichen Kataster nicht existieren.</summary>
+    private const string UnzugeordnetFolderName = "keine_Zuordnung";
+
+    /// <summary>
+    /// Liefert die Ziel-Wurzel fuer eine final ermittelte Haltung: normalerweise
+    /// <paramref name="destGemeindeFolder"/>, aber den Unterordner "keine_Zuordnung", wenn ein
+    /// Kataster geladen ist und das Schacht-Paar dort NICHT existiert. Dadurch laeuft die normale
+    /// Verteil-Logik unveraendert, nur eine Ebene tiefer.
+    ///
+    /// Bewusst konservativ — es wird nur umgelenkt, wenn ALLE Bedingungen erfuellt sind:
+    ///  - ein Kataster ist geladen (ohne Kataster: Verhalten exakt wie bisher),
+    ///  - die Haltung ist KEINE Einzelschacht-Pruefung ("Schacht_..." bleibt im eigenen Ordner),
+    ///  - aus der Haltungs-ID laesst sich ein echtes Schacht-Paar ableiten,
+    ///  - und genau dieses Paar fehlt im Kataster (exakter Vergleich, kein Praefix-Stripping).
+    /// Eine einzelne Haltungsnummer ohne ableitbares Paar bleibt im normalen Ordner (kein Fehl-Umlenken).
+    /// </summary>
+    private static string ResolveDistributionRoot(
+        string destGemeindeFolder,
+        string? haltungId,
+        IHaltungCadastreResolver? cadastre)
+    {
+        if (cadastre is null || cadastre.Count == 0 || string.IsNullOrWhiteSpace(haltungId))
+            return destGemeindeFolder;
+
+        // Einzelschacht-Pruefungen haben naturgemaess keine Haltung im Kataster -> nicht umlenken.
+        if (haltungId!.StartsWith("Schacht_", StringComparison.OrdinalIgnoreCase))
+            return destGemeindeFolder;
+
+        var (a, b) = HaltungCadastreExtractor.SplitShaftPair(haltungId);
+        if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b))
+            return destGemeindeFolder; // kein ableitbares Paar -> konservativ im normalen Ordner lassen
+
+        return cadastre.PairExists(a, b)
+            ? destGemeindeFolder
+            : Path.Combine(destGemeindeFolder, UnzugeordnetFolderName);
+    }
+
+    /// <summary>
+    /// Sammelt Schachtnummern fokussiert: Zahlen auf Zeilen mit einem Haltungs-/Schacht-Label
+    /// UND deren direkten Nachbarzeilen (pdftotext setzt Werte oft eine Zeile versetzt).
+    /// Messwerte (mbar, DN, Datum, GPS) bleiben so weitgehend aussen vor.
+    /// </summary>
+    private static IReadOnlyList<string> GatherShaftCandidates(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return Array.Empty<string>();
+
+        var lines = text.Split('\n');
+        var labeled = new bool[lines.Length];
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var low = lines[i].ToLowerInvariant();
+            foreach (var l in ShaftLabelKeywords)
+                if (low.Contains(l, StringComparison.Ordinal)) { labeled[i] = true; break; }
+        }
+
+        var nums = new List<string>();
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var inWindow = labeled[i]
+                || (i > 0 && labeled[i - 1])
+                || (i < lines.Length - 1 && labeled[i + 1]);
+            if (inWindow)
+                AddNumberTokens(lines[i], nums);
+        }
+        return nums.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>Rueckfall: alle Zahl-Token der ganzen Seite (Eindeutigkeit schuetzt vor Fehltreffern).</summary>
+    private static IReadOnlyList<string> GatherAllNumberCandidates(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return Array.Empty<string>();
+
+        var nums = new List<string>();
+        foreach (var line in text.Split('\n'))
+            AddNumberTokens(line, nums);
+        return nums.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>
+    /// Zieht moegliche Schachtnummern aus einer Zeile: gepunktete IDs (06.24341) und ganze
+    /// Zahlen mit 2-6 Stellen. Dezimal-Teile (70.51, 2.16.2) werden uebersprungen, ein kaputter
+    /// Trenner wie "844-.843" liefert aber beide Schaechte.
+    /// </summary>
+    private static void AddNumberTokens(string line, List<string> nums)
+    {
+        if (IsNoiseLine(line))
+            return;
+
+        foreach (Match mm in Regex.Matches(line, @"\b\d{2,}\.\d{2,}\b"))
+            nums.Add(mm.Value);
+        foreach (Match mm in Regex.Matches(line, @"(?<!\d[.,])\d{2,6}(?![.,]\d)"))
+            nums.Add(mm.Value);
+    }
+
+    /// <summary>
+    /// Zeilen, die typische Nicht-Schacht-Zahlen tragen (Telefon/Fax, Adresse, Messwerte,
+    /// Datum/Zeit, GPS, Software). Verhindert Fehltreffer wie "42-41" aus der Telefonnummer
+    /// "+41 (0)41 440 42 02" in der Fusszeile.
+    /// </summary>
+    private static bool IsNoiseLine(string line)
+    {
+        var low = line.ToLowerInvariant();
+        return low.Contains("telefon") || low.Contains("fax") || low.Contains("www")
+            || low.Contains('@') || low.Contains("mbar") || low.Contains("gps")
+            || low.Contains("software") || low.Contains("sensortemp") || low.Contains('°')
+            || low.Contains("strasse") || low.Contains("+41") || low.Contains("(0)41")
+            || low.Contains("prufdruck") || low.Contains("prüfdruck")
+            || low.Contains("prufzeit") || low.Contains("prüfzeit") || low.Contains("beruhigung");
+    }
 
     private static (string? A, string? B) TryExtractDichtheitShafts(string text)
     {
@@ -565,7 +754,7 @@ public static partial class HoldingFolderDistributor
                 {
                     if (!XtfFilesCache.TryGetValue(dir, out xtfFiles!))
                     {
-                        xtfFiles = Directory.GetFiles(dir, "*.xtf", SearchOption.AllDirectories);
+                        xtfFiles = Common.SafeFileEnumeration.EnumerateFilesSafe(dir, "*.xtf", recursive: true).ToArray();
                         XtfFilesCache[dir] = xtfFiles;
                     }
                 }

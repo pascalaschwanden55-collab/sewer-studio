@@ -184,9 +184,8 @@ public sealed class TrainingCenterImportService
 
     private static IEnumerable<string> EnumerateFolders(string rootFolder)
     {
-        yield return rootFolder;
-
-        foreach (var dir in Directory.EnumerateDirectories(rootFolder, "*", SearchOption.AllDirectories))
+        // Root + alle erreichbaren Unterordner (gesperrte werden uebersprungen statt zu werfen).
+        foreach (var dir in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateDirectoriesSafe(rootFolder))
             yield return dir;
     }
 
@@ -491,7 +490,7 @@ public sealed class TrainingCenterImportService
             StringComparer.OrdinalIgnoreCase)
         { ".ts", ".m4v" };
 
-        foreach (var file in Directory.EnumerateFiles(videoFolder, "*.*", SearchOption.AllDirectories))
+        foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(videoFolder, "*.*", recursive: true))
         {
             if (!videoExts.Contains(Path.GetExtension(file)))
                 continue;

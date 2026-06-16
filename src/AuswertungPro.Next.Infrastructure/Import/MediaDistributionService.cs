@@ -422,7 +422,9 @@ public sealed class MediaDistributionService
     {
         try
         {
-            return Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories)
+            return AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
+                .EnumerateFilesSafe(root, fileName, recursive: true)
+                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .Take(max)
                 .ToList();
         }

@@ -1,6 +1,7 @@
 // AuswertungPro – KI Videoanalyse Modul
 using System;
 using System.IO;
+using System.Linq;
 
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Shared;
@@ -55,7 +56,11 @@ public static class FfmpegLocator
                 foreach (var dir in ffmpegDirs)
                 {
                     // Suche rekursiv nach ffmpeg.exe im bin-Verzeichnis
-                    var binDirs = Directory.GetDirectories(dir, "bin", SearchOption.AllDirectories);
+                    // Gesperrte Unterordner ueberspringen + deterministische Reihenfolge
+                    // (sonst haengt das gewaehlte ffmpeg.exe von der Traversierungs-Reihenfolge ab).
+                    var binDirs = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateDirectoriesSafe(dir)
+                        .Where(sub => string.Equals(Path.GetFileName(sub), "bin", StringComparison.OrdinalIgnoreCase))
+                        .OrderBy(sub => sub, StringComparer.OrdinalIgnoreCase);
                     foreach (var bin in binDirs)
                     {
                         var candidate = Path.Combine(bin, "ffmpeg.exe");

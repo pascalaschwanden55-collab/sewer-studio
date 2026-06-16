@@ -7,6 +7,9 @@ public partial class PlayerWindow
 {
     private Border CodingSidePanel => CodingSidePanelControl.CodingSidePanel;
     private TextBlock TxtQualityGateStatus => CodingSidePanelControl.TxtQualityGateStatus;
+    private Button BtnRunCodingProtocolMatch => CodingSidePanelControl.BtnRunCodingProtocolMatch;
+    private TextBlock TxtCodingProtocolMatchSummary => CodingSidePanelControl.TxtCodingProtocolMatchSummary;
+    private Button BtnAcceptGreenCodingMatches => CodingSidePanelControl.BtnAcceptGreenCodingMatches;
     private ColumnDefinition ColDefectDetail => CodingSidePanelControl.ColDefectDetail;
     private Run RunCodingDefectCount => CodingSidePanelControl.RunCodingDefectCount;
     private Run RunCodingOpenCount => CodingSidePanelControl.RunCodingOpenCount;
@@ -56,5 +59,7 @@ public partial class PlayerWindow
         CodingSidePanelControl.ImportSeekRequested += ImportSeek_Click;
         CodingSidePanelControl.CodingSelectCodeRequested += CodingSelectCode_Click;
         CodingSidePanelControl.CodingCreateEventRequested += CodingCreateEvent_Click;
+        CodingSidePanelControl.CodingProtocolMatchRequested += RunCodingProtocolMatch_Click;
+        CodingSidePanelControl.CodingAcceptGreenMatchesRequested += CodingAcceptGreenMatches_Click;
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,9 +14,12 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class StartupSplashWindow : Window
 {
-    private const int NodeCount = 140;
+    private const int NodeCount = 112;
     private const int ConnectionsPerNode = 3;
-    private const int PulsesPerTick = 4;
+    private const int MaxActivePulses = 14;
+    private const int MaxActiveFlares = 3;
+    private const double PulseIntervalSeconds = 0.11;
+    private const double FlareIntervalSeconds = 0.78;
     private const double GoldenAngle = 2.39996322972865332;
     private const double CanvasCenterX = 220;
     private const double CanvasCenterY = 260;
@@ -23,8 +27,7 @@ public partial class StartupSplashWindow : Window
     private const double CameraDistance = 4.6;
 
     private readonly DispatcherTimer _statusTimer;
-    private readonly DispatcherTimer _pulseTimer;
-    private readonly DispatcherTimer _frameTimer;
+    private readonly Stopwatch _animationClock = new();
     private readonly Random _rng = new(7);
     private readonly List<NeuralNode> _nodes = new();
     private readonly List<NeuralConnection> _connections = new();
@@ -47,6 +50,7 @@ public partial class StartupSplashWindow : Window
     private RotateTransform? _ringInnerRotate;
     private RotateTransform? _ringMiddleRotate;
     private RotateTransform? _ringOuterRotate;
+    private ScaleTransform? _coreGlowScale;
 
     private int _statusIndex;
     private int _pulseColorCursor;
@@ -54,7 +58,11 @@ public partial class StartupSplashWindow : Window
     private double _rotationX = 0.22;
     private double _rotationZ;
     private double _breathPhase;
-    private int _frameCounter;
+    private double _lastFrameSeconds;
+    private double _pulseAccumulator;
+    private double _flareAccumulator;
+    private bool _renderLoopActive;
+    private bool _emitPulses;
 
     private static readonly Color AccentDeep = Color.FromRgb(0x25, 0x63, 0xEB);
     private static readonly Color AccentBlue = Color.FromRgb(0x3B, 0x82, 0xF6);
@@ -72,33 +80,39 @@ public partial class StartupSplashWindow : Window
 
     private sealed class NeuralNode
     {
-        public NeuralNode(double x, double y, double z, Ellipse visual)
+        public NeuralNode(double x, double y, double z, Ellipse visual, SolidColorBrush fillBrush, SolidColorBrush strokeBrush)
         {
             X = x;
             Y = y;
             Z = z;
             Visual = visual;
+            FillBrush = fillBrush;
+            StrokeBrush = strokeBrush;
         }
 
         public double X { get; }
         public double Y { get; }
         public double Z { get; }
         public Ellipse Visual { get; }
+        public SolidColorBrush FillBrush { get; }
+        public SolidColorBrush StrokeBrush { get; }
         public double Activation { get; set; }
     }
 
     private sealed class NeuralConnection
     {
-        public NeuralConnection(int a, int b, Line visual)
+        public NeuralConnection(int a, int b, Line visual, SolidColorBrush strokeBrush)
         {
             A = a;
             B = b;
             Visual = visual;
+            StrokeBrush = strokeBrush;
         }
 
         public int A { get; }
         public int B { get; }
         public Line Visual { get; }
+        public SolidColorBrush StrokeBrush { get; }
         public double Activation { get; set; }
     }
 
@@ -155,25 +169,13 @@ public partial class StartupSplashWindow : Window
         _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1900) };
         _statusTimer.Tick += OnStatusTick;
 
-        _pulseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(260) };
-        _pulseTimer.Tick += OnPulseTick;
-
-        _frameTimer = new DispatcherTimer(DispatcherPriority.Render)
-        {
-            Interval = TimeSpan.FromMilliseconds(33)
-        };
-        _frameTimer.Tick += OnFrameTick;
-
         Loaded += OnLoaded;
         Closed += (_, _) =>
         {
             _progressDone.TrySetResult(true);
             try { _statusTimer.Stop(); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Splash.Closed] StatusTimer: {ex.Message}"); }
-            try { _pulseTimer.Stop(); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Splash.Closed] PulseTimer: {ex.Message}"); }
-            try { _frameTimer.Stop(); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Splash.Closed] FrameTimer: {ex.Message}"); }
+            StopRenderLoop();
         };
     }
 
@@ -198,9 +200,33 @@ public partial class StartupSplashWindow : Window
         FadeIn(StatusDot, 1100, 650);
         StartProgressBar();
 
-        _frameTimer.Start();
+        StartRenderLoop();
         _statusTimer.Start();
-        _pulseTimer.Start();
+    }
+
+    private void StartRenderLoop()
+    {
+        if (_renderLoopActive)
+            return;
+
+        _emitPulses = true;
+        _pulseAccumulator = 0;
+        _flareAccumulator = 0;
+        _lastFrameSeconds = 0;
+        _animationClock.Restart();
+        CompositionTarget.Rendering += OnRendering;
+        _renderLoopActive = true;
+    }
+
+    private void StopRenderLoop()
+    {
+        if (!_renderLoopActive)
+            return;
+
+        CompositionTarget.Rendering -= OnRendering;
+        _animationClock.Stop();
+        _renderLoopActive = false;
+        _emitPulses = false;
     }
 
     private void BuildNeuralNetwork()
@@ -222,11 +248,13 @@ public partial class StartupSplashWindow : Window
 
     private void BuildBackdrop()
     {
+        _coreGlowScale = new ScaleTransform(1, 1, 230, 230);
         _coreGlow = new Ellipse
         {
             Width = 460,
             Height = 460,
             Opacity = 0,
+            CacheMode = new BitmapCache(),
             Fill = new RadialGradientBrush
             {
                 Center = new Point(0.5, 0.5),
@@ -240,6 +268,7 @@ public partial class StartupSplashWindow : Window
                     new GradientStop(Color.FromArgb(0, AccentDeep.R, AccentDeep.G, AccentDeep.B), 1.0)
                 }
             },
+            RenderTransform = _coreGlowScale,
             IsHitTestVisible = false
         };
         Canvas.SetLeft(_coreGlow, CanvasCenterX - 230);
@@ -265,6 +294,7 @@ public partial class StartupSplashWindow : Window
             StrokeThickness = 0.9,
             StrokeDashArray = { 2, 6, 1, 9 },
             RenderTransform = rotate,
+            CacheMode = new BitmapCache(),
             IsHitTestVisible = false
         };
         Canvas.SetLeft(ring, CanvasCenterX - diameter / 2);
@@ -284,30 +314,26 @@ public partial class StartupSplashWindow : Window
             var x = Math.Cos(theta) * radius;
             var z = Math.Sin(theta) * radius;
 
-            var visual = CreateNodeVisual();
+            var visual = CreateNodeVisual(out var fillBrush, out var strokeBrush);
             Panel.SetZIndex(visual, 30);
             NeuralCanvas.Children.Add(visual);
-            _nodes.Add(new NeuralNode(x, y, z, visual));
+            _nodes.Add(new NeuralNode(x, y, z, visual, fillBrush, strokeBrush));
         }
     }
 
-    private static Ellipse CreateNodeVisual()
+    private static Ellipse CreateNodeVisual(out SolidColorBrush fillBrush, out SolidColorBrush strokeBrush)
     {
+        fillBrush = new SolidColorBrush(Color.FromArgb(190, AccentBlue.R, AccentBlue.G, AccentBlue.B));
+        strokeBrush = new SolidColorBrush(Color.FromArgb(180, AccentBlue.R, AccentBlue.G, AccentBlue.B));
+
         return new Ellipse
         {
             Width = 6,
             Height = 6,
             Opacity = 0,
-            Fill = CreateNodeBrush(AccentBlue, 200),
-            Stroke = new SolidColorBrush(Color.FromArgb(180, AccentBlue.R, AccentBlue.G, AccentBlue.B)),
+            Fill = fillBrush,
+            Stroke = strokeBrush,
             StrokeThickness = 0.6,
-            Effect = new DropShadowEffect
-            {
-                BlurRadius = 8,
-                ShadowDepth = 0,
-                Color = AccentBlue,
-                Opacity = 0.55
-            },
             IsHitTestVisible = false
         };
     }
@@ -342,9 +368,10 @@ public partial class StartupSplashWindow : Window
 
     private void AddConnection(int a, int b)
     {
+        var strokeBrush = new SolidColorBrush(Color.FromArgb(40, LineAccent.R, LineAccent.G, LineAccent.B));
         var line = new Line
         {
-            Stroke = new SolidColorBrush(Color.FromArgb(40, LineAccent.R, LineAccent.G, LineAccent.B)),
+            Stroke = strokeBrush,
             StrokeThickness = 0.6,
             Opacity = 0,
             IsHitTestVisible = false
@@ -352,7 +379,7 @@ public partial class StartupSplashWindow : Window
 
         Panel.SetZIndex(line, 10);
         NeuralCanvas.Children.Add(line);
-        _connections.Add(new NeuralConnection(a, b, line));
+        _connections.Add(new NeuralConnection(a, b, line, strokeBrush));
     }
 
     private void AnimateNetworkFadeIn()
@@ -373,31 +400,55 @@ public partial class StartupSplashWindow : Window
             FadeIn(_nodes[i].Visual, 1100 + (i % 28) * 26, 700);
     }
 
-    private void OnFrameTick(object? sender, EventArgs e)
+    private void OnRendering(object? sender, EventArgs e)
     {
-        _frameCounter++;
-        _rotationY += 0.014;
+        var now = _animationClock.Elapsed.TotalSeconds;
+        var dt = _lastFrameSeconds <= 0 ? 1.0 / 60.0 : now - _lastFrameSeconds;
+        _lastFrameSeconds = now;
+
+        // Startup can briefly block while services initialize. Cap the delta so the
+        // network continues smoothly instead of jumping after a delayed UI frame.
+        dt = Math.Clamp(dt, 1.0 / 120.0, 1.0 / 24.0);
+        AdvanceFrame(dt);
+    }
+
+    private void AdvanceFrame(double dt)
+    {
+        _rotationY += 0.42 * dt;
         _rotationX = 0.22 + Math.Sin(_rotationY * 0.45) * 0.08;
         _rotationZ = Math.Sin(_rotationY * 0.31) * 0.10;
-        _breathPhase += 0.045;
+        _breathPhase += 1.35 * dt;
 
         if (_ringOuterRotate is not null)
-            _ringOuterRotate.Angle += 0.18;
+            _ringOuterRotate.Angle += 5.4 * dt;
         if (_ringMiddleRotate is not null)
-            _ringMiddleRotate.Angle -= 0.27;
+            _ringMiddleRotate.Angle -= 8.1 * dt;
         if (_ringInnerRotate is not null)
-            _ringInnerRotate.Angle += 0.42;
+            _ringInnerRotate.Angle += 12.6 * dt;
 
         foreach (var node in _nodes)
-            node.Activation = Math.Max(0, node.Activation - 0.04);
+            node.Activation = Math.Max(0, node.Activation - 1.2 * dt);
 
         foreach (var connection in _connections)
-            connection.Activation = Math.Max(0, connection.Activation - 0.05);
+            connection.Activation = Math.Max(0, connection.Activation - 1.5 * dt);
+
+        if (_emitPulses && _connections.Count > 0)
+        {
+            _pulseAccumulator += dt;
+            while (_pulseAccumulator >= PulseIntervalSeconds && _activePulses.Count < MaxActivePulses)
+            {
+                _pulseAccumulator -= PulseIntervalSeconds;
+                var idx = _rng.Next(_connections.Count);
+                var color = PulsePalette[_pulseColorCursor % PulsePalette.Length];
+                _pulseColorCursor++;
+                FirePulse(idx, color);
+            }
+        }
 
         for (int i = _activePulses.Count - 1; i >= 0; i--)
         {
             var pulse = _activePulses[i];
-            pulse.T += pulse.Speed;
+            pulse.T += pulse.Speed * dt * 30.0;
             if (pulse.T >= 1.0)
             {
                 NeuralCanvas.Children.Remove(pulse.Visual);
@@ -408,7 +459,7 @@ public partial class StartupSplashWindow : Window
         for (int i = _flares.Count - 1; i >= 0; i--)
         {
             var flare = _flares[i];
-            flare.T += 0.03;
+            flare.T += 0.9 * dt;
             if (flare.T >= 1.0)
             {
                 NeuralCanvas.Children.Remove(flare.Visual);
@@ -416,8 +467,12 @@ public partial class StartupSplashWindow : Window
             }
         }
 
-        if (_frameCounter % 22 == 0 && _nodes.Count > 0)
+        _flareAccumulator += dt;
+        if (_emitPulses && _flareAccumulator >= FlareIntervalSeconds && _nodes.Count > 0 && _flares.Count < MaxActiveFlares)
+        {
+            _flareAccumulator -= FlareIntervalSeconds;
             SpawnFlare(_rng.Next(_nodes.Count));
+        }
 
         RenderFrame();
     }
@@ -453,8 +508,8 @@ public partial class StartupSplashWindow : Window
             node.Visual.Width = size;
             node.Visual.Height = size;
             node.Visual.Opacity = 0.40 + depth01 * 0.50 + node.Activation * 0.15;
-            node.Visual.Fill = CreateNodeBrush(color, alpha);
-            node.Visual.Stroke = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B));
+            node.FillBrush.Color = Color.FromArgb(alpha, color.R, color.G, color.B);
+            node.StrokeBrush.Color = Color.FromArgb(alpha, color.R, color.G, color.B);
             Canvas.SetLeft(node.Visual, px - size / 2);
             Canvas.SetTop(node.Visual, py - size / 2);
             Panel.SetZIndex(node.Visual, 30 + (int)(depth01 * 40));
@@ -473,7 +528,7 @@ public partial class StartupSplashWindow : Window
             connection.Visual.X2 = _screenX[b];
             connection.Visual.Y2 = _screenY[b];
             connection.Visual.StrokeThickness = 0.45 + depth01 * 0.6 + connection.Activation * 1.7;
-            connection.Visual.Stroke = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B));
+            connection.StrokeBrush.Color = Color.FromArgb(alpha, color.R, color.G, color.B);
             Panel.SetZIndex(connection.Visual, 8 + (int)(depth01 * 12));
         }
 
@@ -567,7 +622,11 @@ public partial class StartupSplashWindow : Window
         {
             _coreGlow.Opacity = 0.55 + breath * 0.30;
             var scale = 0.92 + breath * 0.10;
-            _coreGlow.RenderTransform = new ScaleTransform(scale, scale, 230, 230);
+            if (_coreGlowScale is not null)
+            {
+                _coreGlowScale.ScaleX = scale;
+                _coreGlowScale.ScaleY = scale;
+            }
         }
 
         if (_ringOuter is not null)
@@ -576,37 +635,6 @@ public partial class StartupSplashWindow : Window
             _ringMiddle.Opacity = 0.42 + breath * 0.20;
         if (_ringInner is not null)
             _ringInner.Opacity = 0.55 + breath * 0.22;
-    }
-
-    private static RadialGradientBrush CreateNodeBrush(Color color, byte alpha)
-    {
-        return new RadialGradientBrush
-        {
-            Center = new Point(0.42, 0.40),
-            GradientOrigin = new Point(0.30, 0.26),
-            RadiusX = 0.75,
-            RadiusY = 0.75,
-            GradientStops =
-            {
-                new GradientStop(Color.FromArgb(255, NodeCore.R, NodeCore.G, NodeCore.B), 0.0),
-                new GradientStop(Color.FromArgb(alpha, color.R, color.G, color.B), 0.55),
-                new GradientStop(Color.FromArgb(45, color.R, color.G, color.B), 1.0)
-            }
-        };
-    }
-
-    private void OnPulseTick(object? sender, EventArgs e)
-    {
-        if (_connections.Count == 0)
-            return;
-
-        for (int i = 0; i < PulsesPerTick; i++)
-        {
-            var idx = _rng.Next(_connections.Count);
-            var color = PulsePalette[_pulseColorCursor % PulsePalette.Length];
-            _pulseColorCursor++;
-            FirePulse(idx, color);
-        }
     }
 
     private void FirePulse(int connectionIndex, Color color)
@@ -712,7 +740,7 @@ public partial class StartupSplashWindow : Window
             StatusText.Foreground = new SolidColorBrush(ReadyAccent);
             StatusDot.Fill = new SolidColorBrush(ReadyAccent);
             _statusTimer.Stop();
-            _pulseTimer.Stop();
+            _emitPulses = false;
         }
         else if (_statusIndex >= 2)
         {
@@ -762,8 +790,7 @@ public partial class StartupSplashWindow : Window
     public Task FadeOutAndCloseAsync(TimeSpan duration)
     {
         _statusTimer.Stop();
-        _pulseTimer.Stop();
-        _frameTimer.Stop();
+        StopRenderLoop();
 
         var tcs = new TaskCompletionSource<object?>();
 

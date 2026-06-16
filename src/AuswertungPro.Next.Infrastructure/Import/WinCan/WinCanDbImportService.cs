@@ -403,7 +403,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         var dict = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var dir in GetMediaRoots(root))
         {
-            foreach (var file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories))
+            foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(dir, "*.*", recursive: true))
             {
                 var ext = Path.GetExtension(file);
                 if (!MediaExtensions.Contains(ext))
@@ -955,7 +955,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             return score;
         }
 
-        var candidates = Directory.EnumerateFiles(exportRoot, "*.mdb", SearchOption.AllDirectories).ToList();
+        var candidates = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(exportRoot, "*.mdb", recursive: true).ToList();
         if (candidates.Count == 0)
             return Array.Empty<string>();
 
@@ -963,6 +963,9 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             .Select(p => new FileInfo(p))
             .OrderByDescending(fi => Rank(fi.FullName))
             .ThenByDescending(fi => fi.Length)
+            // Finaler deterministischer Tiebreak: bei gleichem Rang UND gleicher Groesse
+            // sonst dateisystem-abhaengige Auswahl.
+            .ThenBy(fi => fi.FullName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         var unique = new List<string>();

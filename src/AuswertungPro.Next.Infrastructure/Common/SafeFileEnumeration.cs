@@ -38,10 +38,14 @@ public static class SafeFileEnumeration
             var current = stack.Pop();
             yield return current;
 
-            IEnumerable<string>? children = null;
+            // WICHTIG: Directory.EnumerateDirectories ist LAZY — der Zugriffsfehler (Unauthorized/
+            // IO/NotFound) entsteht erst beim Iterieren, nicht beim Aufruf. Daher hier EAGER
+            // materialisieren (new List), damit der Fehler im try landet und der gesperrte/
+            // verschwundene Ordner wirklich uebersprungen wird statt den ganzen Lauf abzubrechen.
+            List<string> children;
             try
             {
-                children = Directory.EnumerateDirectories(current);
+                children = new List<string>(Directory.EnumerateDirectories(current));
             }
             catch (System.UnauthorizedAccessException)
             {
@@ -83,10 +87,12 @@ public static class SafeFileEnumeration
 
         foreach (var dir in dirs)
         {
-            IEnumerable<string>? files = null;
+            // Lazy wie oben -> eager materialisieren, damit der Zugriffsfehler im try gefangen
+            // wird (sonst wuerde er erst im foreach den ganzen Lauf abbrechen).
+            List<string> files;
             try
             {
-                files = Directory.EnumerateFiles(dir, searchPattern);
+                files = new List<string>(Directory.EnumerateFiles(dir, searchPattern));
             }
             catch (System.UnauthorizedAccessException)
             {

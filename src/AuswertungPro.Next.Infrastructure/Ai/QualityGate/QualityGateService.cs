@@ -15,6 +15,14 @@ public sealed class QualityGateService
     public const double GreenThreshold = 0.75;
     public const double YellowThreshold = 0.45;
 
+    /// <summary>
+    /// Mindestzahl VORHANDENER Evidenzsignale fuer "Green". Mit weniger Signalen wird auf
+    /// hoechstens Yellow gedeckelt. Hinweis: geprueft wird die ANZAHL vorhandener Signale,
+    /// nicht ihre fachliche Uebereinstimmung. Verhindert, dass z.B. eine einzelne (evtl.
+    /// halluzinierte) YOLO-Box ungeprueft als bestaetigt durchlaeuft (QualityGate-Ehrlichkeit).
+    /// </summary>
+    public const int MinSignalsForGreen = 2;
+
     private readonly Dictionary<string, CategoryWeights> _categoryWeights = new(StringComparer.OrdinalIgnoreCase);
 
     public QualityGateService() { }
@@ -70,8 +78,19 @@ public sealed class QualityGateService
             : composite >= YellowThreshold ? TrafficLight.Yellow
             : TrafficLight.Red;
 
+        // QualityGate-Ehrlichkeit: "Green" verlangt mindestens MinSignalsForGreen VORHANDENE
+        // Evidenzsignale (zaehlt die Anzahl, nicht fachliche Uebereinstimmung). Ein einzelnes
+        // hohes Signal (z.B. nur YoloConf=0.9, alle anderen null) darf NICHT als bestaetigt
+        // durchgehen — sonst laeuft eine halluzinierte Einzel-Erkennung als gruen durch.
+        var cappedSingleSignal = trafficLight == TrafficLight.Green && signals.Count < MinSignalsForGreen;
+        if (cappedSingleSignal)
+            trafficLight = TrafficLight.Yellow;
+
         var explanation = $"Composite={composite:F3} ({signals.Count} signals, category={category}): " +
-            string.Join(", ", signals.Select(s => $"{s.Name}={s.Value:F2}×{s.Weight / totalWeight:F2}"));
+            string.Join(", ", signals.Select(s => $"{s.Name}={s.Value:F2}×{s.Weight / totalWeight:F2}"))
+            + (cappedSingleSignal
+                ? $" — auf Gelb begrenzt: nur {signals.Count} Evidenzsignal vorhanden, Green erst ab {MinSignalsForGreen}."
+                : string.Empty);
 
         return new QualityGateResult(composite, trafficLight, weightsUsed, explanation);
     }

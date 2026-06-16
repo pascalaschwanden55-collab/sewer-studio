@@ -312,6 +312,72 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("_codingSessionService?.UpdateEvent(codingEvent.EventId, entry, codingEvent.Overlay)", photoBody);
     }
 
+    [Fact]
+    public void Player_coding_side_panel_exposes_protocol_match_controls()
+    {
+        var sidePanel = ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml");
+        var sidePanelCode = ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml.cs");
+        var accessors = ReadUiFile("Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
+
+        Assert.Contains("x:Name=\"BtnRunCodingProtocolMatch\"", sidePanel);
+        Assert.Contains("x:Name=\"TxtCodingProtocolMatchSummary\"", sidePanel);
+        Assert.Contains("x:Name=\"BtnAcceptGreenCodingMatches\"", sidePanel);
+        Assert.Contains("x:Name=\"CodingMatchBadge\"", sidePanel);
+        Assert.Contains("x:Name=\"TxtCodingMatchBadge\"", sidePanel);
+        Assert.Contains("CodingProtocolMatchRequested", sidePanelCode);
+        Assert.Contains("CodingAcceptGreenMatchesRequested", sidePanelCode);
+        Assert.Contains("BtnRunCodingProtocolMatch", accessors);
+        Assert.Contains("TxtCodingProtocolMatchSummary", accessors);
+        Assert.Contains("BtnAcceptGreenCodingMatches", accessors);
+        Assert.Contains("CodingSidePanelControl.CodingProtocolMatchRequested += RunCodingProtocolMatch_Click", accessors);
+        Assert.Contains("CodingSidePanelControl.CodingAcceptGreenMatchesRequested += CodingAcceptGreenMatches_Click", accessors);
+    }
+
+    [Fact]
+    public void Player_runs_coding_protocol_match_from_import_and_ki_events()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var runBody = ExtractMethodBody(coding, "private void RunCodingProtocolMatch()");
+
+        Assert.Contains("using AuswertungPro.Next.Application.Ai.Evaluation;", coding);
+        Assert.Contains("private CodingMatchRouting? _lastCodingMatch", coding);
+        Assert.Contains("private readonly Dictionary<Guid, CodingProtocolMatchBucket>", coding);
+        Assert.Contains("CodingProtocolMatchService.Match", runBody);
+        Assert.Contains("_codingImportEvents.Select(ev => ev.Entry).ToList()", runBody);
+        Assert.Contains("_codingVm.Events.Select(ev => ev.Entry).ToList()", runBody);
+        Assert.Contains("BuildCodingProtocolMatchBuckets(_lastCodingMatch)", runBody);
+        Assert.Contains("UpdateCodingProtocolMatchSummary(_lastCodingMatch)", runBody);
+        Assert.Contains("RefreshCodingEventsList()", runBody);
+        Assert.Contains("Guid.TryParse(pair.Ki.RefId", coding);
+        Assert.Contains("Guid.TryParse(missed.RefId", coding);
+        Assert.Contains("Guid.TryParse(extra.RefId", coding);
+    }
+
+    [Fact]
+    public void Player_green_match_training_button_reuses_import_confirm_core()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var importConfirmBody = ExtractMethodBody(coding, "private async void ImportConfirm_Click");
+        var greenBody = ExtractMethodBody(coding, "private async void CodingAcceptGreenMatches_Click");
+        var coreBody = ExtractMethodBody(coding, "private async Task<bool> ConfirmImportAsTrainingAsync");
+
+        Assert.Contains("await ConfirmImportAsTrainingAsync(importEvent)", importConfirmBody);
+        Assert.Contains("_lastCodingMatch.Trainingskandidaten", greenBody);
+        Assert.Contains("_codingImportEvents.FirstOrDefault", greenBody);
+        Assert.Contains("await ConfirmImportAsTrainingAsync(importEvent)", greenBody);
+        Assert.Contains("SeekToImportEvent(importEvent)", coreBody);
+        Assert.Contains("TeacherAnnotationStore.AppendAsync(annotation)", coreBody);
+    }
+
+    [Fact]
+    public void Player_protocol_match_badges_are_not_limited_to_visible_list_rows()
+    {
+        var sidePanel = ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml");
+
+        Assert.Equal(2, CountOccurrences(sidePanel, "VirtualizingPanel.IsVirtualizing=\"False\""));
+        Assert.Equal(2, CountOccurrences(sidePanel, "ScrollViewer.CanContentScroll=\"False\""));
+    }
+
     private static string ReadUiFile(params string[] relativeParts)
     {
         var root = FindRepoRoot();
@@ -361,6 +427,21 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         }
 
         throw new InvalidDataException($"Method body not closed: {signature}");
+    }
+
+    private static int CountOccurrences(string source, string needle)
+    {
+        var count = 0;
+        var start = 0;
+        while (true)
+        {
+            var index = source.IndexOf(needle, start, StringComparison.Ordinal);
+            if (index < 0)
+                return count;
+
+            count++;
+            start = index + needle.Length;
+        }
     }
 
     private static string FindRepoRoot()

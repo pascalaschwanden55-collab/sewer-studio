@@ -114,4 +114,34 @@ public sealed class QualityGateServiceTests
         Assert.Contains("LlmCodeConf", result.Explanation);
         Assert.Contains("DinoConf", result.Explanation);
     }
+
+    // QualityGate-Ehrlichkeit: ein einzelnes hohes Signal darf NICHT "Green" werden,
+    // auch wenn der Composite-Score ueber der Green-Schwelle liegt. "Green" verlangt
+    // Kreuzvalidierung durch >= MinSignalsForGreen unabhaengige Signale.
+    [Fact]
+    public void SingleHighSignal_IsCappedToYellow_NotGreen()
+    {
+        var svc = new QualityGateService();
+        var ev = new EvidenceVector(YoloConf: 0.95); // nur EIN Signal (z.B. evtl. halluzinierte YOLO-Box)
+
+        var result = svc.Evaluate(ev);
+
+        Assert.Single(result.WeightsUsed);
+        Assert.True(result.CompositeConfidence >= QualityGateService.GreenThreshold,
+            "Composite waere ohne die Mindest-Signal-Regel Green");
+        Assert.Equal(TrafficLight.Yellow, result.TrafficLight);
+        Assert.Contains("auf Gelb begrenzt", result.Explanation);
+    }
+
+    [Fact]
+    public void TwoHighSignals_AllowGreen()
+    {
+        var svc = new QualityGateService();
+        var ev = new EvidenceVector(YoloConf: 0.95, DinoConf: 0.90); // zwei unabhaengige Signale
+
+        var result = svc.Evaluate(ev);
+
+        Assert.Equal(2, result.WeightsUsed.Count);
+        Assert.Equal(TrafficLight.Green, result.TrafficLight);
+    }
 }

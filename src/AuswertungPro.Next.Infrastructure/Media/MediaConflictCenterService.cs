@@ -88,7 +88,7 @@ public sealed class MediaConflictCenterService
         if (!Directory.Exists(holdingsRoot))
             return Array.Empty<MediaConflictCase>();
 
-        var infoFiles = Directory.EnumerateFiles(holdingsRoot, "*_VIDEO_*.txt", SearchOption.AllDirectories)
+        var infoFiles = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(holdingsRoot, "*_VIDEO_*.txt", recursive: true)
             .Where(path =>
                 path.EndsWith("_VIDEO_MISSING.txt", StringComparison.OrdinalIgnoreCase)
                 || path.EndsWith("_VIDEO_AMBIGUOUS.txt", StringComparison.OrdinalIgnoreCase))
@@ -167,7 +167,9 @@ public sealed class MediaConflictCenterService
         // 4) Last fallback: targeted search in preferred root.
         if (!string.IsNullOrWhiteSpace(preferredVideoRoot) && Directory.Exists(preferredVideoRoot))
         {
-            var found = Directory.EnumerateFiles(preferredVideoRoot, learned.SelectedFileName, SearchOption.AllDirectories)
+            var found = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
+                .EnumerateFilesSafe(preferredVideoRoot, learned.SelectedFileName, recursive: true)
+                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault(File.Exists);
             if (!string.IsNullOrWhiteSpace(found))
                 return found;
@@ -757,7 +759,7 @@ public sealed class MediaConflictCenterService
         if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
             return map;
 
-        foreach (var file in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+        foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(root, "*.*", recursive: true))
         {
             var ext = Path.GetExtension(file);
             if (!VideoExtensions.Contains(ext))

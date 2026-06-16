@@ -781,6 +781,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             bool cpuClockSet = false;
             bool gpuTempSet = false;
             bool gpuClockSet = false;
+            bool ramClockSet = false;
 
             var labelBytes = new byte[128];
 
@@ -837,6 +838,14 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                         GpuClockMhz = clockMhz;
                         IsGpuClockAvailable = true;
                         gpuClockSet = true;
+                    }
+                    // RAM-Takt (DRAM): "Memory Clock" — GPU-Speichertakt ("GPU Memory Clock") ausschliessen.
+                    else if (!ramClockSet && !label.Contains("gpu")
+                             && (label.Contains("memory") || label.Contains("dram")))
+                    {
+                        RamClockMhz = clockMhz;
+                        IsRamClockAvailable = true;
+                        ramClockSet = true;
                     }
                 }
             }

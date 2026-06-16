@@ -284,7 +284,7 @@ public sealed class KinsImportService : IKinsImportService
         bool hasDb3 = false, hasMdb = false, hasFdb = false, hasDatenTxt = false, hasKiDvDataTxt = false;
         try
         {
-            foreach (var file in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+            foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(root, "*.*", recursive: true))
             {
                 var ext = Path.GetExtension(file);
                 var name = Path.GetFileName(file);
@@ -306,7 +306,7 @@ public sealed class KinsImportService : IKinsImportService
     {
         try
         {
-            return Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories).Any();
+            return AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(root, pattern, recursive: true).Any();
         }
         catch
         {
@@ -318,7 +318,7 @@ public sealed class KinsImportService : IKinsImportService
     {
         try
         {
-            return Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories).Any();
+            return AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(root, fileName, recursive: true).Any();
         }
         catch
         {
@@ -345,7 +345,8 @@ public sealed class KinsImportService : IKinsImportService
     {
         try
         {
-            return Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories).ToList();
+            return AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(root, pattern, recursive: true)
+                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToList();
         }
         catch
         {
@@ -478,7 +479,7 @@ public sealed class KinsImportService : IKinsImportService
         IEnumerable<string> files;
         try
         {
-            files = Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories);
+            files = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(root, "*.*", recursive: true);
         }
         catch
         {

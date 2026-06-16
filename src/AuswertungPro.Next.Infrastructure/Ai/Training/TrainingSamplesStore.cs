@@ -20,10 +20,10 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
 
         public static async Task<List<TrainingSample>> LoadAsync()
         {
-            await _fileLock.WaitAsync();
+            await _fileLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                return await LoadInternalAsync();
+                return await LoadInternalAsync().ConfigureAwait(false);
             }
             finally
             {
@@ -33,10 +33,10 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
 
         public static async Task SaveAsync(List<TrainingSample> samples)
         {
-            await _fileLock.WaitAsync();
+            await _fileLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                await SaveInternalAsync(samples);
+                await SaveInternalAsync(samples).ConfigureAwait(false);
             }
             finally
             {
@@ -51,10 +51,10 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
         /// </summary>
         public static async Task MergeAndSaveAsync(List<TrainingSample> newSamples)
         {
-            await _fileLock.WaitAsync();
+            await _fileLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                var existing = await LoadInternalAsync();
+                var existing = await LoadInternalAsync().ConfigureAwait(false);
                 var existingSigs = existing
                     .Where(s => !string.IsNullOrEmpty(s.Signature))
                     .Select(s => s.Signature)
@@ -69,7 +69,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                         existingSigs.Add(s.Signature);
                 }
 
-                await SaveInternalAsync(existing);
+                await SaveInternalAsync(existing).ConfigureAwait(false);
             }
             finally
             {
@@ -84,10 +84,10 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
         /// </summary>
         public static async Task MergeOrUpdateAsync(IEnumerable<TrainingSample> samples)
         {
-            await _fileLock.WaitAsync();
+            await _fileLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                var existing = await LoadInternalAsync();
+                var existing = await LoadInternalAsync().ConfigureAwait(false);
                 var sigIndex = new Dictionary<string, int>(StringComparer.Ordinal);
                 for (var i = 0; i < existing.Count; i++)
                 {
@@ -111,7 +111,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                     }
                 }
 
-                await SaveInternalAsync(existing);
+                await SaveInternalAsync(existing).ConfigureAwait(false);
             }
             finally
             {
@@ -130,7 +130,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
             try
             {
                 using var stream = File.OpenRead(path);
-                var samples = await JsonSerializer.DeserializeAsync<List<TrainingSample>>(stream);
+                var samples = await JsonSerializer.DeserializeAsync<List<TrainingSample>>(stream).ConfigureAwait(false);
                 if (samples is null)
                     return new List<TrainingSample>();
 
@@ -153,7 +153,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                 if (migrated)
                 {
                     Debug.WriteLine("[TrainingSamplesStore] Signatur-Migration: 3-teilig → 4-teilig durchgefuehrt");
-                    await SaveInternalAsync(samples);
+                    await SaveInternalAsync(samples).ConfigureAwait(false);
                 }
 
                 return samples;
@@ -186,7 +186,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
                     try
                     {
                         using var bakStream = File.OpenRead(bak);
-                        var bakSamples = await JsonSerializer.DeserializeAsync<List<TrainingSample>>(bakStream);
+                        var bakSamples = await JsonSerializer.DeserializeAsync<List<TrainingSample>>(bakStream).ConfigureAwait(false);
                         if (bakSamples is { Count: > 0 })
                         {
                             Debug.WriteLine($"[TrainingSamplesStore] Backup {Path.GetFileName(bak)} geladen: {bakSamples.Count} Samples");
@@ -233,14 +233,14 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training
             {
                 using (var stream = File.Create(tempPath))
                 {
-                    await JsonSerializer.SerializeAsync(stream, samples, Application.Common.JsonDefaults.Indented);
-                    await stream.FlushAsync();
+                    await JsonSerializer.SerializeAsync(stream, samples, Application.Common.JsonDefaults.Indented).ConfigureAwait(false);
+                    await stream.FlushAsync().ConfigureAwait(false);
                 }
 
                 // Validierung: temp-Datei muss lesbar sein und gleiche Anzahl Samples haben
                 using (var checkStream = File.OpenRead(tempPath))
                 {
-                    var check = await JsonSerializer.DeserializeAsync<List<TrainingSample>>(checkStream);
+                    var check = await JsonSerializer.DeserializeAsync<List<TrainingSample>>(checkStream).ConfigureAwait(false);
                     if (check is null || check.Count != samples.Count)
                         throw new InvalidOperationException(
                             $"Validierung fehlgeschlagen: erwartet {samples.Count}, gelesen {check?.Count ?? 0}");

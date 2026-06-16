@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Evaluation;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
@@ -85,6 +86,9 @@ public partial class PlayerWindow
     // Multi-Model Pipeline (YOLO â†’ DINO â†’ SAM) fuer Einzelframe-Analyse
     private SingleFrameMultiModelService? _codingMultiModel;
     private VisionPipelineClient? _codingVisionClient;
+    // SAM-Segmentierung fuer manuell gezogene Boxen (Mark-Werkzeug). Logik im Service,
+    // damit der Codiermodus-Window schlank bleibt.
+    private MarkBoxSegmentationService? _codingBoxSegmentation;
     private AuswertungPro.Next.Application.Ai.PipelineConfig? _codingPipelineConfig;
     private bool _codingUseMultiModel;
     private AuswertungPro.Next.Application.Ai.IPipelineHealthMonitor? _codingHealthMonitor;
@@ -92,6 +96,9 @@ public partial class PlayerWindow
 
     // Import-Beobachtungen (Referenz-Spalte, nur-lesen)
     private readonly ObservableCollection<CodingEvent> _codingImportEvents = new();
+    private CodingMatchRouting? _lastCodingMatch;
+    private readonly Dictionary<Guid, CodingProtocolMatchBucket> _codingProtocolMatchBuckets = new();
+    private enum CodingProtocolMatchBucket { TrainingGreen, ReviewYellow, WrongCode, Missed, FalseAlarm }
 
     // Bestaetigungs-Panel: aktuell wartendes Event
     private CodingEvent? _codingPendingConfirmEvent;
@@ -194,6 +201,9 @@ public partial class PlayerWindow
         // ALLE bestehenden Beobachtungen in Import-Referenz verschieben.
         // KI-Befunde-Liste startet LEER â€” KI erkennt frisch, User korrigiert.
         _codingImportEvents.Clear();
+        _lastCodingMatch = null;
+        _codingProtocolMatchBuckets.Clear();
+        UpdateCodingProtocolMatchSummary(null);
         var allExisting = _codingVm.Events.OrderBy(e => e.MeterAtCapture).ToList();
         _codingVm.Events.Clear();
         foreach (var ev in allExisting)
@@ -338,6 +348,9 @@ public partial class PlayerWindow
 
         // Import-Referenzliste leeren
         _codingImportEvents.Clear();
+        _lastCodingMatch = null;
+        _codingProtocolMatchBuckets.Clear();
+        UpdateCodingProtocolMatchSummary(null);
         LstImportEvents.ItemsSource = null;
 
         // Bestaetigungs-Panel und Detection-Overlays schliessen
@@ -689,6 +702,39 @@ public partial class PlayerWindow
         return (minX + width / 2.0, minY + height / 2.0, width, height);
     }
 
+    // Eval-Set-Schutz: einmal pro Codier-Session geladen (Manifest-Hashes + Haltungs-Keys).
+    private IReadOnlySet<string>? _codingEvalImageHashes;
+    private IReadOnlySet<string>? _codingEvalHaltungKeys;
+    private bool _codingEvalSetsLoaded;
+
+    /// <summary>
+    /// True, wenn das Sample aus dem eingefrorenen Eval-Set stammt (inhaltsgleicher Frame
+    /// ODER reservierte Eval-Haltung). Solche Samples duerfen NIE ins Training (ESW-003),
+    /// sonst messen Benchmarks keine Generalisierung mehr. Leere Eval-Saetze -> immer false.
+    /// </summary>
+    private bool IsCodingSampleEvalProtected(TrainingSample sample)
+    {
+        if (!_codingEvalSetsLoaded)
+        {
+            _codingEvalSetsLoaded = true;
+            try
+            {
+                var evalRoot = AppSettings.Load().EvalSetRoot;
+                _codingEvalImageHashes = EvalContaminationGuard.LoadEvalImageHashes(evalRoot);
+                _codingEvalHaltungKeys = EvalContaminationGuard.LoadEvalHaltungKeys(evalRoot);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Training] Eval-Set konnte nicht geladen werden: {ex.Message}");
+            }
+        }
+
+        var hashes = _codingEvalImageHashes ?? (IReadOnlySet<string>)new HashSet<string>();
+        var haltungen = _codingEvalHaltungKeys ?? (IReadOnlySet<string>)new HashSet<string>();
+        return EvalContaminationGuard.ClassifyForExport(hashes, haltungen, sample.FramePath, sample.CaseId)
+               != EvalContaminationGuard.ExportContaminationResult.Clean;
+    }
+
     private async System.Threading.Tasks.Task PersistSingleEventAsTrainingSample(CodingEvent ev)
     {
         if (ev.Entry == null || string.IsNullOrWhiteSpace(ev.Entry.Code)) return;
@@ -724,6 +770,15 @@ public partial class PlayerWindow
                 for (int i = 1; i < ev.Entry.FotoPaths.Count; i++)
                     sample.AdditionalFramePaths.Add(ev.Entry.FotoPaths[i]);
             }
+            // Eval-Schutz (ESW-003): Frames/Haltungen aus dem eingefrorenen Eval-Set
+            // niemals als Trainingssample speichern.
+            if (IsCodingSampleEvalProtected(sample))
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Training] Eval-Schutz: {sample.CaseId}/{sample.Code} NICHT als Gold gespeichert.");
+                return;
+            }
+
             await InfraTraining.TrainingSamplesStore.MergeAndSaveAsync(new List<TrainingSample> { sample });
         }
         catch (Exception ex)
@@ -758,6 +813,8 @@ public partial class PlayerWindow
 
                 samples.Add(sample);
             }
+            // Eval-Schutz (ESW-003): reservierte Eval-Haltungen/-Frames aussortieren.
+            samples = samples.Where(s => !IsCodingSampleEvalProtected(s)).ToList();
             if (samples.Count > 0)
                 InfraTraining.TrainingSamplesStore.MergeAndSaveAsync(samples)
                     .SafeFireAndForget("TrainingSave");
@@ -1623,6 +1680,34 @@ public partial class PlayerWindow
         UpdateToolBadge();
     }
 
+    /// <summary>
+    /// Uebernimmt die Mess-/Lagewerte eines Overlays (Uhrlage, Q1/Q2, Winkel, Fuellgrad/
+    /// Querschnitt) als VSA-Parameter in den ProtocolEntry. Gemeinsam genutzt vom manuellen
+    /// Code-Erfassen und vom Mark-Werkzeug (mit SAM vorausgefuellt) — keine Duplikate.
+    /// </summary>
+    private static void ApplyOverlayQuantToEntry(ProtocolEntry entry, OverlayGeometry? overlay)
+    {
+        if (overlay == null) return;
+        entry.CodeMeta ??= new ProtocolEntryCodeMeta();
+        if (overlay.ClockFrom.HasValue)
+            entry.CodeMeta.Parameters["vsa.uhr.von"] = overlay.ClockFrom.Value.ToString("F1");
+        if (overlay.ClockTo.HasValue)
+            entry.CodeMeta.Parameters["vsa.uhr.bis"] = overlay.ClockTo.Value.ToString("F1");
+        if (overlay.Q1Mm.HasValue)
+            entry.CodeMeta.Parameters["vsa.q1"] = overlay.Q1Mm.Value.ToString("F1");
+        if (overlay.Q2Mm.HasValue)
+            entry.CodeMeta.Parameters["vsa.q2"] = overlay.Q2Mm.Value.ToString("F1");
+        if (overlay.ArcDegrees.HasValue && overlay.ToolType == OverlayToolType.PipeBend)
+            entry.CodeMeta.Parameters["vsa.winkel"] = overlay.ArcDegrees.Value.ToString("F1");
+        if (overlay.FillPercent.HasValue)
+        {
+            var key = overlay.ToolType == OverlayToolType.Level && overlay.Points.Count >= 3
+                ? "vsa.querschnitt.prozent"
+                : "vsa.fuellgrad.prozent";
+            entry.CodeMeta.Parameters[key] = overlay.FillPercent.Value.ToString("F1");
+        }
+    }
+
     private async void CodingSelectCode_Click(object sender, RoutedEventArgs e)
     {
         if (_codingVm == null) return;
@@ -1652,28 +1737,7 @@ public partial class PlayerWindow
                 Zeit = videoZeit
             };
 
-            if (_codingVm.CurrentOverlay != null)
-            {
-                entry.CodeMeta ??= new ProtocolEntryCodeMeta();
-                if (_codingVm.CurrentOverlay.ClockFrom.HasValue)
-                    entry.CodeMeta.Parameters["vsa.uhr.von"] = _codingVm.CurrentOverlay.ClockFrom.Value.ToString("F1");
-                if (_codingVm.CurrentOverlay.ClockTo.HasValue)
-                    entry.CodeMeta.Parameters["vsa.uhr.bis"] = _codingVm.CurrentOverlay.ClockTo.Value.ToString("F1");
-                if (_codingVm.CurrentOverlay.Q1Mm.HasValue)
-                    entry.CodeMeta.Parameters["vsa.q1"] = _codingVm.CurrentOverlay.Q1Mm.Value.ToString("F1");
-                if (_codingVm.CurrentOverlay.Q2Mm.HasValue)
-                    entry.CodeMeta.Parameters["vsa.q2"] = _codingVm.CurrentOverlay.Q2Mm.Value.ToString("F1");
-                if (_codingVm.CurrentOverlay.ArcDegrees.HasValue && _codingVm.CurrentOverlay.ToolType == OverlayToolType.PipeBend)
-                    entry.CodeMeta.Parameters["vsa.winkel"] = _codingVm.CurrentOverlay.ArcDegrees.Value.ToString("F1");
-                if (_codingVm.CurrentOverlay.FillPercent.HasValue)
-                {
-                    var key = _codingVm.CurrentOverlay.ToolType == OverlayToolType.Level
-                              && _codingVm.CurrentOverlay.Points.Count >= 3
-                        ? "vsa.querschnitt.prozent"
-                        : "vsa.fuellgrad.prozent";
-                    entry.CodeMeta.Parameters[key] = _codingVm.CurrentOverlay.FillPercent.Value.ToString("F1");
-                }
-            }
+            ApplyOverlayQuantToEntry(entry, _codingVm.CurrentOverlay);
 
             var explorerVm = CreateVsaCodeExplorerViewModel(
                 entry, meterValue, videoZeit);
@@ -2372,6 +2436,104 @@ public partial class PlayerWindow
         }
     }
 
+    private void RunCodingProtocolMatch_Click(object sender, RoutedEventArgs e)
+    {
+        RunCodingProtocolMatch();
+    }
+
+    private void RunCodingProtocolMatch()
+    {
+        if (_codingVm == null) return;
+
+        _lastCodingMatch = CodingProtocolMatchService.Match(
+            _codingImportEvents.Select(ev => ev.Entry).ToList(),
+            _codingVm.Events.Select(ev => ev.Entry).ToList());
+
+        BuildCodingProtocolMatchBuckets(_lastCodingMatch);
+        UpdateCodingProtocolMatchSummary(_lastCodingMatch);
+        RefreshCodingEventsList();
+        Dispatcher.InvokeAsync(ApplyCodingProtocolMatchListHighlights, DispatcherPriority.Loaded);
+    }
+
+    private void BuildCodingProtocolMatchBuckets(CodingMatchRouting routing)
+    {
+        _codingProtocolMatchBuckets.Clear();
+
+        foreach (var pair in routing.Trainingskandidaten)
+            AddCodingProtocolMatchPairBuckets(pair, CodingProtocolMatchBucket.TrainingGreen);
+
+        foreach (var pair in routing.ReviewGelb)
+            AddCodingProtocolMatchPairBuckets(pair, CodingProtocolMatchBucket.ReviewYellow);
+
+        foreach (var pair in routing.FalscherCodeReview)
+            AddCodingProtocolMatchPairBuckets(pair, CodingProtocolMatchBucket.WrongCode);
+
+        foreach (var missed in routing.Verpasst)
+            if (Guid.TryParse(missed.RefId, out var missedId))
+                _codingProtocolMatchBuckets[missedId] = CodingProtocolMatchBucket.Missed;
+
+        foreach (var extra in routing.Fehlalarm)
+            if (Guid.TryParse(extra.RefId, out var extraId))
+                _codingProtocolMatchBuckets[extraId] = CodingProtocolMatchBucket.FalseAlarm;
+    }
+
+    private void AddCodingProtocolMatchPairBuckets(BefundMatchPair pair, CodingProtocolMatchBucket bucket)
+    {
+        if (Guid.TryParse(pair.Gt.RefId, out var gtId))
+            _codingProtocolMatchBuckets[gtId] = bucket;
+
+        if (Guid.TryParse(pair.Ki.RefId, out var kiId))
+            _codingProtocolMatchBuckets[kiId] = bucket;
+    }
+
+    private void UpdateCodingProtocolMatchSummary(CodingMatchRouting? routing)
+    {
+        if (routing == null)
+        {
+            TxtCodingProtocolMatchSummary.Text = "Abgleich: noch nicht ausgefuehrt";
+            BtnAcceptGreenCodingMatches.IsEnabled = false;
+            return;
+        }
+
+        var green = routing.Trainingskandidaten.Count;
+        var yellow = routing.ReviewGelb.Count;
+        var wrong = routing.FalscherCodeReview.Count;
+        var missed = routing.Verpasst.Count;
+        var extra = routing.Fehlalarm.Count;
+        var hits = green + yellow;
+
+        TxtCodingProtocolMatchSummary.Text =
+            $"Abgleich: {hits} Treffer ({green} gruen/{yellow} gelb) | " +
+            $"{wrong} falscher Code | {missed} fehlen | {extra} extra | " +
+            $"P {routing.Match.Precision:P0} R {routing.Match.Recall:P0}";
+        BtnAcceptGreenCodingMatches.IsEnabled = green > 0;
+    }
+
+    private async void CodingAcceptGreenMatches_Click(object sender, RoutedEventArgs e)
+    {
+        if (_codingVm == null) return;
+        if (_lastCodingMatch == null)
+            RunCodingProtocolMatch();
+        if (_lastCodingMatch == null || _lastCodingMatch.Trainingskandidaten.Count == 0)
+            return;
+
+        var accepted = 0;
+        foreach (var pair in _lastCodingMatch.Trainingskandidaten)
+        {
+            if (!Guid.TryParse(pair.Gt.RefId, out var importEntryId))
+                continue;
+
+            var importEvent = _codingImportEvents.FirstOrDefault(ev => ev.Entry.EntryId == importEntryId);
+            if (importEvent == null)
+                continue;
+
+            if (await ConfirmImportAsTrainingAsync(importEvent))
+                accepted++;
+        }
+
+        ShowOverlay($"{accepted} gruene Treffer als Training uebernommen", TimeSpan.FromSeconds(4));
+    }
+
     /// <summary>
     /// Context-MenÃ¼: Import-Eintrag als Training-Sample bestÃ¤tigen.
     /// Springt zum Zeitpunkt, macht einen Snapshot und erstellt eine Lehrer-Annotation.
@@ -2379,7 +2541,11 @@ public partial class PlayerWindow
     private async void ImportConfirm_Click(object sender, RoutedEventArgs e)
     {
         if (LstImportEvents.SelectedItem is not CodingEvent importEvent) return;
+        await ConfirmImportAsTrainingAsync(importEvent);
+    }
 
+    private async Task<bool> ConfirmImportAsTrainingAsync(CodingEvent importEvent)
+    {
         // 1. Zum Zeitpunkt springen
         SeekToImportEvent(importEvent);
         await Task.Delay(200); // Kurz warten bis Frame gerendert ist
@@ -2389,7 +2555,7 @@ public partial class PlayerWindow
         {
             DialogHost.Current.Warn("Frame konnte nicht aufgenommen werden.\nBitte prüfen Sie ob das Video läuft.",
                 "Import bestätigen");
-            return;
+            return false;
         }
 
         // 3. Bild in teacher_images kopieren
@@ -2419,6 +2585,7 @@ public partial class PlayerWindow
         var resetTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         resetTimer.Tick += (_, _) => { OsdMeterBadge.Visibility = Visibility.Collapsed; resetTimer.Stop(); };
         resetTimer.Start();
+        return true;
     }
 
     private void CodingAcceptDefect_Click(object sender, RoutedEventArgs e)
@@ -2426,6 +2593,11 @@ public partial class PlayerWindow
         _codingVm?.AcceptDefectCommand.Execute(null);
         if (_codingVm?.SelectedDefect != null)
         {
+            // Mensch akzeptiert = bestaetigtes Gold -> als Trainingssample sichern (eval-geschuetzt).
+            // Gleicher Pfad wie das Bestaetigungs-Panel (ConfirmAccept); MergeAndSave dedupliziert,
+            // falls der Befund dort schon gesichert wurde.
+            PersistSingleEventAsTrainingSample(_codingVm.SelectedDefect)
+                .SafeFireAndForget("TrainingSaveAcceptInline");
             UpdateInlineDefectDetail(_codingVm.SelectedDefect);
             RefreshCodingEventsList();
             // Overlay kurz gruen blinken lassen, dann entfernen
@@ -2475,6 +2647,8 @@ public partial class PlayerWindow
 
                 if (ev.AiContext != null)
                     _codingVm.EditDefectCommand.Execute(null);
+                // Bearbeitet+uebernommen = korrigiertes Gold -> als Trainingssample sichern (eval-geschuetzt).
+                PersistSingleEventAsTrainingSample(ev).SafeFireAndForget("TrainingSaveEditInline");
                 RefreshCodingEventsList();
                 UpdateInlineDefectDetail(ev);
             }
@@ -2568,7 +2742,88 @@ public partial class PlayerWindow
                 statusIcon.Foreground = CodingSessionViewModel.GetStatusBrush(status);
             }
         }
+
+        ApplyCodingProtocolMatchListHighlights();
     }
+
+    private void ApplyCodingProtocolMatchListHighlights()
+    {
+        ApplyCodingProtocolMatchListHighlights(LstCodingEvents);
+        ApplyCodingProtocolMatchListHighlights(LstImportEvents);
+    }
+
+    private void ApplyCodingProtocolMatchListHighlights(ListBox listBox)
+    {
+        for (var i = 0; i < listBox.Items.Count; i++)
+        {
+            if (listBox.ItemContainerGenerator.ContainerFromIndex(i) is not ListBoxItem container)
+                continue;
+
+            if (listBox.Items[i] is not CodingEvent ev
+                || !_codingProtocolMatchBuckets.TryGetValue(ev.Entry.EntryId, out var bucket))
+            {
+                var emptyBadge = FindCodingChild<Border>(container, "CodingMatchBadge");
+                if (emptyBadge != null)
+                    emptyBadge.Visibility = Visibility.Collapsed;
+                container.ClearValue(Control.BackgroundProperty);
+                container.ClearValue(FrameworkElement.ToolTipProperty);
+                continue;
+            }
+
+            container.Background = new SolidColorBrush(GetCodingProtocolMatchColor(bucket));
+            container.ToolTip = GetCodingProtocolMatchText(bucket);
+
+            var badge = FindCodingChild<Border>(container, "CodingMatchBadge");
+            var badgeText = FindCodingChild<TextBlock>(container, "TxtCodingMatchBadge");
+            if (badge != null)
+            {
+                badge.Background = new SolidColorBrush(GetCodingProtocolMatchBadgeColor(bucket));
+                badge.Visibility = Visibility.Visible;
+            }
+            if (badgeText != null)
+                badgeText.Text = GetCodingProtocolMatchBadgeText(bucket);
+        }
+    }
+
+    private static Color GetCodingProtocolMatchColor(CodingProtocolMatchBucket bucket) => bucket switch
+    {
+        CodingProtocolMatchBucket.TrainingGreen => Color.FromRgb(0x11, 0x38, 0x22),
+        CodingProtocolMatchBucket.ReviewYellow => Color.FromRgb(0x47, 0x35, 0x10),
+        CodingProtocolMatchBucket.WrongCode => Color.FromRgb(0x51, 0x25, 0x08),
+        CodingProtocolMatchBucket.Missed => Color.FromRgb(0x4C, 0x1D, 0x1D),
+        CodingProtocolMatchBucket.FalseAlarm => Color.FromRgb(0x2F, 0x1A, 0x45),
+        _ => Color.FromRgb(0x1F, 0x29, 0x37)
+    };
+
+    private static Color GetCodingProtocolMatchBadgeColor(CodingProtocolMatchBucket bucket) => bucket switch
+    {
+        CodingProtocolMatchBucket.TrainingGreen => Color.FromRgb(0x16, 0xA3, 0x4A),
+        CodingProtocolMatchBucket.ReviewYellow => Color.FromRgb(0xCA, 0x8A, 0x04),
+        CodingProtocolMatchBucket.WrongCode => Color.FromRgb(0xEA, 0x58, 0x0C),
+        CodingProtocolMatchBucket.Missed => Color.FromRgb(0xDC, 0x26, 0x26),
+        CodingProtocolMatchBucket.FalseAlarm => Color.FromRgb(0x7C, 0x3A, 0xED),
+        _ => Color.FromRgb(0x47, 0x55, 0x69)
+    };
+
+    private static string GetCodingProtocolMatchBadgeText(CodingProtocolMatchBucket bucket) => bucket switch
+    {
+        CodingProtocolMatchBucket.TrainingGreen => "TRAIN",
+        CodingProtocolMatchBucket.ReviewYellow => "PRUEF",
+        CodingProtocolMatchBucket.WrongCode => "CODE",
+        CodingProtocolMatchBucket.Missed => "FEHLT",
+        CodingProtocolMatchBucket.FalseAlarm => "EXTRA",
+        _ => ""
+    };
+
+    private static string GetCodingProtocolMatchText(CodingProtocolMatchBucket bucket) => bucket switch
+    {
+        CodingProtocolMatchBucket.TrainingGreen => "Abgleich: sicherer Treffer, Trainingskandidat",
+        CodingProtocolMatchBucket.ReviewYellow => "Abgleich: wahrscheinlicher Treffer, kurz pruefen",
+        CodingProtocolMatchBucket.WrongCode => "Abgleich: gleiche Stelle, falscher Code",
+        CodingProtocolMatchBucket.Missed => "Abgleich: im Import vorhanden, von KI verpasst",
+        CodingProtocolMatchBucket.FalseAlarm => "Abgleich: KI-Fehlalarm ohne Import-Partner",
+        _ => "Abgleich"
+    };
 
     /// <summary>Rekursiv ein benanntes Kind-Element im VisualTree finden.</summary>
     private static T? FindCodingChild<T>(DependencyObject parent, string childName) where T : FrameworkElement
@@ -2806,6 +3061,7 @@ public partial class PlayerWindow
                     _codingPipelineConfig.SidecarUrl,
                     sidecarToken: _codingPipelineConfig.SidecarToken);
                 _codingMultiModel = new SingleFrameMultiModelService(_codingVisionClient, _codingPipelineConfig);
+                _codingBoxSegmentation = new MarkBoxSegmentationService(_codingVisionClient.SegmentSamAsync);
                 _codingAiEnabled = true;
 
                 // Kontrollsicherung: Monitor pollt laufend und haelt den Modus aktuell

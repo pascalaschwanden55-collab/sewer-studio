@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using AuswertungPro.Next.Infrastructure;
+using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.Domain.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -482,6 +483,20 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 _shell.SetStatus(DistributionProgress);
             });
 
+            // Amtlichen Kataster laden (einmaliger Tabellen-Bau, danach gecached im SewerStudio-Ordner).
+            // Fehlt die Datei, bleibt cadastre null -> Verteilung wie bisher.
+            IHaltungCadastreResolver? cadastre = null;
+            try
+            {
+                var katasterPfad = _sp.Settings.AbwasserkatasterXtfPath;
+                if (!string.IsNullOrWhiteSpace(katasterPfad))
+                    cadastre = await Task.Run(() => HaltungCadastreIndex.EnsureAndLoad(katasterPfad));
+            }
+            catch
+            {
+                // Kataster optional: ohne ihn laeuft die Verteilung wie bisher.
+            }
+
             IReadOnlyList<HoldingFolderDistributor.DistributionResult> results;
             if (selectedPdfFiles.Length > 0)
             {
@@ -491,7 +506,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     moveInsteadOfCopy: false,
                     overwrite: false,
                     project: _shell.Project,
-                    progress: progress));
+                    progress: progress,
+                    cadastre: cadastre));
             }
             else
             {
@@ -501,7 +517,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     moveInsteadOfCopy: false,
                     overwrite: false,
                     project: _shell.Project,
-                    progress: progress));
+                    progress: progress,
+                    cadastre: cadastre));
             }
 
             var ok = results.Count(r => r.Success);

@@ -491,7 +491,7 @@ public static class KnowledgeBackupService
         var goldLabelsDir = Path.Combine(knowledgeRoot, "gold_labels");
         if (Directory.Exists(goldLabelsDir))
         {
-            foreach (var file in Directory.EnumerateFiles(goldLabelsDir, "*.*", SearchOption.AllDirectories))
+            foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(goldLabelsDir, "*.*", recursive: true))
             {
                 var relPath = Path.GetRelativePath(goldLabelsDir, file).Replace('\\', '/');
                 yield return (file, "knowledge/gold_labels/" + relPath);
@@ -513,7 +513,7 @@ public static class KnowledgeBackupService
         if (Directory.Exists(teacherImagesDir))
         {
             // AllDirectories: auch crops/ Unterordner exportieren
-            foreach (var img in Directory.EnumerateFiles(teacherImagesDir, "*.*", SearchOption.AllDirectories))
+            foreach (var img in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(teacherImagesDir, "*.*", recursive: true))
             {
                 var relPath = Path.GetRelativePath(teacherImagesDir, img).Replace('\\', '/');
                 yield return (img, "knowledge/teacher_images/" + relPath);
@@ -522,7 +522,7 @@ public static class KnowledgeBackupService
         var teacherLabelsDir = Path.Combine(knowledgeRoot, "teacher_labels");
         if (Directory.Exists(teacherLabelsDir))
         {
-            foreach (var txt in Directory.EnumerateFiles(teacherLabelsDir, "*.txt", SearchOption.AllDirectories))
+            foreach (var txt in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(teacherLabelsDir, "*.txt", recursive: true))
             {
                 var relPath = Path.GetRelativePath(teacherLabelsDir, txt).Replace('\\', '/');
                 yield return (txt, "knowledge/teacher_labels/" + relPath);

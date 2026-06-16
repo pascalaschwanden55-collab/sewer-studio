@@ -166,10 +166,10 @@ public static partial class HoldingFolderDistributor
 
         // Rekursiv suchen: M150/XML liegen in der Praxis oft in Unterordnern.
         // XML nicht mehr über Dateinamen filtern, da viele Exporte generische Namen haben.
-        try { sidecarFiles.AddRange(Directory.EnumerateFiles(folder, "*.xtf", SearchOption.AllDirectories)); } catch { }
-        try { sidecarFiles.AddRange(Directory.EnumerateFiles(folder, "*.m150", SearchOption.AllDirectories)); } catch { }
-        try { sidecarFiles.AddRange(Directory.EnumerateFiles(folder, "*.mdb", SearchOption.AllDirectories)); } catch { }
-        try { sidecarFiles.AddRange(Directory.EnumerateFiles(folder, "*.xml", SearchOption.AllDirectories)); } catch { }
+        try { sidecarFiles.AddRange(Common.SafeFileEnumeration.EnumerateFilesSafe(folder, "*.xtf", recursive: true)); } catch { }
+        try { sidecarFiles.AddRange(Common.SafeFileEnumeration.EnumerateFilesSafe(folder, "*.m150", recursive: true)); } catch { }
+        try { sidecarFiles.AddRange(Common.SafeFileEnumeration.EnumerateFilesSafe(folder, "*.mdb", recursive: true)); } catch { }
+        try { sidecarFiles.AddRange(Common.SafeFileEnumeration.EnumerateFilesSafe(folder, "*.xml", recursive: true)); } catch { }
 
         return sidecarFiles
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -317,7 +317,7 @@ public static partial class HoldingFolderDistributor
         {
             try
             {
-                foreach (var path in Directory.EnumerateFiles(folder, "CDIndex.txt", SearchOption.AllDirectories))
+                foreach (var path in Common.SafeFileEnumeration.EnumerateFilesSafe(folder, "CDIndex.txt", recursive: true))
                     cdIndexPaths.Add(path);
             }
             catch
@@ -573,7 +573,7 @@ public static partial class HoldingFolderDistributor
         {
             if (!XtfFilesCache.ContainsKey(dir))
             {
-                XtfFilesCache[dir] = Directory.GetFiles(dir, "*.xtf", SearchOption.AllDirectories);
+                XtfFilesCache[dir] = Common.SafeFileEnumeration.EnumerateFilesSafe(dir, "*.xtf", recursive: true).ToArray();
             }
         }
     }

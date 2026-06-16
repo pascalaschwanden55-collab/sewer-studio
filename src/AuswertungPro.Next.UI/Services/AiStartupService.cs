@@ -175,6 +175,26 @@ public static class AiStartupService
             }
         }
 
+        // Nach dem Start auf den Sidecar warten (analog zu Ollama), damit "KI starten" EHRLICH
+        // meldet, ob er wirklich oben ist – statt nur "wird gestartet".
+        if (!sidecarReachable && sidecarStarted)
+        {
+            sidecarReachable = await WaitForReachableAsync(launcher, platform.SidecarUrl, "/health", sidecarHeaders, ct)
+                .ConfigureAwait(false);
+            if (!sidecarReachable)
+                warnings.Add("Vision-Sidecar wurde gestartet, ist aber noch nicht erreichbar. Modelle konnten nicht geladen werden.");
+        }
+
+        // Vision-Modelle (YOLO/DINO/SAM) vorab laden, damit die erste Analyse keinen Lade-Verzug hat.
+        if (sidecarReachable)
+        {
+            var warm = await launcher.WarmupSidecarModelsAsync(platform.SidecarUrl, sidecarHeaders, ct).ConfigureAwait(false);
+            if (warm.LoadedModels.Count > 0)
+                messages.Add($"Vision-Modelle geladen: {string.Join(", ", warm.LoadedModels)}");
+            if (!warm.Succeeded && warm.Error is not null)
+                warnings.Add($"Vision-Modelle konnten nicht vollstaendig geladen werden: {warm.Error}");
+        }
+
         var result = new AiStartupResult(
             SettingsChanged: settingsChanged,
             OllamaReachable: ollamaReachable,
@@ -318,6 +338,25 @@ public static class AiStartupService
         return false;
     }
 
+    private static async Task<bool> WaitForReachableAsync(
+        IAiStartupLauncher launcher,
+        Uri baseUri,
+        string relativePath,
+        IReadOnlyDictionary<string, string>? headers,
+        CancellationToken ct)
+    {
+        // Sidecar braucht beim Kaltstart einige Sekunden (Python-Importe), bevor /health antwortet.
+        for (var attempt = 0; attempt < 60; attempt++)
+        {
+            if (await launcher.IsReachableAsync(baseUri, relativePath, headers, ct).ConfigureAwait(false))
+                return true;
+
+            await Task.Delay(TimeSpan.FromMilliseconds(500), ct).ConfigureAwait(false);
+        }
+
+        return false;
+    }
+
     private static string ResolvePowerShellExe()
     {
         var windowsDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
@@ -434,6 +473,65 @@ public static class AiStartupService
                 return new AiStartupModelPreloadResult(false, ex.Message);
             }
         }
+
+        public async Task<AiStartupWarmupResult> WarmupSidecarModelsAsync(
+            Uri sidecarBaseUri,
+            IReadOnlyDictionary<string, string>? headers,
+            CancellationToken ct)
+        {
+            try
+            {
+                // Modell-Laden (YOLO-Engine/DINO/SAM) kann beim Kaltstart einige Zehn-Sekunden dauern.
+                using var http = new HttpClient { BaseAddress = sidecarBaseUri, Timeout = TimeSpan.FromMinutes(5) };
+                using var req = new HttpRequestMessage(HttpMethod.Post, "/warmup");
+                if (headers is not null)
+                {
+                    foreach (var pair in headers)
+                        req.Headers.TryAddWithoutValidation(pair.Key, pair.Value);
+                }
+
+                using var resp = await http.SendAsync(req, ct).ConfigureAwait(false);
+                if (!resp.IsSuccessStatusCode)
+                {
+                    // Aelterer Sidecar ohne /warmup (404): kein Fehler, Modelle laden dann beim ersten Bild.
+                    var code = (int)resp.StatusCode;
+                    return new AiStartupWarmupResult(false, Array.Empty<string>(),
+                        code == 404 ? "Sidecar kennt /warmup nicht (Modelle laden beim ersten Bild)." : $"HTTP {code}");
+                }
+
+                var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                return new AiStartupWarmupResult(true, ParseLoadedModels(body), null);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException || ex is IOException || ex is InvalidOperationException)
+            {
+                return new AiStartupWarmupResult(false, Array.Empty<string>(), ex.Message);
+            }
+        }
+
+        private static IReadOnlyList<string> ParseLoadedModels(string json)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("loaded", out var arr) && arr.ValueKind == JsonValueKind.Array)
+                {
+                    return arr.EnumerateArray()
+                        .Where(e => e.ValueKind == JsonValueKind.String)
+                        .Select(e => e.GetString()!)
+                        .ToList();
+                }
+            }
+            catch (JsonException)
+            {
+                // Antwort nicht parsbar – als "keine Modelle" behandeln (best-effort).
+            }
+
+            return Array.Empty<string>();
+        }
     }
 
     private static string Truncate(string value, int maxLength)
@@ -453,6 +551,11 @@ public interface IAiStartupLauncher
     Task<AiStartupModelPreloadResult> PreloadOllamaModelAsync(
         Uri baseUri,
         AiStartupModelPreloadRequest request,
+        CancellationToken ct);
+
+    Task<AiStartupWarmupResult> WarmupSidecarModelsAsync(
+        Uri sidecarBaseUri,
+        IReadOnlyDictionary<string, string>? headers,
         CancellationToken ct);
 }
 
@@ -475,6 +578,11 @@ public sealed record AiStartupModelPreloadRequest(
 
 public sealed record AiStartupModelPreloadResult(
     bool Succeeded,
+    string? Error);
+
+public sealed record AiStartupWarmupResult(
+    bool Succeeded,
+    IReadOnlyList<string> LoadedModels,
     string? Error);
 
 public sealed record AiStartupResult(

@@ -1091,24 +1091,21 @@ public partial class PlayerWindow
 
             var timestampSec = _player.Time / 1000.0;
 
-            // Uhrzeiger-Position aus Overlay-Zentrum berechnen
-            string? clockPos = null;
-            if (overlay.Points.Count > 0)
-            {
-                var avgX = overlay.Points.Average(p => p.X);
-                var avgY = overlay.Points.Average(p => p.Y);
-                var cx = 0.5; var cy = 0.5; // Rohrmitte (normalisiert)
-                var dx = avgX - cx;
-                var dy = avgY - cy;
-                var angleDeg = Math.Atan2(dy, dx) * 180.0 / Math.PI;
-                var clockAngle = (angleDeg + 90 + 360) % 360;
-                var hour = (int)Math.Round(clockAngle / 30.0) % 12;
-                if (hour == 0) hour = 12;
-                clockPos = hour.ToString();
-            }
+            // Frame einmal erfassen — wird fuer SAM-Segmentierung UND den YOLO-Export wiederverwendet.
+            var frameBytes = await CaptureCurrentFrameAsync();
 
-            // Training speichern: Frame + YOLO-Export + TeacherAnnotation + CodingEvent
-            bool saved = await SaveMarkAsTrainingAsync(overlay, timestampSec, clockPos);
+            // Uhrlage zunaechst geometrisch (Overlay-Zentrum -> Uhr) als Fallback.
+            string? clockPos = EstimateClockFromOverlayCenter(overlay);
+
+            // SAM segmentiert die gezogene Box und schreibt echte Messwerte (Uhrlage/Hoehe/
+            // Breite/Querschnitt) ins Overlay. Bei fehlendem Sidecar/Maske bleibt die
+            // geometrische Schaetzung erhalten — der Codier-Ablauf wird nie blockiert.
+            var samClock = await TrySegmentMarkBoxAsync(overlay, frameBytes);
+            if (!string.IsNullOrEmpty(samClock))
+                clockPos = samClock;
+
+            // Training speichern + Codierfenster (VsaCodeExplorer) mit vorausgefuellten Messwerten.
+            bool saved = await SaveMarkAsTrainingAsync(overlay, timestampSec, clockPos, frameBytes);
 
             // Overlay entfernen und Canvas neu zeichnen
             if (_codingVm != null) _codingVm.CurrentOverlay = null;
@@ -1133,12 +1130,66 @@ public partial class PlayerWindow
         }
     }
 
+    /// <summary>Grobe Uhrlage aus dem Overlay-Zentrum (Rohrmitte = 0.5/0.5). Fallback ohne SAM.</summary>
+    private static string? EstimateClockFromOverlayCenter(OverlayGeometry overlay)
+    {
+        if (overlay.Points.Count == 0) return null;
+        var avgX = overlay.Points.Average(p => p.X);
+        var avgY = overlay.Points.Average(p => p.Y);
+        var angleDeg = Math.Atan2(avgY - 0.5, avgX - 0.5) * 180.0 / Math.PI;
+        var clockAngle = (angleDeg + 90 + 360) % 360;
+        var hour = (int)Math.Round(clockAngle / 30.0) % 12;
+        if (hour == 0) hour = 12;
+        return hour.ToString();
+    }
+
+    /// <summary>
+    /// Laesst SAM die gezogene Box segmentieren und schreibt die Messwerte ins Overlay
+    /// (Hoehe/Breite mm, Querschnitt-%, Uhrlage). Gibt die SAM-Uhrlage zurueck oder null,
+    /// wenn keine Segmentierung moeglich war (Aufrufer behaelt dann die geometrische
+    /// Schaetzung). Reine Verdrahtung — die Logik liegt im MarkBoxSegmentationService.
+    /// </summary>
+    private async Task<string?> TrySegmentMarkBoxAsync(OverlayGeometry overlay, byte[]? frameBytes)
+    {
+        if (_codingBoxSegmentation == null || frameBytes == null || frameBytes.Length == 0
+            || overlay.Points.Count < 2)
+            return null;
+        try
+        {
+            var box = Application.Ai.NormalizedBoundingBox.FromPoints(
+                overlay.Points.Select(p => new Domain.Models.NormalizedPoint(p.X, p.Y)).ToList());
+            var calibration = _codingOverlayService?.Calibration;
+            int dn = calibration?.NominalDiameterMm ?? 0;
+
+            var result = await _codingBoxSegmentation.SegmentBoxAsync(
+                frameBytes, box, dn, calibration, System.Threading.CancellationToken.None);
+            if (result == null) return null;
+
+            if (result.Quant.HeightMm.HasValue) overlay.Q1Mm = result.Quant.HeightMm.Value;
+            if (result.Quant.WidthMm.HasValue) overlay.Q2Mm = result.Quant.WidthMm.Value;
+            var cross = result.Quant.CrossSectionReductionPercent ?? result.Quant.ExtentPercent;
+            if (cross.HasValue) overlay.FillPercent = cross.Value;
+            if (!string.IsNullOrEmpty(result.Quant.ClockPosition)
+                && double.TryParse(result.Quant.ClockPosition,
+                    System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var clk))
+                overlay.ClockFrom = clk;
+
+            return result.Quant.ClockPosition;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Mark-SAM] Segmentierung uebersprungen: {ex.Message}");
+            return null;
+        }
+    }
+
     /// <summary>
     /// Speichert eine Markierung als Teacher-Annotation (YOLO-Export + TeacherAnnotationStore).
     /// Vereinfachte Version von CodingModeWindow.BtnSaveAsTraining_Click.
     /// </summary>
     /// <summary>Rueckgabe: true wenn gespeichert, false wenn abgebrochen.</summary>
-    private async Task<bool> SaveMarkAsTrainingAsync(OverlayGeometry overlay, double timestampSec, string? clockPosition)
+    private async Task<bool> SaveMarkAsTrainingAsync(OverlayGeometry overlay, double timestampSec, string? clockPosition, byte[]? preCapturedFrame = null)
     {
         try
         {
@@ -1146,6 +1197,8 @@ public partial class PlayerWindow
             // Meter automatisch aus OSD oder Videoposition berechnen
             var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
             var entry = new ProtocolEntry();
+            // SAM-/Overlay-Messwerte ins Codierfenster vorausfuellen (Uhrlage, Hoehe/Breite, Querschnitt).
+            ApplyOverlayQuantToEntry(entry, overlay);
             var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
             var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
             {
@@ -1156,8 +1209,8 @@ public partial class PlayerWindow
 
             var selectedEntry = explorer.SelectedEntry;
 
-            // 2. Frame-Capture
-            var frameBytes = await CaptureCurrentFrameAsync();
+            // 2. Frame-Capture (bereits vor der SAM-Segmentierung erfasst -> wiederverwenden).
+            var frameBytes = preCapturedFrame ?? await CaptureCurrentFrameAsync();
             if (frameBytes == null) return false;
 
             // 3. BoundingBox aus Overlay-Punkten

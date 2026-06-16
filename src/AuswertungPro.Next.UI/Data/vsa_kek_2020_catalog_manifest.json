@@ -759,7 +759,7 @@
     },
     {
       "code": "BAB",
-      "title": "BAB",
+      "title": "Riss",
       "canonicalCode": "BAB",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -1623,7 +1623,7 @@
     },
     {
       "code": "BAC",
-      "title": "BAC",
+      "title": "Leitungsbruch / Einsturz",
       "canonicalCode": "BAC",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -1965,7 +1965,7 @@
     },
     {
       "code": "BAF",
-      "title": "BAF",
+      "title": "Oberflächenschaden",
       "canonicalCode": "BAF",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -5001,7 +5001,7 @@
     },
     {
       "code": "BAH",
-      "title": "BAH",
+      "title": "Schadhafter Anschluss",
       "canonicalCode": "BAH",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -5267,7 +5267,7 @@
     },
     {
       "code": "BAI",
-      "title": "BAI",
+      "title": "Einragendes Dichtungsmaterial",
       "canonicalCode": "BAI",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -5591,7 +5591,7 @@
     },
     {
       "code": "BAJ",
-      "title": "BAJ",
+      "title": "Verschobene Rohrverbindung",
       "canonicalCode": "BAJ",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -6605,7 +6605,7 @@
     },
     {
       "code": "BBA",
-      "title": "BBA",
+      "title": "Wurzeln",
       "canonicalCode": "BBA",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -6821,7 +6821,7 @@
     },
     {
       "code": "BBB",
-      "title": "BBB",
+      "title": "Anhaftende Stoffe",
       "canonicalCode": "BBB",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -7091,7 +7091,7 @@
     },
     {
       "code": "BBC",
-      "title": "BBC",
+      "title": "Ablagerung",
       "canonicalCode": "BBC",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -7655,7 +7655,7 @@
     },
     {
       "code": "BBF",
-      "title": "BBF",
+      "title": "Infiltration",
       "canonicalCode": "BBF",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -8158,7 +8158,7 @@
     },
     {
       "code": "BCA",
-      "title": "BCA",
+      "title": "Seitlicher Anschluss",
       "canonicalCode": "BCA",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -9212,7 +9212,7 @@
     },
     {
       "code": "BCB",
-      "title": "BCB",
+      "title": "Punktuelle Reparatur",
       "canonicalCode": "BCB",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -9814,6 +9814,27 @@
       "rangeThresholdText": null
     },
     {
+      "code": "BCC",
+      "title": "Bogen",
+      "canonicalCode": "BCC",
+      "source": "VSA-KEK-2020-Heading",
+      "isObservedExtension": false,
+      "isSelectable": true,
+      "standardAnnotation": null,
+      "group": "VSA-KEK 2020/Kanal/BCC",
+      "description": "Offizielle VSA-KEK-2020 Basisgruppe.",
+      "categoryPath": [
+        "VSA-KEK 2020",
+        "Kanal",
+        "BCC"
+      ],
+      "parameters": [],
+      "examples": [],
+      "requiresRange": false,
+      "rangeThresholdM": null,
+      "rangeThresholdText": null
+    },
+    {
       "code": "BCD",
       "title": "Rohranfang",
       "canonicalCode": "BCD",
@@ -9920,7 +9941,7 @@
     },
     {
       "code": "BDB",
-      "title": "BDB",
+      "title": "Allgemeine Anmerkung",
       "canonicalCode": "BDB",
       "source": "VSA-KEK-2020-ILI",
       "isObservedExtension": false,
@@ -10802,7 +10823,7 @@
     },
     {
       "code": "BDD",
-      "title": "BDD",
+      "title": "Wasserspiegel",
       "canonicalCode": "BDD",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -15755,7 +15776,7 @@
     },
     {
       "code": "DCA",
-      "title": "DCA",
+      "title": "Anschluss (Schacht)",
       "canonicalCode": "DCA",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -16838,7 +16859,7 @@
     },
     {
       "code": "DCG",
-      "title": "DCG",
+      "title": "Zulauf / Ablauf (Schacht)",
       "canonicalCode": "DCG",
       "source": "VSA-KEK-2020-ICM",
       "isObservedExtension": false,
@@ -18854,7 +18875,7 @@
     },
     {
       "code": "DDB",
-      "title": "DDB",
+      "title": "Allgemeine Anmerkung (Schacht)",
       "canonicalCode": "DDB",
       "source": "VSA-KEK-2020-ILI",
       "isObservedExtension": false,

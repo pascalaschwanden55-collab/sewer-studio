@@ -28,6 +28,8 @@ public partial class PlayerCodingSidePanel : UserControl
     public event RoutedEventHandler? ImportSeekRequested;
     public event RoutedEventHandler? CodingSelectCodeRequested;
     public event RoutedEventHandler? CodingCreateEventRequested;
+    public event RoutedEventHandler? CodingProtocolMatchRequested;
+    public event RoutedEventHandler? CodingAcceptGreenMatchesRequested;
 
     private void CodingTakePhoto_Click(object sender, RoutedEventArgs e) => CodingTakePhotoRequested?.Invoke(sender, e);
     private void CodingEvents_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e) => CodingEventsPreviewMouseRightButtonDownRequested?.Invoke(sender, e);
@@ -46,4 +48,6 @@ public partial class PlayerCodingSidePanel : UserControl
     private void ImportSeek_Click(object sender, RoutedEventArgs e) => ImportSeekRequested?.Invoke(sender, e);
     private void CodingSelectCode_Click(object sender, RoutedEventArgs e) => CodingSelectCodeRequested?.Invoke(sender, e);
     private void CodingCreateEvent_Click(object sender, RoutedEventArgs e) => CodingCreateEventRequested?.Invoke(sender, e);
+    private void RunCodingProtocolMatch_Click(object sender, RoutedEventArgs e) => CodingProtocolMatchRequested?.Invoke(sender, e);
+    private void CodingAcceptGreenMatches_Click(object sender, RoutedEventArgs e) => CodingAcceptGreenMatchesRequested?.Invoke(sender, e);
 }

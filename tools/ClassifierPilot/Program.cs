@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Evaluation;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
@@ -124,46 +125,29 @@ Console.WriteLine($"\nPipeline fertig in {elapsed.TotalMinutes:F1} min — {resu
 foreach (var d in result.Detections)
     Console.WriteLine($"  KI {d.Code,-6} @ {d.MeterStart,6:F2}m{(Math.Abs(d.MeterEnd - d.MeterStart) > 0.05 ? $"-{d.MeterEnd:F2}m" : "")}  {Trim(d.FindingLabel, 50)}  [{d.Severity}]");
 
-// ── 4) Vergleich KI vs. Protokoll (Hauptcode, ±2.0 m Toleranz) ──
-const double meterTol = 2.0;
-string MainCode(string? c) => string.IsNullOrWhiteSpace(c) ? "" : c.Trim().ToUpperInvariant()[..Math.Min(3, c.Trim().Length)];
-bool Overlaps(double aS, double aE, double bS, double bE) =>
-    Math.Max(aS, bS) - meterTol <= Math.Min(aE, bE) + meterTol;
+// ── 4) Abgleich KI vs. Protokoll (gestuft, 1:1, vier Toepfe) ──
+// Geteilte, ehrliche Logik aus der Application-Schicht: gruen<=0.20m / gelb<=0.50m,
+// Eins-zu-Eins-Zuordnung (max. Treffer bei min. Abstand), BCD/BCE ausgenommen,
+// KI-Detections ohne aufgeloesten Code zaehlen als Fehlalarm.
+var gtFindings = gt.Select(e => new BefundMatchFinding(e.VsaCode, e.MeterStart, e.MeterEnd, e.Text)).ToList();
+var kiFindings = result.Detections.Select(d => new BefundMatchFinding(d.Code, d.MeterStart, d.MeterEnd, d.FindingLabel)).ToList();
+var matchResult = BefundMatcher.Match(gtFindings, kiFindings, BefundMatchOptions.Default);
 
-var gtRelevant = gt.Where(e => MainCode(e.VsaCode) is not ("BCD" or "BCE")).ToList();
-var kiRelevant = result.Detections.Where(d => MainCode(d.Code) is not ("" or "BCD" or "BCE")).ToList();
+var gtRelevantCount = gtFindings.Count(f => !BefundMatchOptions.Default.IsExcluded(f));
+var kiRelevantCount = kiFindings.Count(f => !BefundMatchOptions.Default.IsExcluded(f));
 
-var matched = new HashSet<int>();
-var tp = new List<string>();
-var fn = new List<string>();
-foreach (var e in gtRelevant)
-{
-    var hit = kiRelevant
-        .Select((d, i) => (d, i))
-        .Where(x => !matched.Contains(x.i)
-            && MainCode(x.d.Code) == MainCode(e.VsaCode)
-            && Overlaps(e.MeterStart, Math.Max(e.MeterStart, e.MeterEnd), x.d.MeterStart, x.d.MeterEnd))
-        .OrderBy(x => Math.Abs(x.d.MeterStart - e.MeterStart))
-        .Cast<(RawVideoDetection d, int i)?>()
-        .FirstOrDefault();
-    if (hit is { } h)
-    {
-        matched.Add(h.i);
-        tp.Add($"{e.VsaCode} @ {e.MeterStart:F2}m  <->  KI {h.d.Code} @ {h.d.MeterStart:F2}m");
-    }
-    else
-    {
-        fn.Add($"{e.VsaCode} @ {e.MeterStart:F2}m  ({Trim(e.Text, 40)})");
-    }
-}
-var fp = kiRelevant.Where((d, i) => !matched.Contains(i))
-    .Select(d => $"{d.Code} @ {d.MeterStart:F2}m  ({Trim(d.FindingLabel, 40)})").ToList();
-
-Console.WriteLine($"\n=== VERGLEICH (Hauptcode, ±{meterTol:F1} m; BCD/BCE ausgenommen) ===");
-Console.WriteLine($"Protokoll-Befunde: {gtRelevant.Count} | KI-Befunde: {kiRelevant.Count}");
-Console.WriteLine($"TREFFER (TP): {tp.Count}");   foreach (var s in tp) Console.WriteLine($"  + {s}");
-Console.WriteLine($"VERPASST (FN): {fn.Count}");  foreach (var s in fn) Console.WriteLine($"  - {s}");
-Console.WriteLine($"ZUSATZ (FP): {fp.Count}");    foreach (var s in fp) Console.WriteLine($"  ? {s}");
+Console.WriteLine($"\n=== ABGLEICH (gruen<=0.20m / gelb<=0.50m, 1:1; BCD/BCE ausgenommen) ===");
+Console.WriteLine($"Protokoll-Befunde: {gtRelevantCount} | KI-Befunde: {kiRelevantCount}" +
+    (matchResult.OhneCode > 0 ? $" (davon {matchResult.OhneCode} ohne aufgeloesten Code → Fehlalarm)" : ""));
+Console.WriteLine($"Praezision {matchResult.Precision:P0} | Recall {matchResult.Recall:P0}");
+Console.WriteLine($"TREFFER (TP): {matchResult.Treffer.Count} (gruen {matchResult.Treffer.Count(p => p.Tier == "gruen")}, gelb {matchResult.Treffer.Count(p => p.Tier == "gelb")})");
+foreach (var p in matchResult.Treffer) Console.WriteLine($"  + {p.Tier,-5} {p.Gt.Code} @ {p.Gt.MeterStart:F2}m  <->  KI {p.Ki.Code} @ {p.Ki.MeterStart:F2}m  (Δ {p.Gap:F2}m)");
+Console.WriteLine($"FALSCHER CODE (WC): {matchResult.FalscherCode.Count}");
+foreach (var p in matchResult.FalscherCode) Console.WriteLine($"  ~ {p.Gt.Code} @ {p.Gt.MeterStart:F2}m  <->  KI {p.Ki.Code} @ {p.Ki.MeterStart:F2}m  (Δ {p.Gap:F2}m)");
+Console.WriteLine($"VERPASST (FN): {matchResult.Verpasst.Count}");
+foreach (var f in matchResult.Verpasst) Console.WriteLine($"  - {f.Code} @ {f.MeterStart:F2}m  ({Trim(f.Label, 40)})");
+Console.WriteLine($"FEHLALARM (FP): {matchResult.Fehlalarm.Count}");
+foreach (var f in matchResult.Fehlalarm) Console.WriteLine($"  ? {(f.Code.Length == 0 ? "(leer)" : f.Code)} @ {f.MeterStart:F2}m  ({Trim(f.Label, 40)})");
 
 // ── 5) Report-JSON neben die Benchmarks legen ──
 var stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -180,7 +164,17 @@ var report = new
     reach_length_m = reachLength,
     ground_truth = gt.Select(e => new { e.VsaCode, e.MeterStart, e.MeterEnd, e.Text }),
     detections = result.Detections.Select(d => new { d.Code, d.MeterStart, d.MeterEnd, d.FindingLabel, d.Severity }),
-    vergleich = new { tp, fn, fp },
+    match = new
+    {
+        praezision = Math.Round(matchResult.Precision, 4),
+        recall = Math.Round(matchResult.Recall, 4),
+        treffer = matchResult.Treffer.Select(p => new { p.Tier, gt_code = p.Gt.Code, gt_m = p.Gt.MeterStart, ki_code = p.Ki.Code, ki_m = p.Ki.MeterStart, gap_m = Math.Round(p.Gap, 2) }),
+        falscher_code = matchResult.FalscherCode.Select(p => new { gt_code = p.Gt.Code, gt_m = p.Gt.MeterStart, ki_code = p.Ki.Code, ki_m = p.Ki.MeterStart, gap_m = Math.Round(p.Gap, 2) }),
+        verpasst = matchResult.Verpasst.Select(f => new { f.Code, f.MeterStart, f.Label }),
+        fehlalarm = matchResult.Fehlalarm.Select(f => new { f.Code, f.MeterStart, f.Label }),
+        ohne_code = matchResult.OhneCode,
+        ignoriert_anker = matchResult.IgnoriertAnker,
+    },
 };
 File.WriteAllText(outPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
 Console.WriteLine($"\nReport: {outPath}");

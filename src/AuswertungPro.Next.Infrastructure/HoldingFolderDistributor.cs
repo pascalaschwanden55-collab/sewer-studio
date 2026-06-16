@@ -9,6 +9,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
+using AuswertungPro.Next.Infrastructure.Map;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
@@ -35,7 +36,7 @@ public static partial class HoldingFolderDistributor
         if (!Directory.Exists(pdfSourceFolder))
             return new[] { new DistributionResult(false, $"PDF folder not found: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        var pdfFiles = Directory.EnumerateFiles(pdfSourceFolder, "*.pdf", SearchOption.AllDirectories)
+        var pdfFiles = Common.SafeFileEnumeration.EnumerateFilesSafe(pdfSourceFolder, "*.pdf", recursive: true)
             .Where(p => !Path.GetFileName(p).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
@@ -116,7 +117,7 @@ public static partial class HoldingFolderDistributor
             };
         }
 
-        var txtFiles = Directory.EnumerateFiles(txtSourceFolder, "kiDVDaten*.txt", SearchOption.AllDirectories)
+        var txtFiles = Common.SafeFileEnumeration.EnumerateFilesSafe(txtSourceFolder, "kiDVDaten*.txt", recursive: true)
             .ToList();
 
         if (txtFiles.Count == 0)
@@ -544,7 +545,7 @@ public static partial class HoldingFolderDistributor
         if (!Directory.Exists(pdfSourceFolder))
             return new[] { new DistributionResult(false, $"PDF folder not found: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        var pdfFiles = Directory.EnumerateFiles(pdfSourceFolder, "*.pdf", SearchOption.AllDirectories)
+        var pdfFiles = Common.SafeFileEnumeration.EnumerateFilesSafe(pdfSourceFolder, "*.pdf", recursive: true)
             .Where(p => !Path.GetFileName(p).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
@@ -694,19 +695,20 @@ public static partial class HoldingFolderDistributor
         bool moveInsteadOfCopy = false,
         bool overwrite = false,
         Project? project = null,
-        IProgress<DistributionProgress>? progress = null)
+        IProgress<DistributionProgress>? progress = null,
+        IHaltungCadastreResolver? cadastre = null)
     {
         if (!Directory.Exists(pdfSourceFolder))
             return new[] { new DistributionResult(false, $"PDF folder not found: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        var pdfFiles = Directory.EnumerateFiles(pdfSourceFolder, "*.pdf", SearchOption.AllDirectories)
+        var pdfFiles = Common.SafeFileEnumeration.EnumerateFilesSafe(pdfSourceFolder, "*.pdf", recursive: true)
             .Where(p => !Path.GetFileName(p).StartsWith("split_", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         if (pdfFiles.Count == 0)
             return new[] { new DistributionResult(false, $"No PDF files found in: {pdfSourceFolder}", pdfSourceFolder, null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        return DistributeDichtheitCore(pdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress);
+        return DistributeDichtheitCore(pdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, cadastre);
     }
 
     /// <summary>
@@ -719,7 +721,8 @@ public static partial class HoldingFolderDistributor
         bool moveInsteadOfCopy = false,
         bool overwrite = false,
         Project? project = null,
-        IProgress<DistributionProgress>? progress = null)
+        IProgress<DistributionProgress>? progress = null,
+        IHaltungCadastreResolver? cadastre = null)
     {
         var validPdfFiles = pdfFiles
             .Where(p => !string.IsNullOrWhiteSpace(p))
@@ -732,7 +735,7 @@ public static partial class HoldingFolderDistributor
         if (validPdfFiles.Count == 0)
             return new[] { new DistributionResult(false, "No valid PDF files selected.", "", null, null, null, null, null, VideoMatchStatus.NotChecked) };
 
-        return DistributeDichtheitCore(validPdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress);
+        return DistributeDichtheitCore(validPdfFiles, destGemeindeFolder, moveInsteadOfCopy, overwrite, project, progress, cadastre);
     }
 
     private static IReadOnlyList<DistributionResult> DistributeDichtheitCore(
@@ -741,7 +744,8 @@ public static partial class HoldingFolderDistributor
         bool moveInsteadOfCopy,
         bool overwrite,
         Project? project,
-        IProgress<DistributionProgress>? progress)
+        IProgress<DistributionProgress>? progress,
+        IHaltungCadastreResolver? cadastre = null)
     {
         var results = new List<DistributionResult>();
         var processed = 0;
@@ -755,7 +759,7 @@ public static partial class HoldingFolderDistributor
                 // Multi-Seiten-Erkennung: Jede Seite einzeln auf Haltungspaar pruefen.
                 // KIT Bauinspekt PDFs haben pro Seite eine andere Haltung/Schacht.
                 // Kontrollinformations-Seiten (Messdaten) gehoeren zur vorherigen Pruefseite.
-                var pageResults = ExtractDichtheitPerPage(pages, project, destGemeindeFolder);
+                var pageResults = ExtractDichtheitPerPage(pages, project, destGemeindeFolder, cadastre);
 
                 // Multi-Split nur wenn VERSCHIEDENE Haltungen erkannt wurden.
                 // PDFs mit mehreren Seiten aber gleicher Haltung (z.B. Pruefbericht + Anhang)
@@ -780,7 +784,10 @@ public static partial class HoldingFolderDistributor
                         }
 
                         var haltung = SanitizePathSegment(NormalizeHaltungId(pr.HaltungId));
-                        var holdingFolder = Path.Combine(destGemeindeFolder, haltung);
+                        // Nicht im Kataster bekannte Haltungen in den Sammelordner "keine_Zuordnung"
+                        // umlenken (reguläre Ablage-Logik, nur eine Ebene tiefer).
+                        var destRoot = ResolveDistributionRoot(destGemeindeFolder, pr.HaltungId, cadastre);
+                        var holdingFolder = Path.Combine(destRoot, haltung);
                         Directory.CreateDirectory(holdingFolder);
 
                         var suffix = pr.IsSchacht ? "SP" : "DP";
@@ -818,6 +825,10 @@ public static partial class HoldingFolderDistributor
                     if (string.IsNullOrWhiteSpace(haltungId))
                         haltungId = TryExtractFromShafts(pdfText);
 
+                    // Letzter Rettungsanker: amtlicher Kataster-Abgleich (universell, formatunabhaengig).
+                    if (string.IsNullOrWhiteSpace(haltungId) && cadastre is not null)
+                        haltungId = ResolveViaCadastre(pdfText, cadastre);
+
                     if (string.IsNullOrWhiteSpace(haltungId))
                     {
                         results.Add(new DistributionResult(false,
@@ -830,7 +841,10 @@ public static partial class HoldingFolderDistributor
                     var dateStamp = date?.ToString("yyyyMMdd", CultureInfo.InvariantCulture) ?? "00000000";
 
                     var haltung = SanitizePathSegment(NormalizeHaltungId(haltungId));
-                    var holdingFolder = Path.Combine(destGemeindeFolder, haltung);
+                    // Nicht im Kataster bekannte Haltungen in den Sammelordner "keine_Zuordnung"
+                    // umlenken (reguläre Ablage-Logik, nur eine Ebene tiefer).
+                    var destRoot = ResolveDistributionRoot(destGemeindeFolder, haltungId, cadastre);
+                    var holdingFolder = Path.Combine(destRoot, haltung);
                     Directory.CreateDirectory(holdingFolder);
 
                     var destPdfName = $"{dateStamp}_{haltung}_DP.pdf";

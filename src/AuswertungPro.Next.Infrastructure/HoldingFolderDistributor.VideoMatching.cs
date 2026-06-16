@@ -35,8 +35,7 @@ public static partial class HoldingFolderDistributor
         if (!Directory.Exists(root))
             return Array.Empty<string>();
 
-        var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        return Directory.EnumerateFiles(root, "*.*", searchOption)
+        return Common.SafeFileEnumeration.EnumerateFilesSafe(root, "*.*", recursive: recursive)
             .Where(MediaFileTypes.HasVideoExtension)
             .ToList();
     }

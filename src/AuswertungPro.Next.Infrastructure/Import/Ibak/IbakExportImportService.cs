@@ -672,7 +672,12 @@ public sealed class IbakExportImportService : IIbakImportService
 
     private static string? FindFdb(string root)
     {
-        var candidates = Directory.EnumerateFiles(root, "*.fdb", SearchOption.AllDirectories).ToList();
+        // Safe-Enumeration (gesperrte Unterordner ueberspringen) + deterministische Reihenfolge,
+        // damit der candidates[0]-Fallback unten nicht von der Dateisystem-Reihenfolge abhaengt.
+        var candidates = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
+            .EnumerateFilesSafe(root, "*.fdb", recursive: true)
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+            .ToList();
         if (candidates.Count == 0)
             return null;
         var preferred = candidates.FirstOrDefault(p => p.IndexOf(Path.DirectorySeparatorChar + "Data" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) >= 0);
@@ -753,7 +758,7 @@ public sealed class IbakExportImportService : IIbakImportService
     private static Dictionary<string, List<string>> BuildFileIndex(string root)
     {
         var dict = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var file in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+        foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(root, "*.*", recursive: true))
         {
             var ext = Path.GetExtension(file);
             if (!MediaExtensions.Contains(ext))
@@ -781,7 +786,9 @@ public sealed class IbakExportImportService : IIbakImportService
 
     private static string? FindDatenTxt(string root)
     {
-        var candidates = Directory.EnumerateFiles(root, "Daten.txt", SearchOption.AllDirectories)
+        var candidates = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
+            .EnumerateFilesSafe(root, "Daten.txt", recursive: true)
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         if (candidates.Count == 0)

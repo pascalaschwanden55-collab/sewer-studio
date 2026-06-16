@@ -10,349 +10,388 @@
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         </Style>
 
         <Style x:Key="MetricDetailText" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="10"/>
-            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
-            <Setter Property="Opacity" Value="0.78"/>
+            <Setter Property="FontSize" Value="9.5"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Opacity" Value="0.95"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        </Style>
+
+        <Style x:Key="MetricTinyText" TargetType="TextBlock" BasedOn="{StaticResource MetricDetailText}">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
         </Style>
 
         <Style x:Key="MetricPercentText" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Consolas"/>
-            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontSize" Value="19"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="TextAlignment" Value="Right"/>
+            <Setter Property="MinWidth" Value="44"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
+
+        <Style x:Key="MetricCard" TargetType="Border">
+            <Setter Property="Padding" Value="9,8"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <Style x:Key="MetricTrack" TargetType="Border">
+            <Setter Property="Height" Value="7"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Background" Value="{DynamicResource BorderLightBrush}"/>
+            <Setter Property="Margin" Value="0,7,0,6"/>
+            <Setter Property="ClipToBounds" Value="True"/>
         </Style>
     </UserControl.Resources>
 
     <Expander x:Name="PerformanceMonitorExpander"
               IsExpanded="True"
               Foreground="{DynamicResource TextBrush}"
-              Background="{DynamicResource BgLightBrush}"
-              BorderBrush="{DynamicResource BorderBrush}">
+              Background="Transparent"
+              BorderThickness="0">
         <Expander.Header>
-            <Grid MinWidth="170">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <StackPanel>
-                    <TextBlock Text="Systemleistung"
-                               FontSize="12"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextBrush}"/>
+            <Grid MinWidth="0" Margin="0,0,4,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Systemleistung"
+                           FontSize="12"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextBrush}"
+                           TextTrimming="CharacterEllipsis"/>
+                <StackPanel Grid.Row="1"
+                            Orientation="Horizontal"
+                            Margin="0,1,0,0">
+                    <Border CornerRadius="5"
+                            Padding="5,1"
+                            Background="{DynamicResource SuccessBrush}"
+                            BorderThickness="0"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="LIVE"
+                                   FontSize="8"
+                                   FontWeight="Bold"
+                                   Foreground="White"/>
+                    </Border>
                     <TextBlock Text="Live-Monitor"
                                FontSize="10"
                                Foreground="{DynamicResource MutedBrush}"
-                               Opacity="0.75"/>
-                </StackPanel>
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            VerticalAlignment="Center">
-                    <TextBlock Text="CPU "
-                               FontSize="10"
-                               FontFamily="Consolas"
-                               Foreground="{DynamicResource MutedBrush}"/>
-                    <TextBlock FontSize="10"
-                               FontFamily="Consolas"
-                               Foreground="{Binding CpuPercent, Converter={StaticResource PercentToColorConverter}}">
-                        <Run Text="{Binding CpuPercent, Mode=OneWay}"/><Run Text="%"/>
-                    </TextBlock>
+                               Margin="6,0,0,0"
+                               TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
             </Grid>
         </Expander.Header>
 
         <Border Margin="0,8,0,0"
-                Padding="10,10"
-                CornerRadius="8"
+                Padding="8"
+                CornerRadius="10"
                 BorderThickness="1"
                 BorderBrush="{DynamicResource BorderBrush}"
-                Background="{DynamicResource BgLightBrush}">
+                Background="{DynamicResource HeaderBrush}"
+                SnapsToDevicePixels="True">
+
             <StackPanel>
-                <Grid Margin="0,0,0,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="Sensorstatus"
-                               FontSize="10"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource AccentBrush}"/>
-                    <TextBlock Grid.Column="1"
-                               Text="{Binding CpuTempSourceLabel}"
-                               FontSize="10"
-                               Foreground="{DynamicResource MutedBrush}"
-                               TextTrimming="CharacterEllipsis"/>
-                </Grid>
-                <TextBlock Text="{Binding CpuTempStatusText}"
-                           FontSize="10"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           Margin="0,0,0,10"/>
-
-                <Grid Margin="0,0,0,8">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Row="0" Grid.Column="0">
-                        <TextBlock Text="CPU Auslastung" Style="{StaticResource MetricTitleText}"/>
-                        <TextBlock Text="{Binding CpuName, Mode=OneWay}"
-                                   Style="{StaticResource MetricDetailText}"
-                                   Margin="0,1,8,0"/>
-                    </StackPanel>
-                    <TextBlock Grid.Row="0"
-                               Grid.Column="1"
-                               Style="{StaticResource MetricPercentText}"
-                               Foreground="{Binding CpuPercent, Converter={StaticResource PercentToColorConverter}}">
-                        <Run Text="{Binding CpuPercent, Mode=OneWay}"/><Run Text="%"/>
-                    </TextBlock>
-
-                    <Border Grid.Row="1"
-                            Grid.ColumnSpan="2"
-                            Height="8"
-                            CornerRadius="4"
-                            Background="{DynamicResource SurfaceSubtleBrush}"
-                            Margin="0,7,0,6">
-                        <Border CornerRadius="4"
-                                HorizontalAlignment="Left"
-                                Background="{Binding CpuPercent, Converter={StaticResource PercentToColorConverter}}">
-                            <Border.Width>
-                                <MultiBinding Converter="{StaticResource PercentToWidthConverter}">
-                                    <Binding Path="CpuPercent"/>
-                                    <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Border, AncestorLevel=1}"/>
-                                </MultiBinding>
-                            </Border.Width>
-                        </Border>
-                    </Border>
-
-                    <Grid Grid.Row="2" Grid.ColumnSpan="2">
+                <Border CornerRadius="8"
+                        Padding="9,8"
+                        Margin="0,0,0,9"
+                        Background="{DynamicResource CardBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0"
-                                   Style="{StaticResource MetricDetailText}">
-                            <Run Text="Takt "/><Run Text="{Binding CpuClockMhz, Mode=OneWay, StringFormat=N0}"/><Run Text=" MHz"/>
-                        </TextBlock>
-                        <TextBlock Grid.Column="1"
-                                   HorizontalAlignment="Right">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource MetricDetailText}">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsCpuTempAvailable}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                            <Run Text="Temp "/><Run Text="{Binding CpuTempC, Mode=OneWay}"/><Run Text=" °C"/>
-                        </TextBlock>
-                        <TextBlock Grid.Column="1"
-                                   HorizontalAlignment="Right"
-                                   Text="Temp nicht verfügbar">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource MetricDetailText}">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsCpuTempAvailable}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
+
+                        <DockPanel LastChildFill="True">
+                            <Border Width="7"
+                                    Height="7"
+                                    CornerRadius="4"
+                                    Background="{DynamicResource SuccessBrush}"
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Center"/>
+                            <TextBlock Text="Sensorstatus"
+                                       FontSize="10"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </DockPanel>
+
+                        <TextBlock Grid.Row="1"
+                                   Margin="0,5,0,0"
+                                   Text="{Binding CpuTempStatusText}"
+                                   FontSize="9.5"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
                     </Grid>
-                </Grid>
+                </Border>
 
-                <Border Height="1" Background="{DynamicResource BorderBrush}" Opacity="0.35" Margin="0,2,0,10"/>
-
-                <Grid Margin="0,0,0,8">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Text="RAM Arbeitsspeicher" Style="{StaticResource MetricTitleText}"/>
-                    <TextBlock Grid.Column="1"
-                               Style="{StaticResource MetricPercentText}"
-                               Foreground="{Binding RamPercent, Converter={StaticResource PercentToColorConverter}}">
-                        <Run Text="{Binding RamPercent, Mode=OneWay}"/><Run Text="%"/>
-                    </TextBlock>
-
-                    <Border Grid.Row="1"
-                            Grid.ColumnSpan="2"
-                            Height="8"
-                            CornerRadius="4"
-                            Background="{DynamicResource SurfaceSubtleBrush}"
-                            Margin="0,7,0,6">
-                        <Border CornerRadius="4"
-                                HorizontalAlignment="Left"
-                                Background="{Binding RamPercent, Converter={StaticResource PercentToColorConverter}}">
-                            <Border.Width>
-                                <MultiBinding Converter="{StaticResource PercentToWidthConverter}">
-                                    <Binding Path="RamPercent"/>
-                                    <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Border, AncestorLevel=1}"/>
-                                </MultiBinding>
-                            </Border.Width>
-                        </Border>
-                    </Border>
-
-                    <Grid Grid.Row="2" Grid.ColumnSpan="2">
+                <Border Style="{StaticResource MetricCard}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Style="{StaticResource MetricDetailText}">
-                            <Run Text="{Binding RamUsedMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" / "/>
-                            <Run Text="{Binding RamTotalMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" MB"/>
-                        </TextBlock>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                            <TextBlock Text="CPU Auslastung" Style="{StaticResource MetricTitleText}"/>
+                            <TextBlock Text="{Binding CpuName, Mode=OneWay}"
+                                       Style="{StaticResource MetricDetailText}"
+                                       Margin="0,1,0,0"/>
+                        </StackPanel>
                         <TextBlock Grid.Column="1"
-                                   Style="{StaticResource MetricDetailText}">
-                            <Run Text="Takt "/><Run Text="{Binding RamClockMhz, Mode=OneWay, StringFormat=N0}"/><Run Text=" MHz"/>
+                                   Style="{StaticResource MetricPercentText}"
+                                   Foreground="{Binding CpuPercent, Converter={StaticResource PercentToColorConverter}}">
+                            <Run Text="{Binding CpuPercent, Mode=OneWay}"/><Run Text="%"/>
                         </TextBlock>
-                    </Grid>
-                </Grid>
 
-                <Border Height="1" Background="{DynamicResource BorderBrush}" Opacity="0.35" Margin="0,2,0,10"/>
-
-                <Grid Margin="0,0,0,8">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel>
-                        <TextBlock Text="GPU Grafikprozessor" Style="{StaticResource MetricTitleText}"/>
-                        <TextBlock Text="{Binding GpuName, Mode=OneWay}"
-                                   Margin="0,1,8,0">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource MetricDetailText}">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsGpuAvailable}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                        <TextBlock Text="GPU nicht erkannt">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource MetricDetailText}">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsGpuAvailable}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </StackPanel>
-                    <TextBlock Grid.Column="1"
-                               Style="{StaticResource MetricPercentText}"
-                               Foreground="{Binding GpuPercent, Converter={StaticResource PercentToColorConverter}}">
-                        <Run Text="{Binding GpuPercent, Mode=OneWay}"/><Run Text="%"/>
-                    </TextBlock>
-
-                    <Border Grid.Row="1"
-                            Grid.ColumnSpan="2"
-                            Height="8"
-                            CornerRadius="4"
-                            Background="{DynamicResource SurfaceSubtleBrush}"
-                            Margin="0,7,0,6">
-                        <Border CornerRadius="4"
-                                HorizontalAlignment="Left"
-                                Background="{Binding GpuPercent, Converter={StaticResource PercentToColorConverter}}">
-                            <Border.Width>
-                                <MultiBinding Converter="{StaticResource PercentToWidthConverter}">
-                                    <Binding Path="GpuPercent"/>
-                                    <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Border, AncestorLevel=1}"/>
-                                </MultiBinding>
-                            </Border.Width>
+                        <Border Grid.Row="1"
+                                Grid.ColumnSpan="2"
+                                Style="{StaticResource MetricTrack}">
+                            <Border CornerRadius="4"
+                                    HorizontalAlignment="Left"
+                                    Background="{Binding CpuPercent, Converter={StaticResource PercentToColorConverter}}">
+                                <Border.Width>
+                                    <MultiBinding Converter="{StaticResource PercentToWidthConverter}">
+                                        <Binding Path="CpuPercent"/>
+                                        <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Border, AncestorLevel=1}"/>
+                                    </MultiBinding>
+                                </Border.Width>
+                            </Border>
                         </Border>
-                    </Border>
 
-                    <Grid Grid.Row="2" Grid.ColumnSpan="2">
+                        <Grid Grid.Row="2" Grid.ColumnSpan="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Style="{StaticResource MetricTinyText}">
+                                <Run Text="Takt "/><Run Text="{Binding CpuClockMhz, Mode=OneWay, StringFormat=N0}"/><Run Text=" MHz"/>
+                            </TextBlock>
+                            <TextBlock Grid.Column="1"
+                                       HorizontalAlignment="Right">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource MetricTinyText}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsCpuTempAvailable}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                                <Run Text="Temp "/><Run Text="{Binding CpuTempC, Mode=OneWay}"/><Run Text=" C"/>
+                            </TextBlock>
+                            <TextBlock Grid.Column="1"
+                                       HorizontalAlignment="Right"
+                                       Text="Temp n/a">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource MetricTinyText}">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsCpuTempAvailable}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource MetricCard}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Style="{StaticResource MetricDetailText}">
-                            <Run Text="Takt "/><Run Text="{Binding GpuClockMhz, Mode=OneWay, StringFormat=N0}"/><Run Text=" MHz"/>
-                        </TextBlock>
+
+                        <TextBlock Text="RAM Arbeitsspeicher"
+                                   Style="{StaticResource MetricTitleText}"
+                                   Margin="0,0,8,0"/>
                         <TextBlock Grid.Column="1"
-                                   Style="{StaticResource MetricDetailText}">
-                            <Run Text="Temp "/><Run Text="{Binding GpuTempC, Mode=OneWay}"/><Run Text=" °C"/>
+                                   Style="{StaticResource MetricPercentText}"
+                                   Foreground="{Binding RamPercent, Converter={StaticResource PercentToColorConverter}}">
+                            <Run Text="{Binding RamPercent, Mode=OneWay}"/><Run Text="%"/>
+                        </TextBlock>
+
+                        <Border Grid.Row="1"
+                                Grid.ColumnSpan="2"
+                                Style="{StaticResource MetricTrack}">
+                            <Border CornerRadius="4"
+                                    HorizontalAlignment="Left"
+                                    Background="{Binding RamPercent, Converter={StaticResource PercentToColorConverter}}">
+                                <Border.Width>
+                                    <MultiBinding Converter="{StaticResource PercentToWidthConverter}">
+                                        <Binding Path="RamPercent"/>
+                                        <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Border, AncestorLevel=1}"/>
+                                    </MultiBinding>
+                                </Border.Width>
+                            </Border>
+                        </Border>
+
+                        <Grid Grid.Row="2" Grid.ColumnSpan="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource MetricTinyText}">
+                                <Run Text="{Binding RamUsedMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" / "/>
+                                <Run Text="{Binding RamTotalMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" MB"/>
+                            </TextBlock>
+                            <TextBlock Grid.Column="1"
+                                       Style="{StaticResource MetricTinyText}"
+                                       Margin="8,0,0,0">
+                                <Run Text="Takt "/><Run Text="{Binding RamClockMhz, Mode=OneWay, StringFormat=N0}"/><Run Text=" MHz"/>
+                            </TextBlock>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource MetricCard}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                            <TextBlock Text="GPU Grafikprozessor" Style="{StaticResource MetricTitleText}"/>
+                            <TextBlock Text="{Binding GpuName, Mode=OneWay}"
+                                       Margin="0,1,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource MetricDetailText}">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsGpuAvailable}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="GPU nicht erkannt">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource MetricDetailText}">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsGpuAvailable}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1"
+                                   Style="{StaticResource MetricPercentText}"
+                                   Foreground="{Binding GpuPercent, Converter={StaticResource PercentToColorConverter}}">
+                            <Run Text="{Binding GpuPercent, Mode=OneWay}"/><Run Text="%"/>
+                        </TextBlock>
+
+                        <Border Grid.Row="1"
+                                Grid.ColumnSpan="2"
+                                Style="{StaticResource MetricTrack}">
+                            <Border CornerRadius="4"
+                                    HorizontalAlignment="Left"
+                                    Background="{Binding GpuPercent, Converter={StaticResource PercentToColorConverter}}">
+                                <Border.Width>
+                                    <MultiBinding Converter="{StaticResource PercentToWidthConverter}">
+                                        <Binding Path="GpuPercent"/>
+                                        <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Border, AncestorLevel=1}"/>
+                                    </MultiBinding>
+                                </Border.Width>
+                            </Border>
+                        </Border>
+
+                        <Grid Grid.Row="2" Grid.ColumnSpan="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource MetricTinyText}">
+                                <Run Text="Takt "/><Run Text="{Binding GpuClockMhz, Mode=OneWay, StringFormat=N0}"/><Run Text=" MHz"/>
+                            </TextBlock>
+                            <TextBlock Grid.Column="1"
+                                       Style="{StaticResource MetricTinyText}">
+                                <Run Text="Temp "/><Run Text="{Binding GpuTempC, Mode=OneWay}"/><Run Text=" C"/>
+                            </TextBlock>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource MetricCard}" Margin="0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="VRAM Videospeicher"
+                                   Style="{StaticResource MetricTitleText}"
+                                   Margin="0,0,8,0"/>
+                        <TextBlock Grid.Column="1"
+                                   Style="{StaticResource MetricPercentText}"
+                                   Foreground="{Binding GpuMemPercent, Converter={StaticResource PercentToColorConverter}}">
+                            <Run Text="{Binding GpuMemPercent, Mode=OneWay}"/><Run Text="%"/>
+                        </TextBlock>
+
+                        <Border Grid.Row="1"
+                                Grid.ColumnSpan="2"
+                                Style="{StaticResource MetricTrack}">
+                            <Border CornerRadius="4"
+                                    HorizontalAlignment="Left"
+                                    Background="{Binding GpuMemPercent, Converter={StaticResource PercentToColorConverter}}">
+                                <Border.Width>
+                                    <MultiBinding Converter="{StaticResource PercentToWidthConverter}">
+                                        <Binding Path="GpuMemPercent"/>
+                                        <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Border, AncestorLevel=1}"/>
+                                    </MultiBinding>
+                                </Border.Width>
+                            </Border>
+                        </Border>
+
+                        <TextBlock Grid.Row="2"
+                                   Grid.ColumnSpan="2"
+                                   Style="{StaticResource MetricTinyText}">
+                            <Run Text="{Binding GpuMemUsedMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" / "/>
+                            <Run Text="{Binding GpuMemTotalMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" MB"/>
                         </TextBlock>
                     </Grid>
-                </Grid>
-
-                <Border Height="1" Background="{DynamicResource BorderBrush}" Opacity="0.35" Margin="0,2,0,10"/>
-
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Text="VRAM Videospeicher" Style="{StaticResource MetricTitleText}"/>
-                    <TextBlock Grid.Column="1"
-                               Style="{StaticResource MetricPercentText}"
-                               Foreground="{Binding GpuMemPercent, Converter={StaticResource PercentToColorConverter}}">
-                        <Run Text="{Binding GpuMemPercent, Mode=OneWay}"/><Run Text="%"/>
-                    </TextBlock>
-
-                    <Border Grid.Row="1"
-                            Grid.ColumnSpan="2"
-                            Height="8"
-                            CornerRadius="4"
-                            Background="{DynamicResource SurfaceSubtleBrush}"
-                            Margin="0,7,0,6">
-                        <Border CornerRadius="4"
-                                HorizontalAlignment="Left"
-                                Background="{Binding GpuMemPercent, Converter={StaticResource PercentToColorConverter}}">
-                            <Border.Width>
-                                <MultiBinding Converter="{StaticResource PercentToWidthConverter}">
-                                    <Binding Path="GpuMemPercent"/>
-                                    <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Border, AncestorLevel=1}"/>
-                                </MultiBinding>
-                            </Border.Width>
-                        </Border>
-                    </Border>
-
-                    <TextBlock Grid.Row="2"
-                               Grid.ColumnSpan="2"
-                               Style="{StaticResource MetricDetailText}">
-                        <Run Text="{Binding GpuMemUsedMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" / "/>
-                        <Run Text="{Binding GpuMemTotalMb, Mode=OneWay, StringFormat=N0}"/><Run Text=" MB"/>
-                    </TextBlock>
-                </Grid>
+                </Border>
             </StackPanel>
         </Border>
     </Expander>

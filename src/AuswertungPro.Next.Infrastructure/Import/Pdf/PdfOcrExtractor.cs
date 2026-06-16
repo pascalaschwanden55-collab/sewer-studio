@@ -161,7 +161,9 @@ internal static class PdfOcrExtractor
             var winget = Path.Combine(local, "Microsoft", "WinGet", "Packages");
             if (Directory.Exists(winget))
             {
-                return Directory.EnumerateFiles(winget, executableName, SearchOption.AllDirectories)
+                return AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
+                    .EnumerateFilesSafe(winget, executableName, recursive: true)
+                    .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                     .FirstOrDefault();
             }
         }

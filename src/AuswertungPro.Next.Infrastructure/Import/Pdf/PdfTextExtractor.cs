@@ -49,7 +49,9 @@ public static class PdfTextExtractor
             var winget = Path.Combine(local, "Microsoft", "WinGet", "Packages");
             if (Directory.Exists(winget))
             {
-                var match = Directory.EnumerateFiles(winget, "pdftotext.exe", SearchOption.AllDirectories)
+                var match = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
+                    .EnumerateFilesSafe(winget, "pdftotext.exe", recursive: true)
+                    .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                     .FirstOrDefault();
                 if (!string.IsNullOrWhiteSpace(match))
                     return match;

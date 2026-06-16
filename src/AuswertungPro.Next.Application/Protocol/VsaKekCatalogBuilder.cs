@@ -34,8 +34,38 @@ public static partial class VsaKekCatalogBuilder
         ("BAD", "Defektes Mauerwerk"),
         ("BAK", "Feststellung der Innenauskleidung"),
         ("BAL", "Schadhafte Reparatur"),
-        ("BAM", "Schadhafte Schweissnaht")
+        ("BAM", "Schadhafte Schweissnaht"),
+        // BCC (Bogen) hat in der ILI-Enum nur Untercodes (BCCYA/BCCYB/...),
+        // aber keinen nackten Hauptcode. Ohne diesen Eintrag liefert die
+        // Klartext-Aufloesung fuer "BCC" nichts -> die KI-Befundliste zeigt
+        // dann den rohen (englischen) Modelltext statt "Bogen".
+        ("BCC", "Bogen")
     ];
+
+    // Offizielle Klartext-Titel fuer Hauptcodes, die nur ueber die ICM-Mengenregeln
+    // entstehen (Untercodes in der ILI-Enum, aber der nackte Hauptcode selbst nicht).
+    // Ohne diese Tabelle wuerde AddRuleOnlyDefinitions den Code als Titel setzen
+    // (z.B. "BAB" statt "Riss"), was in der KI-Befundliste als "BAB BAB" erscheint.
+    private static readonly Dictionary<string, string> OfficialBaseCodeTitles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["BAB"] = "Riss",
+        ["BAC"] = "Leitungsbruch / Einsturz",
+        ["BAF"] = "Oberflächenschaden",
+        ["BAH"] = "Schadhafter Anschluss",
+        ["BAI"] = "Einragendes Dichtungsmaterial",
+        ["BAJ"] = "Verschobene Rohrverbindung",
+        ["BBA"] = "Wurzeln",
+        ["BBB"] = "Anhaftende Stoffe",
+        ["BBC"] = "Ablagerung",
+        ["BBF"] = "Infiltration",
+        ["BCA"] = "Seitlicher Anschluss",
+        ["BCB"] = "Punktuelle Reparatur",
+        ["BDB"] = "Allgemeine Anmerkung",
+        ["BDD"] = "Wasserspiegel",
+        ["DCA"] = "Anschluss (Schacht)",
+        ["DCG"] = "Zulauf / Ablauf (Schacht)",
+        ["DDB"] = "Allgemeine Anmerkung (Schacht)"
+    };
 
     public static CodeCatalogDocument Build(
         string iliText,
@@ -104,8 +134,14 @@ public static partial class VsaKekCatalogBuilder
             if (byCode.ContainsKey(rule.BaseCode))
                 continue;
 
+            // 1. Offizieller Klartext-Titel (z.B. BAB -> "Riss") falls bekannt,
+            // 2. BAG erbt den Titel von BAGA, 3. sonst Fallback auf den Code selbst.
             var title = rule.BaseCode;
-            if (string.Equals(rule.BaseCode, "BAG", StringComparison.OrdinalIgnoreCase)
+            if (OfficialBaseCodeTitles.TryGetValue(rule.BaseCode, out var officialTitle))
+            {
+                title = officialTitle;
+            }
+            else if (string.Equals(rule.BaseCode, "BAG", StringComparison.OrdinalIgnoreCase)
                 && byCode.TryGetValue("BAGA", out var baga)
                 && !string.IsNullOrWhiteSpace(baga.Title))
             {

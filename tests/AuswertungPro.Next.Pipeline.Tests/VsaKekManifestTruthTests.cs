@@ -61,6 +61,43 @@ public sealed class VsaKekManifestTruthTests
         AssertTitleContains(titles, "BBDZ", "Bodenmaterial dringt ein");
     }
 
+    // Robustheits-Riegel: JEDER Code, den die KI-Befundliste als nackten Code
+    // anzeigen kann, MUSS im Katalog einen deutschen Klartext haben (Titel != Code).
+    // Quelle des Code-Raums:
+    //  - Klassifikator-Klassen (vsa_cls_v5_nocrop): BAB BAF BAI BAJ BBA BBB BCD BCE BDA BDD
+    //  - VsaCodeResolver.InferCodeFromLabel: BCA BCC BAC BAA BBC BDDC (+ obige)
+    //  - PlayerImportFallbackCodePolicy.AllowedPrefixes: BCD BCE BCA BCC BBC BDDC BAA BAB BAC BAF BAH BAI BAJ BBA BBB
+    // Faellt einer dieser Codes auf "Titel == Code" zurueck, zeigt die UI den rohen
+    // (oft englischen) Modelltext statt deutschem Klartext -> dieser Test verhindert das.
+    [Theory]
+    [InlineData("BAA")]
+    [InlineData("BAB")]
+    [InlineData("BAC")]
+    [InlineData("BAF")]
+    [InlineData("BAH")]
+    [InlineData("BAI")]
+    [InlineData("BAJ")]
+    [InlineData("BBA")]
+    [InlineData("BBB")]
+    [InlineData("BBC")]
+    [InlineData("BCA")]
+    [InlineData("BCC")]
+    [InlineData("BCD")]
+    [InlineData("BCE")]
+    [InlineData("BDA")]
+    [InlineData("BDD")]
+    [InlineData("BDDC")]
+    public void Manifest_resolves_ki_and_import_code_space_to_german(string code)
+    {
+        var titles = LoadManifestTitles();
+
+        Assert.True(titles.TryGetValue(code, out var title),
+            $"Code {code} fehlt im Katalog – KI-Liste wuerde rohen Modelltext zeigen.");
+        Assert.False(string.IsNullOrWhiteSpace(title), $"Code {code} hat keinen Titel.");
+        Assert.False(string.Equals(title, code, StringComparison.OrdinalIgnoreCase),
+            $"Code {code} hat den Code als Titel ('{title}') statt deutschen Klartext.");
+    }
+
     [Theory]
     [InlineData("BAB", true, false, true)]
     [InlineData("BAC", true, false, true)]

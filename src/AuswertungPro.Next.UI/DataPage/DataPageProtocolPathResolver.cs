@@ -358,7 +358,9 @@ public static class DataPageProtocolPathResolver
     {
         try
         {
-            return Directory.EnumerateFiles(directory, pattern, searchOption).ToList();
+            return AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
+                .EnumerateFilesSafe(directory, pattern, recursive: searchOption == SearchOption.AllDirectories)
+                .ToList();
         }
         catch
         {
@@ -413,7 +415,9 @@ public static class DataPageProtocolPathResolver
         {
             try
             {
-                var found = Directory.GetFiles(haltungenDir, fileName, SearchOption.AllDirectories);
+                var found = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
+                    .EnumerateFilesSafe(haltungenDir, fileName, recursive: true)
+                    .OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
                 if (found.Length > 0)
                     return found[0];
             }
@@ -428,7 +432,9 @@ public static class DataPageProtocolPathResolver
                 continue;
             try
             {
-                var found = Directory.GetFiles(subDir, fileName, SearchOption.AllDirectories);
+                var found = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration
+                    .EnumerateFilesSafe(subDir, fileName, recursive: true)
+                    .OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
                 if (found.Length > 0)
                     return found[0];
             }

@@ -434,8 +434,8 @@ public sealed class FewShotExampleBuilder
 
     private static IEnumerable<string> EnumerateAllDirs(string root)
     {
-        yield return root;
-        foreach (var dir in Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories))
+        // Root + alle erreichbaren Unterordner (gesperrte werden uebersprungen statt zu werfen).
+        foreach (var dir in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateDirectoriesSafe(root))
             yield return dir;
     }
 }

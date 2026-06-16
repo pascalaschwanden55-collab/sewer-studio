@@ -81,6 +81,11 @@ public sealed class AppSettings
     // Projektpfad, ueberschreibbar; fehlt der Pfad/das Manifest, ist der Schutz leer (kein Blocken).
     public string EvalSetRoot { get; set; } = @"C:\KI_BRAIN\eval_set";
 
+    // Amtlicher Abwasserkataster (SIA405-XTF) fuer die Haltungs-Zuordnung bei der Verteilung.
+    // Schacht-Paar (auch vertauscht) wird hierueber der korrekten Haltung zugeordnet.
+    // Fehlt die Datei, laeuft die Verteilung wie bisher (kein Kataster-Abgleich).
+    public string AbwasserkatasterXtfPath { get; set; } = @"D:\QGIS_V4\Export_Sewer_Studio\Abwasserkataster_Uri_korrigiert.xtf";
+
     // VSA Zustandklassifizierung v2: Shadow-Vergleich gegen Legacy-Engine.
     // Null bedeutet Default an.
     public bool? VsaClassificationShadowEnabled { get; set; }
