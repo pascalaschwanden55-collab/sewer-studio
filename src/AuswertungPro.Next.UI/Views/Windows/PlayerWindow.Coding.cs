@@ -5636,8 +5636,10 @@ public partial class PlayerWindow
         {
             SuggestedCode = "BCD",
             Confidence = 1.0,
-            Reason = "Rohranfang (automatisch)",
-            Decision = CodingUserDecision.Accepted
+            Reason = "Rohranfang (Vorschlag - bitte bestätigen)",
+            // KI akzeptiert Rohranfang/Rohrende NICHT selbst (User-Regel 2026-06-18):
+            // bleibt offener Vorschlag, bis der Mensch ihn bestaetigt oder ablehnt.
+            Decision = CodingUserDecision.Ignored
         };
         // Event-Hook (OnSessionEventAdded) fuegt automatisch in _codingVm.Events ein.
         // KEIN explizites _codingVm.Events.Add() â€” sonst doppelt!
@@ -5748,8 +5750,12 @@ public partial class PlayerWindow
         {
             SuggestedCode = "BCE",
             Confidence = 1.0,
-            Reason = "Rohrende (automatisch)",
-            Decision = CodingUserDecision.Accepted
+            Reason = "Rohrende (Vorschlag - bitte bestätigen)",
+            // KI akzeptiert Rohranfang/Rohrende NICHT selbst (User-Regel 2026-06-18):
+            // bleibt offener Vorschlag, bis der Mensch ihn bestaetigt oder ablehnt.
+            // Verhindert auch, dass ein falsch erkanntes BCE (z.B. Bogen) automatisch
+            // akzeptiert das Protokoll abschliesst.
+            Decision = CodingUserDecision.Ignored
         };
         RefreshCodingEventsList();
     }
