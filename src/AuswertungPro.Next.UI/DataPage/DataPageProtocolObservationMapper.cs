@@ -83,8 +83,12 @@ public static class DataPageProtocolObservationMapper
 
             var meterStart = entry.MeterStart;
             var meterEnd = entry.MeterEnd;
-            var q1 = GetCodeMetaParameter(entry, "Quantifizierung1", "vsa.q1");
-            var q2 = GetCodeMetaParameter(entry, "Quantifizierung2", "vsa.q2");
+            // Q1/Q2 fuer die VSA-Zustandsbewertung: explizite Werte (Quantifizierung1/vsa.q1) haben
+            // Vorrang; sonst codeabhaengig die KI-Quantifizierung (vsa.querschnitt.prozent / vsa.hoehe.mm
+            // ...) gemaess QuantificationUnitPolicy. So fliesst die KI-Messung (Teil 10) in den EZ ein,
+            // statt dass die Bewertung auf den statischen Naeherungswert zurueckfaellt.
+            var q1 = AuswertungPro.Next.Application.Ai.QuantificationCodeMetaReader.ReadQ1(entry.CodeMeta?.Parameters, code);
+            var q2 = AuswertungPro.Next.Application.Ai.QuantificationCodeMetaReader.ReadQ2(entry.CodeMeta?.Parameters, code);
             var photo = entry.FotoPaths?.FirstOrDefault(p => !string.IsNullOrWhiteSpace(p));
 
             var template = existing.FirstOrDefault(f =>
