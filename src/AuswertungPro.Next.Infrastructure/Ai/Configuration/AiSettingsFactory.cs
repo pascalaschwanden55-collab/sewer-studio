@@ -47,7 +47,11 @@ public static class AiSettingsFactory
             ["BBA"] = 0.20,
             ["BBB"] = 0.25,
             ["BBC"] = 0.25,
-            ["BCA"] = 0.35,
+            // BCA von 0.35 auf 0.30 gesenkt (2026-06-18): Die 0.35 (eingefuehrt mit 0df63f16)
+            // verwarf Anschluss-Frames mit YOLO-Confidence 0.30-0.34 komplett -> IsRelevant=false
+            // -> DINO/SAM liefen gar nicht -> SAM bekam keine Box (Regression "frueher saubere
+            // Masken, jetzt nicht"). 0.30 = konsistent mit den anderen Struktur-Codes.
+            ["BCA"] = 0.30,
             ["BCC"] = 0.30,
             ["BCD"] = 0.30,
             ["BCE"] = 0.30
