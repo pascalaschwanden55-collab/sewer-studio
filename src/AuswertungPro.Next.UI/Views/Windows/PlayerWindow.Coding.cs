@@ -4510,9 +4510,32 @@ public partial class PlayerWindow
     /// Gemeinsam genutzt von Qwen- und Multi-Model-Pfad.
     /// Delegiert an QuantificationCodeMetaWriter (inkl. Herkunft + Status fuer den Gold-Fund).
     /// </summary>
-    private static void ApplyQuantificationToEntry(
+    private void ApplyQuantificationToEntry(
         ProtocolEntry entry, string code, MaskQuantificationService.QuantifiedMask quant)
-        => AuswertungPro.Next.Infrastructure.Ai.Pipeline.QuantificationCodeMetaWriter.Apply(entry, code, quant);
+    {
+        // Manifest entscheidet OB Q1/Q2/Uhrlage erlaubt sind (Single Source of Truth, ADR-006);
+        // der Writer/Gate entscheidet anhand der VSA-Einheiten, WELCHE SAM-Werte geschrieben werden.
+        var rule = BuildManifestQuantRule(code);
+        AuswertungPro.Next.Infrastructure.Ai.Pipeline.QuantificationCodeMetaWriter.Apply(entry, code, quant, rule);
+    }
+
+    /// <summary>
+    /// Liest aus dem VSA-Katalog (Manifest), OB ein Code Q1/Q2/Uhrlage vorsieht. Reine Weitergabe
+    /// der Manifest-Wahrheit an das QuantificationGate — keine VSA-Fachregel hier.
+    /// Ohne Katalog: permissiver Default (alles erlaubt), damit nichts verloren geht.
+    /// </summary>
+    private AuswertungPro.Next.Application.Ai.QuantificationGate.ManifestQuantRule BuildManifestQuantRule(string code)
+    {
+        var catalog = CodeSelectionCatalog;
+        if (catalog == null)
+            return new AuswertungPro.Next.Application.Ai.QuantificationGate.ManifestQuantRule(true, true, true);
+
+        var (q1, q2) = catalog.GetQuantRule(code, null);
+        var clock = catalog.GetClockRule(code);
+        bool allowClock = !string.Equals(clock?.Mode, "none", StringComparison.OrdinalIgnoreCase);
+        return new AuswertungPro.Next.Application.Ai.QuantificationGate.ManifestQuantRule(
+            HasQ1: q1 != null, HasQ2: q2 != null, AllowClock: allowClock);
+    }
 
     /// <summary>
     /// Schaetzt Severity (1-5) aus SAM-Quantifizierung.

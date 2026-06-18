@@ -231,7 +231,7 @@ korrekte Zweitwert-Belegung (`00` / Endwert / `12 12` / `00 00`), und Anfang/End
 
 ---
 
-## 10. Quantifizierung anhand des DN-Kreises — [OFFEN/teilweise]
+## 10. Quantifizierung anhand des DN-Kreises — [NEU 2026-06-16]
 
 **Kernregel:** Quantifizierung ist **codeabhaengig**. **Nicht jeder Schaden darf frei quantifiziert
 werden** — fordert die Richtlinie fuer einen Code **keine** Quantifizierung, darf **keine** eingetragen
@@ -265,9 +265,23 @@ Querschnitt keine Wurzel" war falsch/missverstaendlich.)
 > Hinweis: Dies sind die haeufigsten Gruppen. Massgeblich ist immer die Quantifizierungsangabe des
 > jeweiligen Codes in der VSA-Richtlinie; im Zweifel **keine** Quantifizierung statt einer falschen.
 
-**Ist-Stand:** `MaskQuantificationService` rechnet Hoehe/Breite/% grob aus Maske + Kalibrierung.
-**Offen:** codeabhaengige Auswahl der korrekten Quantifizierungsgroesse(n) je VSA-Gruppe, Unterdruecken
-der Quantifizierung bei Codes ohne Quantifizierung, Validierung gegen den DN-Kreis (mm/Pixel).
+**Umsetzung [NEU 2026-06-16]** — zweistufig, Manifest-treu:
+- **OB** Q1/Q2/Uhrlage erlaubt sind → aus dem Manifest (`IVsaCodeSelectionCatalog.GetQuantRule` /
+  `GetClockRule`). Single Source of Truth (ADR-006). Codes ohne Manifest-Q (z.B. BCC, BAA, BBF, BDF)
+  bekommen KEINE Quantifizierung — bewusst kein Erfinden.
+- **WELCHE** Einheit (mm/%/Grad) Q1/Q2 traegt → `QuantificationUnitPolicy` (Wissens-Tabelle aus
+  VSA-PDF), greift nur fuer Codes mit Manifest-Q.
+- `QuantificationGate.Decide(code, manifestRule, availableSamValues)` kombiniert beides + die
+  tatsaechlich vorhandenen SAM-Werte → entscheidet pro Feld, ob es geschrieben wird. Haarriss (BABAx)
+  bekommt nie eine Quantifizierung.
+- `QuantificationCodeMetaWriter.Apply(...)` wendet die Entscheidung an; PlayerWindow reicht die
+  Manifest-Regel aus dem Katalog durch (keine VSA-Fachregel in der UI).
+- 10 Tests (QuantificationGateTests). Adversarisch gegen Manifest geprueft (Workflow 2026-06-16).
+
+**Offen (Folge-Ausbau):** Validierung der mm/%-Berechnung gegen den DN-Kreis (Genauigkeit),
+Winkel/Laenge (BCC Grad, BAC Laenge) sind aus einer Einzelmaske nicht messbar — bleiben manuell.
+BCC/BAA: falls Auto-Quantifizierung gewuenscht, muss das Manifest erweitert werden (User-Entscheid
+2026-06-16: vorerst Manifest folgen = keine).
 
 ---
 
@@ -287,7 +301,7 @@ der Quantifizierung bei Codes ohne Quantifizierung, Validierung gegen den DN-Kre
 | 8    | Auto-Streckenschaden: Mapper | [NEU] StreckenschadenActionMapper (7 Tests) | Application/Ai/StreckenschadenActionMapper.cs |
 | 8    | Auto-Streckenschaden: UI-Anbindung (Tracker→Events, CloseAll bei BCE/BDC/Exit, Session-Reset) | [NEU] | PlayerWindow.Coding (ApplyStreckenschadenTracking/-Actions, CloseTrackedStreckenschaeden) |
 | 9    | Uhrlage + exakte Werte-Konvention (00 / 12 12 / 00 00) | [OFFEN/teilweise] | MaskQuantificationService, VsaCodeResolver |
-| 10   | Quantifizierung codeabhaengig per DN-Kreis; keine Quant. bei BBF/BBG/BDF | [OFFEN/teilweise] | MaskQuantificationService |
+| 10   | Quantifizierung codeabhaengig: Manifest entscheidet OB, Einheiten-Tabelle WELCHE | [NEU] QuantificationGate + QuantificationUnitPolicy (10 Tests) | Application/Ai + QuantificationCodeMetaWriter |
 
 **Tests:** Pipeline-Tests gruen (MetrierungProximityEvaluator, CodingDedupPolicy inkl.
 IsBoundaryEndCodePlausible); UI-Tests gruen (444). Vollbuild sauber.
