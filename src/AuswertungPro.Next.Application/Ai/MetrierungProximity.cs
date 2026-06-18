@@ -17,7 +17,8 @@ public sealed record MetrierungProximityInput(
     double X1, double Y1, double X2, double Y2,   // Befund-Box, normiert
     double VanishX, double VanishY,                // Fluchtpunkt (Rohrmitte), normiert
     double ImageAspect,                            // Bildbreite / Bildhoehe (>= 1 bei Querformat)
-    double PipeRadiusNorm);                        // Rohrradius normiert (NormalizedDiameter/2; Fallback 0.5)
+    double PipeRadiusNorm,                         // Rohrradius normiert (NormalizedDiameter/2; Fallback 0.5)
+    bool IsDirectionalEvent = false);              // Bogen (BCC): zentral/verschobener Fluchtpunkt, kein Wand-Punktschaden
 
 /// <summary>Ergebnis der Naehe-Pruefung mit Begruendung und Messwerten (fuer Tests/Diagnose).</summary>
 public sealed record MetrierungProximityResult(

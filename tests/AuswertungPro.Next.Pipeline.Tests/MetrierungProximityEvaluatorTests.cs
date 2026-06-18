@@ -59,6 +59,41 @@ public class MetrierungProximityEvaluatorTests
     }
 
     [Fact]
+    public void Bogen_BCC_seitlich_im_DN_Kreis_ist_Codierbar()
+    {
+        // Regression-Fix (f530a7d5 machte Boegen unsichtbar): Ein Bogen ist ein seitlich
+        // VERSCHOBENER Fluchtpunkt, kein Wand-Punktschaden. Gleiche Geometrie wie
+        // MittlereTiefe_..._ist_Voraus, aber mit IsDirectionalEvent=true -> Codierbar.
+        var bend = new MetrierungProximityInput(0.70, 0.48, 0.78, 0.52, 0.5, 0.5, 1.0, 0.5,
+            IsDirectionalEvent: true);
+        var r = MetrierungProximityEvaluator.Evaluate(bend, T);
+        Assert.Equal(MetrierungProximity.Codierbar, r.Decision);
+    }
+
+    [Fact]
+    public void Punktschaden_gleiche_Geometrie_bleibt_Voraus()
+    {
+        // Kontrast: identische Box OHNE Bogen-Flag -> verschaerftes Gate greift weiter (Voraus).
+        // Beweist: die Bogen-Ausnahme lockert das Gate NICHT fuer Punktschaeden.
+        var punkt = new MetrierungProximityInput(0.70, 0.48, 0.78, 0.52, 0.5, 0.5, 1.0, 0.5,
+            IsDirectionalEvent: false);
+        var r = MetrierungProximityEvaluator.Evaluate(punkt, T);
+        Assert.Equal(MetrierungProximity.Voraus, r.Decision);
+    }
+
+    [Fact]
+    public void Bogen_zentral_am_Fluchtpunkt_bleibt_Voraus()
+    {
+        // Ein Bogen DIREKT am Fluchtpunkt (kaum verschoben) ist noch zu weit voraus:
+        // distToVanish < RadialOutside -> auch mit Bogen-Flag Voraus. Kein Falsch-Codieren
+        // des Tunnels am Fluchtpunkt.
+        var bendCentral = new MetrierungProximityInput(0.46, 0.46, 0.54, 0.54, 0.5, 0.5, 1.0, 0.5,
+            IsDirectionalEvent: true);
+        var r = MetrierungProximityEvaluator.Evaluate(bendCentral, T);
+        Assert.Equal(MetrierungProximity.Voraus, r.Decision);
+    }
+
+    [Fact]
     public void Ueberschreitet_DN_Kreis_nach_aussen_ist_Codierbar()
     {
         // Befund reicht vom mittleren Bereich bis nahe an den Bildrand/die Rohrwand:

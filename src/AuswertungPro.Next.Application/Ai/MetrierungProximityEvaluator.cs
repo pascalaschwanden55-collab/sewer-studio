@@ -66,6 +66,15 @@ public static class MetrierungProximityEvaluator
         if (outerR >= 1.0 - t.WallTolerance)
             return Result(MetrierungProximity.Codierbar, "ueberschreitet DN-Kreis nach aussen (Nahbereich)");
 
+        // 2b) Richtungsgebundenes Ereignis (Bogen BCC): kein Wand-Punktschaden, sondern ein
+        //     seitlich VERSCHOBENER Fluchtpunkt. Solche Befunde liegen geometrisch im DN-Kreis
+        //     und wuerden von Regel 3 faelschlich als "Voraus" verworfen (Regression f530a7d5).
+        //     Fuer sie gilt weiter die Fluchtpunkt-Verschiebung als Naehe-Kriterium: ist das
+        //     Box-Zentrum deutlich aus der Mitte (distToVanish >= RadialOutside) -> Codierbar.
+        //     Das verschaerfte DN-Kreis-Gate bleibt fuer alle Punktschaeden unveraendert.
+        if (i.IsDirectionalEvent && distToVanish >= t.RadialOutside)
+            return Result(MetrierungProximity.Codierbar, "Bogen: verschobener Fluchtpunkt (Richtungsereignis)");
+
         // 3) Sonst: Befund liegt komplett im DN-Kreis (Richtung Fluchtpunkt) -> noch zu weit
         //    voraus. Wird gemerkt, aber nicht codiert (Distanz waere falsch).
         return Result(MetrierungProximity.Voraus, "innerhalb DN-Kreis, noch zu weit voraus (nur merken)");

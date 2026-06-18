@@ -50,7 +50,15 @@ public static class SegmentedFindingBuilder
                 x2 = mask.Bbox[2] / w; y2 = mask.Bbox[3] / h;
             }
 
-            var input = new MetrierungProximityInput(x1, y1, x2, y2, vanishX, vanishY, aspect, pipeR);
+            // Bogen (BCC) ist ein richtungsgebundenes Ereignis (verschobener Fluchtpunkt), kein
+            // Wand-Punktschaden -> bekommt im Naehe-Gate die Fluchtpunkt-Verschiebung als
+            // Naehe-Kriterium, sonst wuerde ein zentral liegender Bogen immer als "Voraus" verworfen.
+            var label = (dino?.Label ?? mask.Label ?? quant.Label ?? string.Empty).ToLowerInvariant();
+            bool isBend = label.Contains("bend") || label.Contains("bogen")
+                          || label.Contains("kruemm") || label.Contains("kurve");
+
+            var input = new MetrierungProximityInput(
+                x1, y1, x2, y2, vanishX, vanishY, aspect, pipeR, IsDirectionalEvent: isBend);
             var prox = MetrierungProximityEvaluator.Evaluate(input, thresholds);
 
             result.Add(new SegmentedFinding(dino, mask, quant, prox));
