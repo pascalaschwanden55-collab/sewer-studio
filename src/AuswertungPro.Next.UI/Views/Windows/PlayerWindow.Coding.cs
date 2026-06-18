@@ -70,6 +70,11 @@ public partial class PlayerWindow
     private string _codingAiModelName = string.Empty;
     private bool _codingAiPulseRunning;
 
+    // Automatische Streckenschaden-Verfolgung (Fachlogik liegt in Application:
+    // StreckenschadenTracker entscheidet Open/Extend/Close, StreckenschadenActionMapper
+    // uebersetzt in Anweisungen). Dieses Feld haelt nur den Zustand fuer die laufende Session.
+    private readonly AuswertungPro.Next.Application.Ai.StreckenschadenTracker _streckenTracker = new();
+
     // Live-KI Timer (automatische Analyse alle 5s)
     private DispatcherTimer? _codingLiveAiTimer;
     private DispatcherTimer? _codingLiveAiBlinkTimer;
@@ -221,6 +226,9 @@ public partial class PlayerWindow
         RunCodingDefectCount.Text = "0";
         _codingBaselineSignature = BuildCodingEventsSignature(_codingVm.Events);
 
+        // Streckenschaden-Tracker zuruecksetzen: keine offenen Strecken aus der Vorsession.
+        _streckenTracker.Reset();
+
         // UI einblenden
         CodingOverlayPopup.IsOpen = true;
         CodingOverlayCanvas.IsHitTestVisible = true;
@@ -315,6 +323,9 @@ public partial class PlayerWindow
         if (_codingVm != null && _codingVm.Events.Count > 0)
         {
             var endMeter = _codingLastOsdMeter ?? _codingVm.EndMeter;
+            // Auto-Tracker zuerst: schliesst alle vom Tracker gefuehrten offenen Strecken am Endmeter.
+            // Der nachfolgende Dialog ist nur noch Sicherheitsnetz fuer evtl. Reste.
+            CloseTrackedStreckenschaeden(endMeter);
             if (!CloseOpenStreckenschaeden(endMeter))
             {
                 // User hat "Abbrechen" geklickt â†’ Exit abbrechen, weiter codieren
@@ -3689,6 +3700,8 @@ public partial class PlayerWindow
         }
         else
         {
+            // VSA-Pflicht: bei Rohrende duerfen keine offenen Streckenschaeden zurueckbleiben.
+            CloseTrackedStreckenschaeden(meter);
             EnsureRohrendeExists(_codingVm.EndMeter, videoTime, _detectionPendingFrameBytes);
             ClearDetectionOverlays();
             Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
@@ -3913,6 +3926,140 @@ public partial class PlayerWindow
     }
 
     /// <summary>
+    /// Automatische Streckenschaden-Verfolgung (VSA 2.1.2). Laeuft bei JEDEM Analyse-Tick,
+    /// auch mit leerer Streckenschaden-Liste — sonst koennte der Tracker offene Strecken nie
+    /// automatisch schliessen. Die Fachregel liegt in Application (StreckenschadenTracker +
+    /// StreckenschadenActionMapper); hier wird nur gefiltert, aufgerufen und Events angelegt/geaendert.
+    ///
+    /// Streckenschaden-Befunde (Code mit IsStreckenschadenCode) werden NICHT als Punkt-Events
+    /// gefuehrt — die hier "verbrauchten" Segmente werden zurueckgegeben, damit der normale
+    /// Punkt-Loop sie ueberspringt (referenzgleich, exakt die Streckenschaden-Codes).
+    /// </summary>
+    private HashSet<SegmentedFinding> ApplyStreckenschadenTracking(
+        IReadOnlyList<SegmentedFinding> segmented, double meter, TimeSpan videoTime)
+    {
+        var consumed = new HashSet<SegmentedFinding>();
+        var codingSessionService = _codingSessionService;
+        var codingVm = _codingVm;
+        if (codingSessionService == null || codingVm == null)
+            return consumed;
+
+        // 1) Codierbare Streckenschaden-Befunde sammeln und Code aufloesen (gleicher Resolver wie Loop).
+        var observations = new List<AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation>();
+        foreach (var seg in segmented)
+        {
+            if (!seg.Proximity.IsCodierbar) continue;
+            var q = seg.Quant;
+            var pseudo = new LiveFrameFinding(
+                Label: q.Label,
+                Severity: EstimateSeverityFromQuantification(q),
+                PositionClock: NormalizeClockPosition(q.ClockPosition),
+                ExtentPercent: q.ExtentPercent,
+                VsaCodeHint: null);
+            var code = ResolveFindingCodeForCoding(pseudo, meter);
+            if (code == null) continue;
+            if (!VsaCodeResolver.IsStreckenschadenCode(code)) continue;
+
+            consumed.Add(seg);
+            var clock = ParseClockHour(q.ClockPosition);
+            observations.Add(new AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation(
+                MainCode: code, ClockHour: clock, Meter: meter));
+        }
+
+        // 2) Tracker fuettern (auch mit leerer Liste -> ermoeglicht Auto-Schliessen nach Toleranzdistanz).
+        var actions = _streckenTracker.Update(observations, meter);
+
+        // 3) Aktionen in konkrete Anweisungen uebersetzen und ausfuehren.
+        ApplyStreckenschadenActions(actions, videoTime);
+        return consumed;
+    }
+
+    /// <summary>
+    /// Fuehrt die vom Mapper bestimmten Anweisungen aus: offenen Streckenschaden-Eintrag anlegen
+    /// bzw. einen bestehenden schliessen (MeterEnd setzen). Keine Fachlogik hier.
+    /// </summary>
+    private void ApplyStreckenschadenActions(
+        IReadOnlyList<AuswertungPro.Next.Application.Ai.StreckenschadenTracker.SegmentAction> actions,
+        TimeSpan videoTime)
+    {
+        var codingSessionService = _codingSessionService;
+        var codingVm = _codingVm;
+        if (codingSessionService == null || codingVm == null || actions.Count == 0)
+            return;
+
+        // Aktuell offene Streckenschaden-Eintraege als Mapper-Sicht (Referenz = CodingEvent).
+        var openEntries = codingVm.Events
+            .Where(e => e.Entry.IsStreckenschaden && !e.Entry.MeterEnd.HasValue)
+            .Select(e => new AuswertungPro.Next.Application.Ai.StreckenschadenActionMapper.OpenEntry(
+                MainCode: e.Entry.Code, StartMeter: e.Entry.MeterStart ?? e.MeterAtCapture, Reference: e))
+            .ToList();
+
+        var instructions = AuswertungPro.Next.Application.Ai.StreckenschadenActionMapper.MapAll(actions, openEntries);
+        if (instructions.Count == 0) return;
+
+        bool anyChanged = false;
+        foreach (var instr in instructions)
+        {
+            switch (instr.Kind)
+            {
+                case AuswertungPro.Next.Application.Ai.StreckenschadenActionMapper.InstructionKind.CreateOpen:
+                {
+                    var label = LookupVsaLabel(instr.MainCode);
+                    var entry = new ProtocolEntry
+                    {
+                        Source = ProtocolEntrySource.Ai,
+                        Code = instr.MainCode,
+                        Beschreibung = label ?? instr.MainCode,
+                        MeterStart = instr.StartMeter,
+                        MeterEnd = null,                 // offen
+                        IsStreckenschaden = true,
+                        Zeit = videoTime
+                    };
+                    AttachAnalyzedFramePhoto(entry);
+                    var ev = codingSessionService.AddEvent(entry);
+                    ev.MeterAtCapture = instr.StartMeter;
+                    ev.AiContext = new CodingEventAiContext
+                    {
+                        SuggestedCode = instr.MainCode,
+                        Confidence = 0.0,
+                        Reason = "Streckenschaden-Anfang (automatisch) - noch offen",
+                        Decision = CodingUserDecision.Ignored
+                    };
+                    anyChanged = true;
+                    break;
+                }
+                case AuswertungPro.Next.Application.Ai.StreckenschadenActionMapper.InstructionKind.CloseExisting:
+                {
+                    if (instr.TargetReference is CodingEvent target)
+                    {
+                        target.Entry.MeterEnd = instr.EndMeter;
+                        target.Entry.IsStreckenschaden = true;
+                        codingSessionService.UpdateEvent(target.EventId, target.Entry, target.Overlay);
+                        anyChanged = true;
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (anyChanged)
+            RefreshCodingEventsList();
+    }
+
+    /// <summary>
+    /// Schliesst ALLE vom Tracker gefuehrten offenen Strecken am angegebenen Meter (Pflicht bei
+    /// Rohrende BCE / Abbruch BDC / Exit). Fuehrt die Close-Anweisungen aus; der bestehende
+    /// CloseOpenStreckenschaeden-Dialog bleibt nur als Sicherheitsnetz fuer Reste.
+    /// </summary>
+    private void CloseTrackedStreckenschaeden(double endMeter)
+    {
+        var actions = _streckenTracker.CloseAll(endMeter);
+        if (actions.Count == 0) return;
+        var videoTime = _player != null ? TimeSpan.FromMilliseconds(_player.Time) : TimeSpan.Zero;
+        ApplyStreckenschadenActions(actions, videoTime);
+    }
+
+    /// <summary>
     /// Erstellt CodingEvents aus Multi-Model Befunden (DINO-Detections + SAM-Quantifizierung).
     /// </summary>
     /// <summary>
@@ -3931,11 +4078,17 @@ public partial class PlayerWindow
         var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
         bool anyAdded = false;
 
+        // Streckenschaden-Befunde (laengs > 1 m) laufen NICHT als Punkt-Events, sondern ueber den
+        // automatischen Tracker. Laeuft bei jedem Tick (auch leer) -> ermoeglicht Auto-Schliessen.
+        // Die hier verbrauchten Segmente werden im Punkt-Loop uebersprungen (genau die Streckencodes).
+        var streckenConsumed = ApplyStreckenschadenTracking(segmented, meter, videoTime);
+
         // BCD wird NICHT mehr automatisch erzeugt â€” nur durch Eingabemarker oder Qwen-Erkennung.
         // EnsureRohranfangExists(meter, videoTime, ref anyAdded);
 
         foreach (var seg in segmented)
         {
+            if (streckenConsumed.Contains(seg)) continue; // als Streckenschaden behandelt
             var quant = seg.Quant;
             var dino = seg.Dino;
 

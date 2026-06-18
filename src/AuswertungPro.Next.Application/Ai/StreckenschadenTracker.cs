@@ -148,6 +148,10 @@ public sealed class StreckenschadenTracker
     /// <summary>Anzahl aktuell offener Strecken (fuer Diagnose/Tests).</summary>
     public int OpenCount => _open.Count;
 
+    /// <summary>Setzt den Tracker zurueck (beim Start einer neuen Codier-Session). Pflicht,
+    /// damit keine offenen Strecken aus der Vorsession ueberleben.</summary>
+    public void Reset() => _open.Clear();
+
     private static SegmentAction BuildCloseAction(OpenSegment seg, double endMeter)
         => new(
             SegmentActionType.Close, seg.MainCode, seg.ClockHour,
