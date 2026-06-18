@@ -1919,9 +1919,14 @@ public partial class PlayerWindow
 
     private string? AttachAnalyzedFramePhoto(ProtocolEntry entry)
     {
+        // Bevorzugt: Frame GEZIELT per ffmpeg an der exakten Analyse-Zeit aus der Videodatei
+        // extrahieren — unabhaengig davon, wo der Player gerade steht. Verhindert das Problem,
+        // dass das Auto-Foto eine andere Stelle zeigt (Video schon weitergelaufen).
+        var frameBytes = TryExtractAnalyzedFrameBytes() ?? _detectionPendingFrameBytes;
+
         var path = CodingAiFramePhotoService.AttachAnalyzedFramePhoto(
             entry,
-            _detectionPendingFrameBytes,
+            frameBytes,
             _videoPath);
         if (!string.IsNullOrWhiteSpace(path))
             return path;
@@ -1934,6 +1939,37 @@ public partial class PlayerWindow
         }
 
         return fallback;
+    }
+
+    /// <summary>
+    /// Extrahiert den Frame an der exakt analysierten Videozeit (_detectionPendingTimestampSec)
+    /// gezielt per ffmpeg aus der Videodatei. So zeigt das Auto-Foto immer die Befund-Position,
+    /// auch wenn der Player im Live-Modus inzwischen weitergelaufen ist. Null, wenn nicht moeglich
+    /// (kein Zeitstempel, kein Videopfad, kein ffmpeg) -> Aufrufer faellt auf den analysierten
+    /// Frame-Puffer zurueck.
+    /// </summary>
+    private byte[]? TryExtractAnalyzedFrameBytes()
+    {
+        var sec = _detectionPendingTimestampSec;
+        if (sec is null || sec.Value < 0 || string.IsNullOrWhiteSpace(_videoPath))
+            return null;
+
+        try
+        {
+            var ffmpeg = AuswertungPro.Next.Infrastructure.Ai.Shared.FfmpegLocator.ResolveFfmpeg();
+            if (string.IsNullOrWhiteSpace(ffmpeg))
+                return null;
+
+            // Synchron auf das Extraktions-Ergebnis warten (kurzer ffmpeg-Aufruf, eigener Prozess).
+            return AuswertungPro.Next.Infrastructure.Ai.VideoFrameExtractor.TryExtractFramePngAsync(
+                ffmpeg, _videoPath, TimeSpan.FromSeconds(sec.Value), CancellationToken.None)
+                .GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Foto] ffmpeg-Frame-Extraktion fehlgeschlagen: {ex.Message}");
+            return null;
+        }
     }
 
     private string? AttachBoundaryAnalyzedFramePhoto(ProtocolEntry entry, byte[]? analyzedFrameBytes)
