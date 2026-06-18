@@ -49,19 +49,25 @@ public static class MetrierungProximityEvaluator
         MetrierungProximityResult Result(MetrierungProximity d, string reason)
             => new(d, reason, fillRatio, distToVanish, outerR, wandnaehe, enthaeltCenter);
 
-        // 1) Tunnel-Fehlmaske: zentral am Fluchtpunkt, keine Wandnaehe -> Voraus.
-        if (enthaeltCenter && distToVanish < t.CenterNear && !wandnaehe)
-            return Result(MetrierungProximity.Voraus, "zentral am Fluchtpunkt ohne Wandnaehe");
+        // Fachregel des Inspekteurs (vom User bestaetigt 2026-06-16):
+        // Codieren erst, wenn das Ereignis zwischen DN-Kreis und Bildrand liegt — also
+        // den DN-Kreis (Rohrradius, outerR=1.0) nach AUSSEN ueberschreitet. Solange der
+        // Befund ganz INNERHALB des DN-Kreises liegt (Richtung Tunnel/Fluchtpunkt), ist er
+        // noch zu weit voraus: nur merken, nicht protokollieren. Erst der Nahbereich liefert
+        // die korrekte Distanz/Metrierung.
 
-        // 2) Querschnittsfuellend nah: gross UND Wandnaehe -> Codierbar.
+        // 1) Querschnittsfuellend nah: gross UND echte Wandnaehe -> Codierbar.
+        //    (grosse Muffe direkt vor der Kamera, fuellt den Querschnitt)
         if (fillRatio >= t.FillNear && wandnaehe)
             return Result(MetrierungProximity.Codierbar, "querschnittsfuellend mit Wandnaehe");
 
-        // 3) Wandschaden nah: deutlich ausserhalb des Fluchtpunktbereichs -> Codierbar.
-        if (distToVanish >= t.RadialOutside)
-            return Result(MetrierungProximity.Codierbar, "ausserhalb Fluchtpunktbereich (Wandnaehe)");
+        // 2) Befund ueberschreitet den DN-Kreis nach aussen (reicht in den Ring
+        //    DN-Kreis..Bildrand) -> nah genug, Codierbar. Das ist die zentrale Regel.
+        if (outerR >= 1.0 - t.WallTolerance)
+            return Result(MetrierungProximity.Codierbar, "ueberschreitet DN-Kreis nach aussen (Nahbereich)");
 
-        // 4) Konservativer Default.
-        return Result(MetrierungProximity.Voraus, "nicht eindeutig nah (konservativ)");
+        // 3) Sonst: Befund liegt komplett im DN-Kreis (Richtung Fluchtpunkt) -> noch zu weit
+        //    voraus. Wird gemerkt, aber nicht codiert (Distanz waere falsch).
+        return Result(MetrierungProximity.Voraus, "innerhalb DN-Kreis, noch zu weit voraus (nur merken)");
     }
 }

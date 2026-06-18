@@ -48,10 +48,23 @@ public class MetrierungProximityEvaluatorTests
     }
 
     [Fact]
-    public void ImageAspect_wird_in_radialer_Distanz_beruecksichtigt()
+    public void MittlereTiefe_seitlich_aber_im_DN_Kreis_ist_Voraus()
     {
+        // Fachregel (User 2026-06-16): Ein Befund bei halber Rohrtiefe, der seitlich
+        // versetzt ist aber NOCH GANZ IM DN-Kreis liegt (outerR < 1.0), ist zu weit voraus
+        // -> nur merken, nicht codieren. (Frueher faelschlich "Codierbar" ueber distToVanish.)
         var wide = new MetrierungProximityInput(0.70, 0.48, 0.78, 0.52, 0.5, 0.5, 1.78, 0.5);
         var r = MetrierungProximityEvaluator.Evaluate(wide, T);
+        Assert.Equal(MetrierungProximity.Voraus, r.Decision);
+    }
+
+    [Fact]
+    public void Ueberschreitet_DN_Kreis_nach_aussen_ist_Codierbar()
+    {
+        // Befund reicht vom mittleren Bereich bis nahe an den Bildrand/die Rohrwand:
+        // die aeussere Ecke ueberschreitet den DN-Kreis (outerR >= 1.0) -> Nahbereich,
+        // jetzt codieren (Distanz stimmt). Genau die Geometrie "zwischen DN-Kreis und Rand".
+        var r = MetrierungProximityEvaluator.Evaluate(Box(0.55, 0.45, 0.97, 0.55), T);
         Assert.Equal(MetrierungProximity.Codierbar, r.Decision);
     }
 

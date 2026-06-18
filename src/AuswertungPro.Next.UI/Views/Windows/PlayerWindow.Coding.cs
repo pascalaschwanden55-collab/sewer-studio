@@ -780,6 +780,13 @@ public partial class PlayerWindow
             }
 
             await InfraTraining.TrainingSamplesStore.MergeAndSaveAsync(new List<TrainingSample> { sample });
+
+            // Robustes Gehirn: bestaetigtes Gold SOFORT in die KnowledgeBase.db indexieren und den
+            // KbIndexState zurueckschreiben. Frueher endete dieser Pfad bei MergeAndSaveAsync —
+            // das Sample war als Gold gespeichert, aber NIE in der KB (KbIndexState blieb None).
+            // Nur Approved indexieren; abgelehnte/negative Samples bleiben aus der positiven KB raus.
+            if (sample.Status == TrainingSampleStatus.Approved && _codingSessionService is not null)
+                await _codingSessionService.IndexConfirmedSampleAsync(sample);
         }
         catch (Exception ex)
         {
@@ -816,13 +823,31 @@ public partial class PlayerWindow
             // Eval-Schutz (ESW-003): reservierte Eval-Haltungen/-Frames aussortieren.
             samples = samples.Where(s => !IsCodingSampleEvalProtected(s)).ToList();
             if (samples.Count > 0)
-                InfraTraining.TrainingSamplesStore.MergeAndSaveAsync(samples)
-                    .SafeFireAndForget("TrainingSave");
+                PersistAndIndexBatchAsync(samples).SafeFireAndForget("TrainingSave");
         }
         catch (Exception ex)
         {
             // Uebernahme darf nie blockiert werden, aber Fehler loggen
             System.Diagnostics.Debug.WriteLine($"[Training] Fehler: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Speichert eine ganze Charge bestaetigter Codier-Samples und indexiert die Approved-Samples
+    /// danach in die KnowledgeBase.db (gemeinsamer Pfad ueber CodingSessionService). Frueher endete
+    /// der Sammel-Uebernahmepfad bei MergeAndSaveAsync — die Befunde waren als Gold gespeichert, aber
+    /// nie in der KB (KbIndexState blieb None). Robustes Gehirn: Bestaetigtes Gold landet immer in der KB.
+    /// </summary>
+    private async System.Threading.Tasks.Task PersistAndIndexBatchAsync(List<TrainingSample> samples)
+    {
+        await InfraTraining.TrainingSamplesStore.MergeAndSaveAsync(samples);
+
+        if (_codingSessionService is null)
+            return;
+        foreach (var s in samples)
+        {
+            if (s.Status == TrainingSampleStatus.Approved)
+                await _codingSessionService.IndexConfirmedSampleAsync(s);
         }
     }
 
@@ -3730,13 +3755,16 @@ public partial class PlayerWindow
     }
 
     /// <summary>
-    /// Filtert alle SAM-Masken auf sichtbare Befunde. Auch "voraus"-Befunde bleiben
-    /// sichtbar, werden aber spaeter nicht als Ereignis codiert.
+    /// Filtert alle SAM-Masken auf sichtbare Befunde. "Voraus"-Befunde (noch im DN-Kreis,
+    /// zu weit voraus) werden NICHT gezeichnet — sie bleiben nur intern in 'segmented'
+    /// gemerkt (Status "voraus erkannt"), bis sie bei Annaeherung codierbar werden.
+    /// Fachregel User 2026-06-16: erst zwischen DN-Kreis und Bildrand zeigen/codieren.
     /// </summary>
     private static IReadOnlyList<SegmentedFinding> BuildVisibleMaskFindings(
         IReadOnlyList<SegmentedFinding> segmented)
     {
         return segmented
+            .Where(s => s.Proximity.IsCodierbar)
             .Where(s =>
             {
                 var candidate = new Ai.Pipeline.SamMaskRenderer.MaskRenderCandidate(
@@ -3773,8 +3801,8 @@ public partial class PlayerWindow
         // Alte Masken entfernen
         Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
 
-        // Gruene SAM-Masken fuer alle sichtbaren Befunde.
-        // Voraus-Befunde bekommen kein Mess-Label, aber die Maske bleibt sichtbar.
+        // Gruene SAM-Masken nur fuer codierbare (nahe) Befunde. Voraus-Befunde werden
+        // nicht gezeichnet (siehe BuildVisibleMaskFindings) — nur intern gemerkt.
         if (mmResult.SamResponse != null)
         {
             if (mmResult.SamResponse is { ImageWidth: > 0, ImageHeight: > 0 } srAsp)
@@ -3805,50 +3833,13 @@ public partial class PlayerWindow
             }
         }
 
-        // "Voraus"-Befunde gestrichelt markieren (noch nicht codierbar -> kein Meter/Event).
+        // "Voraus"-Befunde werden NICHT mehr gezeichnet (Fachregel User 2026-06-16:
+        // erst zwischen DN-Kreis und Bildrand zeigen/codieren). Sie bleiben nur intern
+        // in 'segmented' gemerkt; der Status meldet "Ereignis voraus erkannt".
         double iw = mmResult.SamResponse?.ImageWidth ?? 0;
         double ih = mmResult.SamResponse?.ImageHeight ?? 0;
         if (iw > 0 && ih > 0)
             _codingVideoAspect = iw / ih;
-        var vorausContent = GetCodingContentRect();
-        double cw = vorausContent.Width, ch = vorausContent.Height;
-        if (iw > 0 && ih > 0)
-        {
-            foreach (var s in segmented)
-            {
-                if (s.Proximity.IsCodierbar || s.Mask.Bbox.Count < 4) continue;
-                double left = vorausContent.X + s.Mask.Bbox[0] / iw * cw;
-                double top = vorausContent.Y + s.Mask.Bbox[1] / ih * ch;
-                var rect = new System.Windows.Shapes.Rectangle
-                {
-                    Width = Math.Max(1, (s.Mask.Bbox[2] - s.Mask.Bbox[0]) / iw * cw),
-                    Height = Math.Max(1, (s.Mask.Bbox[3] - s.Mask.Bbox[1]) / ih * ch),
-                    Stroke = new SolidColorBrush(Color.FromArgb(220, 0xF5, 0x9E, 0x0B)),
-                    StrokeThickness = 1.5,
-                    StrokeDashArray = new DoubleCollection { 4, 3 },
-                    Fill = Brushes.Transparent,
-                    Tag = Ai.Pipeline.SamMaskRenderer.MaskTag,
-                    IsHitTestVisible = false
-                };
-                Canvas.SetLeft(rect, left);
-                Canvas.SetTop(rect, top);
-                CodingOverlayCanvas.Children.Add(rect);
-
-                // Textlabel "voraus", damit der Befund klar als nicht-codierbar erkennbar ist.
-                var vorausLabel = new Border
-                {
-                    Background = new SolidColorBrush(Color.FromArgb(220, 0xF5, 0x9E, 0x0B)),
-                    CornerRadius = new CornerRadius(3),
-                    Padding = new Thickness(4, 1, 4, 1),
-                    Tag = Ai.Pipeline.SamMaskRenderer.MaskTag,
-                    IsHitTestVisible = false,
-                    Child = new TextBlock { Text = "voraus", FontSize = 10, Foreground = Brushes.White }
-                };
-                Canvas.SetLeft(vorausLabel, left);
-                Canvas.SetTop(vorausLabel, Math.Max(0, top - 16));
-                CodingOverlayCanvas.Children.Add(vorausLabel);
-            }
-        }
 
         // Kalibrierkreis anzeigen
         _showReferenceDn = true;
