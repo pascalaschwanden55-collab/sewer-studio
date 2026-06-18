@@ -142,6 +142,46 @@ public sealed class CodingDedupPolicyTests
         Assert.True(CodingDedupPolicy.IsBoundaryEndCodePlausible("BCE", currentMeter: null, endMeter: 45.0));
     }
 
+    [Fact]
+    public void IsBoundaryEndCodePlausible_BCE_weit_UEBER_dem_Ende_ist_unplausibel()
+    {
+        // Realfall: BCE-Meter 114.13 bei 15.82m-Haltung (kaputter OSD-Wert) -> verwerfen.
+        Assert.False(CodingDedupPolicy.IsBoundaryEndCodePlausible("BCE", currentMeter: 114.13, endMeter: 15.82));
+    }
+
+    [Fact]
+    public void IsBoundaryEndCodePlausible_BCE_knapp_ueber_Ende_innerhalb_Toleranz_ist_plausibel()
+    {
+        // 15.82 + 0.5 = 16.32 <= Ende+1.0 -> noch plausibel (Messunschaerfe am Ende).
+        Assert.True(CodingDedupPolicy.IsBoundaryEndCodePlausible("BCE", currentMeter: 16.32, endMeter: 15.82));
+    }
+
+    [Fact]
+    public void ResolvePlausibleEndMeter_korrigiert_kaputten_OSD_auf_Import()
+    {
+        // OSD 114.13 unplausibel -> Import-BCE 15.82 gewinnt.
+        Assert.Equal(15.82, CodingDedupPolicy.ResolvePlausibleEndMeter(114.13, importEndMeter: 15.82, vmEndMeter: 15.82));
+    }
+
+    [Fact]
+    public void ResolvePlausibleEndMeter_behaelt_plausiblen_OSD()
+    {
+        // OSD 15.70 plausibel nah am Ende -> beibehalten.
+        Assert.Equal(15.70, CodingDedupPolicy.ResolvePlausibleEndMeter(15.70, importEndMeter: 15.82, vmEndMeter: 15.82));
+    }
+
+    [Fact]
+    public void ResolvePlausibleEndMeter_ohne_verlaessliches_Ende_nimmt_OSD()
+    {
+        Assert.Equal(42.0, CodingDedupPolicy.ResolvePlausibleEndMeter(42.0, importEndMeter: null, vmEndMeter: 0));
+    }
+
+    [Fact]
+    public void ResolvePlausibleEndMeter_faellt_ohne_OSD_auf_verlaessliches_Ende()
+    {
+        Assert.Equal(15.82, CodingDedupPolicy.ResolvePlausibleEndMeter(null, importEndMeter: 15.82, vmEndMeter: 20.0));
+    }
+
     [Theory]
     [InlineData("BCD")]
     [InlineData("BAB")]

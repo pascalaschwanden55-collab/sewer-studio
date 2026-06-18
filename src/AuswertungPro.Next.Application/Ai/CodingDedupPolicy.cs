@@ -74,13 +74,18 @@ public static class CodingDedupPolicy
     /// <summary>Relative Naehe-Schwelle: erst ab diesem Anteil der Laenge gilt das Ende als nah.</summary>
     private const double EndMeterRelativeThreshold = 0.90;
 
+    /// <summary>Obere Toleranz (Meter), die ein BCE-Meter ueber dem bekannten Haltungsende liegen darf.</summary>
+    private const double EndMeterOvershootTolerance = 1.0;
+
     /// <summary>
-    /// Plausibilitaet eines automatischen Rohrende-Vorschlags (BCE): Der Klassifikator
-    /// haelt manchmal das dunkle Tunnelende am Fluchtpunkt faelschlich fuer das Rohrende,
-    /// obwohl die Kamera noch weit davon entfernt ist. Fachregel User 2026-06-16:
-    /// BCE nur akzeptieren, wenn die Kamera nahe am bekannten Haltungsende ist
-    /// (innerhalb <see cref="EndMeterAbsoluteTolerance"/> m ODER ab
-    /// <see cref="EndMeterRelativeThreshold"/> der Laenge).
+    /// Plausibilitaet eines automatischen Rohrende-Vorschlags (BCE). BEIDSEITIG:
+    /// - zu frueh: Der Klassifikator haelt manchmal das dunkle Tunnelende am Fluchtpunkt
+    ///   faelschlich fuer das Rohrende -> akzeptieren erst nahe am Haltungsende
+    ///   (innerhalb <see cref="EndMeterAbsoluteTolerance"/> m ODER ab
+    ///   <see cref="EndMeterRelativeThreshold"/> der Laenge).
+    /// - zu weit: Ein fehlerhaft gelesener OSD-Meter kann WEIT ueber dem Ende liegen
+    ///   (z.B. 114 m bei 15.82 m Haltung). Solche Werte sind ebenfalls unplausibel und werden
+    ///   verworfen (mehr als <see cref="EndMeterOvershootTolerance"/> m ueber dem Ende).
     ///
     /// Konservativ: Ist die Haltungslaenge (endMeter) oder die aktuelle Position unbekannt,
     /// gilt der Vorschlag als plausibel — sonst entstuende evtl. gar kein Rohrende.
@@ -97,11 +102,43 @@ public static class CodingDedupPolicy
         if (!currentMeter.HasValue)
             return true;
 
+        // Obere Schranke: nicht weit ueber das Ende hinaus (kaputter OSD-Meter).
+        if (currentMeter.Value > endMeter.Value + EndMeterOvershootTolerance)
+            return false;
+
         double nearAbsolute = endMeter.Value - EndMeterAbsoluteTolerance;
         double nearRelative = endMeter.Value * EndMeterRelativeThreshold;
         double threshold = Math.Min(nearAbsolute, nearRelative);
 
         return currentMeter.Value >= threshold;
+    }
+
+    /// <summary>
+    /// Liefert einen verlaesslichen Rohrende-Meter fuer das automatische BCE. Wenn der gelesene
+    /// OSD-Meter unplausibel weit ueber dem bekannten Haltungsende liegt (kaputte OSD-Lesung),
+    /// wird der verlaessliche Wert genommen: bevorzugt der Import-BCE-Meter, sonst das EndMeter.
+    /// Liegt der OSD-Meter plausibel im Bereich, wird er beibehalten.
+    /// Fachregel User 2026-06-16: BCE-Meter auf das Haltungsende korrigieren statt Falschwert.
+    /// </summary>
+    public static double ResolvePlausibleEndMeter(double? osdMeter, double? importEndMeter, double? vmEndMeter)
+    {
+        // Verlaessliches Ende: Import-BCE hat Vorrang, sonst VM-EndMeter.
+        double? reliable = (importEndMeter is > 0) ? importEndMeter
+                         : (vmEndMeter is > 0) ? vmEndMeter
+                         : null;
+
+        if (!osdMeter.HasValue)
+            return reliable ?? 0.0;
+
+        // Kein verlaessliches Ende bekannt -> OSD nehmen (nichts Besseres da).
+        if (reliable is null)
+            return osdMeter.Value;
+
+        // OSD unplausibel weit ueber dem Ende -> auf das verlaessliche Ende korrigieren.
+        if (osdMeter.Value > reliable.Value + EndMeterOvershootTolerance)
+            return reliable.Value;
+
+        return osdMeter.Value;
     }
 
     private static string? MainCode(string? code)

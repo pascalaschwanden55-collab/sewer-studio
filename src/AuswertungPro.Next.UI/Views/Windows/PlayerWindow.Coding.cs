@@ -5517,18 +5517,24 @@ public partial class PlayerWindow
             return;
         // Streckenschaeden werden bereits in ExitCodingMode geschlossen (vor diesem Aufruf)
 
-        // Rohrende: OSD-Meter bevorzugen, sonst aus Import, sonst EndMeter
-        double rohrEndMeter = _codingLastOsdMeter ?? meterEnd;
         var rohrEndTime = _player != null
             ? TimeSpan.FromMilliseconds(_player.Time)
             : videoTime;
 
-        // Aus Import-Referenz den BCE-Eintrag holen (falls vorhanden)
+        // Aus Import-Referenz den BCE-Eintrag holen (falls vorhanden) = verlaessliches Rohrende.
         var importBce = _codingImportEvents.FirstOrDefault(e =>
             string.Equals(e.Entry.Code, "BCE", StringComparison.OrdinalIgnoreCase));
-        if (importBce != null)
+
+        // Rohrende-Meter absichern: ein kaputter OSD-Meter (z.B. 114 m bei 15.82 m Haltung) wird
+        // auf das verlaessliche Ende (Import-BCE / EndMeter) korrigiert statt blind uebernommen.
+        double rohrEndMeter = CodingDedupPolicy.ResolvePlausibleEndMeter(
+            osdMeter: _codingLastOsdMeter ?? meterEnd,
+            importEndMeter: importBce?.MeterAtCapture,
+            vmEndMeter: _codingVm.EndMeter);
+        if (importBce != null
+            && Math.Abs(importBce.MeterAtCapture - rohrEndMeter) < 0.01)
         {
-            rohrEndMeter = importBce.MeterAtCapture;
+            // Ende stammt aus dem Import -> dessen Videozeit uebernehmen.
             rohrEndTime = importBce.VideoTimestamp;
         }
 
