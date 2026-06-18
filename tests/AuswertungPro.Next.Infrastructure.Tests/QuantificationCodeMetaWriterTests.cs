@@ -13,8 +13,11 @@ public sealed class QuantificationCodeMetaWriterTests
         => new("BCA", 0.9, height, width, extent, crossSection, null, clock, source);
 
     [Fact]
-    public void Apply_SchreibtWerteHerkunftUndVorschlag()
+    public void Apply_BCA_SchreibtNurHoeheBreiteUhrlage_KeineProzente()
     {
+        // Teil 10 (codeabhaengig): BCA (Anschluss) traegt laut VSA nur Hoehe + Breite (mm).
+        // Ausdehnung-%/Querschnitt-% sind fuer BCA NICHT vorgesehen -> duerfen nicht geschrieben werden,
+        // auch wenn SAM solche Werte liefert. Frueher schrieb der Writer generisch alles.
         var entry = new ProtocolEntry { Code = "BCA" };
         QuantificationCodeMetaWriter.Apply(entry, "BCA", Quant(CalibrationSource.Manual));
 
@@ -22,10 +25,40 @@ public sealed class QuantificationCodeMetaWriterTests
         Assert.Equal("3:00", p["vsa.uhr.von"]);
         Assert.Equal("45", p["vsa.hoehe.mm"]);
         Assert.Equal("12", p["vsa.breite.mm"]);
-        Assert.Equal("30", p["vsa.ausdehnung.prozent"]);
-        Assert.Equal("20", p["vsa.querschnitt.prozent"]);
+        Assert.False(p.ContainsKey("vsa.ausdehnung.prozent"));
+        Assert.False(p.ContainsKey("vsa.querschnitt.prozent"));
         Assert.Equal("manuell", p["vsa.kalibrierung.quelle"]);
         Assert.Equal("Vorschlag", p["vsa.quant.quelle"]);
+    }
+
+    [Fact]
+    public void Apply_Wurzeln_BBA_SchreibtNurQuerschnittProzent()
+    {
+        // BBA (Wurzeln): nur Querschnittsverminderung %. Hoehe/Breite mm + Ausdehnung% NICHT.
+        var entry = new ProtocolEntry { Code = "BBAC" };
+        QuantificationCodeMetaWriter.Apply(entry, "BBAC", Quant(CalibrationSource.Manual));
+
+        var p = entry.CodeMeta!.Parameters;
+        Assert.Equal("20", p["vsa.querschnitt.prozent"]);
+        Assert.False(p.ContainsKey("vsa.hoehe.mm"));
+        Assert.False(p.ContainsKey("vsa.breite.mm"));
+        Assert.False(p.ContainsKey("vsa.ausdehnung.prozent"));
+    }
+
+    [Fact]
+    public void Apply_ManifestRuleOhneQ_UnterdruecktAlleMasse()
+    {
+        // Explizite Manifest-Regel ohne Q (z.B. BBF Infiltration): keine mm/%-Werte, nur Uhrlage.
+        var entry = new ProtocolEntry { Code = "BBF" };
+        var noQ = new AuswertungPro.Next.Application.Ai.QuantificationGate.ManifestQuantRule(
+            HasQ1: false, HasQ2: false, AllowClock: true);
+        QuantificationCodeMetaWriter.Apply(entry, "BBF", Quant(CalibrationSource.Manual), noQ);
+
+        var p = entry.CodeMeta!.Parameters;
+        Assert.Equal("3:00", p["vsa.uhr.von"]);
+        Assert.False(p.ContainsKey("vsa.hoehe.mm"));
+        Assert.False(p.ContainsKey("vsa.breite.mm"));
+        Assert.False(p.ContainsKey("vsa.querschnitt.prozent"));
     }
 
     [Fact]
