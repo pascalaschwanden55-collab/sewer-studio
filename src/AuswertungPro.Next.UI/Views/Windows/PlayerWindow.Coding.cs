@@ -229,6 +229,17 @@ public partial class PlayerWindow
         // Streckenschaden-Tracker zuruecksetzen: keine offenen Strecken aus der Vorsession.
         _streckenTracker.Reset();
 
+        // Standard-Werkzeug: Rechteck-Markieren. So fuehrt JEDE im Codiermodus gezogene bbox
+        // automatisch zu SAM-Segmentierung + Codefenster (HandleMarkDrawingComplete), ohne dass
+        // erst ein "Markieren"-Werkzeug gewaehlt werden muss. Andere Werkzeuge (Bogen/Level/
+        // Kalibrieren) ueberschreiben das bewusst per Auswahl. Video wird NICHT zwangspausiert
+        // (anders als ActivateMarkTool) — der User faehrt und zieht bei Bedarf eine Box.
+        _markToolType = OverlayToolType.Rectangle;
+        TxtMarkToolName.Text = "Rechteck";
+        TxtActiveToolLabel.Text = "Rechteck";
+        if (_codingOverlayService != null)
+            _codingOverlayService.ActiveTool = OverlayToolType.Rectangle;
+
         // UI einblenden
         CodingOverlayPopup.IsOpen = true;
         CodingOverlayCanvas.IsHitTestVisible = true;
