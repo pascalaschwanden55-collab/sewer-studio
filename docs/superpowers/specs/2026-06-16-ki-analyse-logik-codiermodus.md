@@ -54,22 +54,36 @@ Eintritt: `RunCodingAnalysisAsync` (PlayerWindow.Coding.cs).
 
 ## 2. Steuercodes BCD / BCE / BDC — [IST + NEU]
 
-- BCD (Rohranfang), BCE (Rohrende), BDC (Abbruch) sind **Einmal-Codes pro Haltung**
-  (`CodingDedupPolicy.IsOneTimeCode`). Duplikate werden verworfen.
-- Sie sind **Pflicht** und vom normalen Naehe-Gate (Abschnitt 3) ausgenommen — ein Rohrende darf
-  nicht "weggemerkt" werden.
-- **Distanz-Bezugspunkt** (VSA 2.1.1): Der Rohranfang (BCD) = 0.00 m ist der Nullpunkt der
-  Distanzmessung. Alle Meterstaende beziehen sich darauf.
+### VSA-Bedeutung (PDF, unveraenderlich)
+- **BCD = Rohranfang**, **BCE = Rohrende**, **BDC = Abbruch der Inspektion**. Mehr bedeuten diese
+  Codes nicht. Sie sind **Einmal-Codes pro Haltung** (`CodingDedupPolicy.IsOneTimeCode`); Duplikate
+  werden verworfen.
+- Sie sind **Pflicht** und vom Naehe-Gate (Abschnitt 3) ausgenommen — ein Rohrende darf nicht
+  "weggemerkt" werden.
+- **Distanz-Bezugspunkt** (VSA 2.1.1): Der **Rohranfang ist der Nullpunkt** der Distanzmessung.
+- **BCDXP / BCEXP (Distanzmessung Anfang/Ende):** Wenn der Bezugspunkt der Laengsmessung **nicht**
+  dem Rohranfang bzw. das Inspektionsende **nicht** dem Rohrende entspricht (z.B. Messung beginnt im
+  Schacht vor dem Rohr), ist zusaetzlich `BCDXP` bzw. `BCEXP` zu setzen. → [OFFEN] noch nicht
+  automatisiert; aktuell Annahme "Nullpunkt = Rohranfang".
+- **BDC Abbruch:** Wird der Abbruch durch ein **Hindernis oder einen Schaden** verursacht, muss
+  dieser Grund **vorher separat codiert** werden (z.B. erst `BBCC` Harte Ablagerung, dann `BDC..`).
+  → [OFFEN] noch nicht erzwungen.
 
-### BCE-Plausibilitaet — [NEU 2026-06-16]
-Der Klassifikator haelt das dunkle Tunnelende am Fluchtpunkt manchmal faelschlich fuer das Rohrende.
-- BCE wird **nur akzeptiert, wenn die Kamera nahe am bekannten Haltungsende** (`EndMeter`) ist:
-  **innerhalb der letzten 0.20 m ODER ab 90 % der Laenge** (es gilt die jeweils frueher erreichte Schwelle).
+### BCE-Plausibilitaet — [NEU 2026-06-16] — KEINE VSA-Regel, sondern unsere Plausibilitaetspruefung
+> Klarstellung: Die VSA-PDF kennt keine "20 cm / 90 %"-Regel. BCE heisst dort nur "Rohrende".
+> Das Folgende ist eine **technische Plausibilitaetspruefung der KI**, damit der Klassifikator das
+> dunkle Tunnelende am Fluchtpunkt nicht faelschlich als Rohrende setzt (was sonst alle weitere
+> Protokollierung stoppt).
+
+Regel: **BCE nur akzeptieren, wenn ein tatsaechliches Rohrende plausibel erkannt wurde UND die
+Positionsregel erfuellt ist.** Positionsregel: Kamera **innerhalb der letzten 0.20 m ODER ab 90 %
+der bekannten Haltungslaenge** (`EndMeter`); es gilt die frueher erreichte Schwelle.
 - Ist `EndMeter` unbekannt (kein Import/Stammdaten) → BCE wie bisher akzeptieren (sonst entstuende
   evtl. gar kein Rohrende).
 - Kommt BCE zu frueh → **verworfen**, Status "Mögliches Rohrende voraus - noch nicht am Ende",
-  und es wird **normal weiteranalysiert** (kein Stopp).
+  normal weiteranalysieren (kein Stopp).
 - Logik: `CodingDedupPolicy.IsBoundaryEndCodePlausible(code, currentMeter, endMeter)`.
+- (Die frueher in der TXT genannte "~2 m"-Toleranz ist **ungueltig** — verbindlich ist 0.20 m / 90 %.)
 
 ---
 
@@ -112,7 +126,19 @@ Ziel: nicht ueberladen. Pro Frame werden gezeichnet:
 
 ---
 
-## 5. (zusammengefuehrt mit Abschnitt 2 — BCE-Plausibilitaet)
+## 5. Feststellung an einer Rohrverbindung (Kennung "A") — [OFFEN]
+
+**VSA-Anwendungsregel (2.1.7):** Tritt eine Feststellung **an einer Rohrverbindung** auf (zwischen
+zwei angrenzenden Rohren oder zwischen Rohr und Schacht), muss dies mit der Kennung **"A"** markiert
+werden. Im VSA-DSS-Datenmodell ist das das Attribut `Verbindung = ja` der Klasse Kanalschaden
+(entspricht SN EN 13508 "A").
+
+**Soll-Verhalten:** Liegt ein Befund erkennbar auf einer Muffe/Rohrverbindung (z.B. versetzte
+Verbindung BAJ, einragendes Dichtungsmaterial BAI, Riss an der Muffe), setzt die KI das
+Verbindungs-Kennzeichen.
+
+**Ist-Stand:** `ProtocolEntry` hat aktuell **kein** Verbindungs-Feld (nur `IsStreckenschaden`).
+→ [OFFEN] Feld ergaenzen + automatische Erkennung (Befund-Naehe zu einer Muffe).
 
 ---
 
@@ -171,43 +197,64 @@ entscheidet. Aufruf duenn aus dem Codierpfad. Kein Frame-Tracking noetig (Dedup 
 
 ## 9. Lage am Umfang (Uhrlage) — [OFFEN/teilweise]
 
-**VSA-Anwendungsregel (2.1.6):** Lage am Umfang als Zifferblattreferenz im Uhrzeigersinn, aus
-Kamerasicht in Inspektionsrichtung. 12:00 = Scheitel, 6:00 = Sohle, 3:00 = rechts, 9:00 = links.
-Punktschaden: ein Wert (Mitte der Feststellung), zweiter Wert 00. Gesamtumfang: 12 12. Keine Angabe: 00 00.
+**VSA-Anwendungsregel (2.1.6):** Zifferblattreferenz im Uhrzeigersinn, aus Kamerasicht in
+Inspektionsrichtung. 12:00 = Scheitel (oben), 6:00 = Sohle (unten), 3:00 = rechts, 9:00 = links.
 
-**Soll-Verhalten:** Wenn der Code eine Lage verlangt, gibt die KI die Uhrlage an, abgeleitet aus der
-Maskenposition relativ zum Fluchtpunkt. Beispiel: Anschluss bei 3 Uhr = Anschluss rechts in Axialrichtung.
-Bei versetzten Rohrverbindungen (BAJ) bezeichnet die Uhrlage die **Richtung des Versatzes** in
-Inspektionsrichtung.
+**Exakte Werte-Konvention (verbindlich):**
+- **Punktbefund:** ein Wert (Mitte der Feststellung), zweiter Wert = **`00`**. Beispiel: Anschluss
+  mittig rechts → `03 00`.
+- **Bereich am Umfang:** Anfangs- und Endwert nacheinander im Uhrzeigersinn (z.B. `09 03`).
+- **Gesamtumfang** (Feststellung laeuft rundum): **`12 12`**.
+- **Unbekannt / keine Lage angebbar:** **`00 00`** (so wird auch transferiert).
+
+**Soll-Verhalten:** Verlangt der Code eine Lage, leitet die KI die Uhrlage aus dem Winkel
+Maskenschwerpunkt→Fluchtpunkt ab. Beispiel: Anschluss bei `03 00` = Anschluss rechts in Axialrichtung
+ins Rohr. Bei versetzten Rohrverbindungen (BAJ) bezeichnet die Uhrlage die **Richtung des Versatzes**
+in Inspektionsrichtung.
 
 **Ist-Stand:** `MaskQuantificationService` liefert `ClockPosition`; `VsaCodeResolver.NormalizeClock`
-normalisiert. Ablage in CodeMeta `vsa.uhr.von`. **Offen:** Konsistente, gepruefte Ableitung der
-Uhrlage aus der Maskengeometrie (Winkel Maskenschwerpunkt→Fluchtpunkt → Zifferblatt) und Anfang/Ende
-bei Streckenschaeden.
+normalisiert. Ablage in CodeMeta `vsa.uhr.von`. **Offen:** gepruefte Ableitung aus der Maskengeometrie,
+korrekte Zweitwert-Belegung (`00` / Endwert / `12 12` / `00 00`), und Anfang/Ende bei Streckenschaeden.
 
 ---
 
 ## 10. Quantifizierung anhand des DN-Kreises — [OFFEN/teilweise]
 
-**Prinzip:** Der DN-Kreis ist die bekannte Referenzgroesse (kalibrierter Durchmesser in mm). Daraus
-wird die Groesse eines Ereignisses berechnet (mm pro Pixel aus DN-Kreis-Durchmesser).
+**Kernregel:** Quantifizierung ist **codeabhaengig**. **Nicht jeder Schaden darf frei quantifiziert
+werden** — fordert die Richtlinie fuer einen Code **keine** Quantifizierung, darf **keine** eingetragen
+werden. Die KI waehlt die Groesse(n) anhand der Code-Gruppe, nicht generisch.
 
-**VSA-Anwendungsregeln (welche Groesse je Code-Gruppe):**
-- **Anschluss (BCA):** Q1 = Hoehe der Anschlussleitung in mm, Q2 = Breite in mm (falls abweichend).
-  Beispiel: "Anschluss 120 mm".
-- **Riss (BAB):** Q1 = Breite des Risses in mm (Haarriss = keine Quantifizierung).
-- **Wurzeln (BBA) / Anhaftende Stoffe (BBB) / Eindringen (BBD):** Q1 = Querschnittsverminderung in %.
-  Beispiel: 100 % = ganzer Querschnitt zu, 0 % = frei. Entsprechend einschaetzen.
-- **Ablagerung (BBC):** Q1 = Hoehe der Ablagerung in % der lichten Hoehe.
-- **Verformung (BAA):** Q1 = prozentuale Reduzierung gegenueber der Ursprungsform.
-- **Bogen (BCC):** Q1 = Richtungsaenderung in Altgrad.
-- **Verschobene Rohrverbindung (BAJ):** Abstand/Versatz in mm bzw. Winkel in Grad.
-- **Wasserspiegel (BDD):** % der lichten Hoehe.
-- Wo die Richtlinie keine Quantifizierung verlangt, darf **keine** eingetragen werden.
+**Prinzip der Messung:** Der DN-Kreis ist die bekannte Referenzgroesse (kalibrierter Durchmesser in
+mm). Daraus ergibt sich mm pro Pixel; absolute Masse (mm) und Prozente werden darauf bezogen berechnet.
 
-**Ist-Stand:** `MaskQuantificationService` rechnet Hoehe/Breite/% grob aus der Maske + Kalibrierung.
-**Offen:** Saubere, codeabhaengige Auswahl der korrekten Quantifizierungsgroesse(n) je VSA-Gruppe
-und Validierung gegen den DN-Kreis (mm/Pixel), inkl. %-Querschnitt fuer Wurzeln/Ablagerung.
+**%-Konvention (Klarstellung):** **100 % Querschnittsverminderung = vollstaendig zugesetzt/blockiert.
+0 % = keine Verminderung (frei).** (Der frueher in der TXT stehende Satz "Wurzeln 100 % ganzer
+Querschnitt keine Wurzel" war falsch/missverstaendlich.)
+
+**Quantifizierung je Code-Gruppe (aus VSA-PDF):**
+
+| Code-Gruppe | Quantifizierung |
+|-------------|-----------------|
+| BCA Seitlicher Anschluss | Q1 = Hoehe in mm; Q2 = Breite in mm (falls abweichend). Bsp. "Anschluss 120 mm" |
+| BAB Risse | Q1 = Rissbreite in mm (Haarriss Char.1 "A" = **keine** Quantifizierung) |
+| BAC Leitungsbruch/Einsturz | Q1 = Bruchlaenge in mm |
+| BAA Verformung | Q1 = % Reduzierung gegenueber Ursprungsform |
+| BBA Wurzeln | Q1 = Querschnittsverminderung in % |
+| BBB Anhaftende Stoffe | Q1 = Querschnittsverminderung in % |
+| BBC Ablagerungen | Q1 = Ablagerungshoehe in % der Rohrhoehe |
+| BBD Eindringen Bodenmaterial | Q1 = Querschnittsverminderung in % |
+| BBE Andere Hindernisse | Q1 = Querschnittsverminderung in % |
+| BCC Bogen | Q1 = Richtungsaenderung in Grad |
+| BAJ Verschobene Rohrverbindung | Abstand/Versatz in mm bzw. Knick-Winkel in Grad |
+| BDD Wasserspiegel | Wasserhoehe in % der lichten Hoehe |
+| **BBF Infiltration, BBG Exfiltration, BDF gefaehrliche Atmosphaere** | **KEINE Quantifizierung** |
+
+> Hinweis: Dies sind die haeufigsten Gruppen. Massgeblich ist immer die Quantifizierungsangabe des
+> jeweiligen Codes in der VSA-Richtlinie; im Zweifel **keine** Quantifizierung statt einer falschen.
+
+**Ist-Stand:** `MaskQuantificationService` rechnet Hoehe/Breite/% grob aus Maske + Kalibrierung.
+**Offen:** codeabhaengige Auswahl der korrekten Quantifizierungsgroesse(n) je VSA-Gruppe, Unterdruecken
+der Quantifizierung bei Codes ohne Quantifizierung, Validierung gegen den DN-Kreis (mm/Pixel).
 
 ---
 
@@ -215,14 +262,17 @@ und Validierung gegen den DN-Kreis (mm/Pixel), inkl. %-Querschnitt fuer Wurzeln/
 
 | Teil | Thema | Status | Ort |
 |------|-------|--------|-----|
-| 1-2  | Pipeline-Reihenfolge, Einmal-Codes | [IST] | RunCodingAnalysisAsync, CodingDedupPolicy |
-| 3    | Naehe-Gate (DN-Kreis) verschaerft | [NEU] commit f530a7d5 + 01154308 | MetrierungProximityEvaluator, PlayerWindow.Coding |
+| 1    | Pipeline-Reihenfolge | [IST] | RunCodingAnalysisAsync |
+| 2    | Einmal-Codes BCD/BCE/BDC; BCE-Plausibilitaet (0.20 m / 90 %) | [IST] + [NEU] commit 4e010579 | CodingDedupPolicy |
+| 2    | BCDXP/BCEXP (abweichender Bezugspunkt) | [OFFEN] | — |
+| 2    | BDC: Abbruchgrund vorher separat codieren | [OFFEN] | — |
+| 3    | Naehe-Gate (DN-Kreis) verschaerft | [NEU] commit f530a7d5 + 01154308 | MetrierungProximityEvaluator |
 | 4    | Overlay aufgeraeumt (Eck-Marker, Voraus unsichtbar) | [NEU] commit ea422be7 + f530a7d5 | PlayerWindow.LiveDetection/.Coding |
-| 5/2  | BCE-Plausibilitaet (letzte 0.20 m / 90 %) | [NEU] noch nicht committet | CodingDedupPolicy.IsBoundaryEndCodePlausible |
+| 5    | Verbindungs-Kennung "A" (Befund an Rohrverbindung) | [OFFEN] | Feld in ProtocolEntry fehlt noch (VSA-DSS: Kanalschaden.Verbindung) |
 | 6-7  | Dedup, QualityGate, menschliche Bestaetigung | [IST] | QualityGateService, AiContext |
 | 8    | Auto-Streckenschaden (A/B/C, Schliessen bei BCE/BDC) | [OFFEN] | geplant: StreckenschadenTracker |
-| 9    | Uhrlage aus Maskengeometrie | [OFFEN/teilweise] | MaskQuantificationService, VsaCodeResolver |
-| 10   | Quantifizierung per DN-Kreis je Code-Gruppe | [OFFEN/teilweise] | MaskQuantificationService |
+| 9    | Uhrlage + exakte Werte-Konvention (00 / 12 12 / 00 00) | [OFFEN/teilweise] | MaskQuantificationService, VsaCodeResolver |
+| 10   | Quantifizierung codeabhaengig per DN-Kreis; keine Quant. bei BBF/BBG/BDF | [OFFEN/teilweise] | MaskQuantificationService |
 
 **Tests:** Pipeline-Tests gruen (MetrierungProximityEvaluator, CodingDedupPolicy inkl.
 IsBoundaryEndCodePlausible); UI-Tests gruen (444). Vollbuild sauber.
