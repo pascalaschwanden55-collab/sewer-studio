@@ -3846,6 +3846,37 @@ public partial class PlayerWindow
         RenderReferenceDn();
     }
 
+    /// <summary>
+    /// Naehe-Gate fuer den Qwen/Enhanced-Pfad: prueft per Bbox + Kalibrierung, ob ein
+    /// KI-Befund noch zu weit voraus ist (ganz im DN-Kreis). Fachregel User 2026-06-16:
+    /// erst codieren wenn das Ereignis ueber den DN-Kreis nach aussen reicht.
+    /// Ohne verwertbare Bbox kann die Distanz nicht geometrisch geprueft werden ->
+    /// konservativ false (nicht blockieren), damit reine Textbefunde nicht verschwinden.
+    /// </summary>
+    private bool IsFindingTooFarAhead(LiveFrameFinding finding)
+    {
+        if (!(finding.BboxX1.HasValue && finding.BboxY1.HasValue
+              && finding.BboxX2.HasValue && finding.BboxY2.HasValue))
+            return false;
+
+        var cal = _codingOverlayService?.Calibration;
+        double vanishX = cal?.PipeCenter.X ?? 0.5;
+        double vanishY = cal?.PipeCenter.Y ?? 0.5;
+        double pipeRadius = (cal != null && cal.NormalizedDiameter > 0) ? cal.NormalizedDiameter / 2.0 : 0.5;
+        double aspect = _codingVideoAspect > 0 ? _codingVideoAspect : 1.0;
+
+        var input = new AuswertungPro.Next.Application.Ai.MetrierungProximityInput(
+            Math.Min(finding.BboxX1.Value, finding.BboxX2.Value),
+            Math.Min(finding.BboxY1.Value, finding.BboxY2.Value),
+            Math.Max(finding.BboxX1.Value, finding.BboxX2.Value),
+            Math.Max(finding.BboxY1.Value, finding.BboxY2.Value),
+            vanishX, vanishY, aspect, pipeRadius);
+
+        var result = AuswertungPro.Next.Application.Ai.MetrierungProximityEvaluator.Evaluate(
+            input, AuswertungPro.Next.Application.Ai.MetrierungProximityThresholds.Default);
+        return !result.IsCodierbar;
+    }
+
     /// <summary>Baut SegmentedFindings aus dem Multi-Model-Ergebnis inkl. Naehe-Pruefung.</summary>
     private IReadOnlyList<SegmentedFinding> BuildCodingSegmentedFindings(SingleFrameResult mmResult)
     {
@@ -4443,6 +4474,18 @@ public partial class PlayerWindow
             // FilterValidFindings garantiert: VsaCodeHint ist ein gueltiger VSA-Code.
             // Kein zweiter Inferenzpfad hier â€” nur uebernehmen.
             string code = finding.VsaCodeHint!;
+
+            // Naehe-Gate (Fachregel User 2026-06-16): Ereignis noch ganz im DN-Kreis
+            // (zu weit voraus) -> nur intern erkannt, NICHT codieren. Erst wenn es ueber
+            // den DN-Kreis nach aussen reicht, stimmt die Distanz.
+            // Ausnahme: Steuercodes BCD/BCE (Rohranfang/-ende) sind Pflicht und duerfen
+            // nicht weggemerkt werden.
+            if (!CodingDedupPolicy.IsOneTimeCode(code) && IsFindingTooFarAhead(finding))
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[Qwen] {code} bei {meter:F2}m nur voraus erkannt (im DN-Kreis) - nicht protokolliert");
+                continue;
+            }
 
             // BCD/BCE existieren pro Haltung nur EINMAL â€” Meterstand-unabhaengige Dedup.
             // Primaer gegen session.Events pruefen (wird nie gecleared, im Gegensatz zu _codingVm.Events).
