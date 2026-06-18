@@ -1950,7 +1950,21 @@ public partial class PlayerWindow
     /// </summary>
     private byte[]? TryExtractAnalyzedFrameBytes()
     {
+        // Sicherheitsgurt: nie vor dem ersten sauberen Frame (nach Dateneinblendung) extrahieren,
+        // auch falls das Gating mal umgangen wurde. Nimmt den spaeteren der beiden Zeitpunkte.
         var sec = _detectionPendingTimestampSec;
+        if (_codingFirstCleanFrameSec is double clean && (sec is null || sec.Value < clean))
+            sec = clean;
+        return TryExtractFrameAtSeconds(sec);
+    }
+
+    /// <summary>
+    /// Extrahiert den Frame an einer exakten Videozeit (Sekunden) gezielt per ffmpeg aus der
+    /// Videodatei — unabhaengig von der aktuellen Player-Position. Null, wenn nicht moeglich
+    /// (kein Zeitstempel, kein Videopfad, kein ffmpeg).
+    /// </summary>
+    private byte[]? TryExtractFrameAtSeconds(double? sec)
+    {
         if (sec is null || sec.Value < 0 || string.IsNullOrWhiteSpace(_videoPath))
             return null;
 
@@ -3556,6 +3570,22 @@ public partial class PlayerWindow
                     pngBytes,
                     captureTimestampSec,
                     _codingAnalysisCts.Token);
+
+                // Dateneinblendungs-Gating (wie im Qwen-Pfad): waehrend der Daten-/Texteinblendung
+                // am Videoanfang NICHT codieren. Sonst bekommen fruehe Befunde (BCC, Streckenschaden,
+                // BCD) ein Foto vom eingeblendeten Anfangsframe und einen falschen Anfangs-Meter.
+                // Setzt zugleich _codingFirstCleanFrameSec (erster sauberer Frame) auch im
+                // Multi-Model-Betrieb -> macht den BCD-Clean-Frame-Schutz hier erst wirksam.
+                var readinessProbe = new AuswertungPro.Next.Application.Ai.LiveDetection(
+                    captureTimestampSec, System.Array.Empty<AuswertungPro.Next.Application.Ai.LiveFrameFinding>(),
+                    frameOsdMeter, null);
+                UpdateFrameReadiness(readinessProbe);
+                if (!IsFrameReady())
+                {
+                    SetCodingAiState("Dateneinblendung erkannt - übersprungen",
+                        Color.FromRgb(0x94, 0xA3, 0xB8), "Warte auf sauberes Videobild...");
+                    return;
+                }
 
                 SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
                     "Schritt 2 von 4: YOLO und DINO", pulse: true);
@@ -5348,6 +5378,11 @@ public partial class PlayerWindow
     // und nach Transition zu Ready nachtraeglich verarbeitet.
     private LiveDetection? _pendingWarmupResult;
 
+    // Videozeit (Sekunden) des ersten sauberen Frames NACH der Dateneinblendung
+    // (Uebergang FrameReadiness -> Ready). Wird fuer das Rohranfang-Foto (BCD) genutzt,
+    // damit dieses nicht den eingeblendeten Datenblock am Videoanfang zeigt.
+    private double? _codingFirstCleanFrameSec;
+
     /// <summary>Setzt den Einblendungs-Zustand zurueck (bei Eintritt/Austritt Codier-Modus).</summary>
     private void ResetFrameReadiness()
     {
@@ -5357,6 +5392,17 @@ public partial class PlayerWindow
         _codingLastOsdMeter = null; // Stale Meter aus vorheriger Session verhindern
         _codingLastOsdTimestampSec = null;
         _pendingWarmupResult = null;
+        _codingFirstCleanFrameSec = null;
+    }
+
+    /// <summary>Merkt den Videozeitpunkt des ersten sauberen Frames (Einblendung vorbei), einmalig.</summary>
+    private void MarkFirstCleanFrame(LiveDetection result)
+    {
+        if (_codingFirstCleanFrameSec.HasValue)
+            return;
+        _codingFirstCleanFrameSec = result.TimestampSeconds >= 0
+            ? result.TimestampSeconds
+            : (_player != null ? _player.Time / 1000.0 : 0.0);
     }
 
     /// <summary>
@@ -5399,7 +5445,10 @@ public partial class PlayerWindow
                     // Kein Meter â†’ zaehlen. Nach 3 Frames: kein OSD vorhanden.
                     _codingOsdSkippedFrames++;
                     if (_codingOsdSkippedFrames >= 3)
+                    {
                         _codingFrameState = FrameReadiness.Ready;
+                        MarkFirstCleanFrame(result);
+                    }
                 }
                 break;
 
@@ -5412,6 +5461,7 @@ public partial class PlayerWindow
                 {
                     _codingMeterConfirmCount = 0;
                     _codingFrameState = FrameReadiness.Ready;
+                    MarkFirstCleanFrame(result);
                 }
                 else
                 {
@@ -5422,6 +5472,7 @@ public partial class PlayerWindow
                     {
                         _codingMeterConfirmCount = 0;
                         _codingFrameState = FrameReadiness.Ready;
+                        MarkFirstCleanFrame(result);
                     }
                 }
                 break;
@@ -5471,6 +5522,10 @@ public partial class PlayerWindow
             MeterStart = rohranfangMeter,
             Zeit = rohranfangTime
         };
+        // Rohranfang-Foto: NICHT den Videoanfang nehmen (dort laeuft die Dateneinblendung).
+        // Bevorzugt den ersten sauberen Frame NACH der Einblendung (FrameReadiness -> Ready)
+        // gezielt per ffmpeg greifen; sonst Fallback auf den uebergebenen analysierten Frame.
+        analyzedFrameBytes = TryExtractFrameAtSeconds(_codingFirstCleanFrameSec) ?? analyzedFrameBytes;
         AttachBoundaryAnalyzedFramePhoto(entry, analyzedFrameBytes);
 
         var ev = _codingSessionService.AddEvent(entry);
