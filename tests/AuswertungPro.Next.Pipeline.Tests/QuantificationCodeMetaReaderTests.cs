@@ -59,6 +59,18 @@ public sealed class QuantificationCodeMetaReaderTests
     }
 
     [Fact]
+    public void BAI_Dichtungsmaterial_liest_Querschnitt_Prozent_als_Q1()
+    {
+        // Konsistenz mit der VSA-Zustandsrichtlinie (Tabelle 15: BAI q1 = %) und der
+        // Schadencodierung 2018 (BAI = Querschnittsminderung %). Frueher faelschlich mm.
+        var p = P(("vsa.querschnitt.prozent", "30"));
+        Assert.Equal("30", QuantificationCodeMetaReader.ReadQ1(p, "BAIAD"));
+        // Ein mm-Wert darf fuer BAI NICHT als Q1 gelten (falsche Einheit).
+        var pmm = P(("vsa.hoehe.mm", "12"));
+        Assert.Null(QuantificationCodeMetaReader.ReadQ1(pmm, "BAIAD"));
+    }
+
+    [Fact]
     public void Code_ohne_passende_Einheit_liest_nichts()
     {
         // BBF (Infiltration): keine Quantifizierung -> auch wenn faelschlich Werte da waeren, kein Q1.

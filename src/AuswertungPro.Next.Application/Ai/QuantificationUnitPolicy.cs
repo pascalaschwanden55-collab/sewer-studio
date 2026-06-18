@@ -58,8 +58,10 @@ public static class QuantificationUnitPolicy
             // Riss: Rissbreite mm (Haarriss-Untercode ohne Mass -> siehe IsHaarriss)
             "BAB" => new UnitRule(QuantUnit.WidthMm, QuantUnit.Unknown),
 
-            // Einragende Elemente: Laenge/Tiefe mm
-            "BAI" => new UnitRule(QuantUnit.LengthMm, QuantUnit.Unknown), // einragendes Dichtungsmaterial
+            // Einragendes Dichtungsmaterial: Querschnittsminderung % (VSA Schadencodierung 2018
+            // "BAI = Querschnittsminderung %" + Zustandsrichtlinie Tabelle 15: q1, Einheit %).
+            // Frueher faelschlich LengthMm -> die %-basierte EZ-Bewertung haette den Wert nie gefunden.
+            "BAI" => new UnitRule(QuantUnit.CrossSectionPercent, QuantUnit.Unknown),
 
             // Verschobene Rohrverbindung: Versatz mm (Q2 Winkel ist im Manifest nicht hinterlegt -> Unknown)
             "BAJ" => new UnitRule(QuantUnit.OffsetMm, QuantUnit.Unknown),
