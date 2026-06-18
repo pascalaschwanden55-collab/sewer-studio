@@ -703,21 +703,11 @@ public partial class PlayerWindow
                 var rectW = Math.Max(1, Math.Abs(px2 - px1));
                 var rectH = Math.Max(1, Math.Abs(py2 - py1));
 
-                // Farbiges Rechteck (halbtransparent gefuellt, farbiger Rand)
-                var rect = new System.Windows.Shapes.Rectangle
-                {
-                    Width = rectW,
-                    Height = rectH,
-                    Stroke = new SolidColorBrush(Color.FromArgb(220, color.R, color.G, color.B)),
-                    StrokeThickness = 2.5,
-                    Fill = new SolidColorBrush(Color.FromArgb(35, color.R, color.G, color.B)),
-                    RadiusX = 4,
-                    RadiusY = 4,
-                    IsHitTestVisible = false
-                };
-                Canvas.SetLeft(rect, rectLeft);
-                Canvas.SetTop(rect, rectTop);
-                DetectionCanvas.Children.Add(rect);
+                // KEINE grosse YOLO-Vollbox mehr (verdeckte das halbe Bild, "sehr ueberladen").
+                // Stattdessen nur dezente Eck-Marker an den vier Bbox-Ecken — markiert die
+                // Stelle, ohne die Sicht zu nehmen. Die praezisen SAM-Konturen + das klickbare
+                // Label-Badge unten bleiben erhalten.
+                AddDetectionCornerMarkers(rectLeft, rectTop, rectW, rectH, color);
 
                 // Label-Badge oben am Rechteck
                 var labelText = $"{finding.VsaCodeHint ?? finding.Label} [S{finding.Severity}]";
@@ -760,6 +750,41 @@ public partial class PlayerWindow
                 // Einzelnes Finding ohne Bbox â†’ Ring-Sektor-Fallback
                 RenderRingSectorFinding(finding, i, findings.Count, width, height, timestampSec);
             }
+        }
+    }
+
+    /// <summary>
+    /// Zeichnet vier dezente L-foermige Eck-Marker an den Bbox-Ecken statt einer
+    /// grossen Vollbox. Markiert die Fundstelle, ohne das Videobild zu verdecken.
+    /// </summary>
+    private void AddDetectionCornerMarkers(double left, double top, double w, double h, Color color)
+    {
+        // Marker-Schenkellaenge: an die Box-Groesse gekoppelt, aber gedeckelt.
+        double len = Math.Clamp(Math.Min(w, h) * 0.18, 8, 22);
+        var stroke = new SolidColorBrush(Color.FromArgb(230, color.R, color.G, color.B));
+
+        double right = left + w;
+        double bottom = top + h;
+
+        // Pro Ecke zwei kurze Linien (horizontal + vertikal).
+        // dx/dy zeigen ins Boxinnere.
+        AddCorner(left, top, +1, +1);   // oben links
+        AddCorner(right, top, -1, +1);  // oben rechts
+        AddCorner(left, bottom, +1, -1); // unten links
+        AddCorner(right, bottom, -1, -1); // unten rechts
+
+        void AddCorner(double x, double y, int dx, int dy)
+        {
+            DetectionCanvas.Children.Add(new System.Windows.Shapes.Line
+            {
+                X1 = x, Y1 = y, X2 = x + dx * len, Y2 = y,
+                Stroke = stroke, StrokeThickness = 2.5, IsHitTestVisible = false
+            });
+            DetectionCanvas.Children.Add(new System.Windows.Shapes.Line
+            {
+                X1 = x, Y1 = y, X2 = x, Y2 = y + dy * len,
+                Stroke = stroke, StrokeThickness = 2.5, IsHitTestVisible = false
+            });
         }
     }
 
