@@ -1,15 +1,21 @@
 """YOLO pre-screening and classification endpoints."""
 
 import time
+import logging
 
+import numpy as np
 from fastapi import APIRouter
 from ..schemas.detection import (
     YoloRequest, YoloResponse,
     YoloClassifyRequest, YoloClassifyResponse, YoloClassifyPrediction,
 )
 from ..models import yolo_wrapper
+from ..models.bend_geometry import analyze_bend
+from ..models.image_decode import decode_image_safe
+from ..config import settings
 from ..telemetry import write_event, write_yolo_detection
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -44,6 +50,21 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
         req.image_base64, top_k=req.top_k)
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
+    # Geometrisches Bogen-Veto aus demselben Frame. Defensiv: ein Dekodier-/Geometrie-
+    # Fehler darf die Klassifikation nicht kippen -> Fallback "kein Bogen".
+    bend_shift, is_bend, vanish_x, vanish_y = 0.0, False, 0.5, 0.5
+    try:
+        _img = decode_image_safe(
+            req.image_base64,
+            max_bytes=settings.inference_max_image_bytes,
+            max_pixels=settings.max_image_pixels,
+        )
+        _bend = analyze_bend(np.array(_img))
+        bend_shift, is_bend = round(_bend.shift, 4), _bend.is_bend
+        vanish_x, vanish_y = round(_bend.vanish_x, 4), round(_bend.vanish_y, 4)
+    except Exception:
+        logger.warning("Bogen-Geometrie im classify fehlgeschlagen", exc_info=True)
+
     predictions = [
         YoloClassifyPrediction(class_name=name, confidence=conf)
         for name, conf, _ in preds
@@ -75,4 +96,8 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
         imgsz=int(meta.get("imgsz") or 0),
         preprocessing=meta.get("preprocessing") or "",
         device=meta.get("device") or "",
+        bend_shift=bend_shift,
+        is_bend=is_bend,
+        vanish_x=vanish_x,
+        vanish_y=vanish_y,
     )

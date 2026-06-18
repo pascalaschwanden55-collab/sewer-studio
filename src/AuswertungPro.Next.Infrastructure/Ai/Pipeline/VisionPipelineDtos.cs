@@ -78,7 +78,13 @@ public sealed record YoloClassifyResponse(
     [property: JsonPropertyName("model_sha256")] string ModelSha256 = "",
     [property: JsonPropertyName("imgsz")] int Imgsz = 0,
     [property: JsonPropertyName("preprocessing")] string Preprocessing = "",
-    [property: JsonPropertyName("device")] string Device = ""
+    [property: JsonPropertyName("device")] string Device = "",
+    // Geometrisches Bogen-Veto (BCC) aus demselben Frame: is_bend=true -> Bogen erkannt,
+    // Frame NICHT als BCE Rohrende codieren (der cls hat keine Bogen-Klasse).
+    [property: JsonPropertyName("bend_shift")] double BendShift = 0.0,
+    [property: JsonPropertyName("is_bend")] bool IsBend = false,
+    [property: JsonPropertyName("vanish_x")] double VanishX = 0.5,
+    [property: JsonPropertyName("vanish_y")] double VanishY = 0.5
 );
 
 // ── Grounding DINO ─────────────────────────────────────────────────────────

@@ -75,6 +75,45 @@ public sealed class SingleFrameMultiModelServiceTests
     }
 
     [Fact]
+    public async Task AnalyzeFrameAsync_bend_veto_prevents_rohrende_in_end_zone()
+    {
+        // Identische Endzonen-Situation wie der Rohrende-Test, ABER der Sidecar meldet
+        // per Geometrie einen Bogen (is_bend=true). Dann darf NICHT BCE Rohrende gesetzt
+        // werden - der Bogen wird sonst als Rohrende verkannt (User-Fall 1077586-1077458).
+        var handler = new StaticClassifierHandler("""
+        {
+            "predictions": [
+                { "class_name": "LEER", "confidence": 0.51 },
+                { "class_name": "BDA", "confidence": 0.37 },
+                { "class_name": "BCE", "confidence": 0.03 }
+            ],
+            "inference_time_ms": 12,
+            "usable": true,
+            "quality_reason": "ok",
+            "model_name": "vsa_cls_v5_nocrop",
+            "model_source": "active.json",
+            "is_bend": true,
+            "bend_shift": 0.13
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "test-token");
+        var service = new SingleFrameMultiModelService(client);
+
+        var result = await service.AnalyzeFrameAsync(
+            [1, 2, 3],
+            pipeDiameterMm: 300,
+            calibration: null,
+            currentMeterM: 49.7,
+            reachLengthM: 50.0);
+
+        // Kein positionsgetriebenes BCE mehr - der Bogen kippt die Endzonen-Regel.
+        Assert.NotEqual("BCE", result.ClassifierCode);
+    }
+
+    [Fact]
     public async Task AnalyzeFrameAsync_does_not_replace_clear_defect_code_with_rohrende()
     {
         var handler = new StaticClassifierHandler("""

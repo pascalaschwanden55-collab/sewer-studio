@@ -105,3 +105,10 @@ class YoloClassifyResponse(BaseModel):
     imgsz: int = 0
     preprocessing: str = ""       # letterbox | default
     device: str = ""
+    # Geometrisches Bogen-Veto (VSA-KEK BCC) aus demselben Frame. Da der Klassifikator
+    # keine Bogen-Klasse hat und Boegen als BCE meldet, liefert die Fluchtpunkt-Geometrie
+    # das Korrektiv: is_bend=True -> Frame NICHT als BCE Rohrende codieren.
+    bend_shift: float = 0.0
+    is_bend: bool = False
+    vanish_x: float = 0.5
+    vanish_y: float = 0.5

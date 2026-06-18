@@ -42,6 +42,14 @@ class SamResponse(BaseModel):
     # Teilmenge von skipped_boxes: Masken, die am Score-Gate (sam_min_score) scheiterten
     low_score_boxes: int = 0
     error: str | None = None
+    # Geometrisches Bogen-Veto (VSA-KEK BCC) aus demselben Frame: bend_shift = horizontale
+    # Fluchtpunkt-Verschiebung (-0.5..+0.5), is_bend = |shift| >= Schwelle. Robuster als
+    # SAM/DINO-Labels, die Boegen nicht erkennen. C# nutzt is_bend, um einen Bogen NICHT
+    # faelschlich als BCE Rohrende zu codieren.
+    bend_shift: float = 0.0
+    is_bend: bool = False
+    vanish_x: float = 0.5
+    vanish_y: float = 0.5
 
 
 # ── Training Export ─────────────────────────────────────────────────────────

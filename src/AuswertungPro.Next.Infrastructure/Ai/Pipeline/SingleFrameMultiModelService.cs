@@ -93,7 +93,8 @@ public sealed class SingleFrameMultiModelService
                         currentMeterM,
                         reachLengthM,
                         classifierDecision,
-                        classifierPredictions);
+                        classifierPredictions,
+                        clsResp.IsBend);
 
                     if (boundaryDecision?.Code is "BCD" or "BCE")
                     {
@@ -206,12 +207,20 @@ public sealed class SingleFrameMultiModelService
         double? currentMeterM,
         double? reachLengthM,
         VsaCodeResolver.ResolvedCode? classifierDecision,
-        IReadOnlyList<YoloClassifyPrediction> predictions)
+        IReadOnlyList<YoloClassifyPrediction> predictions,
+        bool isBend = false)
     {
         if (!currentMeterM.HasValue || !reachLengthM.HasValue)
             return classifierDecision;
 
         if (classifierDecision?.Code is "BCD" or "BCE")
+            return classifierDecision;
+
+        // Bogen-Veto (Geometrie aus demselben Frame): Der cls-Klassifikator hat keine
+        // Bogen-Klasse und meldet Boegen als BCE 0.68; in der Endzone wuerde die Positions-
+        // Regel das faelschlich zu BCE Rohrende verstaerken. Erkennt die Fluchtpunkt-
+        // Geometrie einen Bogen, NICHT positionsbasiert BCE setzen.
+        if (isBend)
             return classifierDecision;
 
         if (classifierDecision is { Code: not ("LEER" or "OTHER") })

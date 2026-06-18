@@ -15,6 +15,7 @@ from ..schemas.detection import BoundingBox
 from ..schemas.segmentation import MaskResult, SamResponse
 from .image_decode import decode_image_safe
 from .box_utils import clamp_box
+from .bend_geometry import analyze_bend
 
 logger = logging.getLogger(__name__)
 _sam_predict_lock = threading.Lock()
@@ -168,6 +169,9 @@ def segment(
 
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
+    # Geometrisches Bogen-Veto aus DEMSELBEN Frame (keine zweite Bilddekodierung).
+    bend = analyze_bend(img_array)
+
     return SamResponse(
         masks=masks_out,
         image_width=w,
@@ -177,4 +181,8 @@ def segment(
         skipped_boxes=skipped_boxes,
         low_score_boxes=low_score_boxes,
         degraded=skipped_boxes > 0,
+        bend_shift=round(bend.shift, 4),
+        is_bend=bend.is_bend,
+        vanish_x=round(bend.vanish_x, 4),
+        vanish_y=round(bend.vanish_y, 4),
     )
