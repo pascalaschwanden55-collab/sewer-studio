@@ -3664,6 +3664,22 @@ public partial class PlayerWindow
 
         var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);
         var meter = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
+
+        // Plausibilitaet eines Rohrende-Vorschlags: Der Klassifikator haelt das dunkle
+        // Tunnelende am Fluchtpunkt manchmal faelschlich fuer das Rohrende, obwohl die
+        // Kamera noch weit davon weg ist. Solch ein zu fruehes BCE wuerde alles
+        // weitere Protokollieren stoppen. Fachregel User 2026-06-16: BCE nur nahe am
+        // bekannten Haltungsende setzen. Zu frueh -> ignorieren und normal weiteranalysieren.
+        if (code == "BCE"
+            && !CodingDedupPolicy.IsBoundaryEndCodePlausible(code, meter, _codingVm.EndMeter))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[Boundary] BCE bei {meter:F2}m verworfen (Haltungsende ~{_codingVm.EndMeter:F2}m, noch zu weit) - weiteranalysieren");
+            SetCodingAiState("Mögliches Rohrende voraus - noch nicht am Ende",
+                Color.FromRgb(0xF5, 0x9E, 0x0B), "näher heranfahren");
+            return false;
+        }
+
         var beforeCount = _codingVm.Events.Count;
         var anyAdded = false;
 

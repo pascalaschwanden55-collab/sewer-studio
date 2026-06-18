@@ -68,6 +68,42 @@ public static class CodingDedupPolicy
         return !proximity.IsCodierbar;
     }
 
+    /// <summary>Absolute Naehe-Toleranz zum Haltungsende, in Metern (User 2026-06-16: letzte 20 cm).</summary>
+    private const double EndMeterAbsoluteTolerance = 0.20;
+
+    /// <summary>Relative Naehe-Schwelle: erst ab diesem Anteil der Laenge gilt das Ende als nah.</summary>
+    private const double EndMeterRelativeThreshold = 0.90;
+
+    /// <summary>
+    /// Plausibilitaet eines automatischen Rohrende-Vorschlags (BCE): Der Klassifikator
+    /// haelt manchmal das dunkle Tunnelende am Fluchtpunkt faelschlich fuer das Rohrende,
+    /// obwohl die Kamera noch weit davon entfernt ist. Fachregel User 2026-06-16:
+    /// BCE nur akzeptieren, wenn die Kamera nahe am bekannten Haltungsende ist
+    /// (innerhalb <see cref="EndMeterAbsoluteTolerance"/> m ODER ab
+    /// <see cref="EndMeterRelativeThreshold"/> der Laenge).
+    ///
+    /// Konservativ: Ist die Haltungslaenge (endMeter) oder die aktuelle Position unbekannt,
+    /// gilt der Vorschlag als plausibel — sonst entstuende evtl. gar kein Rohrende.
+    /// Nur BCE wird geprueft; BCD/andere Codes sind hier immer plausibel.
+    /// </summary>
+    public static bool IsBoundaryEndCodePlausible(string? code, double? currentMeter, double? endMeter)
+    {
+        if (MainCode(code) is not "BCE")
+            return true;
+
+        if (!endMeter.HasValue || endMeter.Value <= 0)
+            return true;
+
+        if (!currentMeter.HasValue)
+            return true;
+
+        double nearAbsolute = endMeter.Value - EndMeterAbsoluteTolerance;
+        double nearRelative = endMeter.Value * EndMeterRelativeThreshold;
+        double threshold = Math.Min(nearAbsolute, nearRelative);
+
+        return currentMeter.Value >= threshold;
+    }
+
     private static string? MainCode(string? code)
     {
         if (string.IsNullOrWhiteSpace(code))
