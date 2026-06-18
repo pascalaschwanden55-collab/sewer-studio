@@ -187,11 +187,24 @@ wiederholt (A3-C3-B3).
    geschlossen werden** (MeterEnd = aktueller Meter / letzte Sichtung).
 
 **Ist-Stand:** Manuelles Schliessen existiert (`CloseOpenStreckenschaeden`, Button + Exit/Rohrende-Hook,
-`IsStreckenschaden`/`MeterEnd`). Die **automatische** Anfang/Ende-Erkennung durch die KI fehlt noch.
+`IsStreckenschaden`/`MeterEnd`).
 
-**Geplante Bauweise:** reine, testbare Application-Logik (z.B. `StreckenschadenTracker`), die je
-Haupt-Code+Uhrlage einen offenen Zustand haelt (Anfang-Meter, letzte-Sichtung-Meter) und Open/Extend/Close
-entscheidet. Aufruf duenn aus dem Codierpfad. Kein Frame-Tracking noetig (Dedup per Code+Uhrlage+Meterfenster).
+**Kernlogik [NEU 2026-06-16]:** `StreckenschadenTracker` (Application, 11 Tests) haelt je
+Hauptcode+Uhrlage einen offenen Zustand und entscheidet Open/Extend/Close. Verbindliche Regeln
+(User 2026-06-16):
+- **Identitaet:** gleicher Hauptcode + aehnliche Uhrlage (±2 Std, zyklisch); Meterabstand egal.
+  Unterschiedliche Uhrlage = getrennte Strecken. Unbekannte Uhrlage matcht.
+- **Schwelle:** beim ersten Erkennen offen merken; ab > 1 m bestaetigte Strecke
+  (`IsConfirmedStrecke`); darunter Punktbefund.
+- **Schliessen:** NICHT sofort bei Fehlen — erst wenn der Code ueber `CloseGapMeters` (1 m) hinaus
+  nicht mehr auftaucht (ueberlebt Erkennungsluecken). Ende = letzte echte Sichtung.
+- **CloseAll(meter):** schliesst ALLE offenen Strecken (Pflicht bei BCE/BDC); Ende =
+  max(letzte Sichtung, uebergebener Meter).
+
+**Offen:** Anbindung an den Codierpfad — Tracker pro Analyse-Tick mit den codierbaren
+Streckenschaden-Befunden fuettern (`IsStreckenschadenCode`), Aktionen in Events uebersetzen
+(Open → offener Eintrag `IsStreckenschaden=true, MeterEnd=null`; Close → `MeterEnd` setzen) und bei
+BCE/BDC `CloseAll` aufrufen.
 
 ---
 
@@ -270,7 +283,8 @@ der Quantifizierung bei Codes ohne Quantifizierung, Validierung gegen den DN-Kre
 | 4    | Overlay aufgeraeumt (Eck-Marker, Voraus unsichtbar) | [NEU] commit ea422be7 + f530a7d5 | PlayerWindow.LiveDetection/.Coding |
 | 5    | Verbindungs-Kennung "A" (Befund an Rohrverbindung) | [OFFEN] | Feld in ProtocolEntry fehlt noch (VSA-DSS: Kanalschaden.Verbindung) |
 | 6-7  | Dedup, QualityGate, menschliche Bestaetigung | [IST] | QualityGateService, AiContext |
-| 8    | Auto-Streckenschaden (A/B/C, Schliessen bei BCE/BDC) | [OFFEN] | geplant: StreckenschadenTracker |
+| 8    | Auto-Streckenschaden: Kernlogik | [NEU] StreckenschadenTracker (11 Tests) | Application/Ai/StreckenschadenTracker.cs |
+| 8    | Auto-Streckenschaden: UI-Anbindung (Tracker→Events, CloseAll bei BCE/BDC) | [OFFEN] | RunCodingAnalysisAsync |
 | 9    | Uhrlage + exakte Werte-Konvention (00 / 12 12 / 00 00) | [OFFEN/teilweise] | MaskQuantificationService, VsaCodeResolver |
 | 10   | Quantifizierung codeabhaengig per DN-Kreis; keine Quant. bei BBF/BBG/BDF | [OFFEN/teilweise] | MaskQuantificationService |
 
