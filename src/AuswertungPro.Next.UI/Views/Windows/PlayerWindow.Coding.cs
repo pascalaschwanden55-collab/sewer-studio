@@ -4178,6 +4178,11 @@ public partial class PlayerWindow
             // Messungen in CodeMeta (gleiche Logik wie Qwen-Pfad)
             ApplyQuantificationToEntry(entry, code, quant);
 
+            // VSA-Lage am Umfang (Uhrlage) aus der Bbox-Geometrie verfeinern (Teil 9):
+            // ueberschreibt die grobe Centroid-Uhrlage durch die VSA-Werte-Konvention
+            // (Punkt/Bereich/12 12/00 00), codeabhaengig (BCA/BAJ = Punkt).
+            ApplyClockPositionToEntry(entry, code, seg, imageWidth, imageHeight);
+
             AttachAnalyzedFramePhoto(entry);
 
             var codingEvent = codingSessionService.AddEvent(entry);
@@ -4535,6 +4540,55 @@ public partial class PlayerWindow
         bool allowClock = !string.Equals(clock?.Mode, "none", StringComparison.OrdinalIgnoreCase);
         return new AuswertungPro.Next.Application.Ai.QuantificationGate.ManifestQuantRule(
             HasQ1: q1 != null, HasQ2: q2 != null, AllowClock: allowClock);
+    }
+
+    /// <summary>
+    /// Verfeinert die VSA-Lage am Umfang (vsa.uhr.von / vsa.uhr.bis) aus der Bbox-Geometrie des
+    /// Befunds relativ zur kalibrierten Rohrmitte (Teil 9). Reine Fachlogik liegt im
+    /// ClockPositionResolver (Application); hier nur Geometrie zusammenstellen, aufrufen, schreiben.
+    /// Respektiert die Manifest-Regel: ohne erlaubte Uhrlage (z.B. BDD) wird keine geschrieben.
+    /// </summary>
+    private void ApplyClockPositionToEntry(
+        ProtocolEntry entry, string code, SegmentedFinding seg, double imageWidth, double imageHeight)
+    {
+        if (seg.Mask.Bbox is not { Count: >= 4 } || imageWidth <= 0 || imageHeight <= 0)
+            return;
+
+        // Manifest: erlaubt dieser Code ueberhaupt eine Uhrlage? Wenn nicht -> nichts schreiben.
+        if (!BuildManifestQuantRule(code).AllowClock)
+            return;
+
+        var cal = _codingOverlayService?.Calibration;
+        double pcx = cal?.PipeCenter.X ?? 0.5;
+        double pcy = cal?.PipeCenter.Y ?? 0.5;
+        bool isCalibrated = cal is { IsCalibrated: true };
+
+        var box = new AuswertungPro.Next.Application.Ai.ClockPositionResolver.NormBox(
+            seg.Mask.Bbox[0] / imageWidth,
+            seg.Mask.Bbox[1] / imageHeight,
+            seg.Mask.Bbox[2] / imageWidth,
+            seg.Mask.Bbox[3] / imageHeight);
+
+        var span = AuswertungPro.Next.Application.Ai.ClockPositionResolver.Resolve(box, pcx, pcy, isCalibrated, code);
+
+        var from = AuswertungPro.Next.Application.Ai.ClockPositionResolver.FormatFrom(span);
+        var to = AuswertungPro.Next.Application.Ai.ClockPositionResolver.FormatTo(span);
+
+        // Bei "unbekannt" (00 00) keine erfundene Uhrlage stehen lassen: evtl. grob gesetzte
+        // Quantifizierungs-Uhrlage wieder entfernen, statt eine falsche Lage zu behaupten.
+        if (from == null)
+        {
+            entry.CodeMeta?.Parameters.Remove("vsa.uhr.von");
+            entry.CodeMeta?.Parameters.Remove("vsa.uhr.bis");
+            return;
+        }
+
+        entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
+        entry.CodeMeta.Parameters["vsa.uhr.von"] = from;
+        if (to != null)
+            entry.CodeMeta.Parameters["vsa.uhr.bis"] = to;
+        else
+            entry.CodeMeta.Parameters.Remove("vsa.uhr.bis"); // Punktbefund -> kein Zweitwert
     }
 
     /// <summary>

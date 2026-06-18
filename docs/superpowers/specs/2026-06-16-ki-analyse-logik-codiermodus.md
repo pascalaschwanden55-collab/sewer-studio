@@ -300,7 +300,8 @@ BCC/BAA: falls Auto-Quantifizierung gewuenscht, muss das Manifest erweitert werd
 | 8    | Auto-Streckenschaden: Kernlogik | [NEU] StreckenschadenTracker (11 Tests) | Application/Ai/StreckenschadenTracker.cs |
 | 8    | Auto-Streckenschaden: Mapper | [NEU] StreckenschadenActionMapper (7 Tests) | Application/Ai/StreckenschadenActionMapper.cs |
 | 8    | Auto-Streckenschaden: UI-Anbindung (Tracker→Events, CloseAll bei BCE/BDC/Exit, Session-Reset) | [NEU] | PlayerWindow.Coding (ApplyStreckenschadenTracking/-Actions, CloseTrackedStreckenschaeden) |
-| 9    | Uhrlage + exakte Werte-Konvention (00 / 12 12 / 00 00) | [OFFEN/teilweise] | MaskQuantificationService, VsaCodeResolver |
+| 9    | Uhrlage aus Bbox-Geometrie + VSA-Werte-Konvention (Punkt+00 / 12 12 / 00 00; BCA/BAJ Punkt) | [NEU] ClockPositionResolver (13 Tests) + UI-Verdrahtung | Application/Ai + PlayerWindow.ApplyClockPositionToEntry |
+| Bruecke | KI-Quantifizierung -> VSA-Zustandsbewertung (CodeMeta->VsaFinding) | [NEU] QuantificationCodeMetaReader (9 Tests) | Application/Ai + DataPageProtocolObservationMapper |
 | 10   | Quantifizierung codeabhaengig: Manifest entscheidet OB, Einheiten-Tabelle WELCHE | [NEU] QuantificationGate + QuantificationUnitPolicy (10 Tests) | Application/Ai + QuantificationCodeMetaWriter |
 
 **Tests:** Pipeline-Tests gruen (MetrierungProximityEvaluator, CodingDedupPolicy inkl.
