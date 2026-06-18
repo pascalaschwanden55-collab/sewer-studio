@@ -190,6 +190,30 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     }
 
     [Fact]
+    public void Player_handles_bogen_classifier_before_no_detection_return()
+    {
+        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
+        var structuralBody = ExtractMethodBody(coding, "private bool TryHandleStructuralClassifierResult");
+
+        var boundaryIndex = runBody.IndexOf("TryHandleBoundaryClassifierResult", StringComparison.Ordinal);
+        var structuralIndex = runBody.IndexOf("TryHandleStructuralClassifierResult", StringComparison.Ordinal);
+        var noDetectionIndex = runBody.IndexOf("!mmResult.IsRelevant || !mmResult.HasDetections", StringComparison.Ordinal);
+
+        Assert.True(boundaryIndex >= 0, "Boundary-Classifier muss zuerst behandelt werden.");
+        Assert.True(structuralIndex > boundaryIndex, "BCC darf BCD/BCE nicht ueberholen.");
+        Assert.True(noDetectionIndex > structuralIndex, "BCC muss vor dem YOLO/DINO-No-Detection-Abbruch behandelt werden.");
+        Assert.Contains("code is not \"BCC\"", structuralBody);
+        Assert.Contains("codingSessionService.AddEvent(entry)", structuralBody);
+        Assert.Contains("Decision = CodingUserDecision.Ignored", structuralBody);
+
+        var clearIndex = structuralBody.IndexOf("ClearDetectionOverlays()", StringComparison.Ordinal);
+        var listIndex = structuralBody.IndexOf("CodingFindingsList.ItemsSource", StringComparison.Ordinal);
+        Assert.True(clearIndex >= 0 && listIndex > clearIndex,
+            "Die Befundliste muss nach dem Overlay-Clear gesetzt werden, sonst verschwindet der Bogen-Hinweis.");
+    }
+
+    [Fact]
     public void Player_exit_coding_mode_passes_current_analyzed_frame_to_auto_rohrende()
     {
         var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");

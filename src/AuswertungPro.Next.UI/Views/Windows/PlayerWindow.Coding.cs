@@ -3623,6 +3623,9 @@ public partial class PlayerWindow
                 if (TryHandleBoundaryClassifierResult(mmResult, captureTimestampSec, frameOsdMeter))
                     return;
 
+                if (TryHandleStructuralClassifierResult(mmResult, captureTimestampSec, frameOsdMeter))
+                    return;
+
                 if (!mmResult.IsRelevant || !mmResult.HasDetections)
                 {
                     SetCodingAiState("Kein Schaden erkannt", Color.FromRgb(0x22, 0xC5, 0x5E),
@@ -3804,6 +3807,93 @@ public partial class PlayerWindow
                 VsaCodeHint: code))
         };
 
+        return true;
+    }
+
+    private bool TryHandleStructuralClassifierResult(
+        SingleFrameResult mmResult,
+        double captureTimestampSec,
+        double? frameOsdMeter)
+    {
+        var code = mmResult.ClassifierCode;
+        if (code is not "BCC")
+            return false;
+
+        // Wenn DINO/SAM Befunde liefert, bleibt der praezisere Maskenpfad zustaendig.
+        if (mmResult.HasDetections)
+            return false;
+
+        var codingVm = _codingVm;
+        var codingSessionService = _codingSessionService;
+        if (codingVm == null || codingSessionService == null)
+            return false;
+
+        var meter = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
+        var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);
+        var label = LookupVsaLabel(code) ?? "Bogen";
+        var finding = new LiveFrameFinding(
+            Label: label,
+            Severity: 3,
+            PositionClock: null,
+            ExtentPercent: null,
+            VsaCodeHint: code);
+        var resolvedCode = ResolveFindingCodeForCoding(finding, meter);
+        if (resolvedCode == null || !resolvedCode.StartsWith("BCC", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var coveringEvent = codingVm.Events.FirstOrDefault(e =>
+            CodesMatchForDedup(e.Entry.Code, resolvedCode) &&
+            IsAlreadyCovered(e, meter, finding));
+
+        var confidence = mmResult.ClassifierConfidence.HasValue
+            ? $" {mmResult.ClassifierConfidence.Value:P0}"
+            : "";
+
+        ClearDetectionOverlays();
+        Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+        CodingFindingsList.ItemsSource = new[]
+        {
+            new AiFindingDisplayItem(finding with { VsaCodeHint = resolvedCode })
+        };
+
+        if (coveringEvent != null)
+        {
+            SetCodingAiState($"{label} bereits vorhanden", Color.FromRgb(0x22, 0xC5, 0x5E),
+                $"Klassifikator{confidence}");
+            return true;
+        }
+
+        var entry = new ProtocolEntry
+        {
+            Source = ProtocolEntrySource.Ai,
+            Code = resolvedCode,
+            Beschreibung = LookupVsaLabel(resolvedCode) ?? label,
+            MeterStart = meter,
+            Zeit = videoTime
+        };
+
+        if (!_lastResolvedMeterIsOsd)
+        {
+            entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = resolvedCode };
+            entry.CodeMeta.Parameters["vsa.meter.quelle"] = "geschaetzt";
+        }
+
+        AttachAnalyzedFramePhoto(entry);
+
+        var ev = codingSessionService.AddEvent(entry);
+        ev.MeterAtCapture = meter;
+        ev.VideoTimestamp = videoTime;
+        ev.AiContext = new CodingEventAiContext
+        {
+            SuggestedCode = resolvedCode,
+            Confidence = mmResult.ClassifierConfidence ?? 0.0,
+            Reason = "Bogen (Klassifikator, ohne DINO/SAM-Box)",
+            Decision = CodingUserDecision.Ignored
+        };
+
+        RefreshCodingEventsList();
+        SetCodingAiState($"{entry.Beschreibung} erkannt", Color.FromRgb(0x22, 0xC5, 0x5E),
+            $"Klassifikator{confidence}");
         return true;
     }
 
