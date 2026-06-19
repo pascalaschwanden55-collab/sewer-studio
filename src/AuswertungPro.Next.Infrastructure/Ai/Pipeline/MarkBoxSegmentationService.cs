@@ -54,7 +54,8 @@ public sealed class MarkBoxSegmentationService
             mask, response.ImageWidth, response.ImageHeight,
             Math.Max(0, pipeDiameterMm), calibration);
 
-        return new BoxSegmentationResult(quant, mask, response.ImageWidth, response.ImageHeight);
+        return new BoxSegmentationResult(quant, mask, response.ImageWidth, response.ImageHeight,
+            response.IsBend, response.VanishX, response.VanishY);
     }
 
     /// <summary>
@@ -72,9 +73,13 @@ public sealed class MarkBoxSegmentationService
     }
 }
 
-/// <summary>Ergebnis der Box-Segmentierung: quantifizierte Maske + Rohmaske + Bildmasse.</summary>
+/// <summary>Ergebnis der Box-Segmentierung: quantifizierte Maske + Rohmaske + Bildmasse
+/// + Bogen-Geometrie (Fluchtpunkt). IsBend=true -> im Codiermodus Bogen-Marker statt Maske.</summary>
 public sealed record BoxSegmentationResult(
     MaskQuantificationService.QuantifiedMask Quant,
     SamMaskResult Mask,
     int ImageWidth,
-    int ImageHeight);
+    int ImageHeight,
+    bool IsBend = false,
+    double VanishX = 0.5,
+    double VanishY = 0.5);

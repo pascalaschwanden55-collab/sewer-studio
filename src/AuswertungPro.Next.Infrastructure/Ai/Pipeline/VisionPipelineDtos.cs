@@ -158,7 +158,14 @@ public sealed record SamResponse(
     [property: JsonPropertyName("skipped_boxes")] int SkippedBoxes = 0,
     // Teilmenge von skipped_boxes: Masken unterhalb des SAM-Score-Gates (sam_min_score)
     [property: JsonPropertyName("low_score_boxes")] int LowScoreBoxes = 0,
-    [property: JsonPropertyName("error")] string? Error = null
+    [property: JsonPropertyName("error")] string? Error = null,
+    // Geometrisches Bogen-Signal aus demselben Frame: is_bend=true -> Bogen erkannt,
+    // vanish_x/y = Fluchtpunkt (wo das Rohr abknickt), normiert 0..1. Wird im Codiermodus
+    // als Bogen-Marker gezeigt (eine saubere SAM-Maske der Bogen-Kontur ist nicht moeglich).
+    [property: JsonPropertyName("bend_shift")] double BendShift = 0.0,
+    [property: JsonPropertyName("is_bend")] bool IsBend = false,
+    [property: JsonPropertyName("vanish_x")] double VanishX = 0.5,
+    [property: JsonPropertyName("vanish_y")] double VanishY = 0.5
 );
 
 // ── Training Export ─────────────────────────────────────────────────────────

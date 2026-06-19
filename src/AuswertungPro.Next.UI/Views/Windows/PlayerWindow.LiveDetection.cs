@@ -1142,8 +1142,9 @@ public partial class PlayerWindow
             // Training speichern + Codierfenster (VsaCodeExplorer) mit vorausgefuellten Messwerten.
             bool saved = await SaveMarkAsTrainingAsync(overlay, timestampSec, clockPos, frameBytes);
 
-            // Overlay + SAM-Maske entfernen und Canvas neu zeichnen
+            // Overlay + SAM-Maske + Bogen-Marker entfernen und Canvas neu zeichnen
             Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+            ClearBendMarkers();
             if (_codingVm != null) _codingVm.CurrentOverlay = null;
             RedrawCodingCanvas(includeManualOverlay: false);
 
@@ -1223,18 +1224,28 @@ public partial class PlayerWindow
         }
     }
 
-    // Zeichnet die SAM-Maske der Mark-Box sichtbar auf das Codier-Canvas, damit der Nutzer
-    // die Erkennung sieht, BEVOR das VSA-Codierfenster aufgeht.
+    // Zeigt die Erkennung der Mark-Box sichtbar auf dem Codier-Canvas, BEVOR das
+    // VSA-Codierfenster aufgeht. Bei einem BOGEN (IsBend) waere die SAM-Maske irrefuehrend
+    // (sie deckt das ganze runde Rohr-Loch ab, nicht den Bogen-Rand - SAM/SAM3/Hough koennen
+    // die Bogen-Kontur nicht treffen, empirisch belegt). Daher fuer Boegen einen GEOMETRIE-
+    // MARKER am Fluchtpunkt zeichnen (wo das Rohr abknickt) statt der Maske. Fuer alle anderen
+    // (echte Punktschaeden: Riss/Anschluss) die SAM-Maske wie bisher.
     private void ShowMarkSamMask(Infrastructure.Ai.Pipeline.BoxSegmentationResult result)
     {
         try
         {
-            // WICHTIG: in das tatsaechliche Video-Rechteck rendern (Letterbox/Pillarbox-Raender
-            // beruecksichtigen), NICHT in die volle Canvas-Flaeche - sonst wird die Maske
-            // verzerrt und verschoben (erschien als "Oval" neben dem Befund statt darauf).
             var rect = GetCodingContentRect();
             if (rect.Width <= 0 || rect.Height <= 0)
                 return;
+
+            if (result.IsBend)
+            {
+                ShowBendMarker(result.VanishX, result.VanishY, rect);
+                return;
+            }
+
+            // WICHTIG: in das tatsaechliche Video-Rechteck rendern (Letterbox/Pillarbox-Raender),
+            // NICHT in die volle Canvas-Flaeche - sonst Maske verzerrt/verschoben.
             var samResp = new Infrastructure.Ai.Pipeline.SamResponse(
                 new[] { result.Mask }, result.ImageWidth, result.ImageHeight, 0);
             Ai.Pipeline.SamMaskRenderer.RenderMasks(
@@ -1251,6 +1262,54 @@ public partial class PlayerWindow
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Mark-SAM] Masken-Render uebersprungen: {ex.Message}");
+        }
+    }
+
+    // Zeichnet einen Bogen-Marker (Ring + Label) am Fluchtpunkt - die ehrliche Anzeige
+    // "KI hat hier einen Bogen erkannt", da eine praezise Bogen-Kontur technisch nicht
+    // zuverlaessig moeglich ist. vanishX/Y sind normiert (0..1) im Video-Rechteck.
+    private void ShowBendMarker(double vanishX, double vanishY, Rect rect)
+    {
+        double cx = rect.X + vanishX * rect.Width;
+        double cy = rect.Y + vanishY * rect.Height;
+        double r = Math.Max(24, Math.Min(rect.Width, rect.Height) * 0.10);
+
+        var ring = new System.Windows.Shapes.Ellipse
+        {
+            Width = r * 2, Height = r * 2,
+            Stroke = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)),
+            StrokeThickness = 3,
+            Fill = new SolidColorBrush(Color.FromArgb(40, 0x22, 0xC5, 0x5E)),
+            IsHitTestVisible = false,
+            Tag = "bend_marker"
+        };
+        Canvas.SetLeft(ring, cx - r);
+        Canvas.SetTop(ring, cy - r);
+        CodingOverlayCanvas.Children.Add(ring);
+
+        var label = new System.Windows.Controls.TextBlock
+        {
+            Text = "Bogen erkannt",
+            Foreground = new SolidColorBrush(Colors.White),
+            Background = new SolidColorBrush(Color.FromArgb(200, 0x22, 0xC5, 0x5E)),
+            Padding = new Thickness(4, 1, 4, 1),
+            FontSize = 12,
+            IsHitTestVisible = false,
+            Tag = "bend_marker"
+        };
+        Canvas.SetLeft(label, cx - r);
+        Canvas.SetTop(label, Math.Max(0, cy - r - 20));
+        CodingOverlayCanvas.Children.Add(label);
+    }
+
+    // Entfernt alle Bogen-Marker (Tag "bend_marker") vom Codier-Canvas.
+    private void ClearBendMarkers()
+    {
+        for (int i = CodingOverlayCanvas.Children.Count - 1; i >= 0; i--)
+        {
+            if (CodingOverlayCanvas.Children[i] is FrameworkElement fe
+                && (fe.Tag as string) == "bend_marker")
+                CodingOverlayCanvas.Children.RemoveAt(i);
         }
     }
 
