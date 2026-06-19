@@ -1135,7 +1135,7 @@ public partial class PlayerWindow
             // Overlay tatsaechlich gezeichnet wird, dann erst das VSA-Codierfenster.
             if (samResult != null)
             {
-                ShowMarkSamMask(samResult);
+                ShowMarkSamMask(samResult, overlay);
                 await Task.Delay(800);
             }
 
@@ -1225,12 +1225,12 @@ public partial class PlayerWindow
     }
 
     // Zeigt die Erkennung der Mark-Box sichtbar auf dem Codier-Canvas, BEVOR das
-    // VSA-Codierfenster aufgeht. Bei einem BOGEN (IsBend) waere die SAM-Maske irrefuehrend
+    // VSA-Codierfenster aufgeht. Bei einem BOGEN waere die SAM-Maske irrefuehrend
     // (sie deckt das ganze runde Rohr-Loch ab, nicht den Bogen-Rand - SAM/SAM3/Hough koennen
     // die Bogen-Kontur nicht treffen, empirisch belegt). Daher fuer Boegen einen GEOMETRIE-
-    // MARKER am Fluchtpunkt zeichnen (wo das Rohr abknickt) statt der Maske. Fuer alle anderen
-    // (echte Punktschaeden: Riss/Anschluss) die SAM-Maske wie bisher.
-    private void ShowMarkSamMask(Infrastructure.Ai.Pipeline.BoxSegmentationResult result)
+    // MARKER am Fluchtpunkt zeichnen (wo das Rohr abknickt) statt der Maske. Fuer echte
+    // Punktschaeden (Riss/Anschluss) die SAM-Maske wie bisher.
+    private void ShowMarkSamMask(Infrastructure.Ai.Pipeline.BoxSegmentationResult result, OverlayGeometry? overlay)
     {
         try
         {
@@ -1238,7 +1238,12 @@ public partial class PlayerWindow
             if (rect.Width <= 0 || rect.Height <= 0)
                 return;
 
-            if (result.IsBend)
+            // BOX-SPEZIFISCH: is_bend ist frame-weit. Der Bogen-Marker darf NUR erscheinen,
+            // wenn die GEZOGENE Box wirklich den Bogen meint - d.h. den Fluchtpunkt umschliesst
+            // (die abknickende Rohroeffnung liegt am Fluchtpunkt). Ein Punktschaden an der Wand
+            // liegt NICHT am Fluchtpunkt und behaelt seine SAM-Maske, auch wenn der Frame
+            // zusaetzlich als Bogen gilt.
+            if (result.IsBend && BoxContainsVanishingPoint(overlay, result.VanishX, result.VanishY))
             {
                 ShowBendMarker(result.VanishX, result.VanishY, rect);
                 return;
@@ -1300,6 +1305,20 @@ public partial class PlayerWindow
         Canvas.SetLeft(label, cx - r);
         Canvas.SetTop(label, Math.Max(0, cy - r - 20));
         CodingOverlayCanvas.Children.Add(label);
+    }
+
+    // True, wenn die gezogene Box den Fluchtpunkt (normiert 0..1) umschliesst (kleine
+    // Toleranz). Macht die frame-weite is_bend-Entscheidung box-spezifisch: nur eine Box,
+    // die wirklich die abknickende Rohroeffnung am Fluchtpunkt meint, gilt als Bogen.
+    private static bool BoxContainsVanishingPoint(OverlayGeometry? overlay, double vanishX, double vanishY)
+    {
+        if (overlay == null || overlay.Points.Count < 2)
+            return false;
+        double minX = overlay.Points.Min(p => p.X), maxX = overlay.Points.Max(p => p.X);
+        double minY = overlay.Points.Min(p => p.Y), maxY = overlay.Points.Max(p => p.Y);
+        const double tol = 0.05; // ~5% Rand-Toleranz
+        return vanishX >= minX - tol && vanishX <= maxX + tol
+            && vanishY >= minY - tol && vanishY <= maxY + tol;
     }
 
     // Entfernt alle Bogen-Marker (Tag "bend_marker") vom Codier-Canvas.
