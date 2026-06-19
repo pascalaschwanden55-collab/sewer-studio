@@ -279,7 +279,7 @@ public partial class PlayerWindow
         CodingTimelinePanel.Visibility = Visibility.Visible;
 
         // KI initialisieren + OSD-Timer starten
-        InitCodingAi();
+        InitCodingAi().SafeFireAndForget("InitCodingAi");
         StartCodingOsdTimer();
 
         // OSD-Badge sofort sichtbar
@@ -3133,7 +3133,7 @@ public partial class PlayerWindow
 
     // --- Coding KI-Analyse ---
 
-    private async void InitCodingAi()
+    private async Task InitCodingAi()
     {
         try
         {
@@ -3405,7 +3405,7 @@ public partial class PlayerWindow
         }
 
         if (e.Key != System.Windows.Input.Key.Enter) return;
-        SubmitEingabemarker();
+        SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker");
     }
 
     /// <summary>Auswahl in der Schnellauswahl-ComboBox â†’ Text uebernehmen und absenden.</summary>
@@ -3416,7 +3416,7 @@ public partial class PlayerWindow
         if (CmbEingabemarker.SelectedItem is ComboBoxItem item && item.Content is string text && !string.IsNullOrEmpty(text))
         {
             TxtEingabemarker.Text = text;
-            SubmitEingabemarker();
+            SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker");
         }
     }
 
@@ -3424,7 +3424,7 @@ public partial class PlayerWindow
         => AuswertungPro.Next.UI.Player.PlayerVsaCodeHintResolver.ResolveKeyword(keyword);
 
     /// <summary>Freitext oder Stichwort absenden â†’ Code ableiten oder KI-Analyse starten.</summary>
-    private async void SubmitEingabemarker()
+    private async Task SubmitEingabemarker()
     {
         string keyword = TxtEingabemarker.Text?.Trim() ?? "";
         if (string.IsNullOrEmpty(keyword)) return;
@@ -5646,14 +5646,14 @@ public partial class PlayerWindow
         anyAdded = true;
 
         // Auto-Kalibrierung bei Rohranfang versuchen (wenn noch nicht kalibriert)
-        TryAutoCalibrationFromCurrentFrame();
+        TryAutoCalibrationFromCurrentFrame().SafeFireAndForget("TryAutoCalibration");
     }
 
     /// <summary>
     /// Versucht eine Auto-Kalibrierung des Rohrdurchmessers aus dem aktuellen Video-Frame.
     /// Erkennt Rohrinnenwand-Kanten per Helligkeitsgradienten.
     /// </summary>
-    private async void TryAutoCalibrationFromCurrentFrame()
+    private async Task TryAutoCalibrationFromCurrentFrame()
     {
         // Nur wenn noch nicht kalibriert
         if (_codingOverlayService?.IsCalibrated == true) return;
