@@ -478,7 +478,7 @@ public partial class PlayerWindow
 
         // Fertig-Meldung mit Zusammenfassung
         int totalEvents = _codingVm?.Events?.Count ?? 0;
-        LiveDetectionStatusText.Text = $"KI-Analyse beendet â€” {totalEvents} Beobachtungen";
+        LiveDetectionStatusText.Text = $"KI-Analyse beendet — {totalEvents} Beobachtungen";
         LiveDetectionStatusText.Visibility = Visibility.Visible;
 
         // Video pausieren damit der User die Meldung sieht
@@ -1435,7 +1435,7 @@ public partial class PlayerWindow
 
             // Dezente Statusmeldung im OSD-Badge (kein MessageBox-Popup)
             OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"âœ“ {selectedEntry.Code} gespeichert";
+            TxtOsdMeter.Text = $"✓ {selectedEntry.Code} gespeichert";
 
             // Badge nach 3 Sekunden zuruecksetzen
             var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
@@ -1575,7 +1575,7 @@ public partial class PlayerWindow
 
             // Dezente Bestaetigung im OSD-Badge
             OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"âœ“ {_detectionPendingFindings.Count} Befund(e) gespeichert";
+            TxtOsdMeter.Text = $"✓ {_detectionPendingFindings.Count} Befund(e) gespeichert";
 
             var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
             resetTimer.Tick += (_, _) =>
@@ -1591,7 +1591,7 @@ public partial class PlayerWindow
         catch (Exception ex)
         {
             OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"âœ— Fehler: {ex.Message}";
+            TxtOsdMeter.Text = $"✗ Fehler: {ex.Message}";
         }
 
         ResumeDetection();
@@ -1670,7 +1670,7 @@ public partial class PlayerWindow
             await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"âœ“ Training: {selectedEntry.Code} (korrigiert)";
+            TxtOsdMeter.Text = $"✓ Training: {selectedEntry.Code} (korrigiert)";
 
             var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
             resetTimer.Tick += (_, _) =>
@@ -1686,7 +1686,7 @@ public partial class PlayerWindow
         catch (Exception ex)
         {
             OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"âœ— Fehler: {ex.Message}";
+            TxtOsdMeter.Text = $"✗ Fehler: {ex.Message}";
         }
 
         ResumeDetection();

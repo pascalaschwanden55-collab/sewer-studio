@@ -1038,7 +1038,7 @@ public partial class PlayerWindow
             if (nextEvent != null)
             {
                 var distM = nextEvent.MeterAtCapture - currentMeter;
-                TxtCodingCurrentCode.Text = $"â†’ in {distM:F1}m: {nextEvent.Entry.Code}";
+                TxtCodingCurrentCode.Text = $"→ in {distM:F1}m: {nextEvent.Entry.Code}";
                 CodingCurrentCodeBadge.Visibility = Visibility.Visible;
             }
             else
@@ -2687,7 +2687,7 @@ public partial class PlayerWindow
         // 5. Visuelles Feedback
         AuswertungPro.Next.Application.Common.BestEffort.Try(() => System.IO.File.Delete(snapshotPath), "Foto/Snapshot: Temp loeschen");
         OsdMeterBadge.Visibility = Visibility.Visible;
-        TxtOsdMeter.Text = $"âœ“ {importEvent.Entry.Code} @ {importEvent.MeterAtCapture:F1}m bestÃ¤tigt";
+        TxtOsdMeter.Text = $"✓ {importEvent.Entry.Code} @ {importEvent.MeterAtCapture:F1}m bestätigt";
         var resetTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         resetTimer.Tick += (_, _) => { OsdMeterBadge.Visibility = Visibility.Collapsed; resetTimer.Stop(); };
         resetTimer.Start();
