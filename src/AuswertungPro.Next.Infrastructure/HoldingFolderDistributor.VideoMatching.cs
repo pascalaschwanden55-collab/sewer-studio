@@ -62,7 +62,15 @@ public static partial class HoldingFolderDistributor
         IReadOnlyList<string>? videoFilesCache = null)
     {
         var files = videoFilesCache ?? EnumerateVideoFiles(videoSourceFolder, recursiveVideoSearch);
-        return HoldingVideoMatching.FindVideoByHaltungDate(haltung, dateStamp, files);
+        // Datei-Zeitstempel als Tiebreaker, falls mehrere datumslose Videos derselben Haltung
+        // existieren (im Namen steht kein Datum) - das dem Protokoll-Datum naechstgelegene gewinnt.
+        return HoldingVideoMatching.FindVideoByHaltungDate(haltung, dateStamp, files, GetFileTimestampSafe);
+    }
+
+    private static System.DateTime? GetFileTimestampSafe(string path)
+    {
+        try { return File.Exists(path) ? File.GetLastWriteTime(path) : (System.DateTime?)null; }
+        catch { return null; }
     }
 
 

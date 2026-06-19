@@ -83,6 +83,13 @@ internal static class HoldingVideoMatching
         string haltung,
         string dateStamp,
         IReadOnlyList<string> files)
+        => FindVideoByHaltungDate(haltung, dateStamp, files, fileTimestamp: null);
+
+    public static HoldingFolderDistributor.VideoFindResult FindVideoByHaltungDate(
+        string haltung,
+        string dateStamp,
+        IReadOnlyList<string> files,
+        Func<string, DateTime?>? fileTimestamp)
     {
         // Strategy 1: Exact match with expected format: YYYYMMDD_HALTUNG.ext
         var expectedBase = $"{dateStamp}_{haltung}";
@@ -122,12 +129,45 @@ internal static class HoldingVideoMatching
             // einzige Kandidat dagegen ein ABWEICHENDES Datum (z.B. 20230101_06-001.mp4 bei
             // gesuchtem 20240630), bleibt es bei NotFound (Verwechslungsschutz). Bei mehreren
             // Kandidaten ebenfalls NotFound.
-            if (haltungOnly.Count == 1 && !FileNameHasOwnDate(haltungOnly[0], haltung))
+            // Nur datumslose Kandidaten (Name traegt KEIN eigenes Datum) duerfen ueber die
+            // Haltung allein zugeordnet werden. Namen mit abweichendem Datum bleiben geschuetzt.
+            var dateless = haltungOnly.Where(f => !FileNameHasOwnDate(f, haltung)).ToList();
+
+            if (dateless.Count == 1)
                 return new HoldingFolderDistributor.VideoFindResult(
                     HoldingFolderDistributor.VideoMatchStatus.Matched,
-                    haltungOnly[0],
+                    dateless[0],
                     Array.Empty<string>(),
                     "Eindeutiges Haltung-Video ohne Datum im Namen");
+
+            // Mehrere datumslose Videos derselben Haltung (z.B. Nachinspektion): da im Namen
+            // kein Datum steht, ueber den Datei-Zeitstempel das dem Protokoll-Datum
+            // naechstgelegene Video waehlen (User-Regel: Haltung ist das Indiz, Datum der
+            // Tiebreaker). Ist kein Zeitstempel verfuegbar oder nicht eindeutig -> Ambiguous.
+            if (dateless.Count > 1 && fileTimestamp is not null && TryParseStamp(dateStamp, out var target))
+            {
+                var byClosest = dateless
+                    .Select(f => new { File = f, Ts = fileTimestamp(f) })
+                    .Where(x => x.Ts.HasValue)
+                    .OrderBy(x => Math.Abs((x.Ts!.Value - target).TotalDays))
+                    .ToList();
+
+                if (byClosest.Count >= 1)
+                {
+                    var best = byClosest[0];
+                    var secondDist = byClosest.Count > 1
+                        ? Math.Abs((byClosest[1].Ts!.Value - target).TotalDays)
+                        : double.MaxValue;
+                    var bestDist = Math.Abs((best.Ts!.Value - target).TotalDays);
+                    // Eindeutig naeher (mind. 1 Tag Abstand zum naechsten) -> zuordnen.
+                    if (secondDist - bestDist >= 1.0)
+                        return new HoldingFolderDistributor.VideoFindResult(
+                            HoldingFolderDistributor.VideoMatchStatus.Matched,
+                            best.File,
+                            Array.Empty<string>(),
+                            "Haltung-Video ueber Datei-Zeitstempel dem Protokoll-Datum zugeordnet");
+                }
+            }
 
             return new HoldingFolderDistributor.VideoFindResult(
                 HoldingFolderDistributor.VideoMatchStatus.NotFound,
@@ -166,6 +206,14 @@ internal static class HoldingVideoMatching
     {
         var parts = haltung.Split('-');
         return parts.Length == 2 ? $"{parts[1]}-{parts[0]}" : haltung;
+    }
+
+    // dateStamp kommt als YYYYMMDD aus dem Protokoll-Datum.
+    private static bool TryParseStamp(string dateStamp, out DateTime date)
+    {
+        return DateTime.TryParseExact(dateStamp, "yyyyMMdd",
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out date);
     }
 
     private static string? GetSuffixFromFirstUnderscore(string fileName)

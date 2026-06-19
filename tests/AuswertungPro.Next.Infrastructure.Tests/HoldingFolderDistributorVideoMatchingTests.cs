@@ -13,7 +13,10 @@ public sealed class HoldingFolderDistributorVideoMatchingTests
     public void FindVideoByHaltungDate_DoesNotMatchHaltungOnlyFallback()
     {
         var method = Type.GetType("AuswertungPro.Next.Infrastructure.HoldingVideoMatching, AuswertungPro.Next.Infrastructure")!
-            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static);
+            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static,
+                binder: null,
+                types: new[] { typeof(string), typeof(string), typeof(IReadOnlyList<string>) },
+                modifiers: null);
         Assert.NotNull(method);
 
         var files = new List<string>
@@ -37,7 +40,10 @@ public sealed class HoldingFolderDistributorVideoMatchingTests
         // Datum (L_58875-10.1089399.mpg), das PDF hat keinen Filmnamen. Wenn es zu der
         // Haltung GENAU EIN datumsloses Video gibt, ist die Zuordnung eindeutig -> Matched.
         var method = Type.GetType("AuswertungPro.Next.Infrastructure.HoldingVideoMatching, AuswertungPro.Next.Infrastructure")!
-            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static);
+            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static,
+                binder: null,
+                types: new[] { typeof(string), typeof(string), typeof(IReadOnlyList<string>) },
+                modifiers: null);
         Assert.NotNull(method);
 
         var only = Path.Combine(Path.GetTempPath(), "L_58875-10.1089399.mpg");
@@ -53,12 +59,44 @@ public sealed class HoldingFolderDistributorVideoMatchingTests
     }
 
     [Fact]
+    public void FindVideoByHaltungDate_MultipleDatelessVideos_PicksClosestByFileTimestamp()
+    {
+        // User-Regel: zu jedem Protokoll gibt es ein Video; die Haltungsnummer ist das Indiz.
+        // Wenn dieselbe Haltung MEHRERE datumslose Videos hat (Nachinspektion), entscheidet
+        // der Datei-Zeitstempel (im Namen steht kein Datum) - das dem Protokoll-Datum
+        // naechstgelegene Video gewinnt.
+        var method = Type.GetType("AuswertungPro.Next.Infrastructure.HoldingVideoMatching, AuswertungPro.Next.Infrastructure")!
+            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static,
+                binder: null,
+                types: new[] { typeof(string), typeof(string), typeof(IReadOnlyList<string>), typeof(Func<string, DateTime?>) },
+                modifiers: null);
+        Assert.NotNull(method);
+
+        var alt = Path.Combine(Path.GetTempPath(), "L_58875-10.1089399.mpg");        // 2025
+        var neu = Path.Combine(Path.GetTempPath(), "L_58875-10.1089399_b.mpg");      // 2026 (passt)
+        var files = new List<string> { alt, neu };
+        Func<string, DateTime?> stamp = p =>
+            p == neu ? new DateTime(2026, 6, 18) : new DateTime(2025, 1, 1);
+
+        var result = (HoldingFolderDistributor.VideoFindResult?)method!.Invoke(
+            null,
+            new object?[] { "58875-10.1089399", "20260618", files, stamp });
+
+        Assert.NotNull(result);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.Matched, result!.Status);
+        Assert.Equal(neu, result.VideoPath);
+    }
+
+    [Fact]
     public void FindVideoByHaltungDate_DoesNotMatchSingleHaltungVideoWithConflictingDate()
     {
         // Schutz bleibt: traegt das einzige Haltung-Video ein ANDERES Datum als gesucht,
         // wird NICHT automatisch zugeordnet (Verwechslungsgefahr bei mehreren Inspektionen).
         var method = Type.GetType("AuswertungPro.Next.Infrastructure.HoldingVideoMatching, AuswertungPro.Next.Infrastructure")!
-            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static);
+            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static,
+                binder: null,
+                types: new[] { typeof(string), typeof(string), typeof(IReadOnlyList<string>) },
+                modifiers: null);
         Assert.NotNull(method);
 
         var files = new List<string>
