@@ -118,8 +118,10 @@ public class SamMaskRendererTests
     }
 
     [Fact]
-    public void RenderCandidates_LargeDefectDrawsOutlineAndLabelOnly()
+    public void RenderCandidates_LargeDefectDrawsFillContourAndLabel()
     {
+        // Backup-Verhalten (11.06): eine sichtbare Maske wird IMMER gefuellt + Kontur
+        // gezeichnet, auch wenn sie grossflaechig ist. Kein OutlineOnly-Strippen mehr.
         Exception? threadError = null;
         int childCount = -1;
 
@@ -139,8 +141,8 @@ public class SamMaskRendererTests
 
                 childCount = canvas.Children.Count;
                 Assert.Equal(1, summary.Rendered);
-                Assert.Equal(1, summary.OutlineOnly);
-                Assert.Equal(0, summary.SubtleFill);
+                Assert.Equal(0, summary.OutlineOnly);
+                Assert.Equal(1, summary.SubtleFill);
             }
             catch (Exception ex)
             {
@@ -152,7 +154,7 @@ public class SamMaskRendererTests
         thread.Join();
 
         Assert.Null(threadError);
-        Assert.Equal(2, childCount); // contour path + label, no fill path
+        Assert.Equal(3, childCount); // fill path + contour path + label
     }
 
     [Fact]
@@ -221,14 +223,26 @@ public class SamMaskRendererTests
     }
 
     [Fact]
-    public void DecideVisualMode_KeepsLargeDefectAsOutline()
+    public void DecideVisualMode_FillsLargeDefect()
     {
+        // Backup-Verhalten: grosse Maske bleibt sichtbar UND gefuellt (kein OutlineOnly).
         var candidate = Candidate("incrustation infiltration", samConfidence: 0.86, dinoConfidence: 0.26, areaRatio: 0.55);
 
         var decision = SamMaskRenderer.DecideVisualMode(candidate, SamMaskRenderer.WinCanStyleOptions);
 
-        Assert.Equal(SamMaskRenderer.MaskVisualMode.OutlineOnly, decision.Mode);
-        Assert.Equal("large_finding_outline", decision.Reason);
+        Assert.Equal(SamMaskRenderer.MaskVisualMode.SubtleFill, decision.Mode);
+    }
+
+    [Fact]
+    public void DecideVisualMode_FillsManualMaskWithoutDinoConfidence()
+    {
+        // Manueller Mark-Pfad: KEINE DINO-Confidence, SAM-Confidence unter 0.60. Im kaputten
+        // Stand fiel das auf OutlineOnly (duenne Kontur). Backup-Verhalten: gefuellt.
+        var candidate = Candidate("manuell", samConfidence: 0.45, dinoConfidence: null, areaRatio: 0.10);
+
+        var decision = SamMaskRenderer.DecideVisualMode(candidate, SamMaskRenderer.WinCanStyleOptions);
+
+        Assert.Equal(SamMaskRenderer.MaskVisualMode.SubtleFill, decision.Mode);
     }
 
     [Fact]

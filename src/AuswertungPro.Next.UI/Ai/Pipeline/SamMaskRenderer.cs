@@ -326,14 +326,11 @@ public static class SamMaskRenderer
             && samConfidence < options.MinimumVisibleSamConfidence)
             return new RenderDecision(MaskVisualMode.Hidden, "confidence_too_low");
 
-        var areaRatio = GetAreaRatio(mask);
-        if (areaRatio >= options.LargeFindingOutlineAreaRatio)
-            return new RenderDecision(MaskVisualMode.OutlineOnly, "large_finding_outline");
-
-        if ((detectionConfidence ?? samConfidence) >= options.MinimumFillDetectionConfidence)
-            return new RenderDecision(MaskVisualMode.SubtleFill, null);
-
-        return new RenderDecision(MaskVisualMode.OutlineOnly, null);
+        // Backup-Verhalten (11.06, gute Segmentierung): jede sichtbare Maske wird gefuellt +
+        // Kontur gezeichnet. Das fruehere OutlineOnly-Strippen (grosse Flaeche bzw. fehlende
+        // DINO-Confidence im manuellen Mark-Pfad) liess nur eine duenne Scanline-Kontur uebrig
+        // und wirkte "verzerrt/falsch". Hintergrund (Label/Confidence) bleibt weiter Hidden.
+        return new RenderDecision(MaskVisualMode.SubtleFill, null);
     }
 
     private static double GetAreaRatio(SamMaskResult mask)
