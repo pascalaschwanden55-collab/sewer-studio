@@ -31,6 +31,50 @@ public sealed class HoldingFolderDistributorVideoMatchingTests
     }
 
     [Fact]
+    public void FindVideoByHaltungDate_MatchesSingleDatelessHaltungVideo()
+    {
+        // User-Fall (Buerglen_Gosmergasse): Das Video traegt NUR die Haltungsnummer ohne
+        // Datum (L_58875-10.1089399.mpg), das PDF hat keinen Filmnamen. Wenn es zu der
+        // Haltung GENAU EIN datumsloses Video gibt, ist die Zuordnung eindeutig -> Matched.
+        var method = Type.GetType("AuswertungPro.Next.Infrastructure.HoldingVideoMatching, AuswertungPro.Next.Infrastructure")!
+            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var only = Path.Combine(Path.GetTempPath(), "L_58875-10.1089399.mpg");
+        var files = new List<string> { only };
+
+        var result = (HoldingFolderDistributor.VideoFindResult?)method!.Invoke(
+            null,
+            new object?[] { "58875-10.1089399", "20260618", files });
+
+        Assert.NotNull(result);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.Matched, result!.Status);
+        Assert.Equal(only, result.VideoPath);
+    }
+
+    [Fact]
+    public void FindVideoByHaltungDate_DoesNotMatchSingleHaltungVideoWithConflictingDate()
+    {
+        // Schutz bleibt: traegt das einzige Haltung-Video ein ANDERES Datum als gesucht,
+        // wird NICHT automatisch zugeordnet (Verwechslungsgefahr bei mehreren Inspektionen).
+        var method = Type.GetType("AuswertungPro.Next.Infrastructure.HoldingVideoMatching, AuswertungPro.Next.Infrastructure")!
+            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static);
+        Assert.NotNull(method);
+
+        var files = new List<string>
+        {
+            Path.Combine(Path.GetTempPath(), "20230101_06-001.mp4")
+        };
+
+        var result = (HoldingFolderDistributor.VideoFindResult?)method!.Invoke(
+            null,
+            new object?[] { "06-001", "20240630", files });
+
+        Assert.NotNull(result);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotFound, result!.Status);
+    }
+
+    [Fact]
     public void SidecarLinkLookup_UsesReversedHolding_WhenPdfDirectionIsOpposite()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"video-match-{Guid.NewGuid():N}");

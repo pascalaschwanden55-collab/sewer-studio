@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace AuswertungPro.Next.Infrastructure;
 
@@ -114,13 +115,57 @@ internal static class HoldingVideoMatching
         }).ToList();
 
         if (haltungOnly.Count > 0)
+        {
+            // Eindeutiger Fall (User Buerglen_Gosmergasse): Genau EIN Haltung-Video, das
+            // KEIN eigenes Datum im Namen traegt (z.B. L_58875-10.1089399.mpg). Dann ist die
+            // Zuordnung ueber die Haltung eindeutig und ungefaehrlich -> Matched. Traegt der
+            // einzige Kandidat dagegen ein ABWEICHENDES Datum (z.B. 20230101_06-001.mp4 bei
+            // gesuchtem 20240630), bleibt es bei NotFound (Verwechslungsschutz). Bei mehreren
+            // Kandidaten ebenfalls NotFound.
+            if (haltungOnly.Count == 1 && !FileNameHasOwnDate(haltungOnly[0], haltung))
+                return new HoldingFolderDistributor.VideoFindResult(
+                    HoldingFolderDistributor.VideoMatchStatus.Matched,
+                    haltungOnly[0],
+                    Array.Empty<string>(),
+                    "Eindeutiges Haltung-Video ohne Datum im Namen");
+
             return new HoldingFolderDistributor.VideoFindResult(
                 HoldingFolderDistributor.VideoMatchStatus.NotFound,
                 null,
                 haltungOnly,
                 "Haltung-only candidates found, but not auto-matched without date validation");
+        }
 
         return new HoldingFolderDistributor.VideoFindResult(HoldingFolderDistributor.VideoMatchStatus.NotFound, null, Array.Empty<string>(), "No video found (fallback)");
+    }
+
+    // True, wenn der Dateiname ein eigenes Datum traegt (8-stellig YYYYMMDD oder DD.MM.YYYY /
+    // YYYY-MM-DD). Solche Namen NICHT ohne Datumsabgleich zuordnen (Verwechslungsschutz);
+    // datumslose Namen (nur Haltung) duerfen bei Eindeutigkeit zugeordnet werden.
+    // WICHTIG: zuerst die Haltungsnummer aus dem Namen entfernen - sie kann selbst wie ein
+    // Datum aussehen (z.B. 58875-10.1089399 -> "75-10.1089"), sonst falscher Datums-Treffer.
+    private static bool FileNameHasOwnDate(string path, string haltung)
+    {
+        var name = Path.GetFileNameWithoutExtension(path);
+        if (string.IsNullOrWhiteSpace(name))
+            return false;
+
+        // Haltungsnummer (und ihre umgedrehte Variante) aus dem Namen tilgen.
+        foreach (var h in new[] { haltung, ReverseHaltung(haltung) })
+        {
+            if (string.IsNullOrWhiteSpace(h)) continue;
+            name = name.Replace(h, " ", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return Regex.IsMatch(name, @"\d{8}")
+            || Regex.IsMatch(name, @"\d{2}[.\-]\d{2}[.\-]\d{2,4}")
+            || Regex.IsMatch(name, @"\d{4}[.\-]\d{2}[.\-]\d{2}");
+    }
+
+    private static string ReverseHaltung(string haltung)
+    {
+        var parts = haltung.Split('-');
+        return parts.Length == 2 ? $"{parts[1]}-{parts[0]}" : haltung;
     }
 
     private static string? GetSuffixFromFirstUnderscore(string fileName)
