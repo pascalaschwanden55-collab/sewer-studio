@@ -21,8 +21,13 @@ def client():
     return TestClient(app)
 
 
+@pytest.mark.gpu
 def test_dino_endpoint(client):
-    """Smoke test: DINO endpoint responds with correct schema."""
+    """Smoke test: DINO endpoint responds with correct schema.
+
+    GPU-markiert: /detect/dino laedt das echte Grounding-DINO-Modell -> langsam, kann ohne
+    GPU haengen. Default-Lauf (pytest tests) ueberspringt das; explizit: pytest -m gpu.
+    """
     img_b64 = _make_test_image()
     resp = client.post("/detect/dino", json={
         "image_base64": img_b64,

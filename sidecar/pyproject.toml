@@ -23,3 +23,17 @@ dev = ["pytest>=8.0", "httpx>=0.27"]
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.pytest.ini_options]
+# Audit-Fix: "pytest tests" lief nicht sauber durch, weil einzelne Tests echte Modelle
+# (DINO/SAM/YOLO) auf der GPU laden und haengen/timeouten. Marker trennen Unit- von
+# GPU-/E2E-Tests. Default-Lauf schliesst gpu/e2e aus -> schnell und stabil.
+# GPU-Tests explizit:   pytest -m gpu
+# Alles inkl. GPU:      pytest -m ""
+testpaths = ["tests"]
+addopts = "-m 'not gpu and not e2e'"
+markers = [
+    "gpu: laedt echte Modelle auf der GPU (DINO/SAM/YOLO real) - langsam, braucht Hardware",
+    "e2e: End-to-End ueber echte HTTP-Endpunkte mit Modell-Laden",
+    "slow: langsame Tests (mehrere Sekunden)",
+]
