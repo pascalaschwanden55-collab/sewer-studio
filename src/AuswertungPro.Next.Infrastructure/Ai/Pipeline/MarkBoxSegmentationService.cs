@@ -14,13 +14,6 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// </summary>
 public sealed class MarkBoxSegmentationService
 {
-    // Plausibilitaets-Gate gegen "gruener Riesen-Umriss": SAM nimmt bei dunklen Rohrbildern
-    // oft das ganze Rohrloch oder die Wand als dominantes Objekt. Eine Maske, die deutlich
-    // groesser als die gezogene Box ODER ein zu grosser Bildanteil ist, meint nicht den
-    // markierten Schaden -> verwerfen, statt eine fachlich falsche Maske zu zeigen.
-    private const double MaxMaskToBoxAreaRatio = 2.5;   // Maske > 2,5x Box-Flaeche -> verwerfen
-    private const double MaxMaskToImageAreaRatio = 0.40; // Maske > 40% des Bildes -> verwerfen
-
     private readonly Func<SamRequest, CancellationToken, Task<SamResponse>> _segment;
 
     public MarkBoxSegmentationService(Func<SamRequest, CancellationToken, Task<SamResponse>> segment)
@@ -57,43 +50,12 @@ public sealed class MarkBoxSegmentationService
         if (response?.Masks is null || response.Masks.Count == 0) return null;
 
         var mask = response.Masks[0];
-
-        // Plausibilitaets-Gate: offensichtliche Hintergrund-Masken (Rohrloch/Wand) verwerfen.
-        // Box-Flaeche in Pixeln aus der normalisierten Box; Maskenflaeche kommt vom Sidecar.
-        double boxAreaPixels = box.Width * box.Height * imgW * imgH;
-        if (!IsMaskPlausible(mask, boxAreaPixels)) return null;
-
         var quant = MaskQuantificationService.Quantify(
             mask, response.ImageWidth, response.ImageHeight,
             Math.Max(0, pipeDiameterMm), calibration);
 
         return new BoxSegmentationResult(quant, mask, response.ImageWidth, response.ImageHeight,
             response.IsBend, response.VanishX, response.VanishY);
-    }
-
-    /// <summary>
-    /// Pruefung, ob die SAM-Maske plausibel den markierten Schaden meint (und nicht das
-    /// Rohrloch/die Wand). Verwirft, wenn die Maske deutlich groesser als die gezogene Box
-    /// (Faktor) ODER ein zu grosser Bildanteil ist. Reine Logik, ohne Seiteneffekte.
-    /// Fehlende/0-Flaechenangaben gelten als plausibel (kein hartes Verwerfen bei Unwissen).
-    /// </summary>
-    internal static bool IsMaskPlausible(SamMaskResult mask, double boxAreaPixels)
-    {
-        if (mask.MaskAreaPixels <= 0) return true; // keine Flaeche bekannt -> nicht verwerfen
-
-        if (mask.ImageAreaPixels > 0)
-        {
-            double imageRatio = mask.MaskAreaPixels / (double)mask.ImageAreaPixels;
-            if (imageRatio > MaxMaskToImageAreaRatio) return false; // zu grosser Bildanteil
-        }
-
-        if (boxAreaPixels > 0)
-        {
-            double boxRatio = mask.MaskAreaPixels / boxAreaPixels;
-            if (boxRatio > MaxMaskToBoxAreaRatio) return false; // deutlich groesser als Box
-        }
-
-        return true;
     }
 
     /// <summary>
