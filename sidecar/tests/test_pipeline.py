@@ -39,8 +39,17 @@ def test_full_pipeline_health_then_yolo(client):
     assert isinstance(data["detections"], list)
 
 
-def test_training_export(client):
-    """Smoke test: training export creates valid response."""
+def test_training_export(client, tmp_path, monkeypatch):
+    """Smoke test: training export creates valid response.
+
+    Isoliert: schreibt in pytest tmp_path statt in den festen ./test_export_tmp (vermied
+    PermissionError + nicht aufgeraeumte Artefakte). Die Export-Route erzwingt eine Sandbox
+    (output_dir muss in training_export_root liegen), daher wird der Root auf tmp_path
+    gepatcht und output_dir relativ dazu gesetzt.
+    """
+    from sidecar.config import settings
+    monkeypatch.setattr(settings, "training_export_root", str(tmp_path), raising=False)
+
     img_b64 = _make_test_image(w=100, h=100)
     resp = client.post("/training/export-yolo", json={
         "samples": [
@@ -51,7 +60,7 @@ def test_training_export(client):
                 ],
             }
         ],
-        "output_dir": "./test_export_tmp",
+        "output_dir": "export",
         "train_split": 0.8,
     })
     assert resp.status_code == 200
