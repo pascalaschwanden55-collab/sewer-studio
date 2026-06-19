@@ -74,6 +74,19 @@ test_export_tmp/
 training_export/
 sidecar/yolo11m.engine
 
+# Lokale Modellablagen im Repo-Root (NICHT eincheckbar - z.B. sam3.1_multiplex.pt ~3.5GB).
+# Verhindert, dass ein "git add ." mehrere GB Modellgewichte ins Repo zieht.
+/models/
+/sam3.1/
+# Root-Test-Cache (sidecar/.pytest_cache ist schon oben abgedeckt)
+.pytest_cache/
+# Sicherheitsnetz: Modellgewichte repo-weit, egal wo sie liegen
+**/*.pt
+**/*.pth
+**/*.onnx
+**/*.engine
+**/*.safetensors
+
 # Superpowers Brainstorm-/Arbeitsordner (Mockups, Sessions)
 .superpowers/
 sidecar/yolo11m.onnx
