@@ -97,4 +97,8 @@ if ($DryRun) {
     exit 0
 }
 
-python -m uvicorn sidecar.main:app --host $env:SEWER_SIDECAR_HOST --port $env:SEWER_SIDECAR_PORT --log-level info
+# WICHTIG: explizit den venv-Python nutzen ($venvPython), NICHT das mehrdeutige "python".
+# Wenn die App das Skript startet, greift die venv-Aktivierung (Zeile 36) nicht zuverlaessig
+# -> "python" fiel aufs System-Python (Python312) zurueck, das KEIN torch/ultralytics hat
+# -> der Sidecar lief, konnte aber NIE Modelle laden ("KI nicht robust", loaded_models leer).
+& $venvPython -m uvicorn sidecar.main:app --host $env:SEWER_SIDECAR_HOST --port $env:SEWER_SIDECAR_PORT --log-level info
