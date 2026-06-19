@@ -13,6 +13,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
     <PackageReference Include="Scriban" Version="7.2.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" />
+    <!-- Explizit gepinnt gegen NU1903 (GHSA-2m69-gcr7-jv3q): die transitive 2.1.11 enthielt
+         eine SQLite-Memory-Corruption-Luecke. 3.0.3 buendelt SQLite 3.50.4.5 (> gefordert 3.50.2)
+         und ueberschreibt die transitive Version aus Microsoft.Data.Sqlite. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
     <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="10.0.0" />
   </ItemGroup>
 </Project>
