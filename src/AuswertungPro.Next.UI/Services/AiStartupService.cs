@@ -65,16 +65,34 @@ public static class AiStartupService
     public static Task<AiStartupResult> StartAsync(
         AppSettings settings,
         CancellationToken ct = default)
-        => StartAsync(settings, new DefaultAiStartupLauncher(), sidecarScriptPath: null, ct);
+        => StartAsync(settings, new DefaultAiStartupLauncher(), sidecarScriptPath: null, progress: null, ct);
 
-    public static async Task<AiStartupResult> StartAsync(
+    public static Task<AiStartupResult> StartAsync(
+        AppSettings settings,
+        IProgress<string> progress,
+        CancellationToken ct = default)
+        => StartAsync(settings, new DefaultAiStartupLauncher(), sidecarScriptPath: null, progress, ct);
+
+    public static Task<AiStartupResult> StartAsync(
         AppSettings settings,
         IAiStartupLauncher launcher,
         string? sidecarScriptPath = null,
         CancellationToken ct = default)
+        => StartAsync(settings, launcher, sidecarScriptPath, progress: null, ct);
+
+    public static async Task<AiStartupResult> StartAsync(
+        AppSettings settings,
+        IAiStartupLauncher launcher,
+        string? sidecarScriptPath,
+        IProgress<string>? progress,
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(launcher);
+
+        // Fortschritt live melden, damit der "KI starten"-Knopf waehrend der langen Kaltstart-
+        // Phasen (Sidecar bis zu 2 Min, Modell-Laden) nicht stumm wirkt ("haengt").
+        void Report(string step) => progress?.Report(step);
 
         var messages = new List<string>();
         var warnings = new List<string>();
@@ -87,6 +105,7 @@ public static class AiStartupService
         var modelLabel = BuildModelLabel(preloadRequests.Select(r => r.ModelName), platform.MultiModelEnabled);
         AiRuntimeStatusTracker.MarkStarting(modelLabel);
 
+        Report("Pruefe Ollama...");
         var ollamaReachable = await launcher
             .IsReachableAsync(platform.OllamaBaseUri, "/api/tags", headers: null, ct)
             .ConfigureAwait(false);
@@ -116,6 +135,7 @@ public static class AiStartupService
 
         if (!ollamaReachable && ollamaStarted)
         {
+            Report("Warte auf Ollama (Kaltstart kann ~40s dauern)...");
             ollamaReachable = await WaitForOllamaAsync(launcher, platform.OllamaBaseUri, ct)
                 .ConfigureAwait(false);
             if (!ollamaReachable)
@@ -123,8 +143,9 @@ public static class AiStartupService
         }
 
         var preloadedModels = new List<string>();
-        if (ollamaReachable)
+        if (ollamaReachable && preloadRequests.Count > 0)
         {
+            Report("Lade Sprachmodelle (Ollama)...");
             foreach (var model in preloadRequests)
             {
                 var preload = await launcher.PreloadOllamaModelAsync(platform.OllamaBaseUri, model, ct)
@@ -140,6 +161,7 @@ public static class AiStartupService
         }
 
         var sidecarHeaders = BuildSidecarHeaders(platform.SidecarToken);
+        Report("Pruefe Vision-Sidecar...");
         var sidecarReachable = await launcher
             .IsReachableAsync(platform.SidecarUrl, "/health", sidecarHeaders, ct)
             .ConfigureAwait(false);
@@ -169,7 +191,10 @@ public static class AiStartupService
                     out var error);
 
                 if (sidecarStarted)
+                {
+                    Report("Vision-Sidecar wird gestartet...");
                     messages.Add("Vision-Sidecar wird im Hintergrund gestartet.");
+                }
                 else
                     warnings.Add($"Vision-Sidecar konnte nicht gestartet werden: {error ?? "unbekannter Fehler"}");
             }
@@ -179,20 +204,51 @@ public static class AiStartupService
         // meldet, ob er wirklich oben ist – statt nur "wird gestartet".
         if (!sidecarReachable && sidecarStarted)
         {
+            Report("Warte auf Vision-Sidecar (Kaltstart inkl. TensorRT kann 1-2 Min dauern)...");
             sidecarReachable = await WaitForReachableAsync(launcher, platform.SidecarUrl, "/health", sidecarHeaders, ct)
                 .ConfigureAwait(false);
             if (!sidecarReachable)
                 warnings.Add("Vision-Sidecar wurde gestartet, ist aber noch nicht erreichbar. Modelle konnten nicht geladen werden.");
         }
 
-        // Vision-Modelle (YOLO/DINO/SAM) vorab laden, damit die erste Analyse keinen Lade-Verzug hat.
+        // Vision-Modelle (YOLO/Classifier/DINO/SAM) vorab laden, damit die erste Analyse keinen Lade-Verzug hat.
+        // ROBUST: bis zu 3 Versuche, bis ALLE erwarteten Modelle geladen sind. Ein einzelnes Modell
+        // (z.B. YOLO-TensorRT-Engine) kann beim allerersten Versuch noch klemmen; ein erneuter /warmup
+        // ist idempotent und holt das fehlende Modell nach. So ist nach "KI starten" wirklich alles oben.
         if (sidecarReachable)
         {
-            var warm = await launcher.WarmupSidecarModelsAsync(platform.SidecarUrl, sidecarHeaders, ct).ConfigureAwait(false);
-            if (warm.LoadedModels.Count > 0)
-                messages.Add($"Vision-Modelle geladen: {string.Join(", ", warm.LoadedModels)}");
-            if (!warm.Succeeded && warm.Error is not null)
-                warnings.Add($"Vision-Modelle konnten nicht vollstaendig geladen werden: {warm.Error}");
+            Report("Lade Vision-Modelle (YOLO, DINO, SAM, Klassifikator)...");
+            var expected = new[] { "yolo", "classifier", "dino", "sam" };
+            var loadedAll = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            string? lastError = null;
+
+            for (var attempt = 1; attempt <= 3; attempt++)
+            {
+                if (attempt > 1)
+                    Report($"Lade Vision-Modelle, Versuch {attempt}/3...");
+                var warm = await launcher.WarmupSidecarModelsAsync(platform.SidecarUrl, sidecarHeaders, ct).ConfigureAwait(false);
+                foreach (var m in warm.LoadedModels)
+                    loadedAll.Add(m);
+                lastError = warm.Succeeded ? null : warm.Error;
+
+                // 404 = alter Sidecar ohne /warmup -> Retry zwecklos, abbrechen.
+                if (!warm.Succeeded && warm.Error is not null && warm.Error.Contains("/warmup", StringComparison.OrdinalIgnoreCase))
+                    break;
+                // Alle erwarteten Modelle oben -> fertig.
+                if (expected.All(loadedAll.Contains))
+                    break;
+                // Sonst kurz warten und erneut versuchen (idempotent).
+                if (attempt < 3)
+                    await Task.Delay(TimeSpan.FromSeconds(2), ct).ConfigureAwait(false);
+            }
+
+            if (loadedAll.Count > 0)
+                messages.Add($"Vision-Modelle geladen: {string.Join(", ", loadedAll)}");
+
+            var missing = expected.Where(m => !loadedAll.Contains(m)).ToList();
+            if (missing.Count > 0)
+                warnings.Add($"Vision-Modelle NICHT geladen: {string.Join(", ", missing)}"
+                    + (lastError is not null ? $" ({lastError})" : ""));
         }
 
         var result = new AiStartupResult(
@@ -207,6 +263,7 @@ public static class AiStartupService
             Messages: messages,
             Warnings: warnings);
 
+        Report(result.HasWarnings ? "KI gestartet (mit Warnung)" : "KI bereit");
         AiRuntimeStatusTracker.MarkReady(modelLabel, result.HasWarnings, BuildRuntimeStatusText(result));
         return result;
     }
@@ -327,7 +384,12 @@ public static class AiStartupService
         Uri baseUri,
         CancellationToken ct)
     {
-        for (var attempt = 0; attempt < 20; attempt++)
+        // Ollama braucht beim Kaltstart laenger, als man denkt: allein die GPU-Discovery
+        // (CUDA-Geraet finden, VRAM ermitteln) dauert auf einer dedizierten GPU ~13 s, BEVOR
+        // /api/tags antwortet. Mit nur 10 s (20×500ms) gab die App zu frueh auf ("Ollama
+        // gestartet, aber nicht erreichbar — Modelle nicht geladen"), obwohl der Server gleich
+        // danach bereit war. 80×500ms = 40 s deckt den Kaltstart sicher ab (analog Sidecar-Warten).
+        for (var attempt = 0; attempt < 80; attempt++)
         {
             if (await launcher.IsReachableAsync(baseUri, "/api/tags", headers: null, ct).ConfigureAwait(false))
                 return true;
@@ -345,8 +407,12 @@ public static class AiStartupService
         IReadOnlyDictionary<string, string>? headers,
         CancellationToken ct)
     {
-        // Sidecar braucht beim Kaltstart einige Sekunden (Python-Importe), bevor /health antwortet.
-        for (var attempt = 0; attempt < 60; attempt++)
+        // Sidecar-Kaltstart dauert laenger, als 30s abdecken: Python laedt torch + ultralytics +
+        // TensorRT, und die YOLO-Engine-Initialisierung kann allein 30-60s brauchen, BEVOR /health
+        // antwortet. Mit 60×500ms=30s gab die App zu frueh auf ("Sidecar nicht erreichbar — Modelle
+        // nicht geladen") und uebersprang dadurch den /warmup, sodass YOLO/DINO nie geladen wurden.
+        // 240×500ms = 120s deckt den Kaltstart inkl. TensorRT sicher ab.
+        for (var attempt = 0; attempt < 240; attempt++)
         {
             if (await launcher.IsReachableAsync(baseUri, relativePath, headers, ct).ConfigureAwait(false))
                 return true;

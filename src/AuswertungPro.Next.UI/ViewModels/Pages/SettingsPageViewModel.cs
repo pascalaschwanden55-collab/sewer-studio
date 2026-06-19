@@ -34,6 +34,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty] private string _restorePointsFolderPath = string.Empty;
     [ObservableProperty] private string _backupStatusText = string.Empty;
     [ObservableProperty] private string _aiStartupStatusText = string.Empty;
+    // true, solange "KI starten" laeuft -> Fortschrittsbalken sichtbar, Knopf gesperrt.
+    [ObservableProperty] private bool _isAiStarting;
     private bool _syncingThemeState;
 
     public IReadOnlyList<AutoSaveModeOption> AutoSaveModeOptions { get; } =
@@ -237,11 +239,18 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
     private async Task StartAiAsync()
     {
+        if (IsAiStarting)
+            return;
+
+        IsAiStarting = true;
         AiStartupStatusText = "Starte KI...";
 
         try
         {
-            var result = await AiStartupService.StartAsync(_sp.Settings);
+            // Fortschritt live in den Status-Text leiten, damit der Knopf waehrend des langen
+            // Kaltstarts (Sidecar bis 2 Min, Modell-Laden) nicht stumm wirkt ("haengt").
+            var progress = new Progress<string>(step => AiStartupStatusText = step);
+            var result = await AiStartupService.StartAsync(_sp.Settings, progress);
             _sp.Settings.SaveImmediate();
 
             AiStartupStatusText = result.HasWarnings
@@ -256,6 +265,10 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         {
             AiStartupStatusText = $"KI-Start fehlgeschlagen: {ex.Message}";
             _sp.Dialogs.Error(AiStartupStatusText, "KI starten");
+        }
+        finally
+        {
+            IsAiStarting = false;
         }
     }
 

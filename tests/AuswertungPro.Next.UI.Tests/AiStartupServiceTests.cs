@@ -225,6 +225,181 @@ public sealed class AiStartupServiceTests
         }
     }
 
+    [Fact]
+    public async Task StartAsync_warmup_retries_until_all_vision_models_loaded()
+    {
+        var temp = CreateTempSidecarScript();
+        try
+        {
+            ResetRuntimeStatusIfAvailable();
+            var launcher = new FakeAiStartupLauncher
+            {
+                OllamaReachable = true,
+                SidecarReachable = true,
+                // 1. /warmup liefert nur SAM (YOLO/DINO/Classifier klemmen noch beim TensorRT-Kaltstart),
+                // 2. /warmup liefert alle vier. Der robuste Start muss nachfassen.
+                WarmupLoadedPerCall = new List<string[]>
+                {
+                    new[] { "sam" },
+                    new[] { "yolo", "classifier", "dino", "sam" },
+                }
+            };
+            var settings = new AppSettings
+            {
+                AiEnabled = true,
+                PipelineMultiModelEnabled = true,
+                PipelineMode = "multimodel",
+                AiOllamaUrl = "http://localhost:11434",
+                PipelineSidecarUrl = "http://localhost:8100",
+                AiVisionModel = "qwen2.5vl:7b"
+            };
+
+            var result = await AiStartupService.StartAsync(
+                settings,
+                launcher,
+                sidecarScriptPath: temp.ScriptPath,
+                ct: CancellationToken.None);
+
+            // Nachgefasst -> mind. 2 Aufrufe; am Ende sind ALLE Sidecar-Modelle geladen, keine "fehlt"-Warnung.
+            Assert.True(launcher.WarmupCallCount >= 2, $"Warmup sollte nachfassen, war {launcher.WarmupCallCount}x");
+            Assert.DoesNotContain(result.Warnings, w => w.Contains("NICHT geladen", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(result.Messages, m =>
+                m.Contains("yolo", StringComparison.OrdinalIgnoreCase)
+                && m.Contains("classifier", StringComparison.OrdinalIgnoreCase)
+                && m.Contains("dino", StringComparison.OrdinalIgnoreCase)
+                && m.Contains("sam", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            ResetRuntimeStatusIfAvailable();
+            Directory.Delete(temp.Root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task StartAsync_warns_when_vision_model_stays_missing_after_retries()
+    {
+        var temp = CreateTempSidecarScript();
+        try
+        {
+            ResetRuntimeStatusIfAvailable();
+            var launcher = new FakeAiStartupLauncher
+            {
+                OllamaReachable = true,
+                SidecarReachable = true,
+                // YOLO kommt NIE hoch (Engine kaputt) -> nach Retries muss eine ehrliche Warnung stehen.
+                WarmupLoadedPerCall = new List<string[]> { new[] { "dino", "sam" } }
+            };
+            var settings = new AppSettings
+            {
+                AiEnabled = true,
+                PipelineMultiModelEnabled = true,
+                PipelineMode = "multimodel",
+                AiOllamaUrl = "http://localhost:11434",
+                PipelineSidecarUrl = "http://localhost:8100",
+                AiVisionModel = "qwen2.5vl:7b"
+            };
+
+            var result = await AiStartupService.StartAsync(
+                settings,
+                launcher,
+                sidecarScriptPath: temp.ScriptPath,
+                ct: CancellationToken.None);
+
+            Assert.Equal(3, launcher.WarmupCallCount); // alle Versuche ausgeschoepft
+            Assert.Contains(result.Warnings, w =>
+                w.Contains("NICHT geladen", StringComparison.OrdinalIgnoreCase)
+                && w.Contains("yolo", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            ResetRuntimeStatusIfAvailable();
+            Directory.Delete(temp.Root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task StartAsync_warns_when_classifier_model_stays_missing_after_retries()
+    {
+        var temp = CreateTempSidecarScript();
+        try
+        {
+            ResetRuntimeStatusIfAvailable();
+            var launcher = new FakeAiStartupLauncher
+            {
+                OllamaReachable = true,
+                SidecarReachable = true,
+                WarmupLoadedPerCall = new List<string[]> { new[] { "yolo", "dino", "sam" } }
+            };
+            var settings = new AppSettings
+            {
+                AiEnabled = true,
+                PipelineMultiModelEnabled = true,
+                PipelineMode = "multimodel",
+                AiOllamaUrl = "http://localhost:11434",
+                PipelineSidecarUrl = "http://localhost:8100",
+                AiVisionModel = "qwen2.5vl:7b"
+            };
+
+            var result = await AiStartupService.StartAsync(
+                settings,
+                launcher,
+                sidecarScriptPath: temp.ScriptPath,
+                ct: CancellationToken.None);
+
+            Assert.Equal(3, launcher.WarmupCallCount);
+            Assert.Contains(result.Warnings, w =>
+                w.Contains("NICHT geladen", StringComparison.OrdinalIgnoreCase)
+                && w.Contains("classifier", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            ResetRuntimeStatusIfAvailable();
+            Directory.Delete(temp.Root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task StartAsync_reports_progress_steps_so_button_does_not_look_stuck()
+    {
+        var temp = CreateTempSidecarScript();
+        try
+        {
+            ResetRuntimeStatusIfAvailable();
+            // Sidecar offline -> Start + Warten + Warmup: hier entstehen die langen Phasen,
+            // in denen der Knopf bisher stumm "Starte KI..." zeigte (User: "haengt").
+            var launcher = new FakeAiStartupLauncher
+            {
+                OllamaReachable = true,
+                SidecarReachable = false
+            };
+            var settings = new AppSettings
+            {
+                AiOllamaUrl = "http://localhost:11434",
+                PipelineSidecarUrl = "http://localhost:8100"
+            };
+            var steps = new List<string>();
+            var progress = new Progress<string>(s => steps.Add(s));
+
+            await AiStartupService.StartAsync(
+                settings,
+                launcher,
+                sidecarScriptPath: temp.ScriptPath,
+                progress: progress,
+                ct: CancellationToken.None);
+
+            // Es muss live ueber die langen Phasen berichtet werden, nicht nur ein Endzustand.
+            Assert.NotEmpty(steps);
+            Assert.Contains(steps, s => s.Contains("Sidecar", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(steps, s => s.Contains("Modell", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            ResetRuntimeStatusIfAvailable();
+            Directory.Delete(temp.Root, recursive: true);
+        }
+    }
+
     private static (string Root, string ScriptPath) CreateTempSidecarScript()
     {
         var root = Path.Combine(Path.GetTempPath(), "sewerstudio-ai-start-" + Guid.NewGuid().ToString("N"));
@@ -296,6 +471,16 @@ public sealed class AiStartupServiceTests
             return Task.FromResult(new AiStartupModelPreloadResult(true, null));
         }
 
+        /// <summary>Zaehlt, wie oft /warmup aufgerufen wurde (fuer Retry-Tests).</summary>
+        public int WarmupCallCount { get; private set; }
+
+        /// <summary>
+        /// Optional: pro Aufruf-Index die "loaded"-Liste, die der Warmup zurueckgeben soll.
+        /// Erlaubt Teilausfall-Simulation (z.B. 1. Aufruf nur sam, 2. Aufruf alle Modelle).
+        /// Wenn null/leer, wird immer {yolo,classifier,dino,sam} geliefert (Standardverhalten).
+        /// </summary>
+        public List<string[]>? WarmupLoadedPerCall { get; set; }
+
         public Task<AiStartupWarmupResult> WarmupSidecarModelsAsync(
             Uri sidecarBaseUri,
             IReadOnlyDictionary<string, string>? headers,
@@ -304,7 +489,13 @@ public sealed class AiStartupServiceTests
             if (!SidecarReachable)
                 return Task.FromResult(new AiStartupWarmupResult(false, Array.Empty<string>(), "nicht erreichbar"));
 
-            var models = new[] { "yolo", "dino", "sam" };
+            var idx = WarmupCallCount;
+            WarmupCallCount++;
+
+            var models = WarmupLoadedPerCall is { Count: > 0 }
+                ? (idx < WarmupLoadedPerCall.Count ? WarmupLoadedPerCall[idx] : WarmupLoadedPerCall[^1])
+                : new[] { "yolo", "classifier", "dino", "sam" };
+
             WarmedModels.AddRange(models);
             return Task.FromResult(new AiStartupWarmupResult(true, models, null));
         }
