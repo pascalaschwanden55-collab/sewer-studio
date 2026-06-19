@@ -1229,14 +1229,24 @@ public partial class PlayerWindow
     {
         try
         {
+            // WICHTIG: in das tatsaechliche Video-Rechteck rendern (Letterbox/Pillarbox-Raender
+            // beruecksichtigen), NICHT in die volle Canvas-Flaeche - sonst wird die Maske
+            // verzerrt und verschoben (erschien als "Oval" neben dem Befund statt darauf).
+            var rect = GetCodingContentRect();
+            if (rect.Width <= 0 || rect.Height <= 0)
+                return;
             var samResp = new Infrastructure.Ai.Pipeline.SamResponse(
                 new[] { result.Mask }, result.ImageWidth, result.ImageHeight, 0);
             Ai.Pipeline.SamMaskRenderer.RenderMasks(
                 CodingOverlayCanvas,
                 samResp,
                 new[] { result.Quant },
-                CodingOverlayCanvas.ActualWidth,
-                CodingOverlayCanvas.ActualHeight);
+                rect.Width,
+                rect.Height,
+                logger: null,
+                options: null,
+                offsetX: rect.X,
+                offsetY: rect.Y);
         }
         catch (Exception ex)
         {

@@ -429,7 +429,9 @@ public static class SamMaskRenderer
         double canvasWidth,
         double canvasHeight,
         ILogger? logger = null,
-        RenderOptions? options = null)
+        RenderOptions? options = null,
+        double offsetX = 0,
+        double offsetY = 0)
     {
         if (samResponse == null || samResponse.Masks.Count == 0)
             return new RenderSummary(0, 0, 0, 0, new Dictionary<string, int>());
@@ -449,7 +451,9 @@ public static class SamMaskRenderer
             canvasWidth,
             canvasHeight,
             logger,
-            options);
+            options,
+            offsetX,
+            offsetY);
     }
 
     /// <summary>
