@@ -711,10 +711,13 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     private async Task LoadSamplesInternalAsync()
     {
-        var list = await TrainingSamplesStore.LoadAsync();
-        Samples.Clear();
-        foreach (var s in list)
-            Samples.Add(s);
+        var list = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
+        OnUi(() =>
+        {
+            Samples.Clear();
+            foreach (var s in list)
+                Samples.Add(s);
+        });
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
@@ -1669,13 +1672,145 @@ public partial class TrainingCenterViewModel : ObservableObject
         {
             changedSample.KbIndexState = KbIndexState.Pending;
             await TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample> { changedSample });
-            var indexedIds = await IncrementalKbUpdateAsync(
+            var outcome = await IncrementalKbUpdateWithReasonAsync(
                 new List<TrainingSample> { changedSample },
                 CancellationToken.None);
-            changedSample.KbIndexState = indexedIds.Contains(changedSample.SampleId)
+            // Skipped (bewusst/dauerhaft verworfen) vs. Error (echter Fehler) sauber unterscheiden.
+            changedSample.KbIndexState = outcome.IndexedIds.Contains(changedSample.SampleId)
                 ? KbIndexState.Indexed
-                : KbIndexState.Error;
+                : outcome.SkippedIds.Contains(changedSample.SampleId)
+                    ? KbIndexState.Skipped
+                    : KbIndexState.Error;
             await TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample> { changedSample });
+        }
+    }
+
+    /// <summary>
+    /// Holt alle menschlich bestaetigten Gold-Samples (Status=Approved), die noch nicht in der KB
+    /// stehen (KbIndexState != Indexed), nachtraeglich in die KnowledgeBase.db. Legt vorher ein
+    /// reversibles Backup an. Schreibt den KbIndexState pro Sample zurueck in training_samples.json.
+    ///
+    /// Hintergrund: Der Codiermodus persistiert bestaetigte Befunde zwar als Gold, indexiert sie aber
+    /// nicht zuverlaessig in die KB (das Index-Ergebnis wurde frueher nicht zurueckgeschrieben). Dieser
+    /// Lauf holt genau diese Nachzuegler — "mehr konkrete, richtige Beispiele" in der durchsuchbaren KB.
+    /// Rein additiv: Eval-Schutz und IsIndexWorthy greifen ueber den bestehenden Index-Pfad weiter.
+    /// </summary>
+    [RelayCommand]
+    private async Task ReconcileGoldToKbAsync()
+    {
+        // Nebenlaeufigkeits-Guard: nie parallel zu Batch/Self-Training oder mehrfach gleichzeitig —
+        // sonst koennten Backup, JSON-Status und KB-Index gegeneinander arbeiten.
+        if (IsBusy || IsSelfTrainingRunning) return;
+
+        // An die vorhandene Abbruch-Infrastruktur anschliessen (CancelBatch cancelt _genCts,
+        // der "Abbrechen"-Button ist bei IsBusy sichtbar).
+        _genCts?.Cancel();
+        _genCts?.Dispose();
+        _genCts = new CancellationTokenSource();
+        var ct = _genCts.Token;
+
+        try
+        {
+            IsBusy = true;
+
+            var all = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
+            var pending = KbReconcilePlanner.SelectPending(all);
+            var (total, eligible) = KbReconcilePlanner.CountPending(all);
+            if (total == 0)
+            {
+                Log("KB-Nachholen: keine offenen Gold-Samples (alles bereits indexiert).");
+                SetStatus("KB-Nachholen: nichts zu tun");
+                return;
+            }
+
+            // Ehrliche Laufzeit-Zahl: wie viele bestaetigte Gold-Samples warten wirklich,
+            // und wie viele davon sind trainingsfaehig. Keine fiktive Zahl.
+            Log($"KB-Nachholen: {total} bestaetigte Gold-Samples warten (davon {eligible} trainingsfaehig markiert).");
+
+            // Reversibles Backup VOR der ersten Aenderung — vollwertiger KI-Hirn-Export mit
+            // SQLite-WAL-Checkpoint (vorhandener KnowledgeBackupService). "Daten nie verlieren".
+            var backupZip = System.IO.Path.Combine(
+                KnowledgeBasePaths.GetRoot(), "kb_backups",
+                $"vor_kb_nachholen_{DateTime.Now:yyyy-MM-dd_HHmmss}.zip");
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(backupZip)!);
+            SetStatus("KB-Nachholen: Backup wird erstellt…");
+            // Progress<T> aus dem UI-Thread erstellt -> Callbacks laufen auf dem UI-Kontext;
+            // SetStatus ist zusaetzlich dispatcher-sicher.
+            var backup = await KnowledgeBackupService.ExportAsync(
+                backupZip, new Progress<string>(m => SetStatus($"Backup: {m}")), ct).ConfigureAwait(false);
+            if (!backup.Success)
+            {
+                Log($"KB-Nachholen ABGEBROCHEN: Backup fehlgeschlagen ({backup.Error}). Keine Aenderung vorgenommen.");
+                SetStatus("KB-Nachholen: Backup fehlgeschlagen");
+                return;
+            }
+            Log($"KB-Nachholen: Backup angelegt ({backup.FileCount} Dateien) unter {backupZip}");
+            SetStatus($"KB-Nachholen: 0/{total}");
+
+            var indexed = 0;
+            var skipped = 0;
+            var processed = 0;
+
+            // In Bloecken indexieren, damit Status laufend zurueckgeschrieben wird (kein "alles oder nichts").
+            const int batchSize = 50;
+            for (var i = 0; i < pending.Count; i += batchSize)
+            {
+                ct.ThrowIfCancellationRequested();
+                var batch = pending.Skip(i).Take(batchSize).ToList();
+
+                foreach (var s in batch)
+                    s.KbIndexState = KbIndexState.Pending;
+                await TrainingSamplesStore.MergeOrUpdateAsync(batch).ConfigureAwait(false);
+
+                var indexResult = await IncrementalKbUpdateWithReasonAsync(batch, ct).ConfigureAwait(false);
+
+                foreach (var s in batch)
+                {
+                    if (indexResult.IndexedIds.Contains(s.SampleId))
+                    {
+                        s.KbIndexState = KbIndexState.Indexed;
+                        indexed++;
+                    }
+                    else if (indexResult.SkippedIds.Contains(s.SampleId))
+                    {
+                        // Bewusst/dauerhaft verworfen (Eval-Schutz/nicht index-wuerdig) -> Skipped,
+                        // damit der naechste Nachhol-Lauf es NICHT wieder aufgreift.
+                        s.KbIndexState = KbIndexState.Skipped;
+                        skipped++;
+                    }
+                    else
+                    {
+                        // Echter (transienter) Misserfolg, z.B. Ollama offline -> Error (spaeter erneut).
+                        s.KbIndexState = KbIndexState.Error;
+                        skipped++;
+                    }
+                    processed++;
+                }
+                await TrainingSamplesStore.MergeOrUpdateAsync(batch).ConfigureAwait(false);
+
+                SetStatus($"KB-Nachholen: {processed}/{total}");
+            }
+
+            Log($"KB-Nachholen fertig: {indexed} indexiert, {skipped} uebersprungen/fehlgeschlagen (von {total}).");
+            SetStatus($"KB-Nachholen: {indexed} indexiert, {skipped} uebersprungen");
+        }
+        catch (OperationCanceledException)
+        {
+            // Abbruch ist sauber: bereits verarbeitete Bloecke sind persistiert, der Rest behaelt
+            // seinen Zustand und wird beim naechsten Lauf erneut aufgegriffen.
+            Log("KB-Nachholen abgebrochen.");
+            SetStatus("KB-Nachholen abgebrochen");
+        }
+        catch (Exception ex)
+        {
+            Log($"KB-Nachholen Fehler: {ex.Message}");
+            SetStatus("KB-Nachholen fehlgeschlagen");
+        }
+        finally
+        {
+            // IsBusy ist ein UI-Property; finally laeuft nach ConfigureAwait(false) ggf. auf
+            // dem Worker-Thread -> dispatcher-sicher zuruecksetzen.
+            OnUi(() => IsBusy = false);
         }
     }
 
@@ -1705,6 +1840,11 @@ public partial class TrainingCenterViewModel : ObservableObject
         if (dispatcher is null || dispatcher.CheckAccess()) action();
         else dispatcher.Invoke(action);
     }
+
+    // Thread-sicheres Setzen von StatusText: in async-Methoden mit ConfigureAwait(false)
+    // laeuft die Fortsetzung auf einem Worker-Thread; ein direktes StatusText = ... waere ein
+    // UI-Update vom falschen Thread (WPF-Crash-Risiko). Daher ueber den Dispatcher (OnUi).
+    private void SetStatus(string text) => OnUi(() => StatusText = text);
 
     /// <summary>Loads pending review items into the queue.</summary>
     public void LoadReviewQueue(InfraSelfImproving.ReviewQueueService queueService)
@@ -1738,7 +1878,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     private IReviewApprovalService BuildReviewApprovalService()
     {
         var indexer = new DelegatingKnowledgeBaseIndexer(
-            async (s, c) => (IReadOnlyList<string>)await IncrementalKbUpdateAsync(s.ToList(), c).ConfigureAwait(false),
+            (s, c) => IncrementalKbUpdateWithReasonAsync(s.ToList(), c),
             TryDeindexSample);
         return new ReviewApprovalService(new TrainingSamplesStoreAdapter(), indexer);
     }
@@ -2093,12 +2233,14 @@ public partial class TrainingCenterViewModel : ObservableObject
                     await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
 
                     Log($"{newApproved.Count} ExactMatch-Samples — starte KB-Update...");
-                    var stIndexedIds = await IncrementalKbUpdateAsync(newApproved, ct);
-                    var stIndexedSet = stIndexedIds.ToHashSet();
+                    var stOutcome = await IncrementalKbUpdateWithReasonAsync(newApproved, ct);
+                    var stIndexedSet = stOutcome.IndexedIds.ToHashSet();
                     foreach (var s in newApproved)
                         s.KbIndexState = stIndexedSet.Contains(s.SampleId)
                             ? KbIndexState.Indexed
-                            : (s.KbIndexState == KbIndexState.Pending ? KbIndexState.Error : s.KbIndexState);
+                            : stOutcome.SkippedIds.Contains(s.SampleId)
+                                ? KbIndexState.Skipped   // bewusst/dauerhaft verworfen -> nicht als Fehler markieren
+                                : (s.KbIndexState == KbIndexState.Pending ? KbIndexState.Error : s.KbIndexState);
                     await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
                 }
             }
@@ -2164,29 +2306,28 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// Nutzt KnowledgeBaseManager.IndexSampleAsync pro Sample.
     /// </summary>
     /// <summary>
-    /// Indexiert Samples inkrementell in die KB. Gibt die SampleIds zurueck,
-    /// die tatsaechlich erfolgreich indexiert wurden (leere Liste bei Fehler/Skip).
+    /// Indexiert Samples inkrementell in die KB und liefert ein <see cref="KbIndexOutcome"/>, das
+    /// erfolgreich indexierte von bewusst/dauerhaft uebersprungenen (Skipped: Eval-Schutz/nicht
+    /// index-wuerdig) Samples unterscheidet. Alles, was in keiner der Listen steht, ist ein echter
+    /// (transienter) Fehler -> der Aufrufer setzt KbIndexState.Error. Einziger KB-Index-Pfad fuer
+    /// Review-Approval, Backfill und Self-Training.
     /// </summary>
-    private async Task<List<string>> IncrementalKbUpdateAsync(List<TrainingSample> samples, CancellationToken ct)
+    private async Task<KbIndexOutcome> IncrementalKbUpdateWithReasonAsync(List<TrainingSample> samples, CancellationToken ct)
     {
         var indexedIds = new List<string>();
+        var skippedIds = new HashSet<string>(StringComparer.Ordinal);
         try
         {
-            var ollamaConfig = new AppSettingsAiSettingsProvider()
-                .Load()
-                .ToOllamaConfig();
-            var ollamaReachable = await CheckOllamaReachableAsync(ollamaConfig, ct);
-            if (!ollamaReachable)
+            var ollamaConfig = new AppSettingsAiSettingsProvider().Load().ToOllamaConfig();
+            if (!await CheckOllamaReachableAsync(ollamaConfig, ct))
             {
                 Log($"KB-Update uebersprungen: Ollama nicht erreichbar auf {ollamaConfig.BaseUri}");
-                return indexedIds;
+                return new KbIndexOutcome(indexedIds, skippedIds);
             }
 
             _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
             using var kbCtx = new KnowledgeBaseContext();
             var embedder = new EmbeddingService(_kbHttpClient, ollamaConfig);
-            // Eval-Kontaminationsschutz: Eval-Frames (per Hash) UND reservierte Eval-Haltungen
-            // (per CaseId) hart aus dem KB-Index blockieren.
             var kbEvalRoot = AppSettings.Load().EvalSetRoot;
             var kbEvalHashes = EvalContaminationGuard.LoadEvalImageHashes(kbEvalRoot);
             var kbEvalHaltungen = EvalContaminationGuard.LoadEvalHaltungKeys(kbEvalRoot);
@@ -2198,10 +2339,13 @@ public partial class TrainingCenterViewModel : ObservableObject
                 ct.ThrowIfCancellationRequested();
                 if (kbManager.IsIndexed(sample.SampleId))
                 {
-                    // Bereits in der KB = Erfolg, KEIN Fehler. Muss in indexedIds,
-                    // sonst meldet der Aufrufer faelschlich "KB: Error" fuer ein
-                    // korrekt indexiertes Sample (z. B. bei einer erneuten Freigabe).
                     indexedIds.Add(sample.SampleId);
+                    continue;
+                }
+                // Dauerhaft verworfen? -> Skipped, gar nicht erst indexieren.
+                if (kbManager.IsPermanentlySkipped(sample))
+                {
+                    skippedIds.Add(sample.SampleId);
                     continue;
                 }
                 if (await kbManager.IndexSampleAsync(sample, ct))
@@ -2209,25 +2353,19 @@ public partial class TrainingCenterViewModel : ObservableObject
                     indexedIds.Add(sample.SampleId);
                     newlyIndexed++;
                 }
+                // sonst: echter (transienter) Fehler -> weder indexed noch skipped -> Aufrufer setzt Error
             }
 
-            // Version + "indexiert"-Log nur bei tatsaechlich NEU indexierten Samples,
-            // damit nicht bei reinen "schon vorhanden"-Faellen ein leerer Snapshot entsteht.
+            // KB-Version nur bei tatsaechlich NEU indexierten Samples schnappschotten
+            // (Verhaltensparitaet zur frueheren IncrementalKbUpdateAsync).
             if (newlyIndexed > 0)
-            {
-                kbManager.CreateVersion($"Self-Training inkrementell {DateTime.Now:yyyy-MM-dd HH:mm}");
-                Log($"KB-Update: {newlyIndexed} Samples inkrementell indexiert");
-            }
-            else
-            {
-                Log("KB-Update: Alle Samples bereits indexiert");
-            }
+                kbManager.CreateVersion($"Inkrementell {DateTime.Now:yyyy-MM-dd HH:mm}");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             Log($"KB-Update Fehler: {ex.Message}");
         }
-        return indexedIds;
+        return new KbIndexOutcome(indexedIds, skippedIds);
     }
 
     [RelayCommand]
@@ -2295,13 +2433,23 @@ public partial class TrainingCenterViewModel : ObservableObject
     public int StartdataCandidateCount =>
         ReviewQueue.Count(i => string.Equals(i.SelfTrainingMatchLevel, "ProtocolStartdata", StringComparison.OrdinalIgnoreCase));
 
+    private List<InfraSelfImproving.ReviewQueueItem> GetProtocolStartdataReviewItems()
+    {
+        List<InfraSelfImproving.ReviewQueueItem>? items = null;
+        OnUi(() =>
+        {
+            items = ReviewQueue
+                .Where(i => string.Equals(i.SelfTrainingMatchLevel, "ProtocolStartdata", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        });
+        return items ?? new List<InfraSelfImproving.ReviewQueueItem>();
+    }
+
     /// <summary>Gibt ALLE Protokoll-Startdaten-Kandidaten frei (nach expliziter Bestaetigung im View).</summary>
     public async Task ApproveAllStartdataAsync(CancellationToken ct = default)
     {
         if (ReviewQueueServiceRef is null) return;
-        var items = ReviewQueue
-            .Where(i => string.Equals(i.SelfTrainingMatchLevel, "ProtocolStartdata", StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var items = GetProtocolStartdataReviewItems();
         int ok = 0;
         foreach (var item in items)
         {
