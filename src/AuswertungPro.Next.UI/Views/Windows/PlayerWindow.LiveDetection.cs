@@ -1126,14 +1126,24 @@ public partial class PlayerWindow
             // SAM segmentiert die gezogene Box und schreibt echte Messwerte (Uhrlage/Hoehe/
             // Breite/Querschnitt) ins Overlay. Bei fehlendem Sidecar/Maske bleibt die
             // geometrische Schaetzung erhalten — der Codier-Ablauf wird nie blockiert.
-            var samClock = await TrySegmentMarkBoxAsync(overlay, frameBytes);
-            if (!string.IsNullOrEmpty(samClock))
-                clockPos = samClock;
+            var samResult = await TrySegmentMarkBoxAsync(overlay, frameBytes);
+            if (!string.IsNullOrEmpty(samResult?.Quant.ClockPosition))
+                clockPos = samResult!.Quant.ClockPosition;
+
+            // SAM-Maske SICHTBAR machen, BEVOR das Codierfenster aufgeht: der Nutzer sieht,
+            // dass die KI die Markierung (z.B. den Bogen) erfasst hat. Kurze Pause, damit das
+            // Overlay tatsaechlich gezeichnet wird, dann erst das VSA-Codierfenster.
+            if (samResult != null)
+            {
+                ShowMarkSamMask(samResult);
+                await Task.Delay(800);
+            }
 
             // Training speichern + Codierfenster (VsaCodeExplorer) mit vorausgefuellten Messwerten.
             bool saved = await SaveMarkAsTrainingAsync(overlay, timestampSec, clockPos, frameBytes);
 
-            // Overlay entfernen und Canvas neu zeichnen
+            // Overlay + SAM-Maske entfernen und Canvas neu zeichnen
+            Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
             if (_codingVm != null) _codingVm.CurrentOverlay = null;
             RedrawCodingCanvas(includeManualOverlay: false);
 
@@ -1175,7 +1185,10 @@ public partial class PlayerWindow
     /// wenn keine Segmentierung moeglich war (Aufrufer behaelt dann die geometrische
     /// Schaetzung). Reine Verdrahtung — die Logik liegt im MarkBoxSegmentationService.
     /// </summary>
-    private async Task<string?> TrySegmentMarkBoxAsync(OverlayGeometry overlay, byte[]? frameBytes)
+    // Gibt das Segmentierungs-Ergebnis (inkl. Rohmaske) zurueck, damit der Aufrufer die
+    // SAM-Maske sichtbar rendern kann. null, wenn keine Segmentierung moeglich war.
+    private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync(
+        OverlayGeometry overlay, byte[]? frameBytes)
     {
         if (_codingBoxSegmentation == null || frameBytes == null || frameBytes.Length == 0
             || overlay.Points.Count < 2)
@@ -1201,12 +1214,33 @@ public partial class PlayerWindow
                     System.Globalization.CultureInfo.InvariantCulture, out var clk))
                 overlay.ClockFrom = clk;
 
-            return result.Quant.ClockPosition;
+            return result;
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Mark-SAM] Segmentierung uebersprungen: {ex.Message}");
             return null;
+        }
+    }
+
+    // Zeichnet die SAM-Maske der Mark-Box sichtbar auf das Codier-Canvas, damit der Nutzer
+    // die Erkennung sieht, BEVOR das VSA-Codierfenster aufgeht.
+    private void ShowMarkSamMask(Infrastructure.Ai.Pipeline.BoxSegmentationResult result)
+    {
+        try
+        {
+            var samResp = new Infrastructure.Ai.Pipeline.SamResponse(
+                new[] { result.Mask }, result.ImageWidth, result.ImageHeight, 0);
+            Ai.Pipeline.SamMaskRenderer.RenderMasks(
+                CodingOverlayCanvas,
+                samResp,
+                new[] { result.Quant },
+                CodingOverlayCanvas.ActualWidth,
+                CodingOverlayCanvas.ActualHeight);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Mark-SAM] Masken-Render uebersprungen: {ex.Message}");
         }
     }
 
