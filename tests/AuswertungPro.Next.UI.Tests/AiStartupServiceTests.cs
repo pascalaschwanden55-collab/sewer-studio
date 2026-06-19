@@ -400,6 +400,46 @@ public sealed class AiStartupServiceTests
         }
     }
 
+    [Fact]
+    public async Task StartAsync_warns_when_ollama_model_not_resident_after_preload()
+    {
+        // User-Fall: 'KI starten' gedrueckt, aber Ollama-Modelle blieben LEER (nicht resident).
+        // Der Preload meldete Erfolg, das Modell ist aber nicht im Speicher -> ehrliche Warnung,
+        // damit der Nutzer nicht denkt "alles geladen", obwohl Ollama leer ist.
+        var temp = CreateTempSidecarScript();
+        try
+        {
+            ResetRuntimeStatusIfAvailable();
+            var launcher = new FakeAiStartupLauncher
+            {
+                OllamaReachable = true,
+                SidecarReachable = true,
+                OllamaResidentAfterPreload = false // Preload "ok", aber Modell NICHT resident
+            };
+            var settings = new AppSettings
+            {
+                AiEnabled = true,
+                PipelineMultiModelEnabled = true,
+                PipelineMode = "multimodel",
+                AiOllamaUrl = "http://localhost:11434",
+                PipelineSidecarUrl = "http://localhost:8100",
+                AiVisionModel = "qwen3-vl:8b-q8"
+            };
+
+            var result = await AiStartupService.StartAsync(
+                settings, launcher, sidecarScriptPath: temp.ScriptPath, ct: CancellationToken.None);
+
+            Assert.Contains(result.Warnings, w =>
+                w.Contains("nicht im Speicher", StringComparison.OrdinalIgnoreCase)
+                || w.Contains("nicht resident", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            ResetRuntimeStatusIfAvailable();
+            Directory.Delete(temp.Root, recursive: true);
+        }
+    }
+
     private static (string Root, string ScriptPath) CreateTempSidecarScript()
     {
         var root = Path.Combine(Path.GetTempPath(), "sewerstudio-ai-start-" + Guid.NewGuid().ToString("N"));
@@ -462,6 +502,10 @@ public sealed class AiStartupServiceTests
             return true;
         }
 
+        /// <summary>Simuliert, ob ein Modell nach dem Preload wirklich resident ist (/api/ps).
+        /// false = Preload meldet ok, Modell aber nicht im Speicher (User-Fehlerfall).</summary>
+        public bool OllamaResidentAfterPreload { get; set; } = true;
+
         public Task<AiStartupModelPreloadResult> PreloadOllamaModelAsync(
             Uri baseUri,
             AiStartupModelPreloadRequest request,
@@ -470,6 +514,9 @@ public sealed class AiStartupServiceTests
             PreloadedModels.Add(request.ModelName);
             return Task.FromResult(new AiStartupModelPreloadResult(true, null));
         }
+
+        public Task<bool?> IsOllamaModelResidentAsync(Uri baseUri, string modelName, CancellationToken ct)
+            => Task.FromResult<bool?>(OllamaResidentAfterPreload);
 
         /// <summary>Zaehlt, wie oft /warmup aufgerufen wurde (fuer Retry-Tests).</summary>
         public int WarmupCallCount { get; private set; }

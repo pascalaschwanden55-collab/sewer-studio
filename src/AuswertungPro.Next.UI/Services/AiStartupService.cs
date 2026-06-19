@@ -150,10 +150,28 @@ public static class AiStartupService
             {
                 var preload = await launcher.PreloadOllamaModelAsync(platform.OllamaBaseUri, model, ct)
                     .ConfigureAwait(false);
-                if (preload.Succeeded)
-                    preloadedModels.Add(model.ModelName);
-                else
+                if (!preload.Succeeded)
+                {
                     warnings.Add($"Ollama-Modell konnte nicht geladen werden ({model.ModelName}): {preload.Error ?? "unbekannter Fehler"}");
+                    continue;
+                }
+
+                // VERIFIZIEREN (User-Fall: Preload meldete ok, Modell war aber NICHT resident).
+                // Wenn /api/ps zeigt, dass das Modell nicht im Speicher ist, EINMAL nachladen.
+                var resident = await launcher.IsOllamaModelResidentAsync(platform.OllamaBaseUri, model.ModelName, ct)
+                    .ConfigureAwait(false);
+                if (resident == false)
+                {
+                    Report($"Ollama-Modell {model.ModelName} nicht resident - lade nach...");
+                    await launcher.PreloadOllamaModelAsync(platform.OllamaBaseUri, model, ct).ConfigureAwait(false);
+                    resident = await launcher.IsOllamaModelResidentAsync(platform.OllamaBaseUri, model.ModelName, ct)
+                        .ConfigureAwait(false);
+                }
+
+                if (resident == false)
+                    warnings.Add($"Ollama-Modell {model.ModelName} ist nach dem Laden NICHT im Speicher (nicht resident).");
+                else
+                    preloadedModels.Add(model.ModelName); // true ODER null (Pruefung nicht moeglich) -> als geladen werten
             }
 
             if (preloadedModels.Count > 0)
@@ -449,7 +467,10 @@ public static class AiStartupService
         {
             try
             {
-                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+                // 5s statt 2s: ein beschaeftigter/GC-pausierter Dienst (Ollama/Sidecar) faellt
+                // sonst kurz aus dem Probe und gilt faelschlich als "tot" -> die App startet
+                // einen ZWEITEN Prozess (Doppelstart), der die Modelle wegwirft/leer bleibt.
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
                 using var req = new HttpRequestMessage(HttpMethod.Get, new Uri(baseUri, relativePath));
                 if (headers is not null)
                 {
@@ -540,6 +561,43 @@ public static class AiStartupService
             }
         }
 
+        public async Task<bool?> IsOllamaModelResidentAsync(
+            Uri baseUri,
+            string modelName,
+            CancellationToken ct)
+        {
+            try
+            {
+                using var http = new HttpClient { BaseAddress = baseUri, Timeout = TimeSpan.FromSeconds(5) };
+                using var resp = await http.GetAsync("/api/ps", ct).ConfigureAwait(false);
+                if (!resp.IsSuccessStatusCode)
+                    return null;
+                var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                using var doc = JsonDocument.Parse(body);
+                if (!doc.RootElement.TryGetProperty("models", out var arr) || arr.ValueKind != JsonValueKind.Array)
+                    return false;
+                foreach (var m in arr.EnumerateArray())
+                {
+                    var name = m.TryGetProperty("name", out var n) ? n.GetString() : null;
+                    // Ollama meldet z.B. "qwen3-vl:8b-q8" – Prefix-Vergleich deckt :latest-Varianten ab.
+                    if (name is not null &&
+                        (name.Equals(modelName, StringComparison.OrdinalIgnoreCase)
+                         || name.StartsWith(modelName, StringComparison.OrdinalIgnoreCase)
+                         || modelName.StartsWith(name.Split(':')[0], StringComparison.OrdinalIgnoreCase)))
+                        return true;
+                }
+                return false;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public async Task<AiStartupWarmupResult> WarmupSidecarModelsAsync(
             Uri sidecarBaseUri,
             IReadOnlyDictionary<string, string>? headers,
@@ -617,6 +675,13 @@ public interface IAiStartupLauncher
     Task<AiStartupModelPreloadResult> PreloadOllamaModelAsync(
         Uri baseUri,
         AiStartupModelPreloadRequest request,
+        CancellationToken ct);
+
+    /// <summary>Prueft via /api/ps, ob das Modell wirklich im Speicher resident ist
+    /// (nicht nur "Preload meldete ok"). null = Pruefung nicht moeglich/Fehler.</summary>
+    Task<bool?> IsOllamaModelResidentAsync(
+        Uri baseUri,
+        string modelName,
         CancellationToken ct);
 
     Task<AiStartupWarmupResult> WarmupSidecarModelsAsync(
