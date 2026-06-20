@@ -37,21 +37,23 @@ public class KnowledgeBaseManagerEligibilityTests : IDisposable
         => Assert.True(KnowledgeBaseManager.IsIndexWorthy(BaseSample()));
 
     [Fact]
-    public void IndexWorthy_False_WhenInspectionDateMissing()
+    public void IndexWorthy_True_WhenInspectionDateMissing_RetrievalIsRecencyAgnostic()
     {
-        // Nur InspectionDate entfernen — TrainingEligible bleibt true.
+        // Entkopplung Retrieval <-> Training (2026-06-20): ein fachlich gueltiges Sample OHNE
+        // Aufnahmedatum ist als Retrieval-Kontext weiterhin index-wuerdig. Die Recency-Schranke
+        // gilt nur fuer den Trainingsexport, nicht fuer die KB.
         var s = BaseSample();
         s.InspectionDate = null;
-        Assert.False(KnowledgeBaseManager.IsIndexWorthy(s));
+        Assert.True(KnowledgeBaseManager.IsIndexWorthy(s));
     }
 
     [Fact]
-    public void IndexWorthy_False_WhenTrainingNotEligible()
+    public void IndexWorthy_True_WhenTrainingNotEligible_RetrievalIsRecencyAgnostic()
     {
-        // Gueltiges Datum, aber TrainingEligible explizit auf false setzen.
+        // TrainingEligible=false (Trainings-Flag) darf die Retrieval-Indexierung NICHT mehr blockieren.
         var s = BaseSample();
         s.TrainingEligible = false;
-        Assert.False(KnowledgeBaseManager.IsIndexWorthy(s));
+        Assert.True(KnowledgeBaseManager.IsIndexWorthy(s));
     }
 
     // Minimaler Inline-Katalog fuer diesen Test — nur "BAB" benoetigt.

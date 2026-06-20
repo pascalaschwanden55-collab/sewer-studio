@@ -376,13 +376,13 @@ public sealed class KnowledgeBaseManager(
             return false;
         if (VsaCodeResolver.LookupLabel(sample.Code) is null)
             return false;
-        // Trainings-Eligibility (Datum/Herkunft) muss auch fuer die KB gelten — konsistent zum Export.
-        var eligibility = TrainingSampleEligibility.Evaluate(sample);
-        if (!eligibility.IsEligible)
-        {
-            Debug.WriteLine($"[KnowledgeBaseManager] Sample {sample.SampleId} nicht trainingsfaehig: {eligibility.Reason}");
-            return false;
-        }
+        // Bewusste Entkopplung Retrieval <-> Training (Entscheid 2026-06-20):
+        // Die Trainings-Recency-Schranke (InspectionDate >= 2022 + TrainingEligible) gilt NUR fuer
+        // den YOLO-/Trainingsexport, NICHT fuer die Retrieval-KB. Ein fachlich gueltiges Sample ist
+        // auch ohne Aufnahmedatum als Few-Shot-Kontext nuetzlich; Retrieval filtert ohnehin ueber
+        // QualityGate + Cosine (siehe RetrievalService). Wuerde die Eligibility hier weiter greifen,
+        // kollabierte ein Rebuild die KB auf die ~52 datierten Samples (99,8% haben kein Datum, da der
+        // BatchImport nie eines durchreichte). Der Eval-Kontaminationsschutz bleibt davon unberuehrt.
         // D7: nur fachlich plausible Befunde lernen (kein Muell in die KB).
         if (!TrainingSamplePlausibility.IsFachlichPlausibel(sample, out var reason))
         {
