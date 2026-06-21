@@ -140,7 +140,11 @@ namespace AuswertungPro.Next.UI
                 var kbHttp = new HttpClient { Timeout = ollamaConfig.RequestTimeout };
                 var kbCtx = new KnowledgeBaseContext();
                 var embedder = new EmbeddingService(kbHttp, ollamaConfig);
-                retrieval = new RetrievalService(kbCtx, embedder);
+                // Audit Fix #6a: Eval-Haltungs-Sperrliste auch leseseitig anwenden (Defense-in-Depth,
+                // gleiche Quelle wie der Schreib-Guard) -> kontaminierte Samples kommen nie als Few-Shot.
+                var evalHaltungKeys = AuswertungPro.Next.Application.Ai.Training.EvalContaminationGuard
+                    .LoadEvalHaltungKeys(settings.EvalSetRoot);
+                retrieval = new RetrievalService(kbCtx, embedder, evalHaltungKeys);
                 retrieval.CheckModelConsistency();
                 if (retrieval.HasModelMismatch)
                     Logger.LogWarning(

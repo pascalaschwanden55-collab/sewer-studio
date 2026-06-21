@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
+using AuswertungPro.Next.Application.Ai.Training;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
@@ -15,7 +16,8 @@ namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 /// </summary>
 public sealed class RetrievalService(
     KnowledgeBaseContext db,
-    EmbeddingService embedder) : IRetrievalService
+    EmbeddingService embedder,
+    IReadOnlySet<string>? evalHaltungKeys = null) : IRetrievalService
 {
     private static int _dimensionMismatchWarned;
     private readonly RetrievalQualityPolicy _policy = RetrievalQualityPolicy.Default;
@@ -277,6 +279,19 @@ public sealed class RetrievalService(
                 reader.IsDBNull(9) ? null : reader.GetInt64(9) != 0,
                 reader.IsDBNull(10) ? null : reader.GetString(10),
                 reader.IsDBNull(11) ? null : DateTime.Parse(reader.GetString(11), null, System.Globalization.DateTimeStyles.RoundtripKind));
+
+            // Audit Fix #6a: Defense-in-Depth — Eval-kontaminierte Haltungen NIE als Few-Shot
+            // ausliefern, auch wenn sie (historisch / aus einer Alt-DB / ueber einen ungeguardeten
+            // Schreibpfad) in der Tabelle stehen. Zweite Verteidigungslinie zusaetzlich zum
+            // Schreib-Guard (KnowledgeBaseManager.IsEvalContaminated). Greift nur, wenn ein
+            // Eval-Haltungs-Satz konfiguriert ist (sonst kein Verhaltenswechsel).
+            if (sample is not null
+                && evalHaltungKeys is { Count: > 0 }
+                && EvalContaminationGuard.IsEvalHaltung(evalHaltungKeys, sample.CaseId))
+            {
+                continue;
+            }
+
             list.Add((id, EmbeddingService.FromBlob(blob), sample));
         }
         return list;
