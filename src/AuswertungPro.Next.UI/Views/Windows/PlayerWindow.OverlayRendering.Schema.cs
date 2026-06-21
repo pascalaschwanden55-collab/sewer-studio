@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -187,6 +188,53 @@ public partial class PlayerWindow
         CodingOverlayCanvas.Children.Add(pipe);
     }
 
+    private void RenderReferenceDn()
+    {
+        var old = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
+            .Where(e => e.Tag is string s && s == "ref_dn")
+            .ToList();
+        foreach (var el in old)
+            CodingOverlayCanvas.Children.Remove(el);
+
+        if (!_showReferenceDn || _codingOverlayService?.Calibration == null) return;
+        var cal = _codingOverlayService.Calibration;
+        if (!cal.IsCalibrated || cal.NormalizedDiameter <= 0) return;
+
+        double w = CodingOverlayCanvas.ActualWidth, h = CodingOverlayCanvas.ActualHeight;
+        if (w <= 0 || h <= 0) return;
+
+        var circleRect = ReferenceDnGeometry.BuildCircleRect(
+            cal.PipeCenter,
+            cal.NormalizedDiameter,
+            w,
+            h);
+        if (circleRect.IsEmpty) return;
+
+        var circle = new System.Windows.Shapes.Ellipse
+        {
+            Width = circleRect.Width,
+            Height = circleRect.Height,
+            Stroke = new SolidColorBrush(Color.FromArgb(102, 255, 255, 255)),
+            StrokeThickness = 1.5,
+            StrokeDashArray = new DoubleCollection { 6, 3 },
+            Tag = "ref_dn"
+        };
+        Canvas.SetLeft(circle, circleRect.Left);
+        Canvas.SetTop(circle, circleRect.Top);
+        CodingOverlayCanvas.Children.Add(circle);
+
+        var lbl = new TextBlock
+        {
+            Text = $"Ref: DN {cal.NominalDiameterMm}",
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.FromArgb(128, 255, 255, 255)),
+            Tag = "ref_dn"
+        };
+        Canvas.SetLeft(lbl, circleRect.Right + 4);
+        Canvas.SetTop(lbl, circleRect.Top + circleRect.Height / 2.0 - 8);
+        CodingOverlayCanvas.Children.Add(lbl);
+    }
+
     private void AddSchemaLabel(
         Point anchor,
         string text,
@@ -207,27 +255,5 @@ public partial class PlayerWindow
         Canvas.SetLeft(label, anchor.X + 12);
         Canvas.SetTop(label, anchor.Y - 20);
         CodingOverlayCanvas.Children.Add(label);
-    }
-
-    private void AddDotMarker(
-        Point pos,
-        double radius,
-        Brush fill,
-        string tag,
-        System.Windows.Media.Effects.DropShadowEffect effect)
-    {
-        var dot = new System.Windows.Shapes.Ellipse
-        {
-            Width = radius * 2,
-            Height = radius * 2,
-            Fill = fill,
-            Stroke = Brushes.White,
-            StrokeThickness = 1.5,
-            Effect = effect,
-            Tag = tag
-        };
-        Canvas.SetLeft(dot, pos.X - radius);
-        Canvas.SetTop(dot, pos.Y - radius);
-        CodingOverlayCanvas.Children.Add(dot);
     }
 }
