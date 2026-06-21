@@ -1214,6 +1214,82 @@ public partial class PlayerWindow
             CodingOverlayPopup.IsOpen = false;
     }
 
+    // ── "Screen": ganzes Fenster (inkl. schwebendem Overlay/Boxen) in die Zwischenablage ──
+    // Bewusst Bildschirm-Capture (BitBlt) statt RenderTargetBitmap: nur so sind VLC-Video UND
+    // das Overlay-Popup (eigene Top-Level-HWNDs) zusammen im Bild. Kein Fokuswechsel -> das
+    // Overlay bleibt sichtbar (anders als beim Windows-Snipping-Tool).
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr GetDC(IntPtr hWnd);
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern IntPtr CreateCompatibleBitmap(IntPtr hdc, int w, int h);
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern IntPtr SelectObject(IntPtr hdc, IntPtr h);
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern bool BitBlt(IntPtr hdcDest, int x, int y, int w, int h, IntPtr hdcSrc, int sx, int sy, int rop);
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(IntPtr h);
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern bool DeleteDC(IntPtr hdc);
+
+    private void CodingScreenshot_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        const int SRCCOPY = 0x00CC0020;
+        IntPtr screenDc = IntPtr.Zero, memDc = IntPtr.Zero, hbmp = IntPtr.Zero;
+        try
+        {
+            var srcWin = System.Windows.PresentationSource.FromVisual(this);
+            double scaleX = srcWin?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+            double scaleY = srcWin?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
+            var topLeft = PointToScreen(new System.Windows.Point(0, 0));
+            int x = (int)System.Math.Round(topLeft.X);
+            int y = (int)System.Math.Round(topLeft.Y);
+            int w = (int)System.Math.Round(ActualWidth * scaleX);
+            int h = (int)System.Math.Round(ActualHeight * scaleY);
+            if (w <= 0 || h <= 0) return;
+
+            screenDc = GetDC(IntPtr.Zero);
+            memDc = CreateCompatibleDC(screenDc);
+            hbmp = CreateCompatibleBitmap(screenDc, w, h);
+            IntPtr old = SelectObject(memDc, hbmp);
+            BitBlt(memDc, 0, 0, w, h, screenDc, x, y, SRCCOPY);
+            SelectObject(memDc, old);
+
+            var img = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                hbmp, IntPtr.Zero, System.Windows.Int32Rect.Empty,
+                System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+            img.Freeze();
+            System.Windows.Clipboard.SetImage(img);
+            ShowCodingScreenshotToast("Fenster in Zwischenablage kopiert");
+        }
+        catch (System.Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("[Screen] " + ex.Message);
+        }
+        finally
+        {
+            if (hbmp != IntPtr.Zero) DeleteObject(hbmp);
+            if (memDc != IntPtr.Zero) DeleteDC(memDc);
+            if (screenDc != IntPtr.Zero) ReleaseDC(IntPtr.Zero, screenDc);
+        }
+    }
+
+    private void ShowCodingScreenshotToast(string msg)
+    {
+        try
+        {
+            LiveDetectionStatusText.Text = msg;
+            LiveDetectionStatusText.Visibility = System.Windows.Visibility.Visible;
+            var t = new System.Windows.Threading.DispatcherTimer { Interval = System.TimeSpan.FromSeconds(2.5) };
+            t.Tick += (s, ev) => { LiveDetectionStatusText.Visibility = System.Windows.Visibility.Collapsed; t.Stop(); };
+            t.Start();
+        }
+        catch { }
+    }
+
     private void RestoreCodingOverlayAfterExternalWindow()
     {
         ResumeCodingOverlayInput();
@@ -3522,6 +3598,30 @@ public partial class PlayerWindow
         CodingFindingsList.ItemsSource = null;
     }
 
+    // Analyse-Boxen kurz zeigen, dann nach 3s automatisch ausblenden, damit der Frame nicht
+    // zugekleistert wird. WICHTIG: nur die visuellen Boxen entfernen — die Befundliste (KI-BEFUNDE)
+    // bleibt stehen (deshalb NICHT ClearDetectionOverlays, das wuerde die Liste mitnehmen).
+    private System.Windows.Threading.DispatcherTimer? _detectionAutoHideTimer;
+
+    private void ScheduleDetectionAutoHide()
+    {
+        if (_detectionAutoHideTimer == null)
+        {
+            _detectionAutoHideTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = System.TimeSpan.FromSeconds(3)
+            };
+            _detectionAutoHideTimer.Tick += (s, e) =>
+            {
+                _detectionAutoHideTimer!.Stop();
+                DetectionCanvas.Children.Clear();
+                DetectionOverlayGrid.Visibility = Visibility.Collapsed;
+            };
+        }
+        _detectionAutoHideTimer.Stop();
+        _detectionAutoHideTimer.Start();
+    }
+
     private async void CodingAnalyzeFrame_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -3764,11 +3864,23 @@ public partial class PlayerWindow
         if (code == "BCE"
             && !CodingDedupPolicy.IsBoundaryEndCodePlausible(code, meter, _codingVm.EndMeter))
         {
+            var possibleLabel = LookupVsaLabel(code) ?? "Rohrende";
             System.Diagnostics.Debug.WriteLine(
                 $"[Boundary] BCE bei {meter:F2}m verworfen (Haltungsende ~{_codingVm.EndMeter:F2}m, noch zu weit) - weiteranalysieren");
             SetCodingAiState("Mögliches Rohrende voraus - noch nicht am Ende",
                 Color.FromRgb(0xF5, 0x9E, 0x0B), "näher heranfahren");
-            return false;
+            ClearDetectionOverlays();
+            Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+            CodingFindingsList.ItemsSource = new[]
+            {
+                new AiFindingDisplayItem(new LiveFrameFinding(
+                    Label: $"Mögliches {possibleLabel}",
+                    Severity: 3,
+                    PositionClock: null,
+                    ExtentPercent: null,
+                    VsaCodeHint: code))
+            };
+            return true;
         }
 
         var beforeCount = _codingVm.Events.Count;
@@ -3816,7 +3928,7 @@ public partial class PlayerWindow
         double? frameOsdMeter)
     {
         var code = mmResult.ClassifierCode;
-        if (code is not "BCC")
+        if (code is not ("BCA" or "BCC"))
             return false;
 
         // Wenn DINO/SAM Befunde liefert, bleibt der praezisere Maskenpfad zustaendig.
@@ -3830,7 +3942,7 @@ public partial class PlayerWindow
 
         var meter = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
         var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);
-        var label = LookupVsaLabel(code) ?? "Bogen";
+        var label = LookupVsaLabel(code) ?? (code == "BCC" ? "Bogen" : "Anschluss");
         var finding = new LiveFrameFinding(
             Label: label,
             Severity: 3,
@@ -3838,7 +3950,7 @@ public partial class PlayerWindow
             ExtentPercent: null,
             VsaCodeHint: code);
         var resolvedCode = ResolveFindingCodeForCoding(finding, meter);
-        if (resolvedCode == null || !resolvedCode.StartsWith("BCC", StringComparison.OrdinalIgnoreCase))
+        if (resolvedCode == null || !resolvedCode.StartsWith(code, StringComparison.OrdinalIgnoreCase))
             return false;
 
         var coveringEvent = codingVm.Events.FirstOrDefault(e =>
@@ -3887,7 +3999,7 @@ public partial class PlayerWindow
         {
             SuggestedCode = resolvedCode,
             Confidence = mmResult.ClassifierConfidence ?? 0.0,
-            Reason = "Bogen (Klassifikator, ohne DINO/SAM-Box)",
+            Reason = $"{label} (Klassifikator, ohne DINO/SAM-Box)",
             Decision = CodingUserDecision.Ignored
         };
 
@@ -4490,14 +4602,26 @@ public partial class PlayerWindow
         CodingFindingsList.ItemsSource = validFindings
             .Select(f => new AiFindingDisplayItem(f)).ToList();
 
+        // Vor dem Hinzufuegen pruefen, welche Befunde schon bekannt/abgehandelt sind
+        // (durch ein bestehendes Event abgedeckt). Nur NEUE bekommen eine Box — sonst
+        // tauchen akzeptierte Befunde bei jeder erneuten Analyse wieder als Box auf.
+        var findingsToDraw = validFindings.Where(f => !IsFindingAlreadyKnown(f, currentMeter)).ToList();
+
         // KI-Findings als CodingEvents mit AiContext in die Ereignisliste einfuegen
         AddAiFindingsAsEvents(result, validFindings);
 
-        // Befunde als visuelle Overlays direkt auf dem Videobild anzeigen
-        if (validFindings.Count > 0 && !CodingOverlayPopup.IsOpen)
+        // Nur NEUE Befunde als visuelle Overlays auf dem Videobild anzeigen
+        if (findingsToDraw.Count > 0 && !CodingOverlayPopup.IsOpen)
         {
             DetectionOverlayGrid.Visibility = Visibility.Visible;
-            RenderDetectionOverlay(validFindings, _player.Time / 1000.0);
+            RenderDetectionOverlay(findingsToDraw, _player.Time / 1000.0);
+            ScheduleDetectionAutoHide();   // verbleibende Boxen nach 3s ausblenden (Liste bleibt)
+        }
+        else
+        {
+            // Nichts Neues zu zeigen -> evtl. noch sichtbare Alt-Boxen wegnehmen (Liste bleibt)
+            DetectionCanvas.Children.Clear();
+            DetectionOverlayGrid.Visibility = Visibility.Collapsed;
         }
     }
 
@@ -4861,6 +4985,29 @@ public partial class PlayerWindow
     /// KI-Befunde als CodingEvents eintragen â€” mit QualityGate-Ampelsystem.
     /// Erwartet bereits gefilterte Findings (aus FilterValidFindings).
     /// </summary>
+    // Ist dieser Befund schon durch ein bestehendes Event abgedeckt (bekannt/abgehandelt)?
+    // Nutzt dieselbe Dedup-Logik wie das Event-Hinzufuegen (Code-Match + IsAlreadyCovered),
+    // damit akzeptierte Befunde nicht bei jeder Analyse wieder als Box gezeichnet werden.
+    private bool IsFindingAlreadyKnown(LiveFrameFinding finding, double meter)
+    {
+        string code = finding.VsaCodeHint ?? string.Empty;
+        if (string.IsNullOrEmpty(code)) return false;
+
+        bool CoveredIn(System.Collections.Generic.IEnumerable<CodingEvent>? events)
+        {
+            if (events == null) return false;
+            foreach (var ev in events)
+            {
+                if (!CodesMatchForDedup(ev.Entry.Code, code)) continue;
+                if (IsAlreadyCovered(ev, meter, finding)) return true;
+            }
+            return false;
+        }
+
+        return CoveredIn(_codingSessionService?.ActiveSession?.Events)
+            || CoveredIn(_codingVm?.Events);
+    }
+
     private void AddAiFindingsAsEvents(LiveDetection result, IReadOnlyList<LiveFrameFinding> validFindings)
     {
         var codingVm = _codingVm;

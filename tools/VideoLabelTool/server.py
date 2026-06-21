@@ -19,6 +19,7 @@ Start:
   python tools/VideoLabelTool/server.py --priority C:/tmp/clean_retrain/priority.json
 """
 import argparse
+from collections import deque
 import glob
 import json
 import os
@@ -35,10 +36,20 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 VIDEO_ROOT = r"D:\Haltungen"
-DATASET = r"C:\KI_BRAIN\yolo_vsa_cls_dataset_bal"
+DEFAULT_DATASET = r"C:\KI_BRAIN\yolo_vsa_cls_dataset_v3_bal"
+FALLBACK_DATASET = r"C:\KI_BRAIN\yolo_vsa_cls_dataset_bal"
+DATASET = os.environ.get("SEWERSTUDIO_VIDEO_LABEL_DATASET") or (
+    DEFAULT_DATASET if os.path.isdir(os.path.join(DEFAULT_DATASET, "train")) else FALLBACK_DATASET
+)
 GOLD_ROOT = r"C:\KI_BRAIN\gold_labels"
 CLIP_CACHE = r"C:\tmp\video_label_clips"
-DEFAULT_CLASSES = ["BAI", "BBA", "BAB", "BAJ", "BDD"]
+DEFAULT_CLASSES = ["ALL"]
+DEFAULT_DEDUPE_WINDOW_SECONDS = 20.0
+PREFERRED_CLASS_ORDER = [
+    "BCA", "BCC", "BCD", "BCE",
+    "BAB", "BAF", "BAI", "BAJ",
+    "BBA", "BBB", "BDA", "BDD", "LEER",
+]
 # browser-native zuerst; der Rest wird transkodiert (Clip ist sowieso re-encoded)
 VIDEO_EXT = (".mp4", ".m4v", ".mov", ".mpg", ".mpeg", ".avi", ".wmv", ".mkv", ".mp2")
 NAME_RE = re.compile(r"^(.+?)_([0-9.]+)s_([A-Za-z][A-Za-z0-9]*)(?:_t[+-]\d+)?\.png$")
@@ -179,19 +190,117 @@ def resolve_video(haltung):
     return sorted(cands, key=score)[0]
 
 
-def parse_classes(value):
+def discover_classes(dataset):
+    train = os.path.join(dataset, "train")
+    if not os.path.isdir(train):
+        return ["BAB"]
+    available = []
+    for p in glob.glob(os.path.join(train, "*")):
+        if os.path.isdir(p) and glob.glob(os.path.join(p, "*.png")):
+            available.append(os.path.basename(p).upper())
+    preferred = [c for c in PREFERRED_CLASS_ORDER if c in available]
+    rest = sorted(c for c in available if c not in preferred)
+    return preferred + rest
+
+
+def parse_classes(value, dataset):
     classes = []
     for part in (value or "").split(","):
         code = part.strip().upper()
         if not code:
             continue
+        if code in ("ALL", "*", "MIX"):
+            return discover_classes(dataset)
         if not re.fullmatch(r"[A-Z0-9]{2,8}", code):
             raise ValueError(f"ungueltige Klasse: {code}")
         classes.append(code)
-    return classes or list(DEFAULT_CLASSES)
+    return classes or discover_classes(dataset)
 
 
-def build_findings(priority_path, limit, classes):
+def dedupe_near_duplicates(keys, findings, window_seconds=DEFAULT_DEDUPE_WINDOW_SECONDS):
+    """Pro Klasse/Haltung/Code nur einen Kandidaten je Zeitfenster behalten."""
+    if window_seconds <= 0:
+        return list(keys)
+
+    buckets = {}
+    bucket_order = []
+    for key in keys:
+        f = findings[key]
+        bucket = (f["klass"], f["haltung"], f["code"])
+        if bucket not in buckets:
+            buckets[bucket] = []
+            bucket_order.append(bucket)
+        buckets[bucket].append(key)
+
+    kept = []
+    for bucket in bucket_order:
+        bucket_keys = buckets[bucket]
+        bucket_keys.sort(key=lambda k: (
+            0 if findings[k]["video_available"] else 1,
+            findings[k]["zeit"],
+            findings[k]["id"],
+        ))
+        last_time = None
+        for key in bucket_keys:
+            current_time = findings[key]["zeit"]
+            if last_time is None or current_time - last_time >= window_seconds:
+                kept.append(key)
+                last_time = current_time
+    return kept
+
+
+def interleave_by_holding(keys, findings):
+    """Innerhalb einer Klasse Haltungen abwechseln statt Serien aus derselben Haltung zu zeigen."""
+    buckets = {}
+    for key in keys:
+        haltung = findings[key]["haltung"]
+        buckets.setdefault(haltung, []).append(key)
+
+    for haltung, haltung_keys in buckets.items():
+        haltung_keys.sort(key=lambda k: (
+            0 if findings[k]["video_available"] else 1,
+            findings[k]["zeit"],
+            findings[k]["code"],
+            findings[k]["id"],
+        ))
+        buckets[haltung] = deque(haltung_keys)
+
+    holding_order = sorted(
+        buckets,
+        key=lambda h: (
+            0 if any(findings[k]["video_available"] for k in buckets[h]) else 1,
+            h,
+        ),
+    )
+
+    mixed = []
+    while any(buckets[h] for h in holding_order):
+        for haltung in holding_order:
+            if buckets[haltung]:
+                mixed.append(buckets[haltung].popleft())
+    return mixed
+
+
+def interleave_by_class(keys, findings, classes):
+    buckets = {}
+    for key in keys:
+        cls = findings[key]["klass"]
+        buckets.setdefault(cls, []).append(key)
+    for cls, cls_keys in buckets.items():
+        buckets[cls] = deque(interleave_by_holding(cls_keys, findings))
+
+    class_order = [c for c in classes if c in buckets]
+    class_order += sorted(c for c in buckets if c not in class_order)
+
+    mixed = []
+    while any(buckets[c] for c in class_order):
+        for cls in class_order:
+            if buckets[cls]:
+                mixed.append(buckets[cls].popleft())
+    return mixed
+
+
+def build_findings(priority_path, limit, classes, dedupe_window=DEFAULT_DEDUPE_WINDOW_SECONDS):
     findings = {}
     for cls in classes:
         for p in glob.glob(os.path.join(DATASET, "train", cls, "*.png")):
@@ -218,10 +327,10 @@ def build_findings(priority_path, limit, classes):
         with open(priority_path, encoding="utf-8") as fh:
             prio = [k for k in json.load(fh) if k in findings]
     prio_set = set(prio)
-    # Rest: nach Klasse, dann Vielfalt (eine Haltung nach der anderen)
+    # Rest: Klassen mischen, damit nicht hunderte Risse am Stueck kommen.
     rest = [k for k in findings if k not in prio_set]
-    rest.sort(key=lambda k: (findings[k]["klass"], findings[k]["haltung"], findings[k]["zeit"]))
-    order = prio + rest
+    rest = dedupe_near_duplicates(rest, findings, dedupe_window)
+    order = prio + interleave_by_class(rest, findings, classes)
     # Befunde ohne Video ans Ende (kann man eh nicht reviewen)
     order.sort(key=lambda k: 0 if findings[k]["video_available"] else 1)
     if limit:
@@ -509,20 +618,22 @@ def main():
     ap.add_argument("--limit", type=int, default=0, help="max. Anzahl Befunde (0=alle)")
     ap.add_argument("--classes", default=",".join(DEFAULT_CLASSES),
                     help="Kommagetrennte Trainingsklassen, z.B. BCA,BCC oder BCA,BCC,LEER")
+    ap.add_argument("--dedupe-window", type=float, default=DEFAULT_DEDUPE_WINDOW_SECONDS,
+                    help="Sekundenfenster fuer nahe Duplikate pro Haltung/Code (0=aus)")
     ap.add_argument("--dataset", default=DATASET,
                     help="ImageFolder-Datensatz mit train/<Klasse>/*.png")
     ap.add_argument("--video-root", default=VIDEO_ROOT,
                     help="Root-Ordner der Haltungs-Videos")
     args = ap.parse_args()
-    try:
-        classes = parse_classes(args.classes)
-    except ValueError as ex:
-        raise SystemExit(str(ex))
     DATASET = args.dataset
     VIDEO_ROOT = args.video_root
+    try:
+        classes = parse_classes(args.classes, DATASET)
+    except ValueError as ex:
+        raise SystemExit(str(ex))
     print(f"Baue Befund-Liste ({','.join(classes)}, Video-Aufloesung)...", flush=True)
     t0 = time.time()
-    FINDINGS, ORDER = build_findings(args.priority, args.limit or 0, classes)
+    FINDINGS, ORDER = build_findings(args.priority, args.limit or 0, classes, args.dedupe_window)
     n_vid = sum(1 for k in ORDER if FINDINGS[k]["video_available"])
     print(f"Befunde: {len(ORDER)}  (mit Video: {n_vid})  in {time.time()-t0:.1f}s", flush=True)
     print(f"ffmpeg: {FFMPEG}", flush=True)

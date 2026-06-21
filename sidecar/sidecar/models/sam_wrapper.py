@@ -21,16 +21,56 @@ logger = logging.getLogger(__name__)
 _sam_predict_lock = threading.Lock()
 
 
+def _find_weights_in_dir(model_dir: Path) -> str | None:
+    candidates = sorted(list(model_dir.glob("*.pth")) + list(model_dir.glob("*.pt")))
+    return str(candidates[0]) if candidates else None
+
+
 def _find_sam_weights() -> str:
     """Locate SAM weights in models_dir."""
-    sam_dir = Path(settings.models_dir) / "sam3"
-    candidates = list(sam_dir.glob("*.pth")) + list(sam_dir.glob("*.pt"))
-    if not candidates:
+    _, weights_path = _resolve_sam_backend()
+    return weights_path
+
+
+def _is_sam21_weights(path: Path) -> bool:
+    return "sam2.1" in path.name.lower() or "sam2.1" in path.parent.name.lower()
+
+
+def _find_sam21_weights() -> str | None:
+    configured = settings.sam2_weights_path.strip()
+    if configured:
+        path = Path(configured)
+        if not path.is_absolute():
+            path = Path(settings.models_dir) / path
+        return str(path) if path.exists() and _is_sam21_weights(path) else None
+
+    return _find_weights_in_dir(Path(settings.models_dir) / "sam2.1")
+
+
+def _resolve_sam_backend() -> tuple[str, str]:
+    backend = settings.sam_backend.strip().lower().replace("_", ".")
+    if backend in ("sam2", "2"):
+        raise ValueError("SAM 2 is no longer supported. Use SAM 2.1 weights under models/sam2.1.")
+
+    if backend in ("sam2.1", "2.1"):
+        weights = _find_sam21_weights()
+        if weights is None:
+            raise FileNotFoundError(
+                "SAM 2.1 requested, but no weights were found. "
+                "Place sam2.1_hiera_*.pt under models/sam2.1 or set SEWER_SIDECAR_SAM2_WEIGHTS_PATH."
+            )
+        return "sam2.1", weights
+
+    if backend in ("auto", ""):
+        weights = _find_sam21_weights()
+        if weights is not None:
+            return "sam2.1", weights
         raise FileNotFoundError(
-            f"SAM weights not found in {sam_dir}. "
-            "Please place SAM checkpoint (.pth) there."
+            "SAM 2.1 weights not found. "
+            "Place sam2.1_hiera_*.pt under models/sam2.1 or set SEWER_SIDECAR_SAM2_WEIGHTS_PATH."
         )
-    return str(candidates[0])
+
+    raise ValueError(f"Unsupported SAM backend: {settings.sam_backend!r}")
 
 
 def _resolve_device() -> str:
@@ -43,19 +83,40 @@ def _resolve_device() -> str:
 
 def _load_sam_on(device: str):
     """Load SAM model onto *device*. Returns (model, predictor)."""
+    backend, weights_path = _resolve_sam_backend()
+
     try:
-        from segment_anything import sam_model_registry, SamPredictor
+        from sam2.build_sam import build_sam2
+        from sam2.sam2_image_predictor import SAM2ImagePredictor
     except ImportError:
         raise ImportError(
-            "segment-anything is not installed. "
-            "Install with: pip install segment-anything"
+            "sam2 is not installed. Install locally with: "
+            "pip install git+https://github.com/facebookresearch/sam2.git"
         )
 
-    weights_path = _find_sam_weights()
-    sam = sam_model_registry[settings.sam_model_type](checkpoint=weights_path)
-    sam.to(device)
-    predictor = SamPredictor(sam)
+    model_cfg = _resolve_sam2_cfg(weights_path)
+    sam = build_sam2(model_cfg, weights_path, device=device)
+    predictor = SAM2ImagePredictor(sam)
+    setattr(predictor, "_sewer_sam_backend", backend)
+    logger.info("Loading SAM 2 weights from %s onto %s", weights_path, device)
     return sam, predictor
+
+
+def _resolve_sam2_cfg(weights_path: str) -> str:
+    configured = settings.sam2_model_cfg.strip()
+    if configured and configured.lower() != "auto":
+        return configured
+
+    name = Path(weights_path).name.lower()
+    prefix = "configs/sam2.1"
+    file_prefix = "sam2.1"
+    if "tiny" in name:
+        return f"{prefix}/{file_prefix}_hiera_t.yaml"
+    if "small" in name:
+        return f"{prefix}/{file_prefix}_hiera_s.yaml"
+    if "base_plus" in name or "base-plus" in name or "b+" in name:
+        return f"{prefix}/{file_prefix}_hiera_b+.yaml"
+    return f"{prefix}/{file_prefix}_hiera_l.yaml"
 
 
 def _cuda_available() -> bool:
@@ -88,7 +149,7 @@ def segment(
     """Run SAM segmentation for each bounding box."""
     device = _resolve_device()
     state = gpu_manager.ensure_loaded(ModelSlot.SAM, device, lambda: _load_sam_on(device))
-    predictor = state.processor  # SamPredictor
+    predictor = state.processor  # SAM2ImagePredictor
 
     img = decode_image_safe(
         image_base64,
@@ -105,7 +166,7 @@ def segment(
     skipped_boxes = 0
     low_score_boxes = 0
 
-    # SamPredictor ist stateful: set_image und predict muessen pro Request atomar bleiben.
+    # SAM2ImagePredictor ist stateful: set_image und predict muessen pro Request atomar bleiben.
     with _sam_predict_lock:
         predictor.set_image(img_array)
 
@@ -122,7 +183,7 @@ def segment(
                 pred_masks, scores, _ = predictor.predict(
                     point_coords=None,
                     point_labels=None,
-                    box=box_np[None, :],  # (1, 4)
+                    box=box_np,
                     multimask_output=False,
                 )
             except Exception as exc:
@@ -169,8 +230,9 @@ def segment(
 
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
-    # Geometrisches Bogen-Veto aus DEMSELBEN Frame (keine zweite Bilddekodierung).
-    bend = analyze_bend(img_array)
+    # Geometrisches Bogen-Signal aus DEMSELBEN Frame. Per Default deaktiviert,
+    # damit SAM wieder wie in der Sicherung vom 14.06.2026 antwortet.
+    bend = analyze_bend(img_array) if settings.bend_geometry_enabled else None
 
     return SamResponse(
         masks=masks_out,
@@ -181,8 +243,8 @@ def segment(
         skipped_boxes=skipped_boxes,
         low_score_boxes=low_score_boxes,
         degraded=skipped_boxes > 0,
-        bend_shift=round(bend.shift, 4),
-        is_bend=bend.is_bend,
-        vanish_x=round(bend.vanish_x, 4),
-        vanish_y=round(bend.vanish_y, 4),
+        bend_shift=round(bend.shift, 4) if bend is not None else 0.0,
+        is_bend=bend.is_bend if bend is not None else False,
+        vanish_x=round(bend.vanish_x, 4) if bend is not None else 0.5,
+        vanish_y=round(bend.vanish_y, 4) if bend is not None else 0.5,
     )

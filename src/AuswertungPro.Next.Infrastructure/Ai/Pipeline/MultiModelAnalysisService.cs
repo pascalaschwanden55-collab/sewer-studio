@@ -553,7 +553,7 @@ public sealed class MultiModelAnalysisService
             if (ClassifierDecisionEnabled && clsResult is { Predictions.Count: > 0 })
             {
                 var resolved = VsaCodeResolver.ResolveFromClassifier(
-                    clsResult.Predictions, meter, EstimatedReachLengthM);
+                    clsResult.Predictions, meter, EstimatedReachLengthM, isBend: clsResult.IsBend);
                 var frameDecision = resolved is not null && resolved.Code != "LEER"
                     ? resolved.Code
                     : null;

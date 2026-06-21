@@ -122,6 +122,45 @@ public class TemporalFindingDeduplicatorTests
         Assert.Equal(6.0, detection.MeterEnd);
     }
 
+    [Fact]
+    public void Update_ReverseMeterDirection_KeepsStretchRangeOrdered()
+    {
+        var deduplicator = new TemporalFindingDeduplicator(new TemporalDedupOptions
+        {
+            DedupWindowFrames = 3
+        });
+
+        deduplicator.Update(new[] { Finding("Wurzeln", "BBA", 2, "3") }, 10.0);
+        deduplicator.Update(new[] { Finding("Wurzeln", "BBA", 2, "3") }, 8.7);
+
+        var detection = Assert.Single(deduplicator.Flush());
+        Assert.Equal(8.7, detection.MeterStart);
+        Assert.Equal(10.0, detection.MeterEnd);
+    }
+
+    [Fact]
+    public void Update_ReverseMeterGapGreaterThanMax_StartsNewFinding()
+    {
+        var deduplicator = new TemporalFindingDeduplicator(new TemporalDedupOptions
+        {
+            DedupWindowFrames = 3,
+            MeterMergeGapMaxMeters = 1.0
+        });
+
+        Assert.Empty(deduplicator.Update(new[] { Finding("Wurzeln", "BBA", 2, "3") }, 10.0));
+        Assert.Empty(deduplicator.Update(new[] { Finding("Wurzeln", "BBA", 2, "3") }, 9.0));
+
+        var completed = deduplicator.Update(new[] { Finding("Wurzeln", "BBA", 2, "3") }, 7.8);
+
+        var first = Assert.Single(completed);
+        Assert.Equal(9.0, first.MeterStart);
+        Assert.Equal(10.0, first.MeterEnd);
+
+        var second = Assert.Single(deduplicator.Flush());
+        Assert.Equal(7.8, second.MeterStart);
+        Assert.Equal(7.8, second.MeterEnd);
+    }
+
     private static EnhancedFinding Finding(string label, string? code, int severity, string? clock) =>
         new(
             Label: label,

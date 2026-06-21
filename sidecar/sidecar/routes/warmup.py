@@ -51,8 +51,16 @@ def warmup() -> dict:
 
     results: dict[str, str] = {}
 
-    # YOLO ueber den echten Pfad (inkl. TensorRT-Engine / Klassifikator-Setup).
+    # YOLO ueber den echten Pfad (inkl. TensorRT-Engine).
     results["yolo"] = _warm_one("YOLO", lambda: yolo_wrapper.detect(dummy, 0.25))
+
+    # Whole-Frame-Klassifikator separat laden; er haengt nicht am YOLO-Detection-Slot.
+    def _load_classifier():
+        yolo_wrapper.classify(dummy, top_k=1)
+        if not yolo_wrapper.get_classifier_status().get("loaded"):
+            raise RuntimeError("kein YOLO-cls Modell konfiguriert")
+
+    results["classifier"] = _warm_one("YOLO-cls", _load_classifier)
 
     # DINO ueber den echten Pfad (None-Prompt -> Standard-Labels aus den Settings).
     results["dino"] = _warm_one(

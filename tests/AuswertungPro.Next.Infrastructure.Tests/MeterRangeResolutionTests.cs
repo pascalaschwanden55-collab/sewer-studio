@@ -39,4 +39,22 @@ public class MeterRangeResolutionTests
         Assert.Equal(12.3, TemporalFindingDeduplicator.ResolveMeterEnd(null, 12.3, 12.9));
         Assert.Equal(12.3, TemporalFindingDeduplicator.ResolveMeterEnd("", 12.3, 12.9));
     }
+
+    [Fact]
+    public void ResolveMeterRange_StretchDamageReverseDirection_ReturnsOrderedRange()
+    {
+        var range = TemporalFindingDeduplicator.ResolveMeterRange("BBA", 18.0, 12.3, 18.0);
+
+        Assert.Equal(12.3, range.Start);
+        Assert.Equal(18.0, range.End);
+    }
+
+    [Fact]
+    public void ResolveMeterRange_PointDamageReverseDirection_CollapsesToFirstObservedMeter()
+    {
+        var range = TemporalFindingDeduplicator.ResolveMeterRange("BCA", 18.0, 12.3, 18.0);
+
+        Assert.Equal(18.0, range.Start);
+        Assert.Equal(18.0, range.End);
+    }
 }

@@ -114,6 +114,42 @@ public sealed class SingleFrameMultiModelServiceTests
     }
 
     [Fact]
+    public async Task AnalyzeFrameAsync_bend_veto_prevents_top1_bce_rohrende()
+    {
+        var handler = new StaticClassifierHandler("""
+        {
+            "predictions": [
+                { "class_name": "BCE", "confidence": 0.91 },
+                { "class_name": "LEER", "confidence": 0.03 }
+            ],
+            "inference_time_ms": 12,
+            "usable": true,
+            "quality_reason": "ok",
+            "model_name": "vsa_cls_v5_nocrop",
+            "model_source": "active.json",
+            "is_bend": true,
+            "bend_shift": 0.18
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "test-token");
+        var service = new SingleFrameMultiModelService(client);
+
+        var result = await service.AnalyzeFrameAsync(
+            [1, 2, 3],
+            pipeDiameterMm: 300,
+            calibration: null,
+            currentMeterM: 49.7,
+            reachLengthM: 50.0);
+
+        Assert.True(result.IsRelevant);
+        Assert.Equal("BCC", result.ClassifierCode);
+        Assert.False(result.HasDetections);
+    }
+
+    [Fact]
     public async Task AnalyzeFrameAsync_does_not_replace_clear_defect_code_with_rohrende()
     {
         var handler = new StaticClassifierHandler("""
@@ -144,6 +180,77 @@ public sealed class SingleFrameMultiModelServiceTests
 
         Assert.False(result.IsRelevant);
         Assert.Equal("BDA", result.ClassifierCode);
+    }
+
+    [Theory]
+    [InlineData("BCA")]
+    [InlineData("BCC")]
+    public async Task AnalyzeFrameAsync_keeps_structural_classifier_code_when_yolo_is_irrelevant(
+        string structuralCode)
+    {
+        var handler = new StaticClassifierHandler($$"""
+        {
+            "predictions": [
+                { "class_name": "{{structuralCode}}", "confidence": 0.91 },
+                { "class_name": "LEER", "confidence": 0.03 }
+            ],
+            "inference_time_ms": 12,
+            "usable": true,
+            "quality_reason": "ok",
+            "model_name": "vsa_cls_v5_nocrop",
+            "model_source": "active.json"
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "test-token");
+        var service = new SingleFrameMultiModelService(client);
+
+        var result = await service.AnalyzeFrameAsync(
+            [1, 2, 3],
+            pipeDiameterMm: 300,
+            calibration: null,
+            currentMeterM: 2.0,
+            reachLengthM: 10.0);
+
+        Assert.True(result.IsRelevant);
+        Assert.Equal(structuralCode, result.ClassifierCode);
+        Assert.False(result.HasDetections);
+    }
+
+    [Fact]
+    public async Task AnalyzeFrameAsync_keeps_clear_mid_pipe_rohrende_candidate()
+    {
+        var handler = new StaticClassifierHandler("""
+        {
+            "predictions": [
+                { "class_name": "BCE", "confidence": 0.91 },
+                { "class_name": "LEER", "confidence": 0.03 }
+            ],
+            "inference_time_ms": 12,
+            "usable": true,
+            "quality_reason": "ok",
+            "model_name": "vsa_cls_v5_nocrop",
+            "model_source": "active.json"
+        }
+        """);
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(handler),
+            sidecarToken: "test-token");
+        var service = new SingleFrameMultiModelService(client);
+
+        var result = await service.AnalyzeFrameAsync(
+            [1, 2, 3],
+            pipeDiameterMm: 300,
+            calibration: null,
+            currentMeterM: 0.71,
+            reachLengthM: 10.0);
+
+        Assert.True(result.IsRelevant);
+        Assert.Equal("BCE", result.ClassifierCode);
+        Assert.False(result.HasDetections);
     }
 
     private sealed class RouteHandler(string boundaryCode) : HttpMessageHandler
@@ -180,6 +287,12 @@ public sealed class SingleFrameMultiModelServiceTests
                     "inference_time_ms": 4
                 }
                 """,
+                "/detect/dino" => """
+                {
+                    "detections": [],
+                    "inference_time_ms": 7
+                }
+                """,
                 _ => throw new InvalidOperationException($"Unexpected endpoint: {path}")
             };
 
@@ -206,6 +319,12 @@ public sealed class SingleFrameMultiModelServiceTests
                     "detections": [],
                     "frame_class": "irrelevant",
                     "inference_time_ms": 4
+                }
+                """,
+                "/detect/dino" => """
+                {
+                    "detections": [],
+                    "inference_time_ms": 7
                 }
                 """,
                 _ => throw new InvalidOperationException($"Unexpected endpoint: {path}")

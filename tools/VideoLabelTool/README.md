@@ -15,9 +15,25 @@ python tools/VideoLabelTool/server.py
 ```
 Dann im Browser **http://localhost:8200/** oeffnen.
 
-Fuer Paket 5 gezielt Anschluss/Bogen labeln:
+Standard ist jetzt **Mix von allen verfuegbaren Klassen** aus dem neueren Datensatz
+`C:\KI_BRAIN\yolo_vsa_cls_dataset_v3_bal`. Im Browser kannst du oben bei
+**Klasse** zwischen `Alle / Mix` und einzelnen Codes wie `BCA`, `BCC`, `BAB` wechseln.
+Nahe Duplikate werden standardmaessig bereinigt: gleicher Code in gleicher Haltung
+innerhalb von 20 Sekunden erscheint nur einmal in der Session.
+
+Gezielt nur Anschluss/Bogen labeln:
 ```
 python tools/VideoLabelTool/server.py --dataset C:\KI_BRAIN\yolo_vsa_cls_dataset_v3_bal --classes BCA,BCC --limit 300
+```
+
+Gezielt wieder nur Risse:
+```
+python tools/VideoLabelTool/server.py --classes BAB --limit 300
+```
+
+Wenn du die Duplikat-Sperre bewusst ausschalten willst:
+```
+python tools/VideoLabelTool/server.py --dedupe-window 0
 ```
 
 ## Bedienung

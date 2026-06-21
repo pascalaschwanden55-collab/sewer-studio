@@ -37,6 +37,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="Ordner:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <TextBox Grid.Column="1" Text="{Binding RootFolder}" IsReadOnly="True"
@@ -56,7 +57,10 @@
                 <Button Grid.Column="7" Content="KB prüfen" Command="{Binding CheckKnowledgeBaseCommand}"
                         ToolTip="Liest Samples, Embeddings, Versionen und Top-Codes aus der Knowledge Base"
                         Margin="0,0,8,0"/>
-                <Button Grid.Column="8" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
+                <Button Grid.Column="8" Content="&#x2B07; Gold in KB nachholen" Command="{Binding ReconcileGoldToKbCommand}"
+                        ToolTip="Bestätigte Gold-Befunde, die noch nicht in der Knowledge Base stehen, nachträglich indexieren (legt vorher ein Backup an)"
+                        FontWeight="SemiBold" Margin="0,0,8,0"/>
+                <Button Grid.Column="9" Content="Abbrechen" Command="{Binding CancelBatchCommand}"
                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
             </Grid>
         </Border>

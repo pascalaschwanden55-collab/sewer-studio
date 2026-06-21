@@ -19,6 +19,5 @@ scipy>=1.10
 groundingdino-py>=0.4
 transformers>=4.38,<5
 
-# SAM (pixel-precise segmentation - SAM v1)
-# Note: Code uses segment-anything, not segment-anything-2
-segment-anything>=1.0
+# SAM 2.1 local segmentation. SAM 1/segment-anything is intentionally not used.
+git+https://github.com/facebookresearch/sam2.git

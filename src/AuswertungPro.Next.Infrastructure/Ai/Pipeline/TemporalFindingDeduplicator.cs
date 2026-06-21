@@ -154,14 +154,27 @@ internal sealed class TemporalFindingDeduplicator
         double meterStart,
         double observedMeterEnd,
         double minStretchLengthMeters = 1.0)
-        => VsaCodeResolver.IsStreckenschadenCode(vsaCode ?? string.Empty)
-            && observedMeterEnd - meterStart >= minStretchLengthMeters
-            ? observedMeterEnd
-            : meterStart;
+        => ResolveMeterRange(vsaCode, meterStart, meterStart, observedMeterEnd, minStretchLengthMeters).End;
+
+    public static (double Start, double End) ResolveMeterRange(
+        string? vsaCode,
+        double firstObservedMeter,
+        double observedMeterMin,
+        double observedMeterMax,
+        double minStretchLengthMeters = 1.0)
+    {
+        var start = Math.Min(observedMeterMin, observedMeterMax);
+        var end = Math.Max(observedMeterMin, observedMeterMax);
+
+        return VsaCodeResolver.IsStreckenschadenCode(vsaCode ?? string.Empty)
+            && end - start >= minStretchLengthMeters
+            ? (start, end)
+            : (firstObservedMeter, firstObservedMeter);
+    }
 
     private bool ShouldStartNewFinding(ActiveFindingState active, double meter)
         => _options.MeterMergeGapMaxMeters is { } maxGap
-            && meter - active.MeterEnd > maxGap;
+            && active.DistanceToObservedRange(meter) > maxGap;
 
     private string BuildFindingKey(EnhancedFinding finding)
     {
@@ -237,6 +250,8 @@ internal sealed class TemporalFindingDeduplicator
         public string Name { get; }
         public double MeterStart { get; }
         public double MeterEnd { get; private set; }
+        public double ObservedMeterMin { get; private set; }
+        public double ObservedMeterMax { get; private set; }
         public int MaxSeverity { get; private set; }
         public string? VsaCodeHint { get; private set; }
         public string? PositionClock { get; private set; }
@@ -275,6 +290,8 @@ internal sealed class TemporalFindingDeduplicator
             Name = name;
             MeterStart = start;
             MeterEnd = start;
+            ObservedMeterMin = start;
+            ObservedMeterMax = start;
             MaxSeverity = severity;
             VsaCodeHint = hint;
             PositionClock = NormalizeStoredClock(clock);
@@ -305,6 +322,8 @@ internal sealed class TemporalFindingDeduplicator
             EvidenceVector? evidence = null)
         {
             MeterEnd = meter;
+            ObservedMeterMin = Math.Min(ObservedMeterMin, meter);
+            ObservedMeterMax = Math.Max(ObservedMeterMax, meter);
             MissedFrames = 0;
             FrameCount++;
             if (severity > MaxSeverity) MaxSeverity = severity;
@@ -324,12 +343,31 @@ internal sealed class TemporalFindingDeduplicator
             }
         }
 
-        public RawVideoDetection ToDetection() =>
-            new(Name, MeterStart, ResolveMeterEnd(VsaCodeHint, MeterStart, MeterEnd, _minStretchLengthMeters), SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock,
+        public double DistanceToObservedRange(double meter)
+        {
+            if (meter < ObservedMeterMin)
+                return ObservedMeterMin - meter;
+            if (meter > ObservedMeterMax)
+                return meter - ObservedMeterMax;
+
+            return 0.0;
+        }
+
+        public RawVideoDetection ToDetection()
+        {
+            var (meterStart, meterEnd) = ResolveMeterRange(
+                VsaCodeHint,
+                MeterStart,
+                ObservedMeterMin,
+                ObservedMeterMax,
+                _minStretchLengthMeters);
+
+            return new(Name, meterStart, meterEnd, SeverityLabel(MaxSeverity), VsaCodeHint, PositionClock,
                 ExtentPercent, HeightMm, WidthMm, IntrusionPercent, CrossSectionReductionPercent, DiameterReductionMm,
                 Evidence: Evidence is not null ? Evidence with { FrameCount = FrameCount } : null,
                 MeterSource: MeterSource,
                 IsMeterEstimated: IsMeterEstimated);
+        }
 
         private string? NormalizeStoredClock(string? clock) =>
             _normalizeOutputClock ? NormalizeClock(clock) : clock;

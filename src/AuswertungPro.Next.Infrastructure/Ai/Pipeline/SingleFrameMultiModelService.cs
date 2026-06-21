@@ -87,6 +87,11 @@ public sealed class SingleFrameMultiModelService
                     classifierDecision = VsaCodeResolver.ResolveFromClassifier(
                         classifierPredictions,
                         currentMeterM.Value,
+                        reachLengthM.Value,
+                        isBend: clsResp.IsBend);
+                    classifierDecision ??= ResolveVisibleFrameCandidateFromRawClassifier(
+                        classifierPredictions,
+                        currentMeterM.Value,
                         reachLengthM.Value);
 
                     var boundaryDecision = ResolveBoundaryFromPosition(
@@ -131,7 +136,7 @@ public sealed class SingleFrameMultiModelService
                 ? yoloResp.Detections.Max(d => d.Confidence)
                 : (double?)null;
 
-            if (!yoloResp.IsRelevant)
+            if (!yoloResp.IsRelevant && !IsClassifierOnlyStructuralCode(classifierDecision?.Code))
             {
                 return new SingleFrameResult(
                     IsRelevant: false,
@@ -139,11 +144,11 @@ public sealed class SingleFrameMultiModelService
                     SamResponse: null,
                     QuantifiedMasks: Array.Empty<MaskQuantificationService.QuantifiedMask>(),
                     YoloTimeMs: yoloMs, DinoTimeMs: 0, SamTimeMs: 0,
-                    Error: null, YoloMaxConfidence: yoloMax,
-                    ClassifierCode: classifierDecision?.Code,
-                    ClassifierConfidence: classifierDecision?.Confidence,
-                    ClassifierSource: classifierDecision?.Source,
-                    ClassifierTimeMs: classifierMs);
+                Error: null, YoloMaxConfidence: yoloMax,
+                ClassifierCode: classifierDecision?.Code,
+                ClassifierConfidence: classifierDecision?.Confidence,
+                ClassifierSource: classifierDecision?.Source,
+                ClassifierTimeMs: classifierMs);
             }
 
             // 2. DINO Open-Vocabulary Detection
@@ -246,6 +251,38 @@ public sealed class SingleFrameMultiModelService
             "BCE",
             Math.Max(bceConfidence, 0.80),
             $"Endzone {meter:F2}/{length:F1}m + YOLO BCE {bceConfidence:P0}");
+    }
+
+    private static VsaCodeResolver.ResolvedCode? ResolveVisibleFrameCandidateFromRawClassifier(
+        IReadOnlyList<YoloClassifyPrediction> predictions,
+        double currentMeter,
+        double totalLength)
+    {
+        if (predictions.Count == 0 || totalLength <= 1)
+            return null;
+
+        var top1 = predictions[0];
+        var code = top1.ClassName.Trim().ToUpperInvariant();
+        if (code != "BCE" || top1.Confidence < 0.65)
+            return null;
+
+        if (currentMeter >= totalLength * 0.85)
+            return null;
+
+        return new VsaCodeResolver.ResolvedCode(
+            "BCE",
+            top1.Confidence,
+            $"YOLO BCE {top1.Confidence:P0} (sichtbarer Kandidat, Positionspruefung im Player)");
+    }
+
+    private static bool IsClassifierOnlyStructuralCode(string? code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return false;
+
+        var normalized = code.Trim().Replace(".", "").ToUpperInvariant();
+        var main = normalized.Length >= 3 ? normalized[..3] : normalized;
+        return main is "BCA" or "BCC";
     }
 }
 

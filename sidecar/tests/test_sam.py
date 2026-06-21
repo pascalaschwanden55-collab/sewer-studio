@@ -21,6 +21,7 @@ def client():
     return TestClient(app)
 
 
+@pytest.mark.gpu
 def test_sam_endpoint(client):
     """Smoke test: SAM endpoint responds with correct schema."""
     img_b64 = _make_test_image()

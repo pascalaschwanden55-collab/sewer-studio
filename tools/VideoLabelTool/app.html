@@ -18,6 +18,8 @@ header h1{font-size:15px;margin:0;font-weight:650;color:var(--text)}
 #prog{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .bar{height:7px;background:#0b1220;border:1px solid var(--bd-soft);border-radius:999px;flex:1;min-width:180px;overflow:hidden}
 .bar > i{display:block;height:100%;background:var(--accent);width:0}
+.classpick{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.classpick select{width:auto;min-width:140px;padding:5px 7px;font-size:12px}
 .wrap{display:grid;grid-template-columns:minmax(560px,1fr) minmax(320px,380px);gap:12px;padding:12px;align-items:start}
 .left{min-width:0}
 .right{background:var(--card);border:1px solid var(--bd);border-radius:6px;padding:12px;box-shadow:var(--shadow)}
@@ -88,6 +90,9 @@ kbd{background:#0f172a;border:1px solid #475569;border-bottom-width:2px;border-r
   <h1>Video-Scrub &mdash; richtigen Frame greifen</h1>
   <span id="prog">0/0</span>
   <div class="bar"><i id="barfill"></i></div>
+  <label class="classpick">Klasse
+    <select id="classfilter"></select>
+  </label>
   <span id="counter" style="font-size:13px;color:#999"></span>
 </header>
 
@@ -169,7 +174,7 @@ kbd{background:#0f172a;border:1px solid #475569;border-bottom-width:2px;border-r
 
 <script>
 const WIN=10;               // muss zum Server-Default (win=10) passen
-let ITEMS=[], KT={}, idx=0, dur=0, clipStart=0, activeCodeGroup='', SESSION_TOKEN='';
+let ITEMS=[], KT={}, idx=0, dur=0, clipStart=0, activeCodeGroup='', SESSION_TOKEN='', CLASS_FILTER='ALL';
 
 function el(id){return document.getElementById(id)}
 function toast(m){const t=el('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600)}
@@ -191,6 +196,28 @@ function allCodes(){
 function codeGroup(code){
   code=(code||'LEER').trim().toUpperCase();
   return code==='LEER'?'LEER':code.slice(0,Math.min(3,code.length));
+}
+function classLabel(cls){return cls==='ALL'?'Alle / Mix':`${cls} ${codeText(cls)}`.trim()}
+function matchesClassFilter(item){
+  return CLASS_FILTER==='ALL' || (item&&(item.klass===CLASS_FILTER || codeGroup(item.code||'LEER')===CLASS_FILTER));
+}
+function visibleItems(){return ITEMS.filter(matchesClassFilter)}
+function visibleIndexes(){return ITEMS.map((x,i)=>matchesClassFilter(x)?i:-1).filter(i=>i>=0)}
+function renderClassFilter(){
+  const sel=el('classfilter');if(!sel)return;
+  const counts={};
+  for(const item of ITEMS){const cls=item.klass||codeGroup(item.code||'LEER');counts[cls]=(counts[cls]||0)+1}
+  const classes=Object.keys(counts).sort((a,b)=>a.localeCompare(b,'de'));
+  sel.innerHTML=`<option value="ALL">Alle / Mix (${ITEMS.length})</option>`
+    +classes.map(c=>`<option value="${escHtml(c)}">${escHtml(classLabel(c))} (${counts[c]})</option>`).join('');
+  sel.value=CLASS_FILTER;
+  sel.onchange=()=>{
+    CLASS_FILTER=sel.value||'ALL';
+    let next=ITEMS.findIndex(x=>matchesClassFilter(x)&&!x.decision);
+    if(next<0)next=ITEMS.findIndex(matchesClassFilter);
+    idx=next>=0?next:0;
+    render();updateProg();
+  };
 }
 function selectCode(code){
   code=(code||'').trim().toUpperCase();
@@ -226,21 +253,24 @@ async function load(){
   await initSession();
   const r=await fetch('/findings.json');const d=await r.json();
   ITEMS=d.items;KT=d.klartext||{};
+  renderClassFilter();
   const dl=el('codelist');dl.innerHTML=Object.keys(KT).sort((a,b)=>a.localeCompare(b,'de'))
     .map(c=>`<option value="${escHtml(c)}">${escHtml(c)} - ${escHtml(KT[c])}</option>`).join('');
   el('codesearch').addEventListener('input',()=>renderCodeBrowser());
   el('codein').addEventListener('change',()=>selectCode(el('codein').value));
   el('anncode').addEventListener('change',()=>selectCode(el('anncode').value));
   // erste offene Position
-  idx=ITEMS.findIndex(x=>!x.decision);if(idx<0)idx=0;
+  idx=ITEMS.findIndex(x=>matchesClassFilter(x)&&!x.decision);if(idx<0)idx=ITEMS.findIndex(matchesClassFilter);if(idx<0)idx=0;
   render();updateProg();
 }
 
 function updateProg(){
-  const done=ITEMS.filter(x=>x.decision).length, n=ITEMS.length;
+  const visible=visibleItems();
+  const done=visible.filter(x=>x.decision).length, n=visible.length;
   el('prog').textContent=`Geprüft ${done}/${n}`;
   el('barfill').style.width=(n?100*done/n:0)+'%';
-  el('counter').textContent=`Befund ${idx+1} / ${n}`;
+  const pos=visible.indexOf(ITEMS[idx])+1;
+  el('counter').textContent=n?`Befund ${pos>0?pos:1} / ${n}`:'Keine Befunde';
 }
 
 function render(){
@@ -308,10 +338,15 @@ async function save(decision){
   }catch(e){toast('Netzwerkfehler')}
 }
 
-function go(d){idx=Math.max(0,Math.min(ITEMS.length-1,idx+d));render();updateProg()}
+function go(d){
+  const vis=visibleIndexes();if(!vis.length)return;
+  let p=vis.indexOf(idx);if(p<0)p=0;
+  p=Math.max(0,Math.min(vis.length-1,p+d));
+  idx=vis[p];render();updateProg()
+}
 function jumpUnreviewed(){
-  let n=ITEMS.findIndex((x,i)=>i>idx&&!x.decision);
-  if(n<0)n=ITEMS.findIndex(x=>!x.decision);
+  let n=ITEMS.findIndex((x,i)=>i>idx&&matchesClassFilter(x)&&!x.decision);
+  if(n<0)n=ITEMS.findIndex(x=>matchesClassFilter(x)&&!x.decision);
   if(n<0){toast('Alle geprüft — fertig!');return}
   idx=n;render();updateProg();
 }

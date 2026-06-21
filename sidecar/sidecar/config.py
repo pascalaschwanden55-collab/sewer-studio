@@ -67,6 +67,9 @@ class SidecarSettings(BaseSettings):
     frame_min_edge_var: float = 1.0      # frueher hart 3 -> dunkle, aber scharfe Frames behalten
 
     # Grounding DINO
+    # Lokal, kein API-Backend: auto bevorzugt grounding_dino_swinb, wenn vorhanden,
+    # und faellt sonst auf den bestehenden grounding_dino_1.5-Ordner (Swin-T OGC) zurueck.
+    dino_model_dir: str = "auto"
     dino_box_threshold: float = 0.25
     dino_text_threshold: float = 0.20
     dino_labels: str = (
@@ -85,10 +88,37 @@ class SidecarSettings(BaseSettings):
     )
 
     # SAM
-    sam_model_type: str = "vit_h"
+    # Lokal, kein API-Backend: auto nutzt ausschliesslich SAM-2.1-Gewichte unter models/sam2.1.
+    # SAM 1 und aeltere SAM-2-Gewichte sind bewusst entfernt und werden nicht mehr als Fallback geladen.
+    sam_backend: str = "auto"  # auto | sam2.1
+    sam2_weights_path: str = ""
+    sam2_model_cfg: str = "auto"
     # Score-Gate: Masken mit Predictor-Score darunter werden verworfen (skipped/degraded)
     # statt still als Befund-Basis akzeptiert. 0.0 = Gate aus (Alt-Verhalten).
     sam_min_score: float = 0.5
+
+    # Leichter Bogen-Veto fuer YOLO-cls: verhindert, dass ein Bogen als BCE/Rohrende
+    # durchrutscht. Bleibt unabhaengig vom alten SAM/Bogen-Overlay aktiv.
+    bend_veto_enabled: bool = True
+
+    # Test-/Rueckfall-Schalter fuer die seit 18.06. hinzugekommene geometrische
+    # Bogen-Erkennung im SAM/Overlay-Pfad. Default AUS entspricht dem Verhalten der
+    # Sicherung vom 14.06.2026: keine Bogen-Sondermarker aus der SAM-Antwort.
+    bend_geometry_enabled: bool = False
+
+    # ── SAM 3 (Text-Konzept-Segmentierung) ──────────────────────────────────
+    # Experimentell und per Default AUS. SAM3 segmentiert direkt aus Text-Konzepten ("pipe bend")
+    # und umgeht damit, dass YOLO-cls keine Bogen-Klasse hat und DINO Boegen als
+    # "infiltration" labelt. Gewichte sind gated (facebook/sam3) -> manuell ablegen.
+    # Hat keinen SAM1-/SAM2-Fallback; der produktive Prompt-Segmenter oben ist SAM2.1.
+    sam3_enabled: bool = False
+    # Pfad zur gated sam3-Gewichtsdatei (Dateiname MUSS 'sam3' enthalten). Leer -> Fehler
+    # statt stillem Fallback, wenn sam3_enabled=true.
+    sam3_weights_path: str = ""
+    # Default-Konzeptliste (serverseitig an ' . ' gesplittet zu list[str]).
+    sam3_concept_labels: str = "pipe bend . lateral connection . crack . root . deposit . water"
+    sam3_conf: float = 0.25
+    sam3_device: str = ""
 
     model_config = {"env_prefix": "SEWER_SIDECAR_"}
 

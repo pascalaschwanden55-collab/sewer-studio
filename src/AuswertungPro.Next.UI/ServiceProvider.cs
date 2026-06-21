@@ -73,7 +73,9 @@ namespace AuswertungPro.Next.UI
 
         public IDialogService Dialogs { get; } = new DialogService();
         public IPlaywrightInstallService PlaywrightInstaller { get; }
-        public PipelineConfig PipelineCfg { get; }
+        public PipelineConfig PipelineCfg => AiSettingsFactory
+            .Load(AppSettingsAiSettingsProvider.ToSource(Settings))
+            .ToPipelineConfig();
 
         public IMeasureRecommendationService MeasureRecommendation { get; }
         public IRetrievalService? Retrieval { get; }
@@ -106,7 +108,6 @@ namespace AuswertungPro.Next.UI
 
             // Einheitliche KI-Konfiguration (1x laden, 3x projizieren)
             var aiPlatform = AiSettingsFactory.Load(AppSettingsAiSettingsProvider.ToSource(settings));
-            PipelineCfg = aiPlatform.ToPipelineConfig();
 
             // AI/CodeCatalog Init (AiLocalPack)
             var cfg = aiPlatform.ToRuntimeSettings();

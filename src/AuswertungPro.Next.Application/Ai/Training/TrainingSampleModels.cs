@@ -21,8 +21,16 @@ public enum KbIndexState
     /// <summary>Erfolgreich in knowledge_base.db indexiert.</summary>
     Indexed,
 
-    /// <summary>Indexierung fehlgeschlagen.</summary>
-    Error
+    /// <summary>Indexierung fehlgeschlagen (echter Schreib-/Embedding-Fehler – ein Wiederholversuch ist sinnvoll).</summary>
+    Error,
+
+    /// <summary>
+    /// Bewusst und dauerhaft NICHT indexiert: Eval-kontaminiert oder nicht index-wuerdig
+    /// (zu kurze Beschreibung, unbekannter Code, nicht trainingsfaehig, fachlich implausibel).
+    /// Anders als <see cref="Error"/> KEIN Fehler – ein Nachhol-Lauf darf solche Samples
+    /// NICHT erneut versuchen (es waere immer dasselbe Ergebnis).
+    /// </summary>
+    Skipped
 }
 
 /// <summary>String-Konstanten fuer TrainingSample.MatchLevel.</summary>

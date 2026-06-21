@@ -66,11 +66,15 @@ public sealed class ReviewApprovalServiceTests
         public List<IReadOnlyList<TrainingSample>> IndexCalls { get; } = new();
         public List<string> DeindexCalls { get; } = new();
 
-        public Task<IReadOnlyList<string>> IndexAsync(IReadOnlyList<TrainingSample> samples, CancellationToken ct)
+        /// <summary>SampleIds, die der Fake als "bewusst uebersprungen" (Skipped) statt indexiert meldet.</summary>
+        public HashSet<string> SkipIds { get; } = new(StringComparer.Ordinal);
+
+        public Task<KbIndexOutcome> IndexAsync(IReadOnlyList<TrainingSample> samples, CancellationToken ct)
         {
             IndexCalls.Add(samples);
-            IReadOnlyList<string> ids = samples.Select(s => s.SampleId).ToList();
-            return Task.FromResult(ids);
+            var indexed = samples.Select(s => s.SampleId).Where(id => !SkipIds.Contains(id)).ToList();
+            var skipped = samples.Select(s => s.SampleId).Where(id => SkipIds.Contains(id)).ToList();
+            return Task.FromResult(new KbIndexOutcome(indexed, skipped));
         }
 
         public void Deindex(string sampleId) => DeindexCalls.Add(sampleId);
@@ -124,6 +128,29 @@ public sealed class ReviewApprovalServiceTests
         // Assert – Indexer
         Assert.Single(indexer.IndexCalls);
         Assert.Empty(indexer.DeindexCalls);
+    }
+
+    [Fact]
+    public async Task ApproveSelfTrainingAsync_IndexerSkips_SetsSkippedNotError()
+    {
+        // Ein vom Menschen freigegebenes Sample, das der Indexer dauerhaft verwirft
+        // (Eval-Schutz/nicht index-wuerdig), muss KbIndexState.Skipped erhalten – NICHT Error.
+        // Sonst wuerde ein Nachhol-Lauf es endlos erneut versuchen.
+        var sample = MakeSample("S-SKIP");
+        var store = new FakeStore(new[] { sample });
+        var indexer = new FakeIndexer();
+        indexer.SkipIds.Add("S-SKIP");
+        var svc = new ReviewApprovalService(store, indexer);
+
+        var result = await svc.ApproveSelfTrainingAsync("S-SKIP", box: null, CancellationToken.None, confirmedByUser: "test");
+
+        Assert.True(result.Found);
+        Assert.False(result.Indexed); // nicht in der KB
+
+        var stored = store.Find("S-SKIP");
+        Assert.NotNull(stored);
+        Assert.Equal(TrainingSampleStatus.Approved, stored.Status);
+        Assert.Equal(KbIndexState.Skipped, stored.KbIndexState); // Skipped, nicht Error
     }
 
     [Fact]

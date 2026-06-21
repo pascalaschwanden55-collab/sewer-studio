@@ -196,6 +196,9 @@ public sealed class CodingSessionViewModelFeedbackTests
         public CodingEvent AddEvent(ProtocolEntry entry, OverlayGeometry? overlay = null) => new() { Entry = entry, Overlay = overlay };
         public void UpdateEvent(Guid eventId, ProtocolEntry entry, OverlayGeometry? overlay = null) { }
         public void RemoveEvent(Guid eventId) { }
+        public Task IndexConfirmedSampleAsync(
+            AuswertungPro.Next.Application.Ai.Training.TrainingSample sample,
+            System.Threading.CancellationToken ct = default) => Task.CompletedTask;
 
         public void RaiseState(CodingSessionState state) => StateChanged?.Invoke(this, state);
         public void RaiseMeter(double meter) => MeterChanged?.Invoke(this, meter);

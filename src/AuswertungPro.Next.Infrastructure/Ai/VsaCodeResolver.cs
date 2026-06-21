@@ -225,7 +225,8 @@ public static class VsaCodeResolver
         IReadOnlyList<YoloClassifyPrediction>? predictions,
         double currentMeter,
         double totalLength,
-        IReadOnlyList<(string Code, string Description, double Meter)>? importContext = null)
+        IReadOnlyList<(string Code, string Description, double Meter)>? importContext = null,
+        bool isBend = false)
     {
         if (predictions == null || predictions.Count == 0)
             return null;
@@ -241,6 +242,19 @@ public static class VsaCodeResolver
         var bceConf = predictions
             .FirstOrDefault(p => string.Equals(p.ClassName, "BCE", StringComparison.OrdinalIgnoreCase))
             ?.Confidence ?? 0;
+
+        // Bogen-Veto: Der cls-Klassifikator hat keine stabile Bogen-Klasse und meldet
+        // Boegen oft als BCE/Rohrende. Klare andere Schadencodes bleiben unangetastet.
+        if (isBend && (top1Code is "BCE" or "LEER" or "OTHER" or "NORMAL"
+                       || (top1Conf <= 0.40 && bceConf > 0.20)))
+        {
+            return new ResolvedCode(
+                "BCC",
+                Math.Max(Math.Max(top1Code == "BCE" ? top1Conf : bceConf, 0.75), 0.01),
+                top1Code == "BCE"
+                    ? $"Bogen-Geometrie statt YOLO BCE {top1Conf:P0}"
+                    : "Bogen-Geometrie");
+        }
 
         // ── Meterstand-basierte Regeln (Sensor-Fusion) ──
 

@@ -819,6 +819,17 @@
                         </StackPanel>
                     </Button>
 
+                    <Button x:Name="CodingScreenshotButton"
+                            Style="{StaticResource PlayerButton}"
+                            Margin="6,0,0,0"
+                            Click="CodingScreenshot_Click"
+                            ToolTip="Screen: ganzes Fenster (mit Boxen) in die Zwischenablage kopieren">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE722;" FontFamily="Segoe MDL2 Assets" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Screen" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
                     <TextBlock x:Name="LiveDetectionStatusText"
                                VerticalAlignment="Center"
                                FontSize="11"

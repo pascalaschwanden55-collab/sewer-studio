@@ -1,7 +1,7 @@
 """GPU-freie Tests fuer das degraded-Verhalten (Audit-Befund #1: keine stillen Befundverluste).
 
 Diese Tests laden KEIN echtes Modell und brauchen KEINE GPU: gpu_manager.ensure_loaded
-wird gestubt, die eigentliche Inferenz (groundingdino.predict bzw. SamPredictor) gefaket.
+wird gestubt, die eigentliche Inferenz (groundingdino.predict bzw. SAM2ImagePredictor) gefaket.
 Geprueft wird ausschliesslich der Ehrlichkeits-Vertrag:
   - kein Befund            -> degraded=False, leere Liste erlaubt
   - Modell-/Inferenzfehler -> degraded=True (NICHT als sauberer Negativbefund getarnt)

@@ -32,8 +32,11 @@ async def health():
         "yolo": yolo_wrapper.get_runtime_status(),
         "classifier": yolo_wrapper.get_classifier_status(),
         "models_present": {
-            "dino": _weights_present("grounding_dino_1.5", ("*.pth", "*.pt")),
-            "sam": _weights_present("sam3", ("*.pth", "*.pt")),
+            "dino": (
+                _weights_present("grounding_dino_swinb", ("*.pth", "*.pt"))
+                or _weights_present("grounding_dino_1.5", ("*.pth", "*.pt"))
+            ),
+            "sam": _weights_present("sam2.1", ("*.pth", "*.pt")),
         },
         "device_config": {
             "gpu_device": settings.gpu_device,

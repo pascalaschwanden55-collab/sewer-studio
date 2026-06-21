@@ -190,7 +190,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     }
 
     [Fact]
-    public void Player_handles_bogen_classifier_before_no_detection_return()
+    public void Player_handles_structural_classifier_before_no_detection_return()
     {
         var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
         var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
@@ -201,9 +201,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var noDetectionIndex = runBody.IndexOf("!mmResult.IsRelevant || !mmResult.HasDetections", StringComparison.Ordinal);
 
         Assert.True(boundaryIndex >= 0, "Boundary-Classifier muss zuerst behandelt werden.");
-        Assert.True(structuralIndex > boundaryIndex, "BCC darf BCD/BCE nicht ueberholen.");
-        Assert.True(noDetectionIndex > structuralIndex, "BCC muss vor dem YOLO/DINO-No-Detection-Abbruch behandelt werden.");
-        Assert.Contains("code is not \"BCC\"", structuralBody);
+        Assert.True(structuralIndex > boundaryIndex, "BCA/BCC darf BCD/BCE nicht ueberholen.");
+        Assert.True(noDetectionIndex > structuralIndex, "BCA/BCC muss vor dem YOLO/DINO-No-Detection-Abbruch behandelt werden.");
+        Assert.Contains("code is not (\"BCA\" or \"BCC\")", structuralBody);
         Assert.Contains("codingSessionService.AddEvent(entry)", structuralBody);
         Assert.Contains("Decision = CodingUserDecision.Ignored", structuralBody);
 

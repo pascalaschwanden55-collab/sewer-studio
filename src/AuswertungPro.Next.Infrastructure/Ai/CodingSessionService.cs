@@ -210,17 +210,39 @@ public sealed class CodingSessionService : ICodingSessionService
     /// Indexiert Approved-Samples in die KB (Embedding + SQLite).
     /// Nur wenn Ollama verfuegbar — stilles Fehlschlagen bei Offline.
     /// </summary>
-    private async Task IndexApprovedSamplesToKbAsync(List<TrainingSample> samples)
+    private Task IndexApprovedSamplesToKbAsync(List<TrainingSample> samples)
     {
         var approved = samples.Where(s => s.Status == TrainingSampleStatus.Approved).ToList();
-        if (approved.Count == 0) return;
+        return IndexAndPersistAsync(approved);
+    }
+
+    /// <inheritdoc />
+    public Task IndexConfirmedSampleAsync(TrainingSample sample, CancellationToken ct = default)
+    {
+        // Nur bestaetigtes Gold indexieren — abgelehnte/negative Samples gehoeren nicht in die positive KB.
+        if (sample is null || sample.Status != TrainingSampleStatus.Approved)
+            return Task.CompletedTask;
+        return IndexAndPersistAsync(new List<TrainingSample> { sample }, ct);
+    }
+
+    /// <summary>
+    /// Gemeinsamer Index-Pfad fuer Session-Abschluss (Liste) UND Live-Bestaetigung (Einzel).
+    /// Indexiert jedes Approved-Sample, schreibt das Ergebnis als KbIndexState zurueck in
+    /// training_samples.json und ist robust gegen Ollama-Offline (-> Pending) und echte
+    /// Schreibfehler (-> Error). Ohne diese Rueckschreibung blieb KbIndexState auf None stehen,
+    /// obwohl indexiert wurde ("stiller" Haenger) — und es gab keinen Weg, solche Samples
+    /// spaeter wiederzufinden. Wirft nie (robustes Gehirn: Codieren darf nie an der KB scheitern).
+    /// </summary>
+    private async Task IndexAndPersistAsync(List<TrainingSample> approved, CancellationToken ct = default)
+    {
+        if (approved is null || approved.Count == 0) return;
 
         var cfg = _ollamaConfigProvider();
         if (cfg is null) return;
 
         try
         {
-            // HttpClient besitzen + disponieren -> kein Socket-/Handle-Leck pro Session-Abschluss.
+            // HttpClient besitzen + disponieren -> kein Socket-/Handle-Leck pro Aufruf.
             using var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new InfraKnowledgeBase.EmbeddingService(http, cfg);
 
@@ -228,17 +250,27 @@ public sealed class CodingSessionService : ICodingSessionService
             var kbManager = new InfraKnowledgeBase.KnowledgeBaseManager(
                 db, embedder, _evalHashesProvider(), _evalHaltungKeysProvider());
 
+            var touched = new List<TrainingSample>();
             foreach (var sample in approved)
             {
+                ct.ThrowIfCancellationRequested();
                 try
                 {
-                    await kbManager.IndexSampleAsync(sample);
+                    var ok = await kbManager.IndexSampleAsync(sample, ct);
+                    // true = in KB. false hat ZWEI Bedeutungen, die wir trennen muessen:
+                    //  - dauerhaft uebersprungen (Eval-Schutz/nicht index-wuerdig) -> Skipped (NICHT erneut versuchen)
+                    //  - sonst echter (transienter) Misserfolg -> Error (Nachhol-Lauf darf erneut versuchen)
+                    sample.KbIndexState = ok
+                        ? KbIndexState.Indexed
+                        : (kbManager.IsPermanentlySkipped(sample) ? KbIndexState.Skipped : KbIndexState.Error);
+                    touched.Add(sample);
                 }
                 catch (Exception ex) when (IsTransientOllamaFailure(ex))
                 {
                     // Ollama offline/Timeout: KB-Embedding wird uebersprungen. Erwartet -> nur Debug.
-                    // Das Sample ist bereits in TrainingSamplesStore persistiert und kann spaeter
-                    // ueber "Batch-Import + KB" im TrainingCenter nachindexiert werden.
+                    // Pending markieren, damit "Gold in KB nachholen" im TrainingCenter es spaeter aufgreift.
+                    sample.KbIndexState = KbIndexState.Pending;
+                    touched.Add(sample);
                     System.Diagnostics.Debug.WriteLine(
                         $"[CodingSession] KB-Index uebersprungen (Ollama offline/Timeout): {sample.Code} @ {sample.CaseId}");
                 }
@@ -247,11 +279,25 @@ public sealed class CodingSessionService : ICodingSessionService
                     // ECHTER KB-Schreibfehler (SQLite gesperrt/korrupt, Embedding-Dimension-Mismatch o.ae.).
                     // NICHT als "offline" kaschieren — sonst glaubt der Nutzer faelschlich, der bestaetigte
                     // Befund liege in der KB. Ein fehlerhaftes Sample blockiert die uebrigen nicht.
+                    sample.KbIndexState = KbIndexState.Error;
+                    touched.Add(sample);
                     System.Diagnostics.Debug.WriteLine(
                         $"[CodingSession] KB-SCHREIBFEHLER (NICHT offline) fuer {sample.Code} @ {sample.CaseId}: {ex.GetType().Name}: {ex.Message}");
                 }
             }
+
+            // Status zurueck in die JSON (Merge, kein Voll-Save -> kein Ueberschreiben paralleler Writes).
+            if (touched.Count > 0)
+            {
+                try { await TrainingSamplesStore.MergeOrUpdateAsync(touched); }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[CodingSession] KbIndexState-Rueckschreibung fehlgeschlagen: {ex.Message}");
+                }
+            }
         }
+        catch (OperationCanceledException) { /* Abbruch ist ok — Sample bleibt fuer Nachhol-Lauf */ }
         catch (Exception ex) when (IsTransientOllamaFailure(ex))
         {
             // Aufbau (HttpClient/KB-Context/Embedder) scheiterte transient -> erwartet, nur Debug.

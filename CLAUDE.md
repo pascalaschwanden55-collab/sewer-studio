@@ -1,7 +1,7 @@
 # SewerStudio — AI Sewer Inspection System
 
 ## Projekt-Kontext
-- **App:** WPF / .NET 8+, MVVM, Windows 11
+- **App:** WPF / .NET 10, MVVM, Windows 11
 - **Zweck:** Automatisierte Kanalinspektion, ~3000 Videos aus Kanal-TV-Exporten
 - **Standards:** EN 13508-2, VSA-KEK; aktive Quelle: `vsa_kek_2020_catalog_manifest.json`
 - **Entwickler:** Solo, kein kommerzielles Ziel
@@ -11,9 +11,10 @@
 - C# steuert Geschaeftslogik, UI, Dedup, QualityGate und Persistenz.
 - Sidecar `sidecar/sidecar/` liefert YOLO, Grounding DINO und SAM ueber HTTP.
 - YOLO: Standard-Gewicht `yolo26m.pt` bzw. TensorRT-Engine, wenn vorhanden; COCO-Fallback `yolo11m.pt`, wenn eigene Gewichte fehlen und Fallback erlaubt ist.
-- Qwen2.5-VL laeuft ueber Ollama fuer Bild-/Code-Analyse. Keine Doku-Annahme zu automatischer 8B->32B-Laufzeit-Eskalation treffen.
-- Grounding DINO: on-demand im Sidecar.
-- SAM: Segment Anything `vit_h`; Gewichte liegen aktuell unter `models/sam3/`. Der Ordnername bedeutet nicht "SAM 3".
+- Qwen3-VL laeuft ueber Ollama fuer Bild-/Code-Analyse (Primary `qwen3-vl:8b-q8`; NIE auf qwen2.5 zurueckfallen). Keine Doku-Annahme zu automatischer 8B->32B-Laufzeit-Eskalation treffen.
+- Grounding DINO: on-demand im Sidecar; Loader bevorzugt Swin-B (`grounding_dino_swinb`), Fallback Swin-T OGC (`grounding_dino_1.5`). Swin-B Stresstest 2026-06-20 bestanden (1000 Frames, 0 Timeouts, Forward ~107 ms, VRAM-Peak ~21,3 GB ≪ 29 GB) → behalten.
+- SAM: **SAM 2.1** (`sam2.1_hiera_large.pt` unter `models/sam2.1/`, via `SAM2ImagePredictor`, box-getrieben). SAM-1 `vit_h` ist im Sidecar entfernt. SAM 3 nur deaktivierte Experiment-Option (`sam3_weights_path`, Default aus, kein Wrapper/keine Route); alte `models/sam3/`-Ablage entfernt.
+- Bogen-Geometrie (`bend_geometry.py`, Fluchtpunkt/Bogen-Veto): im HEAD per Default DEAKTIVIERT (`bend_geometry_enabled=false`).
 - Dedup/Merge: C#-framebasiert in `MultiModelAnalysisService.UpdateActive` und `VideoFullAnalysisService.UpdateActive` ueber `DedupWindowFrames`.
 - Kein ByteTrack/OC-SORT und kein echtes Multi-Object-Tracking in HEAD.
 

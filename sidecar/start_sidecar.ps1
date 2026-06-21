@@ -48,14 +48,19 @@ $modelsDir = Join-Path $scriptDir "models"
 $yoloPtOk = Test-Path (Join-Path $modelsDir "yolo26m\*.pt")
 $yoloEngineOk = Test-Path (Join-Path $modelsDir "yolo26m\yolo26m.engine")
 $yoloOk = $yoloPtOk -or $yoloEngineOk
-$dinoOk = Test-Path (Join-Path $modelsDir "grounding_dino_1.5\*.pth")
-$samOk  = Test-Path (Join-Path $modelsDir "sam3\*.pth")
+$dinoSwinBOk = Test-Path (Join-Path $modelsDir "grounding_dino_swinb\*.pth")
+$dinoSwinTOk = Test-Path (Join-Path $modelsDir "grounding_dino_1.5\*.pth")
+$dinoOk = $dinoSwinBOk -or $dinoSwinTOk
+$sam21Ok = (Test-Path (Join-Path $modelsDir "sam2.1\*.pt")) -or (Test-Path (Join-Path $modelsDir "sam2.1\*.pth"))
+$samOk = $sam21Ok
 
 Write-Host "  Modelle:" -ForegroundColor White
 $yoloStatus = if ($yoloEngineOk) { "TensorRT Engine" } elseif ($yoloPtOk) { "Custom Weights" } else { "Fallback (yolo11m)" }
+$dinoStatus = if ($dinoSwinBOk) { "GroundingDINO Swin-B (lokal)" } elseif ($dinoSwinTOk) { "GroundingDINO Swin-T OGC (Fallback)" } else { "FEHLT" }
+$samStatus = if ($sam21Ok) { "SAM 2.1 (lokal)" } else { "FEHLT" }
 Write-Host "    YOLO:  $yoloStatus" -ForegroundColor $(if ($yoloOk) { "Green" } else { "Yellow" })
-Write-Host "    DINO:  $(if ($dinoOk) { 'OK' } else { 'FEHLT' })" -ForegroundColor $(if ($dinoOk) { "Green" } else { "Red" })
-Write-Host "    SAM:   $(if ($samOk)  { 'OK' } else { 'FEHLT' })" -ForegroundColor $(if ($samOk)  { "Green" } else { "Red" })
+Write-Host "    DINO:  $dinoStatus" -ForegroundColor $(if ($dinoOk) { "Green" } else { "Red" })
+Write-Host "    SAM:   $samStatus" -ForegroundColor $(if ($samOk)  { "Green" } else { "Red" })
 
 # Set defaults
 if (-not $env:SEWER_SIDECAR_HOST) { $env:SEWER_SIDECAR_HOST = "127.0.0.1" }

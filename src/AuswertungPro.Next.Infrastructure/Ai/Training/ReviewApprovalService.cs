@@ -57,11 +57,13 @@ public sealed class ReviewApprovalService : IReviewApprovalService
         match.ConfirmedAtUtc = DateTime.UtcNow;
 
         // Inkrementell in KB indexieren
-        var indexedIds = await _indexer.IndexAsync(
+        var outcome = await _indexer.IndexAsync(
             new List<TrainingSample> { match }, ct).ConfigureAwait(false);
-        match.KbIndexState = indexedIds.Contains(match.SampleId)
+        match.KbIndexState = outcome.IsIndexed(match.SampleId)
             ? KbIndexState.Indexed
-            : KbIndexState.Error;
+            : outcome.IsSkipped(match.SampleId)
+                ? KbIndexState.Skipped   // bewusst/dauerhaft verworfen, kein Fehler
+                : KbIndexState.Error;
 
         // Status-Aenderung atomar speichern
         await _store.MergeOrUpdateAsync(new List<TrainingSample> { match }).ConfigureAwait(false);
@@ -162,11 +164,13 @@ public sealed class ReviewApprovalService : IReviewApprovalService
             await _store.MergeAndSaveAsync(new List<TrainingSample> { corrected }).ConfigureAwait(false);
 
             // Inkrementell in KB indexieren
-            var corrIndexedIds = await _indexer.IndexAsync(
+            var corrOutcome = await _indexer.IndexAsync(
                 new List<TrainingSample> { corrected }, ct).ConfigureAwait(false);
-            corrected.KbIndexState = corrIndexedIds.Contains(corrected.SampleId)
+            corrected.KbIndexState = corrOutcome.IsIndexed(corrected.SampleId)
                 ? KbIndexState.Indexed
-                : KbIndexState.Error;
+                : corrOutcome.IsSkipped(corrected.SampleId)
+                    ? KbIndexState.Skipped
+                    : KbIndexState.Error;
             await _store.MergeOrUpdateAsync(new List<TrainingSample> { corrected }).ConfigureAwait(false);
 
             correctedSampleId = corrected.SampleId;

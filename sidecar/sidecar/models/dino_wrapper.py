@@ -25,17 +25,51 @@ _DINO_WEIGHTS: str | None = None
 
 def _find_dino_files() -> tuple[str, str]:
     """Locate Grounding DINO config and weights in models_dir."""
-    models = Path(settings.models_dir) / "grounding_dino_1.5"
-    # Look for common naming patterns
-    config_candidates = list(models.glob("*config*.py")) + list(models.glob("*cfg*.py"))
-    weight_candidates = list(models.glob("*.pth")) + list(models.glob("*.pt"))
+    searched: list[Path] = []
+    for models in _candidate_dino_dirs():
+        searched.append(models)
+        config_candidates = sorted(list(models.glob("*config*.py")) + list(models.glob("*cfg*.py")))
+        weight_candidates = sorted(list(models.glob("*.pth")) + list(models.glob("*.pt")))
 
-    if not config_candidates or not weight_candidates:
-        raise FileNotFoundError(
-            f"Grounding DINO config/weights not found in {models}. "
-            "Please place GroundingDINO config (.py) and weights (.pth) there."
-        )
-    return str(config_candidates[0]), str(weight_candidates[0])
+        if config_candidates and weight_candidates:
+            return str(_prefer_dino_config(config_candidates)), str(_prefer_dino_weights(weight_candidates))
+
+    searched_text = ", ".join(str(p) for p in searched)
+    raise FileNotFoundError(
+        f"Grounding DINO config/weights not found. Searched: {searched_text}. "
+        "For the local upgrade, place GroundingDINO Swin-B config/weights under models/grounding_dino_swinb."
+    )
+
+
+def _candidate_dino_dirs() -> list[Path]:
+    configured = settings.dino_model_dir.strip()
+    if configured and configured.lower() != "auto":
+        path = Path(configured)
+        if not path.is_absolute():
+            path = Path(settings.models_dir) / path
+        return [path]
+
+    root = Path(settings.models_dir)
+    return [
+        root / "grounding_dino_swinb",
+        root / "grounding_dino_1.5",
+        root / "grounding_dino",
+        root / "groundingdino",
+    ]
+
+
+def _prefer_dino_config(candidates: list[Path]) -> Path:
+    return sorted(
+        candidates,
+        key=lambda p: (0 if "swinb" in p.name.lower() else 1, p.name.lower()),
+    )[0]
+
+
+def _prefer_dino_weights(candidates: list[Path]) -> Path:
+    return sorted(
+        candidates,
+        key=lambda p: (0 if "swinb" in p.name.lower() else 1, p.name.lower()),
+    )[0]
 
 
 def _resolve_device() -> str:

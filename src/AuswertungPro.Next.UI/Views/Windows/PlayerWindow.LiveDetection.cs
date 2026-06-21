@@ -1136,7 +1136,7 @@ public partial class PlayerWindow
             if (samResult != null)
             {
                 ShowMarkSamMask(samResult, overlay);
-                await Task.Delay(800);
+                await Task.Delay(3000);   // 3 s: SAM-Maske sichtbar lassen, dann erst das Codefenster
             }
 
             // Training speichern + Codierfenster (VsaCodeExplorer) mit vorausgefuellten Messwerten.
@@ -1148,7 +1148,10 @@ public partial class PlayerWindow
             if (_codingVm != null) _codingVm.CurrentOverlay = null;
             RedrawCodingCanvas(includeManualOverlay: false);
 
-            if (saved)
+            // Codiermodus: Werkzeug NICHT abschalten, sonst loest die naechste Box keine
+            // Segmentierung / kein Codefenster mehr aus (Bug "funktioniert nur einmal").
+            // Nur in der Live-Markierung (ausserhalb Codiermodus) nach dem Speichern abschalten.
+            if (saved && !_isCodingMode)
             {
                 // Erfolgreich gespeichert â†’ Tool deaktivieren
                 DeactivateMarkTool();
@@ -1357,6 +1360,32 @@ public partial class PlayerWindow
 
             var selectedEntry = explorer.SelectedEntry;
 
+            // Den selbst gesetzten Code SOFORT als KI-BEFUND eintragen — unabhaengig davon, ob
+            // der nachfolgende Training-/YOLO-Export klappt. Sonst fehlt der Code in KI-BEFUNDE,
+            // wenn der Export scheitert (User-Wunsch: jeder eigene Code MUSS erscheinen).
+            CodingEvent? manualEvent = null;
+            if (_codingSessionService != null && _codingVm != null)
+            {
+                var manualMeter = 0.0;
+                if (double.TryParse(TxtCodingMeter?.Text?.Replace("m", "").Trim(),
+                        System.Globalization.NumberStyles.Any,
+                        System.Globalization.CultureInfo.InvariantCulture, out var pm0))
+                    manualMeter = pm0;
+                var manualEntry = new ProtocolEntry
+                {
+                    Source = ProtocolEntrySource.Manual,
+                    Code = selectedEntry.Code,
+                    Beschreibung = selectedEntry.Beschreibung,
+                    MeterStart = selectedEntry.MeterStart ?? manualMeter,
+                    MeterEnd = selectedEntry.MeterEnd,
+                    Zeit = selectedEntry.Zeit ?? TimeSpan.FromSeconds(timestampSec),
+                    IsStreckenschaden = selectedEntry.IsStreckenschaden,
+                    CodeMeta = selectedEntry.CodeMeta
+                };
+                manualEvent = _codingSessionService.AddEvent(manualEntry, overlay);
+                RefreshCodingEventsList();
+            }
+
             // 2. Frame-Capture (bereits vor der SAM-Segmentierung erfasst -> wiederverwenden).
             var frameBytes = preCapturedFrame ?? await CaptureCurrentFrameAsync();
             if (frameBytes == null) return false;
@@ -1412,24 +1441,11 @@ public partial class PlayerWindow
 
             await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
-            // Markierung AUCH als CodingEvent in die KI-Befunde-Liste eintragen
-            if (_codingSessionService != null && _codingVm != null)
+            // Foto nachtraeglich an den bereits eingetragenen Befund haengen (der Code wurde oben
+            // schon SOFORT eingetragen, damit er auch bei Export-Fehlern in KI-BEFUNDE steht).
+            if (manualEvent != null && exportResult.FullFramePath != null)
             {
-                var codingEntry = new ProtocolEntry
-                {
-                    Source = ProtocolEntrySource.Manual,
-                    Code = selectedEntry.Code,
-                    Beschreibung = selectedEntry.Beschreibung,
-                    MeterStart = selectedEntry.MeterStart ?? captureMeter,
-                    MeterEnd = selectedEntry.MeterEnd,
-                    Zeit = selectedEntry.Zeit ?? TimeSpan.FromSeconds(timestampSec),
-                    IsStreckenschaden = selectedEntry.IsStreckenschaden,
-                    CodeMeta = selectedEntry.CodeMeta
-                };
-                if (exportResult.FullFramePath != null)
-                    codingEntry.FotoPaths.Add(exportResult.FullFramePath);
-
-                _codingSessionService.AddEvent(codingEntry, overlay);
+                manualEvent.Entry.FotoPaths.Add(exportResult.FullFramePath);
                 RefreshCodingEventsList();
             }
 

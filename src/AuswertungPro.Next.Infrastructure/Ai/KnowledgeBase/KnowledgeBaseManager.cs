@@ -42,6 +42,15 @@ public sealed class KnowledgeBaseManager(
     /// Existiert bereits ein Eintrag, wird er aktualisiert (UPSERT).
     /// Gibt false zurück wenn das Embedding nicht erzeugt werden konnte.
     /// </summary>
+    /// <summary>
+    /// True, wenn das Sample dauerhaft und absichtlich NICHT in die KB darf – Eval-kontaminiert
+    /// ODER nicht index-wuerdig. Solche Samples liefern bei <see cref="IndexSampleAsync"/> immer
+    /// <c>false</c>; ein Wiederholversuch ist zwecklos. Aufrufer koennen damit "bewusst uebersprungen"
+    /// (KbIndexState.Skipped) von echten Schreibfehlern (KbIndexState.Error) unterscheiden.
+    /// </summary>
+    public bool IsPermanentlySkipped(TrainingSample sample)
+        => IsEvalContaminated(sample) || !IsIndexWorthy(sample);
+
     public async Task<bool> IndexSampleAsync(
         TrainingSample sample,
         CancellationToken ct = default)

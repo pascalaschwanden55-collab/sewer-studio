@@ -13,11 +13,11 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Training;
 /// </summary>
 public sealed class DelegatingKnowledgeBaseIndexer : IKnowledgeBaseIndexer
 {
-    private readonly Func<IReadOnlyList<TrainingSample>, CancellationToken, Task<IReadOnlyList<string>>> _index;
+    private readonly Func<IReadOnlyList<TrainingSample>, CancellationToken, Task<KbIndexOutcome>> _index;
     private readonly Action<string> _deindex;
 
     public DelegatingKnowledgeBaseIndexer(
-        Func<IReadOnlyList<TrainingSample>, CancellationToken, Task<IReadOnlyList<string>>> index,
+        Func<IReadOnlyList<TrainingSample>, CancellationToken, Task<KbIndexOutcome>> index,
         Action<string> deindex)
     {
         _index = index ?? throw new ArgumentNullException(nameof(index));
@@ -25,7 +25,7 @@ public sealed class DelegatingKnowledgeBaseIndexer : IKnowledgeBaseIndexer
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<string>> IndexAsync(IReadOnlyList<TrainingSample> samples, CancellationToken ct) =>
+    public Task<KbIndexOutcome> IndexAsync(IReadOnlyList<TrainingSample> samples, CancellationToken ct) =>
         _index(samples, ct);
 
     /// <inheritdoc />

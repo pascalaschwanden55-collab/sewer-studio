@@ -64,6 +64,19 @@ public interface ICodingSessionService
     /// <summary>Ereignis entfernen.</summary>
     void RemoveEvent(Guid eventId);
 
+    // --- KB-Indexierung ---
+
+    /// <summary>
+    /// Indexiert ein einzelnes bestaetigtes Gold-Sample sofort in die KnowledgeBase.db
+    /// (Embedding + SQLite) und schreibt den KbIndexState zurueck in training_samples.json.
+    /// Nutzt denselben eval-geschuetzten Pfad wie der Session-Abschluss. Stilles, robustes
+    /// Verhalten: Ollama offline -> Pending (spaeter ueber "Gold in KB nachholen"), echter
+    /// Schreibfehler -> Error. Wirft nicht.
+    /// </summary>
+    Task IndexConfirmedSampleAsync(
+        AuswertungPro.Next.Application.Ai.Training.TrainingSample sample,
+        CancellationToken ct = default);
+
     // --- Zustand ---
 
     /// <summary>Aktive Session (null wenn keine laeuft).</summary>

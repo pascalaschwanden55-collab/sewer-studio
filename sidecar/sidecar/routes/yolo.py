@@ -50,20 +50,21 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
         req.image_base64, top_k=req.top_k)
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
-    # Geometrisches Bogen-Veto aus demselben Frame. Defensiv: ein Dekodier-/Geometrie-
-    # Fehler darf die Klassifikation nicht kippen -> Fallback "kein Bogen".
+    # Geometrisches Bogen-Veto aus demselben Frame. Dieser leichte Veto bleibt aktiv,
+    # auch wenn das alte SAM/Bogen-Overlay deaktiviert ist.
     bend_shift, is_bend, vanish_x, vanish_y = 0.0, False, 0.5, 0.5
-    try:
-        _img = decode_image_safe(
-            req.image_base64,
-            max_bytes=settings.inference_max_image_bytes,
-            max_pixels=settings.max_image_pixels,
-        )
-        _bend = analyze_bend(np.array(_img))
-        bend_shift, is_bend = round(_bend.shift, 4), _bend.is_bend
-        vanish_x, vanish_y = round(_bend.vanish_x, 4), round(_bend.vanish_y, 4)
-    except Exception:
-        logger.warning("Bogen-Geometrie im classify fehlgeschlagen", exc_info=True)
+    if settings.bend_veto_enabled or settings.bend_geometry_enabled:
+        try:
+            _img = decode_image_safe(
+                req.image_base64,
+                max_bytes=settings.inference_max_image_bytes,
+                max_pixels=settings.max_image_pixels,
+            )
+            _bend = analyze_bend(np.array(_img))
+            bend_shift, is_bend = round(_bend.shift, 4), _bend.is_bend
+            vanish_x, vanish_y = round(_bend.vanish_x, 4), round(_bend.vanish_y, 4)
+        except Exception:
+            logger.warning("Bogen-Geometrie im classify fehlgeschlagen", exc_info=True)
 
     predictions = [
         YoloClassifyPrediction(class_name=name, confidence=conf)
@@ -83,6 +84,8 @@ def classify_yolo(req: YoloClassifyRequest) -> YoloClassifyResponse:
         "imgsz": meta.get("imgsz"),
         "preprocessing": meta.get("preprocessing"),
         "device": meta.get("device"),
+        "bend_shift": bend_shift,
+        "is_bend": is_bend,
     })
 
     return YoloClassifyResponse(
