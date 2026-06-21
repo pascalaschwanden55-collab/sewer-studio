@@ -302,11 +302,7 @@ public sealed class ProtocolDataIntegrityTests
             }
         };
 
-        var method = typeof(ProtocolPdfExporter)
-            .GetMethod("BuildObservationMeterStartText", BindingFlags.NonPublic | BindingFlags.Static);
-        Assert.NotNull(method);
-
-        var text = Assert.IsType<string>(method!.Invoke(null, new object[] { entry }));
+        var text = ProtocolPdfObservationText.BuildObservationMeterStartText(entry);
 
         Assert.Equal("ca. 1.20", text);
     }

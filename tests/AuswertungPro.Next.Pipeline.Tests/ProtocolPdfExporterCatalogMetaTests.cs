@@ -1,4 +1,3 @@
-using System.Reflection;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -42,7 +41,7 @@ public sealed class ProtocolPdfExporterCatalogMetaTests
             }
         };
 
-        var caption = InvokePrivateString("BuildPhotoCaptionLine2", entry);
+        var caption = ProtocolPdfObservationText.BuildPhotoCaptionLine2(entry);
 
         Assert.StartsWith("BAGA", caption, StringComparison.Ordinal);
         Assert.Contains("Q1=12 mm", caption, StringComparison.Ordinal);
@@ -51,13 +50,4 @@ public sealed class ProtocolPdfExporterCatalogMetaTests
         Assert.DoesNotContain("canonicalCode", caption, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string InvokePrivateString(string methodName, ProtocolEntry entry)
-    {
-        var method = typeof(ProtocolPdfExporter).GetMethod(
-            methodName,
-            BindingFlags.NonPublic | BindingFlags.Static);
-
-        Assert.NotNull(method);
-        return Assert.IsType<string>(method!.Invoke(null, [entry]));
-    }
 }
