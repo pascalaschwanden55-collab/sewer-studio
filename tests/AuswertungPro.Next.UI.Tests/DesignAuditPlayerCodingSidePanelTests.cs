@@ -148,12 +148,13 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var captureBody = ExtractMethodBody(coding, "private string? CodingCaptureSnapshot");
-        var goldBody = ExtractMethodBody(coding, "private async System.Threading.Tasks.Task<(string? path, string? error)> TrySaveGoldFrameAsync");
+        var persistBody = ExtractMethodBody(coding, "private async System.Threading.Tasks.Task PersistSingleEventAsTrainingSample");
 
         Assert.DoesNotContain("PlayerBoundaryPhotoPolicy.GetRequiredSnapshotTime(entry.Code", captureBody);
         Assert.DoesNotContain("SeekToRequiredPhotoTime", captureBody);
-        Assert.DoesNotContain("CaptureFrameBytesAtRequiredPhotoTimeAsync", goldBody);
-        Assert.DoesNotContain("Rohranfang-Foto nach Datenblendung nicht verfuegbar", goldBody);
+        Assert.Contains("_detectionPendingFrameBytes", persistBody);
+        Assert.DoesNotContain("CaptureFrameBytesAtRequiredPhotoTimeAsync", persistBody);
+        Assert.DoesNotContain("Rohranfang-Foto nach Datenblendung nicht verfuegbar", persistBody);
     }
 
     [Fact]

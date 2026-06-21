@@ -42,68 +42,11 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    /// <summary>
-    /// Konvertiert die KI-Events aus dem Codiermodus in TrainingSamples
-    /// und speichert sie via TrainingSamplesStore.
-    /// Schliesst den Feedback-Loop im PlayerWindow (analog zu CodingSessionService.CompleteSession).
-    /// </summary>
-    /// <summary>
-    /// Speichert ein einzelnes CodingEvent sofort als TrainingSample.
-    /// Wird nach jeder Codierung aufgerufen â€” nicht erst beim Beenden.
-    /// </summary>
-    /// <summary>
-    /// Sichert den aktuell analysierten Frame als Gold-Snapshot (PNG) unter knowledge/gold_frames,
-    /// falls der Befund kein eigenes Foto hat. Liefert den Dateipfad oder eine Fehlermeldung zurueck.
-    /// </summary>
-    private async System.Threading.Tasks.Task<(string? path, string? error)> TrySaveGoldFrameAsync(CodingEvent ev)
-    {
-        try
-        {
-            var bytes = _detectionPendingFrameBytes;
-
-            if (bytes == null || bytes.Length == 0)
-                bytes = await CaptureCurrentFrameAsync();
-            if (bytes == null || bytes.Length == 0)
-                return (null, "kein Frame verfügbar");
-
-            var dir = System.IO.Path.Combine(
-                AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBasePaths.GetRoot(), "gold_frames");
-            System.IO.Directory.CreateDirectory(dir);
-            var file = System.IO.Path.Combine(dir, $"{ev.EventId:N}.png");
-            await System.IO.File.WriteAllBytesAsync(file, bytes);
-            return (file, null);
-        }
-        catch (System.Exception ex)
-        {
-            return (null, ex.Message);
-        }
-    }
-
-    private (string? path, string? error) TrySaveEvidenceFrame(CodingEvent ev, string? rawFramePath)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(rawFramePath) || !System.IO.File.Exists(rawFramePath))
-                return (null, "kein Rohbild für Beweisbild verfügbar");
-
-            var dir = System.IO.Path.Combine(
-                AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase.KnowledgeBasePaths.GetRoot(),
-                "gold_frames_annotated");
-            var file = System.IO.Path.Combine(dir, $"{ev.EventId:N}_annotated.png");
-            var saved = EvidenceFrameRenderer.SaveAnnotatedFrame(
-                rawFramePath,
-                file,
-                CodingEvidenceAnnotationBuilder.Build(ev));
-
-            return saved ? (file, null) : (null, "Beweisbild konnte nicht erstellt werden");
-        }
-        catch (System.Exception ex)
-        {
-            return (null, ex.Message);
-        }
-    }
-
+    private CodingTrainingFrameStore? _codingTrainingFrameStore;
     private CodingTrainingSampleEvalProtector? _codingTrainingSampleEvalProtector;
+
+    private CodingTrainingFrameStore CodingFrameStore
+        => _codingTrainingFrameStore ??= new CodingTrainingFrameStore();
 
     /// <summary>
     /// True, wenn das Sample aus dem eingefrorenen Eval-Set stammt (inhaltsgleicher Frame
@@ -120,21 +63,24 @@ public partial class PlayerWindow
         try
         {
             var caseId = _codingVm?.HaltungName ?? "unknown";
-            var framePath = ev.Entry.FotoPaths.Count > 0 ? ev.Entry.FotoPaths[0] : null;
+            var framePath = CodingTrainingSampleFactory.PrimaryFramePath(ev);
 
             // Gold-Fund: Wenn der Befund kein eigenes Foto hat, aktuellen Frame als Snapshot sichern.
             // framePath bleibt bei Fehler null â€” das Speichern laeuft trotzdem durch (SnapshotError haelt den Grund fest).
             string? snapshotError = null;
             if (string.IsNullOrWhiteSpace(framePath))
             {
-                var (snapPath, snapErr) = await TrySaveGoldFrameAsync(ev);
-                framePath = snapPath;
-                snapshotError = snapErr;
+                var savedGoldFrame = await CodingFrameStore.SaveGoldFrameAsync(
+                    ev,
+                    _detectionPendingFrameBytes,
+                    CaptureCurrentFrameAsync);
+                framePath = savedGoldFrame.Path;
+                snapshotError = savedGoldFrame.Error;
             }
 
-            var (evidenceFramePath, evidenceError) = TrySaveEvidenceFrame(ev, framePath);
-            if (evidenceError != null)
-                System.Diagnostics.Debug.WriteLine($"[Training] Beweisbild nicht gespeichert: {evidenceError}");
+            var evidenceFrame = CodingFrameStore.SaveEvidenceFrame(ev, framePath);
+            if (evidenceFrame.Error != null)
+                System.Diagnostics.Debug.WriteLine($"[Training] Beweisbild nicht gespeichert: {evidenceFrame.Error}");
 
             var sample = CodingTrainingSampleFactory.Create(
                 ev,
@@ -143,7 +89,7 @@ public partial class PlayerWindow
                 ResolveTrainingInspectionDate(),
                 System.Environment.UserName,
                 System.DateTime.UtcNow,
-                evidenceFramePath,
+                evidenceFrame.Path,
                 snapshotError);
             // Eval-Schutz (ESW-003): Frames/Haltungen aus dem eingefrorenen Eval-Set
             // niemals als Trainingssample speichern.
