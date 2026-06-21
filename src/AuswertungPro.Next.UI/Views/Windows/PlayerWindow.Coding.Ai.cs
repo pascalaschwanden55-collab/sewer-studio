@@ -667,8 +667,9 @@ public partial class PlayerWindow
         double? frameOsdMeter)
     {
         var code = mmResult.ClassifierCode;
-        if (code is not ("BCD" or "BCE"))
+        if (!CodingClassifierDisplayPolicy.IsBoundaryClassifierCode(code))
             return false;
+        var boundaryCode = code!;
         if (_codingVm == null || _codingSessionService == null)
             return false;
 
@@ -680,24 +681,19 @@ public partial class PlayerWindow
         // Kamera noch weit davon weg ist. Solch ein zu fruehes BCE wuerde alles
         // weitere Protokollieren stoppen. Fachregel User 2026-06-16: BCE nur nahe am
         // bekannten Haltungsende setzen. Zu frueh -> ignorieren und normal weiteranalysieren.
-        if (code == "BCE"
-            && !CodingDedupPolicy.IsBoundaryEndCodePlausible(code, meter, _codingVm.EndMeter))
+        if (boundaryCode == "BCE"
+            && !CodingDedupPolicy.IsBoundaryEndCodePlausible(boundaryCode, meter, _codingVm.EndMeter))
         {
-            var possibleLabel = LookupVsaLabel(code) ?? "Rohrende";
+            var possibleLabel = CodingClassifierDisplayPolicy.ResolveBoundaryLabel(boundaryCode, LookupVsaLabel(boundaryCode));
             System.Diagnostics.Debug.WriteLine(
                 $"[Boundary] BCE bei {meter:F2}m verworfen (Haltungsende ~{_codingVm.EndMeter:F2}m, noch zu weit) - weiteranalysieren");
-            SetCodingAiState("Mögliches Rohrende voraus - noch nicht am Ende",
-                Color.FromRgb(0xF5, 0x9E, 0x0B), "näher heranfahren");
+            SetCodingAiState(CodingClassifierDisplayPolicy.PossibleBoundaryEndStatus,
+                Color.FromRgb(0xF5, 0x9E, 0x0B), CodingClassifierDisplayPolicy.PossibleBoundaryEndDetail);
             ClearDetectionOverlays();
             Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
             CodingFindingsList.ItemsSource = new[]
             {
-                new AiFindingDisplayItem(new LiveFrameFinding(
-                    Label: $"Mögliches {possibleLabel}",
-                    Severity: 3,
-                    PositionClock: null,
-                    ExtentPercent: null,
-                    VsaCodeHint: code))
+                new AiFindingDisplayItem(CodingClassifierDisplayPolicy.BuildPossibleBoundaryFinding(boundaryCode, possibleLabel))
             };
             return true;
         }
@@ -705,7 +701,7 @@ public partial class PlayerWindow
         var beforeCount = _codingVm.Events.Count;
         var anyAdded = false;
 
-        if (code == "BCD")
+        if (boundaryCode == "BCD")
         {
             EnsureRohranfangExists(meter, videoTime, _detectionPendingFrameBytes, ref anyAdded);
         }
@@ -718,24 +714,16 @@ public partial class PlayerWindow
             Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
         }
 
-        var label = LookupVsaLabel(code) ?? (code == "BCD" ? "Rohranfang" : "Rohrende");
+        var label = CodingClassifierDisplayPolicy.ResolveBoundaryLabel(boundaryCode, LookupVsaLabel(boundaryCode));
         var added = anyAdded || _codingVm.Events.Count > beforeCount;
-        var confidence = mmResult.ClassifierConfidence.HasValue
-            ? $" {mmResult.ClassifierConfidence.Value:P0}"
-            : "";
-        var statusText = added ? $"{label} erkannt" : $"{label} bereits vorhanden";
+        var statusText = CodingClassifierDisplayPolicy.BuildDetectedStatusText(label, added);
 
         SetCodingAiState(statusText, Color.FromRgb(0x22, 0xC5, 0x5E),
-            $"Klassifikator{confidence}");
+            CodingClassifierDisplayPolicy.BuildClassifierDetail(mmResult.ClassifierConfidence));
 
         CodingFindingsList.ItemsSource = new[]
         {
-            new AiFindingDisplayItem(new LiveFrameFinding(
-                Label: label,
-                Severity: 4,
-                PositionClock: null,
-                ExtentPercent: null,
-                VsaCodeHint: code))
+            new AiFindingDisplayItem(CodingClassifierDisplayPolicy.BuildBoundaryFinding(boundaryCode, label))
         };
 
         return true;
@@ -747,8 +735,9 @@ public partial class PlayerWindow
         double? frameOsdMeter)
     {
         var code = mmResult.ClassifierCode;
-        if (code is not ("BCA" or "BCC"))
+        if (!CodingClassifierDisplayPolicy.IsStructuralClassifierCode(code))
             return false;
+        var structuralCode = code!;
 
         // Wenn DINO/SAM Befunde liefert, bleibt der praezisere Maskenpfad zustaendig.
         if (mmResult.HasDetections)
@@ -761,7 +750,7 @@ public partial class PlayerWindow
 
         var meter = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
         var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);
-        var label = LookupVsaLabel(code) ?? (code == "BCC" ? "Bogen" : "Anschluss");
+        var label = CodingClassifierDisplayPolicy.ResolveStructuralLabel(structuralCode, LookupVsaLabel(structuralCode));
         var finding = new LiveFrameFinding(
             Label: label,
             Severity: 3,
@@ -769,16 +758,12 @@ public partial class PlayerWindow
             ExtentPercent: null,
             VsaCodeHint: code);
         var resolvedCode = ResolveFindingCodeForCoding(finding, meter);
-        if (resolvedCode == null || !resolvedCode.StartsWith(code, StringComparison.OrdinalIgnoreCase))
+        if (resolvedCode == null || !resolvedCode.StartsWith(structuralCode, StringComparison.OrdinalIgnoreCase))
             return false;
 
         var coveringEvent = codingVm.Events.FirstOrDefault(e =>
             CodingDedupPolicy.CodesMatch(e.Entry.Code, resolvedCode) &&
             CodingFindingCoveragePolicy.IsCovered(e, meter, finding));
-
-        var confidence = mmResult.ClassifierConfidence.HasValue
-            ? $" {mmResult.ClassifierConfidence.Value:P0}"
-            : "";
 
         ClearDetectionOverlays();
         Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
@@ -789,8 +774,9 @@ public partial class PlayerWindow
 
         if (coveringEvent != null)
         {
-            SetCodingAiState($"{label} bereits vorhanden", Color.FromRgb(0x22, 0xC5, 0x5E),
-                $"Klassifikator{confidence}");
+            SetCodingAiState(CodingClassifierDisplayPolicy.BuildDetectedStatusText(label, added: false),
+                Color.FromRgb(0x22, 0xC5, 0x5E),
+                CodingClassifierDisplayPolicy.BuildClassifierDetail(mmResult.ClassifierConfidence));
             return true;
         }
 
@@ -811,8 +797,9 @@ public partial class PlayerWindow
         ev.AiContext = draft.AiContext;
 
         RefreshCodingEventsList();
-        SetCodingAiState($"{draft.Entry.Beschreibung} erkannt", Color.FromRgb(0x22, 0xC5, 0x5E),
-            $"Klassifikator{confidence}");
+        SetCodingAiState(CodingClassifierDisplayPolicy.BuildDetectedStatusText(draft.Entry.Beschreibung, added: true),
+            Color.FromRgb(0x22, 0xC5, 0x5E),
+            CodingClassifierDisplayPolicy.BuildClassifierDetail(mmResult.ClassifierConfidence));
         return true;
     }
 
