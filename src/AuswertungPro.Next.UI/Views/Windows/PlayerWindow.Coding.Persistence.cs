@@ -103,10 +103,7 @@ public partial class PlayerWindow
         }
     }
 
-    // Eval-Set-Schutz: einmal pro Codier-Session geladen (Manifest-Hashes + Haltungs-Keys).
-    private IReadOnlySet<string>? _codingEvalImageHashes;
-    private IReadOnlySet<string>? _codingEvalHaltungKeys;
-    private bool _codingEvalSetsLoaded;
+    private CodingTrainingSampleEvalProtector? _codingTrainingSampleEvalProtector;
 
     /// <summary>
     /// True, wenn das Sample aus dem eingefrorenen Eval-Set stammt (inhaltsgleicher Frame
@@ -114,27 +111,8 @@ public partial class PlayerWindow
     /// sonst messen Benchmarks keine Generalisierung mehr. Leere Eval-Saetze -> immer false.
     /// </summary>
     private bool IsCodingSampleEvalProtected(TrainingSample sample)
-    {
-        if (!_codingEvalSetsLoaded)
-        {
-            _codingEvalSetsLoaded = true;
-            try
-            {
-                var evalSets = EvalContaminationSetProvider.Load(_serviceProvider?.Settings);
-                _codingEvalImageHashes = evalSets.ImageHashes;
-                _codingEvalHaltungKeys = evalSets.HaltungKeys;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[Training] Eval-Set konnte nicht geladen werden: {ex.Message}");
-            }
-        }
-
-        var hashes = _codingEvalImageHashes ?? (IReadOnlySet<string>)new HashSet<string>();
-        var haltungen = _codingEvalHaltungKeys ?? (IReadOnlySet<string>)new HashSet<string>();
-        return EvalContaminationGuard.ClassifyForExport(hashes, haltungen, sample.FramePath, sample.CaseId)
-               != EvalContaminationGuard.ExportContaminationResult.Clean;
-    }
+        => (_codingTrainingSampleEvalProtector ??= new CodingTrainingSampleEvalProtector(_serviceProvider?.Settings))
+            .IsProtected(sample);
 
     private async System.Threading.Tasks.Task PersistSingleEventAsTrainingSample(CodingEvent ev)
     {
