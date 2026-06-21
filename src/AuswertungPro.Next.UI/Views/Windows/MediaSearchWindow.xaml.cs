@@ -19,6 +19,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class MediaSearchWindow : Window
 {
     private readonly IReadOnlyList<HaltungRecord> _records;
+    private readonly ServiceProvider _services;
     private readonly string? _initialFolder;
     private CancellationTokenSource? _cts;
     private List<MediaMatchRow>? _rows;
@@ -35,11 +36,12 @@ public partial class MediaSearchWindow : Window
     /// <summary>Number of photos that were applied to protocol entries.</summary>
     public int AppliedFotoCount { get; private set; }
 
-    public MediaSearchWindow(IReadOnlyList<HaltungRecord> records, string? initialFolder)
+    public MediaSearchWindow(IReadOnlyList<HaltungRecord> records, string? initialFolder, ServiceProvider services)
     {
         InitializeComponent();
         WindowStateManager.Track(this);
         _records = records;
+        _services = services;
         _initialFolder = initialFolder;
 
         if (!string.IsNullOrWhiteSpace(_initialFolder))
@@ -51,8 +53,7 @@ public partial class MediaSearchWindow : Window
 
     private void Browse_Click(object sender, RoutedEventArgs e)
     {
-        var sp = (ServiceProvider)App.Services;
-        var folder = sp.Dialogs.SelectFolder("Medien-Suchordner waehlen", FolderBox.Text);
+        var folder = _services.Dialogs.SelectFolder("Medien-Suchordner waehlen", FolderBox.Text);
         if (!string.IsNullOrWhiteSpace(folder))
             FolderBox.Text = folder;
     }
@@ -258,9 +259,8 @@ public partial class MediaSearchWindow : Window
         Applied = videoCount > 0 || pdfCount > 0 || fotoCount > 0;
 
         // Persist last folder
-        var sp = (ServiceProvider)App.Services;
-        sp.Settings.LastVideoSourceFolder = FolderBox.Text.Trim();
-        sp.Settings.Save();
+        _services.Settings.LastVideoSourceFolder = FolderBox.Text.Trim();
+        _services.Settings.Save();
 
         DialogResult = true;
         Close();

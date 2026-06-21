@@ -1263,7 +1263,7 @@ public sealed partial class DataPageViewModel : ObservableObject
                 ? _sp.Settings.LastVideoFolder
                 : null;
 
-        var win = new MediaSearchWindow(Records.ToList(), initial);
+        var win = new MediaSearchWindow(Records.ToList(), initial, _sp);
         win.Owner = System.Windows.Application.Current?.MainWindow;
 
         if (win.ShowDialog() == true && win.Applied)
