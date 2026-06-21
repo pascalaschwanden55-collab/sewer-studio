@@ -484,19 +484,7 @@ public sealed class IbakExportImportService : IIbakImportService
 
         try
         {
-            var cs = new FbConnectionStringBuilder
-            {
-                Database = fdbPath,
-                UserID = Environment.GetEnvironmentVariable("IBAK_FDB_USER") ?? "SYSDBA",
-                Password = Environment.GetEnvironmentVariable("IBAK_FDB_PASSWORD") ?? "masterkey",
-                Charset = "WIN1252",
-                Dialect = 3,
-                Pooling = false
-            };
-
-            var client = TryFindFbClient(exportRoot);
-            if (!string.IsNullOrWhiteSpace(client))
-                cs.ClientLibrary = client;
+            var cs = IbakFdbConnectionOptions.CreatePhotoMap(fdbPath, TryFindFbClient(exportRoot));
 
             using var conn = new FbConnection(cs.ToString());
             conn.Open();

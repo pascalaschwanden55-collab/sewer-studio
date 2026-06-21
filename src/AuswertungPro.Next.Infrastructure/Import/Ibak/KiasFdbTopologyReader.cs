@@ -52,16 +52,7 @@ public static class KiasFdbTopologyReader
         if (string.IsNullOrWhiteSpace(fdb))
             return result;
 
-        // Embedded-Mode mit eingebettetem fbembed.dll - keine Server-Installation noetig.
-        // SYSDBA/masterkey sind Firebird-Defaults, KIAS ueberschreibt diese nicht.
-        var connStr = new FbConnectionStringBuilder
-        {
-            Database = fdb,
-            UserID = Environment.GetEnvironmentVariable("IBAK_FDB_USER") ?? "SYSDBA",
-            Password = Environment.GetEnvironmentVariable("IBAK_FDB_PASSWORD") ?? "masterkey",
-            ServerType = FbServerType.Embedded,
-            Charset = "NONE"
-        }.ToString();
+        var connStr = IbakFdbConnectionOptions.CreateEmbedded(fdb).ToString();
 
         try
         {
@@ -130,14 +121,7 @@ public static class KiasFdbTopologyReader
         if (string.IsNullOrWhiteSpace(fdb))
             return result;
 
-        var connStr = new FbConnectionStringBuilder
-        {
-            Database = fdb,
-            UserID = Environment.GetEnvironmentVariable("IBAK_FDB_USER") ?? "SYSDBA",
-            Password = Environment.GetEnvironmentVariable("IBAK_FDB_PASSWORD") ?? "masterkey",
-            ServerType = FbServerType.Embedded,
-            Charset = "NONE"
-        }.ToString();
+        var connStr = IbakFdbConnectionOptions.CreateEmbedded(fdb).ToString();
 
         try
         {
