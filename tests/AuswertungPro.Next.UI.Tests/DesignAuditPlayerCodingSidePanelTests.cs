@@ -368,12 +368,10 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("CodingProtocolMatchService.Match", runBody);
         Assert.Contains("_codingImportEvents.Select(ev => ev.Entry).ToList()", runBody);
         Assert.Contains("_codingVm.Events.Select(ev => ev.Entry).ToList()", runBody);
-        Assert.Contains("BuildCodingProtocolMatchBuckets(_lastCodingMatch)", runBody);
+        Assert.Contains("CodingProtocolMatchBucketBuilder.Rebuild(_codingProtocolMatchBuckets, _lastCodingMatch)", runBody);
         Assert.Contains("UpdateCodingProtocolMatchSummary(_lastCodingMatch)", runBody);
         Assert.Contains("RefreshCodingEventsList()", runBody);
-        Assert.Contains("Guid.TryParse(pair.Ki.RefId", coding);
-        Assert.Contains("Guid.TryParse(missed.RefId", coding);
-        Assert.Contains("Guid.TryParse(extra.RefId", coding);
+        Assert.Contains("CodingProtocolMatchDisplayPolicy.BadgeText", coding);
     }
 
     [Fact]

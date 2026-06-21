@@ -103,7 +103,6 @@ public partial class PlayerWindow
     private readonly ObservableCollection<CodingEvent> _codingImportEvents = new();
     private CodingMatchRouting? _lastCodingMatch;
     private readonly Dictionary<Guid, CodingProtocolMatchBucket> _codingProtocolMatchBuckets = new();
-    private enum CodingProtocolMatchBucket { TrainingGreen, ReviewYellow, WrongCode, Missed, FalseAlarm }
 
     // Bestaetigungs-Panel: aktuell wartendes Event
     private CodingEvent? _codingPendingConfirmEvent;
@@ -798,47 +797,10 @@ public partial class PlayerWindow
     /// </summary>
     private void EnsureHaltungslaenge(HaltungRecord record)
     {
-        // Bereits vorhanden?
-        if (HasValidLength(record, "Haltungslaenge_m"))
+        if (CodingHaltungslaengeResolver.TryEnsureFromKnownSources(record, _damageOverlay?.PipeLengthMeters))
             return;
 
-        // Fallback 1: Laenge_m
-        if (HasValidLength(record, "Laenge_m"))
-        {
-            record.SetFieldValue("Haltungslaenge_m",
-                record.GetFieldValue("Laenge_m"),
-                Domain.Models.FieldSource.Legacy, userEdited: false);
-            return;
-        }
-
-        // Fallback 2: DamageOverlay (wurde beim Oeffnen aus dem Protokoll berechnet)
-        if (_damageOverlay != null && _damageOverlay.PipeLengthMeters > 0)
-        {
-            record.SetFieldValue("Haltungslaenge_m",
-                _damageOverlay.PipeLengthMeters.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
-                Domain.Models.FieldSource.Legacy, userEdited: false);
-            return;
-        }
-
-        // Fallback 3: Protokoll BCE-Eintrag (Rohrende) â†’ hoechster Meter
-        if (record.Protocol?.Current?.Entries is { Count: > 0 } entries)
-        {
-            var maxMeter = entries
-                .Where(e => e.MeterStart.HasValue && e.MeterStart.Value > 0)
-                .Select(e => e.MeterStart!.Value)
-                .DefaultIfEmpty(0)
-                .Max();
-
-            if (maxMeter > 0)
-            {
-                record.SetFieldValue("Haltungslaenge_m",
-                    maxMeter.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
-                    Domain.Models.FieldSource.Legacy, userEdited: false);
-                return;
-            }
-        }
-
-        // Fallback 4: Benutzer manuell fragen
+        // Letzter Fallback: Benutzer manuell fragen.
         var input = Microsoft.VisualBasic.Interaction.InputBox(
             "Haltungslaenge konnte nicht ermittelt werden.\n" +
             "Bitte Haltungslaenge in Meter eingeben (z.B. 45.3):",
@@ -855,15 +817,6 @@ public partial class PlayerWindow
                     Domain.Models.FieldSource.Manual, userEdited: true);
             }
         }
-    }
-
-    private static bool HasValidLength(HaltungRecord record, string fieldName)
-    {
-        var raw = record.GetFieldValue(fieldName);
-        if (string.IsNullOrWhiteSpace(raw)) return false;
-        var normalized = raw.Replace(',', '.');
-        return double.TryParse(normalized, System.Globalization.NumberStyles.Float,
-            System.Globalization.CultureInfo.InvariantCulture, out var v) && v > 0;
     }
 
     private void CodingModeExit_Click(object sender, RoutedEventArgs e) => ExitCodingMode();
@@ -2397,7 +2350,7 @@ public partial class PlayerWindow
         var canAct = CodingSessionViewModel.CanActOnDefect(ev);
         BtnInlineAccept.Visibility = canAct ? Visibility.Visible : Visibility.Collapsed;
         BtnInlineReject.Visibility = canAct ? Visibility.Visible : Visibility.Collapsed;
-        TxtInlineDetailStatus.Text = CodingStatusToDisplayText(status);
+        TxtInlineDetailStatus.Text = CodingDefectStatusDisplayPolicy.DisplayText(status);
         UpdateInlineEvidencePreview(ev);
 
         // Mittlere Spalte einblenden
@@ -2519,64 +2472,16 @@ public partial class PlayerWindow
             _codingImportEvents.Select(ev => ev.Entry).ToList(),
             _codingVm.Events.Select(ev => ev.Entry).ToList());
 
-        BuildCodingProtocolMatchBuckets(_lastCodingMatch);
+        CodingProtocolMatchBucketBuilder.Rebuild(_codingProtocolMatchBuckets, _lastCodingMatch);
         UpdateCodingProtocolMatchSummary(_lastCodingMatch);
         RefreshCodingEventsList();
         Dispatcher.InvokeAsync(ApplyCodingProtocolMatchListHighlights, DispatcherPriority.Loaded);
     }
 
-    private void BuildCodingProtocolMatchBuckets(CodingMatchRouting routing)
-    {
-        _codingProtocolMatchBuckets.Clear();
-
-        foreach (var pair in routing.Trainingskandidaten)
-            AddCodingProtocolMatchPairBuckets(pair, CodingProtocolMatchBucket.TrainingGreen);
-
-        foreach (var pair in routing.ReviewGelb)
-            AddCodingProtocolMatchPairBuckets(pair, CodingProtocolMatchBucket.ReviewYellow);
-
-        foreach (var pair in routing.FalscherCodeReview)
-            AddCodingProtocolMatchPairBuckets(pair, CodingProtocolMatchBucket.WrongCode);
-
-        foreach (var missed in routing.Verpasst)
-            if (Guid.TryParse(missed.RefId, out var missedId))
-                _codingProtocolMatchBuckets[missedId] = CodingProtocolMatchBucket.Missed;
-
-        foreach (var extra in routing.Fehlalarm)
-            if (Guid.TryParse(extra.RefId, out var extraId))
-                _codingProtocolMatchBuckets[extraId] = CodingProtocolMatchBucket.FalseAlarm;
-    }
-
-    private void AddCodingProtocolMatchPairBuckets(BefundMatchPair pair, CodingProtocolMatchBucket bucket)
-    {
-        if (Guid.TryParse(pair.Gt.RefId, out var gtId))
-            _codingProtocolMatchBuckets[gtId] = bucket;
-
-        if (Guid.TryParse(pair.Ki.RefId, out var kiId))
-            _codingProtocolMatchBuckets[kiId] = bucket;
-    }
-
     private void UpdateCodingProtocolMatchSummary(CodingMatchRouting? routing)
     {
-        if (routing == null)
-        {
-            TxtCodingProtocolMatchSummary.Text = "Abgleich: noch nicht ausgefuehrt";
-            BtnAcceptGreenCodingMatches.IsEnabled = false;
-            return;
-        }
-
-        var green = routing.Trainingskandidaten.Count;
-        var yellow = routing.ReviewGelb.Count;
-        var wrong = routing.FalscherCodeReview.Count;
-        var missed = routing.Verpasst.Count;
-        var extra = routing.Fehlalarm.Count;
-        var hits = green + yellow;
-
-        TxtCodingProtocolMatchSummary.Text =
-            $"Abgleich: {hits} Treffer ({green} gruen/{yellow} gelb) | " +
-            $"{wrong} falscher Code | {missed} fehlen | {extra} extra | " +
-            $"P {routing.Match.Precision:P0} R {routing.Match.Recall:P0}";
-        BtnAcceptGreenCodingMatches.IsEnabled = green > 0;
+        TxtCodingProtocolMatchSummary.Text = CodingProtocolMatchSummaryFormatter.Format(routing);
+        BtnAcceptGreenCodingMatches.IsEnabled = CodingProtocolMatchSummaryFormatter.CanAcceptGreenMatches(routing);
     }
 
     private async void CodingAcceptGreenMatches_Click(object sender, RoutedEventArgs e)
@@ -2743,17 +2648,6 @@ public partial class PlayerWindow
         FadeOutAiOverlayAfterAction();
     }
 
-    private static string CodingStatusToDisplayText(DefectStatus status) => status switch
-    {
-        DefectStatus.AutoAccepted     => "Auto-Akzeptiert (Green Zone)",
-        DefectStatus.Pending          => "Review empfohlen (Yellow Zone)",
-        DefectStatus.ReviewRequired   => "Manuell erforderlich (Red Zone)",
-        DefectStatus.Accepted         => "Akzeptiert",
-        DefectStatus.AcceptedWithEdit => "Bearbeitet",
-        DefectStatus.Rejected         => "Abgelehnt",
-        _ => ""
-    };
-
     /// <summary>Zone-Dots und Konfidenz-Texte in der Event-ListBox einfaerben.</summary>
     private void ColorizeCodingEventListItems()
     {
@@ -2770,16 +2664,7 @@ public partial class PlayerWindow
             if (zoneDot != null)
             {
                 var status = CodingSessionViewModel.GetDefectStatus(ev);
-                zoneDot.Fill = status switch
-                {
-                    DefectStatus.Accepted or DefectStatus.AutoAccepted
-                        => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)), // Gruen = akzeptiert
-                    DefectStatus.AcceptedWithEdit
-                        => new SolidColorBrush(Color.FromRgb(0x3B, 0x82, 0xF6)), // Blau = bearbeitet
-                    DefectStatus.Rejected
-                        => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44)), // Rot = abgelehnt
-                    _ => new SolidColorBrush(Color.FromRgb(0x94, 0xA3, 0xB8))    // Grau = offen
-                };
+                zoneDot.Fill = new SolidColorBrush(CodingDefectStatusDisplayPolicy.ZoneDotColor(status));
             }
 
             // Konfidenz-Text einfaerben
@@ -2799,16 +2684,7 @@ public partial class PlayerWindow
             if (statusIcon != null)
             {
                 var status = CodingSessionViewModel.GetDefectStatus(ev);
-                statusIcon.Text = status switch
-                {
-                    DefectStatus.AutoAccepted      => "\u2713",
-                    DefectStatus.Accepted           => "\u2713",
-                    DefectStatus.AcceptedWithEdit   => "\u270E",
-                    DefectStatus.Pending            => "\u23F3",
-                    DefectStatus.ReviewRequired     => "\u26A0",
-                    DefectStatus.Rejected           => "\u2717",
-                    _ => ""
-                };
+                statusIcon.Text = CodingDefectStatusDisplayPolicy.StatusIcon(status);
                 statusIcon.Foreground = CodingSessionViewModel.GetStatusBrush(status);
             }
         }
@@ -2840,60 +2716,20 @@ public partial class PlayerWindow
                 continue;
             }
 
-            container.Background = new SolidColorBrush(GetCodingProtocolMatchColor(bucket));
-            container.ToolTip = GetCodingProtocolMatchText(bucket);
+            container.Background = new SolidColorBrush(CodingProtocolMatchDisplayPolicy.BackgroundColor(bucket));
+            container.ToolTip = CodingProtocolMatchDisplayPolicy.Tooltip(bucket);
 
             var badge = FindCodingChild<Border>(container, "CodingMatchBadge");
             var badgeText = FindCodingChild<TextBlock>(container, "TxtCodingMatchBadge");
             if (badge != null)
             {
-                badge.Background = new SolidColorBrush(GetCodingProtocolMatchBadgeColor(bucket));
+                badge.Background = new SolidColorBrush(CodingProtocolMatchDisplayPolicy.BadgeColor(bucket));
                 badge.Visibility = Visibility.Visible;
             }
             if (badgeText != null)
-                badgeText.Text = GetCodingProtocolMatchBadgeText(bucket);
+                badgeText.Text = CodingProtocolMatchDisplayPolicy.BadgeText(bucket);
         }
     }
-
-    private static Color GetCodingProtocolMatchColor(CodingProtocolMatchBucket bucket) => bucket switch
-    {
-        CodingProtocolMatchBucket.TrainingGreen => Color.FromRgb(0x11, 0x38, 0x22),
-        CodingProtocolMatchBucket.ReviewYellow => Color.FromRgb(0x47, 0x35, 0x10),
-        CodingProtocolMatchBucket.WrongCode => Color.FromRgb(0x51, 0x25, 0x08),
-        CodingProtocolMatchBucket.Missed => Color.FromRgb(0x4C, 0x1D, 0x1D),
-        CodingProtocolMatchBucket.FalseAlarm => Color.FromRgb(0x2F, 0x1A, 0x45),
-        _ => Color.FromRgb(0x1F, 0x29, 0x37)
-    };
-
-    private static Color GetCodingProtocolMatchBadgeColor(CodingProtocolMatchBucket bucket) => bucket switch
-    {
-        CodingProtocolMatchBucket.TrainingGreen => Color.FromRgb(0x16, 0xA3, 0x4A),
-        CodingProtocolMatchBucket.ReviewYellow => Color.FromRgb(0xCA, 0x8A, 0x04),
-        CodingProtocolMatchBucket.WrongCode => Color.FromRgb(0xEA, 0x58, 0x0C),
-        CodingProtocolMatchBucket.Missed => Color.FromRgb(0xDC, 0x26, 0x26),
-        CodingProtocolMatchBucket.FalseAlarm => Color.FromRgb(0x7C, 0x3A, 0xED),
-        _ => Color.FromRgb(0x47, 0x55, 0x69)
-    };
-
-    private static string GetCodingProtocolMatchBadgeText(CodingProtocolMatchBucket bucket) => bucket switch
-    {
-        CodingProtocolMatchBucket.TrainingGreen => "TRAIN",
-        CodingProtocolMatchBucket.ReviewYellow => "PRUEF",
-        CodingProtocolMatchBucket.WrongCode => "CODE",
-        CodingProtocolMatchBucket.Missed => "FEHLT",
-        CodingProtocolMatchBucket.FalseAlarm => "EXTRA",
-        _ => ""
-    };
-
-    private static string GetCodingProtocolMatchText(CodingProtocolMatchBucket bucket) => bucket switch
-    {
-        CodingProtocolMatchBucket.TrainingGreen => "Abgleich: sicherer Treffer, Trainingskandidat",
-        CodingProtocolMatchBucket.ReviewYellow => "Abgleich: wahrscheinlicher Treffer, kurz pruefen",
-        CodingProtocolMatchBucket.WrongCode => "Abgleich: gleiche Stelle, falscher Code",
-        CodingProtocolMatchBucket.Missed => "Abgleich: im Import vorhanden, von KI verpasst",
-        CodingProtocolMatchBucket.FalseAlarm => "Abgleich: KI-Fehlalarm ohne Import-Partner",
-        _ => "Abgleich"
-    };
 
     /// <summary>Rekursiv ein benanntes Kind-Element im VisualTree finden.</summary>
     private static T? FindCodingChild<T>(DependencyObject parent, string childName) where T : FrameworkElement
