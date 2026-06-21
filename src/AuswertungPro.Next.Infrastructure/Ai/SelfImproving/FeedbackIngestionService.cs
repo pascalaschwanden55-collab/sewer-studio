@@ -11,8 +11,12 @@ namespace AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 /// <summary>
 /// Processes Accept/Reject feedback:
 /// 1. Logs to ValidationLog
-/// 2. On Accept: re-indexes corrected code in KB
-/// 3. On Reject: logs as hard-negative for future training
+/// 2. On Accept: indexes the corrected sample in the KB — but ONLY if it carries a real
+///    frame/holding identity (Audit Fix #6b: a sample without FramePath and without a real
+///    haltung CaseId is invisible to the eval-contamination guard and a near-empty embedding,
+///    so it is deliberately skipped).
+/// 3. On Reject: currently only recorded in ValidationLog. NOTE: no hard-negative learning is
+///    implemented yet (was previously claimed here but never built).
 /// 4. Every 25 validations: triggers WeightLearningService.ReLearnAsync()
 /// </summary>
 public sealed class FeedbackIngestionService
@@ -49,23 +53,45 @@ public sealed class FeedbackIngestionService
 
         if (accepted && _sampleIndexer is not null && !string.IsNullOrWhiteSpace(vsaCode))
         {
-            try
+            var det = entry.Detection;
+            var sample = new TrainingSample
             {
-                var det = entry.Detection;
-                var sample = new TrainingSample
-                {
-                    SampleId = $"feedback_{Guid.NewGuid():N}",
-                    CaseId = det.FindingLabel ?? "",
-                    Code = vsaCode,
-                    Beschreibung = det.FindingLabel ?? "",
-                    MeterStart = det.MeterStart,
-                    MeterEnd = det.MeterEnd
-                };
-                await _sampleIndexer.IndexSampleAsync(sample, ct).ConfigureAwait(false);
+                SampleId = $"feedback_{Guid.NewGuid():N}",
+                CaseId = det.FindingLabel ?? "",
+                Code = vsaCode,
+                Beschreibung = det.FindingLabel ?? "",
+                MeterStart = det.MeterStart,
+                MeterEnd = det.MeterEnd
+            };
+
+            // Audit Fix #6b: Ein Feedback-Sample aus RawVideoDetection traegt KEINEN FramePath
+            // und keine echte Haltungs-CaseId (CaseId = Befund-Label). Damit ist es (a) fuer den
+            // Eval-Kontaminationsschutz unsichtbar (weder Frame-Hash noch Haltungs-Sperrliste
+            // koennen greifen) und (b) ein nahezu inhaltsleeres Embedding. Solche Samples NICHT
+            // indexieren, bis ein echter Frame-/Haltungsbezug durchgereicht wird.
+            var hasFrame = !string.IsNullOrWhiteSpace(sample.FramePath);
+            var hasHaltungId = !string.IsNullOrWhiteSpace(sample.CaseId)
+                && System.Text.RegularExpressions.Regex.IsMatch(sample.CaseId, @"\d[\d.]*[-/]\d[\d.]*");
+
+            if (!hasFrame && !hasHaltungId)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[FeedbackIngestion] Sample {sample.SampleId} NICHT indexiert: kein Frame-/Haltungsbezug " +
+                    "(Eval-Guard waere blind, Embedding inhaltsleer).");
             }
-            catch
+            else
             {
-                // KB re-indexing failure is non-critical.
+                try
+                {
+                    await _sampleIndexer.IndexSampleAsync(sample, ct).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // Frueher stilles catch{} — jetzt sichtbar (Audit): KB-Indexierung nicht kritisch,
+                    // der Fehler darf aber nicht spurlos verschwinden.
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[FeedbackIngestion] KB-Indexierung fehlgeschlagen: {ex.Message}");
+                }
             }
         }
 
