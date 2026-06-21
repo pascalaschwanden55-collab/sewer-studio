@@ -4412,22 +4412,11 @@ public partial class PlayerWindow
     // damit akzeptierte Befunde nicht bei jeder Analyse wieder als Box gezeichnet werden.
     private bool IsFindingAlreadyKnown(LiveFrameFinding finding, double meter)
     {
-        string code = finding.VsaCodeHint ?? string.Empty;
-        if (string.IsNullOrEmpty(code)) return false;
-
-        bool CoveredIn(System.Collections.Generic.IEnumerable<CodingEvent>? events)
-        {
-            if (events == null) return false;
-            foreach (var ev in events)
-            {
-                if (!CodesMatchForDedup(ev.Entry.Code, code)) continue;
-                if (CodingFindingCoveragePolicy.IsCovered(ev, meter, finding)) return true;
-            }
-            return false;
-        }
-
-        return CoveredIn(_codingSessionService?.ActiveSession?.Events)
-            || CoveredIn(_codingVm?.Events);
+        return CodingKnownFindingPolicy.IsKnown(
+            finding,
+            meter,
+            _codingSessionService?.ActiveSession?.Events,
+            _codingVm?.Events);
     }
 
     private void AddAiFindingsAsEvents(LiveDetection result, IReadOnlyList<LiveFrameFinding> validFindings)
