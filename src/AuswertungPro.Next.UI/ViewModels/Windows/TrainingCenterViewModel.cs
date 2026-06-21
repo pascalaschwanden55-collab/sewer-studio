@@ -746,18 +746,10 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             if (newSamples.Count == 0)
             {
-                StatusText = generation.Outcome switch
-                {
-                    TrainingSampleGenerationOutcome.OnlyDuplicates
-                        => $"Keine neuen Samples für {SelectedCase.CaseId} (alle {generation.ParsedEntries} Einträge bereits vorhanden).",
-                    TrainingSampleGenerationOutcome.NoProtocolEntries
-                        => $"Keine Protokolleinträge erkannt für {SelectedCase.CaseId}.",
-                    TrainingSampleGenerationOutcome.ProtocolUnreadable
-                        => $"Protokoll konnte nicht gelesen werden: {SelectedCase.ProtocolPath}",
-                    TrainingSampleGenerationOutcome.ProtocolFileMissing
-                        => $"Protokolldatei fehlt: {SelectedCase.ProtocolPath}",
-                    _ => "Keine neuen Samples generiert."
-                };
+                StatusText = TrainingCenterSampleGenerationStatusFormatter.FormatEmptyCaseStatus(
+                    SelectedCase.CaseId,
+                    SelectedCase.ProtocolPath,
+                    generation);
                 return;
             }
 
@@ -1021,34 +1013,26 @@ public partial class TrainingCenterViewModel : ObservableObject
 
                     if (newSamples.Count == 0)
                     {
-                        string skipReason;
-                        switch (generation.Outcome)
+                        var skip = TrainingCenterSampleGenerationStatusFormatter.FormatBatchSkip(generation);
+                        switch (skip.Kind)
                         {
-                            case TrainingSampleGenerationOutcome.OnlyDuplicates:
+                            case TrainingCenterBatchSkipKind.DuplicateOnly:
                                 duplicateOnlyCases++;
-                                skipReason = $"{generation.ParsedEntries} Duplikate";
-                                Log($"  -> 0 Samples (alle {generation.ParsedEntries} Eintraege bereits vorhanden)");
-                                UpdateLivePreview(tc.CaseId, skipReason, "bereits vorhanden", previewFrame);
                                 break;
-                            case TrainingSampleGenerationOutcome.ProtocolFileMissing:
+                            case TrainingCenterBatchSkipKind.MissingProtocol:
                                 missingProtocols++;
-                                skipReason = "Protokoll fehlt";
-                                Log("  -> 0 Samples (Protokolldatei fehlt)");
-                                UpdateLivePreview(tc.CaseId, "—", skipReason, previewFrame);
                                 break;
-                            case TrainingSampleGenerationOutcome.ProtocolUnreadable:
+                            case TrainingCenterBatchSkipKind.UnreadableProtocol:
                                 unreadableProtocols++;
-                                skipReason = "nicht lesbar";
-                                Log("  -> 0 Samples (Protokoll nicht lesbar)");
-                                UpdateLivePreview(tc.CaseId, "—", skipReason, previewFrame);
                                 break;
                             default:
                                 emptyProtocols++;
-                                skipReason = "keine Eintraege";
-                                Log("  -> 0 Samples (keine Protokolleintraege erkannt)");
-                                UpdateLivePreview(tc.CaseId, "—", skipReason, previewFrame);
                                 break;
                         }
+
+                        var skipReason = skip.ResultSummary;
+                        Log(skip.LogMessage);
+                        UpdateLivePreview(tc.CaseId, skip.LiveCodeInfo, skip.LiveMeterInfo, previewFrame);
 
                         // Uebersprungene Haltungen trotzdem im Ergebnis-Verlauf zeigen
                         void AddSkipped()
