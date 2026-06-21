@@ -16,6 +16,8 @@ namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 /// </summary>
 public sealed class KnowledgeBaseContext : IDisposable
 {
+    public const int SchemaVersion = 1;
+
     public static string DefaultDbPath => KnowledgeBasePaths.GetKnowledgeDbPath();
 
     private readonly SqliteConnection _connection;
@@ -139,6 +141,7 @@ public sealed class KnowledgeBaseContext : IDisposable
             CREATE INDEX IF NOT EXISTS idx_validation_code_created
                 ON ValidationLog(VsaCode, CreatedUtc DESC);
             """);
+        EnsureUserVersion();
     }
 
     private void ExecuteNonQuery(string sql)
@@ -162,5 +165,19 @@ public sealed class KnowledgeBaseContext : IDisposable
         {
             // Spalte existiert bereits — Migration nicht noetig
         }
+    }
+
+    private void EnsureUserVersion()
+    {
+        var current = ReadUserVersion();
+        if (current < SchemaVersion)
+            ExecuteNonQuery($"PRAGMA user_version={SchemaVersion};");
+    }
+
+    private int ReadUserVersion()
+    {
+        using var cmd = _connection.CreateCommand();
+        cmd.CommandText = "PRAGMA user_version;";
+        return Convert.ToInt32(cmd.ExecuteScalar());
     }
 }

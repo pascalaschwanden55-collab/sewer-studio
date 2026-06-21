@@ -37,6 +37,41 @@ public sealed class KnowledgeBaseInfrastructureTests
             idxCmd.CommandText =
                 "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_embeddings_model'";
             Assert.Equal(1, Convert.ToInt32(idxCmd.ExecuteScalar()));
+
+            using var versionCmd = db.Connection.CreateCommand();
+            versionCmd.CommandText = "PRAGMA user_version;";
+            Assert.Equal(KnowledgeBaseContext.SchemaVersion, Convert.ToInt32(versionCmd.ExecuteScalar()));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void KnowledgeBaseContext_DoesNotDowngradeFutureUserVersion()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "AuswertungPro.Next.Tests", Guid.NewGuid().ToString("N"));
+        var dbPath = Path.Combine(root, "KnowledgeBase.db");
+        var futureVersion = KnowledgeBaseContext.SchemaVersion + 1;
+
+        try
+        {
+            using (var db = new KnowledgeBaseContext(dbPath))
+            {
+                using var setCmd = db.Connection.CreateCommand();
+                setCmd.CommandText = $"PRAGMA user_version={futureVersion};";
+                setCmd.ExecuteNonQuery();
+            }
+
+            using (var db = new KnowledgeBaseContext(dbPath))
+            using (var versionCmd = db.Connection.CreateCommand())
+            {
+                versionCmd.CommandText = "PRAGMA user_version;";
+                Assert.Equal(futureVersion, Convert.ToInt32(versionCmd.ExecuteScalar()));
+            }
         }
         finally
         {
