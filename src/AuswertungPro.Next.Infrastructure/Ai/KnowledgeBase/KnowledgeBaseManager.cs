@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.KnowledgeBase;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai;
+using Microsoft.Data.Sqlite;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
@@ -78,8 +79,8 @@ public sealed class KnowledgeBaseManager(
         using var tx = db.Connection.BeginTransaction();
         try
         {
-            UpsertSample(sample, versionId);
-            UpsertEmbedding(sample.SampleId, vector);
+            UpsertSample(sample, versionId, tx);
+            UpsertEmbedding(sample.SampleId, vector, tx);
             tx.Commit();
             return true;
         }
@@ -126,8 +127,8 @@ public sealed class KnowledgeBaseManager(
         {
             foreach (var (sample, vec) in ready)
             {
-                UpsertSample(sample, versionId);
-                UpsertEmbedding(sample.SampleId, vec);
+                UpsertSample(sample, versionId, tx);
+                UpsertEmbedding(sample.SampleId, vec, tx);
             }
             tx.Commit();
             return ready.Select(r => r.Sample.SampleId).ToList();
@@ -144,13 +145,26 @@ public sealed class KnowledgeBaseManager(
     /// </summary>
     public void DeindexSample(string sampleId)
     {
-        ExecuteNonQuery(
-            "DELETE FROM Samples    WHERE SampleId = $id",
-            ("$id", sampleId));
+        using var tx = db.Connection.BeginTransaction();
+        try
+        {
+            ExecuteNonQuery(
+                "DELETE FROM Samples    WHERE SampleId = $id",
+                tx,
+                ("$id", sampleId));
 
-        ExecuteNonQuery(
-            "DELETE FROM Embeddings WHERE SampleId = $id",
-            ("$id", sampleId));
+            ExecuteNonQuery(
+                "DELETE FROM Embeddings WHERE SampleId = $id",
+                tx,
+                ("$id", sampleId));
+
+            tx.Commit();
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
     }
 
     /// <summary>
@@ -226,21 +240,21 @@ public sealed class KnowledgeBaseManager(
         using var tx = db.Connection.BeginTransaction();
         try
         {
-            ExecuteNonQuery("DELETE FROM Embeddings");
-            ExecuteNonQuery("DELETE FROM Samples");
-            ExecuteNonQuery("DELETE FROM Versions");
+            ExecuteNonQuery("DELETE FROM Embeddings", tx);
+            ExecuteNonQuery("DELETE FROM Samples", tx);
+            ExecuteNonQuery("DELETE FROM Versions", tx);
 
-            var versionId = GetOrCreateCurrentVersionId();
+            var versionId = GetOrCreateCurrentVersionId(tx);
             var indexed = 0;
             for (var i = 0; i < samples.Count; i++)
             {
                 if (!embeddings.TryGetValue(i, out var vec)) continue;
-                UpsertSample(samples[i], versionId);
-                UpsertEmbedding(samples[i].SampleId, vec);
+                UpsertSample(samples[i], versionId, tx);
+                UpsertEmbedding(samples[i].SampleId, vec, tx);
                 indexed++;
             }
 
-            FinalizeCurrentVersion(indexed);
+            FinalizeCurrentVersion(indexed, tx);
             tx.Commit();
 
             Debug.WriteLine($"[KnowledgeBaseManager] KB-Rebuild erfolgreich: {indexed}/{samples.Count} Samples indiziert");
@@ -298,7 +312,7 @@ public sealed class KnowledgeBaseManager(
     private string? _currentVersionId;
     private readonly object _versionLock = new();
 
-    private string GetOrCreateCurrentVersionId()
+    private string GetOrCreateCurrentVersionId(SqliteTransaction? transaction = null)
     {
         lock (_versionLock)
         {
@@ -308,6 +322,7 @@ public sealed class KnowledgeBaseManager(
             _currentVersionId = Guid.NewGuid().ToString("N");
             ExecuteNonQuery(
                 "INSERT OR IGNORE INTO Versions(VersionId, CreatedAt, SampleCount, Notes) VALUES($v, $t, 0, '')",
+                transaction,
                 ("$v", _currentVersionId),
                 ("$t", DateTime.UtcNow.ToString("O")));
 
@@ -315,20 +330,21 @@ public sealed class KnowledgeBaseManager(
         }
     }
 
-    private void FinalizeCurrentVersion(int count)
+    private void FinalizeCurrentVersion(int count, SqliteTransaction? transaction = null)
     {
         lock (_versionLock)
         {
             if (_currentVersionId is null) return;
             ExecuteNonQuery(
                 "UPDATE Versions SET SampleCount = $c WHERE VersionId = $v",
+                transaction,
                 ("$c", count),
                 ("$v", _currentVersionId));
             _currentVersionId = null;
         }
     }
 
-    private void UpsertSample(TrainingSample s, string versionId)
+    private void UpsertSample(TrainingSample s, string versionId, SqliteTransaction? transaction = null)
     {
         ExecuteNonQuery("""
             INSERT OR REPLACE INTO Samples
@@ -338,6 +354,7 @@ public sealed class KnowledgeBaseManager(
             VALUES ($id, $caseId, $code, $desc, $ms, $me, $streck, $frame, $exp, $ver, $source, $qg,
                     $hc, $corr, $by, $at)
             """,
+            transaction,
             ("$id",     s.SampleId),
             ("$caseId", s.CaseId),
             ("$code",   s.Code),
@@ -356,12 +373,13 @@ public sealed class KnowledgeBaseManager(
             ("$at",     (object?)s.ConfirmedAtUtc?.ToString("O") ?? DBNull.Value));
     }
 
-    private void UpsertEmbedding(string sampleId, float[] vector)
+    private void UpsertEmbedding(string sampleId, float[] vector, SqliteTransaction? transaction = null)
     {
         ExecuteNonQuery("""
             INSERT OR REPLACE INTO Embeddings(SampleId, Model, Vector, CreatedAt)
             VALUES ($id, $model, $vec, $at)
             """,
+            transaction,
             ("$id",    sampleId),
             ("$model", embedder.ModelName),
             ("$vec",   EmbeddingService.ToBlob(vector)),
@@ -369,8 +387,16 @@ public sealed class KnowledgeBaseManager(
     }
 
     private void ExecuteNonQuery(string sql, params (string Name, object Value)[] parameters)
+        => ExecuteNonQuery(sql, transaction: null, parameters);
+
+    private void ExecuteNonQuery(
+        string sql,
+        SqliteTransaction? transaction,
+        params (string Name, object Value)[] parameters)
     {
         using var cmd = db.Connection.CreateCommand();
+        if (transaction is not null)
+            cmd.Transaction = transaction;
         cmd.CommandText = sql;
         foreach (var (name, value) in parameters)
             cmd.Parameters.AddWithValue(name, value);

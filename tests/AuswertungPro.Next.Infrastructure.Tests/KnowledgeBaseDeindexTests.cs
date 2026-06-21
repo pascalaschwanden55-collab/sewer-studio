@@ -90,6 +90,8 @@ public sealed class KnowledgeBaseDeindexTests : IDisposable
             // Erwartung: Sample ist nicht mehr als indexiert bekannt.
             Assert.False(mgr.IsIndexed(sample.SampleId),
                 "Nach DeindexSample darf IsIndexed nicht mehr true sein.");
+            Assert.Equal(0, CountRows(db, "Samples", sample.SampleId));
+            Assert.Equal(0, CountRows(db, "Embeddings", sample.SampleId));
         }
         finally
         {
@@ -97,6 +99,59 @@ public sealed class KnowledgeBaseDeindexTests : IDisposable
             if (Directory.Exists(root))
                 Directory.Delete(root, recursive: true);
         }
+    }
+
+    [Fact]
+    public async Task DeindexSample_RolltSampleDeleteZurueckWennEmbeddingDeleteFehlschlaegt()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "kb-deindex-tx", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            using var db = new KnowledgeBaseContext(Path.Combine(root, "kb.db"));
+            var mgr = new KnowledgeBaseManager(db, FakeEmbedder());
+
+            var sample = EligibleSample("s-deindex-tx-01");
+            var indexed = await mgr.IndexSampleAsync(sample, CancellationToken.None);
+            Assert.True(indexed, "Testaufbau-Fehler: IndexSampleAsync gab false zurueck.");
+
+            BlockEmbeddingDelete(db);
+
+            Assert.Throws<SqliteException>(() => mgr.DeindexSample(sample.SampleId));
+
+            Assert.Equal(1, CountRows(db, "Samples", sample.SampleId));
+            Assert.Equal(1, CountRows(db, "Embeddings", sample.SampleId));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static int CountRows(KnowledgeBaseContext db, string table, string sampleId)
+    {
+        if (table is not ("Samples" or "Embeddings"))
+            throw new ArgumentOutOfRangeException(nameof(table), table, "Unerwartete Test-Tabelle.");
+
+        using var cmd = db.Connection.CreateCommand();
+        cmd.CommandText = $"SELECT COUNT(*) FROM {table} WHERE SampleId = $id";
+        cmd.Parameters.AddWithValue("$id", sampleId);
+        return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+
+    private static void BlockEmbeddingDelete(KnowledgeBaseContext db)
+    {
+        using var cmd = db.Connection.CreateCommand();
+        cmd.CommandText = """
+            CREATE TRIGGER block_embedding_delete
+            BEFORE DELETE ON Embeddings
+            BEGIN
+                SELECT RAISE(ABORT, 'blocked embedding delete');
+            END;
+            """;
+        cmd.ExecuteNonQuery();
     }
 
     // ── Minimaler Inline-Katalog (wie KnowledgeBaseManagerEligibilityTests) ──
