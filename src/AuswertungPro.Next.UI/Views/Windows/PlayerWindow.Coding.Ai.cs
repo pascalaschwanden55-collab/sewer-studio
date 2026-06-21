@@ -1559,14 +1559,12 @@ public partial class PlayerWindow
 
     private void ConfirmAccept_Click(object sender, RoutedEventArgs e)
     {
-        if (_codingPendingConfirmEvent?.AiContext != null)
+        if (CodingEventDecisionPolicy.ApplyAiConfirmationDecision(
+                _codingPendingConfirmEvent,
+                CodingUserDecision.Accepted,
+                _codingPendingGateResult))
         {
-            _codingPendingConfirmEvent.AiContext.Decision = CodingUserDecision.Accepted;
-            // QualityGate-Ampel aufs Event schreiben, BEVOR das Panel _codingPendingGateResult auf null setzt.
-            if (_codingPendingGateResult != null)
-                _codingPendingConfirmEvent.AiContext.QualityGateLevel =
-                    _codingPendingGateResult.TrafficLight.ToString();
-            PersistSingleEventAsTrainingSample(_codingPendingConfirmEvent).SafeFireAndForget("TrainingSaveAccept");
+            PersistSingleEventAsTrainingSample(_codingPendingConfirmEvent!).SafeFireAndForget("TrainingSaveAccept");
         }
 
         CloseConfirmationAndResume();
@@ -1579,7 +1577,10 @@ public partial class PlayerWindow
 
         if (_codingPendingConfirmEvent != null)
         {
-            _codingPendingConfirmEvent.AiContext!.Decision = CodingUserDecision.AcceptedWithEdit;
+            CodingEventDecisionPolicy.ApplyAiConfirmationDecision(
+                _codingPendingConfirmEvent,
+                CodingUserDecision.AcceptedWithEdit,
+                _codingPendingGateResult);
             // Defect-Detail-Panel oeffnen fuer manuelle Bearbeitung
             LstCodingEvents.SelectedItem = _codingPendingConfirmEvent;
         }
@@ -1591,10 +1592,10 @@ public partial class PlayerWindow
     {
         if (_codingPendingConfirmEvent != null)
         {
-            _codingPendingConfirmEvent.AiContext!.Decision = CodingUserDecision.Rejected;
-            if (_codingPendingGateResult != null)
-                _codingPendingConfirmEvent.AiContext.QualityGateLevel =
-                    _codingPendingGateResult.TrafficLight.ToString();
+            CodingEventDecisionPolicy.ApplyAiConfirmationDecision(
+                _codingPendingConfirmEvent,
+                CodingUserDecision.Rejected,
+                _codingPendingGateResult);
 
             // Gold-Fund: abgelehnten Befund als Negativbeispiel (Status=Rejected, inkl. Snapshot)
             // sichern, BEVOR er aus der Session entfernt wird.

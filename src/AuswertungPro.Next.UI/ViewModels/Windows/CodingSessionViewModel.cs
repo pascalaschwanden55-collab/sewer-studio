@@ -8,6 +8,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
@@ -507,14 +508,10 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         if (SelectedDefect == null) return;
         var wasAiEvent = SelectedDefect.AiContext is not null;
 
-        // AiContext anlegen falls noch nicht vorhanden (manuell codierte Events)
-        SelectedDefect.AiContext ??= new CodingEventAiContext
-        {
-            SuggestedCode = SelectedDefect.Entry.Code,
-            Confidence = 1.0,
-            Reason = "Manuell bestaetigt"
-        };
-        SelectedDefect.AiContext.Decision = CodingUserDecision.Accepted;
+        CodingEventDecisionPolicy.ApplyManualReviewDecision(
+            SelectedDefect,
+            CodingUserDecision.Accepted,
+            "Manuell bestaetigt");
         OnSelectedDefectChanged(SelectedDefect);
         RefreshStatistics();
         RecordFeedbackIfAiEvent(SelectedDefect, wasAiEvent);
@@ -526,13 +523,10 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         if (SelectedDefect == null) return;
         var wasAiEvent = SelectedDefect.AiContext is not null;
 
-        SelectedDefect.AiContext ??= new CodingEventAiContext
-        {
-            SuggestedCode = SelectedDefect.Entry.Code,
-            Confidence = 1.0,
-            Reason = "Manuell bearbeitet"
-        };
-        SelectedDefect.AiContext.Decision = CodingUserDecision.AcceptedWithEdit;
+        CodingEventDecisionPolicy.ApplyManualReviewDecision(
+            SelectedDefect,
+            CodingUserDecision.AcceptedWithEdit,
+            "Manuell bearbeitet");
         OnSelectedDefectChanged(SelectedDefect);
         RefreshStatistics();
         // Window oeffnet den ProtocolEntryEditorDialog
@@ -546,13 +540,10 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
         if (SelectedDefect == null) return;
         var wasAiEvent = SelectedDefect.AiContext is not null;
 
-        SelectedDefect.AiContext ??= new CodingEventAiContext
-        {
-            SuggestedCode = SelectedDefect.Entry.Code,
-            Confidence = 1.0,
-            Reason = "Manuell abgelehnt"
-        };
-        SelectedDefect.AiContext.Decision = CodingUserDecision.Rejected;
+        CodingEventDecisionPolicy.ApplyManualReviewDecision(
+            SelectedDefect,
+            CodingUserDecision.Rejected,
+            "Manuell abgelehnt");
         OnSelectedDefectChanged(SelectedDefect);
         RefreshStatistics();
         RecordFeedbackIfAiEvent(SelectedDefect, wasAiEvent);
