@@ -1577,41 +1577,20 @@ public partial class PlayerWindow
 
             var gateResult = CodingLiveFindingQualityGatePolicy.Evaluate(_codingQualityGate, finding);
 
-            // officialLabel wurde oben bereits per LookupLabel geholt und validiert
-
-            // Streckenschaden-Erkennung: Codes die typischerweise ueber eine Strecke auftreten
-            // (z.B. Wasserrueckstau, Wurzeleinwuchs, Ablagerung, Korrosion)
-            bool isStrecke = VsaCodeResolver.IsStreckenschadenCode(code);
-
-            var entry = new ProtocolEntry
-            {
-                Source = ProtocolEntrySource.Ai,
-                Code = code,
-                Beschreibung = officialLabel ?? finding.Label,
-                MeterStart = meter,
-                IsStreckenschaden = isStrecke,
-                // MeterEnd bleibt null (offen) â€” wird beim naechsten Tick
-                // oder beim Exit automatisch geschlossen
-                Zeit = videoTime
-            };
-
-            CodingLiveFindingCodeMetaWriter.ApplyToEntry(entry, code, finding);
+            var draft = CodingLiveFindingEventFactory.Create(
+                code,
+                officialLabel,
+                finding,
+                meter,
+                videoTime,
+                gateResult);
 
             // Foto 1: exakt der analysierte KI-Frame, damit die Vorschau sofort ein Bild hat.
-            AttachAnalyzedFramePhoto(entry);
+            AttachAnalyzedFramePhoto(draft.Entry);
 
-            var codingEvent = codingSessionService.AddEvent(entry);
-            codingEvent.AiContext = new CodingEventAiContext
-            {
-                SuggestedCode = code,
-                Confidence = gateResult.CompositeConfidence,
-                Reason = finding.Label,
-                // KI darf nicht selbst akzeptieren: Vorschlag bleibt unbestaetigt
-                // (Ignored), bis der Mensch ihn ueber das Bestaetigungs-Panel annimmt.
-                Decision = CodingUserDecision.Ignored
-            };
-
-            codingEvent.Overlay = CodingLiveFindingOverlayBuilder.BuildRectangle(finding);
+            var codingEvent = codingSessionService.AddEvent(draft.Entry);
+            codingEvent.AiContext = draft.AiContext;
+            codingEvent.Overlay = draft.Overlay;
 
             anyAdded = true;
 

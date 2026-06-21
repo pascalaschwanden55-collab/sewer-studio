@@ -419,12 +419,27 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
     private static void AssertAnalyzedFrameAttachedBeforeAddEvent(string methodBody)
     {
-        var attachIndex = methodBody.IndexOf("AttachAnalyzedFramePhoto(entry)", StringComparison.Ordinal);
-        var addIndex = methodBody.IndexOf("codingSessionService.AddEvent(entry)", StringComparison.Ordinal);
+        var attachIndex = FirstIndexOf(
+            methodBody,
+            "AttachAnalyzedFramePhoto(entry)",
+            "AttachAnalyzedFramePhoto(draft.Entry)");
+        var addIndex = FirstIndexOf(
+            methodBody,
+            "codingSessionService.AddEvent(entry)",
+            "codingSessionService.AddEvent(draft.Entry)");
 
         Assert.True(attachIndex >= 0, "KI-Befunde muessen den analysierten Frame in FotoPaths speichern.");
-        Assert.True(addIndex >= 0, "Test erwartet AddEvent(entry) im KI-Befundpfad.");
+        Assert.True(addIndex >= 0, "Test erwartet AddEvent im KI-Befundpfad.");
         Assert.True(attachIndex < addIndex, "Der Frame muss vor AddEvent am ProtocolEntry haengen.");
+    }
+
+    private static int FirstIndexOf(string source, params string[] patterns)
+    {
+        return patterns
+            .Select(pattern => source.IndexOf(pattern, StringComparison.Ordinal))
+            .Where(index => index >= 0)
+            .DefaultIfEmpty(-1)
+            .Min();
     }
 
     private static void AssertBoundaryFrameAttachedBeforeAddEvent(string methodBody)
