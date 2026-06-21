@@ -135,15 +135,15 @@ public partial class PlayerWindow
         if (trackWidth <= 0)
             return;
 
-        double segWidth = (5.0 / videoDurationSec) * trackWidth;
-        if (segWidth < 2) segWidth = 2;
-
-        double ratio = Math.Clamp(segment.TimestampSeconds / videoDurationSec, 0.0, 1.0);
-        double x = offsetX + ratio * trackWidth;
+        var layout = QuickScanHeatmapLayoutPolicy.CalculateSegmentLayout(
+            segment.TimestampSeconds,
+            videoDurationSec,
+            offsetX,
+            trackWidth);
 
         var rect = new Rectangle
         {
-            Width = segWidth,
+            Width = layout.Width,
             Height = 6,
             RadiusX = 1,
             RadiusY = 1,
@@ -174,7 +174,7 @@ public partial class PlayerWindow
             UpdateUi();
         };
 
-        Canvas.SetLeft(rect, x);
+        Canvas.SetLeft(rect, layout.Left);
         Canvas.SetTop(rect, 0);
 
         HeatmapCanvas.Children.Add(rect);
@@ -190,25 +190,21 @@ public partial class PlayerWindow
         if (trackWidth <= 0)
             return;
 
-        // Infer video duration from the last segment timestamp + step
-        double videoDuration = 0;
-        foreach (var (seg, _) in _heatmapRects)
-        {
-            if (seg.TimestampSeconds + 5.0 > videoDuration)
-                videoDuration = seg.TimestampSeconds + 5.0;
-        }
+        var videoDuration = QuickScanHeatmapLayoutPolicy.EstimateDuration(
+            _heatmapRects.Select(item => item.Seg));
         if (videoDuration <= 0)
             return;
 
         foreach (var (seg, rect) in _heatmapRects)
         {
-            double ratio = Math.Clamp(seg.TimestampSeconds / videoDuration, 0.0, 1.0);
-            double x = offsetX + ratio * trackWidth;
-            double w = (5.0 / videoDuration) * trackWidth;
-            if (w < 2) w = 2;
+            var layout = QuickScanHeatmapLayoutPolicy.CalculateSegmentLayout(
+                seg.TimestampSeconds,
+                videoDuration,
+                offsetX,
+                trackWidth);
 
-            Canvas.SetLeft(rect, x);
-            rect.Width = w;
+            Canvas.SetLeft(rect, layout.Left);
+            rect.Width = layout.Width;
         }
     }
 
