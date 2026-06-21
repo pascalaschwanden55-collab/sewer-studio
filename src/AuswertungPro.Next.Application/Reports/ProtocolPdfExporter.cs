@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -13,7 +12,9 @@ using QuestPDF.Infrastructure;
 
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using static AuswertungPro.Next.Application.Reports.ProtocolPdfAssetResolver;
 using static AuswertungPro.Next.Application.Reports.ProtocolPdfObservationText;
+using static AuswertungPro.Next.Application.Reports.ProtocolPdfValueFormatting;
 
 namespace AuswertungPro.Next.Application.Reports;
 
@@ -2148,201 +2149,6 @@ public sealed class ProtocolPdfExporter
         return dateText;
     }
 
-    private static byte[]? ResolveLogoBytes(HaltungsprotokollPdfOptions options, string projectRootAbs)
-    {
-        foreach (var path in BuildLogoCandidates(options.LogoPathAbs, projectRootAbs))
-        {
-            if (string.IsNullOrWhiteSpace(path))
-                continue;
-            if (!File.Exists(path))
-                continue;
-
-            try
-            {
-                return File.ReadAllBytes(path);
-            }
-            catch
-            {
-                // try next candidate
-            }
-        }
-
-        return null;
-    }
-
-    private static IEnumerable<string> BuildLogoCandidates(string? explicitLogo, string projectRootAbs)
-    {
-        if (!string.IsNullOrWhiteSpace(explicitLogo))
-            yield return explicitLogo;
-
-        if (string.IsNullOrWhiteSpace(projectRootAbs))
-            yield break;
-
-        yield return Path.Combine(projectRootAbs, "Assets", "Brand", "abwasser-uri-logo.png");
-        yield return Path.Combine(projectRootAbs, "Brand", "abwasser-uri-logo.png");
-        yield return Path.Combine(projectRootAbs, "Dokumente", "abwasser-uri-logo.png");
-        yield return Path.Combine(projectRootAbs, "abwasser-uri-logo.png");
-        yield return Path.Combine(projectRootAbs, "logo.png");
-        yield return Path.Combine(projectRootAbs, "logo.jpg");
-        yield return Path.Combine(projectRootAbs, "logo.jpeg");
-    }
-
-    private static List<string> ResolvePhotoPaths(
-        IReadOnlyList<string> photoPaths,
-        string projectRootAbs,
-        int maxPhotos,
-        Dictionary<string, string?> resolveCache)
-    {
-        var list = new List<string>();
-        foreach (var raw in photoPaths)
-        {
-            if (string.IsNullOrWhiteSpace(raw))
-                continue;
-
-            var resolved = ResolvePhotoPath(projectRootAbs, raw, resolveCache);
-            if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
-                continue;
-
-            list.Add(resolved);
-            if (list.Count >= maxPhotos)
-                break;
-        }
-
-        return list;
-    }
-
-    private static string ResolvePhotoPath(
-        string projectRootAbs,
-        string raw,
-        Dictionary<string, string?> resolveCache)
-    {
-        var normalized = raw.Replace('/', Path.DirectorySeparatorChar);
-        var fileName = Path.GetFileName(normalized);
-
-        if (Path.IsPathRooted(normalized))
-        {
-            if (File.Exists(normalized))
-                return normalized;
-
-            if (!string.IsNullOrWhiteSpace(fileName))
-            {
-                var rootedSearchRoot = Path.GetDirectoryName(normalized);
-                while (!string.IsNullOrWhiteSpace(rootedSearchRoot))
-                {
-                    if (Directory.Exists(rootedSearchRoot))
-                    {
-                        var rootedMatch = FindFileByName(rootedSearchRoot, fileName, resolveCache);
-                        if (!string.IsNullOrWhiteSpace(rootedMatch))
-                            return rootedMatch;
-                    }
-
-                    rootedSearchRoot = Path.GetDirectoryName(rootedSearchRoot);
-                }
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(projectRootAbs))
-            return normalized;
-
-        var direct = Path.Combine(projectRootAbs, normalized);
-        if (File.Exists(direct))
-            return direct;
-
-        if (!string.IsNullOrWhiteSpace(fileName))
-        {
-            var candidates = new[] { "Fotos", "Photos", "Bilder", "Images", "Fotos_TV", "TV_Fotos", "Foto", "Photo" };
-            foreach (var sub in candidates)
-            {
-                var candidate = Path.Combine(projectRootAbs, sub, fileName);
-                if (File.Exists(candidate))
-                    return candidate;
-            }
-
-            var parent = Path.GetDirectoryName(projectRootAbs);
-            if (!string.IsNullOrWhiteSpace(parent))
-            {
-                var parentCandidate = Path.Combine(parent, normalized);
-                if (File.Exists(parentCandidate))
-                    return parentCandidate;
-            }
-
-            var projectMatch = FindFileByName(projectRootAbs, fileName, resolveCache);
-            if (!string.IsNullOrWhiteSpace(projectMatch))
-                return projectMatch;
-
-            if (!string.IsNullOrWhiteSpace(parent))
-            {
-                var parentMatch = FindFileByName(parent, fileName, resolveCache);
-                if (!string.IsNullOrWhiteSpace(parentMatch))
-                    return parentMatch;
-            }
-        }
-
-        return direct;
-    }
-
-    private static string? FindFileByName(
-        string? searchRoot,
-        string fileName,
-        Dictionary<string, string?> cache)
-    {
-        if (string.IsNullOrWhiteSpace(searchRoot) || string.IsNullOrWhiteSpace(fileName))
-            return null;
-        if (!Directory.Exists(searchRoot))
-            return null;
-
-        var cacheKey = $"{searchRoot}|{fileName}";
-        if (cache.TryGetValue(cacheKey, out var cached))
-            return cached;
-
-        string? found = null;
-        try
-        {
-            found = Common.SafeFileEnumeration.EnumerateFilesSafe(searchRoot, fileName, recursive: true)
-                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
-                .FirstOrDefault();
-        }
-        catch
-        {
-            found = null;
-        }
-
-        cache[cacheKey] = found;
-        return found;
-    }
-
-    private static byte[]? SafeReadAllBytes(string path)
-    {
-        try
-        {
-            return File.ReadAllBytes(path);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static string? GetMeta(Project project, string key)
-        => project.Metadata.TryGetValue(key, out var v) ? v : null;
-
-    private static string NormalizeValue(string? value)
-        => string.IsNullOrWhiteSpace(value) ? "-" : value.Trim();
-
-    private static List<(string Label, string? Value)> FilterNonEmpty(List<(string Label, string? Value)> items)
-        => items.Where(i => !string.IsNullOrWhiteSpace(i.Value)).ToList();
-
-    private static double MapToLine(double value, double length, double left, double right)
-    {
-        if (length <= 0)
-            return left;
-        var t = Math.Clamp(value / length, 0d, 1d);
-        return left + (right - left) * t;
-    }
-
-    private static string Svg(double value)
-        => value.ToString("0.###", CultureInfo.InvariantCulture);
-
     private static string BuildAiSummary(List<ProtocolEntry> entries, ProtocolPdfExportOptions options)
     {
         var aiEntries = entries.Select(e => GetMember(e, "Ai")).Where(ai => ai != null).ToList();
@@ -2407,65 +2213,6 @@ public sealed class ProtocolPdfExporter
             block.Item().Text($"Grund: {reason}").FontSize(9).Italic();
     }
 
-    private static object? GetMember(object? obj, string name)
-    {
-        if (obj == null) return null;
-        var prop = obj.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
-        return prop?.GetValue(obj);
-    }
-
-    private static bool GetBool(object? obj, string name)
-    {
-        var v = GetMember(obj, name);
-        return v is bool b && b;
-    }
-
-    private static double? SafeDouble(object? v)
-        => v is double d ? d : v is float f ? f : v is decimal m ? (double)m : null;
-
-    private static string? SafeString(object? v) => v as string;
-
-    private static IEnumerable<string> AsStringEnumerable(object? v)
-    {
-        if (v is IEnumerable<string> es) return es;
-        if (v is IEnumerable<object> eo) return eo.Select(x => x?.ToString() ?? "");
-        return Array.Empty<string>();
-    }
-
-    private static string JoinFlags(object? flags)
-    {
-        var list = AsStringEnumerable(flags).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
-        return list.Count == 0 ? "" : string.Join(", ", list);
-    }
-
-    private static string EscapeCsv(string s)
-    {
-        if (s.Contains('"') || s.Contains(';') || s.Contains(',') || s.Contains('\n') || s.Contains('\r'))
-            return "\"" + s.Replace("\"", "\"\"") + "\"";
-        return s;
-    }
-
-    private static string FmtMeter(double? m) => m is null ? "—" : m.Value.ToString("0.00");
-
-    private static string BuildParameterText(ProtocolEntry e)
-    {
-        var parts = new List<string>();
-        if (e.CodeMeta?.Parameters != null && e.CodeMeta.Parameters.Count > 0)
-        {
-            var p = e.CodeMeta.Parameters
-                .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
-                .Select(kv => $"{kv.Key}={kv.Value}");
-            parts.Add("Parameter: " + string.Join(", ", p));
-        }
-        if (!string.IsNullOrWhiteSpace(e.CodeMeta?.Severity))
-            parts.Add($"Severity: {e.CodeMeta.Severity}");
-        if (e.CodeMeta?.Count is not null)
-            parts.Add($"Count: {e.CodeMeta.Count}");
-        if (!string.IsNullOrWhiteSpace(e.CodeMeta?.Notes))
-            parts.Add($"Notes: {e.CodeMeta.Notes}");
-
-        return string.Join(" | ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
-    }
 }
 
 public sealed record ProtocolPdfExportOptions
