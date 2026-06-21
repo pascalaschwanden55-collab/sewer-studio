@@ -90,7 +90,7 @@ public partial class PlayerWindow
 
     // Multi-Model Pipeline (YOLO â†’ DINO â†’ SAM) fuer Einzelframe-Analyse
     private SingleFrameMultiModelService? _codingMultiModel;
-    private VisionPipelineClient? _codingVisionClient;
+    private IVisionPipelineClient? _codingVisionClient;
     // SAM-Segmentierung fuer manuell gezogene Boxen (Mark-Werkzeug). Logik im Service,
     // damit der Codiermodus-Window schlank bleibt.
     private MarkBoxSegmentationService? _codingBoxSegmentation;

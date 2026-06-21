@@ -10,13 +10,13 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 /// <summary>
 /// Exports training data to YOLO format via the Sidecar API.
-/// Uses <see cref="VisionPipelineClient"/> for HTTP communication.
+/// Uses <see cref="IVisionPipelineClient"/> for HTTP communication.
 /// </summary>
 public sealed class TrainingExportService
 {
-    private readonly VisionPipelineClient _client;
+    private readonly IVisionPipelineClient _client;
 
-    public TrainingExportService(VisionPipelineClient client)
+    public TrainingExportService(IVisionPipelineClient client)
     {
         _client = client;
     }

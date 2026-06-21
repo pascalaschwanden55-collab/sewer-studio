@@ -15,13 +15,13 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// </summary>
 public sealed class SingleFrameMultiModelService
 {
-    private readonly VisionPipelineClient _client;
+    private readonly IVisionPipelineClient _client;
     private readonly double _yoloConfidence;
     private readonly double _dinoBoxThreshold;
     private readonly double _dinoTextThreshold;
 
     public SingleFrameMultiModelService(
-        VisionPipelineClient client,
+        IVisionPipelineClient client,
         double? yoloConfidence = null,
         double? dinoBoxThreshold = null,
         double? dinoTextThreshold = null)
@@ -37,7 +37,7 @@ public sealed class SingleFrameMultiModelService
             ?? PipelineEnvironmentOptions.ResolveDoubleWithCompat(PipelineEnvironmentOptions.DinoTextThresholdEnvVar, 0.20);
     }
 
-    public SingleFrameMultiModelService(VisionPipelineClient client, PipelineConfig config)
+    public SingleFrameMultiModelService(IVisionPipelineClient client, PipelineConfig config)
         : this(
             client,
             config.YoloConfidence,

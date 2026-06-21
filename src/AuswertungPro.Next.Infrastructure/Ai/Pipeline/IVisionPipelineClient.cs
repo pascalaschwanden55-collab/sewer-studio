@@ -10,8 +10,10 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 public interface IVisionPipelineClient
 {
     Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default);
+    Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(CancellationToken ct = default);
     Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default);
     Task<DinoResponse> DetectDinoAsync(DinoRequest request, CancellationToken ct = default);
     Task<SamResponse> SegmentSamAsync(SamRequest request, CancellationToken ct = default);
     Task<YoloClassifyResponse> ClassifyYoloAsync(YoloClassifyRequest request, CancellationToken ct = default);
+    Task<TrainingExportResponseDto> ExportTrainingAsync(TrainingExportRequestDto request, CancellationToken ct = default);
 }

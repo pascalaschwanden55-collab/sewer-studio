@@ -75,6 +75,14 @@ public sealed class MultiModelAnalysisServiceE2ETests
         public Task<SidecarHealthResponse?> HealthCheckAsync(CancellationToken ct = default)
             => Task.FromResult<SidecarHealthResponse?>(null);
 
+        public Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(CancellationToken ct = default)
+            => Task.FromResult(new PipelineHealthCheckResult(
+                IsReachable: true,
+                IsAuthorized: true,
+                StatusCode: 200,
+                Health: null,
+                Error: null));
+
         public Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default)
             => Task.FromResult(new YoloResponse(
                 IsRelevant: true,
@@ -103,6 +111,14 @@ public sealed class MultiModelAnalysisServiceE2ETests
                 InferenceTimeMs: 1,
                 Usable: true,
                 QualityReason: "ok"));
+
+        public Task<TrainingExportResponseDto> ExportTrainingAsync(TrainingExportRequestDto request, CancellationToken ct = default)
+            => Task.FromResult(new TrainingExportResponseDto(
+                TotalSamples: 0,
+                TrainCount: 0,
+                ValCount: 0,
+                ClassesUsed: Array.Empty<string>(),
+                DataYamlPath: ""));
     }
 
     // ── Tests ────────────────────────────────────────────────────────────────

@@ -12,7 +12,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// </summary>
 public sealed class PipelineHealthMonitor : IPipelineHealthMonitor
 {
-    private readonly VisionPipelineClient _client;
+    private readonly IVisionPipelineClient _client;
     private readonly Func<bool> _aiEnabled;
     private readonly Func<bool> _qwenAvailable;
     private readonly TimeSpan _interval;
@@ -20,7 +20,7 @@ public sealed class PipelineHealthMonitor : IPipelineHealthMonitor
     private Task? _loop;
 
     public PipelineHealthMonitor(
-        VisionPipelineClient client,
+        IVisionPipelineClient client,
         Func<bool> aiEnabled,
         Func<bool> qwenAvailable,
         TimeSpan? interval = null)
