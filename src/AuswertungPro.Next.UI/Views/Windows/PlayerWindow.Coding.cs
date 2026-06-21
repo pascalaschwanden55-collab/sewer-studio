@@ -4464,16 +4464,7 @@ public partial class PlayerWindow
                 continue;
             }
 
-            // QualityGate: Severity -> EvidenceVector -> Ampel
-            var evidence = new EvidenceVector(
-                QwenVisionConf: finding.Severity / 5.0,
-                PlausibilityScore: 0.6
-            );
-            var gateResult = _codingQualityGate?.Evaluate(evidence)
-                ?? new QualityGateResult(
-                    finding.Severity / 5.0,
-                    finding.Severity >= 4 ? TrafficLight.Green : TrafficLight.Yellow,
-                    new Dictionary<string, double>(), "Fallback")!;
+            var gateResult = CodingLiveFindingQualityGatePolicy.Evaluate(_codingQualityGate, finding);
 
             // officialLabel wurde oben bereits per LookupLabel geholt und validiert
 

@@ -1,0 +1,22 @@
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.QualityGate;
+using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
+
+namespace AuswertungPro.Next.UI.Ai;
+
+public static class CodingLiveFindingQualityGatePolicy
+{
+    public static QualityGateResult Evaluate(QualityGateService? qualityGate, LiveFrameFinding finding)
+    {
+        var evidence = new EvidenceVector(
+            QwenVisionConf: finding.Severity / 5.0,
+            PlausibilityScore: 0.6);
+
+        return qualityGate?.Evaluate(evidence)
+            ?? new QualityGateResult(
+                finding.Severity / 5.0,
+                finding.Severity >= 4 ? TrafficLight.Green : TrafficLight.Yellow,
+                new Dictionary<string, double>(),
+                "Fallback");
+    }
+}
