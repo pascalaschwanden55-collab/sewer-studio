@@ -1541,27 +1541,18 @@ public partial class PlayerWindow
         _codingPendingGateResult = gateResult;
 
         // Ampel-Farbe setzen (Gruen = sicher, aber kritischer Befund zur Bestaetigung)
-        var ampelColor = gateResult.IsGreen
-            ? Color.FromRgb(0x22, 0xC5, 0x5E)   // Gruen
-            : gateResult.IsYellow
-                ? Color.FromRgb(0xF5, 0x9E, 0x0B)   // Gelb
-                : Color.FromRgb(0xEF, 0x44, 0x44);   // Rot
+        var ampelColor = CodingConfirmationDisplayPolicy.AmpelColor(gateResult);
         ConfirmAmpel.Fill = new SolidColorBrush(ampelColor);
 
         // Globale Ampel aktualisieren
         SetCodingAiState(TxtCodingAiStatus.Text, ampelColor,
-            gateResult.IsGreen ? "QualityGate: Grün (kritisch)"
-            : gateResult.IsYellow ? "QualityGate: Gelb" : "QualityGate: Rot");
+            CodingConfirmationDisplayPolicy.QualityGateStatusText(gateResult));
 
         // Panel befuellen
         TxtConfirmCode.Text = codingEvent.Entry.Code ?? "???";
         TxtConfirmConfidence.Text = $"({gateResult.CompositeConfidence:P0})";
         TxtConfirmDescription.Text = codingEvent.Entry.Beschreibung ?? codingEvent.AiContext?.Reason ?? "";
-        TxtConfirmDetail.Text = gateResult.IsGreen
-            ? "Kritischer Befund \u2014 bitte bestätigen oder korrigieren."
-            : gateResult.IsYellow
-                ? "KI ist unsicher \u2014 bitte prüfen."
-                : "KI hat geringe Sicherheit \u2014 bitte Code korrigieren oder verwerfen.";
+        TxtConfirmDetail.Text = CodingConfirmationDisplayPolicy.ConfirmationDetail(gateResult);
 
         CodingConfirmationPanel.Visibility = Visibility.Visible;
     }
