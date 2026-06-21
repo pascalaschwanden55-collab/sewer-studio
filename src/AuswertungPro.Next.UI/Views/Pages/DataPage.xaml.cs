@@ -77,6 +77,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         Grid.ColumnReordered += Grid_ColumnReordered;
         Loaded += (_, __) =>
         {
+            ApplyHaltungsansichtSettings();
             EnsureColumns();
             UpdateAlignmentButtonsForCurrentColumn();
         };
@@ -103,8 +104,18 @@ public partial class DataPage : System.Windows.Controls.UserControl
         {
             newVm.RecordsOrderChanged += ResetSort;
             newVm.PropertyChanged += ViewModel_PropertyChanged;
+            ApplyHaltungsansichtSettings(newVm);
         }
     }
+
+    private void ApplyHaltungsansichtSettings()
+    {
+        if (DataContext is DataPageViewModel vm)
+            ApplyHaltungsansichtSettings(vm);
+    }
+
+    private void ApplyHaltungsansichtSettings(DataPageViewModel vm)
+        => HaltungsansichtView.Settings = vm.Services.Settings;
 
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {

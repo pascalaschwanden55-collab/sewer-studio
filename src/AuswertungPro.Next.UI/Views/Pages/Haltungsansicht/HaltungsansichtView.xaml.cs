@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
@@ -12,6 +13,7 @@ public partial class HaltungsansichtView : UserControl
     // Grenzen fuer die einstellbare Hoehe des "Primaere Schaeden"-Panels (px).
     private const double SchadenHeightMin = 80d;
     private const double SchadenHeightMax = 2000d;
+    private AppSettings? _settings;
 
     public HaltungsansichtView()
     {
@@ -20,25 +22,20 @@ public partial class HaltungsansichtView : UserControl
         IsVisibleChanged += (_, _) => RefreshDetail();
     }
 
-    /// <summary>
-    /// Liefert die App-Settings, oder null wenn (z.B. im Designer) keine Services initialisiert sind.
-    /// </summary>
-    private static AppSettings? TryGetSettings()
+    public AppSettings? Settings
     {
-        try
+        get => _settings;
+        set
         {
-            return (App.Services as ServiceProvider)?.Settings;
-        }
-        catch
-        {
-            return null;
+            _settings = value;
+            RestoreSchadenHeight();
         }
     }
 
     /// <summary>Gespeicherte Panel-Hoehe beim Start anwenden (geclampt).</summary>
     private void RestoreSchadenHeight()
     {
-        var height = TryGetSettings()?.HaltungsansichtSchadenHeight ?? double.NaN;
+        var height = _settings?.HaltungsansichtSchadenHeight ?? double.NaN;
         if (double.IsNaN(height) || height <= 0)
             return;
 
@@ -51,7 +48,7 @@ public partial class HaltungsansichtView : UserControl
     private void SchadenSplitter_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e)
     {
         _ = sender; _ = e;
-        var settings = TryGetSettings();
+        var settings = _settings;
         if (settings is null)
             return;
 
