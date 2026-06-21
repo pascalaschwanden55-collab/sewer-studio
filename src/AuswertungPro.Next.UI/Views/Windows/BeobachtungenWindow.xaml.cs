@@ -14,6 +14,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class BeobachtungenWindow : Window
 {
     private readonly ObservableCollection<ProtocolEntry> _entries;
+    private readonly ServiceProvider _services;
     private readonly ICommand? _openProtocolCommand;
     private readonly object? _commandParameter;
     private Action? _vsaUpdateAction;
@@ -21,6 +22,7 @@ public partial class BeobachtungenWindow : Window
 
     public BeobachtungenWindow(
         ObservableCollection<ProtocolEntry> entries,
+        ServiceProvider services,
         string? holdingName,
         ICommand? openProtocolCommand,
         object? commandParameter,
@@ -31,6 +33,7 @@ public partial class BeobachtungenWindow : Window
         WindowStateManager.Track(this);
 
         _entries = entries;
+        _services = services;
         _openProtocolCommand = openProtocolCommand;
         _commandParameter = commandParameter;
         _vsaUpdateAction = vsaUpdateAction;
@@ -92,8 +95,7 @@ public partial class BeobachtungenWindow : Window
         if (string.IsNullOrWhiteSpace(rawPath))
             return;
 
-        var sp = App.Services as ServiceProvider;
-        var resolved = TryResolvePath(rawPath, sp?.Settings.LastProjectPath) ?? rawPath;
+        var resolved = TryResolvePath(rawPath, _services.Settings.LastProjectPath) ?? rawPath;
         if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
         {
             DialogHost.Current.Info($"Foto nicht gefunden:\n{rawPath}", "Foto");

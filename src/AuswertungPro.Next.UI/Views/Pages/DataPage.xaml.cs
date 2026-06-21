@@ -1778,6 +1778,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         _beobachtungenWindow = new BeobachtungenWindow(
             vm.SelectedProtocolEntries,
+            Services,
             holdingName,
             vm.OpenProtocolCommand,
             record,
