@@ -63,15 +63,11 @@ public partial class PlayerWindow
             var osdMeter = await CodingReadOsdMeterAsync();
             var meterValue = Math.Round(Math.Max(0, osdMeter ?? _codingLastOsdMeter ?? timelineMeter), 2);
 
-            var entry = new ProtocolEntry
-            {
-                Source = ProtocolEntrySource.Manual,
-                MeterStart = meterValue,
-                MeterEnd = meterValue,
-                Zeit = videoZeit
-            };
-
-            CodingOverlayQuantificationWriter.ApplyToEntry(entry, _codingVm.CurrentOverlay);
+            var entry = CodingExplorerEntryFactory.CreateSeed(
+                _codingVm.CurrentOverlay,
+                videoZeit);
+            entry.MeterStart = meterValue;
+            entry.MeterEnd = meterValue;
 
             var explorerVm = CreateVsaCodeExplorerViewModel(
                 entry, meterValue, videoZeit);
