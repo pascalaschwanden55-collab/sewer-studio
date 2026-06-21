@@ -77,8 +77,7 @@ public partial class MainWindow : Window
 
     private void OpenCodeCatalog_Click(object sender, RoutedEventArgs e)
     {
-        if (App.Services is not ServiceProvider sp)
-            return;
+        var sp = GetServiceProvider();
 
         var window = new CodeCatalogEditorWindow
         {
@@ -96,8 +95,7 @@ public partial class MainWindow : Window
 
     private async void StartAi_Click(object sender, RoutedEventArgs e)
     {
-        if (App.Services is not ServiceProvider sp)
-            return;
+        var sp = GetServiceProvider();
 
         var shell = DataContext as ShellViewModel;
         shell?.SetStatus("Starte KI...");
