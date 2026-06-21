@@ -11,6 +11,11 @@ namespace AuswertungPro.Next.UI.Services;
 /// </summary>
 public static class WindowStateManager
 {
+    private static AppSettings? _settings;
+
+    public static void Configure(AppSettings settings)
+        => _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+
     /// <summary>
     /// Stellt gespeicherte Position/Groesse wieder her und registriert
     /// den Closing-Event zum automatischen Speichern.
@@ -22,15 +27,9 @@ public static class WindowStateManager
         window.Closing += (_, _) => SaveBounds(window, key);
     }
 
-    private static AppSettings? GetSettings()
-    {
-        try { return (App.Services as ServiceProvider)?.Settings; }
-        catch { return null; }
-    }
-
     private static void RestoreBounds(Window window, string key)
     {
-        var settings = GetSettings();
+        var settings = _settings;
         if (settings?.WindowStates is null)
             return;
 
@@ -55,7 +54,7 @@ public static class WindowStateManager
 
     private static void SaveBounds(Window window, string key)
     {
-        var settings = GetSettings();
+        var settings = _settings;
         if (settings is null)
             return;
 

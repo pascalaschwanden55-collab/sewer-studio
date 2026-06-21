@@ -64,6 +64,7 @@ namespace AuswertungPro.Next.UI
 
                 // Settings
                 var settings = AppSettings.Load();
+                WindowStateManager.Configure(settings);
                 if (settings.AiStartOnProgramStart && AiStartupService.ApplyRuntimeDefaults(settings))
                     settings.SaveImmediate();
                 ThemeManager.ApplyTheme(Resources, settings.UiTheme);
@@ -90,6 +91,7 @@ namespace AuswertungPro.Next.UI
                 };
 
                 _services = new ServiceProvider(settings, diagnostics, logger, loggerFactory);
+                DialogHost.Configure(_services.Dialogs);
 
                 // Global exception handling (after services initialized, but before first window).
                 DispatcherUnhandledException += (_, exArgs) =>
@@ -123,7 +125,7 @@ namespace AuswertungPro.Next.UI
                     AuswertungPro.Next.UI.ViewModels.Protocol.CodeCatalogProviderTest.RunTest(codeCatalog);
                 }
 #endif
-                // Call base last so anything that touches DI (App.Services) is ready.
+                // Call base last so startup infrastructure is configured before first window creation.
                 base.OnStartup(e);
 
                 var mainWindow = new MainWindow
