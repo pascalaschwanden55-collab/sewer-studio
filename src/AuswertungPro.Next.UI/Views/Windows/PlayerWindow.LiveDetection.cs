@@ -13,7 +13,6 @@ using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
-using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -1278,24 +1277,15 @@ public partial class PlayerWindow
                 System.Globalization.CultureInfo.InvariantCulture, out var parsedMeter))
                 captureMeter = parsedMeter;
 
-            var annotation = new TeacherAnnotation
-            {
-                AnnotationId = annotationId,
-                VsaCode = selectedEntry.Code,
-                Beschreibung = selectedEntry.Beschreibung,
-                MeterPosition = captureMeter,
-                VideoTimestamp = TimeSpan.FromSeconds(timestampSec),
-                ToolType = overlay.ToolType,
-                Points = new List<Domain.Models.NormalizedPoint>(
-                    overlay.Points.Select(p => new Domain.Models.NormalizedPoint(p.X, p.Y))),
-                BoundingBox = bbox,
-                ClockPosition = clockPosition != null && double.TryParse(clockPosition, out var cp) ? cp : null,
-                FullFramePath = exportResult.FullFramePath,
-                CroppedRegionPath = exportResult.CroppedRegionPath,
-                YoloAnnotationPath = exportResult.YoloAnnotationPath,
-                WidthMm = overlay.Q2Mm,
-                HeightMm = overlay.Q1Mm
-            };
+            var annotation = LiveDetectionTeacherAnnotationFactory.CreateManualMark(
+                annotationId,
+                selectedEntry,
+                overlay,
+                bbox,
+                clockPosition,
+                captureMeter,
+                TimeSpan.FromSeconds(timestampSec),
+                exportResult);
 
             await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
@@ -1403,26 +1393,15 @@ public partial class PlayerWindow
 
                 var exportResult = await exportService.ExportAsync(tempFrame, bbox, code, classId, baseName);
                 AuswertungPro.Next.Application.Common.BestEffort.Try(
-                () => System.IO.File.Delete(tempFrame), "Mark-Training: Temp-Frame loeschen");
+                    () => System.IO.File.Delete(tempFrame), "Mark-Training: Temp-Frame loeschen");
 
-                // TeacherAnnotation erstellen
-                var annotation = new TeacherAnnotation
-                {
-                    AnnotationId = annotationId,
-                    VsaCode = code,
-                    Beschreibung = finding.Label,
-                    MeterPosition = 0,
-                    VideoTimestamp = TimeSpan.FromSeconds(timestampSec),
-                    ToolType = OverlayToolType.None,
-                    Points = new List<Domain.Models.NormalizedPoint>(),
-                    BoundingBox = bbox,
-                    ClockPosition = double.TryParse(finding.PositionClock, out var cp) ? cp : null,
-                    FullFramePath = exportResult.FullFramePath,
-                    CroppedRegionPath = exportResult.CroppedRegionPath,
-                    YoloAnnotationPath = exportResult.YoloAnnotationPath,
-                    WidthMm = finding.WidthMm,
-                    HeightMm = finding.HeightMm
-                };
+                var annotation = LiveDetectionTeacherAnnotationFactory.CreateDetection(
+                    annotationId,
+                    finding,
+                    code,
+                    bbox,
+                    TimeSpan.FromSeconds(timestampSec),
+                    exportResult);
                 await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
             }
 
@@ -1503,23 +1482,13 @@ public partial class PlayerWindow
             AuswertungPro.Next.Application.Common.BestEffort.Try(
                 () => System.IO.File.Delete(tempFrame), "Mark-Training: Temp-Frame loeschen");
 
-            var annotation = new TeacherAnnotation
-            {
-                AnnotationId = annotationId,
-                VsaCode = selectedEntry.Code,
-                Beschreibung = selectedEntry.Beschreibung,
-                MeterPosition = 0,
-                VideoTimestamp = TimeSpan.FromSeconds(timestampSecForFrame),
-                ToolType = OverlayToolType.None,
-                Points = new List<Domain.Models.NormalizedPoint>(),
-                BoundingBox = bbox,
-                ClockPosition = double.TryParse(primary.PositionClock, out var cp) ? cp : null,
-                FullFramePath = exportResult.FullFramePath,
-                CroppedRegionPath = exportResult.CroppedRegionPath,
-                YoloAnnotationPath = exportResult.YoloAnnotationPath,
-                WidthMm = primary.WidthMm,
-                HeightMm = primary.HeightMm
-            };
+            var annotation = LiveDetectionTeacherAnnotationFactory.CreateCorrectedDetection(
+                annotationId,
+                primary,
+                selectedEntry,
+                bbox,
+                TimeSpan.FromSeconds(timestampSecForFrame),
+                exportResult);
             await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
             OsdMeterBadge.Visibility = Visibility.Visible;
