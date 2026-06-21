@@ -447,11 +447,17 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
     private static void AssertBoundaryFrameAttachedBeforeAddEvent(string methodBody)
     {
-        var attachIndex = methodBody.IndexOf("AttachBoundaryAnalyzedFramePhoto(entry, analyzedFrameBytes)", StringComparison.Ordinal);
-        var addIndex = methodBody.IndexOf("_codingSessionService.AddEvent(entry)", StringComparison.Ordinal);
+        var attachIndex = FirstIndexOf(
+            methodBody,
+            "AttachBoundaryAnalyzedFramePhoto(entry, analyzedFrameBytes)",
+            "AttachBoundaryAnalyzedFramePhoto(draft.Entry, analyzedFrameBytes)");
+        var addIndex = FirstIndexOf(
+            methodBody,
+            "_codingSessionService.AddEvent(entry)",
+            "_codingSessionService.AddEvent(draft.Entry)");
 
         Assert.True(attachIndex >= 0, "Auto-BCD/BCE muessen ihren eigenen analysierten Frame bekommen.");
-        Assert.True(addIndex >= 0, "Test erwartet AddEvent(entry) im Boundary-Pfad.");
+        Assert.True(addIndex >= 0, "Test erwartet AddEvent im Boundary-Pfad.");
         Assert.True(attachIndex < addIndex, "Boundary-Frame muss vor AddEvent am ProtocolEntry haengen.");
     }
 

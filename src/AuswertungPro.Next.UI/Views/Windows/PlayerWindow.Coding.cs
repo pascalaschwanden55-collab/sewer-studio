@@ -1037,32 +1037,17 @@ public partial class PlayerWindow
         }
 
         var label = VsaCodeResolver.LookupLabel("BCD") ?? "Rohranfang";
-        var entry = new ProtocolEntry
-        {
-            Source = ProtocolEntrySource.Ai,
-            Code = "BCD",
-            Beschreibung = label,
-            MeterStart = rohranfangMeter,
-            Zeit = rohranfangTime
-        };
+        var draft = CodingBoundaryEventFactory.CreateStart(label, rohranfangMeter, rohranfangTime);
         // Rohranfang-Foto: NICHT den Videoanfang nehmen (dort laeuft die Dateneinblendung).
         // Bevorzugt den ersten sauberen Frame NACH der Einblendung (FrameReadiness -> Ready)
         // gezielt per ffmpeg greifen; sonst Fallback auf den uebergebenen analysierten Frame.
         analyzedFrameBytes = TryExtractFrameAtSeconds(_codingFrameReadiness.FirstCleanFrameSeconds) ?? analyzedFrameBytes;
-        AttachBoundaryAnalyzedFramePhoto(entry, analyzedFrameBytes);
+        AttachBoundaryAnalyzedFramePhoto(draft.Entry, analyzedFrameBytes);
 
-        var ev = _codingSessionService.AddEvent(entry);
+        var ev = _codingSessionService.AddEvent(draft.Entry);
         ev.MeterAtCapture = rohranfangMeter;
         ev.VideoTimestamp = rohranfangTime;
-        ev.AiContext = new CodingEventAiContext
-        {
-            SuggestedCode = "BCD",
-            Confidence = 1.0,
-            Reason = "Rohranfang (Vorschlag - bitte bestätigen)",
-            // KI akzeptiert Rohranfang/Rohrende NICHT selbst (User-Regel 2026-06-18):
-            // bleibt offener Vorschlag, bis der Mensch ihn bestaetigt oder ablehnt.
-            Decision = CodingUserDecision.Ignored
-        };
+        ev.AiContext = draft.AiContext;
         // Event-Hook (OnSessionEventAdded) fuegt automatisch in _codingVm.Events ein.
         // KEIN explizites _codingVm.Events.Add() â€” sonst doppelt!
         anyAdded = true;
@@ -1155,30 +1140,13 @@ public partial class PlayerWindow
         }
 
         var label = VsaCodeResolver.LookupLabel("BCE") ?? "Rohrende";
-        var entry = new ProtocolEntry
-        {
-            Source = ProtocolEntrySource.Ai,
-            Code = "BCE",
-            Beschreibung = label,
-            MeterStart = rohrEndMeter,
-            Zeit = rohrEndTime
-        };
-        AttachBoundaryAnalyzedFramePhoto(entry, analyzedFrameBytes);
+        var draft = CodingBoundaryEventFactory.CreateEnd(label, rohrEndMeter, rohrEndTime);
+        AttachBoundaryAnalyzedFramePhoto(draft.Entry, analyzedFrameBytes);
 
-        var ev = _codingSessionService.AddEvent(entry);
+        var ev = _codingSessionService.AddEvent(draft.Entry);
         ev.MeterAtCapture = rohrEndMeter;
         ev.VideoTimestamp = rohrEndTime;
-        ev.AiContext = new CodingEventAiContext
-        {
-            SuggestedCode = "BCE",
-            Confidence = 1.0,
-            Reason = "Rohrende (Vorschlag - bitte bestätigen)",
-            // KI akzeptiert Rohranfang/Rohrende NICHT selbst (User-Regel 2026-06-18):
-            // bleibt offener Vorschlag, bis der Mensch ihn bestaetigt oder ablehnt.
-            // Verhindert auch, dass ein falsch erkanntes BCE (z.B. Bogen) automatisch
-            // akzeptiert das Protokoll abschliesst.
-            Decision = CodingUserDecision.Ignored
-        };
+        ev.AiContext = draft.AiContext;
         RefreshCodingEventsList();
     }
 
