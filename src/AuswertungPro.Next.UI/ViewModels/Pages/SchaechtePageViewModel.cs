@@ -18,6 +18,8 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     private readonly ServiceProvider _sp;
     private readonly ShellViewModel _shell;
 
+    internal ServiceProvider Services => _sp;
+
     public ObservableCollection<SchachtRecord> Records => _shell.Project.SchaechteData;
     public ObservableCollection<string> Columns { get; } = new();
 

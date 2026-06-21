@@ -21,6 +21,10 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 
 public partial class SchaechtePage : UserControl
 {
+    private SchaechtePageViewModel Vm => DataContext as SchaechtePageViewModel
+        ?? throw new InvalidOperationException("SchaechtePage benoetigt SchaechtePageViewModel als DataContext.");
+    private ServiceProvider Services => Vm.Services;
+
     private sealed class ComboBindingTag
     {
         public ComboBindingTag(string recordField, string optionField)
@@ -850,7 +854,7 @@ public partial class SchaechtePage : UserControl
 
     private void RestoreLayoutFromSettings()
     {
-        var sp = (ServiceProvider)App.Services;
+        var sp = Services;
         var layout = sp.Settings.SchaechtePageLayout;
         if (layout is null)
             return;
@@ -969,7 +973,7 @@ public partial class SchaechtePage : UserControl
         if (_isRestoringLayout || Grid.Columns.Count == 0)
             return;
 
-        var sp = (ServiceProvider)App.Services;
+        var sp = Services;
         var layout = sp.Settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
         layout.Columns = Grid.Columns
             .Select(col =>
@@ -1756,7 +1760,7 @@ public partial class SchaechtePage : UserControl
         ShowRecordDetails(record);
     }
 
-    private static string? ResolvePdfPath(SchachtRecord record)
+    private string? ResolvePdfPath(SchachtRecord record)
     {
         var pdfField = record.GetFieldValue("PDF_Path");
         if (!string.IsNullOrWhiteSpace(pdfField))
@@ -1764,7 +1768,7 @@ public partial class SchaechtePage : UserControl
             if (System.IO.File.Exists(pdfField))
                 return pdfField;
 
-            var sp = App.Services as ServiceProvider;
+            var sp = Services;
             var resolved = TryResolveRelativePath(pdfField, sp?.Settings.LastProjectPath);
             if (!string.IsNullOrWhiteSpace(resolved))
                 return resolved;
@@ -1777,7 +1781,7 @@ public partial class SchaechtePage : UserControl
             if (System.IO.File.Exists(link))
                 return link;
 
-            var sp = App.Services as ServiceProvider;
+            var sp = Services;
             var resolved = TryResolveRelativePath(link, sp?.Settings.LastProjectPath);
             if (!string.IsNullOrWhiteSpace(resolved))
                 return resolved;
