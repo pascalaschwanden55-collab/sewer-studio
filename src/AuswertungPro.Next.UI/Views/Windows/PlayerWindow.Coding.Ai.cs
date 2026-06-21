@@ -1391,10 +1391,10 @@ public partial class PlayerWindow
 
             // BCD/BCE existieren pro Haltung nur EINMAL â€” Meterstand-unabhaengige Dedup.
             // Primaer gegen session.Events pruefen (wird nie gecleared, im Gegensatz zu _codingVm.Events).
-            if (CodingDedupPolicy.IsOneTimeCode(code)
-                && (codingSessionService.ActiveSession?.Events.Any(e =>
-                        CodingDedupPolicy.CodesMatch(e.Entry.Code, code)) == true
-                    || codingVm.Events.Any(e => CodingDedupPolicy.CodesMatch(e.Entry.Code, code))))
+            if (CodingOneTimeCodeDuplicatePolicy.AlreadyExists(
+                    code,
+                    codingSessionService.ActiveSession?.Events,
+                    codingVm.Events))
             {
                 System.Diagnostics.Debug.WriteLine($"[BCD-Dedup] AddFindings: {code} uebersprungen (bereits vorhanden)");
                 continue;
