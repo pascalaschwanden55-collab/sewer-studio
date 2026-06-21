@@ -35,6 +35,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     private readonly TrainingCenterImportService _import;
     private readonly ICodeCatalogProvider? _codeCatalog;
     private readonly IKnowledgeBaseDiagnosticsRunner _kbDiagnostics;
+    private readonly AppSettings? _settings;
 
     /// <summary>Wiederverwendbarer HttpClient fuer KB-Operationen (Embedding-Requests).</summary>
     private System.Net.Http.HttpClient? _kbHttpClient;
@@ -431,12 +432,14 @@ public partial class TrainingCenterViewModel : ObservableObject
         TrainingCenterStore store,
         TrainingCenterImportService import,
         ICodeCatalogProvider? codeCatalog,
-        IKnowledgeBaseDiagnosticsRunner kbDiagnostics)
+        IKnowledgeBaseDiagnosticsRunner kbDiagnostics,
+        AppSettings? settings = null)
     {
         _store = store;
         _import = import;
         _codeCatalog = codeCatalog;
         _kbDiagnostics = kbDiagnostics;
+        _settings = settings;
     }
 
     // ── Cases ────────────────────────────────────────────────────────────────
@@ -1590,7 +1593,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     private bool HasSelectedReviewItem => SelectedReviewItem is not null;
 
     /// <summary>Erzeugt FeedbackIngestionService mit optionalem KbManager fuer KB-Re-Indexierung.</summary>
-    private static InfraSelfImproving.FeedbackIngestionService CreateFeedbackService(
+    private InfraSelfImproving.FeedbackIngestionService CreateFeedbackService(
         KnowledgeBaseContext db)
     {
         var logger  = new AuswertungPro.Next.Infrastructure.Ai.QualityGate.ValidationLogger(db.Connection);
@@ -1605,10 +1608,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 .ToOllamaConfig();
             var http = new System.Net.Http.HttpClient { Timeout = cfg.RequestTimeout };
             var embedder = new EmbeddingService(http, cfg);
-            var evalRoot = AppSettings.Load().EvalSetRoot;
-            var evalHashes = EvalContaminationGuard.LoadEvalImageHashes(evalRoot);
-            var evalHaltungen = EvalContaminationGuard.LoadEvalHaltungKeys(evalRoot);
-            kbManager = new KnowledgeBaseManager(db, embedder, evalHashes, evalHaltungen);
+            var evalSets = EvalContaminationSetProvider.Load(_settings);
+            kbManager = new KnowledgeBaseManager(db, embedder, evalSets.ImageHashes, evalSets.HaltungKeys);
         }
         catch { /* Ollama nicht verfuegbar — Feedback wird geloggt, KB-Update uebersprungen */ }
 
@@ -1783,7 +1784,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             var stRetrieval = new RetrievalService(stKbCtx, new EmbeddingService(_kbHttpClient, stOllamaConfig));
 
             // Eval-Schutz: reservierte Eval-Haltungen gar nicht erst sammeln (Early-Skip im Orchestrator).
-            var stEvalHaltungen = EvalContaminationGuard.LoadEvalHaltungKeys(AppSettings.Load().EvalSetRoot);
+            var stEvalHaltungen = EvalContaminationSetProvider.Load(_settings).HaltungKeys;
             _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
                 vision, comparison, technique, pdfExtractor, stSettings,
                 TrainingCenterRuntimeHelpers.ResolveFfmpegPath(cfg.FfmpegPath), stRetrieval, stEvalHaltungen);
@@ -1936,10 +1937,8 @@ public partial class TrainingCenterViewModel : ObservableObject
             _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
             using var kbCtx = new KnowledgeBaseContext();
             var embedder = new EmbeddingService(_kbHttpClient, ollamaConfig);
-            var kbEvalRoot = AppSettings.Load().EvalSetRoot;
-            var kbEvalHashes = EvalContaminationGuard.LoadEvalImageHashes(kbEvalRoot);
-            var kbEvalHaltungen = EvalContaminationGuard.LoadEvalHaltungKeys(kbEvalRoot);
-            var kbManager = new KnowledgeBaseManager(kbCtx, embedder, kbEvalHashes, kbEvalHaltungen);
+            var kbEvalSets = EvalContaminationSetProvider.Load(_settings);
+            var kbManager = new KnowledgeBaseManager(kbCtx, embedder, kbEvalSets.ImageHashes, kbEvalSets.HaltungKeys);
 
             var newlyIndexed = 0;
             foreach (var sample in samples)

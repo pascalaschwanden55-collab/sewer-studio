@@ -935,14 +935,12 @@ public partial class PlayerWindow
     /// <summary>
     /// Stellt sicher dass OverlayService + ViewModel bereitstehen (auch ausserhalb Codier-Modus).
     /// </summary>
-    private static ICodingSessionService CreateCodingSessionService()
+    private ICodingSessionService CreateCodingSessionService()
     {
         return new CodingSessionService(
             () => new AppSettingsAiSettingsProvider().Load().ToOllamaConfig(),
-            () => AuswertungPro.Next.Application.Ai.Training.EvalContaminationGuard
-                      .LoadEvalImageHashes(AppSettings.Load().EvalSetRoot),
-            () => AuswertungPro.Next.Application.Ai.Training.EvalContaminationGuard
-                      .LoadEvalHaltungKeys(AppSettings.Load().EvalSetRoot));
+            () => EvalContaminationSetProvider.Load(ResolveEvalSetRoot()).ImageHashes,
+            () => EvalContaminationSetProvider.Load(ResolveEvalSetRoot()).HaltungKeys);
     }
 
     private void EnsureMarkOverlayReady()

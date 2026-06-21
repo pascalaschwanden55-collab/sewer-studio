@@ -87,9 +87,9 @@ public partial class TrainingCenterViewModel
             ProgressValue = 0;
 
             // Eval-Guard: kein eingefrorenes Eval-Bild darf in den Trainings-Export (Audit R4)
-            var sidecarEvalRoot = AppSettings.Load().EvalSetRoot;
-            var sidecarEvalHashes = EvalContaminationGuard.LoadEvalImageHashes(sidecarEvalRoot);
-            var sidecarEvalHaltungen = EvalContaminationGuard.LoadEvalHaltungKeys(sidecarEvalRoot);
+            var sidecarEvalSets = EvalContaminationSetProvider.Load(_settings);
+            var sidecarEvalHashes = sidecarEvalSets.ImageHashes;
+            var sidecarEvalHaltungen = sidecarEvalSets.HaltungKeys;
             int skipEvalHash = 0, skipEvalCase = 0, skipNoBox = 0;
 
             var exportSamples = new List<TrainingExportSample>();
@@ -188,9 +188,9 @@ public partial class TrainingCenterViewModel
         Log($"YOLO-Export: {annotationsWithImages.Count} TeacherAnnotations mit Bildern, {approved.Count} TrainingSamples");
 
         // Eval-Guard: kein eingefrorenes Eval-Bild in den Export (Hash + Haltung). (Audit R4)
-        var localEvalRoot = AppSettings.Load().EvalSetRoot;
-        var localEvalHashes = EvalContaminationGuard.LoadEvalImageHashes(localEvalRoot);
-        var localEvalHaltungen = EvalContaminationGuard.LoadEvalHaltungKeys(localEvalRoot);
+        var localEvalSets = EvalContaminationSetProvider.Load(_settings);
+        var localEvalHashes = localEvalSets.ImageHashes;
+        var localEvalHaltungen = localEvalSets.HaltungKeys;
         int locSkipEvalHash = 0, locSkipEvalCase = 0;
 
         var imgTrain = Path.Combine(outputDir, "images", "train");

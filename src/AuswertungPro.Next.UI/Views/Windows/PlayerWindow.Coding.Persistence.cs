@@ -120,9 +120,9 @@ public partial class PlayerWindow
             _codingEvalSetsLoaded = true;
             try
             {
-                var evalRoot = AppSettings.Load().EvalSetRoot;
-                _codingEvalImageHashes = EvalContaminationGuard.LoadEvalImageHashes(evalRoot);
-                _codingEvalHaltungKeys = EvalContaminationGuard.LoadEvalHaltungKeys(evalRoot);
+                var evalSets = EvalContaminationSetProvider.Load(ResolveEvalSetRoot());
+                _codingEvalImageHashes = evalSets.ImageHashes;
+                _codingEvalHaltungKeys = evalSets.HaltungKeys;
             }
             catch (Exception ex)
             {

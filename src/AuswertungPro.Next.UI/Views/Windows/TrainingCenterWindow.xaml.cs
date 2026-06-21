@@ -74,7 +74,8 @@ public partial class TrainingCenterWindow : Window
             new TrainingCenterStore(),
             new TrainingCenterImportService(),
             codeCatalog,
-            kbDiagnostics);
+            kbDiagnostics,
+            services?.Settings);
 
         DataContext = Vm;
 
