@@ -15,8 +15,8 @@ namespace AuswertungPro.Next.Infrastructure.Ai;
 
 /// <summary>
 /// Lokaler KI-Service (Ollama):
-/// 1) optional Vision (qwen2.5vl) -> Findings
-/// 2) Text/Entscheider (qwen2.5:7b) -> VSA-Code Suggestion
+/// 1) optional Vision (qwen3-vl:8b-q8) -> Findings
+/// 2) Text/Entscheider (nomic-embed-text) -> Embeddings; VSA-Codes vom Klassifikator
 /// </summary>
 public sealed class OllamaProtocolAiService : IProtocolAiService
 {

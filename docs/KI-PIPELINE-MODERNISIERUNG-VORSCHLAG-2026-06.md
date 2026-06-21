@@ -63,7 +63,7 @@ Verworfen wurde alles, was gegen mindestens eine harte Regel verstoesst:
 4. **Telemetrie symmetrisch:** `write_yolo_detection` zu generischem `write_event` verallgemeinern, in DINO-/SAM-Routen aufrufen; TelemetrySummary als JSON neben den PipelineTrace. Heute ist der teuerste Pipeline-Teil (Qwen) der am schlechtesten vermessene.
 5. **Sweep ehrlich machen:** Bypass-Frames `frame_class='sweep'` statt fake 'BCD'/'BCE'; cls-Vorfilter (CPU-billig) und Sidecar-Quality-Check auch fuer Sweep-Frames — heute koennen schwarze Frames bis zu Qwen (120s-Cap) durchlaufen.
 6. **COCO-Fallback sichtbar machen:** `YoloResponse.ModelName` gegen 'yolo26m' pruefen, bei Fallback UI-Warnung (analog Ollama-Fallback). Die Telemetrie belegt einen realen stillen yolo11m.pt-Lauf am 2026-06-09 18:07.
-7. **Modellwahl absichern:** GpuModelSelector/OllamaConfig von hartem `qwen2.5vl:32b/7b/3b` auf die freigegebenen Modelle heben und `AiVisionModel` in settings.json persistieren — sonst waehlt der Auto-Modus beim Wegfall der Env-Var still das laut A/B unbrauchbare 2.5-VL.
+7. **Modellwahl absichern:** GpuModelSelector/OllamaConfig von hartem `qwen2.5vl:32b/7b/3b` auf die freigegebenen Modelle heben (`qwen3-vl:8b-q8`, `nomic-embed-text`) und `AiVisionModel` in settings.json persistieren — sonst waehlt der Auto-Modus beim Wegfall der Env-Var still das laut A/B unbrauchbare qwen2.5-VL.
 8. **EstimatedReachLengthM** aus der echten Haltungslaenge des Projekts setzen (HaltungRecord) statt fix 50.0 m.
 
 **VRAM-Bilanz:** unveraendert. **Aufwand:** 2-3 Tage gesamt (Einzelschritte je Stunden).
@@ -162,7 +162,7 @@ Verworfen wurde alles, was gegen mindestens eine harte Regel verstoesst:
 
 | # | Massnahme | Aufwand | Hinweis |
 |---|---|---|---|
-| K1 | **VLM-A/B mit `format=json`:** qwen3-vl:8b-q8 (Baseline) vs. qwen3.5:9b vs. gemma4 (12B/26B-MoE) via EvalSetBenchmark auf 57er-clean. Ollama erzwingt seit v0.5 grammatikbasiert valides JSON — der 0%-Parse-Fehler-Modus von Qwen2.5-VL ist damit adressierbar; ab sofort Standard in jedem A/B. Gemessen wird NUR: LEER-Erkennung, JSON-Fehlerrate, OSD-Lesefaehigkeit, Beschreibungsqualitaet — **nicht** VSA-Codierung | Stunden | Drop-in (Modellname); Gemma 4 ist nativ auf JSON/Function-Calling trainiert (Apache 2.0, Release 02.04.2026) |
+| K1 | **VLM-A/B mit `format=json`:** qwen3-vl:8b-q8 (Baseline, KEIN Fallback auf qwen3.5:9b oder qwen2.5-VL) via EvalSetBenchmark auf 57er-clean. Ollama erzwingt seit v0.5 grammatikbasiert valides JSON — der 0%-Parse-Fehler-Modus der Vorgaenger ist damit adressierbar; ab sofort Standard in jedem A/B. Gemessen wird NUR: LEER-Erkennung, JSON-Fehlerrate, OSD-Lesefaehigkeit, Beschreibungsqualitaet — **nicht** VSA-Codierung | Stunden | Drop-in (Modellname); sekundaere Kandidaten nur fuer Sekundaeraufgaben nach Verdikt |
 | K2 | **Embedding-Tausch** nomic-embed-text → qwen3-embedding:0.6b (Platz 1 MTEB multilingual 70.58 fuer die Familie; nomic v1 ist primaer Englisch — die KB ist deutsch). Pflicht: Embedding-Modell-Versionierung im SQLite-Schema, kompletter Re-Index der 21.860 Samples, Retrieval-A/B davor/danach | 1-2 Tage | Re-Index-Dauer ist Hochrechnung (Minuten bis Stunden), nicht gemessen; alt/neu nie mischen |
 | K3 | **models-Ordner aufraeumen:** README mit Status, Real-ESRGAN als "verboten (Forensik)" markieren/archivieren, Florence-2-Gewichte nach `_unused/` | Stunden | Verhindert Audit-Verwirrung |
 | K4 | **Nightly-Wheels archivieren:** torch 2.12.0.dev+cu128-Wheels lokal sichern — der Lock-Header warnt, dass Nightly-Wheels vom Index verschwinden; das ist das stille Betriebsrisiko des sm_120-Stacks | Stunden | Reine Vorsorge |
@@ -181,7 +181,7 @@ Verworfen wurde alles, was gegen mindestens eine harte Regel verstoesst:
 
 ### Bewusst NICHT tun (mit Begruendung)
 
-- **VLM-Tausch als VSA-Codier-Hebel** — durch A/B Juni 2026 widerlegt; jede VLM-Massnahme hier ist auf Sekundaeraufgaben begrenzt.
+- **VLM-Tausch als VSA-Codier-Hebel** — durch A/B Juni 2026 widerlegt (qwen3-vl:8b-q8 28% nur LEER, qwen2.5-VL 0%); jede VLM-Massnahme hier ist auf Sekundaeraufgaben begrenzt. Primary-Modell bleibt qwen3-vl:8b-q8.
 - **SAM 3 / 3.1 jetzt** — gated, Custom-License, ~2,9 s/Bild auf Workstation-GPU (Ultralytics-Messung), Zero-Shot auf VSA-Vokabular unbelegt. Beobachten; fruehestens als Einzeltest auf dem 57er-clean.
 - **DINO-X / GDINO 1.5/1.6 Pro / T-Rex2** — API-only, verletzt Lokal-Pflicht (3000 Videos, Datenschutz, Kosten).
 - **MM-Grounding-DINO jetzt** — MMCV-Build unter Windows + PyTorch ≥2.7 + sm_120 ist die bekannte Schmerzstelle; YOLOE-26 erreicht das Ziel im vorhandenen Stack.

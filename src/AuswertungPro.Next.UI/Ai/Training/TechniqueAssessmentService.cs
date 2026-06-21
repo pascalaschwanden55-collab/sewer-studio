@@ -20,7 +20,7 @@ public sealed class TechniqueAssessmentService : ITechniqueAssessmentService
     private readonly OllamaClient _ollama;
     private readonly string _visionModel;
 
-    public TechniqueAssessmentService(OllamaClient ollama, string visionModel = "qwen2.5vl:32b")
+    public TechniqueAssessmentService(OllamaClient ollama, string visionModel = "qwen3-vl:8b-q8")
     {
         _ollama = ollama;
         _visionModel = visionModel;

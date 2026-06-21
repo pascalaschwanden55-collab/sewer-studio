@@ -122,6 +122,6 @@
 | **Rot** | < 45% | Video pausiert, User muss entscheiden |
 
 Die Konfidenz wird aus mehreren Signalen berechnet:
-- KI-Vision-Analyse (Qwen2.5-VL)
+- KI-Vision-Analyse (qwen3-vl:8b-q8)
 - Plausibilitaets-Score (VSA-Code erkannt?)
 - Optional: YOLO, DINO, SAM Pipeline-Signale

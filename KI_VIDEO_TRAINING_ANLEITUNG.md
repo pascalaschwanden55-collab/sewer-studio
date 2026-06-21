@@ -16,8 +16,8 @@ Verifiziert am Code-Stand:
 ```powershell
 setx SEWERSTUDIO_AI_ENABLED 1
 setx SEWERSTUDIO_OLLAMA_URL "http://localhost:11434"
-setx SEWERSTUDIO_AI_VISION_MODEL "qwen3.5:27b"
-setx SEWERSTUDIO_AI_TEXT_MODEL "qwen3.5:27b"
+setx SEWERSTUDIO_AI_VISION_MODEL "qwen3-vl:8b-q8"
+setx SEWERSTUDIO_AI_TEXT_MODEL "nomic-embed-text"
 setx SEWERSTUDIO_AI_EMBED_MODEL "nomic-embed-text"
 setx SEWERSTUDIO_FFMPEG "C:\\Pfad\\zu\\ffmpeg.exe"
 ```
