@@ -47,9 +47,6 @@ namespace AuswertungPro.Next.UI
         public ILogger Logger { get; }
         public ILoggerFactory LoggerFactory { get; }
         public ErrorCodeGenerator ErrorCodes { get; } = new();
-        private const string VsaKekManifestFileName = "vsa_kek_2020_catalog_manifest.json";
-
-
         public IProjectRepository Projects { get; }
         public IPdfImportService PdfImport { get; }
         public IXtfImportService XtfImport { get; }
@@ -111,23 +108,9 @@ namespace AuswertungPro.Next.UI
 
             // AI/CodeCatalog Init (AiLocalPack)
             var cfg = aiPlatform.ToRuntimeSettings();
-            var secCatalogPath = ResolveVsaCatalogPath(settings);
-            var nodCatalogPath = ResolveVsaCatalogNodPath(settings);
-            var vsaKekManifestPath = ResolveVsaKekCatalogManifestPath();
-            var xmlCatalogPaths = new[] { secCatalogPath, nodCatalogPath }
-                .Where(p => !string.IsNullOrWhiteSpace(p))
-                .Select(p => p!)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            var catalogSourcePaths = new[] { vsaKekManifestPath }
-                .Where(p => !string.IsNullOrWhiteSpace(p))
-                .Select(p => p!)
-                .Concat(xmlCatalogPaths)
-                .ToList();
-            VsaCatalogResolvedPath = catalogSourcePaths.Count > 0
-                ? string.Join(" | ", catalogSourcePaths)
-                : null;
-            CodeCatalog = CreateCodeCatalog(settings, vsaKekManifestPath, xmlCatalogPaths);
+            var catalogPaths = VsaCatalogPathResolver.Resolve(settings);
+            VsaCatalogResolvedPath = catalogPaths.DisplayPath;
+            CodeCatalog = CreateCodeCatalog(settings, catalogPaths.KekManifestPath, catalogPaths.XmlCatalogPaths);
             // Picker-Anordnung wie ISYBAU/WinCan (kuratierter VsaCodeTree), aber Mengen-/Uhrlage-
             // Regeln aus dem aktuellen VSA-Katalog – Codes sind EN-13508-/VSA-konform (geprueft).
             CodeSelectionCatalog = new AuswertungPro.Next.Application.Protocol.VsaCodeTreeSelectionCatalog(
@@ -207,108 +190,6 @@ namespace AuswertungPro.Next.UI
             return new AiSanierungOptimizationService(cfg, http);
         }
 
-        private static string? ResolveVsaCatalogPath(AppSettings settings)
-        {
-            if (!string.IsNullOrWhiteSpace(settings.VsaCatalogSecXmlPath))
-            {
-                if (IsCanonicalVsa2019Catalog(settings.VsaCatalogSecXmlPath, Vsa2019CatalogResolver.SectionCatalogFileName))
-                    return settings.VsaCatalogSecXmlPath;
-
-                if (Directory.Exists(settings.VsaCatalogSecXmlPath))
-                {
-                    var fromDir = Vsa2019CatalogResolver.FindSectionCatalog(settings.VsaCatalogSecXmlPath);
-                    if (!string.IsNullOrWhiteSpace(fromDir))
-                        return fromDir;
-                }
-            }
-
-            var env = Environment.GetEnvironmentVariable("VSA_CATALOG_SEC_XML");
-            if (IsCanonicalVsa2019Catalog(env, Vsa2019CatalogResolver.SectionCatalogFileName))
-                return env;
-
-            var envRoot = Environment.GetEnvironmentVariable("VSA_CATALOG_ROOT");
-            if (!string.IsNullOrWhiteSpace(envRoot) && Directory.Exists(envRoot))
-            {
-                var fromRoot = Vsa2019CatalogResolver.FindSectionCatalog(envRoot);
-                if (!string.IsNullOrWhiteSpace(fromRoot))
-                    return fromRoot;
-            }
-
-            // WinCan catalog directory (user-configured via Katalog-Auswahl)
-            if (!string.IsNullOrWhiteSpace(settings.WinCanCatalogDirectory))
-            {
-                var fromWinCan = Vsa2019CatalogResolver.FindSectionCatalog(settings.WinCanCatalogDirectory);
-                if (!string.IsNullOrWhiteSpace(fromWinCan))
-                    return fromWinCan;
-            }
-
-            foreach (var root in Vsa2019CatalogResolver.GetDefaultCatalogRoots(lastProjectPath: settings.LastProjectPath))
-            {
-                var fromCommon = Vsa2019CatalogResolver.FindSectionCatalog(root);
-                if (!string.IsNullOrWhiteSpace(fromCommon))
-                    return fromCommon;
-            }
-
-            return null;
-        }
-
-        private static string? ResolveVsaCatalogNodPath(AppSettings settings)
-        {
-            if (!string.IsNullOrWhiteSpace(settings.VsaCatalogNodXmlPath))
-            {
-                if (IsCanonicalVsa2019Catalog(settings.VsaCatalogNodXmlPath, Vsa2019CatalogResolver.NodeCatalogFileName))
-                    return settings.VsaCatalogNodXmlPath;
-
-                if (Directory.Exists(settings.VsaCatalogNodXmlPath))
-                {
-                    var fromDir = Vsa2019CatalogResolver.FindNodeCatalog(settings.VsaCatalogNodXmlPath);
-                    if (!string.IsNullOrWhiteSpace(fromDir))
-                        return fromDir;
-                }
-            }
-
-            var env = Environment.GetEnvironmentVariable("VSA_CATALOG_NOD_XML");
-            if (IsCanonicalVsa2019Catalog(env, Vsa2019CatalogResolver.NodeCatalogFileName))
-                return env;
-
-            var envRoot = Environment.GetEnvironmentVariable("VSA_CATALOG_NOD_ROOT");
-            if (!string.IsNullOrWhiteSpace(envRoot) && Directory.Exists(envRoot))
-            {
-                var fromRoot = Vsa2019CatalogResolver.FindNodeCatalog(envRoot);
-                if (!string.IsNullOrWhiteSpace(fromRoot))
-                    return fromRoot;
-            }
-
-            if (!string.IsNullOrWhiteSpace(settings.WinCanCatalogDirectory))
-            {
-                var fromWinCan = Vsa2019CatalogResolver.FindNodeCatalog(settings.WinCanCatalogDirectory);
-                if (!string.IsNullOrWhiteSpace(fromWinCan))
-                    return fromWinCan;
-            }
-
-            foreach (var root in Vsa2019CatalogResolver.GetDefaultCatalogRoots(lastProjectPath: settings.LastProjectPath))
-            {
-                var fromCommon = Vsa2019CatalogResolver.FindNodeCatalog(root);
-                if (!string.IsNullOrWhiteSpace(fromCommon))
-                    return fromCommon;
-            }
-
-            return null;
-        }
-
-        private static string? ResolveVsaKekCatalogManifestPath()
-        {
-            var env = Environment.GetEnvironmentVariable("VSA_KEK_2020_CATALOG_MANIFEST");
-            if (!string.IsNullOrWhiteSpace(env) && File.Exists(env))
-                return env;
-
-            var fromData = Path.Combine(AppContext.BaseDirectory, "Data", VsaKekManifestFileName);
-            if (File.Exists(fromData))
-                return fromData;
-
-            return null;
-        }
-
         private void LogCodeCatalogWarnings(AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider provider, string? sourcePath)
         {
             IReadOnlyList<string>? warnings = provider switch
@@ -331,57 +212,6 @@ namespace AuswertungPro.Next.UI
                 warnings.Count, sourceLabel, sample, suffix);
         }
 
-        private static string? ResolveVsaCatalogTextPath(AppSettings settings, string? resolvedXmlPath)
-        {
-            var configured = settings.VsaCatalogSecXmlPath;
-            if (!string.IsNullOrWhiteSpace(configured))
-            {
-                if (File.Exists(configured))
-                {
-                    var dir = Path.GetDirectoryName(configured);
-                    var fromDir = FindTextCatalogInRoot(dir);
-                    if (!string.IsNullOrWhiteSpace(fromDir))
-                        return fromDir;
-                }
-                else if (Directory.Exists(configured))
-                {
-                    var fromRoot = FindTextCatalogInRoot(configured);
-                    if (!string.IsNullOrWhiteSpace(fromRoot))
-                        return fromRoot;
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(resolvedXmlPath))
-            {
-                var dir = Path.GetDirectoryName(resolvedXmlPath);
-                if (!string.IsNullOrWhiteSpace(dir))
-                {
-                    var parent = Directory.GetParent(dir);
-                    if (parent is not null && string.Equals(Path.GetFileName(dir), "Version4", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var fromRoot = FindTextCatalogInRoot(parent.FullName);
-                        if (!string.IsNullOrWhiteSpace(fromRoot))
-                            return fromRoot;
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        private static string? FindTextCatalogInRoot(string? root)
-        {
-            if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
-                return null;
-
-            return Vsa2019CatalogResolver.FindSectionCatalog(root);
-        }
-
-        private static bool IsCanonicalVsa2019Catalog(string? path, string fileName)
-            => !string.IsNullOrWhiteSpace(path)
-               && File.Exists(path)
-               && string.Equals(Path.GetFileName(path), fileName, StringComparison.OrdinalIgnoreCase);
-
         private static AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CreateCodeCatalog(
             AppSettings settings,
             string? vsaKekManifestPath,
@@ -399,7 +229,7 @@ namespace AuswertungPro.Next.UI
                     new AuswertungPro.Next.Application.Protocol.XmlCodeCatalogProvider(
                     path,
                     fallbackJsonPath: null,
-                    fallbackTextXmlPath: ResolveVsaCatalogTextPath(settings, path)),
+                    fallbackTextXmlPath: VsaCatalogPathResolver.ResolveTextFallbackPath(settings, path)),
                     AuswertungPro.Next.Application.Protocol.VsaKekCatalogSources.WinCanFallback))
                 .Cast<AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider>());
 
