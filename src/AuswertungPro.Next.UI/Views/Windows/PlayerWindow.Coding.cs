@@ -3865,7 +3865,7 @@ public partial class PlayerWindow
             var q = seg.Quant;
             var pseudo = new LiveFrameFinding(
                 Label: q.Label,
-                Severity: EstimateSeverityFromQuantification(q),
+                Severity: CodingQuantificationSeverityPolicy.Estimate(q),
                 PositionClock: NormalizeClockPosition(q.ClockPosition),
                 ExtentPercent: q.ExtentPercent,
                 VsaCodeHint: null);
@@ -4009,7 +4009,7 @@ public partial class PlayerWindow
             // So laeuft der Multi-Model-Pfad durch exakt denselben Code wie Qwen.
             var pseudoFinding = new LiveFrameFinding(
                 Label: quant.Label,
-                Severity: EstimateSeverityFromQuantification(quant),
+                Severity: CodingQuantificationSeverityPolicy.Estimate(quant),
                 PositionClock: NormalizeClockPosition(quant.ClockPosition),
                 ExtentPercent: quant.ExtentPercent,
                 VsaCodeHint: null,  // DINO liefert englische Labels, kein VSA-Code
@@ -4362,26 +4362,8 @@ public partial class PlayerWindow
     {
         // Manifest entscheidet OB Q1/Q2/Uhrlage erlaubt sind (Single Source of Truth, ADR-006);
         // der Writer/Gate entscheidet anhand der VSA-Einheiten, WELCHE SAM-Werte geschrieben werden.
-        var rule = BuildManifestQuantRule(code);
+        var rule = CodingManifestQuantRuleResolver.Resolve(CodeSelectionCatalog, code);
         AuswertungPro.Next.Infrastructure.Ai.Pipeline.QuantificationCodeMetaWriter.Apply(entry, code, quant, rule);
-    }
-
-    /// <summary>
-    /// Liest aus dem VSA-Katalog (Manifest), OB ein Code Q1/Q2/Uhrlage vorsieht. Reine Weitergabe
-    /// der Manifest-Wahrheit an das QuantificationGate — keine VSA-Fachregel hier.
-    /// Ohne Katalog: permissiver Default (alles erlaubt), damit nichts verloren geht.
-    /// </summary>
-    private AuswertungPro.Next.Application.Ai.QuantificationGate.ManifestQuantRule BuildManifestQuantRule(string code)
-    {
-        var catalog = CodeSelectionCatalog;
-        if (catalog == null)
-            return new AuswertungPro.Next.Application.Ai.QuantificationGate.ManifestQuantRule(true, true, true);
-
-        var (q1, q2) = catalog.GetQuantRule(code, null);
-        var clock = catalog.GetClockRule(code);
-        bool allowClock = !string.Equals(clock?.Mode, "none", StringComparison.OrdinalIgnoreCase);
-        return new AuswertungPro.Next.Application.Ai.QuantificationGate.ManifestQuantRule(
-            HasQ1: q1 != null, HasQ2: q2 != null, AllowClock: allowClock);
     }
 
     /// <summary>
@@ -4397,7 +4379,7 @@ public partial class PlayerWindow
             return;
 
         // Manifest: erlaubt dieser Code ueberhaupt eine Uhrlage? Wenn nicht -> nichts schreiben.
-        if (!BuildManifestQuantRule(code).AllowClock)
+        if (!CodingManifestQuantRuleResolver.Resolve(CodeSelectionCatalog, code).AllowClock)
             return;
 
         var cal = _codingOverlayService?.Calibration;
@@ -4433,25 +4415,6 @@ public partial class PlayerWindow
             entry.CodeMeta.Parameters.Remove("vsa.uhr.bis"); // Punktbefund -> kein Zweitwert
     }
 
-    /// <summary>
-    /// Schaetzt Severity (1-5) aus SAM-Quantifizierung.
-    /// Groesse der Maske relativ zum Rohrquerschnitt.
-    /// </summary>
-    private static int EstimateSeverityFromQuantification(MaskQuantificationService.QuantifiedMask q)
-    {
-        // Querschnittsreduktion als primaerer Indikator
-        if (q.CrossSectionReductionPercent is > 30) return 5;
-        if (q.CrossSectionReductionPercent is > 15) return 4;
-        if (q.CrossSectionReductionPercent is > 5) return 3;
-        // Einragung
-        if (q.IntrusionPercent is > 20) return 4;
-        if (q.IntrusionPercent is > 10) return 3;
-        // Hoehe relativ (grob: >50mm = ernsthaft)
-        if (q.HeightMm is > 50) return 3;
-        if (q.HeightMm is > 20) return 2;
-        return 2; // Default: leichter Schaden
-    }
-
     /// <summary>Delegiert an VsaCodeResolver.NormalizeClock.</summary>
     private static string? NormalizeClockPosition(string? raw) => VsaCodeResolver.NormalizeClock(raw);
 
@@ -4465,72 +4428,21 @@ public partial class PlayerWindow
         // 1. VsaCodeHint normalisieren
         var hinted = VsaCodeResolver.NormalizeFindingCode(finding.VsaCodeHint);
         if (hinted != null)
-            return RefineGenericCodeFromImport(hinted, currentMeter) ?? hinted;
+            return CodingImportFallbackCodeResolver.RefineGenericCode(_codingImportEvents, hinted, currentMeter) ?? hinted;
 
         // 2. Label-Heuristik
         var coarse = VsaCodeResolver.InferCodeFromLabel(finding.Label);
         if (coarse != null)
-            return RefineGenericCodeFromImport(coarse, currentMeter) ?? coarse;
+            return CodingImportFallbackCodeResolver.RefineGenericCode(_codingImportEvents, coarse, currentMeter) ?? coarse;
 
         // 3. Konservativer Import-Fallback fuer Grundgeruest-Codes am aktuellen Meter
-        var importFallback = TryResolveImportFallbackCode(currentMeter);
+        var importFallback = CodingImportFallbackCodeResolver.ResolveFallbackCode(_codingImportEvents, currentMeter);
         if (importFallback != null)
             return importFallback;
 
         // 4. Kein Code ableitbar
         return null;
     }
-
-    /// <summary>
-    private string? RefineGenericCodeFromImport(string genericCode, double currentMeter)
-    {
-        if (_codingImportEvents.Count == 0 || string.IsNullOrWhiteSpace(genericCode))
-            return null;
-
-        var family = genericCode.Trim().ToUpperInvariant();
-        var candidate = _codingImportEvents
-            .Where(ev =>
-                !string.IsNullOrWhiteSpace(ev.Entry?.Code) &&
-                ev.Entry.Code.StartsWith(family, StringComparison.OrdinalIgnoreCase))
-            .Select(ev => new
-            {
-                Code = ev.Entry.Code!.Trim().ToUpperInvariant(),
-                Distance = Math.Abs(ev.MeterAtCapture - currentMeter)
-            })
-            .Where(x => AuswertungPro.Next.UI.Player.PlayerImportFallbackCodePolicy.IsWithinMeterWindow(x.Code, x.Distance))
-            .OrderBy(x => x.Distance)
-            .ThenByDescending(x => x.Code.Length)
-            .FirstOrDefault();
-
-        return candidate?.Code;
-    }
-
-    private string? TryResolveImportFallbackCode(double currentMeter)
-    {
-        if (_codingImportEvents.Count == 0)
-            return null;
-
-        var candidate = _codingImportEvents
-            .Where(ev => !string.IsNullOrWhiteSpace(ev.Entry?.Code))
-            .Select(ev => new
-            {
-                Code = ev.Entry!.Code.Trim().ToUpperInvariant(),
-                Distance = Math.Abs(ev.MeterAtCapture - currentMeter)
-            })
-            .Where(x => AuswertungPro.Next.UI.Player.PlayerImportFallbackCodePolicy.IsWithinMeterWindow(x.Code, x.Distance))
-            .OrderBy(x => x.Distance)
-            .ThenByDescending(x => x.Code.Length)
-            .FirstOrDefault();
-
-        return candidate?.Code;
-    }
-
-    /// <summary>
-    /// Erlaubte Code-Familien fuer Import-Fallback.
-    /// Umfasst Bestandsaufnahme (BC), Strukturschaeden (BA) und Betriebliche Stoerungen (BB).
-    /// </summary>
-    private static bool IsAllowedImportFallbackCode(string code)
-        => AuswertungPro.Next.UI.Player.PlayerImportFallbackCodePolicy.IsAllowed(code);
 
     /// <summary>
     /// KI-Befunde als CodingEvents eintragen â€” mit QualityGate-Ampelsystem.
