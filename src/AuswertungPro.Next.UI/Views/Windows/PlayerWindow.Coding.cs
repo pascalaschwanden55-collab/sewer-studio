@@ -624,57 +624,34 @@ public partial class PlayerWindow
     /// </summary>
     private void UpdateCodingCurrentCode()
     {
-        if (_codingVm == null || _codingVm.Events.Count == 0)
+        if (_codingVm == null)
         {
             CodingCurrentCodeBadge.Visibility = Visibility.Collapsed;
             return;
         }
 
-        // Aktuellen Meter ermitteln: OSD-Wert bevorzugen, sonst Video-Position berechnen
-        double currentMeter;
+        var state = CodingCurrentCodeBadgePolicy.Build(
+            _codingVm.Events,
+            ResolveCurrentCodingDisplayMeter());
+
+        TxtCodingCurrentCode.Text = state.Text;
+        CodingCurrentCodeBadge.Visibility = state.IsVisible
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private double ResolveCurrentCodingDisplayMeter()
+    {
+        if (_codingVm == null)
+            return 0;
+
         if (_codingLastOsdMeter.HasValue)
-        {
-            currentMeter = _codingLastOsdMeter.Value;
-        }
-        else if (_player.Length > 0 && _codingVm.EndMeter > 0)
-        {
-            currentMeter = (_player.Time / (double)_player.Length) * _codingVm.EndMeter;
-        }
-        else
-        {
-            currentMeter = _codingVm.CurrentMeter;
-        }
+            return _codingLastOsdMeter.Value;
 
-        // Naechsten Code innerhalb Ãƒâ€šÃ‚Â±0.5m finden
-        var nearestEvent = _codingVm.Events
-            .Where(ev => Math.Abs(ev.MeterAtCapture - currentMeter) < 0.5)
-            .OrderBy(ev => Math.Abs(ev.MeterAtCapture - currentMeter))
-            .FirstOrDefault();
+        if (_player.Length > 0 && _codingVm.EndMeter > 0)
+            return (_player.Time / (double)_player.Length) * _codingVm.EndMeter;
 
-        if (nearestEvent != null)
-        {
-            TxtCodingCurrentCode.Text = $"ÃƒÂ¢-Ã‚Â¶ {nearestEvent.MeterAtCapture:F2}m {nearestEvent.Entry.Code} {nearestEvent.Entry.Beschreibung}";
-            CodingCurrentCodeBadge.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            // Naechsten bevorstehenden Code anzeigen
-            var nextEvent = _codingVm.Events
-                .Where(ev => ev.MeterAtCapture > currentMeter)
-                .OrderBy(ev => ev.MeterAtCapture)
-                .FirstOrDefault();
-
-            if (nextEvent != null)
-            {
-                var distM = nextEvent.MeterAtCapture - currentMeter;
-                TxtCodingCurrentCode.Text = $"? in {distM:F1}m: {nextEvent.Entry.Code}";
-                CodingCurrentCodeBadge.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                CodingCurrentCodeBadge.Visibility = Visibility.Collapsed;
-            }
-        }
+        return _codingVm.CurrentMeter;
     }
 
     private void SyncVideoToCodingMeter()
