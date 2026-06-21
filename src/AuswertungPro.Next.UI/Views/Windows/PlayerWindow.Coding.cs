@@ -4323,19 +4323,7 @@ public partial class PlayerWindow
                 ? f
                 : f with { VsaCodeHint = code };
 
-            // Deduplizierung: code + raeumliche Position
-            string dedupeKey;
-            if (normalizedFinding.BboxX1.HasValue && normalizedFinding.BboxY1.HasValue
-                && normalizedFinding.BboxX2.HasValue && normalizedFinding.BboxY2.HasValue)
-            {
-                var cx = Math.Round((normalizedFinding.BboxX1.Value + normalizedFinding.BboxX2.Value) / 2, 1);
-                var cy = Math.Round((normalizedFinding.BboxY1.Value + normalizedFinding.BboxY2.Value) / 2, 1);
-                dedupeKey = $"{code}@{cx:F1},{cy:F1}";
-            }
-            else
-            {
-                dedupeKey = $"{code}@{NormalizeClockPosition(normalizedFinding.PositionClock) ?? "?"}";
-            }
+            var dedupeKey = CodingFindingDedupeKeyBuilder.Build(code, normalizedFinding);
 
             if (!seen.Add(dedupeKey)) continue;
 
