@@ -374,27 +374,19 @@ public partial class PlayerWindow
                 var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
                 var label = LookupVsaLabel(codeHint) ?? keyword;
 
-                var entry = new ProtocolEntry
-                {
-                    Source = ProtocolEntrySource.Ai,
-                    Code = codeHint,
-                    Beschreibung = label,
-                    MeterStart = meter,
-                    Zeit = videoTime
-                };
+                var draft = CodingEingabemarkerEventFactory.CreateAccepted(
+                    codeHint,
+                    label,
+                    keyword,
+                    meter,
+                    videoTime);
 
                 // Foto vom aktuellen Frame
-                var fotoPath = CodingCaptureSnapshot(entry);
-                if (fotoPath != null) entry.FotoPaths.Add(fotoPath);
+                var fotoPath = CodingCaptureSnapshot(draft.Entry);
+                if (fotoPath != null) draft.Entry.FotoPaths.Add(fotoPath);
 
-                var ev = _codingSessionService.AddEvent(entry, _codingVm.CurrentOverlay);
-                ev.AiContext = new CodingEventAiContext
-                {
-                    SuggestedCode = codeHint,
-                    Confidence = 1.0,
-                    Reason = $"Eingabemarker: {keyword}",
-                    Decision = CodingUserDecision.Accepted
-                };
+                var ev = _codingSessionService.AddEvent(draft.Entry, _codingVm.CurrentOverlay);
+                ev.AiContext = draft.AiContext;
                 // Event-Hook (OnSessionEventAdded) fuegt automatisch in _codingVm.Events ein.
                 // KEIN explizites _codingVm.Events.Add() â€” sonst doppelt!
                 RefreshCodingEventsList();
