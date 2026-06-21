@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -9,7 +9,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var sidePanel = ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml");
         var accessors = ReadUiFile("Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
 
         Assert.Contains("x:Name=\"CodingDefectDetailInline\"", sidePanel);
         Assert.DoesNotContain("x:Name=\"CodingDefectDetailPanel\"", sidePanel);
@@ -31,7 +31,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_hides_coding_overlay_when_external_window_gets_focus()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var window = ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
         var suspendBody = ExtractMethodBody(coding, "private void SuspendCodingOverlayInput()");
 
@@ -45,7 +45,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_uses_same_overlay_policy_for_rendering_and_events()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
 
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleCodingFindings", coding);
         Assert.Contains("SamMaskRenderer.RenderCandidates", coding);
@@ -56,7 +56,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_renders_ahead_segment_masks_without_coding_them()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var showBody = ExtractMethodBody(coding, "private void ShowMultiModelResults");
 
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskFindings", coding);
@@ -69,7 +69,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_status_mentions_background_masks_suppressed()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
 
         Assert.Contains("CodingSegmentedFindingVisibility.BuildOverlaySuppressionText", coding);
     }
@@ -79,7 +79,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var sidePanel = ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml");
         var accessors = ReadUiFile("Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
 
         Assert.Contains("x:Name=\"ImgInlineEvidencePreview\"", sidePanel);
         Assert.Contains("x:Name=\"TxtInlineEvidencePreviewStatus\"", sidePanel);
@@ -90,7 +90,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_coding_detail_uses_open_decision_policy_for_confirm_buttons()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var detailBody = ExtractMethodBody(coding, "private void UpdateInlineDefectDetail");
 
         Assert.Contains("CodingSessionViewModel.CanActOnDefect(ev)", detailBody);
@@ -101,7 +101,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_photo_window_shows_segmented_evidence_preview_before_raw_photos()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var photoBody = ExtractMethodBody(coding, "private void CodingEventShowPhotos_Click");
 
         Assert.Contains("CodingDefectPreviewService.BuildPreviewImagePath(codingEvent)", photoBody);
@@ -115,7 +115,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_stops_ai_analysis_before_snapshot_after_rohrende()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
 
         var stopIndex = runBody.IndexOf("IsCodingAfterTerminalBoundary", StringComparison.Ordinal);
@@ -130,7 +130,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_defers_spatial_bogen_before_creating_protocol_event()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var addBody = ExtractMethodBody(coding, "private void AddMultiModelFindingsAsEvents");
 
         Assert.Contains("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", addBody);
@@ -143,7 +143,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_rohranfang_photos_stay_on_event_frame()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var captureBody = ExtractMethodBody(coding, "private string? CodingCaptureSnapshot");
         var goldBody = ExtractMethodBody(coding, "private async System.Threading.Tasks.Task<(string? path, string? error)> TrySaveGoldFrameAsync");
 
@@ -156,7 +156,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_coding_analysis_keeps_analyzed_frame_for_gold_snapshot()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
 
         Assert.Contains("_detectionPendingFrameBytes = pngBytes", runBody);
@@ -170,7 +170,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_ai_findings_attach_analyzed_frame_photo_before_add_event()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var qwenBody = ExtractMethodBody(coding, "private void AddAiFindingsAsEvents");
         var multiModelBody = ExtractMethodBody(coding, "private void AddMultiModelFindingsAsEvents");
 
@@ -181,7 +181,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_boundary_classifier_passes_current_analyzed_frame_to_boundary_events()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var boundaryBody = ExtractMethodBody(coding, "private bool TryHandleBoundaryClassifierResult");
 
         Assert.Contains("EnsureRohranfangExists(meter, videoTime, _detectionPendingFrameBytes, ref anyAdded)", boundaryBody);
@@ -191,7 +191,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_handles_structural_classifier_before_no_detection_return()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
         var structuralBody = ExtractMethodBody(coding, "private bool TryHandleStructuralClassifierResult");
 
@@ -215,7 +215,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_exit_coding_mode_passes_current_analyzed_frame_to_auto_rohrende()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var exitBody = ExtractMethodBody(coding, "private void ExitCodingMode");
 
         Assert.Contains("EnsureRohrendeExists(_codingVm.EndMeter, endTime, _detectionPendingFrameBytes)", exitBody);
@@ -224,7 +224,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_coding_analysis_prefers_video_position_over_stale_viewmodel_meter_for_classifier()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
         var resolveBody = ExtractMethodBody(coding, "private double ResolveCodingMeterForFrame");
 
@@ -245,7 +245,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_ai_events_use_analyzed_frame_meter_not_stale_selected_meter()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
         var multiModelBody = ExtractMethodBody(coding, "private void AddMultiModelFindingsAsEvents");
         var qwenBody = ExtractMethodBody(coding, "private void AddAiFindingsAsEvents");
@@ -264,7 +264,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_reads_osd_meter_from_analyzed_frame_before_multimodel_detection()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
         var readerBody = ExtractMethodBody(coding, "private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync");
         var helperBody = ExtractMethodBody(coding, "private async Task<double?> TryReadOsdMeterFromFrameBytesAsync");
@@ -287,7 +287,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_auto_boundary_events_attach_passed_frame_before_add_event()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var bcdBody = ExtractMethodBody(coding, "private void EnsureRohranfangExists");
         var bceBody = ExtractMethodBody(coding, "private void EnsureRohrendeExists");
 
@@ -298,7 +298,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_event_seek_allows_zero_timestamp()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var seekBody = ExtractMethodBody(coding, "private void CodingEventSeek_Click");
 
         Assert.Contains("codingEvent.VideoTimestamp.TotalMilliseconds >= 0", seekBody);
@@ -308,7 +308,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_import_seek_allows_zero_timestamp()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var seekBody = ExtractMethodBody(coding, "private void SeekToImportEvent");
 
         Assert.Contains("importEvent.VideoTimestamp.TotalMilliseconds >= 0", seekBody);
@@ -318,7 +318,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_manual_photo_aligns_event_time_to_current_frame_before_snapshot()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var photoBody = ExtractMethodBody(coding, "private void CodingTakePhotoForSelectedEvent");
 
         var timeIndex = photoBody.IndexOf("GetCurrentPlayerTimestamp()", StringComparison.Ordinal);
@@ -359,7 +359,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_runs_coding_protocol_match_from_import_and_ki_events()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var runBody = ExtractMethodBody(coding, "private void RunCodingProtocolMatch()");
 
         Assert.Contains("using AuswertungPro.Next.Application.Ai.Evaluation;", coding);
@@ -377,7 +377,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     [Fact]
     public void Player_green_match_training_button_reuses_import_confirm_core()
     {
-        var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
+        var coding = ReadCodingPartials();
         var importConfirmBody = ExtractMethodBody(coding, "private async void ImportConfirm_Click");
         var greenBody = ExtractMethodBody(coding, "private async void CodingAcceptGreenMatches_Click");
         var coreBody = ExtractMethodBody(coding, "private async Task<bool> ConfirmImportAsTrainingAsync");
@@ -404,6 +404,17 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var root = FindRepoRoot();
         var path = Path.Combine(new[] { root, "src", "AuswertungPro.Next.UI" }.Concat(relativeParts).ToArray());
         return File.ReadAllText(path);
+    }
+
+    private static string ReadCodingPartials()
+    {
+        var root = FindRepoRoot();
+        var dir = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var files = Directory.GetFiles(dir, "PlayerWindow.Coding*.cs")
+            .Where(path => !Path.GetFileName(path).Contains("SidePanelAccessors", StringComparison.Ordinal))
+            .OrderBy(path => path, StringComparer.Ordinal);
+
+        return string.Join(Environment.NewLine, files.Select(File.ReadAllText));
     }
 
     private static void AssertAnalyzedFrameAttachedBeforeAddEvent(string methodBody)
@@ -479,3 +490,4 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         throw new DirectoryNotFoundException("Repo root with AuswertungPro.sln was not found.");
     }
 }
+
