@@ -141,55 +141,19 @@ public partial class PlayerWindow
         // Videozeit vom Player uebernehmen
         _codingVm.CurrentVideoTime = TimeSpan.FromMilliseconds(_player.Time);
 
-        // Foto vom Video-Frame
-        var entry = new ProtocolEntry
-        {
-            Code = _codingVm.SelectedCode,
-            Beschreibung = _codingVm.SelectedCodeDescription,
-            MeterStart = _codingLastOsdMeter ?? _codingVm.CurrentMeter,
-            Zeit = TimeSpan.FromMilliseconds(_player.Time),
-            Source = ProtocolEntrySource.Manual
-        };
+        var draft = CodingManualEventFactory.CreateUnconfirmed(
+            _codingVm.SelectedCode,
+            _codingVm.SelectedCodeDescription,
+            _codingLastOsdMeter ?? _codingVm.CurrentMeter,
+            TimeSpan.FromMilliseconds(_player.Time),
+            _codingVm.CurrentOverlay);
 
-        if (_codingVm.CurrentOverlay != null)
-        {
-            entry.CodeMeta ??= new ProtocolEntryCodeMeta();
-            if (_codingVm.CurrentOverlay.ClockFrom.HasValue)
-                entry.CodeMeta.Parameters["vsa.uhr.von"] = _codingVm.CurrentOverlay.ClockFrom.Value.ToString("F1");
-            if (_codingVm.CurrentOverlay.ClockTo.HasValue)
-                entry.CodeMeta.Parameters["vsa.uhr.bis"] = _codingVm.CurrentOverlay.ClockTo.Value.ToString("F1");
-            if (_codingVm.CurrentOverlay.Q1Mm.HasValue)
-                entry.CodeMeta.Parameters["vsa.q1"] = _codingVm.CurrentOverlay.Q1Mm.Value.ToString("F1");
-            if (_codingVm.CurrentOverlay.Q2Mm.HasValue)
-                entry.CodeMeta.Parameters["vsa.q2"] = _codingVm.CurrentOverlay.Q2Mm.Value.ToString("F1");
-            if (_codingVm.CurrentOverlay.ArcDegrees.HasValue && _codingVm.CurrentOverlay.ToolType == OverlayToolType.PipeBend)
-                entry.CodeMeta.Parameters["vsa.winkel"] = _codingVm.CurrentOverlay.ArcDegrees.Value.ToString("F1");
-            if (_codingVm.CurrentOverlay.FillPercent.HasValue)
-            {
-                var key = _codingVm.CurrentOverlay.ToolType == OverlayToolType.Level
-                          && _codingVm.CurrentOverlay.Points.Count >= 3
-                    ? "vsa.querschnitt.prozent"
-                    : "vsa.fuellgrad.prozent";
-                entry.CodeMeta.Parameters[key] = _codingVm.CurrentOverlay.FillPercent.Value.ToString("F1");
-            }
-        }
-
-        var fotoPath = CodingCaptureSnapshot(entry);
+        var fotoPath = CodingCaptureSnapshot(draft.Entry);
         if (fotoPath != null)
-            entry.FotoPaths.Add(fotoPath);
+            draft.Entry.FotoPaths.Add(fotoPath);
 
-        var manualEvent = _codingSessionService!.AddEvent(entry, _codingVm.CurrentOverlay);
-
-        // Manuell codiert: Noch nicht bestaetigt â€” User muss "Akzeptieren" klicken.
-        // Erst wenn alles gruen ist, stimmen die Daten fuer das KI-Training.
-        manualEvent.AiContext = new CodingEventAiContext
-        {
-            SuggestedCode = entry.Code,
-            Confidence = 1.0,
-            Reason = "Manuell codiert - bitte bestätigen",
-            Decision = CodingUserDecision.Ignored
-        };
-
+        var manualEvent = _codingSessionService!.AddEvent(draft.Entry, _codingVm.CurrentOverlay);
+        manualEvent.AiContext = draft.AiContext;
         // Nach Meter sortiert anzeigen
         RefreshCodingEventsList();
 
