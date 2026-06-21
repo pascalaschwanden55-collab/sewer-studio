@@ -3245,7 +3245,7 @@ public partial class PlayerWindow
                 // BCD/BCE/BDC: Einmal-Codes â€” Meter egal
                 bool isEinmalCode = CodingDedupPolicy.IsOneTimeCode(codeHint);
                 var existingDup = _codingVm.Events.FirstOrDefault(e =>
-                    CodesMatchForDedup(e.Entry.Code, codeHint) &&
+                    CodingDedupPolicy.CodesMatch(e.Entry.Code, codeHint) &&
                     (isEinmalCode || Math.Abs(e.MeterAtCapture - checkMeter) < 1.0));
                 if (existingDup != null)
                 {
@@ -3678,7 +3678,7 @@ public partial class PlayerWindow
             return false;
 
         var coveringEvent = codingVm.Events.FirstOrDefault(e =>
-            CodesMatchForDedup(e.Entry.Code, resolvedCode) &&
+            CodingDedupPolicy.CodesMatch(e.Entry.Code, resolvedCode) &&
             CodingFindingCoveragePolicy.IsCovered(e, meter, finding));
 
         var confidence = mmResult.ClassifierConfidence.HasValue
@@ -4045,13 +4045,13 @@ public partial class PlayerWindow
             // Primaer gegen session.Events pruefen (wird nie gecleared).
             if (CodingDedupPolicy.IsOneTimeCode(code)
                 && (codingSessionService.ActiveSession?.Events.Any(e =>
-                        CodesMatchForDedup(e.Entry.Code, code)) == true
-                    || codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
+                        CodingDedupPolicy.CodesMatch(e.Entry.Code, code)) == true
+                    || codingVm.Events.Any(e => CodingDedupPolicy.CodesMatch(e.Entry.Code, code))))
                 continue;
 
             // Dedup gegen bestehende Events (identisch mit Qwen-Pfad)
             var coveringEvent = codingVm.Events.FirstOrDefault(e =>
-                CodesMatchForDedup(e.Entry.Code, code) &&
+                CodingDedupPolicy.CodesMatch(e.Entry.Code, code) &&
                 CodingFindingCoveragePolicy.IsCovered(e, meter, pseudoFinding));
             if (coveringEvent != null) continue;
 
@@ -4260,15 +4260,6 @@ public partial class PlayerWindow
     }
 
     /// <summary>
-    /// Prueft ob zwei VSA-Codes fuer Dedup-Zwecke als gleich gelten.
-    /// Exakter Match ODER gleicher 3-Zeichen-Hauptcode (z.B. BCAEB vs BCA).
-    /// </summary>
-    private static bool CodesMatchForDedup(string? existingCode, string newCode)
-    {
-        return CodingDedupPolicy.CodesMatch(existingCode, newCode);
-    }
-
-    /// <summary>
     /// Filtert KI-Findings: VSA-Code-Validierung, BCD/BCE-Ausschluss, Deduplizierung.
     /// Die gefilterte Liste wird fuer UI, Overlays und Event-Erstellung verwendet.
     /// Deduplizierung: code + BBox-Mittelpunkt (verschiedene Positionen = verschiedene Befunde).
@@ -4296,9 +4287,9 @@ public partial class PlayerWindow
             {
                 bool alreadyExists =
                     _codingSessionService?.ActiveSession?.Events.Any(e =>
-                        CodesMatchForDedup(e.Entry.Code, code)) == true
+                        CodingDedupPolicy.CodesMatch(e.Entry.Code, code)) == true
                     || _codingVm?.Events.Any(e =>
-                        CodesMatchForDedup(e.Entry.Code, code)) == true;
+                        CodingDedupPolicy.CodesMatch(e.Entry.Code, code)) == true;
                 if (alreadyExists)
                 {
                     System.Diagnostics.Debug.WriteLine($"[KI-Filter] {code} uebersprungen (bereits vorhanden, live-check)");
@@ -4446,8 +4437,8 @@ public partial class PlayerWindow
             // Primaer gegen session.Events pruefen (wird nie gecleared, im Gegensatz zu _codingVm.Events).
             if (CodingDedupPolicy.IsOneTimeCode(code)
                 && (codingSessionService.ActiveSession?.Events.Any(e =>
-                        CodesMatchForDedup(e.Entry.Code, code)) == true
-                    || codingVm.Events.Any(e => CodesMatchForDedup(e.Entry.Code, code))))
+                        CodingDedupPolicy.CodesMatch(e.Entry.Code, code)) == true
+                    || codingVm.Events.Any(e => CodingDedupPolicy.CodesMatch(e.Entry.Code, code))))
             {
                 System.Diagnostics.Debug.WriteLine($"[BCD-Dedup] AddFindings: {code} uebersprungen (bereits vorhanden)");
                 continue;
@@ -4462,7 +4453,7 @@ public partial class PlayerWindow
             // 2. Streckenschaden: code faellt in den MeterStart..MeterEnd Bereich
             // 3. Bereits akzeptierter/bearbeiteter Code: nicht nochmal melden
             var coveringEvent = codingVm.Events.FirstOrDefault(e =>
-                CodesMatchForDedup(e.Entry.Code, code) &&
+                CodingDedupPolicy.CodesMatch(e.Entry.Code, code) &&
                 CodingFindingCoveragePolicy.IsCovered(e, meter, finding));
             if (coveringEvent != null)
             {
