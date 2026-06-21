@@ -42,6 +42,16 @@ public static class LiveDetectionDisplayPolicy
             : $"Kein Schaden @ {result.TimestampSeconds:0.0}s";
     }
 
+    public static string BuildCodingNoDamageStatusText(double? meterReading)
+        => meterReading.HasValue
+            ? $"OSD {meterReading.Value:F2}m – Kein Schaden"
+            : "Kein Schaden";
+
+    public static string BuildCodingFindingsStatusText(double? meterReading, int findingCount)
+        => meterReading.HasValue
+            ? $"OSD {meterReading.Value:F2}m – {findingCount} Befund(e)"
+            : $"{findingCount} Befund(e)";
+
     public static string BuildFindingSummaryText(IReadOnlyList<LiveFrameFinding> findings, int maxFindings = 3)
         => string.Join(" | ", findings.Take(maxFindings).Select(f =>
             $"{f.VsaCodeHint ?? f.Label} (S{f.Severity})"));

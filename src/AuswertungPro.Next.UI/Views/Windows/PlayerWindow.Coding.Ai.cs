@@ -1239,18 +1239,14 @@ public partial class PlayerWindow
 
         if (validFindings.Count == 0)
         {
-            var noDamageText = result.MeterReading.HasValue
-                ? $"OSD {result.MeterReading.Value:F2}m \u2013 Kein Schaden"
-                : "Kein Schaden";
+            var noDamageText = LiveDetectionDisplayPolicy.BuildCodingNoDamageStatusText(result.MeterReading);
             SetCodingAiState(noDamageText, Color.FromRgb(0x22, 0xC5, 0x5E), "Schritt 3 von 3: Overlay aktualisiert");
             CodingFindingsList.ItemsSource = null;
             DetectionCanvas.Children.Clear();
             return;
         }
 
-        var findingsText = result.MeterReading.HasValue
-            ? $"OSD {result.MeterReading.Value:F2}m \u2013 {validFindings.Count} Befund(e)"
-            : $"{validFindings.Count} Befund(e)";
+        var findingsText = LiveDetectionDisplayPolicy.BuildCodingFindingsStatusText(result.MeterReading, validFindings.Count);
         SetCodingAiState(findingsText, Color.FromRgb(0x22, 0xC5, 0x5E), "Schritt 3 von 3: Overlay und Events");
         CodingFindingsList.ItemsSource = validFindings
             .Select(f => new AiFindingDisplayItem(f)).ToList();

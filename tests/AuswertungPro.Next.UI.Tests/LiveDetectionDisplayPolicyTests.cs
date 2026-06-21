@@ -139,6 +139,20 @@ public sealed class LiveDetectionDisplayPolicyTests
     }
 
     [Fact]
+    public void BuildCodingNoDamageStatusText_formats_optional_osd_meter()
+    {
+        Assert.Equal("OSD 12.35m – Kein Schaden", LiveDetectionDisplayPolicy.BuildCodingNoDamageStatusText(12.345));
+        Assert.Equal("Kein Schaden", LiveDetectionDisplayPolicy.BuildCodingNoDamageStatusText(null));
+    }
+
+    [Fact]
+    public void BuildCodingFindingsStatusText_formats_count_with_optional_osd_meter()
+    {
+        Assert.Equal("OSD 4.20m – 3 Befund(e)", LiveDetectionDisplayPolicy.BuildCodingFindingsStatusText(4.2, 3));
+        Assert.Equal("3 Befund(e)", LiveDetectionDisplayPolicy.BuildCodingFindingsStatusText(null, 3));
+    }
+
+    [Fact]
     public void BuildFindingSummaryText_uses_code_hint_and_limits_to_three_findings()
     {
         var findings = new[]
