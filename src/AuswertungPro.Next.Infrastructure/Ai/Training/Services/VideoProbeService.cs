@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Training.Services;
@@ -65,19 +66,14 @@ public sealed class VideoProbeService
 
         try
         {
-            using var p = Process.Start(psi);
-            if (p is null) return VideoProbeResult.Fail("ffprobe: Process.Start returned null");
+            var output = await ProcessOutputReader.ReadToExitAsync(psi, ct).ConfigureAwait(false);
+            if (output is null) return VideoProbeResult.Fail("ffprobe: Process.Start returned null");
 
-            var stdoutTask = p.StandardOutput.ReadToEndAsync(ct);
-            var stderrTask = p.StandardError.ReadToEndAsync(ct);
-            await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
-            await p.WaitForExitAsync(ct).ConfigureAwait(false);
+            var stdout = output.StandardOutput;
+            var stderr = output.StandardError;
 
-            var stdout = stdoutTask.Result;
-            var stderr = stderrTask.Result;
-
-            if (p.ExitCode != 0)
-                return VideoProbeResult.Fail($"ffprobe ExitCode {p.ExitCode}: {stderr.Trim()}");
+            if (output.ExitCode != 0)
+                return VideoProbeResult.Fail($"ffprobe ExitCode {output.ExitCode}: {stderr.Trim()}");
 
             if (double.TryParse(stdout.Trim(), NumberStyles.Float,
                     CultureInfo.InvariantCulture, out var dur) && dur > 0)
@@ -104,15 +100,10 @@ public sealed class VideoProbeService
 
         try
         {
-            using var p = Process.Start(psi);
-            if (p is null) return VideoProbeResult.Fail("ffmpeg: Process.Start returned null");
+            var output = await ProcessOutputReader.ReadToExitAsync(psi, ct).ConfigureAwait(false);
+            if (output is null) return VideoProbeResult.Fail("ffmpeg: Process.Start returned null");
 
-            var stdoutTask = p.StandardOutput.ReadToEndAsync(ct);
-            var stderrTask = p.StandardError.ReadToEndAsync(ct);
-            await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
-            await p.WaitForExitAsync(ct).ConfigureAwait(false);
-
-            var stderr = stderrTask.Result;
+            var stderr = output.StandardError;
 
             var m = Regex.Match(stderr, @"Duration:\s*(\d+):(\d{2}):(\d{2}(?:\.\d+)?)");
             if (m.Success

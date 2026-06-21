@@ -167,14 +167,10 @@ public sealed class QuickScanService
             psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
             psi.ArgumentList.Add(videoPath);
 
-            using var p = Process.Start(psi);
-            if (p is null) return null;
+            var output = await ProcessOutputReader.ReadToExitAsync(psi, ct).ConfigureAwait(false);
+            if (output is null) return null;
 
-            var stdoutTask = p.StandardOutput.ReadToEndAsync(ct);
-            var stderrTask = p.StandardError.ReadToEndAsync(ct);
-            await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
-            await p.WaitForExitAsync(ct).ConfigureAwait(false);
-            var stdout = stdoutTask.Result;
+            var stdout = output.StandardOutput;
 
             if (double.TryParse(stdout.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var dur))
                 return dur;

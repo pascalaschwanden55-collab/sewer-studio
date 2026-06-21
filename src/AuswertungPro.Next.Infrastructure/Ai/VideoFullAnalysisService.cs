@@ -271,20 +271,14 @@ public sealed class VideoFullAnalysisService
 
         try
         {
-            using var p = Process.Start(psi);
-            if (p is null) return (null, "Process.Start failed");
+            var output = await ProcessOutputReader.ReadToExitAsync(psi, ct).ConfigureAwait(false);
+            if (output is null) return (null, "Process.Start failed");
 
-            // stdout und stderr parallel lesen um Pipe-Deadlock zu vermeiden
-            var stdoutTask = p.StandardOutput.ReadToEndAsync(ct);
-            var stderrTask = p.StandardError.ReadToEndAsync(ct);
-            await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
-            await p.WaitForExitAsync(ct).ConfigureAwait(false);
+            var stdout = output.StandardOutput;
+            var stderr = output.StandardError;
 
-            var stdout = stdoutTask.Result;
-            var stderr = stderrTask.Result;
-
-            if (p.ExitCode != 0)
-                return (null, string.IsNullOrWhiteSpace(stderr) ? $"ExitCode {p.ExitCode}" : stderr);
+            if (output.ExitCode != 0)
+                return (null, string.IsNullOrWhiteSpace(stderr) ? $"ExitCode {output.ExitCode}" : stderr);
 
             if (double.TryParse(stdout.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var dur))
                 return (dur, "");
