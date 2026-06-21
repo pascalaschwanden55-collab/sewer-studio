@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Map;
@@ -812,7 +813,7 @@ public static partial class HoldingFolderDistributor
                     // Bestehende Fallback-Kette wenn seitenweise Extraktion nichts ergab
                     if (string.IsNullOrWhiteSpace(haltungId))
                     {
-                        var (shaftA, shaftB) = TryExtractDichtheitShafts(pdfText);
+                        var (shaftA, shaftB) = DichtheitShaftParser.TryExtractShafts(pdfText);
                         if (!string.IsNullOrWhiteSpace(shaftA) && !string.IsNullOrWhiteSpace(shaftB))
                             haltungId = ResolveDichtheitHaltungOrder(shaftA, shaftB, project, destGemeindeFolder);
                     }

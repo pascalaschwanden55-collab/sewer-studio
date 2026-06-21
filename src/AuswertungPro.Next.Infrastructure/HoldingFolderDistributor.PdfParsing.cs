@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Map;
@@ -35,30 +36,6 @@ public static partial class HoldingFolderDistributor
     private static readonly Regex PdfFilenamePairRegex = new(
         @"(?:\d{2,}\.\d{2,}|\d{4,})\s*[-_]\s*(?:\d{2,}\.\d{2,}|\d{4,})",
         RegexOptions.Compiled);
-
-    // Hotpath-Regex: TryExtractDichtheitShafts
-    // Schacht-ID-Pattern: numerisch (81150, 42.046) oder alphanumerisch (S42.123, KS-0815)
-
-
-    // Hotpath-Regex: TryExtractDichtheitShafts
-    // Schacht-ID-Pattern: numerisch (81150, 42.046) oder alphanumerisch (S42.123, KS-0815)
-    private const string SchachtIdPat = @"[A-Za-z]{0,3}[\-]?\d{2,}(?:[.\-]\d{2,})?";
-
-    private static readonly Regex DichtheitUpperRx = new(
-        @"oberer\s*Schacht\s*[:\-]?\s*(?<v>" + SchachtIdPat + ")",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-    private static readonly Regex DichtheitLowerRx = new(
-        @"unterer\s*Schacht\s*[:\-]?\s*(?<v>" + SchachtIdPat + ")",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-    private static readonly Regex SchachtObenRx = new(
-        @"Schacht\s*oben\s*[:\-]?\s*(?<v>" + SchachtIdPat + ")",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-    private static readonly Regex SchachtUntenRx = new(
-        @"Schacht\s*unten\s*[:\-]?\s*(?<v>" + SchachtIdPat + ")",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     // Hotpath-Regex: TryFindInspectionDate / TryFindSchachtDate / TryExtractDateFromFormEntries
 
@@ -299,7 +276,7 @@ public static partial class HoldingFolderDistributor
                 if (IsNoiseLine(line))
                     continue;
 
-                var pair = TryMatchDichtheitPairLine(line);
+                var pair = DichtheitShaftParser.TryMatchPairLine(line);
                 if (pair is not null)
                 {
                     var (a, b) = pair.Value;
@@ -322,7 +299,7 @@ public static partial class HoldingFolderDistributor
             // Standard-Fallbacks
             if (haltungId == null)
             {
-                var (shA, shB) = TryExtractDichtheitShafts(text);
+                var (shA, shB) = DichtheitShaftParser.TryExtractShafts(text);
                 if (!string.IsNullOrWhiteSpace(shA) && !string.IsNullOrWhiteSpace(shB))
                     haltungId = ResolveDichtheitHaltungOrder(shA, shB, project, destGemeindeFolder)
                                 ?? $"{shA}-{shB}";
@@ -382,36 +359,6 @@ public static partial class HoldingFolderDistributor
 
     // Haltungspaar in einer Zeile: Schacht A <Trenner> Schacht B.
     // Schacht = optionaler gepunkteter Praefix (07.) + 4-6 Ziffern.
-    // Trenner = beliebige Mischung aus Pfeil-/Strich-/OCR-Resten ( - ^ + > < → . , Leerzeichen),
-    //   muss aber MINDESTENS ein echtes Verbindungszeichen (- ^ + > →) enthalten,
-    //   damit "70.51 m" o.ae. nicht faelschlich als Paar gilt.
-    private static readonly Regex DichtheitPairLineRx = new(
-        @"(?<a>(?:\d{1,2}\.)?\d{4,6})\s*(?<sep>[\^\+\-><→]+[\^\+\-><→.,\s]*)\s*(?<b>(?:\d{1,2}\.)?\d{4,6})",
-        RegexOptions.Compiled);
-
-    /// <summary>
-    /// Findet in einer Zeile ein Schacht-Paar "A &lt;Trenner&gt; B" und gibt beide Schaechte zurueck.
-    /// Toleriert OCR-kaputte Trenner ("-^", "-+", "->", "→") und 4- bis 6-stellige Nummern.
-    /// Liefert null, wenn kein plausibles Paar (gleiche Nummer, reine Dezimalzahl ohne Verbinder).
-    /// </summary>
-    private static (string A, string B)? TryMatchDichtheitPairLine(string line)
-    {
-        if (string.IsNullOrWhiteSpace(line))
-            return null;
-
-        var m = DichtheitPairLineRx.Match(line);
-        if (!m.Success)
-            return null;
-
-        var a = m.Groups["a"].Value.Trim();
-        var b = m.Groups["b"].Value.Trim();
-        if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)
-            || string.Equals(a, b, StringComparison.OrdinalIgnoreCase))
-            return null;
-
-        return (a, b);
-    }
-
     /// <summary>Name des Sammelordners fuer Haltungen, die im amtlichen Kataster nicht existieren.</summary>
     private const string UnzugeordnetFolderName = "keine_Zuordnung";
 
@@ -522,33 +469,6 @@ public static partial class HoldingFolderDistributor
             || low.Contains("strasse") || low.Contains("+41") || low.Contains("(0)41")
             || low.Contains("prufdruck") || low.Contains("prüfdruck")
             || low.Contains("prufzeit") || low.Contains("prüfzeit") || low.Contains("beruhigung");
-    }
-
-    private static (string? A, string? B) TryExtractDichtheitShafts(string text)
-    {
-        // "oberer Schacht: XXXXX" / "unterer Schacht: XXXXX"
-        var upperM = DichtheitUpperRx.Match(text);
-        var lowerM = DichtheitLowerRx.Match(text);
-        if (upperM.Success && lowerM.Success)
-        {
-            var up = upperM.Groups["v"].Value;
-            var low = lowerM.Groups["v"].Value;
-            if (!string.Equals(up, low, StringComparison.OrdinalIgnoreCase))
-                return (up, low);
-        }
-
-        // Fallback: "Schacht oben" / "Schacht unten"
-        var upperS = SchachtObenRx.Match(text);
-        var lowerS = SchachtUntenRx.Match(text);
-        if (upperS.Success && lowerS.Success)
-        {
-            var up = upperS.Groups["v"].Value;
-            var low = lowerS.Groups["v"].Value;
-            if (!string.Equals(up, low, StringComparison.OrdinalIgnoreCase))
-                return (up, low);
-        }
-
-        return (null, null);
     }
 
     /// <summary>

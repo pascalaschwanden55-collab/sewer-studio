@@ -1,7 +1,4 @@
-using System;
-using System.Reflection;
-using AuswertungPro.Next.Infrastructure;
-using Xunit;
+using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -14,21 +11,13 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class DichtheitPairLineParsingTests
 {
     private static (string A, string B)? Match(string line)
-    {
-        var m = typeof(HoldingFolderDistributor).GetMethod(
-            "TryMatchDichtheitPairLine",
-            BindingFlags.NonPublic | BindingFlags.Static)!;
-        var result = m.Invoke(null, new object?[] { line });
-        if (result is null) return null;
-        var t = result.GetType();
-        return ((string)t.GetField("Item1")!.GetValue(result)!,
-                (string)t.GetField("Item2")!.GetValue(result)!);
-    }
+        => DichtheitShaftParser.TryMatchPairLine(line);
 
     [Theory]
     // Saubere Trenner, verschiedene Stelligkeiten
     [InlineData("6927 -+ 6926", "6927", "6926")]              // 4-stellig, OCR "-+"
     [InlineData("6928 -> 6927", "6928", "6927")]              // 4-stellig, "->"
+    [InlineData("6928 \u2192 6927", "6928", "6927")]          // echter Pfeil
     [InlineData("993170-^614445", "993170", "614445")]       // 6-stellig, "-^", kein Leerraum
     [InlineData("865 -> 864", "865", "864")]                  // 3-stellig zu kurz -> KEIN Treffer erwartet? s.u.
     [InlineData("Prufgegenstand / Haltung 6928 -> 6927", "6928", "6927")]
@@ -66,5 +55,29 @@ public sealed class DichtheitPairLineParsingTests
     {
         // "993^-<j-^.993160": erste Nummer von OCR zerstoert -> ehrlich nicht rettbar aus Text.
         Assert.Null(Match("993^-<j-^.993160"));
+    }
+
+    [Fact]
+    public void ExtractShafts_reads_upper_and_lower_labels()
+    {
+        var result = DichtheitShaftParser.TryExtractShafts("""
+            Oberer Schacht: 81150
+            Unterer Schacht: 81149
+            """);
+
+        Assert.Equal("81150", result.A);
+        Assert.Equal("81149", result.B);
+    }
+
+    [Fact]
+    public void ExtractShafts_reads_schacht_oben_unten_fallback()
+    {
+        var result = DichtheitShaftParser.TryExtractShafts("""
+            Schacht oben 07.993164
+            Schacht unten 993162
+            """);
+
+        Assert.Equal("07.993164", result.A);
+        Assert.Equal("993162", result.B);
     }
 }
