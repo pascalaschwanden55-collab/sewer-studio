@@ -75,6 +75,11 @@ async def handle_unexpected(request: Request, exc: Exception):
     )
 
     if _looks_like_oom(exc):
+        # Audit Fix #5: bei OOM zuerst den am laengsten ungenutzten Slot entladen (LRU), damit
+        # der naechste Frame wieder VRAM hat — statt nur den Cache zu leeren. Reaktive
+        # Durchsetzung des VRAM-Budgets ohne die bewusste "alle Modelle resident"-Strategie
+        # im Normalbetrieb anzutasten.
+        gpu_manager.evict_lru()
         gpu_manager.empty_cache()
         return JSONResponse({"detail": "GPU out of memory"}, status_code=503)
 
