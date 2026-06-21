@@ -922,29 +922,6 @@ public partial class PlayerWindow
 
     }
 
-    /// <summary>
-    /// Nach Accept/Reject/Edit: Overlay kurz in Statusfarbe anzeigen, dann ausblenden.
-    /// So sieht der User die Bestaetigung, das Bild wird aber danach wieder frei.
-    /// </summary>
-    private void FadeOutAiOverlayAfterAction()
-    {
-        // Sofort neu rendern (zeigt gruen/rot je nach Decision)
-        RenderAiOverlays();
-        // Nach 800ms die KI-Overlays entfernen
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
-        timer.Tick += (_, _) =>
-        {
-            timer.Stop();
-            // Alle ai_overlay-Elemente entfernen
-            var toRemove = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
-                .Where(el => el.Tag is string s && s.StartsWith("ai_"))
-                .ToList();
-            foreach (var el in toRemove)
-                CodingOverlayCanvas.Children.Remove(el);
-        };
-        timer.Start();
-    }
-
     private async Task AnalyzeWithOverlayHintAsync(OverlayGeometry overlay)
     {
         await RunCodingAnalysisAsync("Analyse: markierte Stelle...");
