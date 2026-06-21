@@ -203,8 +203,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.True(structuralIndex > boundaryIndex, "BCA/BCC darf BCD/BCE nicht ueberholen.");
         Assert.True(noDetectionIndex > structuralIndex, "BCA/BCC muss vor dem YOLO/DINO-No-Detection-Abbruch behandelt werden.");
         Assert.Contains("code is not (\"BCA\" or \"BCC\")", structuralBody);
-        Assert.Contains("codingSessionService.AddEvent(entry)", structuralBody);
-        Assert.Contains("Decision = CodingUserDecision.Ignored", structuralBody);
+        Assert.Contains("CodingStructuralClassifierEventFactory.Create", structuralBody);
+        Assert.Contains("codingSessionService.AddEvent(draft.Entry)", structuralBody);
 
         var clearIndex = structuralBody.IndexOf("ClearDetectionOverlays()", StringComparison.Ordinal);
         var listIndex = structuralBody.IndexOf("CodingFindingsList.ItemsSource", StringComparison.Ordinal);

@@ -810,36 +810,24 @@ public partial class PlayerWindow
             return true;
         }
 
-        var entry = new ProtocolEntry
-        {
-            Source = ProtocolEntrySource.Ai,
-            Code = resolvedCode,
-            Beschreibung = LookupVsaLabel(resolvedCode) ?? label,
-            MeterStart = meter,
-            Zeit = videoTime
-        };
+        var draft = CodingStructuralClassifierEventFactory.Create(
+            resolvedCode,
+            LookupVsaLabel(resolvedCode) ?? label,
+            label,
+            mmResult.ClassifierConfidence,
+            meter,
+            videoTime,
+            meterFromOsd: _lastResolvedMeterIsOsd);
 
-        if (!_lastResolvedMeterIsOsd)
-        {
-            entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = resolvedCode };
-            entry.CodeMeta.Parameters["vsa.meter.quelle"] = "geschaetzt";
-        }
+        AttachAnalyzedFramePhoto(draft.Entry);
 
-        AttachAnalyzedFramePhoto(entry);
-
-        var ev = codingSessionService.AddEvent(entry);
+        var ev = codingSessionService.AddEvent(draft.Entry);
         ev.MeterAtCapture = meter;
         ev.VideoTimestamp = videoTime;
-        ev.AiContext = new CodingEventAiContext
-        {
-            SuggestedCode = resolvedCode,
-            Confidence = mmResult.ClassifierConfidence ?? 0.0,
-            Reason = $"{label} (Klassifikator, ohne DINO/SAM-Box)",
-            Decision = CodingUserDecision.Ignored
-        };
+        ev.AiContext = draft.AiContext;
 
         RefreshCodingEventsList();
-        SetCodingAiState($"{entry.Beschreibung} erkannt", Color.FromRgb(0x22, 0xC5, 0x5E),
+        SetCodingAiState($"{draft.Entry.Beschreibung} erkannt", Color.FromRgb(0x22, 0xC5, 0x5E),
             $"Klassifikator{confidence}");
         return true;
     }
