@@ -62,6 +62,16 @@ public sealed class DropdownOptionListTests
     }
 
     [Fact]
+    public void Shared_eigentuemer_defaults_are_single_source()
+    {
+        var options = new ObservableCollection<string> { "Privat" };
+
+        DropdownOptionList.EnsureExact(options, DropdownOptionsStore.FixedEigentuemerOptions);
+
+        Assert.Equal(new[] { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" }, options);
+    }
+
+    [Fact]
     public void ExtractText_handles_null_string_and_objects()
     {
         Assert.Equal("", DropdownOptionList.ExtractText(null));

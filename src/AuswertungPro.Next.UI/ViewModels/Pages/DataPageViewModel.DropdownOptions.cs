@@ -114,7 +114,7 @@ public sealed partial class DataPageViewModel
 
     private void ResetEigentuemerOptions()
     {
-        DropdownOptionList.ReplaceWith(EigentuemerOptions, FixedEigentuemerOptions);
+        DropdownOptionList.ReplaceWith(EigentuemerOptions, DropdownOptionsStore.FixedEigentuemerOptions);
         SaveDropdownOptions();
     }
 
@@ -255,7 +255,7 @@ public sealed partial class DataPageViewModel
 
     private void EnforceEigentuemerOptionsExact()
     {
-        DropdownOptionList.EnsureExact(EigentuemerOptions, FixedEigentuemerOptions);
+        DropdownOptionList.EnsureExact(EigentuemerOptions, DropdownOptionsStore.FixedEigentuemerOptions);
     }
 
     private static IReadOnlyList<string> ParseRecommendedTemplates(string? raw)

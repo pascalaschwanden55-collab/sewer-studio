@@ -16,7 +16,8 @@ public sealed class DropdownOptionsModel
 
 public static class DropdownOptionsStore
 {
-    private static readonly string[] FixedEigentuemerOptions = { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" };
+    public static IReadOnlyList<string> FixedEigentuemerOptions { get; } =
+        new[] { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" };
 
     private static string OptionsDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), AppIdentity.ProductName, "dropdowns");

@@ -10,7 +10,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class ProjectPageViewModel : ObservableObject
 {
-    private static readonly string[] FixedEigentuemerOptions = { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" };
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
 
@@ -199,7 +198,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject
 
     private void EnforceEigentuemerOptionsExact()
     {
-        DropdownOptionList.EnsureExact(EigentuemerOptions, FixedEigentuemerOptions);
+        DropdownOptionList.EnsureExact(EigentuemerOptions, DropdownOptionsStore.FixedEigentuemerOptions);
     }
 
 }

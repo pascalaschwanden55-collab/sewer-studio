@@ -35,7 +35,6 @@ public sealed partial class DataPageViewModel : ObservableObject
 {
     private const int MinimumSamplesForModelTraining = 25;
     private const int StrongModelThreshold = 100;
-    private static readonly string[] FixedEigentuemerOptions = { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" };
     public event Action? RecordsOrderChanged;
     /// <summary>
     /// Aktualisiert die laufende Nummer (NR) aller Records entsprechend der aktuellen Reihenfolge.
