@@ -1305,56 +1305,13 @@ public partial class PlayerWindow
     /// </summary>
     private IReadOnlyList<LiveFrameFinding> FilterValidFindings(IReadOnlyList<LiveFrameFinding> raw, double currentMeter)
     {
-        var filtered = new List<LiveFrameFinding>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var f in raw)
-        {
-            // Einzige Code-Aufloesung â€” ResolveFindingCodeForCoding gibt validen Code oder null
-            var code = ResolveFindingCodeForCoding(f, currentMeter);
-
-            // BCD/BCE: Live-Check bei JEDEM Finding (nicht gecacht!).
-            // Wichtig weil zwischen Analyse-Start und diesem Punkt der Eingabemarker
-            // bereits ein BCD erzeugt haben kann (async Timing).
-            if (code != null && CodingDedupPolicy.IsOneTimeCode(code))
-            {
-                bool alreadyExists =
-                    _codingSessionService?.ActiveSession?.Events.Any(e =>
-                        CodingDedupPolicy.CodesMatch(e.Entry.Code, code)) == true
-                    || _codingVm?.Events.Any(e =>
-                        CodingDedupPolicy.CodesMatch(e.Entry.Code, code)) == true;
-                if (alreadyExists)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[KI-Filter] {code} uebersprungen (bereits vorhanden, live-check)");
-                    continue;
-                }
-            }
-
-            System.Diagnostics.Debug.WriteLine(
-                $"[KI-Filter] Label='{f.Label}' VsaCodeHint='{f.VsaCodeHint}' â†’ Code='{code ?? "(null)"}'");
-
-            if (code == null)
-            {
-                // Kein VSA-Code ableitbar â€” Finding verwerfen
-                System.Diagnostics.Debug.WriteLine(
-                    $"[KI-Filter] Verworfen: Label='{f.Label}' (kein VSA-Code ableitbar)");
-                continue;
-            }
-
-            // VsaCodeHint konsequent auf den validierten Code setzen.
-            // Alte ungueltige Werte werden NICHT beibehalten.
-            var normalizedFinding = string.Equals(code, f.VsaCodeHint, StringComparison.OrdinalIgnoreCase)
-                ? f
-                : f with { VsaCodeHint = code };
-
-            var dedupeKey = CodingFindingDedupeKeyBuilder.Build(code, normalizedFinding);
-
-            if (!seen.Add(dedupeKey)) continue;
-
-            filtered.Add(normalizedFinding);
-        }
-
-        return filtered;
+        return CodingFindingFilterPolicy.FilterValid(
+            raw,
+            currentMeter,
+            ResolveFindingCodeForCoding,
+            _codingSessionService?.ActiveSession?.Events,
+            _codingVm?.Events,
+            message => System.Diagnostics.Debug.WriteLine(message));
     }
 
     /// <summary>
