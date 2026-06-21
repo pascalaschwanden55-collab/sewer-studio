@@ -460,7 +460,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 if (Directory.Exists(folder))
                     _rootFolders.Add(folder);
             }
-            RootFolder = string.Join("; ", _rootFolders.Select(f => Path.GetFileName(f)));
+            RootFolder = TrainingCenterDisplayFormatter.FormatRootFolders(_rootFolders);
         }
 
         StatusText = $"Geladen: {Cases.Count} Fälle";
@@ -519,12 +519,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     private void UpdateRootFolderDisplay()
     {
-        RootFolder = _rootFolders.Count switch
-        {
-            0 => "",
-            1 => _rootFolders[0],
-            _ => $"{_rootFolders.Count} Ordner: {string.Join("; ", _rootFolders.Select(Path.GetFileName))}"
-        };
+        RootFolder = TrainingCenterDisplayFormatter.FormatRootFolders(_rootFolders);
     }
 
     [RelayCommand]
@@ -619,13 +614,9 @@ public partial class TrainingCenterViewModel : ObservableObject
                     Cases.Add(c);
             }
 
-            var withProto    = Cases.Count(c => !string.IsNullOrEmpty(c.ProtocolPath));
-            var withoutProto = Cases.Count - withProto;
+            var withProto = Cases.Count(c => !string.IsNullOrEmpty(c.ProtocolPath));
             var pdfOnly = Cases.Count(c => string.IsNullOrEmpty(c.VideoPath) && !string.IsNullOrEmpty(c.ProtocolPath));
-            var parts = new List<string> { $"Gefunden: {Cases.Count} Fälle" };
-            if (pdfOnly > 0) parts.Add($"{pdfOnly} nur PDF");
-            if (withoutProto > 0) parts.Add($"{withoutProto} ohne Protokoll");
-            StatusText = string.Join(", ", parts);
+            StatusText = TrainingCenterDisplayFormatter.FormatScanSummary(Cases.Count, withProto, pdfOnly);
 
             // Auto-Save: Faelle + Ordner persistieren
             await AutoSaveStateAsync();
