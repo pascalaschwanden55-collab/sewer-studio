@@ -16,7 +16,7 @@ public sealed class CodingTrainingSamplePersister
     public CodingTrainingSamplePersister(Func<ICodingSessionService?> sessionProvider)
         : this(
             TrainingSamplesStore.MergeAndSaveAsync,
-            sample => sessionProvider()?.IndexConfirmedSampleAsync(sample) ?? Task.CompletedTask)
+            CreateIndexConfirmedSampleAsync(sessionProvider))
     {
     }
 
@@ -47,5 +47,12 @@ public sealed class CodingTrainingSamplePersister
             if (sample.Status == TrainingSampleStatus.Approved)
                 await _indexConfirmedSampleAsync(sample);
         }
+    }
+
+    private static Func<TrainingSample, Task> CreateIndexConfirmedSampleAsync(
+        Func<ICodingSessionService?> sessionProvider)
+    {
+        ArgumentNullException.ThrowIfNull(sessionProvider);
+        return sample => sessionProvider()?.IndexConfirmedSampleAsync(sample) ?? Task.CompletedTask;
     }
 }
