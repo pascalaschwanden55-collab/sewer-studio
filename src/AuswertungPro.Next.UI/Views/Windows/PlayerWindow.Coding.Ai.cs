@@ -1368,7 +1368,7 @@ public partial class PlayerWindow
             // den DN-Kreis nach aussen reicht, stimmt die Distanz.
             // Ausnahme: Steuercodes BCD/BCE (Rohranfang/-ende) sind Pflicht und duerfen
             // nicht weggemerkt werden.
-            if (!CodingDedupPolicy.IsOneTimeCode(code) && IsFindingTooFarAhead(finding))
+            if (CodingLiveFindingAcceptancePolicy.ShouldSkipAsTooFarAhead(code, IsFindingTooFarAhead(finding)))
             {
                 System.Diagnostics.Debug.WriteLine(
                     $"[Qwen] {code} bei {meter:F2}m nur voraus erkannt (im DN-Kreis) - nicht protokolliert");
@@ -1427,7 +1427,7 @@ public partial class PlayerWindow
             // Zur Bestaetigung vorlegen, wenn die KI unsicher ist (gelb/rot) ODER
             // der Befund kritisch ist (Severity >= 4) - kritische Schaeden duerfen
             // niemals stillschweigend uebernommen werden.
-            if ((!gateResult.IsGreen || finding.Severity >= 4) && firstUnsure == null)
+            if (CodingLiveFindingAcceptancePolicy.NeedsConfirmation(gateResult, finding) && firstUnsure == null)
             {
                 firstUnsure = codingEvent;
                 firstUnsureGate = gateResult;
