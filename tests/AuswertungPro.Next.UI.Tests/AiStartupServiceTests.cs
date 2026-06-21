@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -378,8 +379,8 @@ public sealed class AiStartupServiceTests
                 AiOllamaUrl = "http://localhost:11434",
                 PipelineSidecarUrl = "http://localhost:8100"
             };
-            var steps = new List<string>();
-            var progress = new Progress<string>(s => steps.Add(s));
+            var steps = new ConcurrentQueue<string>();
+            var progress = new Progress<string>(steps.Enqueue);
 
             await AiStartupService.StartAsync(
                 settings,
@@ -389,9 +390,10 @@ public sealed class AiStartupServiceTests
                 ct: CancellationToken.None);
 
             // Es muss live ueber die langen Phasen berichtet werden, nicht nur ein Endzustand.
-            Assert.NotEmpty(steps);
-            Assert.Contains(steps, s => s.Contains("Sidecar", StringComparison.OrdinalIgnoreCase));
-            Assert.Contains(steps, s => s.Contains("Modell", StringComparison.OrdinalIgnoreCase));
+            var reportedSteps = steps.ToArray();
+            Assert.NotEmpty(reportedSteps);
+            Assert.Contains(reportedSteps, s => s.Contains("Sidecar", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(reportedSteps, s => s.Contains("Modell", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
