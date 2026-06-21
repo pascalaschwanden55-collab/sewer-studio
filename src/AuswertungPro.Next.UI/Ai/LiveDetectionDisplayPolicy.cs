@@ -66,6 +66,27 @@ public static class LiveDetectionDisplayPolicy
             + (finding.VsaCodeHint != null ? $"\nVorschlag: {finding.VsaCodeHint}" : "")
             + $"\nSchwere: {finding.Severity}/5";
 
+    public static string BuildDetectionConfirmationTitle(IReadOnlyList<LiveFrameFinding> findings)
+    {
+        if (findings.Count == 0)
+            return string.Empty;
+
+        var primary = findings[0];
+        var severityText = FormatDetectionSeverity(primary.Severity);
+        return findings.Count == 1
+            ? $"KI-Erkennung: {primary.Label} ({severityText})"
+            : $"KI-Erkennung: {findings.Count} Befunde - {primary.Label} ({severityText})";
+    }
+
+    public static string BuildDetectionConfirmationDetails(IReadOnlyList<LiveFrameFinding> findings)
+        => string.Join("  |  ", findings.Select(f =>
+        {
+            var text = $"{f.PositionClock ?? "?"} Uhr - {f.Label}";
+            if (f.ExtentPercent.HasValue)
+                text += $" - {f.ExtentPercent}%";
+            return text;
+        }));
+
     public static Color DetectionSeverityColor(int severity)
         => Math.Clamp(severity, 1, 5) switch
         {
@@ -74,5 +95,15 @@ public static class LiveDetectionDisplayPolicy
             3 => Color.FromRgb(245, 158, 11),
             2 => Color.FromRgb(132, 204, 22),
             _ => Color.FromRgb(34, 197, 94)
+        };
+
+    private static string FormatDetectionSeverity(int severity)
+        => severity switch
+        {
+            5 => "S5 kritisch",
+            4 => "S4 schwer",
+            3 => "S3 mittel",
+            2 => "S2 leicht",
+            _ => $"S{severity}"
         };
 }

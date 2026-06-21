@@ -48,6 +48,47 @@ public sealed class LiveDetectionDisplayPolicyTests
     }
 
     [Fact]
+    public void BuildDetectionConfirmationTitle_formats_single_finding()
+    {
+        var findings = new[]
+        {
+            new LiveFrameFinding("Riss", 4, "3", 20)
+        };
+
+        var title = LiveDetectionDisplayPolicy.BuildDetectionConfirmationTitle(findings);
+
+        Assert.Equal("KI-Erkennung: Riss (S4 schwer)", title);
+    }
+
+    [Fact]
+    public void BuildDetectionConfirmationTitle_formats_multiple_findings()
+    {
+        var findings = new[]
+        {
+            new LiveFrameFinding("Riss", 3, "3", 20),
+            new LiveFrameFinding("Wurzel", 2, "9", 10)
+        };
+
+        var title = LiveDetectionDisplayPolicy.BuildDetectionConfirmationTitle(findings);
+
+        Assert.Equal("KI-Erkennung: 2 Befunde - Riss (S3 mittel)", title);
+    }
+
+    [Fact]
+    public void BuildDetectionConfirmationDetails_formats_clock_label_and_extent()
+    {
+        var findings = new[]
+        {
+            new LiveFrameFinding("Riss", 3, "3", 20),
+            new LiveFrameFinding("Wurzel", 2, null, null)
+        };
+
+        var details = LiveDetectionDisplayPolicy.BuildDetectionConfirmationDetails(findings);
+
+        Assert.Equal("3 Uhr - Riss - 20%  |  ? Uhr - Wurzel", details);
+    }
+
+    [Fact]
     public void QuickScanSeverityColor_uses_gray_for_clean_segments_and_severity_colors_for_damage()
     {
         Assert.Equal(Color.FromArgb(100, 0x94, 0xA3, 0xB8), LiveDetectionDisplayPolicy.QuickScanSeverityColor(5, hasDamage: false));

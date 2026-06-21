@@ -1358,29 +1358,8 @@ public partial class PlayerWindow
             _player.Time = targetMs;
         }
 
-        // Zusammenfassung der Befunde
-        var primary = findings[0];
-        var severityText = primary.Severity switch
-        {
-            5 => "S5 kritisch",
-            4 => "S4 schwer",
-            3 => "S3 mittel",
-            2 => "S2 leicht",
-            _ => $"S{primary.Severity}"
-        };
-
-        TxtDetectionFinding.Text = findings.Count == 1
-            ? $"KI-Erkennung: {primary.Label} ({severityText})"
-            : $"KI-Erkennung: {findings.Count} Befunde â€” {primary.Label} ({severityText})";
-
-        var details = new System.Text.StringBuilder();
-        foreach (var f in findings)
-        {
-            if (details.Length > 0) details.Append("  |  ");
-            details.Append($"{f.PositionClock ?? "?"} Uhr Â· {f.Label}");
-            if (f.ExtentPercent.HasValue) details.Append($" Â· {f.ExtentPercent}%");
-        }
-        TxtDetectionDetail.Text = details.ToString();
+        TxtDetectionFinding.Text = LiveDetectionDisplayPolicy.BuildDetectionConfirmationTitle(findings);
+        TxtDetectionDetail.Text = LiveDetectionDisplayPolicy.BuildDetectionConfirmationDetails(findings);
 
         DetectionConfirmationPanel.Visibility = Visibility.Visible;
     }
