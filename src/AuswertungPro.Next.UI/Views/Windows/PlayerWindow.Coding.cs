@@ -652,10 +652,15 @@ public partial class PlayerWindow
 
     private void SyncVideoToCodingMeter()
     {
-        if (_codingVm == null || _player.Length <= 0 || _codingVm.EndMeter <= 0) return;
-        double fraction = _codingVm.CurrentMeter / _codingVm.EndMeter;
-        long targetMs = (long)(fraction * _player.Length);
-        _player.Time = Math.Clamp(targetMs, 0, _player.Length);
+        if (_codingVm == null) return;
+        if (!CodingVideoSyncPolicy.TryResolveTargetTimeMs(
+                _codingVm.CurrentMeter,
+                _codingVm.EndMeter,
+                _player.Length,
+                out var targetMs))
+            return;
+
+        _player.Time = targetMs;
         _codingVm.CurrentVideoTime = TimeSpan.FromMilliseconds(_player.Time);
     }
 
