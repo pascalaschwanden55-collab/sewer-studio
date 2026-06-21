@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -126,7 +125,7 @@ public partial class PlayerWindow
                 SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
                     "Schritt 1 von 4: Snapshot", pulse: true);
 
-                var pngBytes = await CaptureSnapshotAsync();
+                var pngBytes = await CaptureSnapshotAsync(_codingAnalysisCts.Token);
                 if (pngBytes == null || pngBytes.Length == 0)
                 {
                     SetCodingAiState("Frame nicht extrahierbar", Color.FromRgb(0xEF, 0x44, 0x44),
@@ -250,7 +249,7 @@ public partial class PlayerWindow
                 "Schritt 1 von 3: Snapshot", pulse: true);
 
             {
-                var pngBytes = await CaptureSnapshotAsync();
+                var pngBytes = await CaptureSnapshotAsync(_codingAnalysisCts.Token);
                 if (pngBytes == null || pngBytes.Length == 0)
                 {
                     SetCodingAiState("Frame nicht extrahierbar", Color.FromRgb(0xEF, 0x44, 0x44),
@@ -1135,28 +1134,7 @@ public partial class PlayerWindow
         }
     }
 
-    /// <summary>VLC-Snapshot als PNG-Bytes extrahieren.</summary>
-    private async Task<byte[]?> CaptureSnapshotAsync()
-    {
-        var tmpDir = Path.GetTempPath();
-        var snapFile = Path.Combine(tmpDir, $"sewerstudio_snap_{Guid.NewGuid():N}.png");
-        try
-        {
-            TakeSnapshotSafe(snapFile);
-            for (int i = 0; i < 20; i++)
-            {
-                await Task.Delay(50);
-                if (File.Exists(snapFile) && new FileInfo(snapFile).Length > 100)
-                    break;
-            }
-            if (File.Exists(snapFile))
-                return await File.ReadAllBytesAsync(snapFile);
-            return null;
-        }
-        finally
-        {
-            AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (File.Exists(snapFile)) File.Delete(snapFile); }, "Snapshot: Temp loeschen");
-        }
-    }
+    private Task<byte[]?> CaptureSnapshotAsync(CancellationToken ct)
+        => new CodingSnapshotCaptureService(path => TakeSnapshotSafe(path)).CapturePngAsync(ct);
 
 }
