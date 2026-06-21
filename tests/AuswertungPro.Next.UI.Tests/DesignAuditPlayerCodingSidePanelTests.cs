@@ -269,6 +269,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_reads_osd_meter_from_analyzed_frame_before_multimodel_detection()
     {
         var coding = ReadCodingPartials();
+        var osdService = ReadUiFile("Ai", "CodingOsdMeterService.cs");
         var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
         var readerBody = ExtractMethodBody(coding, "private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync");
         var helperBody = ExtractMethodBody(coding, "private async Task<double?> TryReadOsdMeterFromFrameBytesAsync");
@@ -284,8 +285,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("frameOsdMeter", runBody[addIndex..]);
         Assert.Contains("result = result with { MeterReading = frameOsdMeter }", runBody);
         Assert.Contains("TryReadOsdMeterFromFrameBytesAsync", readerBody);
-        Assert.Contains("CodingOsdMeterReader.BuildOsdSearchImage", helperBody);
-        Assert.Contains("CodingOsdMeterReader.AcceptMeterCandidate", helperBody);
+        Assert.Contains("CodingOsdMeterService", helperBody);
+        Assert.Contains("CodingOsdMeterReader.BuildOsdSearchImage", osdService);
+        Assert.Contains("CodingOsdMeterReader.AcceptMeterCandidate", osdService);
     }
 
     [Fact]

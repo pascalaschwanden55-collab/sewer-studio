@@ -3,20 +3,29 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
+    private CodingOsdMeterService? _codingOsdMeterService;
+
     // True, wenn der zuletzt von ResolveCodingMeterForFrame gelieferte Meter aus dem OSD stammt
     // (Same-Frame oder frischer Cache), false bei linearer Schaetzung / CurrentMeter-Fallback.
     private bool _lastResolvedMeterIsOsd;
 
     private double? _codingLastOsdMeter;
     private double? _codingLastOsdTimestampSec;
+
+    private CodingOsdMeterService GetCodingOsdMeterService()
+        => _codingOsdMeterService ??= CodingOsdMeterService.CreateDefault();
+
+    private void DisposeCodingOsdMeterService()
+    {
+        _codingOsdMeterService?.Dispose();
+        _codingOsdMeterService = null;
+    }
 
     private double ResolveCodingMeterForFrame(double? frameTimestampSeconds, double? sameFrameOsdMeter = null)
     {
@@ -67,47 +76,32 @@ public partial class PlayerWindow
 
         try
         {
-            var croppedBytes = CodingOsdMeterReader.BuildOsdSearchImage(pngBytes);
-            var config = new AppSettingsAiSettingsProvider()
-                .Load()
-                .ToRuntimeSettings();
-            using var client = new OllamaClient(
-                config.OllamaBaseUri,
-                ownedTimeout: config.OllamaRequestTimeout,
-                keepAlive: config.OllamaKeepAlive,
-                numCtx: config.OllamaNumCtx);
+            var result = await GetCodingOsdMeterService().ReadMeterAsync(
+                pngBytes,
+                frameTimestampSec,
+                _codingLastOsdMeter,
+                _codingLastOsdTimestampSec,
+                ct).ConfigureAwait(true);
 
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(TimeSpan.FromSeconds(8));
-
-            var b64 = Convert.ToBase64String(croppedBytes);
-            var messages = new[]
+            if (!result.Meter.HasValue)
             {
-                new OllamaClient.ChatMessage("user", CodingOsdMeterReader.Prompt, new[] { b64 })
-            };
-            var raw = await client.ChatAsync(config.VisionModel, messages, cts.Token);
-            var candidate = CodingOsdMeterReader.ParseMeterReply(raw);
-
-            var recentForJumpGuard = _codingLastOsdMeter;
-            if (recentForJumpGuard.HasValue
-                && CodingMeterResolver.ShouldResetRecentMeterForSeek(frameTimestampSec, _codingLastOsdTimestampSec))
-            {
-                recentForJumpGuard = null;
-            }
-
-            var meter = CodingOsdMeterReader.AcceptMeterCandidate(candidate, recentForJumpGuard);
-            if (!meter.HasValue)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    $"[OSD] Meter verworfen. Raw='{raw}', Candidate={candidate?.ToString("F2", CultureInfo.InvariantCulture) ?? "null"}, Last={recentForJumpGuard?.ToString("F2", CultureInfo.InvariantCulture) ?? "null"}");
+                if (!string.IsNullOrWhiteSpace(result.Error))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[OSD] Frame-Meter nicht lesbar: {result.Error}");
+                }
+                else if (!string.IsNullOrWhiteSpace(result.RawReply) || result.Candidate.HasValue)
+                {
+                    System.Diagnostics.Debug.WriteLine(
+                        $"[OSD] Meter verworfen. Raw='{result.RawReply}', Candidate={result.Candidate?.ToString("F2", CultureInfo.InvariantCulture) ?? "null"}, Last={result.RecentMeter?.ToString("F2", CultureInfo.InvariantCulture) ?? "null"}");
+                }
                 return null;
             }
 
-            _codingLastOsdMeter = meter.Value;
+            _codingLastOsdMeter = result.Meter.Value;
             _codingLastOsdTimestampSec = frameTimestampSec;
             OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"{meter.Value:F2}m (OSD)";
-            return meter.Value;
+            TxtOsdMeter.Text = $"{result.Meter.Value:F2}m (OSD)";
+            return result.Meter.Value;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {

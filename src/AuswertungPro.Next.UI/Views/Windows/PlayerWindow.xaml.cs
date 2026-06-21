@@ -290,6 +290,7 @@ public partial class PlayerWindow : Window
             // Cleanup() ist idempotent, weil OnClosing den VLC-Player bereits freigeben kann.
             _isCodingMode = false;
             StopCodingOsdTimer();
+            DisposeCodingOsdMeterService();
             _codingAnalysisCts?.Cancel();
             _codingAnalysisCts?.Dispose();
             _codingAnalysisCts = null;

@@ -357,6 +357,7 @@ public partial class PlayerWindow
 
         // Timer stoppen
         StopCodingOsdTimer();
+        DisposeCodingOsdMeterService();
         _codingLiveAiTimer?.Stop();
         _codingLiveAiTimer = null;
         StopCodingAiPulse();
