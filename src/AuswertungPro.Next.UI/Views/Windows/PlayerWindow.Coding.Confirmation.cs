@@ -1,0 +1,115 @@
+using System.Windows;
+using System.Windows.Media;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.QualityGate;
+using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Helpers;
+
+namespace AuswertungPro.Next.UI.Views.Windows;
+
+public partial class PlayerWindow
+{
+    private void PauseAndAskConfirmation(CodingEvent codingEvent, QualityGateResult gateResult)
+    {
+        _player.SetPause(true);
+        _codingSessionService?.SetWaitingForInput();
+
+        _codingPendingConfirmEvent = codingEvent;
+        _codingPendingGateResult = gateResult;
+
+        var ampelColor = CodingConfirmationDisplayPolicy.AmpelColor(gateResult);
+        ConfirmAmpel.Fill = new SolidColorBrush(ampelColor);
+
+        SetCodingAiState(TxtCodingAiStatus.Text, ampelColor,
+            CodingConfirmationDisplayPolicy.QualityGateStatusText(gateResult));
+
+        TxtConfirmCode.Text = codingEvent.Entry.Code ?? "???";
+        TxtConfirmConfidence.Text = $"({gateResult.CompositeConfidence:P0})";
+        TxtConfirmDescription.Text = codingEvent.Entry.Beschreibung ?? codingEvent.AiContext?.Reason ?? "";
+        TxtConfirmDetail.Text = CodingConfirmationDisplayPolicy.ConfirmationDetail(gateResult);
+
+        CodingConfirmationPanel.Visibility = Visibility.Visible;
+    }
+
+    private void ConfirmAccept_Click(object sender, RoutedEventArgs e)
+    {
+        if (CodingEventDecisionPolicy.ApplyAiConfirmationDecision(
+                _codingPendingConfirmEvent,
+                CodingUserDecision.Accepted,
+                _codingPendingGateResult))
+        {
+            PersistSingleEventAsTrainingSample(_codingPendingConfirmEvent!).SafeFireAndForget("TrainingSaveAccept");
+        }
+
+        CloseConfirmationAndResume();
+    }
+
+    private void ConfirmEdit_Click(object sender, RoutedEventArgs e)
+    {
+        CloseConfirmationPanel();
+
+        if (_codingPendingConfirmEvent != null)
+        {
+            CodingEventDecisionPolicy.ApplyAiConfirmationDecision(
+                _codingPendingConfirmEvent,
+                CodingUserDecision.AcceptedWithEdit,
+                _codingPendingGateResult);
+            LstCodingEvents.SelectedItem = _codingPendingConfirmEvent;
+        }
+
+        ResumeAfterConfirmation();
+    }
+
+    private void ConfirmReject_Click(object sender, RoutedEventArgs e)
+    {
+        if (_codingPendingConfirmEvent != null)
+        {
+            CodingEventDecisionPolicy.ApplyAiConfirmationDecision(
+                _codingPendingConfirmEvent,
+                CodingUserDecision.Rejected,
+                _codingPendingGateResult);
+
+            PersistSingleEventAsTrainingSample(_codingPendingConfirmEvent).SafeFireAndForget("TrainingSaveReject");
+
+            _codingSessionService?.RemoveEvent(_codingPendingConfirmEvent.EventId);
+            _codingVm?.Events.Remove(_codingPendingConfirmEvent);
+            RefreshCodingEventsList();
+        }
+
+        CloseConfirmationAndResume();
+    }
+
+    private void CloseConfirmationAndResume()
+    {
+        CloseConfirmationPanel();
+        ResumeAfterConfirmation();
+    }
+
+    private void CloseConfirmationPanel()
+    {
+        CodingConfirmationPanel.Visibility = Visibility.Collapsed;
+        _codingPendingConfirmEvent = null;
+        _codingPendingGateResult = null;
+    }
+
+    private void ResumeAfterConfirmation()
+    {
+        if (_codingSessionService?.ActiveSession?.State == CodingSessionState.WaitingForUserInput)
+            _codingSessionService.ResumeSession();
+
+        if (BtnCodingLiveAi.IsChecked == true)
+            _player.SetPause(false);
+
+        if (BtnCodingLiveAi.IsChecked == true)
+        {
+            SetCodingAiState("Automatische KI-Analyse aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+                $"Intervall alle 5 Sekunden | {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
+        }
+        else
+        {
+            SetCodingAiState("Künstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
+        }
+    }
+}
