@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Infrastructure.Ai.Configuration;
+using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -308,42 +309,14 @@ public static class AiStartupService
 
     private static IReadOnlyDictionary<string, string>? BuildSidecarHeaders(string? configuredToken)
     {
-        var token = NormalizeToken(configuredToken) ?? TryLoadSidecarToken();
+        var token = SidecarTokenResolver.Resolve(configuredToken);
         return token is null
             ? null
             : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["X-Sidecar-Token"] = token
+                [SidecarTokenResolver.HeaderName] = token
             };
     }
-
-    private static string? TryLoadSidecarToken()
-    {
-        var fromAuthEnv = NormalizeToken(Environment.GetEnvironmentVariable("SEWER_SIDECAR_AUTH_TOKEN"));
-        if (fromAuthEnv is not null)
-            return fromAuthEnv;
-
-        var fromEnv = NormalizeToken(Environment.GetEnvironmentVariable("SEWER_SIDECAR_TOKEN"));
-        if (fromEnv is not null)
-            return fromEnv;
-
-        try
-        {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            if (string.IsNullOrWhiteSpace(localAppData))
-                return null;
-
-            var path = Path.Combine(localAppData, AppIdentity.ProductName, ".sidecar_token");
-            return File.Exists(path) ? NormalizeToken(File.ReadAllText(path)) : null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static string? NormalizeToken(string? token)
-        => string.IsNullOrWhiteSpace(token) ? null : token.Trim();
 
     private static string BuildModelLabel(IEnumerable<string> modelNames, bool multiModelEnabled)
     {

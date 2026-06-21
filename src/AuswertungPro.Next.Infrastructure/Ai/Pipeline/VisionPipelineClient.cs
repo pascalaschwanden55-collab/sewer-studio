@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -35,7 +34,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
         // schon einen Request gesendet hat -> der Multi-Model-Hauptpfad bricht ab. (Audit R1)
         _sendSidecarToken = IsLoopbackUri(baseUri);
         _sidecarToken = _sendSidecarToken
-            ? NormalizeToken(sidecarToken) ?? TryLoadSidecarToken()
+            ? SidecarTokenResolver.Resolve(sidecarToken)
             : null;
     }
 
@@ -225,7 +224,7 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
     private void AddSidecarTokenHeader(HttpRequestMessage request)
     {
         if (_sendSidecarToken && !string.IsNullOrWhiteSpace(_sidecarToken))
-            request.Headers.TryAddWithoutValidation("X-Sidecar-Token", _sidecarToken);
+            request.Headers.TryAddWithoutValidation(SidecarTokenResolver.HeaderName, _sidecarToken);
     }
 
     private static bool IsLoopbackUri(Uri uri)
@@ -239,35 +238,6 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
                string.Equals(host, "::1", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string? TryLoadSidecarToken()
-    {
-        var authEnv = NormalizeToken(Environment.GetEnvironmentVariable("SEWER_SIDECAR_AUTH_TOKEN"));
-        if (authEnv is not null)
-            return authEnv;
-
-        var env = NormalizeToken(Environment.GetEnvironmentVariable("SEWER_SIDECAR_TOKEN"));
-        if (env is not null)
-            return env;
-
-        try
-        {
-            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            if (string.IsNullOrWhiteSpace(localAppData))
-                return null;
-
-            var path = Path.Combine(localAppData, "SewerStudio", ".sidecar_token");
-            return File.Exists(path)
-                ? NormalizeToken(File.ReadAllText(path))
-                : null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static string? NormalizeToken(string? token)
-        => string.IsNullOrWhiteSpace(token) ? null : token.Trim();
 }
 
 /// <summary>

@@ -73,6 +73,39 @@ public class VisionPipelineClientTests
     }
 
     [Fact]
+    public async Task ClassifyYoloAsync_UsesSewerStudioSidecarTokenEnvironmentAlias()
+    {
+        var previousCanonical = Environment.GetEnvironmentVariable("SEWERSTUDIO_SIDECAR_TOKEN");
+        var previousCompat = Environment.GetEnvironmentVariable("AUSWERTUNGPRO_SIDECAR_TOKEN");
+        var previousAuth = Environment.GetEnvironmentVariable("SEWER_SIDECAR_AUTH_TOKEN");
+        var previousLegacy = Environment.GetEnvironmentVariable("SEWER_SIDECAR_TOKEN");
+
+        Environment.SetEnvironmentVariable("SEWERSTUDIO_SIDECAR_TOKEN", "canonical-token");
+        Environment.SetEnvironmentVariable("AUSWERTUNGPRO_SIDECAR_TOKEN", null);
+        Environment.SetEnvironmentVariable("SEWER_SIDECAR_AUTH_TOKEN", null);
+        Environment.SetEnvironmentVariable("SEWER_SIDECAR_TOKEN", null);
+
+        try
+        {
+            var handler = new CaptureHandler("""{"predictions":[],"inference_time_ms":1}""");
+            var client = new VisionPipelineClient(
+                new Uri("http://localhost:8100"),
+                new HttpClient(handler));
+
+            await client.ClassifyYoloAsync(new YoloClassifyRequest("abc", 1));
+
+            Assert.Equal("canonical-token", handler.LastSidecarToken);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("SEWERSTUDIO_SIDECAR_TOKEN", previousCanonical);
+            Environment.SetEnvironmentVariable("AUSWERTUNGPRO_SIDECAR_TOKEN", previousCompat);
+            Environment.SetEnvironmentVariable("SEWER_SIDECAR_AUTH_TOKEN", previousAuth);
+            Environment.SetEnvironmentVariable("SEWER_SIDECAR_TOKEN", previousLegacy);
+        }
+    }
+
+    [Fact]
     public async Task ClassifyYoloAsync_DoesNotSendToken_ToExternalUrl()
     {
         var handler = new CaptureHandler("""{"predictions":[],"inference_time_ms":1}""");
