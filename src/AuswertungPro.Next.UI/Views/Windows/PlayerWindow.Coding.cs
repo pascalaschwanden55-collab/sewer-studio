@@ -757,25 +757,10 @@ public partial class PlayerWindow
 
         if (_codingOverlayService == null) return;
 
-        string? toolText = _codingOverlayService.ActiveTool switch
-        {
-            OverlayToolType.Line => "Linie",
-            OverlayToolType.Arc => "Bogen",
-            OverlayToolType.Rectangle => "Flaeche",
-            OverlayToolType.Point => "Punkt",
-            OverlayToolType.Stretch => "Strecke",
-            OverlayToolType.PipeBend => "Bogen",
-            OverlayToolType.LateralCircle => "Anschluss",
-            OverlayToolType.Level => _codingSchemaType switch
-            {
-                SchemaType.FillLevel when _codingOverlayService.ActiveLevelMode == LevelMode.Water => "Wasser %",
-                SchemaType.FillLevel => "Sediment %",
-                SchemaType.Intrusion => "Einragung %",
-                _ => "Level"
-            },
-            OverlayToolType.Ruler => "Lineal",
-            _ => null
-        };
+        var toolText = CodingToolBadgeTextPolicy.BuildText(
+            _codingOverlayService.ActiveTool,
+            _codingSchemaType,
+            _codingOverlayService.ActiveLevelMode);
 
         if (toolText == null) return;
 
