@@ -13,6 +13,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 using AuswertungPro.Next.UI.Views.Windows;
@@ -35,41 +36,6 @@ public partial class SchaechtePage : UserControl
 
         public string RecordField { get; }
         public string OptionField { get; }
-    }
-
-    private sealed class DropdownColumnSpec
-    {
-        public DropdownColumnSpec(
-            string optionField,
-            string itemsSourcePath,
-            bool allowFreeText,
-            bool managed,
-            string editCommand = "",
-            string previewCommand = "",
-            string resetCommand = "",
-            string removeCommand = "",
-            string addCommand = "")
-        {
-            OptionField = optionField;
-            ItemsSourcePath = itemsSourcePath;
-            AllowFreeText = allowFreeText;
-            Managed = managed;
-            EditCommand = editCommand;
-            PreviewCommand = previewCommand;
-            ResetCommand = resetCommand;
-            RemoveCommand = removeCommand;
-            AddCommand = addCommand;
-        }
-
-        public string OptionField { get; }
-        public string ItemsSourcePath { get; }
-        public bool AllowFreeText { get; }
-        public bool Managed { get; }
-        public string EditCommand { get; }
-        public string PreviewCommand { get; }
-        public string ResetCommand { get; }
-        public string RemoveCommand { get; }
-        public string AddCommand { get; }
     }
 
     private sealed class HorizontalAlignmentToTextAlignmentValueConverter : IValueConverter
@@ -1126,84 +1092,11 @@ public partial class SchaechtePage : UserControl
         return combo.Text ?? string.Empty;
     }
 
-    private static bool TryResolveDropdownColumnSpec(string columnName, out DropdownColumnSpec spec)
+    private static bool TryResolveDropdownColumnSpec(string columnName, out GridDropdownFieldSpec spec)
     {
         var optionField = ResolveOptionField(columnName);
-        if (optionField is null)
-        {
-            spec = null!;
-            return false;
-        }
-
-        if (optionField == "Sanieren_JaNein")
-        {
-            spec = new DropdownColumnSpec(
-                optionField,
-                "SanierenOptions",
-                allowFreeText: true,
-                managed: true,
-                "EditSanierenOptionsCommand",
-                "PreviewSanierenOptionsCommand",
-                "ResetSanierenOptionsCommand",
-                "RemoveSanierenOptionCommand",
-                "AddSanierenOptionCommand");
+        if (optionField is not null && GridDropdownFieldPolicy.TryResolve(optionField, out spec))
             return true;
-        }
-
-        if (optionField == "Eigentuemer")
-        {
-            spec = new DropdownColumnSpec(
-                optionField,
-                "EigentuemerOptions",
-                allowFreeText: false,
-                managed: true,
-                "EditEigentuemerOptionsCommand",
-                "PreviewEigentuemerOptionsCommand",
-                "ResetEigentuemerOptionsCommand",
-                "RemoveEigentuemerOptionCommand",
-                "AddEigentuemerOptionCommand");
-            return true;
-        }
-
-        if (optionField == "Pruefungsresultat")
-        {
-            spec = new DropdownColumnSpec(
-                optionField,
-                "PruefungsresultatOptions",
-                allowFreeText: true,
-                managed: true,
-                "EditPruefungsresultatOptionsCommand",
-                "PreviewPruefungsresultatOptionsCommand",
-                "ResetPruefungsresultatOptionsCommand",
-                "RemovePruefungsresultatOptionCommand",
-                "AddPruefungsresultatOptionCommand");
-            return true;
-        }
-
-        if (optionField == "Referenzpruefung")
-        {
-            spec = new DropdownColumnSpec(
-                optionField,
-                "ReferenzpruefungOptions",
-                allowFreeText: true,
-                managed: true,
-                "EditReferenzpruefungOptionsCommand",
-                "PreviewReferenzpruefungOptionsCommand",
-                "ResetReferenzpruefungOptionsCommand",
-                "RemoveReferenzpruefungOptionCommand",
-                "AddReferenzpruefungOptionCommand");
-            return true;
-        }
-
-        if (optionField == "Ausgefuehrt_durch")
-        {
-            spec = new DropdownColumnSpec(
-                optionField,
-                "AusgefuehrtDurchOptions",
-                allowFreeText: true,
-                managed: false);
-            return true;
-        }
 
         spec = null!;
         return false;

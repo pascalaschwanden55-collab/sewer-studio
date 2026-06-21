@@ -139,58 +139,20 @@ public partial class DataPage : System.Windows.Controls.UserControl
             var def = FieldCatalog.Get(field);
             DataGridColumn col;
 
-            if (field == "Sanieren_JaNein")
+            if (GridDropdownFieldPolicy.TryResolve(field, out var comboSpec))
             {
-                col = CreateComboColumn(
-                    field,
-                    def.Label,
-                    "SanierenOptions",
-                    "EditSanierenOptionsCommand",
-                    "PreviewSanierenOptionsCommand",
-                    "ResetSanierenOptionsCommand",
-                    "RemoveSanierenOptionCommand",
-                    "AddSanierenOptionCommand");
-            }
-            else if (field == "Eigentuemer")
-            {
-                col = CreateComboColumn(
-                    field,
-                    def.Label,
-                    "EigentuemerOptions",
-                    "EditEigentuemerOptionsCommand",
-                    "PreviewEigentuemerOptionsCommand",
-                    "ResetEigentuemerOptionsCommand",
-                    "RemoveEigentuemerOptionCommand",
-                    "AddEigentuemerOptionCommand",
-                    allowFreeText: false);
-            }
-            else if (field == "Pruefungsresultat")
-            {
-                col = CreateComboColumn(
-                    field,
-                    def.Label,
-                    "PruefungsresultatOptions",
-                    "EditPruefungsresultatOptionsCommand",
-                    "PreviewPruefungsresultatOptionsCommand",
-                    "ResetPruefungsresultatOptionsCommand",
-                    "RemovePruefungsresultatOptionCommand",
-                    "AddPruefungsresultatOptionCommand");
-            }
-            else if (field == "Referenzpruefung")
-            {
-                col = CreateComboColumn(
-                    field,
-                    def.Label,
-                    "ReferenzpruefungOptions",
-                    "EditReferenzpruefungOptionsCommand",
-                    "PreviewReferenzpruefungOptionsCommand",
-                    "ResetReferenzpruefungOptionsCommand",
-                    "RemoveReferenzpruefungOptionCommand",
-                    "AddReferenzpruefungOptionCommand");
-            }
-            else if (field == "Ausgefuehrt_durch")
-            {
-                col = CreateSimpleComboColumn(field, def.Label, "AusgefuehrtDurchOptions");
+                col = comboSpec.Managed
+                    ? CreateComboColumn(
+                        field,
+                        def.Label,
+                        comboSpec.ItemsSourcePath,
+                        comboSpec.EditCommand,
+                        comboSpec.PreviewCommand,
+                        comboSpec.ResetCommand,
+                        comboSpec.RemoveCommand,
+                        comboSpec.AddCommand,
+                        comboSpec.AllowFreeText)
+                    : CreateSimpleComboColumn(field, def.Label, comboSpec.ItemsSourcePath);
             }
             else if (field == "Empfohlene_Sanierungsmassnahmen")
             {
@@ -924,18 +886,21 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return null;
 
-        return fieldName switch
+        if (!GridDropdownFieldPolicy.TryResolve(fieldName, out var spec) || !spec.Managed)
+            return null;
+
+        return spec.OptionField switch
         {
-            "Sanieren_JaNein" => (vm.SanierenOptions, true,
+            "Sanieren_JaNein" => (vm.SanierenOptions, spec.AllowFreeText,
                 vm.EditSanierenOptionsCommand, vm.PreviewSanierenOptionsCommand,
                 vm.ResetSanierenOptionsCommand, null, null),
-            "Eigentuemer" => (vm.EigentuemerOptions, false,
+            "Eigentuemer" => (vm.EigentuemerOptions, spec.AllowFreeText,
                 vm.EditEigentuemerOptionsCommand, vm.PreviewEigentuemerOptionsCommand,
                 vm.ResetEigentuemerOptionsCommand, null, null),
-            "Pruefungsresultat" => (vm.PruefungsresultatOptions, true,
+            "Pruefungsresultat" => (vm.PruefungsresultatOptions, spec.AllowFreeText,
                 vm.EditPruefungsresultatOptionsCommand, vm.PreviewPruefungsresultatOptionsCommand,
                 vm.ResetPruefungsresultatOptionsCommand, null, null),
-            "Referenzpruefung" => (vm.ReferenzpruefungOptions, true,
+            "Referenzpruefung" => (vm.ReferenzpruefungOptions, spec.AllowFreeText,
                 vm.EditReferenzpruefungOptionsCommand, vm.PreviewReferenzpruefungOptionsCommand,
                 vm.ResetReferenzpruefungOptionsCommand, null, null),
             _ => null
