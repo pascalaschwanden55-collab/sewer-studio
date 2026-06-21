@@ -203,22 +203,10 @@ public partial class PlayerWindow
     }
 
     private AppProtocol.IVsaCodeSelectionCatalog? CodeSelectionCatalog
-        => _serviceProvider?.CodeSelectionCatalog ?? TryGetAppServiceProvider()?.CodeSelectionCatalog;
+        => _serviceProvider?.CodeSelectionCatalog;
 
     private AppProtocol.ICodeCatalogProvider? CodeCatalog
-        => _serviceProvider?.CodeCatalog ?? TryGetAppServiceProvider()?.CodeCatalog;
-
-    private static ServiceProvider? TryGetAppServiceProvider()
-    {
-        try
-        {
-            return App.Services as ServiceProvider;
-        }
-        catch (InvalidOperationException)
-        {
-            return null;
-        }
-    }
+        => _serviceProvider?.CodeCatalog;
 
     private ViewModels.Windows.VsaCodeExplorerViewModel CreateVsaCodeExplorerViewModel(
         ProtocolEntry entry,
@@ -1531,8 +1519,7 @@ public partial class PlayerWindow
 
     private void OpenCodeCatalogForMark(string? clockPosition, double timestampSec, string? suggestedCode)
     {
-        // Resolve ServiceProvider: prefer injected, fallback to App.Services
-        var sp = _serviceProvider ?? (App.Services as ServiceProvider);
+        var sp = _serviceProvider;
 
         if (sp?.CodeCatalog is null)
         {

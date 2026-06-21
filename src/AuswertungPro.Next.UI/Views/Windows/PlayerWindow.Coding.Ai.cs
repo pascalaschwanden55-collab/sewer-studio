@@ -50,8 +50,8 @@ public partial class PlayerWindow
         {
             var platformConfig = new AppSettingsAiSettingsProvider().Load();
             var config = platformConfig.ToRuntimeSettings();
-            _codingPipelineConfig = App.Services is ServiceProvider sp
-                ? sp.PipelineCfg
+            _codingPipelineConfig = _serviceProvider is not null
+                ? _serviceProvider.PipelineCfg
                 : platformConfig.ToPipelineConfig();
             _codingAiModelName = config.VisionModel;
             if (!config.Enabled)

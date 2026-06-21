@@ -262,7 +262,7 @@ public partial class ProtocolObservationsWindow : Window
                     NetworkCachingMs: _sp.Settings.VideoNetworkCachingMs,
                     CodecThreads: _sp.Settings.VideoCodecThreads,
                     VideoOutput: _sp.Settings.VideoOutput);
-                var window = new PlayerWindow(_videoPath!, options, overlayText);
+                var window = new PlayerWindow(_videoPath!, options, overlayText, serviceProvider: _sp);
                 window.Owner = this;
                 window.Show();
             }

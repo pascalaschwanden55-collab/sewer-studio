@@ -387,7 +387,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
                 CodecThreads: _sp.Settings.VideoCodecThreads,
                 VideoOutput: _sp.Settings.VideoOutput);
 
-            var window = new PlayerWindow(path, options)
+            var window = new PlayerWindow(path, options, serviceProvider: _sp)
             {
                 Owner = System.Windows.Application.Current?.MainWindow
             };
