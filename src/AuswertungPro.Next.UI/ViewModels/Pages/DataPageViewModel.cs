@@ -632,7 +632,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            var logPath = TryWriteVideoStartErrorLog(ex, path);
+            var logPath = DataPageVideoStartErrorLogWriter.TryWrite(ex, path);
             var nativeHint = ex.Message.Contains("native side", StringComparison.OrdinalIgnoreCase)
                 ? "\n\nHinweis: Bitte pruefen, ob 'VideoLAN.LibVLC.Windows' fuer dieses Projekt/Plattform installiert ist."
                 : string.Empty;
@@ -854,36 +854,6 @@ public sealed partial class DataPageViewModel : ObservableObject
             initial,
             _sp.Settings.LastProjectPath,
             storedFilesRaw);
-    }
-
-    private static string? TryWriteVideoStartErrorLog(Exception ex, string path)
-    {
-        try
-        {
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var logsDir = Path.Combine(baseDir, "logs");
-            Directory.CreateDirectory(logsDir);
-
-            var safeName = Path.GetFileNameWithoutExtension(path);
-            foreach (var c in Path.GetInvalidFileNameChars())
-                safeName = safeName.Replace(c, '_');
-            if (string.IsNullOrWhiteSpace(safeName))
-                safeName = "video";
-
-            var file = $"video_start_error_{DateTime.Now:yyyyMMdd_HHmmss}_{safeName}.txt";
-            var logPath = Path.Combine(logsDir, file);
-
-            var content =
-                $"Time: {DateTime.Now:O}{Environment.NewLine}" +
-                $"VideoPath: {path}{Environment.NewLine}" +
-                $"Exception:{Environment.NewLine}{ex}{Environment.NewLine}";
-            File.WriteAllText(logPath, content);
-            return logPath;
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     private void RelinkVideo(HaltungRecord? record)
