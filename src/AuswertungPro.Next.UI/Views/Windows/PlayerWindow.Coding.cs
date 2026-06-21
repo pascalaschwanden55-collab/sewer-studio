@@ -4375,44 +4375,15 @@ public partial class PlayerWindow
     private void ApplyClockPositionToEntry(
         ProtocolEntry entry, string code, SegmentedFinding seg, double imageWidth, double imageHeight)
     {
-        if (seg.Mask.Bbox is not { Count: >= 4 } || imageWidth <= 0 || imageHeight <= 0)
-            return;
-
-        // Manifest: erlaubt dieser Code ueberhaupt eine Uhrlage? Wenn nicht -> nichts schreiben.
-        if (!CodingManifestQuantRuleResolver.Resolve(CodeSelectionCatalog, code).AllowClock)
-            return;
-
-        var cal = _codingOverlayService?.Calibration;
-        double pcx = cal?.PipeCenter.X ?? 0.5;
-        double pcy = cal?.PipeCenter.Y ?? 0.5;
-        bool isCalibrated = cal is { IsCalibrated: true };
-
-        var box = new AuswertungPro.Next.Application.Ai.ClockPositionResolver.NormBox(
-            seg.Mask.Bbox[0] / imageWidth,
-            seg.Mask.Bbox[1] / imageHeight,
-            seg.Mask.Bbox[2] / imageWidth,
-            seg.Mask.Bbox[3] / imageHeight);
-
-        var span = AuswertungPro.Next.Application.Ai.ClockPositionResolver.Resolve(box, pcx, pcy, isCalibrated, code);
-
-        var from = AuswertungPro.Next.Application.Ai.ClockPositionResolver.FormatFrom(span);
-        var to = AuswertungPro.Next.Application.Ai.ClockPositionResolver.FormatTo(span);
-
-        // Bei "unbekannt" (00 00) keine erfundene Uhrlage stehen lassen: evtl. grob gesetzte
-        // Quantifizierungs-Uhrlage wieder entfernen, statt eine falsche Lage zu behaupten.
-        if (from == null)
-        {
-            entry.CodeMeta?.Parameters.Remove("vsa.uhr.von");
-            entry.CodeMeta?.Parameters.Remove("vsa.uhr.bis");
-            return;
-        }
-
-        entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
-        entry.CodeMeta.Parameters["vsa.uhr.von"] = from;
-        if (to != null)
-            entry.CodeMeta.Parameters["vsa.uhr.bis"] = to;
-        else
-            entry.CodeMeta.Parameters.Remove("vsa.uhr.bis"); // Punktbefund -> kein Zweitwert
+        var rule = CodingManifestQuantRuleResolver.Resolve(CodeSelectionCatalog, code);
+        CodingClockPositionEntryWriter.ApplyToEntry(
+            entry,
+            code,
+            seg,
+            imageWidth,
+            imageHeight,
+            _codingOverlayService?.Calibration,
+            rule);
     }
 
     /// <summary>Delegiert an VsaCodeResolver.NormalizeClock.</summary>
