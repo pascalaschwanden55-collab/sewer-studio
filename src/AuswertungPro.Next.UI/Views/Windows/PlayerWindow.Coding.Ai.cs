@@ -346,11 +346,10 @@ public partial class PlayerWindow
             if (_codingVm != null && codeHint != null)
             {
                 double checkMeter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
-                // BCD/BCE/BDC: Einmal-Codes â€” Meter egal
-                bool isEinmalCode = CodingDedupPolicy.IsOneTimeCode(codeHint);
-                var existingDup = _codingVm.Events.FirstOrDefault(e =>
-                    CodingDedupPolicy.CodesMatch(e.Entry.Code, codeHint) &&
-                    (isEinmalCode || Math.Abs(e.MeterAtCapture - checkMeter) < 1.0));
+                var existingDup = CodingEingabemarkerDuplicatePolicy.FindDuplicate(
+                    _codingVm.Events,
+                    codeHint,
+                    checkMeter);
                 if (existingDup != null)
                 {
                     SetCodingAiState(
