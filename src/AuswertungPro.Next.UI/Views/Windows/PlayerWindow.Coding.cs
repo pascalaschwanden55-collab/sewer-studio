@@ -4384,23 +4384,7 @@ public partial class PlayerWindow
     /// </summary>
     private string? ResolveFindingCodeForCoding(LiveFrameFinding finding, double currentMeter)
     {
-        // 1. VsaCodeHint normalisieren
-        var hinted = VsaCodeResolver.NormalizeFindingCode(finding.VsaCodeHint);
-        if (hinted != null)
-            return CodingImportFallbackCodeResolver.RefineGenericCode(_codingImportEvents, hinted, currentMeter) ?? hinted;
-
-        // 2. Label-Heuristik
-        var coarse = VsaCodeResolver.InferCodeFromLabel(finding.Label);
-        if (coarse != null)
-            return CodingImportFallbackCodeResolver.RefineGenericCode(_codingImportEvents, coarse, currentMeter) ?? coarse;
-
-        // 3. Konservativer Import-Fallback fuer Grundgeruest-Codes am aktuellen Meter
-        var importFallback = CodingImportFallbackCodeResolver.ResolveFallbackCode(_codingImportEvents, currentMeter);
-        if (importFallback != null)
-            return importFallback;
-
-        // 4. Kein Code ableitbar
-        return null;
+        return CodingFindingCodeResolver.Resolve(finding, currentMeter, _codingImportEvents);
     }
 
     /// <summary>
