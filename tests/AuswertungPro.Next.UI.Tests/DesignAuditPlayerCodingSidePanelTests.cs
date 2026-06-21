@@ -166,13 +166,13 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_coding_analysis_keeps_analyzed_frame_for_gold_snapshot()
     {
         var coding = ReadCodingPartials();
-        var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
+        var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
 
-        Assert.Contains("_detectionPendingFrameBytes = pngBytes", runBody);
-        Assert.Contains("_detectionPendingTimestampSec = captureTimestampSec", runBody);
+        Assert.Contains("_detectionPendingFrameBytes = pngBytes", multiModelBody);
+        Assert.Contains("_detectionPendingTimestampSec = captureTimestampSec", multiModelBody);
         Assert.True(
-            runBody.IndexOf("_detectionPendingFrameBytes = pngBytes", StringComparison.Ordinal)
-            < runBody.IndexOf("TryHandleBoundaryClassifierResult", StringComparison.Ordinal),
+            multiModelBody.IndexOf("_detectionPendingFrameBytes = pngBytes", StringComparison.Ordinal)
+            < multiModelBody.IndexOf("TryHandleBoundaryClassifierResult", StringComparison.Ordinal),
             "Der Gold-Snapshot muss den analysierten Frame bekommen, bevor ein BCD/BCE-Event entstehen kann.");
     }
 
@@ -201,12 +201,12 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_handles_structural_classifier_before_no_detection_return()
     {
         var coding = ReadCodingPartials();
-        var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
+        var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
         var structuralBody = ExtractMethodBody(coding, "private bool TryHandleStructuralClassifierResult");
 
-        var boundaryIndex = runBody.IndexOf("TryHandleBoundaryClassifierResult", StringComparison.Ordinal);
-        var structuralIndex = runBody.IndexOf("TryHandleStructuralClassifierResult", StringComparison.Ordinal);
-        var noDetectionIndex = runBody.IndexOf("!mmResult.IsRelevant || !mmResult.HasDetections", StringComparison.Ordinal);
+        var boundaryIndex = multiModelBody.IndexOf("TryHandleBoundaryClassifierResult", StringComparison.Ordinal);
+        var structuralIndex = multiModelBody.IndexOf("TryHandleStructuralClassifierResult", StringComparison.Ordinal);
+        var noDetectionIndex = multiModelBody.IndexOf("!mmResult.IsRelevant || !mmResult.HasDetections", StringComparison.Ordinal);
 
         Assert.True(boundaryIndex >= 0, "Boundary-Classifier muss zuerst behandelt werden.");
         Assert.True(structuralIndex > boundaryIndex, "BCA/BCC darf BCD/BCE nicht ueberholen.");
@@ -234,11 +234,11 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_coding_analysis_prefers_video_position_over_stale_viewmodel_meter_for_classifier()
     {
         var coding = ReadCodingPartials();
-        var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
+        var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
         var resolveBody = ExtractMethodBody(coding, "private double ResolveCodingMeterForFrame");
 
-        var meterStart = runBody.IndexOf("var currentMeterForClassifier", StringComparison.Ordinal);
-        var resolveIndex = runBody.IndexOf("ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter)", meterStart, StringComparison.Ordinal);
+        var meterStart = multiModelBody.IndexOf("var currentMeterForClassifier", StringComparison.Ordinal);
+        var resolveIndex = multiModelBody.IndexOf("ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter)", meterStart, StringComparison.Ordinal);
         var resolverIndex = resolveBody.IndexOf("CodingMeterResolver.Resolve", StringComparison.Ordinal);
         var viewModelMeterIndex = resolveBody.IndexOf("_codingVm?.CurrentMeter", StringComparison.Ordinal);
 
@@ -276,18 +276,19 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var osdService = ReadUiFile("Ai", "CodingOsdMeterService.cs");
         var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
+        var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
         var readerBody = ExtractMethodBody(coding, "private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync");
         var helperBody = ExtractMethodBody(coding, "private async Task<double?> TryReadOsdMeterFromFrameBytesAsync");
 
-        var osdReadIndex = runBody.IndexOf("TryReadAnalyzedFrameOsdMeterAsync", StringComparison.Ordinal);
-        var classifierIndex = runBody.IndexOf("var currentMeterForClassifier", StringComparison.Ordinal);
-        var addIndex = runBody.IndexOf("AddMultiModelFindingsAsEvents(", StringComparison.Ordinal);
+        var osdReadIndex = multiModelBody.IndexOf("TryReadAnalyzedFrameOsdMeterAsync", StringComparison.Ordinal);
+        var classifierIndex = multiModelBody.IndexOf("var currentMeterForClassifier", StringComparison.Ordinal);
+        var addIndex = multiModelBody.IndexOf("AddMultiModelFindingsAsEvents(", StringComparison.Ordinal);
 
         Assert.True(osdReadIndex >= 0, "Multi-Model muss den OSD-Meter aus exakt dem analysierten Frame lesen.");
         Assert.True(classifierIndex >= 0, "Test erwartet den Klassifikator-Meter im Multi-Model-Pfad.");
         Assert.True(osdReadIndex < classifierIndex, "OSD-Meter muss vor Klassifikator/Boundary-Logik vorliegen.");
-        Assert.Contains("frameOsdMeter", runBody);
-        Assert.Contains("frameOsdMeter", runBody[addIndex..]);
+        Assert.Contains("frameOsdMeter", multiModelBody);
+        Assert.Contains("frameOsdMeter", multiModelBody[addIndex..]);
         Assert.Contains("result = result with { MeterReading = frameOsdMeter }", runBody);
         Assert.Contains("TryReadOsdMeterFromFrameBytesAsync", readerBody);
         Assert.Contains("CodingOsdMeterService", helperBody);
