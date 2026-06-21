@@ -6,6 +6,9 @@ obj/
 .vs/
 *.rsuser
 
+# Isolierte Agent-/Session-Worktrees (siehe docs/worktrees.md) - nie ins Repo
+.worktrees/
+
 # NuGet
 *.nupkg
 packages/
