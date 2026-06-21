@@ -1,0 +1,184 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using AuswertungPro.Next.Application.Reports;
+using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Services;
+
+namespace AuswertungPro.Next.UI.Views.Windows;
+
+public partial class PlayerWindow
+{
+    // --- Coding PDF-Export ---
+
+    private void CodingOfferPdfExport(ProtocolDocument doc)
+    {
+        if (_serviceProvider == null || _haltungRecord == null) return;
+
+        var createPdf = DialogHost.Current.Confirm(
+            $"Codier-Session abgeschlossen ({doc.Current.Entries.Count} Ereignisse).\n\n" +
+            "Möchten Sie jetzt ein PDF-Protokoll mit Grafik und Fotos erstellen?",
+            "PDF-Protokoll erstellen");
+
+        if (!createPdf) return;
+
+        try
+        {
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "PDF-Protokoll speichern",
+                Filter = "PDF-Dateien (*.pdf)|*.pdf",
+                DefaultExt = ".pdf",
+                FileName = $"Protokoll_{_haltungRecord.GetFieldValue("Haltungsname") ?? "Haltung"}_{DateTime.Now:yyyyMMdd}.pdf"
+            };
+
+            if (dlg.ShowDialog() != true) return;
+
+            // Projektordner ermitteln (fuer Logo-Suche und relative Pfade)
+            var projectRoot = "";
+            if (!string.IsNullOrWhiteSpace(_serviceProvider.Settings.LastProjectPath))
+                projectRoot = Path.GetDirectoryName(_serviceProvider.Settings.LastProjectPath) ?? "";
+
+            // Logo suchen
+            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+            var options = new HaltungsprotokollPdfOptions
+            {
+                IncludePhotos = true,
+                IncludeHaltungsgrafik = true,
+                LogoPathAbs = File.Exists(logoPath) ? logoPath : null
+            };
+
+            var project = ((ViewModels.ShellViewModel?)App.Current.MainWindow?.DataContext)?.Project;
+            var pdf = _serviceProvider.ProtocolPdfExporter.BuildHaltungsprotokollPdf(
+                project!, _haltungRecord, doc, projectRoot, options);
+            File.WriteAllBytes(dlg.FileName, pdf);
+
+            // PDF oeffnen
+            AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(dlg.FileName, out _);
+
+            ShowOverlay("PDF-Protokoll erstellt", TimeSpan.FromSeconds(4));
+        }
+        catch (Exception ex)
+        {
+            DialogHost.Current.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Fehler");
+        }
+    }
+
+    // --- Coding: Existierende Protokoll-Eintraege laden ---
+
+    /// <summary>
+    /// Laedt existierende Protokoll-Eintraege aus der Haltung (Import/DataGrid) in die Events-Liste.
+    /// </summary>
+    private void LoadExistingProtocolEntries()
+    {
+        if (_codingVm == null || _haltungRecord == null) return;
+
+        var entries = _haltungRecord.Protocol?.Current?.Entries?
+            .Where(e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code))
+            .ToList();
+
+        if (entries == null || entries.Count == 0) return;
+
+        foreach (var entry in entries.OrderBy(e => e.MeterStart ?? 0))
+        {
+            var codingEvent = new CodingEvent
+            {
+                Entry = entry,
+                MeterAtCapture = entry.MeterStart ?? 0,
+                VideoTimestamp = entry.Zeit ?? TimeSpan.Zero
+            };
+            _codingVm.Events.Add(codingEvent);
+        }
+    }
+
+    // --- Coding: Primaere Schaeden synchronisieren ---
+
+    private void SyncCodingToPrimaryDamages(ProtocolDocument doc)
+    {
+        if (_haltungRecord == null) return;
+
+        var entries = doc.Current?.Entries?
+            .Where(e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code))
+            .ToList();
+        if (entries == null || entries.Count == 0)
+        {
+            _haltungRecord.SetFieldValue("Primaere_Schaeden", "", FieldSource.Manual, userEdited: true);
+            _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
+            return;
+        }
+
+        // Zeilen fuer Primaere_Schaeden aufbauen
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var lines = new List<string>();
+        foreach (var entry in entries)
+        {
+            var code = (entry.Code ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(code)) continue;
+
+            var meter = entry.MeterStart ?? entry.MeterEnd;
+            var meterKey = meter.HasValue ? meter.Value.ToString("F2") : "";
+            if (!seen.Add($"{code.ToUpperInvariant()}|{meterKey}")) continue;
+
+            var parts = new List<string>();
+            if (meter.HasValue) parts.Add($"{meter.Value:0.00}m");
+            parts.Add(code);
+            if (!string.IsNullOrWhiteSpace(entry.Beschreibung))
+                parts.Add(entry.Beschreibung.Trim().Replace("\r", "").Replace("\n", " "));
+
+            if (entry.CodeMeta?.Parameters != null)
+            {
+                if (entry.CodeMeta.Parameters.TryGetValue("vsa.q1", out var q1) && !string.IsNullOrWhiteSpace(q1))
+                    parts.Add($"Q1={q1}");
+                if (entry.CodeMeta.Parameters.TryGetValue("vsa.q2", out var q2) && !string.IsNullOrWhiteSpace(q2))
+                    parts.Add($"Q2={q2}");
+            }
+
+            lines.Add(string.Join(" ", parts));
+        }
+
+        var primaryText = string.Join("\n", lines);
+        _haltungRecord.SetFieldValue("Primaere_Schaeden", primaryText, FieldSource.Manual, userEdited: true);
+        _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
+    }
+
+    // --- Coding: Protokoll-Vorschau (nachtraeglich bearbeitbar) ---
+
+    private void ShowCodingProtocolPreview(ProtocolDocument doc)
+    {
+        if (_haltungRecord == null || _serviceProvider == null) return;
+
+        var showProtocol = DialogHost.Current.Confirm(
+            $"{doc.Current.Entries.Count} Beobachtungen protokolliert.\n\n" +
+            "Protokoll jetzt anzeigen und bearbeiten?\n" +
+            "(Änderungen werden in Primäre Schäden übernommen)",
+            "Codier-Session abgeschlossen");
+
+        if (!showProtocol) return;
+
+        var project = ((ViewModels.ShellViewModel?)App.Current.MainWindow?.DataContext)?.Project;
+        if (project == null) return;
+
+        var projectFolder = !string.IsNullOrWhiteSpace(_serviceProvider.Settings.LastProjectPath)
+            ? Path.GetDirectoryName(_serviceProvider.Settings.LastProjectPath)
+            : null;
+
+        var dlg = new Views.ProtocolObservationsWindow(
+            _haltungRecord, project, _serviceProvider, _videoPath, projectFolder,
+            markDirty: () =>
+            {
+                MarkProjectDirtyForCoding();
+            });
+        dlg.Owner = this;
+        dlg.ShowDialog();
+
+        // Nach Bearbeitung: Primaere Schaeden erneut synchronisieren
+        if (_haltungRecord.Protocol != null)
+            SyncCodingToPrimaryDamages(_haltungRecord.Protocol);
+
+        // PDF anbieten
+        CodingOfferPdfExport(_haltungRecord.Protocol ?? doc);
+    }
+}
