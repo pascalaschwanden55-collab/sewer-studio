@@ -32,7 +32,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     private static readonly CultureInfo Ch = CultureInfo.GetCultureInfo("de-CH");
 
     private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
+    private readonly ServiceProvider _sp;
     private readonly ProjectCostStoreRepository _costRepo = new();
     private readonly CostCatalogStore _catalogStore = new();
     private readonly DispatcherTimer _refreshDebounceTimer;
@@ -116,9 +116,10 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     public string StatsLemText => $"{StatsLem:0.##} stk";
     public string ExportStateText => BuildExportStateText();
 
-    public BuilderPageViewModel(ShellViewModel shell)
+    public BuilderPageViewModel(ShellViewModel shell, ServiceProvider services)
     {
         _shell = shell;
+        _sp = services;
         _shell.PropertyChanged += ShellPropertyChanged;
         _refreshDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(220) };
         _refreshDebounceTimer.Tick += RefreshDebounceTimerTick;

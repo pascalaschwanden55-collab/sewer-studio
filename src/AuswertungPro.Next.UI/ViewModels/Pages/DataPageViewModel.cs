@@ -47,7 +47,7 @@ public sealed partial class DataPageViewModel : ObservableObject
             Records[i].SetFieldValue("NR", (i + 1).ToString(), FieldSource.Manual, true);
         }
     }
-    private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
+    private readonly ServiceProvider _sp;
     private readonly ShellViewModel _shell;
     private readonly DispatcherTimer _saveBannerTimer;
     private readonly DispatcherTimer _autoSaveTimer;
@@ -134,9 +134,10 @@ public sealed partial class DataPageViewModel : ObservableObject
     public bool IsProjectReady => _shell.IsProjectReady;
     public bool IsDataGridReadOnly => !_shell.IsProjectReady;
 
-    public DataPageViewModel(ShellViewModel shell)
+    public DataPageViewModel(ShellViewModel shell, ServiceProvider services)
     {
         _shell = shell;
+        _sp = services;
         _measureRecommendationService = _sp.MeasureRecommendation;
         _saveBannerTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _saveBannerTimer.Tick += (_, __) =>

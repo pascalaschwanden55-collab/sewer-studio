@@ -15,7 +15,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 public sealed partial class SchaechtePageViewModel : ObservableObject
 {
     private static readonly string[] FixedEigentuemerOptions = { "Kanton", "Bund", "AWU", "Gemeinde", "Privat" };
-    private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
+    private readonly ServiceProvider _sp;
     private readonly ShellViewModel _shell;
 
     public ObservableCollection<SchachtRecord> Records => _shell.Project.SchaechteData;
@@ -66,9 +66,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     public IRelayCommand<object?> AddReferenzpruefungOptionCommand { get; }
     public IRelayCommand<object?> RemoveReferenzpruefungOptionCommand { get; }
 
-    public SchaechtePageViewModel(ShellViewModel shell)
+    public SchaechtePageViewModel(ShellViewModel shell, ServiceProvider services)
     {
         _shell = shell;
+        _sp = services;
 
         var uiLayout = _sp.Settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
         GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d

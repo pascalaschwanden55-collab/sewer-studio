@@ -15,8 +15,13 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         WindowStateManager.Track(this);
-        DataContext = new ShellViewModel();
+        DataContext = new ShellViewModel(GetServiceProvider());
     }
+
+    private static ServiceProvider GetServiceProvider()
+        => App.Services is ServiceProvider sp
+            ? sp
+            : throw new InvalidOperationException("ServiceProvider wurde nicht initialisiert.");
 
     private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {

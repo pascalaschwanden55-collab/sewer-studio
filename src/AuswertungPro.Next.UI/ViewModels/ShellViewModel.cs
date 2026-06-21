@@ -20,7 +20,7 @@ public static class ShellNavigationPolicy
 
 public sealed partial class ShellViewModel : ObservableObject, IDisposable
 {
-    private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
+    private readonly ServiceProvider _sp;
     private bool _disposed;
 
     [ObservableProperty] private string _title = "SewerStudio";
@@ -70,22 +70,25 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
     /// diesen Lock halten, damit der UI-Thread nicht waehrend einer Mutation enumeriert.</summary>
     public object CollectionLock => _collectionLock;
 
-    public ShellViewModel()
+    public ShellViewModel(ServiceProvider services)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
+        _sp = services;
         EnableCollectionSync(_project);
 
         NavItems = new List<NavItem>
         {
             new("\uE80F", "Uebersicht", () => new Pages.OverviewPageViewModel(this, _sp), canOpenWithoutProject: true),
             new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this), canOpenWithoutProject: true),
-            new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this)),
-            new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(this)),
+            new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this, _sp)),
+            new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(this, _sp)),
             // Segoe MDL2: Import = Download, Export = Upload
             new("\uE896", "Import", () => new Pages.ImportPageViewModel(this, _sp)),
             new("\uE898", "Export", () => new Pages.ExportPageViewModel(this, _sp), canOpenWithoutProject: true),
             new("\uE7BA", "Medienkonflikte", () => new Pages.MediaConflictsPageViewModel(this, _sp)),
-            new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this)),
-            new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(this)),
+            new("\uE749", "Druckcenter", () => new Pages.BuilderPageViewModel(this, _sp)),
+            new("\uECA5", "Sanierungs-Matrix", () => new Pages.SanierungsMatrixPageViewModel(this, _sp)),
             new("\uE128", "VSA", () => new Pages.VsaPageViewModel(this, _sp)),
             new("\uE9CE", "Diagnose", () => new Pages.DiagnosticsPageViewModel(_sp)),
             new("\uE713", "Einstellungen", () => new Pages.SettingsPageViewModel(_sp), canOpenWithoutProject: true)
@@ -275,7 +278,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
             SelectedNavItem = null;
             _suppressLeaveGuard = false;
             _navItemBeforeChange = null;
-            SetCurrentPage(new Pages.SanierungsMatrixPageViewModel(this, holding, singleHoldingMode: true, targetRecord));
+            SetCurrentPage(new Pages.SanierungsMatrixPageViewModel(this, _sp, holding, singleHoldingMode: true, targetRecord));
             return;
         }
 

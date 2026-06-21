@@ -507,7 +507,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     private const string KeyDoku = "QK_DOKUMENTATION";
 
     private readonly ShellViewModel _shell;
-    private readonly ServiceProvider _sp = (ServiceProvider)App.Services;
+    private readonly ServiceProvider _sp;
     private readonly CostCatalogStore _catalogStore = new();
     private readonly MeasureTemplateStore _templateStore = new();
     private readonly ProjectCostStoreRepository _costRepo = new();
@@ -556,14 +556,20 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
 
     public ObservableCollection<SanierungsMatrixDetailEditMeasureVm> SelectedDetailMeasures { get; private set; } = new();
 
-    public SanierungsMatrixPageViewModel(ShellViewModel shell)
-        : this(shell, null, singleHoldingMode: false)
+    public SanierungsMatrixPageViewModel(ShellViewModel shell, ServiceProvider services)
+        : this(shell, services, null, singleHoldingMode: false)
     {
     }
 
-    public SanierungsMatrixPageViewModel(ShellViewModel shell, string? holding, bool singleHoldingMode, HaltungRecord? targetRecord = null)
+    public SanierungsMatrixPageViewModel(
+        ShellViewModel shell,
+        ServiceProvider services,
+        string? holding,
+        bool singleHoldingMode,
+        HaltungRecord? targetRecord = null)
     {
         _shell = shell;
+        _sp = services;
         _singleHoldingTarget = string.IsNullOrWhiteSpace(holding) ? null : holding.Trim();
         _singleHoldingTargetRecord = targetRecord;
         IsSingleHoldingMode = singleHoldingMode;
