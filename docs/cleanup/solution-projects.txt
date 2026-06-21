@@ -1,0 +1,9 @@
+﻿tools\ClassifierDatasetBuilder\ClassifierDatasetBuilder.csproj
+tools\ClassifierPilot\ClassifierPilot.csproj
+tools\EvalSetBenchmark\EvalSetBenchmark.csproj
+tools\EvalSetManifestHasher\EvalSetManifestHasher.csproj
+tools\IliCatalogReader\IliCatalogReader.csproj
+tools\SelfTrainingHarness\SelfTrainingHarness.csproj
+tools\SidecarE2eSmoke\SidecarE2eSmoke.csproj
+tools\VsaClassificationRuleBuilder\VsaClassificationRuleBuilder.csproj
+tools\VsaShadowReport\VsaShadowReport.csproj

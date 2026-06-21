@@ -66,3 +66,27 @@ Folgende Muster sind bewusst in `.gitignore`:
 | Orphan-Tools einzeln bewerten | Einige alte Tools sind nuetzlich, aber nicht in der Solution |
 | README fuer `training/vsa_classifier` ergaenzen | CLI-Parameter und Abnahmekriterien sollen an einem Ort stehen |
 | Reports vereinheitlichen | JSON-Reports statt reine Konsolenlogs |
+
+## Cleanup-Review 2026-06-21
+
+`tools/` hat real ~53 Unterordner; 9 sind in `AuswertungPro.sln`, 30 haben ein getracktes `.csproj`.
+Rohlisten: `docs/cleanup/solution-projects.txt`, `docs/cleanup/tracked-tool-projects.txt`.
+
+**Erledigt:** `tools/__pycache__` quarantaeniert. `bin`/`obj` bleiben (gitignored, regenerieren).
+
+**Keine Loeschung ohne Einzelentscheidung** (Plan-Regel). Orphan-Tools (nicht in `.sln`,
+einzeln per rg-Referenz + Doku-Nutzung pruefen, je 1 Commit):
+
+- PDF/Import: AiDocPdf, DiagnosticPdfParser, IbakPdfAnalyzer, PdfCoverageAudit, PdfHeaderReader,
+  PdfImageAnalyzer, PdfPhotoCoverageProbe, PdfPhotoLabelReview, PdfProtocolParser, QuickPdfAnalyzer,
+  VsaPdfExtractor, ProtocolPipelineDiagnostics
+- Kataster/DB/XTF: CadastreTableBuilder, Db3PilotReader, MdbSchemaReaderApp, HaltungTopologyExtractor,
+  StammdatenExporter, XtfPilotReader
+- KB/Training/Eval: BefundMatcher, CrossValidationReport, FachwissenIndexer, KbCodeCleanup, kb_audit,
+  KnowledgeBaseInspector, sewer_classifier, SewerStudioTrainingBatch, TrainingSourceReport,
+  SewerStudio.AiTestRunner, GroundTruthPipeScaleProbe
+- Bild/Video/Sonstige: FrameMultiExtractor, GeminiPhotoCheck, ImageQualityAudit, video_ai,
+  VideoprojekteInventory, AuswertungPro.MeasureCatalogCli, DichtheitDistributeTest,
+  HoldingDistributionSmokeCheck
+
+Nicht verwechseln: Tool `tools/EvalVisibilityReview` != Root-`EvalVisibilityReview_20260525` (Eval-Daten, bleibt).

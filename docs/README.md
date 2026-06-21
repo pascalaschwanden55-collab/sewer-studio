@@ -13,3 +13,9 @@ Tests in `tests/`, der Python-Sidecar in `sidecar/`.
 Alte PowerShell-Prototyp-Doku (README_v2/START/ARCHITECTURE/DATEIEN_MANIFEST/
 LIEFERUEBERSICHT/RELEASE_NOTES/CODE_AUDIT_REPORT) wurde 2026-06-21 entfernt — sie
 beschrieb die abgeloeste `.ps1`-Anwendung.
+
+## Lokale Daten
+
+Grosse lokale Daten, Trainingslaeufe und Rohdaten liegen nicht im Repo-Root.
+Standard-Ablage fuer lokale Archive: `C:\KI_BRAIN\SewerStudio_LocalArchive_YYYYMMDD`.
+Aufraeum-Quarantaene (reversibles Backup): `C:\tmp\SewerStudioCleanupQuarantine\<stamp>`.
