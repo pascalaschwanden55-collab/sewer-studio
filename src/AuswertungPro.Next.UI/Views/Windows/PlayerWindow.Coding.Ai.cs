@@ -1016,27 +1016,15 @@ public partial class PlayerWindow
             {
                 case AuswertungPro.Next.Application.Ai.StreckenschadenActionMapper.InstructionKind.CreateOpen:
                 {
-                    var label = LookupVsaLabel(instr.MainCode);
-                    var entry = new ProtocolEntry
-                    {
-                        Source = ProtocolEntrySource.Ai,
-                        Code = instr.MainCode,
-                        Beschreibung = label ?? instr.MainCode,
-                        MeterStart = instr.StartMeter,
-                        MeterEnd = null,                 // offen
-                        IsStreckenschaden = true,
-                        Zeit = videoTime
-                    };
-                    AttachAnalyzedFramePhoto(entry);
-                    var ev = codingSessionService.AddEvent(entry);
+                    var draft = CodingStreckenschadenEventFactory.CreateOpen(
+                        instr.MainCode,
+                        LookupVsaLabel(instr.MainCode),
+                        instr.StartMeter,
+                        videoTime);
+                    AttachAnalyzedFramePhoto(draft.Entry);
+                    var ev = codingSessionService.AddEvent(draft.Entry);
                     ev.MeterAtCapture = instr.StartMeter;
-                    ev.AiContext = new CodingEventAiContext
-                    {
-                        SuggestedCode = instr.MainCode,
-                        Confidence = 0.0,
-                        Reason = "Streckenschaden-Anfang (automatisch) - noch offen",
-                        Decision = CodingUserDecision.Ignored
-                    };
+                    ev.AiContext = draft.AiContext;
                     anyChanged = true;
                     break;
                 }
