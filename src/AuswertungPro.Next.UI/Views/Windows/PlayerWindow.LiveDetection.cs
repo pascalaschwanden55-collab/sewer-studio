@@ -1238,9 +1238,7 @@ public partial class PlayerWindow
             // 1. VSA-Code waehlen â€” VsaCodeExplorer oeffnet sich sofort
             // Meter automatisch aus OSD oder Videoposition berechnen
             var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
-            var entry = new ProtocolEntry();
-            // SAM-/Overlay-Messwerte ins Codierfenster vorausfuellen (Uhrlage, Hoehe/Breite, Querschnitt).
-            CodingOverlayQuantificationWriter.ApplyToEntry(entry, overlay);
+            var entry = CodingExplorerEntryFactory.CreateSeed(overlay);
             var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
             var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
             {
@@ -1262,17 +1260,10 @@ public partial class PlayerWindow
                         System.Globalization.NumberStyles.Any,
                         System.Globalization.CultureInfo.InvariantCulture, out var pm0))
                     manualMeter = pm0;
-                var manualEntry = new ProtocolEntry
-                {
-                    Source = ProtocolEntrySource.Manual,
-                    Code = selectedEntry.Code,
-                    Beschreibung = selectedEntry.Beschreibung,
-                    MeterStart = selectedEntry.MeterStart ?? manualMeter,
-                    MeterEnd = selectedEntry.MeterEnd,
-                    Zeit = selectedEntry.Zeit ?? TimeSpan.FromSeconds(timestampSec),
-                    IsStreckenschaden = selectedEntry.IsStreckenschaden,
-                    CodeMeta = selectedEntry.CodeMeta
-                };
+                var manualEntry = CodingExplorerEntryFactory.CreateManualFromSelected(
+                    selectedEntry,
+                    manualMeter,
+                    TimeSpan.FromSeconds(timestampSec));
                 manualEvent = _codingSessionService.AddEvent(manualEntry, overlay);
                 RefreshCodingEventsList();
             }
@@ -1518,7 +1509,7 @@ public partial class PlayerWindow
 
             // VsaCodeExplorer oeffnen fuer Korrektur â€” Meter aus OSD/Video
             var autoMeter2 = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
-            var entry = new ProtocolEntry();
+            var entry = CodingExplorerEntryFactory.CreateSeed();
             var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter2, TimeSpan.FromSeconds(timestampSec));
             var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
             {
@@ -1650,18 +1641,10 @@ public partial class PlayerWindow
             return;
         }
 
-        var entry = new ProtocolEntry
-        {
-            Source = ProtocolEntrySource.Manual,
-            Zeit = TimeSpan.FromSeconds(timestampSec),
-        };
-
-        if (!string.IsNullOrWhiteSpace(suggestedCode))
-            entry.Code = suggestedCode;
-
-        entry.CodeMeta ??= new ProtocolEntryCodeMeta();
-        if (!string.IsNullOrWhiteSpace(clockPosition))
-            entry.CodeMeta.Parameters["vsa.uhr.von"] = clockPosition;
+        var entry = CodingExplorerEntryFactory.CreateSeed(
+            videoTime: TimeSpan.FromSeconds(timestampSec),
+            suggestedCode: suggestedCode,
+            clockPosition: clockPosition);
 
         var explorerVm = CreateVsaCodeExplorerViewModel(
             entry,
