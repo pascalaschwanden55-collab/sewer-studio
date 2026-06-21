@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
+using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using Microsoft.Extensions.Logging;
@@ -52,6 +53,18 @@ public sealed class MultiModelAnalysisService
     public bool ClassifierDecisionEnabled { get; set; } =
         Configuration.AiSettingsFactory.ParseBool(
             Environment.GetEnvironmentVariable("SEWERSTUDIO_CLASSIFIER_DECISION"));
+
+    /// <summary>
+    /// Fix #1: Wenn DINO keine Box liefert, aber der Klassifikator einen Grundgeruest-Code
+    /// (BCA/BCC/BCD/BCE) ueber das Voting bestaetigt, wird ein box-loser Befund erzeugt,
+    /// statt den Frame still zu verwerfen. Default AN, reversibel ueber Env.
+    /// </summary>
+    public bool ClassifierOnlyStructuralEnabled { get; set; } =
+        !Configuration.AiSettingsFactory.ParseBool(
+            Environment.GetEnvironmentVariable("SEWERSTUDIO_CLASSIFIER_ONLY_STRUCTURAL_OFF"));
+
+    /// <summary>Mindestkonfidenz fuer den box-losen Grundgeruest-Befund (Fix #1).</summary>
+    public double ClassifierOnlyMinConfidence { get; set; } = 0.60;
 
     // Temporal-Voting gegen Einzelbild-Ausreisser (Paket 2, Schritt 5)
     private readonly ITemporalCodeVotingService _codeVoting = new TemporalCodeVotingService();
@@ -439,11 +452,65 @@ public sealed class MultiModelAnalysisService
 
             if (dinoResult.Detections.Count == 0)
             {
-                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: false));
-                trace.Path = "dino_no_boxes";
-                trace.DropReason = "dino_no_boxes";
+                // Fix #1: Bevor der Frame verworfen wird — wenn der Klassifikator einen
+                // Grundgeruest-Code (BCA/BCC/BCD/BCE) ueber das Voting bestaetigt, einen
+                // box-losen Befund erzeugen. Rettet Bestandsaufnahme, die DINO nicht boxt.
+                var meterNoBox = EstimateMeter(t, duration, ref lastMeter);
+                EnhancedFinding? structuralOnly = null;
+                if (ClassifierOnlyStructuralEnabled && clsResult is { Predictions.Count: > 0 })
+                {
+                    var resolved = ClassifierOnlyStructuralPolicy.TryResolve(
+                        clsResult.Predictions, meterNoBox, EstimatedReachLengthM,
+                        isBend: clsResult.IsBend, minConfidence: ClassifierOnlyMinConfidence);
+                    if (resolved is not null)
+                    {
+                        var confirmed = _codeVoting.RegisterAndVote(resolved.Code, meterNoBox);
+                        if (confirmed is not null)
+                        {
+                            structuralOnly = new EnhancedFinding(
+                                Label: VsaCodeTree.LookupLabel(confirmed) ?? confirmed,
+                                VsaCodeHint: confirmed,
+                                Severity: 1,
+                                PositionClock: null,
+                                ExtentPercent: null, HeightMm: null, WidthMm: null,
+                                IntrusionPercent: null, CrossSectionReductionPercent: null,
+                                DiameterReductionMm: null,
+                                BboxX1: null, BboxY1: null, BboxX2: null, BboxY2: null,
+                                Notes: $"classifier-only (DINO 0 Boxen), conf={resolved.Confidence:F2}, {resolved.Source}");
+                            trace.ClassifierCode = confirmed;
+                            trace.ClassifierConfidence = resolved.Confidence;
+                            trace.ClassifierModel = ClassifierModelTag(clsResult);
+                            trace.ClassifierVoteConfirmed = true;
+                        }
+                    }
+                }
+
+                telemetry.RecordFrame(new FrameTiming(frameIndex, t, extractionMs, yoloMs, dinoMs, 0, 0, frameSw.ElapsedMilliseconds, Skipped: structuralOnly is null));
+
+                if (structuralOnly is not null)
+                {
+                    trace.Path = "classifier_only_structural";
+                    trace.FindingsBuilt = 1;
+                    var evidence = new EvidenceVector(
+                        YoloConf: clsResult?.Predictions[0].Confidence ?? 0.0, DinoConf: 0.0, FrameCount: 1);
+                    var (mSrc, mEst) = GetDedupMeterMetadata(qwenMeterAccepted: false);
+                    detections.AddRange(deduplicator.Update(
+                        new List<EnhancedFinding> { structuralOnly },
+                        meterNoBox,
+                        evidence,
+                        meterSource: mSrc,
+                        isMeterEstimated: mEst));
+                    trace.ActiveCount = deduplicator.ActiveCount;
+                    trace.DetectionsTotal = detections.Count;
+                }
+                else
+                {
+                    trace.Path = "dino_no_boxes";
+                    trace.DropReason = "dino_no_boxes";
+                    detections.AddRange(deduplicator.AdvanceAll());
+                }
+
                 await PipelineTraceWriter.WriteAsync(trace).ConfigureAwait(false);
-                detections.AddRange(deduplicator.AdvanceAll());
                 continue;
             }
 
