@@ -16,7 +16,6 @@ using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Evaluation;
 using AuswertungPro.Next.Application.Ai.QualityGate;
-using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
@@ -861,16 +860,10 @@ public partial class PlayerWindow
         System.IO.File.Copy(snapshotPath, destFrame, overwrite: true);
 
         // 4. Lehrer-Annotation erstellen
-        var annotation = new TeacherAnnotation
-        {
-            AnnotationId = annotationId,
-            VsaCode = importEvent.Entry.Code,
-            Beschreibung = importEvent.Entry.Beschreibung,
-            MeterPosition = importEvent.MeterAtCapture,
-            VideoTimestamp = importEvent.VideoTimestamp,
-            ToolType = Domain.Models.OverlayToolType.None,
-            FullFramePath = destFrame,
-        };
+        var annotation = LiveDetectionTeacherAnnotationFactory.CreateImportConfirmation(
+            annotationId,
+            importEvent,
+            destFrame);
 
         await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 

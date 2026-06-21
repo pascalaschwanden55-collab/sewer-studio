@@ -87,6 +87,21 @@ public static class LiveDetectionTeacherAnnotationFactory
             HeightMm = sourceFinding.HeightMm
         };
 
+    public static TeacherAnnotation CreateImportConfirmation(
+        string annotationId,
+        CodingEvent importEvent,
+        string fullFramePath)
+        => new()
+        {
+            AnnotationId = annotationId,
+            VsaCode = importEvent.Entry.Code,
+            Beschreibung = importEvent.Entry.Beschreibung,
+            MeterPosition = importEvent.MeterAtCapture,
+            VideoTimestamp = importEvent.VideoTimestamp,
+            ToolType = OverlayToolType.None,
+            FullFramePath = fullFramePath
+        };
+
     private static double? ParseClock(string? raw)
     {
         if (double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out var clock))

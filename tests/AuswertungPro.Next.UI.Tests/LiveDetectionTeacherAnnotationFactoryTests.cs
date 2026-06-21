@@ -112,6 +112,30 @@ public sealed class LiveDetectionTeacherAnnotationFactoryTests
         Assert.Equal(22, annotation.HeightMm);
     }
 
+    [Fact]
+    public void CreateImportConfirmation_builds_annotation_from_import_event()
+    {
+        var importEvent = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BCE", Beschreibung = "Rohrende" },
+            MeterAtCapture = 17.4,
+            VideoTimestamp = TimeSpan.FromSeconds(44)
+        };
+
+        var annotation = LiveDetectionTeacherAnnotationFactory.CreateImportConfirmation(
+            "imp1",
+            importEvent,
+            "import-frame.png");
+
+        Assert.Equal("imp1", annotation.AnnotationId);
+        Assert.Equal("BCE", annotation.VsaCode);
+        Assert.Equal("Rohrende", annotation.Beschreibung);
+        Assert.Equal(17.4, annotation.MeterPosition);
+        Assert.Equal(TimeSpan.FromSeconds(44), annotation.VideoTimestamp);
+        Assert.Equal(OverlayToolType.None, annotation.ToolType);
+        Assert.Equal("import-frame.png", annotation.FullFramePath);
+    }
+
     private static TrainingAnnotationResult ExportResult()
         => new()
         {
