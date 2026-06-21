@@ -146,28 +146,21 @@ public partial class PlayerWindow
                 ? new SingleFrameMultiModelService(_codingVisionClient)
                 : new SingleFrameMultiModelService(_codingVisionClient, _codingPipelineConfig);
 
-        var color = status.Level switch
-        {
-            AuswertungPro.Next.Application.Ai.PipelineHealthLevel.Full => Color.FromRgb(0x22, 0xC5, 0x5E),     // gruen
-            AuswertungPro.Next.Application.Ai.PipelineHealthLevel.Degraded => Color.FromRgb(0xF5, 0x9E, 0x0B), // gelb
-            _ => Color.FromRgb(0x94, 0xA3, 0xB8)                                                              // grau
-        };
-        SetCodingAiState(status.Summary, color, status.Detail);
-        BtnCodingAnalyze.IsEnabled = status.AnalysisPossible;
-        UpdatePipelineHealthDetails(status);
+        var uiState = PipelineHealthUiStateFactory.Create(status);
+        SetCodingAiState(uiState.Summary, uiState.Color, uiState.Detail);
+        BtnCodingAnalyze.IsEnabled = uiState.AnalysisEnabled;
+        UpdatePipelineHealthDetails(uiState.Details);
     }
 
     /// <summary>Aktualisiert die ausklappbare Detailanzeige (Sidecar/Token/Modelle/Modus).</summary>
-    private void UpdatePipelineHealthDetails(AuswertungPro.Next.Application.Ai.PipelineHealthStatus s)
+    private void UpdatePipelineHealthDetails(PipelineHealthDetailsUiState details)
     {
-        static string OkBad(bool ok) => ok ? "OK" : "fehlt";
-        static string Loaded(bool ok) => ok ? "geladen" : "laedt bei Bedarf";
-        Hd_Sidecar.Text = $"Sidecar: {(s.SidecarReachable ? (s.SidecarHealthy ? "OK" : "antwortet, ungesund") : "offline")}";
-        Hd_Token.Text = $"Token: {(s.SidecarReachable ? OkBad(s.TokenValid) : "-")}";
-        Hd_Yolo.Text = $"YOLO: {Loaded(s.YoloLoaded)}";
-        Hd_Dino.Text = $"DINO: {Loaded(s.DinoLoaded)}";
-        Hd_Sam.Text = $"SAM: {Loaded(s.SamLoaded)}";
-        Hd_Mode.Text = $"Modus: {(s.MultiModelActive ? "Multi-Model" : (s.QwenAvailable ? "Qwen-only" : "KI aus"))}";
+        Hd_Sidecar.Text = details.Sidecar;
+        Hd_Token.Text = details.Token;
+        Hd_Yolo.Text = details.Yolo;
+        Hd_Dino.Text = details.Dino;
+        Hd_Sam.Text = details.Sam;
+        Hd_Mode.Text = details.Mode;
     }
 
     /// <summary>Stoppt den Pipeline-Health-Monitor und meldet sich vom Event ab.</summary>
