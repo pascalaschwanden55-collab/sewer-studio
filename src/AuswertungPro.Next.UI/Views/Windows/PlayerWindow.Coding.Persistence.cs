@@ -120,7 +120,7 @@ public partial class PlayerWindow
             _codingEvalSetsLoaded = true;
             try
             {
-                var evalSets = EvalContaminationSetProvider.Load(ResolveEvalSetRoot());
+                var evalSets = EvalContaminationSetProvider.Load(_serviceProvider?.Settings);
                 _codingEvalImageHashes = evalSets.ImageHashes;
                 _codingEvalHaltungKeys = evalSets.HaltungKeys;
             }

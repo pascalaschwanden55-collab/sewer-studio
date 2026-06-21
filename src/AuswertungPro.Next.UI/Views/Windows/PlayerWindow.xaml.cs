@@ -138,9 +138,6 @@ public partial class PlayerWindow : Window
 
     private static PlayerWindow? _lastOpened;
 
-    private string? ResolveEvalSetRoot()
-        => _serviceProvider?.Settings.EvalSetRoot ?? AppSettings.Load().EvalSetRoot;
-
     public PlayerWindow(
         string videoPath,
         PlayerWindowOptions? options = null,
