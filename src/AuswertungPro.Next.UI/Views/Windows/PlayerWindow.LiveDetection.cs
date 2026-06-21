@@ -1297,29 +1297,34 @@ public partial class PlayerWindow
                 RefreshCodingEventsList();
             }
 
-            // Dezente Statusmeldung im OSD-Badge (kein MessageBox-Popup)
-            OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"✓ {selectedEntry.Code} gespeichert";
-
-            // Badge nach 3 Sekunden zuruecksetzen
-            var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-            resetTimer.Tick += (_, _) =>
-            {
-                resetTimer.Stop();
-                if (_codingLastOsdMeter.HasValue)
-                    TxtOsdMeter.Text = $"{_codingLastOsdMeter.Value:F2}m (OSD)";
-                else
-                    OsdMeterBadge.Visibility = Visibility.Collapsed;
-            };
-            resetTimer.Start();
+            ShowOsdMeterStatus($"✓ {selectedEntry.Code} gespeichert", resetAfterDelay: true);
             return true;
         }
         catch (Exception ex)
         {
-            OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"\u2717 Fehler: {ex.Message}";
+            ShowOsdMeterStatus($"\u2717 Fehler: {ex.Message}", resetAfterDelay: false);
             return false;
         }
+    }
+
+    private void ShowOsdMeterStatus(string message, bool resetAfterDelay)
+    {
+        OsdMeterBadge.Visibility = Visibility.Visible;
+        TxtOsdMeter.Text = message;
+
+        if (!resetAfterDelay)
+            return;
+
+        var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        resetTimer.Tick += (_, _) =>
+        {
+            resetTimer.Stop();
+            if (_codingLastOsdMeter.HasValue)
+                TxtOsdMeter.Text = $"{_codingLastOsdMeter.Value:F2}m (OSD)";
+            else
+                OsdMeterBadge.Visibility = Visibility.Collapsed;
+        };
+        resetTimer.Start();
     }
 
     // â”€â”€ LiveDetection Bestaetigungs-Logik â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1405,25 +1410,11 @@ public partial class PlayerWindow
                 await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
             }
 
-            // Dezente Bestaetigung im OSD-Badge
-            OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"✓ {_detectionPendingFindings.Count} Befund(e) gespeichert";
-
-            var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-            resetTimer.Tick += (_, _) =>
-            {
-                resetTimer.Stop();
-                if (_codingLastOsdMeter.HasValue)
-                    TxtOsdMeter.Text = $"{_codingLastOsdMeter.Value:F2}m (OSD)";
-                else
-                    OsdMeterBadge.Visibility = Visibility.Collapsed;
-            };
-            resetTimer.Start();
+            ShowOsdMeterStatus($"✓ {_detectionPendingFindings.Count} Befund(e) gespeichert", resetAfterDelay: true);
         }
         catch (Exception ex)
         {
-            OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"✗ Fehler: {ex.Message}";
+            ShowOsdMeterStatus($"✗ Fehler: {ex.Message}", resetAfterDelay: false);
         }
 
         ResumeDetection();
@@ -1491,24 +1482,11 @@ public partial class PlayerWindow
                 exportResult);
             await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
-            OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"✓ Training: {selectedEntry.Code} (korrigiert)";
-
-            var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-            resetTimer.Tick += (_, _) =>
-            {
-                resetTimer.Stop();
-                if (_codingLastOsdMeter.HasValue)
-                    TxtOsdMeter.Text = $"{_codingLastOsdMeter.Value:F2}m (OSD)";
-                else
-                    OsdMeterBadge.Visibility = Visibility.Collapsed;
-            };
-            resetTimer.Start();
+            ShowOsdMeterStatus($"✓ Training: {selectedEntry.Code} (korrigiert)", resetAfterDelay: true);
         }
         catch (Exception ex)
         {
-            OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"✗ Fehler: {ex.Message}";
+            ShowOsdMeterStatus($"✗ Fehler: {ex.Message}", resetAfterDelay: false);
         }
 
         ResumeDetection();
