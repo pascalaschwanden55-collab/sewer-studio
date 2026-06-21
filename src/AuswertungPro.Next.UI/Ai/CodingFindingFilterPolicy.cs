@@ -20,9 +20,7 @@ public static class CodingFindingFilterPolicy
         {
             var code = codeResolver(finding, currentMeter);
 
-            if (code != null
-                && CodingDedupPolicy.IsOneTimeCode(code)
-                && (ExistsCode(sessionEvents, code) || ExistsCode(viewEvents, code)))
+            if (CodingOneTimeCodeDuplicatePolicy.AlreadyExists(code, sessionEvents, viewEvents))
             {
                 trace?.Invoke($"[KI-Filter] {code} uebersprungen (bereits vorhanden, live-check)");
                 continue;
@@ -50,7 +48,4 @@ public static class CodingFindingFilterPolicy
 
         return filtered;
     }
-
-    private static bool ExistsCode(IEnumerable<CodingEvent>? events, string code)
-        => events?.Any(e => CodingDedupPolicy.CodesMatch(e.Entry.Code, code)) == true;
 }

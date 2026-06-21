@@ -1114,10 +1114,10 @@ public partial class PlayerWindow
 
             // BCD/BCE existieren pro Haltung nur EINMAL â€” Meterstand-unabhaengige Dedup
             // Primaer gegen session.Events pruefen (wird nie gecleared).
-            if (CodingDedupPolicy.IsOneTimeCode(code)
-                && (codingSessionService.ActiveSession?.Events.Any(e =>
-                        CodingDedupPolicy.CodesMatch(e.Entry.Code, code)) == true
-                    || codingVm.Events.Any(e => CodingDedupPolicy.CodesMatch(e.Entry.Code, code))))
+            if (CodingOneTimeCodeDuplicatePolicy.AlreadyExists(
+                    code,
+                    codingSessionService.ActiveSession?.Events,
+                    codingVm.Events))
                 continue;
 
             // Dedup gegen bestehende Events (identisch mit Qwen-Pfad)
