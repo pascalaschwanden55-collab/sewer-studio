@@ -136,19 +136,15 @@ public partial class PlayerWindow
             if (evidenceError != null)
                 System.Diagnostics.Debug.WriteLine($"[Training] Beweisbild nicht gespeichert: {evidenceError}");
 
-            var sample = CodingEventToSampleMapper.FromCodingEvent(
-                ev, caseId, framePath, ResolveTrainingInspectionDate(),
-                confirmedByUser: System.Environment.UserName,
-                confirmedAtUtc: System.DateTime.UtcNow,
-                evidenceFramePath: evidenceFramePath);
-            sample.SnapshotError = snapshotError;
-
-            if (ev.Entry.FotoPaths.Count > 1)
-            {
-                sample.AdditionalFramePaths ??= new System.Collections.Generic.List<string>();
-                for (int i = 1; i < ev.Entry.FotoPaths.Count; i++)
-                    sample.AdditionalFramePaths.Add(ev.Entry.FotoPaths[i]);
-            }
+            var sample = CodingTrainingSampleFactory.Create(
+                ev,
+                caseId,
+                framePath,
+                ResolveTrainingInspectionDate(),
+                System.Environment.UserName,
+                System.DateTime.UtcNow,
+                evidenceFramePath,
+                snapshotError);
             // Eval-Schutz (ESW-003): Frames/Haltungen aus dem eingefrorenen Eval-Set
             // niemals als Trainingssample speichern.
             if (IsCodingSampleEvalProtected(sample))
@@ -180,24 +176,16 @@ public partial class PlayerWindow
         {
             var caseId = _codingVm.HaltungName ?? "unknown";
             var samples = new List<TrainingSample>();
+            var inspectionDate = ResolveTrainingInspectionDate();
             foreach (var ev in _codingVm.Events)
             {
-                var framePath = ev.Entry.FotoPaths.Count > 0 ? ev.Entry.FotoPaths[0] : null;
-                var sample = CodingEventToSampleMapper.FromCodingEvent(
-                    ev, caseId, framePath, ResolveTrainingInspectionDate(),
-                    confirmedByUser: System.Environment.UserName,
-                    confirmedAtUtc: System.DateTime.UtcNow);
-
-                // Alle Fotos als zusaetzliche Lernbilder referenzieren
-                // (Foto 1 = FramePath, Foto 2+ = AdditionalFrames)
-                if (ev.Entry.FotoPaths.Count > 1)
-                {
-                    sample.AdditionalFramePaths ??= new System.Collections.Generic.List<string>();
-                    for (int i = 1; i < ev.Entry.FotoPaths.Count; i++)
-                        sample.AdditionalFramePaths.Add(ev.Entry.FotoPaths[i]);
-                }
-
-                samples.Add(sample);
+                samples.Add(CodingTrainingSampleFactory.Create(
+                    ev,
+                    caseId,
+                    CodingTrainingSampleFactory.PrimaryFramePath(ev),
+                    inspectionDate,
+                    System.Environment.UserName,
+                    System.DateTime.UtcNow));
             }
             // Eval-Schutz (ESW-003): reservierte Eval-Haltungen/-Frames aussortieren.
             samples = samples.Where(s => !IsCodingSampleEvalProtected(s)).ToList();
