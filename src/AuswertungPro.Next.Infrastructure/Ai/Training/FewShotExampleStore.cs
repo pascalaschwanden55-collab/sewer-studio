@@ -115,7 +115,7 @@ public sealed class FewShotExampleStore
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_indexPath)!);
         var json = JsonSerializer.Serialize(_examples, JsonOpts);
-        await File.WriteAllTextAsync(_indexPath, json, ct);
+        await WriteAllTextAtomicAsync(_indexPath, json, ct).ConfigureAwait(false);
     }
 
     /// <summary>Fuegt ein neues Beispiel hinzu und speichert das Bild.</summary>
@@ -283,5 +283,31 @@ public sealed class FewShotExampleStore
                         .Take(8)
                         .Select(kv => $"{kv.Key}:{kv.Value}");
         return $"{_examples.Count} Beispiele ({string.Join(", ", parts)})";
+    }
+
+    private static async Task WriteAllTextAtomicAsync(string path, string content, CancellationToken ct)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var directory = Path.GetDirectoryName(fullPath);
+        if (string.IsNullOrWhiteSpace(directory))
+            throw new InvalidOperationException("Zielordner fehlt.");
+
+        Directory.CreateDirectory(directory);
+        var tempPath = Path.Combine(directory, $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
+        await File.WriteAllTextAsync(tempPath, content, ct).ConfigureAwait(false);
+
+        try
+        {
+            ct.ThrowIfCancellationRequested();
+            if (File.Exists(fullPath))
+                File.Replace(tempPath, fullPath, fullPath + ".bak", ignoreMetadataErrors: true);
+            else
+                File.Move(tempPath, fullPath);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
     }
 }
