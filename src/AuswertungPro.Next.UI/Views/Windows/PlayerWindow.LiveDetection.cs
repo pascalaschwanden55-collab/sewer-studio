@@ -658,21 +658,20 @@ public partial class PlayerWindow
             if (finding.BboxX1.HasValue && finding.BboxY1.HasValue
                 && finding.BboxX2.HasValue && finding.BboxY2.HasValue)
             {
-                var px1 = finding.BboxX1.Value * width;
-                var py1 = finding.BboxY1.Value * height;
-                var px2 = finding.BboxX2.Value * width;
-                var py2 = finding.BboxY2.Value * height;
-
-                var rectLeft = Math.Min(px1, px2);
-                var rectTop = Math.Min(py1, py2);
-                var rectW = Math.Max(1, Math.Abs(px2 - px1));
-                var rectH = Math.Max(1, Math.Abs(py2 - py1));
+                var bboxRect = LiveDetectionGeometryMapper.BBoxToCanvasRect(finding, width, height);
+                if (bboxRect is null)
+                    continue;
 
                 // KEINE grosse YOLO-Vollbox mehr (verdeckte das halbe Bild, "sehr ueberladen").
                 // Stattdessen nur dezente Eck-Marker an den vier Bbox-Ecken — markiert die
                 // Stelle, ohne die Sicht zu nehmen. Die praezisen SAM-Konturen + das klickbare
                 // Label-Badge unten bleiben erhalten.
-                AddDetectionCornerMarkers(rectLeft, rectTop, rectW, rectH, color);
+                AddDetectionCornerMarkers(
+                    bboxRect.Value.Left,
+                    bboxRect.Value.Top,
+                    bboxRect.Value.Width,
+                    bboxRect.Value.Height,
+                    color);
 
                 // Label-Badge oben am Rechteck
                 var labelText = $"{finding.VsaCodeHint ?? finding.Label} [S{finding.Severity}]";
@@ -698,14 +697,12 @@ public partial class PlayerWindow
                 var capturedFinding = finding;
                 var capturedTimestamp = timestampSec;
                 label.MouseLeftButtonDown += (_, _) => OnFindingClicked(capturedFinding, capturedTimestamp);
-                label.ToolTip = $"Klick: Schadenscode zuweisen\n{finding.Label}"
-                    + (finding.VsaCodeHint != null ? $"\nVorschlag: {finding.VsaCodeHint}" : "")
-                    + $"\nSchwere: {finding.Severity}/5";
+                label.ToolTip = LiveDetectionDisplayPolicy.BuildFindingAssignmentTooltip(finding);
 
                 label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                 var desired = label.DesiredSize;
-                var lx = Math.Clamp(rectLeft, 2, width - desired.Width - 2);
-                var ly = Math.Clamp(rectTop - desired.Height - 4, 2, height - desired.Height - 2);
+                var lx = Math.Clamp(bboxRect.Value.Left, 2, width - desired.Width - 2);
+                var ly = Math.Clamp(bboxRect.Value.Top - desired.Height - 4, 2, height - desired.Height - 2);
                 Canvas.SetLeft(label, lx);
                 Canvas.SetTop(label, ly);
                 DetectionCanvas.Children.Add(label);
@@ -877,9 +874,7 @@ public partial class PlayerWindow
         var capturedFinding = finding;
         var capturedTimestamp = timestampSec;
         label.MouseLeftButtonDown += (_, _) => OnFindingClicked(capturedFinding, capturedTimestamp);
-        label.ToolTip = $"Klick: Schadenscode zuweisen\n{finding.Label}"
-            + (finding.VsaCodeHint != null ? $"\nVorschlag: {finding.VsaCodeHint}" : "")
-            + $"\nSchwere: {finding.Severity}/5";
+        label.ToolTip = LiveDetectionDisplayPolicy.BuildFindingAssignmentTooltip(finding);
 
         label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         var desired = label.DesiredSize;

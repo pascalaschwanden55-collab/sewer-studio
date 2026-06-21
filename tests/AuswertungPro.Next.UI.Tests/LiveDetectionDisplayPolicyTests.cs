@@ -33,6 +33,21 @@ public sealed class LiveDetectionDisplayPolicyTests
     }
 
     [Fact]
+    public void BuildFindingAssignmentTooltip_includes_label_code_hint_and_severity()
+    {
+        var finding = new LiveFrameFinding(
+            "Riss",
+            4,
+            "3",
+            20,
+            VsaCodeHint: "BAB");
+
+        var tooltip = LiveDetectionDisplayPolicy.BuildFindingAssignmentTooltip(finding);
+
+        Assert.Equal("Klick: Schadenscode zuweisen\nRiss\nVorschlag: BAB\nSchwere: 4/5", tooltip);
+    }
+
+    [Fact]
     public void QuickScanSeverityColor_uses_gray_for_clean_segments_and_severity_colors_for_damage()
     {
         Assert.Equal(Color.FromArgb(100, 0x94, 0xA3, 0xB8), LiveDetectionDisplayPolicy.QuickScanSeverityColor(5, hasDamage: false));

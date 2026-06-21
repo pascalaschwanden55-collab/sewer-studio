@@ -73,6 +73,36 @@ public sealed class LiveDetectionGeometryMapperTests
     }
 
     [Fact]
+    public void BBoxToCanvasRect_maps_normalized_bbox_to_canvas_rect()
+    {
+        var finding = new LiveFrameFinding(
+            "Riss",
+            3,
+            "3",
+            20,
+            BboxX1: 0.8,
+            BboxY1: 0.2,
+            BboxX2: 0.2,
+            BboxY2: 0.7);
+
+        var rect = LiveDetectionGeometryMapper.BBoxToCanvasRect(finding, 200, 100);
+
+        Assert.NotNull(rect);
+        Assert.Equal(40, rect.Value.Left);
+        Assert.Equal(20, rect.Value.Top);
+        Assert.Equal(120, rect.Value.Width);
+        Assert.Equal(50, rect.Value.Height);
+    }
+
+    [Fact]
+    public void BBoxToCanvasRect_returns_null_without_complete_bbox()
+    {
+        var finding = new LiveFrameFinding("Riss", 3, "3", 20, BboxX1: 0.1);
+
+        Assert.Null(LiveDetectionGeometryMapper.BBoxToCanvasRect(finding, 200, 100));
+    }
+
+    [Fact]
     public void ClickToClockPosition_maps_canvas_quadrants_to_clock_hours()
     {
         var size = new Size(200, 200);

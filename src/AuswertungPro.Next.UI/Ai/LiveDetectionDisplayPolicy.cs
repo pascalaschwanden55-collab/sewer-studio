@@ -61,6 +61,11 @@ public static class LiveDetectionDisplayPolicy
         return $"{clock}{(extent.Length > 0 ? $" / {extent}" : "")}{extra} - {baseText}";
     }
 
+    public static string BuildFindingAssignmentTooltip(LiveFrameFinding finding)
+        => $"Klick: Schadenscode zuweisen\n{finding.Label}"
+            + (finding.VsaCodeHint != null ? $"\nVorschlag: {finding.VsaCodeHint}" : "")
+            + $"\nSchwere: {finding.Severity}/5";
+
     public static Color DetectionSeverityColor(int severity)
         => Math.Clamp(severity, 1, 5) switch
         {

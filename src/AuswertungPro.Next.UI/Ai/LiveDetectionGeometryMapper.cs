@@ -105,6 +105,27 @@ public static class LiveDetectionGeometryMapper
         };
     }
 
+    public static Rect? BBoxToCanvasRect(LiveFrameFinding finding, double canvasWidth, double canvasHeight)
+    {
+        if (canvasWidth <= 0 || canvasHeight <= 0)
+            return null;
+
+        if (!finding.BboxX1.HasValue || !finding.BboxY1.HasValue
+            || !finding.BboxX2.HasValue || !finding.BboxY2.HasValue)
+            return null;
+
+        var px1 = finding.BboxX1.Value * canvasWidth;
+        var py1 = finding.BboxY1.Value * canvasHeight;
+        var px2 = finding.BboxX2.Value * canvasWidth;
+        var py2 = finding.BboxY2.Value * canvasHeight;
+
+        return new Rect(
+            Math.Min(px1, px2),
+            Math.Min(py1, py2),
+            Math.Max(1, Math.Abs(px2 - px1)),
+            Math.Max(1, Math.Abs(py2 - py1)));
+    }
+
     public static string ClickToClockPosition(Point click, Size canvasSize)
     {
         var cx = canvasSize.Width / 2.0;
