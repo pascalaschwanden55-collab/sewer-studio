@@ -612,7 +612,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             {
                 if (!Directory.Exists(folder)) continue;
                 var found = await _import.ScanAsync(folder);
-                foreach (var c in found.Select(ToTrainingCase))
+                foreach (var c in found.Select(TrainingCenterRuntimeHelpers.ToTrainingCase))
                     Cases.Add(c);
             }
 
@@ -740,14 +740,14 @@ public partial class TrainingCenterViewModel : ObservableObject
                 .Load()
                 .ToRuntimeSettings();
             var settings = await TrainingCenterSettingsStore.LoadAsync();
-            var meterSvc = CreateMeterTimelineService(cfg, settings.GpuConcurrency);
+            var meterSvc = TrainingCenterRuntimeHelpers.CreateMeterTimelineService(cfg, settings.GpuConcurrency);
             var generator = new TrainingSampleGenerator(cfg, meterSvc, settings, _codeCatalog);
 
             var existing = await TrainingSamplesStore.LoadAsync();
             var existingSigs = existing.Select(s => s.Signature).ToHashSet(StringComparer.Ordinal);
 
             var generation = await generator.GenerateWithDiagnosticsAsync(
-                ToTrainingCaseInput(SelectedCase), existingSigs, framesDir: null, ct);
+                TrainingCenterRuntimeHelpers.ToTrainingCaseInput(SelectedCase), existingSigs, framesDir: null, ct);
             var newSamples = generation.Samples;
 
             if (newSamples.Count == 0)
@@ -1268,7 +1268,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 }
                 Log($"  Scanne: {folder}");
                 var result = await _import.ScanAsync(folder);
-                found.AddRange(result.Select(ToTrainingCase));
+                found.AddRange(result.Select(TrainingCenterRuntimeHelpers.ToTrainingCase));
             }
             var casesWithProtocol = found.Where(c => !string.IsNullOrEmpty(c.ProtocolPath)).ToList();
 
@@ -1300,7 +1300,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             Log($"AI Config: Enabled={cfg.Enabled}, ffmpeg={cfg.FfmpegPath}");
 
             var settings = await TrainingCenterSettingsStore.LoadAsync();
-            var meterSvc = CreateMeterTimelineService(cfg, settings.GpuConcurrency);
+            var meterSvc = TrainingCenterRuntimeHelpers.CreateMeterTimelineService(cfg, settings.GpuConcurrency);
             var generator = new TrainingSampleGenerator(cfg, meterSvc, settings, _codeCatalog);
 
             var allSamples = await TrainingSamplesStore.LoadAsync();
@@ -1334,14 +1334,14 @@ public partial class TrainingCenterViewModel : ObservableObject
                 try
                 {
                     // Preview-Frame extrahieren
-                    var previewFrame = await ExtractPreviewFrameAsync(tc, cfg, ct);
+                    var previewFrame = await TrainingCenterRuntimeHelpers.ExtractPreviewFrameAsync(tc, cfg, ct);
                     if (!string.IsNullOrEmpty(previewFrame))
                         UpdateLivePreview(tc.CaseId, "Verarbeite...", "—", previewFrame);
                     else
                         UpdateLivePreview(tc.CaseId, "Verarbeite...", "—", null);
 
                     var generation = await generator.GenerateWithDiagnosticsAsync(
-                        ToTrainingCaseInput(tc), existingSigs, framesDir: null, ct);
+                        TrainingCenterRuntimeHelpers.ToTrainingCaseInput(tc), existingSigs, framesDir: null, ct);
                     var newSamples = generation.Samples;
 
                     if (newSamples.Count == 0)
@@ -1594,66 +1594,6 @@ public partial class TrainingCenterViewModel : ObservableObject
         PendingSamMask = null;
     }
 
-    /// <summary>
-    /// Extrahiert einen einzelnen Preview-Frame aus dem Video (bei Sekunde 2).
-    /// Wird für die Live-Vorschau genutzt, auch wenn keine neuen Samples generiert werden.
-    /// </summary>
-    private static async Task<string?> ExtractPreviewFrameAsync(TrainingCase tc, AiRuntimeSettings cfg, CancellationToken ct)
-    {
-        if (string.IsNullOrEmpty(tc.VideoPath) || !File.Exists(tc.VideoPath))
-            return null;
-
-        var ffmpeg = cfg.FfmpegPath ?? "ffmpeg";
-        var sampleId = $"preview_{Regex.Replace(tc.CaseId, @"[^\w\-]", "_")}";
-        try
-        {
-            return await FrameStore.ExtractAndStoreAsync(ffmpeg, tc.VideoPath, 2.0, sampleId, null, ct);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static MeterTimelineService CreateMeterTimelineService(AiRuntimeSettings cfg, int concurrency = 1)
-    {
-        if (!cfg.Enabled)
-            return new MeterTimelineService(cfg);
-
-        var ollamaClient = new OllamaClient(
-            cfg.OllamaBaseUri,
-            ownedTimeout: cfg.OllamaRequestTimeout,
-            keepAlive: cfg.OllamaKeepAlive,
-            numCtx: cfg.OllamaNumCtx);
-        var vision = new OllamaVisionFindingsService(ollamaClient, cfg.VisionModel);
-        var osd = new OsdMeterDetectionService(vision);
-        return new MeterTimelineService(cfg, osd, concurrency);
-    }
-
-    private static TrainingCaseInput ToTrainingCaseInput(TrainingCase tc)
-        => new(tc.CaseId, tc.FolderPath, tc.VideoPath, tc.ProtocolPath, tc.InspectionDate);
-
-    private static TrainingCase ToTrainingCase(TrainingCaseInput input)
-        => new()
-        {
-            CaseId = input.CaseId,
-            FolderPath = input.FolderPath,
-            VideoPath = input.VideoPath,
-            ProtocolPath = input.ProtocolPath,
-            InspectionDate = input.InspectionDate,
-            Status = TrainingCaseStatus.New,
-            CreatedUtc = DateTime.UtcNow
-        };
-
-    private static string ResolveFfmpegPath(string? ffmpegPath)
-    {
-        if (string.IsNullOrWhiteSpace(ffmpegPath))
-            return "ffmpeg";
-
-        return File.Exists(ffmpegPath) || string.Equals(ffmpegPath, "ffmpeg", StringComparison.OrdinalIgnoreCase)
-            ? ffmpegPath
-            : "ffmpeg";
-    }
 
     /// <summary>
     /// Speichert alle Samples und indexiert optional ein gerade geaendertes Sample in die KB.
@@ -1814,22 +1754,6 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Prüft ob Ollama erreichbar ist (GET /api/tags).
-    /// </summary>
-    private static async Task<bool> CheckOllamaReachableAsync(OllamaConfig config, CancellationToken ct)
-    {
-        try
-        {
-            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-            var resp = await http.GetAsync(new Uri(config.BaseUri, "/api/tags"), ct).ConfigureAwait(false);
-            return resp.IsSuccessStatusCode;
-        }
-        catch
-        {
-            return false;
-        }
-    }
 
     // ── Review Queue (Self-Improving Loop) ──────────────────────────────
 
@@ -2103,7 +2027,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             {
                 if (!Directory.Exists(folder)) continue;
                 var found = await _import.ScanAsync(folder);
-                foreach (var c in found.Select(ToTrainingCase))
+                foreach (var c in found.Select(TrainingCenterRuntimeHelpers.ToTrainingCase))
                     Cases.Add(c);
             }
         }
@@ -2181,13 +2105,16 @@ public partial class TrainingCenterViewModel : ObservableObject
             var stEvalHaltungen = EvalContaminationGuard.LoadEvalHaltungKeys(AppSettings.Load().EvalSetRoot);
             _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
                 vision, comparison, technique, pdfExtractor, stSettings,
-                ResolveFfmpegPath(cfg.FfmpegPath), stRetrieval, stEvalHaltungen);
+                TrainingCenterRuntimeHelpers.ResolveFfmpegPath(cfg.FfmpegPath), stRetrieval, stEvalHaltungen);
 
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
 
             Log("Pipeline gestartet: OSD-Scan → Frame → KI-Analyse → Vergleich → Technik");
-            var result = await _selfTrainingOrchestrator.RunAsync(ToTrainingCaseInput(SelectedCase), progress, ct);
+            var result = await _selfTrainingOrchestrator.RunAsync(
+                TrainingCenterRuntimeHelpers.ToTrainingCaseInput(SelectedCase),
+                progress,
+                ct);
 
             // Ergebnis loggen
             Log($"--- Selbsttraining abgeschlossen ---");
@@ -2319,7 +2246,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         try
         {
             var ollamaConfig = new AppSettingsAiSettingsProvider().Load().ToOllamaConfig();
-            if (!await CheckOllamaReachableAsync(ollamaConfig, ct))
+            if (!await TrainingCenterRuntimeHelpers.CheckOllamaReachableAsync(ollamaConfig, ct))
             {
                 Log($"KB-Update uebersprungen: Ollama nicht erreichbar auf {ollamaConfig.BaseUri}");
                 return new KbIndexOutcome(indexedIds, skippedIds);
