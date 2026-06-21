@@ -1349,7 +1349,7 @@ public partial class PlayerWindow
             var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
             var entry = new ProtocolEntry();
             // SAM-/Overlay-Messwerte ins Codierfenster vorausfuellen (Uhrlage, Hoehe/Breite, Querschnitt).
-            ApplyOverlayQuantToEntry(entry, overlay);
+            CodingOverlayQuantificationWriter.ApplyToEntry(entry, overlay);
             var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
             var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
             {

@@ -116,6 +116,7 @@ public partial class PlayerWindow
     private bool _codingOverlayWasOpenBeforeSuspend;
     private bool _codingOverlayWasOpenBeforeExternalHide;
     private string _codingBaselineSignature = string.Empty;
+    private readonly CodingFrameReadinessTracker _codingFrameReadiness = new();
 
     private void CodingMode_Click(object sender, RoutedEventArgs e)
     {
@@ -224,7 +225,7 @@ public partial class PlayerWindow
         // KI-Events-Liste binden (startet leer)
         LstCodingEvents.ItemsSource = _codingVm.Events;
         RunCodingDefectCount.Text = "0";
-        _codingBaselineSignature = BuildCodingEventsSignature(_codingVm.Events);
+        _codingBaselineSignature = CodingEventsSignatureBuilder.Build(_codingVm.Events);
 
         // Streckenschaden-Tracker zuruecksetzen: keine offenen Strecken aus der Vorsession.
         _streckenTracker.Reset();
@@ -473,7 +474,7 @@ public partial class PlayerWindow
         {
             if (eventEntries.TryGetValue(existing.EntryId, out var updated))
             {
-                CopyProtocolEntryValues(updated, existing);
+                CodingProtocolEntryCopier.CopyValues(updated, existing);
                 existing.IsDeleted = false;
             }
             else
@@ -501,7 +502,7 @@ public partial class PlayerWindow
         //  daher muss die Training-Persistierung hier erfolgen.)
         PersistCodingEventsAsTrainingSamples();
 
-        _codingBaselineSignature = BuildCodingEventsSignature(_codingVm.Events);
+        _codingBaselineSignature = CodingEventsSignatureBuilder.Build(_codingVm.Events);
 
         // S7: Uebernommene Codierung sofort persistieren. MarkProjectDirty setzt nur das
         // Flag; der AutoSave-Timer haengt an der DataPage und wird hier nicht ausgeloest.
@@ -517,21 +518,6 @@ public partial class PlayerWindow
         }
 
         return true;
-    }
-
-    private static void CopyProtocolEntryValues(ProtocolEntry source, ProtocolEntry target)
-    {
-        target.Code = source.Code;
-        target.Beschreibung = source.Beschreibung;
-        target.MeterStart = source.MeterStart;
-        target.MeterEnd = source.MeterEnd;
-        target.IsStreckenschaden = source.IsStreckenschaden;
-        target.Mpeg = source.Mpeg;
-        target.Zeit = source.Zeit;
-        target.Source = source.Source;
-        target.CodeMeta = source.CodeMeta;
-        target.Ai = source.Ai;
-        target.FotoPaths = source.FotoPaths?.ToList() ?? new List<string>();
     }
 
     private bool ConfirmUnappliedCodingChangesOnClose()
@@ -567,47 +553,9 @@ public partial class PlayerWindow
         if (!_isCodingMode || _codingVm is null)
             return false;
 
-        var current = BuildCodingEventsSignature(_codingVm.Events);
+        var current = CodingEventsSignatureBuilder.Build(_codingVm.Events);
         return !string.Equals(current, _codingBaselineSignature, StringComparison.Ordinal);
     }
-
-    private static string BuildCodingEventsSignature(IEnumerable<CodingEvent> events)
-        => string.Join("\n", events
-            .OrderBy(e => e.Entry.EntryId)
-            .ThenBy(e => e.MeterAtCapture)
-            .Select(e => BuildCodingEventSignature(e)));
-
-    private static string BuildCodingEventSignature(CodingEvent codingEvent)
-    {
-        var entry = codingEvent.Entry;
-        var parameters = entry.CodeMeta?.Parameters is null
-            ? string.Empty
-            : string.Join(";", entry.CodeMeta.Parameters
-                .OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase)
-                .Select(p => $"{p.Key}={p.Value}"));
-
-        return string.Join("|", new[]
-        {
-            entry.EntryId.ToString("N"),
-            entry.Code ?? string.Empty,
-            entry.Beschreibung ?? string.Empty,
-            FormatNullable(entry.MeterStart),
-            FormatNullable(entry.MeterEnd),
-            entry.IsStreckenschaden ? "1" : "0",
-            entry.Mpeg ?? string.Empty,
-            entry.Zeit?.ToString() ?? string.Empty,
-            entry.Source.ToString(),
-            entry.IsDeleted ? "1" : "0",
-            parameters,
-            FormatNullable(codingEvent.MeterAtCapture),
-            codingEvent.VideoTimestamp.ToString()
-        });
-    }
-
-    private static string FormatNullable(double? value)
-        => value.HasValue
-            ? value.Value.ToString("0.###", CultureInfo.InvariantCulture)
-            : string.Empty;
 
     private void MarkProjectDirtyForCoding()
     {
@@ -682,7 +630,7 @@ public partial class PlayerWindow
             var saved = EvidenceFrameRenderer.SaveAnnotatedFrame(
                 rawFramePath,
                 file,
-                BuildEvidenceAnnotation(ev));
+                CodingEvidenceAnnotationBuilder.Build(ev));
 
             return saved ? (file, null) : (null, "Beweisbild konnte nicht erstellt werden");
         }
@@ -690,38 +638,6 @@ public partial class PlayerWindow
         {
             return (null, ex.Message);
         }
-    }
-
-    private static EvidenceFrameAnnotation BuildEvidenceAnnotation(CodingEvent ev)
-    {
-        var (xCenter, yCenter, width, height) = ExtractEvidenceBbox(ev.Overlay);
-        return new EvidenceFrameAnnotation(
-            ev.Entry.Code,
-            ev.AiContext?.Confidence,
-            xCenter,
-            yCenter,
-            width,
-            height,
-            ev.AiContext?.SamMaskRle,
-            ev.AiContext?.SamMaskImageWidth,
-            ev.AiContext?.SamMaskImageHeight);
-    }
-
-    private static (double? XCenter, double? YCenter, double? Width, double? Height) ExtractEvidenceBbox(OverlayGeometry? overlay)
-    {
-        if (overlay?.Points == null || overlay.Points.Count < 2)
-            return (null, null, null, null);
-
-        var minX = overlay.Points.Min(p => p.X);
-        var minY = overlay.Points.Min(p => p.Y);
-        var maxX = overlay.Points.Max(p => p.X);
-        var maxY = overlay.Points.Max(p => p.Y);
-        var width = maxX - minX;
-        var height = maxY - minY;
-        if (width <= 0 || height <= 0)
-            return (null, null, null, null);
-
-        return (minX + width / 2.0, minY + height / 2.0, width, height);
     }
 
     // Eval-Set-Schutz: einmal pro Codier-Session geladen (Manifest-Hashes + Haltungs-Keys).
@@ -1812,34 +1728,6 @@ public partial class PlayerWindow
         UpdateToolBadge();
     }
 
-    /// <summary>
-    /// Uebernimmt die Mess-/Lagewerte eines Overlays (Uhrlage, Q1/Q2, Winkel, Fuellgrad/
-    /// Querschnitt) als VSA-Parameter in den ProtocolEntry. Gemeinsam genutzt vom manuellen
-    /// Code-Erfassen und vom Mark-Werkzeug (mit SAM vorausgefuellt) — keine Duplikate.
-    /// </summary>
-    private static void ApplyOverlayQuantToEntry(ProtocolEntry entry, OverlayGeometry? overlay)
-    {
-        if (overlay == null) return;
-        entry.CodeMeta ??= new ProtocolEntryCodeMeta();
-        if (overlay.ClockFrom.HasValue)
-            entry.CodeMeta.Parameters["vsa.uhr.von"] = overlay.ClockFrom.Value.ToString("F1");
-        if (overlay.ClockTo.HasValue)
-            entry.CodeMeta.Parameters["vsa.uhr.bis"] = overlay.ClockTo.Value.ToString("F1");
-        if (overlay.Q1Mm.HasValue)
-            entry.CodeMeta.Parameters["vsa.q1"] = overlay.Q1Mm.Value.ToString("F1");
-        if (overlay.Q2Mm.HasValue)
-            entry.CodeMeta.Parameters["vsa.q2"] = overlay.Q2Mm.Value.ToString("F1");
-        if (overlay.ArcDegrees.HasValue && overlay.ToolType == OverlayToolType.PipeBend)
-            entry.CodeMeta.Parameters["vsa.winkel"] = overlay.ArcDegrees.Value.ToString("F1");
-        if (overlay.FillPercent.HasValue)
-        {
-            var key = overlay.ToolType == OverlayToolType.Level && overlay.Points.Count >= 3
-                ? "vsa.querschnitt.prozent"
-                : "vsa.fuellgrad.prozent";
-            entry.CodeMeta.Parameters[key] = overlay.FillPercent.Value.ToString("F1");
-        }
-    }
-
     private async void CodingSelectCode_Click(object sender, RoutedEventArgs e)
     {
         if (_codingVm == null) return;
@@ -1869,7 +1757,7 @@ public partial class PlayerWindow
                 Zeit = videoZeit
             };
 
-            ApplyOverlayQuantToEntry(entry, _codingVm.CurrentOverlay);
+            CodingOverlayQuantificationWriter.ApplyToEntry(entry, _codingVm.CurrentOverlay);
 
             var explorerVm = CreateVsaCodeExplorerViewModel(
                 entry, meterValue, videoZeit);
@@ -2040,7 +1928,7 @@ public partial class PlayerWindow
         // Sicherheitsgurt: nie vor dem ersten sauberen Frame (nach Dateneinblendung) extrahieren,
         // auch falls das Gating mal umgangen wurde. Nimmt den spaeteren der beiden Zeitpunkte.
         var sec = _detectionPendingTimestampSec;
-        if (_codingFirstCleanFrameSec is double clean && (sec is null || sec.Value < clean))
+        if (_codingFrameReadiness.FirstCleanFrameSeconds is double clean && (sec is null || sec.Value < clean))
             sec = clean;
         return TryExtractFrameAtSeconds(sec);
     }
@@ -3685,7 +3573,7 @@ public partial class PlayerWindow
                 // Dateneinblendungs-Gating (wie im Qwen-Pfad): waehrend der Daten-/Texteinblendung
                 // am Videoanfang NICHT codieren. Sonst bekommen fruehe Befunde (BCC, Streckenschaden,
                 // BCD) ein Foto vom eingeblendeten Anfangsframe und einen falschen Anfangs-Meter.
-                // Setzt zugleich _codingFirstCleanFrameSec (erster sauberer Frame) auch im
+                // Setzt zugleich den ersten sauberen Frame auch im
                 // Multi-Model-Betrieb -> macht den BCD-Clean-Frame-Schutz hier erst wirksam.
                 var readinessProbe = new AuswertungPro.Next.Application.Ai.LiveDetection(
                     captureTimestampSec, System.Array.Empty<AuswertungPro.Next.Application.Ai.LiveFrameFinding>(),
@@ -3747,9 +3635,9 @@ public partial class PlayerWindow
 
                 // Overlay-Policy einmalig anwenden: nur sichtbare codierbare Befunde zaehlen
                 // als echte Befunde. Als Hintergrund (Hidden) verworfene Masken werden gemeldet.
-                var visibleCodierbar = BuildVisibleCodingFindings(segmented);
+                var visibleCodierbar = CodingSegmentedFindingVisibility.BuildVisibleCodingFindings(segmented);
                 var suppressedBackgroundCount = segmented.Count(s => s.Proximity.IsCodierbar) - visibleCodierbar.Count;
-                var overlaySuppressionText = BuildOverlaySuppressionText(suppressedBackgroundCount);
+                var overlaySuppressionText = CodingSegmentedFindingVisibility.BuildOverlaySuppressionText(suppressedBackgroundCount);
 
                 // DINO hatte Detektionen (sonst waeren wir oben raus), aber SAM lieferte keine Maske
                 // -> Befund verloren (degraded). Nicht als sauberen Negativbefund (gruen) tarnen.
@@ -3955,7 +3843,7 @@ public partial class PlayerWindow
 
         var coveringEvent = codingVm.Events.FirstOrDefault(e =>
             CodesMatchForDedup(e.Entry.Code, resolvedCode) &&
-            IsAlreadyCovered(e, meter, finding));
+            CodingFindingCoveragePolicy.IsCovered(e, meter, finding));
 
         var confidence = mmResult.ClassifierConfidence.HasValue
             ? $" {mmResult.ClassifierConfidence.Value:P0}"
@@ -4012,34 +3900,12 @@ public partial class PlayerWindow
     private bool IsCodingAfterTerminalBoundary(double? currentMeter, TimeSpan currentVideoTime)
     {
         return CodingDedupPolicy.ShouldStopAnalysisAfterTerminalCode(
-            EnumerateTerminalBoundaryCandidates(),
+            CodingTerminalBoundaryCandidateBuilder.Enumerate(
+                _codingSessionService?.ActiveSession?.Events,
+                _codingVm?.Events,
+                _codingImportEvents),
             currentMeter,
             currentVideoTime);
-    }
-
-    private IEnumerable<(string? Code, double? Meter, TimeSpan? VideoTime)> EnumerateTerminalBoundaryCandidates()
-    {
-        if (_codingSessionService?.ActiveSession?.Events is { } sessionEvents)
-        {
-            foreach (var ev in sessionEvents)
-                yield return ToTerminalBoundaryCandidate(ev);
-        }
-
-        if (_codingVm?.Events is { } uiEvents)
-        {
-            foreach (var ev in uiEvents)
-                yield return ToTerminalBoundaryCandidate(ev);
-        }
-
-        foreach (var ev in _codingImportEvents)
-            yield return ToTerminalBoundaryCandidate(ev);
-    }
-
-    private static (string? Code, double? Meter, TimeSpan? VideoTime) ToTerminalBoundaryCandidate(CodingEvent ev)
-    {
-        var meter = ev.Entry.MeterStart ?? (ev.MeterAtCapture > 0 ? ev.MeterAtCapture : null);
-        var videoTime = ev.Entry.Zeit ?? (ev.VideoTimestamp > TimeSpan.Zero ? ev.VideoTimestamp : null);
-        return (ev.Entry.Code, meter, videoTime);
     }
 
     /// <summary>
@@ -4048,58 +3914,6 @@ public partial class PlayerWindow
     /// Die KI erhaelt die bekannten VSA-Codes und kann sie zuweisen statt "???".
     /// </summary>
     // â”€â”€ Multi-Model Rendering (YOLO â†’ DINO â†’ SAM) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    /// <summary>
-    /// Filtert codierbare Befunde auf die, die nach der Overlay-Policy auch sichtbar sind.
-    /// Hintergrundmasken (z. B. Wasserwand) im Hidden-Modus werden verworfen, damit
-    /// Rendering UND Event-Erzeugung dieselbe Sicht teilen (kein "Befund" aus Hintergrund).
-    /// </summary>
-    private static IReadOnlyList<SegmentedFinding> BuildVisibleCodingFindings(
-        IReadOnlyList<SegmentedFinding> segmented)
-    {
-        return BuildVisibleMaskFindings(segmented)
-            .Where(s => s.Proximity.IsCodierbar)
-            .ToList();
-    }
-
-    /// <summary>
-    /// Filtert alle SAM-Masken auf sichtbare Befunde. "Voraus"-Befunde (noch im DN-Kreis,
-    /// zu weit voraus) werden NICHT gezeichnet — sie bleiben nur intern in 'segmented'
-    /// gemerkt (Status "voraus erkannt"), bis sie bei Annaeherung codierbar werden.
-    /// Fachregel User 2026-06-16: erst zwischen DN-Kreis und Bildrand zeigen/codieren.
-    /// </summary>
-    private static IReadOnlyList<SegmentedFinding> BuildVisibleMaskFindings(
-        IReadOnlyList<SegmentedFinding> segmented)
-    {
-        return segmented
-            .Where(s => s.Proximity.IsCodierbar)
-            .Where(s =>
-            {
-                var candidate = new Ai.Pipeline.SamMaskRenderer.MaskRenderCandidate(
-                    s.Mask,
-                    s.Quant,
-                    s.Dino?.Confidence);
-                var decision = Ai.Pipeline.SamMaskRenderer.DecideVisualMode(
-                    candidate,
-                    Ai.Pipeline.SamMaskRenderer.WinCanStyleOptions);
-                return decision.Mode != Ai.Pipeline.SamMaskRenderer.MaskVisualMode.Hidden;
-            })
-            .ToList();
-    }
-
-    /// <summary>
-    /// Statustext fuer ausgeblendete Hintergrundmasken (Policy = Hidden).
-    /// Leerer String, wenn nichts unterdrueckt wurde.
-    /// </summary>
-    private static string BuildOverlaySuppressionText(int suppressedBackgroundCount)
-    {
-        if (suppressedBackgroundCount <= 0)
-            return "";
-
-        return suppressedBackgroundCount == 1
-            ? "1 Hintergrundmaske ausgeblendet"
-            : $"{suppressedBackgroundCount} Hintergrundmasken ausgeblendet";
-    }
 
     /// <summary>
     /// Rendert Multi-Model Ergebnisse: SAM-Masken (gruene Konturen) + Label-Badges mit Messungen.
@@ -4116,7 +3930,7 @@ public partial class PlayerWindow
             if (mmResult.SamResponse is { ImageWidth: > 0, ImageHeight: > 0 } srAsp)
                 _codingVideoAspect = (double)srAsp.ImageWidth / srAsp.ImageHeight;
 
-            var visibleMasks = BuildVisibleMaskFindings(segmented);
+            var visibleMasks = CodingSegmentedFindingVisibility.BuildVisibleMaskFindings(segmented);
             if (visibleMasks.Count > 0)
             {
                 var candidates = visibleMasks
@@ -4163,26 +3977,10 @@ public partial class PlayerWindow
     /// </summary>
     private bool IsFindingTooFarAhead(LiveFrameFinding finding)
     {
-        if (!(finding.BboxX1.HasValue && finding.BboxY1.HasValue
-              && finding.BboxX2.HasValue && finding.BboxY2.HasValue))
-            return false;
-
-        var cal = _codingOverlayService?.Calibration;
-        double vanishX = cal?.PipeCenter.X ?? 0.5;
-        double vanishY = cal?.PipeCenter.Y ?? 0.5;
-        double pipeRadius = (cal != null && cal.NormalizedDiameter > 0) ? cal.NormalizedDiameter / 2.0 : 0.5;
-        double aspect = _codingVideoAspect > 0 ? _codingVideoAspect : 1.0;
-
-        var input = new AuswertungPro.Next.Application.Ai.MetrierungProximityInput(
-            Math.Min(finding.BboxX1.Value, finding.BboxX2.Value),
-            Math.Min(finding.BboxY1.Value, finding.BboxY2.Value),
-            Math.Max(finding.BboxX1.Value, finding.BboxX2.Value),
-            Math.Max(finding.BboxY1.Value, finding.BboxY2.Value),
-            vanishX, vanishY, aspect, pipeRadius);
-
-        var result = AuswertungPro.Next.Application.Ai.MetrierungProximityEvaluator.Evaluate(
-            input, AuswertungPro.Next.Application.Ai.MetrierungProximityThresholds.Default);
-        return !result.IsCodierbar;
+        return CodingFindingProximityPolicy.IsTooFarAhead(
+            finding,
+            _codingOverlayService?.Calibration,
+            _codingVideoAspect);
     }
 
     /// <summary>Baut SegmentedFindings aus dem Multi-Model-Ergebnis inkl. Naehe-Pruefung.</summary>
@@ -4418,7 +4216,7 @@ public partial class PlayerWindow
             // Dedup gegen bestehende Events (identisch mit Qwen-Pfad)
             var coveringEvent = codingVm.Events.FirstOrDefault(e =>
                 CodesMatchForDedup(e.Entry.Code, code) &&
-                IsAlreadyCovered(e, meter, pseudoFinding));
+                CodingFindingCoveragePolicy.IsCovered(e, meter, pseudoFinding));
             if (coveringEvent != null) continue;
 
             // QualityGate mit Multi-Model Evidenz
@@ -4551,7 +4349,7 @@ public partial class PlayerWindow
 
             SetCodingAiState("Dateneinblendung erkannt \u2014 \u00fcbersprungen",
                 Color.FromRgb(0x94, 0xA3, 0xB8),
-                $"Warte auf Videobild... (Bild {_codingOsdSkippedFrames} von 3)");
+                $"Warte auf Videobild... (Bild {_codingFrameReadiness.SkippedFrames} von 3)");
             CodingFindingsList.ItemsSource = null;
             DetectionCanvas.Children.Clear();
             return;
@@ -4623,89 +4421,6 @@ public partial class PlayerWindow
             DetectionCanvas.Children.Clear();
             DetectionOverlayGrid.Visibility = Visibility.Collapsed;
         }
-    }
-
-    /// <summary>
-    /// Prueft ob ein neuer Fund bereits durch ein bestehendes Event abgedeckt ist.
-    /// Beruecksichtigt: Streckenschaeden (ganzer Bereich), akzeptierte Events,
-    /// und Punktschaeden (Â±0.3m + Position).
-    /// </summary>
-    private static bool IsAlreadyCovered(CodingEvent existing, double newMeter, LiveFrameFinding newFinding)
-    {
-        // Einmal-Codes: BCD (Rohranfang), BCE (Rohrende), BDC (Abbruch) duerfen
-        // nur 1Ã— pro Session vorkommen â€” Meter-Distanz ist irrelevant
-        if (CodingDedupPolicy.IsOneTimeCode(existing.Entry.Code))
-            return true; // IMMER Duplikat, egal bei welchem Meter
-
-        // Streckenschaden: der ganze Bereich MeterStart..MeterEnd ist abgedeckt
-        if (existing.Entry.IsStreckenschaden)
-        {
-            var start = existing.Entry.MeterStart ?? existing.MeterAtCapture;
-            var end = existing.Entry.MeterEnd ?? double.MaxValue; // offen = bis Ende
-            return newMeter >= (start - 0.1) && newMeter <= (end + 0.1);
-        }
-
-        // Bereits akzeptiertes/bearbeitetes Event: gleicher Code innerhalb Â±1.0m
-        // nicht nochmal melden (User hat den Schaden schon gesehen und bestaetigt)
-        if (existing.AiContext?.Decision is CodingUserDecision.Accepted
-            or CodingUserDecision.AcceptedWithEdit)
-        {
-            return Math.Abs(existing.MeterAtCapture - newMeter) < 1.0;
-        }
-
-        // Punktschaden: gleicher Code innerhalb Â±1.0m
-        if (Math.Abs(existing.MeterAtCapture - newMeter) >= 1.0)
-            return false;
-
-        // BCA (Anschluss) kann mehrfach am gleichen Meter vorkommen (z.B. 3h und 9h)
-        // â†’ Position-Check noetig um verschiedene Anschluesse zu unterscheiden
-        var baseCode = newFinding.VsaCodeHint?.Length >= 3
-            ? newFinding.VsaCodeHint[..3].ToUpperInvariant() : "";
-        if (baseCode == "BCA")
-            return IsSamePosition(existing, newFinding);
-
-        // Alle anderen Codes: gleicher Meter = Duplikat (kein Position-Check noetig)
-        return true;
-    }
-
-    /// <summary>
-    /// Positionsvergleich fuer Duplikat-Erkennung.
-    /// Zwei Befunde mit gleichem Code gelten als gleiche Position wenn:
-    /// - Beide BBox haben â†’ Mittelpunktabstand kleiner 15% (normalisiert)
-    /// - Keiner BBox hat â†’ gleiche Uhrlage
-    /// - Gemischt (BBox vs. ohne) â†’ Uhrlage vergleichen als Fallback.
-    ///   Verhindert Duplikate wenn Vision die BBox mal liefert, mal nicht.
-    /// </summary>
-    private static bool IsSamePosition(CodingEvent existing, LiveFrameFinding newFinding)
-    {
-        bool newHasBbox = newFinding.BboxX1.HasValue && newFinding.BboxY1.HasValue
-                       && newFinding.BboxX2.HasValue && newFinding.BboxY2.HasValue;
-        bool existHasBbox = existing.Overlay?.Points?.Count >= 4;
-
-        if (newHasBbox && existHasBbox)
-        {
-            // Mittelpunkt-Vergleich (normalisierte Koordinaten 0..1)
-            var ncx = (newFinding.BboxX1!.Value + newFinding.BboxX2!.Value) / 2;
-            var ncy = (newFinding.BboxY1!.Value + newFinding.BboxY2!.Value) / 2;
-            var pts = existing.Overlay!.Points;
-            var ecx = (pts[0].X + pts[2].X) / 2;
-            var ecy = (pts[0].Y + pts[2].Y) / 2;
-            var dist = Math.Sqrt(Math.Pow(ncx - ecx, 2) + Math.Pow(ncy - ecy, 2));
-            return dist < 0.15;
-        }
-
-        // Fallback: Uhrlage vergleichen (auch bei gemischtem BBox-Status).
-        // Faengt den Fall ab, dass Vision die BBox mal liefert und mal nicht.
-        var existClock = existing.Entry.CodeMeta?.Parameters
-            ?.GetValueOrDefault("vsa.uhr.von");
-        var newClock = newFinding.PositionClock;
-
-        // Beide haben Uhrlage â†’ vergleichen
-        if (!string.IsNullOrEmpty(existClock) && !string.IsNullOrEmpty(newClock))
-            return string.Equals(existClock, newClock, StringComparison.OrdinalIgnoreCase);
-
-        // Keine Positionsinfo verfuegbar â†’ konservativ: als gleich werten (Duplikat annehmen)
-        return true;
     }
 
     /// <summary>
@@ -4999,7 +4714,7 @@ public partial class PlayerWindow
             foreach (var ev in events)
             {
                 if (!CodesMatchForDedup(ev.Entry.Code, code)) continue;
-                if (IsAlreadyCovered(ev, meter, finding)) return true;
+                if (CodingFindingCoveragePolicy.IsCovered(ev, meter, finding)) return true;
             }
             return false;
         }
@@ -5068,7 +4783,7 @@ public partial class PlayerWindow
             // 3. Bereits akzeptierter/bearbeiteter Code: nicht nochmal melden
             var coveringEvent = codingVm.Events.FirstOrDefault(e =>
                 CodesMatchForDedup(e.Entry.Code, code) &&
-                IsAlreadyCovered(e, meter, finding));
+                CodingFindingCoveragePolicy.IsCovered(e, meter, finding));
             if (coveringEvent != null)
             {
                 // Offener Streckenschaden: letzte Sichtung merken (fuer automatisches Schliessen)
@@ -5611,53 +5326,24 @@ public partial class PlayerWindow
 
     }
 
-    // --- Dateneinblendung-Erkennung: Zustandsautomat ---
-    //
-    // WaitingForVideo: Dateneinblendung wird vermutet, Analyse blockiert.
-    // Warmup:          Erster Meter gesehen, warte auf Bestaetigung (2. Frame).
-    // Ready:           Analyse freigeschaltet, kein weiteres Gating.
-    //
-    private enum FrameReadiness { WaitingForVideo, Warmup, Ready }
-    private FrameReadiness _codingFrameState = FrameReadiness.WaitingForVideo;
-    private int _codingOsdSkippedFrames;
-    private int _codingMeterConfirmCount;
-
     // Warmup-Puffer: Ergebnis aus der Warmup-Phase wird zwischengespeichert
     // und nach Transition zu Ready nachtraeglich verarbeitet.
     private LiveDetection? _pendingWarmupResult;
 
-    // Videozeit (Sekunden) des ersten sauberen Frames NACH der Dateneinblendung
-    // (Uebergang FrameReadiness -> Ready). Wird fuer das Rohranfang-Foto (BCD) genutzt,
-    // damit dieses nicht den eingeblendeten Datenblock am Videoanfang zeigt.
-    private double? _codingFirstCleanFrameSec;
-
     /// <summary>Setzt den Einblendungs-Zustand zurueck (bei Eintritt/Austritt Codier-Modus).</summary>
     private void ResetFrameReadiness()
     {
-        _codingFrameState = FrameReadiness.WaitingForVideo;
-        _codingOsdSkippedFrames = 0;
-        _codingMeterConfirmCount = 0;
+        _codingFrameReadiness.Reset();
         _codingLastOsdMeter = null; // Stale Meter aus vorheriger Session verhindern
         _codingLastOsdTimestampSec = null;
         _pendingWarmupResult = null;
-        _codingFirstCleanFrameSec = null;
-    }
-
-    /// <summary>Merkt den Videozeitpunkt des ersten sauberen Frames (Einblendung vorbei), einmalig.</summary>
-    private void MarkFirstCleanFrame(LiveDetection result)
-    {
-        if (_codingFirstCleanFrameSec.HasValue)
-            return;
-        _codingFirstCleanFrameSec = result.TimestampSeconds >= 0
-            ? result.TimestampSeconds
-            : (_player != null ? _player.Time / 1000.0 : 0.0);
     }
 
     /// <summary>
     /// Reine Bewertung: Ist der aktuelle Frame bereit fuer die Analyse?
     /// Aendert KEINEN Zustand â€” dafuer ist UpdateFrameReadiness zustaendig.
     /// </summary>
-    private bool IsFrameReady() => _codingFrameState == FrameReadiness.Ready;
+    private bool IsFrameReady() => _codingFrameReadiness.IsReady;
 
     /// <summary>
     /// Aktualisiert den Einblendungs-Zustand anhand des aktuellen Analyse-Ergebnisses.
@@ -5671,60 +5357,8 @@ public partial class PlayerWindow
     /// </summary>
     private void UpdateFrameReadiness(LiveDetection result)
     {
-        if (_codingFrameState == FrameReadiness.Ready)
-            return;
-
-        // NUR den aktuellen Frame-Meter verwenden, NICHT den gecachten _codingLastOsdMeter.
-        // Sonst kann ein stale Wert aus vorheriger Navigation die Sperre umgehen.
-        bool hasMeterThisFrame = result.MeterReading.HasValue;
-
-        switch (_codingFrameState)
-        {
-            case FrameReadiness.WaitingForVideo:
-                if (hasMeterThisFrame)
-                {
-                    // Erster Meter gesehen â†’ Warmup (noch nicht sofort freischalten)
-                    _codingFrameState = FrameReadiness.Warmup;
-                    _codingMeterConfirmCount = 1;
-                    _codingOsdSkippedFrames = 0; // Zaehler fuer Warmup-Fallback neu starten
-                }
-                else
-                {
-                    // Kein Meter â†’ zaehlen. Nach 3 Frames: kein OSD vorhanden.
-                    _codingOsdSkippedFrames++;
-                    if (_codingOsdSkippedFrames >= 3)
-                    {
-                        _codingFrameState = FrameReadiness.Ready;
-                        MarkFirstCleanFrame(result);
-                    }
-                }
-                break;
-
-            case FrameReadiness.Warmup:
-                if (hasMeterThisFrame)
-                    _codingMeterConfirmCount++;
-
-                // 2 Frames mit Meter â†’ sofort Ready (stabiler Uebergang)
-                if (_codingMeterConfirmCount >= 2)
-                {
-                    _codingMeterConfirmCount = 0;
-                    _codingFrameState = FrameReadiness.Ready;
-                    MarkFirstCleanFrame(result);
-                }
-                else
-                {
-                    // Fallback: nach 2 Frames in Warmup (auch ohne zweiten Meter) â†’ Ready.
-                    // Verhindert Deadlock bei OCR-Aussetzern nach erstem Meter.
-                    _codingOsdSkippedFrames++;
-                    if (_codingOsdSkippedFrames >= 2)
-                    {
-                        _codingMeterConfirmCount = 0;
-                        _codingFrameState = FrameReadiness.Ready;
-                        MarkFirstCleanFrame(result);
-                    }
-                }
-                break;
-        }
+        var fallbackTimestamp = _player != null ? _player.Time / 1000.0 : 0.0;
+        _codingFrameReadiness.Update(result.TimestampSeconds, result.MeterReading.HasValue, fallbackTimestamp);
     }
 
     /// <summary>
@@ -5773,7 +5407,7 @@ public partial class PlayerWindow
         // Rohranfang-Foto: NICHT den Videoanfang nehmen (dort laeuft die Dateneinblendung).
         // Bevorzugt den ersten sauberen Frame NACH der Einblendung (FrameReadiness -> Ready)
         // gezielt per ffmpeg greifen; sonst Fallback auf den uebergebenen analysierten Frame.
-        analyzedFrameBytes = TryExtractFrameAtSeconds(_codingFirstCleanFrameSec) ?? analyzedFrameBytes;
+        analyzedFrameBytes = TryExtractFrameAtSeconds(_codingFrameReadiness.FirstCleanFrameSeconds) ?? analyzedFrameBytes;
         AttachBoundaryAnalyzedFramePhoto(entry, analyzedFrameBytes);
 
         var ev = _codingSessionService.AddEvent(entry);
@@ -5997,73 +5631,36 @@ public partial class PlayerWindow
         await RunCodingAnalysisAsync("Analyse: markierte Stelle...");
     }
 
-    /// <summary>
-    /// Berechnet den Meterstand aus der aktuellen Videoposition (linear interpoliert).
-    /// Fallback wenn kein OSD-Wert verfuegbar.
-    /// </summary>
-    private const double RecentOsdMeterMaxAgeSeconds = 1.5;
-
-    // Grosser Sprung der Videoposition (Seek / Sprung zu einem Befund) seit der letzten
-    // OSD-Lesung -> der Jump-Guard wird umgangen, weil ein grosser Meter-Sprung dann legitim ist.
-    private const double OsdSeekResetGapSeconds = 6.0;
-
-    private double? GetMeterFromVideoPosition()
-        => GetMeterFromVideoPositionAt(_player?.Time / 1000.0);
-
-    private double? GetMeterFromVideoPositionAt(double? timestampSeconds)
-    {
-        if (_player == null || _player.Length <= 0) return null;
-        if (_codingVm == null || _codingVm.EndMeter <= 0) return null;
-        if (!timestampSeconds.HasValue) return null;
-
-        var durationSeconds = _player.Length / 1000.0;
-        if (durationSeconds <= 0) return null;
-
-        var fraction = Math.Clamp(timestampSeconds.Value / durationSeconds, 0.0, 1.0);
-        return Math.Round(fraction * _codingVm.EndMeter, 2);
-    }
-
     // True, wenn der zuletzt von ResolveCodingMeterForFrame gelieferte Meter aus dem OSD stammt
     // (Same-Frame oder frischer Cache), false bei linearer Schaetzung / CurrentMeter-Fallback.
     private bool _lastResolvedMeterIsOsd;
 
     private double ResolveCodingMeterForFrame(double? frameTimestampSeconds, double? sameFrameOsdMeter = null)
     {
-        if (sameFrameOsdMeter.HasValue && sameFrameOsdMeter.Value is >= 0 and <= 500)
-        {
-            _lastResolvedMeterIsOsd = true;
-            return Math.Round(sameFrameOsdMeter.Value, 2);
-        }
+        var durationSeconds = _player != null ? _player.Length / 1000.0 : (double?)null;
+        var currentPlayerSeconds = _player != null ? _player.Time / 1000.0 : (double?)null;
+        var result = CodingMeterResolver.Resolve(
+            frameTimestampSeconds,
+            sameFrameOsdMeter,
+            _codingLastOsdMeter,
+            _codingLastOsdTimestampSec,
+            currentPlayerSeconds,
+            durationSeconds,
+            _codingVm?.EndMeter ?? 0,
+            _codingVm?.CurrentMeter ?? 0);
 
-        var recentOsdMeter = GetRecentOsdMeterForFrame(frameTimestampSeconds);
-        if (recentOsdMeter.HasValue)
-        {
-            _lastResolvedMeterIsOsd = true;
-            return recentOsdMeter.Value;
-        }
-
-        // Kein OSD-Wert -> lineare Schaetzung. Herkunft merken, damit der Befund als geschaetzt markiert wird.
-        _lastResolvedMeterIsOsd = false;
-
-        var videoMeter = GetMeterFromVideoPositionAt(frameTimestampSeconds) ?? GetMeterFromVideoPosition();
-        if (videoMeter.HasValue)
-            return videoMeter.Value;
-
-        return Math.Round(Math.Max(0, _codingVm?.CurrentMeter ?? 0), 2);
+        _lastResolvedMeterIsOsd = result.IsOsd;
+        return result.Meter;
     }
 
-    private double? GetRecentOsdMeterForFrame(double? frameTimestampSeconds)
+    private double? GetMeterFromVideoPosition()
     {
-        if (!_codingLastOsdMeter.HasValue || _codingLastOsdMeter.Value is < 0 or > 500)
-            return null;
-        if (!frameTimestampSeconds.HasValue || !_codingLastOsdTimestampSec.HasValue)
-            return null;
-
-        var cachedOsdMeter = _codingLastOsdMeter.Value;
-        var ageSeconds = Math.Abs(frameTimestampSeconds.Value - _codingLastOsdTimestampSec.Value);
-        return ageSeconds <= RecentOsdMeterMaxAgeSeconds
-            ? Math.Round(cachedOsdMeter, 2)
-            : null;
+        var currentPlayerSeconds = _player != null ? _player.Time / 1000.0 : (double?)null;
+        var durationSeconds = _player != null ? _player.Length / 1000.0 : (double?)null;
+        return CodingMeterResolver.EstimateFromVideo(
+            currentPlayerSeconds,
+            durationSeconds,
+            _codingVm?.EndMeter ?? 0);
     }
 
     // --- OSD Meter automatisch lesen beim Navigieren ---
@@ -6120,8 +5717,8 @@ public partial class PlayerWindow
             // (Seek / Sprung zu einem Befund) ist ein grosser Meter-Sprung legitim ->
             // alten Wert wie Erstmessung behandeln, sonst friert der Meter nach dem Sprung ein.
             var recentForJumpGuard = _codingLastOsdMeter;
-            if (recentForJumpGuard.HasValue && frameTimestampSec.HasValue && _codingLastOsdTimestampSec.HasValue
-                && Math.Abs(frameTimestampSec.Value - _codingLastOsdTimestampSec.Value) > OsdSeekResetGapSeconds)
+            if (recentForJumpGuard.HasValue
+                && CodingMeterResolver.ShouldResetRecentMeterForSeek(frameTimestampSec, _codingLastOsdTimestampSec))
             {
                 recentForJumpGuard = null;
             }

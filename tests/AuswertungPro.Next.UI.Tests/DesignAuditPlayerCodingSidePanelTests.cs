@@ -47,7 +47,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
 
-        Assert.Contains("BuildVisibleCodingFindings", coding);
+        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleCodingFindings", coding);
         Assert.Contains("SamMaskRenderer.RenderCandidates", coding);
         Assert.Contains("visibleCodierbar", coding);
         Assert.DoesNotContain("AddMultiModelFindingsAsEvents(\r\n                    segmented.Where(s => s.Proximity.IsCodierbar).ToList()", coding);
@@ -59,9 +59,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
         var showBody = ExtractMethodBody(coding, "private void ShowMultiModelResults");
 
-        Assert.Contains("BuildVisibleMaskFindings", coding);
-        Assert.Contains("BuildVisibleMaskFindings(segmented)", showBody);
-        Assert.Contains("BuildVisibleCodingFindings(segmented)", coding);
+        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskFindings", coding);
+        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskFindings(segmented)", showBody);
+        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleCodingFindings(segmented)", coding);
         Assert.Contains("AddMultiModelFindingsAsEvents(", coding);
         Assert.Contains("visibleCodierbar", coding);
     }
@@ -71,8 +71,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.cs");
 
-        Assert.Contains("Hintergrundmasken ausgeblendet", coding);
-        Assert.Contains("BuildOverlaySuppressionText", coding);
+        Assert.Contains("CodingSegmentedFindingVisibility.BuildOverlaySuppressionText", coding);
     }
 
     [Fact]
@@ -231,15 +230,15 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         var meterStart = runBody.IndexOf("var currentMeterForClassifier", StringComparison.Ordinal);
         var resolveIndex = runBody.IndexOf("ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter)", meterStart, StringComparison.Ordinal);
-        var videoPositionIndex = resolveBody.IndexOf("GetMeterFromVideoPositionAt(frameTimestampSeconds)", StringComparison.Ordinal);
+        var resolverIndex = resolveBody.IndexOf("CodingMeterResolver.Resolve", StringComparison.Ordinal);
         var viewModelMeterIndex = resolveBody.IndexOf("_codingVm?.CurrentMeter", StringComparison.Ordinal);
 
         Assert.True(meterStart >= 0, "Analyse muss einen Meter fuer den Klassifikator bestimmen.");
         Assert.True(resolveIndex >= 0, "Der Klassifikator muss den gemeinsamen Frame-Meter-Resolver verwenden.");
-        Assert.True(videoPositionIndex >= 0, "Video-Positions-Fallback muss fuer den Klassifikator genutzt werden.");
+        Assert.True(resolverIndex >= 0, "Video-Positions-Fallback muss im ausgelagerten Meter-Resolver liegen.");
         Assert.True(viewModelMeterIndex >= 0, "ViewModel-Meter darf nur als spaeter Fallback genutzt werden.");
         Assert.True(
-            videoPositionIndex < viewModelMeterIndex,
+            resolverIndex < viewModelMeterIndex,
             "Staler CurrentMeter=0 darf die echte Videoposition nicht ueberstimmen, sonst blockiert BCD die Pipeline.");
     }
 
