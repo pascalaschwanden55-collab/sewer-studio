@@ -18,6 +18,7 @@ public sealed partial class KarteViewModel : ObservableObject
     private const double ViewportPaddingRatio = 0.50;
 
     private readonly ShellViewModel _shell;
+    private readonly ServiceProvider _services;
 
     // Pfad zur Netz-XTF; kein Settings-Eintrag vorhanden → Konstante.
     // Korrigierte Fassung: vollstaendigerer Netzplan (110'224 Haltungen statt 94'109).
@@ -41,9 +42,10 @@ public sealed partial class KarteViewModel : ObservableObject
 
     public IRelayCommand OpenInspektionCommand { get; }
 
-    public KarteViewModel(ShellViewModel shell)
+    public KarteViewModel(ShellViewModel shell, ServiceProvider services)
     {
         _shell = shell;
+        _services = services;
         OpenInspektionCommand = new RelayCommand(OpenInspektion);
     }
 
@@ -255,20 +257,19 @@ public sealed partial class KarteViewModel : ObservableObject
 
         try
         {
-            var sp = (ServiceProvider)App.Services;
             var options = new Views.Windows.PlayerWindowOptions(
-                EnableHardwareDecoding: sp.Settings.VideoHwDecoding,
-                DropLateFrames: sp.Settings.VideoDropLateFrames,
-                SkipFrames: sp.Settings.VideoSkipFrames,
-                FileCachingMs: sp.Settings.VideoFileCachingMs,
-                NetworkCachingMs: sp.Settings.VideoNetworkCachingMs,
-                CodecThreads: sp.Settings.VideoCodecThreads,
-                VideoOutput: sp.Settings.VideoOutput);
+                EnableHardwareDecoding: _services.Settings.VideoHwDecoding,
+                DropLateFrames: _services.Settings.VideoDropLateFrames,
+                SkipFrames: _services.Settings.VideoSkipFrames,
+                FileCachingMs: _services.Settings.VideoFileCachingMs,
+                NetworkCachingMs: _services.Settings.VideoNetworkCachingMs,
+                CodecThreads: _services.Settings.VideoCodecThreads,
+                VideoOutput: _services.Settings.VideoOutput);
 
             var window = new Views.Windows.PlayerWindow(
                 resolved,
                 options,
-                serviceProvider: sp,
+                serviceProvider: _services,
                 haltungId: record.Id.ToString(),
                 haltungRecord: record)
             {

@@ -123,7 +123,7 @@ public partial class MainWindow : Window
         var window = new Views.Windows.KarteWindow
         {
             Owner = this,
-            DataContext = new ViewModels.Pages.KarteViewModel(shell)
+            DataContext = new ViewModels.Pages.KarteViewModel(shell, GetServiceProvider())
         };
         window.Show();
     }
