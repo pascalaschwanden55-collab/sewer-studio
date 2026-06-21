@@ -48,18 +48,6 @@ public partial class TrainingCenterWindow : Window
     // Review-Services (lazy, erst bei erster Review-Aktion)
     private InfraSelfImproving.ReviewQueueService? _reviewQueueService;
 
-    private static AuswertungPro.Next.UI.ServiceProvider? TryGetAppServiceProvider()
-    {
-        try
-        {
-            return App.Services as AuswertungPro.Next.UI.ServiceProvider;
-        }
-        catch (InvalidOperationException)
-        {
-            return null;
-        }
-    }
-
     // ── Box-Zeichnen auf Review-Karte (B5) ──────────────────────────────
     private Rectangle? _boxPreview;
     private Point _boxStart;
@@ -67,7 +55,7 @@ public partial class TrainingCenterWindow : Window
     private TrainingReviewSamSegmentationService? _reviewSamService;
 
     public TrainingCenterWindow()
-        : this(TryGetAppServiceProvider())
+        : this(null)
     {
     }
 
