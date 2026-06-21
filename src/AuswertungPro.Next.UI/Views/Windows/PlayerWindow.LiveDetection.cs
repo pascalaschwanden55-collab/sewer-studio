@@ -147,7 +147,7 @@ public partial class PlayerWindow
             Height = 6,
             RadiusX = 1,
             RadiusY = 1,
-            Fill = new SolidColorBrush(SeverityToColor(segment.Severity, segment.HasDamage)),
+            Fill = new SolidColorBrush(LiveDetectionDisplayPolicy.QuickScanSeverityColor(segment.Severity, segment.HasDamage)),
             Cursor = Cursors.Hand,
             Opacity = segment.HasDamage ? 0.85 : 0.4
         };
@@ -212,20 +212,6 @@ public partial class PlayerWindow
         }
     }
 
-    private static Color SeverityToColor(int severity, bool hasDamage)
-    {
-        if (!hasDamage)
-            return Color.FromArgb(100, 0x94, 0xA3, 0xB8); // grey with alpha
-
-        return severity switch
-        {
-            >= 4 => (Color)ColorConverter.ConvertFromString("#EF4444"), // red
-            3    => (Color)ColorConverter.ConvertFromString("#F59E0B"), // orange
-            2    => (Color)ColorConverter.ConvertFromString("#FACC15"), // yellow
-            _    => (Color)ColorConverter.ConvertFromString("#22C55E"), // green
-        };
-    }
-
     private AppProtocol.IVsaCodeSelectionCatalog? CodeSelectionCatalog
         => _serviceProvider?.CodeSelectionCatalog ?? TryGetAppServiceProvider()?.CodeSelectionCatalog;
 
@@ -251,18 +237,6 @@ public partial class PlayerWindow
         => new(entry, presetMeter, presetZeit, CodeSelectionCatalog);
 
     // ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ Live Detection ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬
-
-    private static string CompactModelName(string? model)
-    {
-        if (string.IsNullOrWhiteSpace(model))
-            return "?";
-
-        var trimmed = model.Trim();
-        var slashIndex = trimmed.LastIndexOf('/');
-        if (slashIndex >= 0 && slashIndex < trimmed.Length - 1)
-            trimmed = trimmed[(slashIndex + 1)..];
-        return trimmed;
-    }
 
     private void SetLiveDetectionBadge(string status, Color dotColor, string? stage = null)
     {
@@ -428,8 +402,8 @@ public partial class PlayerWindow
             // Show overlay layer
             DetectionOverlayGrid.Visibility = Visibility.Visible;
             SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
-                $"Modell: {CompactModelName(visionModel)}");
-            SetYoloStatus("Aktiv", Color.FromRgb(0x22, 0xC5, 0x5E), CompactModelName(visionModel));
+                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(visionModel)}");
+            SetYoloStatus("Aktiv", Color.FromRgb(0x22, 0xC5, 0x5E), LiveDetectionDisplayPolicy.CompactModelName(visionModel));
 
             LiveDetectionStatusText.Visibility = Visibility.Visible;
             LiveDetectionStatusText.Text = "Warte auf Frame...";
@@ -521,7 +495,7 @@ public partial class PlayerWindow
 
         _isDetectionInFlight = true;
         SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0xF5, 0x9E, 0x0B),
-            $"{CompactModelName(_liveDetectionModelName)} | Snapshot");
+            $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Snapshot");
 
         try
         {
@@ -532,7 +506,7 @@ public partial class PlayerWindow
                 if (!_closing && !_playbackDisposed)
                 {
                     SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
-                        $"{CompactModelName(_liveDetectionModelName)} | Bereit");
+                        $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Bereit");
                 }
                 return;
             }
@@ -541,7 +515,7 @@ public partial class PlayerWindow
                 return;
 
             SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0xF5, 0x9E, 0x0B),
-                $"{CompactModelName(_liveDetectionModelName)} | Inferenz");
+                $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Inferenz");
             var timestampSec = _player.Time / 1000.0;
             var result = await _liveDetectionService.AnalyzeFrameAsync(
                 snapshot, timestampSec, _detectionCts.Token).ConfigureAwait(false);
@@ -558,7 +532,7 @@ public partial class PlayerWindow
                 UpdateDetectionStatus(result);
 
                 SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
-                    $"{CompactModelName(_liveDetectionModelName)} | Overlay");
+                    $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Overlay");
 
                 // Auto-Pause bei relevanten Befunden (Severity >= 2)
                 var significantFindings = result.Findings
@@ -570,7 +544,7 @@ public partial class PlayerWindow
                     _detectionPendingTimestampSec = result.TimestampSeconds;
                     ShowDetectionConfirmation(significantFindings);
                     SetLiveDetectionBadge("Befund erkannt", Color.FromRgb(0xF5, 0x9E, 0x0B),
-                        $"{CompactModelName(_liveDetectionModelName)} | Warte auf Bestaetigung");
+                        $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Warte auf Bestaetigung");
                 }
             });
         }
@@ -589,7 +563,7 @@ public partial class PlayerWindow
 
                 LiveDetectionStatusText.Text = $"Fehler: {msg}";
                 SetLiveDetectionBadge("KI Fehler", Color.FromRgb(0xEF, 0x44, 0x44),
-                    CompactModelName(_liveDetectionModelName));
+                    LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName));
             });
         }
         finally
@@ -688,7 +662,7 @@ public partial class PlayerWindow
         for (var i = 0; i < findings.Count && i < 8; i++)
         {
             var finding = findings[i];
-            var color = MapDetectionSeverityColor(finding.Severity);
+            var color = LiveDetectionDisplayPolicy.DetectionSeverityColor(finding.Severity);
 
             if (finding.BboxX1.HasValue && finding.BboxY1.HasValue
                 && finding.BboxX2.HasValue && finding.BboxY2.HasValue)
@@ -828,7 +802,7 @@ public partial class PlayerWindow
         for (var hour = 1; hour <= 12; hour++)
         {
             var angleDeg = -90 + (hour % 12) * 30;
-            var rad = DegToRad(angleDeg);
+            var rad = LiveDetectionGeometryMapper.DegToRad(angleDeg);
             DetectionCanvas.Children.Add(new System.Windows.Shapes.Line
             {
                 X1 = cx + Math.Cos(rad) * (ringInner - 4),
@@ -856,7 +830,7 @@ public partial class PlayerWindow
         var ringOuter = size * 0.42;
         var ringInner = size * 0.28;
 
-        var parsedClock = ParseClockHour(finding.PositionClock);
+        var parsedClock = LiveDetectionGeometryMapper.ParseClockHour(finding.PositionClock);
         var centerDeg = parsedClock.HasValue
             ? -90 + (parsedClock.Value % 12) * 30
             : -90 + index * (360.0 / total);
@@ -866,11 +840,11 @@ public partial class PlayerWindow
             : 18.0;
 
         var startDeg = centerDeg - sweep / 2.0;
-        var color = MapDetectionSeverityColor(finding.Severity);
+        var color = LiveDetectionDisplayPolicy.DetectionSeverityColor(finding.Severity);
 
         var sector = new System.Windows.Shapes.Path
         {
-            Data = BuildRingSectorGeometry(cx, cy, ringInner, ringOuter, startDeg, sweep),
+            Data = LiveDetectionGeometryMapper.BuildRingSectorGeometry(cx, cy, ringInner, ringOuter, startDeg, sweep),
             Fill = new SolidColorBrush(Color.FromArgb(98, color.R, color.G, color.B)),
             Stroke = new SolidColorBrush(Color.FromArgb(220, color.R, color.G, color.B)),
             StrokeThickness = 1.0, IsHitTestVisible = false
@@ -878,7 +852,7 @@ public partial class PlayerWindow
         DetectionCanvas.Children.Add(sector);
 
         // Severity-Punkt ausserhalb Ring
-        var rad2 = DegToRad(centerDeg);
+        var rad2 = LiveDetectionGeometryMapper.DegToRad(centerDeg);
         var mx = cx + Math.Cos(rad2) * (ringOuter + 2);
         var my = cy + Math.Sin(rad2) * (ringOuter + 2);
 
@@ -893,7 +867,7 @@ public partial class PlayerWindow
         DetectionCanvas.Children.Add(dot);
 
         // Label-Badge (klickbar)
-        var labelText = BuildDetectionLabel(finding);
+        var labelText = LiveDetectionDisplayPolicy.BuildDetectionLabel(finding);
         var label = new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(228, 17, 19, 24)),
@@ -924,62 +898,6 @@ public partial class PlayerWindow
         Canvas.SetTop(label, Math.Clamp(ly, 2, height - desired.Height - 2));
         DetectionCanvas.Children.Add(label);
     }
-
-    private static string BuildDetectionLabel(LiveFrameFinding f)
-    {
-        var baseText = string.IsNullOrWhiteSpace(f.VsaCodeHint)
-            ? f.Label : $"{f.VsaCodeHint} {f.Label}";
-        if (baseText.Length > 24) baseText = baseText[..24] + "...";
-
-        var clock = string.IsNullOrWhiteSpace(f.PositionClock) ? "?" : f.PositionClock;
-        var extent = f.ExtentPercent is > 0 ? $"{f.ExtentPercent}%" : "";
-        var extra = "";
-        if (f.HeightMm is > 0) extra += $" H:{f.HeightMm}mm";
-        if (f.IntrusionPercent is > 0) extra += $" Einr:{f.IntrusionPercent}%";
-        return $"{clock}{(extent.Length > 0 ? $" / {extent}" : "")}{extra} - {baseText}";
-    }
-
-    private static Color MapDetectionSeverityColor(int severity) => Math.Clamp(severity, 1, 5) switch
-    {
-        >= 5 => Color.FromRgb(239, 68, 68),
-        4 => Color.FromRgb(249, 115, 22),
-        3 => Color.FromRgb(245, 158, 11),
-        2 => Color.FromRgb(132, 204, 22),
-        _ => Color.FromRgb(34, 197, 94)
-    };
-
-    private static int? ParseClockHour(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        var m = System.Text.RegularExpressions.Regex.Match(raw, @"\b(?<h>1[0-2]|0?[1-9])\b");
-        if (!m.Success) return null;
-        if (!int.TryParse(m.Groups["h"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var hour))
-            return null;
-        if (hour == 0) return 12;
-        if (hour > 12) hour %= 12;
-        return hour == 0 ? 12 : hour;
-    }
-
-    private static Geometry BuildRingSectorGeometry(
-        double cx, double cy, double innerR, double outerR, double startDeg, double sweepDeg)
-    {
-        var startRad = DegToRad(startDeg);
-        var endRad = DegToRad(startDeg + sweepDeg);
-        var large = sweepDeg > 180;
-
-        var p1 = new Point(cx + Math.Cos(startRad) * outerR, cy + Math.Sin(startRad) * outerR);
-        var p2 = new Point(cx + Math.Cos(endRad) * outerR, cy + Math.Sin(endRad) * outerR);
-        var p3 = new Point(cx + Math.Cos(endRad) * innerR, cy + Math.Sin(endRad) * innerR);
-        var p4 = new Point(cx + Math.Cos(startRad) * innerR, cy + Math.Sin(startRad) * innerR);
-
-        var fig = new PathFigure { StartPoint = p1, IsClosed = true, IsFilled = true };
-        fig.Segments.Add(new ArcSegment(p2, new Size(outerR, outerR), 0, large, SweepDirection.Clockwise, true));
-        fig.Segments.Add(new LineSegment(p3, true));
-        fig.Segments.Add(new ArcSegment(p4, new Size(innerR, innerR), 0, large, SweepDirection.Counterclockwise, true));
-        return new PathGeometry(new[] { fig });
-    }
-
-    private static double DegToRad(double deg) => deg * Math.PI / 180.0;
 
     // ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ Manual Marking ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬
 
@@ -1121,7 +1039,7 @@ public partial class PlayerWindow
             var frameBytes = await CaptureCurrentFrameAsync();
 
             // Uhrlage zunaechst geometrisch (Overlay-Zentrum -> Uhr) als Fallback.
-            string? clockPos = EstimateClockFromOverlayCenter(overlay);
+            string? clockPos = LiveDetectionGeometryMapper.EstimateClockFromOverlayCenter(overlay);
 
             // SAM segmentiert die gezogene Box und schreibt echte Messwerte (Uhrlage/Hoehe/
             // Breite/Querschnitt) ins Overlay. Bei fehlendem Sidecar/Maske bleibt die
@@ -1168,19 +1086,6 @@ public partial class PlayerWindow
         {
             System.Diagnostics.Debug.WriteLine($"[PlayerWindow] HandleMarkDrawingComplete error: {ex.Message}");
         }
-    }
-
-    /// <summary>Grobe Uhrlage aus dem Overlay-Zentrum (Rohrmitte = 0.5/0.5). Fallback ohne SAM.</summary>
-    private static string? EstimateClockFromOverlayCenter(OverlayGeometry overlay)
-    {
-        if (overlay.Points.Count == 0) return null;
-        var avgX = overlay.Points.Average(p => p.X);
-        var avgY = overlay.Points.Average(p => p.Y);
-        var angleDeg = Math.Atan2(avgY - 0.5, avgX - 0.5) * 180.0 / Math.PI;
-        var clockAngle = (angleDeg + 90 + 360) % 360;
-        var hour = (int)Math.Round(clockAngle / 30.0) % 12;
-        if (hour == 0) hour = 12;
-        return hour.ToString();
     }
 
     /// <summary>
@@ -1246,7 +1151,7 @@ public partial class PlayerWindow
             // (die abknickende Rohroeffnung liegt am Fluchtpunkt). Ein Punktschaden an der Wand
             // liegt NICHT am Fluchtpunkt und behaelt seine SAM-Maske, auch wenn der Frame
             // zusaetzlich als Bogen gilt.
-            if (result.IsBend && BoxContainsVanishingPoint(overlay, result.VanishX, result.VanishY))
+            if (result.IsBend && LiveDetectionGeometryMapper.BoxContainsVanishingPoint(overlay, result.VanishX, result.VanishY))
             {
                 ShowBendMarker(result.VanishX, result.VanishY, rect);
                 return;
@@ -1308,20 +1213,6 @@ public partial class PlayerWindow
         Canvas.SetLeft(label, cx - r);
         Canvas.SetTop(label, Math.Max(0, cy - r - 20));
         CodingOverlayCanvas.Children.Add(label);
-    }
-
-    // True, wenn die gezogene Box den Fluchtpunkt (normiert 0..1) umschliesst (kleine
-    // Toleranz). Macht die frame-weite is_bend-Entscheidung box-spezifisch: nur eine Box,
-    // die wirklich die abknickende Rohroeffnung am Fluchtpunkt meint, gilt als Bogen.
-    private static bool BoxContainsVanishingPoint(OverlayGeometry? overlay, double vanishX, double vanishY)
-    {
-        if (overlay == null || overlay.Points.Count < 2)
-            return false;
-        double minX = overlay.Points.Min(p => p.X), maxX = overlay.Points.Max(p => p.X);
-        double minY = overlay.Points.Min(p => p.Y), maxY = overlay.Points.Max(p => p.Y);
-        const double tol = 0.05; // ~5% Rand-Toleranz
-        return vanishX >= minX - tol && vanishX <= maxX + tol
-            && vanishY >= minY - tol && vanishY <= maxY + tol;
     }
 
     // Entfernt alle Bogen-Marker (Tag "bend_marker") vom Codier-Canvas.
@@ -1557,7 +1448,7 @@ public partial class PlayerWindow
                 var baseName = $"det_{annotationId}";
 
                 // Bounding-Box aus Uhrposition ableiten (Ring-Sektor â†’ normalisierte Koordinaten)
-                var bbox = BBoxFromClockPosition(finding);
+                var bbox = LiveDetectionGeometryMapper.BBoxFromClockPosition(finding);
 
                 // Frame temp speichern
                 var tempFrame = System.IO.Path.Combine(
@@ -1651,7 +1542,7 @@ public partial class PlayerWindow
 
             var primary = _detectionPendingFindings[0];
             var timestampSecForFrame = _detectionPendingTimestampSec ?? timestampSec;
-            var bbox = BBoxFromClockPosition(primary);
+            var bbox = LiveDetectionGeometryMapper.BBoxFromClockPosition(primary);
 
             int classId = InfraTeacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
             var annotationId = Guid.NewGuid().ToString("N")[..12];
@@ -1713,38 +1604,6 @@ public partial class PlayerWindow
         ResumeDetection();
     }
 
-    /// <summary>
-    /// Erzeugt eine grobe BoundingBox aus Uhrposition + Ausdehnung eines LiveFrameFinding.
-    /// Mapping: Uhrposition â†’ Kreissektor â†’ normalisierte Box im Bild.
-    /// </summary>
-    private static Application.Ai.NormalizedBoundingBox BBoxFromClockPosition(LiveFrameFinding finding)
-    {
-        // Uhrzeiger â†’ Winkel (12 Uhr = oben = -90Â°, dann im Uhrzeigersinn)
-        double clockHour = 6; // Default: unten
-        if (double.TryParse(finding.PositionClock, System.Globalization.NumberStyles.Any,
-            System.Globalization.CultureInfo.InvariantCulture, out var parsed))
-            clockHour = parsed;
-
-        double angleDeg = (clockHour / 12.0) * 360.0 - 90.0;
-        double angleRad = angleDeg * Math.PI / 180.0;
-
-        // Extent-basierte Groesse (% Umfang â†’ Box-Groesse)
-        double extent = (finding.ExtentPercent ?? 15) / 100.0;
-        double boxSize = Math.Clamp(extent * 0.6, 0.08, 0.40);
-
-        // Zentrum auf ~35% Radius vom Bildmittelpunkt
-        double cx = 0.5 + 0.35 * Math.Cos(angleRad);
-        double cy = 0.5 + 0.35 * Math.Sin(angleRad);
-
-        return new Application.Ai.NormalizedBoundingBox
-        {
-            XCenter = Math.Clamp(cx, 0, 1),
-            YCenter = Math.Clamp(cy, 0, 1),
-            Width = Math.Clamp(boxSize, 0.08, 0.40),
-            Height = Math.Clamp(boxSize, 0.08, 0.40)
-        };
-    }
-
     private void DetectionCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         // Eingabemarker nutzt CodingOverlayCanvas (nicht DetectionCanvas)
@@ -1761,26 +1620,11 @@ public partial class PlayerWindow
         // Pause video
         _player.SetPause(true);
 
-        var clockPosition = ClickToClockPosition(clickPoint, canvasSize);
+        var clockPosition = LiveDetectionGeometryMapper.ClickToClockPosition(clickPoint, canvasSize);
         var timestampSec = _player.Time / 1000.0;
 
         OpenCodeCatalogForMark(clockPosition, timestampSec, null);
         e.Handled = true;
-    }
-
-    private static string ClickToClockPosition(Point click, Size canvasSize)
-    {
-        var cx = canvasSize.Width / 2.0;
-        var cy = canvasSize.Height / 2.0;
-        var dx = click.X - cx;
-        var dy = click.Y - cy;
-
-        var angleDeg = Math.Atan2(dy, dx) * 180.0 / Math.PI;
-        var clockAngle = (angleDeg + 90 + 360) % 360;
-        var hour = (int)Math.Round(clockAngle / 30.0) % 12;
-        if (hour == 0) hour = 12;
-
-        return hour.ToString();
     }
 
     private void OnFindingClicked(LiveFrameFinding finding, double timestampSec)

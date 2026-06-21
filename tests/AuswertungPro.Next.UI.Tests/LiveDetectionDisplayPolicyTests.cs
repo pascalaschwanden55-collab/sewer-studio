@@ -1,0 +1,48 @@
+using System.Windows.Media;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.UI.Ai;
+
+namespace AuswertungPro.Next.UI.Tests;
+
+public sealed class LiveDetectionDisplayPolicyTests
+{
+    [Fact]
+    public void CompactModelName_keeps_last_path_segment_and_handles_empty_values()
+    {
+        Assert.Equal("?", LiveDetectionDisplayPolicy.CompactModelName(null));
+        Assert.Equal("qwen3-vl:8b", LiveDetectionDisplayPolicy.CompactModelName("models/qwen3-vl:8b"));
+        Assert.Equal("local-model", LiveDetectionDisplayPolicy.CompactModelName(" local-model "));
+    }
+
+    [Fact]
+    public void BuildDetectionLabel_includes_clock_extent_measurements_and_truncated_code_label()
+    {
+        var finding = new LiveFrameFinding(
+            "sehr-langer-befundname-mit-zusatz",
+            4,
+            "3",
+            25,
+            VsaCodeHint: "BAB",
+            HeightMm: 12,
+            IntrusionPercent: 8);
+
+        var label = LiveDetectionDisplayPolicy.BuildDetectionLabel(finding);
+
+        Assert.Equal("3 / 25% H:12mm Einr:8% - BAB sehr-langer-befundna...", label);
+    }
+
+    [Fact]
+    public void QuickScanSeverityColor_uses_gray_for_clean_segments_and_severity_colors_for_damage()
+    {
+        Assert.Equal(Color.FromArgb(100, 0x94, 0xA3, 0xB8), LiveDetectionDisplayPolicy.QuickScanSeverityColor(5, hasDamage: false));
+        Assert.Equal(Color.FromRgb(0xEF, 0x44, 0x44), LiveDetectionDisplayPolicy.QuickScanSeverityColor(4, hasDamage: true));
+        Assert.Equal(Color.FromRgb(0x22, 0xC5, 0x5E), LiveDetectionDisplayPolicy.QuickScanSeverityColor(1, hasDamage: true));
+    }
+
+    [Fact]
+    public void DetectionSeverityColor_clamps_to_supported_range()
+    {
+        Assert.Equal(Color.FromRgb(34, 197, 94), LiveDetectionDisplayPolicy.DetectionSeverityColor(0));
+        Assert.Equal(Color.FromRgb(239, 68, 68), LiveDetectionDisplayPolicy.DetectionSeverityColor(9));
+    }
+}

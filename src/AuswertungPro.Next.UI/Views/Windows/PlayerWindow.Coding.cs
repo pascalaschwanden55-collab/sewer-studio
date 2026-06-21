@@ -3153,12 +3153,12 @@ public partial class PlayerWindow
                 SetCodingAiState("Künstliche Intelligenz bereit (Qwen)", Color.FromRgb(0x22, 0xC5, 0x5E),
                     $"Monitor-Fehler: {ex.Message}");
             }
-            SetYoloStatus("Bereit", Color.FromRgb(0x22, 0xC5, 0x5E), CompactModelName(_codingAiModelName));
+            SetYoloStatus("Bereit", Color.FromRgb(0x22, 0xC5, 0x5E), LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName));
         }
         catch (Exception ex)
         {
             SetCodingAiState($"Fehler: {ex.Message}", Color.FromRgb(0xEF, 0x44, 0x44),
-                $"Modell: {CompactModelName(_codingAiModelName)}");
+                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
             BtnCodingAnalyze.IsEnabled = false;
         }
     }
@@ -3684,7 +3684,7 @@ public partial class PlayerWindow
                 if (pngBytes == null || pngBytes.Length == 0)
                 {
                     SetCodingAiState("Frame nicht extrahierbar", Color.FromRgb(0xEF, 0x44, 0x44),
-                        $"Modell: {CompactModelName(_codingAiModelName)}");
+                        $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
                     return;
                 }
                 _detectionPendingFrameBytes = pngBytes;
@@ -3695,7 +3695,7 @@ public partial class PlayerWindow
                     _codingAnalysisCts.Token);
 
                 SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
-                    $"Schritt 2 von 3: Inferenz ({CompactModelName(_codingAiModelName)})", pulse: true);
+                    $"Schritt 2 von 3: Inferenz ({LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)})", pulse: true);
 
                 LiveDetection result;
                 if (_codingEnhancedVision != null)
@@ -3720,7 +3720,7 @@ public partial class PlayerWindow
         catch (Exception ex)
         {
             SetCodingAiState($"Fehler: {ex.Message}", Color.FromRgb(0xEF, 0x44, 0x44),
-                $"Modell: {CompactModelName(_codingAiModelName)}");
+                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
         }
         finally
         {
@@ -4038,7 +4038,7 @@ public partial class PlayerWindow
             if (!VsaCodeResolver.IsStreckenschadenCode(code)) continue;
 
             consumed.Add(seg);
-            var clock = ParseClockHour(q.ClockPosition);
+            var clock = LiveDetectionGeometryMapper.ParseClockHour(q.ClockPosition);
             observations.Add(new AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation(
                 MainCode: code, ClockHour: clock, Meter: meter));
         }
@@ -4331,7 +4331,7 @@ public partial class PlayerWindow
         if (result.Error != null)
         {
             SetCodingAiState($"Fehler: {result.Error}", Color.FromRgb(0xEF, 0x44, 0x44),
-                $"Modell: {CompactModelName(_codingAiModelName)}");
+                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
             CodingFindingsList.ItemsSource = null;
             return;
         }
@@ -4921,7 +4921,7 @@ public partial class PlayerWindow
             BtnCodingLiveAi.Background = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
 
             SetCodingAiState("Automatische KI-Analyse aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
-                $"Intervall alle 5 Sekunden | {CompactModelName(_codingAiModelName)}");
+                $"Intervall alle 5 Sekunden | {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
         }
         else
         {
@@ -4934,7 +4934,7 @@ public partial class PlayerWindow
             BtnCodingLiveAi.ClearValue(System.Windows.Controls.Control.BackgroundProperty);
 
             SetCodingAiState("Künstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
-                $"Modell: {CompactModelName(_codingAiModelName)}");
+                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
         }
     }
 
@@ -5097,12 +5097,12 @@ public partial class PlayerWindow
         if (BtnCodingLiveAi.IsChecked == true)
         {
             SetCodingAiState("Automatische KI-Analyse aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
-                $"Intervall alle 5 Sekunden | {CompactModelName(_codingAiModelName)}");
+                $"Intervall alle 5 Sekunden | {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
         }
         else
         {
             SetCodingAiState("Künstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
-                $"Modell: {CompactModelName(_codingAiModelName)}");
+                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
         }
     }
     /// <summary>Werkzeug-Badge oben links auf Canvas anzeigen.</summary>
