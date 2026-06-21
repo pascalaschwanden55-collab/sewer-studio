@@ -33,11 +33,13 @@ public partial class TrainingCenterWindow : Window
 {
     public TrainingCenterViewModel Vm { get; }
 
-    private static IVsaCodeSelectionCatalog? CodeSelectionCatalog
-        => TryGetAppServiceProvider()?.CodeSelectionCatalog;
+    private readonly ServiceProvider? _services;
+    private readonly IDialogService _dialogs;
 
-    private static IDialogService Dialogs
-        => TryGetAppServiceProvider()?.Dialogs ?? new DialogService();
+    private IVsaCodeSelectionCatalog? CodeSelectionCatalog
+        => _services?.CodeSelectionCatalog;
+
+    private IDialogService Dialogs => _dialogs;
 
     // Pipeline-Dots und Service-Indikatoren fuer Animation
     private Ellipse[] _pipelineDots = Array.Empty<Ellipse>();
@@ -65,14 +67,21 @@ public partial class TrainingCenterWindow : Window
     private TrainingReviewSamSegmentationService? _reviewSamService;
 
     public TrainingCenterWindow()
+        : this(TryGetAppServiceProvider())
     {
+    }
+
+    public TrainingCenterWindow(ServiceProvider? services)
+    {
+        _services = services;
+        _dialogs = services?.Dialogs ?? new DialogService();
+
         InitializeComponent();
         WindowStateManager.Track(this);
 
-        var codeCatalog = App.Services is ServiceProvider sp ? sp.CodeCatalog : null;
-        var kbDiagnostics = App.Services is ServiceProvider services
-            ? services.KnowledgeBaseDiagnostics
-            : new InfraKnowledgeBase.KnowledgeBaseDiagnosticsRunner();
+        var codeCatalog = services?.CodeCatalog;
+        var kbDiagnostics = services?.KnowledgeBaseDiagnostics
+            ?? new InfraKnowledgeBase.KnowledgeBaseDiagnosticsRunner();
         Vm = new TrainingCenterViewModel(
             new TrainingCenterStore(),
             new TrainingCenterImportService(),
@@ -303,9 +312,7 @@ public partial class TrainingCenterWindow : Window
                 result.QuantifiedMasks,
                 BoxCanvas.ActualWidth,
                 BoxCanvas.ActualHeight,
-                App.Services is ServiceProvider sp
-                    ? sp.LoggerFactory.CreateLogger("TrainingReviewSam")
-                    : null);
+                _services?.LoggerFactory.CreateLogger("TrainingReviewSam"));
 
             Vm.PendingSamMask = CreateTrainingSegmentationMask(result.Response);
             ReviewSamStatusText.Text = result.Response.Masks.Count == 0
@@ -323,10 +330,10 @@ public partial class TrainingCenterWindow : Window
         }
     }
 
-    private static TrainingReviewSamSegmentationService CreateReviewSamService()
+    private TrainingReviewSamSegmentationService CreateReviewSamService()
     {
-        var pipelineCfg = App.Services is ServiceProvider sp
-            ? sp.PipelineCfg
+        var pipelineCfg = _services is not null
+            ? _services.PipelineCfg
             : new AppSettingsAiSettingsProvider().Load().ToPipelineConfig();
 
         return new TrainingReviewSamSegmentationService(
@@ -359,10 +366,10 @@ public partial class TrainingCenterWindow : Window
         return "SAM: keine Maske";
     }
 
-    private static int? ResolveReviewPipeDiameterMm()
+    private int? ResolveReviewPipeDiameterMm()
     {
-        var pipelineCfg = App.Services is ServiceProvider sp
-            ? sp.PipelineCfg
+        var pipelineCfg = _services is not null
+            ? _services.PipelineCfg
             : new AppSettingsAiSettingsProvider().Load().ToPipelineConfig();
 
         return pipelineCfg.PipeDiameterMmOverride ?? 300;

@@ -90,7 +90,7 @@ public partial class MainWindow : Window
 
     private void OpenTrainingCenter_Click(object sender, RoutedEventArgs e)
     {
-        var window = new TrainingCenterWindow { Owner = this };
+        var window = new TrainingCenterWindow(GetServiceProvider()) { Owner = this };
         window.Show();
     }
 
