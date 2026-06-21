@@ -352,47 +352,6 @@ public sealed class ProtocolPdfExporter
         return utf8.GetBytes(sb.ToString());
     }
 
-    private static List<(string Label, string? Value)> BuildProjectInfo(Project? project, string inspectionDate)
-    {
-        var items = new List<(string, string?)>
-        {
-            ("Inspektionsdatum", inspectionDate)
-        };
-
-        if (project is not null)
-        {
-            items.Add(("Gemeinde", GetMeta(project, "Gemeinde")));
-            items.Add(("Auftraggeber", GetMeta(project, "Auftraggeber")));
-            items.Add(("Auftrag Nr", GetMeta(project, "AuftragNr")));
-            items.Add(("Bearbeiter", GetMeta(project, "Bearbeiter")));
-            items.Add(("Zone", GetMeta(project, "Zone")));
-        }
-        return FilterNonEmpty(items);
-    }
-
-    private static List<(string Label, string? Value)> BuildHoldingInfo(HaltungRecord record, double? length)
-    {
-        var lengthText = length.HasValue ? length.Value.ToString("0.00", CultureInfo.InvariantCulture) : record.GetFieldValue("Haltungslaenge_m");
-        var items = new List<(string, string?)>
-        {
-            ("Haltungsname", record.GetFieldValue("Haltungsname")),
-            ("Strasse", record.GetFieldValue("Strasse")),
-            ("DN mm", record.GetFieldValue("DN_mm")),
-            ("Material", record.GetFieldValue("Rohrmaterial")),
-            ("Nutzungsart", record.GetFieldValue("Nutzungsart")),
-            ("Laenge m", lengthText),
-            ("Inspektionsrichtung", record.GetFieldValue("Inspektionsrichtung")),
-            ("Zustandsklasse", record.GetFieldValue("Zustandsklasse")),
-            ("VSA Zustandsnote D", record.GetFieldValue("VSA_Zustandsnote_D")),
-            ("Pruefungsresultat", record.GetFieldValue("Pruefungsresultat")),
-            ("Referenzpruefung", record.GetFieldValue("Referenzpruefung")),
-            ("Sanieren", record.GetFieldValue("Sanieren_JaNein")),
-            ("Eigentuemer", record.GetFieldValue("Eigentuemer")),
-            ("Ausgefuehrt durch", record.GetFieldValue("Ausgefuehrt_durch"))
-        };
-        return FilterNonEmpty(items);
-    }
-
     private static IReadOnlyList<(string Label, string? Value)> BuildHaltungsprotokollHeaderTable(
         Project project,
         HaltungRecord record,
@@ -452,69 +411,6 @@ public sealed class ProtocolPdfExporter
             ("Haltung", holdingLabel),
             ("Nr.", record.GetFieldValue("NR"))
         };
-    }
-
-    private static List<(string Label, string? Value)> BuildHoldingSummary(HaltungRecord record, double? length, string inspectionDate)
-    {
-        var lengthText = length.HasValue ? $"{length.Value:0.00} m" : record.GetFieldValue("Haltungslaenge_m");
-        return new List<(string, string?)>
-        {
-            ("Haltung", record.GetFieldValue("Haltungsname")),
-            ("Inspektionsdatum", inspectionDate),
-            ("Strasse", record.GetFieldValue("Strasse")),
-            ("Inspektionsrichtung", record.GetFieldValue("Inspektionsrichtung")),
-            ("DN / Material", BuildDnMaterial(record)),
-            ("Nutzungsart", record.GetFieldValue("Nutzungsart")),
-            ("Laenge", lengthText),
-            ("VSA Zustandsnote", record.GetFieldValue("VSA_Zustandsnote_D"))
-        };
-    }
-
-    private static void ComposeInfoSection(
-        IContainer container,
-        string title,
-        IReadOnlyList<(string Label, string? Value)> items)
-    {
-        if (items.Count == 0)
-            return;
-
-        container.Border(1)
-            .BorderColor(Colors.Grey.Lighten2)
-            .Padding(6)
-            .Column(col =>
-        {
-            col.Item().Text(title).Bold().FontColor("#006E9C");
-            col.Item().Table(table =>
-            {
-                table.ColumnsDefinition(columns =>
-                {
-                    columns.ConstantColumn(115);
-                    columns.RelativeColumn();
-                    columns.ConstantColumn(115);
-                    columns.RelativeColumn();
-                });
-
-                for (int i = 0; i < items.Count; i += 2)
-                {
-                    var left = items[i];
-                    var right = i + 1 < items.Count ? items[i + 1] : (Label: "", Value: "");
-
-                    table.Cell().PaddingVertical(2).Text(left.Label).FontSize(9).SemiBold();
-                    table.Cell().PaddingVertical(2).Text(NormalizeValue(left.Value)).FontSize(9);
-
-                    if (string.IsNullOrWhiteSpace(right.Label) && string.IsNullOrWhiteSpace(right.Value))
-                    {
-                        table.Cell().Text("");
-                        table.Cell().Text("");
-                    }
-                    else
-                    {
-                        table.Cell().PaddingVertical(2).Text(right.Label).FontSize(9).SemiBold();
-                        table.Cell().PaddingVertical(2).Text(NormalizeValue(right.Value)).FontSize(9);
-                    }
-                }
-            });
-        });
     }
 
     internal static void ComposeKeyValueTable(IContainer container, IReadOnlyList<(string Label, string? Value)> items)
@@ -972,21 +868,6 @@ public sealed class ProtocolPdfExporter
             .Replace(">", "&gt;")
             .Replace("\"", "&quot;")
             .Replace("'", "&apos;");
-    }
-
-    private static string BuildDnMaterial(HaltungRecord record)
-    {
-        var dn = record.GetFieldValue("DN_mm");
-        var material = record.GetFieldValue("Rohrmaterial");
-
-        if (string.IsNullOrWhiteSpace(dn) && string.IsNullOrWhiteSpace(material))
-            return string.Empty;
-        if (string.IsNullOrWhiteSpace(dn))
-            return material;
-        if (string.IsNullOrWhiteSpace(material))
-            return dn;
-
-        return $"{dn} mm / {material}";
     }
 
     private static List<PhotoItem> BuildPhotoItems(
