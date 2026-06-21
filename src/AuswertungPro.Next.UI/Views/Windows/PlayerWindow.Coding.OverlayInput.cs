@@ -269,87 +269,20 @@ public partial class PlayerWindow
 
     private SchemaOverlayBase? CreateCodingSchemaOverlay()
     {
-        if (_codingOverlayService == null || _codingSchemaType == null)
+        if (_codingOverlayService == null)
             return null;
 
-        return _codingSchemaType.Value switch
-        {
-            SchemaType.PipeBend => new PipeBendSchema
-            {
-                SnapEnabled = _codingOverlayService.PipeBendSnapEnabled
-            },
-            SchemaType.FillLevel => new FillLevelSchema
-            {
-                Mode = _codingOverlayService.ActiveLevelMode
-            },
-            SchemaType.Intrusion => new IntrusionSchema(),
-            _ => null
-        };
+        return CodingSchemaOverlayBuilder.Create(
+            _codingSchemaType,
+            _codingOverlayService.PipeBendSnapEnabled,
+            _codingOverlayService.ActiveLevelMode);
     }
 
     private string GetDefaultCodingSchemaHandleId()
-        => _codingSchemaType switch
-        {
-            SchemaType.PipeBend => "vertex",
-            SchemaType.FillLevel => "level",
-            SchemaType.Intrusion => "depth",
-            _ => "vertex"
-        };
+        => CodingSchemaOverlayBuilder.GetDefaultHandleId(_codingSchemaType);
 
     private OverlayGeometry? BuildCodingSchemaGeometry()
-    {
-        if (_codingSchemaManager.Active is PipeBendSchema bend)
-        {
-            var (arm1, arm2) = bend.GetArmEndpoints();
-            var angle = bend.SnapEnabled
-                ? new[] { 15d, 30d, 45d, 90d }
-                    .OrderBy(candidate => Math.Abs(candidate - bend.AngleDeg))
-                    .First()
-                : Math.Round(bend.AngleDeg, 1);
-            return new OverlayGeometry
-            {
-                ToolType = OverlayToolType.PipeBend,
-                Points = new List<NormalizedPoint> { arm1, bend.Center, arm2 },
-                ArcDegrees = Math.Round(angle, 1)
-            };
-        }
-
-        if (_codingSchemaManager.Active is FillLevelSchema fill)
-        {
-            double levelY = fill.GetLevelLineY();
-            double dy = levelY - fill.PipeCenter.Y;
-            double halfChord = Math.Sqrt(Math.Max(0, fill.PipeRadius * fill.PipeRadius - dy * dy));
-            double pct = OverlayToolService.CircleSegmentPercent(fill.FillRatio);
-            return new OverlayGeometry
-            {
-                ToolType = OverlayToolType.Level,
-                Points = new List<NormalizedPoint>
-                {
-                    new(fill.PipeCenter.X - halfChord, levelY),
-                    new(fill.PipeCenter.X + halfChord, levelY)
-                },
-                FillPercent = Math.Round(pct, 1),
-                LevelSubMode = fill.Mode
-            };
-        }
-
-        if (_codingSchemaManager.Active is IntrusionSchema intrusion)
-        {
-            var edge = intrusion.GetEdgePoint();
-            var tip = intrusion.GetIntrusionTip();
-            var (left, right) = intrusion.GetSpreadEdges();
-            return new OverlayGeometry
-            {
-                ToolType = OverlayToolType.Level,
-                Points = new List<NormalizedPoint> { edge, tip, intrusion.PipeCenter, left, right },
-                FillPercent = Math.Round(intrusion.DepthRatio * 100.0, 1),
-                LevelSubMode = LevelMode.Obstacle,
-                ClockFrom = Math.Round(intrusion.ClockHour, 1)
-            };
-        }
-
-        return null;
-    }
+        => CodingSchemaOverlayBuilder.BuildGeometry(_codingSchemaManager.Active);
 
     private void UpdateCodingSchemaOverlay(bool enableCreateEvent)
     {
