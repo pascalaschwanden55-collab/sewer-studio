@@ -35,7 +35,6 @@ using AuswertungPro.Next.UI.ViewModels.Windows;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
 using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
-using InfraTraining = AuswertungPro.Next.Infrastructure.Ai.Training;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -44,9 +43,13 @@ public partial class PlayerWindow
 {
     private CodingTrainingFrameStore? _codingTrainingFrameStore;
     private CodingTrainingSampleEvalProtector? _codingTrainingSampleEvalProtector;
+    private CodingTrainingSamplePersister? _codingTrainingSamplePersister;
 
     private CodingTrainingFrameStore CodingFrameStore
         => _codingTrainingFrameStore ??= new CodingTrainingFrameStore();
+
+    private CodingTrainingSamplePersister CodingSamplePersister
+        => _codingTrainingSamplePersister ??= new CodingTrainingSamplePersister(() => _codingSessionService);
 
     /// <summary>
     /// True, wenn das Sample aus dem eingefrorenen Eval-Set stammt (inhaltsgleicher Frame
@@ -100,14 +103,7 @@ public partial class PlayerWindow
                 return;
             }
 
-            await InfraTraining.TrainingSamplesStore.MergeAndSaveAsync(new List<TrainingSample> { sample });
-
-            // Robustes Gehirn: bestaetigtes Gold SOFORT in die KnowledgeBase.db indexieren und den
-            // KbIndexState zurueckschreiben. Frueher endete dieser Pfad bei MergeAndSaveAsync —
-            // das Sample war als Gold gespeichert, aber NIE in der KB (KbIndexState blieb None).
-            // Nur Approved indexieren; abgelehnte/negative Samples bleiben aus der positiven KB raus.
-            if (sample.Status == TrainingSampleStatus.Approved && _codingSessionService is not null)
-                await _codingSessionService.IndexConfirmedSampleAsync(sample);
+            await CodingSamplePersister.SaveAndIndexAsync(sample);
         }
         catch (Exception ex)
         {
@@ -136,31 +132,12 @@ public partial class PlayerWindow
             // Eval-Schutz (ESW-003): reservierte Eval-Haltungen/-Frames aussortieren.
             samples = samples.Where(s => !IsCodingSampleEvalProtected(s)).ToList();
             if (samples.Count > 0)
-                PersistAndIndexBatchAsync(samples).SafeFireAndForget("TrainingSave");
+                CodingSamplePersister.SaveAndIndexAsync(samples).SafeFireAndForget("TrainingSave");
         }
         catch (Exception ex)
         {
             // Uebernahme darf nie blockiert werden, aber Fehler loggen
             System.Diagnostics.Debug.WriteLine($"[Training] Fehler: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Speichert eine ganze Charge bestaetigter Codier-Samples und indexiert die Approved-Samples
-    /// danach in die KnowledgeBase.db (gemeinsamer Pfad ueber CodingSessionService). Frueher endete
-    /// der Sammel-Uebernahmepfad bei MergeAndSaveAsync — die Befunde waren als Gold gespeichert, aber
-    /// nie in der KB (KbIndexState blieb None). Robustes Gehirn: Bestaetigtes Gold landet immer in der KB.
-    /// </summary>
-    private async System.Threading.Tasks.Task PersistAndIndexBatchAsync(List<TrainingSample> samples)
-    {
-        await InfraTraining.TrainingSamplesStore.MergeAndSaveAsync(samples);
-
-        if (_codingSessionService is null)
-            return;
-        foreach (var s in samples)
-        {
-            if (s.Status == TrainingSampleStatus.Approved)
-                await _codingSessionService.IndexConfirmedSampleAsync(s);
         }
     }
 
