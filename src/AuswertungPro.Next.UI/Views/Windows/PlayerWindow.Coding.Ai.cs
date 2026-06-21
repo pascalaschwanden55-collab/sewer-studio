@@ -1179,21 +1179,7 @@ public partial class PlayerWindow
     }
 
     private IReadOnlyList<(string Code, string Description, double Meter)>? GatherImportContext()
-    {
-        if (_codingImportEvents == null || _codingImportEvents.Count == 0)
-            return null;
-
-        var context = new List<(string, string, double)>();
-        foreach (var evt in _codingImportEvents)
-        {
-            var entry = evt.Entry;
-            var code = entry?.Code;
-            if (string.IsNullOrWhiteSpace(code)) continue;
-            context.Add((code, entry?.Beschreibung ?? code, evt.MeterAtCapture));
-        }
-
-        return context.Count > 0 ? context : null;
-    }
+        => CodingImportContextBuilder.Build(_codingImportEvents);
 
     private void ShowCodingAiResults(LiveDetection result)
     {
