@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.UI.Services;
@@ -75,32 +76,7 @@ public static class ProtocolTrainingStore
             Directory.CreateDirectory(dir);
 
         var json = JsonSerializer.Serialize(data, Opt);
-        WriteAllTextAtomic(StorePath, json);
-    }
-
-    private static void WriteAllTextAtomic(string path, string content)
-    {
-        var fullPath = Path.GetFullPath(path);
-        var directory = Path.GetDirectoryName(fullPath);
-        if (string.IsNullOrWhiteSpace(directory))
-            throw new InvalidOperationException("Zielordner fehlt.");
-
-        Directory.CreateDirectory(directory);
-        var tempPath = Path.Combine(directory, $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
-        File.WriteAllText(tempPath, content);
-
-        try
-        {
-            if (File.Exists(fullPath))
-                File.Replace(tempPath, fullPath, fullPath + ".bak", ignoreMetadataErrors: true);
-            else
-                File.Move(tempPath, fullPath);
-        }
-        finally
-        {
-            if (File.Exists(tempPath))
-                File.Delete(tempPath);
-        }
+        AtomicTextFileWriter.WriteAllText(StorePath, json);
     }
 
     public sealed class ProtocolTrainingData
