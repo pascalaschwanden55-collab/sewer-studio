@@ -51,8 +51,7 @@ public sealed class MultiModelAnalysisService
     /// (Env: SEWERSTUDIO_CLASSIFIER_DECISION=1).
     /// </summary>
     public bool ClassifierDecisionEnabled { get; set; } =
-        Configuration.AiSettingsFactory.ParseBool(
-            Environment.GetEnvironmentVariable("SEWERSTUDIO_CLASSIFIER_DECISION"));
+        PipelineEnvironmentOptions.ClassifierDecisionEnabled();
 
     /// <summary>
     /// Fix #1: Wenn DINO keine Box liefert, aber der Klassifikator einen Grundgeruest-Code
@@ -60,8 +59,7 @@ public sealed class MultiModelAnalysisService
     /// statt den Frame still zu verwerfen. Default AN, reversibel ueber Env.
     /// </summary>
     public bool ClassifierOnlyStructuralEnabled { get; set; } =
-        !Configuration.AiSettingsFactory.ParseBool(
-            Environment.GetEnvironmentVariable("SEWERSTUDIO_CLASSIFIER_ONLY_STRUCTURAL_OFF"));
+        PipelineEnvironmentOptions.ClassifierOnlyStructuralEnabled();
 
     /// <summary>Mindestkonfidenz fuer den box-losen Grundgeruest-Befund (Fix #1).</summary>
     public double ClassifierOnlyMinConfidence { get; set; } = 0.60;
@@ -71,10 +69,7 @@ public sealed class MultiModelAnalysisService
 
     // Erwartete Eigengewichte fuer die COCO-Fallback-Warnung. Liefert der Sidecar
     // einen anderen Modellnamen (z.B. yolo11m.pt), wird einmal pro Lauf gewarnt.
-    private static readonly string ExpectedYoloModel =
-        Environment.GetEnvironmentVariable("SEWERSTUDIO_EXPECTED_YOLO_MODEL")?.Trim() is { Length: > 0 } expected
-            ? expected
-            : "yolo26m";
+    private static readonly string ExpectedYoloModel = PipelineEnvironmentOptions.ExpectedYoloModel();
 
     // Letzter Befund fuer Qwen-Kontext (Frame-uebergreifende Kohärenz)
     private (string Code, string Description, double Meter, double Confidence)? _lastFinding;

@@ -29,9 +29,12 @@ public sealed class SingleFrameMultiModelService
         _client = client ?? throw new ArgumentNullException(nameof(client));
         // Defaults respektieren dieselben Env-Vars wie der Batch-Pfad (AiSettingsFactory).
         // 0.25/0.20 seit A/B auf 57er-clean (2026-06-10) — gleiche Werte wie AiSettingsFactory.
-        _yoloConfidence = yoloConfidence ?? EnvDouble("SEWERSTUDIO_YOLO_CONFIDENCE") ?? 0.25;
-        _dinoBoxThreshold = dinoBoxThreshold ?? EnvDouble("SEWERSTUDIO_DINO_BOX_THRESHOLD") ?? 0.25;
-        _dinoTextThreshold = dinoTextThreshold ?? EnvDouble("SEWERSTUDIO_DINO_TEXT_THRESHOLD") ?? 0.20;
+        _yoloConfidence = yoloConfidence
+            ?? PipelineEnvironmentOptions.ResolveDoubleWithCompat(PipelineEnvironmentOptions.YoloConfidenceEnvVar, 0.25);
+        _dinoBoxThreshold = dinoBoxThreshold
+            ?? PipelineEnvironmentOptions.ResolveDoubleWithCompat(PipelineEnvironmentOptions.DinoBoxThresholdEnvVar, 0.25);
+        _dinoTextThreshold = dinoTextThreshold
+            ?? PipelineEnvironmentOptions.ResolveDoubleWithCompat(PipelineEnvironmentOptions.DinoTextThresholdEnvVar, 0.20);
     }
 
     public SingleFrameMultiModelService(VisionPipelineClient client, PipelineConfig config)
@@ -41,14 +44,6 @@ public sealed class SingleFrameMultiModelService
             config.DinoBoxThreshold,
             config.DinoTextThreshold)
     {
-    }
-
-    private static double? EnvDouble(string name)
-    {
-        var value = Environment.GetEnvironmentVariable(name)
-                    ?? Environment.GetEnvironmentVariable("AUSWERTUNGPRO_" + name["SEWERSTUDIO_".Length..]);
-        return double.TryParse(value?.Trim(), System.Globalization.NumberStyles.Float,
-            System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
     }
 
     /// <summary>
