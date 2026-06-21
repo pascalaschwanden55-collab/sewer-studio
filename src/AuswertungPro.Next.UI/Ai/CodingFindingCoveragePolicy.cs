@@ -5,6 +5,21 @@ namespace AuswertungPro.Next.UI.Ai;
 
 public static class CodingFindingCoveragePolicy
 {
+    public static CodingEvent? FindCoveringEvent(
+        IEnumerable<CodingEvent> existingEvents,
+        string code,
+        double meter,
+        LiveFrameFinding finding)
+        => existingEvents.FirstOrDefault(existing =>
+            CodingDedupPolicy.CodesMatch(existing.Entry.Code, code)
+            && IsCovered(existing, meter, finding));
+
+    public static void MarkCoveredAgain(CodingEvent existing, double meter)
+    {
+        if (existing.Entry.IsStreckenschaden)
+            existing.MeterAtCapture = Math.Max(existing.MeterAtCapture, meter);
+    }
+
     public static bool IsCovered(CodingEvent existing, double newMeter, LiveFrameFinding newFinding)
     {
         if (CodingDedupPolicy.IsOneTimeCode(existing.Entry.Code))

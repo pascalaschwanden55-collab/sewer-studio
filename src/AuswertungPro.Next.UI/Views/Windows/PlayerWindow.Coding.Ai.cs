@@ -1408,15 +1408,14 @@ public partial class PlayerWindow
             // 1. Punktschaden: code + meter Â±0.3m + gleiche Position
             // 2. Streckenschaden: code faellt in den MeterStart..MeterEnd Bereich
             // 3. Bereits akzeptierter/bearbeiteter Code: nicht nochmal melden
-            var coveringEvent = codingVm.Events.FirstOrDefault(e =>
-                CodingDedupPolicy.CodesMatch(e.Entry.Code, code) &&
-                CodingFindingCoveragePolicy.IsCovered(e, meter, finding));
+            var coveringEvent = CodingFindingCoveragePolicy.FindCoveringEvent(
+                codingVm.Events,
+                code,
+                meter,
+                finding);
             if (coveringEvent != null)
             {
-                // Offener Streckenschaden: letzte Sichtung merken (fuer automatisches Schliessen)
-                // MeterEnd bleibt null (= offen) â€” wird beim Exit via CloseOpenStreckenschaeden gesetzt
-                if (coveringEvent.Entry.IsStreckenschaden)
-                    coveringEvent.MeterAtCapture = Math.Max(coveringEvent.MeterAtCapture, meter);
+                CodingFindingCoveragePolicy.MarkCoveredAgain(coveringEvent, meter);
                 continue;
             }
 

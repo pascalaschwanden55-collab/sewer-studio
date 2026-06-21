@@ -75,6 +75,45 @@ public sealed class CodingFindingCoveragePolicyTests
         Assert.False(CodingFindingCoveragePolicy.IsSamePosition(existing, Finding("BCA", clock: "9")));
     }
 
+    [Fact]
+    public void FindCoveringEvent_returns_matching_covered_event()
+    {
+        var first = Event("BCA", meter: 2);
+        var second = Event("BAB", meter: 5);
+        second.AiContext = new CodingEventAiContext { Decision = CodingUserDecision.Accepted };
+
+        var covering = CodingFindingCoveragePolicy.FindCoveringEvent(
+            [first, second],
+            "BAB",
+            meter: 5.5,
+            Finding("BAB"));
+
+        Assert.Same(second, covering);
+    }
+
+    [Fact]
+    public void MarkCoveredAgain_extends_stretch_damage_capture_meter_only_forward()
+    {
+        var existing = Event("BAB", meter: 4);
+        existing.Entry.IsStreckenschaden = true;
+
+        CodingFindingCoveragePolicy.MarkCoveredAgain(existing, 7);
+        Assert.Equal(7, existing.MeterAtCapture);
+
+        CodingFindingCoveragePolicy.MarkCoveredAgain(existing, 5);
+        Assert.Equal(7, existing.MeterAtCapture);
+    }
+
+    [Fact]
+    public void MarkCoveredAgain_does_not_update_point_damage_meter()
+    {
+        var existing = Event("BAB", meter: 4);
+
+        CodingFindingCoveragePolicy.MarkCoveredAgain(existing, 7);
+
+        Assert.Equal(4, existing.MeterAtCapture);
+    }
+
     private static CodingEvent Event(string code, double meter)
         => new()
         {
