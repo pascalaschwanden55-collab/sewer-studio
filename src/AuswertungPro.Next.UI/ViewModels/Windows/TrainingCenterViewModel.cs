@@ -2088,7 +2088,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private bool _isSelfTrainingRunning;
     private CancellationTokenSource? _selfTrainingCts;
     private ISelfTrainingOrchestrator? _selfTrainingOrchestrator;
-    private string _activeVisionModel = "Qwen2.5-VL";
+    private string _activeVisionModel = OllamaConfig.DefaultVisionModel;
 
     [RelayCommand]
     private async Task RunSelfTrainingAsync()
@@ -2157,7 +2157,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 .ToRuntimeSettings();
             Log($"Ollama: {cfg.OllamaBaseUri}, Modell: {cfg.VisionModel}");
 
-            var visionModel = cfg.VisionModel ?? "Qwen2.5-VL";
+            var visionModel = cfg.VisionModel ?? OllamaConfig.DefaultVisionModel;
             _activeVisionModel = visionModel;
             var ollamaClient = new OllamaClient(
                 cfg.OllamaBaseUri,

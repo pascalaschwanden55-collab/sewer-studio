@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Data;
 using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
 namespace AuswertungPro.Next.UI.ViewModels;
 
@@ -174,7 +175,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable
                 var cfg = new AppSettingsAiSettingsProvider()
                     .Load()
                     .ToRuntimeSettings();
-                AiLoadedModels = cfg.VisionModel ?? "Qwen2.5-VL";
+                AiLoadedModels = cfg.VisionModel ?? OllamaConfig.DefaultVisionModel;
             }
             catch { AiLoadedModels = ""; }
         }
