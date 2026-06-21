@@ -53,6 +53,8 @@ public sealed partial class DataPageViewModel : ObservableObject
     private readonly DispatcherTimer _autoSaveTimer;
     private readonly IMeasureRecommendationService _measureRecommendationService;
 
+    internal ServiceProvider Services => _sp;
+
     public IRelayCommand AddCommand { get; }
     public IRelayCommand RemoveCommand { get; }
     public IRelayCommand MoveUpCommand { get; }

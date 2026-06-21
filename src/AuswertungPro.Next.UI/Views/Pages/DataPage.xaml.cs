@@ -26,7 +26,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
 {
     private static readonly IValueConverter CostDisplayConverter = new ChfAccountingDisplayConverter();
     private static readonly IValueConverter HorizontalAlignmentToTextAlignmentConverter = new HorizontalAlignmentToTextAlignmentValueConverter();
-    private static IDialogService Dialogs => ((ServiceProvider)App.Services).Dialogs;
+    private DataPageViewModel Vm => DataContext as DataPageViewModel
+        ?? throw new InvalidOperationException("DataPage benoetigt DataPageViewModel als DataContext.");
+    private ServiceProvider Services => Vm.Services;
+    private IDialogService Dialogs => Services.Dialogs;
     private bool _columnsBuilt;
     private System.Windows.Point _dragStartPoint;
     private readonly DispatcherTimer _searchDebounceTimer;
@@ -770,7 +773,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void RestoreLayoutFromSettings()
     {
-        var sp = (ServiceProvider)App.Services;
+        var sp = Services;
         var layout = sp.Settings.DataPageLayout;
         if (layout is null)
             return;
@@ -861,7 +864,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (_isRestoringLayout || Grid.Columns.Count == 0)
             return;
 
-        var sp = (ServiceProvider)App.Services;
+        var sp = Services;
         var layout = sp.Settings.DataPageLayout ?? new DataPageLayoutSettings();
         layout.Columns = Grid.Columns
             .Select(col =>
@@ -1330,9 +1333,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private string BuildPrimaryDamagePreviewContent(HaltungRecord record)
         => DataPagePrimaryDamagePreviewBuilder.Build(record, ResolvePrimaryDamageCodeTitle);
 
-    private static string? ResolvePrimaryDamageCodeTitle(string code)
+    private string? ResolvePrimaryDamageCodeTitle(string code)
     {
-        var sp = App.Services as ServiceProvider;
+        var sp = Services;
         if (sp?.CodeCatalog is null || string.IsNullOrWhiteSpace(code))
             return null;
         if (!sp.CodeCatalog.TryGet(code, out var def))
@@ -1364,7 +1367,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (string.IsNullOrWhiteSpace(rawPath))
             return;
 
-        var sp = App.Services as ServiceProvider;
+        var sp = Services;
         var resolved = AuswertungPro.Next.Application.Common.ProjectPathResolver.ResolveFilePath(rawPath, sp?.Settings.LastProjectPath) ?? rawPath;
         if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
         {
@@ -1514,7 +1517,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             var newValue = GetEditedTextValue(e.EditingElement) ?? oldValue;
             if (!string.Equals(oldValue, newValue, StringComparison.OrdinalIgnoreCase))
             {
-                var sp = App.Services as ServiceProvider;
+                var sp = Services;
                 var projectPath = sp?.Settings.LastProjectPath;
 
                 // Erst Ordner + Pfade umbenennen, DANN erst den Namen setzen
@@ -1617,7 +1620,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             UndockButton.IsEnabled = false;
 
             // Fensterposition aus Settings laden
-            var settings = (App.Services as ServiceProvider)?.Settings;
+            var settings = Services.Settings;
             _floatingGridWindow.ApplySavedBounds(settings?.FloatingGridBounds);
 
             // Titel und Info aktualisieren
@@ -1663,7 +1666,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
 
         // Fensterposition speichern
-        var settings = (App.Services as ServiceProvider)?.Settings;
+        var settings = Services.Settings;
         if (settings is not null)
         {
             settings.FloatingGridBounds = _floatingGridWindow.GetBoundsString();
@@ -1696,7 +1699,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (_floatingGridWindow is null)
             return;
 
-        var settings = (App.Services as ServiceProvider)?.Settings;
+        var settings = Services.Settings;
         if (settings is not null)
         {
             settings.FloatingGridBounds = _floatingGridWindow.GetBoundsString();
@@ -1747,7 +1750,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         Action vsaUpdateAction = () =>
         {
-            var sp = App.Services as ServiceProvider;
+            var sp = Services;
             if (sp?.Vsa is null) return;
             var res = sp.Vsa.EvaluateRecord(record);
             if (res.Ok)
@@ -2169,7 +2172,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        var sp = (ServiceProvider)App.Services;
+        var sp = Services;
         var project = vm.Project;
         if (project is null)
         {
