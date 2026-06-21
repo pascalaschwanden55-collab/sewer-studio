@@ -27,7 +27,7 @@ public partial class ProtocolEntryEditorDialog : Window
     private bool _isNormalizingCode;
 
     public ProtocolEntryEditorDialog()
-        : this(new ProtocolEntryVM(new ProtocolEntry()), App.Services as ServiceProvider, null, null, null)
+        : this(new ProtocolEntryVM(new ProtocolEntry()), null, null, null, null)
     {
     }
 
@@ -42,7 +42,7 @@ public partial class ProtocolEntryEditorDialog : Window
         WindowStateManager.Track(this);
 
         _entryVm = entryVm;
-        _sp = sp ?? (App.Services as ServiceProvider);
+        _sp = sp;
         _haltungId = haltungId;
         _videoPath = videoPath;
         _projectFolder = projectFolder;
