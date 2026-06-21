@@ -775,8 +775,6 @@ public partial class PlayerWindow
         foreach (var el in toRemove)
             CodingOverlayCanvas.Children.Remove(el);
 
-        var amber = new SolidColorBrush(Color.FromRgb(0xF5, 0x9E, 0x0B));
-        var amberFill = new SolidColorBrush(Color.FromArgb(30, 0xF5, 0x9E, 0x0B));
         var aiGlow = new System.Windows.Media.Effects.DropShadowEffect
         {
             Color = Colors.Black,
@@ -794,14 +792,8 @@ public partial class PlayerWindow
             if (ev.Overlay == null || ev.AiContext == null) continue;
             var geo = ev.Overlay;
 
-            Brush stroke = ev.AiContext.Decision switch
-            {
-                CodingUserDecision.Accepted or CodingUserDecision.AcceptedWithEdit
-                    => new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)),
-                CodingUserDecision.Rejected
-                    => new SolidColorBrush(Color.FromRgb(0xEF, 0x44, 0x44)),
-                _ => amber
-            };
+            var strokeColor = CodingAiOverlayDisplayPolicy.StrokeColor(ev.AiContext.Decision);
+            Brush stroke = new SolidColorBrush(strokeColor);
 
             switch (geo.ToolType)
             {
@@ -838,14 +830,14 @@ public partial class PlayerWindow
                         var rectAbsH = Math.Abs(rh);
 
                         // Farbige Kontur mit halbtransparenter Fuellung
-                        var strokeColor = (stroke as SolidColorBrush)?.Color ?? Color.FromRgb(0xF5, 0x9E, 0x0B);
+                        var fillColor = CodingAiOverlayDisplayPolicy.StrokeColor(ev.AiContext.Decision);
                         var rect = new Rectangle
                         {
                             Width = rectAbsW,
                             Height = rectAbsH,
                             Stroke = stroke,
                             StrokeThickness = 3,
-                            Fill = new SolidColorBrush(Color.FromArgb(30, strokeColor.R, strokeColor.G, strokeColor.B)),
+                            Fill = new SolidColorBrush(Color.FromArgb(30, fillColor.R, fillColor.G, fillColor.B)),
                             RadiusX = 6,
                             RadiusY = 6,
                             Tag = "ai_overlay",
@@ -856,11 +848,10 @@ public partial class PlayerWindow
                         CodingOverlayCanvas.Children.Add(rect);
 
                         // Label-Badge: Code [Konfidenz%]
-                        var codeStr = string.IsNullOrWhiteSpace(ev.Entry.Code) ? "?" : ev.Entry.Code;
-                        var confPct = ev.AiContext != null ? $" [{ev.AiContext.Confidence * 100:F1}%]" : "";
+                        var labelText = CodingAiOverlayDisplayPolicy.LabelText(ev.Entry.Code, ev.AiContext.Confidence);
                         var labelBorder = new Border
                         {
-                            Background = new SolidColorBrush(Color.FromArgb(210, strokeColor.R, strokeColor.G, strokeColor.B)),
+                            Background = new SolidColorBrush(Color.FromArgb(210, fillColor.R, fillColor.G, fillColor.B)),
                             CornerRadius = new CornerRadius(4),
                             Padding = new Thickness(6, 2, 6, 2),
                             Tag = "ai_overlay",
@@ -868,7 +859,7 @@ public partial class PlayerWindow
                             IsHitTestVisible = false,
                             Child = new TextBlock
                             {
-                                Text = $"{codeStr}{confPct}",
+                                Text = labelText,
                                 FontSize = 12,
                                 FontWeight = FontWeights.Bold,
                                 Foreground = Brushes.White
