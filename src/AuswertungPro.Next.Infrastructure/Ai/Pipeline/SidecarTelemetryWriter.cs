@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Infrastructure.Telemetry;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
@@ -63,16 +64,7 @@ public static class SidecarTelemetryWriter
     }
 
     public static string? ResolvePath()
-    {
-        var overrideDir = Environment.GetEnvironmentVariable("SEWERSTUDIO_TELEMETRY_DIR");
-        var root = !string.IsNullOrWhiteSpace(overrideDir)
-            ? overrideDir
-            : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-
-        return string.IsNullOrWhiteSpace(root)
-            ? null
-            : Path.Combine(root, "SewerStudio", "Telemetry", "sidecar.jsonl");
-    }
+        => TelemetryPathResolver.ResolveFile("sidecar.jsonl");
 }
 
 public sealed record SidecarTelemetryEvent(

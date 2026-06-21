@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Infrastructure.Telemetry;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
@@ -99,14 +100,7 @@ public static class PipelineTraceWriter
         foreach (var c in Path.GetInvalidFileNameChars())
             runId = runId.Replace(c, '_');
 
-        var overrideDir = Environment.GetEnvironmentVariable("SEWERSTUDIO_TELEMETRY_DIR");
-        var root = !string.IsNullOrWhiteSpace(overrideDir)
-            ? overrideDir
-            : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-
-        return string.IsNullOrWhiteSpace(root)
-            ? null
-            : Path.Combine(root, "SewerStudio", "Telemetry", $"{prefix}{runId}{extension}");
+        return TelemetryPathResolver.ResolveFile($"{prefix}{runId}{extension}");
     }
 }
 

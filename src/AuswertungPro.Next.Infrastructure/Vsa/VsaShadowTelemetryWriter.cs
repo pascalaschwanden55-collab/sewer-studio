@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AuswertungPro.Next.Infrastructure.Telemetry;
 
 namespace AuswertungPro.Next.Infrastructure.Vsa;
 
@@ -33,16 +34,7 @@ public static class VsaShadowTelemetryWriter
     }
 
     public static string? ResolvePath()
-    {
-        var overrideDir = Environment.GetEnvironmentVariable("SEWERSTUDIO_TELEMETRY_DIR");
-        var root = !string.IsNullOrWhiteSpace(overrideDir)
-            ? overrideDir
-            : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-
-        return string.IsNullOrWhiteSpace(root)
-            ? null
-            : Path.Combine(root, "SewerStudio", "Telemetry", "vsa_shadow.jsonl");
-    }
+        => TelemetryPathResolver.ResolveFile("vsa_shadow.jsonl");
 }
 
 public sealed record VsaShadowTelemetryEvent(
