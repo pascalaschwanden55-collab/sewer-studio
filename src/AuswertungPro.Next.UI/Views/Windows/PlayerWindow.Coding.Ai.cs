@@ -1462,12 +1462,10 @@ public partial class PlayerWindow
                 if (_closing || _player is null) return;
                 _codingLiveAiBlinkState = !_codingLiveAiBlinkState;
                 BtnCodingLiveAi.Background = new SolidColorBrush(
-                    _codingLiveAiBlinkState
-                        ? Color.FromRgb(0x22, 0xC5, 0x5E)   // Gruen
-                        : Color.FromRgb(0x16, 0x65, 0x34));  // Dunkelgruen
+                    CodingLiveAiButtonDisplayPolicy.BlinkColor(_codingLiveAiBlinkState));
             };
             _codingLiveAiBlinkTimer.Start();
-            BtnCodingLiveAi.Background = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E));
+            BtnCodingLiveAi.Background = new SolidColorBrush(CodingLiveAiButtonDisplayPolicy.ActiveColor);
 
             SetCodingAiState("Automatische KI-Analyse aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
                 $"Intervall alle 5 Sekunden | {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
