@@ -4534,26 +4534,7 @@ public partial class PlayerWindow
                 Decision = CodingUserDecision.Ignored
             };
 
-            // Bbox â†’ OverlayGeometry (Rectangle) fuer Kontur-Rendering auf CodingOverlayCanvas
-            if (finding.BboxX1.HasValue && finding.BboxY1.HasValue
-                && finding.BboxX2.HasValue && finding.BboxY2.HasValue)
-            {
-                var x1 = finding.BboxX1.Value;
-                var y1 = finding.BboxY1.Value;
-                var x2 = finding.BboxX2.Value;
-                var y2 = finding.BboxY2.Value;
-                codingEvent.Overlay = new OverlayGeometry
-                {
-                    ToolType = OverlayToolType.Rectangle,
-                    Points = new List<NormalizedPoint>
-                    {
-                        new(Math.Min(x1, x2), Math.Min(y1, y2)),
-                        new(Math.Max(x1, x2), Math.Min(y1, y2)),
-                        new(Math.Max(x1, x2), Math.Max(y1, y2)),
-                        new(Math.Min(x1, x2), Math.Max(y1, y2))
-                    }
-                };
-            }
+            codingEvent.Overlay = CodingLiveFindingOverlayBuilder.BuildRectangle(finding);
 
             anyAdded = true;
 
