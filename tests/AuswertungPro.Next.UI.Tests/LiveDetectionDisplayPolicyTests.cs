@@ -127,6 +127,34 @@ public sealed class LiveDetectionDisplayPolicyTests
     }
 
     [Fact]
+    public void BuildDetectionStatusText_formats_error_clean_and_damage_results()
+    {
+        var error = new LiveDetection(12, [], null, "Timeout");
+        var clean = new LiveDetection(8, [], null, null);
+        var damaged = new LiveDetection(4.25, [new LiveFrameFinding("Riss", 3, "3", 20)], null, null);
+
+        Assert.Equal("Fehler: Timeout", LiveDetectionDisplayPolicy.BuildDetectionStatusText(error));
+        Assert.Equal("Kein Schaden @ 8.0s", LiveDetectionDisplayPolicy.BuildDetectionStatusText(clean));
+        Assert.Equal("1 Schaden erkannt @ 4.3s", LiveDetectionDisplayPolicy.BuildDetectionStatusText(damaged));
+    }
+
+    [Fact]
+    public void BuildFindingSummaryText_uses_code_hint_and_limits_to_three_findings()
+    {
+        var findings = new[]
+        {
+            new LiveFrameFinding("Riss", 3, "3", 20, VsaCodeHint: "BAB"),
+            new LiveFrameFinding("Wurzel", 4, "9", 20),
+            new LiveFrameFinding("Anschluss", 2, "12", 10, VsaCodeHint: "BCA"),
+            new LiveFrameFinding("Inkrustation", 1, "6", 5, VsaCodeHint: "BBB")
+        };
+
+        var summary = LiveDetectionDisplayPolicy.BuildFindingSummaryText(findings);
+
+        Assert.Equal("BAB (S3) | Wurzel (S4) | BCA (S2)", summary);
+    }
+
+    [Fact]
     public void DetectionSeverityColor_clamps_to_supported_range()
     {
         Assert.Equal(Color.FromRgb(34, 197, 94), LiveDetectionDisplayPolicy.DetectionSeverityColor(0));

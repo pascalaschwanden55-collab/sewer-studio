@@ -599,24 +599,14 @@ public partial class PlayerWindow
 
     private void UpdateDetectionStatus(LiveDetection result)
     {
+        LiveDetectionStatusText.Text = LiveDetectionDisplayPolicy.BuildDetectionStatusText(result);
         if (result.Error is not null)
-        {
-            LiveDetectionStatusText.Text = $"Fehler: {result.Error}";
             return;
-        }
 
-        var count = result.Findings.Count;
-        LiveDetectionStatusText.Text = count > 0
-            ? $"{count} Schaden erkannt @ {result.TimestampSeconds:0.0}s"
-            : $"Kein Schaden @ {result.TimestampSeconds:0.0}s";
-
-        if (count > 0)
+        if (result.Findings.Count > 0)
         {
-            var summary = string.Join(" | ",
-                result.Findings.Take(3).Select(f =>
-                    $"{f.VsaCodeHint ?? f.Label} (S{f.Severity})"));
             FindingSummaryPanel.Visibility = Visibility.Visible;
-            FindingSummaryText.Text = summary;
+            FindingSummaryText.Text = LiveDetectionDisplayPolicy.BuildFindingSummaryText(result.Findings);
         }
         else
         {

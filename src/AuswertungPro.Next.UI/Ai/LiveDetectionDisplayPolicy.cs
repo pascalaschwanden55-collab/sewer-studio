@@ -31,6 +31,21 @@ public static class LiveDetectionDisplayPolicy
         return tooltip + $"\n@ {segment.TimestampSeconds:0.0}s";
     }
 
+    public static string BuildDetectionStatusText(LiveDetection result)
+    {
+        if (result.Error is not null)
+            return $"Fehler: {result.Error}";
+
+        var count = result.Findings.Count;
+        return count > 0
+            ? $"{count} Schaden erkannt @ {result.TimestampSeconds:0.0}s"
+            : $"Kein Schaden @ {result.TimestampSeconds:0.0}s";
+    }
+
+    public static string BuildFindingSummaryText(IReadOnlyList<LiveFrameFinding> findings, int maxFindings = 3)
+        => string.Join(" | ", findings.Take(maxFindings).Select(f =>
+            $"{f.VsaCodeHint ?? f.Label} (S{f.Severity})"));
+
     public static string CompactModelName(string? model)
     {
         if (string.IsNullOrWhiteSpace(model))
