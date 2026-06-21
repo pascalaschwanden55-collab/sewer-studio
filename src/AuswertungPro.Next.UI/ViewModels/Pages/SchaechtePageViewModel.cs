@@ -362,9 +362,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         var dlg = new OptionsEditorWindow(vm);
         if (dlg.ShowDialog() == true)
         {
-            SanierenOptions.Clear();
-            foreach (var item in vm.Items)
-                SanierenOptions.Add(item);
+            DropdownOptionList.ReplaceWith(SanierenOptions, vm.Items);
             SaveDropdownOptions();
         }
     }
@@ -377,9 +375,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 
     private void ResetSanierenOptions()
     {
-        SanierenOptions.Clear();
-        foreach (var item in new[] { "Nein", "Ja" })
-            SanierenOptions.Add(item);
+        DropdownOptionList.ReplaceWith(SanierenOptions, new[] { "Nein", "Ja" });
         SaveDropdownOptions();
     }
 
@@ -392,9 +388,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         var dlg = new OptionsEditorWindow(vm);
         if (dlg.ShowDialog() == true)
         {
-            EigentuemerOptions.Clear();
-            foreach (var item in vm.Items)
-                EigentuemerOptions.Add(item);
+            DropdownOptionList.ReplaceWith(EigentuemerOptions, vm.Items);
             EnforceEigentuemerOptionsExact();
             SaveDropdownOptions();
         }
@@ -432,9 +426,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         var dlg = new OptionsEditorWindow(vm);
         if (dlg.ShowDialog() == true)
         {
-            PruefungsresultatOptions.Clear();
-            foreach (var item in vm.Items)
-                PruefungsresultatOptions.Add(item);
+            DropdownOptionList.ReplaceWith(PruefungsresultatOptions, vm.Items);
             SaveDropdownOptions();
         }
     }
@@ -447,15 +439,15 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 
     private void ResetPruefungsresultatOptions()
     {
-        PruefungsresultatOptions.Clear();
-        foreach (var item in new[]
-                 {
-                     "Pruefung bestanden",
-                     "Pruefung knapp nicht bestanden",
-                     "Pruefung nicht bestanden (grob undicht)",
-                     "Keine"
-                 })
-            PruefungsresultatOptions.Add(item);
+        DropdownOptionList.ReplaceWith(
+            PruefungsresultatOptions,
+            new[]
+            {
+                "Pruefung bestanden",
+                "Pruefung knapp nicht bestanden",
+                "Pruefung nicht bestanden (grob undicht)",
+                "Keine"
+            });
         SaveDropdownOptions();
     }
 
@@ -468,9 +460,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         var dlg = new OptionsEditorWindow(vm);
         if (dlg.ShowDialog() == true)
         {
-            ReferenzpruefungOptions.Clear();
-            foreach (var item in vm.Items)
-                ReferenzpruefungOptions.Add(item);
+            DropdownOptionList.ReplaceWith(ReferenzpruefungOptions, vm.Items);
             SaveDropdownOptions();
         }
     }
@@ -483,9 +473,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 
     private void ResetReferenzpruefungOptions()
     {
-        ReferenzpruefungOptions.Clear();
-        foreach (var item in new[] { "Ja", "Nein" })
-            ReferenzpruefungOptions.Add(item);
+        DropdownOptionList.ReplaceWith(ReferenzpruefungOptions, new[] { "Ja", "Nein" });
         SaveDropdownOptions();
     }
 
@@ -494,44 +482,22 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 
     private void AddOptionIfMissing(ObservableCollection<string> options, string value)
     {
-        if (!AddOptionIfMissingCore(options, value))
+        if (!DropdownOptionList.AddIfMissing(options, value))
             return;
         SaveDropdownOptions();
     }
 
     private static bool AddOptionIfMissingCore(ObservableCollection<string> options, string? value)
-    {
-        var text = (value ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(text))
-            return false;
-        if (options.Any(x => x.Equals(text, StringComparison.OrdinalIgnoreCase)))
-            return false;
-        options.Insert(0, text);
-        return true;
-    }
+        => DropdownOptionList.AddIfMissing(options, value);
 
     private void RemoveOptionFromList(ObservableCollection<string> options, string? value)
     {
-        var text = (value ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(text))
-            return;
-        var existing = options.FirstOrDefault(x => x.Equals(text, StringComparison.OrdinalIgnoreCase));
-        if (existing is null)
-            return;
-        options.Remove(existing);
-        SaveDropdownOptions();
+        if (DropdownOptionList.Remove(options, value))
+            SaveDropdownOptions();
     }
 
     private static string ExtractText(object? value)
-    {
-        if (value is null)
-            return string.Empty;
-        if (value is string text)
-            return text;
-        if (value is System.Windows.Controls.ComboBox combo)
-            return combo.Text ?? string.Empty;
-        return value.ToString() ?? string.Empty;
-    }
+        => DropdownOptionList.ExtractText(value);
 
     private void SaveDropdownOptions()
     {
@@ -656,24 +622,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 
     private void EnforceEigentuemerOptionsExact()
     {
-        var same = EigentuemerOptions.Count == FixedEigentuemerOptions.Length;
-        if (same)
-        {
-            for (var i = 0; i < FixedEigentuemerOptions.Length; i++)
-            {
-                if (!string.Equals(EigentuemerOptions[i], FixedEigentuemerOptions[i], StringComparison.Ordinal))
-                {
-                    same = false;
-                    break;
-                }
-            }
-        }
-
-        if (same)
-            return;
-
-        EigentuemerOptions.Clear();
-        foreach (var item in FixedEigentuemerOptions)
-            EigentuemerOptions.Add(item);
+        DropdownOptionList.EnsureExact(EigentuemerOptions, FixedEigentuemerOptions);
     }
 }

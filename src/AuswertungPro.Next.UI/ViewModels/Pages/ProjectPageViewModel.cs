@@ -99,11 +99,8 @@ public sealed partial class ProjectPageViewModel : ObservableObject
     partial void OnSanierenValueChanged(string value)
     {
         Project.Metadata["Sanieren"] = value;
-        if (!SanierenOptions.Contains(value))
-        {
-            SanierenOptions.Insert(0, value);
+        if (DropdownOptionList.AddIfMissing(SanierenOptions, value))
             SaveDropdownOptions();
-        }
     }
 
     partial void OnEigentuemerValueChanged(string value)
@@ -117,11 +114,8 @@ public sealed partial class ProjectPageViewModel : ObservableObject
         var dlg = new OptionsEditorWindow(vm);
         if (dlg.ShowDialog() == true)
         {
-            SanierenOptions.Clear();
-            foreach (var item in vm.Items)
-                SanierenOptions.Add(item);
-            if (!SanierenOptions.Contains(SanierenValue))
-                SanierenOptions.Insert(0, SanierenValue);
+            DropdownOptionList.ReplaceWith(SanierenOptions, vm.Items);
+            DropdownOptionList.AddIfMissing(SanierenOptions, SanierenValue);
             SaveDropdownOptions();
         }
     }
@@ -134,9 +128,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject
 
     private void ResetSanierenOptions()
     {
-        SanierenOptions.Clear();
-        foreach (var item in new[] { "Nein", "Ja" })
-            SanierenOptions.Add(item);
+        DropdownOptionList.ReplaceWith(SanierenOptions, new[] { "Nein", "Ja" });
         SaveDropdownOptions();
     }
 
@@ -152,9 +144,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject
         var dlg = new OptionsEditorWindow(vm);
         if (dlg.ShowDialog() == true)
         {
-            EigentuemerOptions.Clear();
-            foreach (var item in vm.Items)
-                EigentuemerOptions.Add(item);
+            DropdownOptionList.ReplaceWith(EigentuemerOptions, vm.Items);
             EnforceEigentuemerOptionsExact();
             SaveDropdownOptions();
         }
@@ -187,37 +177,18 @@ public sealed partial class ProjectPageViewModel : ObservableObject
     }
 
     private static string ExtractText(object? value)
-    {
-        if (value is null)
-            return string.Empty;
-        if (value is string text)
-            return text;
-        if (value is System.Windows.Controls.ComboBox combo)
-            return combo.Text ?? string.Empty;
-        return value.ToString() ?? string.Empty;
-    }
+        => DropdownOptionList.ExtractText(value);
 
     private void AddOptionIfMissing(ObservableCollection<string> options, string value)
     {
-        var text = (value ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(text))
-            return;
-        if (options.Any(x => x.Equals(text, StringComparison.OrdinalIgnoreCase)))
-            return;
-        options.Insert(0, text);
-        SaveDropdownOptions();
+        if (DropdownOptionList.AddIfMissing(options, value))
+            SaveDropdownOptions();
     }
 
     private void RemoveOptionFromList(ObservableCollection<string> options, string? value)
     {
-        var text = (value ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(text))
-            return;
-        var existing = options.FirstOrDefault(x => x.Equals(text, StringComparison.OrdinalIgnoreCase));
-        if (existing is null)
-            return;
-        options.Remove(existing);
-        SaveDropdownOptions();
+        if (DropdownOptionList.Remove(options, value))
+            SaveDropdownOptions();
     }
     private void SaveDropdownOptions()
     {
@@ -228,25 +199,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject
 
     private void EnforceEigentuemerOptionsExact()
     {
-        var same = EigentuemerOptions.Count == FixedEigentuemerOptions.Length;
-        if (same)
-        {
-            for (var i = 0; i < FixedEigentuemerOptions.Length; i++)
-            {
-                if (!string.Equals(EigentuemerOptions[i], FixedEigentuemerOptions[i], StringComparison.Ordinal))
-                {
-                    same = false;
-                    break;
-                }
-            }
-        }
-
-        if (same)
-            return;
-
-        EigentuemerOptions.Clear();
-        foreach (var item in FixedEigentuemerOptions)
-            EigentuemerOptions.Add(item);
+        DropdownOptionList.EnsureExact(EigentuemerOptions, FixedEigentuemerOptions);
     }
 
 }
