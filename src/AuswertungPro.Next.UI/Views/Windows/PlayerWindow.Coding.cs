@@ -4518,21 +4518,7 @@ public partial class PlayerWindow
                 Zeit = videoTime
             };
 
-            if (!string.IsNullOrWhiteSpace(finding.PositionClock))
-            {
-                entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
-                entry.CodeMeta.Parameters["vsa.uhr.von"] = finding.PositionClock!;
-            }
-            if (finding.CrossSectionReductionPercent is > 0)
-            {
-                entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
-                entry.CodeMeta.Parameters["vsa.querschnitt.prozent"] = finding.CrossSectionReductionPercent.Value.ToString(CultureInfo.InvariantCulture);
-            }
-            else if (finding.IntrusionPercent is > 0)
-            {
-                entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
-                entry.CodeMeta.Parameters["vsa.querschnitt.prozent"] = finding.IntrusionPercent.Value.ToString(CultureInfo.InvariantCulture);
-            }
+            CodingLiveFindingCodeMetaWriter.ApplyToEntry(entry, code, finding);
 
             // Foto 1: exakt der analysierte KI-Frame, damit die Vorschau sofort ein Bild hat.
             AttachAnalyzedFramePhoto(entry);
