@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
@@ -149,10 +150,5 @@ public static class KnowledgeBasePaths
     }
 
     private static string GetAppDataDir()
-    {
-        var overridePath = Environment.GetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR");
-        return string.IsNullOrWhiteSpace(overridePath)
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SewerStudio")
-            : overridePath;
-    }
+        => AppDataPathResolver.Resolve();
 }

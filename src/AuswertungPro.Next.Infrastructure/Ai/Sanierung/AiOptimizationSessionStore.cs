@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Ai.Sanierung;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Sanierung;
 
@@ -67,10 +68,5 @@ public static class AiOptimizationSessionStore
     }
 
     private static string GetAppDataDir()
-    {
-        var overridePath = Environment.GetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR");
-        return string.IsNullOrWhiteSpace(overridePath)
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SewerStudio")
-            : overridePath;
-    }
+        => AppDataPathResolver.Resolve();
 }

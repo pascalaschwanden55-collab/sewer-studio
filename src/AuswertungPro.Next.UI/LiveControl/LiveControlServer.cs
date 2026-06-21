@@ -9,6 +9,7 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
+using AuswertungPro.Next.Application.Common;
 using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.LiveControl;
@@ -72,16 +73,7 @@ public sealed class LiveControlServer : IDisposable
     /// damit der MCP-Client exakt denselben Pfad berechnen kann.
     /// </summary>
     internal static string TokenFilePath
-    {
-        get
-        {
-            var overridePath = Environment.GetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR");
-            var dir = string.IsNullOrWhiteSpace(overridePath)
-                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.ProductName)
-                : overridePath;
-            return Path.Combine(dir, ".live_control_token");
-        }
-    }
+        => Path.Combine(AppDataPathResolver.Resolve(AppIdentity.ProductName), ".live_control_token");
 
     /// <summary>
     /// Ermittelt den Live-Control-Token: bevorzugt aus der Env-Var, sonst wird ein neuer erzeugt

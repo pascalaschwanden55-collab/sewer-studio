@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI;
@@ -119,15 +120,7 @@ public sealed class AppSettings
     public HydraulikPanelSettings HydraulikPanel { get; set; } = new();
 
     public static string AppDataDir
-    {
-        get
-        {
-            var overridePath = Environment.GetEnvironmentVariable("SEWERSTUDIO_APPDATA_DIR");
-            return string.IsNullOrWhiteSpace(overridePath)
-                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.ProductName)
-                : overridePath;
-        }
-    }
+        => AppDataPathResolver.Resolve(AppIdentity.ProductName);
 
     private static string LegacyAppDataDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppIdentity.LegacyLocalDataFolder);
