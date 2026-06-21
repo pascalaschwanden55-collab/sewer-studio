@@ -136,7 +136,10 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", addBody);
         Assert.True(
             addBody.IndexOf("ShouldDeferSpatialCodeUntilCloser", StringComparison.Ordinal)
-            < addBody.IndexOf("codingSessionService.AddEvent(entry)", StringComparison.Ordinal),
+            < FirstIndexOf(
+                addBody,
+                "codingSessionService.AddEvent(entry)",
+                "codingSessionService.AddEvent(draft.Entry)"),
             "Bogen-Vorschau muss vor AddEvent ausgesiebt werden.");
     }
 

@@ -1150,64 +1150,26 @@ public partial class PlayerWindow
                 ?? new QualityGateResult(dinoConf, TrafficLight.Yellow,
                     new Dictionary<string, double>(), "Multi-Model")!;
 
-            var entry = new ProtocolEntry
-            {
-                Source = ProtocolEntrySource.Ai,
-                Code = code,
-                Beschreibung = officialLabel ?? quant.Label,
-                MeterStart = meter,
-                Zeit = videoTime
-            };
+            var quantRule = CodingManifestQuantRuleResolver.Resolve(CodeSelectionCatalog, code);
+            var draft = CodingMultiModelEventFactory.Create(
+                code,
+                officialLabel,
+                seg,
+                meter,
+                videoTime,
+                dinoConf,
+                gateResult.CompositeConfidence,
+                imageWidth,
+                imageHeight,
+                meterFromOsd: _lastResolvedMeterIsOsd,
+                calibration: _codingOverlayService?.Calibration,
+                manifestRule: quantRule);
 
-            // Ehrlichkeit: stammt der Meter nicht aus dem OSD, sondern aus linearer Schaetzung,
-            // als "geschaetzt" markieren (Hinweis fuer Review und Trainingsdaten).
-            if (!_lastResolvedMeterIsOsd)
-            {
-                entry.CodeMeta ??= new ProtocolEntryCodeMeta { Code = code };
-                entry.CodeMeta.Parameters["vsa.meter.quelle"] = "geschaetzt";
-            }
+            AttachAnalyzedFramePhoto(draft.Entry);
 
-            // Messungen in CodeMeta (gleiche Logik wie Qwen-Pfad)
-            ApplyQuantificationToEntry(entry, code, quant);
-
-            // VSA-Lage am Umfang (Uhrlage) aus der Bbox-Geometrie verfeinern (Teil 9):
-            // ueberschreibt die grobe Centroid-Uhrlage durch die VSA-Werte-Konvention
-            // (Punkt/Bereich/12 12/00 00), codeabhaengig (BCA/BAJ = Punkt).
-            ApplyClockPositionToEntry(entry, code, seg, imageWidth, imageHeight);
-
-            AttachAnalyzedFramePhoto(entry);
-
-            var codingEvent = codingSessionService.AddEvent(entry);
-            codingEvent.AiContext = new CodingEventAiContext
-            {
-                SuggestedCode = code,
-                Confidence = gateResult.CompositeConfidence,
-                Reason = $"{quant.Label} (DINO {dinoConf:P0})",
-                SamMaskRle = seg.Mask.MaskRle,
-                SamMaskImageWidth = (int)Math.Round(imageWidth),
-                SamMaskImageHeight = (int)Math.Round(imageHeight),
-                // KI darf in KEINEM Pfad selbst akzeptieren: Vorschlag bleibt
-                // unbestaetigt (Ignored), bis der Mensch ihn bestaetigt (identisch zum Qwen-Pfad).
-                Decision = CodingUserDecision.Ignored
-            };
-            if (seg.Mask.Bbox is { Count: >= 4 })
-            {
-                var x1 = Math.Clamp(seg.Mask.Bbox[0] / imageWidth, 0, 1);
-                var y1 = Math.Clamp(seg.Mask.Bbox[1] / imageHeight, 0, 1);
-                var x2 = Math.Clamp(seg.Mask.Bbox[2] / imageWidth, 0, 1);
-                var y2 = Math.Clamp(seg.Mask.Bbox[3] / imageHeight, 0, 1);
-                codingEvent.Overlay = new OverlayGeometry
-                {
-                    ToolType = OverlayToolType.Rectangle,
-                    Points =
-                    [
-                        new NormalizedPoint(x1, y1),
-                        new NormalizedPoint(x2, y1),
-                        new NormalizedPoint(x2, y2),
-                        new NormalizedPoint(x1, y2)
-                    ]
-                };
-            }
+            var codingEvent = codingSessionService.AddEvent(draft.Entry);
+            codingEvent.AiContext = draft.AiContext;
+            codingEvent.Overlay = draft.Overlay;
 
             anyAdded = true;
         }
@@ -1409,40 +1371,6 @@ public partial class PlayerWindow
     /// </summary>
     /// <summary>Delegiert an VsaCodeResolver.LookupLabel.</summary>
     private static string? LookupVsaLabel(string code) => VsaCodeResolver.LookupLabel(code);
-
-    /// <summary>
-    /// Traegt SAM-Quantifizierungsdaten in ProtocolEntry.CodeMeta ein.
-    /// Gemeinsam genutzt von Qwen- und Multi-Model-Pfad.
-    /// Delegiert an QuantificationCodeMetaWriter (inkl. Herkunft + Status fuer den Gold-Fund).
-    /// </summary>
-    private void ApplyQuantificationToEntry(
-        ProtocolEntry entry, string code, MaskQuantificationService.QuantifiedMask quant)
-    {
-        // Manifest entscheidet OB Q1/Q2/Uhrlage erlaubt sind (Single Source of Truth, ADR-006);
-        // der Writer/Gate entscheidet anhand der VSA-Einheiten, WELCHE SAM-Werte geschrieben werden.
-        var rule = CodingManifestQuantRuleResolver.Resolve(CodeSelectionCatalog, code);
-        AuswertungPro.Next.Infrastructure.Ai.Pipeline.QuantificationCodeMetaWriter.Apply(entry, code, quant, rule);
-    }
-
-    /// <summary>
-    /// Verfeinert die VSA-Lage am Umfang (vsa.uhr.von / vsa.uhr.bis) aus der Bbox-Geometrie des
-    /// Befunds relativ zur kalibrierten Rohrmitte (Teil 9). Reine Fachlogik liegt im
-    /// ClockPositionResolver (Application); hier nur Geometrie zusammenstellen, aufrufen, schreiben.
-    /// Respektiert die Manifest-Regel: ohne erlaubte Uhrlage (z.B. BDD) wird keine geschrieben.
-    /// </summary>
-    private void ApplyClockPositionToEntry(
-        ProtocolEntry entry, string code, SegmentedFinding seg, double imageWidth, double imageHeight)
-    {
-        var rule = CodingManifestQuantRuleResolver.Resolve(CodeSelectionCatalog, code);
-        CodingClockPositionEntryWriter.ApplyToEntry(
-            entry,
-            code,
-            seg,
-            imageWidth,
-            imageHeight,
-            _codingOverlayService?.Calibration,
-            rule);
-    }
 
     /// <summary>Delegiert an VsaCodeResolver.NormalizeClock.</summary>
     private static string? NormalizeClockPosition(string? raw) => VsaCodeResolver.NormalizeClock(raw);
