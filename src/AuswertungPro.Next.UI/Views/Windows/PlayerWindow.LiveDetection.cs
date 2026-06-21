@@ -152,12 +152,7 @@ public partial class PlayerWindow
             Opacity = segment.HasDamage ? 0.85 : 0.4
         };
 
-        var tip = segment.HasDamage
-            ? $"Schaden: {segment.Label ?? "?"} (Schwere {segment.Severity})"
-              + (segment.Clock != null ? $"\nUhr: {segment.Clock}" : "")
-              + $"\n@ {segment.TimestampSeconds:0.0}s"
-            : $"Kein Schaden @ {segment.TimestampSeconds:0.0}s";
-        rect.ToolTip = tip;
+        rect.ToolTip = LiveDetectionDisplayPolicy.BuildQuickScanTooltip(segment);
 
         var timestampSec = segment.TimestampSeconds;
         rect.MouseLeftButtonDown += (_, _) =>

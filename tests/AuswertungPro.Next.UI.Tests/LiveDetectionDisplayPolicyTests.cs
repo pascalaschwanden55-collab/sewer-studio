@@ -1,5 +1,6 @@
 using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -37,6 +38,36 @@ public sealed class LiveDetectionDisplayPolicyTests
         Assert.Equal(Color.FromArgb(100, 0x94, 0xA3, 0xB8), LiveDetectionDisplayPolicy.QuickScanSeverityColor(5, hasDamage: false));
         Assert.Equal(Color.FromRgb(0xEF, 0x44, 0x44), LiveDetectionDisplayPolicy.QuickScanSeverityColor(4, hasDamage: true));
         Assert.Equal(Color.FromRgb(0x22, 0xC5, 0x5E), LiveDetectionDisplayPolicy.QuickScanSeverityColor(1, hasDamage: true));
+    }
+
+    [Fact]
+    public void BuildQuickScanTooltip_describes_damage_segments_with_optional_clock()
+    {
+        var segment = new QuickScanSegment(
+            TimestampSeconds: 12.25,
+            HasDamage: true,
+            Severity: 4,
+            Label: "Riss",
+            Clock: "3");
+
+        var tooltip = LiveDetectionDisplayPolicy.BuildQuickScanTooltip(segment);
+
+        Assert.Equal("Schaden: Riss (Schwere 4)\nUhr: 3\n@ 12.3s", tooltip);
+    }
+
+    [Fact]
+    public void BuildQuickScanTooltip_describes_clean_segments()
+    {
+        var segment = new QuickScanSegment(
+            TimestampSeconds: 8,
+            HasDamage: false,
+            Severity: 0,
+            Label: null,
+            Clock: null);
+
+        var tooltip = LiveDetectionDisplayPolicy.BuildQuickScanTooltip(segment);
+
+        Assert.Equal("Kein Schaden @ 8.0s", tooltip);
     }
 
     [Fact]

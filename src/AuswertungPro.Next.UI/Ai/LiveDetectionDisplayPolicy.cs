@@ -1,5 +1,6 @@
 using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Infrastructure.Ai;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -17,6 +18,17 @@ public static class LiveDetectionDisplayPolicy
             2 => Color.FromRgb(0xFA, 0xCC, 0x15),
             _ => Color.FromRgb(0x22, 0xC5, 0x5E),
         };
+    }
+
+    public static string BuildQuickScanTooltip(QuickScanSegment segment)
+    {
+        if (!segment.HasDamage)
+            return $"Kein Schaden @ {segment.TimestampSeconds:0.0}s";
+
+        var tooltip = $"Schaden: {segment.Label ?? "?"} (Schwere {segment.Severity})";
+        if (segment.Clock != null)
+            tooltip += $"\nUhr: {segment.Clock}";
+        return tooltip + $"\n@ {segment.TimestampSeconds:0.0}s";
     }
 
     public static string CompactModelName(string? model)
