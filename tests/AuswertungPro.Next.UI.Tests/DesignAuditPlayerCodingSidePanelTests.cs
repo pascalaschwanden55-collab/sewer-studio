@@ -46,10 +46,12 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_uses_same_overlay_policy_for_rendering_and_events()
     {
         var coding = ReadCodingPartials();
+        var summary = ReadUiFile("Ai", "CodingMultiModelFindingSummary.cs");
 
-        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleCodingFindings", coding);
+        Assert.Contains("CodingMultiModelFindingSummary.Build(segmented, mmResult)", coding);
+        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleCodingFindings", summary);
         Assert.Contains("SamMaskRenderer.RenderCandidates", coding);
-        Assert.Contains("visibleCodierbar", coding);
+        Assert.Contains("findingSummary.VisibleCodierbar", coding);
         Assert.DoesNotContain("AddMultiModelFindingsAsEvents(\r\n                    segmented.Where(s => s.Proximity.IsCodierbar).ToList()", coding);
     }
 
@@ -57,21 +59,24 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_renders_ahead_segment_masks_without_coding_them()
     {
         var coding = ReadCodingPartials();
+        var summary = ReadUiFile("Ai", "CodingMultiModelFindingSummary.cs");
         var showBody = ExtractMethodBody(coding, "private void ShowMultiModelResults");
 
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskFindings", coding);
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskFindings(segmented)", showBody);
-        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleCodingFindings(segmented)", coding);
+        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleCodingFindings(segmented)", summary);
         Assert.Contains("AddMultiModelFindingsAsEvents(", coding);
-        Assert.Contains("visibleCodierbar", coding);
+        Assert.Contains("findingSummary.VisibleCodierbar", coding);
     }
 
     [Fact]
     public void Player_status_mentions_background_masks_suppressed()
     {
         var coding = ReadCodingPartials();
+        var summary = ReadUiFile("Ai", "CodingMultiModelFindingSummary.cs");
 
-        Assert.Contains("CodingSegmentedFindingVisibility.BuildOverlaySuppressionText", coding);
+        Assert.Contains("CodingSegmentedFindingVisibility.BuildOverlaySuppressionText", summary);
+        Assert.Contains("findingSummary.TimingText", coding);
     }
 
     [Fact]

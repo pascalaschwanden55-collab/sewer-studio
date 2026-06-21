@@ -160,21 +160,14 @@ public partial class PlayerWindow
 
                 // Naehe-Gate: nur codierbare Befunde metrieren; "Voraus" nur anzeigen.
                 var segmented = BuildCodingSegmentedFindings(mmResult);
-                int vorausCount = segmented.Count(s => !s.Proximity.IsCodierbar);
-                int codierbarCount = segmented.Count - vorausCount;
+                var findingSummary = CodingMultiModelFindingSummary.Build(segmented, mmResult);
 
                 // Masken/Overlay rendern (alle; "Voraus" optisch abgesetzt).
                 ShowMultiModelResults(mmResult, segmented);
 
-                // Overlay-Policy einmalig anwenden: nur sichtbare codierbare Befunde zaehlen
-                // als echte Befunde. Als Hintergrund (Hidden) verworfene Masken werden gemeldet.
-                var visibleCodierbar = CodingSegmentedFindingVisibility.BuildVisibleCodingFindings(segmented);
-                var suppressedBackgroundCount = segmented.Count(s => s.Proximity.IsCodierbar) - visibleCodierbar.Count;
-                var overlaySuppressionText = CodingSegmentedFindingVisibility.BuildOverlaySuppressionText(suppressedBackgroundCount);
-
                 // DINO hatte Detektionen (sonst waeren wir oben raus), aber SAM lieferte keine Maske
                 // -> Befund verloren (degraded). Nicht als sauberen Negativbefund (gruen) tarnen.
-                if (segmented.Count == 0)
+                if (findingSummary.HasNoSegmentedFindings)
                 {
                     SetCodingAiState("SAM ohne Maske - Befund nicht segmentiert",
                         Color.FromRgb(0xF5, 0x9E, 0x0B),
@@ -184,25 +177,22 @@ public partial class PlayerWindow
                     return;
                 }
 
-                if (codierbarCount == 0 && vorausCount > 0)
+                if (findingSummary.HasOnlyAheadFindings)
                 {
                     SetCodingAiState("Ereignis voraus erkannt - näher heranfahren",
                         Color.FromRgb(0xF5, 0x9E, 0x0B),
-                        $"{vorausCount} voraus");
+                        $"{findingSummary.VorausCount} voraus");
                     return;
                 }
 
-                var timingText = $"YOLO {mmResult.YoloTimeMs:F0}ms | DINO {mmResult.DinoTimeMs:F0}ms | SAM {mmResult.SamTimeMs:F0}ms";
-                if (!string.IsNullOrEmpty(overlaySuppressionText))
-                    timingText += $" | {overlaySuppressionText}";
                 SetCodingAiState(
-                    $"{codierbarCount} Befunde erkannt" + (vorausCount > 0 ? $" ({vorausCount} voraus ignoriert)" : ""),
+                    findingSummary.DetectedStatusText,
                     Color.FromRgb(0x22, 0xC5, 0x5E),
-                    timingText);
+                    findingSummary.TimingText);
 
                 // Nur sichtbare codierbare Befunde als Events (Hintergrundmasken raus).
                 AddMultiModelFindingsAsEvents(
-                    visibleCodierbar,
+                    findingSummary.VisibleCodierbar,
                     mmResult.SamResponse?.ImageWidth ?? 1, mmResult.SamResponse?.ImageHeight ?? 1,
                     mmResult.YoloMaxConfidence, captureTimestampSec, frameOsdMeter);
                 return;
