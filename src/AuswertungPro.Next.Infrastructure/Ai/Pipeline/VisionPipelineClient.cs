@@ -13,7 +13,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// HTTP client for the Python FastAPI Vision Sidecar.
 /// Pattern mirrors OllamaClient – simple, typed HTTP calls.
 /// </summary>
-public sealed class VisionPipelineClient
+public sealed class VisionPipelineClient : IVisionPipelineClient
 {
     private readonly HttpClient _http;
     private readonly Uri _baseUri;

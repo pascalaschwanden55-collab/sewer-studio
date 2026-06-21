@@ -25,7 +25,7 @@ namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 /// </summary>
 public sealed class MultiModelAnalysisService
 {
-    private readonly VisionPipelineClient _client;
+    private readonly IVisionPipelineClient _client;
     private readonly PipelineConfig _config;
     private readonly EnhancedVisionAnalysisService? _qwenVision;
     private readonly ILogger _logger;
@@ -82,12 +82,19 @@ public sealed class MultiModelAnalysisService
     // Gecachter minimaler Confidence-Schwellenwert (einmal berechnet statt pro Frame)
     private readonly double _minClassConfidence;
 
+    // Test-Seams: null = Produktiv-Verhalten (VideoFrameStream / GetVideoDurationAsync)
+    private readonly Func<string, string, double, double, CancellationToken, IAsyncEnumerable<FrameData>>? _frameSource;
+    private readonly Func<string, CancellationToken, Task<double>>? _durationProbe;
+    private readonly bool _frameSourceOverridden;
+
     public MultiModelAnalysisService(
-        VisionPipelineClient client,
+        IVisionPipelineClient client,
         PipelineConfig config,
         string ffmpegPath = "ffmpeg",
         EnhancedVisionAnalysisService? qwenVision = null,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        Func<string, string, double, double, CancellationToken, IAsyncEnumerable<FrameData>>? frameSource = null,
+        Func<string, CancellationToken, Task<double>>? durationProbe = null)
     {
         _client = client;
         _config = config;
@@ -99,6 +106,9 @@ public sealed class MultiModelAnalysisService
         _minClassConfidence = config.YoloClassConfidence.Count > 0
             ? config.YoloClassConfidence.Values.Min()
             : config.YoloConfidence;
+        _frameSource = frameSource;
+        _durationProbe = durationProbe;
+        _frameSourceOverridden = frameSource is not null;
     }
 
     public static (string MeterSource, bool IsMeterEstimated) GetDedupMeterMetadata(bool qwenMeterAccepted)
@@ -114,12 +124,14 @@ public sealed class MultiModelAnalysisService
         CancellationToken ct = default)
     {
         videoPath = NormalizePath(videoPath);
-        if (!File.Exists(videoPath))
+        // File-Existenz-Check nur ohne frameSource-Override (Tests nutzen Dummy-Pfad).
+        if (!_frameSourceOverridden && !File.Exists(videoPath))
             return VideoAnalysisResult.Failed($"Video nicht gefunden: {videoPath}");
 
         progress?.Report(new VideoAnalysisProgress(0, 0, "Multi-Model: Videodauer wird ermittelt..."));
 
-        var duration = await GetVideoDurationAsync(videoPath, ct).ConfigureAwait(false);
+        var durationFunc = _durationProbe ?? GetVideoDurationAsync;
+        var duration = await durationFunc(videoPath, ct).ConfigureAwait(false);
         if (duration <= 0)
             return VideoAnalysisResult.Failed("Videodauer konnte nicht ermittelt werden.");
 
@@ -156,10 +168,12 @@ public sealed class MultiModelAnalysisService
         _logger.LogInformation("Multi-Model Pipeline runId={RunId}, Stufen-Trace: {TracePath}",
             runId, PipelineTraceWriter.ResolvePath(runId));
 
-        await using var stream = VideoFrameStream.Open(
-            _ffmpegPath, videoPath, FrameStepSeconds, duration, ct);
+        // frameSource-Seam: im Test injizierbar; sonst echter VideoFrameStream.
+        var frames = _frameSource is not null
+            ? _frameSource(_ffmpegPath, videoPath, FrameStepSeconds, duration, ct)
+            : DefaultFrameSource(_ffmpegPath, videoPath, FrameStepSeconds, duration, ct);
 
-        await foreach (var frame in stream.ReadFramesAsync(ct).ConfigureAwait(false))
+        await foreach (var frame in frames.ConfigureAwait(false))
         {
             ct.ThrowIfCancellationRequested();
             var frameSw = Stopwatch.StartNew();
@@ -954,6 +968,22 @@ public sealed class MultiModelAnalysisService
         if (path.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
             path = new Uri(path).LocalPath;
         return Path.GetFullPath(path);
+    }
+
+    /// <summary>
+    /// Standard-Frame-Quelle: oeffnet einen VideoFrameStream und gibt seine Frames zurueck.
+    /// Als separater Helper, damit der await-using-Dispose korrekt ablaeuft.
+    /// </summary>
+    private static async IAsyncEnumerable<FrameData> DefaultFrameSource(
+        string ffmpegPath,
+        string videoPath,
+        double stepSeconds,
+        double duration,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+    {
+        await using var stream = VideoFrameStream.Open(ffmpegPath, videoPath, stepSeconds, duration, ct);
+        await foreach (var frame in stream.ReadFramesAsync(ct).ConfigureAwait(false))
+            yield return frame;
     }
 
     private async Task<double> GetVideoDurationAsync(string videoPath, CancellationToken ct)
