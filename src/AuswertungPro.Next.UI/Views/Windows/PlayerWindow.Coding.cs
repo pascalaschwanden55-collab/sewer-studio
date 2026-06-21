@@ -641,18 +641,14 @@ public partial class PlayerWindow
     }
 
     private double ResolveCurrentCodingDisplayMeter()
-    {
-        if (_codingVm == null)
-            return 0;
-
-        if (_codingLastOsdMeter.HasValue)
-            return _codingLastOsdMeter.Value;
-
-        if (_player.Length > 0 && _codingVm.EndMeter > 0)
-            return (_player.Time / (double)_player.Length) * _codingVm.EndMeter;
-
-        return _codingVm.CurrentMeter;
-    }
+        => _codingVm == null
+            ? 0
+            : CodingCurrentMeterResolver.Resolve(
+                _codingLastOsdMeter,
+                _player.Time,
+                _player.Length,
+                _codingVm.EndMeter,
+                _codingVm.CurrentMeter);
 
     private void SyncVideoToCodingMeter()
     {
