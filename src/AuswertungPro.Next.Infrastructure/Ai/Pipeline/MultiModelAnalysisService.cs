@@ -599,7 +599,11 @@ public sealed class MultiModelAnalysisService
                 findings.Add(new EnhancedFinding(
                     Label: q.Label,
                     VsaCodeHint: VsaCodeResolver.InferCodeFromLabel(q.Label),
-                    Severity: EstimateSeverity(q),
+                    Severity: QuantificationSeverityPolicy.Estimate(
+                        q.CrossSectionReductionPercent,
+                        q.IntrusionPercent,
+                        q.HeightMm,
+                        q.ExtentPercent),
                     PositionClock: NormalizeClockPosition(q.ClockPosition),
                     ExtentPercent: q.ExtentPercent,
                     HeightMm: q.HeightMm,
@@ -886,7 +890,11 @@ public sealed class MultiModelAnalysisService
             findings.Add(new EnhancedFinding(
                 Label: q.Label,
                 VsaCodeHint: VsaCodeResolver.InferCodeFromLabel(q.Label),
-                Severity: EstimateSeverity(q),
+                Severity: QuantificationSeverityPolicy.Estimate(
+                    q.CrossSectionReductionPercent,
+                    q.IntrusionPercent,
+                    q.HeightMm,
+                    q.ExtentPercent),
                 PositionClock: NormalizeClockPosition(q.ClockPosition),
                 ExtentPercent: q.ExtentPercent,
                 HeightMm: q.HeightMm,
@@ -916,18 +924,6 @@ public sealed class MultiModelAnalysisService
     }
 
     // ── Private helpers ────────────────────────────────────────────────
-
-    private static int EstimateSeverity(MaskQuantificationService.QuantifiedMask q)
-    {
-        // Heuristic based on physical dimensions
-        if (q.CrossSectionReductionPercent is > 50) return 5;
-        if (q.CrossSectionReductionPercent is > 25) return 4;
-        if (q.ExtentPercent is > 50) return 4;
-        if (q.HeightMm is > 50) return 3;
-        if (q.ExtentPercent is > 25) return 3;
-        if (q.HeightMm is > 10) return 2;
-        return 1;
-    }
 
     private static (double? X1, double? Y1, double? X2, double? Y2) GetNormalizedBbox(
         SamMaskResult mask,

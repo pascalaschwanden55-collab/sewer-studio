@@ -133,7 +133,11 @@ public static class AiOverlayConverter
                 Geometry = geo,
                 Label = quantified.Label,
                 Confidence = quantified.Confidence,
-                Severity = EstimateSeverity(quantified),
+                Severity = QuantificationSeverityPolicy.Estimate(
+                    quantified.CrossSectionReductionPercent,
+                    quantified.IntrusionPercent,
+                    quantified.HeightMm,
+                    quantified.ExtentPercent),
                 VsaCodeHint = null,
                 Source = AiOverlaySource.Sam
             });
@@ -295,15 +299,6 @@ public static class AiOverlayConverter
             >= 0.3 => 2,
             _ => 1
         };
-
-    private static int EstimateSeverity(MaskQuantificationService.QuantifiedMask q)
-    {
-        if (q.CrossSectionReductionPercent is >= 50) return 5;
-        if (q.CrossSectionReductionPercent is >= 30) return 4;
-        if (q.CrossSectionReductionPercent is >= 15) return 3;
-        if (q.IntrusionPercent is >= 30) return 4;
-        return 2;
-    }
 
     private static double ParseClockHour(string? clockStr)
     {

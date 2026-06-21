@@ -1,0 +1,210 @@
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Helpers;
+
+namespace AuswertungPro.Next.UI.Views.Windows;
+
+public partial class PlayerWindow
+{
+    private void Eingabemarker_Click(object sender, RoutedEventArgs e)
+    {
+        if (BtnEingabemarker.IsChecked == true)
+        {
+            _player.SetPause(true);
+            _eingabemarkerPhase = EingabemarkerPhase.Drawing;
+            EnsureMarkOverlayReady();
+            CodingOverlayPopup.IsOpen = true;
+            UpdateCodingOverlayViewport();
+            CodingOverlayCanvas.IsHitTestVisible = true;
+            CodingOverlayCanvas.Cursor = System.Windows.Input.Cursors.Cross;
+            SetCodingAiState("Eingabemarker: Rechteck um die Beobachtung ziehen",
+                Color.FromRgb(0x3B, 0x82, 0xF6), "Klicken + Ziehen = Bereich markieren");
+        }
+        else
+        {
+            CancelEingabemarker();
+        }
+    }
+
+    private void CancelEingabemarker()
+    {
+        _eingabemarkerPhase = EingabemarkerPhase.Inactive;
+        BtnEingabemarker.IsChecked = false;
+        EingabemarkerPopup.Visibility = Visibility.Collapsed;
+        if (_eingabemarkerPreviewRect != null)
+        {
+            CodingOverlayCanvas.Children.Remove(_eingabemarkerPreviewRect);
+            _eingabemarkerPreviewRect = null;
+        }
+        CodingOverlayCanvas.Cursor = System.Windows.Input.Cursors.Arrow;
+    }
+
+    private void EingabemarkerCanvas_MouseDown(Point canvasPos)
+    {
+        if (_eingabemarkerPhase != EingabemarkerPhase.Drawing) return;
+
+        _eingabemarkerDragStart = canvasPos;
+        CodingOverlayCanvas.CaptureMouse();
+
+        _eingabemarkerPreviewRect = new System.Windows.Shapes.Rectangle
+        {
+            Stroke = Brushes.Lime,
+            StrokeThickness = 2,
+            StrokeDashArray = new DoubleCollection { 4, 2 },
+            Fill = new SolidColorBrush(Color.FromArgb(40, 0, 255, 0))
+        };
+        Canvas.SetLeft(_eingabemarkerPreviewRect, canvasPos.X);
+        Canvas.SetTop(_eingabemarkerPreviewRect, canvasPos.Y);
+        _eingabemarkerPreviewRect.Width = 0;
+        _eingabemarkerPreviewRect.Height = 0;
+        CodingOverlayCanvas.Children.Add(_eingabemarkerPreviewRect);
+    }
+
+    private void EingabemarkerCanvas_MouseMove(Point canvasPos)
+    {
+        if (_eingabemarkerPhase != EingabemarkerPhase.Drawing || _eingabemarkerPreviewRect == null) return;
+
+        var x = Math.Min(_eingabemarkerDragStart.X, canvasPos.X);
+        var y = Math.Min(_eingabemarkerDragStart.Y, canvasPos.Y);
+        var w = Math.Abs(canvasPos.X - _eingabemarkerDragStart.X);
+        var h = Math.Abs(canvasPos.Y - _eingabemarkerDragStart.Y);
+
+        Canvas.SetLeft(_eingabemarkerPreviewRect, x);
+        Canvas.SetTop(_eingabemarkerPreviewRect, y);
+        _eingabemarkerPreviewRect.Width = w;
+        _eingabemarkerPreviewRect.Height = h;
+    }
+
+    private void EingabemarkerCanvas_MouseUp(Point canvasPos)
+    {
+        if (_eingabemarkerPhase != EingabemarkerPhase.Drawing) return;
+        CodingOverlayCanvas.ReleaseMouseCapture();
+
+        var canvasW = CodingOverlayCanvas.ActualWidth;
+        var canvasH = CodingOverlayCanvas.ActualHeight;
+        if (canvasW <= 0 || canvasH <= 0) { CancelEingabemarker(); return; }
+
+        var x1 = Math.Min(_eingabemarkerDragStart.X, canvasPos.X) / canvasW;
+        var y1 = Math.Min(_eingabemarkerDragStart.Y, canvasPos.Y) / canvasH;
+        var x2 = Math.Max(_eingabemarkerDragStart.X, canvasPos.X) / canvasW;
+        var y2 = Math.Max(_eingabemarkerDragStart.Y, canvasPos.Y) / canvasH;
+
+        if ((x2 - x1) < 0.02 || (y2 - y1) < 0.02) { CancelEingabemarker(); return; }
+
+        _eingabemarkerRectNorm = new Rect(x1, y1, x2 - x1, y2 - y1);
+        _eingabemarkerPhase = EingabemarkerPhase.Input;
+        CodingOverlayCanvas.IsHitTestVisible = false;
+        CodingOverlayCanvas.Cursor = System.Windows.Input.Cursors.Arrow;
+
+        EingabemarkerPopup.Visibility = Visibility.Visible;
+        TxtEingabemarker.Text = "";
+        CmbEingabemarker.SelectedIndex = -1;
+        Dispatcher.BeginInvoke(new Action(() => TxtEingabemarker.Focus()),
+            System.Windows.Threading.DispatcherPriority.Input);
+
+        SetCodingAiState("Beschreibung eingeben oder Stichwort wählen, dann Enter",
+            Color.FromRgb(0x3B, 0x82, 0xF6), "z.B. \"Beule unten\", \"Riss bei 3 Uhr\", \"Anschluss offen\"");
+    }
+
+    private void CmbEingabemarker_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Escape)
+        {
+            CancelEingabemarker();
+            ClearDetectionOverlays();
+            return;
+        }
+
+        if (e.Key != System.Windows.Input.Key.Enter) return;
+        SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker");
+    }
+
+    private void CmbEingabemarker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (EingabemarkerPopup.Visibility != Visibility.Visible) return;
+        if (CmbEingabemarker.SelectedItem is ComboBoxItem item && item.Content is string text && !string.IsNullOrEmpty(text))
+        {
+            TxtEingabemarker.Text = text;
+            SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker");
+        }
+    }
+
+    private static string? ResolveEingabemarkerCodeHint(string? keyword)
+        => AuswertungPro.Next.UI.Player.PlayerVsaCodeHintResolver.ResolveKeyword(keyword);
+
+    private async Task SubmitEingabemarker()
+    {
+        var keyword = TxtEingabemarker.Text?.Trim() ?? "";
+        if (string.IsNullOrEmpty(keyword)) return;
+
+        EingabemarkerPopup.Visibility = Visibility.Collapsed;
+        _eingabemarkerPhase = EingabemarkerPhase.Analyzing;
+
+        var codeHint = ResolveEingabemarkerCodeHint(keyword);
+
+        try
+        {
+            if (_codingVm != null && codeHint != null)
+            {
+                var checkMeter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
+                var existingDup = CodingEingabemarkerDuplicatePolicy.FindDuplicate(
+                    _codingVm.Events,
+                    codeHint,
+                    checkMeter);
+                if (existingDup != null)
+                {
+                    SetCodingAiState(
+                        $"{codeHint} bereits vorhanden bei {existingDup.MeterAtCapture:F2}m - Duplikat",
+                        Color.FromRgb(0xF5, 0x9E, 0x0B), "");
+                    return;
+                }
+            }
+
+            if (codeHint != null && _codingVm != null && _codingSessionService != null)
+            {
+                var meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
+                var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
+                var label = LookupVsaLabel(codeHint) ?? keyword;
+
+                var draft = CodingEingabemarkerEventFactory.CreateAccepted(
+                    codeHint,
+                    label,
+                    keyword,
+                    meter,
+                    videoTime);
+
+                var fotoPath = CodingCaptureSnapshot(draft.Entry);
+                if (fotoPath != null) draft.Entry.FotoPaths.Add(fotoPath);
+
+                var ev = _codingSessionService.AddEvent(draft.Entry, _codingVm.CurrentOverlay);
+                ev.AiContext = draft.AiContext;
+                RefreshCodingEventsList();
+                UpdateToolBadge();
+                PersistSingleEventAsTrainingSample(ev).SafeFireAndForget("TrainingSaveSingle");
+                SetCodingAiState($"{codeHint} {label} bei {meter:F2}m eingetragen",
+                    Color.FromRgb(0x22, 0xC5, 0x5E), "");
+            }
+            else
+            {
+                SetCodingAiState($"KI analysiert: \"{keyword}\" ...",
+                    Color.FromRgb(0xF5, 0x9E, 0x0B), "Qwen analysiert");
+                await RunCodingAnalysisAsync(
+                    $"Eingabemarker: {keyword}",
+                    disableAnalyzeButton: true,
+                    keywordHint: keyword,
+                    codeHint: null);
+            }
+        }
+        catch (Exception ex)
+        {
+            SetCodingAiState($"Fehler: {ex.Message}", Color.FromRgb(0xEF, 0x44, 0x44), "");
+        }
+        finally
+        {
+            CancelEingabemarker();
+        }
+    }
+}
