@@ -86,6 +86,12 @@ public sealed class KnowledgeBaseContext : IDisposable
         // die Spalte existiert, damit das SELECT in RetrievalService auf frischen DBs nicht bricht.
         MigrateAddColumn("Samples", "QualityGateLevel", "TEXT NOT NULL DEFAULT ''");
 
+        // Migration (Audit Fix #3): Gold-Fund-Metadaten persistieren.
+        MigrateAddColumn("Samples", "HumanConfirmed", "INTEGER");
+        MigrateAddColumn("Samples", "Corrected", "INTEGER");
+        MigrateAddColumn("Samples", "ConfirmedByUser", "TEXT");
+        MigrateAddColumn("Samples", "ConfirmedAtUtc", "TEXT");
+
         // Index für schnelle Code-Suche
         ExecuteNonQuery("""
             CREATE INDEX IF NOT EXISTS idx_samples_code

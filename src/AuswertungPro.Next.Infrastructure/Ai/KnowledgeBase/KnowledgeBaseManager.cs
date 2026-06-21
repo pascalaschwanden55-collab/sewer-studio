@@ -333,8 +333,10 @@ public sealed class KnowledgeBaseManager(
         ExecuteNonQuery("""
             INSERT OR REPLACE INTO Samples
                 (SampleId, CaseId, VsaCode, Beschreibung, MeterStart, MeterEnd,
-                 IsStreck, FramePath, ExportedUtc, VersionId, SourceType, QualityGateLevel)
-            VALUES ($id, $caseId, $code, $desc, $ms, $me, $streck, $frame, $exp, $ver, $source, $qg)
+                 IsStreck, FramePath, ExportedUtc, VersionId, SourceType, QualityGateLevel,
+                 HumanConfirmed, Corrected, ConfirmedByUser, ConfirmedAtUtc)
+            VALUES ($id, $caseId, $code, $desc, $ms, $me, $streck, $frame, $exp, $ver, $source, $qg,
+                    $hc, $corr, $by, $at)
             """,
             ("$id",     s.SampleId),
             ("$caseId", s.CaseId),
@@ -347,7 +349,11 @@ public sealed class KnowledgeBaseManager(
             ("$exp",    s.ExportedUtc?.ToString("O") ?? DateTime.UtcNow.ToString("O")),
             ("$ver",    versionId),
             ("$source", s.SourceType ?? ""),
-            ("$qg",     s.QualityGateLevel ?? ""));
+            ("$qg",     s.QualityGateLevel ?? ""),
+            ("$hc",     (object?)(s.HumanConfirmed is bool hc ? (hc ? 1 : 0) : (int?)null) ?? DBNull.Value),
+            ("$corr",   (object?)(s.Corrected is bool cr ? (cr ? 1 : 0) : (int?)null) ?? DBNull.Value),
+            ("$by",     (object?)s.ConfirmedByUser ?? DBNull.Value),
+            ("$at",     (object?)s.ConfirmedAtUtc?.ToString("O") ?? DBNull.Value));
     }
 
     private void UpsertEmbedding(string sampleId, float[] vector)

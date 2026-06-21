@@ -256,7 +256,8 @@ public sealed class RetrievalService(
         cmd.CommandText = """
             SELECT e.SampleId, e.Vector,
                    s.CaseId, s.VsaCode, s.Beschreibung, s.MeterStart, s.MeterEnd,
-                   s.QualityGateLevel
+                   s.QualityGateLevel,
+                   s.HumanConfirmed, s.Corrected, s.ConfirmedByUser, s.ConfirmedAtUtc
             FROM Embeddings e
             LEFT JOIN Samples s ON e.SampleId = s.SampleId
             """;
@@ -267,10 +268,15 @@ public sealed class RetrievalService(
             var blob = (byte[])reader.GetValue(1);
             // QualityGateLevel (Index 7) angehaengt am Ende -> bestehende Ordinale 2..6 unveraendert.
             // Bei Alt-DBs ohne Wert (NULL) konservativ als leer behandeln.
+            // Gold-Metadaten (Audit Fix #3): Indizes 8-11, alle nullable.
             SampleRecord? sample = reader.IsDBNull(2) ? null : new SampleRecord(
                 id, reader.GetString(2), reader.GetString(3),
                 reader.GetString(4), reader.GetDouble(5), reader.GetDouble(6),
-                reader.IsDBNull(7) ? "" : reader.GetString(7));
+                reader.IsDBNull(7) ? "" : reader.GetString(7),
+                reader.IsDBNull(8) ? null : reader.GetInt64(8) != 0,
+                reader.IsDBNull(9) ? null : reader.GetInt64(9) != 0,
+                reader.IsDBNull(10) ? null : reader.GetString(10),
+                reader.IsDBNull(11) ? null : DateTime.Parse(reader.GetString(11), null, System.Globalization.DateTimeStyles.RoundtripKind));
             list.Add((id, EmbeddingService.FromBlob(blob), sample));
         }
         return list;
