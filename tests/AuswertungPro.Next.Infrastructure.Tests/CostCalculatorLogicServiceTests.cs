@@ -89,6 +89,61 @@ public sealed class CostCalculatorLogicServiceTests
         Assert.Empty(ids);
     }
 
+    [Fact]
+    public void FindNearestDnCandidates_ReturnsClosestBucketsInStableOrder()
+    {
+        var prices = new List<DnPrice>
+        {
+            new() { DnFrom = 100, DnTo = 150, Price = 10m },
+            new() { DnFrom = 210, DnTo = 260, Price = 20m },
+            new() { DnFrom = 400, DnTo = 500, Price = 30m }
+        };
+
+        var candidates = CostCalculatorLogicService.FindNearestDnCandidates(prices, 180);
+
+        Assert.Equal(new[] { 100, 210 }, candidates.Select(p => p.DnFrom).ToArray());
+    }
+
+    [Fact]
+    public void QtyMatches_HonorsOptionalQuantityBounds()
+    {
+        var price = new DnPrice { DnFrom = 100, DnTo = 200, QtyFrom = 2m, QtyTo = 5m, Price = 10m };
+
+        Assert.False(CostCalculatorLogicService.QtyMatches(price, 1.9m));
+        Assert.True(CostCalculatorLogicService.QtyMatches(price, 2m));
+        Assert.True(CostCalculatorLogicService.QtyMatches(price, 5m));
+        Assert.False(CostCalculatorLogicService.QtyMatches(price, 5.1m));
+    }
+
+    [Fact]
+    public void ParseDecimal_AcceptsNumericPrefix()
+    {
+        Assert.Equal(8m, CostCalculatorLogicService.ParseDecimal("8m"));
+        Assert.Equal(1.25m, CostCalculatorLogicService.ParseDecimal("1.25"));
+        Assert.Null(CostCalculatorLogicService.ParseDecimal("abc"));
+    }
+
+    [Fact]
+    public void LineClassifiers_DetectConnectionInstallationAndItemKeys()
+    {
+        Assert.True(CostCalculatorLogicService.IsConnectionLine("ROBOTER_ANSCHLUSS", ""));
+        Assert.True(CostCalculatorLogicService.IsConnectionLine("", "Hausanschluss fraesen"));
+        Assert.True(CostCalculatorLogicService.IsInstallationLine("Installation", ""));
+        Assert.True(CostCalculatorLogicService.IsInstallationLine("", "HL_INSTALL_ANLAGE"));
+        Assert.True(CostCalculatorLogicService.IsItemKey(" INSTALL_UV_ANLAGE ", "INSTALL_UV_ANLAGE"));
+    }
+
+    [Fact]
+    public void BuildNearestDnPriceHint_FormatsSingleAndRangeBuckets()
+    {
+        Assert.Equal(
+            "Preis von DN 200 uebernommen",
+            CostCalculatorLogicService.BuildNearestDnPriceHint(new DnPrice { DnFrom = 200, DnTo = 200 }));
+        Assert.Equal(
+            "Preis von DN 200-300 uebernommen",
+            CostCalculatorLogicService.BuildNearestDnPriceHint(new DnPrice { DnFrom = 200, DnTo = 300 }));
+    }
+
     private static MeasureTemplate Template(string id, string name, string itemKey, bool disabled = false)
         => new()
         {

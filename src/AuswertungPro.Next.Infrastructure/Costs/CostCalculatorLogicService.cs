@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
 
@@ -149,6 +150,121 @@ public static class CostCalculatorLogicService
             .ToList();
     }
 
+    public static bool QtyMatches(DnPrice price, decimal qty)
+    {
+        var minOk = !price.QtyFrom.HasValue || qty >= price.QtyFrom.Value;
+        var maxOk = !price.QtyTo.HasValue || qty <= price.QtyTo.Value;
+        return minOk && maxOk;
+    }
+
+    public static List<DnPrice> FindNearestDnCandidates(IEnumerable<DnPrice> prices, int dn)
+    {
+        var withDistance = prices
+            .Select(p => new
+            {
+                Price = p,
+                Distance = dn < p.DnFrom
+                    ? p.DnFrom - dn
+                    : dn > p.DnTo
+                        ? dn - p.DnTo
+                        : 0
+            })
+            .ToList();
+
+        if (withDistance.Count == 0)
+            return new List<DnPrice>();
+
+        var minDistance = withDistance.Min(x => x.Distance);
+        return withDistance
+            .Where(x => x.Distance == minDistance)
+            .Select(x => x.Price)
+            .OrderBy(x => x.DnFrom)
+            .ThenBy(x => x.DnTo)
+            .ToList();
+    }
+
+    public static string BuildNearestDnPriceHint(DnPrice price)
+    {
+        var dn = price.DnFrom == price.DnTo
+            ? price.DnFrom.ToString(CultureInfo.InvariantCulture)
+            : $"{price.DnFrom.ToString(CultureInfo.InvariantCulture)}-{price.DnTo.ToString(CultureInfo.InvariantCulture)}";
+        return $"Preis von DN {dn} uebernommen";
+    }
+
+    public static int? ParseDn(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+        return int.TryParse(raw.Trim(), out var dn) ? dn : null;
+    }
+
+    public static decimal? ParseDecimal(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var text = raw.Trim();
+        if (TryParseDecimal(text, out var value))
+            return value;
+
+        var numericPrefix = new string(text
+            .TakeWhile(ch => char.IsDigit(ch) || ch is '+' or '-' or '.' or ',')
+            .ToArray());
+        if (numericPrefix.Length > 0 && TryParseDecimal(numericPrefix, out value))
+            return value;
+
+        return null;
+    }
+
+    public static bool IsMeterUnit(string? unit)
+        => string.Equals(unit?.Trim(), "m", StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsConnectionLine(string? itemKey, string? text)
+    {
+        if (!string.IsNullOrWhiteSpace(itemKey) &&
+            itemKey.Contains("ANSCHLUSS", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(text) &&
+            text.Contains("anschluss", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    public static bool IsInstallationLine(string? group, string? itemKey)
+    {
+        if (!string.IsNullOrWhiteSpace(group) &&
+            group.Trim().Equals("Installation", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return IsInstallationItemKey(itemKey);
+    }
+
+    public static bool IsItemKey(string? itemKey, string key)
+    {
+        if (string.IsNullOrWhiteSpace(itemKey))
+            return false;
+
+        return itemKey.Trim().Equals(key, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsInstallationItemKey(string? itemKey)
+    {
+        if (string.IsNullOrWhiteSpace(itemKey))
+            return false;
+
+        var key = itemKey.Trim();
+        return key.StartsWith("INSTALL_", StringComparison.OrdinalIgnoreCase)
+               || key.StartsWith("HL_INSTALL_", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool ContainsToken(string text, string token)
     {
         if (text.Length == 0 || token.Length == 0)
@@ -167,5 +283,25 @@ public static class CostCalculatorLogicService
         while (text.Length > 0 && (text[0] == '-' || text[0] == '*'))
             text = text[1..].TrimStart();
         return text;
+    }
+
+    private static bool TryParseDecimal(string raw, out decimal value)
+    {
+        if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.CurrentCulture, out value))
+            return true;
+
+        if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out value))
+            return true;
+
+        var normalized = raw.Contains(',')
+            ? raw.Replace(',', '.')
+            : raw.Replace('.', ',');
+
+        if (!string.Equals(normalized, raw, StringComparison.Ordinal) &&
+            decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out value))
+            return true;
+
+        value = 0;
+        return false;
     }
 }
