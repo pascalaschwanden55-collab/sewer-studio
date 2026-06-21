@@ -26,9 +26,9 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
     private readonly IRetrievalService? _retrieval;
     private readonly IReadOnlySet<string>? _evalHaltungKeys;
 
-    private readonly ManualResetEventSlim _pauseGate = new(true);
+    private readonly AsyncPauseGate _pauseGate = new();
 
-    public bool IsPaused => !_pauseGate.IsSet;
+    public bool IsPaused => _pauseGate.IsPaused;
 
     public SelfTrainingOrchestrator(
         EnhancedVisionAnalysisService vision,
@@ -50,8 +50,8 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         _evalHaltungKeys = evalHaltungKeys;
     }
 
-    public void Pause() => _pauseGate.Reset();
-    public void Resume() => _pauseGate.Set();
+    public void Pause() => _pauseGate.Pause();
+    public void Resume() => _pauseGate.Resume();
 
     internal static GroundTruthEntry AttachExtractedVideoFrame(
         GroundTruthEntry entry,
@@ -238,7 +238,7 @@ public sealed class SelfTrainingOrchestrator : ISelfTrainingOrchestrator
         for (int i = 0; i < entries.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
-            _pauseGate.Wait(ct);
+            await _pauseGate.WaitIfPausedAsync(ct).ConfigureAwait(false);
 
             var entry = entries[i];
             string framePath = entry.ExtractedFramePath!;
