@@ -209,6 +209,25 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("new LibVLC()", factory);
     }
 
+    [Fact]
+    public void PlayerWindow_coding_statistics_live_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Coding-Statistik-Berechnung muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var events = File.ReadAllText(eventsPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingStatisticsPolicy.Build", events);
+        Assert.DoesNotContain("Average(e => e.AiContext!.Confidence)", events);
+        Assert.DoesNotContain("int autoAccepted = 0", events);
+        Assert.Contains("public static CodingStatisticsSummary Build", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

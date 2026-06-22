@@ -334,43 +334,21 @@ public partial class PlayerWindow
         Dispatcher.InvokeAsync(ColorizeCodingEventListItems, System.Windows.Threading.DispatcherPriority.Loaded);
         UpdateCodingStatistics();
     }
-    /// <summary>Statistiken im Seitenpanel aktualisieren (direkt berechnet).</summary>
+    /// <summary>Statistiken im Seitenpanel aktualisieren.</summary>
     private void UpdateCodingStatistics()
     {
         if (_codingVm == null) return;
 
-        RunCodingDefectCount.Text = _codingVm.Events.Count.ToString();
+        var summary = CodingStatisticsPolicy.Build(
+            _codingVm.Events,
+            CodingSessionViewModel.GetDefectStatus);
 
-        // Statistiken direkt aus Events berechnen
-        var aiEvents = _codingVm.Events.Where(e => e.AiContext != null).ToList();
-        int autoAccepted = 0, pending = 0, reviewRequired = 0;
-
-        foreach (var ev in aiEvents)
-        {
-            var status = CodingSessionViewModel.GetDefectStatus(ev);
-            switch (status)
-            {
-                case DefectStatus.AutoAccepted:
-                case DefectStatus.Accepted:
-                case DefectStatus.AcceptedWithEdit:
-                    autoAccepted++;
-                    break;
-                case DefectStatus.Pending:
-                    pending++;
-                    break;
-                case DefectStatus.ReviewRequired:
-                    reviewRequired++;
-                    break;
-            }
-        }
-
-        RunCodingOpenCount.Text = (pending + reviewRequired).ToString();
-        TxtCodingStatAutoAccepted.Text = autoAccepted.ToString();
-        TxtCodingStatPending.Text = pending.ToString();
-        TxtCodingStatReviewRequired.Text = reviewRequired.ToString();
-        TxtCodingStatAvgConfidence.Text = aiEvents.Count > 0
-            ? $"{aiEvents.Average(e => e.AiContext!.Confidence) * 100:F0}%"
-            : "\u2013";
+        RunCodingDefectCount.Text = summary.Total.ToString();
+        RunCodingOpenCount.Text = summary.Open.ToString();
+        TxtCodingStatAutoAccepted.Text = summary.AutoAccepted.ToString();
+        TxtCodingStatPending.Text = summary.Pending.ToString();
+        TxtCodingStatReviewRequired.Text = summary.ReviewRequired.ToString();
+        TxtCodingStatAvgConfidence.Text = summary.AverageConfidenceText;
     }
 
     // --- Coding: OSD-Timer (liest Meterstand kontinuierlich) ---
