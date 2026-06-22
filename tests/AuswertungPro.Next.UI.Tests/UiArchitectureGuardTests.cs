@@ -684,6 +684,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_photo_display_paths_live_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingPhotoDisplayPathPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Fotoanzeige-Pfadauswahl muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var photos = File.ReadAllText(photosPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", photos);
+        Assert.Contains("CodingPhotoDisplayPathPolicy.ResolveExistingPath", photos);
+        Assert.DoesNotContain("var displayPhotoPaths = new List<string>", photos);
+        Assert.DoesNotContain("displayPhotoPaths.Contains(fotoPath", photos);
+        Assert.Contains("public static IReadOnlyList<string> BuildDisplayPhotoPaths", policy);
+        Assert.Contains("public static string? ResolveExistingPath", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_mark_bbox_mapping_lives_in_mapper()
     {
         var root = FindRepositoryRoot();

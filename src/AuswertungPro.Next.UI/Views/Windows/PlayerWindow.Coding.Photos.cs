@@ -173,22 +173,18 @@ public partial class PlayerWindow
         var projectFolder = !string.IsNullOrEmpty(_serviceProvider?.Settings.LastProjectPath)
             ? Path.GetDirectoryName(_serviceProvider!.Settings.LastProjectPath) ?? ""
             : "";
-        var displayPhotoPaths = new List<string>();
         var evidencePreviewPath = CodingDefectPreviewService.BuildPreviewImagePath(codingEvent);
-        if (!string.IsNullOrWhiteSpace(evidencePreviewPath) && File.Exists(evidencePreviewPath))
-            displayPhotoPaths.Add(evidencePreviewPath);
-
-        foreach (var fotoPath in entry.FotoPaths)
-        {
-            if (!displayPhotoPaths.Contains(fotoPath, StringComparer.OrdinalIgnoreCase))
-                displayPhotoPaths.Add(fotoPath);
-        }
+        var displayPhotoPaths = CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths(
+            evidencePreviewPath,
+            entry.FotoPaths,
+            File.Exists);
 
         foreach (var fotoPath in displayPhotoPaths)
         {
-            var resolved = Path.IsPathRooted(fotoPath) && File.Exists(fotoPath)
-                ? fotoPath
-                : (File.Exists(Path.Combine(projectFolder, fotoPath)) ? Path.Combine(projectFolder, fotoPath) : null);
+            var resolved = CodingPhotoDisplayPathPolicy.ResolveExistingPath(
+                fotoPath,
+                projectFolder,
+                File.Exists);
 
             if (resolved == null) continue;
 

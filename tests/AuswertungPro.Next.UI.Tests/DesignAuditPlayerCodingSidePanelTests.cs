@@ -110,12 +110,13 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var photoBody = ExtractMethodBody(coding, "private void CodingEventShowPhotos_Click");
+        var policy = ReadUiFile("Ai", "CodingPhotoDisplayPathPolicy.cs");
 
         Assert.Contains("CodingDefectPreviewService.BuildPreviewImagePath(codingEvent)", photoBody);
-        Assert.Contains("displayPhotoPaths", photoBody);
+        Assert.Contains("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", photoBody);
         Assert.True(
-            photoBody.IndexOf("BuildPreviewImagePath", StringComparison.Ordinal)
-            < photoBody.IndexOf("foreach (var fotoPath in entry.FotoPaths)", StringComparison.Ordinal),
+            policy.IndexOf("displayPaths.Add(evidencePreviewPath)", StringComparison.Ordinal)
+            < policy.IndexOf("foreach (var photoPath in photoPaths)", StringComparison.Ordinal),
             "Segmentierte Beweisvorschau muss vor den Rohfotos eingefuegt werden.");
     }
 
