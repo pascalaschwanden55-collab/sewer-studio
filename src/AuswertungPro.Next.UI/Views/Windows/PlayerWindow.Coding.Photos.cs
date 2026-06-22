@@ -132,16 +132,8 @@ public partial class PlayerWindow
             return;
         }
 
-        if (entry.FotoPaths.Count >= 2)
-        {
-            entry.FotoPaths[1] = fotoPath;
-            ShowOverlay($"Foto 2 ersetzt: {Path.GetFileName(fotoPath)}", TimeSpan.FromSeconds(3));
-        }
-        else
-        {
-            entry.FotoPaths.Add(fotoPath);
-            ShowOverlay($"Foto {entry.FotoPaths.Count}: {Path.GetFileName(fotoPath)}", TimeSpan.FromSeconds(3));
-        }
+        var slotUpdate = CodingPhotoSlotPolicy.Apply(entry.FotoPaths, fotoPath);
+        ShowOverlay(slotUpdate.OverlayText, TimeSpan.FromSeconds(3));
 
         _codingSessionService?.UpdateEvent(codingEvent.EventId, entry, codingEvent.Overlay);
         RefreshCodingEventsList();

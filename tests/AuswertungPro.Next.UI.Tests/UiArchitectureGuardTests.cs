@@ -705,6 +705,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_manual_photo_slot_logic_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingPhotoSlotPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Manuelle Foto-Slot-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var photos = File.ReadAllText(photosPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingPhotoSlotPolicy.Apply", photos);
+        Assert.DoesNotContain("entry.FotoPaths[1] = fotoPath", photos);
+        Assert.DoesNotContain("Foto 2 ersetzt", photos);
+        Assert.Contains("public static CodingPhotoSlotUpdate Apply", policy);
+        Assert.Contains("photoPaths.Count >= 2", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_mark_bbox_mapping_lives_in_mapper()
     {
         var root = FindRepositoryRoot();
