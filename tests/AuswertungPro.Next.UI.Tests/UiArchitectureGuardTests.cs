@@ -592,6 +592,26 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("MainCode(e.Entry.Code) is \"BCE\" or \"BDC\"", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_dn_calibration_initialization_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingDnCalibrationPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "DN-/Kalibrierungsinitialisierung muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var coding = File.ReadAllText(codingPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingDnCalibrationPolicy.Build", coding);
+        Assert.DoesNotContain("_haltungRecord.Fields.TryGetValue(\"DN_mm\"", coding);
+        Assert.DoesNotContain("int.TryParse(dnStr", coding);
+        Assert.Contains("public static CodingDnCalibrationState Build", policy);
+        Assert.Contains("new PipeCalibration", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

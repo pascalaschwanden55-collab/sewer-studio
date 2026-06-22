@@ -164,17 +164,11 @@ public partial class PlayerWindow
         _codingVm.PropertyChanged += CodingVm_PropertyChanged;
 
         // DN laden
-        int nominalDn = 0;
-        if (_haltungRecord.Fields.TryGetValue("DN_mm", out var dnStr)
-            && int.TryParse(dnStr, out var dn) && dn > 0)
-        {
-            nominalDn = dn;
-            _codingOverlayService.SetCalibration(new PipeCalibration { NominalDiameterMm = dn });
-        }
-
-        TxtCodingCalibDn.Text = nominalDn > 0 ? $"DN: {nominalDn} mm" : "DN: unbekannt";
-        TxtCodingCalibStatus.Text = _codingOverlayService.IsCalibrated
-            ? "Kalibriert" : "Nicht kalibriert";
+        var dnCalibration = CodingDnCalibrationPolicy.Build(_haltungRecord.Fields);
+        if (dnCalibration.Calibration != null)
+            _codingOverlayService.SetCalibration(dnCalibration.Calibration);
+        TxtCodingCalibDn.Text = dnCalibration.DnText;
+        TxtCodingCalibStatus.Text = dnCalibration.CalibrationStatusText;
 
         // Fallback: Haltungslaenge pruefen, ggf. manuell abfragen
         EnsureHaltungslaenge(_haltungRecord);
