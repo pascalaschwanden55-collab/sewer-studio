@@ -42,4 +42,46 @@ public sealed class CodingProtocolEntryCopierTests
         Assert.Same(ai, target.Ai);
         Assert.Equal(["a.png"], target.FotoPaths);
     }
+
+    [Fact]
+    public void CopyEditableValues_keeps_identity_and_ai_fields()
+    {
+        var source = new ProtocolEntry
+        {
+            Code = "BCA",
+            Beschreibung = "Anschluss",
+            MeterStart = 2.5,
+            MeterEnd = 2.7,
+            IsStreckenschaden = true,
+            Mpeg = "source-film.mp4",
+            Zeit = TimeSpan.FromSeconds(23),
+            Source = ProtocolEntrySource.Manual,
+            CodeMeta = new ProtocolEntryCodeMeta { Code = "BCA" },
+            Ai = new ProtocolEntryAiMeta { SuggestedCode = "BCA" },
+            FotoPaths = ["new.png"]
+        };
+        var originalAi = new ProtocolEntryAiMeta { SuggestedCode = "OLD" };
+        var target = new ProtocolEntry
+        {
+            Code = "OLD",
+            Mpeg = "target-film.mp4",
+            Source = ProtocolEntrySource.Ai,
+            Ai = originalAi,
+            FotoPaths = ["old.png"]
+        };
+
+        CodingProtocolEntryCopier.CopyEditableValues(source, target);
+        source.FotoPaths.Add("late.png");
+
+        Assert.Equal("BCA", target.Code);
+        Assert.Equal("Anschluss", target.Beschreibung);
+        Assert.Equal(2.5, target.MeterStart);
+        Assert.Equal(2.7, target.MeterEnd);
+        Assert.True(target.IsStreckenschaden);
+        Assert.Equal(TimeSpan.FromSeconds(23), target.Zeit);
+        Assert.Equal(["new.png"], target.FotoPaths);
+        Assert.Equal("target-film.mp4", target.Mpeg);
+        Assert.Equal(ProtocolEntrySource.Ai, target.Source);
+        Assert.Same(originalAi, target.Ai);
+    }
 }

@@ -173,14 +173,7 @@ public partial class PlayerWindow
             if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
             {
                 var result = dlg.SelectedEntry;
-                entry.Code = result.Code;
-                entry.Beschreibung = result.Beschreibung;
-                entry.CodeMeta = result.CodeMeta;
-                entry.MeterStart = result.MeterStart;
-                entry.MeterEnd = result.MeterEnd;
-                entry.Zeit = result.Zeit;
-                entry.IsStreckenschaden = result.IsStreckenschaden;
-                entry.FotoPaths = result.FotoPaths;
+                CodingProtocolEntryCopier.CopyEditableValues(result, entry);
                 _codingSessionService?.UpdateEvent(ev.EventId, entry, ev.Overlay);
                 ev.MeterAtCapture = entry.MeterStart ?? entry.MeterEnd ?? ev.MeterAtCapture;
                 ev.VideoTimestamp = entry.Zeit ?? ev.VideoTimestamp;

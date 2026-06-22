@@ -87,14 +87,7 @@ public partial class PlayerWindow
             if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
             {
                 var result = dlg.SelectedEntry;
-                entry.Code = result.Code;
-                entry.Beschreibung = result.Beschreibung;
-                entry.CodeMeta = result.CodeMeta;
-                entry.MeterStart = result.MeterStart;
-                entry.MeterEnd = result.MeterEnd;
-                entry.Zeit = result.Zeit;
-                entry.IsStreckenschaden = result.IsStreckenschaden;
-                entry.FotoPaths = result.FotoPaths;
+                CodingProtocolEntryCopier.CopyEditableValues(result, entry);
 
                 // Kein automatischer Snapshot hier — Foto wird manuell per "Foto"-Button
                 // oder automatisch durch die KI-Analyse eingefuegt, wenn ein sinnvoller
@@ -195,14 +188,7 @@ public partial class PlayerWindow
         if (dialogResult == true && dlg.SelectedEntry is not null)
         {
             var result = dlg.SelectedEntry;
-            entry.Code = result.Code;
-            entry.Beschreibung = result.Beschreibung;
-            entry.CodeMeta = result.CodeMeta;
-            entry.MeterStart = result.MeterStart;
-            entry.MeterEnd = result.MeterEnd;
-            entry.Zeit = result.Zeit;
-            entry.IsStreckenschaden = result.IsStreckenschaden;
-            entry.FotoPaths = result.FotoPaths;
+            CodingProtocolEntryCopier.CopyEditableValues(result, entry);
 
             // Meter aktualisieren falls geaendert
             codingEvent.MeterAtCapture = entry.MeterStart ?? entry.MeterEnd ?? codingEvent.MeterAtCapture;

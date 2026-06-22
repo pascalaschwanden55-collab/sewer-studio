@@ -555,6 +555,29 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_explorer_entry_edits_use_copier()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
+        var detailsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.cs");
+        var copierPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEntryCopier.cs");
+
+        var events = File.ReadAllText(eventsPath);
+        var details = File.ReadAllText(detailsPath);
+        var copier = File.ReadAllText(copierPath);
+
+        Assert.Contains("CodingProtocolEntryCopier.CopyEditableValues", events);
+        Assert.Contains("CodingProtocolEntryCopier.CopyEditableValues", details);
+        Assert.DoesNotContain("entry.Code = result.Code", events);
+        Assert.DoesNotContain("entry.Code = result.Code", details);
+        Assert.DoesNotContain("entry.FotoPaths = result.FotoPaths", events);
+        Assert.DoesNotContain("entry.FotoPaths = result.FotoPaths", details);
+        Assert.Contains("public static void CopyEditableValues", copier);
+    }
+
+    [Fact]
     public void PlayerWindow_live_detection_model_selection_lives_in_policy()
     {
         var root = FindRepositoryRoot();
