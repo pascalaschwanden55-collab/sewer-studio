@@ -669,17 +669,23 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingManualCalibrationPolicy.cs");
+        var previewPolicyPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationPreviewPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Manuelle Kalibrierungsberechnung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(previewPolicyPath), "Manuelle Kalibrierungsvorschau muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var policy = File.ReadAllText(policyPath);
+        var previewPolicy = File.ReadAllText(previewPolicyPath);
 
         Assert.Contains("CodingManualCalibrationPolicy.Build", overlayInput);
+        Assert.Contains("CodingCalibrationPreviewPolicy.Build", overlayInput);
         Assert.DoesNotContain("double pixelDiameter = Math.Sqrt", overlayInput);
+        Assert.DoesNotContain("Math.Sqrt(Math.Pow(p2.X - p1.X, 2)", overlayInput);
         Assert.DoesNotContain("new PipeCalibration", overlayInput);
         Assert.Contains("public static CodingManualCalibrationResult Build", policy);
         Assert.Contains("CalibrationSource.Manual", policy);
+        Assert.Contains("public static CodingCalibrationPreviewState Build", previewPolicy);
     }
 
     [Fact]

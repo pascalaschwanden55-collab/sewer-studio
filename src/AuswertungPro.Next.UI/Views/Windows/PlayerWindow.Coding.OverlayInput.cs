@@ -378,20 +378,20 @@ public partial class PlayerWindow
 
             var p1 = CodingNormToPixel(_codingCalibStart);
             var p2 = CodingNormToPixel(norm);
+            var preview = CodingCalibrationPreviewPolicy.Build(p1, p2);
             _codingPreviewLine = new System.Windows.Shapes.Line
             {
-                X1 = p1.X,
-                Y1 = p1.Y,
-                X2 = p2.X,
-                Y2 = p2.Y,
+                X1 = preview.Start.X,
+                Y1 = preview.Start.Y,
+                X2 = preview.End.X,
+                Y2 = preview.End.Y,
                 Stroke = Brushes.Magenta,
                 StrokeThickness = 2.5,
                 StrokeDashArray = new DoubleCollection { 6, 3 },
                 Tag = OverlayTags.Preview
             };
             CodingOverlayCanvas.Children.Add(_codingPreviewLine);
-            double pxLen = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
-            TxtCodingCalibHint.Text = $"Referenzlinie: {pxLen:F0} px";
+            TxtCodingCalibHint.Text = preview.HintText;
             return;
         }
 
