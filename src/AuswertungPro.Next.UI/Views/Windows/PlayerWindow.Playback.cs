@@ -92,7 +92,9 @@ public partial class PlayerWindow
 
             // VLC-OSD-Anzeige (Dateipfad) vorher deaktivieren, damit der Pfad
             // nicht als Text auf dem Videobild erscheint
-            AuswertungPro.Next.Application.Common.BestEffort.Try(() => _player.SetMarqueeInt(VideoMarqueeOption.Enable, 0), "VLC: Marquee deaktivieren");
+            AuswertungPro.Next.Application.Common.BestEffort.Try(
+                () => _player.SetMarqueeInt(VideoMarqueeOption.Enable, PlayerMarqueeOverlayPolicy.DisabledEnable),
+                "VLC: Marquee deaktivieren");
             return _player.TakeSnapshot(0, filePath, width, height);
         }
         catch
@@ -115,19 +117,22 @@ public partial class PlayerWindow
 
         try
         {
-            _player.SetMarqueeInt(VideoMarqueeOption.Enable, 1);
-            _player.SetMarqueeInt(VideoMarqueeOption.X, 16);
-            _player.SetMarqueeInt(VideoMarqueeOption.Y, 16);
-            _player.SetMarqueeInt(VideoMarqueeOption.Size, 24);
-            _player.SetMarqueeInt(VideoMarqueeOption.Color, 0xFFFFFF);
-            _player.SetMarqueeInt(VideoMarqueeOption.Opacity, 200);
-            _player.SetMarqueeString(VideoMarqueeOption.Text, text);
+            var marquee = PlayerMarqueeOverlayPolicy.BuildShow(text);
+            _player.SetMarqueeInt(VideoMarqueeOption.Enable, marquee.Enable);
+            _player.SetMarqueeInt(VideoMarqueeOption.X, marquee.X);
+            _player.SetMarqueeInt(VideoMarqueeOption.Y, marquee.Y);
+            _player.SetMarqueeInt(VideoMarqueeOption.Size, marquee.Size);
+            _player.SetMarqueeInt(VideoMarqueeOption.Color, marquee.Color);
+            _player.SetMarqueeInt(VideoMarqueeOption.Opacity, marquee.Opacity);
+            _player.SetMarqueeString(VideoMarqueeOption.Text, marquee.Text);
 
             var t = new DispatcherTimer { Interval = duration };
             t.Tick += (_, __) =>
             {
                 t.Stop();
-                AuswertungPro.Next.Application.Common.BestEffort.Try(() => _player.SetMarqueeInt(VideoMarqueeOption.Enable, 0), "VLC: Marquee deaktivieren");
+                AuswertungPro.Next.Application.Common.BestEffort.Try(
+                    () => _player.SetMarqueeInt(VideoMarqueeOption.Enable, PlayerMarqueeOverlayPolicy.DisabledEnable),
+                    "VLC: Marquee deaktivieren");
             };
             t.Start();
         }

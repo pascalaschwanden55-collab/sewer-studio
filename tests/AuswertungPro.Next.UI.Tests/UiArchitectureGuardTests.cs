@@ -503,6 +503,30 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_marquee_overlay_settings_live_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.cs");
+        var policyPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "VLC-Marquee-Anzeigeparameter muessen ausserhalb der PlayerWindow-Partials liegen.");
+
+        var playback = File.ReadAllText(playbackPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("PlayerMarqueeOverlayPolicy.BuildShow", playback);
+        Assert.Contains("PlayerMarqueeOverlayPolicy.DisabledEnable", playback);
+        Assert.DoesNotContain("VideoMarqueeOption.Enable, 0", playback);
+        Assert.DoesNotContain("VideoMarqueeOption.X, 16", playback);
+        Assert.DoesNotContain("VideoMarqueeOption.Y, 16", playback);
+        Assert.DoesNotContain("VideoMarqueeOption.Size, 24", playback);
+        Assert.DoesNotContain("VideoMarqueeOption.Color, 0xFFFFFF", playback);
+        Assert.DoesNotContain("VideoMarqueeOption.Opacity, 200", playback);
+        Assert.Contains("public static PlayerMarqueeOverlayState BuildShow", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_import_reference_transfer_lives_in_policy()
     {
         var root = FindRepositoryRoot();
