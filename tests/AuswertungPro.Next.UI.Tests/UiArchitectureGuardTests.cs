@@ -534,6 +534,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_stretch_damage_close_decision_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingStretchDamageClosePolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Streckenschaden-Schliessregel muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var events = File.ReadAllText(eventsPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingStretchDamageClosePolicy.CanClose", events);
+        Assert.Contains("CodingStretchDamageClosePolicy.BuildClosedStatusText", events);
+        Assert.DoesNotContain("currentMeter <= (startEvent.MeterAtCapture + 0.01)", events);
+        Assert.DoesNotContain("Streckenschaden geschlossen:", events);
+        Assert.Contains("public static bool CanClose", policy);
+        Assert.Contains("CloseToleranceMeters = 0.01", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_live_detection_model_selection_lives_in_policy()
     {
         var root = FindRepositoryRoot();

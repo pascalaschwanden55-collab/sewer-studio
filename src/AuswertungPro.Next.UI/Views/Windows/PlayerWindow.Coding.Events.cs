@@ -240,7 +240,7 @@ public partial class PlayerWindow
 
         // Aktuellen Meterstand als Endpunkt
         double currentMeter = _codingVm.CurrentMeter;
-        if (currentMeter <= (startEvent.MeterAtCapture + 0.01))
+        if (!CodingStretchDamageClosePolicy.CanClose(startEvent.MeterAtCapture, currentMeter))
         {
             DialogHost.Current.Info(
                 "Der aktuelle Meterstand muss gr��er sein als der Anfang des Streckenschadens.",
@@ -260,7 +260,10 @@ public partial class PlayerWindow
 
         // Status
         SetCodingAiState(
-            $"Streckenschaden geschlossen: {startEvent.Entry.Code} {startEvent.MeterAtCapture:F2}m – {currentMeter:F2}m",
+            CodingStretchDamageClosePolicy.BuildClosedStatusText(
+                startEvent.Entry.Code,
+                startEvent.MeterAtCapture,
+                currentMeter),
             PlayerStatusColors.Success, "");
     }
 
