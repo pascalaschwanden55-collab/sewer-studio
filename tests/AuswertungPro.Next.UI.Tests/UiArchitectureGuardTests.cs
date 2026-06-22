@@ -772,6 +772,19 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_multi_model_coverage_uses_existing_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs");
+
+        var events = File.ReadAllText(eventsPath);
+
+        Assert.Contains("CodingFindingCoveragePolicy.FindCoveringEvent", events);
+        Assert.DoesNotContain("CodingFindingCoveragePolicy.IsCovered(e, meter, pseudoFinding)", events);
+    }
+
+    [Fact]
     public void PlayerWindow_structural_classifier_finding_lives_in_factory()
     {
         var root = FindRepositoryRoot();

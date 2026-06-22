@@ -76,9 +76,11 @@ public partial class PlayerWindow
                 continue;
 
             // Dedup gegen bestehende Events (identisch mit Qwen-Pfad)
-            var coveringEvent = codingVm.Events.FirstOrDefault(e =>
-                CodingDedupPolicy.CodesMatch(e.Entry.Code, code) &&
-                CodingFindingCoveragePolicy.IsCovered(e, meter, pseudoFinding));
+            var coveringEvent = CodingFindingCoveragePolicy.FindCoveringEvent(
+                codingVm.Events,
+                code,
+                meter,
+                pseudoFinding);
             if (coveringEvent != null) continue;
 
             // QualityGate mit Multi-Model Evidenz
