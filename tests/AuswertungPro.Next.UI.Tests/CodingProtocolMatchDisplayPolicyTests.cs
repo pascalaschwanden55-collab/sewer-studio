@@ -37,4 +37,13 @@ public sealed class CodingProtocolMatchDisplayPolicyTests
         Assert.Equal($"? BCA @ {12.34:F1}m bestaetigt", result.Text);
         Assert.Equal(TimeSpan.FromSeconds(3), result.AutoHideDelay);
     }
+
+    [Fact]
+    public void BuildAcceptedGreenMatchesOverlay_formats_text_and_duration()
+    {
+        var result = CodingProtocolMatchDisplayPolicy.BuildAcceptedGreenMatchesOverlay(3);
+
+        Assert.Equal("3 gruene Treffer als Training uebernommen", result.Text);
+        Assert.Equal(TimeSpan.FromSeconds(4), result.Duration);
+    }
 }

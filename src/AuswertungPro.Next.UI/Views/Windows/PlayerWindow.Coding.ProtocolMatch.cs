@@ -83,7 +83,8 @@ public partial class PlayerWindow
                 accepted++;
         }
 
-        ShowOverlay($"{accepted} gruene Treffer als Training uebernommen", TimeSpan.FromSeconds(4));
+        var overlay = CodingProtocolMatchDisplayPolicy.BuildAcceptedGreenMatchesOverlay(accepted);
+        ShowOverlay(overlay.Text, overlay.Duration);
     }
 
     private async void ImportConfirm_Click(object sender, RoutedEventArgs e)

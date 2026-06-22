@@ -674,6 +674,23 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_green_match_accept_overlay_uses_display_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var protocolMatchPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchDisplayPolicy.cs");
+
+        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingProtocolMatchDisplayPolicy.BuildAcceptedGreenMatchesOverlay", protocolMatch);
+        Assert.DoesNotContain("gruene Treffer als Training uebernommen", protocolMatch);
+        Assert.DoesNotContain("ShowOverlay($\"{accepted}", protocolMatch);
+        Assert.Contains("public static CodingProtocolMatchOverlayState BuildAcceptedGreenMatchesOverlay", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_code_meter_resolution_uses_policy()
     {
         var root = FindRepositoryRoot();

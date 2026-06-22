@@ -5,6 +5,8 @@ namespace AuswertungPro.Next.UI.Ai;
 
 public readonly record struct CodingImportConfirmationBadgeState(string Text, TimeSpan AutoHideDelay);
 
+public readonly record struct CodingProtocolMatchOverlayState(string Text, TimeSpan Duration);
+
 public static class CodingProtocolMatchDisplayPolicy
 {
     public static Color BackgroundColor(CodingProtocolMatchBucket bucket)
@@ -53,4 +55,7 @@ public static class CodingProtocolMatchDisplayPolicy
 
     public static CodingImportConfirmationBadgeState BuildImportConfirmationBadge(string? code, double meter)
         => new($"? {code} @ {meter:F1}m bestaetigt", TimeSpan.FromSeconds(3));
+
+    public static CodingProtocolMatchOverlayState BuildAcceptedGreenMatchesOverlay(int accepted)
+        => new($"{accepted} gruene Treffer als Training uebernommen", TimeSpan.FromSeconds(4));
 }
