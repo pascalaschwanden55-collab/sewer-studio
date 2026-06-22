@@ -495,12 +495,12 @@ public partial class PlayerWindow
     {
         if (BtnCodingLiveAi.IsChecked == true)
         {
-            _codingLiveAiTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            _codingLiveAiTimer = new DispatcherTimer { Interval = CodingLiveAiTimerSettings.AnalysisInterval };
             _codingLiveAiTimer.Tick += CodingLiveAiTimer_Tick;
             _codingLiveAiTimer.Start();
 
             // Gruen blinken wenn aktiv
-            _codingLiveAiBlinkTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
+            _codingLiveAiBlinkTimer = new DispatcherTimer { Interval = CodingLiveAiTimerSettings.BlinkInterval };
             _codingLiveAiBlinkTimer.Tick += (_, _) =>
             {
                 if (_closing || _player is null) return;

@@ -16,7 +16,7 @@ public static class CodingLiveAiButtonDisplayPolicy
         => isActive
             ? new CodingLiveAiStatusState(
                 "Automatische KI-Analyse aktiv",
-                $"Intervall alle 5 Sekunden | {compactModelName}")
+                $"{CodingLiveAiTimerSettings.FormatAnalysisIntervalText()} | {compactModelName}")
             : new CodingLiveAiStatusState(
                 "K\u00fcnstliche Intelligenz bereit",
                 $"Modell: {compactModelName}");

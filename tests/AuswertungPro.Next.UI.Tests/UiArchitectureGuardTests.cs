@@ -666,6 +666,31 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_ai_timer_intervals_live_in_settings()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var displayPolicyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
+        var settingsPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiTimerSettings.cs");
+
+        Assert.True(File.Exists(settingsPath), "Live-AI-Timer-Intervalle muessen ausserhalb der PlayerWindow-Partials liegen.");
+
+        var ai = File.ReadAllText(aiPath);
+        var displayPolicy = File.ReadAllText(displayPolicyPath);
+        var settings = File.ReadAllText(settingsPath);
+
+        Assert.Contains("CodingLiveAiTimerSettings.AnalysisInterval", ai);
+        Assert.Contains("CodingLiveAiTimerSettings.BlinkInterval", ai);
+        Assert.DoesNotContain("Interval = TimeSpan.FromSeconds(5)", ai);
+        Assert.DoesNotContain("Interval = TimeSpan.FromMilliseconds(800)", ai);
+        Assert.Contains("CodingLiveAiTimerSettings.FormatAnalysisIntervalText", displayPolicy);
+        Assert.DoesNotContain("\"Intervall alle 5 Sekunden", displayPolicy);
+        Assert.Contains("public static TimeSpan AnalysisInterval", settings);
+        Assert.Contains("public static TimeSpan BlinkInterval", settings);
+    }
+
+    [Fact]
     public void PlayerWindow_live_detection_model_selection_lives_in_policy()
     {
         var root = FindRepositoryRoot();
