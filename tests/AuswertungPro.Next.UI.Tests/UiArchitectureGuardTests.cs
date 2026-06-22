@@ -572,6 +572,26 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static IReadOnlyList<StreckenschadenActionMapper.OpenEntry> BuildOpenEntries", builder);
     }
 
+    [Fact]
+    public void PlayerWindow_terminal_exit_boundary_check_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingTerminalBoundaryPresencePolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Exit-Pruefung fuer BCE/BDC* muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var coding = File.ReadAllText(codingPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode", coding);
+        Assert.DoesNotContain("string.Equals(e.Entry.Code, \"BCE\"", coding);
+        Assert.DoesNotContain("string.Equals(e.Entry.Code, \"BDC\"", coding);
+        Assert.Contains("public static bool HasEndOrAbortCode", policy);
+        Assert.Contains("MainCode(e.Entry.Code) is \"BCE\" or \"BDC\"", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

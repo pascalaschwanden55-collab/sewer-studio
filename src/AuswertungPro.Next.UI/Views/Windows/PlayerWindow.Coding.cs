@@ -332,10 +332,7 @@ public partial class PlayerWindow
             }
 
             // Ende-Code nur einfuegen wenn weder BCE (Rohrende) noch BDC (Abbruch) vorhanden
-            bool hasEndCode = _codingVm.Events.Any(e =>
-                string.Equals(e.Entry.Code, "BCE", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(e.Entry.Code, "BDC", StringComparison.OrdinalIgnoreCase));
-            if (!hasEndCode)
+            if (!CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode(_codingVm.Events))
             {
                 var endTime = TimeSpan.FromMilliseconds(_player?.Length ?? 0);
                 EnsureRohrendeExists(_codingVm.EndMeter, endTime, _detectionPendingFrameBytes);
