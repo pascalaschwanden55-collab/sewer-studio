@@ -83,21 +83,13 @@ public partial class PlayerWindow
                 pseudoFinding);
             if (coveringEvent != null) continue;
 
-            // QualityGate mit Multi-Model Evidenz
             double dinoConf = dino?.Confidence ?? quant.Confidence;
-            // D2-A: ECHTE YOLO-Confidence (hoechste Box des Frames) statt Festwert 0.8.
-            // Ist sie null (keine YOLO-Box), ueberspringt das QualityGate das Signal und
-            // renormalisiert ueber DINO/SAM/Plausibilitaet. Klar erkannte Befunde bekommen
-            // so wieder eine ehrliche, hohe Confidence statt durchgehend gelb.
-            var evidence = new EvidenceVector(
-                YoloConf: yoloMaxConfidence,
-                DinoConf: dinoConf,
-                SamMaskStability: quant.Confidence,
-                PlausibilityScore: officialLabel != null ? 0.8 : 0.4
-            );
-            var gateResult = _codingQualityGate?.Evaluate(evidence)
-                ?? new QualityGateResult(dinoConf, TrafficLight.Yellow,
-                    new Dictionary<string, double>(), "Multi-Model")!;
+            var gateResult = CodingMultiModelQualityGatePolicy.Evaluate(
+                _codingQualityGate,
+                yoloMaxConfidence,
+                dinoConf,
+                quant.Confidence,
+                officialLabel);
 
             var quantRule = CodingManifestQuantRuleResolver.Resolve(CodeSelectionCatalog, code);
             var draft = CodingMultiModelEventFactory.Create(

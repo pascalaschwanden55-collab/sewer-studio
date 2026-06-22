@@ -812,6 +812,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_multi_model_quality_gate_uses_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelQualityGatePolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Multi-Model-QualityGate-Evidenz muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var events = File.ReadAllText(eventsPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingMultiModelQualityGatePolicy.Evaluate", events);
+        Assert.DoesNotContain("new EvidenceVector(", events);
+        Assert.DoesNotContain("new QualityGateResult(dinoConf", events);
+        Assert.Contains("public static QualityGateResult Evaluate", policy);
+        Assert.Contains("YoloConf: yoloMaxConfidence", policy);
+        Assert.Contains("PlausibilityScore: officialLabel != null ? 0.8 : 0.4", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_structural_classifier_finding_lives_in_factory()
     {
         var root = FindRepositoryRoot();
