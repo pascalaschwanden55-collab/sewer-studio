@@ -460,11 +460,7 @@ public partial class PlayerWindow
             return;
 
         // Aktuell offene Streckenschaden-Eintraege als Mapper-Sicht (Referenz = CodingEvent).
-        var openEntries = codingVm.Events
-            .Where(e => e.Entry.IsStreckenschaden && !e.Entry.MeterEnd.HasValue)
-            .Select(e => new AuswertungPro.Next.Application.Ai.StreckenschadenActionMapper.OpenEntry(
-                MainCode: e.Entry.Code, StartMeter: e.Entry.MeterStart ?? e.MeterAtCapture, Reference: e))
-            .ToList();
+        var openEntries = CodingStreckenschadenActionInputBuilder.BuildOpenEntries(codingVm.Events);
 
         var instructions = AuswertungPro.Next.Application.Ai.StreckenschadenActionMapper.MapAll(actions, openEntries);
         if (instructions.Count == 0) return;

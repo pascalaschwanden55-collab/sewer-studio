@@ -553,6 +553,25 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static NormalizedBoundingBox BBoxFromOverlay", mapper);
     }
 
+    [Fact]
+    public void PlayerWindow_stretch_damage_action_input_lives_in_builder()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var builderPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionInputBuilder.cs");
+
+        Assert.True(File.Exists(builderPath), "Mapper-Eingabe fuer Streckenschaden-Aktionen muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var ai = File.ReadAllText(aiPath);
+        var builder = File.ReadAllText(builderPath);
+
+        Assert.Contains("CodingStreckenschadenActionInputBuilder.BuildOpenEntries", ai);
+        Assert.DoesNotContain(".Where(e => e.Entry.IsStreckenschaden", ai);
+        Assert.DoesNotContain("StreckenschadenActionMapper.OpenEntry(", ai);
+        Assert.Contains("public static IReadOnlyList<StreckenschadenActionMapper.OpenEntry> BuildOpenEntries", builder);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);
