@@ -20,6 +20,14 @@ public static class PlayerPlaybackState
         return Math.Clamp(next, 0, Math.Max(0, durationMs));
     }
 
+    public static string FormatMilliseconds(long milliseconds)
+    {
+        var time = TimeSpan.FromMilliseconds(milliseconds);
+        return time.TotalHours >= 1
+            ? time.ToString(@"hh\:mm\:ss")
+            : time.ToString(@"mm\:ss");
+    }
+
     public static bool TryResolveSliderRatio(double sliderValue, double sliderMaximum, out double ratio)
     {
         if (sliderMaximum <= 0)

@@ -38,6 +38,17 @@ public sealed class PlayerPlaybackStateTests
     }
 
     [Theory]
+    [InlineData(0, "00:00")]
+    [InlineData(61000, "01:01")]
+    [InlineData(3599000, "59:59")]
+    [InlineData(3600000, "01:00:00")]
+    [InlineData(3661000, "01:01:01")]
+    public void FormatMilliseconds_uses_hour_format_only_when_needed(long milliseconds, string expected)
+    {
+        Assert.Equal(expected, PlayerPlaybackState.FormatMilliseconds(milliseconds));
+    }
+
+    [Theory]
     [InlineData(0, 100, 0)]
     [InlineData(25, 100, 0.25)]
     [InlineData(150, 100, 1)]

@@ -411,12 +411,12 @@ public partial class PlayerWindow
         {
             var pos = (double)time / length;
             PositionSlider.Value = pos * PositionSlider.Maximum;
-            CurrentTimeText.Text = FormatMs(time);
-            DurationText.Text = FormatMs(length);
+            CurrentTimeText.Text = PlayerPlaybackState.FormatMilliseconds(time);
+            DurationText.Text = PlayerPlaybackState.FormatMilliseconds(length);
         }
         else
         {
-            CurrentTimeText.Text = FormatMs(time);
+            CurrentTimeText.Text = PlayerPlaybackState.FormatMilliseconds(time);
             DurationText.Text = "--:--";
         }
 
@@ -425,12 +425,6 @@ public partial class PlayerWindow
         // Im Codier-Modus: Echtzeit-Code am Zeitstempel aktualisieren
         if (_isCodingMode)
             UpdateCodingCurrentCode();
-    }
-
-    private static string FormatMs(long ms)
-    {
-        var t = TimeSpan.FromMilliseconds(ms);
-        return t.TotalHours >= 1 ? t.ToString(@"hh\:mm\:ss") : t.ToString(@"mm\:ss");
     }
 
     private void Play_Click(object sender, RoutedEventArgs e)
@@ -495,8 +489,8 @@ public partial class PlayerWindow
         if (length > 0)
         {
             var targetMs = (long)(targetPos * length);
-            CurrentTimeText.Text = FormatMs(targetMs);
-            DurationText.Text = FormatMs(length);
+            CurrentTimeText.Text = PlayerPlaybackState.FormatMilliseconds(targetMs);
+            DurationText.Text = PlayerPlaybackState.FormatMilliseconds(length);
         }
         else
         {
@@ -520,7 +514,9 @@ public partial class PlayerWindow
         else
             _player.Position = (float)targetPos;
 
-        CurrentTimeText.Text = length > 0 ? FormatMs((long)(targetPos * length)) : $"{targetPos:P0}";
+        CurrentTimeText.Text = length > 0
+            ? PlayerPlaybackState.FormatMilliseconds((long)(targetPos * length))
+            : $"{targetPos:P0}";
     }
 
     private void SetSpeed(float rate)
