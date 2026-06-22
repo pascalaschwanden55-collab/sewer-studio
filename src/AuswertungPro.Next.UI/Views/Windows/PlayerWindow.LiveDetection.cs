@@ -335,9 +335,7 @@ public partial class PlayerWindow
                 SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Success,
                     $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Overlay");
 
-                // Auto-Pause bei relevanten Befunden (Severity >= 2)
-                var significantFindings = result.Findings
-                    .Where(f => f.Severity >= 2).ToList();
+                var significantFindings = LiveDetectionConfirmationPolicy.SelectSignificantFindings(result.Findings);
                 if (significantFindings.Count > 0)
                 {
                     _detectionPendingFindings = significantFindings;
