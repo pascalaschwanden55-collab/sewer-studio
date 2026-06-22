@@ -378,7 +378,7 @@ public partial class PlayerWindow
         // 2. Alle DispatcherTimer stoppen bevor der MediaPlayer freigegeben wird.
         //    So koennen keine in-flight Ticks mehr _player.IsPlaying aufrufen.
         StopPlayerTimers();
-        _quickScanCts?.Cancel();
+        _quickScanController.Cancel();
         _detectionCts?.Cancel();
         _codingAnalysisCts?.Cancel();
         StopLiveDetection();
