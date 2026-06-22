@@ -691,6 +691,33 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_osd_badge_meter_text_uses_display_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var osdPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.cs");
+        var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
+        var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingOsdBadgeDisplayPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "OSD-Badge-Textformat muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var osd = File.ReadAllText(osdPath);
+        var aiEvents = File.ReadAllText(aiEventsPath);
+        var marking = File.ReadAllText(markingPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", osd);
+        Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", aiEvents);
+        Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", marking);
+        Assert.DoesNotContain(":F2}m (OSD)", osd);
+        Assert.DoesNotContain(":F2}m (OSD)", aiEvents);
+        Assert.DoesNotContain(":F2}m (OSD)", marking);
+        Assert.Contains("public static string BuildMeterText", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_code_meter_resolution_uses_policy()
     {
         var root = FindRepositoryRoot();

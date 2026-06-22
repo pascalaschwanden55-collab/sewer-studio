@@ -100,7 +100,7 @@ public partial class PlayerWindow
             _codingLastOsdMeter = result.Meter.Value;
             _codingLastOsdTimestampSec = frameTimestampSec;
             OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"{result.Meter.Value:F2}m (OSD)";
+            TxtOsdMeter.Text = CodingOsdBadgeDisplayPolicy.BuildMeterText(result.Meter.Value);
             return result.Meter.Value;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

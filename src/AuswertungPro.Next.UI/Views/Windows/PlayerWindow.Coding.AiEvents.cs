@@ -178,7 +178,7 @@ public partial class PlayerWindow
             _codingLastOsdTimestampSec = result.TimestampSeconds;
             _codingSessionService?.MoveToMeter(result.MeterReading.Value);
             OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = $"{result.MeterReading.Value:F2}m (OSD)";
+            TxtOsdMeter.Text = CodingOsdBadgeDisplayPolicy.BuildMeterText(result.MeterReading.Value);
         }
 
         // â”€â”€ Findings filtern: VSA-Validierung + Deduplizierung â”€â”€

@@ -384,7 +384,7 @@ public partial class PlayerWindow
         {
             resetTimer.Stop();
             if (_codingLastOsdMeter.HasValue)
-                TxtOsdMeter.Text = $"{_codingLastOsdMeter.Value:F2}m (OSD)";
+                TxtOsdMeter.Text = CodingOsdBadgeDisplayPolicy.BuildMeterText(_codingLastOsdMeter.Value);
             else
                 OsdMeterBadge.Visibility = Visibility.Collapsed;
         };
