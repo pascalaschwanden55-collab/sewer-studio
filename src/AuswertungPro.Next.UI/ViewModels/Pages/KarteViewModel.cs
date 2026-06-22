@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Map;
+using AuswertungPro.Next.UI.Player;
 using Mapsui;
 using Mapsui.Extensions;
 using Mapsui.Layers;
@@ -257,7 +258,7 @@ public sealed partial class KarteViewModel : ObservableObject
 
         try
         {
-            var options = new Views.Windows.PlayerWindowOptions(
+            var options = new PlayerWindowOptions(
                 EnableHardwareDecoding: _services.Settings.VideoHwDecoding,
                 DropLateFrames: _services.Settings.VideoDropLateFrames,
                 SkipFrames: _services.Settings.VideoSkipFrames,

@@ -28,6 +28,7 @@ using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Hydraulik;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using AuswertungPro.Next.Infrastructure.Media;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Views.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;

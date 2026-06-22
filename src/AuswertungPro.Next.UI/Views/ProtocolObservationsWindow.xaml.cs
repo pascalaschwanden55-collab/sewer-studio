@@ -10,6 +10,7 @@ using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.ViewModels.Protocol;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
