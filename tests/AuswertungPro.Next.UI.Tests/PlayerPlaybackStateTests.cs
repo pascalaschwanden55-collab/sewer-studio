@@ -36,4 +36,26 @@ public sealed class PlayerPlaybackStateTests
 
         Assert.Equal(expectedMs, next);
     }
+
+    [Theory]
+    [InlineData(0, 100, 0)]
+    [InlineData(25, 100, 0.25)]
+    [InlineData(150, 100, 1)]
+    [InlineData(-20, 100, 0)]
+    public void TryResolveSliderRatio_clamps_slider_value(double value, double max, double expected)
+    {
+        var ok = PlayerPlaybackState.TryResolveSliderRatio(value, max, out var ratio);
+
+        Assert.True(ok);
+        Assert.Equal(expected, ratio, precision: 6);
+    }
+
+    [Fact]
+    public void TryResolveSliderRatio_rejects_invalid_slider_maximum()
+    {
+        var ok = PlayerPlaybackState.TryResolveSliderRatio(50, 0, out var ratio);
+
+        Assert.False(ok);
+        Assert.Equal(0, ratio);
+    }
 }

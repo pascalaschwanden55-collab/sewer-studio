@@ -474,15 +474,8 @@ public partial class PlayerWindow
 
     private void SeekToSlider()
     {
-        var max = PositionSlider.Maximum;
-        if (max <= 0)
+        if (!PlayerPlaybackState.TryResolveSliderRatio(PositionSlider.Value, PositionSlider.Maximum, out var targetPos))
             return;
-
-        var targetPos = PositionSlider.Value / max;
-        if (targetPos < 0)
-            targetPos = 0;
-        if (targetPos > 1)
-            targetPos = 1;
 
         var length = _player.Length;
         if (length > 0)
@@ -495,15 +488,8 @@ public partial class PlayerWindow
 
     private void UpdateSeekPreview()
     {
-        var max = PositionSlider.Maximum;
-        if (max <= 0)
+        if (!PlayerPlaybackState.TryResolveSliderRatio(PositionSlider.Value, PositionSlider.Maximum, out var targetPos))
             return;
-
-        var targetPos = PositionSlider.Value / max;
-        if (targetPos < 0)
-            targetPos = 0;
-        if (targetPos > 1)
-            targetPos = 1;
 
         var length = _player.Length;
         if (length > 0)
@@ -525,11 +511,9 @@ public partial class PlayerWindow
 
     private void ScrubSeekToSlider()
     {
-        var max = PositionSlider.Maximum;
-        if (max <= 0)
+        if (!PlayerPlaybackState.TryResolveSliderRatio(PositionSlider.Value, PositionSlider.Maximum, out var targetPos))
             return;
 
-        var targetPos = Math.Clamp(PositionSlider.Value / max, 0.0, 1.0);
         var length = _player.Length;
         if (length > 0)
             _player.Time = (long)(targetPos * length);

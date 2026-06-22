@@ -19,4 +19,16 @@ public static class PlayerPlaybackState
         var next = currentTimeMs + deltaSeconds * 1000L;
         return Math.Clamp(next, 0, Math.Max(0, durationMs));
     }
+
+    public static bool TryResolveSliderRatio(double sliderValue, double sliderMaximum, out double ratio)
+    {
+        if (sliderMaximum <= 0)
+        {
+            ratio = 0;
+            return false;
+        }
+
+        ratio = Math.Clamp(sliderValue / sliderMaximum, 0.0, 1.0);
+        return true;
+    }
 }
