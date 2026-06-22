@@ -392,6 +392,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_side_panel_width_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var detailPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.cs");
+        var policyPath = Path.Combine(uiRoot, "Player", "CodingSidePanelWidthPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Breitenentscheidung fuer das Coding-Detailpanel muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var detail = File.ReadAllText(detailPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingSidePanelWidthPolicy.Resolve", detail);
+        Assert.DoesNotContain("Math.Clamp(availableWidth * 0.46", detail);
+        Assert.DoesNotContain("return 760", detail);
+        Assert.Contains("public static double Resolve", policy);
+        Assert.Contains("WidthRatio = 0.46", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_import_reference_transfer_lives_in_policy()
     {
         var root = FindRepositoryRoot();

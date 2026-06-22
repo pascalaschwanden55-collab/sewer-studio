@@ -99,15 +99,7 @@ public partial class PlayerWindow
     }
 
     private double GetCodingSidePanelWidth()
-    {
-        var availableWidth = ActualWidth > 0 ? ActualWidth : Width;
-        if (double.IsNaN(availableWidth) || availableWidth <= 0)
-        {
-            return 760;
-        }
-
-        return Math.Clamp(availableWidth * 0.46, 760, 840);
-    }
+        => CodingSidePanelWidthPolicy.Resolve(ActualWidth, Width);
 
     private void HideInlineDefectDetail()
     {
