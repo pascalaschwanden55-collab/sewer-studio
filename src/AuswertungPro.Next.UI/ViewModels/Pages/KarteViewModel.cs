@@ -258,14 +258,7 @@ public sealed partial class KarteViewModel : ObservableObject
 
         try
         {
-            var options = new PlayerWindowOptions(
-                EnableHardwareDecoding: _services.Settings.VideoHwDecoding,
-                DropLateFrames: _services.Settings.VideoDropLateFrames,
-                SkipFrames: _services.Settings.VideoSkipFrames,
-                FileCachingMs: _services.Settings.VideoFileCachingMs,
-                NetworkCachingMs: _services.Settings.VideoNetworkCachingMs,
-                CodecThreads: _services.Settings.VideoCodecThreads,
-                VideoOutput: _services.Settings.VideoOutput);
+            var options = PlayerWindowOptions.FromSettings(_services.Settings);
 
             var window = new Views.Windows.PlayerWindow(
                 resolved,

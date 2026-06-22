@@ -379,14 +379,7 @@ public sealed partial class MediaConflictsPageViewModel : ObservableObject
 
         try
         {
-            var options = new PlayerWindowOptions(
-                EnableHardwareDecoding: _sp.Settings.VideoHwDecoding,
-                DropLateFrames: _sp.Settings.VideoDropLateFrames,
-                SkipFrames: _sp.Settings.VideoSkipFrames,
-                FileCachingMs: _sp.Settings.VideoFileCachingMs,
-                NetworkCachingMs: _sp.Settings.VideoNetworkCachingMs,
-                CodecThreads: _sp.Settings.VideoCodecThreads,
-                VideoOutput: _sp.Settings.VideoOutput);
+            var options = PlayerWindowOptions.FromSettings(_sp.Settings);
 
             var window = new PlayerWindow(path, options, serviceProvider: _sp)
             {

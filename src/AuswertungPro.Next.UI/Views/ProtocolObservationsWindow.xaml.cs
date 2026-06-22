@@ -255,14 +255,7 @@ public partial class ProtocolObservationsWindow : Window
         {
             try
             {
-                var options = new PlayerWindowOptions(
-                    EnableHardwareDecoding: _sp.Settings.VideoHwDecoding,
-                    DropLateFrames: _sp.Settings.VideoDropLateFrames,
-                    SkipFrames: _sp.Settings.VideoSkipFrames,
-                    FileCachingMs: _sp.Settings.VideoFileCachingMs,
-                    NetworkCachingMs: _sp.Settings.VideoNetworkCachingMs,
-                    CodecThreads: _sp.Settings.VideoCodecThreads,
-                    VideoOutput: _sp.Settings.VideoOutput);
+                var options = PlayerWindowOptions.FromSettings(_sp.Settings);
                 var window = new PlayerWindow(_videoPath!, options, overlayText, serviceProvider: _sp);
                 window.Owner = this;
                 window.Show();

@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.UI;
 
 namespace AuswertungPro.Next.UI.Player;
 
@@ -19,6 +20,20 @@ public sealed record PlayerWindowOptions(
         NetworkCachingMs: 3000,
         CodecThreads: 4,
         VideoOutput: "direct3d11");
+
+    public static PlayerWindowOptions FromSettings(AppSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        return new PlayerWindowOptions(
+            EnableHardwareDecoding: settings.VideoHwDecoding,
+            DropLateFrames: settings.VideoDropLateFrames,
+            SkipFrames: settings.VideoSkipFrames,
+            FileCachingMs: settings.VideoFileCachingMs,
+            NetworkCachingMs: settings.VideoNetworkCachingMs,
+            CodecThreads: settings.VideoCodecThreads,
+            VideoOutput: settings.VideoOutput);
+    }
 
     public static PlayerWindowOptions Normalize(PlayerWindowOptions? options)
     {
