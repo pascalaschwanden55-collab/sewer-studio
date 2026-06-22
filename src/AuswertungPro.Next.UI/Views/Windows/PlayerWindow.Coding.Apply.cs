@@ -24,15 +24,11 @@ public partial class PlayerWindow
         doc.Current ??= new ProtocolRevision();
         doc.Current.Entries ??= new List<ProtocolEntry>();
 
-        var eventEntries = _codingVm.Events
-            .Select(ev => ev.Entry)
-            .Where(e => e != null && !string.IsNullOrWhiteSpace(e.Code))
-            .GroupBy(e => e.EntryId)
-            .Select(g => g.Last())
-            .ToDictionary(e => e.EntryId, e => e);
+        var eventEntryCount = _codingVm.Events.Count(
+            ev => !string.IsNullOrWhiteSpace(ev.Entry.Code));
 
         // Schutz vor versehentlichem Leeren einer bestehenden Befundliste.
-        if (eventEntries.Count == 0)
+        if (eventEntryCount == 0)
         {
             var aktiveBefunde = doc.Current.Entries.Count(
                 e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code));
@@ -46,25 +42,7 @@ public partial class PlayerWindow
             }
         }
 
-        var existingById = doc.Current.Entries.ToDictionary(e => e.EntryId, e => e);
-        foreach (var existing in doc.Current.Entries)
-        {
-            if (eventEntries.TryGetValue(existing.EntryId, out var updated))
-            {
-                CodingProtocolEntryCopier.CopyValues(updated, existing);
-                existing.IsDeleted = false;
-            }
-            else
-            {
-                existing.IsDeleted = true;
-            }
-        }
-
-        foreach (var kv in eventEntries)
-        {
-            if (!existingById.ContainsKey(kv.Key))
-                doc.Current.Entries.Add(kv.Value);
-        }
+        CodingProtocolRevisionUpdater.ApplyCodingEvents(doc.Current, _codingVm.Events);
 
         _haltungRecord.Protocol = doc;
         MarkProjectDirtyForCoding();

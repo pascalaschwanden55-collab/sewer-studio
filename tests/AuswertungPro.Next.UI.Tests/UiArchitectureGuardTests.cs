@@ -368,6 +368,24 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static int MoveExistingEventsToImportReference", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_protocol_revision_update_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var applyPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Apply.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingProtocolRevisionUpdater.cs");
+
+        Assert.True(File.Exists(policyPath), "Protokoll-Revision-Update muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var apply = File.ReadAllText(applyPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingProtocolRevisionUpdater.ApplyCodingEvents", apply);
+        Assert.DoesNotContain(".GroupBy(e => e.EntryId)", apply);
+        Assert.Contains("public static int ApplyCodingEvents", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);
