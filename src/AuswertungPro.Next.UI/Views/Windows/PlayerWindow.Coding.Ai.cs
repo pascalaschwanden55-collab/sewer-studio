@@ -241,9 +241,11 @@ public partial class PlayerWindow
         if (resolvedCode == null || !resolvedCode.StartsWith(structuralCode, StringComparison.OrdinalIgnoreCase))
             return false;
 
-        var coveringEvent = codingVm.Events.FirstOrDefault(e =>
-            CodingDedupPolicy.CodesMatch(e.Entry.Code, resolvedCode) &&
-            CodingFindingCoveragePolicy.IsCovered(e, meter, finding));
+        var coveringEvent = CodingFindingCoveragePolicy.FindCoveringEvent(
+            codingVm.Events,
+            resolvedCode,
+            meter,
+            finding);
 
         ClearDetectionOverlays();
         Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);

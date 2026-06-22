@@ -785,7 +785,9 @@ public sealed class UiArchitectureGuardTests
         var factory = File.ReadAllText(factoryPath);
 
         Assert.Contains("CodingStructuralClassifierFindingFactory.Create", ai);
+        Assert.Contains("CodingFindingCoveragePolicy.FindCoveringEvent", ai);
         Assert.DoesNotContain("new LiveFrameFinding(", ai);
+        Assert.DoesNotContain("CodingFindingCoveragePolicy.IsCovered(e, meter, finding)", ai);
         Assert.Contains("public static LiveFrameFinding Create", factory);
         Assert.Contains("VsaCodeHint: code", factory);
     }
