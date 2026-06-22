@@ -386,6 +386,22 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static int ApplyCodingEvents", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_stretch_damage_close_marker_lives_in_factory()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenEventFactory.cs");
+
+        var events = File.ReadAllText(eventsPath);
+        var factory = File.ReadAllText(factoryPath);
+
+        Assert.Contains("CodingStreckenschadenEventFactory.CloseStart", events);
+        Assert.DoesNotContain("Beschreibung + \" (Ende)\"", events);
+        Assert.Contains("public static ProtocolEntry CloseStart", factory);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

@@ -258,20 +258,7 @@ public partial class PlayerWindow
             return;
         }
 
-        // Start-Event als Streckenschaden markieren
-        startEvent.Entry.IsStreckenschaden = true;
-        startEvent.Entry.MeterEnd = currentMeter;
-
-        // Ende-Event erstellen (identischer Code)
-        var endEntry = new AuswertungPro.Next.Domain.Protocol.ProtocolEntry
-        {
-            Code = startEvent.Entry.Code,
-            Beschreibung = startEvent.Entry.Beschreibung + " (Ende)",
-            MeterStart = currentMeter,
-            IsStreckenschaden = true,
-            Source = startEvent.Entry.Source,
-            CodeMeta = startEvent.Entry.CodeMeta
-        };
+        var endEntry = CodingStreckenschadenEventFactory.CloseStart(startEvent.Entry, currentMeter);
 
         var endEvent = _codingSessionService.AddEvent(endEntry, null);
         endEvent.VideoTimestamp = _player != null

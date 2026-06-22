@@ -41,4 +41,29 @@ public sealed class CodingStreckenschadenEventFactoryTests
         Assert.Equal("Streckenschaden-Anfang (automatisch) - noch offen", draft.AiContext.Reason);
         Assert.Equal(CodingUserDecision.Ignored, draft.AiContext.Decision);
     }
+
+    [Fact]
+    public void CloseStart_marks_start_entry_and_builds_end_marker()
+    {
+        var codeMeta = new ProtocolEntryCodeMeta { Code = "BAJ" };
+        var start = new ProtocolEntry
+        {
+            Code = "BAJ",
+            Beschreibung = "Laengsriss",
+            MeterStart = 2.0,
+            Source = ProtocolEntrySource.Ai,
+            CodeMeta = codeMeta
+        };
+
+        var endEntry = CodingStreckenschadenEventFactory.CloseStart(start, endMeter: 8.5);
+
+        Assert.True(start.IsStreckenschaden);
+        Assert.Equal(8.5, start.MeterEnd);
+        Assert.Equal("BAJ", endEntry.Code);
+        Assert.Equal("Laengsriss (Ende)", endEntry.Beschreibung);
+        Assert.Equal(8.5, endEntry.MeterStart);
+        Assert.True(endEntry.IsStreckenschaden);
+        Assert.Equal(ProtocolEntrySource.Ai, endEntry.Source);
+        Assert.Same(codeMeta, endEntry.CodeMeta);
+    }
 }

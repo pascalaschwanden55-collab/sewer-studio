@@ -36,4 +36,22 @@ public static class CodingStreckenschadenEventFactory
 
         return new CodingStreckenschadenEventDraft(entry, aiContext);
     }
+
+    public static ProtocolEntry CloseStart(ProtocolEntry startEntry, double endMeter)
+    {
+        ArgumentNullException.ThrowIfNull(startEntry);
+
+        startEntry.IsStreckenschaden = true;
+        startEntry.MeterEnd = endMeter;
+
+        return new ProtocolEntry
+        {
+            Code = startEntry.Code,
+            Beschreibung = startEntry.Beschreibung + " (Ende)",
+            MeterStart = endMeter,
+            IsStreckenschaden = true,
+            Source = startEntry.Source,
+            CodeMeta = startEntry.CodeMeta
+        };
+    }
 }
