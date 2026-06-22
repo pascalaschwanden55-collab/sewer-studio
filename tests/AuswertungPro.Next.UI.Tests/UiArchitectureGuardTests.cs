@@ -772,6 +772,25 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_structural_classifier_finding_lives_in_factory()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "CodingStructuralClassifierFindingFactory.cs");
+
+        Assert.True(File.Exists(factoryPath), "Structural-Classifier-Finding-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var ai = File.ReadAllText(aiPath);
+        var factory = File.ReadAllText(factoryPath);
+
+        Assert.Contains("CodingStructuralClassifierFindingFactory.Create", ai);
+        Assert.DoesNotContain("new LiveFrameFinding(", ai);
+        Assert.Contains("public static LiveFrameFinding Create", factory);
+        Assert.Contains("VsaCodeHint: code", factory);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_calibration_math_lives_in_policy()
     {
         var root = FindRepositoryRoot();

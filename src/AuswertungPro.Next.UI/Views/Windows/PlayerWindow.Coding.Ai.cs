@@ -236,12 +236,7 @@ public partial class PlayerWindow
         var meter = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
         var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);
         var label = CodingClassifierDisplayPolicy.ResolveStructuralLabel(structuralCode, LookupVsaLabel(structuralCode));
-        var finding = new LiveFrameFinding(
-            Label: label,
-            Severity: 3,
-            PositionClock: null,
-            ExtentPercent: null,
-            VsaCodeHint: code);
+        var finding = CodingStructuralClassifierFindingFactory.Create(structuralCode, label);
         var resolvedCode = ResolveFindingCodeForCoding(finding, meter);
         if (resolvedCode == null || !resolvedCode.StartsWith(structuralCode, StringComparison.OrdinalIgnoreCase))
             return false;
