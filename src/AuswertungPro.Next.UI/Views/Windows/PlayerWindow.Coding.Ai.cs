@@ -543,15 +543,16 @@ public partial class PlayerWindow
 
     private async void CodingLiveAiTimer_Tick(object? sender, EventArgs e)
     {
-        if (_closing || _player is null) return;
         try
         {
             // Nicht analysieren wenn: bereits analysierend, Video pausiert, WaitingForUserInput
-            if (_codingLiveDetection == null) return;
-            if (_codingSessionService?.ActiveSession?.State == CodingSessionState.WaitingForUserInput) return;
-
-            // Nur analysieren wenn Video tatsaechlich laeuft
-            if (_player == null || !_player.IsPlaying) return;
+            if (!CodingLiveAiTickPolicy.ShouldAnalyze(
+                    _closing,
+                    hasPlayer: _player is not null,
+                    hasLiveDetection: _codingLiveDetection is not null,
+                    _codingSessionService?.ActiveSession?.State,
+                    isPlayerPlaying: _player?.IsPlaying == true))
+                return;
 
             await RunCodingAnalysisAsync("Automatische KI-Analyse: Analysiere...");
         }
