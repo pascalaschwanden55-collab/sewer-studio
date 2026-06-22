@@ -495,16 +495,19 @@ public partial class PlayerWindow
     /// </summary>
     private void UpdateCodingOverlayViewport()
     {
-        double w = VideoView.ActualWidth;
-        double h = VideoView.ActualHeight;
-        if (double.IsNaN(w) || double.IsInfinity(w) || w <= 1 ||
-            double.IsNaN(h) || double.IsInfinity(h) || h <= 1)
+        var update = CodingOverlayViewportSizePolicy.Build(
+            VideoView.ActualWidth,
+            VideoView.ActualHeight,
+            CodingOverlayCanvas.Width,
+            CodingOverlayCanvas.Height);
+
+        if (!update.IsValid)
             return;
 
-        if (Math.Abs(CodingOverlayCanvas.Width - w) > 0.5)
-            CodingOverlayCanvas.Width = w;
-        if (Math.Abs(CodingOverlayCanvas.Height - h) > 0.5)
-            CodingOverlayCanvas.Height = h;
+        if (update.Width.HasValue)
+            CodingOverlayCanvas.Width = update.Width.Value;
+        if (update.Height.HasValue)
+            CodingOverlayCanvas.Height = update.Height.Value;
     }
 
     // --- Coding Navigation ---

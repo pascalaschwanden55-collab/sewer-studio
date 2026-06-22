@@ -6,6 +6,42 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class CodingOverlayViewportMapperTests
 {
+    [Theory]
+    [InlineData(double.NaN, 480)]
+    [InlineData(double.PositiveInfinity, 480)]
+    [InlineData(1, 480)]
+    [InlineData(640, double.NaN)]
+    [InlineData(640, double.PositiveInfinity)]
+    [InlineData(640, 1)]
+    public void BuildSizeUpdate_rejects_invalid_video_size(double videoWidth, double videoHeight)
+    {
+        var update = CodingOverlayViewportSizePolicy.Build(videoWidth, videoHeight, 640, 480);
+
+        Assert.False(update.IsValid);
+        Assert.Null(update.Width);
+        Assert.Null(update.Height);
+    }
+
+    [Fact]
+    public void BuildSizeUpdate_skips_canvas_values_inside_tolerance()
+    {
+        var update = CodingOverlayViewportSizePolicy.Build(640, 480, 639.6, 480.4);
+
+        Assert.True(update.IsValid);
+        Assert.Null(update.Width);
+        Assert.Null(update.Height);
+    }
+
+    [Fact]
+    public void BuildSizeUpdate_returns_values_that_need_resizing()
+    {
+        var update = CodingOverlayViewportSizePolicy.Build(640, 480, 600, 470);
+
+        Assert.True(update.IsValid);
+        Assert.Equal(640, update.Width);
+        Assert.Equal(480, update.Height);
+    }
+
     [Fact]
     public void GetContentRect_uses_full_canvas_when_video_aspect_is_unknown()
     {

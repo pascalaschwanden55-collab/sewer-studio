@@ -730,6 +730,24 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static CodingToolSelectionState Build", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_overlay_viewport_size_decision_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var playerCodingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var policyPath = Path.Combine(uiRoot, "Player", "CodingOverlayViewportSizePolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Overlay-Viewport-Groessenentscheidung muss ausserhalb von PlayerWindow liegen.");
+
+        var playerCoding = File.ReadAllText(playerCodingPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingOverlayViewportSizePolicy.Build", playerCoding);
+        Assert.DoesNotContain("double.IsNaN(w)", playerCoding);
+        Assert.Contains("public static CodingOverlayViewportSizeUpdate Build", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);
