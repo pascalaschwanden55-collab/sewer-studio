@@ -1208,6 +1208,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_classifier_finding_list_items_live_in_factory()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var factoryPath = Path.Combine(uiRoot, "Views", "Windows", "AiFindingDisplayItemFactory.cs");
+
+        Assert.True(File.Exists(factoryPath), "Classifier-Befundlisten-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var ai = File.ReadAllText(aiPath);
+        var factory = File.ReadAllText(factoryPath);
+
+        Assert.Contains("AiFindingDisplayItemFactory.ForPossibleBoundary", ai);
+        Assert.Contains("AiFindingDisplayItemFactory.ForBoundary", ai);
+        Assert.Contains("AiFindingDisplayItemFactory.ForResolvedFinding", ai);
+        Assert.DoesNotContain("new AiFindingDisplayItem", ai);
+        Assert.Contains("public static IReadOnlyList<AiFindingDisplayItem> ForPossibleBoundary", factory);
+        Assert.Contains("public static IReadOnlyList<AiFindingDisplayItem> ForBoundary", factory);
+        Assert.Contains("public static IReadOnlyList<AiFindingDisplayItem> ForResolvedFinding", factory);
+    }
+
+    [Fact]
     public void PlayerWindow_segmented_finding_calibration_lives_in_policy()
     {
         var root = FindRepositoryRoot();

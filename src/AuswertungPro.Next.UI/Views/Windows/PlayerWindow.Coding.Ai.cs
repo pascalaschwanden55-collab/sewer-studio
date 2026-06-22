@@ -175,10 +175,7 @@ public partial class PlayerWindow
                 PlayerStatusColors.Warning, CodingClassifierDisplayPolicy.PossibleBoundaryEndDetail);
             ClearDetectionOverlays();
             Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
-            CodingFindingsList.ItemsSource = new[]
-            {
-                new AiFindingDisplayItem(CodingClassifierDisplayPolicy.BuildPossibleBoundaryFinding(boundaryCode, possibleLabel))
-            };
+            CodingFindingsList.ItemsSource = AiFindingDisplayItemFactory.ForPossibleBoundary(boundaryCode, possibleLabel);
             return true;
         }
 
@@ -205,10 +202,7 @@ public partial class PlayerWindow
         SetCodingAiState(statusText, PlayerStatusColors.Success,
             CodingClassifierDisplayPolicy.BuildClassifierDetail(mmResult.ClassifierConfidence));
 
-        CodingFindingsList.ItemsSource = new[]
-        {
-            new AiFindingDisplayItem(CodingClassifierDisplayPolicy.BuildBoundaryFinding(boundaryCode, label))
-        };
+        CodingFindingsList.ItemsSource = AiFindingDisplayItemFactory.ForBoundary(boundaryCode, label);
 
         return true;
     }
@@ -248,10 +242,7 @@ public partial class PlayerWindow
 
         ClearDetectionOverlays();
         Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
-        CodingFindingsList.ItemsSource = new[]
-        {
-            new AiFindingDisplayItem(finding with { VsaCodeHint = resolvedCode })
-        };
+        CodingFindingsList.ItemsSource = AiFindingDisplayItemFactory.ForResolvedFinding(finding, resolvedCode);
 
         if (coveringEvent != null)
         {
