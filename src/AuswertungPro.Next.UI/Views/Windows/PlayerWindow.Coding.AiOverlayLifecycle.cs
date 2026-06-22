@@ -3,6 +3,8 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Threading;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -58,7 +60,7 @@ public partial class PlayerWindow
             timer.Stop();
             // Alle ai_overlay-Elemente entfernen
             var toRemove = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
-                .Where(el => el.Tag is string s && s.StartsWith("ai_"))
+                .Where(el => el.Tag is string s && s.StartsWith(OverlayTags.AiPrefix))
                 .ToList();
             foreach (var el in toRemove)
                 CodingOverlayCanvas.Children.Remove(el);

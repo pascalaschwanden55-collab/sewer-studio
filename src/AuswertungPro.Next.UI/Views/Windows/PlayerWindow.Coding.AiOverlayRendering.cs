@@ -8,6 +8,8 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -20,7 +22,7 @@ public partial class PlayerWindow
 
         // Bestehende KI-Overlays entfernen (Tags beginnen mit "ai_")
         var toRemove = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
-            .Where(e => e.Tag is string s && s.StartsWith("ai_"))
+            .Where(e => e.Tag is string s && s.StartsWith(OverlayTags.AiPrefix))
             .ToList();
         foreach (var el in toRemove)
             CodingOverlayCanvas.Children.Remove(el);
@@ -60,7 +62,7 @@ public partial class PlayerWindow
                             Stroke = stroke,
                             StrokeThickness = 2.5,
                             StrokeDashArray = new DoubleCollection { 5, 3 },
-                            Tag = "ai_overlay",
+                            Tag = OverlayTags.AiOverlay,
                             Effect = aiGlow
                         };
                         CodingOverlayCanvas.Children.Add(line);
@@ -90,7 +92,7 @@ public partial class PlayerWindow
                             Fill = new SolidColorBrush(Color.FromArgb(30, fillColor.R, fillColor.G, fillColor.B)),
                             RadiusX = 6,
                             RadiusY = 6,
-                            Tag = "ai_overlay",
+                            Tag = OverlayTags.AiOverlay,
                             Effect = aiGlow
                         };
                         Canvas.SetLeft(rect, rectLeft);
@@ -104,7 +106,7 @@ public partial class PlayerWindow
                             Background = new SolidColorBrush(Color.FromArgb(210, fillColor.R, fillColor.G, fillColor.B)),
                             CornerRadius = new CornerRadius(4),
                             Padding = new Thickness(6, 2, 6, 2),
-                            Tag = "ai_overlay",
+                            Tag = OverlayTags.AiOverlay,
                             Effect = aiGlow,
                             IsHitTestVisible = false,
                             Child = new TextBlock
@@ -137,7 +139,7 @@ public partial class PlayerWindow
                             Opacity = 0.8,
                             Stroke = Brushes.White,
                             StrokeThickness = 1.5,
-                            Tag = "ai_overlay",
+                            Tag = OverlayTags.AiOverlay,
                             Effect = aiGlow
                         };
                         Canvas.SetLeft(dot, px - 7);
@@ -149,22 +151,22 @@ public partial class PlayerWindow
                 case OverlayToolType.Arc:
                     if (geo.Points.Count >= 2)
                     {
-                        var arc = CreateArcPath(geo.Points[0], geo.Points[1], stroke, aiGlow, "ai_overlay", dashed: true);
+                        var arc = CreateArcPath(geo.Points[0], geo.Points[1], stroke, aiGlow, OverlayTags.AiOverlay, dashed: true);
                         if (arc != null)
                             CodingOverlayCanvas.Children.Add(arc);
                     }
                     break;
 
                 case OverlayToolType.PipeBend:
-                    RenderPipeBendOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
+                    RenderPipeBendOverlay(geo, true, stroke, aiGlow, OverlayTags.AiOverlay, null);
                     break;
 
                 case OverlayToolType.LateralCircle:
-                    RenderLateralCircleOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
+                    RenderLateralCircleOverlay(geo, true, stroke, aiGlow, OverlayTags.AiOverlay, null);
                     break;
 
                 case OverlayToolType.Ruler:
-                    RenderRulerOverlay(geo, true, stroke, aiGlow, "ai_overlay", null);
+                    RenderRulerOverlay(geo, true, stroke, aiGlow, OverlayTags.AiOverlay, null);
                     break;
             }
         }

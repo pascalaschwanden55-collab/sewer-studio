@@ -7,6 +7,8 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -17,7 +19,7 @@ public partial class PlayerWindow
         double h = CodingOverlayCanvas.ActualHeight;
         if (w <= 0 || h <= 0) return;
 
-        string tag = isPreview ? "overlay_preview" : "overlay_manual";
+        string tag = isPreview ? OverlayTags.Preview : OverlayTags.Manual;
         var stroke = isPreview
             ? Brushes.Lime
             : new SolidColorBrush(Color.FromRgb(0x00, 0xE5, 0xFF));
@@ -194,7 +196,7 @@ public partial class PlayerWindow
                 Background = new SolidColorBrush(Color.FromArgb(200, 17, 19, 24)),
                 Padding = new Thickness(5, 2, 5, 2),
                 Effect = glowEffect,
-                Tag = isPreview ? "overlay_measure" : "overlay_manual"
+                Tag = isPreview ? OverlayTags.Measure : OverlayTags.Manual
             };
             Canvas.SetLeft(label, anchor.X + 12);
             Canvas.SetTop(label, anchor.Y - 20);

@@ -8,6 +8,8 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -31,7 +33,7 @@ public partial class PlayerWindow
             {
                 var overlay = BuildCodingSchemaGeometry();
                 if (overlay != null)
-                    RenderPipeBendOverlay(overlay, true, Brushes.Gold, glowEffect, "overlay_preview", bend.Center);
+                    RenderPipeBendOverlay(overlay, true, Brushes.Gold, glowEffect, OverlayTags.Preview, bend.Center);
 
                 var center = CodingNormToPixel(bend.Center);
                 var radiusHandle = CodingNormToPixel(bend.GetRadiusHandle());
@@ -45,11 +47,11 @@ public partial class PlayerWindow
                     Stroke = new SolidColorBrush(Color.FromArgb(180, 255, 184, 0)),
                     StrokeThickness = 1.5,
                     StrokeDashArray = new DoubleCollection { 4, 3 },
-                    Tag = "overlay_preview"
+                    Tag = OverlayTags.Preview
                 };
                 CodingOverlayCanvas.Children.Add(guide);
 
-                AddDotMarker(radiusHandle, 5, Brushes.White, "overlay_preview", glowEffect);
+                AddDotMarker(radiusHandle, 5, Brushes.White, OverlayTags.Preview, glowEffect);
                 break;
             }
 
@@ -68,7 +70,7 @@ public partial class PlayerWindow
                 var stroke = new SolidColorBrush(strokeColor);
                 var fillBrush = new SolidColorBrush(Color.FromArgb(68, strokeColor.R, strokeColor.G, strokeColor.B));
 
-                RenderSchemaPipeReference(fill.PipeCenter, fill.PipeRadius, stroke, glowEffect, "overlay_preview");
+                RenderSchemaPipeReference(fill.PipeCenter, fill.PipeRadius, stroke, glowEffect, OverlayTags.Preview);
 
                 var center = CodingNormToPixel(fill.PipeCenter);
                 double rPx = fill.PipeRadius * Math.Min(CodingOverlayCanvas.ActualWidth, CodingOverlayCanvas.ActualHeight);
@@ -85,7 +87,7 @@ public partial class PlayerWindow
                     Width = Math.Max(1, rx * 2),
                     Height = Math.Max(1, fill.Mode == LevelMode.Obstacle ? levelY - top : bottom - levelY),
                     Fill = fillBrush,
-                    Tag = "overlay_preview",
+                    Tag = OverlayTags.Preview,
                     Clip = new EllipseGeometry(center, rx, ry)
                 };
                 Canvas.SetLeft(segment, center.X - rx);
@@ -102,11 +104,11 @@ public partial class PlayerWindow
                     StrokeThickness = 2.5,
                     StrokeDashArray = new DoubleCollection { 6, 3 },
                     Effect = glowEffect,
-                    Tag = "overlay_preview"
+                    Tag = OverlayTags.Preview
                 };
                 CodingOverlayCanvas.Children.Add(levelLine);
 
-                AddDotMarker(new Point(center.X, levelY), 6, stroke, "overlay_preview", glowEffect);
+                AddDotMarker(new Point(center.X, levelY), 6, stroke, OverlayTags.Preview, glowEffect);
                 AddSchemaLabel(new Point(center.X, levelY), $"{overlay.FillPercent:F1}%", stroke, glowEffect);
                 break;
             }
@@ -120,7 +122,7 @@ public partial class PlayerWindow
                 var stroke = new SolidColorBrush(Color.FromRgb(239, 68, 68));
                 var fillBrush = new SolidColorBrush(Color.FromArgb(72, 239, 68, 68));
 
-                RenderSchemaPipeReference(intrusion.PipeCenter, intrusion.PipeRadius, stroke, glowEffect, "overlay_preview");
+                RenderSchemaPipeReference(intrusion.PipeCenter, intrusion.PipeRadius, stroke, glowEffect, OverlayTags.Preview);
 
                 var tip = CodingNormToPixel(intrusion.GetIntrusionTip());
                 var edge = CodingNormToPixel(intrusion.GetEdgePoint());
@@ -134,7 +136,7 @@ public partial class PlayerWindow
                     StrokeThickness = 2.5,
                     Fill = fillBrush,
                     Effect = glowEffect,
-                    Tag = "overlay_preview"
+                    Tag = OverlayTags.Preview
                 };
                 tongue.Points.Add(left);
                 tongue.Points.Add(tip);
@@ -151,12 +153,12 @@ public partial class PlayerWindow
                     StrokeThickness = 2,
                     StrokeDashArray = new DoubleCollection { 4, 2 },
                     Effect = glowEffect,
-                    Tag = "overlay_preview"
+                    Tag = OverlayTags.Preview
                 };
                 CodingOverlayCanvas.Children.Add(spine);
 
-                AddDotMarker(tip, 7, stroke, "overlay_preview", glowEffect);
-                AddDotMarker(edge, 5, Brushes.White, "overlay_preview", glowEffect);
+                AddDotMarker(tip, 7, stroke, OverlayTags.Preview, glowEffect);
+                AddDotMarker(edge, 5, Brushes.White, OverlayTags.Preview, glowEffect);
                 AddSchemaLabel(tip, $"{overlay.FillPercent:F1}% @ {overlay.ClockFrom:F1}h", stroke, glowEffect);
                 break;
             }
@@ -191,7 +193,7 @@ public partial class PlayerWindow
     private void RenderReferenceDn()
     {
         var old = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
-            .Where(e => e.Tag is string s && s == "ref_dn")
+            .Where(e => e.Tag is string s && s == OverlayTags.RefDn)
             .ToList();
         foreach (var el in old)
             CodingOverlayCanvas.Children.Remove(el);
@@ -217,7 +219,7 @@ public partial class PlayerWindow
             Stroke = new SolidColorBrush(Color.FromArgb(102, 255, 255, 255)),
             StrokeThickness = 1.5,
             StrokeDashArray = new DoubleCollection { 6, 3 },
-            Tag = "ref_dn"
+            Tag = OverlayTags.RefDn
         };
         Canvas.SetLeft(circle, circleRect.Left);
         Canvas.SetTop(circle, circleRect.Top);
@@ -228,7 +230,7 @@ public partial class PlayerWindow
             Text = $"Ref: DN {cal.NominalDiameterMm}",
             FontSize = 11,
             Foreground = new SolidColorBrush(Color.FromArgb(128, 255, 255, 255)),
-            Tag = "ref_dn"
+            Tag = OverlayTags.RefDn
         };
         Canvas.SetLeft(lbl, circleRect.Right + 4);
         Canvas.SetTop(lbl, circleRect.Top + circleRect.Height / 2.0 - 8);
@@ -250,7 +252,7 @@ public partial class PlayerWindow
             Background = new SolidColorBrush(Color.FromArgb(205, 17, 19, 24)),
             Padding = new Thickness(6, 3, 6, 3),
             Effect = glowEffect,
-            Tag = "overlay_measure"
+            Tag = OverlayTags.Measure
         };
         Canvas.SetLeft(label, anchor.X + 12);
         Canvas.SetTop(label, anchor.Y - 20);

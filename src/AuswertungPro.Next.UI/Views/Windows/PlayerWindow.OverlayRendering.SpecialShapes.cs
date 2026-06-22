@@ -7,6 +7,8 @@ using System.Windows.Media.Animation;
 using AuswertungPro.Next.Domain.Models;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -269,7 +271,7 @@ public partial class PlayerWindow
                 Background = new SolidColorBrush(Color.FromArgb(200, 17, 19, 24)),
                 Padding = new Thickness(6, 3, 6, 3),
                 Effect = glowEffect,
-                Tag = isPreview ? "overlay_measure" : "overlay_manual"
+                Tag = isPreview ? OverlayTags.Measure : OverlayTags.Manual
             };
             Canvas.SetLeft(lbl, vertex.X + 14);
             Canvas.SetTop(lbl, vertex.Y - 24);
@@ -333,7 +335,7 @@ public partial class PlayerWindow
                 Background = new SolidColorBrush(Color.FromArgb(200, 17, 19, 24)),
                 Padding = new Thickness(6, 3, 6, 3),
                 Effect = glowEffect,
-                Tag = isPreview ? "overlay_measure" : "overlay_manual"
+                Tag = isPreview ? OverlayTags.Measure : OverlayTags.Manual
             };
             Canvas.SetLeft(lbl, center.X + radius + 8);
             Canvas.SetTop(lbl, center.Y - 12);
@@ -433,7 +435,7 @@ public partial class PlayerWindow
             Background = new SolidColorBrush(Color.FromArgb(200, 17, 19, 24)),
             Padding = new Thickness(6, 3, 6, 3),
             Effect = glowEffect,
-            Tag = isPreview ? "overlay_measure" : "overlay_manual"
+            Tag = isPreview ? OverlayTags.Measure : OverlayTags.Manual
         };
         Canvas.SetLeft(totalLbl, anchorPt.X + 12);
         Canvas.SetTop(totalLbl, anchorPt.Y - 20);

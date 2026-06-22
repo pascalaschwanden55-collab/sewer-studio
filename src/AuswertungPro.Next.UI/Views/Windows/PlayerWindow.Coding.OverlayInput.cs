@@ -38,6 +38,8 @@ using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using InfraTraining = AuswertungPro.Next.Infrastructure.Ai.Training;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -258,7 +260,7 @@ public partial class PlayerWindow
         UpdateCodingOverlayInfo(null);
 
         CodingCalibrationHint.Visibility = _codingIsCalibrating ? Visibility.Visible : Visibility.Collapsed;
-        TxtCodingCalibHint.Text = "Linie über den sichtbaren Rohrdurchmesser zeichnen";
+        TxtCodingCalibHint.Text = "Linie ï¿½ber den sichtbaren Rohrdurchmesser zeichnen";
         UpdateCodingOverlayCursor();
         RedrawCodingCanvas(includeManualOverlay: false);
     }
@@ -438,7 +440,7 @@ public partial class PlayerWindow
                 Stroke = Brushes.Magenta,
                 StrokeThickness = 2.5,
                 StrokeDashArray = new DoubleCollection { 6, 3 },
-                Tag = "overlay_preview"
+                Tag = OverlayTags.Preview
             };
             CodingOverlayCanvas.Children.Add(_codingPreviewLine);
             double pxLen = Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
@@ -647,10 +649,10 @@ public partial class PlayerWindow
         var remove = CodingOverlayCanvas.Children
             .OfType<FrameworkElement>()
             .Where(el => el.Tag is string tag &&
-                         (tag == "tool_badge" ||
-                          tag == "overlay_preview" ||
-                          tag == "overlay_measure" ||
-                          (clearManualOverlay && tag == "overlay_manual")))
+                         (tag == OverlayTags.ToolBadge ||
+                          tag == OverlayTags.Preview ||
+                          tag == OverlayTags.Measure ||
+                          (clearManualOverlay && tag == OverlayTags.Manual)))
             .ToList();
 
         foreach (var el in remove)

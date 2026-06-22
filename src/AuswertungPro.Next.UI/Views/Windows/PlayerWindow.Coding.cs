@@ -38,6 +38,8 @@ using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using InfraTraining = AuswertungPro.Next.Infrastructure.Ai.Training;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -577,7 +579,7 @@ public partial class PlayerWindow
     private void UpdateToolBadge()
     {
         var old = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
-            .Where(e => e.Tag is string s && s == "tool_badge")
+            .Where(e => e.Tag is string s && s == OverlayTags.ToolBadge)
             .ToList();
         foreach (var el in old)
             CodingOverlayCanvas.Children.Remove(el);
@@ -596,7 +598,7 @@ public partial class PlayerWindow
             Background = new SolidColorBrush(Color.FromArgb(200, 17, 19, 24)),
             CornerRadius = new CornerRadius(6),
             Padding = new Thickness(8, 4, 8, 4),
-            Tag = "tool_badge",
+            Tag = OverlayTags.ToolBadge,
             Child = new TextBlock
             {
                 Text = toolText,
