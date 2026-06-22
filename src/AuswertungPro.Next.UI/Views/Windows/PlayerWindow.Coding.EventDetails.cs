@@ -166,8 +166,7 @@ public partial class PlayerWindow
                 Owner = this,
                 LiveSnapshotProvider = () =>
                 {
-                    var snapPath = Path.Combine(Path.GetTempPath(),
-                        $"coding_live_{Guid.NewGuid():N}.png");
+                    var snapPath = CodingLiveSnapshotPathPolicy.CreateTempPath();
                     return TakeSnapshotSafe(snapPath) ? snapPath : null;
                 }
             };

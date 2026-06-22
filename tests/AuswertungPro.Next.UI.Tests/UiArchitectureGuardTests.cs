@@ -432,6 +432,29 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_snapshot_temp_path_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var detailPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.cs");
+        var policyPath = Path.Combine(uiRoot, "Player", "CodingLiveSnapshotPathPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Temp-Pfade fuer Live-Snapshots muessen ausserhalb der PlayerWindow-Partials liegen.");
+
+        var events = File.ReadAllText(eventsPath);
+        var detail = File.ReadAllText(detailPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingLiveSnapshotPathPolicy.CreateTempPath", events);
+        Assert.Contains("CodingLiveSnapshotPathPolicy.CreateTempPath", detail);
+        Assert.DoesNotContain("coding_live_{Guid.NewGuid()", events);
+        Assert.DoesNotContain("coding_live_{Guid.NewGuid()", detail);
+        Assert.Contains("public static string BuildTempPath", policy);
+        Assert.Contains("public static string CreateTempPath", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_import_reference_transfer_lives_in_policy()
     {
         var root = FindRepositoryRoot();
