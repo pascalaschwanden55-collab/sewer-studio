@@ -188,6 +188,27 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PART_Track", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_libvlc_creation_lives_in_factory()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var factoryPath = Path.Combine(uiRoot, "Player", "PlayerLibVlcFactory.cs");
+
+        Assert.True(File.Exists(factoryPath), "LibVLC-Erzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var playerWindowText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
+        var factory = File.ReadAllText(factoryPath);
+
+        Assert.DoesNotContain("CreateLibVlc", playerWindowText);
+        Assert.Contains("PlayerLibVlcFactory.Create", playerWindowText);
+        Assert.Contains("new LibVLC(args)", factory);
+        Assert.Contains("new LibVLC()", factory);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

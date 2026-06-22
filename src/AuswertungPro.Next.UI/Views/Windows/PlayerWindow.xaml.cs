@@ -143,7 +143,7 @@ public partial class PlayerWindow : Window
 
         Core.Initialize();
 
-        _libVlc = CreateLibVlc(_options);
+        _libVlc = PlayerLibVlcFactory.Create(_options);
         _player = new MediaPlayer(_libVlc)
         {
             EnableHardwareDecoding = _options.EnableHardwareDecoding

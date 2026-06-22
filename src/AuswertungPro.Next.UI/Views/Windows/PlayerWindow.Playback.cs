@@ -170,20 +170,6 @@ public partial class PlayerWindow
         }
     }
 
-    private static LibVLC CreateLibVlc(PlayerWindowOptions options)
-    {
-        var args = PlayerLibVlcArguments.Build(options);
-
-        try
-        {
-            return new LibVLC(args);
-        }
-        catch
-        {
-            return new LibVLC();
-        }
-    }
-
     private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         var action = PlayerKeyboardShortcutPolicy.Resolve(e.Key, _codingOverlayService != null);
