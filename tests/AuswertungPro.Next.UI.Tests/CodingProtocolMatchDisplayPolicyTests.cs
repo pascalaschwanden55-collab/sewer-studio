@@ -28,4 +28,13 @@ public sealed class CodingProtocolMatchDisplayPolicyTests
         Assert.Equal(Color.FromRgb(0x7C, 0x3A, 0xED),
             CodingProtocolMatchDisplayPolicy.BadgeColor(CodingProtocolMatchBucket.FalseAlarm));
     }
+
+    [Fact]
+    public void BuildImportConfirmationBadge_formats_text_and_delay()
+    {
+        var result = CodingProtocolMatchDisplayPolicy.BuildImportConfirmationBadge("BCA", 12.34);
+
+        Assert.Equal($"? BCA @ {12.34:F1}m bestaetigt", result.Text);
+        Assert.Equal(TimeSpan.FromSeconds(3), result.AutoHideDelay);
+    }
 }

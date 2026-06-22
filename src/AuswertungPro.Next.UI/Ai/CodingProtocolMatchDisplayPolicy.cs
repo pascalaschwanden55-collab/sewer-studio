@@ -1,6 +1,9 @@
+using System;
 using System.Windows.Media;
 
 namespace AuswertungPro.Next.UI.Ai;
+
+public readonly record struct CodingImportConfirmationBadgeState(string Text, TimeSpan AutoHideDelay);
 
 public static class CodingProtocolMatchDisplayPolicy
 {
@@ -47,4 +50,7 @@ public static class CodingProtocolMatchDisplayPolicy
             CodingProtocolMatchBucket.FalseAlarm => "Abgleich: KI-Fehlalarm ohne Import-Partner",
             _ => "Abgleich"
         };
+
+    public static CodingImportConfirmationBadgeState BuildImportConfirmationBadge(string? code, double meter)
+        => new($"? {code} @ {meter:F1}m bestaetigt", TimeSpan.FromSeconds(3));
 }

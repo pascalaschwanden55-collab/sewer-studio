@@ -119,9 +119,12 @@ public partial class PlayerWindow
         AuswertungPro.Next.Application.Common.BestEffort.Try(
             () => System.IO.File.Delete(snapshotPath),
             "Foto/Snapshot: Temp loeschen");
+        var badge = CodingProtocolMatchDisplayPolicy.BuildImportConfirmationBadge(
+            importEvent.Entry.Code,
+            importEvent.MeterAtCapture);
         OsdMeterBadge.Visibility = Visibility.Visible;
-        TxtOsdMeter.Text = $"? {importEvent.Entry.Code} @ {importEvent.MeterAtCapture:F1}m bestaetigt";
-        var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        TxtOsdMeter.Text = badge.Text;
+        var resetTimer = new DispatcherTimer { Interval = badge.AutoHideDelay };
         resetTimer.Tick += (_, _) => { OsdMeterBadge.Visibility = Visibility.Collapsed; resetTimer.Stop(); };
         resetTimer.Start();
         return true;

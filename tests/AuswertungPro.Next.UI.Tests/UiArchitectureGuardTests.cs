@@ -657,6 +657,23 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_import_confirmation_badge_uses_display_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var protocolMatchPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchDisplayPolicy.cs");
+
+        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingProtocolMatchDisplayPolicy.BuildImportConfirmationBadge", protocolMatch);
+        Assert.DoesNotContain("bestaetigt", protocolMatch);
+        Assert.DoesNotContain("Interval = TimeSpan.FromSeconds(3)", protocolMatch);
+        Assert.Contains("public static CodingImportConfirmationBadgeState BuildImportConfirmationBadge", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_code_meter_resolution_uses_policy()
     {
         var root = FindRepositoryRoot();
