@@ -420,6 +420,24 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static string Select", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_coding_event_display_order_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingEventDisplayOrderPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Codier-Ereignis-Sortierung muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var events = File.ReadAllText(eventsPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingEventDisplayOrderPolicy.Order", events);
+        Assert.DoesNotContain(".OrderBy(e => e.MeterAtCapture)", events);
+        Assert.Contains("public static IReadOnlyList<CodingEvent> Order", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

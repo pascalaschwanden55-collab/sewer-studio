@@ -299,11 +299,7 @@ public partial class PlayerWindow
     {
         if (_codingVm == null) return;
 
-        // Nach Meter sortieren, dann nach Videozeit
-        var sorted = _codingVm.Events
-            .OrderBy(e => e.MeterAtCapture)
-            .ThenBy(e => e.VideoTimestamp)
-            .ToList();
+        var sorted = CodingEventDisplayOrderPolicy.Order(_codingVm.Events);
 
         var selected = LstCodingEvents.SelectedItem;
         _codingVm.Events.Clear();
