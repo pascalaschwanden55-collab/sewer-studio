@@ -1101,6 +1101,22 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_multi_model_mask_render_candidates_live_in_visibility_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingSegmentedFindingVisibility.cs");
+
+        var ai = File.ReadAllText(aiPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates", ai);
+        Assert.DoesNotContain("new Ai.Pipeline.SamMaskRenderer.MaskRenderCandidate", ai);
+        Assert.Contains("public static IReadOnlyList<SamMaskRenderer.MaskRenderCandidate> BuildVisibleMaskRenderCandidates", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_structural_classifier_finding_lives_in_factory()
     {
         var root = FindRepositoryRoot();

@@ -62,8 +62,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var summary = ReadUiFile("Ai", "CodingMultiModelFindingSummary.cs");
         var showBody = ExtractMethodBody(coding, "private void ShowMultiModelResults");
 
-        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskFindings", coding);
-        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskFindings(segmented)", showBody);
+        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates", coding);
+        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates(segmented)", showBody);
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleCodingFindings(segmented)", summary);
         Assert.Contains("AddMultiModelFindingsAsEvents(", coding);
         Assert.Contains("findingSummary.VisibleCodierbar", coding);

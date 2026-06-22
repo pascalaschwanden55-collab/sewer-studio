@@ -18,6 +18,15 @@ public static class CodingSegmentedFindingVisibility
             .Where(IsMaskVisible)
             .ToList();
 
+    public static IReadOnlyList<SamMaskRenderer.MaskRenderCandidate> BuildVisibleMaskRenderCandidates(
+        IReadOnlyList<SegmentedFinding> segmented)
+        => BuildVisibleMaskFindings(segmented)
+            .Select(s => new SamMaskRenderer.MaskRenderCandidate(
+                s.Mask,
+                s.Proximity.IsCodierbar ? s.Quant : null,
+                s.Dino?.Confidence))
+            .ToList();
+
     public static string BuildOverlaySuppressionText(int suppressedBackgroundCount)
     {
         if (suppressedBackgroundCount <= 0)

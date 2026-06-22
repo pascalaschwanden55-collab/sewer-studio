@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -318,16 +317,9 @@ public partial class PlayerWindow
             if (mmResult.SamResponse is { ImageWidth: > 0, ImageHeight: > 0 } srAsp)
                 _codingVideoAspect = (double)srAsp.ImageWidth / srAsp.ImageHeight;
 
-            var visibleMasks = CodingSegmentedFindingVisibility.BuildVisibleMaskFindings(segmented);
-            if (visibleMasks.Count > 0)
+            var candidates = CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates(segmented);
+            if (candidates.Count > 0)
             {
-                var candidates = visibleMasks
-                    .Select(s => new Ai.Pipeline.SamMaskRenderer.MaskRenderCandidate(
-                        s.Mask,
-                        s.Proximity.IsCodierbar ? s.Quant : null,
-                        s.Dino?.Confidence))
-                    .ToList();
-
                 var maskContent = GetCodingContentRect();
                 Ai.Pipeline.SamMaskRenderer.RenderCandidates(
                     CodingOverlayCanvas,

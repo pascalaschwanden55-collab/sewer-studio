@@ -26,6 +26,26 @@ public sealed class CodingSegmentedFindingVisibilityTests
     }
 
     [Fact]
+    public void BuildVisibleMaskRenderCandidates_maps_visible_masks_for_renderer()
+    {
+        var candidate = Assert.Single(CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates(
+            [Finding("crack", MetrierungProximity.Codierbar, dinoConfidence: 0.72)]));
+
+        Assert.Equal("crack", candidate.Mask.Label);
+        Assert.Equal("crack", candidate.Quant?.Label);
+        Assert.Equal(0.72, candidate.DetectionConfidence);
+    }
+
+    [Fact]
+    public void BuildVisibleMaskRenderCandidates_hides_background_masks()
+    {
+        var candidates = CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates(
+            [Finding("water wall", MetrierungProximity.Codierbar, areaRatio: 0.95, confidence: 0.98, dinoConfidence: 0.32)]);
+
+        Assert.Empty(candidates);
+    }
+
+    [Fact]
     public void BuildVisibleCodingFindings_excludes_ahead_findings()
     {
         var visible = CodingSegmentedFindingVisibility.BuildVisibleCodingFindings(
