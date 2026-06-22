@@ -718,6 +718,25 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_osd_timer_gate_uses_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingOsdTimerPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "OSD-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var events = File.ReadAllText(eventsPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingOsdTimerPolicy.ShouldReadMeter", events);
+        Assert.DoesNotContain("!_isCodingMode || _codingOsdReading || _codingIsAnalyzing", events);
+        Assert.DoesNotContain("_codingLiveDetection == null) return", events);
+        Assert.Contains("public static bool ShouldReadMeter", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_code_meter_resolution_uses_policy()
     {
         var root = FindRepositoryRoot();

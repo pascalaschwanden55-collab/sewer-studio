@@ -320,10 +320,16 @@ public partial class PlayerWindow
         _codingOsdTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _codingOsdTimer.Tick += async (_, _) =>
         {
-            if (_closing || _player is null) return;
             // Waehrend einer laufenden Live-Analyse liest diese bereits den OSD-Meter
             // -> separaten 3s-OSD-Timer aussetzen, um doppelte Qwen-Last zu vermeiden.
-            if (!_isCodingMode || _codingOsdReading || _codingIsAnalyzing || _codingLiveDetection == null) return;
+            if (!CodingOsdTimerPolicy.ShouldReadMeter(
+                    _closing,
+                    hasPlayer: _player is not null,
+                    _isCodingMode,
+                    _codingOsdReading,
+                    _codingIsAnalyzing,
+                    hasLiveDetection: _codingLiveDetection is not null))
+                return;
             _codingOsdReading = true;
             try
             {
