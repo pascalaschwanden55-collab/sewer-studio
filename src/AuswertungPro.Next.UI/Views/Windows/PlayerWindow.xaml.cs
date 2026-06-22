@@ -93,7 +93,7 @@ public partial class PlayerWindow : Window
     private readonly PlayerWindowOptions _options;
     private readonly string? _initialOverlayText;
     private readonly PlayerDamageOverlayData? _damageOverlay;
-    private readonly List<(DamageMarkerInfo Info, FrameworkElement Container, FrameworkElement TickOrRange, TextBlock Label)> _damageMarkers = new();
+    private readonly DamageMarkerController _damageMarkerController;
 
     // ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ Quick-Scan state ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬
     private CancellationTokenSource? _quickScanCts;
@@ -190,6 +190,15 @@ public partial class PlayerWindow : Window
         };
         VideoView.MediaPlayer = _player;
 
+        _damageMarkerController = new DamageMarkerController(
+            DamageMarkerCanvas,
+            PositionSlider,
+            _damageOverlay,
+            _player,
+            EnsurePlaying,
+            UpdateUi,
+            GetSliderTrackBounds);
+
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _timer.Tick += (_, __) => { if (_closing || _player is null) return; UpdateUi(); };
 
@@ -253,7 +262,7 @@ public partial class PlayerWindow : Window
             if (!string.IsNullOrWhiteSpace(_initialOverlayText))
                 ShowOverlay(_initialOverlayText!, TimeSpan.FromSeconds(6));
 
-            BuildDamageMarkers();
+            _damageMarkerController.Build();
 
             Focusable = true;
             Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
@@ -264,7 +273,7 @@ public partial class PlayerWindow : Window
             }));
         };
 
-        DamageMarkerCanvas.SizeChanged += (_, __) => RepositionDamageMarkers();
+        DamageMarkerCanvas.SizeChanged += (_, __) => _damageMarkerController.Reposition();
         HeatmapCanvas.SizeChanged += (_, __) => RepositionHeatmap();
         DetectionCanvas.MouseLeftButtonDown += DetectionCanvas_MouseLeftButtonDown;
         VideoView.SizeChanged += (_, __) => UpdateCodingOverlayViewport();
