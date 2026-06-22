@@ -10,8 +10,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Evaluation;
@@ -550,12 +548,6 @@ public partial class PlayerWindow
     /// <summary>Werkzeug-Badge oben links auf Canvas anzeigen.</summary>
     private void UpdateToolBadge()
     {
-        var old = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
-            .Where(e => e.Tag is string s && s == OverlayTags.ToolBadge)
-            .ToList();
-        foreach (var el in old)
-            CodingOverlayCanvas.Children.Remove(el);
-
         if (_codingOverlayService == null) return;
 
         var toolText = CodingToolBadgeTextPolicy.BuildText(
@@ -563,26 +555,7 @@ public partial class PlayerWindow
             _codingSchemaType,
             _codingOverlayService.ActiveLevelMode);
 
-        if (toolText == null) return;
-
-        var badge = new Border
-        {
-            Background = new SolidColorBrush(Color.FromArgb(200, 17, 19, 24)),
-            CornerRadius = new CornerRadius(6),
-            Padding = new Thickness(8, 4, 8, 4),
-            Tag = OverlayTags.ToolBadge,
-            Child = new TextBlock
-            {
-                Text = toolText,
-                FontSize = 12,
-                FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0xE5, 0xFF))
-            }
-        };
-
-        Canvas.SetLeft(badge, 10);
-        Canvas.SetTop(badge, 10);
-        CodingOverlayCanvas.Children.Add(badge);
+        CodingToolBadgeRenderer.Update(CodingOverlayCanvas, toolText);
     }
 
     private async Task AnalyzeWithOverlayHintAsync(OverlayGeometry overlay)

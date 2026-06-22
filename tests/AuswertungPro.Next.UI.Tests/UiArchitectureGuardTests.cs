@@ -1211,6 +1211,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_tool_badge_rendering_lives_in_renderer()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var rendererPath = Path.Combine(uiRoot, "Player", "CodingToolBadgeRenderer.cs");
+
+        Assert.True(File.Exists(rendererPath), "Werkzeug-Badge-Rendering muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var coding = File.ReadAllText(codingPath);
+        var renderer = File.ReadAllText(rendererPath);
+
+        Assert.Contains("CodingToolBadgeRenderer.Update", coding);
+        Assert.DoesNotContain("var old = CodingOverlayCanvas.Children.OfType<FrameworkElement>()", coding);
+        Assert.DoesNotContain("var badge = new Border", coding);
+        Assert.DoesNotContain("Tag = OverlayTags.ToolBadge", coding);
+        Assert.Contains("public static void Update", renderer);
+        Assert.Contains("OverlayTags.ToolBadge", renderer);
+    }
+
+    [Fact]
     public void PlayerWindow_overlay_cursor_decision_lives_in_policy()
     {
         var root = FindRepositoryRoot();
