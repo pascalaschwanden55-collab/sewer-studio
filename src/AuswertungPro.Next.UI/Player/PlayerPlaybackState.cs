@@ -104,6 +104,9 @@ public static class PlayerPlaybackState
         return $"{normalized:0.##}x";
     }
 
+    public static bool IsRateButtonChecked(float currentRate, float targetRate)
+        => Math.Abs(currentRate - targetRate) < 0.01f;
+
     public static float NormalizeRate(float rate)
         => rate <= 0f ? 1.0f : rate;
 

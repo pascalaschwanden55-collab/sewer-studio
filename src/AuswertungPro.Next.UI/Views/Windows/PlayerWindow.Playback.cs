@@ -494,7 +494,7 @@ public partial class PlayerWindow
 
     private static void SetSpeedButtonState(ToggleButton button, float currentRate, float targetRate)
     {
-        button.IsChecked = Math.Abs(currentRate - targetRate) < 0.01f;
+        button.IsChecked = PlayerPlaybackState.IsRateButtonChecked(currentRate, targetRate);
     }
 
     // Damage marker overlay

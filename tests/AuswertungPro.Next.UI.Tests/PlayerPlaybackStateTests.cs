@@ -160,6 +160,18 @@ public sealed class PlayerPlaybackStateTests
         Assert.Equal(expected, PlayerPlaybackState.FormatRateLabel(rate));
     }
 
+    [Theory]
+    [InlineData(1.0f, 1.0f, true)]
+    [InlineData(1.009f, 1.0f, true)]
+    [InlineData(1.02f, 1.0f, false)]
+    public void IsRateButtonChecked_uses_existing_rate_tolerance(
+        float currentRate,
+        float targetRate,
+        bool expected)
+    {
+        Assert.Equal(expected, PlayerPlaybackState.IsRateButtonChecked(currentRate, targetRate));
+    }
+
     [Fact]
     public void BuildSeekPreviewText_formats_target_time_when_duration_is_known()
     {
