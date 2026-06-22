@@ -177,15 +177,13 @@ public partial class PlayerWindow
 
     private void UpdateCodingOverlayCursor()
     {
-        if (!CodingOverlayPopup.IsOpen)
-        {
-            CodingOverlayCanvas.Cursor = Cursors.Arrow;
-            return;
-        }
-
         var activeTool = _codingOverlayService?.ActiveTool ?? OverlayToolType.None;
-        var isInteractive = _codingIsCalibrating || activeTool != OverlayToolType.None;
-        CodingOverlayCanvas.Cursor = isInteractive ? Cursors.Cross : Cursors.Arrow;
+        CodingOverlayCanvas.Cursor = CodingOverlayCursorPolicy.ShouldUseCrossCursor(
+            CodingOverlayPopup.IsOpen,
+            _codingIsCalibrating,
+            activeTool)
+            ? Cursors.Cross
+            : Cursors.Arrow;
     }
 
     private void CodingCalibrate_Click(object sender, RoutedEventArgs e)

@@ -672,6 +672,25 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("OverlayTags.ToolBadge", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_overlay_cursor_decision_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingOverlayCursorPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Overlay-Cursor-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingOverlayCursorPolicy.ShouldUseCrossCursor", overlayInput);
+        Assert.DoesNotContain("var isInteractive = _codingIsCalibrating", overlayInput);
+        Assert.Contains("public static bool ShouldUseCrossCursor", policy);
+        Assert.Contains("activeTool != OverlayToolType.None", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);
