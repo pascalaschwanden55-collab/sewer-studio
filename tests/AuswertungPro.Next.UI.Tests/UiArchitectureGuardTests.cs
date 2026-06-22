@@ -509,6 +509,26 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("MinimumConfirmationSeverity", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_boundary_presence_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var boundariesPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingBoundaryPresencePolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Boundary-Praesenzlogik muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var boundaries = File.ReadAllText(boundariesPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingBoundaryPresencePolicy.CountExisting", boundaries);
+        Assert.Contains("CodingBoundaryPresencePolicy.ExistsInView", boundaries);
+        Assert.DoesNotContain("var vmBcd = _codingVm.Events.Count", boundaries);
+        Assert.DoesNotContain("_codingVm.Events.Any(e => string.Equals(e.Entry.Code, \"BCE\"", boundaries);
+        Assert.Contains("public static CodingBoundaryPresence CountExisting", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

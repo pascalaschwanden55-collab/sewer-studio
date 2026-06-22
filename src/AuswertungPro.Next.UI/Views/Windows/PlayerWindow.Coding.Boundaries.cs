@@ -18,17 +18,18 @@ public partial class PlayerWindow
     {
         if (_codingVm == null || _codingSessionService == null) return;
         // BCD bereits vorhanden? Alle moeglichen Quellen pruefen
-        var vmBcd = _codingVm.Events.Count(e => string.Equals(e.Entry.Code, "BCD", StringComparison.OrdinalIgnoreCase));
-        var sessBcd = _codingSessionService.ActiveSession?.Events.Count(e =>
-            string.Equals(e.Entry.Code, "BCD", StringComparison.OrdinalIgnoreCase)) ?? 0;
-        if (vmBcd > 0 || sessBcd > 0)
+        var bcdPresence = CodingBoundaryPresencePolicy.CountExisting(
+            _codingVm.Events,
+            _codingSessionService.ActiveSession?.Events,
+            "BCD");
+        if (bcdPresence.Exists)
         {
             System.Diagnostics.Debug.WriteLine(
-                $"[BCD-Dedup] EnsureRohranfang: bereits vorhanden (VM={vmBcd}, Session={sessBcd})");
+                $"[BCD-Dedup] EnsureRohranfang: bereits vorhanden (VM={bcdPresence.ViewCount}, Session={bcdPresence.SessionCount})");
             return;
         }
         System.Diagnostics.Debug.WriteLine(
-            $"[BCD-Dedup] EnsureRohranfang: NEU erzeugen bei {currentMeter:F2}m (VM={vmBcd}, Session={sessBcd})");
+            $"[BCD-Dedup] EnsureRohranfang: NEU erzeugen bei {currentMeter:F2}m (VM={bcdPresence.ViewCount}, Session={bcdPresence.SessionCount})");
 
         // Rohranfang: OSD-Meter vom Import uebernehmen, sonst 0.00m
         // Videozeit: aus dem Import oder Anfang des Videos
@@ -73,7 +74,7 @@ public partial class PlayerWindow
     {
         if (_codingVm == null || _codingSessionService == null) return;
         // BCE bereits vorhanden?
-        if (_codingVm.Events.Any(e => string.Equals(e.Entry.Code, "BCE", StringComparison.OrdinalIgnoreCase)))
+        if (CodingBoundaryPresencePolicy.ExistsInView(_codingVm.Events, "BCE"))
             return;
         // Streckenschaeden werden bereits in ExitCodingMode geschlossen (vor diesem Aufruf)
 
