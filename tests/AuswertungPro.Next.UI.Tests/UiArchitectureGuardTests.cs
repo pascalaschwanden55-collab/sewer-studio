@@ -228,6 +228,21 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static CodingStatisticsSummary Build", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_coding_primary_damage_text_uses_existing_mapper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
+
+        var protocol = File.ReadAllText(protocolPath);
+
+        Assert.Contains("DataPageProtocolObservationMapper.BuildPrimaryDamageLines", protocol);
+        Assert.DoesNotContain("new HashSet<string>", protocol);
+        Assert.DoesNotContain("Q1={q1}", protocol);
+        Assert.DoesNotContain("Q2={q2}", protocol);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

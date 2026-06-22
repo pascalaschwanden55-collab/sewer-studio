@@ -1,11 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -110,36 +110,8 @@ public partial class PlayerWindow
             return;
         }
 
-        // Zeilen fuer Primaere_Schaeden aufbauen
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var lines = new List<string>();
-        foreach (var entry in entries)
-        {
-            var code = (entry.Code ?? "").Trim();
-            if (string.IsNullOrWhiteSpace(code)) continue;
-
-            var meter = entry.MeterStart ?? entry.MeterEnd;
-            var meterKey = meter.HasValue ? meter.Value.ToString("F2") : "";
-            if (!seen.Add($"{code.ToUpperInvariant()}|{meterKey}")) continue;
-
-            var parts = new List<string>();
-            if (meter.HasValue) parts.Add($"{meter.Value:0.00}m");
-            parts.Add(code);
-            if (!string.IsNullOrWhiteSpace(entry.Beschreibung))
-                parts.Add(entry.Beschreibung.Trim().Replace("\r", "").Replace("\n", " "));
-
-            if (entry.CodeMeta?.Parameters != null)
-            {
-                if (entry.CodeMeta.Parameters.TryGetValue("vsa.q1", out var q1) && !string.IsNullOrWhiteSpace(q1))
-                    parts.Add($"Q1={q1}");
-                if (entry.CodeMeta.Parameters.TryGetValue("vsa.q2", out var q2) && !string.IsNullOrWhiteSpace(q2))
-                    parts.Add($"Q2={q2}");
-            }
-
-            lines.Add(string.Join(" ", parts));
-        }
-
-        var primaryText = string.Join("\n", lines);
+        var primaryText = string.Join("\n",
+            DataPageProtocolObservationMapper.BuildPrimaryDamageLines(entries));
         _haltungRecord.SetFieldValue("Primaere_Schaeden", primaryText, FieldSource.Manual, userEdited: true);
         _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
     }
