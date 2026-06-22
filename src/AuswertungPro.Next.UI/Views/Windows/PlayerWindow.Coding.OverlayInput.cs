@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -565,13 +564,7 @@ public partial class PlayerWindow
 
     private void ClearTransientCodingCanvas(bool clearManualOverlay)
     {
-        var remove = CodingOverlayCanvas.Children
-            .OfType<FrameworkElement>()
-            .Where(el => CodingOverlayCleanupPolicy.ShouldRemoveTransientTag(el.Tag, clearManualOverlay))
-            .ToList();
-
-        foreach (var el in remove)
-            CodingOverlayCanvas.Children.Remove(el);
+        CodingOverlayCanvasCleaner.ClearTransient(CodingOverlayCanvas, clearManualOverlay);
     }
 
     private void RedrawCodingCanvas(bool includeManualOverlay)

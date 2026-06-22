@@ -1197,17 +1197,23 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupPolicy.cs");
+        var cleanerPath = Path.Combine(uiRoot, "Player", "CodingOverlayCanvasCleaner.cs");
 
         Assert.True(File.Exists(policyPath), "Transient-Overlay-Cleanup muss den zentralen Tag-Vertrag verwenden.");
+        Assert.True(File.Exists(cleanerPath), "Transient-Overlay-Cleanup der Canvas-Elemente muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var policy = File.ReadAllText(policyPath);
+        var cleaner = File.ReadAllText(cleanerPath);
 
-        Assert.Contains("CodingOverlayCleanupPolicy.ShouldRemoveTransientTag", overlayInput);
+        Assert.Contains("CodingOverlayCanvasCleaner.ClearTransient", overlayInput);
+        Assert.DoesNotContain("CodingOverlayCleanupPolicy.ShouldRemoveTransientTag(el.Tag", overlayInput);
+        Assert.DoesNotContain(".OfType<FrameworkElement>()", overlayInput);
         Assert.DoesNotContain("tag == OverlayTags.ToolBadge ||", overlayInput);
         Assert.DoesNotContain("clearManualOverlay && tag == OverlayTags.Manual", overlayInput);
         Assert.Contains("public static bool ShouldRemoveTransientTag", policy);
         Assert.Contains("OverlayTags.ToolBadge", policy);
+        Assert.Contains("CodingOverlayCleanupPolicy.ShouldRemoveTransientTag", cleaner);
     }
 
     [Fact]
