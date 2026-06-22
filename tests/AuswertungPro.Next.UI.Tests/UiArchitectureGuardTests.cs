@@ -215,17 +215,25 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsPolicy.cs");
+        var refreshPolicyPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsRefreshPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Coding-Statistik-Berechnung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(refreshPolicyPath), "Coding-Statistik-Refresh-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var events = File.ReadAllText(eventsPath);
+        var coding = File.ReadAllText(codingPath);
         var policy = File.ReadAllText(policyPath);
+        var refreshPolicy = File.ReadAllText(refreshPolicyPath);
 
         Assert.Contains("CodingStatisticsPolicy.Build", events);
+        Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", coding);
         Assert.DoesNotContain("Average(e => e.AiContext!.Confidence)", events);
+        Assert.DoesNotContain("nameof(CodingSessionViewModel.StatAutoAccepted) or", coding);
         Assert.DoesNotContain("int autoAccepted = 0", events);
         Assert.Contains("public static CodingStatisticsSummary Build", policy);
+        Assert.Contains("public static bool ShouldRefresh", refreshPolicy);
     }
 
     [Fact]

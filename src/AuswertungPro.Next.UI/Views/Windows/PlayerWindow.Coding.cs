@@ -433,12 +433,7 @@ public partial class PlayerWindow
         UpdateCodingCurrentCode();
 
         // Statistiken aktualisieren (nur bei relevanten Property-Aenderungen)
-        if (propertyName is nameof(CodingSessionViewModel.StatAutoAccepted) or
-            nameof(CodingSessionViewModel.StatPending) or
-            nameof(CodingSessionViewModel.StatReviewRequired) or
-            nameof(CodingSessionViewModel.StatAverageConfidence) or
-            nameof(CodingSessionViewModel.EventCount) or
-            null)
+        if (CodingStatisticsRefreshPolicy.ShouldRefresh(propertyName))
         {
             UpdateCodingStatistics();
         }
