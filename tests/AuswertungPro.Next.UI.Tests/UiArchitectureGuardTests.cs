@@ -612,6 +612,26 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("new PipeCalibration", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_stretch_damage_observation_projection_lives_in_builder()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var builderPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenObservationBuilder.cs");
+
+        Assert.True(File.Exists(builderPath), "Segment-zu-Streckenschaden-Observation-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var ai = File.ReadAllText(aiPath);
+        var builder = File.ReadAllText(builderPath);
+
+        Assert.Contains("CodingStreckenschadenObservationBuilder.Build", ai);
+        Assert.DoesNotContain("new List<AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation>", ai);
+        Assert.DoesNotContain("observations.Add(new AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation", ai);
+        Assert.Contains("public static CodingStreckenschadenObservationBuildResult Build", builder);
+        Assert.Contains("new StreckenschadenTracker.Observation", builder);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

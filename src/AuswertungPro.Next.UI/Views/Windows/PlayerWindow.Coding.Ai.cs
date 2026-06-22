@@ -406,44 +406,23 @@ public partial class PlayerWindow
     private HashSet<SegmentedFinding> ApplyStreckenschadenTracking(
         IReadOnlyList<SegmentedFinding> segmented, double meter, TimeSpan videoTime)
     {
-        var consumed = new HashSet<SegmentedFinding>();
         var codingSessionService = _codingSessionService;
         var codingVm = _codingVm;
         if (codingSessionService == null || codingVm == null)
-            return consumed;
+            return [];
 
         // 1) Codierbare Streckenschaden-Befunde sammeln und Code aufloesen (gleicher Resolver wie Loop).
-        var observations = new List<AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation>();
-        foreach (var seg in segmented)
-        {
-            if (!seg.Proximity.IsCodierbar) continue;
-            var q = seg.Quant;
-            var pseudo = new LiveFrameFinding(
-                Label: q.Label,
-                Severity: QuantificationSeverityPolicy.Estimate(
-                    q.CrossSectionReductionPercent,
-                    q.IntrusionPercent,
-                    q.HeightMm,
-                    q.ExtentPercent),
-                PositionClock: NormalizeClockPosition(q.ClockPosition),
-                ExtentPercent: q.ExtentPercent,
-                VsaCodeHint: null);
-            var code = ResolveFindingCodeForCoding(pseudo, meter);
-            if (code == null) continue;
-            if (!VsaCodeResolver.IsStreckenschadenCode(code)) continue;
-
-            consumed.Add(seg);
-            var clock = LiveDetectionGeometryMapper.ParseClockHour(q.ClockPosition);
-            observations.Add(new AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation(
-                MainCode: code, ClockHour: clock, Meter: meter));
-        }
+        var trackingInput = CodingStreckenschadenObservationBuilder.Build(
+            segmented,
+            meter,
+            ResolveFindingCodeForCoding);
 
         // 2) Tracker fuettern (auch mit leerer Liste -> ermoeglicht Auto-Schliessen nach Toleranzdistanz).
-        var actions = _streckenTracker.Update(observations, meter);
+        var actions = _streckenTracker.Update(trackingInput.Observations, meter);
 
         // 3) Aktionen in konkrete Anweisungen uebersetzen und ausfuehren.
         ApplyStreckenschadenActions(actions, videoTime);
-        return consumed;
+        return trackingInput.ConsumedSegments;
     }
 
     /// <summary>
