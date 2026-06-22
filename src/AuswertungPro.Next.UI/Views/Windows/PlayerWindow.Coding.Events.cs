@@ -55,14 +55,14 @@ public partial class PlayerWindow
         {
             var videoZeit = TimeSpan.FromMilliseconds(Math.Max(0, _player.Time));
 
-            var timelineMeter = _codingVm.CurrentMeter;
-            if (_player.Length > 0 && _codingVm.EndMeter > 0)
-            {
-                timelineMeter = Math.Round((_player.Time / (double)_player.Length) * _codingVm.EndMeter, 2);
-            }
-
             var osdMeter = await CodingReadOsdMeterAsync();
-            var meterValue = Math.Round(Math.Max(0, osdMeter ?? _codingLastOsdMeter ?? timelineMeter), 2);
+            var meterValue = CodingCurrentMeterResolver.ResolveManualEntry(
+                osdMeter,
+                _codingLastOsdMeter,
+                _player.Time,
+                _player.Length,
+                _codingVm.EndMeter,
+                _codingVm.CurrentMeter);
 
             var entry = CodingExplorerEntryFactory.CreateSeed(
                 _codingVm.CurrentOverlay,

@@ -438,6 +438,22 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static IReadOnlyList<CodingEvent> Order", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_manual_code_meter_resolution_uses_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var resolverPath = Path.Combine(uiRoot, "Ai", "CodingCurrentMeterResolver.cs");
+
+        var events = File.ReadAllText(eventsPath);
+        var resolver = File.ReadAllText(resolverPath);
+
+        Assert.Contains("CodingCurrentMeterResolver.ResolveManualEntry", events);
+        Assert.DoesNotContain("Math.Round(Math.Max(0, osdMeter", events);
+        Assert.Contains("public static double ResolveManualEntry", resolver);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

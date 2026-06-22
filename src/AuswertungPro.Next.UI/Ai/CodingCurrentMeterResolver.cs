@@ -17,4 +17,19 @@ public static class CodingCurrentMeterResolver
 
         return sessionCurrentMeter;
     }
+
+    public static double ResolveManualEntry(
+        double? osdMeter,
+        double? cachedOsdMeter,
+        long playerTimeMs,
+        long playerLengthMs,
+        double endMeter,
+        double sessionCurrentMeter)
+    {
+        var timelineMeter = sessionCurrentMeter;
+        if (playerLengthMs > 0 && endMeter > 0)
+            timelineMeter = Math.Round((playerTimeMs / (double)playerLengthMs) * endMeter, 2);
+
+        return Math.Round(Math.Max(0, osdMeter ?? cachedOsdMeter ?? timelineMeter), 2);
+    }
 }

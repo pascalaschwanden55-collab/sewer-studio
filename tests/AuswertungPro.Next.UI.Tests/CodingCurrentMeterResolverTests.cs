@@ -47,4 +47,60 @@ public sealed class CodingCurrentMeterResolverTests
 
         Assert.Equal(4.5, meter);
     }
+
+    [Fact]
+    public void ResolveManualEntry_prefers_fresh_osd_over_cached_osd_and_video_position()
+    {
+        var meter = CodingCurrentMeterResolver.ResolveManualEntry(
+            osdMeter: 12.346,
+            cachedOsdMeter: 9.9,
+            playerTimeMs: 500,
+            playerLengthMs: 1000,
+            endMeter: 50,
+            sessionCurrentMeter: 4);
+
+        Assert.Equal(12.35, meter);
+    }
+
+    [Fact]
+    public void ResolveManualEntry_uses_cached_osd_before_video_position()
+    {
+        var meter = CodingCurrentMeterResolver.ResolveManualEntry(
+            osdMeter: null,
+            cachedOsdMeter: 9.876,
+            playerTimeMs: 500,
+            playerLengthMs: 1000,
+            endMeter: 50,
+            sessionCurrentMeter: 4);
+
+        Assert.Equal(9.88, meter);
+    }
+
+    [Fact]
+    public void ResolveManualEntry_uses_rounded_video_position_before_session_meter()
+    {
+        var meter = CodingCurrentMeterResolver.ResolveManualEntry(
+            osdMeter: null,
+            cachedOsdMeter: null,
+            playerTimeMs: 333,
+            playerLengthMs: 1000,
+            endMeter: 80,
+            sessionCurrentMeter: 4);
+
+        Assert.Equal(26.64, meter);
+    }
+
+    [Fact]
+    public void ResolveManualEntry_clamps_negative_meter_to_zero()
+    {
+        var meter = CodingCurrentMeterResolver.ResolveManualEntry(
+            osdMeter: -1.2,
+            cachedOsdMeter: null,
+            playerTimeMs: 333,
+            playerLengthMs: 1000,
+            endMeter: 80,
+            sessionCurrentMeter: 4);
+
+        Assert.Equal(0, meter);
+    }
 }
