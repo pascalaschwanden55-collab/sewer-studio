@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Player;
 using LibVLCSharp.Shared;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -221,106 +222,82 @@ public partial class PlayerWindow
 
     private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape && _codingOverlayService != null)
-        {
-            _codingOverlayService.CancelDraw();
-            _codingSchemaManager.Cancel();
-            if (CodingOverlayCanvas.IsMouseCaptured)
-                CodingOverlayCanvas.ReleaseMouseCapture();
-            if (_codingVm != null)
-            {
-                _codingVm.CurrentOverlay = null;
-                BtnCodingCreateEvent.IsEnabled = false;
-                UpdateCodingOverlayInfo(null);
-            }
-            if (CodingOverlayPopup.IsOpen)
-                RedrawCodingCanvas(includeManualOverlay: false);
-            e.Handled = true;
+        var action = PlayerKeyboardShortcutPolicy.Resolve(e.Key, _codingOverlayService != null);
+        if (action == null)
             return;
+
+        switch (action.Value)
+        {
+            case PlayerKeyboardAction.CancelCodingOverlay:
+                _codingOverlayService?.CancelDraw();
+                _codingSchemaManager.Cancel();
+                if (CodingOverlayCanvas.IsMouseCaptured)
+                    CodingOverlayCanvas.ReleaseMouseCapture();
+                if (_codingVm != null)
+                {
+                    _codingVm.CurrentOverlay = null;
+                    BtnCodingCreateEvent.IsEnabled = false;
+                    UpdateCodingOverlayInfo(null);
+                }
+                if (CodingOverlayPopup.IsOpen)
+                    RedrawCodingCanvas(includeManualOverlay: false);
+                break;
+
+            case PlayerKeyboardAction.TogglePlayPause:
+                TogglePlayPause();
+                break;
+
+            case PlayerKeyboardAction.Stop:
+                _player.Stop();
+                break;
+
+            case PlayerKeyboardAction.Pause:
+                _player.SetPause(true);
+                break;
+
+            case PlayerKeyboardAction.Resume:
+                EnsurePlaying();
+                _player.SetPause(false);
+                break;
+
+            case PlayerKeyboardAction.SpeedUp:
+                ChangeSpeed(+0.25f);
+                break;
+
+            case PlayerKeyboardAction.SpeedDown:
+                ChangeSpeed(-0.25f);
+                break;
+
+            case PlayerKeyboardAction.JumpForward:
+                JumpSeconds(5);
+                break;
+
+            case PlayerKeyboardAction.JumpBackward:
+                JumpSeconds(-5);
+                break;
+
+            case PlayerKeyboardAction.ToggleDetection:
+                if (_isCodingMode)
+                {
+                    BtnCodingLiveAi.IsChecked = !(BtnCodingLiveAi.IsChecked == true);
+                    CodingLiveAi_Click(BtnCodingLiveAi, new RoutedEventArgs());
+                }
+                else
+                {
+                    LiveDetectionButton.IsChecked = !(LiveDetectionButton.IsChecked == true);
+                    LiveDetection_Click(LiveDetectionButton, new RoutedEventArgs());
+                }
+                break;
+
+            case PlayerKeyboardAction.ToggleMarkTool:
+                if (_markToolType != OverlayToolType.None)
+                    DeactivateMarkTool();
+                else
+                    MarkToolPopup.IsOpen = !MarkToolPopup.IsOpen;
+                break;
         }
 
-        if (e.Key == Key.Space)
-        {
-            TogglePlayPause();
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.S)
-        {
-            _player.Stop();
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.P)
-        {
-            _player.SetPause(true);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.R)
-        {
-            EnsurePlaying();
-            _player.SetPause(false);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.Add || e.Key == Key.OemPlus)
-        {
-            ChangeSpeed(+0.25f);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.Subtract || e.Key == Key.OemMinus)
-        {
-            ChangeSpeed(-0.25f);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.Right)
-        {
-            JumpSeconds(5);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.Left)
-        {
-            JumpSeconds(-5);
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.D)
-        {
-            if (_isCodingMode)
-            {
-                BtnCodingLiveAi.IsChecked = !(BtnCodingLiveAi.IsChecked == true);
-                CodingLiveAi_Click(BtnCodingLiveAi, new RoutedEventArgs());
-            }
-            else
-            {
-                LiveDetectionButton.IsChecked = !(LiveDetectionButton.IsChecked == true);
-                LiveDetection_Click(LiveDetectionButton, new RoutedEventArgs());
-            }
-            e.Handled = true;
-            return;
-        }
-
-        if (e.Key == Key.M)
-        {
-            // Toggle: Wenn Mark-Tool aktiv â†’ deaktivieren, sonst Popup oeffnen
-            if (_markToolType != OverlayToolType.None)
-                DeactivateMarkTool();
-            else
-                MarkToolPopup.IsOpen = !MarkToolPopup.IsOpen;
-            e.Handled = true;
-        }
+        e.Handled = true;
     }
 
     private void TogglePlayPause()
@@ -461,7 +438,7 @@ public partial class PlayerWindow
         EnsurePlaying();
         _player.SetPause(false);
         UpdateRateLabel();
-        // Overlays aufraumen â€” beim Abspielen sind alte Markierungen irrelevant
+        // Overlays aufraeumen; beim Abspielen sind alte Markierungen irrelevant.
         ClearDetectionOverlays();
     }
 
@@ -596,7 +573,7 @@ public partial class PlayerWindow
         button.IsChecked = Math.Abs(currentRate - targetRate) < 0.01f;
     }
 
-    // ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ Damage marker overlay ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬
+    // Damage marker overlay
 
     private void EnsureVisibleOnScreen()
     {
@@ -609,5 +586,5 @@ public partial class PlayerWindow
         if (Top + Height > area.Bottom) Top = area.Bottom - Height;
     }
 
-    // ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ Quick-Scan ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬
+    // Quick-Scan
 }
