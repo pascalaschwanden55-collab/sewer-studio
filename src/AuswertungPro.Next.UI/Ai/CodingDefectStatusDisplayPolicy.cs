@@ -1,7 +1,18 @@
 using System.Windows.Media;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Ai;
+
+public sealed record CodingInlineDefectDetailState(
+    string CodeText,
+    string DescriptionText,
+    string DistanceText,
+    string ConfidenceText,
+    double? Confidence,
+    DefectStatus Status,
+    string StatusText,
+    bool CanAct);
 
 public static class CodingDefectStatusDisplayPolicy
 {
@@ -37,4 +48,22 @@ public static class CodingDefectStatusDisplayPolicy
             DefectStatus.Rejected => "\u2717",
             _ => ""
         };
+
+    public static CodingInlineDefectDetailState BuildInlineDetail(CodingEvent ev)
+    {
+        var status = CodingSessionViewModel.GetDefectStatus(ev);
+        var confidence = ev.AiContext?.Confidence;
+
+        return new CodingInlineDefectDetailState(
+            CodeText: ev.Entry.Code,
+            DescriptionText: ev.Entry.Beschreibung,
+            DistanceText: $"{ev.MeterAtCapture:F2}m",
+            ConfidenceText: confidence.HasValue
+                ? $"{confidence.Value * 100:F0}%"
+                : "\u2013",
+            Confidence: confidence,
+            Status: status,
+            StatusText: DisplayText(status),
+            CanAct: CodingSessionViewModel.CanActOnDefect(ev));
+    }
 }

@@ -333,6 +333,23 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static PlayerSeekPreviewText BuildSeekPreviewText", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_inline_defect_detail_uses_display_policy_state()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var detailPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingDefectStatusDisplayPolicy.cs");
+
+        var detail = File.ReadAllText(detailPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingDefectStatusDisplayPolicy.BuildInlineDetail", detail);
+        Assert.DoesNotContain("$\"{ev.MeterAtCapture:F2}m\"", detail);
+        Assert.DoesNotContain("$\"{conf * 100:F0}%\"", detail);
+        Assert.Contains("public static CodingInlineDefectDetailState BuildInlineDetail", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

@@ -97,10 +97,12 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var detailBody = ExtractMethodBody(coding, "private void UpdateInlineDefectDetail");
+        var policy = ReadUiFile("Ai", "CodingDefectStatusDisplayPolicy.cs");
 
-        Assert.Contains("CodingSessionViewModel.CanActOnDefect(ev)", detailBody);
-        Assert.Contains("BtnInlineAccept.Visibility = canAct ? Visibility.Visible : Visibility.Collapsed", detailBody);
-        Assert.Contains("BtnInlineReject.Visibility = canAct ? Visibility.Visible : Visibility.Collapsed", detailBody);
+        Assert.Contains("CodingDefectStatusDisplayPolicy.BuildInlineDetail(ev)", detailBody);
+        Assert.Contains("CodingSessionViewModel.CanActOnDefect(ev)", policy);
+        Assert.Contains("BtnInlineAccept.Visibility = state.CanAct ? Visibility.Visible : Visibility.Collapsed", detailBody);
+        Assert.Contains("BtnInlineReject.Visibility = state.CanAct ? Visibility.Visible : Visibility.Collapsed", detailBody);
     }
 
     [Fact]

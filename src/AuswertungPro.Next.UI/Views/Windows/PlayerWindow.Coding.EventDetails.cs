@@ -35,30 +35,27 @@ public partial class PlayerWindow
     /// <summary>Mittlere Spalte: kompakte Defekt-Details inline anzeigen.</summary>
     private void UpdateInlineDefectDetail(CodingEvent ev)
     {
-        TxtInlineDetailCode.Text = ev.Entry.Code;
-        TxtInlineDetailDesc.Text = ev.Entry.Beschreibung;
-        TxtInlineDetailDistance.Text = $"{ev.MeterAtCapture:F2}m";
+        var state = CodingDefectStatusDisplayPolicy.BuildInlineDetail(ev);
+        TxtInlineDetailCode.Text = state.CodeText;
+        TxtInlineDetailDesc.Text = state.DescriptionText;
+        TxtInlineDetailDistance.Text = state.DistanceText;
+        TxtInlineDetailConfidence.Text = state.ConfidenceText;
 
-        if (ev.AiContext != null)
+        if (state.Confidence.HasValue)
         {
-            double conf = ev.AiContext.Confidence;
-            TxtInlineDetailConfidence.Text = $"{conf * 100:F0}%";
             TxtInlineDetailConfidence.Foreground =
-                ViewModels.Windows.CodingSessionViewModel.GetConfidenceBrush(conf);
+                ViewModels.Windows.CodingSessionViewModel.GetConfidenceBrush(state.Confidence.Value);
         }
         else
         {
-            TxtInlineDetailConfidence.Text = "\u2013";
             TxtInlineDetailConfidence.Foreground =
                 new System.Windows.Media.SolidColorBrush(
                     PlayerStatusColors.Muted);
         }
 
-        var status = ViewModels.Windows.CodingSessionViewModel.GetDefectStatus(ev);
-        var canAct = CodingSessionViewModel.CanActOnDefect(ev);
-        BtnInlineAccept.Visibility = canAct ? Visibility.Visible : Visibility.Collapsed;
-        BtnInlineReject.Visibility = canAct ? Visibility.Visible : Visibility.Collapsed;
-        TxtInlineDetailStatus.Text = CodingDefectStatusDisplayPolicy.DisplayText(status);
+        BtnInlineAccept.Visibility = state.CanAct ? Visibility.Visible : Visibility.Collapsed;
+        BtnInlineReject.Visibility = state.CanAct ? Visibility.Visible : Visibility.Collapsed;
+        TxtInlineDetailStatus.Text = state.StatusText;
         UpdateInlineEvidencePreview(ev);
 
         // Mittlere Spalte einblenden

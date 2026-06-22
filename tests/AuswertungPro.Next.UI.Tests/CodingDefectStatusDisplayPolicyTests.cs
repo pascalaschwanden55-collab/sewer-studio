@@ -1,4 +1,6 @@
 using System.Windows.Media;
+using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -33,5 +35,51 @@ public sealed class CodingDefectStatusDisplayPolicyTests
             CodingDefectStatusDisplayPolicy.ZoneDotColor(DefectStatus.Rejected));
         Assert.Equal(Color.FromRgb(0x94, 0xA3, 0xB8),
             CodingDefectStatusDisplayPolicy.ZoneDotColor(DefectStatus.Pending));
+    }
+
+    [Fact]
+    public void BuildInlineDetail_formats_ai_event_and_action_state()
+    {
+        var ev = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BAB", Beschreibung = "Riss" },
+            MeterAtCapture = 1.234,
+            AiContext = new CodingEventAiContext
+            {
+                Confidence = 0.876,
+                Decision = CodingUserDecision.Ignored
+            }
+        };
+
+        var state = CodingDefectStatusDisplayPolicy.BuildInlineDetail(ev);
+
+        Assert.Equal("BAB", state.CodeText);
+        Assert.Equal("Riss", state.DescriptionText);
+        Assert.Equal("1.23m", state.DistanceText);
+        Assert.Equal("88%", state.ConfidenceText);
+        Assert.Equal(0.876, state.Confidence);
+        Assert.Equal(DefectStatus.AutoAccepted, state.Status);
+        Assert.Equal("Auto-Akzeptiert (Green Zone)", state.StatusText);
+        Assert.True(state.CanAct);
+    }
+
+    [Fact]
+    public void BuildInlineDetail_formats_manual_event_without_confidence()
+    {
+        var ev = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BCA", Beschreibung = "Anschluss" },
+            MeterAtCapture = 2
+        };
+
+        var state = CodingDefectStatusDisplayPolicy.BuildInlineDetail(ev);
+
+        Assert.Equal("BCA", state.CodeText);
+        Assert.Equal("Anschluss", state.DescriptionText);
+        Assert.Equal("2.00m", state.DistanceText);
+        Assert.Equal("\u2013", state.ConfidenceText);
+        Assert.Null(state.Confidence);
+        Assert.Equal(DefectStatus.Pending, state.Status);
+        Assert.True(state.CanAct);
     }
 }
