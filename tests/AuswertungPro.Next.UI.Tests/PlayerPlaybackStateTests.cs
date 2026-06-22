@@ -87,6 +87,39 @@ public sealed class PlayerPlaybackStateTests
         Assert.Equal(0, ratio);
     }
 
+    [Fact]
+    public void ResolveSliderSeekTarget_rejects_invalid_slider_maximum()
+    {
+        var target = PlayerPlaybackState.ResolveSliderSeekTarget(50, 0, 100000);
+
+        Assert.False(target.IsValid);
+        Assert.Equal(0, target.Ratio);
+        Assert.Null(target.TimeMs);
+        Assert.Null(target.Position);
+    }
+
+    [Fact]
+    public void ResolveSliderSeekTarget_returns_time_when_duration_is_known()
+    {
+        var target = PlayerPlaybackState.ResolveSliderSeekTarget(25, 100, 120000);
+
+        Assert.True(target.IsValid);
+        Assert.Equal(0.25, target.Ratio, precision: 6);
+        Assert.Equal(30000, target.TimeMs);
+        Assert.Null(target.Position);
+    }
+
+    [Fact]
+    public void ResolveSliderSeekTarget_returns_position_when_duration_is_unknown()
+    {
+        var target = PlayerPlaybackState.ResolveSliderSeekTarget(150, 100, 0);
+
+        Assert.True(target.IsValid);
+        Assert.Equal(1, target.Ratio, precision: 6);
+        Assert.Null(target.TimeMs);
+        Assert.Equal(1.0f, target.Position);
+    }
+
     [Theory]
     [InlineData(0.0f, "1x")]
     [InlineData(-1.0f, "1x")]

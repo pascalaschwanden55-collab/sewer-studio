@@ -415,25 +415,36 @@ public partial class PlayerWindow
 
     private void SeekToSlider()
     {
-        if (!PlayerPlaybackState.TryResolveSliderRatio(PositionSlider.Value, PositionSlider.Maximum, out var targetPos))
+        var target = PlayerPlaybackState.ResolveSliderSeekTarget(
+            PositionSlider.Value,
+            PositionSlider.Maximum,
+            _player.Length);
+        if (!target.IsValid)
             return;
 
-        var length = _player.Length;
-        if (length > 0)
-            _player.Time = (long)(targetPos * length);
-        else
-            _player.Position = (float)targetPos;
-
+        ApplySliderSeekTarget(target);
         UpdateUi();
+    }
+
+    private void ApplySliderSeekTarget(PlayerSliderSeekTarget target)
+    {
+        if (target.TimeMs.HasValue)
+            _player.Time = target.TimeMs.Value;
+        else if (target.Position.HasValue)
+            _player.Position = target.Position.Value;
     }
 
     private void UpdateSeekPreview()
     {
-        if (!PlayerPlaybackState.TryResolveSliderRatio(PositionSlider.Value, PositionSlider.Maximum, out var targetPos))
+        var target = PlayerPlaybackState.ResolveSliderSeekTarget(
+            PositionSlider.Value,
+            PositionSlider.Maximum,
+            _player.Length);
+        if (!target.IsValid)
             return;
 
         var length = _player.Length;
-        var preview = PlayerPlaybackState.BuildSeekPreviewText(targetPos, length);
+        var preview = PlayerPlaybackState.BuildSeekPreviewText(target.Ratio, length);
         CurrentTimeText.Text = preview.CurrentTimeText;
         DurationText.Text = preview.DurationText;
 
@@ -444,17 +455,17 @@ public partial class PlayerWindow
 
     private void ScrubSeekToSlider()
     {
-        if (!PlayerPlaybackState.TryResolveSliderRatio(PositionSlider.Value, PositionSlider.Maximum, out var targetPos))
+        var target = PlayerPlaybackState.ResolveSliderSeekTarget(
+            PositionSlider.Value,
+            PositionSlider.Maximum,
+            _player.Length);
+        if (!target.IsValid)
             return;
 
-        var length = _player.Length;
-        if (length > 0)
-            _player.Time = (long)(targetPos * length);
-        else
-            _player.Position = (float)targetPos;
+        ApplySliderSeekTarget(target);
 
         CurrentTimeText.Text = PlayerPlaybackState
-            .BuildSeekPreviewText(targetPos, length)
+            .BuildSeekPreviewText(target.Ratio, _player.Length)
             .CurrentTimeText;
     }
 

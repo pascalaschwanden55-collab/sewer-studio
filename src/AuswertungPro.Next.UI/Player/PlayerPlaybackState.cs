@@ -4,6 +4,12 @@ public sealed record PlayerSeekPreviewText(
     string CurrentTimeText,
     string DurationText);
 
+public readonly record struct PlayerSliderSeekTarget(
+    bool IsValid,
+    double Ratio,
+    long? TimeMs,
+    float? Position);
+
 public static class PlayerPlaybackState
 {
     public const float MinRate = 0.25f;
@@ -51,6 +57,19 @@ public static class PlayerPlaybackState
 
         ratio = Math.Clamp(sliderValue / sliderMaximum, 0.0, 1.0);
         return true;
+    }
+
+    public static PlayerSliderSeekTarget ResolveSliderSeekTarget(
+        double sliderValue,
+        double sliderMaximum,
+        long durationMs)
+    {
+        if (!TryResolveSliderRatio(sliderValue, sliderMaximum, out var ratio))
+            return new PlayerSliderSeekTarget(false, 0, null, null);
+
+        return durationMs > 0
+            ? new PlayerSliderSeekTarget(true, ratio, (long)(ratio * durationMs), null)
+            : new PlayerSliderSeekTarget(true, ratio, null, (float)ratio);
     }
 
     public static string FormatRateLabel(float rate)
