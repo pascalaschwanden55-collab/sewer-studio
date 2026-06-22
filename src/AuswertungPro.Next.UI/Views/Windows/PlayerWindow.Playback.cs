@@ -189,30 +189,11 @@ public partial class PlayerWindow
 
     private static LibVLC CreateLibVlc(PlayerWindowOptions options)
     {
-        var args = new List<string>();
-
-        if (!string.Equals(options.VideoOutput, "any", StringComparison.OrdinalIgnoreCase))
-            args.Add($"--vout={options.VideoOutput}");
-
-        args.Add(options.EnableHardwareDecoding ? "--avcodec-hw=dxva2" : "--avcodec-hw=none");
-        args.Add($"--avcodec-threads={options.CodecThreads}");
-        args.Add($"--file-caching={options.FileCachingMs}");
-        args.Add($"--network-caching={options.NetworkCachingMs}");
-
-        if (options.DropLateFrames)
-            args.Add("--drop-late-frames");
-        if (options.SkipFrames)
-            args.Add("--skip-frames");
-
-        args.Add("--clock-jitter=0");
-        args.Add("--clock-synchro=0");
-
-        // Snapshot-Pfad nicht als OSD anzeigen (stoert bei KI-Frame-Captures)
-        args.Add("--no-snapshot-preview");
+        var args = PlayerLibVlcArguments.Build(options);
 
         try
         {
-            return new LibVLC(args.ToArray());
+            return new LibVLC(args);
         }
         catch
         {
