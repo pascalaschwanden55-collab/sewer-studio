@@ -31,6 +31,17 @@ public sealed class CodingManualEventFactoryTests
     }
 
     [Fact]
+    public void CreateUnconfirmedContext_builds_manual_confirmation_context()
+    {
+        var aiContext = CodingManualEventFactory.CreateUnconfirmedContext("BCA");
+
+        Assert.Equal("BCA", aiContext.SuggestedCode);
+        Assert.Equal(1.0, aiContext.Confidence);
+        Assert.Equal("Manuell codiert - bitte bestätigen", aiContext.Reason);
+        Assert.Equal(CodingUserDecision.Ignored, aiContext.Decision);
+    }
+
+    [Fact]
     public void CreateUnconfirmed_applies_overlay_quantification()
     {
         var overlay = new OverlayGeometry

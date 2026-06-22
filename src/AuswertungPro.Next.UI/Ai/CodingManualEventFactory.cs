@@ -27,14 +27,15 @@ public static class CodingManualEventFactory
 
         CodingOverlayQuantificationWriter.ApplyToEntry(entry, overlay);
 
-        var aiContext = new CodingEventAiContext
+        return new CodingManualEventDraft(entry, CreateUnconfirmedContext(code));
+    }
+
+    public static CodingEventAiContext CreateUnconfirmedContext(string code)
+        => new()
         {
             SuggestedCode = code,
             Confidence = 1.0,
             Reason = "Manuell codiert - bitte bestätigen",
             Decision = CodingUserDecision.Ignored
         };
-
-        return new CodingManualEventDraft(entry, aiContext);
-    }
 }

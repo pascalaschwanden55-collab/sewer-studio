@@ -454,6 +454,22 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static double ResolveManualEntry", resolver);
     }
 
+    [Fact]
+    public void PlayerWindow_manual_coding_ai_context_lives_in_factory()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "CodingManualEventFactory.cs");
+
+        var events = File.ReadAllText(eventsPath);
+        var factory = File.ReadAllText(factoryPath);
+
+        Assert.Contains("CodingManualEventFactory.CreateUnconfirmedContext", events);
+        Assert.DoesNotContain("new CodingEventAiContext", events);
+        Assert.Contains("public static CodingEventAiContext CreateUnconfirmedContext", factory);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

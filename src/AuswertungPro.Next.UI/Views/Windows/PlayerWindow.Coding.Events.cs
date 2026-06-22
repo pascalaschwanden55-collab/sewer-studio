@@ -105,13 +105,7 @@ public partial class PlayerWindow
 
                 // Manuell codiert: Noch nicht bestaetigt — User muss "Akzeptieren" klicken.
                 // Erst wenn alles gruen ist, stimmen die Daten fuer das KI-Training.
-                createdEvent.AiContext = new CodingEventAiContext
-                {
-                    SuggestedCode = entry.Code,
-                    Confidence = 1.0,
-                    Reason = "Manuell codiert - bitte best�tigen",
-                    Decision = CodingUserDecision.Ignored
-                };
+                createdEvent.AiContext = CodingManualEventFactory.CreateUnconfirmedContext(entry.Code);
 
                 RefreshCodingEventsList();
                 LstCodingEvents.SelectedItem = createdEvent;
