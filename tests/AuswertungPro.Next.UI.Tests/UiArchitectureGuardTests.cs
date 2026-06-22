@@ -632,6 +632,26 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("new StreckenschadenTracker.Observation", builder);
     }
 
+    [Fact]
+    public void PlayerWindow_manual_calibration_math_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingManualCalibrationPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Manuelle Kalibrierungsberechnung muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingManualCalibrationPolicy.Build", overlayInput);
+        Assert.DoesNotContain("double pixelDiameter = Math.Sqrt", overlayInput);
+        Assert.DoesNotContain("new PipeCalibration", overlayInput);
+        Assert.Contains("public static CodingManualCalibrationResult Build", policy);
+        Assert.Contains("CalibrationSource.Manual", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);
