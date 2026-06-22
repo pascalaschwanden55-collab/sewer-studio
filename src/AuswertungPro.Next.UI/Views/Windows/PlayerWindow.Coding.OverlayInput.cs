@@ -9,8 +9,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Evaluation;
@@ -379,18 +377,7 @@ public partial class PlayerWindow
             var p1 = CodingNormToPixel(_codingCalibStart);
             var p2 = CodingNormToPixel(norm);
             var preview = CodingCalibrationPreviewPolicy.Build(p1, p2);
-            _codingPreviewLine = new System.Windows.Shapes.Line
-            {
-                X1 = preview.Start.X,
-                Y1 = preview.Start.Y,
-                X2 = preview.End.X,
-                Y2 = preview.End.Y,
-                Stroke = Brushes.Magenta,
-                StrokeThickness = 2.5,
-                StrokeDashArray = new DoubleCollection { 6, 3 },
-                Tag = OverlayTags.Preview
-            };
-            CodingOverlayCanvas.Children.Add(_codingPreviewLine);
+            _codingPreviewLine = CodingCalibrationPreviewLineRenderer.Render(CodingOverlayCanvas, preview);
             TxtCodingCalibHint.Text = preview.HintText;
             return;
         }

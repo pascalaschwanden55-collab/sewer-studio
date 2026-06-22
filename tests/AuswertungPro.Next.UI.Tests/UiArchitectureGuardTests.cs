@@ -1236,6 +1236,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_calibration_preview_line_rendering_lives_in_renderer()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
+        var rendererPath = Path.Combine(uiRoot, "Player", "CodingCalibrationPreviewLineRenderer.cs");
+
+        Assert.True(File.Exists(rendererPath), "Kalibrierungs-Vorschaulinie muss ausserhalb der PlayerWindow-Partials gerendert werden.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var renderer = File.ReadAllText(rendererPath);
+
+        Assert.Contains("CodingCalibrationPreviewLineRenderer.Render", overlayInput);
+        Assert.DoesNotContain("new System.Windows.Shapes.Line", overlayInput);
+        Assert.DoesNotContain("StrokeDashArray = new DoubleCollection", overlayInput);
+        Assert.DoesNotContain("Brushes.Magenta", overlayInput);
+        Assert.Contains("public static Line Render", renderer);
+        Assert.Contains("OverlayTags.Preview", renderer);
+    }
+
+    [Fact]
     public void PlayerWindow_transient_overlay_cleanup_uses_tag_policy()
     {
         var root = FindRepositoryRoot();
