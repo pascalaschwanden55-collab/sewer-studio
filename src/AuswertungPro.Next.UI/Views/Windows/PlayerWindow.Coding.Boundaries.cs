@@ -119,9 +119,7 @@ public partial class PlayerWindow
     {
         if (_codingVm == null) return true;
 
-        var offene = _codingVm.Events
-            .Where(e => e.Entry.IsStreckenschaden && !e.Entry.MeterEnd.HasValue)
-            .ToList();
+        var offene = CodingOpenStretchDamagePolicy.FindOpen(_codingVm.Events);
 
         if (offene.Count == 0) return true;
 
@@ -145,10 +143,7 @@ public partial class PlayerWindow
             // MeterEnd = letzte Sichtung (MeterAtCapture) oder aktueller Meter
             foreach (var ev in offene)
             {
-                var start = ev.Entry.MeterStart ?? 0;
-                ev.Entry.MeterEnd = ev.MeterAtCapture > start
-                    ? ev.MeterAtCapture
-                    : currentMeter;
+                ev.Entry.MeterEnd = CodingOpenStretchDamagePolicy.ResolveCloseMeter(ev, currentMeter);
                 _codingSessionService?.UpdateEvent(ev.EventId, ev.Entry, ev.Overlay);
             }
             RefreshCodingEventsList();

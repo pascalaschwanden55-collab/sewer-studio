@@ -253,16 +253,24 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var boundariesPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamagePromptBuilder.cs");
+        var closePolicyPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamagePolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Dialogtext fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(closePolicyPath), "Filter- und Schliessmeterlogik fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var boundaries = File.ReadAllText(boundariesPath);
         var policy = File.ReadAllText(policyPath);
+        var closePolicy = File.ReadAllText(closePolicyPath);
 
         Assert.Contains("CodingOpenStretchDamagePromptBuilder.Build", boundaries);
+        Assert.Contains("CodingOpenStretchDamagePolicy.FindOpen", boundaries);
+        Assert.Contains("CodingOpenStretchDamagePolicy.ResolveCloseMeter", boundaries);
         Assert.DoesNotContain("new System.Text.StringBuilder", boundaries);
         Assert.DoesNotContain("Folgende Streckensch", boundaries);
+        Assert.DoesNotContain(".Where(e => e.Entry.IsStreckenschaden", boundaries);
+        Assert.DoesNotContain("ev.MeterAtCapture > start", boundaries);
         Assert.Contains("public static string Build", policy);
+        Assert.Contains("public static IReadOnlyList<CodingEvent> FindOpen", closePolicy);
     }
 
     [Fact]
