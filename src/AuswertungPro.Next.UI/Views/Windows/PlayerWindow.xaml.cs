@@ -18,6 +18,7 @@ using Rectangle = System.Windows.Shapes.Rectangle;
 using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 using LibVLCSharp.Shared;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Application.Ai.Teacher;
@@ -78,17 +79,6 @@ public sealed record PlayerWindowOptions(
             VideoOutput: output);
     }
 }
-
-public sealed record DamageMarkerInfo(
-    string Code,
-    string? Description,
-    double MeterStart,
-    double? MeterEnd,
-    bool IsStreckenschaden);
-
-public sealed record PlayerDamageOverlayData(
-    double PipeLengthMeters,
-    IReadOnlyList<DamageMarkerInfo> Markers);
 
 public partial class PlayerWindow : Window
 {

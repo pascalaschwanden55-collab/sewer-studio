@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Player; // temporaer: Records nach UI.Player verschoben; diese Datei wird in Task 2 geloescht
 using Rectangle = System.Windows.Shapes.Rectangle;
 
 namespace AuswertungPro.Next.UI.Views.Windows;

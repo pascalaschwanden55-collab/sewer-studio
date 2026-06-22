@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.UI.Views.Windows;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
