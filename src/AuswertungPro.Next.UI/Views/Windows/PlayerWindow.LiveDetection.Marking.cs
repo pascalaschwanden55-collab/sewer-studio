@@ -302,11 +302,7 @@ public partial class PlayerWindow
             CodingEvent? manualEvent = null;
             if (_codingSessionService != null && _codingVm != null)
             {
-                var manualMeter = 0.0;
-                if (double.TryParse(TxtCodingMeter?.Text?.Replace("m", "").Trim(),
-                        System.Globalization.NumberStyles.Any,
-                        System.Globalization.CultureInfo.InvariantCulture, out var pm0))
-                    manualMeter = pm0;
+                var manualMeter = CodingCurrentMeterResolver.ParseDisplayedMeterOrZero(TxtCodingMeter?.Text);
                 var manualEntry = CodingExplorerEntryFactory.CreateManualFromSelected(
                     selectedEntry,
                     manualMeter,
@@ -343,10 +339,7 @@ public partial class PlayerWindow
                 () => System.IO.File.Delete(tempFrame), "Mark-Training: Temp-Frame loeschen");
 
             // 5. TeacherAnnotation erstellen + persistieren
-            var captureMeter = 0.0;
-            if (double.TryParse(TxtCodingMeter?.Text?.Replace("m", "").Trim(), System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out var parsedMeter))
-                captureMeter = parsedMeter;
+            var captureMeter = CodingCurrentMeterResolver.ParseDisplayedMeterOrZero(TxtCodingMeter?.Text);
 
             var annotation = LiveDetectionTeacherAnnotationFactory.CreateManualMark(
                 annotationId,

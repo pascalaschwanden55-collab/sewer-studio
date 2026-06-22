@@ -485,14 +485,19 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var markingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
         var resolverPath = Path.Combine(uiRoot, "Ai", "CodingCurrentMeterResolver.cs");
 
         var events = File.ReadAllText(eventsPath);
+        var marking = File.ReadAllText(markingPath);
         var resolver = File.ReadAllText(resolverPath);
 
         Assert.Contains("CodingCurrentMeterResolver.ResolveManualEntry", events);
+        Assert.Contains("CodingCurrentMeterResolver.ParseDisplayedMeterOrZero", marking);
         Assert.DoesNotContain("Math.Round(Math.Max(0, osdMeter", events);
+        Assert.DoesNotContain("TxtCodingMeter?.Text?.Replace(\"m\"", marking);
         Assert.Contains("public static double ResolveManualEntry", resolver);
+        Assert.Contains("public static double ParseDisplayedMeterOrZero", resolver);
     }
 
     [Fact]

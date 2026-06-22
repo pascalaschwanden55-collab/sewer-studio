@@ -103,4 +103,29 @@ public sealed class CodingCurrentMeterResolverTests
 
         Assert.Equal(0, meter);
     }
+
+    [Theory]
+    [InlineData("12.34m", 12.34)]
+    [InlineData(" 12.34 m ", 12.34)]
+    [InlineData("12.34", 12.34)]
+    public void ParseDisplayedMeterOrZero_reads_invariant_meter_text(
+        string text,
+        double expected)
+    {
+        var meter = CodingCurrentMeterResolver.ParseDisplayedMeterOrZero(text);
+
+        Assert.Equal(expected, meter);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("abc")]
+    public void ParseDisplayedMeterOrZero_returns_zero_when_text_is_missing_or_invalid(
+        string? text)
+    {
+        var meter = CodingCurrentMeterResolver.ParseDisplayedMeterOrZero(text);
+
+        Assert.Equal(0, meter);
+    }
 }
