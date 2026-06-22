@@ -688,6 +688,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_segmented_finding_projection_lives_in_mapper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs");
+        var mapperPath = Path.Combine(uiRoot, "Ai", "CodingSegmentedFindingFrameMapper.cs");
+
+        Assert.True(File.Exists(mapperPath), "SegmentedFinding-zu-LiveFrameFinding-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var events = File.ReadAllText(eventsPath);
+        var mapper = File.ReadAllText(mapperPath);
+
+        Assert.Contains("CodingSegmentedFindingFrameMapper.Build", events);
+        Assert.DoesNotContain("new LiveFrameFinding(", events);
+        Assert.DoesNotContain("QuantificationSeverityPolicy.Estimate(", events);
+        Assert.DoesNotContain("dino.X1 / imageWidth", events);
+        Assert.Contains("public static LiveFrameFinding Build", mapper);
+        Assert.Contains("VsaCodeResolver.NormalizeClock", mapper);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_calibration_math_lives_in_policy()
     {
         var root = FindRepositoryRoot();

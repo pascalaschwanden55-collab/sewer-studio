@@ -47,25 +47,7 @@ public partial class PlayerWindow
 
             // Gemeinsamer Resolver: DINO-Label â†’ LiveFrameFinding â†’ ResolveFindingCodeForCoding
             // So laeuft der Multi-Model-Pfad durch exakt denselben Code wie Qwen.
-            var pseudoFinding = new LiveFrameFinding(
-                Label: quant.Label,
-                Severity: QuantificationSeverityPolicy.Estimate(
-                    quant.CrossSectionReductionPercent,
-                    quant.IntrusionPercent,
-                    quant.HeightMm,
-                    quant.ExtentPercent),
-                PositionClock: NormalizeClockPosition(quant.ClockPosition),
-                ExtentPercent: quant.ExtentPercent,
-                VsaCodeHint: null,  // DINO liefert englische Labels, kein VSA-Code
-                HeightMm: quant.HeightMm,
-                WidthMm: quant.WidthMm,
-                IntrusionPercent: quant.IntrusionPercent,
-                CrossSectionReductionPercent: quant.CrossSectionReductionPercent,
-                DiameterReductionMm: null,
-                BboxX1: dino != null ? dino.X1 / imageWidth : null,
-                BboxY1: dino != null ? dino.Y1 / imageHeight : null,
-                BboxX2: dino != null ? dino.X2 / imageWidth : null,
-                BboxY2: dino != null ? dino.Y2 / imageHeight : null);
+            var pseudoFinding = CodingSegmentedFindingFrameMapper.Build(seg, imageWidth, imageHeight);
 
             // Gemeinsamer Resolver (identisch mit Qwen-Pfad)
             var code = ResolveFindingCodeForCoding(pseudoFinding, meter);
@@ -275,9 +257,6 @@ public partial class PlayerWindow
     /// </summary>
     /// <summary>Delegiert an VsaCodeResolver.LookupLabel.</summary>
     private static string? LookupVsaLabel(string code) => VsaCodeResolver.LookupLabel(code);
-
-    /// <summary>Delegiert an VsaCodeResolver.NormalizeClock.</summary>
-    private static string? NormalizeClockPosition(string? raw) => VsaCodeResolver.NormalizeClock(raw);
 
     /// <summary>
     /// Einzige Quelle fuer VSA-Code-Aufloesung eines KI-Findings.
