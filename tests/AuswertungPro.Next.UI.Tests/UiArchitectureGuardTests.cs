@@ -281,6 +281,23 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static IReadOnlyList<CodingEvent> BuildExistingEvents", mapper);
     }
 
+    [Fact]
+    public void PlayerWindow_import_protocol_events_use_mapper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var mapperPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEventMapper.cs");
+
+        var coding = File.ReadAllText(codingPath);
+        var mapper = File.ReadAllText(mapperPath);
+
+        Assert.Contains("CodingProtocolEventMapper.BuildMissingImportEvents", coding);
+        Assert.DoesNotContain("new CodingEvent", coding);
+        Assert.DoesNotContain("!e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code)", coding);
+        Assert.Contains("public static IReadOnlyList<CodingEvent> BuildMissingImportEvents", mapper);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

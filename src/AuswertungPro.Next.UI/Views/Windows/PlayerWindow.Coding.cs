@@ -305,23 +305,10 @@ public partial class PlayerWindow
     {
         if (_haltungRecord?.Protocol?.Current?.Entries == null) return;
 
-        var entries = _haltungRecord.Protocol.Current.Entries
-            .Where(e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code))
-            .ToList();
-
-        foreach (var entry in entries)
-        {
-            // Duplikat-Check (CodingSessionService hat evtl. schon geladen)
-            if (_codingImportEvents.Any(ev => ev.Entry.EntryId == entry.EntryId))
-                continue;
-
-            _codingImportEvents.Add(new CodingEvent
-            {
-                Entry = entry,
-                MeterAtCapture = entry.MeterStart ?? entry.MeterEnd ?? 0,
-                VideoTimestamp = entry.Zeit ?? TimeSpan.Zero
-            });
-        }
+        foreach (var codingEvent in CodingProtocolEventMapper.BuildMissingImportEvents(
+                     _haltungRecord.Protocol,
+                     _codingImportEvents))
+            _codingImportEvents.Add(codingEvent);
 
         RunImportDefectCount.Text = _codingImportEvents.Count.ToString();
     }
