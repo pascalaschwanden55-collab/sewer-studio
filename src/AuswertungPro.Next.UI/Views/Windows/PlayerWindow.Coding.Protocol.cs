@@ -89,18 +89,7 @@ public partial class PlayerWindow
     {
         if (_haltungRecord == null) return;
 
-        var entries = doc.Current?.Entries?
-            .Where(e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code))
-            .ToList();
-        if (entries == null || entries.Count == 0)
-        {
-            _haltungRecord.SetFieldValue("Primaere_Schaeden", "", FieldSource.Manual, userEdited: true);
-            _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
-            return;
-        }
-
-        var primaryText = string.Join("\n",
-            DataPageProtocolObservationMapper.BuildPrimaryDamageLines(entries));
+        var primaryText = CodingPrimaryDamageTextBuilder.Build(doc);
         _haltungRecord.SetFieldValue("Primaere_Schaeden", primaryText, FieldSource.Manual, userEdited: true);
         _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
     }

@@ -234,10 +234,13 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageTextBuilder.cs");
 
         var protocol = File.ReadAllText(protocolPath);
+        var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("DataPageProtocolObservationMapper.BuildPrimaryDamageLines", protocol);
+        Assert.Contains("CodingPrimaryDamageTextBuilder.Build", protocol);
+        Assert.Contains("DataPageProtocolObservationMapper.BuildPrimaryDamageLines", policy);
         Assert.DoesNotContain("new HashSet<string>", protocol);
         Assert.DoesNotContain("Q1={q1}", protocol);
         Assert.DoesNotContain("Q2={q2}", protocol);
@@ -468,6 +471,24 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingManualEventFactory.CreateUnconfirmedContext", events);
         Assert.DoesNotContain("new CodingEventAiContext", events);
         Assert.Contains("public static CodingEventAiContext CreateUnconfirmedContext", factory);
+    }
+
+    [Fact]
+    public void PlayerWindow_primary_damage_text_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageTextBuilder.cs");
+
+        Assert.True(File.Exists(policyPath), "Primaere-Schaeden-Textbildung muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var protocol = File.ReadAllText(protocolPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingPrimaryDamageTextBuilder.Build", protocol);
+        Assert.DoesNotContain("DataPageProtocolObservationMapper.BuildPrimaryDamageLines", protocol);
+        Assert.Contains("public static string Build", policy);
     }
 
     private static bool IsBuildOutput(string path)
