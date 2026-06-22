@@ -16,23 +16,6 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    // Geometrie der Slider-Spur fuer Marker- und QuickScan-Positionierung.
-    // Geteilt (DamageMarkerController via Delegate + QuickScan direkt), daher im Window.
-    private (double offsetX, double trackWidth) GetSliderTrackBounds()
-    {
-        if (PositionSlider.Template?.FindName("PART_Track", PositionSlider) is Track track
-            && track.IsVisible
-            && track.ActualWidth > 0)
-        {
-            var thumbHalf = (track.Thumb?.ActualWidth ?? 18) / 2.0;
-            var ptStart = track.TranslatePoint(new Point(thumbHalf, 0), DamageMarkerCanvas);
-            var ptEnd = track.TranslatePoint(new Point(track.ActualWidth - thumbHalf, 0), DamageMarkerCanvas);
-            return (ptStart.X, ptEnd.X - ptStart.X);
-        }
-
-        return (9, Math.Max(DamageMarkerCanvas.ActualWidth - 18, 1));
-    }
-
     public static bool TryShowOverlayOnLast(string text, TimeSpan duration)
     {
         if (_lastOpened is null)

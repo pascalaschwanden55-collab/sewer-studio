@@ -167,6 +167,27 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("Color.FromRgb(0x3B, 0x82, 0xF6)", playerWindowText);
     }
 
+    [Fact]
+    public void PlayerWindow_slider_track_bounds_live_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var policyPath = Path.Combine(uiRoot, "Player", "PlayerSliderTrackBounds.cs");
+
+        Assert.True(File.Exists(policyPath), "Slider-Spur-Geometrie muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var playerWindowText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.DoesNotContain("GetSliderTrackBounds", playerWindowText);
+        Assert.Contains("PlayerSliderTrackBounds.Resolve", playerWindowText);
+        Assert.Contains("ResolveFallback", policy);
+        Assert.Contains("PART_Track", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

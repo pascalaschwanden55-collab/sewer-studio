@@ -157,7 +157,7 @@ public partial class PlayerWindow : Window
             _player,
             EnsurePlaying,
             UpdateUi,
-            GetSliderTrackBounds);
+            () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas));
 
         _quickScanController = new QuickScanController(
             HeatmapCanvas,
@@ -167,7 +167,7 @@ public partial class PlayerWindow : Window
             _videoPath,
             EnsurePlaying,
             UpdateUi,
-            GetSliderTrackBounds);
+            () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas));
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _timer.Tick += (_, __) => { if (_closing || _player is null) return; UpdateUi(); };

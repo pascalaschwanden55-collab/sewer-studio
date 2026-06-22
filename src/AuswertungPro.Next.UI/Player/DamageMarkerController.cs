@@ -18,7 +18,6 @@ public sealed class DamageMarkerController
     private readonly MediaPlayer _player;
     private readonly Action _ensurePlaying;
     private readonly Action _updateUi;
-    // GetSliderTrackBounds bleibt im Window: der Helfer wird auch von QuickScan genutzt (geteilt).
     private readonly Func<(double offsetX, double trackWidth)> _getSliderTrackBounds;
     private readonly List<(DamageMarkerInfo Info, FrameworkElement Container, FrameworkElement TickOrRange, TextBlock Label)> _damageMarkers = new();
 
