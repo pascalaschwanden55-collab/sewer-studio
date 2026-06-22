@@ -791,6 +791,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_segmented_finding_calibration_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingPipeProximityCalibrationPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Kalibrierableitung fuer SegmentedFinding-Proximity muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var ai = File.ReadAllText(aiPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingPipeProximityCalibrationPolicy.Resolve", ai);
+        Assert.DoesNotContain("cal?.PipeCenter.X", ai);
+        Assert.DoesNotContain("cal.NormalizedDiameter / 2.0", ai);
+        Assert.Contains("public static CodingPipeProximityCalibration Resolve", policy);
+        Assert.Contains("NormalizedDiameter / 2.0", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_calibration_math_lives_in_policy()
     {
         var root = FindRepositoryRoot();

@@ -375,16 +375,16 @@ public partial class PlayerWindow
         if (mmResult.SamResponse == null)
             return System.Array.Empty<SegmentedFinding>();
 
-        var cal = _codingOverlayService?.Calibration;
-        double vanishX = cal?.PipeCenter.X ?? 0.5;
-        double vanishY = cal?.PipeCenter.Y ?? 0.5;
-        double pipeRadius = (cal != null && cal.NormalizedDiameter > 0) ? cal.NormalizedDiameter / 2.0 : 0.5;
+        var proximityCalibration = CodingPipeProximityCalibrationPolicy.Resolve(
+            _codingOverlayService?.Calibration);
 
         return SegmentedFindingBuilder.Build(
             mmResult.SamResponse,
             mmResult.DinoDetections,
             mmResult.QuantifiedMasks,
-            vanishX, vanishY, pipeRadius,
+            proximityCalibration.VanishX,
+            proximityCalibration.VanishY,
+            proximityCalibration.PipeRadiusNorm,
             AuswertungPro.Next.Application.Ai.MetrierungProximityThresholds.Default);
     }
 
