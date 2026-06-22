@@ -712,6 +712,24 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static double Meter", accessors);
     }
 
+    [Fact]
+    public void PlayerWindow_coding_tool_selection_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingToolSelectionPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Tool-Toggle-Entscheidung muss ausserhalb von PlayerWindow liegen.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingToolSelectionPolicy.Build", overlayInput);
+        Assert.DoesNotContain("bool activate = !string.Equals(_activeCodingToolName, btnName)", overlayInput);
+        Assert.Contains("public static CodingToolSelectionState Build", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

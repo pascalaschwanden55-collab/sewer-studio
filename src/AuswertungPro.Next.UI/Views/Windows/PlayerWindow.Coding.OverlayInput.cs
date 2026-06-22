@@ -68,19 +68,25 @@ public partial class PlayerWindow
 
         // Toggle: gleiches Tool nochmal → deaktivieren
         string btnName = (activeBtn as FrameworkElement)?.Name ?? "";
-        bool activate = !string.Equals(_activeCodingToolName, btnName);
-        _activeCodingToolName = activate ? btnName : null;
+        string label = (activeBtn as ContentControl)?.Content?.ToString() ?? tool.ToString();
+        var selection = CodingToolSelectionPolicy.Build(
+            _activeCodingToolName,
+            btnName,
+            label,
+            tool,
+            schemaType,
+            levelMode);
 
-        if (activate && levelMode.HasValue)
-            _codingOverlayService.ActiveLevelMode = levelMode.Value;
+        _activeCodingToolName = selection.ActiveToolName;
+        if (selection.LevelModeToApply.HasValue)
+            _codingOverlayService.ActiveLevelMode = selection.LevelModeToApply.Value;
 
-        _codingOverlayService.ActiveTool = activate ? tool : OverlayToolType.None;
-        _codingSchemaType = activate ? schemaType : null;
+        _codingOverlayService.ActiveTool = selection.ActiveTool;
+        _codingSchemaType = selection.ActiveSchemaType;
         _codingSchemaManager.Cancel();
 
         // Aktives Tool-Label anzeigen
-        string label = (activeBtn as ContentControl)?.Content?.ToString() ?? tool.ToString();
-        TxtActiveToolLabel.Text = activate ? label : "";
+        TxtActiveToolLabel.Text = selection.LabelText;
 
         // Offene Zeichnung verwerfen, damit das naechste Tool sauber startet.
         _codingVm.CurrentOverlay = null;
