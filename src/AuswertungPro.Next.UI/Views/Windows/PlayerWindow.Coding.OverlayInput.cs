@@ -196,18 +196,19 @@ public partial class PlayerWindow
     {
         if (_codingOverlayService == null || _codingVm == null) return;
         ToolsDropdownPopup.IsOpen = false;
-        _codingIsCalibrating = !_codingIsCalibrating;
+        var state = CodingCalibrationTogglePolicy.Build(_codingIsCalibrating);
+        _codingIsCalibrating = state.IsCalibrating;
         _codingCalibStart = null;
-        _codingOverlayService.ActiveTool = OverlayToolType.None;
-        _activeCodingToolName = _codingIsCalibrating ? "BtnCodingCalibrate" : null;
-        TxtActiveToolLabel.Text = _codingIsCalibrating ? "Kalibrieren" : "";
+        _codingOverlayService.ActiveTool = state.ActiveTool;
+        _activeCodingToolName = state.ActiveToolName;
+        TxtActiveToolLabel.Text = state.ToolLabel;
 
         _codingVm.CurrentOverlay = null;
         BtnCodingCreateEvent.IsEnabled = false;
         UpdateCodingOverlayInfo(null);
 
-        CodingCalibrationHint.Visibility = _codingIsCalibrating ? Visibility.Visible : Visibility.Collapsed;
-        TxtCodingCalibHint.Text = "Linie �ber den sichtbaren Rohrdurchmesser zeichnen";
+        CodingCalibrationHint.Visibility = state.ShowHint ? Visibility.Visible : Visibility.Collapsed;
+        TxtCodingCalibHint.Text = state.HintText;
         UpdateCodingOverlayCursor();
         RedrawCodingCanvas(includeManualOverlay: false);
     }
@@ -528,7 +529,7 @@ public partial class PlayerWindow
 
         _codingIsCalibrating = false;
         _codingCalibStart = null;
-        if (string.Equals(_activeCodingToolName, "BtnCodingCalibrate"))
+        if (string.Equals(_activeCodingToolName, CodingCalibrationTogglePolicy.CalibrateButtonName))
             _activeCodingToolName = null;
         CodingCalibrationHint.Visibility = Visibility.Collapsed;
         UpdateCodingOverlayCursor();
