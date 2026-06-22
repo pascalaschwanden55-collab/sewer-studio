@@ -243,6 +243,25 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("Q2={q2}", protocol);
     }
 
+    [Fact]
+    public void PlayerWindow_open_stretch_damage_prompt_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var boundariesPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamagePromptBuilder.cs");
+
+        Assert.True(File.Exists(policyPath), "Dialogtext fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var boundaries = File.ReadAllText(boundariesPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingOpenStretchDamagePromptBuilder.Build", boundaries);
+        Assert.DoesNotContain("new System.Text.StringBuilder", boundaries);
+        Assert.DoesNotContain("Folgende Streckensch", boundaries);
+        Assert.Contains("public static string Build", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

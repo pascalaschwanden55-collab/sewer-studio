@@ -124,24 +124,13 @@ public partial class PlayerWindow
 
         if (offene.Count == 0) return true;
 
-        // Hinweis-Dialog mit Liste der offenen Streckenschaeden
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine("Folgende Streckenschäden sind noch offen (kein MeterEnde):");
-        sb.AppendLine();
-        foreach (var ev in offene)
-        {
-            sb.AppendLine($"  \u2022 {ev.Entry.Code} \u2013 {ev.Entry.Beschreibung}");
-            sb.AppendLine($"    Start: {ev.MeterAtCapture:F2}m");
-        }
-        sb.AppendLine();
-        sb.AppendLine($"Sollen alle offenen Streckenschäden bei {currentMeter:F2}m geschlossen werden?");
-
+        var prompt = CodingOpenStretchDamagePromptBuilder.Build(offene, currentMeter);
         SuspendCodingOverlayInput();
         DialogConfirm result;
         try
         {
             result = DialogHost.Current.ConfirmCancel(
-                sb.ToString(),
+                prompt,
                 "Offene Streckenschäden");
         }
         finally
