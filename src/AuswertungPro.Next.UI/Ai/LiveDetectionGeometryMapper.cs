@@ -105,6 +105,9 @@ public static class LiveDetectionGeometryMapper
         };
     }
 
+    public static NormalizedBoundingBox BBoxFromOverlay(OverlayGeometry overlay)
+        => NormalizedBoundingBox.FromPoints(overlay.Points);
+
     public static Rect? BBoxToCanvasRect(LiveFrameFinding finding, double canvasWidth, double canvasHeight)
     {
         if (canvasWidth <= 0 || canvasHeight <= 0)

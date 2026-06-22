@@ -208,8 +208,7 @@ public partial class PlayerWindow
             return null;
         try
         {
-            var box = Application.Ai.NormalizedBoundingBox.FromPoints(
-                overlay.Points.Select(p => new Domain.Models.NormalizedPoint(p.X, p.Y)).ToList());
+            var box = LiveDetectionGeometryMapper.BBoxFromOverlay(overlay);
             var calibration = _codingOverlayService?.Calibration;
             int dn = calibration?.NominalDiameterMm ?? 0;
 
@@ -329,8 +328,7 @@ public partial class PlayerWindow
             if (frameBytes == null) return false;
 
             // 3. BoundingBox aus Overlay-Punkten
-            var bbox = Application.Ai.NormalizedBoundingBox.FromPoints(
-                overlay.Points.Select(p => new Domain.Models.NormalizedPoint(p.X, p.Y)).ToList());
+            var bbox = LiveDetectionGeometryMapper.BBoxFromOverlay(overlay);
 
             // Mindestgroesse pruefen (1% des Frames)
             if (bbox.Width < 0.01 || bbox.Height < 0.01) return false;

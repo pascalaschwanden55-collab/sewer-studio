@@ -537,6 +537,22 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static CodingBoundaryPresence CountExisting", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_manual_mark_bbox_mapping_lives_in_mapper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var markingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
+        var mapperPath = Path.Combine(uiRoot, "Ai", "LiveDetectionGeometryMapper.cs");
+
+        var marking = File.ReadAllText(markingPath);
+        var mapper = File.ReadAllText(mapperPath);
+
+        Assert.Contains("LiveDetectionGeometryMapper.BBoxFromOverlay", marking);
+        Assert.DoesNotContain("NormalizedBoundingBox.FromPoints", marking);
+        Assert.Contains("public static NormalizedBoundingBox BBoxFromOverlay", mapper);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

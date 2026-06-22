@@ -73,6 +73,27 @@ public sealed class LiveDetectionGeometryMapperTests
     }
 
     [Fact]
+    public void BBoxFromOverlay_maps_overlay_points_to_normalized_box()
+    {
+        var overlay = new OverlayGeometry
+        {
+            Points =
+            {
+                new NormalizedPoint(0.2, 0.7),
+                new NormalizedPoint(0.6, 0.3),
+                new NormalizedPoint(0.4, 0.5)
+            }
+        };
+
+        var bbox = LiveDetectionGeometryMapper.BBoxFromOverlay(overlay);
+
+        Assert.Equal(0.4, bbox.XCenter, precision: 3);
+        Assert.Equal(0.5, bbox.YCenter, precision: 3);
+        Assert.Equal(0.4, bbox.Width, precision: 3);
+        Assert.Equal(0.4, bbox.Height, precision: 3);
+    }
+
+    [Fact]
     public void BBoxToCanvasRect_maps_normalized_bbox_to_canvas_rect()
     {
         var finding = new LiveFrameFinding(
