@@ -351,6 +351,24 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_bounds_adjustment_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.cs");
+        var policyPath = Path.Combine(uiRoot, "Player", "PlayerWindowBoundsPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Fenster-Grenzlogik muss ausserhalb von PlayerWindow liegen.");
+
+        var playback = File.ReadAllText(playbackPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("PlayerWindowBoundsPolicy.ClampToWorkArea", playback);
+        Assert.DoesNotContain("if (Left + Width > area.Right)", playback);
+        Assert.Contains("public static Rect ClampToWorkArea", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_inline_defect_detail_uses_display_policy_state()
     {
         var root = FindRepositoryRoot();

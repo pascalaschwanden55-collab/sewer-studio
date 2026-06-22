@@ -507,13 +507,14 @@ public partial class PlayerWindow
 
     private void EnsureVisibleOnScreen()
     {
-        var area = SystemParameters.WorkArea;
-        if (Width > area.Width) Width = area.Width - 20;
-        if (Height > area.Height) Height = area.Height - 20;
-        if (Left < area.Left) Left = area.Left;
-        if (Top < area.Top) Top = area.Top;
-        if (Left + Width > area.Right) Left = area.Right - Width;
-        if (Top + Height > area.Bottom) Top = area.Bottom - Height;
+        var bounds = PlayerWindowBoundsPolicy.ClampToWorkArea(
+            new Rect(Left, Top, Width, Height),
+            SystemParameters.WorkArea);
+
+        Left = bounds.Left;
+        Top = bounds.Top;
+        Width = bounds.Width;
+        Height = bounds.Height;
     }
 
     // Quick-Scan
