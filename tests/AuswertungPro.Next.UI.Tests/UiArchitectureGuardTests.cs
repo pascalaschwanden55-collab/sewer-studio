@@ -799,6 +799,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_eingabemarker_geometry_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerGeometryPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Eingabemarker-Rechteckgeometrie muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var marker = File.ReadAllText(markerPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildPreviewRect", marker);
+        Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection", marker);
+        Assert.DoesNotContain("Math.Min(_eingabemarkerDragStart.X", marker);
+        Assert.DoesNotContain("Math.Abs(canvasPos.X - _eingabemarkerDragStart.X)", marker);
+        Assert.DoesNotContain("Math.Max(_eingabemarkerDragStart.X", marker);
+        Assert.Contains("public static Rect BuildPreviewRect", policy);
+        Assert.Contains("public static Rect? BuildNormalizedSelection", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_overlay_viewport_size_decision_lives_in_policy()
     {
         var root = FindRepositoryRoot();

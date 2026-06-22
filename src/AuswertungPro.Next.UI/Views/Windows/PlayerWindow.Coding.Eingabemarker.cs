@@ -69,15 +69,14 @@ public partial class PlayerWindow
     {
         if (_eingabemarkerPhase != EingabemarkerPhase.Drawing || _eingabemarkerPreviewRect == null) return;
 
-        var x = Math.Min(_eingabemarkerDragStart.X, canvasPos.X);
-        var y = Math.Min(_eingabemarkerDragStart.Y, canvasPos.Y);
-        var w = Math.Abs(canvasPos.X - _eingabemarkerDragStart.X);
-        var h = Math.Abs(canvasPos.Y - _eingabemarkerDragStart.Y);
+        var previewRect = CodingEingabemarkerGeometryPolicy.BuildPreviewRect(
+            _eingabemarkerDragStart,
+            canvasPos);
 
-        Canvas.SetLeft(_eingabemarkerPreviewRect, x);
-        Canvas.SetTop(_eingabemarkerPreviewRect, y);
-        _eingabemarkerPreviewRect.Width = w;
-        _eingabemarkerPreviewRect.Height = h;
+        Canvas.SetLeft(_eingabemarkerPreviewRect, previewRect.X);
+        Canvas.SetTop(_eingabemarkerPreviewRect, previewRect.Y);
+        _eingabemarkerPreviewRect.Width = previewRect.Width;
+        _eingabemarkerPreviewRect.Height = previewRect.Height;
     }
 
     private void EingabemarkerCanvas_MouseUp(Point canvasPos)
@@ -85,18 +84,13 @@ public partial class PlayerWindow
         if (_eingabemarkerPhase != EingabemarkerPhase.Drawing) return;
         CodingOverlayCanvas.ReleaseMouseCapture();
 
-        var canvasW = CodingOverlayCanvas.ActualWidth;
-        var canvasH = CodingOverlayCanvas.ActualHeight;
-        if (canvasW <= 0 || canvasH <= 0) { CancelEingabemarker(); return; }
+        var normalizedRect = CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection(
+            _eingabemarkerDragStart,
+            canvasPos,
+            new Size(CodingOverlayCanvas.ActualWidth, CodingOverlayCanvas.ActualHeight));
+        if (normalizedRect is null) { CancelEingabemarker(); return; }
 
-        var x1 = Math.Min(_eingabemarkerDragStart.X, canvasPos.X) / canvasW;
-        var y1 = Math.Min(_eingabemarkerDragStart.Y, canvasPos.Y) / canvasH;
-        var x2 = Math.Max(_eingabemarkerDragStart.X, canvasPos.X) / canvasW;
-        var y2 = Math.Max(_eingabemarkerDragStart.Y, canvasPos.Y) / canvasH;
-
-        if ((x2 - x1) < 0.02 || (y2 - y1) < 0.02) { CancelEingabemarker(); return; }
-
-        _eingabemarkerRectNorm = new Rect(x1, y1, x2 - x1, y2 - y1);
+        _eingabemarkerRectNorm = normalizedRect.Value;
         _eingabemarkerPhase = EingabemarkerPhase.Input;
         CodingOverlayCanvas.IsHitTestVisible = false;
         CodingOverlayCanvas.Cursor = System.Windows.Input.Cursors.Arrow;
