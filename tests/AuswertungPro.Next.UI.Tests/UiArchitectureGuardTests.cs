@@ -39,6 +39,34 @@ public sealed class UiArchitectureGuardTests
             + string.Join("\n", offenders));
     }
 
+    [Fact]
+    public void PlayerWindow_damage_markers_live_in_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var controllerPath = Path.Combine(uiRoot, "Player", "DamageMarkerController.cs");
+
+        Assert.True(File.Exists(controllerPath), "DamageMarkerController muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var windowText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs")
+                .Where(path => !path.EndsWith("PlayerWindow.Playback.DamageMarkers.cs", StringComparison.OrdinalIgnoreCase))
+                .Select(File.ReadAllText));
+        var windowRoot = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"));
+        var controller = File.ReadAllText(controllerPath);
+
+        Assert.DoesNotContain("_damageMarkers", windowText);
+        Assert.DoesNotContain("BuildDamageMarkers", windowText);
+        Assert.DoesNotContain("RepositionDamageMarkers", windowText);
+        Assert.Contains("new DamageMarkerController", windowRoot);
+        Assert.Contains("_damageMarkerController.Build()", windowRoot);
+        Assert.Contains("_damageMarkerController.Reposition()", windowRoot);
+        Assert.Contains("private readonly List<(DamageMarkerInfo Info", controller);
+        Assert.Contains("PlayerTimelineLayoutCalculator.CalculatePointX", controller);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);
