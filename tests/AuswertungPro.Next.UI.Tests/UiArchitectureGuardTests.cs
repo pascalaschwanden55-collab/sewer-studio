@@ -412,6 +412,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_snapshot_target_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingSnapshotTargetPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Snapshot-Zielpfad fuer Coding-Fotos muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var photos = File.ReadAllText(photosPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingSnapshotTargetPolicy.Build", photos);
+        Assert.DoesNotContain("Path.GetDirectoryName(_videoPath)", photos);
+        Assert.DoesNotContain("DateTimeOffset.Now.ToString(\"HHmmss\")", photos);
+        Assert.Contains("public static CodingSnapshotTarget Build", policy);
+        Assert.Contains("Path.Combine(videoDir, \"Fotos\")", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_import_reference_transfer_lives_in_policy()
     {
         var root = FindRepositoryRoot();

@@ -88,28 +88,19 @@ public partial class PlayerWindow
     {
         try
         {
-            var videoDir = !string.IsNullOrEmpty(_videoPath)
-                ? Path.GetDirectoryName(_videoPath) ?? Path.GetTempPath()
-                : Path.GetTempPath();
-            var fotoDir = Path.Combine(videoDir, "Fotos");
-            Directory.CreateDirectory(fotoDir);
+            var target = CodingSnapshotTargetPolicy.Build(entry, _videoPath, DateTimeOffset.Now);
+            Directory.CreateDirectory(target.PhotoDirectory);
 
-            var ts = entry.Zeit.HasValue
-                ? entry.Zeit.Value.ToString(@"hh\-mm\-ss\-fff")
-                : DateTimeOffset.Now.ToString("HHmmss");
-            var fileName = $"{entry.Code}_{entry.MeterStart:F2}m_{ts}.png";
-            var filePath = Path.Combine(fotoDir, fileName);
-
-            TakeSnapshotSafe(filePath);
+            TakeSnapshotSafe(target.FilePath);
 
             for (var i = 0; i < 20; i++)
             {
                 Thread.Sleep(50);
-                if (File.Exists(filePath) && new FileInfo(filePath).Length > 100)
-                    return filePath;
+                if (File.Exists(target.FilePath) && new FileInfo(target.FilePath).Length > 100)
+                    return target.FilePath;
             }
 
-            return File.Exists(filePath) ? filePath : null;
+            return File.Exists(target.FilePath) ? target.FilePath : null;
         }
         catch (Exception ex)
         {
