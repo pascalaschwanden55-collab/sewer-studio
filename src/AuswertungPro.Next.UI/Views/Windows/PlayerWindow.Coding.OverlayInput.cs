@@ -562,11 +562,7 @@ public partial class PlayerWindow
     {
         var remove = CodingOverlayCanvas.Children
             .OfType<FrameworkElement>()
-            .Where(el => el.Tag is string tag &&
-                         (tag == OverlayTags.ToolBadge ||
-                          tag == OverlayTags.Preview ||
-                          tag == OverlayTags.Measure ||
-                          (clearManualOverlay && tag == OverlayTags.Manual)))
+            .Where(el => CodingOverlayCleanupPolicy.ShouldRemoveTransientTag(el.Tag, clearManualOverlay))
             .ToList();
 
         foreach (var el in remove)
