@@ -578,6 +578,29 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_ai_status_text_uses_display_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
+        var confirmationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Confirmation.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
+
+        var ai = File.ReadAllText(aiPath);
+        var confirmation = File.ReadAllText(confirmationPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", ai);
+        Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", confirmation);
+        Assert.DoesNotContain("Automatische KI-Analyse aktiv", ai);
+        Assert.DoesNotContain("Automatische KI-Analyse aktiv", confirmation);
+        Assert.DoesNotContain("Intervall alle 5 Sekunden", ai);
+        Assert.DoesNotContain("Intervall alle 5 Sekunden", confirmation);
+        Assert.Contains("public static CodingLiveAiStatusState BuildStatus", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_live_detection_model_selection_lives_in_policy()
     {
         var root = FindRepositoryRoot();

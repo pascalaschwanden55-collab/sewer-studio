@@ -105,13 +105,17 @@ public partial class PlayerWindow
 
         if (BtnCodingLiveAi.IsChecked == true)
         {
-            SetCodingAiState("Automatische KI-Analyse aktiv", PlayerStatusColors.Success,
-                $"Intervall alle 5 Sekunden | {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
+            var status = CodingLiveAiButtonDisplayPolicy.BuildStatus(
+                isActive: true,
+                LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName));
+            SetCodingAiState(status.StatusText, PlayerStatusColors.Success, status.DetailText);
         }
         else
         {
-            SetCodingAiState("Künstliche Intelligenz bereit", PlayerStatusColors.Success,
-                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
+            var status = CodingLiveAiButtonDisplayPolicy.BuildStatus(
+                isActive: false,
+                LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName));
+            SetCodingAiState(status.StatusText, PlayerStatusColors.Success, status.DetailText);
         }
     }
 }
