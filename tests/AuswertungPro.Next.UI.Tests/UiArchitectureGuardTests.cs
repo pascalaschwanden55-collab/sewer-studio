@@ -402,6 +402,24 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static ProtocolEntry CloseStart", factory);
     }
 
+    [Fact]
+    public void PlayerWindow_live_detection_model_selection_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var liveDetectionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "VisionModelSelectionPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Live-KI-Modellauswahl muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var liveDetection = File.ReadAllText(liveDetectionPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("VisionModelSelectionPolicy.Select", liveDetection);
+        Assert.DoesNotContain("m.Contains(\"vl\"", liveDetection);
+        Assert.Contains("public static string Select", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

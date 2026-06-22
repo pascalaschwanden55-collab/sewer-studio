@@ -190,18 +190,7 @@ public partial class PlayerWindow
             try
             {
                 var models = await client.ListModelNamesAsync(CancellationToken.None);
-                bool configuredExists = false;
-                string? fallbackVision = null;
-                foreach (var m in models)
-                {
-                    if (m.StartsWith(visionModel, StringComparison.OrdinalIgnoreCase) ||
-                        m.Equals(visionModel, StringComparison.OrdinalIgnoreCase))
-                        configuredExists = true;
-                    if (fallbackVision == null && m.Contains("vl", StringComparison.OrdinalIgnoreCase))
-                        fallbackVision = m;
-                }
-                if (!configuredExists && fallbackVision != null)
-                    visionModel = fallbackVision;
+                visionModel = VisionModelSelectionPolicy.Select(visionModel, models);
             }
             catch { /* use configured model */ }
 
