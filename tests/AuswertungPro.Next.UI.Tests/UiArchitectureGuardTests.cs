@@ -118,6 +118,22 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("Clipboard.SetImage", service);
     }
 
+    [Fact]
+    public void PlayerWindow_uses_overlay_tag_constants_for_bend_marker()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var markingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
+        var tagsPath = Path.Combine(uiRoot, "Player", "OverlayTags.cs");
+
+        var marking = File.ReadAllText(markingPath);
+        var tags = File.ReadAllText(tagsPath);
+
+        Assert.Contains("public const string BendMarker = \"bend_marker\"", tags);
+        Assert.Contains("OverlayTags.BendMarker", marking);
+        Assert.DoesNotContain("\"bend_marker\"", marking);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

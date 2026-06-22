@@ -6,6 +6,7 @@ using System.Windows.Input;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
 using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
@@ -298,7 +299,7 @@ public partial class PlayerWindow
             StrokeThickness = 3,
             Fill = new SolidColorBrush(Color.FromArgb(40, 0x22, 0xC5, 0x5E)),
             IsHitTestVisible = false,
-            Tag = "bend_marker"
+            Tag = OverlayTags.BendMarker
         };
         Canvas.SetLeft(ring, cx - r);
         Canvas.SetTop(ring, cy - r);
@@ -312,20 +313,20 @@ public partial class PlayerWindow
             Padding = new Thickness(4, 1, 4, 1),
             FontSize = 12,
             IsHitTestVisible = false,
-            Tag = "bend_marker"
+            Tag = OverlayTags.BendMarker
         };
         Canvas.SetLeft(label, cx - r);
         Canvas.SetTop(label, Math.Max(0, cy - r - 20));
         CodingOverlayCanvas.Children.Add(label);
     }
 
-    // Entfernt alle Bogen-Marker (Tag "bend_marker") vom Codier-Canvas.
+    // Entfernt alle Bogen-Marker vom Codier-Canvas.
     private void ClearBendMarkers()
     {
         for (int i = CodingOverlayCanvas.Children.Count - 1; i >= 0; i--)
         {
             if (CodingOverlayCanvas.Children[i] is FrameworkElement fe
-                && (fe.Tag as string) == "bend_marker")
+                && (fe.Tag as string) == OverlayTags.BendMarker)
                 CodingOverlayCanvas.Children.RemoveAt(i);
         }
     }

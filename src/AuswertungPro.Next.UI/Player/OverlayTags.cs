@@ -28,4 +28,7 @@ public static class OverlayTags
 
     /// <summary>Werkzeug-Badge (aktives Codier-Werkzeug oben im Overlay).</summary>
     public const string ToolBadge = "tool_badge";
+
+    /// <summary>Bogen-Erkennungsmarker im Markierungsfluss.</summary>
+    public const string BendMarker = "bend_marker";
 }
