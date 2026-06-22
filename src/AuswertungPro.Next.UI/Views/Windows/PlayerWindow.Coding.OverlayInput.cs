@@ -143,67 +143,10 @@ public partial class PlayerWindow
             CodingOverlayPopup.IsOpen = false;
     }
 
-    // -- "Screen": ganzes Fenster (inkl. schwebendem Overlay/Boxen) in die Zwischenablage --
-    // Bewusst Bildschirm-Capture (BitBlt) statt RenderTargetBitmap: nur so sind VLC-Video UND
-    // das Overlay-Popup (eigene Top-Level-HWNDs) zusammen im Bild. Kein Fokuswechsel -> das
-    // Overlay bleibt sichtbar (anders als beim Windows-Snipping-Tool).
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern IntPtr GetDC(IntPtr hWnd);
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
-    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
-    private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
-    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
-    private static extern IntPtr CreateCompatibleBitmap(IntPtr hdc, int w, int h);
-    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
-    private static extern IntPtr SelectObject(IntPtr hdc, IntPtr h);
-    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
-    private static extern bool BitBlt(IntPtr hdcDest, int x, int y, int w, int h, IntPtr hdcSrc, int sx, int sy, int rop);
-    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
-    private static extern bool DeleteObject(IntPtr h);
-    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
-    private static extern bool DeleteDC(IntPtr hdc);
-
     private void CodingScreenshot_Click(object sender, System.Windows.RoutedEventArgs e)
     {
-        const int SRCCOPY = 0x00CC0020;
-        IntPtr screenDc = IntPtr.Zero, memDc = IntPtr.Zero, hbmp = IntPtr.Zero;
-        try
-        {
-            var srcWin = System.Windows.PresentationSource.FromVisual(this);
-            double scaleX = srcWin?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
-            double scaleY = srcWin?.CompositionTarget?.TransformToDevice.M22 ?? 1.0;
-            var topLeft = PointToScreen(new System.Windows.Point(0, 0));
-            int x = (int)System.Math.Round(topLeft.X);
-            int y = (int)System.Math.Round(topLeft.Y);
-            int w = (int)System.Math.Round(ActualWidth * scaleX);
-            int h = (int)System.Math.Round(ActualHeight * scaleY);
-            if (w <= 0 || h <= 0) return;
-
-            screenDc = GetDC(IntPtr.Zero);
-            memDc = CreateCompatibleDC(screenDc);
-            hbmp = CreateCompatibleBitmap(screenDc, w, h);
-            IntPtr old = SelectObject(memDc, hbmp);
-            BitBlt(memDc, 0, 0, w, h, screenDc, x, y, SRCCOPY);
-            SelectObject(memDc, old);
-
-            var img = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                hbmp, IntPtr.Zero, System.Windows.Int32Rect.Empty,
-                System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
-            img.Freeze();
-            System.Windows.Clipboard.SetImage(img);
+        if (WindowClipboardCaptureService.TryCopyWindowToClipboard(this))
             ShowCodingScreenshotToast("Fenster in Zwischenablage kopiert");
-        }
-        catch (System.Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine("[Screen] " + ex.Message);
-        }
-        finally
-        {
-            if (hbmp != IntPtr.Zero) DeleteObject(hbmp);
-            if (memDc != IntPtr.Zero) DeleteDC(memDc);
-            if (screenDc != IntPtr.Zero) ReleaseDC(IntPtr.Zero, screenDc);
-        }
     }
 
     private void ShowCodingScreenshotToast(string msg)

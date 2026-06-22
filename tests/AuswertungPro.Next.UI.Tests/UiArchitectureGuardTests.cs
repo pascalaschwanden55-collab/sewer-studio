@@ -96,6 +96,28 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("QuickScanHeatmapLayoutPolicy", controller);
     }
 
+    [Fact]
+    public void PlayerWindow_does_not_own_win32_screenshot_capture()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var servicePath = Path.Combine(uiRoot, "Services", "WindowClipboardCaptureService.cs");
+
+        Assert.True(File.Exists(servicePath), "Win32-Screenshot-Capture muss in einem UI-Service gekapselt bleiben.");
+
+        var playerWindowText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
+        var service = File.ReadAllText(servicePath);
+
+        Assert.DoesNotContain("DllImport", playerWindowText);
+        Assert.DoesNotContain("BitBlt", playerWindowText);
+        Assert.Contains("TryCopyWindowToClipboard", playerWindowText);
+        Assert.Contains("BitBlt", service);
+        Assert.Contains("Clipboard.SetImage", service);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);
