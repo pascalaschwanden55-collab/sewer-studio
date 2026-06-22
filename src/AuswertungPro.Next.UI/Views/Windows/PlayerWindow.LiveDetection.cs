@@ -30,6 +30,8 @@ using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 using Rectangle = System.Windows.Shapes.Rectangle;
 using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -46,7 +48,7 @@ public partial class PlayerWindow
         TimeSpan? presetZeit)
         => new(entry, presetMeter, presetZeit, CodeSelectionCatalog);
 
-    // ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ Live Detection ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬
+    // Live Detection
 
     private void SetLiveDetectionBadge(string status, Color dotColor, string? stage = null)
     {
@@ -211,9 +213,9 @@ public partial class PlayerWindow
 
             // Show overlay layer
             DetectionOverlayGrid.Visibility = Visibility.Visible;
-            SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+            SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Success,
                 $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(visionModel)}");
-            SetYoloStatus("Aktiv", Color.FromRgb(0x22, 0xC5, 0x5E), LiveDetectionDisplayPolicy.CompactModelName(visionModel));
+            SetYoloStatus("Aktiv", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(visionModel));
 
             LiveDetectionStatusText.Visibility = Visibility.Visible;
             LiveDetectionStatusText.Text = "Warte auf Frame...";
@@ -256,7 +258,7 @@ public partial class PlayerWindow
         if (!_isManualMarkMode)
             DetectionOverlayGrid.Visibility = Visibility.Collapsed;
         AiStatusBadge.Visibility = Visibility.Collapsed;
-        SetYoloStatus("Gestoppt", Color.FromRgb(0x94, 0xA3, 0xB8));
+        SetYoloStatus("Gestoppt", PlayerStatusColors.Muted);
         DetectionCanvas.Children.Clear();
         FindingSummaryPanel.Visibility = Visibility.Collapsed;
 
@@ -304,7 +306,7 @@ public partial class PlayerWindow
             return;
 
         _isDetectionInFlight = true;
-        SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0xF5, 0x9E, 0x0B),
+        SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Warning,
             $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Snapshot");
 
         try
@@ -315,7 +317,7 @@ public partial class PlayerWindow
                 _isDetectionInFlight = false;
                 if (!_closing && !_playbackDisposed)
                 {
-                    SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+                    SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Success,
                         $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Bereit");
                 }
                 return;
@@ -324,7 +326,7 @@ public partial class PlayerWindow
             if (_closing || _playbackDisposed || _liveDetectionService is null || _detectionCts is null)
                 return;
 
-            SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0xF5, 0x9E, 0x0B),
+            SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Warning,
                 $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Inferenz");
             var timestampSec = _player.Time / 1000.0;
             var result = await _liveDetectionService.AnalyzeFrameAsync(
@@ -341,7 +343,7 @@ public partial class PlayerWindow
                 RenderDetectionOverlay(result.Findings, result.TimestampSeconds);
                 UpdateDetectionStatus(result);
 
-                SetLiveDetectionBadge("KI aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+                SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Success,
                     $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Overlay");
 
                 // Auto-Pause bei relevanten Befunden (Severity >= 2)
@@ -353,7 +355,7 @@ public partial class PlayerWindow
                     _detectionPendingFrameBytes = snapshot;
                     _detectionPendingTimestampSec = result.TimestampSeconds;
                     ShowDetectionConfirmation(significantFindings);
-                    SetLiveDetectionBadge("Befund erkannt", Color.FromRgb(0xF5, 0x9E, 0x0B),
+                    SetLiveDetectionBadge("Befund erkannt", PlayerStatusColors.Warning,
                         $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Warte auf Bestaetigung");
                 }
             });
@@ -372,7 +374,7 @@ public partial class PlayerWindow
                     return;
 
                 LiveDetectionStatusText.Text = $"Fehler: {msg}";
-                SetLiveDetectionBadge("KI Fehler", Color.FromRgb(0xEF, 0x44, 0x44),
+                SetLiveDetectionBadge("KI Fehler", PlayerStatusColors.Error,
                     LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName));
             });
         }
@@ -433,7 +435,7 @@ public partial class PlayerWindow
         }
     }
 
-    // ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬ Detection Overlay Rendering (ring-sector pattern from LiveFrameWindow) ÃƒÂ¢"Ã¢â€šÂ¬ÃƒÂ¢"Ã¢â€šÂ¬
+    // Detection Overlay Rendering (ring-sector pattern from LiveFrameWindow)
 
     private void RenderDetectionOverlay(IReadOnlyList<LiveFrameFinding> findings, double timestampSec)
         => LiveDetectionOverlayRenderer.Render(DetectionCanvas, findings, timestampSec, OnFindingClicked);

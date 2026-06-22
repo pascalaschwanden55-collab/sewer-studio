@@ -8,6 +8,8 @@ using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Services;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -24,7 +26,7 @@ public partial class PlayerWindow
             _codingAiModelName = config.VisionModel;
             if (!config.Enabled)
             {
-                SetCodingAiState("Künstliche Intelligenz deaktiviert", Color.FromRgb(0x94, 0xA3, 0xB8), "Modell: aus");
+                SetCodingAiState("Künstliche Intelligenz deaktiviert", PlayerStatusColors.Muted, "Modell: aus");
                 BtnCodingAnalyze.IsEnabled = false;
                 return;
             }
@@ -60,14 +62,14 @@ public partial class PlayerWindow
             catch (Exception ex)
             {
                 _codingUseMultiModel = false;
-                SetCodingAiState("Künstliche Intelligenz bereit (Qwen)", Color.FromRgb(0x22, 0xC5, 0x5E),
+                SetCodingAiState("Künstliche Intelligenz bereit (Qwen)", PlayerStatusColors.Success,
                     $"Monitor-Fehler: {ex.Message}");
             }
-            SetYoloStatus("Bereit", Color.FromRgb(0x22, 0xC5, 0x5E), LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName));
+            SetYoloStatus("Bereit", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName));
         }
         catch (Exception ex)
         {
-            SetCodingAiState($"Fehler: {ex.Message}", Color.FromRgb(0xEF, 0x44, 0x44),
+            SetCodingAiState($"Fehler: {ex.Message}", PlayerStatusColors.Error,
                 $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
             BtnCodingAnalyze.IsEnabled = false;
         }

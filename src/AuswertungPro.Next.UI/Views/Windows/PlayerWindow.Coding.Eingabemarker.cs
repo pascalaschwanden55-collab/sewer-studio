@@ -5,6 +5,8 @@ using System.Windows.Media;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -21,7 +23,7 @@ public partial class PlayerWindow
             CodingOverlayCanvas.IsHitTestVisible = true;
             CodingOverlayCanvas.Cursor = System.Windows.Input.Cursors.Cross;
             SetCodingAiState("Eingabemarker: Rechteck um die Beobachtung ziehen",
-                Color.FromRgb(0x3B, 0x82, 0xF6), "Klicken + Ziehen = Bereich markieren");
+                PlayerStatusColors.Info, "Klicken + Ziehen = Bereich markieren");
         }
         else
         {
@@ -106,7 +108,7 @@ public partial class PlayerWindow
             System.Windows.Threading.DispatcherPriority.Input);
 
         SetCodingAiState("Beschreibung eingeben oder Stichwort wählen, dann Enter",
-            Color.FromRgb(0x3B, 0x82, 0xF6), "z.B. \"Beule unten\", \"Riss bei 3 Uhr\", \"Anschluss offen\"");
+            PlayerStatusColors.Info, "z.B. \"Beule unten\", \"Riss bei 3 Uhr\", \"Anschluss offen\"");
     }
 
     private void CmbEingabemarker_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -158,7 +160,7 @@ public partial class PlayerWindow
                 {
                     SetCodingAiState(
                         $"{codeHint} bereits vorhanden bei {existingDup.MeterAtCapture:F2}m - Duplikat",
-                        Color.FromRgb(0xF5, 0x9E, 0x0B), "");
+                        PlayerStatusColors.Warning, "");
                     return;
                 }
             }
@@ -185,12 +187,12 @@ public partial class PlayerWindow
                 UpdateToolBadge();
                 PersistSingleEventAsTrainingSample(ev).SafeFireAndForget("TrainingSaveSingle");
                 SetCodingAiState($"{codeHint} {label} bei {meter:F2}m eingetragen",
-                    Color.FromRgb(0x22, 0xC5, 0x5E), "");
+                    PlayerStatusColors.Success, "");
             }
             else
             {
                 SetCodingAiState($"KI analysiert: \"{keyword}\" ...",
-                    Color.FromRgb(0xF5, 0x9E, 0x0B), "Qwen analysiert");
+                    PlayerStatusColors.Warning, "Qwen analysiert");
                 await RunCodingAnalysisAsync(
                     $"Eingabemarker: {keyword}",
                     disableAnalyzeButton: true,
@@ -200,7 +202,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            SetCodingAiState($"Fehler: {ex.Message}", Color.FromRgb(0xEF, 0x44, 0x44), "");
+            SetCodingAiState($"Fehler: {ex.Message}", PlayerStatusColors.Error, "");
         }
         finally
         {

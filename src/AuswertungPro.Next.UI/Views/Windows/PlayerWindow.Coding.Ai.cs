@@ -37,6 +37,8 @@ using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using InfraTraining = AuswertungPro.Next.Infrastructure.Ai.Training;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -79,7 +81,7 @@ public partial class PlayerWindow
                 ClearDetectionOverlays();
                 Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
                 SetCodingAiState("Rohrende erreicht - KI-Analyse gestoppt",
-                    Color.FromRgb(0x22, 0xC5, 0x5E), "Codierung abgeschlossen");
+                    PlayerStatusColors.Success, "Codierung abgeschlossen");
                 return;
             }
 
@@ -90,14 +92,14 @@ public partial class PlayerWindow
             }
 
             // â”€â”€ Qwen-only Fallback-Pfad â”€â”€
-            SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
+            SetCodingAiState(activityText, PlayerStatusColors.Warning,
                 "Schritt 1 von 3: Snapshot", pulse: true);
 
             {
                 var pngBytes = await CaptureSnapshotAsync(_codingAnalysisCts.Token);
                 if (pngBytes == null || pngBytes.Length == 0)
                 {
-                    SetCodingAiState("Frame nicht extrahierbar", Color.FromRgb(0xEF, 0x44, 0x44),
+                    SetCodingAiState("Frame nicht extrahierbar", PlayerStatusColors.Error,
                         $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
                     return;
                 }
@@ -108,7 +110,7 @@ public partial class PlayerWindow
                     captureTimestampSec,
                     _codingAnalysisCts.Token);
 
-                SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
+                SetCodingAiState(activityText, PlayerStatusColors.Warning,
                     $"Schritt 2 von 3: Inferenz ({LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)})", pulse: true);
 
                 LiveDetection result;
@@ -133,7 +135,7 @@ public partial class PlayerWindow
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            SetCodingAiState($"Fehler: {ex.Message}", Color.FromRgb(0xEF, 0x44, 0x44),
+            SetCodingAiState($"Fehler: {ex.Message}", PlayerStatusColors.Error,
                 $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
         }
         finally
@@ -171,7 +173,7 @@ public partial class PlayerWindow
             System.Diagnostics.Debug.WriteLine(
                 $"[Boundary] BCE bei {meter:F2}m verworfen (Haltungsende ~{_codingVm.EndMeter:F2}m, noch zu weit) - weiteranalysieren");
             SetCodingAiState(CodingClassifierDisplayPolicy.PossibleBoundaryEndStatus,
-                Color.FromRgb(0xF5, 0x9E, 0x0B), CodingClassifierDisplayPolicy.PossibleBoundaryEndDetail);
+                PlayerStatusColors.Warning, CodingClassifierDisplayPolicy.PossibleBoundaryEndDetail);
             ClearDetectionOverlays();
             Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
             CodingFindingsList.ItemsSource = new[]
@@ -201,7 +203,7 @@ public partial class PlayerWindow
         var added = anyAdded || _codingVm.Events.Count > beforeCount;
         var statusText = CodingClassifierDisplayPolicy.BuildDetectedStatusText(label, added);
 
-        SetCodingAiState(statusText, Color.FromRgb(0x22, 0xC5, 0x5E),
+        SetCodingAiState(statusText, PlayerStatusColors.Success,
             CodingClassifierDisplayPolicy.BuildClassifierDetail(mmResult.ClassifierConfidence));
 
         CodingFindingsList.ItemsSource = new[]
@@ -258,7 +260,7 @@ public partial class PlayerWindow
         if (coveringEvent != null)
         {
             SetCodingAiState(CodingClassifierDisplayPolicy.BuildDetectedStatusText(label, added: false),
-                Color.FromRgb(0x22, 0xC5, 0x5E),
+                PlayerStatusColors.Success,
                 CodingClassifierDisplayPolicy.BuildClassifierDetail(mmResult.ClassifierConfidence));
             return true;
         }
@@ -281,7 +283,7 @@ public partial class PlayerWindow
 
         RefreshCodingEventsList();
         SetCodingAiState(CodingClassifierDisplayPolicy.BuildDetectedStatusText(draft.Entry.Beschreibung, added: true),
-            Color.FromRgb(0x22, 0xC5, 0x5E),
+            PlayerStatusColors.Success,
             CodingClassifierDisplayPolicy.BuildClassifierDetail(mmResult.ClassifierConfidence));
         return true;
     }
@@ -545,7 +547,7 @@ public partial class PlayerWindow
             _codingLiveAiBlinkTimer.Start();
             BtnCodingLiveAi.Background = new SolidColorBrush(CodingLiveAiButtonDisplayPolicy.ActiveColor);
 
-            SetCodingAiState("Automatische KI-Analyse aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+            SetCodingAiState("Automatische KI-Analyse aktiv", PlayerStatusColors.Success,
                 $"Intervall alle 5 Sekunden | {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
         }
         else
@@ -558,7 +560,7 @@ public partial class PlayerWindow
             _codingLiveAiBlinkTimer = null;
             BtnCodingLiveAi.ClearValue(System.Windows.Controls.Control.BackgroundProperty);
 
-            SetCodingAiState("Künstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+            SetCodingAiState("Künstliche Intelligenz bereit", PlayerStatusColors.Success,
                 $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
         }
     }

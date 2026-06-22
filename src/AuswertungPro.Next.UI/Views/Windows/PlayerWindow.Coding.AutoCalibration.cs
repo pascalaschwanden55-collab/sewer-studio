@@ -2,6 +2,8 @@ using System;
 using System.Threading.Tasks;
 using System.Windows.Media;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -41,7 +43,7 @@ public partial class PlayerWindow
 
             SetCodingAiState(
                 $"Auto-Kalibrierung: DN{nominalDn} erkannt ({autoCalib.NormalizedDiameter:P0} der Bildbreite)",
-                Color.FromRgb(0x22, 0xC5, 0x5E),
+                PlayerStatusColors.Success,
                 "Rohrdurchmesser automatisch gemessen");
 
             System.Diagnostics.Debug.WriteLine(

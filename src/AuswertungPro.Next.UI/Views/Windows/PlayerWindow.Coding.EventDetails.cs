@@ -10,6 +10,8 @@ using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -49,7 +51,7 @@ public partial class PlayerWindow
             TxtInlineDetailConfidence.Text = "\u2013";
             TxtInlineDetailConfidence.Foreground =
                 new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(0x94, 0xA3, 0xB8));
+                    PlayerStatusColors.Muted);
         }
 
         var status = ViewModels.Windows.CodingSessionViewModel.GetDefectStatus(ev);

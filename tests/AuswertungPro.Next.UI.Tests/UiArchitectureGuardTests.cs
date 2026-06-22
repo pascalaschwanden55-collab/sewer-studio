@@ -143,6 +143,30 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("canvas.Children.Add", renderer);
     }
 
+    [Fact]
+    public void PlayerWindow_uses_status_color_constants()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var statusColorsPath = Path.Combine(uiRoot, "Player", "PlayerStatusColors.cs");
+
+        Assert.True(File.Exists(statusColorsPath), "Player-Statusfarben muessen zentralisiert bleiben.");
+
+        var playerWindowText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
+        var statusColors = File.ReadAllText(statusColorsPath);
+
+        Assert.Contains("PlayerStatusColors", playerWindowText);
+        Assert.Contains("Success => Color.FromRgb(0x22, 0xC5, 0x5E)", statusColors);
+        Assert.DoesNotContain("Color.FromRgb(0x22, 0xC5, 0x5E)", playerWindowText);
+        Assert.DoesNotContain("Color.FromRgb(0xF5, 0x9E, 0x0B)", playerWindowText);
+        Assert.DoesNotContain("Color.FromRgb(0xEF, 0x44, 0x44)", playerWindowText);
+        Assert.DoesNotContain("Color.FromRgb(0x94, 0xA3, 0xB8)", playerWindowText);
+        Assert.DoesNotContain("Color.FromRgb(0x3B, 0x82, 0xF6)", playerWindowText);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

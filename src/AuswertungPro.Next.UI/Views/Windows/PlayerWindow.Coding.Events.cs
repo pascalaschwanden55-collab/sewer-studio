@@ -37,6 +37,8 @@ using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using InfraTraining = AuswertungPro.Next.Infrastructure.Ai.Training;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -282,7 +284,7 @@ public partial class PlayerWindow
         // Status
         SetCodingAiState(
             $"Streckenschaden geschlossen: {startEvent.Entry.Code} {startEvent.MeterAtCapture:F2}m – {currentMeter:F2}m",
-            Color.FromRgb(0x22, 0xC5, 0x5E), "");
+            PlayerStatusColors.Success, "");
     }
 
     private void CodingEventDelete_Click(object sender, RoutedEventArgs e)

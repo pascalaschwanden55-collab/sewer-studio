@@ -6,6 +6,8 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -103,12 +105,12 @@ public partial class PlayerWindow
 
         if (BtnCodingLiveAi.IsChecked == true)
         {
-            SetCodingAiState("Automatische KI-Analyse aktiv", Color.FromRgb(0x22, 0xC5, 0x5E),
+            SetCodingAiState("Automatische KI-Analyse aktiv", PlayerStatusColors.Success,
                 $"Intervall alle 5 Sekunden | {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
         }
         else
         {
-            SetCodingAiState("Künstliche Intelligenz bereit", Color.FromRgb(0x22, 0xC5, 0x5E),
+            SetCodingAiState("Künstliche Intelligenz bereit", PlayerStatusColors.Success,
                 $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
         }
     }

@@ -13,6 +13,8 @@ using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -156,7 +158,7 @@ public partial class PlayerWindow
     {
         if (result.Error != null)
         {
-            SetCodingAiState($"Fehler: {result.Error}", Color.FromRgb(0xEF, 0x44, 0x44),
+            SetCodingAiState($"Fehler: {result.Error}", PlayerStatusColors.Error,
                 $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
             CodingFindingsList.ItemsSource = null;
             return;
@@ -174,7 +176,7 @@ public partial class PlayerWindow
                 _pendingWarmupResult = result;
 
             SetCodingAiState("Dateneinblendung erkannt \u2014 \u00fcbersprungen",
-                Color.FromRgb(0x94, 0xA3, 0xB8),
+                PlayerStatusColors.Muted,
                 $"Warte auf Videobild... (Bild {_codingFrameReadiness.SkippedFrames} von 3)");
             CodingFindingsList.ItemsSource = null;
             DetectionCanvas.Children.Clear();
@@ -211,14 +213,14 @@ public partial class PlayerWindow
         if (validFindings.Count == 0)
         {
             var noDamageText = LiveDetectionDisplayPolicy.BuildCodingNoDamageStatusText(result.MeterReading);
-            SetCodingAiState(noDamageText, Color.FromRgb(0x22, 0xC5, 0x5E), "Schritt 3 von 3: Overlay aktualisiert");
+            SetCodingAiState(noDamageText, PlayerStatusColors.Success, "Schritt 3 von 3: Overlay aktualisiert");
             CodingFindingsList.ItemsSource = null;
             DetectionCanvas.Children.Clear();
             return;
         }
 
         var findingsText = LiveDetectionDisplayPolicy.BuildCodingFindingsStatusText(result.MeterReading, validFindings.Count);
-        SetCodingAiState(findingsText, Color.FromRgb(0x22, 0xC5, 0x5E), "Schritt 3 von 3: Overlay und Events");
+        SetCodingAiState(findingsText, PlayerStatusColors.Success, "Schritt 3 von 3: Overlay und Events");
         CodingFindingsList.ItemsSource = validFindings
             .Select(f => new AiFindingDisplayItem(f)).ToList();
 

@@ -4,6 +4,8 @@ using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
@@ -14,13 +16,13 @@ public partial class PlayerWindow
         if (multiModel == null || _codingAnalysisCts == null)
             return;
 
-        SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
+        SetCodingAiState(activityText, PlayerStatusColors.Warning,
             "Schritt 1 von 4: Snapshot", pulse: true);
 
         var pngBytes = await CaptureSnapshotAsync(_codingAnalysisCts.Token);
         if (pngBytes == null || pngBytes.Length == 0)
         {
-            SetCodingAiState("Frame nicht extrahierbar", Color.FromRgb(0xEF, 0x44, 0x44),
+            SetCodingAiState("Frame nicht extrahierbar", PlayerStatusColors.Error,
                 "Multi-Model");
             return;
         }
@@ -41,11 +43,11 @@ public partial class PlayerWindow
         if (!IsFrameReady())
         {
             SetCodingAiState("Dateneinblendung erkannt - uebersprungen",
-                Color.FromRgb(0x94, 0xA3, 0xB8), "Warte auf sauberes Videobild...");
+                PlayerStatusColors.Muted, "Warte auf sauberes Videobild...");
             return;
         }
 
-        SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
+        SetCodingAiState(activityText, PlayerStatusColors.Warning,
             "Schritt 2 von 4: YOLO und DINO", pulse: true);
 
         var dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
@@ -62,7 +64,7 @@ public partial class PlayerWindow
 
         if (mmResult.Error != null)
         {
-            SetCodingAiState($"Fehler: {mmResult.Error}", Color.FromRgb(0xEF, 0x44, 0x44),
+            SetCodingAiState($"Fehler: {mmResult.Error}", PlayerStatusColors.Error,
                 "Multi-Model");
             return;
         }
@@ -75,13 +77,13 @@ public partial class PlayerWindow
 
         if (!mmResult.IsRelevant || !mmResult.HasDetections)
         {
-            SetCodingAiState("Kein Schaden erkannt", Color.FromRgb(0x22, 0xC5, 0x5E),
+            SetCodingAiState("Kein Schaden erkannt", PlayerStatusColors.Success,
                 $"YOLO {mmResult.YoloTimeMs:F0}ms | {mmResult.DinoDetections.Count} Detektionen");
             Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
             return;
         }
 
-        SetCodingAiState(activityText, Color.FromRgb(0xF5, 0x9E, 0x0B),
+        SetCodingAiState(activityText, PlayerStatusColors.Warning,
             $"Schritt 3 von 4: SAM-Masken ({mmResult.DinoDetections.Count} Befunde)", pulse: true);
 
         var segmented = BuildCodingSegmentedFindings(mmResult);
@@ -92,7 +94,7 @@ public partial class PlayerWindow
         if (findingSummary.HasNoSegmentedFindings)
         {
             SetCodingAiState("SAM ohne Maske - Befund nicht segmentiert",
-                Color.FromRgb(0xF5, 0x9E, 0x0B),
+                PlayerStatusColors.Warning,
                 mmResult.SamResponse?.Degraded == true
                     ? $"SAM degraded ({mmResult.SamResponse.SkippedBoxes} Box(en) verloren)"
                     : "keine Maske erzeugt");
@@ -102,14 +104,14 @@ public partial class PlayerWindow
         if (findingSummary.HasOnlyAheadFindings)
         {
             SetCodingAiState("Ereignis voraus erkannt - naeher heranfahren",
-                Color.FromRgb(0xF5, 0x9E, 0x0B),
+                PlayerStatusColors.Warning,
                 $"{findingSummary.VorausCount} voraus");
             return;
         }
 
         SetCodingAiState(
             findingSummary.DetectedStatusText,
-            Color.FromRgb(0x22, 0xC5, 0x5E),
+            PlayerStatusColors.Success,
             findingSummary.TimingText);
 
         AddMultiModelFindingsAsEvents(
