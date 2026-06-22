@@ -810,6 +810,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_detection_timer_gate_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var liveDetectionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTimerPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "LiveDetection-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var liveDetection = File.ReadAllText(liveDetectionPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("LiveDetectionTimerPolicy.ShouldRunTick", liveDetection);
+        Assert.DoesNotContain("_isDetectionInFlight || _liveDetectionService is null || _detectionCts is null", liveDetection);
+        Assert.DoesNotContain("!_player.IsPlaying", liveDetection);
+        Assert.DoesNotContain("if (_detectionPendingFindings != null)", liveDetection);
+        Assert.Contains("public static bool ShouldRunTick", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_boundary_presence_lives_in_policy()
     {
         var root = FindRepositoryRoot();

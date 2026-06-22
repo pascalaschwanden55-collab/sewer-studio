@@ -285,13 +285,15 @@ public partial class PlayerWindow
 
     private async Task RunDetectionAsync()
     {
-        if (_closing || _player is null) return;
-        if (_isDetectionInFlight || _liveDetectionService is null || _detectionCts is null)
-            return;
-        if (!_player.IsPlaying)
-            return;
-        // Keine neue Analyse waehrend User-Bestaetigung
-        if (_detectionPendingFindings != null)
+        var player = _player;
+        if (!LiveDetectionTimerPolicy.ShouldRunTick(
+                isClosing: _closing,
+                hasPlayer: player is not null,
+                isDetectionInFlight: _isDetectionInFlight,
+                hasLiveDetectionService: _liveDetectionService is not null,
+                hasDetectionCancellation: _detectionCts is not null,
+                isPlayerPlaying: player?.IsPlaying == true,
+                hasPendingFindings: _detectionPendingFindings != null))
             return;
 
         _isDetectionInFlight = true;
@@ -317,7 +319,7 @@ public partial class PlayerWindow
 
             SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Warning,
                 $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Inferenz");
-            var timestampSec = _player.Time / 1000.0;
+            var timestampSec = player!.Time / 1000.0;
             var result = await _liveDetectionService.AnalyzeFrameAsync(
                 snapshot, timestampSec, _detectionCts.Token).ConfigureAwait(false);
 
