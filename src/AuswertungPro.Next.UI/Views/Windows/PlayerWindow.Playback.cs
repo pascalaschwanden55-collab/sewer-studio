@@ -157,10 +157,7 @@ public partial class PlayerWindow
         try
         {
             EnsurePlaying();
-            var ms = (long)Math.Max(0, time.TotalMilliseconds);
-            if (_player.Length > 0 && ms > _player.Length)
-                ms = _player.Length;
-            _player.Time = ms;
+            _player.Time = PlayerPlaybackState.ResolveSeekTargetMs(time, _player.Length);
             UpdateUi();
             return true;
         }

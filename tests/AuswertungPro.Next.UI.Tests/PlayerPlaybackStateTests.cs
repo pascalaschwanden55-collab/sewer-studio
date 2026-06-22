@@ -38,6 +38,23 @@ public sealed class PlayerPlaybackStateTests
     }
 
     [Theory]
+    [InlineData(-500, 100000, 0)]
+    [InlineData(5000, 100000, 5000)]
+    [InlineData(120000, 100000, 100000)]
+    [InlineData(120000, 0, 120000)]
+    public void ResolveSeekTargetMs_clamps_time_to_known_video_duration(
+        double requestedMs,
+        long durationMs,
+        long expectedMs)
+    {
+        var targetMs = PlayerPlaybackState.ResolveSeekTargetMs(
+            TimeSpan.FromMilliseconds(requestedMs),
+            durationMs);
+
+        Assert.Equal(expectedMs, targetMs);
+    }
+
+    [Theory]
     [InlineData(0, "00:00")]
     [InlineData(61000, "01:01")]
     [InlineData(3599000, "59:59")]

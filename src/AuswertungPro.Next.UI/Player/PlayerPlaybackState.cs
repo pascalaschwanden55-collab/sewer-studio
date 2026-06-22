@@ -24,6 +24,15 @@ public static class PlayerPlaybackState
         return Math.Clamp(next, 0, Math.Max(0, durationMs));
     }
 
+    public static long ResolveSeekTargetMs(TimeSpan requestedTime, long durationMs)
+    {
+        var ms = (long)Math.Max(0, requestedTime.TotalMilliseconds);
+        if (durationMs > 0 && ms > durationMs)
+            return durationMs;
+
+        return ms;
+    }
+
     public static string FormatMilliseconds(long milliseconds)
     {
         var time = TimeSpan.FromMilliseconds(milliseconds);

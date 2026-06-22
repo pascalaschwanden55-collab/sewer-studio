@@ -339,9 +339,12 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("PlayerPlaybackState.BuildSeekPreviewText", playback);
         Assert.Contains("PlayerPlaybackState.FormatRateLabel", playback);
+        Assert.Contains("PlayerPlaybackState.ResolveSeekTargetMs", playback);
         Assert.DoesNotContain("$\"{targetPos:P0}\"", playback);
         Assert.DoesNotContain("$\"{rate:0.##}x\"", playback);
+        Assert.DoesNotContain("var ms = (long)Math.Max(0, time.TotalMilliseconds);", playback);
         Assert.Contains("public static PlayerSeekPreviewText BuildSeekPreviewText", policy);
+        Assert.Contains("public static long ResolveSeekTargetMs", policy);
     }
 
     [Fact]
