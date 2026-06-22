@@ -67,6 +67,35 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerTimelineLayoutCalculator.CalculatePointX", controller);
     }
 
+    [Fact]
+    public void PlayerWindow_quickscan_lives_in_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var controllerPath = Path.Combine(uiRoot, "Player", "QuickScanController.cs");
+
+        Assert.True(File.Exists(controllerPath), "QuickScanController muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var windowText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
+        var windowRoot = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"));
+        var controller = File.ReadAllText(controllerPath);
+
+        Assert.DoesNotContain("_heatmapRects", windowText);
+        Assert.DoesNotContain("_isQuickScanning", windowText);
+        Assert.DoesNotContain("_quickScanCts", windowText);
+        Assert.DoesNotContain("AddHeatmapSegment", windowText);
+        Assert.DoesNotContain("RepositionHeatmap", windowText);
+        Assert.Contains("new QuickScanController", windowRoot);
+        Assert.Contains("_quickScanController.Reposition()", windowRoot);
+        Assert.Contains("_quickScanController.Cancel()", windowRoot);
+        Assert.Contains("_quickScanController.ToggleAsync()", windowText);
+        Assert.Contains("private readonly List<(QuickScanSegment Seg", controller);
+        Assert.Contains("QuickScanHeatmapLayoutPolicy", controller);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);
