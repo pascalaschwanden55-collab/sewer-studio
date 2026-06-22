@@ -216,15 +216,7 @@ public partial class PlayerWindow
                 frameBytes, box, dn, calibration, System.Threading.CancellationToken.None);
             if (result == null) return null;
 
-            if (result.Quant.HeightMm.HasValue) overlay.Q1Mm = result.Quant.HeightMm.Value;
-            if (result.Quant.WidthMm.HasValue) overlay.Q2Mm = result.Quant.WidthMm.Value;
-            var cross = result.Quant.CrossSectionReductionPercent ?? result.Quant.ExtentPercent;
-            if (cross.HasValue) overlay.FillPercent = cross.Value;
-            if (!string.IsNullOrEmpty(result.Quant.ClockPosition)
-                && double.TryParse(result.Quant.ClockPosition,
-                    System.Globalization.NumberStyles.Any,
-                    System.Globalization.CultureInfo.InvariantCulture, out var clk))
-                overlay.ClockFrom = clk;
+            CodingMarkBoxQuantificationOverlayPolicy.Apply(overlay, result.Quant);
 
             return result;
         }

@@ -584,6 +584,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_mark_box_quantification_mapping_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var markingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingMarkBoxQuantificationOverlayPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "SAM-Quantifizierung-zu-Overlay-Mapping muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var marking = File.ReadAllText(markingPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingMarkBoxQuantificationOverlayPolicy.Apply", marking);
+        Assert.DoesNotContain("result.Quant.HeightMm.HasValue", marking);
+        Assert.DoesNotContain("double.TryParse(result.Quant.ClockPosition", marking);
+        Assert.Contains("public static void Apply", policy);
+        Assert.Contains("quantification.CrossSectionReductionPercent", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_stretch_damage_action_input_lives_in_builder()
     {
         var root = FindRepositoryRoot();
