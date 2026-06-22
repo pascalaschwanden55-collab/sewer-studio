@@ -351,21 +351,15 @@ public partial class PlayerWindow
         if (_isDragging)
             return;
 
-        var length = _player.Length;
-        var time = Math.Max(0, _player.Time);
+        var state = PlayerPlaybackState.BuildUiState(
+            _player.Time,
+            _player.Length,
+            PositionSlider.Maximum);
 
-        if (length > 0)
-        {
-            var pos = (double)time / length;
-            PositionSlider.Value = pos * PositionSlider.Maximum;
-            CurrentTimeText.Text = PlayerPlaybackState.FormatMilliseconds(time);
-            DurationText.Text = PlayerPlaybackState.FormatMilliseconds(length);
-        }
-        else
-        {
-            CurrentTimeText.Text = PlayerPlaybackState.FormatMilliseconds(time);
-            DurationText.Text = "--:--";
-        }
+        if (state.SliderValue.HasValue)
+            PositionSlider.Value = state.SliderValue.Value;
+        CurrentTimeText.Text = state.CurrentTimeText;
+        DurationText.Text = state.DurationText;
 
         UpdateRateLabel();
 

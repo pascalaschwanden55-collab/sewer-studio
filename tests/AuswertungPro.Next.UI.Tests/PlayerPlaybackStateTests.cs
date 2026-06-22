@@ -120,6 +120,36 @@ public sealed class PlayerPlaybackStateTests
         Assert.Equal(1.0f, target.Position);
     }
 
+    [Fact]
+    public void BuildUiState_formats_known_duration_and_slider_value()
+    {
+        var state = PlayerPlaybackState.BuildUiState(30_000, 120_000, sliderMaximum: 100);
+
+        Assert.Equal(25, state.SliderValue);
+        Assert.Equal("00:30", state.CurrentTimeText);
+        Assert.Equal("02:00", state.DurationText);
+    }
+
+    [Fact]
+    public void BuildUiState_formats_unknown_duration_without_slider_value()
+    {
+        var state = PlayerPlaybackState.BuildUiState(61_000, 0, sliderMaximum: 100);
+
+        Assert.Null(state.SliderValue);
+        Assert.Equal("01:01", state.CurrentTimeText);
+        Assert.Equal("--:--", state.DurationText);
+    }
+
+    [Fact]
+    public void BuildUiState_clamps_negative_time_for_display_and_slider()
+    {
+        var state = PlayerPlaybackState.BuildUiState(-500, 100_000, sliderMaximum: 100);
+
+        Assert.Equal(0, state.SliderValue);
+        Assert.Equal("00:00", state.CurrentTimeText);
+        Assert.Equal("01:40", state.DurationText);
+    }
+
     [Theory]
     [InlineData(0.0f, "1x")]
     [InlineData(-1.0f, "1x")]

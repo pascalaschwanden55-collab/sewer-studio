@@ -10,6 +10,11 @@ public readonly record struct PlayerSliderSeekTarget(
     long? TimeMs,
     float? Position);
 
+public sealed record PlayerPlaybackUiState(
+    double? SliderValue,
+    string CurrentTimeText,
+    string DurationText);
+
 public static class PlayerPlaybackState
 {
     public const float MinRate = 0.25f;
@@ -70,6 +75,27 @@ public static class PlayerPlaybackState
         return durationMs > 0
             ? new PlayerSliderSeekTarget(true, ratio, (long)(ratio * durationMs), null)
             : new PlayerSliderSeekTarget(true, ratio, null, (float)ratio);
+    }
+
+    public static PlayerPlaybackUiState BuildUiState(
+        long currentTimeMs,
+        long durationMs,
+        double sliderMaximum)
+    {
+        var time = Math.Max(0, currentTimeMs);
+        if (durationMs > 0)
+        {
+            var ratio = (double)time / durationMs;
+            return new PlayerPlaybackUiState(
+                ratio * sliderMaximum,
+                FormatMilliseconds(time),
+                FormatMilliseconds(durationMs));
+        }
+
+        return new PlayerPlaybackUiState(
+            SliderValue: null,
+            CurrentTimeText: FormatMilliseconds(time),
+            DurationText: "--:--");
     }
 
     public static string FormatRateLabel(float rate)
