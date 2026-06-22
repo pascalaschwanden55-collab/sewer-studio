@@ -75,15 +75,10 @@ public partial class PlayerWindow
             return;
 
         var accepted = 0;
-        foreach (var pair in _lastCodingMatch.Trainingskandidaten)
+        foreach (var importEvent in CodingProtocolTrainingCandidateResolver.ResolveImportEvents(
+                     _lastCodingMatch.Trainingskandidaten,
+                     _codingImportEvents))
         {
-            if (!Guid.TryParse(pair.Gt.RefId, out var importEntryId))
-                continue;
-
-            var importEvent = _codingImportEvents.FirstOrDefault(ev => ev.Entry.EntryId == importEntryId);
-            if (importEvent == null)
-                continue;
-
             if (await ConfirmImportAsTrainingAsync(importEvent))
                 accepted++;
         }

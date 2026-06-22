@@ -237,6 +237,25 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_green_protocol_training_candidates_use_resolver()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var protocolMatchPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var resolverPath = Path.Combine(uiRoot, "Ai", "CodingProtocolTrainingCandidateResolver.cs");
+
+        Assert.True(File.Exists(resolverPath), "Gruene Protokoll-Trainingskandidaten muessen ausserhalb der PlayerWindow-Partials auf Import-Events gemappt werden.");
+
+        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var resolver = File.ReadAllText(resolverPath);
+
+        Assert.Contains("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", protocolMatch);
+        Assert.DoesNotContain("Guid.TryParse(pair.Gt.RefId", protocolMatch);
+        Assert.DoesNotContain("_codingImportEvents.FirstOrDefault(ev => ev.Entry.EntryId", protocolMatch);
+        Assert.Contains("public static IReadOnlyList<CodingEvent> ResolveImportEvents", resolver);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_primary_damage_text_uses_existing_mapper()
     {
         var root = FindRepositoryRoot();

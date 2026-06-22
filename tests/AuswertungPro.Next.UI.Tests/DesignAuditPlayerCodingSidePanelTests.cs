@@ -398,7 +398,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         Assert.Contains("await ConfirmImportAsTrainingAsync(importEvent)", importConfirmBody);
         Assert.Contains("_lastCodingMatch.Trainingskandidaten", greenBody);
-        Assert.Contains("_codingImportEvents.FirstOrDefault", greenBody);
+        Assert.Contains("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", greenBody);
+        Assert.DoesNotContain("_codingImportEvents.FirstOrDefault", greenBody);
         Assert.Contains("await ConfirmImportAsTrainingAsync(importEvent)", greenBody);
         Assert.Contains("SeekToImportEvent(importEvent)", coreBody);
         Assert.Contains("TeacherAnnotationStore.AppendAsync(annotation)", coreBody);
