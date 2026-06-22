@@ -233,10 +233,8 @@ public partial class PlayerWindow
     private void CodingEventSeek_Click(object sender, RoutedEventArgs e)
     {
         if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
-        if (_player != null
-            && codingEvent.VideoTimestamp.TotalMilliseconds >= 0
-            && (codingEvent.Entry.Zeit.HasValue || codingEvent.VideoTimestamp != TimeSpan.Zero))
-            _player.Time = (long)codingEvent.VideoTimestamp.TotalMilliseconds;
+        if (_player != null && CodingEventSeekPolicy.TryGetSeekMilliseconds(codingEvent, out var milliseconds))
+            _player.Time = milliseconds;
     }
 
     /// <summary>

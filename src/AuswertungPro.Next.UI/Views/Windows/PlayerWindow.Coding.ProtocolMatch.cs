@@ -31,10 +31,8 @@ public partial class PlayerWindow
 
     private void SeekToImportEvent(CodingEvent importEvent)
     {
-        if (_player != null
-            && importEvent.VideoTimestamp.TotalMilliseconds >= 0
-            && (importEvent.Entry.Zeit.HasValue || importEvent.VideoTimestamp != TimeSpan.Zero))
-            _player.Time = (long)importEvent.VideoTimestamp.TotalMilliseconds;
+        if (_player != null && CodingEventSeekPolicy.TryGetSeekMilliseconds(importEvent, out var milliseconds))
+            _player.Time = milliseconds;
         else if (_codingSessionService != null && importEvent.MeterAtCapture > 0)
         {
             _codingSessionService.MoveToMeter(importEvent.MeterAtCapture);

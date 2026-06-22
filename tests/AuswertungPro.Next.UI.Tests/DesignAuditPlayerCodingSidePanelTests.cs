@@ -315,7 +315,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var seekBody = ExtractMethodBody(coding, "private void CodingEventSeek_Click");
 
-        Assert.Contains("codingEvent.VideoTimestamp.TotalMilliseconds >= 0", seekBody);
+        Assert.Contains("CodingEventSeekPolicy.TryGetSeekMilliseconds(codingEvent", seekBody);
         Assert.DoesNotContain("codingEvent.VideoTimestamp.TotalMilliseconds > 0", seekBody);
     }
 
@@ -325,7 +325,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var seekBody = ExtractMethodBody(coding, "private void SeekToImportEvent");
 
-        Assert.Contains("importEvent.VideoTimestamp.TotalMilliseconds >= 0", seekBody);
+        Assert.Contains("CodingEventSeekPolicy.TryGetSeekMilliseconds(importEvent", seekBody);
         Assert.DoesNotContain("importEvent.VideoTimestamp.TotalMilliseconds > 0", seekBody);
     }
 
