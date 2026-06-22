@@ -76,22 +76,11 @@ public partial class PlayerWindow
     {
         if (_codingVm == null || _haltungRecord == null) return;
 
-        var entries = _haltungRecord.Protocol?.Current?.Entries?
-            .Where(e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code))
-            .ToList();
+        var events = CodingProtocolEventMapper.BuildExistingEvents(_haltungRecord.Protocol);
+        if (events.Count == 0) return;
 
-        if (entries == null || entries.Count == 0) return;
-
-        foreach (var entry in entries.OrderBy(e => e.MeterStart ?? 0))
-        {
-            var codingEvent = new CodingEvent
-            {
-                Entry = entry,
-                MeterAtCapture = entry.MeterStart ?? 0,
-                VideoTimestamp = entry.Zeit ?? TimeSpan.Zero
-            };
+        foreach (var codingEvent in events)
             _codingVm.Events.Add(codingEvent);
-        }
     }
 
     // --- Coding: Primaere Schaeden synchronisieren ---

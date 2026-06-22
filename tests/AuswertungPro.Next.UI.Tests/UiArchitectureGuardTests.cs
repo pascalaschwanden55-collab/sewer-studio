@@ -262,6 +262,25 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static string Build", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_existing_protocol_entries_use_mapper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
+        var mapperPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEventMapper.cs");
+
+        Assert.True(File.Exists(mapperPath), "ProtocolEntry-zu-CodingEvent-Mapping muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var protocol = File.ReadAllText(protocolPath);
+        var mapper = File.ReadAllText(mapperPath);
+
+        Assert.Contains("CodingProtocolEventMapper.BuildExistingEvents", protocol);
+        Assert.DoesNotContain("new CodingEvent", protocol);
+        Assert.DoesNotContain("OrderBy(e => e.MeterStart ?? 0)", protocol);
+        Assert.Contains("public static IReadOnlyList<CodingEvent> BuildExistingEvents", mapper);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);
