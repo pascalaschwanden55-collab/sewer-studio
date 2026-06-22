@@ -124,14 +124,23 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var markingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
+        var rendererPath = Path.Combine(uiRoot, "Player", "BendMarkerRenderer.cs");
         var tagsPath = Path.Combine(uiRoot, "Player", "OverlayTags.cs");
 
+        Assert.True(File.Exists(rendererPath), "BendMarkerRenderer muss ausserhalb der PlayerWindow-Partials liegen.");
+
         var marking = File.ReadAllText(markingPath);
+        var renderer = File.ReadAllText(rendererPath);
         var tags = File.ReadAllText(tagsPath);
 
         Assert.Contains("public const string BendMarker = \"bend_marker\"", tags);
-        Assert.Contains("OverlayTags.BendMarker", marking);
+        Assert.Contains("BendMarkerRenderer.Show", marking);
+        Assert.Contains("BendMarkerRenderer.Clear", marking);
+        Assert.DoesNotContain("OverlayTags.BendMarker", marking);
         Assert.DoesNotContain("\"bend_marker\"", marking);
+        Assert.Contains("OverlayTags.BendMarker", renderer);
+        Assert.Contains("Text = \"Bogen erkannt\"", renderer);
+        Assert.Contains("canvas.Children.Add", renderer);
     }
 
     private static bool IsBuildOutput(string path)

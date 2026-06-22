@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using System.Windows.Threading;
 using System.Windows.Input;
 using AuswertungPro.Next.Application.Ai;
@@ -167,7 +166,7 @@ public partial class PlayerWindow
 
             // Overlay + SAM-Maske + Bogen-Marker entfernen und Canvas neu zeichnen
             Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
-            ClearBendMarkers();
+            BendMarkerRenderer.Clear(CodingOverlayCanvas);
             if (_codingVm != null) _codingVm.CurrentOverlay = null;
             RedrawCodingCanvas(includeManualOverlay: false);
 
@@ -258,7 +257,7 @@ public partial class PlayerWindow
             // zusaetzlich als Bogen gilt.
             if (result.IsBend && LiveDetectionGeometryMapper.BoxContainsVanishingPoint(overlay, result.VanishX, result.VanishY))
             {
-                ShowBendMarker(result.VanishX, result.VanishY, rect);
+                BendMarkerRenderer.Show(CodingOverlayCanvas, result.VanishX, result.VanishY, rect);
                 return;
             }
 
@@ -280,54 +279,6 @@ public partial class PlayerWindow
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Mark-SAM] Masken-Render uebersprungen: {ex.Message}");
-        }
-    }
-
-    // Zeichnet einen Bogen-Marker (Ring + Label) am Fluchtpunkt - die ehrliche Anzeige
-    // "KI hat hier einen Bogen erkannt", da eine praezise Bogen-Kontur technisch nicht
-    // zuverlaessig moeglich ist. vanishX/Y sind normiert (0..1) im Video-Rechteck.
-    private void ShowBendMarker(double vanishX, double vanishY, Rect rect)
-    {
-        double cx = rect.X + vanishX * rect.Width;
-        double cy = rect.Y + vanishY * rect.Height;
-        double r = Math.Max(24, Math.Min(rect.Width, rect.Height) * 0.10);
-
-        var ring = new System.Windows.Shapes.Ellipse
-        {
-            Width = r * 2, Height = r * 2,
-            Stroke = new SolidColorBrush(Color.FromRgb(0x22, 0xC5, 0x5E)),
-            StrokeThickness = 3,
-            Fill = new SolidColorBrush(Color.FromArgb(40, 0x22, 0xC5, 0x5E)),
-            IsHitTestVisible = false,
-            Tag = OverlayTags.BendMarker
-        };
-        Canvas.SetLeft(ring, cx - r);
-        Canvas.SetTop(ring, cy - r);
-        CodingOverlayCanvas.Children.Add(ring);
-
-        var label = new System.Windows.Controls.TextBlock
-        {
-            Text = "Bogen erkannt",
-            Foreground = new SolidColorBrush(Colors.White),
-            Background = new SolidColorBrush(Color.FromArgb(200, 0x22, 0xC5, 0x5E)),
-            Padding = new Thickness(4, 1, 4, 1),
-            FontSize = 12,
-            IsHitTestVisible = false,
-            Tag = OverlayTags.BendMarker
-        };
-        Canvas.SetLeft(label, cx - r);
-        Canvas.SetTop(label, Math.Max(0, cy - r - 20));
-        CodingOverlayCanvas.Children.Add(label);
-    }
-
-    // Entfernt alle Bogen-Marker vom Codier-Canvas.
-    private void ClearBendMarkers()
-    {
-        for (int i = CodingOverlayCanvas.Children.Count - 1; i >= 0; i--)
-        {
-            if (CodingOverlayCanvas.Children[i] is FrameworkElement fe
-                && (fe.Tag as string) == OverlayTags.BendMarker)
-                CodingOverlayCanvas.Children.RemoveAt(i);
         }
     }
 
