@@ -246,12 +246,10 @@ public partial class PlayerWindow
 
         // PipeGraphTimeline einrichten und einblenden
         PipeTimeline.TotalLength = _codingVm.EndMeter;
-        PipeTimeline.MeterAccessor = obj => obj is CodingEvent ce ? ce.MeterAtCapture : 0;
-        PipeTimeline.CodeAccessor = obj => obj is CodingEvent ce ? ce.Entry.Code : "?";
-        PipeTimeline.ConfidenceAccessor = obj => obj is CodingEvent ce && ce.AiContext != null
-            ? ce.AiContext.Confidence : -1;
-        PipeTimeline.IsRejectedAccessor = obj => obj is CodingEvent ce
-            && CodingSessionViewModel.GetDefectStatus(ce) == DefectStatus.Rejected;
+        PipeTimeline.MeterAccessor = CodingTimelineMarkerAccessors.Meter;
+        PipeTimeline.CodeAccessor = CodingTimelineMarkerAccessors.Code;
+        PipeTimeline.ConfidenceAccessor = CodingTimelineMarkerAccessors.Confidence;
+        PipeTimeline.IsRejectedAccessor = CodingTimelineMarkerAccessors.IsRejected;
         PipeTimeline.Markers = _codingVm.Events;
         PipeTimeline.NavigateToMeterCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<double>(meter =>
         {

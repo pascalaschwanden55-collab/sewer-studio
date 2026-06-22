@@ -691,6 +691,27 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("activeTool != OverlayToolType.None", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_timeline_marker_accessors_live_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var playerCodingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var accessorsPath = Path.Combine(uiRoot, "Ai", "CodingTimelineMarkerAccessors.cs");
+
+        Assert.True(File.Exists(accessorsPath), "Timeline-Marker-Regeln muessen ausserhalb von PlayerWindow liegen.");
+
+        var playerCoding = File.ReadAllText(playerCodingPath);
+        var accessors = File.ReadAllText(accessorsPath);
+
+        Assert.Contains("CodingTimelineMarkerAccessors.Meter", playerCoding);
+        Assert.Contains("CodingTimelineMarkerAccessors.Code", playerCoding);
+        Assert.Contains("CodingTimelineMarkerAccessors.Confidence", playerCoding);
+        Assert.Contains("CodingTimelineMarkerAccessors.IsRejected", playerCoding);
+        Assert.DoesNotContain("PipeTimeline.MeterAccessor = obj => obj is CodingEvent", playerCoding);
+        Assert.Contains("public static double Meter", accessors);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);
