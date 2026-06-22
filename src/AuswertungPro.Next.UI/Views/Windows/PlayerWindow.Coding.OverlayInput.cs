@@ -609,39 +609,23 @@ public partial class PlayerWindow
     // formattreu (Letterbox/Pillarbox). Overlays muessen in DIESES Rechteck gerechnet werden,
     // nicht in die volle Flaeche - sonst werden z.B. 4:3-Befunde in einer 16:9-Flaeche verzerrt.
     private Rect GetCodingContentRect()
-    {
-        double w = CodingOverlayCanvas.ActualWidth;
-        double h = CodingOverlayCanvas.ActualHeight;
-        if (w <= 0 || h <= 0 || _codingVideoAspect <= 0)
-            return new Rect(0, 0, Math.Max(0, w), Math.Max(0, h));
-
-        double canvasAspect = w / h;
-        if (_codingVideoAspect > canvasAspect)
-        {
-            // Video breiter als die Flaeche -> fuellt die Breite, Balken oben/unten.
-            double contentH = w / _codingVideoAspect;
-            return new Rect(0, (h - contentH) / 2.0, w, contentH);
-        }
-
-        // Video schmaler (z.B. 4:3 in 16:9) -> fuellt die Hoehe, Balken links/rechts.
-        double contentW = h * _codingVideoAspect;
-        return new Rect((w - contentW) / 2.0, 0, contentW, h);
-    }
+        => CodingOverlayViewportMapper.GetContentRect(
+            CodingOverlayCanvas.ActualWidth,
+            CodingOverlayCanvas.ActualHeight,
+            _codingVideoAspect);
 
     private NormalizedPoint CodingPixelToNorm(Point pixel)
     {
         if (CodingOverlayCanvas.ActualWidth <= 0 || CodingOverlayCanvas.ActualHeight <= 0)
             UpdateCodingOverlayViewport();
         var r = GetCodingContentRect();
-        if (r.Width <= 0 || r.Height <= 0)
-            return new NormalizedPoint(0.5, 0.5);
-        return new NormalizedPoint((pixel.X - r.X) / r.Width, (pixel.Y - r.Y) / r.Height);
+        return CodingOverlayViewportMapper.PixelToNorm(pixel, r);
     }
 
     private Point CodingNormToPixel(NormalizedPoint norm)
     {
         var r = GetCodingContentRect();
-        return new Point(r.X + norm.X * r.Width, r.Y + norm.Y * r.Height);
+        return CodingOverlayViewportMapper.NormToPixel(norm, r);
     }
 
     private void ClearTransientCodingCanvas(bool clearManualOverlay)
