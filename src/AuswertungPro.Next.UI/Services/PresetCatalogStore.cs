@@ -56,7 +56,9 @@ public static class PresetCatalogStore
             Directory.CreateDirectory(dir);
 
         var json = JsonSerializer.Serialize(catalog, Application.Common.JsonDefaults.Indented);
-        File.WriteAllText(PresetPath, json);
+        // Atomar schreiben: temp -> File.Replace (mit .bak) statt direktem WriteAllText,
+        // damit ein Absturz mitten im Schreiben den Preset-Katalog nicht korrumpiert.
+        Application.Common.AtomicTextFileWriter.WriteAllText(PresetPath, json);
     }
 
     private static void MigrateLegacyIfNeeded()

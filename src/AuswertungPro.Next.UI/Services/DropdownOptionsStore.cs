@@ -116,7 +116,9 @@ public static class DropdownOptionsStore
         Directory.CreateDirectory(OptionsDir);
         var path = Path.Combine(OptionsDir, $"{key}.json");
         var json = JsonSerializer.Serialize(options, Application.Common.JsonDefaults.Indented);
-        File.WriteAllText(path, json);
+        // Atomar schreiben: temp -> File.Replace (mit .bak) statt direktem WriteAllText,
+        // damit ein Absturz mitten im Schreiben die Dropdown-Liste nicht korrumpiert.
+        Application.Common.AtomicTextFileWriter.WriteAllText(path, json);
     }
 
     private static void EnsureMigrated()
