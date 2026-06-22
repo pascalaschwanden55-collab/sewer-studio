@@ -2,6 +2,14 @@ using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Ai;
 
+public sealed record CodingOverlayMeasurementPanelState(
+    bool IsVisible,
+    string Q1Text,
+    string Q2Text,
+    string ClockText,
+    string ArcText,
+    string MeasurementText);
+
 public static class CodingOverlayMeasurementFormatter
 {
     public static string BuildOverlayMeasurementText(OverlayGeometry overlay)
@@ -94,6 +102,51 @@ public static class CodingOverlayMeasurementFormatter
         }
 
         return string.Join("  |  ", parts);
+    }
+
+    public static CodingOverlayMeasurementPanelState BuildPanelState(OverlayGeometry? overlay)
+    {
+        if (overlay == null)
+        {
+            return new CodingOverlayMeasurementPanelState(
+                IsVisible: false,
+                Q1Text: "Q1: -",
+                Q2Text: "Q2: -",
+                ClockText: "Uhr: -",
+                ArcText: "Bogen: -",
+                MeasurementText: "");
+        }
+
+        return new CodingOverlayMeasurementPanelState(
+            IsVisible: true,
+            Q1Text: overlay.Q1Mm.HasValue ? $"Q1: {overlay.Q1Mm:F1} mm" : "Q1: -",
+            Q2Text: overlay.Q2Mm.HasValue ? $"Q2: {overlay.Q2Mm:F1} mm" : "Q2: -",
+            ClockText: BuildPanelClockText(overlay),
+            ArcText: BuildPanelArcText(overlay),
+            MeasurementText: BuildPanelMeasurementText(overlay));
+    }
+
+    private static string BuildPanelClockText(OverlayGeometry overlay)
+    {
+        if (!overlay.ClockFrom.HasValue)
+            return "Uhr: -";
+
+        return overlay.ClockTo.HasValue
+            ? $"Uhr: {overlay.ClockFrom:F1} -> {overlay.ClockTo:F1}"
+            : $"Uhr: {overlay.ClockFrom:F1}";
+    }
+
+    private static string BuildPanelArcText(OverlayGeometry overlay)
+    {
+        if (overlay.ToolType == OverlayToolType.Level && overlay.FillPercent.HasValue)
+            return $"Fuellung: {overlay.FillPercent:F1}%";
+
+        if (!overlay.ArcDegrees.HasValue)
+            return "Bogen: -";
+
+        return overlay.ToolType == OverlayToolType.PipeBend
+            ? $"Winkel: {overlay.ArcDegrees:F1}\u00B0"
+            : $"Bogen: {overlay.ArcDegrees:F0} deg";
     }
 
     private static string BuildLevelLabel(OverlayGeometry overlay)

@@ -298,6 +298,23 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static IReadOnlyList<CodingEvent> BuildMissingImportEvents", mapper);
     }
 
+    [Fact]
+    public void PlayerWindow_overlay_measurement_panel_uses_formatter_state()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var overlayPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.OverlayRendering.cs");
+        var formatterPath = Path.Combine(uiRoot, "Ai", "CodingOverlayMeasurementFormatter.cs");
+
+        var overlay = File.ReadAllText(overlayPath);
+        var formatter = File.ReadAllText(formatterPath);
+
+        Assert.Contains("CodingOverlayMeasurementFormatter.BuildPanelState", overlay);
+        Assert.DoesNotContain("overlay.Q1Mm.HasValue ? $\"Q1:", overlay);
+        Assert.DoesNotContain("overlay.ToolType == OverlayToolType.Level && overlay.FillPercent.HasValue", overlay);
+        Assert.Contains("public static CodingOverlayMeasurementPanelState BuildPanelState", formatter);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

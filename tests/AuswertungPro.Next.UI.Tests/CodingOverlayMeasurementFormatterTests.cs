@@ -80,4 +80,56 @@ public sealed class CodingOverlayMeasurementFormatterTests
         Assert.Equal("Einragung:40.0%  |  Uhr:6.0", CodingOverlayMeasurementFormatter.BuildPanelMeasurementText(level));
         Assert.Equal("DN:110mm  |  37%  |  Uhr:3.0", CodingOverlayMeasurementFormatter.BuildPanelMeasurementText(lateral));
     }
+
+    [Fact]
+    public void BuildPanelState_hides_measurement_panel_without_overlay()
+    {
+        var state = CodingOverlayMeasurementFormatter.BuildPanelState(null);
+
+        Assert.False(state.IsVisible);
+        Assert.Equal("Q1: -", state.Q1Text);
+        Assert.Equal("Q2: -", state.Q2Text);
+        Assert.Equal("Uhr: -", state.ClockText);
+        Assert.Equal("Bogen: -", state.ArcText);
+        Assert.Equal("", state.MeasurementText);
+    }
+
+    [Fact]
+    public void BuildPanelState_formats_standard_measurement_fields()
+    {
+        var state = CodingOverlayMeasurementFormatter.BuildPanelState(new OverlayGeometry
+        {
+            ToolType = OverlayToolType.Rectangle,
+            Q1Mm = 12.34,
+            Q2Mm = 4.56,
+            ClockFrom = 2,
+            ClockTo = 5,
+            ArcDegrees = 44.9
+        });
+
+        Assert.True(state.IsVisible);
+        Assert.Equal("Q1: 12.3 mm", state.Q1Text);
+        Assert.Equal("Q2: 4.6 mm", state.Q2Text);
+        Assert.Equal("Uhr: 2.0 -> 5.0", state.ClockText);
+        Assert.Equal("Bogen: 45 deg", state.ArcText);
+        Assert.Equal("Q1:12.3mm  |  Uhr:2.0  |  45deg", state.MeasurementText);
+    }
+
+    [Fact]
+    public void BuildPanelState_formats_level_fill_and_pipe_bend_angle()
+    {
+        var level = CodingOverlayMeasurementFormatter.BuildPanelState(new OverlayGeometry
+        {
+            ToolType = OverlayToolType.Level,
+            FillPercent = 37.8
+        });
+        var bend = CodingOverlayMeasurementFormatter.BuildPanelState(new OverlayGeometry
+        {
+            ToolType = OverlayToolType.PipeBend,
+            ArcDegrees = 22.26
+        });
+
+        Assert.Equal("Fuellung: 37.8%", level.ArcText);
+        Assert.Equal("Winkel: 22.3\u00B0", bend.ArcText);
+    }
 }

@@ -208,29 +208,15 @@ public partial class PlayerWindow
 
     private void UpdateCodingOverlayInfo(OverlayGeometry? overlay)
     {
-        if (overlay == null)
-        {
-            TxtCodingQ1.Text = "Q1: -"; TxtCodingQ2.Text = "Q2: -";
-            TxtCodingClock.Text = "Uhr: -"; TxtCodingArc.Text = "Bogen: -";
-            CodingMeasurementPanel.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        TxtCodingQ1.Text = overlay.Q1Mm.HasValue ? $"Q1: {overlay.Q1Mm:F1} mm" : "Q1: -";
-        TxtCodingQ2.Text = overlay.Q2Mm.HasValue ? $"Q2: {overlay.Q2Mm:F1} mm" : "Q2: -";
-        TxtCodingClock.Text = overlay.ClockFrom.HasValue
-            ? $"Uhr: {overlay.ClockFrom:F1}" + (overlay.ClockTo.HasValue ? $" -> {overlay.ClockTo:F1}" : "")
-            : "Uhr: -";
-        TxtCodingArc.Text = overlay.ToolType == OverlayToolType.Level && overlay.FillPercent.HasValue
-            ? $"Fuellung: {overlay.FillPercent:F1}%"
-            : overlay.ArcDegrees.HasValue
-                ? (overlay.ToolType == OverlayToolType.PipeBend
-                    ? $"Winkel: {overlay.ArcDegrees:F1}\u00B0"
-                    : $"Bogen: {overlay.ArcDegrees:F0} deg")
-                : "Bogen: -";
-
-        CodingMeasurementPanel.Visibility = Visibility.Visible;
-        TxtCodingMeasurement.Text = CodingOverlayMeasurementFormatter.BuildPanelMeasurementText(overlay);
+        var state = CodingOverlayMeasurementFormatter.BuildPanelState(overlay);
+        TxtCodingQ1.Text = state.Q1Text;
+        TxtCodingQ2.Text = state.Q2Text;
+        TxtCodingClock.Text = state.ClockText;
+        TxtCodingArc.Text = state.ArcText;
+        TxtCodingMeasurement.Text = state.MeasurementText;
+        CodingMeasurementPanel.Visibility = state.IsVisible
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     // --- Coding Code-Auswahl ---
