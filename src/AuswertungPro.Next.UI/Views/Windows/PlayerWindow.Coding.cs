@@ -207,14 +207,12 @@ public partial class PlayerWindow
 
         // ALLE bestehenden Beobachtungen in Import-Referenz verschieben.
         // KI-Befunde-Liste startet LEER â€” KI erkennt frisch, User korrigiert.
-        _codingImportEvents.Clear();
         _lastCodingMatch = null;
         _codingProtocolMatchBuckets.Clear();
         UpdateCodingProtocolMatchSummary(null);
-        var allExisting = _codingVm.Events.OrderBy(e => e.MeterAtCapture).ToList();
-        _codingVm.Events.Clear();
-        foreach (var ev in allExisting)
-            _codingImportEvents.Add(ev);
+        CodingImportReferenceTransfer.MoveExistingEventsToImportReference(
+            _codingVm.Events,
+            _codingImportEvents);
         LstImportEvents.ItemsSource = _codingImportEvents;
         RunImportDefectCount.Text = _codingImportEvents.Count.ToString();
 

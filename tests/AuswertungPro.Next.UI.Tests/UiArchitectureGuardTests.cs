@@ -350,6 +350,24 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static CodingInlineDefectDetailState BuildInlineDetail", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_import_reference_transfer_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceTransfer.cs");
+
+        Assert.True(File.Exists(policyPath), "Import-Referenz-Transfer muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var coding = File.ReadAllText(codingPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingImportReferenceTransfer.MoveExistingEventsToImportReference", coding);
+        Assert.DoesNotContain("var allExisting = _codingVm.Events.OrderBy", coding);
+        Assert.Contains("public static int MoveExistingEventsToImportReference", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);
