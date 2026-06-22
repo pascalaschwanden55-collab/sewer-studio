@@ -31,22 +31,10 @@ public partial class PlayerWindow
         System.Diagnostics.Debug.WriteLine(
             $"[BCD-Dedup] EnsureRohranfang: NEU erzeugen bei {currentMeter:F2}m (VM={bcdPresence.ViewCount}, Session={bcdPresence.SessionCount})");
 
-        // Rohranfang: OSD-Meter vom Import uebernehmen, sonst 0.00m
-        // Videozeit: aus dem Import oder Anfang des Videos
-        double rohranfangMeter = 0.0;
-        var rohranfangTime = TimeSpan.Zero;
-
-        // Aus Import-Referenz den BCD-Eintrag holen (falls vorhanden)
-        var importBcd = _codingImportEvents.FirstOrDefault(e =>
-            string.Equals(e.Entry.Code, "BCD", StringComparison.OrdinalIgnoreCase));
-        if (importBcd != null)
-        {
-            rohranfangMeter = importBcd.MeterAtCapture;
-            rohranfangTime = importBcd.VideoTimestamp;
-        }
+        var startReference = CodingBoundaryImportReferencePolicy.ResolveStart(_codingImportEvents);
 
         var label = VsaCodeResolver.LookupLabel("BCD") ?? "Rohranfang";
-        var draft = CodingBoundaryEventFactory.CreateStart(label, rohranfangMeter, rohranfangTime);
+        var draft = CodingBoundaryEventFactory.CreateStart(label, startReference.Meter, startReference.VideoTime);
         // Rohranfang-Foto: NICHT den Videoanfang nehmen (dort laeuft die Dateneinblendung).
         // Bevorzugt den ersten sauberen Frame NACH der Einblendung (FrameReadiness -> Ready)
         // gezielt per ffmpeg greifen; sonst Fallback auf den uebergebenen analysierten Frame.
@@ -54,8 +42,8 @@ public partial class PlayerWindow
         AttachBoundaryAnalyzedFramePhoto(draft.Entry, analyzedFrameBytes);
 
         var ev = _codingSessionService.AddEvent(draft.Entry);
-        ev.MeterAtCapture = rohranfangMeter;
-        ev.VideoTimestamp = rohranfangTime;
+        ev.MeterAtCapture = startReference.Meter;
+        ev.VideoTimestamp = startReference.VideoTime;
         ev.AiContext = draft.AiContext;
         // Event-Hook (OnSessionEventAdded) fuegt automatisch in _codingVm.Events ein.
         // KEIN explizites _codingVm.Events.Add() - sonst doppelt!
@@ -78,34 +66,24 @@ public partial class PlayerWindow
             return;
         // Streckenschaeden werden bereits in ExitCodingMode geschlossen (vor diesem Aufruf)
 
-        var rohrEndTime = _player != null
+        var fallbackEndTime = _player != null
             ? TimeSpan.FromMilliseconds(_player.Time)
             : videoTime;
 
-        // Aus Import-Referenz den BCE-Eintrag holen (falls vorhanden) = verlaessliches Rohrende.
-        var importBce = _codingImportEvents.FirstOrDefault(e =>
-            string.Equals(e.Entry.Code, "BCE", StringComparison.OrdinalIgnoreCase));
-
-        // Rohrende-Meter absichern: ein kaputter OSD-Meter (z.B. 114 m bei 15.82 m Haltung) wird
-        // auf das verlaessliche Ende (Import-BCE / EndMeter) korrigiert statt blind uebernommen.
-        double rohrEndMeter = CodingDedupPolicy.ResolvePlausibleEndMeter(
-            osdMeter: _codingLastOsdMeter ?? meterEnd,
-            importEndMeter: importBce?.MeterAtCapture,
-            vmEndMeter: _codingVm.EndMeter);
-        if (importBce != null
-            && Math.Abs(importBce.MeterAtCapture - rohrEndMeter) < 0.01)
-        {
-            // Ende stammt aus dem Import -> dessen Videozeit uebernehmen.
-            rohrEndTime = importBce.VideoTimestamp;
-        }
+        var endReference = CodingBoundaryImportReferencePolicy.ResolveEnd(
+            _codingImportEvents,
+            _codingLastOsdMeter,
+            meterEnd,
+            _codingVm.EndMeter,
+            fallbackEndTime);
 
         var label = VsaCodeResolver.LookupLabel("BCE") ?? "Rohrende";
-        var draft = CodingBoundaryEventFactory.CreateEnd(label, rohrEndMeter, rohrEndTime);
+        var draft = CodingBoundaryEventFactory.CreateEnd(label, endReference.Meter, endReference.VideoTime);
         AttachBoundaryAnalyzedFramePhoto(draft.Entry, analyzedFrameBytes);
 
         var ev = _codingSessionService.AddEvent(draft.Entry);
-        ev.MeterAtCapture = rohrEndMeter;
-        ev.VideoTimestamp = rohrEndTime;
+        ev.MeterAtCapture = endReference.Meter;
+        ev.VideoTimestamp = endReference.VideoTime;
         ev.AiContext = draft.AiContext;
         RefreshCodingEventsList();
     }

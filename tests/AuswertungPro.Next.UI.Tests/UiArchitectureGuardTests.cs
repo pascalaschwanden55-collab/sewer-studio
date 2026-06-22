@@ -663,6 +663,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_boundary_import_reference_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var boundariesPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingBoundaryImportReferencePolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Import-Referenzlogik fuer BCD/BCE muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var boundaries = File.ReadAllText(boundariesPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingBoundaryImportReferencePolicy.ResolveStart", boundaries);
+        Assert.Contains("CodingBoundaryImportReferencePolicy.ResolveEnd", boundaries);
+        Assert.DoesNotContain("_codingImportEvents.FirstOrDefault(e =>", boundaries);
+        Assert.Contains("public static CodingBoundaryReference ResolveStart", policy);
+        Assert.Contains("public static CodingBoundaryReference ResolveEnd", policy);
+        Assert.Contains("CodingDedupPolicy.ResolvePlausibleEndMeter", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_mark_bbox_mapping_lives_in_mapper()
     {
         var root = FindRepositoryRoot();
