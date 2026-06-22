@@ -56,9 +56,9 @@ public partial class PlayerWindow
 
         try
         {
-            var tempDir = Path.Combine(Path.GetTempPath(), "SewerStudio_Snapshots");
-            Directory.CreateDirectory(tempDir);
-            snapshotPath = Path.Combine(tempDir, $"snap_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+            var target = PlayerSnapshotPathPolicy.Create();
+            Directory.CreateDirectory(target.DirectoryPath);
+            snapshotPath = target.FilePath;
 
             // VLC Snapshot: 0 = original Aufloesung (FullHD etc.)
             return playerWindow.TakeSnapshotSafe(snapshotPath);

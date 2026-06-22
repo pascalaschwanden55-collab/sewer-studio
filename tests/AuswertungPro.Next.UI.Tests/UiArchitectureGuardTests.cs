@@ -482,6 +482,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_public_snapshot_path_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.cs");
+        var policyPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotPathPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Temp-Pfad fuer Player-Snapshots muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var playback = File.ReadAllText(playbackPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("PlayerSnapshotPathPolicy.Create", playback);
+        Assert.DoesNotContain("SewerStudio_Snapshots", playback);
+        Assert.DoesNotContain("snap_{DateTime.Now", playback);
+        Assert.DoesNotContain("Path.GetTempPath()", playback);
+        Assert.Contains("public static PlayerSnapshotTarget Build", policy);
+        Assert.Contains("public static PlayerSnapshotTarget Create", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_import_reference_transfer_lives_in_policy()
     {
         var root = FindRepositoryRoot();
