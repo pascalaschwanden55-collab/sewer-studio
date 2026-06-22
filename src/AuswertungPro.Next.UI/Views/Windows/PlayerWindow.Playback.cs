@@ -436,17 +436,9 @@ public partial class PlayerWindow
             return;
 
         var length = _player.Length;
-        if (length > 0)
-        {
-            var targetMs = (long)(targetPos * length);
-            CurrentTimeText.Text = PlayerPlaybackState.FormatMilliseconds(targetMs);
-            DurationText.Text = PlayerPlaybackState.FormatMilliseconds(length);
-        }
-        else
-        {
-            CurrentTimeText.Text = $"{targetPos:P0}";
-            DurationText.Text = "--:--";
-        }
+        var preview = PlayerPlaybackState.BuildSeekPreviewText(targetPos, length);
+        CurrentTimeText.Text = preview.CurrentTimeText;
+        DurationText.Text = preview.DurationText;
 
         // Throttled live seek: schedule scrub if not already pending
         if (_isDragging && !_scrubTimer.IsEnabled)
@@ -464,9 +456,9 @@ public partial class PlayerWindow
         else
             _player.Position = (float)targetPos;
 
-        CurrentTimeText.Text = length > 0
-            ? PlayerPlaybackState.FormatMilliseconds((long)(targetPos * length))
-            : $"{targetPos:P0}";
+        CurrentTimeText.Text = PlayerPlaybackState
+            .BuildSeekPreviewText(targetPos, length)
+            .CurrentTimeText;
     }
 
     private void SetSpeed(float rate)
@@ -483,8 +475,8 @@ public partial class PlayerWindow
 
     private void UpdateRateLabel()
     {
-        var rate = _player.Rate <= 0f ? 1.0f : _player.Rate;
-        RateText.Text = $"{rate:0.##}x";
+        var rate = PlayerPlaybackState.NormalizeRate(_player.Rate);
+        RateText.Text = PlayerPlaybackState.FormatRateLabel(rate);
         UpdateSpeedButtons(rate);
     }
 

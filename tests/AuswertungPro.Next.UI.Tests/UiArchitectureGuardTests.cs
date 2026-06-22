@@ -315,6 +315,24 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static CodingOverlayMeasurementPanelState BuildPanelState", formatter);
     }
 
+    [Fact]
+    public void PlayerWindow_playback_preview_and_rate_labels_live_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.cs");
+        var policyPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackState.cs");
+
+        var playback = File.ReadAllText(playbackPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("PlayerPlaybackState.BuildSeekPreviewText", playback);
+        Assert.Contains("PlayerPlaybackState.FormatRateLabel", playback);
+        Assert.DoesNotContain("$\"{targetPos:P0}\"", playback);
+        Assert.DoesNotContain("$\"{rate:0.##}x\"", playback);
+        Assert.Contains("public static PlayerSeekPreviewText BuildSeekPreviewText", policy);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

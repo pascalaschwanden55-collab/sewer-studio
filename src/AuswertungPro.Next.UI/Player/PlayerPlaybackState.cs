@@ -1,5 +1,9 @@
 namespace AuswertungPro.Next.UI.Player;
 
+public sealed record PlayerSeekPreviewText(
+    string CurrentTimeText,
+    string DurationText);
+
 public static class PlayerPlaybackState
 {
     public const float MinRate = 0.25f;
@@ -38,5 +42,27 @@ public static class PlayerPlaybackState
 
         ratio = Math.Clamp(sliderValue / sliderMaximum, 0.0, 1.0);
         return true;
+    }
+
+    public static string FormatRateLabel(float rate)
+    {
+        var normalized = NormalizeRate(rate);
+        return $"{normalized:0.##}x";
+    }
+
+    public static float NormalizeRate(float rate)
+        => rate <= 0f ? 1.0f : rate;
+
+    public static PlayerSeekPreviewText BuildSeekPreviewText(double ratio, long durationMs)
+    {
+        if (durationMs > 0)
+        {
+            var targetMs = (long)(ratio * durationMs);
+            return new PlayerSeekPreviewText(
+                FormatMilliseconds(targetMs),
+                FormatMilliseconds(durationMs));
+        }
+
+        return new PlayerSeekPreviewText($"{ratio:P0}", "--:--");
     }
 }

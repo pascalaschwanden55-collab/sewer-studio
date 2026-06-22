@@ -69,4 +69,32 @@ public sealed class PlayerPlaybackStateTests
         Assert.False(ok);
         Assert.Equal(0, ratio);
     }
+
+    [Theory]
+    [InlineData(0.0f, "1x")]
+    [InlineData(-1.0f, "1x")]
+    [InlineData(1.5f, "1.5x")]
+    [InlineData(1.25f, "1.25x")]
+    public void FormatRateLabel_uses_normal_speed_when_current_rate_is_invalid(float rate, string expected)
+    {
+        Assert.Equal(expected, PlayerPlaybackState.FormatRateLabel(rate));
+    }
+
+    [Fact]
+    public void BuildSeekPreviewText_formats_target_time_when_duration_is_known()
+    {
+        var preview = PlayerPlaybackState.BuildSeekPreviewText(0.25, 120_000);
+
+        Assert.Equal("00:30", preview.CurrentTimeText);
+        Assert.Equal("02:00", preview.DurationText);
+    }
+
+    [Fact]
+    public void BuildSeekPreviewText_formats_percent_when_duration_is_unknown()
+    {
+        var preview = PlayerPlaybackState.BuildSeekPreviewText(0.25, 0);
+
+        Assert.Equal(0.25.ToString("P0"), preview.CurrentTimeText);
+        Assert.Equal("--:--", preview.DurationText);
+    }
 }
