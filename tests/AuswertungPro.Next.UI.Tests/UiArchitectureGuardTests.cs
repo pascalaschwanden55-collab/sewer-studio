@@ -725,6 +725,25 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_analyzed_frame_timestamp_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingAnalyzedFrameTimestampPolicy.cs");
+
+        Assert.True(File.Exists(policyPath), "Analysierter-Frame-Zeitpunkt muss ausserhalb der PlayerWindow-Partials entschieden werden.");
+
+        var photos = File.ReadAllText(photosPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingAnalyzedFrameTimestampPolicy.Resolve", photos);
+        Assert.DoesNotContain("sec.Value < clean", photos);
+        Assert.Contains("public static double? Resolve", policy);
+        Assert.Contains("pendingTimestampSeconds.Value < firstCleanFrameSeconds.Value", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_mark_bbox_mapping_lives_in_mapper()
     {
         var root = FindRepositoryRoot();

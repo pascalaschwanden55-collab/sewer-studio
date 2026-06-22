@@ -40,9 +40,9 @@ public partial class PlayerWindow
 
     private byte[]? TryExtractAnalyzedFrameBytes()
     {
-        var sec = _detectionPendingTimestampSec;
-        if (_codingFrameReadiness.FirstCleanFrameSeconds is double clean && (sec is null || sec.Value < clean))
-            sec = clean;
+        var sec = CodingAnalyzedFrameTimestampPolicy.Resolve(
+            _detectionPendingTimestampSec,
+            _codingFrameReadiness.FirstCleanFrameSeconds);
         return TryExtractFrameAtSeconds(sec);
     }
 
