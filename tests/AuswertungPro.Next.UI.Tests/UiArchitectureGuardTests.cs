@@ -106,11 +106,14 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var wiringPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs");
+        var sliderPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs");
 
         Assert.True(File.Exists(wiringPath), "Fenster-, Slider- und Viewport-Wiring soll aus dem Konstruktor heraus.");
+        Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var wiring = File.ReadAllText(wiringPath);
+        var slider = File.ReadAllText(sliderPath);
 
         Assert.Contains("WireWindowLifecycleEvents();", windowRoot);
         Assert.Contains("WirePositionSliderEvents();", windowRoot);
@@ -120,7 +123,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("Deactivated += (_, _)", windowRoot);
         Assert.Contains("private void WireWindowLifecycleEvents", wiring);
         Assert.Contains("private void PlayerWindow_Closed", wiring);
-        Assert.Contains("private void WirePositionSliderEvents", wiring);
+        Assert.DoesNotContain("private void WirePositionSliderEvents", wiring);
+        Assert.DoesNotContain("PositionSlider.AddHandler", wiring);
+        Assert.Contains("private void WirePositionSliderEvents", slider);
+        Assert.Contains("PositionSlider.AddHandler", slider);
+        Assert.Contains("private void PositionSlider_DragStarted", slider);
+        Assert.Contains("private void PositionSlider_LostMouseCapture", slider);
         Assert.Contains("private void WireWindowSurfaceEvents", wiring);
     }
 
