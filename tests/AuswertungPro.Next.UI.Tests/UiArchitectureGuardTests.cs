@@ -361,9 +361,10 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.cs");
+        var controlsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Controls.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackState.cs");
 
-        var playback = File.ReadAllText(playbackPath);
+        var playback = File.ReadAllText(playbackPath) + File.ReadAllText(controlsPath);
         var policy = File.ReadAllText(policyPath);
 
         Assert.Contains("PlayerPlaybackState.BuildSeekPreviewText", playback);
@@ -383,6 +384,32 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public readonly record struct PlayerSliderSeekTarget", policy);
         Assert.Contains("public static PlayerPlaybackUiState BuildUiState", policy);
         Assert.Contains("public static bool IsRateButtonChecked", policy);
+    }
+
+    [Fact]
+    public void PlayerWindow_playback_controls_live_in_controls_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
+        var controlsPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Controls.cs");
+
+        Assert.True(File.Exists(controlsPath), "Playback-Button- und Slider-Wiring soll in ein eigenes Partial.");
+
+        var playback = File.ReadAllText(playbackPath);
+        var controls = File.ReadAllText(controlsPath);
+
+        Assert.DoesNotContain("private void Play_Click", playback);
+        Assert.DoesNotContain("private void PositionSlider_ValueChanged", playback);
+        Assert.DoesNotContain("private void SetSpeed", playback);
+        Assert.DoesNotContain("private void UpdateSpeedButtons", playback);
+        Assert.Contains("private void Play_Click", controls);
+        Assert.Contains("private void PositionSlider_ValueChanged", controls);
+        Assert.Contains("private void SetSpeed", controls);
+        Assert.Contains("private void UpdateSpeedButtons", controls);
+        Assert.Contains("PlayerPlaybackState.ResolveSliderSeekTarget", controls);
+        Assert.Contains("PlayerPlaybackState.FormatRateLabel", controls);
     }
 
     [Fact]
