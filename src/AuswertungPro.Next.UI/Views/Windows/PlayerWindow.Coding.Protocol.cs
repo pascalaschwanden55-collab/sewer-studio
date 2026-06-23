@@ -85,15 +85,14 @@ public partial class PlayerWindow
         if (project == null) return;
 
         var projectFolder = CodingProjectFolderResolver.ResolveNullable(_serviceProvider.Settings.LastProjectPath);
-
-        var dlg = new Views.ProtocolObservationsWindow(
-            _haltungRecord, project, _serviceProvider, _videoPath, projectFolder,
-            markDirty: () =>
-            {
-                MarkProjectDirtyForCoding();
-            });
-        dlg.Owner = this;
-        dlg.ShowDialog();
+        CodingProtocolPreviewWindowServiceFactory.Create().Show(
+            this,
+            _haltungRecord,
+            project,
+            _serviceProvider,
+            _videoPath,
+            projectFolder,
+            MarkProjectDirtyForCoding);
 
         // Nach Bearbeitung: Primaere Schaeden erneut synchronisieren.
         if (_haltungRecord.Protocol != null)

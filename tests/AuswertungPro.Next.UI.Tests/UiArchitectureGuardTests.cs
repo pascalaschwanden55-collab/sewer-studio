@@ -415,6 +415,8 @@ public sealed class UiArchitectureGuardTests
         var saveDialogPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfSavePathDialog.cs");
         var dialogServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolDialogService.cs");
         var dialogFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolDialogServiceFactory.cs");
+        var previewWindowServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWindowService.cs");
+        var previewWindowServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWindowServiceFactory.cs");
 
         Assert.True(File.Exists(plannerPath), "PDF-Exportvorbereitung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(fileServicePath), "PDF-Datei schreiben und oeffnen soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -422,6 +424,8 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(saveDialogPath), "PDF-Speicherdialog soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServicePath), "Protokoll-Dialogtexte sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogFactoryPath), "Protokoll-DialogHost-Verdrahtung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(previewWindowServicePath), "Protokoll-Vorschaufenster soll ausserhalb der PlayerWindow-Partials erzeugt werden.");
+        Assert.True(File.Exists(previewWindowServiceFactoryPath), "Protokoll-Vorschaufenster soll ueber Factory verdrahtet werden.");
 
         var protocol = File.ReadAllText(protocolPath);
         var planner = File.ReadAllText(plannerPath);
@@ -430,13 +434,19 @@ public sealed class UiArchitectureGuardTests
         var saveDialog = File.ReadAllText(saveDialogPath);
         var dialogService = File.ReadAllText(dialogServicePath);
         var dialogFactory = File.ReadAllText(dialogFactoryPath);
+        var previewWindowService = File.ReadAllText(previewWindowServicePath);
+        var previewWindowServiceFactory = File.ReadAllText(previewWindowServiceFactoryPath);
 
         Assert.Contains("CodingProtocolPdfExportPlanner.Build", protocol);
         Assert.Contains("CodingProtocolPdfSavePathDialogFactory.Create", protocol);
         Assert.Contains("CodingProtocolPdfFileServiceFactory.Create", protocol);
         Assert.Contains("CodingProjectFolderResolver.ResolveNullable", protocol);
         Assert.Contains("CodingProtocolDialogServiceFactory.Create", protocol);
+        Assert.Contains("CodingProtocolPreviewWindowServiceFactory.Create", protocol);
         Assert.DoesNotContain("DialogHost.Current", protocol);
+        Assert.DoesNotContain("new Views.ProtocolObservationsWindow", protocol);
+        Assert.DoesNotContain("ShowDialog", protocol);
+        Assert.DoesNotContain("dlg.Owner", protocol);
         Assert.DoesNotContain("PDF konnte nicht erstellt werden", protocol);
         Assert.DoesNotContain("Protokoll jetzt anzeigen", protocol);
         Assert.DoesNotContain("PDF-Protokoll mit Grafik", protocol);
@@ -458,6 +468,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("ConfirmProtocolPreview", dialogService);
         Assert.Contains("ShowPdfExportFailed", dialogService);
         Assert.Contains("DialogHost.Current", dialogFactory);
+        Assert.Contains("ProtocolObservationsWindow", previewWindowService);
+        Assert.Contains("ShowDialog", previewWindowService);
+        Assert.Contains("new CodingProtocolPreviewWindowService", previewWindowServiceFactory);
     }
 
     [Fact]
