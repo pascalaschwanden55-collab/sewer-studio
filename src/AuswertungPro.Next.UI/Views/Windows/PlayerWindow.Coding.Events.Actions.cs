@@ -96,9 +96,9 @@ public partial class PlayerWindow
         }
         if (!confirm) return;
 
-        _codingSessionService?.RemoveEvent(codingEvent.EventId);
-        _codingVm?.Events.Remove(codingEvent);
-        if (_codingVm != null && ReferenceEquals(_codingVm.SelectedDefect, codingEvent))
+        var deleteResult = CodingEventDeleteApplier.Apply(
+            codingEvent, _codingSessionService, _codingVm?.Events, _codingVm?.SelectedDefect);
+        if (_codingVm != null && deleteResult.ShouldClearSelectedDefect)
             _codingVm.SelectedDefect = null;
         HideInlineDefectDetail();
         RefreshCodingEventsList();
