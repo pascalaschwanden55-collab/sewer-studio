@@ -1389,7 +1389,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.cs");
+        var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.Viewer.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingPhotoDisplayPathPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Fotoanzeige-Pfadauswahl muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -1403,6 +1403,26 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("displayPhotoPaths.Contains(fotoPath", photos);
         Assert.Contains("public static IReadOnlyList<string> BuildDisplayPhotoPaths", policy);
         Assert.Contains("public static string? ResolveExistingPath", policy);
+    }
+
+    [Fact]
+    public void PlayerWindow_photo_viewer_lives_in_viewer_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var photosPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Photos.cs");
+        var viewerPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Photos.Viewer.cs");
+
+        Assert.True(File.Exists(viewerPath), "Foto-Anzeigefenster soll aus dem Snapshot-Partial heraus.");
+
+        var photos = File.ReadAllText(photosPath);
+        var viewer = File.ReadAllText(viewerPath);
+
+        Assert.DoesNotContain("private void CodingEventShowPhotos_Click", photos);
+        Assert.Contains("private void CodingEventShowPhotos_Click", viewer);
+        Assert.Contains("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", viewer);
+        Assert.Contains("WindowStateManager.Track", viewer);
     }
 
     [Fact]
