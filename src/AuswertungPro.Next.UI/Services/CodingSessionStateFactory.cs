@@ -22,6 +22,17 @@ public static class CodingSessionStateFactory
             videoPath);
 
     public static CodingSessionStateComponents Create(
+        string videoPath,
+        AppSettings? settings,
+        ICodingSessionService? existingSessionService,
+        IOverlayToolService? existingOverlayService)
+        => Create(
+            existingSessionService ?? CodingSessionServiceFactory.Create(settings),
+            existingOverlayService ?? new OverlayToolService(),
+            new CodingFeedbackRecorder(),
+            videoPath);
+
+    public static CodingSessionStateComponents Create(
         ICodingSessionService sessionService,
         IOverlayToolService overlayService,
         ICodingFeedbackRecorder? feedbackRecorder,

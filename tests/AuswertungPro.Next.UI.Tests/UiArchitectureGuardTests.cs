@@ -2129,7 +2129,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_markToolControls.ActivatePointTool", markTools);
         Assert.Contains("_markToolControls.OpenCodingOverlay", markTools);
         Assert.Contains("_markToolControls.DeactivateDetectionSide", markTools);
-        Assert.Contains("CodingSessionServiceFactory.Create", markTools);
+        Assert.Contains("CodingSessionStateFactory.Create", markTools);
+        Assert.DoesNotContain("CodingSessionServiceFactory.Create", markTools);
+        Assert.DoesNotContain("new OverlayToolService", markTools);
+        Assert.DoesNotContain("new ViewModels.Windows.CodingSessionViewModel", markTools);
+        Assert.DoesNotContain("CodingFeedbackRecorder", markTools);
         Assert.Contains("public sealed class PlayerMarkToolControls", controls);
         Assert.Contains("_markToolPopup.IsOpen", controls);
         Assert.Contains("_detectionCanvas.Cursor", controls);

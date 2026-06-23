@@ -1,9 +1,6 @@
 using System.Windows;
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Services;
-using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -65,23 +62,18 @@ public partial class PlayerWindow
     /// <summary>
     /// Stellt sicher dass OverlayService + ViewModel bereitstehen (auch ausserhalb Codier-Modus).
     /// </summary>
-    private ICodingSessionService CreateCodingSessionService()
-        => CodingSessionServiceFactory.Create(_serviceProvider?.Settings);
-
     private void EnsureMarkOverlayReady()
     {
         if (_codingOverlayService != null && _codingVm != null) return;
 
-        // Lazy-Init: minimales Setup fuer Overlay-Zeichnung
-        _codingOverlayService ??= new OverlayToolService();
-        if (_codingVm == null)
-        {
-            _codingSessionService ??= CreateCodingSessionService();
-            _codingVm = new ViewModels.Windows.CodingSessionViewModel(
-                _codingSessionService,
-                _codingOverlayService,
-                new InfraSelfImproving.CodingFeedbackRecorder());
-        }
+        var state = CodingSessionStateFactory.Create(
+            _videoPath,
+            _serviceProvider?.Settings,
+            _codingSessionService,
+            _codingOverlayService);
+        _codingSessionService = state.SessionService;
+        _codingOverlayService = state.OverlayService;
+        _codingVm = state.ViewModel;
     }
 
     private void DeactivateMarkTool()
