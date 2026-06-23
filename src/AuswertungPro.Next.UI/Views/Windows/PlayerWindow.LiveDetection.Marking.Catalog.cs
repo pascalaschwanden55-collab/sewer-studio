@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Input;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -41,44 +40,17 @@ public partial class PlayerWindow
 
     private void OpenCodeCatalogForMark(string? clockPosition, double timestampSec, string? suggestedCode)
     {
-        var sp = _serviceProvider;
-
-        if (sp?.CodeCatalog is null)
-        {
-            LiveDetectionDialogServiceFactory.Create().ShowCodeCatalogUnavailable();
-            return;
-        }
-
-        var entry = CodingExplorerEntryFactory.CreateSeed(
-            videoTime: TimeSpan.FromSeconds(timestampSec),
-            suggestedCode: suggestedCode,
-            clockPosition: clockPosition);
-
-        var explorerVm = CreateVsaCodeExplorerViewModel(
-            entry,
-            _codingLastOsdMeter ?? GetMeterFromVideoPosition(),
-            TimeSpan.FromSeconds(timestampSec));
-
-        var dialogResult = VsaCodeExplorerDialogServiceFactory.Create().Show(
-            explorerVm,
-            _videoPath,
-            TimeSpan.FromSeconds(timestampSec),
-            this);
-
-        if (dialogResult.Accepted && dialogResult.SelectedEntry is not null)
-        {
-            var result = dialogResult.SelectedEntry;
-            entry.Code = result.Code;
-            entry.Beschreibung = result.Beschreibung;
-            entry.CodeMeta = result.CodeMeta;
-            entry.MeterStart = result.MeterStart;
-            entry.MeterEnd = result.MeterEnd;
-            entry.Zeit = result.Zeit;
-            entry.IsStreckenschaden = result.IsStreckenschaden;
-            entry.FotoPaths = result.FotoPaths;
-
-            _onEntryCreated?.Invoke(entry);
-            ShowOverlay($"Beobachtung erfasst: {entry.Code}", TimeSpan.FromSeconds(4));
-        }
+        LiveDetectionMarkCatalogWorkflowServiceFactory.Create(
+                hasCodeCatalog: () => _serviceProvider?.CodeCatalog is not null,
+                createViewModel: CreateVsaCodeExplorerViewModel,
+                onEntryCreated: entry => _onEntryCreated?.Invoke(entry),
+                showOverlay: message => ShowOverlay(message, TimeSpan.FromSeconds(4)))
+            .TryOpen(
+                clockPosition,
+                timestampSec,
+                suggestedCode,
+                _codingLastOsdMeter ?? GetMeterFromVideoPosition(),
+                _videoPath,
+                this);
     }
 }

@@ -1785,14 +1785,18 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
         var detailsActionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.Actions.cs");
+        var markCatalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
         var copierPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEntryCopier.cs");
 
         var events = File.ReadAllText(eventsPath);
         var detailsActions = File.ReadAllText(detailsActionsPath);
+        var markCatalog = File.ReadAllText(markCatalogPath);
         var copier = File.ReadAllText(copierPath);
 
         Assert.Contains("CodingProtocolEntryCopier.CopyEditableValues", events);
         Assert.Contains("CodingProtocolEntryCopier.CopyEditableValues", detailsActions);
+        Assert.DoesNotContain("entry.Code = result.Code", markCatalog);
+        Assert.DoesNotContain("entry.FotoPaths = result.FotoPaths", markCatalog);
         Assert.DoesNotContain("entry.Code = result.Code", events);
         Assert.DoesNotContain("entry.Code = result.Code", detailsActions);
         Assert.DoesNotContain("entry.FotoPaths = result.FotoPaths", events);
@@ -2679,11 +2683,17 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
         var catalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogWorkflowService.cs");
+        var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogWorkflowServiceFactory.cs");
 
         Assert.True(File.Exists(catalogPath), "LiveDetection-Markkatalog-Wiring soll aus dem grossen Marking-Partial heraus.");
+        Assert.True(File.Exists(workflowPath), "LiveDetection-Markkatalog-Workflow soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowFactoryPath), "LiveDetection-Markkatalog-Workflow soll ueber Factory verdrahtet werden.");
 
         var marking = File.ReadAllText(markingPath);
         var catalog = File.ReadAllText(catalogPath);
+        var workflow = File.ReadAllText(workflowPath);
+        var workflowFactory = File.ReadAllText(workflowFactoryPath);
 
         Assert.DoesNotContain("private void DetectionCanvas_MouseLeftButtonDown", marking);
         Assert.DoesNotContain("private void OnFindingClicked", marking);
@@ -2691,7 +2701,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void DetectionCanvas_MouseLeftButtonDown", catalog);
         Assert.Contains("private void OnFindingClicked", catalog);
         Assert.Contains("private void OpenCodeCatalogForMark", catalog);
-        Assert.Contains("CodingExplorerEntryFactory.CreateSeed", catalog);
+        Assert.Contains("LiveDetectionMarkCatalogWorkflowServiceFactory.Create", catalog);
+        Assert.DoesNotContain("CodingExplorerEntryFactory.CreateSeed", catalog);
+        Assert.Contains("CodingExplorerEntryFactory.CreateSeed", workflow);
+        Assert.Contains("VsaCodeExplorerDialogServiceFactory.Create", workflowFactory);
+        Assert.Contains("LiveDetectionDialogServiceFactory.Create", workflowFactory);
     }
 
     [Fact]
