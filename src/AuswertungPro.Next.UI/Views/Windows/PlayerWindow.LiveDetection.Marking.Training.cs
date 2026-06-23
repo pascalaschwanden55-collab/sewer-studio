@@ -1,9 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
-using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -41,41 +39,21 @@ public partial class PlayerWindow
             if (frameBytes == null)
                 return false;
 
-            var bbox = LiveDetectionGeometryMapper.BBoxFromOverlay(overlay);
-            if (bbox.Width < 0.01 || bbox.Height < 0.01)
-                return false;
-
-            int classId = InfraTeacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
-            var annotationId = Guid.NewGuid().ToString("N")[..12];
-            var baseName = $"mark_{annotationId}";
-
-            var frameExporter = new LiveDetectionTrainingFrameExporter(
-                Ai.Teacher.TrainingAnnotationExportServiceFactory.Create());
-            var exportResult = await frameExporter.ExportAsync(
-                frameBytes,
-                bbox,
-                selectedEntry.Code,
-                classId,
-                baseName,
-                annotationId);
-
             var captureMeter = CodingCurrentMeterResolver.ParseDisplayedMeterOrZero(TxtCodingMeter?.Text);
-
-            var annotation = LiveDetectionTeacherAnnotationFactory.CreateManualMark(
-                annotationId,
+            var annotation = await LiveDetectionTrainingAnnotationWriter.CreateDefault()
+                .SaveManualMarkAsync(
+                frameBytes,
                 selectedEntry,
                 overlay,
-                bbox,
                 clockPosition,
                 captureMeter,
-                TimeSpan.FromSeconds(timestampSec),
-                exportResult);
+                TimeSpan.FromSeconds(timestampSec));
+            if (annotation == null)
+                return false;
 
-            await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
-
-            if (manualEvent != null && exportResult.FullFramePath != null)
+            if (manualEvent != null && annotation.FullFramePath != null)
             {
-                manualEvent.Entry.FotoPaths.Add(exportResult.FullFramePath);
+                manualEvent.Entry.FotoPaths.Add(annotation.FullFramePath);
                 RefreshCodingEventsList();
             }
 

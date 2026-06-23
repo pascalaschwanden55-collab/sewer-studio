@@ -2690,25 +2690,33 @@ public sealed class UiArchitectureGuardTests
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
         var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Training.cs");
         var frameExporterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingFrameExporter.cs");
+        var annotationWriterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingAnnotationWriter.cs");
 
         Assert.True(File.Exists(trainingPath), "Manual-Mark-Training-Speicherung soll aus dem grossen Marking-Partial heraus.");
         Assert.True(File.Exists(frameExporterPath), "Manual-Mark-Training soll den bestehenden FrameExporter fuer Tempframe-I/O nutzen.");
+        Assert.True(File.Exists(annotationWriterPath), "Manual-Mark-Training soll den bestehenden AnnotationWriter nutzen.");
 
         var marking = File.ReadAllText(markingPath);
         var training = File.ReadAllText(trainingPath);
         var frameExporter = File.ReadAllText(frameExporterPath);
+        var annotationWriter = File.ReadAllText(annotationWriterPath);
 
         Assert.DoesNotContain("private async Task<bool> SaveMarkAsTrainingAsync", marking);
         Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", marking);
         Assert.Contains("private async Task<bool> SaveMarkAsTrainingAsync", training);
-        Assert.Contains("new LiveDetectionTrainingFrameExporter", training);
-        Assert.Contains("TrainingAnnotationExportServiceFactory.Create", training);
+        Assert.Contains("LiveDetectionTrainingAnnotationWriter.CreateDefault", training);
+        Assert.DoesNotContain("new LiveDetectionTrainingFrameExporter", training);
+        Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", training);
+        Assert.DoesNotContain("VsaYoloClassMap.GetClassId", training);
+        Assert.DoesNotContain("TeacherAnnotationStore.AppendAsync", training);
         Assert.DoesNotContain("File.WriteAllBytesAsync", training);
         Assert.DoesNotContain("File.Delete(tempFrame)", training);
         Assert.DoesNotContain("Path.GetTempPath", training);
-        Assert.Contains("LiveDetectionTeacherAnnotationFactory.CreateManualMark", training);
+        Assert.DoesNotContain("LiveDetectionTeacherAnnotationFactory.CreateManualMark", training);
         Assert.Contains("File.WriteAllBytesAsync", frameExporter);
         Assert.Contains("BestEffort.Try", frameExporter);
+        Assert.Contains("SaveManualMarkAsync", annotationWriter);
+        Assert.Contains("LiveDetectionTeacherAnnotationFactory.CreateManualMark", annotationWriter);
     }
 
     [Fact]

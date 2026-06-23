@@ -2,6 +2,7 @@ using System.IO;
 using System.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
 
@@ -96,8 +97,103 @@ public sealed class LiveDetectionTrainingAnnotationWriterTests
         }
     }
 
+    [Fact]
+    public async Task SaveManualMarkAsync_exports_overlay_bbox_builds_manual_mark_annotation_and_appends_it()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "AuswertungPro.Next.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var tempPath = Path.Combine(root, "frame.png");
+        var exportService = new RecordingExportService();
+        var appended = new List<TeacherAnnotation>();
+        var writer = new LiveDetectionTrainingAnnotationWriter(
+            new LiveDetectionTrainingFrameExporter(exportService, _ => tempPath),
+            () => "mark123",
+            annotation =>
+            {
+                appended.Add(annotation);
+                return Task.CompletedTask;
+            });
+
+        try
+        {
+            var overlay = new OverlayGeometry
+            {
+                ToolType = OverlayToolType.Rectangle,
+                Points =
+                [
+                    new NormalizedPoint(0.2, 0.3),
+                    new NormalizedPoint(0.6, 0.7)
+                ],
+                Q1Mm = 11,
+                Q2Mm = 22
+            };
+            var selectedEntry = new ProtocolEntry { Code = "BCA", Beschreibung = "Anschluss" };
+            var frameBytes = new byte[] { 4, 5, 6 };
+
+            var annotation = await writer.SaveManualMarkAsync(
+                frameBytes,
+                selectedEntry,
+                overlay,
+                clockPosition: "3",
+                captureMeter: 7.5,
+                videoTimestamp: TimeSpan.FromSeconds(33));
+
+            Assert.NotNull(annotation);
+            Assert.Same(annotation, Assert.Single(appended));
+            Assert.Equal("mark123", annotation!.AnnotationId);
+            Assert.Equal("BCA", annotation.VsaCode);
+            Assert.Equal("Anschluss", annotation.Beschreibung);
+            Assert.Equal(7.5, annotation.MeterPosition);
+            Assert.Equal(TimeSpan.FromSeconds(33), annotation.VideoTimestamp);
+            Assert.Equal(OverlayToolType.Rectangle, annotation.ToolType);
+            Assert.Equal(3, annotation.ClockPosition);
+            Assert.Equal(11, annotation.HeightMm);
+            Assert.Equal(22, annotation.WidthMm);
+            Assert.Equal("full.png", annotation.FullFramePath);
+            Assert.Equal(frameBytes, exportService.SourceBytes);
+            Assert.Equal("BCA", exportService.Code);
+            Assert.Equal("mark_mark123", exportService.BaseName);
+            Assert.Same(annotation.BoundingBox, exportService.BoundingBox);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SaveManualMarkAsync_returns_null_without_export_for_tiny_bbox()
+    {
+        var exportService = new RecordingExportService();
+        var writer = new LiveDetectionTrainingAnnotationWriter(
+            new LiveDetectionTrainingFrameExporter(exportService),
+            () => "mark123",
+            _ => throw new InvalidOperationException("Annotation must not be appended."));
+        var overlay = new OverlayGeometry
+        {
+            Points =
+            [
+                new NormalizedPoint(0.4, 0.4),
+                new NormalizedPoint(0.4, 0.4)
+            ]
+        };
+
+        var annotation = await writer.SaveManualMarkAsync(
+            new byte[] { 1 },
+            new ProtocolEntry { Code = "BCA" },
+            overlay,
+            clockPosition: null,
+            captureMeter: 0,
+            videoTimestamp: TimeSpan.Zero);
+
+        Assert.Null(annotation);
+        Assert.Equal(0, exportService.ExportCount);
+    }
+
     private sealed class RecordingExportService : ITrainingAnnotationExportService
     {
+        public int ExportCount { get; private set; }
         public byte[]? SourceBytes { get; private set; }
         public NormalizedBoundingBox? BoundingBox { get; private set; }
         public string? Code { get; private set; }
@@ -111,6 +207,7 @@ public sealed class LiveDetectionTrainingAnnotationWriterTests
             string baseName,
             CancellationToken ct = default)
         {
+            ExportCount++;
             SourceBytes = await File.ReadAllBytesAsync(sourceFramePath, ct);
             BoundingBox = bbox;
             Code = vsaCode;

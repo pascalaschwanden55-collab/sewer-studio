@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai.Teacher;
 using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
@@ -76,6 +77,42 @@ public sealed class LiveDetectionTrainingAnnotationWriter
             sourceFinding,
             selectedEntry,
             exportPlan.BoundingBox,
+            videoTimestamp,
+            exportResult);
+        await _appendAsync(annotation);
+        return annotation;
+    }
+
+    public async Task<TeacherAnnotation?> SaveManualMarkAsync(
+        byte[] frameBytes,
+        ProtocolEntry selectedEntry,
+        OverlayGeometry overlay,
+        string? clockPosition,
+        double captureMeter,
+        TimeSpan videoTimestamp,
+        CancellationToken ct = default)
+    {
+        var boundingBox = LiveDetectionGeometryMapper.BBoxFromOverlay(overlay);
+        if (boundingBox.Width < 0.01 || boundingBox.Height < 0.01)
+            return null;
+
+        var annotationId = _annotationIdFactory();
+        var exportResult = await _frameExporter.ExportAsync(
+            frameBytes,
+            boundingBox,
+            selectedEntry.Code,
+            InfraTeacher.VsaYoloClassMap.GetClassId(selectedEntry.Code),
+            $"mark_{annotationId}",
+            annotationId,
+            ct);
+
+        var annotation = LiveDetectionTeacherAnnotationFactory.CreateManualMark(
+            annotationId,
+            selectedEntry,
+            overlay,
+            boundingBox,
+            clockPosition,
+            captureMeter,
             videoTimestamp,
             exportResult);
         await _appendAsync(annotation);
