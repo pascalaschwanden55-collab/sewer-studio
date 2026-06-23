@@ -1363,6 +1363,7 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
+        var calibrationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Calibration.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingManualCalibrationPolicy.cs");
         var previewPolicyPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationPreviewPolicy.cs");
         var togglePolicyPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationTogglePolicy.cs");
@@ -1372,22 +1373,45 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(togglePolicyPath), "Manuelle Kalibrierungs-Toggle-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
+        var calibration = File.ReadAllText(calibrationPath);
         var policy = File.ReadAllText(policyPath);
         var previewPolicy = File.ReadAllText(previewPolicyPath);
         var togglePolicy = File.ReadAllText(togglePolicyPath);
 
-        Assert.Contains("CodingManualCalibrationPolicy.Build", overlayInput);
+        Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
         Assert.Contains("CodingCalibrationPreviewPolicy.Build", overlayInput);
-        Assert.Contains("CodingCalibrationTogglePolicy.Build", overlayInput);
-        Assert.DoesNotContain("double pixelDiameter = Math.Sqrt", overlayInput);
-        Assert.DoesNotContain("Math.Sqrt(Math.Pow(p2.X - p1.X, 2)", overlayInput);
-        Assert.DoesNotContain("_codingIsCalibrating = !_codingIsCalibrating", overlayInput);
-        Assert.DoesNotContain("\"BtnCodingCalibrate\"", overlayInput);
-        Assert.DoesNotContain("new PipeCalibration", overlayInput);
+        Assert.Contains("CodingCalibrationTogglePolicy.Build", calibration);
+        Assert.DoesNotContain("double pixelDiameter = Math.Sqrt", overlayInput + calibration);
+        Assert.DoesNotContain("Math.Sqrt(Math.Pow(p2.X - p1.X, 2)", overlayInput + calibration);
+        Assert.DoesNotContain("_codingIsCalibrating = !_codingIsCalibrating", overlayInput + calibration);
+        Assert.DoesNotContain("\"BtnCodingCalibrate\"", overlayInput + calibration);
+        Assert.DoesNotContain("new PipeCalibration", overlayInput + calibration);
         Assert.Contains("public static CodingManualCalibrationResult Build", policy);
         Assert.Contains("CalibrationSource.Manual", policy);
         Assert.Contains("public static CodingCalibrationPreviewState Build", previewPolicy);
         Assert.Contains("public static CodingCalibrationToggleState Build", togglePolicy);
+    }
+
+    [Fact]
+    public void PlayerWindow_manual_calibration_wiring_lives_in_calibration_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
+        var calibrationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Calibration.cs");
+
+        Assert.True(File.Exists(calibrationPath), "Manuelle Kalibrierungs-Verdrahtung soll aus dem allgemeinen OverlayInput-Partial heraus.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var calibration = File.ReadAllText(calibrationPath);
+
+        Assert.DoesNotContain("private void CodingCalibrate_Click", overlayInput);
+        Assert.DoesNotContain("private void ApplyCodingCalibration", overlayInput);
+        Assert.Contains("private void CodingCalibrate_Click", calibration);
+        Assert.Contains("private void ApplyCodingCalibration", calibration);
+        Assert.Contains("CodingCalibrationTogglePolicy.Build", calibration);
+        Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
     }
 
     [Fact]
