@@ -762,16 +762,24 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var liveDetectionPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.cs");
         var snapshotPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Snapshot.cs");
+        var servicePath = Path.Combine(uiRoot, "Player", "LiveDetectionFrameCaptureService.cs");
 
         Assert.True(File.Exists(snapshotPath), "LiveDetection-Snapshot-Capture soll in ein eigenes Snapshot-Partial.");
+        Assert.True(File.Exists(servicePath), "LiveDetection-Snapshot-Dateilogik soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var snapshot = File.ReadAllText(snapshotPath);
+        var service = File.ReadAllText(servicePath);
 
         Assert.DoesNotContain("private async Task<byte[]?> CaptureCurrentFrameAsync", liveDetection);
         Assert.Contains("private async Task<byte[]?> CaptureCurrentFrameAsync", snapshot);
+        Assert.Contains("LiveDetectionFrameCaptureServiceFactory.Create", snapshot);
         Assert.Contains("TakeSnapshotSafe", snapshot);
-        Assert.Contains("sewer_live_", snapshot);
+        Assert.DoesNotContain("sewer_live_", snapshot);
+        Assert.DoesNotContain("File.Exists", snapshot);
+        Assert.DoesNotContain("File.ReadAllBytesAsync", snapshot);
+        Assert.Contains("sewer_live_", service);
+        Assert.Contains("File.ReadAllBytesAsync", service);
     }
 
     [Fact]
