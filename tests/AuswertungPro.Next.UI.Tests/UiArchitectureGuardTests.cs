@@ -682,6 +682,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveDetectionRuntimeFactory.CreateAsync", lifecycle);
         Assert.DoesNotContain("new OllamaClient", lifecycle);
         Assert.DoesNotContain("new LiveDetectionService", lifecycle);
+        Assert.DoesNotContain("new DispatcherTimer", lifecycle);
+        Assert.Contains("PlayerWindowTimerFactory.CreateLiveDetectionTimer", lifecycle);
         Assert.DoesNotContain("VisionModelSelectionPolicy.Select", lifecycle);
         Assert.Contains("new OllamaClient", factory);
         Assert.Contains("new LiveDetectionService", factory);

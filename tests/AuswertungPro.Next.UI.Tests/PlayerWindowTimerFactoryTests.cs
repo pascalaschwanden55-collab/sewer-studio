@@ -21,4 +21,13 @@ public sealed class PlayerWindowTimerFactoryTests
         Assert.Equal(TimeSpan.FromMilliseconds(60), timer.Interval);
         Assert.False(timer.IsEnabled);
     }
+
+    [Fact]
+    public void CreateLiveDetectionTimer_uses_five_second_interval_and_starts_disabled()
+    {
+        var timer = PlayerWindowTimerFactory.CreateLiveDetectionTimer((_, _) => { });
+
+        Assert.Equal(TimeSpan.FromSeconds(5), timer.Interval);
+        Assert.False(timer.IsEnabled);
+    }
 }

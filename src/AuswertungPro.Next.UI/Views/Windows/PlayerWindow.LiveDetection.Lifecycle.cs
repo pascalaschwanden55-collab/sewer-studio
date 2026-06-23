@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
@@ -65,8 +64,7 @@ public partial class PlayerWindow
             LiveDetectionStatusText.Visibility = Visibility.Visible;
             LiveDetectionStatusText.Text = "Warte auf Frame...";
 
-            _detectionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-            _detectionTimer.Tick += DetectionTimer_Tick;
+            _detectionTimer = PlayerWindowTimerFactory.CreateLiveDetectionTimer(DetectionTimer_Tick);
             _detectionTimer.Start();
 
             RunDetectionAsync().SafeFireAndForget("LiveDetection");

@@ -19,10 +19,20 @@ public static class PlayerWindowTimerFactory
         return timer;
     }
 
+    public static DispatcherTimer CreateLiveDetectionTimer(EventHandler onTick)
+        => Create(TimeSpan.FromSeconds(5), onTick);
+
     private static DispatcherTimer Create(TimeSpan interval, Action onTick)
     {
         var timer = new DispatcherTimer { Interval = interval };
         timer.Tick += (_, __) => onTick();
+        return timer;
+    }
+
+    private static DispatcherTimer Create(TimeSpan interval, EventHandler onTick)
+    {
+        var timer = new DispatcherTimer { Interval = interval };
+        timer.Tick += onTick;
         return timer;
     }
 }
