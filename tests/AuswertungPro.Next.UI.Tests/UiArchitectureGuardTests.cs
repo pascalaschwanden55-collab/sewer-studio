@@ -364,16 +364,25 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var trainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var resolverPath = Path.Combine(uiRoot, "Ai", "CodingProtocolTrainingCandidateResolver.cs");
+        var snapshotStorePath = Path.Combine(uiRoot, "Ai", "CodingProtocolTrainingSnapshotStore.cs");
 
         Assert.True(File.Exists(resolverPath), "Gruene Protokoll-Trainingskandidaten muessen ausserhalb der PlayerWindow-Partials auf Import-Events gemappt werden.");
+        Assert.True(File.Exists(snapshotStorePath), "Gruene Protokoll-Trainingssnapshots sollen ausserhalb der PlayerWindow-Partials kopiert werden.");
 
         var training = File.ReadAllText(trainingPath);
         var resolver = File.ReadAllText(resolverPath);
+        var snapshotStore = File.ReadAllText(snapshotStorePath);
 
         Assert.Contains("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", training);
+        Assert.Contains("CodingProtocolTrainingSnapshotStoreFactory.Create", training);
         Assert.DoesNotContain("Guid.TryParse(pair.Gt.RefId", training);
         Assert.DoesNotContain("_codingImportEvents.FirstOrDefault(ev => ev.Entry.EntryId", training);
+        Assert.DoesNotContain("File.Exists", training);
+        Assert.DoesNotContain("File.Copy", training);
+        Assert.DoesNotContain("File.Delete", training);
         Assert.Contains("public static IReadOnlyList<CodingEvent> ResolveImportEvents", resolver);
+        Assert.Contains("File.Copy", snapshotStore);
+        Assert.Contains("BestEffort.Try", snapshotStore);
     }
 
     [Fact]

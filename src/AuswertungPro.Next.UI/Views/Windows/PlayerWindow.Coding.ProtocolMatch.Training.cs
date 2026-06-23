@@ -43,17 +43,22 @@ public partial class PlayerWindow
         SeekToImportEvent(importEvent);
         await Task.Delay(200);
 
-        if (!TryTakeSnapshot(out var snapshotPath) || !System.IO.File.Exists(snapshotPath))
+        if (!TryTakeSnapshot(out var snapshotPath))
         {
             DialogHost.Current.Warn("Frame konnte nicht aufgenommen werden.\nBitte pruefen Sie ob das Video laeuft.",
                 "Import bestaetigen");
             return false;
         }
 
-        var imagesDir = InfraTeacher.TeacherAnnotationStore.GetImagesDir();
         var annotationId = Guid.NewGuid().ToString("N")[..12];
-        var destFrame = System.IO.Path.Combine(imagesDir, $"mark_{annotationId}.png");
-        System.IO.File.Copy(snapshotPath, destFrame, overwrite: true);
+        var snapshotStore = CodingProtocolTrainingSnapshotStoreFactory.Create();
+        var destFrame = snapshotStore.CopySnapshotToTrainingImages(snapshotPath, annotationId);
+        if (destFrame == null)
+        {
+            DialogHost.Current.Warn("Frame konnte nicht aufgenommen werden.\nBitte pruefen Sie ob das Video laeuft.",
+                "Import bestaetigen");
+            return false;
+        }
 
         var annotation = LiveDetectionTeacherAnnotationFactory.CreateImportConfirmation(
             annotationId,
@@ -62,9 +67,7 @@ public partial class PlayerWindow
 
         await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
 
-        AuswertungPro.Next.Application.Common.BestEffort.Try(
-            () => System.IO.File.Delete(snapshotPath),
-            "Foto/Snapshot: Temp loeschen");
+        snapshotStore.DeleteSnapshot(snapshotPath);
         var badge = CodingProtocolMatchDisplayPolicy.BuildImportConfirmationBadge(
             importEvent.Entry.Code,
             importEvent.MeterAtCapture);
