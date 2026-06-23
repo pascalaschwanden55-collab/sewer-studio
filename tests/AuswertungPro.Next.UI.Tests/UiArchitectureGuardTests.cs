@@ -1152,9 +1152,29 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private byte[]? TryExtractFrameAtSeconds", capture);
         Assert.Contains("private TimeSpan? GetCurrentPlayerTimestamp", capture);
         Assert.Contains("private string? CodingCaptureSnapshot", capture);
-        Assert.Contains("FfmpegLocator.ResolveFfmpeg", capture);
-        Assert.Contains("VideoFrameExtractor.TryExtractFramePngAsync", capture);
+        Assert.Contains("CodingFrameExtractionService", capture);
         Assert.Contains("CodingSnapshotTargetPolicy.Build", capture);
+    }
+
+    [Fact]
+    public void PlayerWindow_frame_extraction_lives_in_service()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var capturePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.Capture.cs");
+        var servicePath = Path.Combine(uiRoot, "Ai", "CodingFrameExtractionService.cs");
+
+        Assert.True(File.Exists(servicePath), "ffmpeg-Frame-Extraktion soll ausserhalb von PlayerWindow liegen.");
+
+        var capture = File.ReadAllText(capturePath);
+        var service = File.ReadAllText(servicePath);
+
+        Assert.Contains("CodingFrameExtractionService", capture);
+        Assert.DoesNotContain("FfmpegLocator.ResolveFfmpeg", capture);
+        Assert.DoesNotContain("VideoFrameExtractor.TryExtractFramePngAsync", capture);
+        Assert.DoesNotContain(".GetAwaiter().GetResult()", capture);
+        Assert.Contains("FfmpegLocator.ResolveFfmpeg", service);
+        Assert.Contains("VideoFrameExtractor.TryExtractFramePngAsync", service);
     }
 
     [Fact]

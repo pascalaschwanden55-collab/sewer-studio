@@ -2,8 +2,6 @@ using System;
 using System.IO;
 using System.Threading;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.Infrastructure.Ai;
-using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -11,6 +9,11 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
+    private CodingFrameExtractionService? _codingFrameExtractionService;
+
+    private CodingFrameExtractionService CodingFrameExtractionService
+        => _codingFrameExtractionService ??= new CodingFrameExtractionService();
+
     private byte[]? TryExtractAnalyzedFrameBytes()
     {
         var sec = CodingAnalyzedFrameTimestampPolicy.Resolve(
@@ -21,24 +24,7 @@ public partial class PlayerWindow
 
     private byte[]? TryExtractFrameAtSeconds(double? sec)
     {
-        if (sec is null || sec.Value < 0 || string.IsNullOrWhiteSpace(_videoPath))
-            return null;
-
-        try
-        {
-            var ffmpeg = FfmpegLocator.ResolveFfmpeg();
-            if (string.IsNullOrWhiteSpace(ffmpeg))
-                return null;
-
-            return VideoFrameExtractor.TryExtractFramePngAsync(
-                ffmpeg, _videoPath, TimeSpan.FromSeconds(sec.Value), CancellationToken.None)
-                .GetAwaiter().GetResult();
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[Foto] ffmpeg-Frame-Extraktion fehlgeschlagen: {ex.Message}");
-            return null;
-        }
+        return CodingFrameExtractionService.TryExtractFrameAtSeconds(_videoPath, sec);
     }
 
     private TimeSpan? GetCurrentPlayerTimestamp()
