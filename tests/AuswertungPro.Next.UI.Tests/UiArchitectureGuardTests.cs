@@ -2152,6 +2152,29 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_standard_overlay_input_lives_in_standard_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
+        var standardPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Standard.cs");
+
+        Assert.True(File.Exists(standardPath), "Standard-2-Punkt-OverlayInput soll aus dem allgemeinen Mouseflow heraus.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var standard = File.ReadAllText(standardPath);
+
+        Assert.DoesNotContain("OnCanvasMouseDown(norm)", overlayInput);
+        Assert.DoesNotContain("OnCanvasMouseMove(norm)", overlayInput);
+        Assert.DoesNotContain("OnCanvasMouseUp(norm)", overlayInput);
+        Assert.Contains("private void HandleCodingStandardMouseDown", standard);
+        Assert.Contains("private bool TryHandleCodingStandardMouseMove", standard);
+        Assert.Contains("private bool TryHandleCodingStandardMouseUp", standard);
+        Assert.Contains("HandleMarkDrawingComplete", standard);
+    }
+
+    [Fact]
     public void PlayerWindow_overlay_input_visibility_lives_in_visibility_partial()
     {
         var root = FindRepositoryRoot();

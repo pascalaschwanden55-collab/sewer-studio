@@ -78,17 +78,7 @@ public partial class PlayerWindow
             return; // Kein CaptureMouse bei Multi-Punkt
         }
 
-        // Standard 2-Punkt-Werkzeug (Klick+Drag)
-        _codingVm.CurrentOverlay = null;
-        BtnCodingCreateEvent.IsEnabled = false;
-        UpdateCodingOverlayInfo(null);
-
-        _codingVm.OnCanvasMouseDown(norm);
-        CodingOverlayCanvas.CaptureMouse();
-        ClearTransientCodingCanvas(clearManualOverlay: true);
-        RenderAiOverlays();
-        RenderReferenceDn();
-        UpdateToolBadge();
+        HandleCodingStandardMouseDown(norm);
     }
 
     private void CodingCanvas_MouseMove(object sender, MouseEventArgs e)
@@ -113,15 +103,7 @@ public partial class PlayerWindow
         if (TryHandleCodingMultiPointMouseMove(norm))
             return;
 
-        if (!_codingOverlayService.IsDrawing) return;
-        _codingVm.OnCanvasMouseMove(norm);
-        if (_codingVm.CurrentOverlay == null) return;
-
-        ClearTransientCodingCanvas(clearManualOverlay: true);
-        RenderAiOverlays();
-        RenderReferenceDn();
-        UpdateToolBadge();
-        RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: true, labelAnchor: norm);
+        TryHandleCodingStandardMouseMove(norm);
     }
 
     private void CodingCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -144,37 +126,6 @@ public partial class PlayerWindow
         if (TryHandleCodingSchemaMouseUp(norm))
             return;
 
-        if (!_codingOverlayService.IsDrawing) return;
-        _codingVm.OnCanvasMouseUp(norm);
-        CodingOverlayCanvas.ReleaseMouseCapture();
-
-        ClearTransientCodingCanvas(clearManualOverlay: true);
-        RenderAiOverlays();
-        RenderReferenceDn();
-        UpdateToolBadge();
-
-        if (_codingVm.CurrentOverlay != null)
-        {
-            RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: false);
-
-            // Mark-Modus: direkt VsaCodeExplorer oeffnen + Training speichern
-            if (_markToolType != OverlayToolType.None)
-            {
-                HandleMarkDrawingComplete();
-                return;
-            }
-
-            UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
-            BtnCodingCreateEvent.IsEnabled = true;
-
-            // Wenn Auto-KI aktiv: Overlay-Zeichnung -> KI analysiert markierte Stelle
-            if (BtnCodingLiveAi.IsChecked == true)
-                _ = AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay);
-        }
-        else
-        {
-            UpdateCodingOverlayInfo(null);
-            BtnCodingCreateEvent.IsEnabled = false;
-        }
+        TryHandleCodingStandardMouseUp(norm);
     }
 }
