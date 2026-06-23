@@ -22,6 +22,9 @@ public static class PlayerWindowTimerFactory
     public static DispatcherTimer CreateLiveDetectionTimer(EventHandler onTick)
         => Create(TimeSpan.FromSeconds(5), onTick);
 
+    public static DispatcherTimer CreateCodingOsdTimer(EventHandler onTick)
+        => Create(TimeSpan.FromSeconds(3), onTick);
+
     private static DispatcherTimer Create(TimeSpan interval, Action onTick)
     {
         var timer = new DispatcherTimer { Interval = interval };

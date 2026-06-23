@@ -1,6 +1,6 @@
 using System;
-using System.Windows.Threading;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -8,8 +8,7 @@ public partial class PlayerWindow
 {
     private void StartCodingOsdTimer()
     {
-        _codingOsdTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-        _codingOsdTimer.Tick += async (_, _) =>
+        _codingOsdTimer = PlayerWindowTimerFactory.CreateCodingOsdTimer(async (_, _) =>
         {
             // Waehrend einer laufenden Live-Analyse liest diese bereits den OSD-Meter
             // -> separaten 3s-OSD-Timer aussetzen, um doppelte Qwen-Last zu vermeiden.
@@ -30,7 +29,7 @@ public partial class PlayerWindow
             {
                 _codingOsdReading = false;
             }
-        };
+        });
         _codingOsdTimer.Start();
     }
 

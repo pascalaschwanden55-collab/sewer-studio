@@ -30,4 +30,13 @@ public sealed class PlayerWindowTimerFactoryTests
         Assert.Equal(TimeSpan.FromSeconds(5), timer.Interval);
         Assert.False(timer.IsEnabled);
     }
+
+    [Fact]
+    public void CreateCodingOsdTimer_uses_three_second_interval_and_starts_disabled()
+    {
+        var timer = PlayerWindowTimerFactory.CreateCodingOsdTimer((_, _) => { });
+
+        Assert.Equal(TimeSpan.FromSeconds(3), timer.Interval);
+        Assert.False(timer.IsEnabled);
+    }
 }

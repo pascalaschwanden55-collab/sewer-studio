@@ -1746,6 +1746,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void StopCodingOsdTimer", osd);
         Assert.Contains("private void StartCodingOsdTimer", timer);
         Assert.Contains("private void StopCodingOsdTimer", timer);
+        Assert.Contains("PlayerWindowTimerFactory.CreateCodingOsdTimer", timerBlock);
+        Assert.DoesNotContain("new DispatcherTimer", timerBlock);
         Assert.Contains("CodingOsdTimerPolicy.ShouldReadMeter", timerBlock);
         Assert.DoesNotContain("!_isCodingMode || _codingOsdReading || _codingIsAnalyzing", timerBlock);
         Assert.DoesNotContain("_codingLiveDetection == null) return", timerBlock);
