@@ -4,7 +4,6 @@ using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -76,9 +75,7 @@ public partial class PlayerWindow
         double currentMeter = _codingVm.CurrentMeter;
         if (!CodingStretchDamageClosePolicy.CanClose(startEvent.MeterAtCapture, currentMeter))
         {
-            DialogHost.Current.Info(
-                "Der aktuelle Meterstand muss gr\u00f6\u00dfer sein als der Anfang des Streckenschadens.",
-                "Streckenschaden");
+            CodingEventActionDialogServiceFactory.Create().ShowStretchCloseRequiresLaterMeter();
             return;
         }
 
@@ -105,7 +102,7 @@ public partial class PlayerWindow
         bool confirm;
         try
         {
-            confirm = DialogHost.Current.ConfirmWarn($"Ereignis '{codingEvent.Entry.Code}' l\u00f6schen?", "L\u00f6schen");
+            confirm = CodingEventActionDialogServiceFactory.Create().ConfirmDelete(codingEvent.Entry.Code);
         }
         finally
         {

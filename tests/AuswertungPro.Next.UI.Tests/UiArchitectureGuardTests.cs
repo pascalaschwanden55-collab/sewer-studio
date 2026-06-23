@@ -1630,11 +1630,17 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
         var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs");
+        var dialogServicePath = Path.Combine(uiRoot, "Ai", "CodingEventActionDialogService.cs");
+        var dialogServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingEventActionDialogServiceFactory.cs");
 
         Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionshandler sollen aus dem allgemeinen Events-Partial heraus.");
+        Assert.True(File.Exists(dialogServicePath), "Coding-Event-Aktionsdialoge muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogServiceFactoryPath), "Coding-Event-Aktionsdialog-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var events = File.ReadAllText(eventsPath);
         var actions = File.ReadAllText(actionsPath);
+        var dialogService = File.ReadAllText(dialogServicePath);
+        var dialogServiceFactory = File.ReadAllText(dialogServiceFactoryPath);
 
         Assert.DoesNotContain("private void CodingEvents_DoubleClick", events);
         Assert.DoesNotContain("private void CodingEventEdit_Click", events);
@@ -1646,6 +1652,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void CodingEventSeek_Click", actions);
         Assert.Contains("private void CodingEventCloseStretch_Click", actions);
         Assert.Contains("private void CodingEventDelete_Click", actions);
+        Assert.Contains("CodingEventActionDialogServiceFactory.Create", actions);
+        Assert.DoesNotContain("DialogHost.Current", actions);
+        Assert.DoesNotContain("Der aktuelle Meterstand", actions);
+        Assert.DoesNotContain("Ereignis '", actions);
+        Assert.Contains("ShowStretchCloseRequiresLaterMeter", dialogService);
+        Assert.Contains("ConfirmDelete", dialogService);
+        Assert.Contains("DialogHost.Current", dialogServiceFactory);
     }
 
     [Fact]
