@@ -2431,8 +2431,14 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private async void DetectionCorrect_Click", actions);
         Assert.Contains("private void DetectionSkip_Click", actions);
         Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", actions);
-        Assert.Contains("private async void DetectionAccept_Click", training);
-        Assert.Contains("private async void DetectionCorrect_Click", training);
+        Assert.DoesNotContain("private async void DetectionAccept_Click", training);
+        Assert.DoesNotContain("private async void DetectionCorrect_Click", training);
+        Assert.Contains("private void DetectionAccept_Click", training);
+        Assert.Contains("private void DetectionCorrect_Click", training);
+        Assert.Contains(".SafeFireAndForget(\"DetectionAccept\")", training);
+        Assert.Contains(".SafeFireAndForget(\"DetectionCorrect\")", training);
+        Assert.Contains("private async Task HandleDetectionAcceptAsync", training);
+        Assert.Contains("private async Task HandleDetectionCorrectAsync", training);
         Assert.Contains("LiveDetectionCorrectionCodeSelectionServiceFactory.Create", training);
         Assert.DoesNotContain("CodingExplorerEntryFactory.CreateSeed", training);
         Assert.DoesNotContain("VsaCodeExplorerDialogServiceFactory.Create", training);

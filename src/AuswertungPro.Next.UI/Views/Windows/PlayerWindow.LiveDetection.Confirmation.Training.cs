@@ -1,12 +1,17 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private async void DetectionAccept_Click(object sender, RoutedEventArgs e)
+    private void DetectionAccept_Click(object sender, RoutedEventArgs e)
+        => HandleDetectionAcceptAsync().SafeFireAndForget("DetectionAccept");
+
+    private async Task HandleDetectionAcceptAsync()
     {
         if (_detectionPendingFindings == null || _detectionPendingFindings.Count == 0)
         {
@@ -44,7 +49,10 @@ public partial class PlayerWindow
         ResumeDetection();
     }
 
-    private async void DetectionCorrect_Click(object sender, RoutedEventArgs e)
+    private void DetectionCorrect_Click(object sender, RoutedEventArgs e)
+        => HandleDetectionCorrectAsync().SafeFireAndForget("DetectionCorrect");
+
+    private async Task HandleDetectionCorrectAsync()
     {
         if (_detectionPendingFindings == null || _detectionPendingFindings.Count == 0)
         {
