@@ -131,11 +131,6 @@ public partial class PlayerWindow
             _codingVm.Events,
             CodingSessionViewModel.GetDefectStatus);
 
-        RunCodingDefectCount.Text = summary.Total.ToString();
-        RunCodingOpenCount.Text = summary.Open.ToString();
-        TxtCodingStatAutoAccepted.Text = summary.AutoAccepted.ToString();
-        TxtCodingStatPending.Text = summary.Pending.ToString();
-        TxtCodingStatReviewRequired.Text = summary.ReviewRequired.ToString();
-        TxtCodingStatAvgConfidence.Text = summary.AverageConfidenceText;
+        _codingStatisticsControls.Apply(summary);
     }
 }

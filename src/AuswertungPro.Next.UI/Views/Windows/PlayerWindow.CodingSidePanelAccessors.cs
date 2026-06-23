@@ -1,5 +1,6 @@
 using System.Windows.Controls;
 using System.Windows.Documents;
+using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -61,5 +62,16 @@ public partial class PlayerWindow
         CodingSidePanelControl.CodingCreateEventRequested += CodingCreateEvent_Click;
         CodingSidePanelControl.CodingProtocolMatchRequested += RunCodingProtocolMatch_Click;
         CodingSidePanelControl.CodingAcceptGreenMatchesRequested += CodingAcceptGreenMatches_Click;
+    }
+
+    private void InitializeCodingSidePanelControllers()
+    {
+        _codingStatisticsControls = new CodingStatisticsControls(
+            RunCodingDefectCount,
+            RunCodingOpenCount,
+            TxtCodingStatAutoAccepted,
+            TxtCodingStatPending,
+            TxtCodingStatReviewRequired,
+            TxtCodingStatAvgConfidence);
     }
 }

@@ -42,6 +42,7 @@ public partial class PlayerWindow
     private bool _codingAiPulseRunning;
     private readonly StreckenschadenTracker _streckenTracker = new();
     private CodingLiveAiTimerController? _codingLiveAiTimers;
+    private CodingStatisticsControls _codingStatisticsControls = null!;
     private QualityGateService? _codingQualityGate;
 
     private enum EingabemarkerPhase { Inactive, Drawing, Input, Analyzing }

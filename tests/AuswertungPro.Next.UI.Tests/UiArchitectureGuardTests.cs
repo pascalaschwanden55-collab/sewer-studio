@@ -309,23 +309,31 @@ public sealed class UiArchitectureGuardTests
         var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
         var navigationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Navigation.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsPolicy.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsControls.cs");
         var refreshPolicyPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsRefreshPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Coding-Statistik-Berechnung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controlsPath), "Coding-Statistik-Anzeige muss ausserhalb der PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(refreshPolicyPath), "Coding-Statistik-Refresh-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var events = File.ReadAllText(eventsPath);
         var coding = File.ReadAllText(codingPath);
         var navigation = File.ReadAllText(navigationPath);
         var policy = File.ReadAllText(policyPath);
+        var controls = File.ReadAllText(controlsPath);
         var refreshPolicy = File.ReadAllText(refreshPolicyPath);
 
         Assert.Contains("CodingStatisticsPolicy.Build", events);
+        Assert.Contains("_codingStatisticsControls.Apply(summary)", events);
         Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", navigation);
         Assert.DoesNotContain("Average(e => e.AiContext!.Confidence)", events);
         Assert.DoesNotContain("nameof(CodingSessionViewModel.StatAutoAccepted) or", coding + navigation);
         Assert.DoesNotContain("int autoAccepted = 0", events);
+        Assert.DoesNotContain("RunCodingDefectCount.Text", events);
+        Assert.DoesNotContain("TxtCodingStatAutoAccepted.Text", events);
         Assert.Contains("public static CodingStatisticsSummary Build", policy);
+        Assert.Contains("public sealed class CodingStatisticsControls", controls);
+        Assert.Contains("_totalCount.Text", controls);
         Assert.Contains("public static bool ShouldRefresh", refreshPolicy);
     }
 
