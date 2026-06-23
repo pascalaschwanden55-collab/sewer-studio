@@ -1178,6 +1178,29 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_trace_output_lives_in_player_trace()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var tracePath = Path.Combine(uiRoot, "Player", "PlayerTrace.cs");
+
+        Assert.True(File.Exists(tracePath), "PlayerWindow-Trace-Ausgaben sollen zentral ueber PlayerTrace laufen.");
+
+        var playerWindowText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs")
+                .OrderBy(Path.GetFileName)
+                .Select(File.ReadAllText));
+        var trace = File.ReadAllText(tracePath);
+
+        Assert.Contains("PlayerTrace.WriteLine", playerWindowText);
+        Assert.DoesNotContain("Debug.WriteLine", playerWindowText);
+        Assert.DoesNotContain("System.Diagnostics.Debug.WriteLine", playerWindowText);
+        Assert.Contains("Debug.WriteLine", trace);
+    }
+
+    [Fact]
     public void PlayerWindow_live_snapshot_temp_path_lives_in_policy()
     {
         var root = FindRepositoryRoot();

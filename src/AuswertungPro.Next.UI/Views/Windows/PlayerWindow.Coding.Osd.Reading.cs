@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -41,11 +42,11 @@ public partial class PlayerWindow
             {
                 if (!string.IsNullOrWhiteSpace(result.Error))
                 {
-                    System.Diagnostics.Debug.WriteLine($"[OSD] Frame-Meter nicht lesbar: {result.Error}");
+                    PlayerTrace.WriteLine($"[OSD] Frame-Meter nicht lesbar: {result.Error}");
                 }
                 else if (!string.IsNullOrWhiteSpace(result.RawReply) || result.Candidate.HasValue)
                 {
-                    System.Diagnostics.Debug.WriteLine(
+                    PlayerTrace.WriteLine(
                         $"[OSD] Meter verworfen. Raw='{result.RawReply}', Candidate={result.Candidate?.ToString("F2", CultureInfo.InvariantCulture) ?? "null"}, Last={result.RecentMeter?.ToString("F2", CultureInfo.InvariantCulture) ?? "null"}");
                 }
                 return null;
@@ -67,7 +68,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[OSD] Frame-Meter nicht lesbar: {ex.Message}");
+            PlayerTrace.WriteLine($"[OSD] Frame-Meter nicht lesbar: {ex.Message}");
             return null;
         }
     }

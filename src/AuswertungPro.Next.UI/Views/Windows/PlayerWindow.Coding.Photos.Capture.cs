@@ -55,7 +55,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Snapshot-Fehler: {ex.Message}");
+            PlayerTrace.WriteLine($"Snapshot-Fehler: {ex.Message}");
             return null;
         }
     }

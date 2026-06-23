@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.ViewModels.Windows;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -110,7 +110,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[PlayerWindow] {traceName} error: {ex.Message}");
+            PlayerTrace.WriteLine($"[PlayerWindow] {traceName} error: {ex.Message}");
         }
     }
 }

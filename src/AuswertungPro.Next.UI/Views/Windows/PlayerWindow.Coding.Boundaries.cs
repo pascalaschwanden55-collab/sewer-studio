@@ -2,6 +2,7 @@ using System;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -21,11 +22,11 @@ public partial class PlayerWindow
             "BCD");
         if (bcdPresence.Exists)
         {
-            System.Diagnostics.Debug.WriteLine(
+            PlayerTrace.WriteLine(
                 $"[BCD-Dedup] EnsureRohranfang: bereits vorhanden (VM={bcdPresence.ViewCount}, Session={bcdPresence.SessionCount})");
             return;
         }
-        System.Diagnostics.Debug.WriteLine(
+        PlayerTrace.WriteLine(
             $"[BCD-Dedup] EnsureRohranfang: NEU erzeugen bei {currentMeter:F2}m (VM={bcdPresence.ViewCount}, Session={bcdPresence.SessionCount})");
 
         var startReference = CodingBoundaryImportReferencePolicy.ResolveStart(_codingImportEvents);

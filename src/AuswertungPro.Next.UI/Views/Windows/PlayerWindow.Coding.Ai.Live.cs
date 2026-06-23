@@ -51,7 +51,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] CodingLiveAiTimer_Tick error: {ex.Message}");
+            PlayerTrace.WriteLine($"[PlayerWindow] CodingLiveAiTimer_Tick error: {ex.Message}");
         }
     }
 }

@@ -46,14 +46,14 @@ public partial class PlayerWindow
                 PlayerStatusColors.Success,
                 "Rohrdurchmesser automatisch gemessen");
 
-            System.Diagnostics.Debug.WriteLine(
+            PlayerTrace.WriteLine(
                 $"[AutoCalib] DN{nominalDn}: NormDiam={autoCalib.NormalizedDiameter:F3}, " +
                 $"Center=({autoCalib.PipeCenter.X:F3},{autoCalib.PipeCenter.Y:F3}), " +
                 $"PixelDiam={autoCalib.PipePixelDiameter:F0}");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[AutoCalib] Fehlgeschlagen: {ex.Message}");
+            PlayerTrace.WriteLine($"[AutoCalib] Fehlgeschlagen: {ex.Message}");
         }
     }
 }

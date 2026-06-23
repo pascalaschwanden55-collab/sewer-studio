@@ -34,7 +34,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Mark-SAM] Segmentierung uebersprungen: {ex.Message}");
+            PlayerTrace.WriteLine($"[Mark-SAM] Segmentierung uebersprungen: {ex.Message}");
             return null;
         }
     }
@@ -70,7 +70,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Mark-SAM] Masken-Render uebersprungen: {ex.Message}");
+            PlayerTrace.WriteLine($"[Mark-SAM] Masken-Render uebersprungen: {ex.Message}");
         }
     }
 }

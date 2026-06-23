@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -45,7 +46,7 @@ public partial class PlayerWindow
             // nicht weggemerkt werden.
             if (CodingLiveFindingAcceptancePolicy.ShouldSkipAsTooFarAhead(code, IsFindingTooFarAhead(finding)))
             {
-                System.Diagnostics.Debug.WriteLine(
+                PlayerTrace.WriteLine(
                     $"[Qwen] {code} bei {meter:F2}m nur voraus erkannt (im DN-Kreis) - nicht protokolliert");
                 continue;
             }
@@ -57,7 +58,7 @@ public partial class PlayerWindow
                     codingSessionService.ActiveSession?.Events,
                     codingVm.Events))
             {
-                System.Diagnostics.Debug.WriteLine($"[BCD-Dedup] AddFindings: {code} uebersprungen (bereits vorhanden)");
+                PlayerTrace.WriteLine($"[BCD-Dedup] AddFindings: {code} uebersprungen (bereits vorhanden)");
                 continue;
             }
 

@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -41,7 +42,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] OnClosing error: {ex.Message}");
+            PlayerTrace.WriteLine($"[PlayerWindow] OnClosing error: {ex.Message}");
         }
     }
 
@@ -55,8 +56,8 @@ public partial class PlayerWindow
         AuswertungPro.Next.Application.Common.BestEffort.Try(
             () => { if (VideoView != null) VideoView.MediaPlayer = null; },
             "VLC: VideoView trennen");
-        try { _player.Dispose(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PlayerWindow] MediaPlayer Dispose error: {ex.Message}"); }
-        try { _libVlc.Dispose(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PlayerWindow] LibVLC Dispose error: {ex.Message}"); }
+        try { _player.Dispose(); } catch (Exception ex) { PlayerTrace.WriteLine($"[PlayerWindow] MediaPlayer Dispose error: {ex.Message}"); }
+        try { _libVlc.Dispose(); } catch (Exception ex) { PlayerTrace.WriteLine($"[PlayerWindow] LibVLC Dispose error: {ex.Message}"); }
     }
 
     private void StopPlayerTimers()

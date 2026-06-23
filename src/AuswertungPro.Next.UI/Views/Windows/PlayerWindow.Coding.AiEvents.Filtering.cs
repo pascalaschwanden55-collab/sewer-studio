@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -21,7 +22,7 @@ public partial class PlayerWindow
             ResolveFindingCodeForCoding,
             _codingSessionService?.ActiveSession?.Events,
             _codingVm?.Events,
-            message => System.Diagnostics.Debug.WriteLine(message));
+            message => PlayerTrace.WriteLine(message));
     }
 
     /// <summary>Delegiert an VsaCodeResolver.LookupLabel.</summary>

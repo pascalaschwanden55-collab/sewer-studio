@@ -16,7 +16,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] DetectionTimer_Tick Fehler: {ex.Message}");
+            PlayerTrace.WriteLine($"[PlayerWindow] DetectionTimer_Tick Fehler: {ex.Message}");
         }
     }
 

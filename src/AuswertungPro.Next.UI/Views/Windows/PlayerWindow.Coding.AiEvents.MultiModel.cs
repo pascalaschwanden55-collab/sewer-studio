@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -42,14 +43,14 @@ public partial class PlayerWindow
             var code = ResolveFindingCodeForCoding(pseudoFinding, meter);
             if (code == null)
             {
-                System.Diagnostics.Debug.WriteLine(
+                PlayerTrace.WriteLine(
                     $"[Multi-Model] Kein VSA-Code fuer Label='{quant.Label}' - uebersprungen");
                 continue;
             }
 
             if (CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser(code, seg.Proximity))
             {
-                System.Diagnostics.Debug.WriteLine(
+                PlayerTrace.WriteLine(
                     $"[Multi-Model] {code} bei {meter:F2}m nur voraus erkannt - nicht protokolliert");
                 continue;
             }

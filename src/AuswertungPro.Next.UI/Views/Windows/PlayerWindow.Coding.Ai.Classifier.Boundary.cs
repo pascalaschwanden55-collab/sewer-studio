@@ -32,7 +32,7 @@ public partial class PlayerWindow
             && !CodingDedupPolicy.IsBoundaryEndCodePlausible(boundaryCode, meter, _codingVm.EndMeter))
         {
             var possibleLabel = CodingClassifierDisplayPolicy.ResolveBoundaryLabel(boundaryCode, LookupVsaLabel(boundaryCode));
-            System.Diagnostics.Debug.WriteLine(
+            PlayerTrace.WriteLine(
                 $"[Boundary] BCE bei {meter:F2}m verworfen (Haltungsende ~{_codingVm.EndMeter:F2}m, noch zu weit) - weiteranalysieren");
             SetCodingAiState(CodingClassifierDisplayPolicy.PossibleBoundaryEndStatus,
                 PlayerStatusColors.Warning, CodingClassifierDisplayPolicy.PossibleBoundaryEndDetail);

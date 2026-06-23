@@ -59,7 +59,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] HandleMarkDrawingComplete error: {ex.Message}");
+            PlayerTrace.WriteLine($"[PlayerWindow] HandleMarkDrawingComplete error: {ex.Message}");
         }
     }
 

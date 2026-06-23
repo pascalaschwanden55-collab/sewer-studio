@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -40,7 +41,7 @@ public partial class PlayerWindow
             ImgInlineEvidencePreview.Visibility = Visibility.Collapsed;
             TxtInlineEvidencePreviewStatus.Text = "Bild nicht ladbar";
             TxtInlineEvidencePreviewStatus.Visibility = Visibility.Visible;
-            System.Diagnostics.Debug.WriteLine($"[CodingPreview] {ex.Message}");
+            PlayerTrace.WriteLine($"[CodingPreview] {ex.Message}");
         }
     }
 }
