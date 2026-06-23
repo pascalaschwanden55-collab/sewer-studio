@@ -1,11 +1,8 @@
 using System;
 using System.IO;
-using System.Linq;
-using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -27,33 +24,25 @@ public partial class PlayerWindow
 
         try
         {
+            var plan = CodingProtocolPdfExportPlanner.Build(
+                _haltungRecord,
+                _serviceProvider.Settings.LastProjectPath,
+                AppContext.BaseDirectory,
+                DateTime.Now);
+
             var dlg = new Microsoft.Win32.SaveFileDialog
             {
                 Title = "PDF-Protokoll speichern",
                 Filter = "PDF-Dateien (*.pdf)|*.pdf",
                 DefaultExt = ".pdf",
-                FileName = $"Protokoll_{_haltungRecord.GetFieldValue("Haltungsname") ?? "Haltung"}_{DateTime.Now:yyyyMMdd}.pdf"
+                FileName = plan.DefaultFileName
             };
 
             if (dlg.ShowDialog() != true) return;
 
-            // Projektordner ermitteln (fuer Logo-Suche und relative Pfade)
-            var projectRoot = "";
-            if (!string.IsNullOrWhiteSpace(_serviceProvider.Settings.LastProjectPath))
-                projectRoot = Path.GetDirectoryName(_serviceProvider.Settings.LastProjectPath) ?? "";
-
-            // Logo suchen
-            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
-            var options = new HaltungsprotokollPdfOptions
-            {
-                IncludePhotos = true,
-                IncludeHaltungsgrafik = true,
-                LogoPathAbs = File.Exists(logoPath) ? logoPath : null
-            };
-
             var project = ((ViewModels.ShellViewModel?)App.Current.MainWindow?.DataContext)?.Project;
             var pdf = _serviceProvider.ProtocolPdfExporter.BuildHaltungsprotokollPdf(
-                project!, _haltungRecord, doc, projectRoot, options);
+                project!, _haltungRecord, doc, plan.ProjectRoot, plan.Options);
             File.WriteAllBytes(dlg.FileName, pdf);
 
             // PDF oeffnen

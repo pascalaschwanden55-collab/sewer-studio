@@ -375,6 +375,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_pdf_export_uses_planner()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
+        var plannerPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfExportPlanner.cs");
+
+        Assert.True(File.Exists(plannerPath), "PDF-Exportvorbereitung soll ausserhalb der PlayerWindow-Partials liegen.");
+
+        var protocol = File.ReadAllText(protocolPath);
+        var planner = File.ReadAllText(plannerPath);
+
+        Assert.Contains("CodingProtocolPdfExportPlanner.Build", protocol);
+        Assert.DoesNotContain("HaltungsprotokollPdfOptions", protocol);
+        Assert.DoesNotContain("LogoPathAbs", protocol);
+        Assert.DoesNotContain("IncludeHaltungsgrafik", protocol);
+        Assert.Contains("public static class CodingProtocolPdfExportPlanner", planner);
+        Assert.Contains("HaltungsprotokollPdfOptions", planner);
+        Assert.Contains("Path.GetDirectoryName", planner);
+    }
+
+    [Fact]
     public void PlayerWindow_open_stretch_damage_prompt_lives_in_policy()
     {
         var root = FindRepositoryRoot();
