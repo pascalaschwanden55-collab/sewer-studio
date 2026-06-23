@@ -26,11 +26,9 @@ public partial class PlayerWindow
         if (!updateUi)
             return;
 
-        if (!_isManualMarkMode)
-            DetectionOverlayGrid.Visibility = Visibility.Collapsed;
         AiStatusBadge.Visibility = Visibility.Collapsed;
         SetYoloStatus("Gestoppt", PlayerStatusColors.Muted);
-        DetectionCanvas.Children.Clear();
+        DetectionOverlayCleaner.ClearCanvas(DetectionCanvas, DetectionOverlayGrid, hideOverlay: !_isManualMarkMode);
         FindingSummaryPanel.Visibility = Visibility.Collapsed;
 
         var totalEvents = _codingVm?.Events?.Count ?? 0;
