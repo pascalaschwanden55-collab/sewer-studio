@@ -634,14 +634,20 @@ public sealed class UiArchitectureGuardTests
         var gatewayPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackGateway.cs");
         var positionControlsPath = Path.Combine(uiRoot, "Player", "PlayerPositionControls.cs");
         var speedControlsPath = Path.Combine(uiRoot, "Player", "PlayerSpeedControls.cs");
+        var dialogServicePath = Path.Combine(uiRoot, "Player", "PlayerPlaybackDialogService.cs");
+        var dialogServiceFactoryPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackDialogServiceFactory.cs");
 
         Assert.True(File.Exists(gatewayPath), "Try-Playback-Zugriffe sollen ausserhalb des PlayerWindow-Partials gekapselt sein.");
+        Assert.True(File.Exists(dialogServicePath), "Playback-Dialogtexte sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogServiceFactoryPath), "Playback-DialogHost-Verdrahtung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var playback = File.ReadAllText(playbackPath) + File.ReadAllText(controlsPath);
         var policy = File.ReadAllText(policyPath);
         var gateway = File.ReadAllText(gatewayPath);
         var positionControls = File.ReadAllText(positionControlsPath);
         var speedControls = File.ReadAllText(speedControlsPath);
+        var dialogService = File.ReadAllText(dialogServicePath);
+        var dialogServiceFactory = File.ReadAllText(dialogServiceFactoryPath);
 
         Assert.Contains("PlayerPlaybackGateway.TryGetCurrentTime", playback);
         Assert.Contains("PlayerPlaybackGateway.TrySeekTo", playback);
@@ -665,6 +671,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("time = TimeSpan.FromMilliseconds", playback);
         Assert.DoesNotContain("Math.Abs(currentRate - targetRate) < 0.01f", playback);
         Assert.DoesNotContain("_player.Time = (long)(targetPos * length);", playback);
+        Assert.DoesNotContain("DialogHost.Current", playback);
+        Assert.DoesNotContain("nicht unterst", playback);
         Assert.Contains("public static class PlayerPlaybackGateway", gateway);
         Assert.Contains("PlayerPlaybackState.ResolveSeekTargetMs", gateway);
         Assert.Contains("TimeSpan.FromMilliseconds(Math.Max(0, getCurrentTimeMs()))", gateway);
@@ -679,6 +687,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public readonly record struct PlayerSliderSeekTarget", policy);
         Assert.Contains("public static PlayerPlaybackUiState BuildUiState", policy);
         Assert.Contains("public static bool IsRateButtonChecked", policy);
+        Assert.Contains("public sealed class PlayerPlaybackDialogService", dialogService);
+        Assert.Contains("ShowUnsupportedRate", dialogService);
+        Assert.Contains("SetRate(", dialogService);
+        Assert.Contains("DialogHost.Current", dialogServiceFactory);
     }
 
     [Fact]

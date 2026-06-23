@@ -76,7 +76,7 @@ public partial class PlayerWindow
 
         _positionControls.ApplySeekPreview(target.Ratio, _player.Length);
 
-        // Throttled live seek: schedule scrub if not already pending
+        // Throttled live seek: schedule scrub if not already pending.
         if (_isDragging && !_scrubTimer.IsEnabled)
             _scrubTimer.Start();
     }
@@ -101,7 +101,7 @@ public partial class PlayerWindow
         var result = _player.SetRate(clamped);
         if (result != 0)
         {
-            DialogHost.Current.Info($"SetRate({clamped:0.##}) nicht unterstützt für dieses Video.", "Video");
+            PlayerPlaybackDialogServiceFactory.Create().ShowUnsupportedRate(clamped);
         }
 
         UpdateRateLabel();
