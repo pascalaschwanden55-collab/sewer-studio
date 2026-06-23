@@ -4,7 +4,6 @@ using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
-using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -39,35 +38,14 @@ public partial class PlayerWindow
 
     private async Task<bool> ConfirmImportAsTrainingAsync(CodingEvent importEvent)
     {
-        SeekToImportEvent(importEvent);
-        await Task.Delay(200);
-
-        if (!TryTakeSnapshot(out var snapshotPath))
-        {
-            CodingModeDialogServiceFactory.Create().ShowImportFrameCaptureFailed();
+        var result = await CodingProtocolImportTrainingWorkflowServiceFactory.Create(
+                SeekToImportEvent,
+                () => TryTakeSnapshot(out var snapshotPath) ? snapshotPath : null)
+            .ConfirmAsync(importEvent);
+        if (!result.Accepted)
             return false;
-        }
 
-        var annotationId = Guid.NewGuid().ToString("N")[..12];
-        var snapshotStore = CodingProtocolTrainingSnapshotStoreFactory.Create();
-        var destFrame = snapshotStore.CopySnapshotToTrainingImages(snapshotPath, annotationId);
-        if (destFrame == null)
-        {
-            CodingModeDialogServiceFactory.Create().ShowImportFrameCaptureFailed();
-            return false;
-        }
-
-        var annotation = LiveDetectionTeacherAnnotationFactory.CreateImportConfirmation(
-            annotationId,
-            importEvent,
-            destFrame);
-
-        await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
-
-        snapshotStore.DeleteSnapshot(snapshotPath);
-        var badge = CodingProtocolMatchDisplayPolicy.BuildImportConfirmationBadge(
-            importEvent.Entry.Code,
-            importEvent.MeterAtCapture);
+        var badge = result.Badge;
         OsdMeterBadge.Visibility = Visibility.Visible;
         TxtOsdMeter.Text = badge.Text;
         var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(

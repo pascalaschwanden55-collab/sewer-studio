@@ -405,22 +405,27 @@ public sealed class UiArchitectureGuardTests
         var trainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var resolverPath = Path.Combine(uiRoot, "Ai", "CodingProtocolTrainingCandidateResolver.cs");
         var snapshotStorePath = Path.Combine(uiRoot, "Ai", "CodingProtocolTrainingSnapshotStore.cs");
+        var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
         Assert.True(File.Exists(resolverPath), "Gruene Protokoll-Trainingskandidaten muessen ausserhalb der PlayerWindow-Partials auf Import-Events gemappt werden.");
         Assert.True(File.Exists(snapshotStorePath), "Gruene Protokoll-Trainingssnapshots sollen ausserhalb der PlayerWindow-Partials kopiert werden.");
+        Assert.True(File.Exists(workflowFactoryPath), "Gruene Protokoll-Trainingsuebernahme soll ausserhalb der PlayerWindow-Partials verdrahtet werden.");
 
         var training = File.ReadAllText(trainingPath);
         var resolver = File.ReadAllText(resolverPath);
         var snapshotStore = File.ReadAllText(snapshotStorePath);
+        var workflowFactory = File.ReadAllText(workflowFactoryPath);
 
         Assert.Contains("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", training);
-        Assert.Contains("CodingProtocolTrainingSnapshotStoreFactory.Create", training);
+        Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", training);
+        Assert.DoesNotContain("CodingProtocolTrainingSnapshotStoreFactory.Create", training);
         Assert.DoesNotContain("Guid.TryParse(pair.Gt.RefId", training);
         Assert.DoesNotContain("_codingImportEvents.FirstOrDefault(ev => ev.Entry.EntryId", training);
         Assert.DoesNotContain("File.Exists", training);
         Assert.DoesNotContain("File.Copy", training);
         Assert.DoesNotContain("File.Delete", training);
         Assert.Contains("public static IReadOnlyList<CodingEvent> ResolveImportEvents", resolver);
+        Assert.Contains("CodingProtocolTrainingSnapshotStoreFactory.Create", workflowFactory);
         Assert.Contains("File.Copy", snapshotStore);
         Assert.Contains("BestEffort.Try", snapshotStore);
     }
@@ -2110,11 +2115,13 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var trainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchDisplayPolicy.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingWorkflowService.cs");
 
         var training = File.ReadAllText(trainingPath);
         var policy = File.ReadAllText(policyPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : string.Empty;
 
-        Assert.Contains("CodingProtocolMatchDisplayPolicy.BuildImportConfirmationBadge", training);
+        Assert.Contains("CodingProtocolMatchDisplayPolicy.BuildImportConfirmationBadge", workflow);
         Assert.DoesNotContain("bestaetigt", training);
         Assert.DoesNotContain("Interval = TimeSpan.FromSeconds(3)", training);
         Assert.Contains("public static CodingImportConfirmationBadgeState BuildImportConfirmationBadge", policy);
@@ -2145,11 +2152,17 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var protocolMatchPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.cs");
         var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Training.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingWorkflowService.cs");
+        var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
         Assert.True(File.Exists(trainingPath), "ProtocolMatch-Trainingsuebernahme soll aus dem Match-Partial heraus.");
+        Assert.True(File.Exists(workflowPath), "ProtocolMatch-Trainingsworkflow soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowFactoryPath), "ProtocolMatch-Trainingsworkflow soll ueber Factory verdrahtet werden.");
 
         var protocolMatch = File.ReadAllText(protocolMatchPath);
         var training = File.ReadAllText(trainingPath);
+        var workflow = File.ReadAllText(workflowPath);
+        var workflowFactory = File.ReadAllText(workflowFactoryPath);
 
         Assert.DoesNotContain("private async void CodingAcceptGreenMatches_Click", protocolMatch);
         Assert.DoesNotContain("private async void ImportConfirm_Click", protocolMatch);
@@ -2157,8 +2170,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private async void CodingAcceptGreenMatches_Click", training);
         Assert.Contains("private async void ImportConfirm_Click", training);
         Assert.Contains("private async Task<bool> ConfirmImportAsTrainingAsync", training);
-        Assert.Contains("TeacherAnnotationStore.AppendAsync", training);
-        Assert.Contains("LiveDetectionTeacherAnnotationFactory.CreateImportConfirmation", training);
+        Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", training);
+        Assert.DoesNotContain("TeacherAnnotationStore.AppendAsync", training);
+        Assert.DoesNotContain("LiveDetectionTeacherAnnotationFactory.CreateImportConfirmation", training);
+        Assert.DoesNotContain("CodingProtocolTrainingSnapshotStoreFactory.Create", training);
+        Assert.Contains("CodingProtocolTrainingSnapshotStore", workflow);
+        Assert.Contains("LiveDetectionTeacherAnnotationFactory.CreateImportConfirmation", workflowFactory);
+        Assert.Contains("TeacherAnnotationStore.AppendAsync", workflowFactory);
     }
 
     [Fact]

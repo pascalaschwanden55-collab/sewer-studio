@@ -404,14 +404,19 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var importConfirmBody = ExtractMethodBody(coding, "private async void ImportConfirm_Click");
         var greenBody = ExtractMethodBody(coding, "private async void CodingAcceptGreenMatches_Click");
         var coreBody = ExtractMethodBody(coding, "private async Task<bool> ConfirmImportAsTrainingAsync");
+        var workflow = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowService.cs");
+        var workflowFactory = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
         Assert.Contains("await ConfirmImportAsTrainingAsync(importEvent)", importConfirmBody);
         Assert.Contains("_lastCodingMatch.Trainingskandidaten", greenBody);
         Assert.Contains("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", greenBody);
         Assert.DoesNotContain("_codingImportEvents.FirstOrDefault", greenBody);
         Assert.Contains("await ConfirmImportAsTrainingAsync(importEvent)", greenBody);
-        Assert.Contains("SeekToImportEvent(importEvent)", coreBody);
-        Assert.Contains("TeacherAnnotationStore.AppendAsync(annotation)", coreBody);
+        Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", coreBody);
+        Assert.DoesNotContain("TeacherAnnotationStore.AppendAsync(annotation)", coreBody);
+        Assert.Contains("await _seekAndWait(importEvent)", workflow);
+        Assert.Contains("await _appendAnnotation(annotation)", workflow);
+        Assert.Contains("TeacherAnnotationStore.AppendAsync", workflowFactory);
     }
 
     [Fact]
