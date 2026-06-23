@@ -440,6 +440,29 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_detection_lifecycle_lives_in_lifecycle_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var liveDetectionPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.cs");
+        var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.cs");
+
+        Assert.True(File.Exists(lifecyclePath), "LiveDetection-Start/Stop-Wiring soll in ein eigenes Lifecycle-Partial.");
+
+        var liveDetection = File.ReadAllText(liveDetectionPath);
+        var lifecycle = File.ReadAllText(lifecyclePath);
+
+        Assert.DoesNotContain("private async void LiveDetection_Click", liveDetection);
+        Assert.DoesNotContain("private async Task StartLiveDetectionAsync", liveDetection);
+        Assert.DoesNotContain("private void StopLiveDetection", liveDetection);
+        Assert.Contains("private async void LiveDetection_Click", lifecycle);
+        Assert.Contains("private async Task StartLiveDetectionAsync", lifecycle);
+        Assert.Contains("private void StopLiveDetection", lifecycle);
+        Assert.Contains("VisionModelSelectionPolicy.Select", lifecycle);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_live_ai_wiring_lives_in_live_partial()
     {
         var root = FindRepositoryRoot();
@@ -898,15 +921,20 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var liveDetectionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.cs");
+        var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Lifecycle.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "VisionModelSelectionPolicy.cs");
 
+        Assert.True(File.Exists(lifecyclePath), "LiveDetection-Modellauswahl-Wiring soll im Lifecycle-Partial liegen.");
         Assert.True(File.Exists(policyPath), "Live-KI-Modellauswahl muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
+        var lifecycle = File.ReadAllText(lifecyclePath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("VisionModelSelectionPolicy.Select", liveDetection);
+        Assert.DoesNotContain("VisionModelSelectionPolicy.Select", liveDetection);
+        Assert.Contains("VisionModelSelectionPolicy.Select", lifecycle);
         Assert.DoesNotContain("m.Contains(\"vl\"", liveDetection);
+        Assert.DoesNotContain("m.Contains(\"vl\"", lifecycle);
         Assert.Contains("public static string Select", policy);
     }
 
