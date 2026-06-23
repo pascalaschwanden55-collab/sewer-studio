@@ -1509,19 +1509,29 @@ public sealed class UiArchitectureGuardTests
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingProtocolRevisionUpdater.cs");
         var emptyGuardPath = Path.Combine(uiRoot, "Ai", "CodingApplyEmptyProtocolGuard.cs");
         var closePolicyPath = Path.Combine(uiRoot, "Ai", "CodingUnappliedChangesClosePolicy.cs");
+        var dialogServicePath = Path.Combine(uiRoot, "Ai", "CodingApplyDialogService.cs");
+        var dialogServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingApplyDialogServiceFactory.cs");
 
         Assert.True(File.Exists(policyPath), "Protokoll-Revision-Update muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(emptyGuardPath), "Leere-Codierung-Schutzlogik muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(closePolicyPath), "Schliessen-Entscheidung fuer unuebernommene Codierungen muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogServicePath), "Apply-Dialogtexte und DialogHost-Zugriff muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogServiceFactoryPath), "Apply-DialogHost-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var apply = File.ReadAllText(applyPath);
         var policy = File.ReadAllText(policyPath);
         var emptyGuard = File.ReadAllText(emptyGuardPath);
         var closePolicy = File.ReadAllText(closePolicyPath);
+        var dialogService = File.ReadAllText(dialogServicePath);
+        var dialogServiceFactory = File.ReadAllText(dialogServiceFactoryPath);
 
         Assert.Contains("CodingProtocolRevisionUpdater.ApplyCodingEvents", apply);
         Assert.Contains("CodingApplyEmptyProtocolGuard.Build", apply);
-        Assert.Contains("CodingUnappliedChangesClosePolicy.ShouldClose", apply);
+        Assert.Contains("CodingApplyDialogServiceFactory.Create", apply);
+        Assert.Contains("ConfirmEmptyProtocol", apply);
+        Assert.Contains("ConfirmUnappliedChangesOnClose", apply);
+        Assert.DoesNotContain("DialogHost.Current", apply);
+        Assert.DoesNotContain("CodingUnappliedChangesClosePolicy.ShouldClose", apply);
         Assert.DoesNotContain(".GroupBy(e => e.EntryId)", apply);
         Assert.DoesNotContain("aktiveBefunde", apply);
         Assert.DoesNotContain("bestehende(n) Befund", apply);
@@ -1530,6 +1540,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static int ApplyCodingEvents", policy);
         Assert.Contains("public static CodingApplyEmptyProtocolGuardResult Build", emptyGuard);
         Assert.Contains("public static bool ShouldClose", closePolicy);
+        Assert.Contains("public sealed class CodingApplyDialogService", dialogService);
+        Assert.Contains("_confirmWarn", dialogService);
+        Assert.Contains("_confirmCancel", dialogService);
+        Assert.Contains("CodingUnappliedChangesClosePolicy.ShouldClose", dialogService);
+        Assert.Contains("DialogHost.Current", dialogServiceFactory);
+        Assert.Contains("ConfirmWarn", dialogServiceFactory);
+        Assert.Contains("ConfirmCancel", dialogServiceFactory);
     }
 
     [Fact]

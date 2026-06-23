@@ -5,7 +5,6 @@ using System.Windows;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.Services;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -29,12 +28,8 @@ public partial class PlayerWindow
             ev => !string.IsNullOrWhiteSpace(ev.Entry.Code));
 
         var emptyGuard = CodingApplyEmptyProtocolGuard.Build(eventEntryCount, doc.Current.Entries);
-        if (emptyGuard.RequiresConfirmation)
-        {
-            var uebernehmen = DialogHost.Current.ConfirmWarn(emptyGuard.Message, emptyGuard.Title);
-            if (!uebernehmen)
-                return false;
-        }
+        if (!CodingApplyDialogServiceFactory.Create().ConfirmEmptyProtocol(emptyGuard))
+            return false;
 
         CodingProtocolRevisionUpdater.ApplyCodingEvents(doc.Current, _codingVm.Events);
 
@@ -53,8 +48,8 @@ public partial class PlayerWindow
         if (showOverlay)
         {
             var message = _codingVm.Events.Count == 0
-                ? "Primäre Schäden geleert"
-                : $"{_codingVm.Events.Count} Ereignisse in Primäre Schäden übernommen";
+                ? "Prim\u00e4re Sch\u00e4den geleert"
+                : $"{_codingVm.Events.Count} Ereignisse in Prim\u00e4re Sch\u00e4den \u00fcbernommen";
             ShowOverlay(message, TimeSpan.FromSeconds(4));
         }
 
@@ -67,22 +62,18 @@ public partial class PlayerWindow
             return true;
 
         SuspendCodingOverlayInput();
-        DialogConfirm result;
+        bool shouldClose;
         try
         {
-            result = DialogHost.Current.ConfirmCancel(
-                "Es gibt noch nicht übernommene Codierungen.\n\n" +
-                "Ja = übernehmen\nNein = verwerfen\nAbbrechen = Fenster offen lassen",
-                "Codier-Modus");
+            shouldClose = CodingApplyDialogServiceFactory.Create()
+                .ConfirmUnappliedChangesOnClose(() => ApplyCodingChanges(showOverlay: false));
         }
         finally
         {
             ResumeCodingOverlayInput();
         }
 
-        return CodingUnappliedChangesClosePolicy.ShouldClose(
-            result,
-            () => ApplyCodingChanges(showOverlay: false));
+        return shouldClose;
     }
 
     private bool HasUnappliedCodingChanges()
