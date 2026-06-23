@@ -29,7 +29,7 @@ public partial class PlayerWindow
                     mmResult.SamResponse.ImageHeight,
                     maskContent.Width,
                     maskContent.Height,
-                    logger: _serviceProvider?.LoggerFactory.CreateLogger("SamMaskRenderer"),
+                    logger: _dependencies.LoggerFactory?.CreateLogger("SamMaskRenderer"),
                     options: Ai.Pipeline.SamMaskRenderer.WinCanStyleOptions,
                     offsetX: maskContent.X,
                     offsetY: maskContent.Y);

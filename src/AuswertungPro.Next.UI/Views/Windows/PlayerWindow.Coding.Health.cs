@@ -12,7 +12,7 @@ public partial class PlayerWindow
         try
         {
             var platformConfig = PlayerAiSettingsLoader.LoadPlatformSettings();
-            var runtime = CodingAiRuntimeFactory.Create(platformConfig, CodeCatalog, _serviceProvider?.PipelineCfg);
+            var runtime = CodingAiRuntimeFactory.Create(platformConfig, CodeCatalog, _dependencies.PipelineConfig);
             var config = runtime.RuntimeSettings;
             _codingPipelineConfig = runtime.PipelineConfig;
             _codingAiModelName = runtime.ModelName;

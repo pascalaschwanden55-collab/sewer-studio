@@ -181,6 +181,46 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_service_provider_access_lives_behind_dependencies()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var dependenciesPath = Path.Combine(uiRoot, "Player", "PlayerWindowDependencies.cs");
+
+        Assert.True(File.Exists(dependenciesPath), "PlayerWindow-Partials sollen nicht direkt am konkreten ServiceProvider haengen.");
+
+        var offenders = Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs")
+            .Where(path => !path.EndsWith("PlayerWindow.xaml.cs", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.EndsWith("PlayerWindow.State.cs", StringComparison.OrdinalIgnoreCase))
+            .Select(path => new
+            {
+                Path = path,
+                Lines = File.ReadLines(path)
+                    .Select((line, index) => new { Line = line, Number = index + 1 })
+                    .Where(item => item.Line.Contains("_serviceProvider", StringComparison.Ordinal))
+                    .Select(item => item.Number)
+                    .ToArray()
+            })
+            .Where(item => item.Lines.Length > 0)
+            .Select(item => $"{Path.GetFileName(item.Path)}:{string.Join(",", item.Lines)}")
+            .ToArray();
+
+        var state = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.State.cs"));
+        var windowRoot = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"));
+        var dependencies = File.ReadAllText(dependenciesPath);
+
+        Assert.True(
+            offenders.Length == 0,
+            "_serviceProvider darf nur im Konstruktor/State als Legacy-Bruecke stehen. Partials nutzen PlayerWindowDependencies:\n"
+            + string.Join("\n", offenders));
+        Assert.Contains("private readonly PlayerWindowDependencies _dependencies", state);
+        Assert.Contains("_dependencies = PlayerWindowDependencies.From(serviceProvider)", windowRoot);
+        Assert.Contains("public ServiceProvider? LegacyServiceProvider", dependencies);
+        Assert.Contains("public string? LastProjectPath", dependencies);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_state_fields_live_in_coding_state_partial()
     {
         var root = FindRepositoryRoot();

@@ -52,6 +52,7 @@ public partial class PlayerWindow
 
     // Protocol integration state.
     private readonly ServiceProvider? _serviceProvider;
+    private readonly PlayerWindowDependencies _dependencies;
     private readonly string? _haltungId;
     private readonly Action<ProtocolEntry>? _onEntryCreated;
     private readonly HaltungRecord? _haltungRecord;

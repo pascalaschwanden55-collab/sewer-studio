@@ -8,7 +8,7 @@ public partial class PlayerWindow
 {
     private void CreateCodingSessionState()
     {
-        var state = CodingSessionStateFactory.Create(_videoPath, _serviceProvider?.Settings);
+        var state = CodingSessionStateFactory.Create(_videoPath, _dependencies.Settings);
         _codingSessionService = state.SessionService;
         _codingOverlayService = state.OverlayService;
         _codingSchemaManager.Cancel();

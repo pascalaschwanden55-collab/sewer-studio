@@ -35,6 +35,7 @@ public partial class PlayerWindow : Window
         _damageOverlay = damageOverlay;
         _options = PlayerWindowOptions.Normalize(options);
         _serviceProvider = serviceProvider;
+        _dependencies = PlayerWindowDependencies.From(serviceProvider);
         _haltungId = haltungId;
         _onEntryCreated = onEntryCreated;
         _haltungRecord = haltungRecord;

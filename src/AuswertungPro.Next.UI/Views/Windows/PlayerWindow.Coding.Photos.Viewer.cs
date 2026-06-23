@@ -20,6 +20,6 @@ public partial class PlayerWindow
         CodingPhotoViewerWorkflowServiceFactory.Create().Show(
             this,
             codingEvent,
-            _serviceProvider?.Settings.LastProjectPath);
+            _dependencies.LastProjectPath);
     }
 }

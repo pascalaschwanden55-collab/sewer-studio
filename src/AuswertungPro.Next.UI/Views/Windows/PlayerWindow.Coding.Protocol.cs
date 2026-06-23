@@ -12,10 +12,10 @@ public partial class PlayerWindow
 
     private void CodingOfferPdfExport(ProtocolDocument doc)
     {
-        if (_serviceProvider == null || _haltungRecord == null) return;
+        if (_dependencies.ProtocolPdfExporter == null || _haltungRecord == null) return;
 
-        var exported = CodingProtocolPdfExportServiceFactory.Create(_serviceProvider.ProtocolPdfExporter)
-            .TryOfferPdfExport(_haltungRecord, doc, _serviceProvider.Settings.LastProjectPath);
+        var exported = CodingProtocolPdfExportServiceFactory.Create(_dependencies.ProtocolPdfExporter)
+            .TryOfferPdfExport(_haltungRecord, doc, _dependencies.LastProjectPath);
 
         if (exported)
             ShowOverlay("PDF-Protokoll erstellt", TimeSpan.FromSeconds(4));
@@ -50,15 +50,15 @@ public partial class PlayerWindow
 
     private void ShowCodingProtocolPreview(ProtocolDocument doc)
     {
-        if (_haltungRecord == null || _serviceProvider == null) return;
+        if (_haltungRecord == null || _dependencies.LegacyServiceProvider == null) return;
 
         var opened = CodingProtocolPreviewWorkflowServiceFactory.Create().TryShow(
             this,
             _haltungRecord,
             doc,
-            _serviceProvider,
+            _dependencies.LegacyServiceProvider,
             _videoPath,
-            _serviceProvider.Settings.LastProjectPath,
+            _dependencies.LastProjectPath,
             MarkProjectDirtyForCoding);
         if (!opened) return;
 

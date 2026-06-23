@@ -41,7 +41,7 @@ public partial class PlayerWindow
     private void OpenCodeCatalogForMark(string? clockPosition, double timestampSec, string? suggestedCode)
     {
         LiveDetectionMarkCatalogWorkflowServiceFactory.Create(
-                hasCodeCatalog: () => _serviceProvider?.CodeCatalog is not null,
+                hasCodeCatalog: () => _dependencies.HasCodeCatalog,
                 createViewModel: CreateVsaCodeExplorerViewModel,
                 onEntryCreated: entry => _onEntryCreated?.Invoke(entry),
                 showOverlay: message => ShowOverlay(message, TimeSpan.FromSeconds(4)))
