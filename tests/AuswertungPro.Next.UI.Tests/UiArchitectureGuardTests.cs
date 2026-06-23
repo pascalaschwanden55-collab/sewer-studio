@@ -133,6 +133,31 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_state_fields_live_in_state_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
+
+        Assert.True(File.Exists(statePath), "PlayerWindow-Feldzustand soll aus dem Konstruktor-Partial heraus.");
+
+        var windowRoot = File.ReadAllText(windowRootPath);
+        var state = File.ReadAllText(statePath);
+
+        Assert.DoesNotContain("private readonly LibVLC _libVlc", windowRoot);
+        Assert.DoesNotContain("private OllamaClient? _liveDetectionClient", windowRoot);
+        Assert.DoesNotContain("private static PlayerWindow? _lastOpened", windowRoot);
+        Assert.Contains("private readonly LibVLC _libVlc", state);
+        Assert.Contains("private readonly MediaPlayer _player", state);
+        Assert.Contains("private readonly DamageMarkerController _damageMarkerController", state);
+        Assert.Contains("private readonly QuickScanController _quickScanController", state);
+        Assert.Contains("private OllamaClient? _liveDetectionClient", state);
+        Assert.Contains("private static PlayerWindow? _lastOpened", state);
+    }
+
+    [Fact]
     public void PlayerWindow_does_not_own_win32_screenshot_capture()
     {
         var root = FindRepositoryRoot();
