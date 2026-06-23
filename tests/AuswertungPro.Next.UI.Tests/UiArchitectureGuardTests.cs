@@ -354,15 +354,21 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
+        var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
+        var importPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Import.cs");
         var mapperPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEventMapper.cs");
 
-        var coding = File.ReadAllText(codingPath);
+        Assert.True(File.Exists(importPath), "Import-Referenz-Laden soll in einem eigenen Lifecycle-Partial liegen.");
+
+        var lifecycle = File.ReadAllText(lifecyclePath);
+        var import = File.ReadAllText(importPath);
         var mapper = File.ReadAllText(mapperPath);
 
-        Assert.Contains("CodingProtocolEventMapper.BuildMissingImportEvents", coding);
-        Assert.DoesNotContain("new CodingEvent", coding);
-        Assert.DoesNotContain("!e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code)", coding);
+        Assert.Contains("LoadExistingProtocolEventsAsImport();", lifecycle);
+        Assert.DoesNotContain("CodingProtocolEventMapper.BuildMissingImportEvents", lifecycle);
+        Assert.Contains("CodingProtocolEventMapper.BuildMissingImportEvents", import);
+        Assert.DoesNotContain("new CodingEvent", import);
+        Assert.DoesNotContain("!e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code)", import);
         Assert.Contains("public static IReadOnlyList<CodingEvent> BuildMissingImportEvents", mapper);
     }
 
@@ -2044,21 +2050,25 @@ public sealed class UiArchitectureGuardTests
         var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.cs");
         var exitPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var importPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Import.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(exitPath), "Codiermodus-Exit soll aus dem allgemeinen Lifecycle-Partial heraus.");
+        Assert.True(File.Exists(importPath), "Import-Referenz-Laden soll aus dem allgemeinen Lifecycle-Partial heraus.");
 
         var coding = File.ReadAllText(codingPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var exit = File.ReadAllText(exitPath);
+        var import = File.ReadAllText(importPath);
 
         Assert.DoesNotContain("private void EnterCodingMode", coding);
         Assert.DoesNotContain("private void ExitCodingMode", coding);
         Assert.DoesNotContain("private void ExitCodingMode", lifecycle);
         Assert.DoesNotContain("private void LoadExistingProtocolEventsAsImport", coding);
+        Assert.DoesNotContain("private void LoadExistingProtocolEventsAsImport", lifecycle);
         Assert.Contains("private void CodingMode_Click", lifecycle);
         Assert.Contains("private void EnterCodingMode", lifecycle);
-        Assert.Contains("private void LoadExistingProtocolEventsAsImport", lifecycle);
+        Assert.Contains("private void LoadExistingProtocolEventsAsImport", import);
         Assert.Contains("private void ExitCodingMode", exit);
         Assert.Contains("private void CodingModeExit_Click", exit);
     }
