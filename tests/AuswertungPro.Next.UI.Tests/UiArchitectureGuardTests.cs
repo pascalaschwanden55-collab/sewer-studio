@@ -55,14 +55,15 @@ public sealed class UiArchitectureGuardTests
                 .Where(path => !path.EndsWith("PlayerWindow.Playback.DamageMarkers.cs", StringComparison.OrdinalIgnoreCase))
                 .Select(File.ReadAllText));
         var windowRoot = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"));
+        var wiring = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs"));
         var controller = File.ReadAllText(controllerPath);
 
         Assert.DoesNotContain("_damageMarkers", windowText);
         Assert.DoesNotContain("BuildDamageMarkers", windowText);
         Assert.DoesNotContain("RepositionDamageMarkers", windowText);
         Assert.Contains("new DamageMarkerController", windowRoot);
-        Assert.Contains("_damageMarkerController.Build()", windowRoot);
-        Assert.Contains("_damageMarkerController.Reposition()", windowRoot);
+        Assert.Contains("_damageMarkerController.Build()", wiring);
+        Assert.Contains("_damageMarkerController.Reposition()", wiring);
         Assert.Contains("private readonly List<(DamageMarkerInfo Info", controller);
         Assert.Contains("PlayerTimelineLayoutCalculator.CalculatePointX", controller);
     }
@@ -81,6 +82,7 @@ public sealed class UiArchitectureGuardTests
             Environment.NewLine,
             Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
         var windowRoot = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"));
+        var wiring = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs"));
         var controller = File.ReadAllText(controllerPath);
 
         Assert.DoesNotContain("_heatmapRects", windowText);
@@ -89,11 +91,37 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("AddHeatmapSegment", windowText);
         Assert.DoesNotContain("RepositionHeatmap", windowText);
         Assert.Contains("new QuickScanController", windowRoot);
-        Assert.Contains("_quickScanController.Reposition()", windowRoot);
-        Assert.Contains("_quickScanController.Cancel()", windowRoot);
+        Assert.Contains("_quickScanController.Reposition()", wiring);
+        Assert.Contains("_quickScanController.Cancel()", wiring);
         Assert.Contains("_quickScanController.ToggleAsync()", windowText);
         Assert.Contains("private readonly List<(QuickScanSegment Seg", controller);
         Assert.Contains("QuickScanHeatmapLayoutPolicy", controller);
+    }
+
+    [Fact]
+    public void PlayerWindow_constructor_wiring_lives_in_wiring_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
+        var wiringPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs");
+
+        Assert.True(File.Exists(wiringPath), "Fenster-, Slider- und Viewport-Wiring soll aus dem Konstruktor heraus.");
+
+        var windowRoot = File.ReadAllText(windowRootPath);
+        var wiring = File.ReadAllText(wiringPath);
+
+        Assert.Contains("WireWindowLifecycleEvents();", windowRoot);
+        Assert.Contains("WirePositionSliderEvents();", windowRoot);
+        Assert.Contains("WireWindowSurfaceEvents();", windowRoot);
+        Assert.DoesNotContain("PositionSlider.AddHandler", windowRoot);
+        Assert.DoesNotContain("Closed += (_, __)", windowRoot);
+        Assert.DoesNotContain("Deactivated += (_, _)", windowRoot);
+        Assert.Contains("private void WireWindowLifecycleEvents", wiring);
+        Assert.Contains("private void PlayerWindow_Closed", wiring);
+        Assert.Contains("private void WirePositionSliderEvents", wiring);
+        Assert.Contains("private void WireWindowSurfaceEvents", wiring);
     }
 
     [Fact]

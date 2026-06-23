@@ -115,25 +115,6 @@ public partial class PlayerWindow : Window
         _onEntryCreated = onEntryCreated;
         _haltungRecord = haltungRecord;
         _initialOverlayText = initialOverlayText;
-        Loaded += (_, _) => EnsureVisibleOnScreen();
-
-        // Overlay-Popup schliessen, wenn ein FREMDES Fenster den Fokus bekommt.
-        // Sonst schwebt das WPF-Popup ueber VS Code/anderen Programmen weiter.
-        // Nicht bei eigenen Child-Dialogen (MessageBox, VsaCodeExplorer) â€” die verwenden
-        // SuspendCodingOverlayInput/ResumeCodingOverlayInput direkt.
-        Deactivated += (_, _) =>
-        {
-            // Nur suspendieren wenn kein eigener Dialog den Fokus hat
-            if (_codingOverlaySuspendDepth > 0) return;
-            _deactivatedByExternalWindow = true;
-            HideCodingOverlayForExternalWindow();
-        };
-        Activated += (_, _) =>
-        {
-            if (!_deactivatedByExternalWindow) return;
-            _deactivatedByExternalWindow = false;
-            RestoreCodingOverlayAfterExternalWindow();
-        };
 
         var fileName = Path.GetFileName(videoPath);
         var displayName = string.IsNullOrWhiteSpace(fileName) ? "Video" : fileName;
@@ -169,119 +150,12 @@ public partial class PlayerWindow : Window
             UpdateUi,
             () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas));
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-        _timer.Tick += (_, __) => { if (_closing || _player is null) return; UpdateUi(); };
-
-        // Scrub timer: fires pending seek when dragging (throttled)
-        _scrubTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(60) };
-        _scrubTimer.Tick += (_, __) =>
-        {
-            _scrubTimer.Stop();
-            if (_closing || _player is null) return;
-            if (_isDragging)
-                ScrubSeekToSlider();
-        };
-
-        PositionSlider.AddHandler(Thumb.DragStartedEvent,
-            new DragStartedEventHandler((_, __) =>
-            {
-                _wasPlayingBeforeDrag = _player.IsPlaying;
-                _isDragging = true;
-                // Pause during drag so frames render cleanly
-                if (_wasPlayingBeforeDrag)
-                    _player.SetPause(true);
-                ScrubSeekToSlider();
-            }),
-            true);
-        PositionSlider.AddHandler(Thumb.DragCompletedEvent,
-            new DragCompletedEventHandler((_, __) =>
-            {
-                _scrubTimer.Stop();
-                SeekToSlider();
-                _isDragging = false;
-                // Resume playback if it was playing before drag
-                if (_wasPlayingBeforeDrag)
-                    _player.SetPause(false);
-            }),
-            true);
-
-        PositionSlider.PreviewMouseLeftButtonUp += (_, __) =>
-        {
-            if (!_isDragging)
-                SeekToSlider();
-        };
-
-        PositionSlider.LostMouseCapture += (_, __) =>
-        {
-            if (_isDragging)
-            {
-                _scrubTimer.Stop();
-                SeekToSlider();
-                _isDragging = false;
-                if (_wasPlayingBeforeDrag)
-                    _player.SetPause(false);
-            }
-        };
-
-        Closing += OnClosing;
-        Loaded += (_, __) =>
-        {
-            Play(_videoPath);
-            UpdateCodingOverlayViewport();
-            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(UpdateCodingOverlayViewport));
-            if (!string.IsNullOrWhiteSpace(_initialOverlayText))
-                ShowOverlay(_initialOverlayText!, TimeSpan.FromSeconds(6));
-
-            _damageMarkerController.Build();
-
-            Focusable = true;
-            Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
-            {
-                Activate();
-                Focus();
-                Keyboard.Focus(this);
-            }));
-        };
-
-        DamageMarkerCanvas.SizeChanged += (_, __) => _damageMarkerController.Reposition();
-        HeatmapCanvas.SizeChanged += (_, __) => _quickScanController.Reposition();
-        DetectionCanvas.MouseLeftButtonDown += DetectionCanvas_MouseLeftButtonDown;
-        VideoView.SizeChanged += (_, __) => UpdateCodingOverlayViewport();
-        SizeChanged += (_, __) => UpdateCodingOverlayViewport();
-        LocationChanged += (_, __) => UpdateCodingOverlayViewport();
-
-        Closed += (_, __) =>
-        {
-            if (ReferenceEquals(_lastOpened, this))
-                _lastOpened = null;
-
-            // Codier-Modus sauber beenden: Timer + Hintergrund-Tasks stoppen.
-            // Cleanup() ist idempotent, weil OnClosing den VLC-Player bereits freigeben kann.
-            _isCodingMode = false;
-            StopCodingOsdTimer();
-            DisposeCodingOsdMeterService();
-            _codingAnalysisCts?.Cancel();
-            _codingAnalysisCts?.Dispose();
-            _codingAnalysisCts = null;
-            _codingLiveDetection = null;
-            StopCodingAiPulse();
-
-            _quickScanController.Cancel();
-            StopLiveDetection();
-            StopPipelineHealthMonitor();
-            Cleanup();
-
-            // Hauptfenster sichtbar machen und aktivieren
-            var main = System.Windows.Application.Current?.MainWindow;
-            if (main != null && !ReferenceEquals(main, this))
-            {
-                if (main.WindowState == WindowState.Minimized)
-                    main.WindowState = WindowState.Normal;
-                main.Activate();
-            }
-        };
-
-        AddHandler(Keyboard.PreviewKeyDownEvent, new KeyEventHandler(PlayerWindow_PreviewKeyDown), true);
+        _timer = CreateUpdateTimer();
+        _scrubTimer = CreateScrubTimer();
+        WirePositionSliderEvents();
+        WireWindowLifecycleEvents();
+        WireWindowSurfaceEvents();
+        WireKeyboardEvents();
 
         // Erst ganz am Ende setzen: TryShowOverlayOnLast darf nie ein Fenster sehen,
         // dessen Konstruktor fehlgeschlagen ist (_player/_libVlc waeren dann null).

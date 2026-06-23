@@ -32,7 +32,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_hides_coding_overlay_when_external_window_gets_focus()
     {
         var coding = ReadCodingPartials();
-        var window = ReadUiFile("Views", "Windows", "PlayerWindow.xaml.cs");
+        var window = ReadUiFile("Views", "Windows", "PlayerWindow.Wiring.cs");
         var suspendBody = ExtractMethodBody(coding, "private void SuspendCodingOverlayInput()");
 
         Assert.Contains("HideCodingOverlayForExternalWindow", window);
