@@ -412,22 +412,27 @@ public sealed class UiArchitectureGuardTests
         var plannerPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfExportPlanner.cs");
         var fileServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfFileService.cs");
         var projectFolderResolverPath = Path.Combine(uiRoot, "Ai", "CodingProjectFolderResolver.cs");
+        var saveDialogPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfSavePathDialog.cs");
 
         Assert.True(File.Exists(plannerPath), "PDF-Exportvorbereitung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(fileServicePath), "PDF-Datei schreiben und oeffnen soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(projectFolderResolverPath), "Projektordner-Aufloesung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(saveDialogPath), "PDF-Speicherdialog soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var protocol = File.ReadAllText(protocolPath);
         var planner = File.ReadAllText(plannerPath);
         var fileService = File.ReadAllText(fileServicePath);
         var projectFolderResolver = File.ReadAllText(projectFolderResolverPath);
+        var saveDialog = File.ReadAllText(saveDialogPath);
 
         Assert.Contains("CodingProtocolPdfExportPlanner.Build", protocol);
+        Assert.Contains("CodingProtocolPdfSavePathDialogFactory.Create", protocol);
         Assert.Contains("CodingProtocolPdfFileServiceFactory.Create", protocol);
         Assert.Contains("CodingProjectFolderResolver.ResolveNullable", protocol);
         Assert.DoesNotContain("HaltungsprotokollPdfOptions", protocol);
         Assert.DoesNotContain("LogoPathAbs", protocol);
         Assert.DoesNotContain("IncludeHaltungsgrafik", protocol);
+        Assert.DoesNotContain("SaveFileDialog", protocol);
         Assert.DoesNotContain("Path.GetDirectoryName(_serviceProvider.Settings.LastProjectPath)", protocol);
         Assert.DoesNotContain("File.WriteAllBytes", protocol);
         Assert.DoesNotContain("SafeShellOpen.TryOpen", protocol);
@@ -437,6 +442,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("File.WriteAllBytes", fileService);
         Assert.Contains("SafeShellOpen.TryOpen", fileService);
         Assert.Contains("Path.GetDirectoryName", projectFolderResolver);
+        Assert.Contains("SaveFileDialog", saveDialog);
     }
 
     [Fact]

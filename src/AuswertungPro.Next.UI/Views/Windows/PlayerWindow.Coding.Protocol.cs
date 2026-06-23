@@ -30,20 +30,13 @@ public partial class PlayerWindow
                 AppContext.BaseDirectory,
                 PlayerClock.Now());
 
-            var dlg = new Microsoft.Win32.SaveFileDialog
-            {
-                Title = "PDF-Protokoll speichern",
-                Filter = "PDF-Dateien (*.pdf)|*.pdf",
-                DefaultExt = ".pdf",
-                FileName = plan.DefaultFileName
-            };
-
-            if (dlg.ShowDialog() != true) return;
+            var outputPath = CodingProtocolPdfSavePathDialogFactory.Create().Show(plan.DefaultFileName);
+            if (outputPath == null) return;
 
             var project = ((ViewModels.ShellViewModel?)App.Current.MainWindow?.DataContext)?.Project;
             var pdf = _serviceProvider.ProtocolPdfExporter.BuildHaltungsprotokollPdf(
                 project!, _haltungRecord, doc, plan.ProjectRoot, plan.Options);
-            CodingProtocolPdfFileServiceFactory.Create().SaveAndOpen(dlg.FileName, pdf);
+            CodingProtocolPdfFileServiceFactory.Create().SaveAndOpen(outputPath, pdf);
 
             ShowOverlay("PDF-Protokoll erstellt", TimeSpan.FromSeconds(4));
         }
