@@ -1102,16 +1102,18 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var streckenPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Streckenschaden.cs");
         var builderPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionInputBuilder.cs");
 
         Assert.True(File.Exists(builderPath), "Mapper-Eingabe fuer Streckenschaden-Aktionen muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
+        var strecken = File.ReadAllText(streckenPath);
         var builder = File.ReadAllText(builderPath);
 
-        Assert.Contains("CodingStreckenschadenActionInputBuilder.BuildOpenEntries", ai);
-        Assert.DoesNotContain(".Where(e => e.Entry.IsStreckenschaden", ai);
-        Assert.DoesNotContain("StreckenschadenActionMapper.OpenEntry(", ai);
+        Assert.Contains("CodingStreckenschadenActionInputBuilder.BuildOpenEntries", strecken);
+        Assert.DoesNotContain(".Where(e => e.Entry.IsStreckenschaden", ai + strecken);
+        Assert.DoesNotContain("StreckenschadenActionMapper.OpenEntry(", ai + strecken);
         Assert.Contains("public static IReadOnlyList<StreckenschadenActionMapper.OpenEntry> BuildOpenEntries", builder);
     }
 
@@ -1161,18 +1163,41 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var streckenPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Streckenschaden.cs");
         var builderPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenObservationBuilder.cs");
 
         Assert.True(File.Exists(builderPath), "Segment-zu-Streckenschaden-Observation-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
+        var strecken = File.ReadAllText(streckenPath);
         var builder = File.ReadAllText(builderPath);
 
-        Assert.Contains("CodingStreckenschadenObservationBuilder.Build", ai);
-        Assert.DoesNotContain("new List<AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation>", ai);
-        Assert.DoesNotContain("observations.Add(new AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation", ai);
+        Assert.Contains("CodingStreckenschadenObservationBuilder.Build", strecken);
+        Assert.DoesNotContain("new List<AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation>", ai + strecken);
+        Assert.DoesNotContain("observations.Add(new AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation", ai + strecken);
         Assert.Contains("public static CodingStreckenschadenObservationBuildResult Build", builder);
         Assert.Contains("new StreckenschadenTracker.Observation", builder);
+    }
+
+    [Fact]
+    public void PlayerWindow_stretch_damage_tracking_lives_in_ai_stretch_damage_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var streckenPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Streckenschaden.cs");
+
+        Assert.True(File.Exists(streckenPath), "Streckenschaden-Tracking soll aus dem allgemeinen AI-Partial heraus.");
+
+        var ai = File.ReadAllText(aiPath);
+        var strecken = File.ReadAllText(streckenPath);
+
+        Assert.DoesNotContain("private HashSet<SegmentedFinding> ApplyStreckenschadenTracking", ai);
+        Assert.DoesNotContain("private void ApplyStreckenschadenActions", ai);
+        Assert.DoesNotContain("private void CloseTrackedStreckenschaeden", ai);
+        Assert.Contains("private HashSet<SegmentedFinding> ApplyStreckenschadenTracking", strecken);
+        Assert.Contains("CodingStreckenschadenObservationBuilder.Build", strecken);
+        Assert.Contains("StreckenschadenActionMapper.MapAll", strecken);
     }
 
     [Fact]
