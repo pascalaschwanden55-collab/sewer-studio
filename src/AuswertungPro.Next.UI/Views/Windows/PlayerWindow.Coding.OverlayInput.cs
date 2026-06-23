@@ -89,33 +89,9 @@ public partial class PlayerWindow
             return;
         }
 
-        // Multi-Punkt-Werkzeug (Winkelmesser: 3 Klicks)
         if (_codingOverlayService.IsMultiPointTool)
         {
-            // Beim ersten Klick Reset
-            if (_codingOverlayService.DrawPointCount == 0)
-            {
-                _codingVm.CurrentOverlay = null;
-                BtnCodingCreateEvent.IsEnabled = false;
-                UpdateCodingOverlayInfo(null);
-            }
-
-            bool complete = _codingVm.OnCanvasMultiPointClick(norm);
-            ClearTransientCodingCanvas(clearManualOverlay: true);
-            RenderAiOverlays();
-            RenderReferenceDn();
-            UpdateToolBadge();
-
-            if (_codingVm.CurrentOverlay != null)
-                RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: !complete);
-
-            if (complete)
-            {
-                UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
-                BtnCodingCreateEvent.IsEnabled = true;
-                if (BtnCodingLiveAi.IsChecked == true && _codingVm.CurrentOverlay != null)
-                    AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay).SafeFireAndForget("OverlayHint");
-            }
+            HandleCodingMultiPointMouseDown(norm);
             return; // Kein CaptureMouse bei Multi-Punkt
         }
 
@@ -158,18 +134,8 @@ public partial class PlayerWindow
             return;
         }
 
-        // Multi-Punkt-Vorschau (Winkelmesser: Mausbewegung zwischen Klicks)
-        if (_codingOverlayService.IsMultiPointTool && _codingOverlayService.DrawPointCount > 0)
-        {
-            _codingVm.OnCanvasMultiPointMove(norm);
-            ClearTransientCodingCanvas(clearManualOverlay: true);
-            RenderAiOverlays();
-            RenderReferenceDn();
-            UpdateToolBadge();
-            if (_codingVm.CurrentOverlay != null)
-                RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: true, labelAnchor: norm);
+        if (TryHandleCodingMultiPointMouseMove(norm))
             return;
-        }
 
         if (!_codingOverlayService.IsDrawing) return;
         _codingVm.OnCanvasMouseMove(norm);

@@ -2125,6 +2125,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_multipoint_overlay_input_lives_in_multipoint_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
+        var multiPointPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.MultiPoint.cs");
+
+        Assert.True(File.Exists(multiPointPath), "Multi-Point-OverlayInput soll aus dem allgemeinen Mouseflow heraus.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var multiPoint = File.ReadAllText(multiPointPath);
+
+        Assert.DoesNotContain("OnCanvasMultiPointClick", overlayInput);
+        Assert.DoesNotContain("OnCanvasMultiPointMove", overlayInput);
+        Assert.Contains("private void HandleCodingMultiPointMouseDown", multiPoint);
+        Assert.Contains("private bool TryHandleCodingMultiPointMouseMove", multiPoint);
+        Assert.Contains("OnCanvasMultiPointClick", multiPoint);
+        Assert.Contains("OnCanvasMultiPointMove", multiPoint);
+    }
+
+    [Fact]
     public void PlayerWindow_overlay_input_visibility_lives_in_visibility_partial()
     {
         var root = FindRepositoryRoot();
