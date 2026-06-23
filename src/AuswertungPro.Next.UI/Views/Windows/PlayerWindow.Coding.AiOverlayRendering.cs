@@ -43,6 +43,7 @@ public partial class PlayerWindow
             var strokeColor = CodingAiOverlayDisplayPolicy.StrokeColor(ev.AiContext.Decision);
             Brush stroke = new SolidColorBrush(strokeColor);
             var primitiveStyle = new CodingAiPrimitiveOverlayRenderStyle(stroke, aiGlow, OverlayTags.AiOverlay);
+            var rectangleStyle = new CodingAiRectangleOverlayRenderStyle(stroke, strokeColor, aiGlow, OverlayTags.AiOverlay);
 
             switch (geo.ToolType)
             {
@@ -52,7 +53,14 @@ public partial class PlayerWindow
                     break;
 
                 case OverlayToolType.Rectangle:
-                    RenderAiRectangleOverlay(ev, geo, stroke, aiGlow, w, h);
+                    CodingAiRectangleOverlayRenderer.Render(
+                        CodingOverlayCanvas,
+                        geo,
+                        w,
+                        h,
+                        ev.Entry.Code,
+                        ev.AiContext.Confidence,
+                        rectangleStyle);
                     break;
 
                 case OverlayToolType.Point:
