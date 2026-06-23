@@ -2942,16 +2942,14 @@ public sealed class UiArchitectureGuardTests
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingLevelOverlayRenderer.cs");
 
         Assert.False(File.Exists(specialShapesPath), "Das allgemeine SpecialShapes-Partial soll entfernt bleiben.");
-        Assert.True(File.Exists(levelPath), "Level-Overlay-Rendering soll aus dem allgemeinen SpecialShapes-Partial heraus.");
+        Assert.False(File.Exists(levelPath), "Level-Overlay-Wrapper soll nicht mehr als PlayerWindow-Partial leben.");
         Assert.True(File.Exists(rendererPath), "Level-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
-        var level = File.ReadAllText(levelPath);
+        var overlayRendering = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs"));
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.Contains("private void RenderLevelOverlay", level);
-        Assert.Contains("CodingLevelOverlayRenderer.Render", level);
-        Assert.DoesNotContain("new System.Windows.Shapes.Line", level);
-        Assert.DoesNotContain("new Rectangle", level);
+        Assert.DoesNotContain("RenderLevelOverlay", overlayRendering);
+        Assert.Contains("CodingLevelOverlayRenderer.Render", overlayRendering);
         Assert.Contains("public static class CodingLevelOverlayRenderer", renderer);
         Assert.Contains("LevelMode.Obstacle", renderer);
         Assert.Contains("CodingSchemaOverlayRenderer.AddPipeReference", renderer);
@@ -3050,16 +3048,14 @@ public sealed class UiArchitectureGuardTests
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingRulerOverlayRenderer.cs");
 
         Assert.False(File.Exists(specialShapesPath), "Das allgemeine SpecialShapes-Partial soll entfernt bleiben.");
-        Assert.True(File.Exists(rulerPath), "Ruler-Overlay-Rendering soll aus dem allgemeinen SpecialShapes-Partial heraus.");
+        Assert.False(File.Exists(rulerPath), "Ruler-Overlay-Wrapper soll nicht mehr als PlayerWindow-Partial leben.");
         Assert.True(File.Exists(rendererPath), "Ruler-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
-        var ruler = File.ReadAllText(rulerPath);
+        var overlayRendering = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs"));
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.Contains("private void RenderRulerOverlay", ruler);
-        Assert.Contains("CodingRulerOverlayRenderer.Render", ruler);
-        Assert.DoesNotContain("new System.Windows.Shapes.Line", ruler);
-        Assert.DoesNotContain("new TextBlock", ruler);
+        Assert.DoesNotContain("RenderRulerOverlay", overlayRendering);
+        Assert.Contains("CodingRulerOverlayRenderer.Render", overlayRendering);
         Assert.Contains("public static class CodingRulerOverlayRenderer", renderer);
         Assert.Contains("new System.Windows.Shapes.Line", renderer);
         Assert.Contains("new TextBlock", renderer);
@@ -3080,20 +3076,17 @@ public sealed class UiArchitectureGuardTests
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingPipeBendOverlayRenderer.cs");
 
         Assert.False(File.Exists(specialShapesPath), "Das allgemeine SpecialShapes-Partial soll entfernt bleiben.");
-        Assert.True(File.Exists(pipeBendPath), "Pipe-Bend-Overlay-Rendering soll aus dem allgemeinen SpecialShapes-Partial heraus.");
+        Assert.False(File.Exists(pipeBendPath), "Pipe-Bend-Overlay-Wrapper soll nicht mehr als PlayerWindow-Partial leben.");
         Assert.False(File.Exists(helperPath), "Dot-Marker-Rendering soll nicht mehr als PlayerWindow-Partial leben.");
         Assert.True(File.Exists(dotRendererPath), "Dot-Marker-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(rendererPath), "Pipe-Bend-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
-        var pipeBend = File.ReadAllText(pipeBendPath);
+        var overlayRendering = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs"));
         var dotRenderer = File.ReadAllText(dotRendererPath);
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.Contains("private void RenderPipeBendOverlay", pipeBend);
-        Assert.Contains("CodingPipeBendOverlayRenderer.Render", pipeBend);
-        Assert.DoesNotContain("overlay.ArcDegrees", pipeBend);
-        Assert.DoesNotContain("new System.Windows.Shapes.Line", pipeBend);
-        Assert.DoesNotContain("AddDotMarker", pipeBend);
+        Assert.DoesNotContain("RenderPipeBendOverlay", overlayRendering);
+        Assert.Contains("CodingPipeBendOverlayRenderer.Render", overlayRendering);
         Assert.Contains("public static class CodingOverlayDotMarkerRenderer", dotRenderer);
         Assert.Contains("new System.Windows.Shapes.Ellipse", dotRenderer);
         Assert.Contains("public static class CodingPipeBendOverlayRenderer", renderer);
@@ -3113,16 +3106,14 @@ public sealed class UiArchitectureGuardTests
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingLateralCircleOverlayRenderer.cs");
 
         Assert.False(File.Exists(specialShapesPath), "Das allgemeine SpecialShapes-Partial soll entfernt bleiben.");
-        Assert.True(File.Exists(lateralCirclePath), "Lateral-Circle-Overlay-Rendering soll aus dem allgemeinen SpecialShapes-Partial heraus.");
+        Assert.False(File.Exists(lateralCirclePath), "Lateral-Circle-Overlay-Wrapper soll nicht mehr als PlayerWindow-Partial leben.");
         Assert.True(File.Exists(rendererPath), "Lateral-Circle-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
-        var lateralCircle = File.ReadAllText(lateralCirclePath);
+        var overlayRendering = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs"));
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.Contains("private void RenderLateralCircleOverlay", lateralCircle);
-        Assert.Contains("CodingLateralCircleOverlayRenderer.Render", lateralCircle);
-        Assert.DoesNotContain("new System.Windows.Shapes.Ellipse", lateralCircle);
-        Assert.DoesNotContain("new TextBlock", lateralCircle);
+        Assert.DoesNotContain("RenderLateralCircleOverlay", overlayRendering);
+        Assert.Contains("CodingLateralCircleOverlayRenderer.Render", overlayRendering);
         Assert.Contains("public static class CodingLateralCircleOverlayRenderer", renderer);
         Assert.Contains("overlay.DnRatioPercent", renderer);
         Assert.Contains("DN {overlay.Q1Mm.Value:F0}", renderer);

@@ -72,19 +72,50 @@ public partial class PlayerWindow
                 break;
 
             case OverlayToolType.PipeBend:
-                RenderPipeBendOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
+                CodingPipeBendOverlayRenderer.Render(
+                    CodingOverlayCanvas,
+                    overlay,
+                    isPreview,
+                    glowEffect,
+                    tag,
+                    isPreview ? OverlayTags.Measure : OverlayTags.Manual,
+                    CodingNormToPixel);
                 return; // Eigenes Label-Rendering
 
             case OverlayToolType.LateralCircle:
-                RenderLateralCircleOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
+                CodingLateralCircleOverlayRenderer.Render(
+                    CodingOverlayCanvas,
+                    overlay,
+                    isPreview,
+                    glowEffect,
+                    tag,
+                    isPreview ? OverlayTags.Measure : OverlayTags.Manual,
+                    CodingNormToPixel);
                 return; // Eigenes Label-Rendering
 
             case OverlayToolType.Ruler:
-                RenderRulerOverlay(overlay, isPreview, stroke, glowEffect, tag, labelAnchor);
+                CodingRulerOverlayRenderer.Render(
+                    CodingOverlayCanvas,
+                    overlay,
+                    isPreview,
+                    glowEffect,
+                    tag,
+                    isPreview ? OverlayTags.Measure : OverlayTags.Manual,
+                    CodingNormToPixel,
+                    labelAnchor);
                 return; // Eigenes Label-Rendering
 
             case OverlayToolType.Level:
-                RenderLevelOverlay(overlay, isPreview, glowEffect, tag);
+                CodingLevelOverlayRenderer.Render(
+                    CodingOverlayCanvas,
+                    overlay,
+                    isPreview,
+                    glowEffect,
+                    tag,
+                    CodingNormToPixel,
+                    _codingOverlayService?.Calibration,
+                    CodingOverlayCanvas.ActualWidth,
+                    CodingOverlayCanvas.ActualHeight);
                 return; // Eigenes Label-Rendering
 
             case OverlayToolType.Ellipse:
