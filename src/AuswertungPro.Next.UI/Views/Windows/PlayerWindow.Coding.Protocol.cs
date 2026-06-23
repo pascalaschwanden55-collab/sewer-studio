@@ -97,7 +97,7 @@ public partial class PlayerWindow
         var project = ((ViewModels.ShellViewModel?)App.Current.MainWindow?.DataContext)?.Project;
         if (project == null) return;
 
-        var projectFolder = CodingProtocolProjectFolderResolver.Resolve(_serviceProvider.Settings.LastProjectPath);
+        var projectFolder = CodingProjectFolderResolver.ResolveNullable(_serviceProvider.Settings.LastProjectPath);
 
         var dlg = new Views.ProtocolObservationsWindow(
             _haltungRecord, project, _serviceProvider, _videoPath, projectFolder,

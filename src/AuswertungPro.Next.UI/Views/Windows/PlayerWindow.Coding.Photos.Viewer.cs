@@ -32,9 +32,7 @@ public partial class PlayerWindow
         };
 
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(8) };
-        var projectFolder = !string.IsNullOrEmpty(_serviceProvider?.Settings.LastProjectPath)
-            ? Path.GetDirectoryName(_serviceProvider!.Settings.LastProjectPath) ?? ""
-            : "";
+        var projectFolder = CodingProjectFolderResolver.ResolveOrEmpty(_serviceProvider?.Settings.LastProjectPath);
         var evidencePreviewPath = CodingDefectPreviewService.BuildPreviewImagePath(codingEvent);
         var displayPhotoPaths = CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths(
             evidencePreviewPath,

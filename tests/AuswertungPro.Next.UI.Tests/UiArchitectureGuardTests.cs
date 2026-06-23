@@ -402,7 +402,7 @@ public sealed class UiArchitectureGuardTests
         var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
         var plannerPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfExportPlanner.cs");
         var fileServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfFileService.cs");
-        var projectFolderResolverPath = Path.Combine(uiRoot, "Ai", "CodingProtocolProjectFolderResolver.cs");
+        var projectFolderResolverPath = Path.Combine(uiRoot, "Ai", "CodingProjectFolderResolver.cs");
 
         Assert.True(File.Exists(plannerPath), "PDF-Exportvorbereitung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(fileServicePath), "PDF-Datei schreiben und oeffnen soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -415,7 +415,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("CodingProtocolPdfExportPlanner.Build", protocol);
         Assert.Contains("CodingProtocolPdfFileServiceFactory.Create", protocol);
-        Assert.Contains("CodingProtocolProjectFolderResolver.Resolve", protocol);
+        Assert.Contains("CodingProjectFolderResolver.ResolveNullable", protocol);
         Assert.DoesNotContain("HaltungsprotokollPdfOptions", protocol);
         Assert.DoesNotContain("LogoPathAbs", protocol);
         Assert.DoesNotContain("IncludeHaltungsgrafik", protocol);
@@ -2168,6 +2168,8 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", photos);
         Assert.Contains("CodingPhotoDisplayPathPolicy.ResolveExistingPath", photos);
+        Assert.Contains("CodingProjectFolderResolver.ResolveOrEmpty", photos);
+        Assert.DoesNotContain("Path.GetDirectoryName(_serviceProvider!.Settings.LastProjectPath)", photos);
         Assert.DoesNotContain("var displayPhotoPaths = new List<string>", photos);
         Assert.DoesNotContain("displayPhotoPaths.Contains(fotoPath", photos);
         Assert.Contains("public static IReadOnlyList<string> BuildDisplayPhotoPaths", policy);
