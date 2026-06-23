@@ -2001,6 +2001,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_confirmation_reject_uses_delete_applier()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var confirmationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs");
+        var deleteApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteApplier.cs");
+
+        Assert.True(File.Exists(deleteApplierPath), "Confirm-Reject muss die gemeinsame Coding-Event-Loeschanwendung nutzen.");
+
+        var confirmation = File.ReadAllText(confirmationPath);
+        var deleteApplier = File.ReadAllText(deleteApplierPath);
+
+        Assert.Contains("CodingEventDeleteApplier.Apply", confirmation);
+        Assert.DoesNotContain("_codingSessionService?.RemoveEvent", confirmation);
+        Assert.DoesNotContain("_codingVm?.Events.Remove", confirmation);
+        Assert.Contains("codingSessionService?.RemoveEvent", deleteApplier);
+        Assert.Contains("codingEvents?.Remove", deleteApplier);
+    }
+
+    [Fact]
     public void PlayerWindow_live_ai_timer_gate_uses_policy()
     {
         var root = FindRepositoryRoot();

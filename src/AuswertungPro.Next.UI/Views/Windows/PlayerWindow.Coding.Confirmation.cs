@@ -74,8 +74,8 @@ public partial class PlayerWindow
 
             PersistSingleEventAsTrainingSample(_codingPendingConfirmEvent).SafeFireAndForget("TrainingSaveReject");
 
-            _codingSessionService?.RemoveEvent(_codingPendingConfirmEvent.EventId);
-            _codingVm?.Events.Remove(_codingPendingConfirmEvent);
+            CodingEventDeleteApplier.Apply(
+                _codingPendingConfirmEvent, _codingSessionService, _codingVm?.Events, selectedDefect: null);
             RefreshCodingEventsList();
         }
 
