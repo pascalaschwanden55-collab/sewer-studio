@@ -1,41 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Threading;
-using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Application.Ai.Evaluation;
-using AuswertungPro.Next.Application.Ai.QualityGate;
-using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.Domain.VsaCatalog;
-using AuswertungPro.Next.Infrastructure.Ai;
-using AuswertungPro.Next.Infrastructure.Ai.Ollama;
-using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
-using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
-using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
-using AuswertungPro.Next.UI.Services;
-using AuswertungPro.Next.UI.ViewModels.Protocol;
-using AuswertungPro.Next.UI.ViewModels.Windows;
-using AppProtocol = AuswertungPro.Next.Application.Protocol;
-using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
-using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
-using Rectangle = System.Windows.Shapes.Rectangle;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -69,7 +38,7 @@ public partial class PlayerWindow
             var framePath = CodingTrainingSampleFactory.PrimaryFramePath(ev);
 
             // Gold-Fund: Wenn der Befund kein eigenes Foto hat, aktuellen Frame als Snapshot sichern.
-            // framePath bleibt bei Fehler null — das Speichern laeuft trotzdem durch (SnapshotError haelt den Grund fest).
+            // framePath bleibt bei Fehler null - das Speichern laeuft trotzdem durch (SnapshotError haelt den Grund fest).
             string? snapshotError = null;
             if (string.IsNullOrWhiteSpace(framePath))
             {
@@ -143,32 +112,4 @@ public partial class PlayerWindow
 
     private DateTime? ResolveTrainingInspectionDate()
         => TrainingSampleEligibility.TryParseInspectionDate(_haltungRecord?.GetFieldValue("Datum_Jahr"));
-
-    /// <summary>
-    /// Stellt sicher, dass Haltungslaenge_m gesetzt ist.
-    /// Fallback-Kette: Haltungslaenge_m → Laenge_m → DamageOverlay → Protokoll BCE → manuelle Eingabe.
-    /// </summary>
-    private void EnsureHaltungslaenge(HaltungRecord record)
-    {
-        if (CodingHaltungslaengeResolver.TryEnsureFromKnownSources(record, _damageOverlay?.PipeLengthMeters))
-            return;
-
-        // Letzter Fallback: Benutzer manuell fragen.
-        var input = Microsoft.VisualBasic.Interaction.InputBox(
-            "Haltungslaenge konnte nicht ermittelt werden.\n" +
-            "Bitte Haltungslaenge in Meter eingeben (z.B. 45.3):",
-            "Haltungslaenge eingeben", "");
-
-        if (!string.IsNullOrWhiteSpace(input))
-        {
-            var normalized = input.Trim().Replace(',', '.');
-            if (double.TryParse(normalized, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var val) && val > 0)
-            {
-                record.SetFieldValue("Haltungslaenge_m",
-                    val.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
-                    Domain.Models.FieldSource.Manual, userEdited: true);
-            }
-        }
-    }
 }

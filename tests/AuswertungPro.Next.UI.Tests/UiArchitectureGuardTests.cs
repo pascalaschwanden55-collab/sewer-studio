@@ -1663,6 +1663,29 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_haltungslaenge_fallback_lives_in_lifecycle_length_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
+        var persistencePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Persistence.cs");
+        var lengthPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Length.cs");
+
+        Assert.True(File.Exists(lengthPath), "Haltungslaenge-Fallback gehoert in eine Lifecycle-Length-Partial, nicht in Persistence.");
+
+        var lifecycle = File.ReadAllText(lifecyclePath);
+        var persistence = File.ReadAllText(persistencePath);
+        var length = File.ReadAllText(lengthPath);
+
+        Assert.Contains("EnsureHaltungslaenge(_haltungRecord);", lifecycle);
+        Assert.DoesNotContain("private void EnsureHaltungslaenge", persistence);
+        Assert.DoesNotContain("Microsoft.VisualBasic.Interaction.InputBox", persistence);
+        Assert.Contains("private void EnsureHaltungslaenge", length);
+        Assert.Contains("CodingHaltungslaengeResolver.TryEnsureFromKnownSources", length);
+        Assert.Contains("Microsoft.VisualBasic.Interaction.InputBox", length);
+    }
+
+    [Fact]
     public void PlayerWindow_stretch_damage_observation_projection_lives_in_builder()
     {
         var root = FindRepositoryRoot();
