@@ -3019,18 +3019,25 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiOverlayPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.cs");
         var rectanglePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.Rectangle.cs");
+        var cleanupPolicyPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupPolicy.cs");
 
         Assert.True(File.Exists(rectanglePath), "AI-Rechteck-Overlay mit Label soll aus dem allgemeinen AI-Overlay-Dispatcher heraus.");
+        Assert.True(File.Exists(cleanupPolicyPath), "AI-Overlay-Cleanup-Regel soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var aiOverlay = File.ReadAllText(aiOverlayPath);
         var rectangle = File.ReadAllText(rectanglePath);
+        var cleanupPolicy = File.ReadAllText(cleanupPolicyPath);
 
         Assert.Contains("RenderAiRectangleOverlay(", aiOverlay);
+        Assert.Contains("CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag", aiOverlay);
+        Assert.DoesNotContain("StartsWith(OverlayTags.AiPrefix", aiOverlay);
         Assert.DoesNotContain("var labelBorder = new Border", aiOverlay);
         Assert.DoesNotContain("CodingAiOverlayDisplayPolicy.LabelText", aiOverlay);
         Assert.Contains("private void RenderAiRectangleOverlay", rectangle);
         Assert.Contains("var labelBorder = new Border", rectangle);
         Assert.Contains("CodingAiOverlayDisplayPolicy.LabelText", rectangle);
+        Assert.Contains("public static bool ShouldRemoveAiOverlayTag", cleanupPolicy);
+        Assert.Contains("StartsWith(OverlayTags.AiPrefix", cleanupPolicy);
     }
 
     [Fact]

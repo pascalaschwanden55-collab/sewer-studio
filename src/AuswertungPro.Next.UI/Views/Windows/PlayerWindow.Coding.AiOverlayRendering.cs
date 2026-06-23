@@ -22,7 +22,7 @@ public partial class PlayerWindow
 
         // Bestehende KI-Overlays entfernen (Tags beginnen mit "ai_")
         var toRemove = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
-            .Where(e => e.Tag is string s && s.StartsWith(OverlayTags.AiPrefix))
+            .Where(e => CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag(e.Tag))
             .ToList();
         foreach (var el in toRemove)
             CodingOverlayCanvas.Children.Remove(el);

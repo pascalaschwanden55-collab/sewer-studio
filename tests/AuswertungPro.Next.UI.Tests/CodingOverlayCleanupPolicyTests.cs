@@ -37,4 +37,21 @@ public sealed class CodingOverlayCleanupPolicyTests
         Assert.False(CodingOverlayCleanupPolicy.ShouldRemoveTransientTag(null, clearManualOverlay: true));
         Assert.False(CodingOverlayCleanupPolicy.ShouldRemoveTransientTag(123, clearManualOverlay: true));
     }
+
+    [Theory]
+    [InlineData(OverlayTags.AiOverlay)]
+    [InlineData("ai_candidate")]
+    public void ShouldRemoveAiOverlayTag_removes_ai_tags(string tag)
+    {
+        Assert.True(CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag(tag));
+    }
+
+    [Theory]
+    [InlineData(OverlayTags.Manual)]
+    [InlineData(OverlayTags.Preview)]
+    [InlineData("other")]
+    public void ShouldRemoveAiOverlayTag_keeps_non_ai_tags(string tag)
+    {
+        Assert.False(CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag(tag));
+    }
 }
