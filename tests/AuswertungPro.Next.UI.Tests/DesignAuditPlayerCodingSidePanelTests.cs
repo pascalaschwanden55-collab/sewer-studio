@@ -483,7 +483,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var addIndex = FirstIndexOf(
             methodBody,
             "_codingSessionService.AddEvent(entry)",
-            "_codingSessionService.AddEvent(draft.Entry)");
+            "_codingSessionService.AddEvent(draft.Entry)",
+            "CodingBoundaryEventAppender.Apply");
 
         Assert.True(attachIndex >= 0, "Auto-BCD/BCE muessen ihren eigenen analysierten Frame bekommen.");
         Assert.True(addIndex >= 0, "Test erwartet AddEvent im Boundary-Pfad.");

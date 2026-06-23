@@ -39,10 +39,7 @@ public partial class PlayerWindow
         analyzedFrameBytes = TryExtractFrameAtSeconds(_codingFrameReadiness.FirstCleanFrameSeconds) ?? analyzedFrameBytes;
         AttachBoundaryAnalyzedFramePhoto(draft.Entry, analyzedFrameBytes);
 
-        var ev = _codingSessionService.AddEvent(draft.Entry);
-        ev.MeterAtCapture = startReference.Meter;
-        ev.VideoTimestamp = startReference.VideoTime;
-        ev.AiContext = draft.AiContext;
+        CodingBoundaryEventAppender.Apply(draft, startReference.Meter, startReference.VideoTime, _codingSessionService);
         // Event-Hook (OnSessionEventAdded) fuegt automatisch in _codingVm.Events ein.
         // KEIN explizites _codingVm.Events.Add() - sonst doppelt!
         anyAdded = true;
@@ -79,10 +76,7 @@ public partial class PlayerWindow
         var draft = CodingBoundaryEventFactory.CreateEnd(label, endReference.Meter, endReference.VideoTime);
         AttachBoundaryAnalyzedFramePhoto(draft.Entry, analyzedFrameBytes);
 
-        var ev = _codingSessionService.AddEvent(draft.Entry);
-        ev.MeterAtCapture = endReference.Meter;
-        ev.VideoTimestamp = endReference.VideoTime;
-        ev.AiContext = draft.AiContext;
+        CodingBoundaryEventAppender.Apply(draft, endReference.Meter, endReference.VideoTime, _codingSessionService);
         RefreshCodingEventsList();
     }
 }
