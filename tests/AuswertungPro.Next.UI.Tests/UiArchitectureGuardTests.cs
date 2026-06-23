@@ -1150,17 +1150,17 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
-        var markingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
+        var markingTrainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Training.cs");
         var resolverPath = Path.Combine(uiRoot, "Ai", "CodingCurrentMeterResolver.cs");
 
         var events = File.ReadAllText(eventsPath);
-        var marking = File.ReadAllText(markingPath);
+        var markingTraining = File.ReadAllText(markingTrainingPath);
         var resolver = File.ReadAllText(resolverPath);
 
         Assert.Contains("CodingCurrentMeterResolver.ResolveManualEntry", events);
-        Assert.Contains("CodingCurrentMeterResolver.ParseDisplayedMeterOrZero", marking);
+        Assert.Contains("CodingCurrentMeterResolver.ParseDisplayedMeterOrZero", markingTraining);
         Assert.DoesNotContain("Math.Round(Math.Max(0, osdMeter", events);
-        Assert.DoesNotContain("TxtCodingMeter?.Text?.Replace(\"m\"", marking);
+        Assert.DoesNotContain("TxtCodingMeter?.Text?.Replace(\"m\"", markingTraining);
         Assert.Contains("public static double ResolveManualEntry", resolver);
         Assert.Contains("public static double ParseDisplayedMeterOrZero", resolver);
     }
@@ -1372,6 +1372,27 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("double.TryParse(result.Quant.ClockPosition", marking);
         Assert.Contains("public static void Apply", policy);
         Assert.Contains("quantification.CrossSectionReductionPercent", policy);
+    }
+
+    [Fact]
+    public void PlayerWindow_manual_mark_training_save_lives_in_training_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
+        var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Training.cs");
+
+        Assert.True(File.Exists(trainingPath), "Manual-Mark-Training-Speicherung soll aus dem grossen Marking-Partial heraus.");
+
+        var marking = File.ReadAllText(markingPath);
+        var training = File.ReadAllText(trainingPath);
+
+        Assert.DoesNotContain("private async Task<bool> SaveMarkAsTrainingAsync", marking);
+        Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", marking);
+        Assert.Contains("private async Task<bool> SaveMarkAsTrainingAsync", training);
+        Assert.Contains("TrainingAnnotationExportServiceFactory.Create", training);
+        Assert.Contains("LiveDetectionTeacherAnnotationFactory.CreateManualMark", training);
     }
 
     [Fact]

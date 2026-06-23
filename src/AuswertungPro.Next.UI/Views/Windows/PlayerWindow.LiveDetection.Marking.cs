@@ -1,73 +1,60 @@
+using System;
+using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Threading;
 using System.Windows.Input;
+using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.Services;
-using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
-using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
     /// <summary>
-    /// Nach abgeschlossener Markierung (Ellipse/Freihand/Rechteck): Code-Katalog oeffnen + Training speichern.
+    /// Nach abgeschlossener Markierung: Code-Katalog oeffnen und Training speichern.
     /// </summary>
     private async void HandleMarkDrawingComplete()
     {
         try
         {
             var overlay = _codingVm?.CurrentOverlay;
-            if (overlay == null) return;
+            if (overlay == null)
+                return;
 
             var timestampSec = _player.Time / 1000.0;
-
-            // Frame einmal erfassen — wird fuer SAM-Segmentierung UND den YOLO-Export wiederverwendet.
             var frameBytes = await CaptureCurrentFrameAsync();
 
-            // Uhrlage zunaechst geometrisch (Overlay-Zentrum -> Uhr) als Fallback.
             string? clockPos = LiveDetectionGeometryMapper.EstimateClockFromOverlayCenter(overlay);
 
-            // SAM segmentiert die gezogene Box und schreibt echte Messwerte (Uhrlage/Hoehe/
-            // Breite/Querschnitt) ins Overlay. Bei fehlendem Sidecar/Maske bleibt die
-            // geometrische Schaetzung erhalten — der Codier-Ablauf wird nie blockiert.
             var samResult = await TrySegmentMarkBoxAsync(overlay, frameBytes);
             if (!string.IsNullOrEmpty(samResult?.Quant.ClockPosition))
                 clockPos = samResult!.Quant.ClockPosition;
 
-            // SAM-Maske SICHTBAR machen, BEVOR das Codierfenster aufgeht: der Nutzer sieht,
-            // dass die KI die Markierung (z.B. den Bogen) erfasst hat. Kurze Pause, damit das
-            // Overlay tatsaechlich gezeichnet wird, dann erst das VSA-Codierfenster.
             if (samResult != null)
             {
                 ShowMarkSamMask(samResult, overlay);
-                await Task.Delay(3000);   // 3 s: SAM-Maske sichtbar lassen, dann erst das Codefenster
+                // SAM-Maske kurz sichtbar lassen, bevor der Code-Dialog oeffnet.
+                await Task.Delay(3000);
             }
 
-            // Training speichern + Codierfenster (VsaCodeExplorer) mit vorausgefuellten Messwerten.
             bool saved = await SaveMarkAsTrainingAsync(overlay, timestampSec, clockPos, frameBytes);
 
-            // Overlay + SAM-Maske + Bogen-Marker entfernen und Canvas neu zeichnen
+            // Nach dem Dialog alle transienten Markierungsartefakte entfernen.
             Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
             BendMarkerRenderer.Clear(CodingOverlayCanvas);
-            if (_codingVm != null) _codingVm.CurrentOverlay = null;
+            if (_codingVm != null)
+                _codingVm.CurrentOverlay = null;
             RedrawCodingCanvas(includeManualOverlay: false);
 
-            // Codiermodus: Werkzeug NICHT abschalten, sonst loest die naechste Box keine
-            // Segmentierung / kein Codefenster mehr aus (Bug "funktioniert nur einmal").
-            // Nur in der Live-Markierung (ausserhalb Codiermodus) nach dem Speichern abschalten.
+            // Im Codiermodus Werkzeug aktiv lassen, damit mehrere Markierungen nacheinander moeglich sind.
             if (saved && !_isCodingMode)
             {
-                // Erfolgreich gespeichert â†’ Tool deaktivieren
                 DeactivateMarkTool();
             }
             else
             {
-                // Abgebrochen â†’ Tool bleibt aktiv, naechste Markierung kann sofort gezeichnet werden
                 if (_codingOverlayService != null)
                     _codingOverlayService.ActiveTool = _markToolType;
                 CodingOverlayCanvas.Cursor = Cursors.Cross;
@@ -80,13 +67,8 @@ public partial class PlayerWindow
     }
 
     /// <summary>
-    /// Laesst SAM die gezogene Box segmentieren und schreibt die Messwerte ins Overlay
-    /// (Hoehe/Breite mm, Querschnitt-%, Uhrlage). Gibt die SAM-Uhrlage zurueck oder null,
-    /// wenn keine Segmentierung moeglich war (Aufrufer behaelt dann die geometrische
-    /// Schaetzung). Reine Verdrahtung — die Logik liegt im MarkBoxSegmentationService.
+    /// Laesst SAM die gezogene Box segmentieren und schreibt Messwerte ins Overlay.
     /// </summary>
-    // Gibt das Segmentierungs-Ergebnis (inkl. Rohmaske) zurueck, damit der Aufrufer die
-    // SAM-Maske sichtbar rendern kann. null, wenn keine Segmentierung moeglich war.
     private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync(
         OverlayGeometry overlay, byte[]? frameBytes)
     {
@@ -101,7 +83,8 @@ public partial class PlayerWindow
 
             var result = await _codingBoxSegmentation.SegmentBoxAsync(
                 frameBytes, box, dn, calibration, System.Threading.CancellationToken.None);
-            if (result == null) return null;
+            if (result == null)
+                return null;
 
             CodingMarkBoxQuantificationOverlayPolicy.Apply(overlay, result.Quant);
 
@@ -114,12 +97,6 @@ public partial class PlayerWindow
         }
     }
 
-    // Zeigt die Erkennung der Mark-Box sichtbar auf dem Codier-Canvas, BEVOR das
-    // VSA-Codierfenster aufgeht. Bei einem BOGEN waere die SAM-Maske irrefuehrend
-    // (sie deckt das ganze runde Rohr-Loch ab, nicht den Bogen-Rand - SAM/SAM3/Hough koennen
-    // die Bogen-Kontur nicht treffen, empirisch belegt). Daher fuer Boegen einen GEOMETRIE-
-    // MARKER am Fluchtpunkt zeichnen (wo das Rohr abknickt) statt der Maske. Fuer echte
-    // Punktschaeden (Riss/Anschluss) die SAM-Maske wie bisher.
     private void ShowMarkSamMask(Infrastructure.Ai.Pipeline.BoxSegmentationResult result, OverlayGeometry? overlay)
     {
         try
@@ -128,21 +105,16 @@ public partial class PlayerWindow
             if (rect.Width <= 0 || rect.Height <= 0)
                 return;
 
-            // BOX-SPEZIFISCH: is_bend ist frame-weit. Der Bogen-Marker darf NUR erscheinen,
-            // wenn die GEZOGENE Box wirklich den Bogen meint - d.h. den Fluchtpunkt umschliesst
-            // (die abknickende Rohroeffnung liegt am Fluchtpunkt). Ein Punktschaden an der Wand
-            // liegt NICHT am Fluchtpunkt und behaelt seine SAM-Maske, auch wenn der Frame
-            // zusaetzlich als Bogen gilt.
+            // Bei Boegen keine SAM-Maske zeigen; ein Marker am Fluchtpunkt ist stabiler.
             if (result.IsBend && LiveDetectionGeometryMapper.BoxContainsVanishingPoint(overlay, result.VanishX, result.VanishY))
             {
                 BendMarkerRenderer.Show(CodingOverlayCanvas, result.VanishX, result.VanishY, rect);
                 return;
             }
 
-            // WICHTIG: in das tatsaechliche Video-Rechteck rendern (Letterbox/Pillarbox-Raender),
-            // NICHT in die volle Canvas-Flaeche - sonst Maske verzerrt/verschoben.
             var samResp = new Infrastructure.Ai.Pipeline.SamResponse(
                 new[] { result.Mask }, result.ImageWidth, result.ImageHeight, 0);
+            // In das echte Video-Rechteck rendern, nicht in Letterbox-Raender.
             Ai.Pipeline.SamMaskRenderer.RenderMasks(
                 CodingOverlayCanvas,
                 samResp,
@@ -157,104 +129,6 @@ public partial class PlayerWindow
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Mark-SAM] Masken-Render uebersprungen: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Speichert eine Markierung als Teacher-Annotation (YOLO-Export + TeacherAnnotationStore).
-    /// Eigenstaendige Implementierung im PlayerWindow-Codiermodus.
-    /// </summary>
-    /// <summary>Rueckgabe: true wenn gespeichert, false wenn abgebrochen.</summary>
-    private async Task<bool> SaveMarkAsTrainingAsync(OverlayGeometry overlay, double timestampSec, string? clockPosition, byte[]? preCapturedFrame = null)
-    {
-        try
-        {
-            // 1. VSA-Code waehlen â€” VsaCodeExplorer oeffnet sich sofort
-            // Meter automatisch aus OSD oder Videoposition berechnen
-            var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
-            var entry = CodingExplorerEntryFactory.CreateSeed(overlay);
-            var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
-            var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
-            {
-                Owner = this
-            };
-            if (explorer.ShowDialog() != true || explorer.SelectedEntry == null)
-                return false;
-
-            var selectedEntry = explorer.SelectedEntry;
-
-            // Den selbst gesetzten Code SOFORT als KI-BEFUND eintragen — unabhaengig davon, ob
-            // der nachfolgende Training-/YOLO-Export klappt. Sonst fehlt der Code in KI-BEFUNDE,
-            // wenn der Export scheitert (User-Wunsch: jeder eigene Code MUSS erscheinen).
-            CodingEvent? manualEvent = null;
-            if (_codingSessionService != null && _codingVm != null)
-            {
-                var manualMeter = CodingCurrentMeterResolver.ParseDisplayedMeterOrZero(TxtCodingMeter?.Text);
-                var manualEntry = CodingExplorerEntryFactory.CreateManualFromSelected(
-                    selectedEntry,
-                    manualMeter,
-                    TimeSpan.FromSeconds(timestampSec));
-                manualEvent = _codingSessionService.AddEvent(manualEntry, overlay);
-                RefreshCodingEventsList();
-            }
-
-            // 2. Frame-Capture (bereits vor der SAM-Segmentierung erfasst -> wiederverwenden).
-            var frameBytes = preCapturedFrame ?? await CaptureCurrentFrameAsync();
-            if (frameBytes == null) return false;
-
-            // 3. BoundingBox aus Overlay-Punkten
-            var bbox = LiveDetectionGeometryMapper.BBoxFromOverlay(overlay);
-
-            // Mindestgroesse pruefen (1% des Frames)
-            if (bbox.Width < 0.01 || bbox.Height < 0.01) return false;
-
-            // 4. YOLO-Export
-            int classId = InfraTeacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
-            var annotationId = Guid.NewGuid().ToString("N")[..12];
-            var baseName = $"mark_{annotationId}";
-
-            // Frame in Temp speichern
-            var tempFrame = System.IO.Path.Combine(
-                System.IO.Path.GetTempPath(), $"sewer_studio_mark_{annotationId}.png");
-            await System.IO.File.WriteAllBytesAsync(tempFrame, frameBytes);
-
-            var exportService = Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
-            var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
-
-            // Temp aufrÃ¤umen
-            AuswertungPro.Next.Application.Common.BestEffort.Try(
-                () => System.IO.File.Delete(tempFrame), "Mark-Training: Temp-Frame loeschen");
-
-            // 5. TeacherAnnotation erstellen + persistieren
-            var captureMeter = CodingCurrentMeterResolver.ParseDisplayedMeterOrZero(TxtCodingMeter?.Text);
-
-            var annotation = LiveDetectionTeacherAnnotationFactory.CreateManualMark(
-                annotationId,
-                selectedEntry,
-                overlay,
-                bbox,
-                clockPosition,
-                captureMeter,
-                TimeSpan.FromSeconds(timestampSec),
-                exportResult);
-
-            await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
-
-            // Foto nachtraeglich an den bereits eingetragenen Befund haengen (der Code wurde oben
-            // schon SOFORT eingetragen, damit er auch bei Export-Fehlern in KI-BEFUNDE steht).
-            if (manualEvent != null && exportResult.FullFramePath != null)
-            {
-                manualEvent.Entry.FotoPaths.Add(exportResult.FullFramePath);
-                RefreshCodingEventsList();
-            }
-
-            ShowOsdMeterStatus($"✓ {selectedEntry.Code} gespeichert", resetAfterDelay: true);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            ShowOsdMeterStatus($"\u2717 Fehler: {ex.Message}", resetAfterDelay: false);
-            return false;
         }
     }
 
@@ -277,5 +151,4 @@ public partial class PlayerWindow
         };
         resetTimer.Start();
     }
-
 }

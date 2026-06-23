@@ -1,0 +1,92 @@
+using System;
+using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Ai;
+using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
+
+namespace AuswertungPro.Next.UI.Views.Windows;
+
+public partial class PlayerWindow
+{
+    /// <summary>Rueckgabe: true wenn gespeichert, false wenn abgebrochen.</summary>
+    private async Task<bool> SaveMarkAsTrainingAsync(OverlayGeometry overlay, double timestampSec, string? clockPosition, byte[]? preCapturedFrame = null)
+    {
+        try
+        {
+            var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
+            var entry = CodingExplorerEntryFactory.CreateSeed(overlay);
+            var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
+            var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
+            {
+                Owner = this
+            };
+            if (explorer.ShowDialog() != true || explorer.SelectedEntry == null)
+                return false;
+
+            var selectedEntry = explorer.SelectedEntry;
+
+            CodingEvent? manualEvent = null;
+            if (_codingSessionService != null && _codingVm != null)
+            {
+                var manualMeter = CodingCurrentMeterResolver.ParseDisplayedMeterOrZero(TxtCodingMeter?.Text);
+                var manualEntry = CodingExplorerEntryFactory.CreateManualFromSelected(
+                    selectedEntry,
+                    manualMeter,
+                    TimeSpan.FromSeconds(timestampSec));
+                manualEvent = _codingSessionService.AddEvent(manualEntry, overlay);
+                RefreshCodingEventsList();
+            }
+
+            var frameBytes = preCapturedFrame ?? await CaptureCurrentFrameAsync();
+            if (frameBytes == null)
+                return false;
+
+            var bbox = LiveDetectionGeometryMapper.BBoxFromOverlay(overlay);
+            if (bbox.Width < 0.01 || bbox.Height < 0.01)
+                return false;
+
+            int classId = InfraTeacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
+            var annotationId = Guid.NewGuid().ToString("N")[..12];
+            var baseName = $"mark_{annotationId}";
+
+            var tempFrame = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(), $"sewer_studio_mark_{annotationId}.png");
+            await System.IO.File.WriteAllBytesAsync(tempFrame, frameBytes);
+
+            var exportService = Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
+            var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
+
+            AuswertungPro.Next.Application.Common.BestEffort.Try(
+                () => System.IO.File.Delete(tempFrame), "Mark-Training: Temp-Frame loeschen");
+
+            var captureMeter = CodingCurrentMeterResolver.ParseDisplayedMeterOrZero(TxtCodingMeter?.Text);
+
+            var annotation = LiveDetectionTeacherAnnotationFactory.CreateManualMark(
+                annotationId,
+                selectedEntry,
+                overlay,
+                bbox,
+                clockPosition,
+                captureMeter,
+                TimeSpan.FromSeconds(timestampSec),
+                exportResult);
+
+            await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
+
+            if (manualEvent != null && exportResult.FullFramePath != null)
+            {
+                manualEvent.Entry.FotoPaths.Add(exportResult.FullFramePath);
+                RefreshCodingEventsList();
+            }
+
+            ShowOsdMeterStatus($"\u2713 {selectedEntry.Code} gespeichert", resetAfterDelay: true);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ShowOsdMeterStatus($"\u2717 Fehler: {ex.Message}", resetAfterDelay: false);
+            return false;
+        }
+    }
+}
