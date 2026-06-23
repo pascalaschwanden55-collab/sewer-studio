@@ -28,7 +28,7 @@ public partial class PlayerWindow
         {
             SetCodingAiState($"Fehler: {result.Error}", PlayerStatusColors.Error,
                 $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
-            CodingFindingsList.ItemsSource = null;
+            DetectionOverlayCleaner.ClearFindings(CodingFindingsList);
             return;
         }
 

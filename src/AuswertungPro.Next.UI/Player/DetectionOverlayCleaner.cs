@@ -21,6 +21,13 @@ public static class DetectionOverlayCleaner
         ArgumentNullException.ThrowIfNull(findingsList);
 
         canvas.Children.Clear();
+        ClearFindings(findingsList);
+    }
+
+    public static void ClearFindings(ItemsControl findingsList)
+    {
+        ArgumentNullException.ThrowIfNull(findingsList);
+
         findingsList.ItemsSource = null;
     }
 

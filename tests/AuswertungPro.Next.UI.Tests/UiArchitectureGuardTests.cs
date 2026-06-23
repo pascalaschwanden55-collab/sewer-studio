@@ -3512,8 +3512,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("DetectionOverlayCleaner.ClearVisuals", lifecycle);
         Assert.DoesNotContain("DetectionCanvas.Children.Clear()", lifecycle);
         Assert.Contains("DetectionOverlayCleaner.ClearFindingsAndCanvas", aiEvents);
+        Assert.Contains("DetectionOverlayCleaner.ClearFindings", aiEvents);
         Assert.Contains("DetectionOverlayCleaner.ClearVisuals", aiEvents);
         Assert.DoesNotContain("DetectionCanvas.Children.Clear()", aiEvents);
+        Assert.DoesNotContain("CodingFindingsList.ItemsSource = null", aiEvents);
         Assert.Contains("DetectionOverlayCleaner.ClearCanvas", exit);
         Assert.DoesNotContain("DetectionCanvas.Children.Clear()", exit);
         Assert.Contains("DetectionOverlayCleaner.ClearCanvas", liveStop);
@@ -3521,6 +3523,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static void ClearAll", cleaner);
         Assert.Contains("public static void ClearVisuals", cleaner);
         Assert.Contains("public static void ClearFindingsAndCanvas", cleaner);
+        Assert.Contains("public static void ClearFindings", cleaner);
         Assert.Contains("public static void ClearCanvas", cleaner);
     }
 
