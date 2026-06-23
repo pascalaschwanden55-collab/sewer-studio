@@ -1169,7 +1169,8 @@ public sealed class UiArchitectureGuardTests
         var capture = File.ReadAllText(capturePath);
         var service = File.ReadAllText(servicePath);
 
-        Assert.Contains("CodingFrameExtractionService", capture);
+        Assert.Contains("CodingFrameExtractionServiceFactory.Create", capture);
+        Assert.DoesNotContain("new CodingFrameExtractionService", capture);
         Assert.DoesNotContain("FfmpegLocator.ResolveFfmpeg", capture);
         Assert.DoesNotContain("VideoFrameExtractor.TryExtractFramePngAsync", capture);
         Assert.DoesNotContain(".GetAwaiter().GetResult()", capture);

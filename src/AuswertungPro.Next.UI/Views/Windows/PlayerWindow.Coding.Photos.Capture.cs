@@ -12,7 +12,7 @@ public partial class PlayerWindow
     private CodingFrameExtractionService? _codingFrameExtractionService;
 
     private CodingFrameExtractionService CodingFrameExtractionService
-        => _codingFrameExtractionService ??= new CodingFrameExtractionService();
+        => _codingFrameExtractionService ??= CodingFrameExtractionServiceFactory.Create();
 
     private byte[]? TryExtractAnalyzedFrameBytes()
     {
