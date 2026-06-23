@@ -41,37 +41,23 @@ public partial class PlayerWindow
 
             // Gemeinsamer Resolver (identisch mit Qwen-Pfad)
             var code = ResolveFindingCodeForCoding(pseudoFinding, meter);
-            if (code == null)
-            {
-                PlayerTrace.WriteLine(
-                    $"[Multi-Model] Kein VSA-Code fuer Label='{quant.Label}' - uebersprungen");
-                continue;
-            }
-
-            if (CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser(code, seg.Proximity))
-            {
-                PlayerTrace.WriteLine(
-                    $"[Multi-Model] {code} bei {meter:F2}m nur voraus erkannt - nicht protokolliert");
-                continue;
-            }
-
-            var officialLabel = LookupVsaLabel(code);
-
-            // BCD/BCE existieren pro Haltung nur EINMAL - Meterstand-unabhaengige Dedup
-            // Primaer gegen session.Events pruefen (wird nie gecleared).
-            if (CodingOneTimeCodeDuplicatePolicy.AlreadyExists(
+            var addDecision = CodingMultiModelFindingAddDecisionPolicy.Decide(
                     code,
+                    quant.Label,
+                    seg.Proximity,
+                    pseudoFinding,
+                    meter,
                     codingSessionService.ActiveSession?.Events,
-                    codingVm.Events))
+                    codingVm.Events);
+
+            if (addDecision.TraceMessage != null)
+                PlayerTrace.WriteLine(addDecision.TraceMessage);
+
+            if (addDecision.Kind != CodingMultiModelFindingAddDecisionKind.Add)
                 continue;
 
-            // Dedup gegen bestehende Events (identisch mit Qwen-Pfad)
-            var coveringEvent = CodingFindingCoveragePolicy.FindCoveringEvent(
-                codingVm.Events,
-                code,
-                meter,
-                pseudoFinding);
-            if (coveringEvent != null) continue;
+            code = addDecision.Code!;
+            var officialLabel = LookupVsaLabel(code);
 
             double dinoConf = dino?.Confidence ?? quant.Confidence;
             var gateResult = CodingMultiModelQualityGatePolicy.Evaluate(

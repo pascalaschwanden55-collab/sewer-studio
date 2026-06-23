@@ -1208,16 +1208,27 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
         var multiModelPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.MultiModel.cs");
+        var addDecisionPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
 
         Assert.True(File.Exists(multiModelPath), "Multi-Model-Event-Erzeugung soll aus dem allgemeinen AiEvents-Partial heraus.");
+        Assert.True(File.Exists(addDecisionPath), "Multi-Model-Add-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var aiEvents = File.ReadAllText(aiEventsPath);
         var multiModel = File.ReadAllText(multiModelPath);
+        var addDecision = File.ReadAllText(addDecisionPath);
 
         Assert.DoesNotContain("private void AddMultiModelFindingsAsEvents", aiEvents);
         Assert.Contains("private void AddMultiModelFindingsAsEvents", multiModel);
         Assert.Contains("CodingSegmentedFindingFrameMapper.Build", multiModel);
         Assert.Contains("CodingMultiModelQualityGatePolicy.Evaluate", multiModel);
+        Assert.Contains("CodingMultiModelFindingAddDecisionPolicy.Decide", multiModel);
+        Assert.DoesNotContain("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", multiModel);
+        Assert.DoesNotContain("CodingOneTimeCodeDuplicatePolicy.AlreadyExists", multiModel);
+        Assert.DoesNotContain("CodingFindingCoveragePolicy.FindCoveringEvent", multiModel);
+        Assert.Contains("public static CodingMultiModelFindingAddDecision Decide", addDecision);
+        Assert.Contains("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", addDecision);
+        Assert.Contains("CodingOneTimeCodeDuplicatePolicy.AlreadyExists", addDecision);
+        Assert.Contains("CodingFindingCoveragePolicy.FindCoveringEvent", addDecision);
     }
 
     [Fact]
@@ -3055,10 +3066,14 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
+        var decisionPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
 
         var events = File.ReadAllText(eventsPath);
+        var decision = File.ReadAllText(decisionPath);
 
-        Assert.Contains("CodingFindingCoveragePolicy.FindCoveringEvent", events);
+        Assert.Contains("CodingMultiModelFindingAddDecisionPolicy.Decide", events);
+        Assert.DoesNotContain("CodingFindingCoveragePolicy.FindCoveringEvent", events);
+        Assert.Contains("CodingFindingCoveragePolicy.FindCoveringEvent", decision);
         Assert.DoesNotContain("CodingFindingCoveragePolicy.IsCovered(e, meter, pseudoFinding)", events);
     }
 

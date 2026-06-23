@@ -147,11 +147,13 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_defers_spatial_bogen_before_creating_protocol_event()
     {
         var coding = ReadCodingPartials();
+        var policy = ReadUiFile("Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
         var addBody = ExtractMethodBody(coding, "private void AddMultiModelFindingsAsEvents");
 
-        Assert.Contains("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", addBody);
+        Assert.Contains("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", policy);
+        Assert.Contains("CodingMultiModelFindingAddDecisionPolicy.Decide", addBody);
         Assert.True(
-            addBody.IndexOf("ShouldDeferSpatialCodeUntilCloser", StringComparison.Ordinal)
+            addBody.IndexOf("CodingMultiModelFindingAddDecisionPolicy.Decide", StringComparison.Ordinal)
             < FirstIndexOf(
                 addBody,
                 "codingSessionService.AddEvent(entry)",
