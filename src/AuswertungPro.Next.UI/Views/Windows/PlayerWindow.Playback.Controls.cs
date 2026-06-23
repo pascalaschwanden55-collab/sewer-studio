@@ -74,10 +74,7 @@ public partial class PlayerWindow
         if (!target.IsValid)
             return;
 
-        var length = _player.Length;
-        var preview = PlayerPlaybackState.BuildSeekPreviewText(target.Ratio, length);
-        CurrentTimeText.Text = preview.CurrentTimeText;
-        DurationText.Text = preview.DurationText;
+        _positionControls.ApplySeekPreview(target.Ratio, _player.Length);
 
         // Throttled live seek: schedule scrub if not already pending
         if (_isDragging && !_scrubTimer.IsEnabled)
@@ -95,9 +92,7 @@ public partial class PlayerWindow
 
         ApplySliderSeekTarget(target);
 
-        CurrentTimeText.Text = PlayerPlaybackState
-            .BuildSeekPreviewText(target.Ratio, _player.Length)
-            .CurrentTimeText;
+        _positionControls.ApplyScrubPreview(target.Ratio, _player.Length);
     }
 
     private void SetSpeed(float rate)

@@ -101,16 +101,7 @@ public partial class PlayerWindow
         if (_isDragging)
             return;
 
-        var state = PlayerPlaybackState.BuildUiState(
-            _player.Time,
-            _player.Length,
-            PositionSlider.Maximum);
-
-        if (state.SliderValue.HasValue)
-            PositionSlider.Value = state.SliderValue.Value;
-        CurrentTimeText.Text = state.CurrentTimeText;
-        DurationText.Text = state.DurationText;
-
+        _positionControls.ApplyPlaybackState(_player.Time, _player.Length);
         UpdateRateLabel();
 
         // Im Codier-Modus: Echtzeit-Code am Zeitstempel aktualisieren

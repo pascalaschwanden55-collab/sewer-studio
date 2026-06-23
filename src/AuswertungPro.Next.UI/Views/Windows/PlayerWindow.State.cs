@@ -28,6 +28,7 @@ public partial class PlayerWindow
     private readonly PlayerWindowOptions _options;
     private readonly string? _initialOverlayText;
     private readonly PlayerDamageOverlayData? _damageOverlay;
+    private readonly PlayerPositionControls _positionControls;
     private readonly PlayerSpeedControls _speedControls;
     private readonly DamageMarkerController _damageMarkerController;
     private readonly QuickScanController _quickScanController;

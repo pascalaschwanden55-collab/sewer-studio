@@ -75,6 +75,11 @@ public partial class PlayerWindow : Window
             UpdateUi,
             () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas));
 
+        _positionControls = new PlayerPositionControls(
+            PositionSlider,
+            CurrentTimeText,
+            DurationText);
+
         _speedControls = new PlayerSpeedControls(
             RateText,
             Speed05Button,
