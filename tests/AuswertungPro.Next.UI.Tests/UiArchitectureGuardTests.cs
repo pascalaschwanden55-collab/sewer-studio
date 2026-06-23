@@ -1643,15 +1643,20 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
+        var toolsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Tools.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingOverlayCursorPolicy.cs");
 
+        Assert.True(File.Exists(toolsPath), "Overlay-Cursor-Wiring soll im Tool-Partial liegen.");
         Assert.True(File.Exists(policyPath), "Overlay-Cursor-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
+        var tools = File.ReadAllText(toolsPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingOverlayCursorPolicy.ShouldUseCrossCursor", overlayInput);
+        Assert.DoesNotContain("CodingOverlayCursorPolicy.ShouldUseCrossCursor", overlayInput);
+        Assert.Contains("CodingOverlayCursorPolicy.ShouldUseCrossCursor", tools);
         Assert.DoesNotContain("var isInteractive = _codingIsCalibrating", overlayInput);
+        Assert.DoesNotContain("var isInteractive = _codingIsCalibrating", tools);
         Assert.Contains("public static bool ShouldUseCrossCursor", policy);
         Assert.Contains("activeTool != OverlayToolType.None", policy);
     }
@@ -1729,15 +1734,22 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
+        var toolsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Tools.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingToolSelectionPolicy.cs");
 
+        Assert.True(File.Exists(toolsPath), "Tool- und Cursor-Wiring soll aus dem allgemeinen OverlayInput-Partial heraus.");
         Assert.True(File.Exists(policyPath), "Tool-Toggle-Entscheidung muss ausserhalb von PlayerWindow liegen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
+        var tools = File.ReadAllText(toolsPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingToolSelectionPolicy.Build", overlayInput);
-        Assert.DoesNotContain("bool activate = !string.Equals(_activeCodingToolName, btnName)", overlayInput);
+        Assert.DoesNotContain("private void SetCodingTool", overlayInput);
+        Assert.DoesNotContain("private void UpdateCodingOverlayCursor", overlayInput);
+        Assert.Contains("private void SetCodingTool", tools);
+        Assert.Contains("private void UpdateCodingOverlayCursor", tools);
+        Assert.Contains("CodingToolSelectionPolicy.Build", tools);
+        Assert.DoesNotContain("bool activate = !string.Equals(_activeCodingToolName, btnName)", tools);
         Assert.Contains("public static CodingToolSelectionState Build", policy);
     }
 
