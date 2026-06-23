@@ -1114,18 +1114,28 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.cs");
         var capturePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.Capture.cs");
+        var captureServicePath = Path.Combine(uiRoot, "Ai", "CodingSnapshotFileCaptureService.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingSnapshotTargetPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Snapshot-Zielpfad fuer Coding-Fotos muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(captureServicePath), "Snapshot-Datei-Capture und Warten muss ausserhalb von PlayerWindow liegen.");
 
         var photos = File.ReadAllText(photosPath);
         var capture = File.Exists(capturePath) ? File.ReadAllText(capturePath) : string.Empty;
+        var captureService = File.ReadAllText(captureServicePath);
         var policy = File.ReadAllText(policyPath);
         var photoText = photos + capture;
 
         Assert.Contains("CodingSnapshotTargetPolicy.Build", photoText);
+        Assert.Contains("CodingSnapshotFileCaptureServiceFactory.Create", capture);
+        Assert.DoesNotContain("new CodingSnapshotFileCaptureService", capture);
         Assert.DoesNotContain("Path.GetDirectoryName(_videoPath)", photoText);
         Assert.DoesNotContain("DateTimeOffset.Now.ToString(\"HHmmss\")", photoText);
+        Assert.DoesNotContain("Directory.CreateDirectory", capture);
+        Assert.DoesNotContain("Thread.Sleep", capture);
+        Assert.DoesNotContain("new FileInfo", capture);
+        Assert.Contains("Directory.CreateDirectory", captureService);
+        Assert.Contains("Thread.Sleep", captureService);
         Assert.Contains("public static CodingSnapshotTarget Build", policy);
         Assert.Contains("Path.Combine(videoDir, \"Fotos\")", policy);
     }

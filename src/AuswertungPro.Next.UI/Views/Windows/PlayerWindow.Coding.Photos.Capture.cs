@@ -1,6 +1,4 @@
 using System;
-using System.IO;
-using System.Threading;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
@@ -10,9 +8,13 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class PlayerWindow
 {
     private CodingFrameExtractionService? _codingFrameExtractionService;
+    private CodingSnapshotFileCaptureService? _codingSnapshotFileCaptureService;
 
     private CodingFrameExtractionService CodingFrameExtractionService
         => _codingFrameExtractionService ??= CodingFrameExtractionServiceFactory.Create();
+
+    private CodingSnapshotFileCaptureService CodingSnapshotFileCaptureService
+        => _codingSnapshotFileCaptureService ??= CodingSnapshotFileCaptureServiceFactory.Create();
 
     private byte[]? TryExtractAnalyzedFrameBytes()
     {
@@ -37,26 +39,7 @@ public partial class PlayerWindow
 
     private string? CodingCaptureSnapshot(ProtocolEntry entry)
     {
-        try
-        {
-            var target = CodingSnapshotTargetPolicy.Build(entry, _videoPath, PlayerClock.NowOffset());
-            Directory.CreateDirectory(target.PhotoDirectory);
-
-            TakeSnapshotSafe(target.FilePath);
-
-            for (var i = 0; i < 20; i++)
-            {
-                Thread.Sleep(50);
-                if (File.Exists(target.FilePath) && new FileInfo(target.FilePath).Length > 100)
-                    return target.FilePath;
-            }
-
-            return File.Exists(target.FilePath) ? target.FilePath : null;
-        }
-        catch (Exception ex)
-        {
-            PlayerTrace.WriteLine($"Snapshot-Fehler: {ex.Message}");
-            return null;
-        }
+        var target = CodingSnapshotTargetPolicy.Build(entry, _videoPath, PlayerClock.NowOffset());
+        return CodingSnapshotFileCaptureService.CaptureSnapshot(target, path => TakeSnapshotSafe(path));
     }
 }
