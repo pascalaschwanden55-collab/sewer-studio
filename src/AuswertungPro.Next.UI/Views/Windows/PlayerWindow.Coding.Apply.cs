@@ -1,10 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
-using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
-using AppProtocol = AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -17,25 +13,17 @@ public partial class PlayerWindow
     {
         if (_codingVm == null || _haltungRecord == null) return false;
 
-        var doc = _haltungRecord.Protocol is null
-            ? new ProtocolDocument { HaltungId = _haltungRecord.GetFieldValue("Haltungsname") }
-            : AppProtocol.ProtocolRevisionCloner.CloneDocument(_haltungRecord.Protocol);
-        doc.Current ??= new ProtocolRevision();
-        doc.Current.Entries ??= new List<ProtocolEntry>();
-
-        var eventEntryCount = _codingVm.Events.Count(
-            ev => !string.IsNullOrWhiteSpace(ev.Entry.Code));
-
-        var emptyGuard = CodingApplyEmptyProtocolGuard.Build(eventEntryCount, doc.Current.Entries);
+        var update = CodingApplyProtocolUpdateBuilder.Create(_haltungRecord, _codingVm.Events);
+        var emptyGuard = CodingApplyEmptyProtocolGuard.Build(update.EventEntryCount, update.CurrentRevision.Entries);
         if (!CodingApplyDialogServiceFactory.Create().ConfirmEmptyProtocol(emptyGuard))
             return false;
 
-        CodingProtocolRevisionUpdater.ApplyCodingEvents(doc.Current, _codingVm.Events);
+        CodingProtocolRevisionUpdater.ApplyCodingEvents(update.CurrentRevision, update.Events);
 
-        _haltungRecord.Protocol = doc;
+        _haltungRecord.Protocol = update.Document;
         MarkProjectDirtyForCoding();
 
-        SyncCodingToPrimaryDamages(doc);
+        SyncCodingToPrimaryDamages(update.Document);
         MarkProjectDirtyForCoding();
 
         PersistCodingEventsAsTrainingSamples();

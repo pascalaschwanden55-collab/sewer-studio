@@ -1707,12 +1707,14 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var applyPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Apply.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingProtocolRevisionUpdater.cs");
+        var updateBuilderPath = Path.Combine(uiRoot, "Ai", "CodingApplyProtocolUpdateBuilder.cs");
         var emptyGuardPath = Path.Combine(uiRoot, "Ai", "CodingApplyEmptyProtocolGuard.cs");
         var closePolicyPath = Path.Combine(uiRoot, "Ai", "CodingUnappliedChangesClosePolicy.cs");
         var dialogServicePath = Path.Combine(uiRoot, "Ai", "CodingApplyDialogService.cs");
         var dialogServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingApplyDialogServiceFactory.cs");
 
         Assert.True(File.Exists(policyPath), "Protokoll-Revision-Update muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(updateBuilderPath), "Protokoll-Dokumentvorbereitung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(emptyGuardPath), "Leere-Codierung-Schutzlogik muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(closePolicyPath), "Schliessen-Entscheidung fuer unuebernommene Codierungen muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServicePath), "Apply-Dialogtexte und DialogHost-Zugriff muessen ausserhalb der PlayerWindow-Partials liegen.");
@@ -1720,16 +1722,22 @@ public sealed class UiArchitectureGuardTests
 
         var apply = File.ReadAllText(applyPath);
         var policy = File.ReadAllText(policyPath);
+        var updateBuilder = File.ReadAllText(updateBuilderPath);
         var emptyGuard = File.ReadAllText(emptyGuardPath);
         var closePolicy = File.ReadAllText(closePolicyPath);
         var dialogService = File.ReadAllText(dialogServicePath);
         var dialogServiceFactory = File.ReadAllText(dialogServiceFactoryPath);
 
+        Assert.Contains("CodingApplyProtocolUpdateBuilder.Create", apply);
         Assert.Contains("CodingProtocolRevisionUpdater.ApplyCodingEvents", apply);
         Assert.Contains("CodingApplyEmptyProtocolGuard.Build", apply);
         Assert.Contains("CodingApplyDialogServiceFactory.Create", apply);
         Assert.Contains("ConfirmEmptyProtocol", apply);
         Assert.Contains("ConfirmUnappliedChangesOnClose", apply);
+        Assert.DoesNotContain("new ProtocolDocument", apply);
+        Assert.DoesNotContain("ProtocolRevisionCloner.CloneDocument", apply);
+        Assert.DoesNotContain("doc.Current ??=", apply);
+        Assert.DoesNotContain("_codingVm.Events.Count(", apply);
         Assert.DoesNotContain("DialogHost.Current", apply);
         Assert.DoesNotContain("CodingUnappliedChangesClosePolicy.ShouldClose", apply);
         Assert.DoesNotContain(".GroupBy(e => e.EntryId)", apply);
@@ -1738,6 +1746,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("result == DialogConfirm.Cancel", apply);
         Assert.DoesNotContain("result == DialogConfirm.Yes", apply);
         Assert.Contains("public static int ApplyCodingEvents", policy);
+        Assert.Contains("public static CodingApplyProtocolUpdate Create", updateBuilder);
         Assert.Contains("public static CodingApplyEmptyProtocolGuardResult Build", emptyGuard);
         Assert.Contains("public static bool ShouldClose", closePolicy);
         Assert.Contains("public sealed class CodingApplyDialogService", dialogService);
