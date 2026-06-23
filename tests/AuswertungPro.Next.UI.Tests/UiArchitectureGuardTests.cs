@@ -1275,6 +1275,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private static string? LookupVsaLabel", aiEvents);
         Assert.DoesNotContain("private string? ResolveFindingCodeForCoding", aiEvents);
         Assert.DoesNotContain("private bool IsFindingAlreadyKnown", aiEvents);
+        Assert.DoesNotContain("new AiFindingDisplayItem", aiEvents);
+        Assert.Contains("AiFindingDisplayItemFactory.ForFindings(validFindings)", aiEvents);
         Assert.Contains("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", filtering);
         Assert.Contains("private static string? LookupVsaLabel", filtering);
         Assert.Contains("private string? ResolveFindingCodeForCoding", filtering);

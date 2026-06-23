@@ -45,4 +45,39 @@ public sealed class AiFindingDisplayItemFactoryTests
         Assert.Equal("BCE", item.VsaCode);
         Assert.Equal(4, item.Severity);
     }
+
+    [Fact]
+    public void ForFindings_projects_all_findings_for_display()
+    {
+        var findings = new[]
+        {
+            new LiveFrameFinding(
+                Label: "Riss",
+                Severity: 2,
+                PositionClock: null,
+                ExtentPercent: null,
+                VsaCodeHint: "BAB"),
+            new LiveFrameFinding(
+                Label: "Rohrende",
+                Severity: 1,
+                PositionClock: null,
+                ExtentPercent: null,
+                VsaCodeHint: "BCE")
+        };
+
+        var items = AiFindingDisplayItemFactory.ForFindings(findings);
+
+        Assert.Collection(
+            items,
+            first =>
+            {
+                Assert.Equal("Riss", first.Label);
+                Assert.Equal("BAB", first.VsaCode);
+            },
+            second =>
+            {
+                Assert.Equal("Rohrende", second.Label);
+                Assert.Equal("BCE", second.VsaCode);
+            });
+    }
 }

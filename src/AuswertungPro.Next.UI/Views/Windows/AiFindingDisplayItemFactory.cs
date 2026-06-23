@@ -16,6 +16,9 @@ public static class AiFindingDisplayItemFactory
         string resolvedCode)
         => Single(finding with { VsaCodeHint = resolvedCode });
 
+    public static IReadOnlyList<AiFindingDisplayItem> ForFindings(IEnumerable<LiveFrameFinding> findings)
+        => findings.Select(finding => new AiFindingDisplayItem(finding)).ToList();
+
     private static IReadOnlyList<AiFindingDisplayItem> Single(LiveFrameFinding finding)
         => [new AiFindingDisplayItem(finding)];
 }
