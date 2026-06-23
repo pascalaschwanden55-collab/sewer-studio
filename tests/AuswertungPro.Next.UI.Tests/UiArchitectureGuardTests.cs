@@ -158,6 +158,30 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_state_fields_live_in_coding_state_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+
+        Assert.True(File.Exists(statePath), "Coding-Feldzustand soll aus dem allgemeinen Coding-Partial heraus.");
+
+        var coding = File.ReadAllText(codingPath);
+        var state = File.ReadAllText(statePath);
+
+        Assert.DoesNotContain("private bool _isCodingMode", coding);
+        Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", coding);
+        Assert.DoesNotContain("private enum EingabemarkerPhase", coding);
+        Assert.DoesNotContain("private readonly ObservableCollection<CodingEvent> _codingImportEvents", coding);
+        Assert.Contains("private bool _isCodingMode", state);
+        Assert.Contains("private CodingSessionViewModel? _codingVm", state);
+        Assert.Contains("private enum EingabemarkerPhase", state);
+        Assert.Contains("private readonly ObservableCollection<CodingEvent> _codingImportEvents", state);
+    }
+
+    [Fact]
     public void PlayerWindow_does_not_own_win32_screenshot_capture()
     {
         var root = FindRepositoryRoot();
@@ -1159,6 +1183,7 @@ public sealed class UiArchitectureGuardTests
         var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
         var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Live.cs");
         var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.cs");
         var codingExitPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Exit.cs");
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
@@ -1172,21 +1197,22 @@ public sealed class UiArchitectureGuardTests
         var ai = File.ReadAllText(aiPath);
         var live = File.ReadAllText(livePath);
         var coding = File.ReadAllText(codingPath);
+        var state = File.ReadAllText(statePath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var codingExit = File.ReadAllText(codingExitPath);
         var playback = File.ReadAllText(playbackPath);
         var playbackLifecycle = File.ReadAllText(playbackLifecyclePath);
         var controller = File.ReadAllText(controllerPath);
 
-        Assert.Contains("CodingLiveAiTimerController", coding);
+        Assert.Contains("CodingLiveAiTimerController", state);
         Assert.Contains("_codingLiveAiTimers.Start()", live);
         Assert.Contains("_codingLiveAiTimers.Stop(resetButton: true)", live);
         Assert.DoesNotContain("_codingLiveAiTimers?.Stop(resetButton: true)", lifecycle);
         Assert.Contains("_codingLiveAiTimers?.Stop(resetButton: true)", codingExit);
         Assert.DoesNotContain("_codingLiveAiTimers?.StopTimers()", playback);
         Assert.Contains("_codingLiveAiTimers?.StopTimers()", playbackLifecycle);
-        Assert.DoesNotContain("_codingLiveAiBlinkTimer", coding + lifecycle + codingExit + ai + live + playback + playbackLifecycle);
-        Assert.DoesNotContain("_codingLiveAiBlinkState", coding + lifecycle + codingExit + ai + live + playback + playbackLifecycle);
+        Assert.DoesNotContain("_codingLiveAiBlinkTimer", coding + state + lifecycle + codingExit + ai + live + playback + playbackLifecycle);
+        Assert.DoesNotContain("_codingLiveAiBlinkState", coding + state + lifecycle + codingExit + ai + live + playback + playbackLifecycle);
         Assert.DoesNotContain("new DispatcherTimer { Interval = CodingLiveAiTimerSettings", live);
         Assert.Contains("public sealed class CodingLiveAiTimerController", controller);
         Assert.Contains("CodingLiveAiButtonDisplayPolicy.BlinkColor", controller);
