@@ -1146,6 +1146,10 @@ public sealed class UiArchitectureGuardTests
         var ai = File.ReadAllText(aiPath);
         var helpers = File.ReadAllText(helpersPath);
 
+        Assert.DoesNotContain("private async void CodingAnalyzeFrame_Click", ai);
+        Assert.Contains("private void CodingAnalyzeFrame_Click", ai);
+        Assert.Contains("SafeFireAndForget", ai);
+        Assert.Contains("\"CodingAnalyzeFrame\"", ai);
         Assert.Contains("private async Task RunCodingAnalysisAsync", ai);
         Assert.DoesNotContain("private bool IsCodingAfterTerminalBoundary", ai);
         Assert.DoesNotContain("private bool IsFindingTooFarAhead", ai);

@@ -5,23 +5,18 @@ using System.Windows;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private async void CodingAnalyzeFrame_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            await RunCodingAnalysisAsync("Aktuellen Frame analysieren...", disableAnalyzeButton: true);
-        }
-        catch (Exception ex)
-        {
-            PlayerTrace.WriteLine($"[PlayerWindow] CodingAnalyzeFrame_Click error: {ex.Message}");
-        }
-    }
+    private void CodingAnalyzeFrame_Click(object sender, RoutedEventArgs e)
+        => RunCodingAnalysisAsync("Aktuellen Frame analysieren...", disableAnalyzeButton: true)
+            .SafeFireAndForget(
+                "CodingAnalyzeFrame",
+                ex => PlayerTrace.WriteLine($"[PlayerWindow] CodingAnalyzeFrame_Click error: {ex.Message}"));
 
     private async Task RunCodingAnalysisAsync(
         string activityText,
