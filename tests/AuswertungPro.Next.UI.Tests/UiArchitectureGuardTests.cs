@@ -413,22 +413,33 @@ public sealed class UiArchitectureGuardTests
         var fileServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfFileService.cs");
         var projectFolderResolverPath = Path.Combine(uiRoot, "Ai", "CodingProjectFolderResolver.cs");
         var saveDialogPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfSavePathDialog.cs");
+        var dialogServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolDialogService.cs");
+        var dialogFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolDialogServiceFactory.cs");
 
         Assert.True(File.Exists(plannerPath), "PDF-Exportvorbereitung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(fileServicePath), "PDF-Datei schreiben und oeffnen soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(projectFolderResolverPath), "Projektordner-Aufloesung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(saveDialogPath), "PDF-Speicherdialog soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogServicePath), "Protokoll-Dialogtexte sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogFactoryPath), "Protokoll-DialogHost-Verdrahtung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var protocol = File.ReadAllText(protocolPath);
         var planner = File.ReadAllText(plannerPath);
         var fileService = File.ReadAllText(fileServicePath);
         var projectFolderResolver = File.ReadAllText(projectFolderResolverPath);
         var saveDialog = File.ReadAllText(saveDialogPath);
+        var dialogService = File.ReadAllText(dialogServicePath);
+        var dialogFactory = File.ReadAllText(dialogFactoryPath);
 
         Assert.Contains("CodingProtocolPdfExportPlanner.Build", protocol);
         Assert.Contains("CodingProtocolPdfSavePathDialogFactory.Create", protocol);
         Assert.Contains("CodingProtocolPdfFileServiceFactory.Create", protocol);
         Assert.Contains("CodingProjectFolderResolver.ResolveNullable", protocol);
+        Assert.Contains("CodingProtocolDialogServiceFactory.Create", protocol);
+        Assert.DoesNotContain("DialogHost.Current", protocol);
+        Assert.DoesNotContain("PDF konnte nicht erstellt werden", protocol);
+        Assert.DoesNotContain("Protokoll jetzt anzeigen", protocol);
+        Assert.DoesNotContain("PDF-Protokoll mit Grafik", protocol);
         Assert.DoesNotContain("HaltungsprotokollPdfOptions", protocol);
         Assert.DoesNotContain("LogoPathAbs", protocol);
         Assert.DoesNotContain("IncludeHaltungsgrafik", protocol);
@@ -443,6 +454,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("SafeShellOpen.TryOpen", fileService);
         Assert.Contains("Path.GetDirectoryName", projectFolderResolver);
         Assert.Contains("SaveFileDialog", saveDialog);
+        Assert.Contains("ConfirmPdfExport", dialogService);
+        Assert.Contains("ConfirmProtocolPreview", dialogService);
+        Assert.Contains("ShowPdfExportFailed", dialogService);
+        Assert.Contains("DialogHost.Current", dialogFactory);
     }
 
     [Fact]

@@ -3,7 +3,6 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -15,10 +14,8 @@ public partial class PlayerWindow
     {
         if (_serviceProvider == null || _haltungRecord == null) return;
 
-        var createPdf = DialogHost.Current.Confirm(
-            $"Codier-Session abgeschlossen ({doc.Current.Entries.Count} Ereignisse).\n\n" +
-            "Möchten Sie jetzt ein PDF-Protokoll mit Grafik und Fotos erstellen?",
-            "PDF-Protokoll erstellen");
+        var createPdf = CodingProtocolDialogServiceFactory.Create()
+            .ConfirmPdfExport(doc.Current.Entries.Count);
 
         if (!createPdf) return;
 
@@ -42,7 +39,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            DialogHost.Current.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Fehler");
+            CodingProtocolDialogServiceFactory.Create().ShowPdfExportFailed(ex.Message);
         }
     }
 
@@ -79,11 +76,8 @@ public partial class PlayerWindow
     {
         if (_haltungRecord == null || _serviceProvider == null) return;
 
-        var showProtocol = DialogHost.Current.Confirm(
-            $"{doc.Current.Entries.Count} Beobachtungen protokolliert.\n\n" +
-            "Protokoll jetzt anzeigen und bearbeiten?\n" +
-            "(Änderungen werden in Primäre Schäden übernommen)",
-            "Codier-Session abgeschlossen");
+        var showProtocol = CodingProtocolDialogServiceFactory.Create()
+            .ConfirmProtocolPreview(doc.Current.Entries.Count);
 
         if (!showProtocol) return;
 
@@ -101,11 +95,11 @@ public partial class PlayerWindow
         dlg.Owner = this;
         dlg.ShowDialog();
 
-        // Nach Bearbeitung: Primaere Schaeden erneut synchronisieren
+        // Nach Bearbeitung: Primaere Schaeden erneut synchronisieren.
         if (_haltungRecord.Protocol != null)
             SyncCodingToPrimaryDamages(_haltungRecord.Protocol);
 
-        // PDF anbieten
+        // PDF anbieten.
         CodingOfferPdfExport(_haltungRecord.Protocol ?? doc);
     }
 }
