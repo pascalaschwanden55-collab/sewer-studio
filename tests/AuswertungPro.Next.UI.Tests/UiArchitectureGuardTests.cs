@@ -1727,13 +1727,16 @@ public sealed class UiArchitectureGuardTests
         var confirmationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.cs");
         var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.Actions.cs");
         var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.Training.cs");
+        var frameExporterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingFrameExporter.cs");
 
         Assert.True(File.Exists(actionsPath), "LiveDetection-Bestaetigungsaktionen sollen aus dem Anzeige-Partial heraus.");
         Assert.True(File.Exists(trainingPath), "LiveDetection-Trainingsuebernahme soll aus den simplen Bestaetigungsaktionen heraus.");
+        Assert.True(File.Exists(frameExporterPath), "Detection-Training-Frame-Export soll ausserhalb der PlayerWindow-Partials gekapselt sein.");
 
         var confirmation = File.ReadAllText(confirmationPath);
         var actions = File.ReadAllText(actionsPath);
         var training = File.ReadAllText(trainingPath);
+        var frameExporter = File.ReadAllText(frameExporterPath);
 
         Assert.Contains("private void ShowDetectionConfirmation", confirmation);
         Assert.Contains("private void ResumeDetection", confirmation);
@@ -1747,7 +1750,14 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private async void DetectionAccept_Click", training);
         Assert.Contains("private async void DetectionCorrect_Click", training);
         Assert.Contains("TrainingAnnotationExportServiceFactory.Create", training);
+        Assert.Contains("LiveDetectionTrainingFrameExporter", training);
+        Assert.DoesNotContain("File.WriteAllBytesAsync", training);
+        Assert.DoesNotContain("File.Delete", training);
+        Assert.DoesNotContain("Path.GetTempPath", training);
         Assert.Contains("TeacherAnnotationStore.AppendAsync", training);
+        Assert.Contains("public sealed class LiveDetectionTrainingFrameExporter", frameExporter);
+        Assert.Contains("File.WriteAllBytesAsync", frameExporter);
+        Assert.Contains("BestEffort.Try", frameExporter);
     }
 
     [Fact]

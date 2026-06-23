@@ -25,7 +25,8 @@ public partial class PlayerWindow
             }
 
             var timestampSec = _detectionPendingTimestampSec ?? (_player.Time / 1000.0);
-            var exportService = AuswertungPro.Next.UI.Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
+            var frameExporter = new LiveDetectionTrainingFrameExporter(
+                AuswertungPro.Next.UI.Ai.Teacher.TrainingAnnotationExportServiceFactory.Create());
 
             foreach (var finding in _detectionPendingFindings)
             {
@@ -37,14 +38,13 @@ public partial class PlayerWindow
                 // Bounding-Box aus Uhrposition ableiten (Ring-Sektor -> normalisierte Koordinaten)
                 var bbox = LiveDetectionGeometryMapper.BBoxFromClockPosition(finding);
 
-                // Frame temp speichern
-                var tempFrame = System.IO.Path.Combine(
-                    System.IO.Path.GetTempPath(), $"sewer_studio_det_{annotationId}.png");
-                await System.IO.File.WriteAllBytesAsync(tempFrame, frameBytes);
-
-                var exportResult = await exportService.ExportAsync(tempFrame, bbox, code, classId, baseName);
-                AuswertungPro.Next.Application.Common.BestEffort.Try(
-                    () => System.IO.File.Delete(tempFrame), "Mark-Training: Temp-Frame loeschen");
+                var exportResult = await frameExporter.ExportAsync(
+                    frameBytes,
+                    bbox,
+                    code,
+                    classId,
+                    baseName,
+                    annotationId);
 
                 var annotation = LiveDetectionTeacherAnnotationFactory.CreateDetection(
                     annotationId,
@@ -110,14 +110,15 @@ public partial class PlayerWindow
             var annotationId = Guid.NewGuid().ToString("N")[..12];
             var baseName = $"det_corr_{annotationId}";
 
-            var tempFrame = System.IO.Path.Combine(
-                System.IO.Path.GetTempPath(), $"sewer_studio_det_{annotationId}.png");
-            await System.IO.File.WriteAllBytesAsync(tempFrame, frameBytes);
-
-            var exportService = AuswertungPro.Next.UI.Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
-            var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
-            AuswertungPro.Next.Application.Common.BestEffort.Try(
-                () => System.IO.File.Delete(tempFrame), "Mark-Training: Temp-Frame loeschen");
+            var frameExporter = new LiveDetectionTrainingFrameExporter(
+                AuswertungPro.Next.UI.Ai.Teacher.TrainingAnnotationExportServiceFactory.Create());
+            var exportResult = await frameExporter.ExportAsync(
+                frameBytes,
+                bbox,
+                selectedEntry.Code,
+                classId,
+                baseName,
+                annotationId);
 
             var annotation = LiveDetectionTeacherAnnotationFactory.CreateCorrectedDetection(
                 annotationId,
