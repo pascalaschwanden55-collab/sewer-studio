@@ -27,11 +27,8 @@ public partial class PlayerWindow
             if (_codingSessionService != null && _codingVm != null)
             {
                 var manualMeter = CodingCurrentMeterResolver.ParseDisplayedMeterOrZero(TxtCodingMeter?.Text);
-                var manualEntry = CodingExplorerEntryFactory.CreateManualFromSelected(
-                    selectedEntry,
-                    manualMeter,
-                    TimeSpan.FromSeconds(timestampSec));
-                manualEvent = _codingSessionService.AddEvent(manualEntry, overlay);
+                manualEvent = LiveDetectionManualMarkEventAppender.Apply(
+                    selectedEntry, manualMeter, TimeSpan.FromSeconds(timestampSec), overlay, _codingSessionService);
                 RefreshCodingEventsList();
             }
 
