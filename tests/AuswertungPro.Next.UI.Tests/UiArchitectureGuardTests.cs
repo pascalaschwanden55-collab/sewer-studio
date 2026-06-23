@@ -703,16 +703,22 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
         var mapperPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEventMapper.cs");
+        var appenderPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEventCollectionAppender.cs");
 
         Assert.True(File.Exists(mapperPath), "ProtocolEntry-zu-CodingEvent-Mapping muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(appenderPath), "Eintragen gemappter Protokoll-Events muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var protocol = File.ReadAllText(protocolPath);
         var mapper = File.ReadAllText(mapperPath);
+        var appender = File.Exists(appenderPath) ? File.ReadAllText(appenderPath) : "";
 
         Assert.Contains("CodingProtocolEventMapper.BuildExistingEvents", protocol);
+        Assert.Contains("CodingProtocolEventCollectionAppender.Append", protocol);
+        Assert.DoesNotContain("_codingVm.Events.Add", protocol);
         Assert.DoesNotContain("new CodingEvent", protocol);
         Assert.DoesNotContain("OrderBy(e => e.MeterStart ?? 0)", protocol);
         Assert.Contains("public static IReadOnlyList<CodingEvent> BuildExistingEvents", mapper);
+        Assert.Contains("target.Add", appender);
     }
 
     [Fact]

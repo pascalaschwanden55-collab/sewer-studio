@@ -33,8 +33,7 @@ public partial class PlayerWindow
         var events = CodingProtocolEventMapper.BuildExistingEvents(_haltungRecord.Protocol);
         if (events.Count == 0) return;
 
-        foreach (var codingEvent in events)
-            _codingVm.Events.Add(codingEvent);
+        CodingProtocolEventCollectionAppender.Append(_codingVm.Events, events);
     }
 
     // --- Coding: Primaere Schaeden synchronisieren ---
