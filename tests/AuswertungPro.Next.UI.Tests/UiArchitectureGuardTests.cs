@@ -2200,6 +2200,37 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_active_schema_rendering_delegates_to_shape_partials()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var activePath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.cs");
+        var pipeBendPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.PipeBend.cs");
+        var fillLevelPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.FillLevel.cs");
+        var intrusionPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.Intrusion.cs");
+
+        Assert.True(File.Exists(pipeBendPath), "Aktives PipeBend-Rendering soll aus dem Dispatcher heraus.");
+        Assert.True(File.Exists(fillLevelPath), "Aktives FillLevel-Rendering soll aus dem Dispatcher heraus.");
+        Assert.True(File.Exists(intrusionPath), "Aktives Intrusion-Rendering soll aus dem Dispatcher heraus.");
+
+        var active = File.ReadAllText(activePath);
+        var pipeBend = File.ReadAllText(pipeBendPath);
+        var fillLevel = File.ReadAllText(fillLevelPath);
+        var intrusion = File.ReadAllText(intrusionPath);
+
+        Assert.Contains("RenderActivePipeBendSchema(bend, glowEffect)", active);
+        Assert.Contains("RenderActiveFillLevelSchema(fill, glowEffect)", active);
+        Assert.Contains("RenderActiveIntrusionSchema(intrusion, glowEffect)", active);
+        Assert.DoesNotContain("RenderPipeBendOverlay(overlay, true, Brushes.Gold", active);
+        Assert.DoesNotContain("new Rectangle", active);
+        Assert.DoesNotContain("new System.Windows.Shapes.Polygon", active);
+        Assert.Contains("private void RenderActivePipeBendSchema", pipeBend);
+        Assert.Contains("private void RenderActiveFillLevelSchema", fillLevel);
+        Assert.Contains("private void RenderActiveIntrusionSchema", intrusion);
+    }
+
+    [Fact]
     public void PlayerWindow_timeline_marker_accessors_live_in_policy()
     {
         var root = FindRepositoryRoot();
