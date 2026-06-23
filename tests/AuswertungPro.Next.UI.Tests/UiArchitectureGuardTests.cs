@@ -427,6 +427,8 @@ public sealed class UiArchitectureGuardTests
         var saveDialogPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfSavePathDialog.cs");
         var dialogServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolDialogService.cs");
         var dialogFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolDialogServiceFactory.cs");
+        var previewWorkflowServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWorkflowService.cs");
+        var previewWorkflowServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWorkflowServiceFactory.cs");
         var previewWindowServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWindowService.cs");
         var previewWindowServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWindowServiceFactory.cs");
 
@@ -438,6 +440,8 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(saveDialogPath), "PDF-Speicherdialog soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServicePath), "Protokoll-Dialogtexte sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogFactoryPath), "Protokoll-DialogHost-Verdrahtung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(previewWorkflowServicePath), "Protokoll-Vorschauablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(previewWorkflowServiceFactoryPath), "Protokoll-Vorschauablauf soll ueber Factory verdrahtet werden.");
         Assert.True(File.Exists(previewWindowServicePath), "Protokoll-Vorschaufenster soll ausserhalb der PlayerWindow-Partials erzeugt werden.");
         Assert.True(File.Exists(previewWindowServiceFactoryPath), "Protokoll-Vorschaufenster soll ueber Factory verdrahtet werden.");
 
@@ -450,6 +454,8 @@ public sealed class UiArchitectureGuardTests
         var saveDialog = File.ReadAllText(saveDialogPath);
         var dialogService = File.ReadAllText(dialogServicePath);
         var dialogFactory = File.ReadAllText(dialogFactoryPath);
+        var previewWorkflowService = File.ReadAllText(previewWorkflowServicePath);
+        var previewWorkflowServiceFactory = File.ReadAllText(previewWorkflowServiceFactoryPath);
         var previewWindowService = File.ReadAllText(previewWindowServicePath);
         var previewWindowServiceFactory = File.ReadAllText(previewWindowServiceFactoryPath);
 
@@ -457,10 +463,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingProtocolPdfExportPlanner.Build", protocol);
         Assert.DoesNotContain("CodingProtocolPdfSavePathDialogFactory.Create", protocol);
         Assert.DoesNotContain("CodingProtocolPdfFileServiceFactory.Create", protocol);
-        Assert.Contains("CodingProjectFolderResolver.ResolveNullable", protocol);
-        Assert.Contains("CodingProtocolDialogServiceFactory.Create", protocol);
-        Assert.Contains("CodingProtocolPreviewWindowServiceFactory.Create", protocol);
+        Assert.DoesNotContain("CodingProjectFolderResolver.ResolveNullable", protocol);
+        Assert.DoesNotContain("CodingProtocolDialogServiceFactory.Create", protocol);
+        Assert.Contains("CodingProtocolPreviewWorkflowServiceFactory.Create", protocol);
+        Assert.DoesNotContain("CodingProtocolPreviewWindowServiceFactory.Create", protocol);
         Assert.DoesNotContain("DialogHost.Current", protocol);
+        Assert.DoesNotContain("PlayerShellProjectServiceFactory.Create", protocol);
         Assert.DoesNotContain("new Views.ProtocolObservationsWindow", protocol);
         Assert.DoesNotContain("ShowDialog", protocol);
         Assert.DoesNotContain("dlg.Owner", protocol);
@@ -491,6 +499,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("ConfirmProtocolPreview", dialogService);
         Assert.Contains("ShowPdfExportFailed", dialogService);
         Assert.Contains("DialogHost.Current", dialogFactory);
+        Assert.Contains("TryShow", previewWorkflowService);
+        Assert.Contains("CodingProtocolDialogServiceFactory.Create", previewWorkflowServiceFactory);
+        Assert.Contains("PlayerShellProjectServiceFactory.Create", previewWorkflowServiceFactory);
+        Assert.Contains("CodingProjectFolderResolver.ResolveNullable", previewWorkflowServiceFactory);
+        Assert.Contains("CodingProtocolPreviewWindowServiceFactory.Create", previewWorkflowServiceFactory);
         Assert.Contains("ProtocolObservationsWindow", previewWindowService);
         Assert.Contains("ShowDialog", previewWindowService);
         Assert.Contains("new CodingProtocolPreviewWindowService", previewWindowServiceFactory);
@@ -503,6 +516,7 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
         var applyPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Apply.cs");
+        var previewWorkflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWorkflowServiceFactory.cs");
         var servicePath = Path.Combine(uiRoot, "Player", "PlayerShellProjectService.cs");
         var factoryPath = Path.Combine(uiRoot, "Player", "PlayerShellProjectServiceFactory.cs");
         var shellPath = Path.Combine(uiRoot, "ViewModels", "ShellViewModel.cs");
@@ -512,11 +526,13 @@ public sealed class UiArchitectureGuardTests
 
         var protocol = File.ReadAllText(protocolPath);
         var apply = File.ReadAllText(applyPath);
+        var previewWorkflowFactory = File.ReadAllText(previewWorkflowFactoryPath);
         var service = File.ReadAllText(servicePath);
         var factory = File.ReadAllText(factoryPath);
         var shell = File.ReadAllText(shellPath);
 
-        Assert.Contains("PlayerShellProjectServiceFactory.Create", protocol);
+        Assert.DoesNotContain("PlayerShellProjectServiceFactory.Create", protocol);
+        Assert.Contains("PlayerShellProjectServiceFactory.Create", previewWorkflowFactory);
         Assert.Contains("PlayerShellProjectServiceFactory.Create", apply);
         Assert.DoesNotContain("App.Current", protocol + apply);
         Assert.Contains("IPlayerShellProjectContext", service);

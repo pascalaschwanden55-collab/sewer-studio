@@ -52,23 +52,15 @@ public partial class PlayerWindow
     {
         if (_haltungRecord == null || _serviceProvider == null) return;
 
-        var showProtocol = CodingProtocolDialogServiceFactory.Create()
-            .ConfirmProtocolPreview(doc.Current.Entries.Count);
-
-        if (!showProtocol) return;
-
-        var project = PlayerShellProjectServiceFactory.Create().GetCurrentProject();
-        if (project == null) return;
-
-        var projectFolder = CodingProjectFolderResolver.ResolveNullable(_serviceProvider.Settings.LastProjectPath);
-        CodingProtocolPreviewWindowServiceFactory.Create().Show(
+        var opened = CodingProtocolPreviewWorkflowServiceFactory.Create().TryShow(
             this,
             _haltungRecord,
-            project,
+            doc,
             _serviceProvider,
             _videoPath,
-            projectFolder,
+            _serviceProvider.Settings.LastProjectPath,
             MarkProjectDirtyForCoding);
+        if (!opened) return;
 
         // Nach Bearbeitung: Primaere Schaeden erneut synchronisieren.
         if (_haltungRecord.Protocol != null)
