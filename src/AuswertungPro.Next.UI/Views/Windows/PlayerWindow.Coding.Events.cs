@@ -46,8 +46,7 @@ public partial class PlayerWindow
 
             if (entry is not null)
             {
-                var createdEvent = _codingSessionService!.AddEvent(entry, _codingVm.CurrentOverlay);
-                createdEvent.AiContext = CodingManualEventFactory.CreateUnconfirmedContext(entry.Code);
+                var createdEvent = CodingManualEventAppender.Apply(entry, _codingVm.CurrentOverlay, _codingSessionService!);
 
                 RefreshCodingEventsList();
                 LstCodingEvents.SelectedItem = createdEvent;
@@ -83,8 +82,7 @@ public partial class PlayerWindow
         if (fotoPath != null)
             draft.Entry.FotoPaths.Add(fotoPath);
 
-        var manualEvent = _codingSessionService!.AddEvent(draft.Entry, _codingVm.CurrentOverlay);
-        manualEvent.AiContext = draft.AiContext;
+        CodingManualEventAppender.Apply(draft, _codingVm.CurrentOverlay, _codingSessionService!);
         RefreshCodingEventsList();
 
         _codingSchemaManager.Cancel();

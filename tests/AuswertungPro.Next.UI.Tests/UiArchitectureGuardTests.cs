@@ -2457,11 +2457,15 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingManualEventFactory.cs");
+        var appenderPath = Path.Combine(uiRoot, "Ai", "CodingManualEventAppender.cs");
 
         var events = File.ReadAllText(eventsPath);
         var factory = File.ReadAllText(factoryPath);
+        var appender = File.Exists(appenderPath) ? File.ReadAllText(appenderPath) : "";
 
-        Assert.Contains("CodingManualEventFactory.CreateUnconfirmedContext", events);
+        Assert.Contains("CodingManualEventAppender.Apply", events);
+        Assert.DoesNotContain("CodingManualEventFactory.CreateUnconfirmedContext", events);
+        Assert.Contains("CodingManualEventFactory.CreateUnconfirmedContext", appender);
         Assert.DoesNotContain("new CodingEventAiContext", events);
         Assert.Contains("public static CodingEventAiContext CreateUnconfirmedContext", factory);
     }
