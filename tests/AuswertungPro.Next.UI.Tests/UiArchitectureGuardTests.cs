@@ -1101,6 +1101,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void UpdatePipelineHealthDetails", monitoring);
         Assert.Contains("private void StopPipelineHealthMonitor", monitoring);
         Assert.Contains("PipelineHealthUiStateFactory.Create", monitoring);
+        Assert.DoesNotContain("_ = _codingHealthMonitor.StopAsync()", monitoring);
+        Assert.Contains("_codingHealthMonitor.StopAsync().SafeFireAndForget(\"PipelineHealthMonitorStop\")", monitoring);
     }
 
     [Fact]
@@ -3604,6 +3606,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private bool TryHandleCodingStandardMouseMove", standard);
         Assert.Contains("private bool TryHandleCodingStandardMouseUp", standard);
         Assert.Contains("HandleMarkDrawingComplete", standard);
+        Assert.DoesNotContain("_ = AnalyzeWithOverlayHintAsync", standard);
+        Assert.Contains("AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay).SafeFireAndForget(\"OverlayHint\")", standard);
     }
 
     [Fact]

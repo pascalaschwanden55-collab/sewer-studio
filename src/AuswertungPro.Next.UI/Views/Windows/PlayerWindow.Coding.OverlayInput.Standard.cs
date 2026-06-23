@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -73,7 +74,7 @@ public partial class PlayerWindow
 
             // Wenn Auto-KI aktiv: Overlay-Zeichnung -> KI analysiert markierte Stelle
             if (BtnCodingLiveAi.IsChecked == true)
-                _ = AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay);
+                AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay).SafeFireAndForget("OverlayHint");
         }
         else
         {

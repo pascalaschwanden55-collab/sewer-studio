@@ -2,6 +2,7 @@ using System;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -54,7 +55,7 @@ public partial class PlayerWindow
         if (_codingHealthMonitor != null)
         {
             _codingHealthMonitor.StatusChanged -= OnPipelineHealthChanged;
-            _ = _codingHealthMonitor.StopAsync();
+            _codingHealthMonitor.StopAsync().SafeFireAndForget("PipelineHealthMonitorStop");
             _codingHealthMonitor = null;
         }
     }
