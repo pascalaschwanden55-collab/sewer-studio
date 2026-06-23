@@ -955,16 +955,27 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var osdPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Osd.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingOsdTimerPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "OSD-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var events = File.ReadAllText(eventsPath);
+        var osd = File.ReadAllText(osdPath);
         var policy = File.ReadAllText(policyPath);
+        var timerStart = osd.IndexOf("private void StartCodingOsdTimer", StringComparison.Ordinal);
+        var timerEnd = osd.IndexOf("private void StopCodingOsdTimer", StringComparison.Ordinal);
 
-        Assert.Contains("CodingOsdTimerPolicy.ShouldReadMeter", events);
-        Assert.DoesNotContain("!_isCodingMode || _codingOsdReading || _codingIsAnalyzing", events);
-        Assert.DoesNotContain("_codingLiveDetection == null) return", events);
+        Assert.True(timerStart >= 0 && timerEnd > timerStart, "OSD-Timer-Block wurde nicht gefunden.");
+        var timerBlock = osd[timerStart..timerEnd];
+
+        Assert.DoesNotContain("private void StartCodingOsdTimer", events);
+        Assert.DoesNotContain("private void StopCodingOsdTimer", events);
+        Assert.Contains("private void StartCodingOsdTimer", osd);
+        Assert.Contains("private void StopCodingOsdTimer", osd);
+        Assert.Contains("CodingOsdTimerPolicy.ShouldReadMeter", timerBlock);
+        Assert.DoesNotContain("!_isCodingMode || _codingOsdReading || _codingIsAnalyzing", timerBlock);
+        Assert.DoesNotContain("_codingLiveDetection == null) return", timerBlock);
         Assert.Contains("public static bool ShouldReadMeter", policy);
     }
 
