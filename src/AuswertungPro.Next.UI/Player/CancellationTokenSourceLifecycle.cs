@@ -4,6 +4,11 @@ namespace AuswertungPro.Next.UI.Player;
 
 public static class CancellationTokenSourceLifecycle
 {
+    public static void CancelIfPresent(CancellationTokenSource? current)
+    {
+        current?.Cancel();
+    }
+
     public static CancellationTokenSource CancelPreviousAndCreate(CancellationTokenSource? current)
     {
         current?.Cancel();

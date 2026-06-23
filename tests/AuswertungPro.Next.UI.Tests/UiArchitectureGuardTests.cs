@@ -3540,6 +3540,7 @@ public sealed class UiArchitectureGuardTests
         var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
         var exitPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
         var wiringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Wiring.cs");
+        var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Lifecycle.cs");
         var helperPath = Path.Combine(uiRoot, "Player", "CancellationTokenSourceLifecycle.cs");
 
         Assert.True(File.Exists(helperPath), "CancellationTokenSource-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -3547,14 +3548,19 @@ public sealed class UiArchitectureGuardTests
         var ai = File.ReadAllText(aiPath);
         var exit = File.ReadAllText(exitPath);
         var wiring = File.ReadAllText(wiringPath);
+        var playback = File.ReadAllText(playbackPath);
         var helper = File.Exists(helperPath) ? File.ReadAllText(helperPath) : "";
-        var playerWindowText = ai + exit + wiring;
+        var playerWindowText = ai + exit + wiring + playback;
 
         Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate", ai);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", exit);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", wiring);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_detectionCts)", playback);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_codingAnalysisCts)", playback);
         Assert.DoesNotContain("_codingAnalysisCts?.Cancel();", playerWindowText);
         Assert.DoesNotContain("_codingAnalysisCts?.Dispose();", playerWindowText);
+        Assert.DoesNotContain("_detectionCts?.Cancel();", playerWindowText);
+        Assert.Contains("public static void CancelIfPresent", helper);
         Assert.Contains("public static CancellationTokenSource CancelPreviousAndCreate", helper);
         Assert.Contains("public static CancellationTokenSource? CancelDisposeAndClear", helper);
     }

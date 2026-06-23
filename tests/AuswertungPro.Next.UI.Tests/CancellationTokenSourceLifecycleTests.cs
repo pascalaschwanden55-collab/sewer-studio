@@ -1,4 +1,5 @@
 using AuswertungPro.Next.UI.Player;
+using System.Reflection;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -36,5 +37,39 @@ public sealed class CancellationTokenSourceLifecycleTests
         var current = CancellationTokenSourceLifecycle.CancelDisposeAndClear(null);
 
         Assert.Null(current);
+    }
+
+    [Fact]
+    public void CancelIfPresent_cancels_source_without_disposing_it()
+    {
+        var method = typeof(CancellationTokenSourceLifecycle).GetMethod(
+            "CancelIfPresent",
+            BindingFlags.Public | BindingFlags.Static,
+            binder: null,
+            types: [typeof(CancellationTokenSource)],
+            modifiers: null);
+        Assert.NotNull(method);
+
+        using var source = new CancellationTokenSource();
+        var token = source.Token;
+
+        method.Invoke(null, [source]);
+
+        Assert.True(token.IsCancellationRequested);
+        _ = source.Token;
+    }
+
+    [Fact]
+    public void CancelIfPresent_handles_missing_source()
+    {
+        var method = typeof(CancellationTokenSourceLifecycle).GetMethod(
+            "CancelIfPresent",
+            BindingFlags.Public | BindingFlags.Static,
+            binder: null,
+            types: [typeof(CancellationTokenSource)],
+            modifiers: null);
+        Assert.NotNull(method);
+
+        method.Invoke(null, [null]);
     }
 }
