@@ -52,14 +52,10 @@ public partial class PlayerWindow
         }
 
         // Warmup-Puffer nachtraeglich verarbeiten (erste Ready-Transition)
-        if (_pendingWarmupResult != null)
-        {
-            var buffered = _pendingWarmupResult;
+        var warmupSelection = CodingWarmupResultBufferPolicy.Select(result, _pendingWarmupResult);
+        if (warmupSelection.ShouldClearPending)
             _pendingWarmupResult = null;
-            // Bestes gepuffertes Ergebnis verwenden wenn aktuelles leer ist
-            if (result.Findings.Count == 0 && buffered.Findings.Count > 0)
-                result = buffered;
-        }
+        result = warmupSelection.Result;
 
         // â”€â”€ Ab hier: Frame ist bereit fuer Analyse â”€â”€
 

@@ -1266,13 +1266,16 @@ public sealed class UiArchitectureGuardTests
         var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
         var filteringPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Filtering.cs");
         var meterPolicyPath = Path.Combine(uiRoot, "Ai", "CodingResultMeterReadingPolicy.cs");
+        var warmupPolicyPath = Path.Combine(uiRoot, "Ai", "CodingWarmupResultBufferPolicy.cs");
 
         Assert.True(File.Exists(filteringPath), "KI-Finding-Filteradapter sollen aus dem allgemeinen AiEvents-Partial heraus.");
         Assert.True(File.Exists(meterPolicyPath), "OSD-Meteruebernahme aus KI-Ergebnissen muss ausserhalb der PlayerWindow-Partials entschieden werden.");
+        Assert.True(File.Exists(warmupPolicyPath), "Warmup-Puffer-Auswahl muss ausserhalb der PlayerWindow-Partials entschieden werden.");
 
         var aiEvents = File.ReadAllText(aiEventsPath);
         var filtering = File.ReadAllText(filteringPath);
         var meterPolicy = File.ReadAllText(meterPolicyPath);
+        var warmupPolicy = File.ReadAllText(warmupPolicyPath);
 
         Assert.DoesNotContain("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", aiEvents);
         Assert.DoesNotContain("private static string? LookupVsaLabel", aiEvents);
@@ -1282,6 +1285,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("MeterReading.Value <= 500", aiEvents);
         Assert.DoesNotContain("MeterReading.HasValue &&", aiEvents);
         Assert.Contains("CodingResultMeterReadingPolicy.TryAccept", aiEvents);
+        Assert.DoesNotContain("var buffered = _pendingWarmupResult", aiEvents);
+        Assert.DoesNotContain("buffered.Findings.Count", aiEvents);
+        Assert.Contains("CodingWarmupResultBufferPolicy.Select", aiEvents);
         Assert.Contains("AiFindingDisplayItemFactory.ForFindings(validFindings)", aiEvents);
         Assert.Contains("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", filtering);
         Assert.Contains("private static string? LookupVsaLabel", filtering);
@@ -1291,6 +1297,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingFindingCodeResolver.Resolve", filtering);
         Assert.Contains("CodingKnownFindingPolicy.IsKnown", filtering);
         Assert.Contains("public static bool TryAccept", meterPolicy);
+        Assert.Contains("public static CodingWarmupResultSelection Select", warmupPolicy);
     }
 
     [Fact]
