@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 
@@ -22,8 +21,7 @@ public partial class PlayerWindow
         double meter = ResolveCodingMeterForFrame(result.TimestampSeconds, result.MeterReading);
         var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
         bool anyAdded = false;
-        CodingEvent? firstUnsure = null;
-        QualityGateResult? firstUnsureGate = null;
+        var confirmationTracker = new CodingLiveFindingConfirmationTracker();
 
         // BCD wird NICHT mehr automatisch erzeugt - nur durch Eingabemarker oder Qwen-Erkennung.
         // EnsureRohranfangExists(meter, videoTime, ref anyAdded);
@@ -99,14 +97,7 @@ public partial class PlayerWindow
 
             anyAdded = true;
 
-            // Zur Bestaetigung vorlegen, wenn die KI unsicher ist (gelb/rot) ODER
-            // der Befund kritisch ist (Severity >= 4) - kritische Schaeden duerfen
-            // niemals stillschweigend uebernommen werden.
-            if (CodingLiveFindingAcceptancePolicy.NeedsConfirmation(gateResult, finding) && firstUnsure == null)
-            {
-                firstUnsure = codingEvent;
-                firstUnsureGate = gateResult;
-            }
+            confirmationTracker.Observe(codingEvent, gateResult, finding);
         }
 
         if (anyAdded)
@@ -118,7 +109,7 @@ public partial class PlayerWindow
             UpdateToolBadge();
         }
 
-        if (firstUnsure != null && firstUnsureGate != null)
-            PauseAndAskConfirmation(firstUnsure, firstUnsureGate);
+        if (confirmationTracker is { Event: not null, Gate: not null })
+            PauseAndAskConfirmation(confirmationTracker.Event, confirmationTracker.Gate);
     }
 }
