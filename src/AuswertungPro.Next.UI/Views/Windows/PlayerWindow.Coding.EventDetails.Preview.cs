@@ -1,7 +1,5 @@
 using System;
-using System.IO;
 using System.Windows;
-using System.Windows.Media.Imaging;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
@@ -14,34 +12,20 @@ public partial class PlayerWindow
     {
         try
         {
-            var previewPath = CodingDefectPreviewService.BuildPreviewImagePath(ev);
-            if (string.IsNullOrWhiteSpace(previewPath) || !File.Exists(previewPath))
-            {
-                ImgInlineEvidencePreview.Source = null;
-                ImgInlineEvidencePreview.Visibility = Visibility.Collapsed;
-                TxtInlineEvidencePreviewStatus.Text = "Kein Bild";
-                TxtInlineEvidencePreviewStatus.Visibility = Visibility.Visible;
-                return;
-            }
-
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.UriSource = new System.Uri(previewPath, UriKind.Absolute);
-            image.EndInit();
-            image.Freeze();
-
-            ImgInlineEvidencePreview.Source = image;
-            ImgInlineEvidencePreview.Visibility = Visibility.Visible;
-            TxtInlineEvidencePreviewStatus.Visibility = Visibility.Collapsed;
+            ApplyInlineEvidencePreviewState(CodingInlineEvidencePreviewService.Build(ev));
         }
         catch (Exception ex)
         {
-            ImgInlineEvidencePreview.Source = null;
-            ImgInlineEvidencePreview.Visibility = Visibility.Collapsed;
-            TxtInlineEvidencePreviewStatus.Text = "Bild nicht ladbar";
-            TxtInlineEvidencePreviewStatus.Visibility = Visibility.Visible;
+            ApplyInlineEvidencePreviewState(CodingInlineEvidencePreviewService.LoadFailed);
             PlayerTrace.WriteLine($"[CodingPreview] {ex.Message}");
         }
+    }
+
+    private void ApplyInlineEvidencePreviewState(CodingInlineEvidencePreviewState state)
+    {
+        ImgInlineEvidencePreview.Source = state.Source;
+        ImgInlineEvidencePreview.Visibility = state.ImageVisible ? Visibility.Visible : Visibility.Collapsed;
+        TxtInlineEvidencePreviewStatus.Text = state.StatusText ?? "";
+        TxtInlineEvidencePreviewStatus.Visibility = state.StatusVisible ? Visibility.Visible : Visibility.Collapsed;
     }
 }
