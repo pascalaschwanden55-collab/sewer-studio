@@ -346,8 +346,7 @@ public partial class PlayerWindow
         try { _timer.Stop(); } catch { }
         try { _scrubTimer.Stop(); } catch { }
         try { _detectionTimer?.Stop(); } catch { }
-        try { _codingLiveAiTimer?.Stop(); } catch { }
-        try { _codingLiveAiBlinkTimer?.Stop(); } catch { }
+        try { _codingLiveAiTimers?.StopTimers(); } catch { }
         try { _codingOsdTimer?.Stop(); } catch { }
     }
 

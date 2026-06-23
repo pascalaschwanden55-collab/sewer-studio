@@ -671,23 +671,56 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingLiveAiTimerController.cs");
         var displayPolicyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
         var settingsPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiTimerSettings.cs");
 
         Assert.True(File.Exists(settingsPath), "Live-AI-Timer-Intervalle muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controllerPath), "Live-AI-Timer-Nutzung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
+        var controller = File.ReadAllText(controllerPath);
         var displayPolicy = File.ReadAllText(displayPolicyPath);
         var settings = File.ReadAllText(settingsPath);
 
-        Assert.Contains("CodingLiveAiTimerSettings.AnalysisInterval", ai);
-        Assert.Contains("CodingLiveAiTimerSettings.BlinkInterval", ai);
+        Assert.Contains("CodingLiveAiTimerSettings.AnalysisInterval", controller);
+        Assert.Contains("CodingLiveAiTimerSettings.BlinkInterval", controller);
         Assert.DoesNotContain("Interval = TimeSpan.FromSeconds(5)", ai);
         Assert.DoesNotContain("Interval = TimeSpan.FromMilliseconds(800)", ai);
         Assert.Contains("CodingLiveAiTimerSettings.FormatAnalysisIntervalText", displayPolicy);
         Assert.DoesNotContain("\"Intervall alle 5 Sekunden", displayPolicy);
         Assert.Contains("public static TimeSpan AnalysisInterval", settings);
         Assert.Contains("public static TimeSpan BlinkInterval", settings);
+    }
+
+    [Fact]
+    public void PlayerWindow_live_ai_timer_wiring_lives_in_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
+        var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
+        var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingLiveAiTimerController.cs");
+
+        Assert.True(File.Exists(controllerPath), "Live-AI-Timer-Wiring muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var ai = File.ReadAllText(aiPath);
+        var coding = File.ReadAllText(codingPath);
+        var playback = File.ReadAllText(playbackPath);
+        var controller = File.ReadAllText(controllerPath);
+
+        Assert.Contains("CodingLiveAiTimerController", coding);
+        Assert.Contains("_codingLiveAiTimers.Start()", ai);
+        Assert.Contains("_codingLiveAiTimers.Stop(resetButton: true)", ai);
+        Assert.Contains("_codingLiveAiTimers?.Stop(resetButton: true)", coding);
+        Assert.Contains("_codingLiveAiTimers?.StopTimers()", playback);
+        Assert.DoesNotContain("_codingLiveAiBlinkTimer", coding + ai + playback);
+        Assert.DoesNotContain("_codingLiveAiBlinkState", coding + ai + playback);
+        Assert.DoesNotContain("new DispatcherTimer { Interval = CodingLiveAiTimerSettings", ai);
+        Assert.Contains("public sealed class CodingLiveAiTimerController", controller);
+        Assert.Contains("CodingLiveAiButtonDisplayPolicy.BlinkColor", controller);
     }
 
     [Fact]

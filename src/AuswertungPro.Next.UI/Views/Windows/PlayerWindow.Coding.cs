@@ -75,10 +75,8 @@ public partial class PlayerWindow
     // uebersetzt in Anweisungen). Dieses Feld haelt nur den Zustand fuer die laufende Session.
     private readonly AuswertungPro.Next.Application.Ai.StreckenschadenTracker _streckenTracker = new();
 
-    // Live-KI Timer (automatische Analyse alle 5s)
-    private DispatcherTimer? _codingLiveAiTimer;
-    private DispatcherTimer? _codingLiveAiBlinkTimer;
-    private bool _codingLiveAiBlinkState;
+    // Live-KI Timer (automatische Analyse + Aktiv-Blinken)
+    private CodingLiveAiTimerController? _codingLiveAiTimers;
     private QualityGateService? _codingQualityGate;
 
     // Eingabemarker-Zustand
@@ -332,8 +330,7 @@ public partial class PlayerWindow
         // Timer stoppen
         StopCodingOsdTimer();
         DisposeCodingOsdMeterService();
-        _codingLiveAiTimer?.Stop();
-        _codingLiveAiTimer = null;
+        _codingLiveAiTimers?.Stop(resetButton: true);
         StopCodingAiPulse();
 
         // Pipeline-Health-Monitor beenden (Kontrollsicherung)

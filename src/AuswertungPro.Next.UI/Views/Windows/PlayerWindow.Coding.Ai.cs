@@ -8,9 +8,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Evaluation;
 using AuswertungPro.Next.Application.Ai.QualityGate;
@@ -484,23 +481,14 @@ public partial class PlayerWindow
 
     private void CodingLiveAi_Click(object sender, RoutedEventArgs e)
     {
+        _codingLiveAiTimers ??= new CodingLiveAiTimerController(
+            BtnCodingLiveAi,
+            CodingLiveAiTimer_Tick,
+            () => !_closing && _player is not null);
+
         if (BtnCodingLiveAi.IsChecked == true)
         {
-            _codingLiveAiTimer = new DispatcherTimer { Interval = CodingLiveAiTimerSettings.AnalysisInterval };
-            _codingLiveAiTimer.Tick += CodingLiveAiTimer_Tick;
-            _codingLiveAiTimer.Start();
-
-            // Gruen blinken wenn aktiv
-            _codingLiveAiBlinkTimer = new DispatcherTimer { Interval = CodingLiveAiTimerSettings.BlinkInterval };
-            _codingLiveAiBlinkTimer.Tick += (_, _) =>
-            {
-                if (_closing || _player is null) return;
-                _codingLiveAiBlinkState = !_codingLiveAiBlinkState;
-                BtnCodingLiveAi.Background = new SolidColorBrush(
-                    CodingLiveAiButtonDisplayPolicy.BlinkColor(_codingLiveAiBlinkState));
-            };
-            _codingLiveAiBlinkTimer.Start();
-            BtnCodingLiveAi.Background = new SolidColorBrush(CodingLiveAiButtonDisplayPolicy.ActiveColor);
+            _codingLiveAiTimers.Start();
 
             var status = CodingLiveAiButtonDisplayPolicy.BuildStatus(
                 isActive: true,
@@ -509,13 +497,7 @@ public partial class PlayerWindow
         }
         else
         {
-            _codingLiveAiTimer?.Stop();
-            _codingLiveAiTimer = null;
-
-            // Blinken stoppen, Standardfarbe zuruecksetzen
-            _codingLiveAiBlinkTimer?.Stop();
-            _codingLiveAiBlinkTimer = null;
-            BtnCodingLiveAi.ClearValue(System.Windows.Controls.Control.BackgroundProperty);
+            _codingLiveAiTimers.Stop(resetButton: true);
 
             var status = CodingLiveAiButtonDisplayPolicy.BuildStatus(
                 isActive: false,
