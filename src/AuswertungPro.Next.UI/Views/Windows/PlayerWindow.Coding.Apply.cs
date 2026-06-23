@@ -28,19 +28,12 @@ public partial class PlayerWindow
         var eventEntryCount = _codingVm.Events.Count(
             ev => !string.IsNullOrWhiteSpace(ev.Entry.Code));
 
-        // Schutz vor versehentlichem Leeren einer bestehenden Befundliste.
-        if (eventEntryCount == 0)
+        var emptyGuard = CodingApplyEmptyProtocolGuard.Build(eventEntryCount, doc.Current.Entries);
+        if (emptyGuard.RequiresConfirmation)
         {
-            var aktiveBefunde = doc.Current.Entries.Count(
-                e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code));
-            if (aktiveBefunde > 0)
-            {
-                var uebernehmen = DialogHost.Current.ConfirmWarn(
-                    $"Die Befundliste ist leer.\n\n\"Übernehmen\" würde {aktiveBefunde} bestehende(n) Befund(e) dieser Haltung löschen und die primären Schäden leeren.\n\nWirklich eine leere Codierung übernehmen?",
-                    "Leere Codierung übernehmen?");
-                if (!uebernehmen)
-                    return false;
-            }
+            var uebernehmen = DialogHost.Current.ConfirmWarn(emptyGuard.Message, emptyGuard.Title);
+            if (!uebernehmen)
+                return false;
         }
 
         CodingProtocolRevisionUpdater.ApplyCodingEvents(doc.Current, _codingVm.Events);

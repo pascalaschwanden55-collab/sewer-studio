@@ -1507,15 +1507,22 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var applyPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Apply.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingProtocolRevisionUpdater.cs");
+        var emptyGuardPath = Path.Combine(uiRoot, "Ai", "CodingApplyEmptyProtocolGuard.cs");
 
         Assert.True(File.Exists(policyPath), "Protokoll-Revision-Update muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(emptyGuardPath), "Leere-Codierung-Schutzlogik muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var apply = File.ReadAllText(applyPath);
         var policy = File.ReadAllText(policyPath);
+        var emptyGuard = File.ReadAllText(emptyGuardPath);
 
         Assert.Contains("CodingProtocolRevisionUpdater.ApplyCodingEvents", apply);
+        Assert.Contains("CodingApplyEmptyProtocolGuard.Build", apply);
         Assert.DoesNotContain(".GroupBy(e => e.EntryId)", apply);
+        Assert.DoesNotContain("aktiveBefunde", apply);
+        Assert.DoesNotContain("bestehende(n) Befund", apply);
         Assert.Contains("public static int ApplyCodingEvents", policy);
+        Assert.Contains("public static CodingApplyEmptyProtocolGuardResult Build", emptyGuard);
     }
 
     [Fact]
