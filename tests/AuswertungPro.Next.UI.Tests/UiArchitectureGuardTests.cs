@@ -3382,7 +3382,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private async void CodingPrevious_Click", coding);
         Assert.DoesNotContain("private void SyncVideoToCodingMeter", coding);
         Assert.DoesNotContain("private bool _codingNavPending", coding);
-        Assert.Contains("private async void CodingNext_Click", navigation);
+        Assert.DoesNotContain("private async void CodingNext_Click", navigation);
+        Assert.DoesNotContain("private async void CodingPrevious_Click", navigation);
+        Assert.Contains("private void CodingNext_Click", navigation);
+        Assert.Contains("private void CodingPrevious_Click", navigation);
+        Assert.Contains(".SafeFireAndForget(\"CodingNext\")", navigation);
+        Assert.Contains(".SafeFireAndForget(\"CodingPrevious\")", navigation);
         Assert.Contains("private async Task MoveCodingByCommandAsync", navigation);
         Assert.Contains("CodingVideoSyncPolicy.TryResolveTargetTimeMs", navigation);
     }

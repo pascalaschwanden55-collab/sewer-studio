@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.UI.Player;
 
@@ -84,15 +85,17 @@ public partial class PlayerWindow
         _codingVm.CurrentVideoTime = TimeSpan.FromMilliseconds(_player.Time);
     }
 
-    private async void CodingNext_Click(object sender, RoutedEventArgs e)
-        => await MoveCodingByCommandAsync(
+    private void CodingNext_Click(object sender, RoutedEventArgs e)
+        => MoveCodingByCommandAsync(
             vm => vm.MoveNextCommand.Execute(null),
-            nameof(CodingNext_Click));
+            nameof(CodingNext_Click))
+            .SafeFireAndForget("CodingNext");
 
-    private async void CodingPrevious_Click(object sender, RoutedEventArgs e)
-        => await MoveCodingByCommandAsync(
+    private void CodingPrevious_Click(object sender, RoutedEventArgs e)
+        => MoveCodingByCommandAsync(
             vm => vm.MovePreviousCommand.Execute(null),
-            nameof(CodingPrevious_Click));
+            nameof(CodingPrevious_Click))
+            .SafeFireAndForget("CodingPrevious");
 
     private async Task MoveCodingByCommandAsync(
         Action<CodingSessionViewModel> executeMoveCommand,
