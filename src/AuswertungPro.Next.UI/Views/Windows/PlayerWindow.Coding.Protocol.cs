@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
@@ -98,9 +97,7 @@ public partial class PlayerWindow
         var project = ((ViewModels.ShellViewModel?)App.Current.MainWindow?.DataContext)?.Project;
         if (project == null) return;
 
-        var projectFolder = !string.IsNullOrWhiteSpace(_serviceProvider.Settings.LastProjectPath)
-            ? Path.GetDirectoryName(_serviceProvider.Settings.LastProjectPath)
-            : null;
+        var projectFolder = CodingProtocolProjectFolderResolver.Resolve(_serviceProvider.Settings.LastProjectPath);
 
         var dlg = new Views.ProtocolObservationsWindow(
             _haltungRecord, project, _serviceProvider, _videoPath, projectFolder,

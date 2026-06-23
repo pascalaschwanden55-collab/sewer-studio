@@ -382,19 +382,24 @@ public sealed class UiArchitectureGuardTests
         var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
         var plannerPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfExportPlanner.cs");
         var fileServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfFileService.cs");
+        var projectFolderResolverPath = Path.Combine(uiRoot, "Ai", "CodingProtocolProjectFolderResolver.cs");
 
         Assert.True(File.Exists(plannerPath), "PDF-Exportvorbereitung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(fileServicePath), "PDF-Datei schreiben und oeffnen soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(projectFolderResolverPath), "Projektordner-Aufloesung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var protocol = File.ReadAllText(protocolPath);
         var planner = File.ReadAllText(plannerPath);
         var fileService = File.ReadAllText(fileServicePath);
+        var projectFolderResolver = File.ReadAllText(projectFolderResolverPath);
 
         Assert.Contains("CodingProtocolPdfExportPlanner.Build", protocol);
         Assert.Contains("CodingProtocolPdfFileServiceFactory.Create", protocol);
+        Assert.Contains("CodingProtocolProjectFolderResolver.Resolve", protocol);
         Assert.DoesNotContain("HaltungsprotokollPdfOptions", protocol);
         Assert.DoesNotContain("LogoPathAbs", protocol);
         Assert.DoesNotContain("IncludeHaltungsgrafik", protocol);
+        Assert.DoesNotContain("Path.GetDirectoryName(_serviceProvider.Settings.LastProjectPath)", protocol);
         Assert.DoesNotContain("File.WriteAllBytes", protocol);
         Assert.DoesNotContain("SafeShellOpen.TryOpen", protocol);
         Assert.Contains("public static class CodingProtocolPdfExportPlanner", planner);
@@ -402,6 +407,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("Path.GetDirectoryName", planner);
         Assert.Contains("File.WriteAllBytes", fileService);
         Assert.Contains("SafeShellOpen.TryOpen", fileService);
+        Assert.Contains("Path.GetDirectoryName", projectFolderResolver);
     }
 
     [Fact]
