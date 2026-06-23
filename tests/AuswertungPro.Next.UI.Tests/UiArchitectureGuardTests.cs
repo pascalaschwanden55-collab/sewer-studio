@@ -655,6 +655,32 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_health_monitoring_lives_in_monitoring_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var healthPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Health.cs");
+        var monitoringPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Health.Monitoring.cs");
+
+        Assert.True(File.Exists(monitoringPath), "Pipeline-Health-Monitoring soll aus dem Initialisierungs-Partial heraus.");
+
+        var health = File.ReadAllText(healthPath);
+        var monitoring = File.ReadAllText(monitoringPath);
+
+        Assert.Contains("private async Task InitCodingAi", health);
+        Assert.DoesNotContain("private void OnPipelineHealthChanged", health);
+        Assert.DoesNotContain("private void ApplyPipelineHealth", health);
+        Assert.DoesNotContain("private void UpdatePipelineHealthDetails", health);
+        Assert.DoesNotContain("private void StopPipelineHealthMonitor", health);
+        Assert.Contains("private void OnPipelineHealthChanged", monitoring);
+        Assert.Contains("private void ApplyPipelineHealth", monitoring);
+        Assert.Contains("private void UpdatePipelineHealthDetails", monitoring);
+        Assert.Contains("private void StopPipelineHealthMonitor", monitoring);
+        Assert.Contains("PipelineHealthUiStateFactory.Create", monitoring);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_classifier_results_live_in_classifier_partial()
     {
         var root = FindRepositoryRoot();
