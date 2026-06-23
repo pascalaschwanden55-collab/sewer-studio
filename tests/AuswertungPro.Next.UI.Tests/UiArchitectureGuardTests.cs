@@ -1372,6 +1372,31 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_detection_confirmation_actions_live_in_actions_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var confirmationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.cs");
+        var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.Actions.cs");
+
+        Assert.True(File.Exists(actionsPath), "LiveDetection-Bestaetigungsaktionen sollen aus dem Anzeige-Partial heraus.");
+
+        var confirmation = File.ReadAllText(confirmationPath);
+        var actions = File.ReadAllText(actionsPath);
+
+        Assert.Contains("private void ShowDetectionConfirmation", confirmation);
+        Assert.Contains("private void ResumeDetection", confirmation);
+        Assert.DoesNotContain("private async void DetectionAccept_Click", confirmation);
+        Assert.DoesNotContain("private async void DetectionCorrect_Click", confirmation);
+        Assert.DoesNotContain("private void DetectionSkip_Click", confirmation);
+        Assert.Contains("private async void DetectionAccept_Click", actions);
+        Assert.Contains("private async void DetectionCorrect_Click", actions);
+        Assert.Contains("private void DetectionSkip_Click", actions);
+        Assert.Contains("TrainingAnnotationExportServiceFactory.Create", actions);
+    }
+
+    [Fact]
     public void PlayerWindow_live_detection_timer_gate_lives_in_policy()
     {
         var root = FindRepositoryRoot();
