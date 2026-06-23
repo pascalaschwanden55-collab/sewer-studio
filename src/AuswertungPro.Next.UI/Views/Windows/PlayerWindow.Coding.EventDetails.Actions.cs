@@ -76,9 +76,9 @@ public partial class PlayerWindow
             return;
 
         // Ablehnen = Eintrag komplett entfernen, nicht nur Status setzen.
-        _codingSessionService?.RemoveEvent(ev.EventId);
-        _codingVm.Events.Remove(ev);
-        _codingVm.SelectedDefect = null;
+        var deleteResult = CodingEventDeleteApplier.Apply(ev, _codingSessionService, _codingVm.Events, _codingVm.SelectedDefect);
+        if (deleteResult.ShouldClearSelectedDefect)
+            _codingVm.SelectedDefect = null;
         HideInlineDefectDetail();
         RefreshCodingEventsList();
         FadeOutAiOverlayAfterAction();
