@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Threading;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
 using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
@@ -70,8 +70,9 @@ public partial class PlayerWindow
             importEvent.MeterAtCapture);
         OsdMeterBadge.Visibility = Visibility.Visible;
         TxtOsdMeter.Text = badge.Text;
-        var resetTimer = new DispatcherTimer { Interval = badge.AutoHideDelay };
-        resetTimer.Tick += (_, _) => { OsdMeterBadge.Visibility = Visibility.Collapsed; resetTimer.Stop(); };
+        var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(
+            badge.AutoHideDelay,
+            () => OsdMeterBadge.Visibility = Visibility.Collapsed);
         resetTimer.Start();
         return true;
     }

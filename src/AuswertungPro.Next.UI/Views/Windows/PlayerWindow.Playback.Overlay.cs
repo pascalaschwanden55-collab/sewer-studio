@@ -1,5 +1,4 @@
 using System;
-using System.Windows.Threading;
 using AuswertungPro.Next.UI.Player;
 using LibVLCSharp.Shared;
 
@@ -31,14 +30,12 @@ public partial class PlayerWindow
             _player.SetMarqueeInt(VideoMarqueeOption.Opacity, marquee.Opacity);
             _player.SetMarqueeString(VideoMarqueeOption.Text, marquee.Text);
 
-            var t = new DispatcherTimer { Interval = duration };
-            t.Tick += (_, __) =>
+            var t = PlayerWindowTimerFactory.CreateOneShotTimer(duration, () =>
             {
-                t.Stop();
                 AuswertungPro.Next.Application.Common.BestEffort.Try(
                     () => _player.SetMarqueeInt(VideoMarqueeOption.Enable, PlayerMarqueeOverlayPolicy.DisabledEnable),
                     "VLC: Marquee deaktivieren");
-            };
+            });
             t.Start();
         }
         catch

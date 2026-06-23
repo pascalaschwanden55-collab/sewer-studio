@@ -1,6 +1,5 @@
 using System;
 using System.Windows;
-using System.Windows.Threading;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -41,13 +40,11 @@ public partial class PlayerWindow
         if (_player != null && !_playbackDisposed && _player.IsPlaying)
             _player.SetPause(true);
 
-        var hideTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-        hideTimer.Tick += (_, _) =>
+        var hideTimer = PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromSeconds(5), () =>
         {
-            hideTimer.Stop();
             if (!_isDetecting)
                 LiveDetectionStatusText.Visibility = Visibility.Collapsed;
-        };
+        });
         hideTimer.Start();
     }
 }

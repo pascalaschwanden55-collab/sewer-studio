@@ -39,4 +39,13 @@ public sealed class PlayerWindowTimerFactoryTests
         Assert.Equal(TimeSpan.FromSeconds(3), timer.Interval);
         Assert.False(timer.IsEnabled);
     }
+
+    [Fact]
+    public void CreateOneShotTimer_uses_requested_interval_and_starts_disabled()
+    {
+        var timer = PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromMilliseconds(800), () => { });
+
+        Assert.Equal(TimeSpan.FromMilliseconds(800), timer.Interval);
+        Assert.False(timer.IsEnabled);
+    }
 }

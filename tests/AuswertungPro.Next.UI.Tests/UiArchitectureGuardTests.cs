@@ -413,7 +413,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerWindowTimerFactory.CreateScrubTimer", wiring);
         Assert.DoesNotContain("TimeSpan.FromMilliseconds(250)", wiring);
         Assert.DoesNotContain("TimeSpan.FromMilliseconds(60)", wiring);
+        foreach (var playerWindowPartial in Directory.GetFiles(Path.Combine(uiRoot, "Views", "Windows"), "PlayerWindow*.cs"))
+        {
+            Assert.DoesNotContain("new DispatcherTimer", File.ReadAllText(playerWindowPartial));
+        }
         Assert.Contains("public static class PlayerWindowTimerFactory", factory);
+        Assert.Contains("CreateOneShotTimer", factory);
         Assert.Contains("TimeSpan.FromMilliseconds(250)", factory);
         Assert.Contains("TimeSpan.FromMilliseconds(60)", factory);
     }

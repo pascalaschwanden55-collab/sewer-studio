@@ -30,16 +30,13 @@ public partial class PlayerWindow
     {
         if (_detectionAutoHideTimer == null)
         {
-            _detectionAutoHideTimer = new DispatcherTimer
+            _detectionAutoHideTimer = PlayerWindowTimerFactory.CreateOneShotTimer(
+                TimeSpan.FromSeconds(3),
+                () =>
             {
-                Interval = TimeSpan.FromSeconds(3)
-            };
-            _detectionAutoHideTimer.Tick += (s, e) =>
-            {
-                _detectionAutoHideTimer!.Stop();
                 DetectionCanvas.Children.Clear();
                 DetectionOverlayGrid.Visibility = Visibility.Collapsed;
-            };
+            });
         }
         _detectionAutoHideTimer.Stop();
         _detectionAutoHideTimer.Start();
@@ -54,17 +51,15 @@ public partial class PlayerWindow
         // Sofort neu rendern (zeigt gruen/rot je nach Decision)
         RenderAiOverlays();
         // Nach 800ms die KI-Overlays entfernen
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
-        timer.Tick += (_, _) =>
+        var timer = PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromMilliseconds(800), () =>
         {
-            timer.Stop();
             // Alle ai_overlay-Elemente entfernen
             var toRemove = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
                 .Where(el => el.Tag is string s && s.StartsWith(OverlayTags.AiPrefix))
                 .ToList();
             foreach (var el in toRemove)
                 CodingOverlayCanvas.Children.Remove(el);
-        };
+        });
         timer.Start();
     }
 }

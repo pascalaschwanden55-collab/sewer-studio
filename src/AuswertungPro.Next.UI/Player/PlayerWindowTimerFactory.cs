@@ -25,6 +25,17 @@ public static class PlayerWindowTimerFactory
     public static DispatcherTimer CreateCodingOsdTimer(EventHandler onTick)
         => Create(TimeSpan.FromSeconds(3), onTick);
 
+    public static DispatcherTimer CreateOneShotTimer(TimeSpan interval, Action onElapsed)
+    {
+        DispatcherTimer? timer = null;
+        timer = Create(interval, () =>
+        {
+            timer!.Stop();
+            onElapsed();
+        });
+        return timer;
+    }
+
     private static DispatcherTimer Create(TimeSpan interval, Action onTick)
     {
         var timer = new DispatcherTimer { Interval = interval };

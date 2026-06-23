@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Threading;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -72,15 +71,13 @@ public partial class PlayerWindow
         if (!resetAfterDelay)
             return;
 
-        var resetTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-        resetTimer.Tick += (_, _) =>
+        var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromSeconds(3), () =>
         {
-            resetTimer.Stop();
             if (_codingLastOsdMeter.HasValue)
                 TxtOsdMeter.Text = CodingOsdBadgeDisplayPolicy.BuildMeterText(_codingLastOsdMeter.Value);
             else
                 OsdMeterBadge.Visibility = Visibility.Collapsed;
-        };
+        });
         resetTimer.Start();
     }
 }
