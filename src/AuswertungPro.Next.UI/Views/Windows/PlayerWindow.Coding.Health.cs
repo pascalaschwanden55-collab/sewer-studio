@@ -1,13 +1,7 @@
 using System;
-using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Infrastructure.Ai;
-using AuswertungPro.Next.Infrastructure.Ai.Ollama;
-using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
-using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Services;
-
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -19,11 +13,10 @@ public partial class PlayerWindow
         try
         {
             var platformConfig = new AppSettingsAiSettingsProvider().Load();
-            var config = platformConfig.ToRuntimeSettings();
-            _codingPipelineConfig = _serviceProvider is not null
-                ? _serviceProvider.PipelineCfg
-                : platformConfig.ToPipelineConfig();
-            _codingAiModelName = config.VisionModel;
+            var runtime = CodingAiRuntimeFactory.Create(platformConfig, CodeCatalog, _serviceProvider?.PipelineCfg);
+            var config = runtime.RuntimeSettings;
+            _codingPipelineConfig = runtime.PipelineConfig;
+            _codingAiModelName = runtime.ModelName;
             if (!config.Enabled)
             {
                 SetCodingAiState("Künstliche Intelligenz deaktiviert", PlayerStatusColors.Muted, "Modell: aus");
@@ -31,25 +24,18 @@ public partial class PlayerWindow
                 return;
             }
 
-            var client = new OllamaClient(
-                config.OllamaBaseUri,
-                ownedTimeout: config.OllamaRequestTimeout,
-                keepAlive: config.OllamaKeepAlive,
-                numCtx: config.OllamaNumCtx);
-            _codingLiveDetection = new LiveDetectionService(client, config.VisionModel);
-            _codingEnhancedVision = new EnhancedVisionAnalysisService(client, config.VisionModel, CodeCatalog);
-            _codingQualityGate = new QualityGateService();
+            _codingLiveDetection = runtime.LiveDetection;
+            _codingEnhancedVision = runtime.EnhancedVision;
+            _codingQualityGate = runtime.QualityGate;
 
-            try
+            if (runtime.MultiModelAvailable && runtime.VisionClient is not null)
             {
-                _codingVisionClient = new VisionPipelineClient(
-                    _codingPipelineConfig.SidecarUrl,
-                    sidecarToken: _codingPipelineConfig.SidecarToken);
-                _codingMultiModel = new SingleFrameMultiModelService(_codingVisionClient, _codingPipelineConfig);
-                _codingBoxSegmentation = new MarkBoxSegmentationService(_codingVisionClient.SegmentSamAsync);
+                _codingVisionClient = runtime.VisionClient;
+                _codingMultiModel = runtime.MultiModel;
+                _codingBoxSegmentation = runtime.BoxSegmentation;
                 _codingAiEnabled = true;
 
-                _codingHealthMonitor = new PipelineHealthMonitor(
+                _codingHealthMonitor = CodingAiRuntimeFactory.CreateHealthMonitor(
                     _codingVisionClient,
                     aiEnabled: () => _codingAiEnabled,
                     qwenAvailable: () => _codingLiveDetection != null || _codingEnhancedVision != null);
@@ -59,11 +45,11 @@ public partial class PlayerWindow
                 var initial = await _codingHealthMonitor.RefreshOnceAsync();
                 ApplyPipelineHealth(initial);
             }
-            catch (Exception ex)
+            else if (!string.IsNullOrWhiteSpace(runtime.MultiModelError))
             {
                 _codingUseMultiModel = false;
                 SetCodingAiState("Künstliche Intelligenz bereit (Qwen)", PlayerStatusColors.Success,
-                    $"Monitor-Fehler: {ex.Message}");
+                    $"Monitor-Fehler: {runtime.MultiModelError}");
             }
             SetYoloStatus("Bereit", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName));
         }

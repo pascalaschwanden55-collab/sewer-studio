@@ -3376,6 +3376,35 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static CodingOverlayViewportSizeUpdate Build", policy);
     }
 
+    [Fact]
+    public void PlayerWindow_coding_ai_runtime_creation_lives_in_factory()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var healthPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Health.cs");
+        var monitoringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Health.Monitoring.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "CodingAiRuntimeFactory.cs");
+
+        Assert.True(File.Exists(factoryPath), "Coding-AI-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
+
+        var health = File.ReadAllText(healthPath);
+        var monitoring = File.ReadAllText(monitoringPath);
+        var factory = File.ReadAllText(factoryPath);
+
+        Assert.Contains("CodingAiRuntimeFactory.Create", health);
+        Assert.DoesNotContain("new OllamaClient", health);
+        Assert.DoesNotContain("new LiveDetectionService", health);
+        Assert.DoesNotContain("new EnhancedVisionAnalysisService", health);
+        Assert.DoesNotContain("new QualityGateService", health);
+        Assert.DoesNotContain("new VisionPipelineClient", health);
+        Assert.DoesNotContain("new SingleFrameMultiModelService", health);
+        Assert.DoesNotContain("new MarkBoxSegmentationService", health);
+        Assert.DoesNotContain("new SingleFrameMultiModelService", monitoring);
+        Assert.Contains("CodingAiRuntimeFactory.CreateMultiModelService", monitoring);
+        Assert.Contains("new OllamaClient", factory);
+        Assert.Contains("new VisionPipelineClient", factory);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);

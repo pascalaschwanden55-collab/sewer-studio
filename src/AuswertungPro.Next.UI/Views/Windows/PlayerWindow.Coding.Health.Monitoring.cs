@@ -30,9 +30,7 @@ public partial class PlayerWindow
     {
         _codingUseMultiModel = status.MultiModelActive;
         if (status.MultiModelActive && _codingMultiModel == null && _codingVisionClient != null)
-            _codingMultiModel = _codingPipelineConfig is null
-                ? new SingleFrameMultiModelService(_codingVisionClient)
-                : new SingleFrameMultiModelService(_codingVisionClient, _codingPipelineConfig);
+            _codingMultiModel = CodingAiRuntimeFactory.CreateMultiModelService(_codingVisionClient, _codingPipelineConfig);
 
         var uiState = PipelineHealthUiStateFactory.Create(status);
         SetCodingAiState(uiState.Summary, uiState.Color, uiState.Detail);
