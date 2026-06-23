@@ -1811,15 +1811,20 @@ public sealed class UiArchitectureGuardTests
         var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
         var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenEventFactory.cs");
+        var applierPath = Path.Combine(uiRoot, "Ai", "CodingStretchDamageManualCloseApplier.cs");
 
         Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionen sollen in einem eigenen Partial liegen.");
+        Assert.True(File.Exists(applierPath), "Manuelles Streckenschaden-Schliessen soll ausserhalb der PlayerWindow-Partials angewendet werden.");
 
         var events = File.ReadAllText(eventsPath);
         var actions = File.ReadAllText(actionsPath);
         var factory = File.ReadAllText(factoryPath);
+        var applier = File.ReadAllText(applierPath);
 
         Assert.DoesNotContain("CodingStreckenschadenEventFactory.CloseStart", events);
-        Assert.Contains("CodingStreckenschadenEventFactory.CloseStart", actions);
+        Assert.DoesNotContain("CodingStreckenschadenEventFactory.CloseStart", actions);
+        Assert.Contains("CodingStretchDamageManualCloseApplier.Apply", actions);
+        Assert.Contains("CodingStreckenschadenEventFactory.CloseStart", applier);
         Assert.DoesNotContain("Beschreibung + \" (Ende)\"", events + actions);
         Assert.Contains("public static ProtocolEntry CloseStart", factory);
     }
@@ -1833,18 +1838,23 @@ public sealed class UiArchitectureGuardTests
         var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
         var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingStretchDamageClosePolicy.cs");
+        var applierPath = Path.Combine(uiRoot, "Ai", "CodingStretchDamageManualCloseApplier.cs");
 
         Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionen sollen in einem eigenen Partial liegen.");
         Assert.True(File.Exists(policyPath), "Streckenschaden-Schliessregel muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(applierPath), "Manuelles Streckenschaden-Schliessen soll die Policy ausserhalb der PlayerWindow-Partials nutzen.");
 
         var events = File.ReadAllText(eventsPath);
         var actions = File.ReadAllText(actionsPath);
         var policy = File.ReadAllText(policyPath);
+        var applier = File.ReadAllText(applierPath);
 
         Assert.DoesNotContain("CodingStretchDamageClosePolicy.CanClose", events);
         Assert.DoesNotContain("CodingStretchDamageClosePolicy.BuildClosedStatusText", events);
-        Assert.Contains("CodingStretchDamageClosePolicy.CanClose", actions);
-        Assert.Contains("CodingStretchDamageClosePolicy.BuildClosedStatusText", actions);
+        Assert.DoesNotContain("CodingStretchDamageClosePolicy.CanClose", actions);
+        Assert.DoesNotContain("CodingStretchDamageClosePolicy.BuildClosedStatusText", actions);
+        Assert.Contains("CodingStretchDamageClosePolicy.CanClose", applier);
+        Assert.Contains("CodingStretchDamageClosePolicy.BuildClosedStatusText", applier);
         Assert.DoesNotContain("currentMeter <= (startEvent.MeterAtCapture + 0.01)", events + actions);
         Assert.DoesNotContain("Streckenschaden geschlossen:", events + actions);
         Assert.Contains("public static bool CanClose", policy);

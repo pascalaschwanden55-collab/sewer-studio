@@ -64,26 +64,21 @@ public partial class PlayerWindow
         if (_codingSessionService == null || _codingVm == null) return;
 
         double currentMeter = _codingVm.CurrentMeter;
-        if (!CodingStretchDamageClosePolicy.CanClose(startEvent.MeterAtCapture, currentMeter))
+        var closeResult = CodingStretchDamageManualCloseApplier.Apply(
+            startEvent,
+            currentMeter,
+            _player != null ? TimeSpan.FromMilliseconds(_player.Time) : TimeSpan.Zero,
+            _codingSessionService);
+
+        if (closeResult.Kind == CodingStretchDamageManualCloseResultKind.RequiresLaterMeter)
         {
             CodingEventActionDialogServiceFactory.Create().ShowStretchCloseRequiresLaterMeter();
             return;
         }
 
-        var endEntry = CodingStreckenschadenEventFactory.CloseStart(startEvent.Entry, currentMeter);
-
-        var endEvent = _codingSessionService.AddEvent(endEntry, null);
-        endEvent.VideoTimestamp = _player != null
-            ? TimeSpan.FromMilliseconds(_player.Time) : TimeSpan.Zero;
-
         RefreshCodingEventsList();
 
-        SetCodingAiState(
-            CodingStretchDamageClosePolicy.BuildClosedStatusText(
-                startEvent.Entry.Code,
-                startEvent.MeterAtCapture,
-                currentMeter),
-            PlayerStatusColors.Success, "");
+        SetCodingAiState(closeResult.StatusText ?? "", PlayerStatusColors.Success, "");
     }
 
     private void CodingEventDelete_Click(object sender, RoutedEventArgs e)
