@@ -2466,6 +2466,11 @@ public sealed class UiArchitectureGuardTests
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var policy = File.ReadAllText(policyPath);
 
+        Assert.DoesNotContain("private async void DetectionTimer_Tick", liveDetection);
+        Assert.Contains("private void DetectionTimer_Tick", liveDetection);
+        Assert.Contains("SafeFireAndForget", liveDetection);
+        Assert.Contains("\"DetectionTimer\"", liveDetection);
+        Assert.Contains("private async Task RunDetectionAsync", liveDetection);
         Assert.Contains("LiveDetectionTimerPolicy.ShouldRunTick", liveDetection);
         Assert.DoesNotContain("_isDetectionInFlight || _liveDetectionService is null || _detectionCts is null", liveDetection);
         Assert.DoesNotContain("!_player.IsPlaying", liveDetection);

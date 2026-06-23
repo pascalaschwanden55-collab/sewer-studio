@@ -1,23 +1,20 @@
 using System;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private async void DetectionTimer_Tick(object? sender, EventArgs e)
+    private void DetectionTimer_Tick(object? sender, EventArgs e)
     {
         if (_closing || _player is null) return;
-        try
-        {
-            await RunDetectionAsync();
-        }
-        catch (Exception ex)
-        {
-            PlayerTrace.WriteLine($"[PlayerWindow] DetectionTimer_Tick Fehler: {ex.Message}");
-        }
+
+        RunDetectionAsync().SafeFireAndForget(
+            "DetectionTimer",
+            ex => PlayerTrace.WriteLine($"[PlayerWindow] DetectionTimer_Tick Fehler: {ex.Message}"));
     }
 
     private async Task RunDetectionAsync()
