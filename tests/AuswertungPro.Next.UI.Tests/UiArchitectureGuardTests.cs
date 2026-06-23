@@ -392,12 +392,22 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageTextBuilder.cs");
+        var synchronizerPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSynchronizer.cs");
+        var synchronizerFactoryPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSynchronizerFactory.cs");
 
+        Assert.True(File.Exists(synchronizerPath), "Primaere-Schaeden-Synchronisierung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(synchronizerFactoryPath), "Primaere-Schaeden-Synchronisierung muss ueber Factory verdrahtet werden.");
         var protocol = File.ReadAllText(protocolPath);
         var policy = File.ReadAllText(policyPath);
+        var synchronizer = File.ReadAllText(synchronizerPath);
+        var synchronizerFactory = File.ReadAllText(synchronizerFactoryPath);
 
-        Assert.Contains("CodingPrimaryDamageTextBuilder.Build", protocol);
+        Assert.Contains("CodingPrimaryDamageSynchronizerFactory.Create", protocol);
+        Assert.DoesNotContain("CodingPrimaryDamageTextBuilder.Build", protocol);
+        Assert.DoesNotContain("SetFieldValue(\"Primaere_Schaeden\"", protocol);
         Assert.Contains("DataPageProtocolObservationMapper.BuildPrimaryDamageLines", policy);
+        Assert.Contains("CodingPrimaryDamageTextBuilder.Build", synchronizerFactory);
+        Assert.Contains("SetFieldValue(\"Primaere_Schaeden\"", synchronizer);
         Assert.DoesNotContain("new HashSet<string>", protocol);
         Assert.DoesNotContain("Q1={q1}", protocol);
         Assert.DoesNotContain("Q2={q2}", protocol);
@@ -2220,15 +2230,25 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageTextBuilder.cs");
+        var synchronizerPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSynchronizer.cs");
+        var synchronizerFactoryPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSynchronizerFactory.cs");
 
         Assert.True(File.Exists(policyPath), "Primaere-Schaeden-Textbildung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(synchronizerPath), "Primaere-Schaeden-Feldschreiben muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(synchronizerFactoryPath), "Primaere-Schaeden-Feldschreiben muss ueber Factory verdrahtet werden.");
 
         var protocol = File.ReadAllText(protocolPath);
         var policy = File.ReadAllText(policyPath);
+        var synchronizer = File.ReadAllText(synchronizerPath);
+        var synchronizerFactory = File.ReadAllText(synchronizerFactoryPath);
 
-        Assert.Contains("CodingPrimaryDamageTextBuilder.Build", protocol);
+        Assert.Contains("CodingPrimaryDamageSynchronizerFactory.Create", protocol);
+        Assert.DoesNotContain("CodingPrimaryDamageTextBuilder.Build", protocol);
+        Assert.DoesNotContain("SetFieldValue(\"Primaere_Schaeden\"", protocol);
         Assert.DoesNotContain("DataPageProtocolObservationMapper.BuildPrimaryDamageLines", protocol);
         Assert.Contains("public static string Build", policy);
+        Assert.Contains("SetFieldValue(\"Primaere_Schaeden\"", synchronizer);
+        Assert.Contains("CodingPrimaryDamageTextBuilder.Build", synchronizerFactory);
     }
 
     [Fact]

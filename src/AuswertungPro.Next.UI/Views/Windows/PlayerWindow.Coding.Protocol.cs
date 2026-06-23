@@ -43,9 +43,7 @@ public partial class PlayerWindow
     {
         if (_haltungRecord == null) return;
 
-        var primaryText = CodingPrimaryDamageTextBuilder.Build(doc);
-        _haltungRecord.SetFieldValue("Primaere_Schaeden", primaryText, FieldSource.Manual, userEdited: true);
-        _haltungRecord.ModifiedAtUtc = PlayerClock.UtcNow();
+        CodingPrimaryDamageSynchronizerFactory.Create().Sync(_haltungRecord, doc);
     }
 
     // --- Coding: Protokoll-Vorschau (nachtraeglich bearbeitbar) ---
