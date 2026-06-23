@@ -63,41 +63,6 @@ public partial class PlayerWindow
         ColDefectDetail.Width = new GridLength(300);
     }
 
-    private void UpdateInlineEvidencePreview(CodingEvent ev)
-    {
-        try
-        {
-            var previewPath = CodingDefectPreviewService.BuildPreviewImagePath(ev);
-            if (string.IsNullOrWhiteSpace(previewPath) || !File.Exists(previewPath))
-            {
-                ImgInlineEvidencePreview.Source = null;
-                ImgInlineEvidencePreview.Visibility = Visibility.Collapsed;
-                TxtInlineEvidencePreviewStatus.Text = "Kein Bild";
-                TxtInlineEvidencePreviewStatus.Visibility = Visibility.Visible;
-                return;
-            }
-
-            var image = new System.Windows.Media.Imaging.BitmapImage();
-            image.BeginInit();
-            image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-            image.UriSource = new Uri(previewPath, UriKind.Absolute);
-            image.EndInit();
-            image.Freeze();
-
-            ImgInlineEvidencePreview.Source = image;
-            ImgInlineEvidencePreview.Visibility = Visibility.Visible;
-            TxtInlineEvidencePreviewStatus.Visibility = Visibility.Collapsed;
-        }
-        catch (Exception ex)
-        {
-            ImgInlineEvidencePreview.Source = null;
-            ImgInlineEvidencePreview.Visibility = Visibility.Collapsed;
-            TxtInlineEvidencePreviewStatus.Text = "Bild nicht ladbar";
-            TxtInlineEvidencePreviewStatus.Visibility = Visibility.Visible;
-            System.Diagnostics.Debug.WriteLine($"[CodingPreview] {ex.Message}");
-        }
-    }
-
     private double GetCodingSidePanelWidth()
         => CodingSidePanelWidthPolicy.Resolve(ActualWidth, Width);
 

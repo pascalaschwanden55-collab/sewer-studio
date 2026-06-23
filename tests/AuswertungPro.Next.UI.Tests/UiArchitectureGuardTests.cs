@@ -680,6 +680,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_inline_defect_preview_lives_in_preview_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var detailPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.cs");
+        var previewPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.Preview.cs");
+
+        Assert.True(File.Exists(previewPath), "Inline-Defekt-Bildvorschau soll in einem eigenen EventDetails-Partial liegen.");
+
+        var detail = File.ReadAllText(detailPath);
+        var preview = File.ReadAllText(previewPath);
+
+        Assert.Contains("UpdateInlineEvidencePreview(ev);", detail);
+        Assert.DoesNotContain("private void UpdateInlineEvidencePreview", detail);
+        Assert.DoesNotContain("CodingDefectPreviewService.BuildPreviewImagePath", detail);
+        Assert.DoesNotContain("BitmapImage", detail);
+        Assert.Contains("private void UpdateInlineEvidencePreview", preview);
+        Assert.Contains("CodingDefectPreviewService.BuildPreviewImagePath", preview);
+        Assert.Contains("BitmapImage", preview);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_side_panel_width_lives_in_policy()
     {
         var root = FindRepositoryRoot();
