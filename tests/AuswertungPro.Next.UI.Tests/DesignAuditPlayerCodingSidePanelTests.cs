@@ -395,10 +395,11 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("using AuswertungPro.Next.Application.Ai.Evaluation;", coding);
         Assert.Contains("private CodingMatchRouting? _lastCodingMatch", coding);
         Assert.Contains("private readonly Dictionary<Guid, CodingProtocolMatchBucket>", coding);
-        Assert.Contains("CodingProtocolMatchService.Match", runBody);
-        Assert.Contains("_codingImportEvents.Select(ev => ev.Entry).ToList()", runBody);
-        Assert.Contains("_codingVm.Events.Select(ev => ev.Entry).ToList()", runBody);
-        Assert.Contains("CodingProtocolMatchBucketBuilder.Rebuild(_codingProtocolMatchBuckets, _lastCodingMatch)", runBody);
+        Assert.Contains("CodingProtocolMatchRunner.Run", runBody);
+        Assert.DoesNotContain("CodingProtocolMatchService.Match", runBody);
+        Assert.DoesNotContain("_codingImportEvents.Select(ev => ev.Entry).ToList()", runBody);
+        Assert.DoesNotContain("_codingVm.Events.Select(ev => ev.Entry).ToList()", runBody);
+        Assert.DoesNotContain("CodingProtocolMatchBucketBuilder.Rebuild", runBody);
         Assert.Contains("UpdateCodingProtocolMatchSummary(_lastCodingMatch)", runBody);
         Assert.Contains("RefreshCodingEventsList()", runBody);
         Assert.Contains("CodingProtocolMatchDisplayPolicy.BadgeText", coding);

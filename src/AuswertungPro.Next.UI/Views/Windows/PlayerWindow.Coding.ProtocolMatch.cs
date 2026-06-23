@@ -1,8 +1,6 @@
-using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Evaluation;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
@@ -44,11 +42,10 @@ public partial class PlayerWindow
     {
         if (_codingVm == null) return;
 
-        _lastCodingMatch = CodingProtocolMatchService.Match(
-            _codingImportEvents.Select(ev => ev.Entry).ToList(),
-            _codingVm.Events.Select(ev => ev.Entry).ToList());
-
-        CodingProtocolMatchBucketBuilder.Rebuild(_codingProtocolMatchBuckets, _lastCodingMatch);
+        _lastCodingMatch = CodingProtocolMatchRunner.Run(
+            _codingImportEvents,
+            _codingVm.Events,
+            _codingProtocolMatchBuckets);
         UpdateCodingProtocolMatchSummary(_lastCodingMatch);
         RefreshCodingEventsList();
         Dispatcher.InvokeAsync(ApplyCodingProtocolMatchListHighlights, DispatcherPriority.Loaded);
