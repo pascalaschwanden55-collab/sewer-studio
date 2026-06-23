@@ -2414,6 +2414,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_eingabemarker_submission_lives_in_submission_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
+        var submissionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Submission.cs");
+
+        Assert.True(File.Exists(submissionPath), "Eingabemarker-Submission muss in einer eigenen PlayerWindow-Partial liegen.");
+
+        var marker = File.ReadAllText(markerPath);
+        var submission = File.ReadAllText(submissionPath);
+
+        Assert.DoesNotContain("private async Task SubmitEingabemarker", marker);
+        Assert.DoesNotContain("CodingEingabemarkerDuplicatePolicy.FindDuplicate", marker);
+        Assert.Contains("private async Task SubmitEingabemarker", submission);
+        Assert.Contains("CodingEingabemarkerDuplicatePolicy.FindDuplicate", submission);
+        Assert.Contains("RunCodingAnalysisAsync", submission);
+    }
+
+    [Fact]
     public void PlayerWindow_overlay_viewport_size_decision_lives_in_policy()
     {
         var root = FindRepositoryRoot();
