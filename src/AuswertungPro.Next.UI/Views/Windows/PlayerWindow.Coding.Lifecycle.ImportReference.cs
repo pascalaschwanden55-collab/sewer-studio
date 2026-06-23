@@ -9,9 +9,8 @@ public partial class PlayerWindow
         if (_codingVm == null)
             return;
 
-        _lastCodingMatch = null;
-        _codingProtocolMatchBuckets.Clear();
-        UpdateCodingProtocolMatchSummary(null);
+        _lastCodingMatch = CodingProtocolMatchStateResetter.Reset(_codingProtocolMatchBuckets);
+        UpdateCodingProtocolMatchSummary(_lastCodingMatch);
         CodingImportReferenceTransfer.MoveExistingEventsToImportReference(
             _codingVm.Events,
             _codingImportEvents);

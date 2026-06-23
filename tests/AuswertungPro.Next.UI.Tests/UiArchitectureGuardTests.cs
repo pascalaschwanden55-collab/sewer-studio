@@ -1765,20 +1765,27 @@ public sealed class UiArchitectureGuardTests
         var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceTransfer.cs");
         var resetterPath = Path.Combine(uiRoot, "Ai", "CodingSessionEventResetter.cs");
+        var matchResetterPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchStateResetter.cs");
 
         Assert.True(File.Exists(policyPath), "Import-Referenz-Transfer muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(resetterPath), "Session-Event-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(matchResetterPath), "Protocol-Match-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var coding = File.ReadAllText(codingPath);
         var policy = File.ReadAllText(policyPath);
         var resetter = File.Exists(resetterPath) ? File.ReadAllText(resetterPath) : "";
+        var matchResetter = File.Exists(matchResetterPath) ? File.ReadAllText(matchResetterPath) : "";
 
         Assert.Contains("CodingImportReferenceTransfer.MoveExistingEventsToImportReference", coding);
         Assert.Contains("CodingSessionEventResetter.ClearActiveSessionEvents", coding);
+        Assert.Contains("CodingProtocolMatchStateResetter.Reset", coding);
+        Assert.DoesNotContain("_lastCodingMatch = null", coding);
+        Assert.DoesNotContain("_codingProtocolMatchBuckets.Clear()", coding);
         Assert.DoesNotContain("ActiveSession?.Events.Clear", coding);
         Assert.DoesNotContain("var allExisting = _codingVm.Events.OrderBy", coding);
         Assert.Contains("public static int MoveExistingEventsToImportReference", policy);
         Assert.Contains("public static int ClearActiveSessionEvents", resetter);
+        Assert.Contains("public static CodingMatchRouting? Reset", matchResetter);
     }
 
     [Fact]
@@ -3649,6 +3656,7 @@ public sealed class UiArchitectureGuardTests
         var importReferencePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
         var uiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Ui.cs");
         var importReferenceResetterPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceStateResetter.cs");
+        var matchResetterPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchStateResetter.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(exitPath), "Codiermodus-Exit soll aus dem allgemeinen Lifecycle-Partial heraus.");
@@ -3657,6 +3665,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(importReferencePath), "Codiermodus-Importreferenz-Aufbau soll aus dem Enter-Partial heraus.");
         Assert.True(File.Exists(uiPath), "Codiermodus-UI-Aktivierung soll aus dem Enter-Partial heraus.");
         Assert.True(File.Exists(importReferenceResetterPath), "Import-Referenz-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(matchResetterPath), "Protocol-Match-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var coding = File.ReadAllText(codingPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
@@ -3666,6 +3675,7 @@ public sealed class UiArchitectureGuardTests
         var importReference = File.ReadAllText(importReferencePath);
         var ui = File.ReadAllText(uiPath);
         var importReferenceResetter = File.Exists(importReferenceResetterPath) ? File.ReadAllText(importReferenceResetterPath) : "";
+        var matchResetter = File.Exists(matchResetterPath) ? File.ReadAllText(matchResetterPath) : "";
 
         Assert.DoesNotContain("private void EnterCodingMode", coding);
         Assert.DoesNotContain("private void ExitCodingMode", coding);
@@ -3685,12 +3695,16 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CreateCodingSessionState();", lifecycle);
         Assert.Contains("InitializeCodingImportReferences();", lifecycle);
         Assert.Contains("CodingImportReferenceStateResetter.ClearEvents", exit);
+        Assert.Contains("CodingProtocolMatchStateResetter.Reset", exit);
+        Assert.DoesNotContain("_lastCodingMatch = null", exit);
+        Assert.DoesNotContain("_codingProtocolMatchBuckets.Clear()", exit);
         Assert.DoesNotContain("_codingImportEvents.Clear()", exit);
         Assert.Contains("ShowCodingModeUi();", lifecycle);
         Assert.DoesNotContain("new CodingSessionViewModel", lifecycle);
         Assert.DoesNotContain("CodingImportReferenceTransfer.MoveExistingEventsToImportReference", lifecycle);
         Assert.DoesNotContain("CodingOverlayPopup.IsOpen = true", lifecycle);
         Assert.Contains("public static int ClearEvents", importReferenceResetter);
+        Assert.Contains("public static CodingMatchRouting? Reset", matchResetter);
     }
 
     [Fact]

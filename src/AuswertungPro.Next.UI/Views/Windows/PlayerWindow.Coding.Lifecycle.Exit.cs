@@ -41,9 +41,8 @@ public partial class PlayerWindow
         _codingAnalysisCts = null;
 
         CodingImportReferenceStateResetter.ClearEvents(_codingImportEvents);
-        _lastCodingMatch = null;
-        _codingProtocolMatchBuckets.Clear();
-        UpdateCodingProtocolMatchSummary(null);
+        _lastCodingMatch = CodingProtocolMatchStateResetter.Reset(_codingProtocolMatchBuckets);
+        UpdateCodingProtocolMatchSummary(_lastCodingMatch);
         LstImportEvents.ItemsSource = null;
 
         CodingConfirmationPanel.Visibility = Visibility.Collapsed;
