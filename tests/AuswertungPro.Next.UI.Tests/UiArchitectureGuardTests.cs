@@ -724,6 +724,31 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_keyboard_action_execution_lives_in_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
+        var keyboardPath = Path.Combine(windowsRoot, "PlayerWindow.Keyboard.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardActionController.cs");
+
+        Assert.True(File.Exists(keyboardPath), "Keyboard-Wiring soll in einem eigenen PlayerWindow-Partial liegen.");
+        Assert.True(File.Exists(controllerPath), "Shortcut-Aktionsausfuehrung soll ausserhalb des PlayerWindow liegen.");
+
+        var playback = File.ReadAllText(playbackPath);
+        var keyboard = File.ReadAllText(keyboardPath);
+        var controller = File.ReadAllText(controllerPath);
+
+        Assert.DoesNotContain("PlayerWindow_PreviewKeyDown", playback);
+        Assert.Contains("PlayerWindow_PreviewKeyDown", keyboard);
+        Assert.Contains("_keyboardActions.Execute(action)", keyboard);
+        Assert.DoesNotContain("case PlayerKeyboardAction.", keyboard);
+        Assert.Contains("public sealed class PlayerKeyboardActionController", controller);
+        Assert.Contains("case PlayerKeyboardAction.ToggleDetection", controller);
+    }
+
+    [Fact]
     public void PlayerWindow_live_detection_model_selection_lives_in_policy()
     {
         var root = FindRepositoryRoot();

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -170,86 +169,6 @@ public partial class PlayerWindow
         {
             return false;
         }
-    }
-
-    private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        var action = PlayerKeyboardShortcutPolicy.Resolve(e.Key, _codingOverlayService != null);
-        if (action == null)
-            return;
-
-        switch (action.Value)
-        {
-            case PlayerKeyboardAction.CancelCodingOverlay:
-                _codingOverlayService?.CancelDraw();
-                _codingSchemaManager.Cancel();
-                if (CodingOverlayCanvas.IsMouseCaptured)
-                    CodingOverlayCanvas.ReleaseMouseCapture();
-                if (_codingVm != null)
-                {
-                    _codingVm.CurrentOverlay = null;
-                    BtnCodingCreateEvent.IsEnabled = false;
-                    UpdateCodingOverlayInfo(null);
-                }
-                if (CodingOverlayPopup.IsOpen)
-                    RedrawCodingCanvas(includeManualOverlay: false);
-                break;
-
-            case PlayerKeyboardAction.TogglePlayPause:
-                TogglePlayPause();
-                break;
-
-            case PlayerKeyboardAction.Stop:
-                _player.Stop();
-                break;
-
-            case PlayerKeyboardAction.Pause:
-                _player.SetPause(true);
-                break;
-
-            case PlayerKeyboardAction.Resume:
-                EnsurePlaying();
-                _player.SetPause(false);
-                break;
-
-            case PlayerKeyboardAction.SpeedUp:
-                ChangeSpeed(+0.25f);
-                break;
-
-            case PlayerKeyboardAction.SpeedDown:
-                ChangeSpeed(-0.25f);
-                break;
-
-            case PlayerKeyboardAction.JumpForward:
-                JumpSeconds(5);
-                break;
-
-            case PlayerKeyboardAction.JumpBackward:
-                JumpSeconds(-5);
-                break;
-
-            case PlayerKeyboardAction.ToggleDetection:
-                if (_isCodingMode)
-                {
-                    BtnCodingLiveAi.IsChecked = !(BtnCodingLiveAi.IsChecked == true);
-                    CodingLiveAi_Click(BtnCodingLiveAi, new RoutedEventArgs());
-                }
-                else
-                {
-                    LiveDetectionButton.IsChecked = !(LiveDetectionButton.IsChecked == true);
-                    LiveDetection_Click(LiveDetectionButton, new RoutedEventArgs());
-                }
-                break;
-
-            case PlayerKeyboardAction.ToggleMarkTool:
-                if (_markToolType != OverlayToolType.None)
-                    DeactivateMarkTool();
-                else
-                    MarkToolPopup.IsOpen = !MarkToolPopup.IsOpen;
-                break;
-        }
-
-        e.Handled = true;
     }
 
     private void TogglePlayPause()
