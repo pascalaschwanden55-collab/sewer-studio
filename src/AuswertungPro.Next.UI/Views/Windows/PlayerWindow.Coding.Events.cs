@@ -1,6 +1,8 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -8,7 +10,12 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private async void CodingSelectCode_Click(object sender, RoutedEventArgs e)
+    private void CodingSelectCode_Click(object sender, RoutedEventArgs e)
+    {
+        HandleCodingSelectCodeAsync().SafeFireAndForget("CodingSelectCode");
+    }
+
+    private async Task HandleCodingSelectCodeAsync()
     {
         if (_codingVm == null) return;
 

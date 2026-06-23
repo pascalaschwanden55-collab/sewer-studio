@@ -2345,6 +2345,21 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_select_code_handler_uses_fire_and_forget_wrapper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+
+        var events = File.ReadAllText(eventsPath);
+
+        Assert.DoesNotContain("private async void CodingSelectCode_Click", events);
+        Assert.Contains("private void CodingSelectCode_Click", events);
+        Assert.Contains(".SafeFireAndForget(\"CodingSelectCode\")", events);
+        Assert.Contains("private async Task HandleCodingSelectCodeAsync", events);
+    }
+
+    [Fact]
     public void PlayerWindow_primary_damage_text_lives_in_policy()
     {
         var root = FindRepositoryRoot();
@@ -3589,6 +3604,22 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private bool TryHandleCodingStandardMouseMove", standard);
         Assert.Contains("private bool TryHandleCodingStandardMouseUp", standard);
         Assert.Contains("HandleMarkDrawingComplete", standard);
+    }
+
+    [Fact]
+    public void PlayerWindow_mark_drawing_completion_uses_fire_and_forget_wrapper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
+
+        var marking = File.ReadAllText(markingPath);
+
+        Assert.DoesNotContain("private async void HandleMarkDrawingComplete", marking);
+        Assert.Contains("private void HandleMarkDrawingComplete", marking);
+        Assert.Contains(".SafeFireAndForget(\"MarkDrawingComplete\")", marking);
+        Assert.Contains("private async Task HandleMarkDrawingCompleteAsync", marking);
     }
 
     [Fact]

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -12,7 +13,12 @@ public partial class PlayerWindow
     /// <summary>
     /// Nach abgeschlossener Markierung: Code-Katalog oeffnen und Training speichern.
     /// </summary>
-    private async void HandleMarkDrawingComplete()
+    private void HandleMarkDrawingComplete()
+    {
+        HandleMarkDrawingCompleteAsync().SafeFireAndForget("MarkDrawingComplete");
+    }
+
+    private async Task HandleMarkDrawingCompleteAsync()
     {
         try
         {
