@@ -28,13 +28,10 @@ public partial class PlayerWindow
         StopLiveDetection();
         StopPipelineHealthMonitor();
 
-        AuswertungPro.Next.Application.Common.BestEffort.Try(
-            () => { if (VideoView != null) VideoView.MediaPlayer = null; },
-            "VLC: VideoView trennen");
+        PlayerPlaybackResourceCleaner.DetachVideoView(
+            () => { if (VideoView != null) VideoView.MediaPlayer = null; });
 
-        AuswertungPro.Next.Application.Common.BestEffort.Try(
-            () => _player.Stop(),
-            "VLC: Player stoppen");
+        PlayerPlaybackResourceCleaner.StopPlayer(() => _player.Stop());
 
         try
         {
@@ -53,11 +50,10 @@ public partial class PlayerWindow
 
         _playbackDisposed = true;
         StopPlayerTimers();
-        AuswertungPro.Next.Application.Common.BestEffort.Try(
-            () => { if (VideoView != null) VideoView.MediaPlayer = null; },
-            "VLC: VideoView trennen");
-        try { _player.Dispose(); } catch (Exception ex) { PlayerTrace.WriteLine($"[PlayerWindow] MediaPlayer Dispose error: {ex.Message}"); }
-        try { _libVlc.Dispose(); } catch (Exception ex) { PlayerTrace.WriteLine($"[PlayerWindow] LibVLC Dispose error: {ex.Message}"); }
+        PlayerPlaybackResourceCleaner.DetachVideoView(
+            () => { if (VideoView != null) VideoView.MediaPlayer = null; });
+        PlayerPlaybackResourceCleaner.DisposeMediaPlayer(_player, message => PlayerTrace.WriteLine(message));
+        PlayerPlaybackResourceCleaner.DisposeLibVlc(_libVlc, message => PlayerTrace.WriteLine(message));
     }
 
     private void StopPlayerTimers()

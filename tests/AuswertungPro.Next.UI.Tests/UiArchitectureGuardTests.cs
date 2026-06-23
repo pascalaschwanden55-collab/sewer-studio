@@ -2217,11 +2217,14 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Lifecycle.cs");
+        var cleanerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackResourceCleaner.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Playback-Closing/Cleanup soll aus dem allgemeinen Playback-Partial heraus.");
+        Assert.True(File.Exists(cleanerPath), "Playback-Resource-Cleanup soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var playback = File.ReadAllText(playbackPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
+        var cleaner = File.Exists(cleanerPath) ? File.ReadAllText(cleanerPath) : "";
 
         Assert.DoesNotContain("private void OnClosing", playback);
         Assert.DoesNotContain("private void Cleanup", playback);
@@ -2230,6 +2233,15 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void Cleanup", lifecycle);
         Assert.Contains("private void StopPlayerTimers", lifecycle);
         Assert.Contains("ConfirmUnappliedCodingChangesOnClose", lifecycle);
+        Assert.Contains("PlayerPlaybackResourceCleaner.DetachVideoView", lifecycle);
+        Assert.Contains("PlayerPlaybackResourceCleaner.StopPlayer", lifecycle);
+        Assert.Contains("PlayerPlaybackResourceCleaner.DisposeMediaPlayer", lifecycle);
+        Assert.Contains("PlayerPlaybackResourceCleaner.DisposeLibVlc", lifecycle);
+        Assert.DoesNotContain("AuswertungPro.Next.Application.Common.BestEffort.Try", lifecycle);
+        Assert.DoesNotContain("_player.Dispose()", lifecycle);
+        Assert.DoesNotContain("_libVlc.Dispose()", lifecycle);
+        Assert.Contains("public static class PlayerPlaybackResourceCleaner", cleaner);
+        Assert.Contains("AuswertungPro.Next.Application.Common.BestEffort.Try", cleaner);
     }
 
     [Fact]
