@@ -5,6 +5,19 @@ namespace AuswertungPro.Next.UI.Player;
 
 public static class CodingOverlayCanvasCleaner
 {
+    public static void ClearAiOverlays(Canvas canvas)
+    {
+        ArgumentNullException.ThrowIfNull(canvas);
+
+        var remove = canvas.Children
+            .OfType<FrameworkElement>()
+            .Where(el => CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag(el.Tag))
+            .ToList();
+
+        foreach (var element in remove)
+            canvas.Children.Remove(element);
+    }
+
     public static void ClearTransient(Canvas canvas, bool clearManualOverlay)
     {
         ArgumentNullException.ThrowIfNull(canvas);

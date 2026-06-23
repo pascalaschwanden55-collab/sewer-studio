@@ -80,4 +80,43 @@ public sealed class CodingOverlayCanvasCleanerTests
         Assert.Equal(1, childCount);
         Assert.Equal(OverlayTags.RefDn, remainingTag);
     }
+
+    [Fact]
+    public void ClearAiOverlays_removes_only_ai_prefixed_overlays()
+    {
+        Exception? threadError = null;
+        int childCount = -1;
+        object? firstTag = null;
+        object? secondTag = null;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var canvas = new Canvas();
+                canvas.Children.Add(new Border { Tag = OverlayTags.AiOverlay });
+                canvas.Children.Add(new Border { Tag = OverlayTags.AiPrefix + "label" });
+                canvas.Children.Add(new Border { Tag = OverlayTags.Manual });
+                canvas.Children.Add(new Border { Tag = OverlayTags.Measure });
+
+                CodingOverlayCanvasCleaner.ClearAiOverlays(canvas);
+
+                childCount = canvas.Children.Count;
+                firstTag = canvas.Children[0] is Border first ? first.Tag : null;
+                secondTag = canvas.Children[1] is Border second ? second.Tag : null;
+            }
+            catch (Exception ex)
+            {
+                threadError = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(threadError);
+        Assert.Equal(2, childCount);
+        Assert.Equal(OverlayTags.Manual, firstTag);
+        Assert.Equal(OverlayTags.Measure, secondTag);
+    }
 }
