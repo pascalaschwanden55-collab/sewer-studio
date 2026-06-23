@@ -1,5 +1,4 @@
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -7,8 +6,8 @@ public partial class PlayerWindow
 {
     /// <summary>
     /// Prueft ob offene Streckenschaeden existieren (IsStreckenschaden=true, MeterEnd=null).
-    /// Zeigt Dialog mit Liste und bietet an, sie am aktuellen Meter zu schliessen.
-    /// Rueckgabe: true = weiter (geschlossen oder ignoriert), false = abgebrochen (User will weiter codieren).
+    /// Bietet an, sie am aktuellen Meter zu schliessen.
+    /// Rueckgabe: true = weiter (geschlossen oder ignoriert), false = abgebrochen.
     /// </summary>
     private bool CloseOpenStreckenschaeden(double currentMeter)
     {
@@ -18,24 +17,20 @@ public partial class PlayerWindow
 
         if (offene.Count == 0) return true;
 
-        var prompt = CodingOpenStretchDamagePromptBuilder.Build(offene, currentMeter);
         SuspendCodingOverlayInput();
-        DialogConfirm result;
+        CodingOpenStretchDamageDialogDecision decision;
         try
         {
-            result = DialogHost.Current.ConfirmCancel(
-                prompt,
-                "Offene Streckenschäden");
+            decision = CodingOpenStretchDamageDialogServiceFactory.Create()
+                .ConfirmClose(offene, currentMeter);
         }
         finally
         {
             ResumeCodingOverlayInput();
         }
 
-        if (result == DialogConfirm.Yes)
+        if (decision == CodingOpenStretchDamageDialogDecision.Close)
         {
-            // Alle offenen Streckenschaeden schliessen.
-            // MeterEnd = letzte Sichtung (MeterAtCapture) oder aktueller Meter
             foreach (var ev in offene)
             {
                 ev.Entry.MeterEnd = CodingOpenStretchDamagePolicy.ResolveCloseMeter(ev, currentMeter);
@@ -45,9 +40,9 @@ public partial class PlayerWindow
             return true;
         }
 
-        if (result == DialogConfirm.Cancel)
-            return false; // User will weiter codieren - Exit abbrechen
+        if (decision == CodingOpenStretchDamageDialogDecision.Cancel)
+            return false;
 
-        return true; // "Nein" -> weiter ohne Schliessen
+        return true;
     }
 }

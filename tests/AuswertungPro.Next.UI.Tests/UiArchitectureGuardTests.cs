@@ -529,27 +529,39 @@ public sealed class UiArchitectureGuardTests
         var closePromptPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Streckenschaden.ClosePrompt.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamagePromptBuilder.cs");
         var closePolicyPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamagePolicy.cs");
+        var dialogServicePath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamageDialogService.cs");
+        var dialogServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamageDialogServiceFactory.cs");
 
         Assert.True(File.Exists(closePromptPath), "Dialog fuer offene Streckenschaeden soll aus dem Boundary-Partial heraus.");
         Assert.True(File.Exists(policyPath), "Dialogtext fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(closePolicyPath), "Filter- und Schliessmeterlogik fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogServicePath), "Dialogentscheidung fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogServiceFactoryPath), "DialogHost-Verdrahtung fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var boundaries = File.ReadAllText(boundariesPath);
         var closePrompt = File.ReadAllText(closePromptPath);
         var policy = File.ReadAllText(policyPath);
         var closePolicy = File.ReadAllText(closePolicyPath);
+        var dialogService = File.ReadAllText(dialogServicePath);
+        var dialogServiceFactory = File.ReadAllText(dialogServiceFactoryPath);
 
         Assert.DoesNotContain("private bool CloseOpenStreckenschaeden", boundaries);
         Assert.Contains("private bool CloseOpenStreckenschaeden", closePrompt);
-        Assert.Contains("CodingOpenStretchDamagePromptBuilder.Build", closePrompt);
+        Assert.Contains("CodingOpenStretchDamageDialogServiceFactory.Create", closePrompt);
         Assert.Contains("CodingOpenStretchDamagePolicy.FindOpen", closePrompt);
         Assert.Contains("CodingOpenStretchDamagePolicy.ResolveCloseMeter", closePrompt);
+        Assert.DoesNotContain("DialogHost.Current", closePrompt);
+        Assert.DoesNotContain("DialogConfirm", closePrompt);
         Assert.DoesNotContain("new System.Text.StringBuilder", closePrompt);
         Assert.DoesNotContain("Folgende Streckensch", closePrompt);
         Assert.DoesNotContain(".Where(e => e.Entry.IsStreckenschaden", closePrompt);
         Assert.DoesNotContain("ev.MeterAtCapture > start", closePrompt);
         Assert.Contains("public static string Build", policy);
         Assert.Contains("public static IReadOnlyList<CodingEvent> FindOpen", closePolicy);
+        Assert.Contains("CodingOpenStretchDamagePromptBuilder.Build", dialogService);
+        Assert.Contains("CodingOpenStretchDamageDialogDecision", dialogService);
+        Assert.Contains("DialogHost.Current", dialogServiceFactory);
+        Assert.Contains("ConfirmCancel", dialogServiceFactory);
     }
 
     [Fact]
