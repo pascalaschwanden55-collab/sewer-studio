@@ -216,6 +216,7 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
         var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var navigationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Navigation.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsPolicy.cs");
         var refreshPolicyPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsRefreshPolicy.cs");
 
@@ -224,13 +225,14 @@ public sealed class UiArchitectureGuardTests
 
         var events = File.ReadAllText(eventsPath);
         var coding = File.ReadAllText(codingPath);
+        var navigation = File.ReadAllText(navigationPath);
         var policy = File.ReadAllText(policyPath);
         var refreshPolicy = File.ReadAllText(refreshPolicyPath);
 
         Assert.Contains("CodingStatisticsPolicy.Build", events);
-        Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", coding);
+        Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", navigation);
         Assert.DoesNotContain("Average(e => e.AiContext!.Confidence)", events);
-        Assert.DoesNotContain("nameof(CodingSessionViewModel.StatAutoAccepted) or", coding);
+        Assert.DoesNotContain("nameof(CodingSessionViewModel.StatAutoAccepted) or", coding + navigation);
         Assert.DoesNotContain("int autoAccepted = 0", events);
         Assert.Contains("public static CodingStatisticsSummary Build", policy);
         Assert.Contains("public static bool ShouldRefresh", refreshPolicy);
@@ -1446,6 +1448,29 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingTimelineMarkerAccessors.IsRejected", playerCoding);
         Assert.DoesNotContain("PipeTimeline.MeterAccessor = obj => obj is CodingEvent", playerCoding);
         Assert.Contains("public static double Meter", accessors);
+    }
+
+    [Fact]
+    public void PlayerWindow_coding_navigation_lives_in_navigation_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
+        var navigationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Navigation.cs");
+
+        Assert.True(File.Exists(navigationPath), "Coding-Navigation soll nicht im grossen Coding-Partial liegen.");
+
+        var coding = File.ReadAllText(codingPath);
+        var navigation = File.ReadAllText(navigationPath);
+
+        Assert.DoesNotContain("private async void CodingNext_Click", coding);
+        Assert.DoesNotContain("private async void CodingPrevious_Click", coding);
+        Assert.DoesNotContain("private void SyncVideoToCodingMeter", coding);
+        Assert.DoesNotContain("private bool _codingNavPending", coding);
+        Assert.Contains("private async void CodingNext_Click", navigation);
+        Assert.Contains("private async Task MoveCodingByCommandAsync", navigation);
+        Assert.Contains("CodingVideoSyncPolicy.TryResolveTargetTimeMs", navigation);
     }
 
     [Fact]
