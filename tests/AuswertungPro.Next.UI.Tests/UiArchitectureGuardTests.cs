@@ -730,14 +730,20 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
+        var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenEventFactory.cs");
 
+        Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionen sollen in einem eigenen Partial liegen.");
+
         var events = File.ReadAllText(eventsPath);
+        var actions = File.ReadAllText(actionsPath);
         var factory = File.ReadAllText(factoryPath);
 
-        Assert.Contains("CodingStreckenschadenEventFactory.CloseStart", events);
-        Assert.DoesNotContain("Beschreibung + \" (Ende)\"", events);
+        Assert.DoesNotContain("CodingStreckenschadenEventFactory.CloseStart", events);
+        Assert.Contains("CodingStreckenschadenEventFactory.CloseStart", actions);
+        Assert.DoesNotContain("Beschreibung + \" (Ende)\"", events + actions);
         Assert.Contains("public static ProtocolEntry CloseStart", factory);
     }
 
@@ -746,20 +752,52 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
+        var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingStretchDamageClosePolicy.cs");
 
+        Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionen sollen in einem eigenen Partial liegen.");
         Assert.True(File.Exists(policyPath), "Streckenschaden-Schliessregel muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var events = File.ReadAllText(eventsPath);
+        var actions = File.ReadAllText(actionsPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingStretchDamageClosePolicy.CanClose", events);
-        Assert.Contains("CodingStretchDamageClosePolicy.BuildClosedStatusText", events);
-        Assert.DoesNotContain("currentMeter <= (startEvent.MeterAtCapture + 0.01)", events);
-        Assert.DoesNotContain("Streckenschaden geschlossen:", events);
+        Assert.DoesNotContain("CodingStretchDamageClosePolicy.CanClose", events);
+        Assert.DoesNotContain("CodingStretchDamageClosePolicy.BuildClosedStatusText", events);
+        Assert.Contains("CodingStretchDamageClosePolicy.CanClose", actions);
+        Assert.Contains("CodingStretchDamageClosePolicy.BuildClosedStatusText", actions);
+        Assert.DoesNotContain("currentMeter <= (startEvent.MeterAtCapture + 0.01)", events + actions);
+        Assert.DoesNotContain("Streckenschaden geschlossen:", events + actions);
         Assert.Contains("public static bool CanClose", policy);
         Assert.Contains("CloseToleranceMeters = 0.01", policy);
+    }
+
+    [Fact]
+    public void PlayerWindow_coding_event_actions_live_in_actions_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
+        var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs");
+
+        Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionshandler sollen aus dem allgemeinen Events-Partial heraus.");
+
+        var events = File.ReadAllText(eventsPath);
+        var actions = File.ReadAllText(actionsPath);
+
+        Assert.DoesNotContain("private void CodingEvents_DoubleClick", events);
+        Assert.DoesNotContain("private void CodingEventEdit_Click", events);
+        Assert.DoesNotContain("private void CodingEventSeek_Click", events);
+        Assert.DoesNotContain("private void CodingEventCloseStretch_Click", events);
+        Assert.DoesNotContain("private void CodingEventDelete_Click", events);
+        Assert.Contains("private void CodingEvents_DoubleClick", actions);
+        Assert.Contains("private void CodingEventEdit_Click", actions);
+        Assert.Contains("private void CodingEventSeek_Click", actions);
+        Assert.Contains("private void CodingEventCloseStretch_Click", actions);
+        Assert.Contains("private void CodingEventDelete_Click", actions);
     }
 
     [Fact]
