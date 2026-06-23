@@ -1642,21 +1642,28 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var confirmationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.cs");
         var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.Actions.cs");
+        var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.Training.cs");
 
         Assert.True(File.Exists(actionsPath), "LiveDetection-Bestaetigungsaktionen sollen aus dem Anzeige-Partial heraus.");
+        Assert.True(File.Exists(trainingPath), "LiveDetection-Trainingsuebernahme soll aus den simplen Bestaetigungsaktionen heraus.");
 
         var confirmation = File.ReadAllText(confirmationPath);
         var actions = File.ReadAllText(actionsPath);
+        var training = File.ReadAllText(trainingPath);
 
         Assert.Contains("private void ShowDetectionConfirmation", confirmation);
         Assert.Contains("private void ResumeDetection", confirmation);
         Assert.DoesNotContain("private async void DetectionAccept_Click", confirmation);
         Assert.DoesNotContain("private async void DetectionCorrect_Click", confirmation);
         Assert.DoesNotContain("private void DetectionSkip_Click", confirmation);
-        Assert.Contains("private async void DetectionAccept_Click", actions);
-        Assert.Contains("private async void DetectionCorrect_Click", actions);
+        Assert.DoesNotContain("private async void DetectionAccept_Click", actions);
+        Assert.DoesNotContain("private async void DetectionCorrect_Click", actions);
         Assert.Contains("private void DetectionSkip_Click", actions);
-        Assert.Contains("TrainingAnnotationExportServiceFactory.Create", actions);
+        Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", actions);
+        Assert.Contains("private async void DetectionAccept_Click", training);
+        Assert.Contains("private async void DetectionCorrect_Click", training);
+        Assert.Contains("TrainingAnnotationExportServiceFactory.Create", training);
+        Assert.Contains("TeacherAnnotationStore.AppendAsync", training);
     }
 
     [Fact]
