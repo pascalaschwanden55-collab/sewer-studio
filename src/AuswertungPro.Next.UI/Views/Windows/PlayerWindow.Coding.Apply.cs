@@ -80,13 +80,9 @@ public partial class PlayerWindow
             ResumeCodingOverlayInput();
         }
 
-        if (result == DialogConfirm.Cancel)
-            return false;
-
-        if (result == DialogConfirm.Yes)
-            return ApplyCodingChanges(showOverlay: false);
-
-        return true;
+        return CodingUnappliedChangesClosePolicy.ShouldClose(
+            result,
+            () => ApplyCodingChanges(showOverlay: false));
     }
 
     private bool HasUnappliedCodingChanges()

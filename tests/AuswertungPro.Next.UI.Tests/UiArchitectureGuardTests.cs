@@ -1508,21 +1508,28 @@ public sealed class UiArchitectureGuardTests
         var applyPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Apply.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingProtocolRevisionUpdater.cs");
         var emptyGuardPath = Path.Combine(uiRoot, "Ai", "CodingApplyEmptyProtocolGuard.cs");
+        var closePolicyPath = Path.Combine(uiRoot, "Ai", "CodingUnappliedChangesClosePolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Protokoll-Revision-Update muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(emptyGuardPath), "Leere-Codierung-Schutzlogik muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(closePolicyPath), "Schliessen-Entscheidung fuer unuebernommene Codierungen muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var apply = File.ReadAllText(applyPath);
         var policy = File.ReadAllText(policyPath);
         var emptyGuard = File.ReadAllText(emptyGuardPath);
+        var closePolicy = File.ReadAllText(closePolicyPath);
 
         Assert.Contains("CodingProtocolRevisionUpdater.ApplyCodingEvents", apply);
         Assert.Contains("CodingApplyEmptyProtocolGuard.Build", apply);
+        Assert.Contains("CodingUnappliedChangesClosePolicy.ShouldClose", apply);
         Assert.DoesNotContain(".GroupBy(e => e.EntryId)", apply);
         Assert.DoesNotContain("aktiveBefunde", apply);
         Assert.DoesNotContain("bestehende(n) Befund", apply);
+        Assert.DoesNotContain("result == DialogConfirm.Cancel", apply);
+        Assert.DoesNotContain("result == DialogConfirm.Yes", apply);
         Assert.Contains("public static int ApplyCodingEvents", policy);
         Assert.Contains("public static CodingApplyEmptyProtocolGuardResult Build", emptyGuard);
+        Assert.Contains("public static bool ShouldClose", closePolicy);
     }
 
     [Fact]
