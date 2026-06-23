@@ -504,6 +504,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_ai_events_live_in_live_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
+        var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Live.cs");
+
+        Assert.True(File.Exists(livePath), "Live/Qwen-Event-Erzeugung soll aus dem allgemeinen AiEvents-Partial heraus.");
+
+        var aiEvents = File.ReadAllText(aiEventsPath);
+        var live = File.ReadAllText(livePath);
+
+        Assert.DoesNotContain("private void AddAiFindingsAsEvents", aiEvents);
+        Assert.Contains("private void AddAiFindingsAsEvents", live);
+        Assert.Contains("CodingLiveFindingEventFactory.Create", live);
+        Assert.Contains("CodingLiveFindingQualityGatePolicy.Evaluate", live);
+    }
+
+    [Fact]
     public void PlayerWindow_bounds_adjustment_lives_in_policy()
     {
         var root = FindRepositoryRoot();
