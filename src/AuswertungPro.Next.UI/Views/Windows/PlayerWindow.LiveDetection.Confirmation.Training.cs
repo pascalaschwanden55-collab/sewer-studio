@@ -30,27 +30,22 @@ public partial class PlayerWindow
 
             foreach (var finding in _detectionPendingFindings)
             {
-                var code = finding.VsaCodeHint ?? finding.Label;
-                int classId = InfraTeacher.VsaYoloClassMap.GetClassId(code);
-                var annotationId = Guid.NewGuid().ToString("N")[..12];
-                var baseName = $"det_{annotationId}";
-
-                // Bounding-Box aus Uhrposition ableiten (Ring-Sektor -> normalisierte Koordinaten)
-                var bbox = LiveDetectionGeometryMapper.BBoxFromClockPosition(finding);
+                var annotationId = LiveDetectionTrainingExportPlanner.CreateAnnotationId();
+                var exportPlan = LiveDetectionTrainingExportPlanner.BuildAccepted(finding, annotationId);
 
                 var exportResult = await frameExporter.ExportAsync(
                     frameBytes,
-                    bbox,
-                    code,
-                    classId,
-                    baseName,
+                    exportPlan.BoundingBox,
+                    exportPlan.Code,
+                    exportPlan.ClassId,
+                    exportPlan.BaseName,
                     annotationId);
 
                 var annotation = LiveDetectionTeacherAnnotationFactory.CreateDetection(
                     annotationId,
                     finding,
-                    code,
-                    bbox,
+                    exportPlan.Code,
+                    exportPlan.BoundingBox,
                     TimeSpan.FromSeconds(timestampSec),
                     exportResult);
                 await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
@@ -104,27 +99,24 @@ public partial class PlayerWindow
 
             var primary = _detectionPendingFindings[0];
             var timestampSecForFrame = _detectionPendingTimestampSec ?? timestampSec;
-            var bbox = LiveDetectionGeometryMapper.BBoxFromClockPosition(primary);
-
-            int classId = InfraTeacher.VsaYoloClassMap.GetClassId(selectedEntry.Code);
-            var annotationId = Guid.NewGuid().ToString("N")[..12];
-            var baseName = $"det_corr_{annotationId}";
+            var annotationId = LiveDetectionTrainingExportPlanner.CreateAnnotationId();
+            var exportPlan = LiveDetectionTrainingExportPlanner.BuildCorrected(primary, selectedEntry.Code, annotationId);
 
             var frameExporter = new LiveDetectionTrainingFrameExporter(
                 AuswertungPro.Next.UI.Ai.Teacher.TrainingAnnotationExportServiceFactory.Create());
             var exportResult = await frameExporter.ExportAsync(
                 frameBytes,
-                bbox,
-                selectedEntry.Code,
-                classId,
-                baseName,
+                exportPlan.BoundingBox,
+                exportPlan.Code,
+                exportPlan.ClassId,
+                exportPlan.BaseName,
                 annotationId);
 
             var annotation = LiveDetectionTeacherAnnotationFactory.CreateCorrectedDetection(
                 annotationId,
                 primary,
                 selectedEntry,
-                bbox,
+                exportPlan.BoundingBox,
                 TimeSpan.FromSeconds(timestampSecForFrame),
                 exportResult);
             await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);

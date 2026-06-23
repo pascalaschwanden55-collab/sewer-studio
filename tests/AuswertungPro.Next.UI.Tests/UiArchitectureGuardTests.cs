@@ -1728,15 +1728,18 @@ public sealed class UiArchitectureGuardTests
         var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.Actions.cs");
         var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.Training.cs");
         var frameExporterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingFrameExporter.cs");
+        var exportPlannerPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingExportPlanner.cs");
 
         Assert.True(File.Exists(actionsPath), "LiveDetection-Bestaetigungsaktionen sollen aus dem Anzeige-Partial heraus.");
         Assert.True(File.Exists(trainingPath), "LiveDetection-Trainingsuebernahme soll aus den simplen Bestaetigungsaktionen heraus.");
         Assert.True(File.Exists(frameExporterPath), "Detection-Training-Frame-Export soll ausserhalb der PlayerWindow-Partials gekapselt sein.");
+        Assert.True(File.Exists(exportPlannerPath), "Detection-Training-Exportplanung soll ausserhalb der PlayerWindow-Partials gekapselt sein.");
 
         var confirmation = File.ReadAllText(confirmationPath);
         var actions = File.ReadAllText(actionsPath);
         var training = File.ReadAllText(trainingPath);
         var frameExporter = File.ReadAllText(frameExporterPath);
+        var exportPlanner = File.ReadAllText(exportPlannerPath);
 
         Assert.Contains("private void ShowDetectionConfirmation", confirmation);
         Assert.Contains("private void ResumeDetection", confirmation);
@@ -1751,6 +1754,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private async void DetectionCorrect_Click", training);
         Assert.Contains("TrainingAnnotationExportServiceFactory.Create", training);
         Assert.Contains("LiveDetectionTrainingFrameExporter", training);
+        Assert.Contains("LiveDetectionTrainingExportPlanner.BuildAccepted", training);
+        Assert.Contains("LiveDetectionTrainingExportPlanner.BuildCorrected", training);
+        Assert.DoesNotContain("VsaYoloClassMap.GetClassId", training);
+        Assert.DoesNotContain("BBoxFromClockPosition", training);
+        Assert.DoesNotContain("det_corr_", training);
         Assert.DoesNotContain("File.WriteAllBytesAsync", training);
         Assert.DoesNotContain("File.Delete", training);
         Assert.DoesNotContain("Path.GetTempPath", training);
@@ -1758,6 +1766,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public sealed class LiveDetectionTrainingFrameExporter", frameExporter);
         Assert.Contains("File.WriteAllBytesAsync", frameExporter);
         Assert.Contains("BestEffort.Try", frameExporter);
+        Assert.Contains("public static class LiveDetectionTrainingExportPlanner", exportPlanner);
+        Assert.Contains("VsaYoloClassMap.GetClassId", exportPlanner);
+        Assert.Contains("LiveDetectionGeometryMapper.BBoxFromClockPosition", exportPlanner);
     }
 
     [Fact]
