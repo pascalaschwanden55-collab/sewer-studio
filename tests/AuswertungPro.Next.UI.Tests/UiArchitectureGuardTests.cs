@@ -2727,19 +2727,31 @@ public sealed class UiArchitectureGuardTests
         var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
         var persistencePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Persistence.cs");
         var lengthPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Length.cs");
+        var ensureServicePath = Path.Combine(uiRoot, "Ai", "CodingHaltungslaengeEnsureService.cs");
+        var ensureServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingHaltungslaengeEnsureServiceFactory.cs");
 
         Assert.True(File.Exists(lengthPath), "Haltungslaenge-Fallback gehoert in eine Lifecycle-Length-Partial, nicht in Persistence.");
+        Assert.True(File.Exists(ensureServicePath), "Haltungslaenge-Fallbacklogik gehoert ausserhalb der PlayerWindow-Partials.");
+        Assert.True(File.Exists(ensureServiceFactoryPath), "Haltungslaenge-Eingabe soll ueber Factory verdrahtet werden.");
 
         var lifecycle = File.ReadAllText(lifecyclePath);
         var persistence = File.ReadAllText(persistencePath);
         var length = File.ReadAllText(lengthPath);
+        var ensureService = File.ReadAllText(ensureServicePath);
+        var ensureServiceFactory = File.ReadAllText(ensureServiceFactoryPath);
 
         Assert.Contains("EnsureHaltungslaenge(_haltungRecord);", lifecycle);
         Assert.DoesNotContain("private void EnsureHaltungslaenge", persistence);
         Assert.DoesNotContain("Microsoft.VisualBasic.Interaction.InputBox", persistence);
         Assert.Contains("private void EnsureHaltungslaenge", length);
-        Assert.Contains("CodingHaltungslaengeResolver.TryEnsureFromKnownSources", length);
-        Assert.Contains("Microsoft.VisualBasic.Interaction.InputBox", length);
+        Assert.Contains("CodingHaltungslaengeEnsureServiceFactory.Create", length);
+        Assert.DoesNotContain("CodingHaltungslaengeResolver.TryEnsureFromKnownSources", length);
+        Assert.DoesNotContain("Microsoft.VisualBasic.Interaction.InputBox", length);
+        Assert.DoesNotContain("SetFieldValue(\"Haltungslaenge_m\"", length);
+        Assert.Contains("CodingHaltungslaengeResolver.TryEnsureFromKnownSources", ensureServiceFactory);
+        Assert.Contains("Microsoft.VisualBasic.Interaction.InputBox", ensureServiceFactory);
+        Assert.Contains("SetFieldValue", ensureService);
+        Assert.Contains("\"Haltungslaenge_m\"", ensureService);
     }
 
     [Fact]
