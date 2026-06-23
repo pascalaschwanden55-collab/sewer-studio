@@ -833,21 +833,28 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.cs");
+        var overlayPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Overlay.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayPolicy.cs");
 
+        Assert.True(File.Exists(overlayPath), "Playback-Marquee-Overlay-Wiring soll in einem eigenen Playback-Partial liegen.");
         Assert.True(File.Exists(policyPath), "VLC-Marquee-Anzeigeparameter muessen ausserhalb der PlayerWindow-Partials liegen.");
 
         var playback = File.ReadAllText(playbackPath);
+        var overlay = File.ReadAllText(overlayPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("PlayerMarqueeOverlayPolicy.BuildShow", playback);
-        Assert.Contains("PlayerMarqueeOverlayPolicy.DisabledEnable", playback);
-        Assert.DoesNotContain("VideoMarqueeOption.Enable, 0", playback);
-        Assert.DoesNotContain("VideoMarqueeOption.X, 16", playback);
-        Assert.DoesNotContain("VideoMarqueeOption.Y, 16", playback);
-        Assert.DoesNotContain("VideoMarqueeOption.Size, 24", playback);
-        Assert.DoesNotContain("VideoMarqueeOption.Color, 0xFFFFFF", playback);
-        Assert.DoesNotContain("VideoMarqueeOption.Opacity, 200", playback);
+        Assert.DoesNotContain("private void ShowOverlay", playback);
+        Assert.DoesNotContain("public static bool TryShowOverlayOnLast", playback);
+        Assert.Contains("private void ShowOverlay", overlay);
+        Assert.Contains("public static bool TryShowOverlayOnLast", overlay);
+        Assert.Contains("PlayerMarqueeOverlayPolicy.BuildShow", overlay);
+        Assert.Contains("PlayerMarqueeOverlayPolicy.DisabledEnable", overlay);
+        Assert.DoesNotContain("VideoMarqueeOption.Enable, 0", overlay);
+        Assert.DoesNotContain("VideoMarqueeOption.X, 16", overlay);
+        Assert.DoesNotContain("VideoMarqueeOption.Y, 16", overlay);
+        Assert.DoesNotContain("VideoMarqueeOption.Size, 24", overlay);
+        Assert.DoesNotContain("VideoMarqueeOption.Color, 0xFFFFFF", overlay);
+        Assert.DoesNotContain("VideoMarqueeOption.Opacity, 200", overlay);
         Assert.Contains("public static PlayerMarqueeOverlayState BuildShow", policy);
     }
 
