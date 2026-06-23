@@ -46,8 +46,7 @@ public partial class PlayerWindow
             SetCodingAiState("Dateneinblendung erkannt \u2014 \u00fcbersprungen",
                 PlayerStatusColors.Muted,
                 $"Warte auf Videobild... (Bild {_codingFrameReadiness.SkippedFrames} von 3)");
-            CodingFindingsList.ItemsSource = null;
-            DetectionCanvas.Children.Clear();
+            DetectionOverlayCleaner.ClearFindingsAndCanvas(DetectionCanvas, CodingFindingsList);
             return;
         }
 
@@ -78,8 +77,7 @@ public partial class PlayerWindow
         {
             var noDamageText = LiveDetectionDisplayPolicy.BuildCodingNoDamageStatusText(result.MeterReading);
             SetCodingAiState(noDamageText, PlayerStatusColors.Success, "Schritt 3 von 3: Overlay aktualisiert");
-            CodingFindingsList.ItemsSource = null;
-            DetectionCanvas.Children.Clear();
+            DetectionOverlayCleaner.ClearFindingsAndCanvas(DetectionCanvas, CodingFindingsList);
             return;
         }
 
@@ -108,8 +106,7 @@ public partial class PlayerWindow
         else
         {
             // Nichts Neues zu zeigen -> evtl. noch sichtbare Alt-Boxen wegnehmen (Liste bleibt)
-            DetectionCanvas.Children.Clear();
-            DetectionOverlayGrid.Visibility = Visibility.Collapsed;
+            DetectionOverlayCleaner.ClearVisuals(DetectionCanvas, DetectionOverlayGrid);
         }
     }
 

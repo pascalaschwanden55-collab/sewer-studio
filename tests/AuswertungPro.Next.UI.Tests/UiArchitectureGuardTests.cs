@@ -3495,18 +3495,24 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiOverlayLifecycle.cs");
+        var aiEventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs");
         var cleanerPath = Path.Combine(uiRoot, "Player", "DetectionOverlayCleaner.cs");
 
         Assert.True(File.Exists(cleanerPath), "Detection-Overlay-Cleanup muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var lifecycle = File.ReadAllText(lifecyclePath);
+        var aiEvents = File.ReadAllText(aiEventsPath);
         var cleaner = File.Exists(cleanerPath) ? File.ReadAllText(cleanerPath) : "";
 
         Assert.Contains("DetectionOverlayCleaner.ClearAll", lifecycle);
         Assert.Contains("DetectionOverlayCleaner.ClearVisuals", lifecycle);
         Assert.DoesNotContain("DetectionCanvas.Children.Clear()", lifecycle);
+        Assert.Contains("DetectionOverlayCleaner.ClearFindingsAndCanvas", aiEvents);
+        Assert.Contains("DetectionOverlayCleaner.ClearVisuals", aiEvents);
+        Assert.DoesNotContain("DetectionCanvas.Children.Clear()", aiEvents);
         Assert.Contains("public static void ClearAll", cleaner);
         Assert.Contains("public static void ClearVisuals", cleaner);
+        Assert.Contains("public static void ClearFindingsAndCanvas", cleaner);
     }
 
     [Fact]

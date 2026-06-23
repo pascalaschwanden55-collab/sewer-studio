@@ -83,4 +83,42 @@ public sealed class DetectionOverlayCleanerTests
         Assert.Equal(Visibility.Collapsed, overlayVisibility);
         Assert.NotNull(itemsSource);
     }
+
+    [Fact]
+    public void ClearFindingsAndCanvas_clears_canvas_and_findings_without_hiding_overlay()
+    {
+        Exception? threadError = null;
+        int childCount = -1;
+        Visibility overlayVisibility = Visibility.Visible;
+        object? itemsSource = new object();
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var canvas = new Canvas();
+                canvas.Children.Add(new Border());
+                var overlay = new Grid { Visibility = Visibility.Visible };
+                var findings = new ListBox { ItemsSource = new[] { "BAB" } };
+
+                DetectionOverlayCleaner.ClearFindingsAndCanvas(canvas, findings);
+
+                childCount = canvas.Children.Count;
+                overlayVisibility = overlay.Visibility;
+                itemsSource = findings.ItemsSource;
+            }
+            catch (Exception ex)
+            {
+                threadError = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(threadError);
+        Assert.Equal(0, childCount);
+        Assert.Equal(Visibility.Visible, overlayVisibility);
+        Assert.Null(itemsSource);
+    }
 }
