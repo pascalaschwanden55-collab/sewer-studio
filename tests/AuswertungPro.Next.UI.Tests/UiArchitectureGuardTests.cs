@@ -849,6 +849,29 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_event_list_item_coloring_lives_in_list_items_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var detailPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.cs");
+        var listItemsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.ListItems.cs");
+
+        Assert.True(File.Exists(listItemsPath), "Event-ListBox-Einfaerbung soll aus dem Inline-Detail-Partial heraus.");
+
+        var detail = File.ReadAllText(detailPath);
+        var listItems = File.ReadAllText(listItemsPath);
+
+        Assert.DoesNotContain("private void ColorizeCodingEventListItems", detail);
+        Assert.DoesNotContain("\"ZoneDot\"", detail);
+        Assert.DoesNotContain("\"TxtConfidence\"", detail);
+        Assert.Contains("private void ColorizeCodingEventListItems", listItems);
+        Assert.Contains("\"ZoneDot\"", listItems);
+        Assert.Contains("\"TxtConfidence\"", listItems);
+        Assert.Contains("ApplyCodingProtocolMatchListHighlights();", listItems);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_side_panel_width_lives_in_policy()
     {
         var root = FindRepositoryRoot();
