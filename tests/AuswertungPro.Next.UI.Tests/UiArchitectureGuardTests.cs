@@ -1638,6 +1638,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_level_overlay_rendering_lives_in_level_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var specialShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.cs");
+        var levelPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.Level.cs");
+
+        Assert.True(File.Exists(levelPath), "Level-Overlay-Rendering soll aus dem allgemeinen SpecialShapes-Partial heraus.");
+
+        var specialShapes = File.ReadAllText(specialShapesPath);
+        var level = File.ReadAllText(levelPath);
+
+        Assert.DoesNotContain("private void RenderLevelOverlay", specialShapes);
+        Assert.Contains("private void RenderLevelOverlay", level);
+        Assert.Contains("RenderSchemaPipeReference", level);
+        Assert.Contains("LevelMode.Obstacle", level);
+        Assert.Contains("AddSchemaLabel", level);
+    }
+
+    [Fact]
     public void PlayerWindow_eingabemarker_geometry_lives_in_policy()
     {
         var root = FindRepositoryRoot();
