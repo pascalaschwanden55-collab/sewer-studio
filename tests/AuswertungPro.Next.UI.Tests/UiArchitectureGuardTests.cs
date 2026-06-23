@@ -371,7 +371,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var overlayPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.OverlayRendering.cs");
+        var overlayPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.OverlayRendering.MeasurementPanel.cs");
         var formatterPath = Path.Combine(uiRoot, "Ai", "CodingOverlayMeasurementFormatter.cs");
 
         var overlay = File.ReadAllText(overlayPath);
@@ -2171,6 +2171,26 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void RenderLateralCircleOverlay", lateralCircle);
         Assert.Contains("overlay.DnRatioPercent", lateralCircle);
         Assert.Contains("DN {overlay.Q1Mm.Value:F0}", lateralCircle);
+    }
+
+    [Fact]
+    public void PlayerWindow_overlay_measurement_panel_lives_in_measurement_panel_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayRenderingPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs");
+        var measurementPanelPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.MeasurementPanel.cs");
+
+        Assert.True(File.Exists(measurementPanelPath), "Overlay-Messwert-Panel soll aus dem allgemeinen OverlayRendering-Partial heraus.");
+
+        var overlayRendering = File.ReadAllText(overlayRenderingPath);
+        var measurementPanel = File.ReadAllText(measurementPanelPath);
+
+        Assert.DoesNotContain("private void UpdateCodingOverlayInfo", overlayRendering);
+        Assert.Contains("private void UpdateCodingOverlayInfo", measurementPanel);
+        Assert.Contains("CodingOverlayMeasurementFormatter.BuildPanelState", measurementPanel);
+        Assert.Contains("CodingMeasurementPanel.Visibility", measurementPanel);
     }
 
     [Fact]
