@@ -1310,6 +1310,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_visual_tree_helper_lives_in_visual_tree_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var detailsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.cs");
+        var visualTreePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.VisualTree.cs");
+
+        Assert.True(File.Exists(visualTreePath), "Gemeinsame Coding-VisualTree-Helfer sollen nicht in EventDetails liegen.");
+
+        var details = File.ReadAllText(detailsPath);
+        var visualTree = File.ReadAllText(visualTreePath);
+
+        Assert.DoesNotContain("private static T? FindCodingChild", details);
+        Assert.Contains("private static T? FindCodingChild", visualTree);
+        Assert.Contains("VisualTreeHelper.GetChildrenCount", visualTree);
+        Assert.Contains("where T : FrameworkElement", visualTree);
+    }
+
+    [Fact]
     public void PlayerWindow_osd_badge_meter_text_uses_display_policy()
     {
         var root = FindRepositoryRoot();
