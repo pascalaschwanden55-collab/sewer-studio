@@ -1,8 +1,6 @@
 using System;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Services;
-using AuswertungPro.Next.UI.ViewModels.Windows;
-using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -10,15 +8,12 @@ public partial class PlayerWindow
 {
     private void CreateCodingSessionState()
     {
-        _codingSessionService = CreateCodingSessionService();
-        _codingOverlayService = new OverlayToolService();
+        var state = CodingSessionStateFactory.Create(_videoPath, _serviceProvider?.Settings);
+        _codingSessionService = state.SessionService;
+        _codingOverlayService = state.OverlayService;
         _codingSchemaManager.Cancel();
         _codingSchemaType = null;
-        _codingVm = new CodingSessionViewModel(
-            _codingSessionService,
-            _codingOverlayService,
-            new InfraSelfImproving.CodingFeedbackRecorder());
-        _codingVm.VideoPath = _videoPath;
+        _codingVm = state.ViewModel;
         _codingVm.PropertyChanged += CodingVm_PropertyChanged;
     }
 

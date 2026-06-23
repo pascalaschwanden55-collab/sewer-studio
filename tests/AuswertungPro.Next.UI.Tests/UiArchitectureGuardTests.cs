@@ -3405,6 +3405,28 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("new VisionPipelineClient", factory);
     }
 
+    [Fact]
+    public void PlayerWindow_coding_session_state_creation_lives_in_factory()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var sessionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
+        var factoryPath = Path.Combine(uiRoot, "Services", "CodingSessionStateFactory.cs");
+
+        Assert.True(File.Exists(factoryPath), "Codier-Session-State-Aufbau soll ausserhalb von PlayerWindow liegen.");
+
+        var session = File.ReadAllText(sessionPath);
+        var factory = File.ReadAllText(factoryPath);
+
+        Assert.Contains("CodingSessionStateFactory.Create", session);
+        Assert.DoesNotContain("new OverlayToolService", session);
+        Assert.DoesNotContain("new CodingSessionViewModel", session);
+        Assert.DoesNotContain("CodingFeedbackRecorder", session);
+        Assert.Contains("new OverlayToolService", factory);
+        Assert.Contains("new CodingSessionViewModel", factory);
+        Assert.Contains("new CodingFeedbackRecorder", factory);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);
