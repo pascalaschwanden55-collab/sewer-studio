@@ -3016,22 +3016,30 @@ public sealed class UiArchitectureGuardTests
         var pipeBendPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.PipeBend.cs");
         var helperPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Helpers.cs");
         var dotRendererPath = Path.Combine(uiRoot, "Player", "CodingOverlayDotMarkerRenderer.cs");
+        var rendererPath = Path.Combine(uiRoot, "Player", "CodingPipeBendOverlayRenderer.cs");
 
         Assert.True(File.Exists(pipeBendPath), "Pipe-Bend-Overlay-Rendering soll aus dem allgemeinen SpecialShapes-Partial heraus.");
         Assert.False(File.Exists(helperPath), "Dot-Marker-Rendering soll nicht mehr als PlayerWindow-Partial leben.");
         Assert.True(File.Exists(dotRendererPath), "Dot-Marker-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(rendererPath), "Pipe-Bend-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var specialShapes = File.ReadAllText(specialShapesPath);
         var pipeBend = File.ReadAllText(pipeBendPath);
         var dotRenderer = File.ReadAllText(dotRendererPath);
+        var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("private void RenderPipeBendOverlay", specialShapes);
         Assert.Contains("private void RenderPipeBendOverlay", pipeBend);
-        Assert.Contains("overlay.ArcDegrees", pipeBend);
+        Assert.Contains("CodingPipeBendOverlayRenderer.Render", pipeBend);
+        Assert.DoesNotContain("overlay.ArcDegrees", pipeBend);
+        Assert.DoesNotContain("new System.Windows.Shapes.Line", pipeBend);
         Assert.DoesNotContain("AddDotMarker", pipeBend);
-        Assert.Contains("CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, vertex", pipeBend);
         Assert.Contains("public static class CodingOverlayDotMarkerRenderer", dotRenderer);
         Assert.Contains("new System.Windows.Shapes.Ellipse", dotRenderer);
+        Assert.Contains("public static class CodingPipeBendOverlayRenderer", renderer);
+        Assert.Contains("overlay.ArcDegrees", renderer);
+        Assert.Contains("new System.Windows.Shapes.Line", renderer);
+        Assert.Contains("CodingOverlayDotMarkerRenderer.Add", renderer);
     }
 
     [Fact]
