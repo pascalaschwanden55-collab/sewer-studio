@@ -1,4 +1,5 @@
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -18,8 +19,7 @@ public partial class PlayerWindow
 
     private void DisposeCodingOsdMeterService()
     {
-        _codingOsdMeterService?.Dispose();
-        _codingOsdMeterService = null;
+        _codingOsdMeterService = DisposableReferenceLifecycle.DisposeAndClear(_codingOsdMeterService);
     }
 
     private double ResolveCodingMeterForFrame(double? frameTimestampSeconds, double? sameFrameOsdMeter = null)

@@ -15,8 +15,7 @@ public partial class PlayerWindow
         _isDetecting = false;
         _isDetectionInFlight = false;
         _liveDetectionService = null;
-        _liveDetectionClient?.Dispose();
-        _liveDetectionClient = null;
+        _liveDetectionClient = DisposableReferenceLifecycle.DisposeAndClear(_liveDetectionClient);
         _liveDetectionModelName = string.Empty;
         _currentFindings.Clear();
 

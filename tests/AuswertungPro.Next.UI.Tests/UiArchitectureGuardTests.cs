@@ -964,15 +964,18 @@ public sealed class UiArchitectureGuardTests
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.cs");
         var stopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeFactory.cs");
+        var disposableLifecyclePath = Path.Combine(uiRoot, "Player", "DisposableReferenceLifecycle.cs");
 
         Assert.True(File.Exists(lifecyclePath), "LiveDetection-Start/Stop-Wiring soll in ein eigenes Lifecycle-Partial.");
         Assert.True(File.Exists(stopPath), "LiveDetection-Stop/Cleanup soll aus dem Start-Lifecycle-Partial heraus.");
         Assert.True(File.Exists(factoryPath), "LiveDetection-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(disposableLifecyclePath), "Disposable-Referenz-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var stop = File.ReadAllText(stopPath);
         var factory = File.ReadAllText(factoryPath);
+        var disposableLifecycle = File.Exists(disposableLifecyclePath) ? File.ReadAllText(disposableLifecyclePath) : "";
 
         Assert.DoesNotContain("private async void LiveDetection_Click", liveDetection);
         Assert.DoesNotContain("private async Task StartLiveDetectionAsync", liveDetection);
@@ -1001,7 +1004,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_detectionCts?.Cancel();", lifecycle + stop);
         Assert.DoesNotContain("_detectionCts?.Dispose();", lifecycle + stop);
         Assert.DoesNotContain("_detectionCts = null;", lifecycle + stop);
-        Assert.Contains("_liveDetectionClient?.Dispose", stop);
+        Assert.Contains("_liveDetectionClient = DisposableReferenceLifecycle.DisposeAndClear(_liveDetectionClient)", stop);
+        Assert.DoesNotContain("_liveDetectionClient?.Dispose()", stop);
+        Assert.DoesNotContain("_liveDetectionClient = null;", stop);
+        Assert.Contains("public static T? DisposeAndClear<T>", disposableLifecycle);
     }
 
     [Fact]
@@ -1230,19 +1236,26 @@ public sealed class UiArchitectureGuardTests
         var helpersPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Helpers.cs");
         var readingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Reading.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingSnapshotCaptureFactory.cs");
+        var disposableLifecyclePath = Path.Combine(uiRoot, "Player", "DisposableReferenceLifecycle.cs");
 
         Assert.True(File.Exists(readingPath), "OSD-OCR und Snapshot-Lesen sollen aus dem Meter-Resolver-Partial heraus.");
         Assert.True(File.Exists(factoryPath), "Snapshot-Capture-Erzeugung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(disposableLifecyclePath), "Disposable-Referenz-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var osd = File.ReadAllText(osdPath);
         var helpers = File.ReadAllText(helpersPath);
         var reading = File.ReadAllText(readingPath);
         var factory = File.ReadAllText(factoryPath);
+        var disposableLifecycle = File.Exists(disposableLifecyclePath) ? File.ReadAllText(disposableLifecyclePath) : "";
 
         Assert.Contains("private double ResolveCodingMeterForFrame", osd);
         Assert.Contains("private double? GetMeterFromVideoPosition", osd);
         Assert.DoesNotContain("private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync", osd);
         Assert.DoesNotContain("private async Task<double?> TryReadOsdMeterFromFrameBytesAsync", osd);
+        Assert.Contains("_codingOsdMeterService = DisposableReferenceLifecycle.DisposeAndClear(_codingOsdMeterService)", osd);
+        Assert.DoesNotContain("_codingOsdMeterService?.Dispose()", osd);
+        Assert.DoesNotContain("_codingOsdMeterService = null;", osd);
+        Assert.Contains("public static T? DisposeAndClear<T>", disposableLifecycle);
         Assert.DoesNotContain("private async Task<double?> CodingReadOsdMeterAsync", osd);
         Assert.Contains("private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync", reading);
         Assert.Contains("private async Task<double?> TryReadOsdMeterFromFrameBytesAsync", reading);
