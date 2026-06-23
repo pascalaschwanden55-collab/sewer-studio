@@ -2436,6 +2436,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_ai_rectangle_overlay_rendering_lives_in_rectangle_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var aiOverlayPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.cs");
+        var rectanglePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.Rectangle.cs");
+
+        Assert.True(File.Exists(rectanglePath), "AI-Rechteck-Overlay mit Label soll aus dem allgemeinen AI-Overlay-Dispatcher heraus.");
+
+        var aiOverlay = File.ReadAllText(aiOverlayPath);
+        var rectangle = File.ReadAllText(rectanglePath);
+
+        Assert.Contains("RenderAiRectangleOverlay(", aiOverlay);
+        Assert.DoesNotContain("var labelBorder = new Border", aiOverlay);
+        Assert.DoesNotContain("CodingAiOverlayDisplayPolicy.LabelText", aiOverlay);
+        Assert.Contains("private void RenderAiRectangleOverlay", rectangle);
+        Assert.Contains("var labelBorder = new Border", rectangle);
+        Assert.Contains("CodingAiOverlayDisplayPolicy.LabelText", rectangle);
+    }
+
+    [Fact]
     public void PlayerWindow_eingabemarker_geometry_lives_in_policy()
     {
         var root = FindRepositoryRoot();
