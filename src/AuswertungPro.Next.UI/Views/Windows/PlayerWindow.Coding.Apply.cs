@@ -4,7 +4,6 @@ using System.Linq;
 using System.Windows;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Player;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -87,17 +86,13 @@ public partial class PlayerWindow
 
     private void MarkProjectDirtyForCoding()
     {
-        if (PlayerShellProjectServiceFactory.Create().MarkProjectDirty(_haltungRecord))
-            return;
-
-        if (_haltungRecord is not null)
-            _haltungRecord.ModifiedAtUtc = PlayerClock.UtcNow();
+        CodingProjectPersistenceServiceFactory.Create().MarkProjectDirty(_haltungRecord);
     }
 
     private void SaveProjectAfterCoding()
     {
         // Nur speichern, wenn das Projekt bereits einen Pfad hat. Sonst wuerde TrySaveProject
         // mitten im Codieren oder beim Fensterschliessen einen Speichern-unter-Dialog oeffnen.
-        PlayerShellProjectServiceFactory.Create().TrySaveProjectIfReady();
+        CodingProjectPersistenceServiceFactory.Create().TrySaveProjectIfReady();
     }
 }
