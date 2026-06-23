@@ -1241,16 +1241,25 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var snapshotPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Snapshot.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotPathPolicy.cs");
+        var captureServicePath = Path.Combine(uiRoot, "Player", "PlayerSnapshotFileCaptureService.cs");
 
         Assert.True(File.Exists(policyPath), "Temp-Pfad fuer Player-Snapshots muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(captureServicePath), "Snapshot-Datei-Capture muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var snapshot = File.ReadAllText(snapshotPath);
         var policy = File.ReadAllText(policyPath);
+        var captureService = File.ReadAllText(captureServicePath);
 
         Assert.Contains("PlayerSnapshotPathPolicy.Create", snapshot);
+        Assert.Contains("PlayerSnapshotFileCaptureServiceFactory.Create", snapshot);
+        Assert.DoesNotContain("new PlayerSnapshotFileCaptureService", snapshot);
         Assert.DoesNotContain("SewerStudio_Snapshots", snapshot);
         Assert.DoesNotContain("snap_{DateTime.Now", snapshot);
         Assert.DoesNotContain("Path.GetTempPath()", snapshot);
+        Assert.DoesNotContain("Directory.CreateDirectory", snapshot);
+        Assert.DoesNotContain("Thread.Sleep", snapshot);
+        Assert.Contains("Directory.CreateDirectory", captureService);
+        Assert.Contains("PlayerSnapshotPauseDelay.WaitAfterPause", snapshot);
         Assert.Contains("public static PlayerSnapshotTarget Build", policy);
         Assert.Contains("public static PlayerSnapshotTarget Create", policy);
     }

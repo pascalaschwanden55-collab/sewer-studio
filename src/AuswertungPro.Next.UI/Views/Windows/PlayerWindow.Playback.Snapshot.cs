@@ -1,4 +1,3 @@
-using System.IO;
 using LibVLCSharp.Shared;
 using AuswertungPro.Next.UI.Player;
 
@@ -21,10 +20,8 @@ public partial class PlayerWindow
         try
         {
             var target = PlayerSnapshotPathPolicy.Create();
-            Directory.CreateDirectory(target.DirectoryPath);
-            snapshotPath = target.FilePath;
-
-            return playerWindow.TakeSnapshotSafe(snapshotPath);
+            return PlayerSnapshotFileCaptureServiceFactory.Create()
+                .TryCapture(target, path => playerWindow.TakeSnapshotSafe(path), out snapshotPath);
         }
         catch
         {
@@ -44,7 +41,7 @@ public partial class PlayerWindow
             if (wasPlaying)
             {
                 _player.SetPause(true);
-                System.Threading.Thread.Sleep(60);
+                PlayerSnapshotPauseDelay.WaitAfterPause();
             }
             if (_closing || _playbackDisposed)
                 return false;
