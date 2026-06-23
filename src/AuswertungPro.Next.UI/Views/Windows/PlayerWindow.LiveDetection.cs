@@ -1,52 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Threading;
+using System;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Threading;
-using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Application.Ai.QualityGate;
-using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.Infrastructure.Ai;
-using AuswertungPro.Next.Infrastructure.Ai.Ollama;
-using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
-using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
-using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Helpers;
-using AuswertungPro.Next.UI.Services;
-using AuswertungPro.Next.UI.ViewModels.Windows;
-using AppProtocol = AuswertungPro.Next.Application.Protocol;
-using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
-using Rectangle = System.Windows.Shapes.Rectangle;
-using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
-
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private AppProtocol.IVsaCodeSelectionCatalog? CodeSelectionCatalog
-        => _serviceProvider?.CodeSelectionCatalog;
-
-    private AppProtocol.ICodeCatalogProvider? CodeCatalog
-        => _serviceProvider?.CodeCatalog;
-
-    private ViewModels.Windows.VsaCodeExplorerViewModel CreateVsaCodeExplorerViewModel(
-        ProtocolEntry entry,
-        double? presetMeter,
-        TimeSpan? presetZeit)
-        => new(entry, presetMeter, presetZeit, CodeSelectionCatalog);
-
     private async void DetectionTimer_Tick(object? sender, EventArgs e)
     {
         if (_closing || _player is null) return;
@@ -149,5 +109,4 @@ public partial class PlayerWindow
             _isDetectionInFlight = false;
         }
     }
-
 }
