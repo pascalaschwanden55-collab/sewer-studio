@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Windows.Input;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -10,19 +9,14 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private OverlayToolType _markToolType = OverlayToolType.None;
-
     private void ManualMark_Click(object sender, RoutedEventArgs e)
     {
-        if (_isCodingMode)
-            ToolsDropdownPopup.IsOpen = !ToolsDropdownPopup.IsOpen;
-        else
-            MarkToolPopup.IsOpen = !MarkToolPopup.IsOpen;
+        _markToolControls.ToggleManualMarkPopup(_isCodingMode);
     }
 
     private void ToolsDropdown_Click(object sender, RoutedEventArgs e)
     {
-        ToolsDropdownPopup.IsOpen = !ToolsDropdownPopup.IsOpen;
+        _markToolControls.ToggleToolsDropdown();
     }
 
     private void MarkTool_Punkt_Click(object sender, RoutedEventArgs e)
@@ -39,12 +33,8 @@ public partial class PlayerWindow
 
     private void ActivateMarkTool(OverlayToolType tool, string label)
     {
-        MarkToolPopup.IsOpen = false;
-        CodingMarkToolPopup.IsOpen = false;
-        ToolsDropdownPopup.IsOpen = false;
+        _markToolControls.BeginActivation(label);
         _markToolType = tool;
-        TxtMarkToolName.Text = label;
-        TxtActiveToolLabel.Text = label;
         _player.SetPause(true);
         _codingSchemaManager.Cancel();
         _codingSchemaType = null;
@@ -53,10 +43,7 @@ public partial class PlayerWindow
         {
             // Bestehende Punkt-Logik: DetectionCanvas aktivieren
             _isManualMarkMode = true;
-            DetectionOverlayGrid.Visibility = Visibility.Visible;
-            DetectionOverlayGrid.IsHitTestVisible = true;
-            DetectionCanvas.IsHitTestVisible = true;
-            DetectionCanvas.Cursor = Cursors.Cross;
+            _markToolControls.ActivatePointTool();
         }
         else
         {
@@ -69,10 +56,9 @@ public partial class PlayerWindow
             if (_codingVm != null)
                 _codingVm.CurrentOverlay = null;
 
-            CodingOverlayPopup.IsOpen = true;
+            _markToolControls.OpenCodingOverlay();
             UpdateCodingOverlayViewport();
-            CodingOverlayCanvas.IsHitTestVisible = true;
-            CodingOverlayCanvas.Cursor = Cursors.Cross;
+            _markToolControls.EnableCodingOverlayInput();
         }
     }
 
@@ -102,15 +88,8 @@ public partial class PlayerWindow
     {
         _markToolType = OverlayToolType.None;
         _isManualMarkMode = false;
-        TxtMarkToolName.Text = "Markieren";
-
-        DetectionCanvas.Cursor = Cursors.Arrow;
-        DetectionCanvas.IsHitTestVisible = false;
-        if (!_isDetecting)
-        {
-            DetectionOverlayGrid.IsHitTestVisible = false;
-            DetectionOverlayGrid.Visibility = Visibility.Collapsed;
-        }
+        _markToolControls.ResetToolLabel();
+        _markToolControls.DeactivateDetectionSide(_isDetecting);
 
         if (!_isCodingMode)
         {
@@ -118,8 +97,7 @@ public partial class PlayerWindow
             _codingOverlayService?.CancelDraw();
             if (_codingOverlayService != null)
                 _codingOverlayService.ActiveTool = OverlayToolType.None;
-            CodingOverlayPopup.IsOpen = false;
-            CodingOverlayCanvas.IsHitTestVisible = false;
+            _markToolControls.DeactivateCodingOverlay();
         }
     }
 }

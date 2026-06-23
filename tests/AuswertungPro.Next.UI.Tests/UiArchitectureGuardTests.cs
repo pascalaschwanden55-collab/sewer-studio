@@ -153,6 +153,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private readonly MediaPlayer _player", state);
         Assert.Contains("private readonly PlayerPositionControls _positionControls", state);
         Assert.Contains("private readonly PlayerSpeedControls _speedControls", state);
+        Assert.Contains("private readonly PlayerMarkToolControls _markToolControls", state);
         Assert.Contains("private readonly DamageMarkerController _damageMarkerController", state);
         Assert.Contains("private readonly QuickScanController _quickScanController", state);
         Assert.Contains("private OllamaClient? _liveDetectionClient", state);
@@ -1962,19 +1963,39 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
         var markToolsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.MarkTools.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
+        var controlsPath = Path.Combine(uiRoot, "Player", "PlayerMarkToolControls.cs");
 
         Assert.True(File.Exists(markToolsPath), "Markierwerkzeug-Wiring soll aus dem grossen Marking-Partial heraus.");
+        Assert.True(File.Exists(controlsPath), "Markierwerkzeug-UI-Zustand soll in einem Player-Controller gekapselt sein.");
 
         var marking = File.ReadAllText(markingPath);
         var markTools = File.ReadAllText(markToolsPath);
+        var state = File.ReadAllText(statePath);
+        var controls = File.ReadAllText(controlsPath);
 
         Assert.DoesNotContain("private void ActivateMarkTool", marking);
         Assert.DoesNotContain("private void EnsureMarkOverlayReady", marking);
         Assert.DoesNotContain("private void DeactivateMarkTool", marking);
+        Assert.DoesNotContain("private OverlayToolType _markToolType", markTools);
+        Assert.DoesNotContain("MarkToolPopup.IsOpen", markTools);
+        Assert.DoesNotContain("ToolsDropdownPopup.IsOpen", markTools);
+        Assert.DoesNotContain("TxtMarkToolName.Text", markTools);
+        Assert.DoesNotContain("DetectionCanvas.Cursor", markTools);
+        Assert.DoesNotContain("CodingOverlayPopup.IsOpen", markTools);
+        Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible", markTools);
         Assert.Contains("private void ActivateMarkTool", markTools);
         Assert.Contains("private void EnsureMarkOverlayReady", markTools);
         Assert.Contains("private void DeactivateMarkTool", markTools);
+        Assert.Contains("private OverlayToolType _markToolType", state);
+        Assert.Contains("_markToolControls.BeginActivation", markTools);
+        Assert.Contains("_markToolControls.ActivatePointTool", markTools);
+        Assert.Contains("_markToolControls.OpenCodingOverlay", markTools);
+        Assert.Contains("_markToolControls.DeactivateDetectionSide", markTools);
         Assert.Contains("CodingSessionServiceFactory.Create", markTools);
+        Assert.Contains("public sealed class PlayerMarkToolControls", controls);
+        Assert.Contains("_markToolPopup.IsOpen", controls);
+        Assert.Contains("_detectionCanvas.Cursor", controls);
     }
 
     [Fact]

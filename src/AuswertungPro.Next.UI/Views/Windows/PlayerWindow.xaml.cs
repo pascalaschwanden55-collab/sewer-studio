@@ -89,6 +89,17 @@ public partial class PlayerWindow : Window
             Speed4Button,
             Speed8Button);
 
+        _markToolControls = new PlayerMarkToolControls(
+            MarkToolPopup,
+            CodingMarkToolPopup,
+            ToolsDropdownPopup,
+            TxtMarkToolName,
+            TxtActiveToolLabel,
+            DetectionOverlayGrid,
+            DetectionCanvas,
+            CodingOverlayPopup,
+            CodingOverlayCanvas);
+
         _timer = CreateUpdateTimer();
         _scrubTimer = CreateScrubTimer();
         WirePositionSliderEvents();

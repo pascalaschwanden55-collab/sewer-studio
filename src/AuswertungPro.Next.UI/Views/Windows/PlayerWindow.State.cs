@@ -30,6 +30,7 @@ public partial class PlayerWindow
     private readonly PlayerDamageOverlayData? _damageOverlay;
     private readonly PlayerPositionControls _positionControls;
     private readonly PlayerSpeedControls _speedControls;
+    private readonly PlayerMarkToolControls _markToolControls;
     private readonly DamageMarkerController _damageMarkerController;
     private readonly QuickScanController _quickScanController;
 
@@ -41,6 +42,7 @@ public partial class PlayerWindow
     private bool _isDetecting;
     private bool _isDetectionInFlight;
     private bool _isManualMarkMode;
+    private OverlayToolType _markToolType = OverlayToolType.None;
     private double _lastDetectionTimestamp;
     private readonly List<LiveFrameFinding> _currentFindings = new();
     private List<LiveFrameFinding>? _detectionPendingFindings;
