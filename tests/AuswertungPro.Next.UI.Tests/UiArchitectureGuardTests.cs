@@ -151,6 +151,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private static PlayerWindow? _lastOpened", windowRoot);
         Assert.Contains("private readonly LibVLC _libVlc", state);
         Assert.Contains("private readonly MediaPlayer _player", state);
+        Assert.Contains("private readonly PlayerSpeedControls _speedControls", state);
         Assert.Contains("private readonly DamageMarkerController _damageMarkerController", state);
         Assert.Contains("private readonly QuickScanController _quickScanController", state);
         Assert.Contains("private OllamaClient? _liveDetectionClient", state);
@@ -455,29 +456,37 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
-    public void PlayerWindow_playback_preview_and_rate_labels_live_in_policy()
+    public void PlayerWindow_playback_preview_lives_in_policy_and_speed_controls_in_controller()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.cs");
         var controlsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Controls.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackState.cs");
+        var speedControlsPath = Path.Combine(uiRoot, "Player", "PlayerSpeedControls.cs");
 
         var playback = File.ReadAllText(playbackPath) + File.ReadAllText(controlsPath);
         var policy = File.ReadAllText(policyPath);
+        var speedControls = File.ReadAllText(speedControlsPath);
 
         Assert.Contains("PlayerPlaybackState.BuildSeekPreviewText", playback);
-        Assert.Contains("PlayerPlaybackState.FormatRateLabel", playback);
         Assert.Contains("PlayerPlaybackState.ResolveSeekTargetMs", playback);
         Assert.Contains("PlayerPlaybackState.ResolveSliderSeekTarget", playback);
         Assert.Contains("PlayerPlaybackState.BuildUiState", playback);
-        Assert.Contains("PlayerPlaybackState.IsRateButtonChecked", playback);
+        Assert.Contains("_speedControls.Update", playback);
+        Assert.DoesNotContain("PlayerPlaybackState.FormatRateLabel", playback);
+        Assert.DoesNotContain("PlayerPlaybackState.IsRateButtonChecked", playback);
+        Assert.DoesNotContain("RateText.Text", playback);
+        Assert.DoesNotContain("Speed05Button.IsChecked", playback);
         Assert.DoesNotContain("$\"{targetPos:P0}\"", playback);
         Assert.DoesNotContain("$\"{rate:0.##}x\"", playback);
         Assert.DoesNotContain("var ms = (long)Math.Max(0, time.TotalMilliseconds);", playback);
         Assert.DoesNotContain("var time = Math.Max(0, _player.Time);", playback);
         Assert.DoesNotContain("Math.Abs(currentRate - targetRate) < 0.01f", playback);
         Assert.DoesNotContain("_player.Time = (long)(targetPos * length);", playback);
+        Assert.Contains("public sealed class PlayerSpeedControls", speedControls);
+        Assert.Contains("PlayerPlaybackState.FormatRateLabel", speedControls);
+        Assert.Contains("PlayerPlaybackState.IsRateButtonChecked", speedControls);
         Assert.Contains("public static PlayerSeekPreviewText BuildSeekPreviewText", policy);
         Assert.Contains("public static long ResolveSeekTargetMs", policy);
         Assert.Contains("public readonly record struct PlayerSliderSeekTarget", policy);
@@ -506,9 +515,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void Play_Click", controls);
         Assert.Contains("private void PositionSlider_ValueChanged", controls);
         Assert.Contains("private void SetSpeed", controls);
-        Assert.Contains("private void UpdateSpeedButtons", controls);
+        Assert.DoesNotContain("private void UpdateSpeedButtons", controls);
+        Assert.DoesNotContain("private static void SetSpeedButtonState", controls);
         Assert.Contains("PlayerPlaybackState.ResolveSliderSeekTarget", controls);
-        Assert.Contains("PlayerPlaybackState.FormatRateLabel", controls);
+        Assert.Contains("_speedControls.Update", controls);
     }
 
     [Fact]

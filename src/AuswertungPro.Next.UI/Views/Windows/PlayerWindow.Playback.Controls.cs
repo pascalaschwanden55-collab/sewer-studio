@@ -1,6 +1,4 @@
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -116,23 +114,6 @@ public partial class PlayerWindow
 
     private void UpdateRateLabel()
     {
-        var rate = PlayerPlaybackState.NormalizeRate(_player.Rate);
-        RateText.Text = PlayerPlaybackState.FormatRateLabel(rate);
-        UpdateSpeedButtons(rate);
-    }
-
-    private void UpdateSpeedButtons(float rate)
-    {
-        SetSpeedButtonState(Speed05Button, rate, 0.5f);
-        SetSpeedButtonState(Speed1Button, rate, 1.0f);
-        SetSpeedButtonState(Speed15Button, rate, 1.5f);
-        SetSpeedButtonState(Speed2Button, rate, 2.0f);
-        SetSpeedButtonState(Speed4Button, rate, 4.0f);
-        SetSpeedButtonState(Speed8Button, rate, 8.0f);
-    }
-
-    private static void SetSpeedButtonState(ToggleButton button, float currentRate, float targetRate)
-    {
-        button.IsChecked = PlayerPlaybackState.IsRateButtonChecked(currentRate, targetRate);
+        _speedControls.Update(_player.Rate);
     }
 }
