@@ -2985,16 +2985,25 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var specialShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.cs");
         var rulerPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.Ruler.cs");
+        var rendererPath = Path.Combine(uiRoot, "Player", "CodingRulerOverlayRenderer.cs");
 
         Assert.True(File.Exists(rulerPath), "Ruler-Overlay-Rendering soll aus dem allgemeinen SpecialShapes-Partial heraus.");
+        Assert.True(File.Exists(rendererPath), "Ruler-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var specialShapes = File.ReadAllText(specialShapesPath);
         var ruler = File.ReadAllText(rulerPath);
+        var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("private void RenderRulerOverlay", specialShapes);
         Assert.Contains("private void RenderRulerOverlay", ruler);
-        Assert.Contains("tickInterval", ruler);
-        Assert.Contains("totalMm:F1", ruler);
+        Assert.Contains("CodingRulerOverlayRenderer.Render", ruler);
+        Assert.DoesNotContain("new System.Windows.Shapes.Line", ruler);
+        Assert.DoesNotContain("new TextBlock", ruler);
+        Assert.Contains("public static class CodingRulerOverlayRenderer", renderer);
+        Assert.Contains("new System.Windows.Shapes.Line", renderer);
+        Assert.Contains("new TextBlock", renderer);
+        Assert.Contains("TickInterval", renderer);
+        Assert.Contains("totalMm:F1", renderer);
     }
 
     [Fact]
