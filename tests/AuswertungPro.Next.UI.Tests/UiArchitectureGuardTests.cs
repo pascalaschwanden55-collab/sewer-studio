@@ -2134,6 +2134,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_pipe_bend_overlay_rendering_lives_in_pipe_bend_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var specialShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.cs");
+        var pipeBendPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.PipeBend.cs");
+
+        Assert.True(File.Exists(pipeBendPath), "Pipe-Bend-Overlay-Rendering soll aus dem allgemeinen SpecialShapes-Partial heraus.");
+
+        var specialShapes = File.ReadAllText(specialShapesPath);
+        var pipeBend = File.ReadAllText(pipeBendPath);
+
+        Assert.DoesNotContain("private void RenderPipeBendOverlay", specialShapes);
+        Assert.Contains("private void RenderPipeBendOverlay", pipeBend);
+        Assert.Contains("overlay.ArcDegrees", pipeBend);
+        Assert.Contains("AddDotMarker(vertex", pipeBend);
+    }
+
+    [Fact]
     public void PlayerWindow_eingabemarker_geometry_lives_in_policy()
     {
         var root = FindRepositoryRoot();
