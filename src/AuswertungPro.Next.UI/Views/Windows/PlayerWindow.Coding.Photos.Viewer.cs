@@ -17,7 +17,9 @@ public partial class PlayerWindow
             return;
         }
 
-        var projectFolder = CodingProjectFolderResolver.ResolveOrEmpty(_serviceProvider?.Settings.LastProjectPath);
-        CodingPhotoViewerWindowServiceFactory.Create().Show(this, codingEvent, projectFolder);
+        CodingPhotoViewerWorkflowServiceFactory.Create().Show(
+            this,
+            codingEvent,
+            _serviceProvider?.Settings.LastProjectPath);
     }
 }

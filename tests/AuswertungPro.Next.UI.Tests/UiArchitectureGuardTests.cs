@@ -2426,27 +2426,34 @@ public sealed class UiArchitectureGuardTests
         var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.Viewer.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingPhotoDisplayPathPolicy.cs");
         var loaderPath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerImageSourceLoader.cs");
+        var viewerWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerWorkflowService.cs");
+        var viewerWorkflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerWorkflowServiceFactory.cs");
         var viewerServicePath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerWindowService.cs");
         var viewerServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerWindowServiceFactory.cs");
 
         Assert.True(File.Exists(policyPath), "Fotoanzeige-Pfadauswahl muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(loaderPath), "Fotoanzeige-Bildquellen sollen ausserhalb der PlayerWindow-Partials geladen werden.");
+        Assert.True(File.Exists(viewerWorkflowPath), "Fotoanzeige-Workflow soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(viewerWorkflowFactoryPath), "Fotoanzeige-Workflow soll ueber Factory verdrahtet werden.");
         Assert.True(File.Exists(viewerServicePath), "Fotoanzeige-Fensteraufbau soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(viewerServiceFactoryPath), "Fotoanzeige-Fensteraufbau soll ueber Factory verdrahtet werden.");
 
         var photos = File.ReadAllText(photosPath);
         var policy = File.ReadAllText(policyPath);
         var loader = File.ReadAllText(loaderPath);
+        var viewerWorkflow = File.ReadAllText(viewerWorkflowPath);
+        var viewerWorkflowFactory = File.ReadAllText(viewerWorkflowFactoryPath);
         var viewerService = File.ReadAllText(viewerServicePath);
         var viewerServiceFactory = File.ReadAllText(viewerServiceFactoryPath);
 
-        Assert.Contains("CodingPhotoViewerWindowServiceFactory.Create", photos);
+        Assert.Contains("CodingPhotoViewerWorkflowServiceFactory.Create", photos);
+        Assert.DoesNotContain("CodingPhotoViewerWindowServiceFactory.Create", photos);
         Assert.DoesNotContain("CodingPhotoViewerImageSourceLoader.Load", photos);
         Assert.DoesNotContain("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", photos);
         Assert.DoesNotContain("CodingPhotoDisplayPathPolicy.ResolveExistingPath", photos);
         Assert.DoesNotContain("File.Exists", photos);
         Assert.DoesNotContain("BitmapImage", photos);
-        Assert.Contains("CodingProjectFolderResolver.ResolveOrEmpty", photos);
+        Assert.DoesNotContain("CodingProjectFolderResolver.ResolveOrEmpty", photos);
         Assert.DoesNotContain("Path.GetDirectoryName(_serviceProvider!.Settings.LastProjectPath)", photos);
         Assert.DoesNotContain("var displayPhotoPaths = new List<string>", photos);
         Assert.DoesNotContain("displayPhotoPaths.Contains(fotoPath", photos);
@@ -2454,6 +2461,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingPhotoDisplayPathPolicy.ResolveExistingPath", loader);
         Assert.Contains("File.Exists", loader);
         Assert.Contains("BitmapImage", loader);
+        Assert.Contains("CodingProjectFolderResolver.ResolveOrEmpty", viewerWorkflowFactory);
+        Assert.Contains("CodingPhotoViewerWindowServiceFactory.Create", viewerWorkflowFactory);
+        Assert.Contains("Show", viewerWorkflow);
         Assert.Contains("CodingPhotoViewerImageSourceLoader.Load", viewerService);
         Assert.Contains("WindowStateManager.Track", viewerService);
         Assert.Contains("new CodingPhotoViewerWindowService", viewerServiceFactory);
@@ -2477,12 +2487,13 @@ public sealed class UiArchitectureGuardTests
 
         Assert.DoesNotContain("private void CodingEventShowPhotos_Click", photos);
         Assert.Contains("private void CodingEventShowPhotos_Click", viewer);
-        Assert.Contains("CodingPhotoViewerWindowServiceFactory.Create", viewer);
+        Assert.Contains("CodingPhotoViewerWorkflowServiceFactory.Create", viewer);
         Assert.DoesNotContain("new Window", viewer);
         Assert.DoesNotContain("new StackPanel", viewer);
         Assert.DoesNotContain("new Image", viewer);
         Assert.DoesNotContain("new ScrollViewer", viewer);
         Assert.DoesNotContain("WindowStateManager.Track", viewer);
+        Assert.DoesNotContain("CodingProjectFolderResolver.ResolveOrEmpty", viewer);
     }
 
     [Fact]
