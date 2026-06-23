@@ -2764,21 +2764,26 @@ public sealed class UiArchitectureGuardTests
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingPhotoSlotPolicy.cs");
         var applierPath = Path.Combine(uiRoot, "Ai", "CodingEventPhotoApplier.cs");
         var timestampScopePath = Path.Combine(uiRoot, "Ai", "CodingEventPhotoTimestampScope.cs");
+        var pathAppenderPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEntryPhotoPathAppender.cs");
 
         Assert.True(File.Exists(policyPath), "Manuelle Foto-Slot-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(applierPath), "Manuelle Foto-Slot-Anwendung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(timestampScopePath), "Manuelle Foto-Zeitsetzung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(pathAppenderPath), "FotoPath-Anhaengen muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var photos = File.ReadAllText(photosPath);
         var policy = File.ReadAllText(policyPath);
         var applier = File.ReadAllText(applierPath);
         var timestampScope = File.Exists(timestampScopePath) ? File.ReadAllText(timestampScopePath) : "";
+        var pathAppender = File.Exists(pathAppenderPath) ? File.ReadAllText(pathAppenderPath) : "";
 
         Assert.Contains("CodingEventPhotoApplier.Apply", photos);
         Assert.Contains("CodingEventPhotoTimestampScope.Apply", photos);
+        Assert.Contains("CodingProtocolEntryPhotoPathAppender", photos);
         Assert.DoesNotContain("CodingPhotoSlotPolicy.Apply", photos);
         Assert.DoesNotContain("_codingSessionService?.UpdateEvent", photos);
         Assert.DoesNotContain("codingEvent.VideoTimestamp = photoTime.Value", photos);
+        Assert.DoesNotContain("FotoPaths.Add", photos);
         Assert.DoesNotContain("entry.FotoPaths[1] = fotoPath", photos);
         Assert.DoesNotContain("Foto 2 ersetzt", photos);
         Assert.Contains("public static CodingPhotoSlotUpdate Apply", policy);
@@ -2786,6 +2791,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingPhotoSlotPolicy.Apply", applier);
         Assert.Contains("codingSessionService?.UpdateEvent", applier);
         Assert.Contains("RestoreOriginalTime", timestampScope);
+        Assert.Contains("AddDistinctNonBlank", pathAppender);
     }
 
     [Fact]

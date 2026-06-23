@@ -51,7 +51,7 @@ public partial class PlayerWindow
                     videoTime);
 
                 var fotoPath = CodingCaptureSnapshot(draft.Entry);
-                if (fotoPath != null) draft.Entry.FotoPaths.Add(fotoPath);
+                CodingProtocolEntryPhotoPathAppender.AddIfPresent(draft.Entry, fotoPath);
 
                 var ev = CodingEingabemarkerEventAppender.Apply(draft, _codingVm.CurrentOverlay, _codingSessionService);
                 RefreshCodingEventsList();

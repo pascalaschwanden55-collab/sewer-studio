@@ -48,9 +48,9 @@ public partial class PlayerWindow
             if (annotation == null)
                 return false;
 
-            if (manualEvent != null && annotation.FullFramePath != null)
+            if (manualEvent != null
+                && CodingProtocolEntryPhotoPathAppender.AddIfPresent(manualEvent.Entry, annotation.FullFramePath))
             {
-                manualEvent.Entry.FotoPaths.Add(annotation.FullFramePath);
                 RefreshCodingEventsList();
             }
 

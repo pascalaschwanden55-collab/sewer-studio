@@ -22,11 +22,7 @@ public partial class PlayerWindow
             return path;
 
         var fallback = CodingCaptureSnapshot(entry);
-        if (!string.IsNullOrWhiteSpace(fallback)
-            && !entry.FotoPaths.Contains(fallback, StringComparer.OrdinalIgnoreCase))
-        {
-            entry.FotoPaths.Add(fallback);
-        }
+        CodingProtocolEntryPhotoPathAppender.AddDistinctNonBlank(entry, fallback);
 
         return fallback;
     }

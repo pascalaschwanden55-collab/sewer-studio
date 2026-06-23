@@ -79,8 +79,7 @@ public partial class PlayerWindow
             _codingVm.CurrentOverlay);
 
         var fotoPath = CodingCaptureSnapshot(draft.Entry);
-        if (fotoPath != null)
-            draft.Entry.FotoPaths.Add(fotoPath);
+        CodingProtocolEntryPhotoPathAppender.AddIfPresent(draft.Entry, fotoPath);
 
         CodingManualEventAppender.Apply(draft, _codingVm.CurrentOverlay, _codingSessionService!);
         RefreshCodingEventsList();
