@@ -2909,20 +2909,32 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayRenderingPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs");
         var basicShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.BasicShapes.cs");
+        var rendererPath = Path.Combine(uiRoot, "Player", "CodingBasicOverlayRenderer.cs");
 
         Assert.True(File.Exists(basicShapesPath), "Basisformen-Rendering soll aus dem OverlayRendering-Dispatcher heraus.");
+        Assert.True(File.Exists(rendererPath), "Basisformen-Rendering soll ausserhalb der PlayerWindow-Partials gerendert werden.");
 
         var overlayRendering = File.ReadAllText(overlayRenderingPath);
         var basicShapes = File.ReadAllText(basicShapesPath);
+        var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("var rect = new Rectangle", overlayRendering);
         Assert.DoesNotContain("var dot = new System.Windows.Shapes.Ellipse", overlayRendering);
         Assert.DoesNotContain("var poly = new System.Windows.Shapes.Polygon", overlayRendering);
+        Assert.DoesNotContain("new Rectangle", basicShapes);
+        Assert.DoesNotContain("new System.Windows.Shapes.Line", basicShapes);
+        Assert.DoesNotContain("new System.Windows.Shapes.Ellipse", basicShapes);
+        Assert.DoesNotContain("new System.Windows.Shapes.Polygon", basicShapes);
         Assert.Contains("RenderLineOverlay", basicShapes);
         Assert.Contains("RenderRectangleOverlay", basicShapes);
         Assert.Contains("RenderPointOverlay", basicShapes);
         Assert.Contains("RenderEllipseOverlay", basicShapes);
         Assert.Contains("RenderFreehandOverlay", basicShapes);
+        Assert.Contains("CodingBasicOverlayRenderer.Render", basicShapes);
+        Assert.Contains("public static class CodingBasicOverlayRenderer", renderer);
+        Assert.Contains("new Rectangle", renderer);
+        Assert.Contains("new System.Windows.Shapes.Line", renderer);
+        Assert.Contains("new System.Windows.Shapes.Polygon", renderer);
     }
 
     [Fact]
