@@ -2392,6 +2392,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_eingabemarker_input_wiring_lives_in_input_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
+        var inputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Input.cs");
+
+        Assert.True(File.Exists(inputPath), "Eingabemarker-Eingabe-Wiring muss in einer eigenen PlayerWindow-Partial liegen.");
+
+        var marker = File.ReadAllText(markerPath);
+        var input = File.ReadAllText(inputPath);
+
+        Assert.DoesNotContain("private void CmbEingabemarker_KeyDown", marker);
+        Assert.DoesNotContain("private void CmbEingabemarker_SelectionChanged", marker);
+        Assert.DoesNotContain("private static string? ResolveEingabemarkerCodeHint", marker);
+        Assert.Contains("private void CmbEingabemarker_KeyDown", input);
+        Assert.Contains("private void CmbEingabemarker_SelectionChanged", input);
+        Assert.Contains("private static string? ResolveEingabemarkerCodeHint", input);
+        Assert.Contains("SubmitEingabemarker().SafeFireAndForget", input);
+    }
+
+    [Fact]
     public void PlayerWindow_overlay_viewport_size_decision_lives_in_policy()
     {
         var root = FindRepositoryRoot();

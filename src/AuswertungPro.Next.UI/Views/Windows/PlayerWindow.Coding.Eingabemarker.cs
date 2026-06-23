@@ -105,32 +105,6 @@ public partial class PlayerWindow
             PlayerStatusColors.Info, "z.B. \"Beule unten\", \"Riss bei 3 Uhr\", \"Anschluss offen\"");
     }
 
-    private void CmbEingabemarker_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-    {
-        if (e.Key == System.Windows.Input.Key.Escape)
-        {
-            CancelEingabemarker();
-            ClearDetectionOverlays();
-            return;
-        }
-
-        if (e.Key != System.Windows.Input.Key.Enter) return;
-        SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker");
-    }
-
-    private void CmbEingabemarker_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (EingabemarkerPopup.Visibility != Visibility.Visible) return;
-        if (CmbEingabemarker.SelectedItem is ComboBoxItem item && item.Content is string text && !string.IsNullOrEmpty(text))
-        {
-            TxtEingabemarker.Text = text;
-            SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker");
-        }
-    }
-
-    private static string? ResolveEingabemarkerCodeHint(string? keyword)
-        => AuswertungPro.Next.UI.Player.PlayerVsaCodeHintResolver.ResolveKeyword(keyword);
-
     private async Task SubmitEingabemarker()
     {
         var keyword = TxtEingabemarker.Text?.Trim() ?? "";
