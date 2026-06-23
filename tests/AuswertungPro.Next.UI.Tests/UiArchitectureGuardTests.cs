@@ -3490,6 +3490,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_detection_overlay_cleanup_lives_in_cleaner()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiOverlayLifecycle.cs");
+        var cleanerPath = Path.Combine(uiRoot, "Player", "DetectionOverlayCleaner.cs");
+
+        Assert.True(File.Exists(cleanerPath), "Detection-Overlay-Cleanup muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var lifecycle = File.ReadAllText(lifecyclePath);
+        var cleaner = File.Exists(cleanerPath) ? File.ReadAllText(cleanerPath) : "";
+
+        Assert.Contains("DetectionOverlayCleaner.ClearAll", lifecycle);
+        Assert.Contains("DetectionOverlayCleaner.ClearVisuals", lifecycle);
+        Assert.DoesNotContain("DetectionCanvas.Children.Clear()", lifecycle);
+        Assert.Contains("public static void ClearAll", cleaner);
+        Assert.Contains("public static void ClearVisuals", cleaner);
+    }
+
+    [Fact]
     public void PlayerWindow_tool_badge_rendering_lives_in_renderer()
     {
         var root = FindRepositoryRoot();
