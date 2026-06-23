@@ -209,20 +209,23 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var markingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
+        var segmentationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "BendMarkerRenderer.cs");
         var tagsPath = Path.Combine(uiRoot, "Player", "OverlayTags.cs");
 
         Assert.True(File.Exists(rendererPath), "BendMarkerRenderer muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var marking = File.ReadAllText(markingPath);
+        var segmentation = File.Exists(segmentationPath) ? File.ReadAllText(segmentationPath) : string.Empty;
         var renderer = File.ReadAllText(rendererPath);
         var tags = File.ReadAllText(tagsPath);
+        var playerMarkingText = marking + segmentation;
 
         Assert.Contains("public const string BendMarker = \"bend_marker\"", tags);
-        Assert.Contains("BendMarkerRenderer.Show", marking);
+        Assert.Contains("BendMarkerRenderer.Show", segmentation);
         Assert.Contains("BendMarkerRenderer.Clear", marking);
-        Assert.DoesNotContain("OverlayTags.BendMarker", marking);
-        Assert.DoesNotContain("\"bend_marker\"", marking);
+        Assert.DoesNotContain("OverlayTags.BendMarker", playerMarkingText);
+        Assert.DoesNotContain("\"bend_marker\"", playerMarkingText);
         Assert.Contains("OverlayTags.BendMarker", renderer);
         Assert.Contains("Text = \"Bogen erkannt\"", renderer);
         Assert.Contains("canvas.Children.Add", renderer);
@@ -1713,14 +1716,14 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var markingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
+        var segmentationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
         var mapperPath = Path.Combine(uiRoot, "Ai", "LiveDetectionGeometryMapper.cs");
 
-        var marking = File.ReadAllText(markingPath);
+        var segmentation = File.ReadAllText(segmentationPath);
         var mapper = File.ReadAllText(mapperPath);
 
-        Assert.Contains("LiveDetectionGeometryMapper.BBoxFromOverlay", marking);
-        Assert.DoesNotContain("NormalizedBoundingBox.FromPoints", marking);
+        Assert.Contains("LiveDetectionGeometryMapper.BBoxFromOverlay", segmentation);
+        Assert.DoesNotContain("NormalizedBoundingBox.FromPoints", segmentation);
         Assert.Contains("public static NormalizedBoundingBox BBoxFromOverlay", mapper);
     }
 
@@ -1729,19 +1732,42 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var markingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
+        var segmentationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingMarkBoxQuantificationOverlayPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "SAM-Quantifizierung-zu-Overlay-Mapping muss ausserhalb der PlayerWindow-Partials liegen.");
 
-        var marking = File.ReadAllText(markingPath);
+        var segmentation = File.ReadAllText(segmentationPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingMarkBoxQuantificationOverlayPolicy.Apply", marking);
-        Assert.DoesNotContain("result.Quant.HeightMm.HasValue", marking);
-        Assert.DoesNotContain("double.TryParse(result.Quant.ClockPosition", marking);
+        Assert.Contains("CodingMarkBoxQuantificationOverlayPolicy.Apply", segmentation);
+        Assert.DoesNotContain("result.Quant.HeightMm.HasValue", segmentation);
+        Assert.DoesNotContain("double.TryParse(result.Quant.ClockPosition", segmentation);
         Assert.Contains("public static void Apply", policy);
         Assert.Contains("quantification.CrossSectionReductionPercent", policy);
+    }
+
+    [Fact]
+    public void PlayerWindow_mark_segmentation_lives_in_segmentation_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
+        var segmentationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
+
+        Assert.True(File.Exists(segmentationPath), "SAM-Segmentierung und Maskenrendering sollen aus dem Marking-Orchestrator heraus.");
+
+        var marking = File.ReadAllText(markingPath);
+        var segmentation = File.ReadAllText(segmentationPath);
+
+        Assert.DoesNotContain("private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync", marking);
+        Assert.DoesNotContain("private void ShowMarkSamMask", marking);
+        Assert.Contains("private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync", segmentation);
+        Assert.Contains("private void ShowMarkSamMask", segmentation);
+        Assert.Contains("CodingMarkBoxQuantificationOverlayPolicy.Apply", segmentation);
+        Assert.Contains("Ai.Pipeline.SamMaskRenderer.RenderMasks", segmentation);
+        Assert.Contains("BendMarkerRenderer.Show", segmentation);
     }
 
     [Fact]
