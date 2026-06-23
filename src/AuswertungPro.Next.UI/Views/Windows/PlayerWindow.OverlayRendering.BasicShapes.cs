@@ -126,4 +126,33 @@ public partial class PlayerWindow
         Canvas.SetTop(elli, Math.Min(ep1.Y, ep2.Y));
         CodingOverlayCanvas.Children.Add(elli);
     }
+
+    private void RenderFreehandOverlay(
+        OverlayGeometry overlay,
+        bool isPreview,
+        System.Windows.Media.Effects.DropShadowEffect glowEffect,
+        string tag)
+    {
+        if (overlay.Points.Count < 3)
+            return;
+
+        // Geschlossenes Polygon: umschliesst den Schadensbereich.
+        var poly = new System.Windows.Shapes.Polygon
+        {
+            Stroke = isPreview ? Brushes.HotPink : new SolidColorBrush(Color.FromRgb(255, 105, 180)),
+            StrokeThickness = isPreview ? 2 : 2.5,
+            StrokeLineJoin = PenLineJoin.Round,
+            Fill = new SolidColorBrush(Color.FromArgb(25, 255, 105, 180)),
+            Effect = glowEffect,
+            Tag = tag
+        };
+        if (isPreview)
+            poly.StrokeDashArray = new DoubleCollection { 3, 2 };
+        foreach (var pt in overlay.Points)
+        {
+            var px = CodingNormToPixel(pt);
+            poly.Points.Add(new Point(px.X, px.Y));
+        }
+        CodingOverlayCanvas.Children.Add(poly);
+    }
 }

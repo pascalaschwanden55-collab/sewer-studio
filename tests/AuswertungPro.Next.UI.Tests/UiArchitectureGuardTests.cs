@@ -2227,10 +2227,12 @@ public sealed class UiArchitectureGuardTests
 
         Assert.DoesNotContain("var rect = new Rectangle", overlayRendering);
         Assert.DoesNotContain("var dot = new System.Windows.Shapes.Ellipse", overlayRendering);
+        Assert.DoesNotContain("var poly = new System.Windows.Shapes.Polygon", overlayRendering);
         Assert.Contains("RenderLineOverlay", basicShapes);
         Assert.Contains("RenderRectangleOverlay", basicShapes);
         Assert.Contains("RenderPointOverlay", basicShapes);
         Assert.Contains("RenderEllipseOverlay", basicShapes);
+        Assert.Contains("RenderFreehandOverlay", basicShapes);
     }
 
     [Fact]

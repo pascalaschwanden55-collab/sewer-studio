@@ -1,10 +1,8 @@
-using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
-
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -77,27 +75,7 @@ public partial class PlayerWindow
                 break;
 
             case OverlayToolType.Freehand:
-                if (overlay.Points.Count >= 3)
-                {
-                    // Geschlossenes Polygon (nicht offene Polyline) â€” umschliesst den Schadensbereich
-                    var poly = new System.Windows.Shapes.Polygon
-                    {
-                        Stroke = isPreview ? Brushes.HotPink : new SolidColorBrush(Color.FromRgb(255, 105, 180)),
-                        StrokeThickness = isPreview ? 2 : 2.5,
-                        StrokeLineJoin = PenLineJoin.Round,
-                        Fill = new SolidColorBrush(Color.FromArgb(25, 255, 105, 180)), // Leicht gefuellt
-                        Effect = glowEffect,
-                        Tag = tag
-                    };
-                    if (isPreview)
-                        poly.StrokeDashArray = new DoubleCollection { 3, 2 };
-                    foreach (var pt in overlay.Points)
-                    {
-                        var px = CodingNormToPixel(pt);
-                        poly.Points.Add(new Point(px.X, px.Y));
-                    }
-                    CodingOverlayCanvas.Children.Add(poly);
-                }
+                RenderFreehandOverlay(overlay, isPreview, glowEffect, tag);
                 break;
         }
 
@@ -123,5 +101,4 @@ public partial class PlayerWindow
             CodingOverlayCanvas.Children.Add(label);
         }
     }
-
 }
