@@ -31,34 +31,15 @@ public partial class PlayerWindow
     }
 
     private bool TryGetCurrentTimeInternal(out TimeSpan time)
-    {
-        time = default;
-        try
-        {
-            var ms = Math.Max(0, _player.Time);
-            time = TimeSpan.FromMilliseconds(ms);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+        => PlayerPlaybackGateway.TryGetCurrentTime(() => _player.Time, out time);
 
     private bool TrySeekToInternal(TimeSpan time)
-    {
-        try
-        {
-            EnsurePlaying();
-            _player.Time = PlayerPlaybackState.ResolveSeekTargetMs(time, _player.Length);
-            UpdateUi();
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+        => PlayerPlaybackGateway.TrySeekTo(
+            time,
+            () => _player.Length,
+            targetMs => _player.Time = targetMs,
+            EnsurePlaying,
+            UpdateUi);
 
     private void TogglePlayPause()
     {
