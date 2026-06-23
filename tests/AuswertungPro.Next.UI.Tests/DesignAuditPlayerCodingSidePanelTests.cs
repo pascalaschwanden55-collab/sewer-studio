@@ -455,6 +455,12 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
     private static void AssertAnalyzedFrameAttachedBeforeAddEvent(string methodBody)
     {
+        if (methodBody.Contains("CodingLiveFindingSessionAppender.Append", StringComparison.Ordinal))
+        {
+            Assert.Contains("AttachAnalyzedFramePhoto(entry)", methodBody);
+            return;
+        }
+
         var attachIndex = FirstIndexOf(
             methodBody,
             "AttachAnalyzedFramePhoto(entry)",

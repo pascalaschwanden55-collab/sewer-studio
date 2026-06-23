@@ -1269,6 +1269,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingLiveFindingConfirmationTracker", live);
         Assert.Contains("CodingLiveFindingAddDecisionPolicy.Decide", live);
         Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", live);
+        Assert.DoesNotContain("codingSessionService.AddEvent(entry)", live);
         Assert.DoesNotContain("codingEvent.AiContext = draft.AiContext", live);
         Assert.DoesNotContain("CodingLiveFindingAcceptancePolicy.NeedsConfirmation", live);
         Assert.DoesNotContain("CodingLiveFindingAcceptancePolicy.ShouldSkipAsTooFarAhead", live);

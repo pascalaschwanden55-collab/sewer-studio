@@ -78,7 +78,7 @@ public partial class PlayerWindow
             var codingEvent = CodingLiveFindingSessionAppender.Append(
                 draft,
                 entry => AttachAnalyzedFramePhoto(entry),
-                entry => codingSessionService.AddEvent(entry));
+                codingSessionService);
 
             anyAdded = true;
 
