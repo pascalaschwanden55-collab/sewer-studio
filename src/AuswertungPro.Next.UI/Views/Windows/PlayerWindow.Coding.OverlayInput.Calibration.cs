@@ -1,6 +1,7 @@
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -56,5 +57,45 @@ public partial class PlayerWindow
         UpdateCodingOverlayCursor();
         if (_codingSchemaManager.IsActive)
             UpdateCodingSchemaOverlay(enableCreateEvent: true);
+    }
+
+    private bool TryStartCodingCalibration(NormalizedPoint norm)
+    {
+        if (!_codingIsCalibrating)
+            return false;
+
+        _codingCalibStart = norm;
+        CodingOverlayCanvas.CaptureMouse();
+        ClearTransientCodingCanvas(clearManualOverlay: true);
+        RenderAiOverlays();
+        RenderReferenceDn();
+        return true;
+    }
+
+    private bool TryPreviewCodingCalibration(NormalizedPoint norm)
+    {
+        if (!_codingIsCalibrating || _codingCalibStart == null)
+            return false;
+
+        ClearTransientCodingCanvas(clearManualOverlay: true);
+        RenderAiOverlays();
+        RenderReferenceDn();
+
+        var p1 = CodingNormToPixel(_codingCalibStart);
+        var p2 = CodingNormToPixel(norm);
+        var preview = CodingCalibrationPreviewPolicy.Build(p1, p2);
+        _codingPreviewLine = CodingCalibrationPreviewLineRenderer.Render(CodingOverlayCanvas, preview);
+        TxtCodingCalibHint.Text = preview.HintText;
+        return true;
+    }
+
+    private bool TryFinishCodingCalibration(NormalizedPoint norm)
+    {
+        if (!_codingIsCalibrating || _codingCalibStart == null)
+            return false;
+
+        CodingOverlayCanvas.ReleaseMouseCapture();
+        ApplyCodingCalibration(_codingCalibStart, norm);
+        return true;
     }
 }

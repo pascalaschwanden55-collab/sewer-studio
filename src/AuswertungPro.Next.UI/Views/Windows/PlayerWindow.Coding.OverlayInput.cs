@@ -64,15 +64,8 @@ public partial class PlayerWindow
         var pos = e.GetPosition(CodingOverlayCanvas);
         var norm = CodingPixelToNorm(pos);
 
-        if (_codingIsCalibrating)
-        {
-            _codingCalibStart = norm;
-            CodingOverlayCanvas.CaptureMouse();
-            ClearTransientCodingCanvas(clearManualOverlay: true);
-            RenderAiOverlays();
-            RenderReferenceDn();
+        if (TryStartCodingCalibration(norm))
             return;
-        }
 
         if (_codingOverlayService.ActiveTool == OverlayToolType.None) return;
 
@@ -152,19 +145,8 @@ public partial class PlayerWindow
         var pos = e.GetPosition(CodingOverlayCanvas);
         var norm = CodingPixelToNorm(pos);
 
-        if (_codingIsCalibrating && _codingCalibStart != null)
-        {
-            ClearTransientCodingCanvas(clearManualOverlay: true);
-            RenderAiOverlays();
-            RenderReferenceDn();
-
-            var p1 = CodingNormToPixel(_codingCalibStart);
-            var p2 = CodingNormToPixel(norm);
-            var preview = CodingCalibrationPreviewPolicy.Build(p1, p2);
-            _codingPreviewLine = CodingCalibrationPreviewLineRenderer.Render(CodingOverlayCanvas, preview);
-            TxtCodingCalibHint.Text = preview.HintText;
+        if (TryPreviewCodingCalibration(norm))
             return;
-        }
 
         if (IsCodingSchemaToolSelected() && _codingSchemaManager.IsActive)
         {
@@ -214,12 +196,8 @@ public partial class PlayerWindow
         var pos = e.GetPosition(CodingOverlayCanvas);
         var norm = CodingPixelToNorm(pos);
 
-        if (_codingIsCalibrating && _codingCalibStart != null)
-        {
-            CodingOverlayCanvas.ReleaseMouseCapture();
-            ApplyCodingCalibration(_codingCalibStart, norm);
+        if (TryFinishCodingCalibration(norm))
             return;
-        }
 
         if (IsCodingSchemaToolSelected() && _codingSchemaManager.IsDragging)
         {

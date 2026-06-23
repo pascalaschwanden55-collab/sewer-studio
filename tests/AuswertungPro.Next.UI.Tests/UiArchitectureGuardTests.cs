@@ -1702,7 +1702,7 @@ public sealed class UiArchitectureGuardTests
         var togglePolicy = File.ReadAllText(togglePolicyPath);
 
         Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
-        Assert.Contains("CodingCalibrationPreviewPolicy.Build", overlayInput);
+        Assert.Contains("CodingCalibrationPreviewPolicy.Build", calibration);
         Assert.Contains("CodingCalibrationTogglePolicy.Build", calibration);
         Assert.DoesNotContain("double pixelDiameter = Math.Sqrt", overlayInput + calibration);
         Assert.DoesNotContain("Math.Sqrt(Math.Pow(p2.X - p1.X, 2)", overlayInput + calibration);
@@ -1731,8 +1731,14 @@ public sealed class UiArchitectureGuardTests
 
         Assert.DoesNotContain("private void CodingCalibrate_Click", overlayInput);
         Assert.DoesNotContain("private void ApplyCodingCalibration", overlayInput);
+        Assert.DoesNotContain("private bool TryStartCodingCalibration", overlayInput);
+        Assert.DoesNotContain("private bool TryPreviewCodingCalibration", overlayInput);
+        Assert.DoesNotContain("private bool TryFinishCodingCalibration", overlayInput);
         Assert.Contains("private void CodingCalibrate_Click", calibration);
         Assert.Contains("private void ApplyCodingCalibration", calibration);
+        Assert.Contains("private bool TryStartCodingCalibration", calibration);
+        Assert.Contains("private bool TryPreviewCodingCalibration", calibration);
+        Assert.Contains("private bool TryFinishCodingCalibration", calibration);
         Assert.Contains("CodingCalibrationTogglePolicy.Build", calibration);
         Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
     }
@@ -1743,17 +1749,19 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
+        var calibrationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Calibration.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingCalibrationPreviewLineRenderer.cs");
 
         Assert.True(File.Exists(rendererPath), "Kalibrierungs-Vorschaulinie muss ausserhalb der PlayerWindow-Partials gerendert werden.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
+        var calibration = File.ReadAllText(calibrationPath);
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.Contains("CodingCalibrationPreviewLineRenderer.Render", overlayInput);
-        Assert.DoesNotContain("new System.Windows.Shapes.Line", overlayInput);
-        Assert.DoesNotContain("StrokeDashArray = new DoubleCollection", overlayInput);
-        Assert.DoesNotContain("Brushes.Magenta", overlayInput);
+        Assert.Contains("CodingCalibrationPreviewLineRenderer.Render", calibration);
+        Assert.DoesNotContain("new System.Windows.Shapes.Line", overlayInput + calibration);
+        Assert.DoesNotContain("StrokeDashArray = new DoubleCollection", overlayInput + calibration);
+        Assert.DoesNotContain("Brushes.Magenta", overlayInput + calibration);
         Assert.Contains("public static Line Render", renderer);
         Assert.Contains("OverlayTags.Preview", renderer);
     }
