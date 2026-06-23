@@ -14,33 +14,11 @@ public partial class PlayerWindow
     {
         if (_serviceProvider == null || _haltungRecord == null) return;
 
-        var createPdf = CodingProtocolDialogServiceFactory.Create()
-            .ConfirmPdfExport(doc.Current.Entries.Count);
+        var exported = CodingProtocolPdfExportServiceFactory.Create(_serviceProvider.ProtocolPdfExporter)
+            .TryOfferPdfExport(_haltungRecord, doc, _serviceProvider.Settings.LastProjectPath);
 
-        if (!createPdf) return;
-
-        try
-        {
-            var plan = CodingProtocolPdfExportPlanner.Build(
-                _haltungRecord,
-                _serviceProvider.Settings.LastProjectPath,
-                AppContext.BaseDirectory,
-                PlayerClock.Now());
-
-            var outputPath = CodingProtocolPdfSavePathDialogFactory.Create().Show(plan.DefaultFileName);
-            if (outputPath == null) return;
-
-            var project = PlayerShellProjectServiceFactory.Create().GetCurrentProject();
-            var pdf = _serviceProvider.ProtocolPdfExporter.BuildHaltungsprotokollPdf(
-                project!, _haltungRecord, doc, plan.ProjectRoot, plan.Options);
-            CodingProtocolPdfFileServiceFactory.Create().SaveAndOpen(outputPath, pdf);
-
+        if (exported)
             ShowOverlay("PDF-Protokoll erstellt", TimeSpan.FromSeconds(4));
-        }
-        catch (Exception ex)
-        {
-            CodingProtocolDialogServiceFactory.Create().ShowPdfExportFailed(ex.Message);
-        }
     }
 
     // --- Coding: Existierende Protokoll-Eintraege laden ---
