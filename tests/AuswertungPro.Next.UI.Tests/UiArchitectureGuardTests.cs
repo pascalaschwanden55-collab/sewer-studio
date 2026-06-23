@@ -3042,16 +3042,24 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var specialShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.cs");
         var lateralCirclePath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.LateralCircle.cs");
+        var rendererPath = Path.Combine(uiRoot, "Player", "CodingLateralCircleOverlayRenderer.cs");
 
         Assert.True(File.Exists(lateralCirclePath), "Lateral-Circle-Overlay-Rendering soll aus dem allgemeinen SpecialShapes-Partial heraus.");
+        Assert.True(File.Exists(rendererPath), "Lateral-Circle-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var specialShapes = File.ReadAllText(specialShapesPath);
         var lateralCircle = File.ReadAllText(lateralCirclePath);
+        var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("private void RenderLateralCircleOverlay", specialShapes);
         Assert.Contains("private void RenderLateralCircleOverlay", lateralCircle);
-        Assert.Contains("overlay.DnRatioPercent", lateralCircle);
-        Assert.Contains("DN {overlay.Q1Mm.Value:F0}", lateralCircle);
+        Assert.Contains("CodingLateralCircleOverlayRenderer.Render", lateralCircle);
+        Assert.DoesNotContain("new System.Windows.Shapes.Ellipse", lateralCircle);
+        Assert.DoesNotContain("new TextBlock", lateralCircle);
+        Assert.Contains("public static class CodingLateralCircleOverlayRenderer", renderer);
+        Assert.Contains("overlay.DnRatioPercent", renderer);
+        Assert.Contains("DN {overlay.Q1Mm.Value:F0}", renderer);
+        Assert.Contains("new System.Windows.Shapes.Ellipse", renderer);
     }
 
     [Fact]
