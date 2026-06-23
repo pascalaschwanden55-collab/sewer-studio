@@ -514,11 +514,14 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var liveDetectionPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.cs");
         var statusPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Status.cs");
+        var pulsePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Status.Pulse.cs");
 
         Assert.True(File.Exists(statusPath), "LiveDetection-Status-UI soll in ein eigenes Partial.");
+        Assert.True(File.Exists(pulsePath), "Coding-AI-Pulsanimation soll aus dem Status-Orchestrator heraus.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var status = File.ReadAllText(statusPath);
+        var pulse = File.ReadAllText(pulsePath);
 
         Assert.DoesNotContain("private void SetLiveDetectionBadge", liveDetection);
         Assert.DoesNotContain("private void SetYoloStatus", liveDetection);
@@ -529,10 +532,14 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void SetLiveDetectionBadge", status);
         Assert.Contains("private void SetYoloStatus", status);
         Assert.Contains("private void SetCodingAiState", status);
-        Assert.Contains("private void StartCodingAiPulse", status);
-        Assert.Contains("private void StopCodingAiPulse", status);
+        Assert.DoesNotContain("private void StartCodingAiPulse", status);
+        Assert.DoesNotContain("private void StopCodingAiPulse", status);
         Assert.Contains("private void UpdateDetectionStatus", status);
         Assert.Contains("Dispatcher.Invoke", status);
+        Assert.Contains("private void StartCodingAiPulse", pulse);
+        Assert.Contains("private void StopCodingAiPulse", pulse);
+        Assert.Contains("DoubleAnimation", pulse);
+        Assert.Contains("CodingAiPulseRing", pulse);
     }
 
     [Fact]
