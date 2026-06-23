@@ -92,12 +92,10 @@ public partial class PlayerWindow
                 videoTime,
                 gateResult);
 
-            // Foto 1: exakt der analysierte KI-Frame, damit die Vorschau sofort ein Bild hat.
-            AttachAnalyzedFramePhoto(draft.Entry);
-
-            var codingEvent = codingSessionService.AddEvent(draft.Entry);
-            codingEvent.AiContext = draft.AiContext;
-            codingEvent.Overlay = draft.Overlay;
+            var codingEvent = CodingLiveFindingSessionAppender.Append(
+                draft,
+                entry => AttachAnalyzedFramePhoto(entry),
+                entry => codingSessionService.AddEvent(entry));
 
             anyAdded = true;
 

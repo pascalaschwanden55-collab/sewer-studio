@@ -872,16 +872,26 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
         var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Live.cs");
+        var appenderPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingSessionAppender.cs");
 
         Assert.True(File.Exists(livePath), "Live/Qwen-Event-Erzeugung soll aus dem allgemeinen AiEvents-Partial heraus.");
+        Assert.True(File.Exists(appenderPath), "Live/Qwen-Event-Anwendung auf die Session soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var aiEvents = File.ReadAllText(aiEventsPath);
         var live = File.ReadAllText(livePath);
+        var appender = File.ReadAllText(appenderPath);
 
         Assert.DoesNotContain("private void AddAiFindingsAsEvents", aiEvents);
         Assert.Contains("private void AddAiFindingsAsEvents", live);
         Assert.Contains("CodingLiveFindingEventFactory.Create", live);
         Assert.Contains("CodingLiveFindingQualityGatePolicy.Evaluate", live);
+        Assert.Contains("CodingLiveFindingSessionAppender.Append", live);
+        Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", live);
+        Assert.DoesNotContain("codingEvent.AiContext = draft.AiContext", live);
+        Assert.Contains("public static class CodingLiveFindingSessionAppender", appender);
+        Assert.Contains("attachAnalyzedFramePhoto(draft.Entry)", appender);
+        Assert.Contains("addEvent(draft.Entry)", appender);
+        Assert.Contains("codingEvent.AiContext = draft.AiContext", appender);
     }
 
     [Fact]
