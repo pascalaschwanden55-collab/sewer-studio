@@ -491,6 +491,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_detection_snapshot_lives_in_snapshot_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var liveDetectionPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.cs");
+        var snapshotPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Snapshot.cs");
+
+        Assert.True(File.Exists(snapshotPath), "LiveDetection-Snapshot-Capture soll in ein eigenes Snapshot-Partial.");
+
+        var liveDetection = File.ReadAllText(liveDetectionPath);
+        var snapshot = File.ReadAllText(snapshotPath);
+
+        Assert.DoesNotContain("private async Task<byte[]?> CaptureCurrentFrameAsync", liveDetection);
+        Assert.Contains("private async Task<byte[]?> CaptureCurrentFrameAsync", snapshot);
+        Assert.Contains("TakeSnapshotSafe", snapshot);
+        Assert.Contains("sewer_live_", snapshot);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_live_ai_wiring_lives_in_live_partial()
     {
         var root = FindRepositoryRoot();
