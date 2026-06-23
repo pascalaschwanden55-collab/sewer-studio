@@ -84,9 +84,7 @@ public partial class PlayerWindow
 
             AttachAnalyzedFramePhoto(draft.Entry);
 
-            var codingEvent = codingSessionService.AddEvent(draft.Entry);
-            codingEvent.AiContext = draft.AiContext;
-            codingEvent.Overlay = draft.Overlay;
+            CodingMultiModelEventAppender.Apply(draft, codingSessionService);
 
             anyAdded = true;
         }

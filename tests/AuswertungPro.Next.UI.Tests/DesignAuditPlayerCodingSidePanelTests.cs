@@ -157,7 +157,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
             < FirstIndexOf(
                 addBody,
                 "codingSessionService.AddEvent(entry)",
-                "codingSessionService.AddEvent(draft.Entry)"),
+                "codingSessionService.AddEvent(draft.Entry)",
+                "CodingMultiModelEventAppender.Apply"),
             "Bogen-Vorschau muss vor AddEvent ausgesiebt werden.");
     }
 
@@ -198,6 +199,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         AssertAnalyzedFrameAttachedBeforeAddEvent(qwenBody);
         AssertAnalyzedFrameAttachedBeforeAddEvent(multiModelBody);
+        Assert.Contains("CodingMultiModelEventAppender.Apply", multiModelBody);
+        Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", multiModelBody);
     }
 
     [Fact]
@@ -459,7 +462,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var addIndex = FirstIndexOf(
             methodBody,
             "codingSessionService.AddEvent(entry)",
-            "codingSessionService.AddEvent(draft.Entry)");
+            "codingSessionService.AddEvent(draft.Entry)",
+            "CodingMultiModelEventAppender.Apply");
 
         Assert.True(attachIndex >= 0, "KI-Befunde muessen den analysierten Frame in FotoPaths speichern.");
         Assert.True(addIndex >= 0, "Test erwartet AddEvent im KI-Befundpfad.");
