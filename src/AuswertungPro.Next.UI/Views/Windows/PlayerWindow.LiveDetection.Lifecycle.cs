@@ -53,7 +53,7 @@ public partial class PlayerWindow
             _liveDetectionClient = runtime.Client;
             _liveDetectionService = runtime.Service;
             _liveDetectionModelName = runtime.VisionModel;
-            _detectionCts = new CancellationTokenSource();
+            _detectionCts = CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_detectionCts);
             _isDetecting = true;
 
             DetectionOverlayGrid.Visibility = Visibility.Visible;

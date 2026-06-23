@@ -12,9 +12,7 @@ public partial class PlayerWindow
 
         _detectionTimer?.Stop();
         _detectionTimer = null;
-        _detectionCts?.Cancel();
-        _detectionCts?.Dispose();
-        _detectionCts = null;
+        _detectionCts = CancellationTokenSourceLifecycle.CancelDisposeAndClear(_detectionCts);
         _isDetecting = false;
         _isDetectionInFlight = false;
         _liveDetectionService = null;

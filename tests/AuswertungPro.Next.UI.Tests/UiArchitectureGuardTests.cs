@@ -966,7 +966,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("new LiveDetectionService", factory);
         Assert.Contains("VisionModelSelectionPolicy.Select", factory);
         Assert.Contains("private void StopLiveDetection", stop);
-        Assert.Contains("_detectionCts?.Cancel", stop);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate", lifecycle);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", stop);
+        Assert.DoesNotContain("_detectionCts = new CancellationTokenSource();", lifecycle + stop);
+        Assert.DoesNotContain("_detectionCts?.Cancel();", lifecycle + stop);
+        Assert.DoesNotContain("_detectionCts?.Dispose();", lifecycle + stop);
+        Assert.DoesNotContain("_detectionCts = null;", lifecycle + stop);
         Assert.Contains("_liveDetectionClient?.Dispose", stop);
     }
 
