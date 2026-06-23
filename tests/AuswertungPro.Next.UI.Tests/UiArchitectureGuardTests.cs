@@ -1991,18 +1991,24 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var playerCodingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
+        var timelinePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Timeline.cs");
         var accessorsPath = Path.Combine(uiRoot, "Ai", "CodingTimelineMarkerAccessors.cs");
 
+        Assert.True(File.Exists(timelinePath), "Coding-Timeline-Wiring soll in einem eigenen Lifecycle-Partial liegen.");
         Assert.True(File.Exists(accessorsPath), "Timeline-Marker-Regeln muessen ausserhalb von PlayerWindow liegen.");
 
         var playerCoding = File.ReadAllText(playerCodingPath);
+        var timeline = File.ReadAllText(timelinePath);
         var accessors = File.ReadAllText(accessorsPath);
 
-        Assert.Contains("CodingTimelineMarkerAccessors.Meter", playerCoding);
-        Assert.Contains("CodingTimelineMarkerAccessors.Code", playerCoding);
-        Assert.Contains("CodingTimelineMarkerAccessors.Confidence", playerCoding);
-        Assert.Contains("CodingTimelineMarkerAccessors.IsRejected", playerCoding);
-        Assert.DoesNotContain("PipeTimeline.MeterAccessor = obj => obj is CodingEvent", playerCoding);
+        Assert.Contains("InitializeCodingTimeline();", playerCoding);
+        Assert.DoesNotContain("PipeTimeline.MeterAccessor = CodingTimelineMarkerAccessors.Meter", playerCoding);
+        Assert.Contains("private void InitializeCodingTimeline", timeline);
+        Assert.Contains("CodingTimelineMarkerAccessors.Meter", timeline);
+        Assert.Contains("CodingTimelineMarkerAccessors.Code", timeline);
+        Assert.Contains("CodingTimelineMarkerAccessors.Confidence", timeline);
+        Assert.Contains("CodingTimelineMarkerAccessors.IsRejected", timeline);
+        Assert.DoesNotContain("PipeTimeline.MeterAccessor = obj => obj is CodingEvent", timeline);
         Assert.Contains("public static double Meter", accessors);
     }
 

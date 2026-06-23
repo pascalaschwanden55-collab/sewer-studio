@@ -141,31 +141,7 @@ public partial class PlayerWindow
         CodingSidePanelColumn.Width = new GridLength(GetCodingSidePanelWidth());
         CodingToolbar.Visibility = Visibility.Visible;
 
-        // PipeGraphTimeline einrichten und einblenden
-        PipeTimeline.TotalLength = _codingVm.EndMeter;
-        PipeTimeline.MeterAccessor = CodingTimelineMarkerAccessors.Meter;
-        PipeTimeline.CodeAccessor = CodingTimelineMarkerAccessors.Code;
-        PipeTimeline.ConfidenceAccessor = CodingTimelineMarkerAccessors.Confidence;
-        PipeTimeline.IsRejectedAccessor = CodingTimelineMarkerAccessors.IsRejected;
-        PipeTimeline.Markers = _codingVm.Events;
-        PipeTimeline.NavigateToMeterCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<double>(meter =>
-        {
-            if (_codingSessionService != null && (_codingVm.IsRunning || _codingVm.IsPaused))
-            {
-                _codingSessionService.MoveToMeter(meter);
-                _codingNavPending = true;
-                SyncVideoToCodingMeter();
-            }
-        });
-        PipeTimeline.MarkerClickedCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<object>(item =>
-        {
-            if (item is CodingEvent ce)
-            {
-                _codingVm.JumpToDefectCommand.Execute(ce);
-                LstCodingEvents.SelectedItem = ce;
-            }
-        });
-        CodingTimelinePanel.Visibility = Visibility.Visible;
+        InitializeCodingTimeline();
 
         // KI initialisieren + OSD-Timer starten
         InitCodingAi().SafeFireAndForget("InitCodingAi");
