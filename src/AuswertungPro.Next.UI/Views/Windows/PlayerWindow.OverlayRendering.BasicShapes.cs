@@ -1,0 +1,129 @@
+using System;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using AuswertungPro.Next.Domain.Models;
+using Rectangle = System.Windows.Shapes.Rectangle;
+
+namespace AuswertungPro.Next.UI.Views.Windows;
+
+public partial class PlayerWindow
+{
+    private void RenderLineOverlay(
+        OverlayGeometry overlay,
+        bool isPreview,
+        Brush stroke,
+        System.Windows.Media.Effects.DropShadowEffect glowEffect,
+        string tag)
+    {
+        if (overlay.Points.Count < 2)
+            return;
+
+        var p1 = CodingNormToPixel(overlay.Points[0]);
+        var p2 = CodingNormToPixel(overlay.Points[1]);
+        var line = new System.Windows.Shapes.Line
+        {
+            X1 = p1.X,
+            Y1 = p1.Y,
+            X2 = p2.X,
+            Y2 = p2.Y,
+            Stroke = stroke,
+            StrokeThickness = 3,
+            Effect = glowEffect,
+            Tag = tag
+        };
+        if (isPreview)
+            line.StrokeDashArray = new DoubleCollection { 4, 2 };
+        CodingOverlayCanvas.Children.Add(line);
+    }
+
+    private void RenderRectangleOverlay(
+        OverlayGeometry overlay,
+        bool isPreview,
+        Brush stroke,
+        Brush fill,
+        System.Windows.Media.Effects.DropShadowEffect glowEffect,
+        string tag)
+    {
+        if (overlay.Points.Count < 4)
+            return;
+
+        // Ueber das sichtbare Video-Rechteck rechnen (Letterbox-bewusst), nicht volle Flaeche.
+        var pix = overlay.Points.Select(CodingNormToPixel).ToList();
+        double minX = pix.Min(p => p.X);
+        double maxX = pix.Max(p => p.X);
+        double minY = pix.Min(p => p.Y);
+        double maxY = pix.Max(p => p.Y);
+
+        var rect = new Rectangle
+        {
+            Width = Math.Max(1, maxX - minX),
+            Height = Math.Max(1, maxY - minY),
+            Stroke = stroke,
+            StrokeThickness = 3,
+            Fill = fill,
+            Effect = glowEffect,
+            Tag = tag
+        };
+        if (isPreview)
+            rect.StrokeDashArray = new DoubleCollection { 4, 2 };
+
+        Canvas.SetLeft(rect, minX);
+        Canvas.SetTop(rect, minY);
+        CodingOverlayCanvas.Children.Add(rect);
+    }
+
+    private void RenderPointOverlay(
+        OverlayGeometry overlay,
+        Brush stroke,
+        System.Windows.Media.Effects.DropShadowEffect glowEffect,
+        string tag)
+    {
+        if (overlay.Points.Count < 1)
+            return;
+
+        var p = CodingNormToPixel(overlay.Points[0]);
+        var dot = new System.Windows.Shapes.Ellipse
+        {
+            Width = 16,
+            Height = 16,
+            Fill = stroke,
+            Stroke = Brushes.White,
+            StrokeThickness = 2,
+            Effect = glowEffect,
+            Tag = tag
+        };
+        Canvas.SetLeft(dot, p.X - 8);
+        Canvas.SetTop(dot, p.Y - 8);
+        CodingOverlayCanvas.Children.Add(dot);
+    }
+
+    private void RenderEllipseOverlay(
+        OverlayGeometry overlay,
+        bool isPreview,
+        System.Windows.Media.Effects.DropShadowEffect glowEffect,
+        string tag)
+    {
+        if (overlay.Points.Count < 2)
+            return;
+
+        var ep1 = CodingNormToPixel(overlay.Points[0]);
+        var ep2 = CodingNormToPixel(overlay.Points[1]);
+        var elli = new System.Windows.Shapes.Ellipse
+        {
+            Width = Math.Max(1, Math.Abs(ep2.X - ep1.X)),
+            Height = Math.Max(1, Math.Abs(ep2.Y - ep1.Y)),
+            Stroke = isPreview ? Brushes.MediumPurple : new SolidColorBrush(Color.FromRgb(147, 112, 219)),
+            StrokeThickness = isPreview ? 2 : 2.5,
+            Fill = new SolidColorBrush(Color.FromArgb(30, 147, 112, 219)),
+            Effect = glowEffect,
+            Tag = tag
+        };
+        if (isPreview)
+            elli.StrokeDashArray = new DoubleCollection { 4, 2 };
+        Canvas.SetLeft(elli, Math.Min(ep1.X, ep2.X));
+        Canvas.SetTop(elli, Math.Min(ep1.Y, ep2.Y));
+        CodingOverlayCanvas.Children.Add(elli);
+    }
+}

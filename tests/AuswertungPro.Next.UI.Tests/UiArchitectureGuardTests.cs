@@ -2194,6 +2194,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_basic_overlay_shape_rendering_lives_in_basic_shapes_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayRenderingPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs");
+        var basicShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.BasicShapes.cs");
+
+        Assert.True(File.Exists(basicShapesPath), "Basisformen-Rendering soll aus dem OverlayRendering-Dispatcher heraus.");
+
+        var overlayRendering = File.ReadAllText(overlayRenderingPath);
+        var basicShapes = File.ReadAllText(basicShapesPath);
+
+        Assert.DoesNotContain("var rect = new Rectangle", overlayRendering);
+        Assert.DoesNotContain("var dot = new System.Windows.Shapes.Ellipse", overlayRendering);
+        Assert.Contains("RenderLineOverlay", basicShapes);
+        Assert.Contains("RenderRectangleOverlay", basicShapes);
+        Assert.Contains("RenderPointOverlay", basicShapes);
+        Assert.Contains("RenderEllipseOverlay", basicShapes);
+    }
+
+    [Fact]
     public void PlayerWindow_eingabemarker_geometry_lives_in_policy()
     {
         var root = FindRepositoryRoot();
