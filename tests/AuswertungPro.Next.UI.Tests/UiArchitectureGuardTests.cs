@@ -3648,6 +3648,7 @@ public sealed class UiArchitectureGuardTests
         var sessionPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Session.cs");
         var importReferencePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
         var uiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Ui.cs");
+        var importReferenceResetterPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceStateResetter.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(exitPath), "Codiermodus-Exit soll aus dem allgemeinen Lifecycle-Partial heraus.");
@@ -3655,6 +3656,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(sessionPath), "Codiermodus-Session-Aufbau soll aus dem Enter-Partial heraus.");
         Assert.True(File.Exists(importReferencePath), "Codiermodus-Importreferenz-Aufbau soll aus dem Enter-Partial heraus.");
         Assert.True(File.Exists(uiPath), "Codiermodus-UI-Aktivierung soll aus dem Enter-Partial heraus.");
+        Assert.True(File.Exists(importReferenceResetterPath), "Import-Referenz-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var coding = File.ReadAllText(codingPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
@@ -3663,6 +3665,7 @@ public sealed class UiArchitectureGuardTests
         var session = File.ReadAllText(sessionPath);
         var importReference = File.ReadAllText(importReferencePath);
         var ui = File.ReadAllText(uiPath);
+        var importReferenceResetter = File.Exists(importReferenceResetterPath) ? File.ReadAllText(importReferenceResetterPath) : "";
 
         Assert.DoesNotContain("private void EnterCodingMode", coding);
         Assert.DoesNotContain("private void ExitCodingMode", coding);
@@ -3681,10 +3684,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void ShowCodingModeUi", ui);
         Assert.Contains("CreateCodingSessionState();", lifecycle);
         Assert.Contains("InitializeCodingImportReferences();", lifecycle);
+        Assert.Contains("CodingImportReferenceStateResetter.ClearEvents", exit);
+        Assert.DoesNotContain("_codingImportEvents.Clear()", exit);
         Assert.Contains("ShowCodingModeUi();", lifecycle);
         Assert.DoesNotContain("new CodingSessionViewModel", lifecycle);
         Assert.DoesNotContain("CodingImportReferenceTransfer.MoveExistingEventsToImportReference", lifecycle);
         Assert.DoesNotContain("CodingOverlayPopup.IsOpen = true", lifecycle);
+        Assert.Contains("public static int ClearEvents", importReferenceResetter);
     }
 
     [Fact]

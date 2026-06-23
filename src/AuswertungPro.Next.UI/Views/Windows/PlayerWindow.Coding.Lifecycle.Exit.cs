@@ -40,7 +40,7 @@ public partial class PlayerWindow
         _codingAnalysisCts?.Dispose();
         _codingAnalysisCts = null;
 
-        _codingImportEvents.Clear();
+        CodingImportReferenceStateResetter.ClearEvents(_codingImportEvents);
         _lastCodingMatch = null;
         _codingProtocolMatchBuckets.Clear();
         UpdateCodingProtocolMatchSummary(null);
