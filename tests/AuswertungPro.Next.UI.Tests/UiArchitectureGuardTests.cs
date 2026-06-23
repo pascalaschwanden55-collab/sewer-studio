@@ -2052,6 +2052,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_active_schema_rendering_lives_in_active_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.cs");
+        var activePath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.cs");
+
+        Assert.True(File.Exists(activePath), "Aktive Schema-Vorschau soll aus dem allgemeinen Schema-Rendering-Partial heraus.");
+
+        var schema = File.ReadAllText(schemaPath);
+        var active = File.ReadAllText(activePath);
+
+        Assert.DoesNotContain("private void RenderActiveCodingSchema", schema);
+        Assert.Contains("private void RenderActiveCodingSchema", active);
+        Assert.Contains("case PipeBendSchema bend", active);
+        Assert.Contains("case FillLevelSchema fill", active);
+        Assert.Contains("case IntrusionSchema intrusion", active);
+        Assert.Contains("private void RenderSchemaPipeReference", schema);
+    }
+
+    [Fact]
     public void PlayerWindow_ruler_overlay_rendering_lives_in_ruler_partial()
     {
         var root = FindRepositoryRoot();
