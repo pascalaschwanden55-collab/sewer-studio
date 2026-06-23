@@ -1,5 +1,3 @@
-using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
@@ -85,20 +83,12 @@ public partial class PlayerWindow
             var anchorNorm = labelAnchor ?? overlay.Points.LastOrDefault() ?? new NormalizedPoint(0.5, 0.5);
             var anchor = CodingNormToPixel(anchorNorm);
 
-            var label = new TextBlock
-            {
-                Text = text,
-                FontSize = 12,
-                FontWeight = FontWeights.SemiBold,
-                Foreground = Brushes.White,
-                Background = new SolidColorBrush(Color.FromArgb(200, 17, 19, 24)),
-                Padding = new Thickness(5, 2, 5, 2),
-                Effect = glowEffect,
-                Tag = isPreview ? OverlayTags.Measure : OverlayTags.Manual
-            };
-            Canvas.SetLeft(label, anchor.X + 12);
-            Canvas.SetTop(label, anchor.Y - 20);
-            CodingOverlayCanvas.Children.Add(label);
+            CodingOverlayMeasurementLabelRenderer.Add(
+                CodingOverlayCanvas,
+                anchor,
+                text,
+                glowEffect,
+                isPreview ? OverlayTags.Measure : OverlayTags.Manual);
         }
     }
 }

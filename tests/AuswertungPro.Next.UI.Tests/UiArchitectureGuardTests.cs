@@ -3123,6 +3123,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_overlay_measurement_label_lives_in_renderer()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayRenderingPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs");
+        var rendererPath = Path.Combine(uiRoot, "Player", "CodingOverlayMeasurementLabelRenderer.cs");
+
+        Assert.True(File.Exists(rendererPath), "Overlay-Messlabel soll ausserhalb der PlayerWindow-Partials gerendert werden.");
+
+        var overlayRendering = File.ReadAllText(overlayRenderingPath);
+        var renderer = File.ReadAllText(rendererPath);
+
+        Assert.Contains("CodingOverlayMeasurementLabelRenderer.Add", overlayRendering);
+        Assert.DoesNotContain("new TextBlock", overlayRendering);
+        Assert.DoesNotContain("FontWeights.SemiBold", overlayRendering);
+        Assert.Contains("public static class CodingOverlayMeasurementLabelRenderer", renderer);
+        Assert.Contains("new TextBlock", renderer);
+        Assert.Contains("FontWeights.SemiBold", renderer);
+    }
+
+    [Fact]
     public void PlayerWindow_basic_overlay_shape_rendering_lives_in_basic_shapes_partial()
     {
         var root = FindRepositoryRoot();
