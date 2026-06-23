@@ -462,6 +462,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_classifier_results_live_in_classifier_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
+        var classifierPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.cs");
+
+        Assert.True(File.Exists(classifierPath), "Coding-Classifier-Ergebnisbehandlung soll in ein eigenes Partial.");
+
+        var ai = File.ReadAllText(aiPath);
+        var classifier = File.ReadAllText(classifierPath);
+
+        Assert.DoesNotContain("private bool TryHandleBoundaryClassifierResult", ai);
+        Assert.DoesNotContain("private bool TryHandleStructuralClassifierResult", ai);
+        Assert.Contains("private bool TryHandleBoundaryClassifierResult", classifier);
+        Assert.Contains("private bool TryHandleStructuralClassifierResult", classifier);
+        Assert.Contains("CodingClassifierDisplayPolicy.IsBoundaryClassifierCode", classifier);
+        Assert.Contains("CodingStructuralClassifierEventFactory.Create", classifier);
+    }
+
+    [Fact]
     public void PlayerWindow_bounds_adjustment_lives_in_policy()
     {
         var root = FindRepositoryRoot();
@@ -748,7 +770,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingLiveAiTimerController.cs");
         var displayPolicyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
         var settingsPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiTimerSettings.cs");
@@ -1379,7 +1401,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingStructuralClassifierFindingFactory.cs");
 
         Assert.True(File.Exists(factoryPath), "Structural-Classifier-Finding-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -1400,7 +1422,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.cs");
         var factoryPath = Path.Combine(uiRoot, "Views", "Windows", "AiFindingDisplayItemFactory.cs");
 
         Assert.True(File.Exists(factoryPath), "Classifier-Befundlisten-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
