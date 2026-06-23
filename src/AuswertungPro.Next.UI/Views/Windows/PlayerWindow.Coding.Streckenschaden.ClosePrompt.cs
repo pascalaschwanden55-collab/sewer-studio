@@ -31,12 +31,8 @@ public partial class PlayerWindow
 
         if (decision == CodingOpenStretchDamageDialogDecision.Close)
         {
-            foreach (var ev in offene)
-            {
-                ev.Entry.MeterEnd = CodingOpenStretchDamagePolicy.ResolveCloseMeter(ev, currentMeter);
-                _codingSessionService?.UpdateEvent(ev.EventId, ev.Entry, ev.Overlay);
-            }
-            RefreshCodingEventsList();
+            if (CodingOpenStretchDamageCloseApplier.Apply(offene, currentMeter, _codingSessionService))
+                RefreshCodingEventsList();
             return true;
         }
 
