@@ -3018,16 +3018,20 @@ public sealed class UiArchitectureGuardTests
         var aiRenderingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.cs");
         var specialShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingArcOverlayRenderer.cs");
+        var aiRendererPath = Path.Combine(uiRoot, "Player", "CodingAiOverlayRenderer.cs");
 
         Assert.False(File.Exists(specialShapesPath), "Das allgemeine SpecialShapes-Partial soll nach der Arc-Extraktion entfernt bleiben.");
         Assert.True(File.Exists(rendererPath), "Arc-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(aiRendererPath), "AI-Overlay-Orchestrierung soll Arc-Rendering ebenfalls ausserhalb von PlayerWindow erreichen.");
 
         var overlayRendering = File.ReadAllText(overlayRenderingPath);
         var aiRendering = File.ReadAllText(aiRenderingPath);
         var renderer = File.ReadAllText(rendererPath);
+        var aiRenderer = File.ReadAllText(aiRendererPath);
 
         Assert.Contains("CodingArcOverlayRenderer.Render", overlayRendering);
-        Assert.Contains("CodingArcOverlayRenderer.Render", aiRendering);
+        Assert.Contains("CodingAiOverlayRenderer.Render", aiRendering);
+        Assert.Contains("CodingArcOverlayRenderer.Render", aiRenderer);
         Assert.DoesNotContain("CreateArcPath", overlayRendering);
         Assert.DoesNotContain("CreateArcPath", aiRendering);
         Assert.Contains("public static class CodingArcOverlayRenderer", renderer);
@@ -3212,23 +3216,29 @@ public sealed class UiArchitectureGuardTests
         var aiOverlayPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.cs");
         var rectanglePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.Rectangle.cs");
         var cleanupPolicyPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupPolicy.cs");
+        var aiRendererPath = Path.Combine(uiRoot, "Player", "CodingAiOverlayRenderer.cs");
         var primitiveRendererPath = Path.Combine(uiRoot, "Player", "CodingAiPrimitiveOverlayRenderer.cs");
         var rectangleRendererPath = Path.Combine(uiRoot, "Player", "CodingAiRectangleOverlayRenderer.cs");
 
         Assert.False(File.Exists(rectanglePath), "AI-Rechteck-Overlay soll nicht mehr als PlayerWindow-Partial leben.");
         Assert.True(File.Exists(cleanupPolicyPath), "AI-Overlay-Cleanup-Regel soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(aiRendererPath), "AI-Overlay-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(primitiveRendererPath), "AI-Primitive sollen ausserhalb der PlayerWindow-Partials gerendert werden.");
         Assert.True(File.Exists(rectangleRendererPath), "AI-Rechteck-Overlay mit Label soll ausserhalb der PlayerWindow-Partials gerendert werden.");
 
         var aiOverlay = File.ReadAllText(aiOverlayPath);
         var cleanupPolicy = File.ReadAllText(cleanupPolicyPath);
+        var aiRenderer = File.ReadAllText(aiRendererPath);
         var primitiveRenderer = File.ReadAllText(primitiveRendererPath);
         var rectangleRenderer = File.ReadAllText(rectangleRendererPath);
 
         Assert.DoesNotContain("RenderAiRectangleOverlay(", aiOverlay);
-        Assert.Contains("CodingAiRectangleOverlayRenderer.Render", aiOverlay);
-        Assert.Contains("CodingAiPrimitiveOverlayRenderer.Render", aiOverlay);
-        Assert.Contains("CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag", aiOverlay);
+        Assert.Contains("CodingAiOverlayRenderer.Render", aiOverlay);
+        Assert.DoesNotContain("CodingAiRectangleOverlayRenderer.Render", aiOverlay);
+        Assert.DoesNotContain("CodingAiPrimitiveOverlayRenderer.Render", aiOverlay);
+        Assert.DoesNotContain("CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag", aiOverlay);
+        Assert.DoesNotContain("CodingAiOverlayDisplayPolicy.StrokeColor", aiOverlay);
+        Assert.DoesNotContain("switch (geo.ToolType)", aiOverlay);
         Assert.DoesNotContain("StartsWith(OverlayTags.AiPrefix", aiOverlay);
         Assert.DoesNotContain("var labelBorder = new Border", aiOverlay);
         Assert.DoesNotContain("CodingAiOverlayDisplayPolicy.LabelText", aiOverlay);
@@ -3236,6 +3246,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("new System.Windows.Shapes.Ellipse", aiOverlay);
         Assert.Contains("public static bool ShouldRemoveAiOverlayTag", cleanupPolicy);
         Assert.Contains("StartsWith(OverlayTags.AiPrefix", cleanupPolicy);
+        Assert.Contains("public static class CodingAiOverlayRenderer", aiRenderer);
+        Assert.Contains("CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag", aiRenderer);
+        Assert.Contains("CodingAiOverlayDisplayPolicy.StrokeColor", aiRenderer);
+        Assert.Contains("CodingAiPrimitiveOverlayRenderer.Render", aiRenderer);
+        Assert.Contains("CodingAiRectangleOverlayRenderer.Render", aiRenderer);
+        Assert.Contains("CodingArcOverlayRenderer.Render", aiRenderer);
         Assert.Contains("public static class CodingAiPrimitiveOverlayRenderer", primitiveRenderer);
         Assert.Contains("new System.Windows.Shapes.Line", primitiveRenderer);
         Assert.Contains("new System.Windows.Shapes.Ellipse", primitiveRenderer);
