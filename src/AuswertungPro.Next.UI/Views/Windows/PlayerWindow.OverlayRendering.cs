@@ -46,9 +46,16 @@ public partial class PlayerWindow
             case OverlayToolType.Arc:
                 if (overlay.Points.Count >= 2)
                 {
-                    var arc = CreateArcPath(overlay.Points[0], overlay.Points[1], stroke, glowEffect, tag, isPreview);
-                    if (arc != null)
-                        CodingOverlayCanvas.Children.Add(arc);
+                    CodingArcOverlayRenderer.Render(
+                        CodingOverlayCanvas,
+                        overlay.Points[0],
+                        overlay.Points[1],
+                        _codingOverlayService?.Calibration?.PipeCenter ?? new NormalizedPoint(0.5, 0.5),
+                        stroke,
+                        glowEffect,
+                        tag,
+                        isPreview,
+                        CodingNormToPixel);
                 }
                 break;
 
