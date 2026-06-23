@@ -279,17 +279,17 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var protocolMatchPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var trainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var resolverPath = Path.Combine(uiRoot, "Ai", "CodingProtocolTrainingCandidateResolver.cs");
 
         Assert.True(File.Exists(resolverPath), "Gruene Protokoll-Trainingskandidaten muessen ausserhalb der PlayerWindow-Partials auf Import-Events gemappt werden.");
 
-        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var training = File.ReadAllText(trainingPath);
         var resolver = File.ReadAllText(resolverPath);
 
-        Assert.Contains("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", protocolMatch);
-        Assert.DoesNotContain("Guid.TryParse(pair.Gt.RefId", protocolMatch);
-        Assert.DoesNotContain("_codingImportEvents.FirstOrDefault(ev => ev.Entry.EntryId", protocolMatch);
+        Assert.Contains("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", training);
+        Assert.DoesNotContain("Guid.TryParse(pair.Gt.RefId", training);
+        Assert.DoesNotContain("_codingImportEvents.FirstOrDefault(ev => ev.Entry.EntryId", training);
         Assert.Contains("public static IReadOnlyList<CodingEvent> ResolveImportEvents", resolver);
     }
 
@@ -1234,15 +1234,15 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var protocolMatchPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var trainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchDisplayPolicy.cs");
 
-        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var training = File.ReadAllText(trainingPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingProtocolMatchDisplayPolicy.BuildImportConfirmationBadge", protocolMatch);
-        Assert.DoesNotContain("bestaetigt", protocolMatch);
-        Assert.DoesNotContain("Interval = TimeSpan.FromSeconds(3)", protocolMatch);
+        Assert.Contains("CodingProtocolMatchDisplayPolicy.BuildImportConfirmationBadge", training);
+        Assert.DoesNotContain("bestaetigt", training);
+        Assert.DoesNotContain("Interval = TimeSpan.FromSeconds(3)", training);
         Assert.Contains("public static CodingImportConfirmationBadgeState BuildImportConfirmationBadge", policy);
     }
 
@@ -1251,16 +1251,40 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var protocolMatchPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var trainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchDisplayPolicy.cs");
 
-        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var training = File.ReadAllText(trainingPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingProtocolMatchDisplayPolicy.BuildAcceptedGreenMatchesOverlay", protocolMatch);
-        Assert.DoesNotContain("gruene Treffer als Training uebernommen", protocolMatch);
-        Assert.DoesNotContain("ShowOverlay($\"{accepted}", protocolMatch);
+        Assert.Contains("CodingProtocolMatchDisplayPolicy.BuildAcceptedGreenMatchesOverlay", training);
+        Assert.DoesNotContain("gruene Treffer als Training uebernommen", training);
+        Assert.DoesNotContain("ShowOverlay($\"{accepted}", training);
         Assert.Contains("public static CodingProtocolMatchOverlayState BuildAcceptedGreenMatchesOverlay", policy);
+    }
+
+    [Fact]
+    public void PlayerWindow_protocol_match_training_lives_in_training_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var protocolMatchPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.cs");
+        var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Training.cs");
+
+        Assert.True(File.Exists(trainingPath), "ProtocolMatch-Trainingsuebernahme soll aus dem Match-Partial heraus.");
+
+        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var training = File.ReadAllText(trainingPath);
+
+        Assert.DoesNotContain("private async void CodingAcceptGreenMatches_Click", protocolMatch);
+        Assert.DoesNotContain("private async void ImportConfirm_Click", protocolMatch);
+        Assert.DoesNotContain("private async Task<bool> ConfirmImportAsTrainingAsync", protocolMatch);
+        Assert.Contains("private async void CodingAcceptGreenMatches_Click", training);
+        Assert.Contains("private async void ImportConfirm_Click", training);
+        Assert.Contains("private async Task<bool> ConfirmImportAsTrainingAsync", training);
+        Assert.Contains("TeacherAnnotationStore.AppendAsync", training);
+        Assert.Contains("LiveDetectionTeacherAnnotationFactory.CreateImportConfirmation", training);
     }
 
     [Fact]
