@@ -1417,6 +1417,7 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
+        var viewportPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Viewport.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupPolicy.cs");
         var cleanerPath = Path.Combine(uiRoot, "Player", "CodingOverlayCanvasCleaner.cs");
 
@@ -1424,14 +1425,15 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(cleanerPath), "Transient-Overlay-Cleanup der Canvas-Elemente muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
+        var viewport = File.ReadAllText(viewportPath);
         var policy = File.ReadAllText(policyPath);
         var cleaner = File.ReadAllText(cleanerPath);
 
-        Assert.Contains("CodingOverlayCanvasCleaner.ClearTransient", overlayInput);
-        Assert.DoesNotContain("CodingOverlayCleanupPolicy.ShouldRemoveTransientTag(el.Tag", overlayInput);
-        Assert.DoesNotContain(".OfType<FrameworkElement>()", overlayInput);
-        Assert.DoesNotContain("tag == OverlayTags.ToolBadge ||", overlayInput);
-        Assert.DoesNotContain("clearManualOverlay && tag == OverlayTags.Manual", overlayInput);
+        Assert.Contains("CodingOverlayCanvasCleaner.ClearTransient", viewport);
+        Assert.DoesNotContain("CodingOverlayCleanupPolicy.ShouldRemoveTransientTag(el.Tag", overlayInput + viewport);
+        Assert.DoesNotContain(".OfType<FrameworkElement>()", overlayInput + viewport);
+        Assert.DoesNotContain("tag == OverlayTags.ToolBadge ||", overlayInput + viewport);
+        Assert.DoesNotContain("clearManualOverlay && tag == OverlayTags.Manual", overlayInput + viewport);
         Assert.Contains("public static bool ShouldRemoveTransientTag", policy);
         Assert.Contains("OverlayTags.ToolBadge", policy);
         Assert.Contains("CodingOverlayCleanupPolicy.ShouldRemoveTransientTag", cleaner);
@@ -1585,6 +1587,30 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_codingOverlaySuspendDepth++", visibility);
         Assert.Contains("CodingOverlayPopup.IsOpen = false", visibility);
         Assert.Contains("private void RestoreCodingOverlayAfterExternalWindow", visibility);
+    }
+
+    [Fact]
+    public void PlayerWindow_overlay_viewport_mapping_lives_in_viewport_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
+        var viewportPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Viewport.cs");
+
+        Assert.True(File.Exists(viewportPath), "Overlay-Viewport-Mapping soll aus dem allgemeinen OverlayInput-Partial heraus.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var viewport = File.ReadAllText(viewportPath);
+
+        Assert.DoesNotContain("private Rect GetCodingContentRect", overlayInput);
+        Assert.DoesNotContain("private NormalizedPoint CodingPixelToNorm", overlayInput);
+        Assert.DoesNotContain("private Point CodingNormToPixel", overlayInput);
+        Assert.DoesNotContain("private void RedrawCodingCanvas", overlayInput);
+        Assert.Contains("private Rect GetCodingContentRect", viewport);
+        Assert.Contains("CodingOverlayViewportMapper.GetContentRect", viewport);
+        Assert.Contains("CodingOverlayCanvasCleaner.ClearTransient", viewport);
+        Assert.Contains("private void RedrawCodingCanvas", viewport);
     }
 
     [Fact]
