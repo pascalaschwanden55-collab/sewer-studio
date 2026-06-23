@@ -699,20 +699,40 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.cs");
+        var snapshotPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Snapshot.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotPathPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Temp-Pfad fuer Player-Snapshots muss ausserhalb der PlayerWindow-Partials liegen.");
 
-        var playback = File.ReadAllText(playbackPath);
+        var snapshot = File.ReadAllText(snapshotPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("PlayerSnapshotPathPolicy.Create", playback);
-        Assert.DoesNotContain("SewerStudio_Snapshots", playback);
-        Assert.DoesNotContain("snap_{DateTime.Now", playback);
-        Assert.DoesNotContain("Path.GetTempPath()", playback);
+        Assert.Contains("PlayerSnapshotPathPolicy.Create", snapshot);
+        Assert.DoesNotContain("SewerStudio_Snapshots", snapshot);
+        Assert.DoesNotContain("snap_{DateTime.Now", snapshot);
+        Assert.DoesNotContain("Path.GetTempPath()", snapshot);
         Assert.Contains("public static PlayerSnapshotTarget Build", policy);
         Assert.Contains("public static PlayerSnapshotTarget Create", policy);
+    }
+
+    [Fact]
+    public void PlayerWindow_playback_snapshot_lives_in_snapshot_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
+        var snapshotPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Snapshot.cs");
+
+        Assert.True(File.Exists(snapshotPath), "Playback-Snapshot-Erzeugung soll aus dem allgemeinen Playback-Partial heraus.");
+
+        var playback = File.ReadAllText(playbackPath);
+        var snapshot = File.ReadAllText(snapshotPath);
+
+        Assert.DoesNotContain("public static bool TryTakeSnapshot", playback);
+        Assert.DoesNotContain("private bool TakeSnapshotSafe", playback);
+        Assert.Contains("public static bool TryTakeSnapshot", snapshot);
+        Assert.Contains("private bool TakeSnapshotSafe", snapshot);
     }
 
     [Fact]
