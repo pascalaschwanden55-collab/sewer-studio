@@ -397,6 +397,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_timer_creation_uses_factory()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var wiringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Wiring.cs");
+        var factoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerFactory.cs");
+
+        Assert.True(File.Exists(factoryPath), "PlayerWindow-Timer sollen ausserhalb des Wiring-Partials erzeugt werden.");
+
+        var wiring = File.ReadAllText(wiringPath);
+        var factory = File.ReadAllText(factoryPath);
+
+        Assert.Contains("PlayerWindowTimerFactory.CreateUpdateTimer", wiring);
+        Assert.Contains("PlayerWindowTimerFactory.CreateScrubTimer", wiring);
+        Assert.DoesNotContain("TimeSpan.FromMilliseconds(250)", wiring);
+        Assert.DoesNotContain("TimeSpan.FromMilliseconds(60)", wiring);
+        Assert.Contains("public static class PlayerWindowTimerFactory", factory);
+        Assert.Contains("TimeSpan.FromMilliseconds(250)", factory);
+        Assert.Contains("TimeSpan.FromMilliseconds(60)", factory);
+    }
+
+    [Fact]
     public void PlayerWindow_open_stretch_damage_prompt_lives_in_policy()
     {
         var root = FindRepositoryRoot();

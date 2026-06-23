@@ -1,32 +1,27 @@
 using System;
 using System.Windows;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
     private DispatcherTimer CreateUpdateTimer()
-    {
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-        timer.Tick += (_, __) => { if (_closing || _player is null) return; UpdateUi(); };
-        return timer;
-    }
+        => PlayerWindowTimerFactory.CreateUpdateTimer(() =>
+        {
+            if (_closing || _player is null) return;
+            UpdateUi();
+        });
 
     private DispatcherTimer CreateScrubTimer()
-    {
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(60) };
-        timer.Tick += (_, __) =>
+        => PlayerWindowTimerFactory.CreateScrubTimer(() =>
         {
-            timer.Stop();
             if (_closing || _player is null) return;
             if (_isDragging)
                 ScrubSeekToSlider();
-        };
-        return timer;
-    }
+        });
 
     private void WireWindowLifecycleEvents()
     {
