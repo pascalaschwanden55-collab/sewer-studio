@@ -2943,6 +2943,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_reference_dn_rendering_lives_in_renderer()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.cs");
+        var rendererPath = Path.Combine(uiRoot, "Player", "ReferenceDnOverlayRenderer.cs");
+
+        Assert.True(File.Exists(rendererPath), "Ref-DN-Canvas-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
+
+        var schema = File.ReadAllText(schemaPath);
+        var renderer = File.ReadAllText(rendererPath);
+
+        Assert.Contains("ReferenceDnOverlayRenderer.Render", schema);
+        Assert.DoesNotContain("ReferenceDnGeometry.BuildCircleRect", schema);
+        Assert.DoesNotContain("Ref: DN", schema);
+        Assert.Contains("public static class ReferenceDnOverlayRenderer", renderer);
+        Assert.Contains("ReferenceDnGeometry.BuildCircleRect", renderer);
+        Assert.Contains("new System.Windows.Shapes.Ellipse", renderer);
+    }
+
+    [Fact]
     public void PlayerWindow_ruler_overlay_rendering_lives_in_ruler_partial()
     {
         var root = FindRepositoryRoot();

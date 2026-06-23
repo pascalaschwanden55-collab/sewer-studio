@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.UI.Ai;
-using Rectangle = System.Windows.Shapes.Rectangle;
-
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -41,49 +36,12 @@ public partial class PlayerWindow
 
     private void RenderReferenceDn()
     {
-        var old = CodingOverlayCanvas.Children.OfType<FrameworkElement>()
-            .Where(e => e.Tag is string s && s == OverlayTags.RefDn)
-            .ToList();
-        foreach (var el in old)
-            CodingOverlayCanvas.Children.Remove(el);
-
-        if (!_showReferenceDn || _codingOverlayService?.Calibration == null) return;
-        var cal = _codingOverlayService.Calibration;
-        if (!cal.IsCalibrated || cal.NormalizedDiameter <= 0) return;
-
-        double w = CodingOverlayCanvas.ActualWidth, h = CodingOverlayCanvas.ActualHeight;
-        if (w <= 0 || h <= 0) return;
-
-        var circleRect = ReferenceDnGeometry.BuildCircleRect(
-            cal.PipeCenter,
-            cal.NormalizedDiameter,
-            w,
-            h);
-        if (circleRect.IsEmpty) return;
-
-        var circle = new System.Windows.Shapes.Ellipse
-        {
-            Width = circleRect.Width,
-            Height = circleRect.Height,
-            Stroke = new SolidColorBrush(Color.FromArgb(102, 255, 255, 255)),
-            StrokeThickness = 1.5,
-            StrokeDashArray = new DoubleCollection { 6, 3 },
-            Tag = OverlayTags.RefDn
-        };
-        Canvas.SetLeft(circle, circleRect.Left);
-        Canvas.SetTop(circle, circleRect.Top);
-        CodingOverlayCanvas.Children.Add(circle);
-
-        var lbl = new TextBlock
-        {
-            Text = $"Ref: DN {cal.NominalDiameterMm}",
-            FontSize = 11,
-            Foreground = new SolidColorBrush(Color.FromArgb(128, 255, 255, 255)),
-            Tag = OverlayTags.RefDn
-        };
-        Canvas.SetLeft(lbl, circleRect.Right + 4);
-        Canvas.SetTop(lbl, circleRect.Top + circleRect.Height / 2.0 - 8);
-        CodingOverlayCanvas.Children.Add(lbl);
+        ReferenceDnOverlayRenderer.Render(
+            CodingOverlayCanvas,
+            _codingOverlayService?.Calibration,
+            _showReferenceDn,
+            CodingOverlayCanvas.ActualWidth,
+            CodingOverlayCanvas.ActualHeight);
     }
 
     private void AddSchemaLabel(
