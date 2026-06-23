@@ -684,6 +684,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private async void LiveDetection_Click", lifecycle);
         Assert.Contains("private async Task StartLiveDetectionAsync", lifecycle);
         Assert.DoesNotContain("private void StopLiveDetection", lifecycle);
+        Assert.Contains("PlayerAiSettingsLoader.LoadRuntimeSettings", lifecycle);
+        Assert.DoesNotContain("AppSettingsAiSettingsProvider", lifecycle);
         Assert.Contains("LiveDetectionRuntimeFactory.CreateAsync", lifecycle);
         Assert.DoesNotContain("new OllamaClient", lifecycle);
         Assert.DoesNotContain("new LiveDetectionService", lifecycle);
@@ -3420,13 +3422,18 @@ public sealed class UiArchitectureGuardTests
         var healthPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Health.cs");
         var monitoringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Health.Monitoring.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingAiRuntimeFactory.cs");
+        var settingsLoaderPath = Path.Combine(uiRoot, "Ai", "PlayerAiSettingsLoader.cs");
 
         Assert.True(File.Exists(factoryPath), "Coding-AI-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(settingsLoaderPath), "Player-AI-Settings-Erzeugung soll ausserhalb von PlayerWindow liegen.");
 
         var health = File.ReadAllText(healthPath);
         var monitoring = File.ReadAllText(monitoringPath);
         var factory = File.ReadAllText(factoryPath);
+        var settingsLoader = File.ReadAllText(settingsLoaderPath);
 
+        Assert.Contains("PlayerAiSettingsLoader.LoadPlatformSettings", health);
+        Assert.DoesNotContain("AppSettingsAiSettingsProvider", health);
         Assert.Contains("CodingAiRuntimeFactory.Create", health);
         Assert.DoesNotContain("new OllamaClient", health);
         Assert.DoesNotContain("new LiveDetectionService", health);
@@ -3439,6 +3446,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingAiRuntimeFactory.CreateMultiModelService", monitoring);
         Assert.Contains("new OllamaClient", factory);
         Assert.Contains("new VisionPipelineClient", factory);
+        Assert.Contains("new AppSettingsAiSettingsProvider", settingsLoader);
     }
 
     [Fact]

@@ -1,7 +1,6 @@
 using System;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -12,7 +11,7 @@ public partial class PlayerWindow
     {
         try
         {
-            var platformConfig = new AppSettingsAiSettingsProvider().Load();
+            var platformConfig = PlayerAiSettingsLoader.LoadPlatformSettings();
             var runtime = CodingAiRuntimeFactory.Create(platformConfig, CodeCatalog, _serviceProvider?.PipelineCfg);
             var config = runtime.RuntimeSettings;
             _codingPipelineConfig = runtime.PipelineConfig;

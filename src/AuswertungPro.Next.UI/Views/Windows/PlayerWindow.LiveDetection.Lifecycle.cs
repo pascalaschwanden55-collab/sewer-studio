@@ -6,7 +6,6 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -29,9 +28,7 @@ public partial class PlayerWindow
         AiRuntimeSettings cfg;
         try
         {
-            cfg = new AppSettingsAiSettingsProvider()
-                .Load()
-                .ToRuntimeSettings();
+            cfg = PlayerAiSettingsLoader.LoadRuntimeSettings();
         }
         catch
         {
