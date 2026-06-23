@@ -2354,15 +2354,22 @@ public sealed class UiArchitectureGuardTests
         var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.Viewer.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingPhotoDisplayPathPolicy.cs");
         var loaderPath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerImageSourceLoader.cs");
+        var viewerServicePath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerWindowService.cs");
+        var viewerServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerWindowServiceFactory.cs");
 
         Assert.True(File.Exists(policyPath), "Fotoanzeige-Pfadauswahl muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(loaderPath), "Fotoanzeige-Bildquellen sollen ausserhalb der PlayerWindow-Partials geladen werden.");
+        Assert.True(File.Exists(viewerServicePath), "Fotoanzeige-Fensteraufbau soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(viewerServiceFactoryPath), "Fotoanzeige-Fensteraufbau soll ueber Factory verdrahtet werden.");
 
         var photos = File.ReadAllText(photosPath);
         var policy = File.ReadAllText(policyPath);
         var loader = File.ReadAllText(loaderPath);
+        var viewerService = File.ReadAllText(viewerServicePath);
+        var viewerServiceFactory = File.ReadAllText(viewerServiceFactoryPath);
 
-        Assert.Contains("CodingPhotoViewerImageSourceLoader.Load", photos);
+        Assert.Contains("CodingPhotoViewerWindowServiceFactory.Create", photos);
+        Assert.DoesNotContain("CodingPhotoViewerImageSourceLoader.Load", photos);
         Assert.DoesNotContain("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", photos);
         Assert.DoesNotContain("CodingPhotoDisplayPathPolicy.ResolveExistingPath", photos);
         Assert.DoesNotContain("File.Exists", photos);
@@ -2375,6 +2382,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingPhotoDisplayPathPolicy.ResolveExistingPath", loader);
         Assert.Contains("File.Exists", loader);
         Assert.Contains("BitmapImage", loader);
+        Assert.Contains("CodingPhotoViewerImageSourceLoader.Load", viewerService);
+        Assert.Contains("WindowStateManager.Track", viewerService);
+        Assert.Contains("new CodingPhotoViewerWindowService", viewerServiceFactory);
         Assert.Contains("public static IReadOnlyList<string> BuildDisplayPhotoPaths", policy);
         Assert.Contains("public static string? ResolveExistingPath", policy);
     }
@@ -2395,8 +2405,12 @@ public sealed class UiArchitectureGuardTests
 
         Assert.DoesNotContain("private void CodingEventShowPhotos_Click", photos);
         Assert.Contains("private void CodingEventShowPhotos_Click", viewer);
-        Assert.Contains("CodingPhotoViewerImageSourceLoader.Load", viewer);
-        Assert.Contains("WindowStateManager.Track", viewer);
+        Assert.Contains("CodingPhotoViewerWindowServiceFactory.Create", viewer);
+        Assert.DoesNotContain("new Window", viewer);
+        Assert.DoesNotContain("new StackPanel", viewer);
+        Assert.DoesNotContain("new Image", viewer);
+        Assert.DoesNotContain("new ScrollViewer", viewer);
+        Assert.DoesNotContain("WindowStateManager.Track", viewer);
     }
 
     [Fact]

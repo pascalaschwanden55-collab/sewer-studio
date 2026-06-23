@@ -114,8 +114,10 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var photoBody = ExtractMethodBody(coding, "private void CodingEventShowPhotos_Click");
         var policy = ReadUiFile("Ai", "CodingPhotoDisplayPathPolicy.cs");
         var loader = ReadUiFile("Ai", "CodingPhotoViewerImageSourceLoader.cs");
+        var viewerService = ReadUiFile("Ai", "CodingPhotoViewerWindowService.cs");
 
-        Assert.Contains("CodingPhotoViewerImageSourceLoader.Load", photoBody);
+        Assert.Contains("CodingPhotoViewerWindowServiceFactory.Create", photoBody);
+        Assert.Contains("CodingPhotoViewerImageSourceLoader.Load", viewerService);
         Assert.Contains("CodingDefectPreviewService.BuildPreviewImagePath", loader);
         Assert.Contains("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", loader);
         Assert.True(
