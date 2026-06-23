@@ -2757,17 +2757,24 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingPhotoSlotPolicy.cs");
+        var applierPath = Path.Combine(uiRoot, "Ai", "CodingEventPhotoApplier.cs");
 
         Assert.True(File.Exists(policyPath), "Manuelle Foto-Slot-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(applierPath), "Manuelle Foto-Slot-Anwendung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var photos = File.ReadAllText(photosPath);
         var policy = File.ReadAllText(policyPath);
+        var applier = File.ReadAllText(applierPath);
 
-        Assert.Contains("CodingPhotoSlotPolicy.Apply", photos);
+        Assert.Contains("CodingEventPhotoApplier.Apply", photos);
+        Assert.DoesNotContain("CodingPhotoSlotPolicy.Apply", photos);
+        Assert.DoesNotContain("_codingSessionService?.UpdateEvent", photos);
         Assert.DoesNotContain("entry.FotoPaths[1] = fotoPath", photos);
         Assert.DoesNotContain("Foto 2 ersetzt", photos);
         Assert.Contains("public static CodingPhotoSlotUpdate Apply", policy);
         Assert.Contains("photoPaths.Count >= 2", policy);
+        Assert.Contains("CodingPhotoSlotPolicy.Apply", applier);
+        Assert.Contains("codingSessionService?.UpdateEvent", applier);
     }
 
     [Fact]

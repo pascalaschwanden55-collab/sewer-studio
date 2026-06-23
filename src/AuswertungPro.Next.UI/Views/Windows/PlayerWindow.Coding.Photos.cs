@@ -62,10 +62,9 @@ public partial class PlayerWindow
             return;
         }
 
-        var slotUpdate = CodingPhotoSlotPolicy.Apply(entry.FotoPaths, fotoPath);
+        var slotUpdate = CodingEventPhotoApplier.Apply(codingEvent, fotoPath, _codingSessionService);
         ShowOverlay(slotUpdate.OverlayText, TimeSpan.FromSeconds(3));
 
-        _codingSessionService?.UpdateEvent(codingEvent.EventId, entry, codingEvent.Overlay);
         RefreshCodingEventsList();
     }
 

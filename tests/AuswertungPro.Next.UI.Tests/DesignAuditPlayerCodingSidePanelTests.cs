@@ -358,7 +358,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.True(snapshotIndex >= 0, "Manuelles Foto muss weiter den aktuellen Frame capturen.");
         Assert.True(entryTimeIndex < snapshotIndex, "Dateiname und Befund muessen den Foto-Zeitpunkt verwenden.");
         Assert.True(eventTimeIndex < snapshotIndex, "Event-Zeit muss vor dem Snapshot angepasst werden.");
-        Assert.Contains("_codingSessionService?.UpdateEvent(codingEvent.EventId, entry, codingEvent.Overlay)", photoBody);
+        Assert.Contains("CodingEventPhotoApplier.Apply", photoBody);
     }
 
     [Fact]
