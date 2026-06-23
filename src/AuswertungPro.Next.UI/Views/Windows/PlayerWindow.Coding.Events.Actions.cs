@@ -37,10 +37,7 @@ public partial class PlayerWindow
 
         if (edited)
         {
-            codingEvent.MeterAtCapture = entry.MeterStart ?? entry.MeterEnd ?? codingEvent.MeterAtCapture;
-            codingEvent.VideoTimestamp = entry.Zeit ?? codingEvent.VideoTimestamp;
-            _codingSessionService?.UpdateEvent(codingEvent.EventId, entry, codingEvent.Overlay);
-
+            CodingEventEditApplier.Apply(codingEvent, _codingSessionService);
             RefreshCodingEventsList();
         }
     }

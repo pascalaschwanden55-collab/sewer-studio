@@ -50,9 +50,7 @@ public partial class PlayerWindow
 
             if (edited)
             {
-                _codingSessionService?.UpdateEvent(ev.EventId, entry, ev.Overlay);
-                ev.MeterAtCapture = entry.MeterStart ?? entry.MeterEnd ?? ev.MeterAtCapture;
-                ev.VideoTimestamp = entry.Zeit ?? ev.VideoTimestamp;
+                CodingEventEditApplier.Apply(ev, _codingSessionService);
 
                 if (ev.AiContext != null)
                     _codingVm.EditDefectCommand.Execute(null);
