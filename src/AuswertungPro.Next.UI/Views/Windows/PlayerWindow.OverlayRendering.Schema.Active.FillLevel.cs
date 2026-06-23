@@ -64,7 +64,7 @@ public partial class PlayerWindow
         };
         CodingOverlayCanvas.Children.Add(levelLine);
 
-        AddDotMarker(new Point(center.X, levelY), 6, stroke, OverlayTags.Preview, glowEffect);
+        CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, new Point(center.X, levelY), 6, stroke, OverlayTags.Preview, glowEffect);
         AddSchemaLabel(new Point(center.X, levelY), $"{overlay.FillPercent:F1}%", stroke, glowEffect);
     }
 }

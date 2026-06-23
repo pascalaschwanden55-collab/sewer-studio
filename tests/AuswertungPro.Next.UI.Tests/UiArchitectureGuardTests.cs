@@ -2992,16 +2992,24 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var specialShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.cs");
         var pipeBendPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.PipeBend.cs");
+        var helperPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Helpers.cs");
+        var dotRendererPath = Path.Combine(uiRoot, "Player", "CodingOverlayDotMarkerRenderer.cs");
 
         Assert.True(File.Exists(pipeBendPath), "Pipe-Bend-Overlay-Rendering soll aus dem allgemeinen SpecialShapes-Partial heraus.");
+        Assert.False(File.Exists(helperPath), "Dot-Marker-Rendering soll nicht mehr als PlayerWindow-Partial leben.");
+        Assert.True(File.Exists(dotRendererPath), "Dot-Marker-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var specialShapes = File.ReadAllText(specialShapesPath);
         var pipeBend = File.ReadAllText(pipeBendPath);
+        var dotRenderer = File.ReadAllText(dotRendererPath);
 
         Assert.DoesNotContain("private void RenderPipeBendOverlay", specialShapes);
         Assert.Contains("private void RenderPipeBendOverlay", pipeBend);
         Assert.Contains("overlay.ArcDegrees", pipeBend);
-        Assert.Contains("AddDotMarker(vertex", pipeBend);
+        Assert.DoesNotContain("AddDotMarker", pipeBend);
+        Assert.Contains("CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, vertex", pipeBend);
+        Assert.Contains("public static class CodingOverlayDotMarkerRenderer", dotRenderer);
+        Assert.Contains("new System.Windows.Shapes.Ellipse", dotRenderer);
     }
 
     [Fact]

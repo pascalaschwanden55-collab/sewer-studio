@@ -29,6 +29,6 @@ public partial class PlayerWindow
         };
         CodingOverlayCanvas.Children.Add(guide);
 
-        AddDotMarker(radiusHandle, 5, Brushes.White, OverlayTags.Preview, glowEffect);
+        CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, radiusHandle, 5, Brushes.White, OverlayTags.Preview, glowEffect);
     }
 }

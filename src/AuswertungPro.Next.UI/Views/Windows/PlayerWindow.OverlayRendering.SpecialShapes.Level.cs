@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Player;
 using Rectangle = System.Windows.Shapes.Rectangle;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -54,7 +55,7 @@ public partial class PlayerWindow
             };
             CodingOverlayCanvas.Children.Add(spine);
 
-            AddDotMarker(tip, 6, intrusionStroke, tag, glowEffect);
+            CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, tip, 6, intrusionStroke, tag, glowEffect);
             if (overlay.FillPercent.HasValue)
                 AddSchemaLabel(tip, $"Einragung {overlay.FillPercent:F1}%", intrusionStroke, glowEffect);
             return;

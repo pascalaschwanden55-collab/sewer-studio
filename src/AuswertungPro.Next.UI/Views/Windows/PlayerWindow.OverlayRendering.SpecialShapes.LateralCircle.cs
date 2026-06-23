@@ -39,7 +39,7 @@ public partial class PlayerWindow
         Canvas.SetTop(circle, center.Y - radius);
         CodingOverlayCanvas.Children.Add(circle);
 
-        AddDotMarker(center, 5, stroke, tag, glowEffect);
+        CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, center, 5, stroke, tag, glowEffect);
 
         var radLine = new System.Windows.Shapes.Line
         {

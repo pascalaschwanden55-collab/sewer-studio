@@ -51,8 +51,8 @@ public partial class PlayerWindow
         };
         CodingOverlayCanvas.Children.Add(spine);
 
-        AddDotMarker(tip, 7, stroke, OverlayTags.Preview, glowEffect);
-        AddDotMarker(edge, 5, Brushes.White, OverlayTags.Preview, glowEffect);
+        CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, tip, 7, stroke, OverlayTags.Preview, glowEffect);
+        CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, edge, 5, Brushes.White, OverlayTags.Preview, glowEffect);
         AddSchemaLabel(tip, $"{overlay.FillPercent:F1}% @ {overlay.ClockFrom:F1}h", stroke, glowEffect);
     }
 }

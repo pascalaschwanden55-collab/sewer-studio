@@ -31,8 +31,8 @@ public partial class PlayerWindow
             };
             CodingOverlayCanvas.Children.Add(line);
 
-            AddDotMarker(a, 6, stroke, tag, glowEffect);
-            AddDotMarker(b, 6, stroke, tag, glowEffect);
+            CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, a, 6, stroke, tag, glowEffect);
+            CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, b, 6, stroke, tag, glowEffect);
             return;
         }
 
@@ -58,9 +58,9 @@ public partial class PlayerWindow
         if (isPreview) line2.StrokeDashArray = new DoubleCollection { 4, 2 };
         CodingOverlayCanvas.Children.Add(line2);
 
-        AddDotMarker(p1, 6, stroke, tag, glowEffect);
-        AddDotMarker(vertex, 8, stroke, tag, glowEffect);
-        AddDotMarker(p3, 6, stroke, tag, glowEffect);
+        CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, p1, 6, stroke, tag, glowEffect);
+        CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, vertex, 8, stroke, tag, glowEffect);
+        CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, p3, 6, stroke, tag, glowEffect);
 
         double arcRadius = 30;
         double angle1 = Math.Atan2(p1.Y - vertex.Y, p1.X - vertex.X);
