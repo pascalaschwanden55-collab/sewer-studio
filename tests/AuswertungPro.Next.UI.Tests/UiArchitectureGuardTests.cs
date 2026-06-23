@@ -555,18 +555,24 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var liveDetectionPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.cs");
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.cs");
+        var stopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
 
         Assert.True(File.Exists(lifecyclePath), "LiveDetection-Start/Stop-Wiring soll in ein eigenes Lifecycle-Partial.");
+        Assert.True(File.Exists(stopPath), "LiveDetection-Stop/Cleanup soll aus dem Start-Lifecycle-Partial heraus.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
+        var stop = File.ReadAllText(stopPath);
 
         Assert.DoesNotContain("private async void LiveDetection_Click", liveDetection);
         Assert.DoesNotContain("private async Task StartLiveDetectionAsync", liveDetection);
         Assert.DoesNotContain("private void StopLiveDetection", liveDetection);
         Assert.Contains("private async void LiveDetection_Click", lifecycle);
         Assert.Contains("private async Task StartLiveDetectionAsync", lifecycle);
-        Assert.Contains("private void StopLiveDetection", lifecycle);
+        Assert.DoesNotContain("private void StopLiveDetection", lifecycle);
+        Assert.Contains("private void StopLiveDetection", stop);
+        Assert.Contains("_detectionCts?.Cancel", stop);
+        Assert.Contains("_liveDetectionClient?.Dispose", stop);
         Assert.Contains("VisionModelSelectionPolicy.Select", lifecycle);
     }
 
