@@ -66,6 +66,7 @@ public partial class PlayerWindow
 
     private void InitializeCodingSidePanelControllers()
     {
+        _codingEventsListControls = new CodingEventsListControls(LstCodingEvents);
         _codingStatisticsControls = new CodingStatisticsControls(
             RunCodingDefectCount,
             RunCodingOpenCount,

@@ -1461,15 +1461,23 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingEventDisplayOrderPolicy.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingEventsListControls.cs");
 
         Assert.True(File.Exists(policyPath), "Codier-Ereignis-Sortierung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controlsPath), "Codier-Ereignislisten-Rebind muss ausserhalb der PlayerWindow-Partials gekapselt sein.");
 
         var events = File.ReadAllText(eventsPath);
         var policy = File.ReadAllText(policyPath);
+        var controls = File.ReadAllText(controlsPath);
 
         Assert.Contains("CodingEventDisplayOrderPolicy.Order", events);
+        Assert.Contains("_codingEventsListControls.ApplyOrderedEvents", events);
         Assert.DoesNotContain(".OrderBy(e => e.MeterAtCapture)", events);
+        Assert.DoesNotContain("LstCodingEvents.ItemsSource", events);
+        Assert.DoesNotContain("_codingVm.Events.Clear()", events);
         Assert.Contains("public static IReadOnlyList<CodingEvent> Order", policy);
+        Assert.Contains("public sealed class CodingEventsListControls", controls);
+        Assert.Contains("_eventsList.ItemsSource", controls);
     }
 
     [Fact]

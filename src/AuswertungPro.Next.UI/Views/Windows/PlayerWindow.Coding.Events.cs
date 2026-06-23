@@ -108,16 +108,7 @@ public partial class PlayerWindow
         if (_codingVm == null) return;
 
         var sorted = CodingEventDisplayOrderPolicy.Order(_codingVm.Events);
-
-        var selected = LstCodingEvents.SelectedItem;
-        _codingVm.Events.Clear();
-        foreach (var ev in sorted)
-            _codingVm.Events.Add(ev);
-
-        LstCodingEvents.ItemsSource = null;
-        LstCodingEvents.ItemsSource = _codingVm.Events;
-        if (selected != null)
-            LstCodingEvents.SelectedItem = selected;
+        _codingEventsListControls.ApplyOrderedEvents(_codingVm.Events, sorted);
 
         Dispatcher.InvokeAsync(ColorizeCodingEventListItems, System.Windows.Threading.DispatcherPriority.Loaded);
         UpdateCodingStatistics();
