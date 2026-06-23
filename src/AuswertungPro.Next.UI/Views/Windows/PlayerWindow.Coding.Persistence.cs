@@ -35,7 +35,7 @@ public partial class PlayerWindow
         => CodingTrainingSamplePersistenceRequest.FromPlayerContext(
             _codingVm?.HaltungName ?? "unknown",
             _haltungRecord?.GetFieldValue("Datum_Jahr"),
-            Environment.UserName,
+            PlayerUserNameProvider.Current(),
             PlayerClock.UtcNow(),
             preferredFrameBytes,
             CaptureCurrentFrameAsync);

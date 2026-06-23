@@ -1312,6 +1312,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("SaveEvidenceFrame", persistence);
         Assert.DoesNotContain("IsCodingSampleEvalProtected", persistence);
         Assert.DoesNotContain("TrainingSampleEligibility", persistence);
+        Assert.DoesNotContain("Environment.UserName", persistence);
+        Assert.Contains("PlayerUserNameProvider.Current", persistence);
         Assert.Contains("SaveGoldFrameAsync", coordinator);
         Assert.Contains("CodingTrainingSampleFactory.Create", coordinator);
         Assert.Contains("CodingTrainingSampleEvalProtector", coordinator);
