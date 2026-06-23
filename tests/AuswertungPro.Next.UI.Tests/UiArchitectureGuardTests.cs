@@ -2613,12 +2613,14 @@ public sealed class UiArchitectureGuardTests
         var intrusionPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.Intrusion.cs");
         var pipeBendRendererPath = Path.Combine(uiRoot, "Player", "CodingActivePipeBendSchemaRenderer.cs");
         var intrusionRendererPath = Path.Combine(uiRoot, "Player", "CodingActiveIntrusionSchemaRenderer.cs");
+        var fillLevelRendererPath = Path.Combine(uiRoot, "Player", "CodingActiveFillLevelSchemaRenderer.cs");
 
         Assert.True(File.Exists(pipeBendPath), "Aktives PipeBend-Rendering soll aus dem Dispatcher heraus.");
         Assert.True(File.Exists(fillLevelPath), "Aktives FillLevel-Rendering soll aus dem Dispatcher heraus.");
         Assert.True(File.Exists(intrusionPath), "Aktives Intrusion-Rendering soll aus dem Dispatcher heraus.");
         Assert.True(File.Exists(pipeBendRendererPath), "Aktives PipeBend-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(intrusionRendererPath), "Aktives Intrusion-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(fillLevelRendererPath), "Aktives FillLevel-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var active = File.ReadAllText(activePath);
         var pipeBend = File.ReadAllText(pipeBendPath);
@@ -2626,6 +2628,7 @@ public sealed class UiArchitectureGuardTests
         var intrusion = File.ReadAllText(intrusionPath);
         var pipeBendRenderer = File.ReadAllText(pipeBendRendererPath);
         var intrusionRenderer = File.ReadAllText(intrusionRendererPath);
+        var fillLevelRenderer = File.ReadAllText(fillLevelRendererPath);
 
         Assert.Contains("RenderActivePipeBendSchema(bend, glowEffect)", active);
         Assert.Contains("RenderActiveFillLevelSchema(fill, glowEffect)", active);
@@ -2642,6 +2645,14 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("new System.Windows.Shapes.Line", pipeBendRenderer);
         Assert.Contains("CodingOverlayDotMarkerRenderer.Add", pipeBendRenderer);
         Assert.Contains("private void RenderActiveFillLevelSchema", fillLevel);
+        Assert.Contains("CodingActiveFillLevelSchemaRenderer.Render", fillLevel);
+        Assert.DoesNotContain("new Rectangle", fillLevel);
+        Assert.DoesNotContain("new System.Windows.Shapes.Line", fillLevel);
+        Assert.DoesNotContain("CodingOverlayDotMarkerRenderer.Add", fillLevel);
+        Assert.Contains("public static class CodingActiveFillLevelSchemaRenderer", fillLevelRenderer);
+        Assert.Contains("new Rectangle", fillLevelRenderer);
+        Assert.Contains("new System.Windows.Shapes.Line", fillLevelRenderer);
+        Assert.Contains("CodingOverlayDotMarkerRenderer.Add", fillLevelRenderer);
         Assert.Contains("private void RenderActiveIntrusionSchema", intrusion);
         Assert.Contains("CodingActiveIntrusionSchemaRenderer.Render", intrusion);
         Assert.DoesNotContain("new System.Windows.Shapes.Polygon", intrusion);
