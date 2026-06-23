@@ -1,46 +1,18 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Input;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Application.Ai.Evaluation;
-using AuswertungPro.Next.Application.Ai.QualityGate;
-using AuswertungPro.Next.Application.Ai.Teacher;
-using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.Application.Reports;
-using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Ai;
-using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
-using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
-using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Helpers;
-using AuswertungPro.Next.UI.Services;
-using AuswertungPro.Next.UI.ViewModels.Protocol;
-using AuswertungPro.Next.UI.ViewModels.Windows;
-using AppProtocol = AuswertungPro.Next.Application.Protocol;
-using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
-using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
-using InfraTraining = AuswertungPro.Next.Infrastructure.Ai.Training;
-using Rectangle = System.Windows.Shapes.Rectangle;
-
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    // --- Coding KI-Analyse ---
-
     private async void CodingAnalyzeFrame_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -53,11 +25,15 @@ public partial class PlayerWindow
         }
     }
 
-    private async Task RunCodingAnalysisAsync(string activityText, bool disableAnalyzeButton = false,
-        string? keywordHint = null, string? codeHint = null)
+    private async Task RunCodingAnalysisAsync(
+        string activityText,
+        bool disableAnalyzeButton = false,
+        string? keywordHint = null,
+        string? codeHint = null)
     {
         if ((_codingEnhancedVision == null && _codingLiveDetection == null && _codingMultiModel == null)
-            || _codingIsAnalyzing) return;
+            || _codingIsAnalyzing)
+            return;
 
         _codingIsAnalyzing = true;
         _codingAnalysisCts?.Cancel();
@@ -68,7 +44,6 @@ public partial class PlayerWindow
             if (disableAnalyzeButton)
                 BtnCodingAnalyze.IsEnabled = false;
 
-            // Zeitstempel VOR dem Capture festhalten (CaptureSnapshotAsync wartet bis zu 1s)
             var captureTimestampSec = _player.Time / 1000.0;
             var currentMeterForStop = ResolveCodingMeterForFrame(captureTimestampSec);
             var currentVideoTimeForStop = TimeSpan.FromSeconds(captureTimestampSec);
@@ -87,48 +62,49 @@ public partial class PlayerWindow
                 return;
             }
 
-            // â”€â”€ Qwen-only Fallback-Pfad â”€â”€
             SetCodingAiState(activityText, PlayerStatusColors.Warning,
                 "Schritt 1 von 3: Snapshot", pulse: true);
 
+            var pngBytes = await CaptureSnapshotAsync(_codingAnalysisCts.Token);
+            if (pngBytes == null || pngBytes.Length == 0)
             {
-                var pngBytes = await CaptureSnapshotAsync(_codingAnalysisCts.Token);
-                if (pngBytes == null || pngBytes.Length == 0)
-                {
-                    SetCodingAiState("Frame nicht extrahierbar", PlayerStatusColors.Error,
-                        $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
-                    return;
-                }
-                _detectionPendingFrameBytes = pngBytes;
-                _detectionPendingTimestampSec = captureTimestampSec;
-                var frameOsdMeter = await TryReadAnalyzedFrameOsdMeterAsync(
-                    pngBytes,
-                    captureTimestampSec,
-                    _codingAnalysisCts.Token);
-
-                SetCodingAiState(activityText, PlayerStatusColors.Warning,
-                    $"Schritt 2 von 3: Inferenz ({LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)})", pulse: true);
-
-                LiveDetection result;
-                if (_codingEnhancedVision != null)
-                {
-                    var b64 = Convert.ToBase64String(pngBytes);
-                    var importContext = GatherImportContext();
-                    var enhanced = await _codingEnhancedVision.AnalyzeAsync(
-                        b64, importContext, _codingAnalysisCts.Token);
-                    result = LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
-                }
-                else
-                {
-                    result = await _codingLiveDetection!.AnalyzeFrameAsync(
-                        pngBytes, captureTimestampSec, _codingAnalysisCts.Token);
-                }
-                result = result with { MeterReading = frameOsdMeter };
-
-                ShowCodingAiResults(result);
+                SetCodingAiState("Frame nicht extrahierbar", PlayerStatusColors.Error,
+                    $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
+                return;
             }
+
+            _detectionPendingFrameBytes = pngBytes;
+            _detectionPendingTimestampSec = captureTimestampSec;
+            var frameOsdMeter = await TryReadAnalyzedFrameOsdMeterAsync(
+                pngBytes,
+                captureTimestampSec,
+                _codingAnalysisCts.Token);
+
+            SetCodingAiState(activityText, PlayerStatusColors.Warning,
+                $"Schritt 2 von 3: Inferenz ({LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)})",
+                pulse: true);
+
+            LiveDetection result;
+            if (_codingEnhancedVision != null)
+            {
+                var b64 = Convert.ToBase64String(pngBytes);
+                var importContext = GatherImportContext();
+                var enhanced = await _codingEnhancedVision.AnalyzeAsync(
+                    b64, importContext, _codingAnalysisCts.Token);
+                result = LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
+            }
+            else
+            {
+                result = await _codingLiveDetection!.AnalyzeFrameAsync(
+                    pngBytes, captureTimestampSec, _codingAnalysisCts.Token);
+            }
+
+            result = result with { MeterReading = frameOsdMeter };
+            ShowCodingAiResults(result);
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+        }
         catch (Exception ex)
         {
             SetCodingAiState($"Fehler: {ex.Message}", PlayerStatusColors.Error,
@@ -153,66 +129,6 @@ public partial class PlayerWindow
             currentVideoTime);
     }
 
-    /// <summary>
-    /// <summary>
-    /// Sammelt alle Import-Eintraege als Erwartungshorizont fuer die KI-Analyse.
-    /// Die KI erhaelt die bekannten VSA-Codes und kann sie zuweisen statt "???".
-    /// </summary>
-    // â”€â”€ Multi-Model Rendering (YOLO â†’ DINO â†’ SAM) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    /// <summary>
-    /// Rendert Multi-Model Ergebnisse: SAM-Masken (gruene Konturen) + Label-Badges mit Messungen.
-    /// </summary>
-    private void ShowMultiModelResults(SingleFrameResult mmResult, IReadOnlyList<SegmentedFinding> segmented)
-    {
-        // Alte Masken entfernen
-        Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
-
-        // Gruene SAM-Masken nur fuer codierbare (nahe) Befunde. Voraus-Befunde werden
-        // nicht gezeichnet (siehe BuildVisibleMaskFindings) — nur intern gemerkt.
-        if (mmResult.SamResponse != null)
-        {
-            if (mmResult.SamResponse is { ImageWidth: > 0, ImageHeight: > 0 } srAsp)
-                _codingVideoAspect = (double)srAsp.ImageWidth / srAsp.ImageHeight;
-
-            var candidates = CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates(segmented);
-            if (candidates.Count > 0)
-            {
-                var maskContent = GetCodingContentRect();
-                Ai.Pipeline.SamMaskRenderer.RenderCandidates(
-                    CodingOverlayCanvas,
-                    candidates,
-                    mmResult.SamResponse.ImageWidth,
-                    mmResult.SamResponse.ImageHeight,
-                    maskContent.Width,
-                    maskContent.Height,
-                    logger: _serviceProvider?.LoggerFactory.CreateLogger("SamMaskRenderer"),
-                    options: Ai.Pipeline.SamMaskRenderer.WinCanStyleOptions,
-                    offsetX: maskContent.X,
-                    offsetY: maskContent.Y);
-            }
-        }
-
-        // "Voraus"-Befunde werden NICHT mehr gezeichnet (Fachregel User 2026-06-16:
-        // erst zwischen DN-Kreis und Bildrand zeigen/codieren). Sie bleiben nur intern
-        // in 'segmented' gemerkt; der Status meldet "Ereignis voraus erkannt".
-        double iw = mmResult.SamResponse?.ImageWidth ?? 0;
-        double ih = mmResult.SamResponse?.ImageHeight ?? 0;
-        if (iw > 0 && ih > 0)
-            _codingVideoAspect = iw / ih;
-
-        // Kalibrierkreis anzeigen
-        _showReferenceDn = true;
-        RenderReferenceDn();
-    }
-
-    /// <summary>
-    /// Naehe-Gate fuer den Qwen/Enhanced-Pfad: prueft per Bbox + Kalibrierung, ob ein
-    /// KI-Befund noch zu weit voraus ist (ganz im DN-Kreis). Fachregel User 2026-06-16:
-    /// erst codieren wenn das Ereignis ueber den DN-Kreis nach aussen reicht.
-    /// Ohne verwertbare Bbox kann die Distanz nicht geometrisch geprueft werden ->
-    /// konservativ false (nicht blockieren), damit reine Textbefunde nicht verschwinden.
-    /// </summary>
     private bool IsFindingTooFarAhead(LiveFrameFinding finding)
     {
         return CodingFindingProximityPolicy.IsTooFarAhead(
@@ -221,11 +137,10 @@ public partial class PlayerWindow
             _codingVideoAspect);
     }
 
-    /// <summary>Baut SegmentedFindings aus dem Multi-Model-Ergebnis inkl. Naehe-Pruefung.</summary>
     private IReadOnlyList<SegmentedFinding> BuildCodingSegmentedFindings(SingleFrameResult mmResult)
     {
         if (mmResult.SamResponse == null)
-            return System.Array.Empty<SegmentedFinding>();
+            return Array.Empty<SegmentedFinding>();
 
         var proximityCalibration = CodingPipeProximityCalibrationPolicy.Resolve(
             _codingOverlayService?.Calibration);
@@ -237,18 +152,9 @@ public partial class PlayerWindow
             proximityCalibration.VanishX,
             proximityCalibration.VanishY,
             proximityCalibration.PipeRadiusNorm,
-            AuswertungPro.Next.Application.Ai.MetrierungProximityThresholds.Default);
+            MetrierungProximityThresholds.Default);
     }
-
-    /// <summary>
-    /// Erstellt CodingEvents aus Multi-Model Befunden (DINO-Detections + SAM-Quantifizierung).
-    /// </summary>
-    /// <summary>
-    /// Multi-Model Findings als CodingEvents â€” nutzt denselben Resolver-
-    /// und Label-Pfad wie der Qwen/Enhanced-Pfad (ResolveFindingCodeForCoding, LookupVsaLabel).
-    /// </summary>
 
     private Task<byte[]?> CaptureSnapshotAsync(CancellationToken ct)
         => new CodingSnapshotCaptureService(path => TakeSnapshotSafe(path)).CapturePngAsync(ct);
-
 }

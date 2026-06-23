@@ -1628,15 +1628,35 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var renderingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Rendering.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingSegmentedFindingVisibility.cs");
 
-        var ai = File.ReadAllText(aiPath);
+        var rendering = File.ReadAllText(renderingPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates", ai);
-        Assert.DoesNotContain("new Ai.Pipeline.SamMaskRenderer.MaskRenderCandidate", ai);
+        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates", rendering);
+        Assert.DoesNotContain("new Ai.Pipeline.SamMaskRenderer.MaskRenderCandidate", rendering);
         Assert.Contains("public static IReadOnlyList<SamMaskRenderer.MaskRenderCandidate> BuildVisibleMaskRenderCandidates", policy);
+    }
+
+    [Fact]
+    public void PlayerWindow_multi_model_rendering_lives_in_rendering_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
+        var renderingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Rendering.cs");
+
+        Assert.True(File.Exists(renderingPath), "Multi-Model-Maskenanzeige soll aus dem allgemeinen Coding.Ai-Partial heraus.");
+
+        var ai = File.ReadAllText(aiPath);
+        var rendering = File.ReadAllText(renderingPath);
+
+        Assert.DoesNotContain("private void ShowMultiModelResults", ai);
+        Assert.Contains("private void ShowMultiModelResults", rendering);
+        Assert.Contains("SamMaskRenderer.RenderCandidates", rendering);
+        Assert.Contains("RenderReferenceDn", rendering);
     }
 
     [Fact]
