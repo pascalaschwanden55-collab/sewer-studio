@@ -1265,17 +1265,23 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
         var filteringPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Filtering.cs");
+        var meterPolicyPath = Path.Combine(uiRoot, "Ai", "CodingResultMeterReadingPolicy.cs");
 
         Assert.True(File.Exists(filteringPath), "KI-Finding-Filteradapter sollen aus dem allgemeinen AiEvents-Partial heraus.");
+        Assert.True(File.Exists(meterPolicyPath), "OSD-Meteruebernahme aus KI-Ergebnissen muss ausserhalb der PlayerWindow-Partials entschieden werden.");
 
         var aiEvents = File.ReadAllText(aiEventsPath);
         var filtering = File.ReadAllText(filteringPath);
+        var meterPolicy = File.ReadAllText(meterPolicyPath);
 
         Assert.DoesNotContain("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", aiEvents);
         Assert.DoesNotContain("private static string? LookupVsaLabel", aiEvents);
         Assert.DoesNotContain("private string? ResolveFindingCodeForCoding", aiEvents);
         Assert.DoesNotContain("private bool IsFindingAlreadyKnown", aiEvents);
         Assert.DoesNotContain("new AiFindingDisplayItem", aiEvents);
+        Assert.DoesNotContain("MeterReading.Value <= 500", aiEvents);
+        Assert.DoesNotContain("MeterReading.HasValue &&", aiEvents);
+        Assert.Contains("CodingResultMeterReadingPolicy.TryAccept", aiEvents);
         Assert.Contains("AiFindingDisplayItemFactory.ForFindings(validFindings)", aiEvents);
         Assert.Contains("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", filtering);
         Assert.Contains("private static string? LookupVsaLabel", filtering);
@@ -1284,6 +1290,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingFindingFilterPolicy.FilterValid", filtering);
         Assert.Contains("CodingFindingCodeResolver.Resolve", filtering);
         Assert.Contains("CodingKnownFindingPolicy.IsKnown", filtering);
+        Assert.Contains("public static bool TryAccept", meterPolicy);
     }
 
     [Fact]
