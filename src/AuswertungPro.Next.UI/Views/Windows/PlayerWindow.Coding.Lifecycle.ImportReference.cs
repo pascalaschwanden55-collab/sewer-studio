@@ -19,7 +19,7 @@ public partial class PlayerWindow
         RunImportDefectCount.Text = _codingImportEvents.Count.ToString();
 
         // CompleteSession soll nur neue KI-Events enthalten.
-        _codingSessionService?.ActiveSession?.Events.Clear();
+        CodingSessionEventResetter.ClearActiveSessionEvents(_codingSessionService);
 
         LstCodingEvents.ItemsSource = _codingVm.Events;
         RunCodingDefectCount.Text = "0";
