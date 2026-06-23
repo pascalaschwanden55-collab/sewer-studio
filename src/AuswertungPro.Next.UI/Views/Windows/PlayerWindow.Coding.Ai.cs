@@ -29,8 +29,7 @@ public partial class PlayerWindow
             return;
 
         _codingIsAnalyzing = true;
-        _codingAnalysisCts?.Cancel();
-        _codingAnalysisCts = new CancellationTokenSource();
+        _codingAnalysisCts = CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_codingAnalysisCts);
 
         try
         {

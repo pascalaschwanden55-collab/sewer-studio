@@ -102,9 +102,7 @@ public partial class PlayerWindow
         _isCodingMode = false;
         StopCodingOsdTimer();
         DisposeCodingOsdMeterService();
-        _codingAnalysisCts?.Cancel();
-        _codingAnalysisCts?.Dispose();
-        _codingAnalysisCts = null;
+        _codingAnalysisCts = CancellationTokenSourceLifecycle.CancelDisposeAndClear(_codingAnalysisCts);
         _codingLiveDetection = null;
         StopCodingAiPulse();
 

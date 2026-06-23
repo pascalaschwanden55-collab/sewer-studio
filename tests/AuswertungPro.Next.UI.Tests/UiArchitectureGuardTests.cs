@@ -3528,6 +3528,33 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_analysis_cts_lifecycle_lives_in_helper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var exitPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var wiringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Wiring.cs");
+        var helperPath = Path.Combine(uiRoot, "Player", "CancellationTokenSourceLifecycle.cs");
+
+        Assert.True(File.Exists(helperPath), "CancellationTokenSource-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var ai = File.ReadAllText(aiPath);
+        var exit = File.ReadAllText(exitPath);
+        var wiring = File.ReadAllText(wiringPath);
+        var helper = File.Exists(helperPath) ? File.ReadAllText(helperPath) : "";
+        var playerWindowText = ai + exit + wiring;
+
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate", ai);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", exit);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", wiring);
+        Assert.DoesNotContain("_codingAnalysisCts?.Cancel();", playerWindowText);
+        Assert.DoesNotContain("_codingAnalysisCts?.Dispose();", playerWindowText);
+        Assert.Contains("public static CancellationTokenSource CancelPreviousAndCreate", helper);
+        Assert.Contains("public static CancellationTokenSource? CancelDisposeAndClear", helper);
+    }
+
+    [Fact]
     public void PlayerWindow_tool_badge_rendering_lives_in_renderer()
     {
         var root = FindRepositoryRoot();
