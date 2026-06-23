@@ -50,17 +50,17 @@ public partial class PlayerWindow
         SetCodingAiState(activityText, PlayerStatusColors.Warning,
             "Schritt 2 von 4: YOLO und DINO", pulse: true);
 
-        var dn = _codingOverlayService?.Calibration?.NominalDiameterMm ?? 300;
         var currentMeterForClassifier = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
-        var reachLengthForClassifier = _codingVm?.EndMeter > 0
-            ? _codingVm.EndMeter
-            : Math.Max(currentMeterForClassifier, 1);
+        var classifierInput = CodingMultiModelClassifierInputPolicy.Build(
+            _codingOverlayService?.Calibration?.NominalDiameterMm,
+            currentMeterForClassifier,
+            _codingVm?.EndMeter);
 
         var mmResult = await multiModel.AnalyzeFrameAsync(
-            pngBytes, dn, _codingOverlayService?.Calibration,
+            pngBytes, classifierInput.NominalDiameterMm, _codingOverlayService?.Calibration,
             _codingAnalysisCts.Token,
-            currentMeterForClassifier,
-            reachLengthForClassifier);
+            classifierInput.CurrentMeter,
+            classifierInput.ReachLength);
 
         if (mmResult.Error != null)
         {

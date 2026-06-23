@@ -257,6 +257,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         Assert.True(meterStart >= 0, "Analyse muss einen Meter fuer den Klassifikator bestimmen.");
         Assert.True(resolveIndex >= 0, "Der Klassifikator muss den gemeinsamen Frame-Meter-Resolver verwenden.");
+        Assert.Contains("CodingMultiModelClassifierInputPolicy.Build", multiModelBody);
         Assert.True(resolverIndex >= 0, "Video-Positions-Fallback muss im ausgelagerten Meter-Resolver liegen.");
         Assert.True(viewModelMeterIndex >= 0, "ViewModel-Meter darf nur als spaeter Fallback genutzt werden.");
         Assert.True(
