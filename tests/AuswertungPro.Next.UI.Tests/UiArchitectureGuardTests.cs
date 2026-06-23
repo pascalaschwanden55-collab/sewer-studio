@@ -919,18 +919,48 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.cs");
+        var capturePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.Capture.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingSnapshotTargetPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Snapshot-Zielpfad fuer Coding-Fotos muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var photos = File.ReadAllText(photosPath);
+        var capture = File.Exists(capturePath) ? File.ReadAllText(capturePath) : string.Empty;
         var policy = File.ReadAllText(policyPath);
+        var photoText = photos + capture;
 
-        Assert.Contains("CodingSnapshotTargetPolicy.Build", photos);
-        Assert.DoesNotContain("Path.GetDirectoryName(_videoPath)", photos);
-        Assert.DoesNotContain("DateTimeOffset.Now.ToString(\"HHmmss\")", photos);
+        Assert.Contains("CodingSnapshotTargetPolicy.Build", photoText);
+        Assert.DoesNotContain("Path.GetDirectoryName(_videoPath)", photoText);
+        Assert.DoesNotContain("DateTimeOffset.Now.ToString(\"HHmmss\")", photoText);
         Assert.Contains("public static CodingSnapshotTarget Build", policy);
         Assert.Contains("Path.Combine(videoDir, \"Fotos\")", policy);
+    }
+
+    [Fact]
+    public void PlayerWindow_coding_photo_capture_lives_in_capture_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var photosPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Photos.cs");
+        var capturePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Photos.Capture.cs");
+
+        Assert.True(File.Exists(capturePath), "Foto-Capture und Frame-Extraktion sollen aus dem Foto-Orchestrator heraus.");
+
+        var photos = File.ReadAllText(photosPath);
+        var capture = File.ReadAllText(capturePath);
+
+        Assert.DoesNotContain("private byte[]? TryExtractAnalyzedFrameBytes", photos);
+        Assert.DoesNotContain("private byte[]? TryExtractFrameAtSeconds", photos);
+        Assert.DoesNotContain("private TimeSpan? GetCurrentPlayerTimestamp", photos);
+        Assert.DoesNotContain("private string? CodingCaptureSnapshot", photos);
+        Assert.Contains("private byte[]? TryExtractAnalyzedFrameBytes", capture);
+        Assert.Contains("private byte[]? TryExtractFrameAtSeconds", capture);
+        Assert.Contains("private TimeSpan? GetCurrentPlayerTimestamp", capture);
+        Assert.Contains("private string? CodingCaptureSnapshot", capture);
+        Assert.Contains("FfmpegLocator.ResolveFfmpeg", capture);
+        Assert.Contains("VideoFrameExtractor.TryExtractFramePngAsync", capture);
+        Assert.Contains("CodingSnapshotTargetPolicy.Build", capture);
     }
 
     [Fact]
@@ -1756,16 +1786,16 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.cs");
+        var capturePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.Capture.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingAnalyzedFrameTimestampPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Analysierter-Frame-Zeitpunkt muss ausserhalb der PlayerWindow-Partials entschieden werden.");
 
-        var photos = File.ReadAllText(photosPath);
+        var capture = File.ReadAllText(capturePath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingAnalyzedFrameTimestampPolicy.Resolve", photos);
-        Assert.DoesNotContain("sec.Value < clean", photos);
+        Assert.Contains("CodingAnalyzedFrameTimestampPolicy.Resolve", capture);
+        Assert.DoesNotContain("sec.Value < clean", capture);
         Assert.Contains("public static double? Resolve", policy);
         Assert.Contains("pendingTimestampSeconds.Value < firstCleanFrameSeconds.Value", policy);
     }
