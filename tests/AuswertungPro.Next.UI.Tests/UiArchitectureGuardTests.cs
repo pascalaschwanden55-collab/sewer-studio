@@ -662,13 +662,16 @@ public sealed class UiArchitectureGuardTests
         var liveDetectionPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.cs");
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.cs");
         var stopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeFactory.cs");
 
         Assert.True(File.Exists(lifecyclePath), "LiveDetection-Start/Stop-Wiring soll in ein eigenes Lifecycle-Partial.");
         Assert.True(File.Exists(stopPath), "LiveDetection-Stop/Cleanup soll aus dem Start-Lifecycle-Partial heraus.");
+        Assert.True(File.Exists(factoryPath), "LiveDetection-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var stop = File.ReadAllText(stopPath);
+        var factory = File.ReadAllText(factoryPath);
 
         Assert.DoesNotContain("private async void LiveDetection_Click", liveDetection);
         Assert.DoesNotContain("private async Task StartLiveDetectionAsync", liveDetection);
@@ -676,10 +679,16 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private async void LiveDetection_Click", lifecycle);
         Assert.Contains("private async Task StartLiveDetectionAsync", lifecycle);
         Assert.DoesNotContain("private void StopLiveDetection", lifecycle);
+        Assert.Contains("LiveDetectionRuntimeFactory.CreateAsync", lifecycle);
+        Assert.DoesNotContain("new OllamaClient", lifecycle);
+        Assert.DoesNotContain("new LiveDetectionService", lifecycle);
+        Assert.DoesNotContain("VisionModelSelectionPolicy.Select", lifecycle);
+        Assert.Contains("new OllamaClient", factory);
+        Assert.Contains("new LiveDetectionService", factory);
+        Assert.Contains("VisionModelSelectionPolicy.Select", factory);
         Assert.Contains("private void StopLiveDetection", stop);
         Assert.Contains("_detectionCts?.Cancel", stop);
         Assert.Contains("_liveDetectionClient?.Dispose", stop);
-        Assert.Contains("VisionModelSelectionPolicy.Select", lifecycle);
     }
 
     [Fact]
@@ -1529,19 +1538,24 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var liveDetectionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.cs");
         var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Lifecycle.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeFactory.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "VisionModelSelectionPolicy.cs");
 
         Assert.True(File.Exists(lifecyclePath), "LiveDetection-Modellauswahl-Wiring soll im Lifecycle-Partial liegen.");
+        Assert.True(File.Exists(factoryPath), "LiveDetection-Modellauswahl-Wiring soll in der Runtime-Factory liegen.");
         Assert.True(File.Exists(policyPath), "Live-KI-Modellauswahl muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
+        var factory = File.ReadAllText(factoryPath);
         var policy = File.ReadAllText(policyPath);
 
         Assert.DoesNotContain("VisionModelSelectionPolicy.Select", liveDetection);
-        Assert.Contains("VisionModelSelectionPolicy.Select", lifecycle);
+        Assert.DoesNotContain("VisionModelSelectionPolicy.Select", lifecycle);
+        Assert.Contains("VisionModelSelectionPolicy.Select", factory);
         Assert.DoesNotContain("m.Contains(\"vl\"", liveDetection);
         Assert.DoesNotContain("m.Contains(\"vl\"", lifecycle);
+        Assert.DoesNotContain("m.Contains(\"vl\"", factory);
         Assert.Contains("public static string Select", policy);
     }
 

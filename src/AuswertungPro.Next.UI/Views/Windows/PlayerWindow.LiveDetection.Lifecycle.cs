@@ -4,8 +4,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Infrastructure.Ai;
-using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
@@ -52,28 +50,17 @@ public partial class PlayerWindow
 
         try
         {
-            var client = new OllamaClient(cfg.OllamaBaseUri,
-                ownedTimeout: cfg.OllamaRequestTimeout > TimeSpan.Zero ? cfg.OllamaRequestTimeout : TimeSpan.FromMinutes(10),
-                keepAlive: cfg.OllamaKeepAlive, numCtx: cfg.OllamaNumCtx);
-
-            var visionModel = cfg.VisionModel;
-            try
-            {
-                var models = await client.ListModelNamesAsync(CancellationToken.None);
-                visionModel = VisionModelSelectionPolicy.Select(visionModel, models);
-            }
-            catch { /* use configured model */ }
-
-            _liveDetectionClient = client;
-            _liveDetectionService = new LiveDetectionService(client, visionModel);
-            _liveDetectionModelName = visionModel;
+            var runtime = await LiveDetectionRuntimeFactory.CreateAsync(cfg);
+            _liveDetectionClient = runtime.Client;
+            _liveDetectionService = runtime.Service;
+            _liveDetectionModelName = runtime.VisionModel;
             _detectionCts = new CancellationTokenSource();
             _isDetecting = true;
 
             DetectionOverlayGrid.Visibility = Visibility.Visible;
             SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Success,
-                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(visionModel)}");
-            SetYoloStatus("Aktiv", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(visionModel));
+                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(runtime.VisionModel)}");
+            SetYoloStatus("Aktiv", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(runtime.VisionModel));
 
             LiveDetectionStatusText.Visibility = Visibility.Visible;
             LiveDetectionStatusText.Text = "Warte auf Frame...";
