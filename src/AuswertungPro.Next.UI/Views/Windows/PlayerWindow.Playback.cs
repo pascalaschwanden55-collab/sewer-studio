@@ -205,68 +205,6 @@ public partial class PlayerWindow
         UpdateRateLabel();
     }
 
-    private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
-    {
-        if (_closing)
-            return;
-
-        if (!ConfirmUnappliedCodingChangesOnClose())
-        {
-            e.Cancel = true;
-            return;
-        }
-
-        // 1. Guard setzen: alle laufenden Tick-Handler prufen _closing und kehren sofort zurueck.
-        _closing = true;
-        if (ReferenceEquals(_lastOpened, this))
-            _lastOpened = null;
-
-        // 2. Alle DispatcherTimer stoppen bevor der MediaPlayer freigegeben wird.
-        //    So koennen keine in-flight Ticks mehr _player.IsPlaying aufrufen.
-        StopPlayerTimers();
-        _quickScanController.Cancel();
-        _detectionCts?.Cancel();
-        _codingAnalysisCts?.Cancel();
-        StopLiveDetection();
-        StopPipelineHealthMonitor();
-
-        // 3. Player vom VideoView trennen (verhindert D3D-Zugriff nach Dispose).
-        AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (VideoView != null) VideoView.MediaPlayer = null; }, "VLC: VideoView trennen");
-
-        // 4. Player sauber stoppen bevor Dispose (Cleanup macht dann nur noch Dispose).
-        AuswertungPro.Next.Application.Common.BestEffort.Try(() => _player.Stop(), "VLC: Player stoppen");
-
-        try
-        {
-            Cleanup();
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] OnClosing error: {ex.Message}");
-        }
-    }
-
-    private void Cleanup()
-    {
-        if (_playbackDisposed)
-            return;
-
-        _playbackDisposed = true;
-        StopPlayerTimers();
-        AuswertungPro.Next.Application.Common.BestEffort.Try(() => { if (VideoView != null) VideoView.MediaPlayer = null; }, "VLC: VideoView trennen");
-        try { _player.Dispose(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PlayerWindow] MediaPlayer Dispose error: {ex.Message}"); }
-        try { _libVlc.Dispose(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[PlayerWindow] LibVLC Dispose error: {ex.Message}"); }
-    }
-
-    private void StopPlayerTimers()
-    {
-        try { _timer.Stop(); } catch { }
-        try { _scrubTimer.Stop(); } catch { }
-        try { _detectionTimer?.Stop(); } catch { }
-        try { _codingLiveAiTimers?.StopTimers(); } catch { }
-        try { _codingOsdTimer?.Stop(); } catch { }
-    }
-
     private void UpdateUi()
     {
         if (_isDragging)
