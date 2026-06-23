@@ -28,6 +28,55 @@ public partial class PlayerWindow
     private OverlayGeometry? BuildCodingSchemaGeometry()
         => CodingSchemaOverlayBuilder.BuildGeometry(_codingSchemaManager.Active);
 
+    private bool TryHandleCodingSchemaMouseDown(NormalizedPoint norm)
+    {
+        if (!IsCodingSchemaToolSelected())
+            return false;
+
+        if (!_codingSchemaManager.IsActive)
+        {
+            var schema = CreateCodingSchemaOverlay();
+            if (schema == null) return true;
+            _codingSchemaManager.Activate(schema, _codingOverlayService?.Calibration);
+            _codingSchemaManager.Place(norm);
+            UpdateCodingSchemaOverlay(enableCreateEvent: true);
+            return true;
+        }
+
+        var handleId = _codingSchemaManager.HitTest(norm, 0.035) ?? GetDefaultCodingSchemaHandleId();
+        _codingSchemaManager.BeginDrag(handleId);
+        _codingSchemaManager.UpdateDrag(norm);
+        CodingOverlayCanvas.CaptureMouse();
+        UpdateCodingSchemaOverlay(enableCreateEvent: true);
+        return true;
+    }
+
+    private bool TryHandleCodingSchemaMouseMove(NormalizedPoint norm)
+    {
+        if (!IsCodingSchemaToolSelected() || !_codingSchemaManager.IsActive)
+            return false;
+
+        if (_codingSchemaManager.IsDragging)
+        {
+            _codingSchemaManager.UpdateDrag(norm);
+            UpdateCodingSchemaOverlay(enableCreateEvent: true);
+        }
+
+        return true;
+    }
+
+    private bool TryHandleCodingSchemaMouseUp(NormalizedPoint norm)
+    {
+        if (!IsCodingSchemaToolSelected() || !_codingSchemaManager.IsDragging)
+            return false;
+
+        _codingSchemaManager.UpdateDrag(norm);
+        _codingSchemaManager.EndDrag();
+        CodingOverlayCanvas.ReleaseMouseCapture();
+        UpdateCodingSchemaOverlay(enableCreateEvent: true);
+        return true;
+    }
+
     private void UpdateCodingSchemaOverlay(bool enableCreateEvent)
     {
         if (_codingVm == null) return;

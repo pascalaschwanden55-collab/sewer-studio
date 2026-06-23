@@ -69,25 +69,8 @@ public partial class PlayerWindow
 
         if (_codingOverlayService.ActiveTool == OverlayToolType.None) return;
 
-        if (IsCodingSchemaToolSelected())
-        {
-            if (!_codingSchemaManager.IsActive)
-            {
-                var schema = CreateCodingSchemaOverlay();
-                if (schema == null) return;
-                _codingSchemaManager.Activate(schema, _codingOverlayService.Calibration);
-                _codingSchemaManager.Place(norm);
-                UpdateCodingSchemaOverlay(enableCreateEvent: true);
-                return;
-            }
-
-            var handleId = _codingSchemaManager.HitTest(norm, 0.035) ?? GetDefaultCodingSchemaHandleId();
-            _codingSchemaManager.BeginDrag(handleId);
-            _codingSchemaManager.UpdateDrag(norm);
-            CodingOverlayCanvas.CaptureMouse();
-            UpdateCodingSchemaOverlay(enableCreateEvent: true);
+        if (TryHandleCodingSchemaMouseDown(norm))
             return;
-        }
 
         if (_codingOverlayService.IsMultiPointTool)
         {
@@ -124,15 +107,8 @@ public partial class PlayerWindow
         if (TryPreviewCodingCalibration(norm))
             return;
 
-        if (IsCodingSchemaToolSelected() && _codingSchemaManager.IsActive)
-        {
-            if (_codingSchemaManager.IsDragging)
-            {
-                _codingSchemaManager.UpdateDrag(norm);
-                UpdateCodingSchemaOverlay(enableCreateEvent: true);
-            }
+        if (TryHandleCodingSchemaMouseMove(norm))
             return;
-        }
 
         if (TryHandleCodingMultiPointMouseMove(norm))
             return;
@@ -165,14 +141,8 @@ public partial class PlayerWindow
         if (TryFinishCodingCalibration(norm))
             return;
 
-        if (IsCodingSchemaToolSelected() && _codingSchemaManager.IsDragging)
-        {
-            _codingSchemaManager.UpdateDrag(norm);
-            _codingSchemaManager.EndDrag();
-            CodingOverlayCanvas.ReleaseMouseCapture();
-            UpdateCodingSchemaOverlay(enableCreateEvent: true);
+        if (TryHandleCodingSchemaMouseUp(norm))
             return;
-        }
 
         if (!_codingOverlayService.IsDrawing) return;
         _codingVm.OnCanvasMouseUp(norm);

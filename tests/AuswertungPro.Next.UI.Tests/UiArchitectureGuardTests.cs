@@ -2100,7 +2100,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private SchemaOverlayBase? CreateCodingSchemaOverlay", overlayInput);
         Assert.DoesNotContain("private void UpdateCodingSchemaOverlay", overlayInput);
         Assert.DoesNotContain("private void ClearCodingSchemaOverlay", overlayInput);
+        Assert.DoesNotContain("_codingSchemaManager.BeginDrag", overlayInput);
+        Assert.DoesNotContain("_codingSchemaManager.EndDrag", overlayInput);
         Assert.Contains("private bool IsCodingSchemaToolSelected", schema);
+        Assert.Contains("private bool TryHandleCodingSchemaMouseDown", schema);
+        Assert.Contains("private bool TryHandleCodingSchemaMouseMove", schema);
+        Assert.Contains("private bool TryHandleCodingSchemaMouseUp", schema);
         Assert.Contains("CodingSchemaOverlayBuilder.Create", schema);
         Assert.Contains("CodingSchemaOverlayBuilder.BuildGeometry", schema);
         Assert.Contains("private void UpdateCodingSchemaOverlay", schema);
