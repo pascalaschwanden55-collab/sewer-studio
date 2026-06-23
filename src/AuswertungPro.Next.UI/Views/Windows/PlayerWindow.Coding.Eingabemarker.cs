@@ -1,7 +1,5 @@
 using System;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 
@@ -51,18 +49,9 @@ public partial class PlayerWindow
         _eingabemarkerDragStart = canvasPos;
         CodingOverlayCanvas.CaptureMouse();
 
-        _eingabemarkerPreviewRect = new System.Windows.Shapes.Rectangle
-        {
-            Stroke = Brushes.Lime,
-            StrokeThickness = 2,
-            StrokeDashArray = new DoubleCollection { 4, 2 },
-            Fill = new SolidColorBrush(Color.FromArgb(40, 0, 255, 0))
-        };
-        Canvas.SetLeft(_eingabemarkerPreviewRect, canvasPos.X);
-        Canvas.SetTop(_eingabemarkerPreviewRect, canvasPos.Y);
-        _eingabemarkerPreviewRect.Width = 0;
-        _eingabemarkerPreviewRect.Height = 0;
-        CodingOverlayCanvas.Children.Add(_eingabemarkerPreviewRect);
+        _eingabemarkerPreviewRect = CodingEingabemarkerPreviewRenderer.Create(
+            CodingOverlayCanvas,
+            canvasPos);
     }
 
     private void EingabemarkerCanvas_MouseMove(Point canvasPos)
@@ -73,10 +62,7 @@ public partial class PlayerWindow
             _eingabemarkerDragStart,
             canvasPos);
 
-        Canvas.SetLeft(_eingabemarkerPreviewRect, previewRect.X);
-        Canvas.SetTop(_eingabemarkerPreviewRect, previewRect.Y);
-        _eingabemarkerPreviewRect.Width = previewRect.Width;
-        _eingabemarkerPreviewRect.Height = previewRect.Height;
+        CodingEingabemarkerPreviewRenderer.Update(_eingabemarkerPreviewRect, previewRect);
     }
 
     private void EingabemarkerCanvas_MouseUp(Point canvasPos)

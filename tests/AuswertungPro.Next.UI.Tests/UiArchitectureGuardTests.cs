@@ -3251,19 +3251,28 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerGeometryPolicy.cs");
+        var rendererPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerPreviewRenderer.cs");
 
         Assert.True(File.Exists(policyPath), "Eingabemarker-Rechteckgeometrie muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(rendererPath), "Eingabemarker-Preview-Rendering muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var marker = File.ReadAllText(markerPath);
         var policy = File.ReadAllText(policyPath);
+        var renderer = File.ReadAllText(rendererPath);
 
         Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildPreviewRect", marker);
         Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection", marker);
+        Assert.Contains("CodingEingabemarkerPreviewRenderer.Create", marker);
+        Assert.Contains("CodingEingabemarkerPreviewRenderer.Update", marker);
         Assert.DoesNotContain("Math.Min(_eingabemarkerDragStart.X", marker);
         Assert.DoesNotContain("Math.Abs(canvasPos.X - _eingabemarkerDragStart.X)", marker);
         Assert.DoesNotContain("Math.Max(_eingabemarkerDragStart.X", marker);
+        Assert.DoesNotContain("new System.Windows.Shapes.Rectangle", marker);
+        Assert.DoesNotContain("Canvas.SetLeft(_eingabemarkerPreviewRect", marker);
         Assert.Contains("public static Rect BuildPreviewRect", policy);
         Assert.Contains("public static Rect? BuildNormalizedSelection", policy);
+        Assert.Contains("public static class CodingEingabemarkerPreviewRenderer", renderer);
+        Assert.Contains("new System.Windows.Shapes.Rectangle", renderer);
     }
 
     [Fact]
