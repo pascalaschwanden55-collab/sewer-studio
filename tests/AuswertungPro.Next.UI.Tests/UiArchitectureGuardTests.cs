@@ -459,11 +459,13 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void SetCodingAiState", liveDetection);
         Assert.DoesNotContain("private void StartCodingAiPulse", liveDetection);
         Assert.DoesNotContain("private void StopCodingAiPulse", liveDetection);
+        Assert.DoesNotContain("private void UpdateDetectionStatus", liveDetection);
         Assert.Contains("private void SetLiveDetectionBadge", status);
         Assert.Contains("private void SetYoloStatus", status);
         Assert.Contains("private void SetCodingAiState", status);
         Assert.Contains("private void StartCodingAiPulse", status);
         Assert.Contains("private void StopCodingAiPulse", status);
+        Assert.Contains("private void UpdateDetectionStatus", status);
         Assert.Contains("Dispatcher.Invoke", status);
     }
 

@@ -150,23 +150,6 @@ public partial class PlayerWindow
         }
     }
 
-    private void UpdateDetectionStatus(LiveDetection result)
-    {
-        LiveDetectionStatusText.Text = LiveDetectionDisplayPolicy.BuildDetectionStatusText(result);
-        if (result.Error is not null)
-            return;
-
-        if (result.Findings.Count > 0)
-        {
-            FindingSummaryPanel.Visibility = Visibility.Visible;
-            FindingSummaryText.Text = LiveDetectionDisplayPolicy.BuildFindingSummaryText(result.Findings);
-        }
-        else
-        {
-            FindingSummaryPanel.Visibility = Visibility.Collapsed;
-        }
-    }
-
     // Detection Overlay Rendering (ring-sector pattern from LiveFrameWindow)
 
     private void RenderDetectionOverlay(IReadOnlyList<LiveFrameFinding> findings, double timestampSec)

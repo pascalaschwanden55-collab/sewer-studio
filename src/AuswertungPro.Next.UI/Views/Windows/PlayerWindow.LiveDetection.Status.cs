@@ -2,6 +2,8 @@ using System;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -99,5 +101,22 @@ public partial class PlayerWindow
 
         CodingAiPulseRing.BeginAnimation(UIElement.OpacityProperty, null);
         CodingAiPulseRing.Opacity = 0;
+    }
+
+    private void UpdateDetectionStatus(LiveDetection result)
+    {
+        LiveDetectionStatusText.Text = LiveDetectionDisplayPolicy.BuildDetectionStatusText(result);
+        if (result.Error is not null)
+            return;
+
+        if (result.Findings.Count > 0)
+        {
+            FindingSummaryPanel.Visibility = Visibility.Visible;
+            FindingSummaryText.Text = LiveDetectionDisplayPolicy.BuildFindingSummaryText(result.Findings);
+        }
+        else
+        {
+            FindingSummaryPanel.Visibility = Visibility.Collapsed;
+        }
     }
 }
