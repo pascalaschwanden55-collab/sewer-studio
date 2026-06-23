@@ -226,7 +226,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.True(noDetectionIndex > structuralIndex, "BCA/BCC muss vor dem YOLO/DINO-No-Detection-Abbruch behandelt werden.");
         Assert.Contains("CodingClassifierDisplayPolicy.IsStructuralClassifierCode(code)", structuralBody);
         Assert.Contains("CodingStructuralClassifierEventFactory.Create", structuralBody);
-        Assert.Contains("codingSessionService.AddEvent(draft.Entry)", structuralBody);
+        Assert.Contains("CodingStructuralClassifierEventAppender.Apply", structuralBody);
+        Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", structuralBody);
 
         var clearIndex = structuralBody.IndexOf("ClearDetectionOverlays()", StringComparison.Ordinal);
         var listIndex = structuralBody.IndexOf("CodingFindingsList.ItemsSource", StringComparison.Ordinal);

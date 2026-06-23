@@ -63,10 +63,7 @@ public partial class PlayerWindow
 
         AttachAnalyzedFramePhoto(draft.Entry);
 
-        var ev = codingSessionService.AddEvent(draft.Entry);
-        ev.MeterAtCapture = meter;
-        ev.VideoTimestamp = videoTime;
-        ev.AiContext = draft.AiContext;
+        CodingStructuralClassifierEventAppender.Apply(draft, meter, videoTime, codingSessionService);
 
         RefreshCodingEventsList();
         SetCodingAiState(CodingClassifierDisplayPolicy.BuildDetectedStatusText(draft.Entry.Beschreibung, added: true),
