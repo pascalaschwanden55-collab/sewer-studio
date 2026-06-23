@@ -3067,24 +3067,33 @@ public sealed class UiArchitectureGuardTests
         var aiOverlayPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.cs");
         var rectanglePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.Rectangle.cs");
         var cleanupPolicyPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupPolicy.cs");
+        var primitiveRendererPath = Path.Combine(uiRoot, "Player", "CodingAiPrimitiveOverlayRenderer.cs");
 
         Assert.True(File.Exists(rectanglePath), "AI-Rechteck-Overlay mit Label soll aus dem allgemeinen AI-Overlay-Dispatcher heraus.");
         Assert.True(File.Exists(cleanupPolicyPath), "AI-Overlay-Cleanup-Regel soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(primitiveRendererPath), "AI-Primitive sollen ausserhalb der PlayerWindow-Partials gerendert werden.");
 
         var aiOverlay = File.ReadAllText(aiOverlayPath);
         var rectangle = File.ReadAllText(rectanglePath);
         var cleanupPolicy = File.ReadAllText(cleanupPolicyPath);
+        var primitiveRenderer = File.ReadAllText(primitiveRendererPath);
 
         Assert.Contains("RenderAiRectangleOverlay(", aiOverlay);
+        Assert.Contains("CodingAiPrimitiveOverlayRenderer.Render", aiOverlay);
         Assert.Contains("CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag", aiOverlay);
         Assert.DoesNotContain("StartsWith(OverlayTags.AiPrefix", aiOverlay);
         Assert.DoesNotContain("var labelBorder = new Border", aiOverlay);
         Assert.DoesNotContain("CodingAiOverlayDisplayPolicy.LabelText", aiOverlay);
+        Assert.DoesNotContain("new System.Windows.Shapes.Line", aiOverlay);
+        Assert.DoesNotContain("new System.Windows.Shapes.Ellipse", aiOverlay);
         Assert.Contains("private void RenderAiRectangleOverlay", rectangle);
         Assert.Contains("var labelBorder = new Border", rectangle);
         Assert.Contains("CodingAiOverlayDisplayPolicy.LabelText", rectangle);
         Assert.Contains("public static bool ShouldRemoveAiOverlayTag", cleanupPolicy);
         Assert.Contains("StartsWith(OverlayTags.AiPrefix", cleanupPolicy);
+        Assert.Contains("public static class CodingAiPrimitiveOverlayRenderer", primitiveRenderer);
+        Assert.Contains("new System.Windows.Shapes.Line", primitiveRenderer);
+        Assert.Contains("new System.Windows.Shapes.Ellipse", primitiveRenderer);
     }
 
     [Fact]

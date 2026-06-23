@@ -1,13 +1,9 @@
 using System;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
-using Rectangle = System.Windows.Shapes.Rectangle;
-
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -46,27 +42,13 @@ public partial class PlayerWindow
 
             var strokeColor = CodingAiOverlayDisplayPolicy.StrokeColor(ev.AiContext.Decision);
             Brush stroke = new SolidColorBrush(strokeColor);
+            var primitiveStyle = new CodingAiPrimitiveOverlayRenderStyle(stroke, aiGlow, OverlayTags.AiOverlay);
 
             switch (geo.ToolType)
             {
                 case OverlayToolType.Line:
                 case OverlayToolType.Stretch:
-                    if (geo.Points.Count >= 2)
-                    {
-                        var line = new System.Windows.Shapes.Line
-                        {
-                            X1 = geo.Points[0].X * w,
-                            Y1 = geo.Points[0].Y * h,
-                            X2 = geo.Points[1].X * w,
-                            Y2 = geo.Points[1].Y * h,
-                            Stroke = stroke,
-                            StrokeThickness = 2.5,
-                            StrokeDashArray = new DoubleCollection { 5, 3 },
-                            Tag = OverlayTags.AiOverlay,
-                            Effect = aiGlow
-                        };
-                        CodingOverlayCanvas.Children.Add(line);
-                    }
+                    CodingAiPrimitiveOverlayRenderer.Render(CodingOverlayCanvas, geo, w, h, primitiveStyle);
                     break;
 
                 case OverlayToolType.Rectangle:
@@ -74,25 +56,7 @@ public partial class PlayerWindow
                     break;
 
                 case OverlayToolType.Point:
-                    if (geo.Points.Count >= 1)
-                    {
-                        double px = geo.Points[0].X * w;
-                        double py = geo.Points[0].Y * h;
-                        var dot = new System.Windows.Shapes.Ellipse
-                        {
-                            Width = 14,
-                            Height = 14,
-                            Fill = stroke,
-                            Opacity = 0.8,
-                            Stroke = Brushes.White,
-                            StrokeThickness = 1.5,
-                            Tag = OverlayTags.AiOverlay,
-                            Effect = aiGlow
-                        };
-                        Canvas.SetLeft(dot, px - 7);
-                        Canvas.SetTop(dot, py - 7);
-                        CodingOverlayCanvas.Children.Add(dot);
-                    }
+                    CodingAiPrimitiveOverlayRenderer.Render(CodingOverlayCanvas, geo, w, h, primitiveStyle);
                     break;
 
                 case OverlayToolType.Arc:
