@@ -2154,6 +2154,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_lateral_circle_overlay_rendering_lives_in_lateral_circle_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var specialShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.cs");
+        var lateralCirclePath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.LateralCircle.cs");
+
+        Assert.True(File.Exists(lateralCirclePath), "Lateral-Circle-Overlay-Rendering soll aus dem allgemeinen SpecialShapes-Partial heraus.");
+
+        var specialShapes = File.ReadAllText(specialShapesPath);
+        var lateralCircle = File.ReadAllText(lateralCirclePath);
+
+        Assert.DoesNotContain("private void RenderLateralCircleOverlay", specialShapes);
+        Assert.Contains("private void RenderLateralCircleOverlay", lateralCircle);
+        Assert.Contains("overlay.DnRatioPercent", lateralCircle);
+        Assert.Contains("DN {overlay.Q1Mm.Value:F0}", lateralCircle);
+    }
+
+    [Fact]
     public void PlayerWindow_eingabemarker_geometry_lives_in_policy()
     {
         var root = FindRepositoryRoot();
