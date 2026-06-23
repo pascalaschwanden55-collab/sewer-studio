@@ -1541,6 +1541,30 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_overlay_input_visibility_lives_in_visibility_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
+        var visibilityPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Visibility.cs");
+
+        Assert.True(File.Exists(visibilityPath), "Overlay-Suspend/Restore soll aus dem allgemeinen OverlayInput-Partial heraus.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var visibility = File.ReadAllText(visibilityPath);
+
+        Assert.DoesNotContain("private void SuspendCodingOverlayInput", overlayInput);
+        Assert.DoesNotContain("private void ResumeCodingOverlayInput", overlayInput);
+        Assert.DoesNotContain("private void HideCodingOverlayForExternalWindow", overlayInput);
+        Assert.DoesNotContain("private void RestoreCodingOverlayAfterExternalWindow", overlayInput);
+        Assert.Contains("private void SuspendCodingOverlayInput", visibility);
+        Assert.Contains("_codingOverlaySuspendDepth++", visibility);
+        Assert.Contains("CodingOverlayPopup.IsOpen = false", visibility);
+        Assert.Contains("private void RestoreCodingOverlayAfterExternalWindow", visibility);
+    }
+
+    [Fact]
     public void PlayerWindow_eingabemarker_geometry_lives_in_policy()
     {
         var root = FindRepositoryRoot();
