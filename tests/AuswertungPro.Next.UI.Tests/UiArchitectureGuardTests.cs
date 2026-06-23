@@ -1273,6 +1273,29 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_detection_mark_catalog_lives_in_catalog_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
+        var catalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
+
+        Assert.True(File.Exists(catalogPath), "LiveDetection-Markkatalog-Wiring soll aus dem grossen Marking-Partial heraus.");
+
+        var marking = File.ReadAllText(markingPath);
+        var catalog = File.ReadAllText(catalogPath);
+
+        Assert.DoesNotContain("private void DetectionCanvas_MouseLeftButtonDown", marking);
+        Assert.DoesNotContain("private void OnFindingClicked", marking);
+        Assert.DoesNotContain("private void OpenCodeCatalogForMark", marking);
+        Assert.Contains("private void DetectionCanvas_MouseLeftButtonDown", catalog);
+        Assert.Contains("private void OnFindingClicked", catalog);
+        Assert.Contains("private void OpenCodeCatalogForMark", catalog);
+        Assert.Contains("CodingExplorerEntryFactory.CreateSeed", catalog);
+    }
+
+    [Fact]
     public void PlayerWindow_stretch_damage_action_input_lives_in_builder()
     {
         var root = FindRepositoryRoot();
