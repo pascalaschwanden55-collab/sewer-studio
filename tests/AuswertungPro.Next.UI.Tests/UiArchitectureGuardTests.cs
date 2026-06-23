@@ -513,6 +513,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_detection_overlay_lives_in_overlay_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var liveDetectionPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.cs");
+        var overlayPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Overlay.cs");
+
+        Assert.True(File.Exists(overlayPath), "LiveDetection-Overlay-Rendering soll in ein eigenes Overlay-Partial.");
+
+        var liveDetection = File.ReadAllText(liveDetectionPath);
+        var overlay = File.ReadAllText(overlayPath);
+
+        Assert.DoesNotContain("private void RenderDetectionOverlay", liveDetection);
+        Assert.Contains("private void RenderDetectionOverlay", overlay);
+        Assert.Contains("LiveDetectionOverlayRenderer.Render", overlay);
+        Assert.Contains("OnFindingClicked", overlay);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_live_ai_wiring_lives_in_live_partial()
     {
         var root = FindRepositoryRoot();

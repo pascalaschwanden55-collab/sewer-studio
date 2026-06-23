@@ -150,8 +150,4 @@ public partial class PlayerWindow
         }
     }
 
-    // Detection Overlay Rendering (ring-sector pattern from LiveFrameWindow)
-
-    private void RenderDetectionOverlay(IReadOnlyList<LiveFrameFinding> findings, double timestampSec)
-        => LiveDetectionOverlayRenderer.Render(DetectionCanvas, findings, timestampSec, OnFindingClicked);
 }
