@@ -597,6 +597,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_overlay_input_mouseflow_keeps_only_direct_dependencies()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+
+        Assert.Contains("using System.Windows.Input;", overlayInput);
+        Assert.Contains("using AuswertungPro.Next.Domain.Models;", overlayInput);
+        Assert.DoesNotContain("using System.Collections", overlayInput);
+        Assert.DoesNotContain("using System.Globalization", overlayInput);
+        Assert.DoesNotContain("using System.IO", overlayInput);
+        Assert.DoesNotContain("using System.Threading", overlayInput);
+        Assert.DoesNotContain("AuswertungPro.Next.Application", overlayInput);
+        Assert.DoesNotContain("AuswertungPro.Next.Infrastructure", overlayInput);
+        Assert.DoesNotContain("AuswertungPro.Next.UI.Services", overlayInput);
+        Assert.DoesNotContain("InfraTeacher", overlayInput);
+    }
+
+    [Fact]
     public void PlayerWindow_live_detection_status_lives_in_status_partial()
     {
         var root = FindRepositoryRoot();

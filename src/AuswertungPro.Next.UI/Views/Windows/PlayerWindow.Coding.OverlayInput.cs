@@ -1,41 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Globalization;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Threading;
-using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Application.Ai.Evaluation;
-using AuswertungPro.Next.Application.Ai.QualityGate;
-using AuswertungPro.Next.Application.Ai.Teacher;
-using AuswertungPro.Next.Application.Ai.Training;
-using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.Domain.VsaCatalog;
-using AuswertungPro.Next.Infrastructure.Ai;
-using AuswertungPro.Next.Infrastructure.Ai.Ollama;
-using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
-using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
-using AuswertungPro.Next.Infrastructure.Ai.Shared;
-using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Helpers;
-using AuswertungPro.Next.UI.Services;
-using AuswertungPro.Next.UI.ViewModels.Protocol;
-using AuswertungPro.Next.UI.ViewModels.Windows;
-using AppProtocol = AuswertungPro.Next.Application.Protocol;
-using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
-using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
-using InfraTraining = AuswertungPro.Next.Infrastructure.Ai.Training;
-using Rectangle = System.Windows.Shapes.Rectangle;
-
-using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
