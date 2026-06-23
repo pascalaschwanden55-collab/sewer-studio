@@ -50,15 +50,15 @@ public partial class PlayerWindow
             var annotationId = Guid.NewGuid().ToString("N")[..12];
             var baseName = $"mark_{annotationId}";
 
-            var tempFrame = System.IO.Path.Combine(
-                System.IO.Path.GetTempPath(), $"sewer_studio_mark_{annotationId}.png");
-            await System.IO.File.WriteAllBytesAsync(tempFrame, frameBytes);
-
-            var exportService = Ai.Teacher.TrainingAnnotationExportServiceFactory.Create();
-            var exportResult = await exportService.ExportAsync(tempFrame, bbox, selectedEntry.Code, classId, baseName);
-
-            AuswertungPro.Next.Application.Common.BestEffort.Try(
-                () => System.IO.File.Delete(tempFrame), "Mark-Training: Temp-Frame loeschen");
+            var frameExporter = new LiveDetectionTrainingFrameExporter(
+                Ai.Teacher.TrainingAnnotationExportServiceFactory.Create());
+            var exportResult = await frameExporter.ExportAsync(
+                frameBytes,
+                bbox,
+                selectedEntry.Code,
+                classId,
+                baseName,
+                annotationId);
 
             var captureMeter = CodingCurrentMeterResolver.ParseDisplayedMeterOrZero(TxtCodingMeter?.Text);
 
