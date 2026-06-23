@@ -630,6 +630,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_inline_defect_actions_live_in_actions_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var detailPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.cs");
+        var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.Actions.cs");
+
+        Assert.True(File.Exists(actionsPath), "Inline-Defekt-Aktionshandler sollen aus dem allgemeinen EventDetails-Partial heraus.");
+
+        var detail = File.ReadAllText(detailPath);
+        var actions = File.ReadAllText(actionsPath);
+
+        Assert.DoesNotContain("private void CodingAcceptDefect_Click", detail);
+        Assert.DoesNotContain("private void CodingEditDefect_Click", detail);
+        Assert.DoesNotContain("private void CodingRejectDefect_Click", detail);
+        Assert.Contains("private void CodingAcceptDefect_Click", actions);
+        Assert.Contains("private void CodingEditDefect_Click", actions);
+        Assert.Contains("private void CodingRejectDefect_Click", actions);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_snapshot_target_lives_in_policy()
     {
         var root = FindRepositoryRoot();
@@ -655,19 +677,19 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
-        var detailPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.cs");
+        var detailActionsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.Actions.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "CodingLiveSnapshotPathPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Temp-Pfade fuer Live-Snapshots muessen ausserhalb der PlayerWindow-Partials liegen.");
 
         var events = File.ReadAllText(eventsPath);
-        var detail = File.ReadAllText(detailPath);
+        var detailActions = File.ReadAllText(detailActionsPath);
         var policy = File.ReadAllText(policyPath);
 
         Assert.Contains("CodingLiveSnapshotPathPolicy.CreateTempPath", events);
-        Assert.Contains("CodingLiveSnapshotPathPolicy.CreateTempPath", detail);
+        Assert.Contains("CodingLiveSnapshotPathPolicy.CreateTempPath", detailActions);
         Assert.DoesNotContain("coding_live_{Guid.NewGuid()", events);
-        Assert.DoesNotContain("coding_live_{Guid.NewGuid()", detail);
+        Assert.DoesNotContain("coding_live_{Guid.NewGuid()", detailActions);
         Assert.Contains("public static string BuildTempPath", policy);
         Assert.Contains("public static string CreateTempPath", policy);
     }
@@ -835,19 +857,19 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
-        var detailsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.cs");
+        var detailsActionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.Actions.cs");
         var copierPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEntryCopier.cs");
 
         var events = File.ReadAllText(eventsPath);
-        var details = File.ReadAllText(detailsPath);
+        var detailsActions = File.ReadAllText(detailsActionsPath);
         var copier = File.ReadAllText(copierPath);
 
         Assert.Contains("CodingProtocolEntryCopier.CopyEditableValues", events);
-        Assert.Contains("CodingProtocolEntryCopier.CopyEditableValues", details);
+        Assert.Contains("CodingProtocolEntryCopier.CopyEditableValues", detailsActions);
         Assert.DoesNotContain("entry.Code = result.Code", events);
-        Assert.DoesNotContain("entry.Code = result.Code", details);
+        Assert.DoesNotContain("entry.Code = result.Code", detailsActions);
         Assert.DoesNotContain("entry.FotoPaths = result.FotoPaths", events);
-        Assert.DoesNotContain("entry.FotoPaths = result.FotoPaths", details);
+        Assert.DoesNotContain("entry.FotoPaths = result.FotoPaths", detailsActions);
         Assert.Contains("public static void CopyEditableValues", copier);
     }
 
