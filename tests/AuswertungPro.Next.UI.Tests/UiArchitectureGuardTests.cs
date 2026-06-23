@@ -1069,7 +1069,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void CodingLiveAi_Click", ai);
         Assert.DoesNotContain("private async void CodingLiveAiTimer_Tick", ai);
         Assert.Contains("private void CodingLiveAi_Click", live);
-        Assert.Contains("private async void CodingLiveAiTimer_Tick", live);
+        Assert.DoesNotContain("private async void CodingLiveAiTimer_Tick", live);
+        Assert.Contains("private void CodingLiveAiTimer_Tick", live);
+        Assert.Contains(".SafeFireAndForget(\"CodingLiveAiTimer\")", live);
+        Assert.Contains("private async Task HandleCodingLiveAiTimerTickAsync", live);
         Assert.Contains("CodingLiveAiTimerController", live);
         Assert.Contains("CodingLiveAiTickPolicy.ShouldAnalyze", live);
     }

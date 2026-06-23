@@ -1,6 +1,8 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -34,7 +36,10 @@ public partial class PlayerWindow
         }
     }
 
-    private async void CodingLiveAiTimer_Tick(object? sender, EventArgs e)
+    private void CodingLiveAiTimer_Tick(object? sender, EventArgs e)
+        => HandleCodingLiveAiTimerTickAsync().SafeFireAndForget("CodingLiveAiTimer");
+
+    private async Task HandleCodingLiveAiTimerTickAsync()
     {
         try
         {
