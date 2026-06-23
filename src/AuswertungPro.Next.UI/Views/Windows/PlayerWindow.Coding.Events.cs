@@ -2,7 +2,6 @@ using System;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -29,27 +28,17 @@ public partial class PlayerWindow
                 _codingVm.EndMeter,
                 _codingVm.CurrentMeter);
 
-            var entry = CodingExplorerEntryFactory.CreateSeed(
-                _codingVm.CurrentOverlay,
-                videoZeit);
-            entry.MeterStart = meterValue;
-            entry.MeterEnd = meterValue;
+            var entry = CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
+                .CreateManualEntry(
+                    _codingVm.CurrentOverlay,
+                    meterValue,
+                    videoZeit,
+                    _videoPath,
+                    this,
+                    CreateVsaCodeExplorerLiveSnapshotProvider());
 
-            var explorerVm = CreateVsaCodeExplorerViewModel(
-                entry, meterValue, videoZeit);
-
-            var dialogResult = VsaCodeExplorerDialogServiceFactory.Create().Show(
-                explorerVm,
-                _videoPath,
-                videoZeit,
-                this,
-                CreateVsaCodeExplorerLiveSnapshotProvider());
-
-            if (dialogResult.Accepted && dialogResult.SelectedEntry is not null)
+            if (entry is not null)
             {
-                var result = dialogResult.SelectedEntry;
-                CodingProtocolEntryCopier.CopyEditableValues(result, entry);
-
                 var createdEvent = _codingSessionService!.AddEvent(entry, _codingVm.CurrentOverlay);
                 createdEvent.AiContext = CodingManualEventFactory.CreateUnconfirmedContext(entry.Code);
 

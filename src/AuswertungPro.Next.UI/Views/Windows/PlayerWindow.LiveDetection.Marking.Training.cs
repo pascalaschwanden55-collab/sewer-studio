@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Services;
 using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -16,17 +15,15 @@ public partial class PlayerWindow
         try
         {
             var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
-            var entry = CodingExplorerEntryFactory.CreateSeed(overlay);
-            var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter, TimeSpan.FromSeconds(timestampSec));
-            var explorer = VsaCodeExplorerDialogServiceFactory.Create().Show(
-                explorerVm,
-                _videoPath,
-                TimeSpan.FromSeconds(timestampSec),
-                this);
-            if (!explorer.Accepted || explorer.SelectedEntry == null)
+            var selectedEntry = CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
+                .SelectSeed(
+                    overlay,
+                    autoMeter,
+                    TimeSpan.FromSeconds(timestampSec),
+                    _videoPath,
+                    this);
+            if (selectedEntry == null)
                 return false;
-
-            var selectedEntry = explorer.SelectedEntry;
 
             CodingEvent? manualEvent = null;
             if (_codingSessionService != null && _codingVm != null)

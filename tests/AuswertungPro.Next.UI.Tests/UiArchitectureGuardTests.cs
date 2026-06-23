@@ -1786,15 +1786,20 @@ public sealed class UiArchitectureGuardTests
         var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
         var detailsActionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.Actions.cs");
         var markCatalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerWorkflowService.cs");
         var copierPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEntryCopier.cs");
+
+        Assert.True(File.Exists(workflowPath), "Code-Explorer-Workflow soll editierbare Werte ausserhalb der PlayerWindow-Partials kopieren.");
 
         var events = File.ReadAllText(eventsPath);
         var detailsActions = File.ReadAllText(detailsActionsPath);
         var markCatalog = File.ReadAllText(markCatalogPath);
+        var workflow = File.ReadAllText(workflowPath);
         var copier = File.ReadAllText(copierPath);
 
-        Assert.Contains("CodingProtocolEntryCopier.CopyEditableValues", events);
-        Assert.Contains("CodingProtocolEntryCopier.CopyEditableValues", detailsActions);
+        Assert.DoesNotContain("CodingProtocolEntryCopier.CopyEditableValues", events);
+        Assert.DoesNotContain("CodingProtocolEntryCopier.CopyEditableValues", detailsActions);
+        Assert.Contains("CodingProtocolEntryCopier.CopyEditableValues", workflow);
         Assert.DoesNotContain("entry.Code = result.Code", markCatalog);
         Assert.DoesNotContain("entry.FotoPaths = result.FotoPaths", markCatalog);
         Assert.DoesNotContain("entry.Code = result.Code", events);
@@ -1812,17 +1817,24 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var servicePath = Path.Combine(uiRoot, "Services", "VsaCodeExplorerDialogService.cs");
         var factoryPath = Path.Combine(uiRoot, "Services", "VsaCodeExplorerDialogServiceFactory.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerWorkflowService.cs");
+        var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerWorkflowServiceFactory.cs");
 
         Assert.True(File.Exists(servicePath), "VSA-Code-Explorer-Dialoggrenze muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "VSA-Code-Explorer-Fenstererzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "Coding-Code-Explorer-Workflow muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowFactoryPath), "Coding-Code-Explorer-Workflow muss ueber Factory verdrahtet werden.");
 
         var playerWindowText = string.Join(
             Environment.NewLine,
             Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
         var service = File.ReadAllText(servicePath);
         var factory = File.ReadAllText(factoryPath);
+        var workflow = File.ReadAllText(workflowPath);
+        var workflowFactory = File.ReadAllText(workflowFactoryPath);
 
-        Assert.Contains("VsaCodeExplorerDialogServiceFactory.Create", playerWindowText);
+        Assert.DoesNotContain("VsaCodeExplorerDialogServiceFactory.Create", playerWindowText);
+        Assert.Contains("CodingCodeExplorerWorkflowServiceFactory.Create", playerWindowText);
         Assert.Contains("CreateVsaCodeExplorerLiveSnapshotProvider", playerWindowText);
         Assert.DoesNotContain("new VsaCodeExplorerWindow", playerWindowText);
         Assert.DoesNotContain("new Views.Windows.VsaCodeExplorerWindow", playerWindowText);
@@ -1830,6 +1842,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public sealed record VsaCodeExplorerDialogResult", service);
         Assert.Contains("new VsaCodeExplorerWindow", factory);
         Assert.Contains("LiveSnapshotProvider", factory);
+        Assert.Contains("CodingExplorerEntryFactory.CreateSeed", workflow);
+        Assert.Contains("VsaCodeExplorerDialogServiceFactory.Create", workflowFactory);
     }
 
     [Fact]

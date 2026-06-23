@@ -4,7 +4,6 @@ using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -18,29 +17,26 @@ public partial class PlayerWindow
         SuspendCodingOverlayInput();
 
         var entry = codingEvent.Entry;
-        var explorerVm = CreateVsaCodeExplorerViewModel(
-            entry, entry.MeterStart, entry.Zeit);
-
-        VsaCodeExplorerDialogResult dialogResult;
+        bool edited;
         try
         {
-            dialogResult = VsaCodeExplorerDialogServiceFactory.Create().Show(
-                explorerVm,
-                _videoPath,
-                TimeSpan.FromMilliseconds(_player.Time),
-                this,
-                CreateVsaCodeExplorerLiveSnapshotProvider());
+            edited = CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
+                .TryEdit(
+                    entry,
+                    entry.MeterStart,
+                    entry.Zeit,
+                    _videoPath,
+                    TimeSpan.FromMilliseconds(_player.Time),
+                    this,
+                    CreateVsaCodeExplorerLiveSnapshotProvider());
         }
         finally
         {
             ResumeCodingOverlayInput();
         }
 
-        if (dialogResult.Accepted && dialogResult.SelectedEntry is not null)
+        if (edited)
         {
-            var result = dialogResult.SelectedEntry;
-            CodingProtocolEntryCopier.CopyEditableValues(result, entry);
-
             codingEvent.MeterAtCapture = entry.MeterStart ?? entry.MeterEnd ?? codingEvent.MeterAtCapture;
             codingEvent.VideoTimestamp = entry.Zeit ?? codingEvent.VideoTimestamp;
             _codingSessionService?.UpdateEvent(codingEvent.EventId, entry, codingEvent.Overlay);
