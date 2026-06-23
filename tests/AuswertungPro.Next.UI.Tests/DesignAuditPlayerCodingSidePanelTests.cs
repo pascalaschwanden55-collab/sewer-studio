@@ -85,11 +85,13 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var sidePanel = ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml");
         var accessors = ReadUiFile("Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
         var coding = ReadCodingPartials();
+        var previewService = ReadUiFile("Ai", "CodingInlineEvidencePreviewService.cs");
 
         Assert.Contains("x:Name=\"ImgInlineEvidencePreview\"", sidePanel);
         Assert.Contains("x:Name=\"TxtInlineEvidencePreviewStatus\"", sidePanel);
         Assert.Contains("ImgInlineEvidencePreview", accessors);
-        Assert.Contains("CodingDefectPreviewService.BuildPreviewImagePath", coding);
+        Assert.Contains("CodingInlineEvidencePreviewService.Build", coding);
+        Assert.Contains("CodingDefectPreviewService.BuildPreviewImagePath", previewService);
     }
 
     [Fact]
@@ -111,9 +113,11 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var photoBody = ExtractMethodBody(coding, "private void CodingEventShowPhotos_Click");
         var policy = ReadUiFile("Ai", "CodingPhotoDisplayPathPolicy.cs");
+        var loader = ReadUiFile("Ai", "CodingPhotoViewerImageSourceLoader.cs");
 
-        Assert.Contains("CodingDefectPreviewService.BuildPreviewImagePath(codingEvent)", photoBody);
-        Assert.Contains("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", photoBody);
+        Assert.Contains("CodingPhotoViewerImageSourceLoader.Load", photoBody);
+        Assert.Contains("CodingDefectPreviewService.BuildPreviewImagePath", loader);
+        Assert.Contains("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", loader);
         Assert.True(
             policy.IndexOf("displayPaths.Add(evidencePreviewPath)", StringComparison.Ordinal)
             < policy.IndexOf("foreach (var photoPath in photoPaths)", StringComparison.Ordinal),

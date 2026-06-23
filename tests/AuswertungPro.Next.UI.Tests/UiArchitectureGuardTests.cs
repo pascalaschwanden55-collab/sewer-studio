@@ -2160,18 +2160,28 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.Viewer.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingPhotoDisplayPathPolicy.cs");
+        var loaderPath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerImageSourceLoader.cs");
 
         Assert.True(File.Exists(policyPath), "Fotoanzeige-Pfadauswahl muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(loaderPath), "Fotoanzeige-Bildquellen sollen ausserhalb der PlayerWindow-Partials geladen werden.");
 
         var photos = File.ReadAllText(photosPath);
         var policy = File.ReadAllText(policyPath);
+        var loader = File.ReadAllText(loaderPath);
 
-        Assert.Contains("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", photos);
-        Assert.Contains("CodingPhotoDisplayPathPolicy.ResolveExistingPath", photos);
+        Assert.Contains("CodingPhotoViewerImageSourceLoader.Load", photos);
+        Assert.DoesNotContain("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", photos);
+        Assert.DoesNotContain("CodingPhotoDisplayPathPolicy.ResolveExistingPath", photos);
+        Assert.DoesNotContain("File.Exists", photos);
+        Assert.DoesNotContain("BitmapImage", photos);
         Assert.Contains("CodingProjectFolderResolver.ResolveOrEmpty", photos);
         Assert.DoesNotContain("Path.GetDirectoryName(_serviceProvider!.Settings.LastProjectPath)", photos);
         Assert.DoesNotContain("var displayPhotoPaths = new List<string>", photos);
         Assert.DoesNotContain("displayPhotoPaths.Contains(fotoPath", photos);
+        Assert.Contains("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", loader);
+        Assert.Contains("CodingPhotoDisplayPathPolicy.ResolveExistingPath", loader);
+        Assert.Contains("File.Exists", loader);
+        Assert.Contains("BitmapImage", loader);
         Assert.Contains("public static IReadOnlyList<string> BuildDisplayPhotoPaths", policy);
         Assert.Contains("public static string? ResolveExistingPath", policy);
     }
@@ -2192,7 +2202,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.DoesNotContain("private void CodingEventShowPhotos_Click", photos);
         Assert.Contains("private void CodingEventShowPhotos_Click", viewer);
-        Assert.Contains("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", viewer);
+        Assert.Contains("CodingPhotoViewerImageSourceLoader.Load", viewer);
         Assert.Contains("WindowStateManager.Track", viewer);
     }
 
