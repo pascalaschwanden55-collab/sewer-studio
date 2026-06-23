@@ -133,6 +133,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_video_path_validation_lives_in_guard()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
+        var guardPath = Path.Combine(uiRoot, "Player", "PlayerVideoPathGuard.cs");
+
+        Assert.True(File.Exists(guardPath), "Video-Pfadpruefung und Anzeigename sollen ausserhalb des PlayerWindow-Konstruktors liegen.");
+
+        var windowRoot = File.ReadAllText(windowRootPath);
+        var guard = File.ReadAllText(guardPath);
+
+        Assert.Contains("PlayerVideoPathGuard.Validate", windowRoot);
+        Assert.DoesNotContain("File.Exists(videoPath)", windowRoot);
+        Assert.DoesNotContain("Path.GetFileName(videoPath)", windowRoot);
+        Assert.Contains("new FileNotFoundException", guard);
+        Assert.Contains("Path.GetFileName", guard);
+    }
+
+    [Fact]
     public void PlayerWindow_state_fields_live_in_state_partial()
     {
         var root = FindRepositoryRoot();

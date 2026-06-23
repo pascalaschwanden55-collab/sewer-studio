@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
@@ -25,15 +24,14 @@ public partial class PlayerWindow : Window
     {
         // Frueh pruefen, bevor irgendein Zustand (insb. _lastOpened) gesetzt wird:
         // wirft der Konstruktor spaeter, bliebe sonst ein halb-konstruiertes Fenster zurueck.
-        if (string.IsNullOrWhiteSpace(videoPath) || !File.Exists(videoPath))
-            throw new FileNotFoundException("Video nicht gefunden", videoPath);
+        var videoInfo = PlayerVideoPathGuard.Validate(videoPath);
 
         InitializeComponent();
         WireCodingSidePanelEvents();
         InitializeCodingSidePanelControllers();
         WindowStateManager.Track(this);
 
-        _videoPath = videoPath;
+        _videoPath = videoInfo.VideoPath;
         _damageOverlay = damageOverlay;
         _options = PlayerWindowOptions.Normalize(options);
         _serviceProvider = serviceProvider;
@@ -42,11 +40,9 @@ public partial class PlayerWindow : Window
         _haltungRecord = haltungRecord;
         _initialOverlayText = initialOverlayText;
 
-        var fileName = Path.GetFileName(videoPath);
-        var displayName = string.IsNullOrWhiteSpace(fileName) ? "Video" : fileName;
-        Title = $"Video - {displayName}";
-        VideoNameText.Text = displayName;
-        VideoPathText.Text = videoPath;
+        Title = $"Video - {videoInfo.DisplayName}";
+        VideoNameText.Text = videoInfo.DisplayName;
+        VideoPathText.Text = videoInfo.VideoPath;
 
         Core.Initialize();
 
