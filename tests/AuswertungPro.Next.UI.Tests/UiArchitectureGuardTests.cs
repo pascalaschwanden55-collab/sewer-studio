@@ -653,6 +653,33 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_ai_finding_filtering_lives_in_filtering_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
+        var filteringPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Filtering.cs");
+
+        Assert.True(File.Exists(filteringPath), "KI-Finding-Filteradapter sollen aus dem allgemeinen AiEvents-Partial heraus.");
+
+        var aiEvents = File.ReadAllText(aiEventsPath);
+        var filtering = File.ReadAllText(filteringPath);
+
+        Assert.DoesNotContain("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", aiEvents);
+        Assert.DoesNotContain("private static string? LookupVsaLabel", aiEvents);
+        Assert.DoesNotContain("private string? ResolveFindingCodeForCoding", aiEvents);
+        Assert.DoesNotContain("private bool IsFindingAlreadyKnown", aiEvents);
+        Assert.Contains("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", filtering);
+        Assert.Contains("private static string? LookupVsaLabel", filtering);
+        Assert.Contains("private string? ResolveFindingCodeForCoding", filtering);
+        Assert.Contains("private bool IsFindingAlreadyKnown", filtering);
+        Assert.Contains("CodingFindingFilterPolicy.FilterValid", filtering);
+        Assert.Contains("CodingFindingCodeResolver.Resolve", filtering);
+        Assert.Contains("CodingKnownFindingPolicy.IsKnown", filtering);
+    }
+
+    [Fact]
     public void PlayerWindow_bounds_adjustment_lives_in_policy()
     {
         var root = FindRepositoryRoot();
