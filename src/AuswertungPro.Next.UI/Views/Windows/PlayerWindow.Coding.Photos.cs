@@ -44,20 +44,12 @@ public partial class PlayerWindow
         if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
 
         var entry = codingEvent.Entry;
-        var originalZeit = entry.Zeit;
-        var originalVideoTimestamp = codingEvent.VideoTimestamp;
-        var photoTime = GetCurrentPlayerTimestamp();
-        if (photoTime.HasValue)
-        {
-            entry.Zeit = photoTime.Value;
-            codingEvent.VideoTimestamp = photoTime.Value;
-        }
+        var photoTimestamp = CodingEventPhotoTimestampScope.Apply(codingEvent, GetCurrentPlayerTimestamp());
 
         var fotoPath = CodingCaptureSnapshot(entry);
         if (fotoPath == null)
         {
-            entry.Zeit = originalZeit;
-            codingEvent.VideoTimestamp = originalVideoTimestamp;
+            photoTimestamp.RestoreOriginalTime();
             ShowOverlay("Foto konnte nicht aufgenommen werden", TimeSpan.FromSeconds(3));
             return;
         }

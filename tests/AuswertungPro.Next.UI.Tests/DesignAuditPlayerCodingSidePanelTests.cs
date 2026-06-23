@@ -352,16 +352,16 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var photoBody = ExtractMethodBody(coding, "private void CodingTakePhotoForSelectedEvent");
 
         var timeIndex = photoBody.IndexOf("GetCurrentPlayerTimestamp()", StringComparison.Ordinal);
-        var entryTimeIndex = photoBody.IndexOf("entry.Zeit = photoTime.Value", StringComparison.Ordinal);
-        var eventTimeIndex = photoBody.IndexOf("codingEvent.VideoTimestamp = photoTime.Value", StringComparison.Ordinal);
+        var scopeIndex = photoBody.IndexOf("CodingEventPhotoTimestampScope.Apply", StringComparison.Ordinal);
         var snapshotIndex = photoBody.IndexOf("CodingCaptureSnapshot(entry)", StringComparison.Ordinal);
 
         Assert.True(timeIndex >= 0, "Manuelles Foto muss den aktuellen Player-Zeitpunkt lesen.");
-        Assert.True(entryTimeIndex >= 0, "Befund-Zeit muss auf den Foto-Frame gesetzt werden.");
-        Assert.True(eventTimeIndex >= 0, "CodingEvent-Zeit muss auf den Foto-Frame gesetzt werden.");
+        Assert.True(scopeIndex >= 0, "Befund- und Event-Zeit muessen vor dem Snapshot per Scope auf den Foto-Frame gesetzt werden.");
         Assert.True(snapshotIndex >= 0, "Manuelles Foto muss weiter den aktuellen Frame capturen.");
-        Assert.True(entryTimeIndex < snapshotIndex, "Dateiname und Befund muessen den Foto-Zeitpunkt verwenden.");
-        Assert.True(eventTimeIndex < snapshotIndex, "Event-Zeit muss vor dem Snapshot angepasst werden.");
+        Assert.True(scopeIndex < snapshotIndex, "Dateiname und Befund muessen den Foto-Zeitpunkt verwenden.");
+        Assert.Contains("photoTimestamp.RestoreOriginalTime()", photoBody);
+        Assert.DoesNotContain("entry.Zeit = photoTime.Value", photoBody);
+        Assert.DoesNotContain("codingEvent.VideoTimestamp = photoTime.Value", photoBody);
         Assert.Contains("CodingEventPhotoApplier.Apply", photoBody);
     }
 

@@ -2763,23 +2763,29 @@ public sealed class UiArchitectureGuardTests
         var photosPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingPhotoSlotPolicy.cs");
         var applierPath = Path.Combine(uiRoot, "Ai", "CodingEventPhotoApplier.cs");
+        var timestampScopePath = Path.Combine(uiRoot, "Ai", "CodingEventPhotoTimestampScope.cs");
 
         Assert.True(File.Exists(policyPath), "Manuelle Foto-Slot-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(applierPath), "Manuelle Foto-Slot-Anwendung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(timestampScopePath), "Manuelle Foto-Zeitsetzung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var photos = File.ReadAllText(photosPath);
         var policy = File.ReadAllText(policyPath);
         var applier = File.ReadAllText(applierPath);
+        var timestampScope = File.Exists(timestampScopePath) ? File.ReadAllText(timestampScopePath) : "";
 
         Assert.Contains("CodingEventPhotoApplier.Apply", photos);
+        Assert.Contains("CodingEventPhotoTimestampScope.Apply", photos);
         Assert.DoesNotContain("CodingPhotoSlotPolicy.Apply", photos);
         Assert.DoesNotContain("_codingSessionService?.UpdateEvent", photos);
+        Assert.DoesNotContain("codingEvent.VideoTimestamp = photoTime.Value", photos);
         Assert.DoesNotContain("entry.FotoPaths[1] = fotoPath", photos);
         Assert.DoesNotContain("Foto 2 ersetzt", photos);
         Assert.Contains("public static CodingPhotoSlotUpdate Apply", policy);
         Assert.Contains("photoPaths.Count >= 2", policy);
         Assert.Contains("CodingPhotoSlotPolicy.Apply", applier);
         Assert.Contains("codingSessionService?.UpdateEvent", applier);
+        Assert.Contains("RestoreOriginalTime", timestampScope);
     }
 
     [Fact]
