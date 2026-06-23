@@ -413,6 +413,33 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_detection_status_lives_in_status_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var liveDetectionPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.cs");
+        var statusPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Status.cs");
+
+        Assert.True(File.Exists(statusPath), "LiveDetection-Status-UI soll in ein eigenes Partial.");
+
+        var liveDetection = File.ReadAllText(liveDetectionPath);
+        var status = File.ReadAllText(statusPath);
+
+        Assert.DoesNotContain("private void SetLiveDetectionBadge", liveDetection);
+        Assert.DoesNotContain("private void SetYoloStatus", liveDetection);
+        Assert.DoesNotContain("private void SetCodingAiState", liveDetection);
+        Assert.DoesNotContain("private void StartCodingAiPulse", liveDetection);
+        Assert.DoesNotContain("private void StopCodingAiPulse", liveDetection);
+        Assert.Contains("private void SetLiveDetectionBadge", status);
+        Assert.Contains("private void SetYoloStatus", status);
+        Assert.Contains("private void SetCodingAiState", status);
+        Assert.Contains("private void StartCodingAiPulse", status);
+        Assert.Contains("private void StopCodingAiPulse", status);
+        Assert.Contains("Dispatcher.Invoke", status);
+    }
+
+    [Fact]
     public void PlayerWindow_bounds_adjustment_lives_in_policy()
     {
         var root = FindRepositoryRoot();
