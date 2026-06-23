@@ -326,7 +326,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
         var mapperPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEventMapper.cs");
 
         var coding = File.ReadAllText(codingPath);
@@ -533,7 +533,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceTransfer.cs");
 
         Assert.True(File.Exists(policyPath), "Import-Referenz-Transfer muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -703,6 +703,7 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
         var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
+        var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.cs");
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingLiveAiTimerController.cs");
 
@@ -710,16 +711,17 @@ public sealed class UiArchitectureGuardTests
 
         var ai = File.ReadAllText(aiPath);
         var coding = File.ReadAllText(codingPath);
+        var lifecycle = File.ReadAllText(lifecyclePath);
         var playback = File.ReadAllText(playbackPath);
         var controller = File.ReadAllText(controllerPath);
 
         Assert.Contains("CodingLiveAiTimerController", coding);
         Assert.Contains("_codingLiveAiTimers.Start()", ai);
         Assert.Contains("_codingLiveAiTimers.Stop(resetButton: true)", ai);
-        Assert.Contains("_codingLiveAiTimers?.Stop(resetButton: true)", coding);
+        Assert.Contains("_codingLiveAiTimers?.Stop(resetButton: true)", lifecycle);
         Assert.Contains("_codingLiveAiTimers?.StopTimers()", playback);
-        Assert.DoesNotContain("_codingLiveAiBlinkTimer", coding + ai + playback);
-        Assert.DoesNotContain("_codingLiveAiBlinkState", coding + ai + playback);
+        Assert.DoesNotContain("_codingLiveAiBlinkTimer", coding + lifecycle + ai + playback);
+        Assert.DoesNotContain("_codingLiveAiBlinkState", coding + lifecycle + ai + playback);
         Assert.DoesNotContain("new DispatcherTimer { Interval = CodingLiveAiTimerSettings", ai);
         Assert.Contains("public sealed class CodingLiveAiTimerController", controller);
         Assert.Contains("CodingLiveAiButtonDisplayPolicy.BlinkColor", controller);
@@ -1145,7 +1147,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingTerminalBoundaryPresencePolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Exit-Pruefung fuer BCE/BDC* muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -1165,7 +1167,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingDnCalibrationPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "DN-/Kalibrierungsinitialisierung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -1508,7 +1510,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var playerCodingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
+        var playerCodingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
         var accessorsPath = Path.Combine(uiRoot, "Ai", "CodingTimelineMarkerAccessors.cs");
 
         Assert.True(File.Exists(accessorsPath), "Timeline-Marker-Regeln muessen ausserhalb von PlayerWindow liegen.");
@@ -1545,6 +1547,29 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private async void CodingNext_Click", navigation);
         Assert.Contains("private async Task MoveCodingByCommandAsync", navigation);
         Assert.Contains("CodingVideoSyncPolicy.TryResolveTargetTimeMs", navigation);
+    }
+
+    [Fact]
+    public void PlayerWindow_coding_lifecycle_lives_in_lifecycle_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
+        var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.cs");
+
+        Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
+
+        var coding = File.ReadAllText(codingPath);
+        var lifecycle = File.ReadAllText(lifecyclePath);
+
+        Assert.DoesNotContain("private void EnterCodingMode", coding);
+        Assert.DoesNotContain("private void ExitCodingMode", coding);
+        Assert.DoesNotContain("private void LoadExistingProtocolEventsAsImport", coding);
+        Assert.Contains("private void CodingMode_Click", lifecycle);
+        Assert.Contains("private void EnterCodingMode", lifecycle);
+        Assert.Contains("private void LoadExistingProtocolEventsAsImport", lifecycle);
+        Assert.Contains("private void ExitCodingMode", lifecycle);
     }
 
     [Fact]
