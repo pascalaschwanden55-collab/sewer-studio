@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using System.Windows.Media;
 
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -29,14 +29,7 @@ public partial class PlayerWindow
             var frameBytes = await CaptureCurrentFrameAsync();
             if (frameBytes == null || frameBytes.Length == 0) return;
 
-            var bmp = new System.Windows.Media.Imaging.BitmapImage();
-            bmp.BeginInit();
-            bmp.StreamSource = new System.IO.MemoryStream(frameBytes);
-            bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-            bmp.EndInit();
-            bmp.Freeze();
-
-            var autoCalib = Ai.AutoCalibrationService.TryAutoCalibrate(bmp, nominalDn);
+            var autoCalib = CodingAutoCalibrationFrameService.TryAutoCalibrate(frameBytes, nominalDn);
             if (autoCalib == null) return;
 
             _codingOverlayService?.SetCalibration(autoCalib);

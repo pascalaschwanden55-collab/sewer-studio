@@ -2680,6 +2680,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_auto_calibration_frame_loading_lives_in_service()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var autoCalibrationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AutoCalibration.cs");
+        var servicePath = Path.Combine(uiRoot, "Ai", "CodingAutoCalibrationFrameService.cs");
+
+        Assert.True(File.Exists(servicePath), "AutoCalibration-Framebytes sollen ausserhalb der PlayerWindow-Partials in ein Bitmap geladen werden.");
+
+        var autoCalibration = File.ReadAllText(autoCalibrationPath);
+        var service = File.ReadAllText(servicePath);
+
+        Assert.Contains("CodingAutoCalibrationFrameService.TryAutoCalibrate", autoCalibration);
+        Assert.DoesNotContain("BitmapImage", autoCalibration);
+        Assert.DoesNotContain("MemoryStream", autoCalibration);
+        Assert.Contains("BitmapImage", service);
+        Assert.Contains("AutoCalibrationService.TryAutoCalibrate", service);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_calibration_math_lives_in_policy()
     {
         var root = FindRepositoryRoot();
