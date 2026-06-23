@@ -739,6 +739,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LoadExistingProtocolEventsAsImport();", lifecycle);
         Assert.DoesNotContain("CodingProtocolEventMapper.BuildMissingImportEvents", lifecycle);
         Assert.Contains("CodingProtocolEventMapper.BuildMissingImportEvents", import);
+        Assert.Contains("CodingProtocolEventCollectionAppender.Append", import);
+        Assert.DoesNotContain("_codingImportEvents.Add", import);
         Assert.DoesNotContain("new CodingEvent", import);
         Assert.DoesNotContain("!e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code)", import);
         Assert.Contains("public static IReadOnlyList<CodingEvent> BuildMissingImportEvents", mapper);

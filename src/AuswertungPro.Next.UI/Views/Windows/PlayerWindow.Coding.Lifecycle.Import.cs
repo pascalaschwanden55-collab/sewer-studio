@@ -12,10 +12,11 @@ public partial class PlayerWindow
     {
         if (_haltungRecord?.Protocol?.Current?.Entries == null) return;
 
-        foreach (var codingEvent in CodingProtocolEventMapper.BuildMissingImportEvents(
-                     _haltungRecord.Protocol,
-                     _codingImportEvents))
-            _codingImportEvents.Add(codingEvent);
+        CodingProtocolEventCollectionAppender.Append(
+            _codingImportEvents,
+            CodingProtocolEventMapper.BuildMissingImportEvents(
+                _haltungRecord.Protocol,
+                _codingImportEvents));
 
         RunImportDefectCount.Text = _codingImportEvents.Count.ToString();
     }
