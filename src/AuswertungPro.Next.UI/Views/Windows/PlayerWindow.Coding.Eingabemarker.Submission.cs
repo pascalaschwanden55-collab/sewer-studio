@@ -53,8 +53,7 @@ public partial class PlayerWindow
                 var fotoPath = CodingCaptureSnapshot(draft.Entry);
                 if (fotoPath != null) draft.Entry.FotoPaths.Add(fotoPath);
 
-                var ev = _codingSessionService.AddEvent(draft.Entry, _codingVm.CurrentOverlay);
-                ev.AiContext = draft.AiContext;
+                var ev = CodingEingabemarkerEventAppender.Apply(draft, _codingVm.CurrentOverlay, _codingSessionService);
                 RefreshCodingEventsList();
                 UpdateToolBadge();
                 PersistSingleEventAsTrainingSample(ev).SafeFireAndForget("TrainingSaveSingle");

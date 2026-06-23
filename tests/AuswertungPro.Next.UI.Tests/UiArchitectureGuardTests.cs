@@ -4257,6 +4257,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingEingabemarkerDuplicatePolicy.FindDuplicate", marker);
         Assert.Contains("private async Task SubmitEingabemarker", submission);
         Assert.Contains("CodingEingabemarkerDuplicatePolicy.FindDuplicate", submission);
+        Assert.Contains("CodingEingabemarkerEventAppender.Apply", submission);
+        Assert.DoesNotContain("_codingSessionService.AddEvent(draft.Entry", submission);
         Assert.Contains("RunCodingAnalysisAsync", submission);
     }
 
