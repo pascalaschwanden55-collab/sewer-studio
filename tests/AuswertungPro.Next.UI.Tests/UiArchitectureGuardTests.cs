@@ -1228,6 +1228,32 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_training_sample_persistence_lives_in_coordinator()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var persistencePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Persistence.cs");
+        var coordinatorPath = Path.Combine(uiRoot, "Ai", "CodingTrainingSamplePersistenceCoordinator.cs");
+
+        Assert.True(File.Exists(coordinatorPath), "Training-Sample-Persistenz soll ausserhalb von PlayerWindow orchestriert werden.");
+
+        var persistence = File.ReadAllText(persistencePath);
+        var coordinator = File.ReadAllText(coordinatorPath);
+
+        Assert.Contains("CodingTrainingSamplePersistenceCoordinator", persistence);
+        Assert.DoesNotContain("CodingTrainingFrameStore", persistence);
+        Assert.DoesNotContain("CodingTrainingSamplePersister", persistence);
+        Assert.DoesNotContain("CodingTrainingSampleEvalProtector", persistence);
+        Assert.DoesNotContain("CodingTrainingSampleFactory.Create", persistence);
+        Assert.DoesNotContain("SaveGoldFrameAsync", persistence);
+        Assert.DoesNotContain("SaveEvidenceFrame", persistence);
+        Assert.DoesNotContain("IsCodingSampleEvalProtected", persistence);
+        Assert.Contains("SaveGoldFrameAsync", coordinator);
+        Assert.Contains("CodingTrainingSampleFactory.Create", coordinator);
+        Assert.Contains("CodingTrainingSampleEvalProtector", coordinator);
+    }
+
+    [Fact]
     public void PlayerWindow_playback_snapshot_lives_in_snapshot_partial()
     {
         var root = FindRepositoryRoot();
