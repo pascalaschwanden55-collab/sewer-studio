@@ -2180,8 +2180,14 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private async void CodingAcceptGreenMatches_Click", protocolMatch);
         Assert.DoesNotContain("private async void ImportConfirm_Click", protocolMatch);
         Assert.DoesNotContain("private async Task<bool> ConfirmImportAsTrainingAsync", protocolMatch);
-        Assert.Contains("private async void CodingAcceptGreenMatches_Click", training);
-        Assert.Contains("private async void ImportConfirm_Click", training);
+        Assert.DoesNotContain("private async void CodingAcceptGreenMatches_Click", training);
+        Assert.DoesNotContain("private async void ImportConfirm_Click", training);
+        Assert.Contains("private void CodingAcceptGreenMatches_Click", training);
+        Assert.Contains("private void ImportConfirm_Click", training);
+        Assert.Contains(".SafeFireAndForget(\"CodingAcceptGreenMatches\")", training);
+        Assert.Contains(".SafeFireAndForget(\"ImportConfirm\")", training);
+        Assert.Contains("private async Task HandleCodingAcceptGreenMatchesAsync", training);
+        Assert.Contains("private async Task HandleImportConfirmAsync", training);
         Assert.Contains("private async Task<bool> ConfirmImportAsTrainingAsync", training);
         Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", training);
         Assert.DoesNotContain("TeacherAnnotationStore.AppendAsync", training);

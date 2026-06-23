@@ -3,13 +3,17 @@ using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private async void CodingAcceptGreenMatches_Click(object sender, RoutedEventArgs e)
+    private void CodingAcceptGreenMatches_Click(object sender, RoutedEventArgs e)
+        => HandleCodingAcceptGreenMatchesAsync().SafeFireAndForget("CodingAcceptGreenMatches");
+
+    private async Task HandleCodingAcceptGreenMatchesAsync()
     {
         if (_codingVm == null) return;
         if (_lastCodingMatch == null)
@@ -30,7 +34,10 @@ public partial class PlayerWindow
         ShowOverlay(overlay.Text, overlay.Duration);
     }
 
-    private async void ImportConfirm_Click(object sender, RoutedEventArgs e)
+    private void ImportConfirm_Click(object sender, RoutedEventArgs e)
+        => HandleImportConfirmAsync().SafeFireAndForget("ImportConfirm");
+
+    private async Task HandleImportConfirmAsync()
     {
         if (LstImportEvents.SelectedItem is not CodingEvent importEvent) return;
         await ConfirmImportAsTrainingAsync(importEvent);

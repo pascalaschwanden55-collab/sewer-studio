@@ -401,8 +401,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_green_match_training_button_reuses_import_confirm_core()
     {
         var coding = ReadCodingPartials();
-        var importConfirmBody = ExtractMethodBody(coding, "private async void ImportConfirm_Click");
-        var greenBody = ExtractMethodBody(coding, "private async void CodingAcceptGreenMatches_Click");
+        var importConfirmBody = ExtractMethodBody(coding, "private async Task HandleImportConfirmAsync");
+        var greenBody = ExtractMethodBody(coding, "private async Task HandleCodingAcceptGreenMatchesAsync");
         var coreBody = ExtractMethodBody(coding, "private async Task<bool> ConfirmImportAsTrainingAsync");
         var workflow = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowService.cs");
         var workflowFactory = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
