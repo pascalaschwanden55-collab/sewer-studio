@@ -1,5 +1,4 @@
 using System;
-using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
@@ -33,14 +32,11 @@ public partial class PlayerWindow
     }
 
     private CodingTrainingSamplePersistenceRequest CreateCodingTrainingSamplePersistenceRequest(byte[]? preferredFrameBytes)
-        => new(
+        => CodingTrainingSamplePersistenceRequest.FromPlayerContext(
             _codingVm?.HaltungName ?? "unknown",
-            ResolveTrainingInspectionDate(),
+            _haltungRecord?.GetFieldValue("Datum_Jahr"),
             Environment.UserName,
             PlayerClock.UtcNow(),
             preferredFrameBytes,
             CaptureCurrentFrameAsync);
-
-    private DateTime? ResolveTrainingInspectionDate()
-        => TrainingSampleEligibility.TryParseInspectionDate(_haltungRecord?.GetFieldValue("Datum_Jahr"));
 }

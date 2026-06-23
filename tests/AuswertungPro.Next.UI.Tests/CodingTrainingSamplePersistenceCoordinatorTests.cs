@@ -13,6 +13,20 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingTrainingSamplePersistenceCoordinatorTests
 {
     [Fact]
+    public void RequestFromPlayerContext_parses_raw_inspection_date()
+    {
+        var request = CodingTrainingSamplePersistenceRequest.FromPlayerContext(
+            caseId: "H-100",
+            inspectionDateText: "20251110_9866-9327.pdf",
+            confirmedByUser: "tester",
+            confirmedAtUtc: new DateTime(2026, 6, 23, 10, 11, 12, DateTimeKind.Utc),
+            preferredFrameBytes: null,
+            captureFrameAsync: () => Task.FromResult<byte[]?>(null));
+
+        Assert.Equal(new DateTime(2025, 11, 10), request.InspectionDate);
+    }
+
+    [Fact]
     public async Task PersistSingleEventAsync_saves_gold_frame_evidence_and_sample()
     {
         using var temp = new TempDir();

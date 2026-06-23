@@ -15,7 +15,23 @@ public sealed record CodingTrainingSamplePersistenceRequest(
     string? ConfirmedByUser,
     DateTime? ConfirmedAtUtc,
     byte[]? PreferredFrameBytes,
-    Func<Task<byte[]?>> CaptureFrameAsync);
+    Func<Task<byte[]?>> CaptureFrameAsync)
+{
+    public static CodingTrainingSamplePersistenceRequest FromPlayerContext(
+        string caseId,
+        string? inspectionDateText,
+        string? confirmedByUser,
+        DateTime? confirmedAtUtc,
+        byte[]? preferredFrameBytes,
+        Func<Task<byte[]?>> captureFrameAsync)
+        => new(
+            caseId,
+            TrainingSampleEligibility.TryParseInspectionDate(inspectionDateText),
+            confirmedByUser,
+            confirmedAtUtc,
+            preferredFrameBytes,
+            captureFrameAsync);
+}
 
 public sealed class CodingTrainingSamplePersistenceCoordinator
 {
