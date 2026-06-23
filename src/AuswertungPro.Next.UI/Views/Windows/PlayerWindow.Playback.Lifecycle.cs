@@ -61,11 +61,10 @@ public partial class PlayerWindow
     }
 
     private void StopPlayerTimers()
-    {
-        try { _timer.Stop(); } catch { }
-        try { _scrubTimer.Stop(); } catch { }
-        try { _detectionTimer?.Stop(); } catch { }
-        try { _codingLiveAiTimers?.StopTimers(); } catch { }
-        try { _codingOsdTimer?.Stop(); } catch { }
-    }
+        => PlayerWindowTimerStopper.StopPlaybackTimers(
+            _timer,
+            _scrubTimer,
+            _detectionTimer,
+            _codingLiveAiTimers,
+            _codingOsdTimer);
 }

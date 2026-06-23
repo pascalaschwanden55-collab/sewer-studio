@@ -2145,10 +2145,12 @@ public sealed class UiArchitectureGuardTests
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var playbackLifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Lifecycle.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingLiveAiTimerController.cs");
+        var timerStopperPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerStopper.cs");
 
         Assert.True(File.Exists(codingExitPath), "Coding-Exit-Cleanup soll in einem eigenen Partial liegen.");
         Assert.True(File.Exists(playbackLifecyclePath), "Playback-Cleanup soll in einem eigenen Lifecycle-Partial liegen.");
         Assert.True(File.Exists(controllerPath), "Live-AI-Timer-Wiring muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(timerStopperPath), "Playback-Timer-Shutdown soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var live = File.ReadAllText(livePath);
@@ -2159,6 +2161,7 @@ public sealed class UiArchitectureGuardTests
         var playback = File.ReadAllText(playbackPath);
         var playbackLifecycle = File.ReadAllText(playbackLifecyclePath);
         var controller = File.ReadAllText(controllerPath);
+        var timerStopper = File.Exists(timerStopperPath) ? File.ReadAllText(timerStopperPath) : "";
 
         Assert.Contains("CodingLiveAiTimerController", state);
         Assert.Contains("_codingLiveAiTimers.Start()", live);
@@ -2166,12 +2169,15 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingLiveAiTimers?.Stop(resetButton: true)", lifecycle);
         Assert.Contains("_codingLiveAiTimers?.Stop(resetButton: true)", codingExit);
         Assert.DoesNotContain("_codingLiveAiTimers?.StopTimers()", playback);
-        Assert.Contains("_codingLiveAiTimers?.StopTimers()", playbackLifecycle);
+        Assert.DoesNotContain("_codingLiveAiTimers?.StopTimers()", playbackLifecycle);
+        Assert.Contains("PlayerWindowTimerStopper.StopPlaybackTimers", playbackLifecycle);
         Assert.DoesNotContain("_codingLiveAiBlinkTimer", coding + state + lifecycle + codingExit + ai + live + playback + playbackLifecycle);
         Assert.DoesNotContain("_codingLiveAiBlinkState", coding + state + lifecycle + codingExit + ai + live + playback + playbackLifecycle);
         Assert.DoesNotContain("new DispatcherTimer { Interval = CodingLiveAiTimerSettings", live);
         Assert.Contains("public sealed class CodingLiveAiTimerController", controller);
         Assert.Contains("CodingLiveAiButtonDisplayPolicy.BlinkColor", controller);
+        Assert.Contains("public static class PlayerWindowTimerStopper", timerStopper);
+        Assert.Contains("public static void StopPlaybackTimers", timerStopper);
     }
 
     [Fact]
