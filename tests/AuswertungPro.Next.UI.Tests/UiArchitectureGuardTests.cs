@@ -2907,17 +2907,23 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var specialShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.cs");
         var levelPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.Level.cs");
+        var rendererPath = Path.Combine(uiRoot, "Player", "CodingLevelOverlayRenderer.cs");
 
         Assert.True(File.Exists(levelPath), "Level-Overlay-Rendering soll aus dem allgemeinen SpecialShapes-Partial heraus.");
+        Assert.True(File.Exists(rendererPath), "Level-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var specialShapes = File.ReadAllText(specialShapesPath);
         var level = File.ReadAllText(levelPath);
+        var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("private void RenderLevelOverlay", specialShapes);
         Assert.Contains("private void RenderLevelOverlay", level);
-        Assert.Contains("CodingSchemaOverlayRenderer.AddPipeReference", level);
-        Assert.Contains("LevelMode.Obstacle", level);
-        Assert.Contains("CodingSchemaOverlayRenderer.AddLabel", level);
+        Assert.Contains("CodingLevelOverlayRenderer.Render", level);
+        Assert.DoesNotContain("new System.Windows.Shapes.Line", level);
+        Assert.DoesNotContain("new Rectangle", level);
+        Assert.Contains("public static class CodingLevelOverlayRenderer", renderer);
+        Assert.Contains("LevelMode.Obstacle", renderer);
+        Assert.Contains("CodingSchemaOverlayRenderer.AddPipeReference", renderer);
     }
 
     [Fact]
