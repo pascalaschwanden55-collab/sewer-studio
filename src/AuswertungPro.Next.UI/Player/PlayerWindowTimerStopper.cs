@@ -19,6 +19,12 @@ public static class PlayerWindowTimerStopper
         StopTimer(codingOsdTimer);
     }
 
+    public static DispatcherTimer? StopAndClear(DispatcherTimer? timer)
+    {
+        StopTimer(timer);
+        return null;
+    }
+
     private static void StopTimer(DispatcherTimer? timer)
         => TryStop(() => timer?.Stop());
 

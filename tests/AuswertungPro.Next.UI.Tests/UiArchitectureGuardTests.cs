@@ -652,6 +652,35 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_timer_shutdown_uses_stopper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var playbackLifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Lifecycle.cs");
+        var liveStopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
+        var osdTimerPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Timer.cs");
+        var stopperPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerStopper.cs");
+
+        Assert.True(File.Exists(stopperPath), "PlayerWindow-Timer-Shutdown soll ausserhalb der PlayerWindow-Partials liegen.");
+
+        var playbackLifecycle = File.ReadAllText(playbackLifecyclePath);
+        var liveStop = File.ReadAllText(liveStopPath);
+        var osdTimer = File.ReadAllText(osdTimerPath);
+        var stopper = File.Exists(stopperPath) ? File.ReadAllText(stopperPath) : "";
+        var directTimerShutdownText = liveStop + osdTimer;
+
+        Assert.Contains("PlayerWindowTimerStopper.StopPlaybackTimers", playbackLifecycle);
+        Assert.Contains("_detectionTimer = PlayerWindowTimerStopper.StopAndClear(_detectionTimer)", liveStop);
+        Assert.Contains("_codingOsdTimer = PlayerWindowTimerStopper.StopAndClear(_codingOsdTimer)", osdTimer);
+        Assert.DoesNotContain("_detectionTimer?.Stop();", directTimerShutdownText);
+        Assert.DoesNotContain("_detectionTimer = null;", directTimerShutdownText);
+        Assert.DoesNotContain("_codingOsdTimer?.Stop();", directTimerShutdownText);
+        Assert.DoesNotContain("_codingOsdTimer = null;", directTimerShutdownText);
+        Assert.Contains("public static DispatcherTimer? StopAndClear", stopper);
+    }
+
+    [Fact]
     public void PlayerWindow_open_stretch_damage_prompt_lives_in_policy()
     {
         var root = FindRepositoryRoot();

@@ -35,8 +35,7 @@ public partial class PlayerWindow
 
     private void StopCodingOsdTimer()
     {
-        _codingOsdTimer?.Stop();
-        _codingOsdTimer = null;
+        _codingOsdTimer = PlayerWindowTimerStopper.StopAndClear(_codingOsdTimer);
         _codingOsdReading = false;
     }
 }

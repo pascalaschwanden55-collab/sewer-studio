@@ -104,6 +104,55 @@ public sealed class PlayerWindowTimerStopperTests
         Assert.False(scrubRunning);
     }
 
+    [Fact]
+    public void StopAndClear_stops_timer_and_returns_null()
+    {
+        var method = FindStopAndClearMethod();
+        Assert.NotNull(method);
+
+        Exception? threadError = null;
+        bool timerRunning = true;
+        object? result = new object();
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var timer = StartTimer();
+
+                result = method.Invoke(null, [timer]);
+
+                timerRunning = timer.IsEnabled;
+            }
+            catch (TargetInvocationException ex)
+            {
+                threadError = ex.InnerException ?? ex;
+            }
+            catch (Exception ex)
+            {
+                threadError = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(threadError);
+        Assert.Null(result);
+        Assert.False(timerRunning);
+    }
+
+    [Fact]
+    public void StopAndClear_handles_missing_timer()
+    {
+        var method = FindStopAndClearMethod();
+        Assert.NotNull(method);
+
+        var result = method.Invoke(null, [null]);
+
+        Assert.Null(result);
+    }
+
     private static MethodInfo? FindStopPlaybackTimersMethod()
         => typeof(PlayerWindowTimerFactory).Assembly
             .GetType("AuswertungPro.Next.UI.Player.PlayerWindowTimerStopper")
@@ -119,6 +168,16 @@ public sealed class PlayerWindowTimerStopperTests
                     typeof(CodingLiveAiTimerController),
                     typeof(DispatcherTimer)
                 ],
+                modifiers: null);
+
+    private static MethodInfo? FindStopAndClearMethod()
+        => typeof(PlayerWindowTimerFactory).Assembly
+            .GetType("AuswertungPro.Next.UI.Player.PlayerWindowTimerStopper")
+            ?.GetMethod(
+                "StopAndClear",
+                BindingFlags.Public | BindingFlags.Static,
+                binder: null,
+                types: [typeof(DispatcherTimer)],
                 modifiers: null);
 
     private static DispatcherTimer StartTimer()

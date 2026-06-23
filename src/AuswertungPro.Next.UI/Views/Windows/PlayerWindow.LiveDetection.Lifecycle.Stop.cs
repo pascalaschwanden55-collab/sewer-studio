@@ -10,8 +10,7 @@ public partial class PlayerWindow
     {
         var updateUi = !_closing && !_playbackDisposed;
 
-        _detectionTimer?.Stop();
-        _detectionTimer = null;
+        _detectionTimer = PlayerWindowTimerStopper.StopAndClear(_detectionTimer);
         _detectionCts = CancellationTokenSourceLifecycle.CancelDisposeAndClear(_detectionCts);
         _isDetecting = false;
         _isDetectionInFlight = false;
