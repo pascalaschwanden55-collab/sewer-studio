@@ -2915,9 +2915,9 @@ public sealed class UiArchitectureGuardTests
 
         Assert.DoesNotContain("private void RenderLevelOverlay", specialShapes);
         Assert.Contains("private void RenderLevelOverlay", level);
-        Assert.Contains("RenderSchemaPipeReference", level);
+        Assert.Contains("CodingSchemaOverlayRenderer.AddPipeReference", level);
         Assert.Contains("LevelMode.Obstacle", level);
-        Assert.Contains("AddSchemaLabel", level);
+        Assert.Contains("CodingSchemaOverlayRenderer.AddLabel", level);
     }
 
     [Fact]
@@ -2928,18 +2928,25 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.cs");
         var activePath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.cs");
+        var rendererPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayRenderer.cs");
 
         Assert.True(File.Exists(activePath), "Aktive Schema-Vorschau soll aus dem allgemeinen Schema-Rendering-Partial heraus.");
+        Assert.True(File.Exists(rendererPath), "Schema-Canvas-Helfer sollen ausserhalb der PlayerWindow-Partials liegen.");
 
         var schema = File.ReadAllText(schemaPath);
         var active = File.ReadAllText(activePath);
+        var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("private void RenderActiveCodingSchema", schema);
+        Assert.DoesNotContain("private void RenderSchemaPipeReference", schema);
+        Assert.DoesNotContain("private void AddSchemaLabel", schema);
         Assert.Contains("private void RenderActiveCodingSchema", active);
         Assert.Contains("case PipeBendSchema bend", active);
         Assert.Contains("case FillLevelSchema fill", active);
         Assert.Contains("case IntrusionSchema intrusion", active);
-        Assert.Contains("private void RenderSchemaPipeReference", schema);
+        Assert.Contains("public static class CodingSchemaOverlayRenderer", renderer);
+        Assert.Contains("AddPipeReference", renderer);
+        Assert.Contains("AddLabel", renderer);
     }
 
     [Fact]

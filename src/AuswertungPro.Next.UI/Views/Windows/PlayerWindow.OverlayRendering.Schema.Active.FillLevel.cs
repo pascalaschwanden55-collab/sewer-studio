@@ -26,7 +26,15 @@ public partial class PlayerWindow
         var stroke = new SolidColorBrush(strokeColor);
         var fillBrush = new SolidColorBrush(Color.FromArgb(68, strokeColor.R, strokeColor.G, strokeColor.B));
 
-        RenderSchemaPipeReference(fill.PipeCenter, fill.PipeRadius, stroke, glowEffect, OverlayTags.Preview);
+        CodingSchemaOverlayRenderer.AddPipeReference(
+            CodingOverlayCanvas,
+            fill.PipeCenter,
+            fill.PipeRadius,
+            CodingOverlayCanvas.ActualWidth,
+            CodingOverlayCanvas.ActualHeight,
+            stroke,
+            glowEffect,
+            OverlayTags.Preview);
 
         var center = CodingNormToPixel(fill.PipeCenter);
         double rPx = fill.PipeRadius * Math.Min(CodingOverlayCanvas.ActualWidth, CodingOverlayCanvas.ActualHeight);
@@ -65,6 +73,12 @@ public partial class PlayerWindow
         CodingOverlayCanvas.Children.Add(levelLine);
 
         CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, new Point(center.X, levelY), 6, stroke, OverlayTags.Preview, glowEffect);
-        AddSchemaLabel(new Point(center.X, levelY), $"{overlay.FillPercent:F1}%", stroke, glowEffect);
+        CodingSchemaOverlayRenderer.AddLabel(
+            CodingOverlayCanvas,
+            new Point(center.X, levelY),
+            $"{overlay.FillPercent:F1}%",
+            stroke,
+            glowEffect,
+            OverlayTags.Measure);
     }
 }

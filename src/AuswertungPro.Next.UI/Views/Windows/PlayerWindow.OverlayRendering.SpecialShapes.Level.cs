@@ -26,7 +26,15 @@ public partial class PlayerWindow
             var right = CodingNormToPixel(overlay.Points[4]);
             var pipeRadius = _codingOverlayService?.Calibration?.NormalizedDiameter / 2.0 ?? 0.35;
 
-            RenderSchemaPipeReference(pipeCenter, pipeRadius, intrusionStroke, glowEffect, tag);
+            CodingSchemaOverlayRenderer.AddPipeReference(
+                CodingOverlayCanvas,
+                pipeCenter,
+                pipeRadius,
+                CodingOverlayCanvas.ActualWidth,
+                CodingOverlayCanvas.ActualHeight,
+                intrusionStroke,
+                glowEffect,
+                tag);
 
             var tongue = new System.Windows.Shapes.Polygon
             {
@@ -57,7 +65,13 @@ public partial class PlayerWindow
 
             CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, tip, 6, intrusionStroke, tag, glowEffect);
             if (overlay.FillPercent.HasValue)
-                AddSchemaLabel(tip, $"Einragung {overlay.FillPercent:F1}%", intrusionStroke, glowEffect);
+                CodingSchemaOverlayRenderer.AddLabel(
+                    CodingOverlayCanvas,
+                    tip,
+                    $"Einragung {overlay.FillPercent:F1}%",
+                    intrusionStroke,
+                    glowEffect,
+                    OverlayTags.Measure);
             return;
         }
 
@@ -91,7 +105,15 @@ public partial class PlayerWindow
 
         if (_codingOverlayService?.Calibration is { IsCalibrated: true } cal)
         {
-            RenderSchemaPipeReference(cal.PipeCenter, cal.NormalizedDiameter / 2.0, stroke, glowEffect, tag);
+            CodingSchemaOverlayRenderer.AddPipeReference(
+                CodingOverlayCanvas,
+                cal.PipeCenter,
+                cal.NormalizedDiameter / 2.0,
+                CodingOverlayCanvas.ActualWidth,
+                CodingOverlayCanvas.ActualHeight,
+                stroke,
+                glowEffect,
+                tag);
 
             var center = CodingNormToPixel(cal.PipeCenter);
             double rPxCal = (cal.NormalizedDiameter / 2.0) * Math.Min(CodingOverlayCanvas.ActualWidth, CodingOverlayCanvas.ActualHeight);
@@ -114,6 +136,12 @@ public partial class PlayerWindow
         }
 
         if (overlay.FillPercent.HasValue)
-            AddSchemaLabel(new Point((p1.X + p2.X) / 2, y), $"{overlay.FillPercent:F1}%", stroke, glowEffect);
+            CodingSchemaOverlayRenderer.AddLabel(
+                CodingOverlayCanvas,
+                new Point((p1.X + p2.X) / 2, y),
+                $"{overlay.FillPercent:F1}%",
+                stroke,
+                glowEffect,
+                OverlayTags.Measure);
     }
 }

@@ -16,7 +16,15 @@ public partial class PlayerWindow
         var stroke = new SolidColorBrush(Color.FromRgb(239, 68, 68));
         var fillBrush = new SolidColorBrush(Color.FromArgb(72, 239, 68, 68));
 
-        RenderSchemaPipeReference(intrusion.PipeCenter, intrusion.PipeRadius, stroke, glowEffect, OverlayTags.Preview);
+        CodingSchemaOverlayRenderer.AddPipeReference(
+            CodingOverlayCanvas,
+            intrusion.PipeCenter,
+            intrusion.PipeRadius,
+            CodingOverlayCanvas.ActualWidth,
+            CodingOverlayCanvas.ActualHeight,
+            stroke,
+            glowEffect,
+            OverlayTags.Preview);
 
         var tip = CodingNormToPixel(intrusion.GetIntrusionTip());
         var edge = CodingNormToPixel(intrusion.GetEdgePoint());
@@ -53,6 +61,12 @@ public partial class PlayerWindow
 
         CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, tip, 7, stroke, OverlayTags.Preview, glowEffect);
         CodingOverlayDotMarkerRenderer.Add(CodingOverlayCanvas, edge, 5, Brushes.White, OverlayTags.Preview, glowEffect);
-        AddSchemaLabel(tip, $"{overlay.FillPercent:F1}% @ {overlay.ClockFrom:F1}h", stroke, glowEffect);
+        CodingSchemaOverlayRenderer.AddLabel(
+            CodingOverlayCanvas,
+            tip,
+            $"{overlay.FillPercent:F1}% @ {overlay.ClockFrom:F1}h",
+            stroke,
+            glowEffect,
+            OverlayTags.Measure);
     }
 }
