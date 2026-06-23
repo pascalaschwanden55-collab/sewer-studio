@@ -44,10 +44,7 @@ public partial class PlayerWindow
             var project = ((ViewModels.ShellViewModel?)App.Current.MainWindow?.DataContext)?.Project;
             var pdf = _serviceProvider.ProtocolPdfExporter.BuildHaltungsprotokollPdf(
                 project!, _haltungRecord, doc, plan.ProjectRoot, plan.Options);
-            File.WriteAllBytes(dlg.FileName, pdf);
-
-            // PDF oeffnen
-            AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(dlg.FileName, out _);
+            CodingProtocolPdfFileServiceFactory.Create().SaveAndOpen(dlg.FileName, pdf);
 
             ShowOverlay("PDF-Protokoll erstellt", TimeSpan.FromSeconds(4));
         }
