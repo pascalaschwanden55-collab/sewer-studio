@@ -638,6 +638,33 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_ai_shared_helpers_live_in_helpers_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
+        var helpersPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Helpers.cs");
+
+        Assert.True(File.Exists(helpersPath), "Gemeinsame Coding-AI-Helper sollen aus dem Orchestrator-Partial heraus.");
+
+        var ai = File.ReadAllText(aiPath);
+        var helpers = File.ReadAllText(helpersPath);
+
+        Assert.Contains("private async Task RunCodingAnalysisAsync", ai);
+        Assert.DoesNotContain("private bool IsCodingAfterTerminalBoundary", ai);
+        Assert.DoesNotContain("private bool IsFindingTooFarAhead", ai);
+        Assert.DoesNotContain("private IReadOnlyList<SegmentedFinding> BuildCodingSegmentedFindings", ai);
+        Assert.DoesNotContain("private Task<byte[]?> CaptureSnapshotAsync", ai);
+        Assert.Contains("private bool IsCodingAfterTerminalBoundary", helpers);
+        Assert.Contains("private bool IsFindingTooFarAhead", helpers);
+        Assert.Contains("private IReadOnlyList<SegmentedFinding> BuildCodingSegmentedFindings", helpers);
+        Assert.Contains("private Task<byte[]?> CaptureSnapshotAsync", helpers);
+        Assert.Contains("CodingTerminalBoundaryCandidateBuilder.Enumerate", helpers);
+        Assert.Contains("SegmentedFindingBuilder.Build", helpers);
+    }
+
+    [Fact]
     public void PlayerWindow_multi_model_ai_events_live_in_multimodel_partial()
     {
         var root = FindRepositoryRoot();
@@ -2025,7 +2052,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Helpers.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingPipeProximityCalibrationPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Kalibrierableitung fuer SegmentedFinding-Proximity muss ausserhalb der PlayerWindow-Partials liegen.");
