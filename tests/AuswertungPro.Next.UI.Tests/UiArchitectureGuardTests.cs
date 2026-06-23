@@ -1097,6 +1097,29 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_mark_tool_wiring_lives_in_mark_tools_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
+        var markToolsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.MarkTools.cs");
+
+        Assert.True(File.Exists(markToolsPath), "Markierwerkzeug-Wiring soll aus dem grossen Marking-Partial heraus.");
+
+        var marking = File.ReadAllText(markingPath);
+        var markTools = File.ReadAllText(markToolsPath);
+
+        Assert.DoesNotContain("private void ActivateMarkTool", marking);
+        Assert.DoesNotContain("private void EnsureMarkOverlayReady", marking);
+        Assert.DoesNotContain("private void DeactivateMarkTool", marking);
+        Assert.Contains("private void ActivateMarkTool", markTools);
+        Assert.Contains("private void EnsureMarkOverlayReady", markTools);
+        Assert.Contains("private void DeactivateMarkTool", markTools);
+        Assert.Contains("CodingSessionServiceFactory.Create", markTools);
+    }
+
+    [Fact]
     public void PlayerWindow_stretch_damage_action_input_lives_in_builder()
     {
         var root = FindRepositoryRoot();
