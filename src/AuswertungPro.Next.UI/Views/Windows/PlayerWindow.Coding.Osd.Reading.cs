@@ -82,8 +82,7 @@ public partial class PlayerWindow
                 ? _player.Time / 1000.0
                 : (double?)null;
 
-            var pngBytes = await new CodingSnapshotCaptureService(path => TakeSnapshotSafe(path))
-                .CapturePngAsync();
+            var pngBytes = await CodingSnapshotCaptureFactory.CapturePngAsync(path => TakeSnapshotSafe(path));
             if (pngBytes == null || pngBytes.Length == 0)
                 return null;
 

@@ -49,5 +49,5 @@ public partial class PlayerWindow
     }
 
     private Task<byte[]?> CaptureSnapshotAsync(CancellationToken ct)
-        => new CodingSnapshotCaptureService(path => TakeSnapshotSafe(path)).CapturePngAsync(ct);
+        => CodingSnapshotCaptureFactory.CapturePngAsync(path => TakeSnapshotSafe(path), ct);
 }

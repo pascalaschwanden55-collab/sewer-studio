@@ -871,12 +871,17 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var osdPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.cs");
+        var helpersPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Helpers.cs");
         var readingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Reading.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "CodingSnapshotCaptureFactory.cs");
 
         Assert.True(File.Exists(readingPath), "OSD-OCR und Snapshot-Lesen sollen aus dem Meter-Resolver-Partial heraus.");
+        Assert.True(File.Exists(factoryPath), "Snapshot-Capture-Erzeugung soll ausserhalb von PlayerWindow liegen.");
 
         var osd = File.ReadAllText(osdPath);
+        var helpers = File.ReadAllText(helpersPath);
         var reading = File.ReadAllText(readingPath);
+        var factory = File.ReadAllText(factoryPath);
 
         Assert.Contains("private double ResolveCodingMeterForFrame", osd);
         Assert.Contains("private double? GetMeterFromVideoPosition", osd);
@@ -887,7 +892,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private async Task<double?> TryReadOsdMeterFromFrameBytesAsync", reading);
         Assert.Contains("private async Task<double?> CodingReadOsdMeterAsync", reading);
         Assert.Contains("GetCodingOsdMeterService().ReadMeterAsync", reading);
-        Assert.Contains("new CodingSnapshotCaptureService", reading);
+        Assert.Contains("CodingSnapshotCaptureFactory.CapturePngAsync", reading);
+        Assert.Contains("CodingSnapshotCaptureFactory.CapturePngAsync", helpers);
+        Assert.DoesNotContain("new CodingSnapshotCaptureService", reading);
+        Assert.DoesNotContain("new CodingSnapshotCaptureService", helpers);
+        Assert.Contains("new CodingSnapshotCaptureService", factory);
     }
 
     [Fact]
