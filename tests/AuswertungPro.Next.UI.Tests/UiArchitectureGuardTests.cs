@@ -2308,12 +2308,16 @@ public sealed class UiArchitectureGuardTests
         var confirmationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.cs");
         var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.Actions.cs");
         var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.Training.cs");
+        var correctionSelectionPath = Path.Combine(uiRoot, "Ai", "LiveDetectionCorrectionCodeSelectionService.cs");
+        var correctionSelectionFactoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionCorrectionCodeSelectionServiceFactory.cs");
         var frameExporterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingFrameExporter.cs");
         var exportPlannerPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingExportPlanner.cs");
         var annotationWriterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingAnnotationWriter.cs");
 
         Assert.True(File.Exists(actionsPath), "LiveDetection-Bestaetigungsaktionen sollen aus dem Anzeige-Partial heraus.");
         Assert.True(File.Exists(trainingPath), "LiveDetection-Trainingsuebernahme soll aus den simplen Bestaetigungsaktionen heraus.");
+        Assert.True(File.Exists(correctionSelectionPath), "LiveDetection-Korrektur-Codeauswahl soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(correctionSelectionFactoryPath), "LiveDetection-Korrektur-Codeauswahl soll ueber Factory verdrahtet werden.");
         Assert.True(File.Exists(frameExporterPath), "Detection-Training-Frame-Export soll ausserhalb der PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(exportPlannerPath), "Detection-Training-Exportplanung soll ausserhalb der PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(annotationWriterPath), "Detection-Training-Annotationen sollen ausserhalb der PlayerWindow-Partials geschrieben werden.");
@@ -2321,6 +2325,8 @@ public sealed class UiArchitectureGuardTests
         var confirmation = File.ReadAllText(confirmationPath);
         var actions = File.ReadAllText(actionsPath);
         var training = File.ReadAllText(trainingPath);
+        var correctionSelection = File.ReadAllText(correctionSelectionPath);
+        var correctionSelectionFactory = File.ReadAllText(correctionSelectionFactoryPath);
         var frameExporter = File.ReadAllText(frameExporterPath);
         var exportPlanner = File.ReadAllText(exportPlannerPath);
         var annotationWriter = File.ReadAllText(annotationWriterPath);
@@ -2336,7 +2342,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", actions);
         Assert.Contains("private async void DetectionAccept_Click", training);
         Assert.Contains("private async void DetectionCorrect_Click", training);
+        Assert.Contains("LiveDetectionCorrectionCodeSelectionServiceFactory.Create", training);
+        Assert.DoesNotContain("CodingExplorerEntryFactory.CreateSeed", training);
+        Assert.DoesNotContain("VsaCodeExplorerDialogServiceFactory.Create", training);
         Assert.Contains("LiveDetectionTrainingAnnotationWriter.CreateDefault", training);
+        Assert.Contains("CodingExplorerEntryFactory.CreateSeed", correctionSelection);
+        Assert.Contains("VsaCodeExplorerDialogServiceFactory.Create", correctionSelectionFactory);
         Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", training);
         Assert.DoesNotContain("LiveDetectionTrainingFrameExporter", training);
         Assert.DoesNotContain("LiveDetectionTrainingExportPlanner.BuildAccepted", training);

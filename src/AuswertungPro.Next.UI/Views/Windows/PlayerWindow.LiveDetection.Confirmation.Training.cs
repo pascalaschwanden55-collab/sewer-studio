@@ -1,7 +1,6 @@
 using System;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -59,21 +58,19 @@ public partial class PlayerWindow
 
             // VsaCodeExplorer oeffnen fuer Korrektur - Meter aus OSD/Video
             var autoMeter2 = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
-            var entry = CodingExplorerEntryFactory.CreateSeed();
-            var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter2, TimeSpan.FromSeconds(timestampSec));
-            var explorer = VsaCodeExplorerDialogServiceFactory.Create().Show(
-                explorerVm,
-                _videoPath,
-                TimeSpan.FromSeconds(timestampSec),
-                this);
+            var selectedEntry = LiveDetectionCorrectionCodeSelectionServiceFactory.Create(
+                    CreateVsaCodeExplorerViewModel)
+                .Select(
+                    autoMeter2,
+                    timestampSec,
+                    _videoPath,
+                    this);
 
-            if (!explorer.Accepted || explorer.SelectedEntry == null)
+            if (selectedEntry == null)
             {
                 ResumeDetection();
                 return;
             }
-
-            var selectedEntry = explorer.SelectedEntry;
 
             var frameBytes = _detectionPendingFrameBytes;
             if (frameBytes == null || frameBytes.Length == 0)
