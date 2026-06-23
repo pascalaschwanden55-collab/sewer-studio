@@ -241,17 +241,4 @@ public partial class PlayerWindow
             BtnCodingCreateEvent.IsEnabled = false;
         }
     }
-
-    private void CodingCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        // Mausrad: Winkel der PipeBend-Schablone aendern (5° pro Schritt)
-        if (_codingSchemaManager.Active is PipeBendSchema bend && _codingSchemaManager.IsActive)
-        {
-            double delta = e.Delta > 0 ? 5 : -5;
-            bend.AdjustAngle(delta);
-            UpdateCodingSchemaOverlay(enableCreateEvent: true);
-            e.Handled = true;
-        }
-    }
-
 }

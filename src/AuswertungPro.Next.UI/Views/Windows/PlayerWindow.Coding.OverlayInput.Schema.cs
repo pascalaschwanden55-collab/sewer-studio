@@ -1,6 +1,7 @@
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai;
+using System.Windows.Input;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -51,5 +52,17 @@ public partial class PlayerWindow
         UpdateCodingOverlayInfo(null);
         if (redraw)
             RedrawCodingCanvas(includeManualOverlay: false);
+    }
+
+    private void CodingCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        // Mausrad: Winkel der PipeBend-Schablone aendern (5 Grad pro Schritt)
+        if (_codingSchemaManager.Active is PipeBendSchema bend && _codingSchemaManager.IsActive)
+        {
+            double delta = e.Delta > 0 ? 5 : -5;
+            bend.AdjustAngle(delta);
+            UpdateCodingSchemaOverlay(enableCreateEvent: true);
+            e.Handled = true;
+        }
     }
 }

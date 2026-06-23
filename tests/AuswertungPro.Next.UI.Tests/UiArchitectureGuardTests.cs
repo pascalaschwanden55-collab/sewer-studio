@@ -2023,6 +2023,24 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_schema_mouse_wheel_lives_in_schema_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
+        var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var schema = File.ReadAllText(schemaPath);
+
+        Assert.DoesNotContain("private void CodingCanvas_MouseWheel", overlayInput);
+        Assert.Contains("private void CodingCanvas_MouseWheel", schema);
+        Assert.Contains("bend.AdjustAngle", schema);
+        Assert.Contains("UpdateCodingSchemaOverlay(enableCreateEvent: true)", schema);
+    }
+
+    [Fact]
     public void PlayerWindow_overlay_input_visibility_lives_in_visibility_partial()
     {
         var root = FindRepositoryRoot();
