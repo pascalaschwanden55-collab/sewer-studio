@@ -3,6 +3,7 @@ using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -28,7 +29,7 @@ public partial class PlayerWindow
                 _haltungRecord,
                 _serviceProvider.Settings.LastProjectPath,
                 AppContext.BaseDirectory,
-                DateTime.Now);
+                PlayerClock.Now());
 
             var dlg = new Microsoft.Win32.SaveFileDialog
             {
@@ -80,7 +81,7 @@ public partial class PlayerWindow
 
         var primaryText = CodingPrimaryDamageTextBuilder.Build(doc);
         _haltungRecord.SetFieldValue("Primaere_Schaeden", primaryText, FieldSource.Manual, userEdited: true);
-        _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
+        _haltungRecord.ModifiedAtUtc = PlayerClock.UtcNow();
     }
 
     // --- Coding: Protokoll-Vorschau (nachtraeglich bearbeitbar) ---

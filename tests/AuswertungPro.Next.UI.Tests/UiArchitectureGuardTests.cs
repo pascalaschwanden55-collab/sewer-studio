@@ -1202,6 +1202,32 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_timestamp_access_lives_in_player_clock()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var clockPath = Path.Combine(uiRoot, "Player", "PlayerClock.cs");
+
+        Assert.True(File.Exists(clockPath), "Zeit-Zugriffe aus PlayerWindow sollen in einer kleinen Clock-Hilfe liegen.");
+
+        var playerWindowText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs")
+                .OrderBy(Path.GetFileName)
+                .Select(File.ReadAllText));
+        var clock = File.ReadAllText(clockPath);
+
+        Assert.DoesNotContain("DateTime.Now", playerWindowText);
+        Assert.DoesNotContain("DateTime.UtcNow", playerWindowText);
+        Assert.DoesNotContain("DateTimeOffset.Now", playerWindowText);
+        Assert.Contains("PlayerClock.Now", playerWindowText);
+        Assert.Contains("PlayerClock.UtcNow", playerWindowText);
+        Assert.Contains("PlayerClock.NowOffset", playerWindowText);
+        Assert.Contains("TimeProvider.System", clock);
+    }
+
+    [Fact]
     public void PlayerWindow_playback_snapshot_lives_in_snapshot_partial()
     {
         var root = FindRepositoryRoot();

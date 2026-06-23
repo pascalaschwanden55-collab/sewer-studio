@@ -5,6 +5,7 @@ using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -52,7 +53,7 @@ public partial class PlayerWindow
     {
         try
         {
-            var target = CodingSnapshotTargetPolicy.Build(entry, _videoPath, DateTimeOffset.Now);
+            var target = CodingSnapshotTargetPolicy.Build(entry, _videoPath, PlayerClock.NowOffset());
             Directory.CreateDirectory(target.PhotoDirectory);
 
             TakeSnapshotSafe(target.FilePath);

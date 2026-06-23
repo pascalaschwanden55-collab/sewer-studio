@@ -5,6 +5,7 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -60,7 +61,7 @@ public partial class PlayerWindow
                 framePath,
                 ResolveTrainingInspectionDate(),
                 System.Environment.UserName,
-                System.DateTime.UtcNow,
+                PlayerClock.UtcNow(),
                 evidenceFrame.Path,
                 snapshotError);
             // Eval-Schutz (ESW-003): Frames/Haltungen aus dem eingefrorenen Eval-Set
@@ -96,7 +97,7 @@ public partial class PlayerWindow
                     CodingTrainingSampleFactory.PrimaryFramePath(ev),
                     inspectionDate,
                     System.Environment.UserName,
-                    System.DateTime.UtcNow));
+                    PlayerClock.UtcNow()));
             }
             // Eval-Schutz (ESW-003): reservierte Eval-Haltungen/-Frames aussortieren.
             samples = samples.Where(s => !IsCodingSampleEvalProtected(s)).ToList();

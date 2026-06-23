@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
 
@@ -113,7 +114,7 @@ public partial class PlayerWindow
         }
 
         if (_haltungRecord is not null)
-            _haltungRecord.ModifiedAtUtc = DateTime.UtcNow;
+            _haltungRecord.ModifiedAtUtc = PlayerClock.UtcNow();
     }
 
     private void SaveProjectAfterCoding()
