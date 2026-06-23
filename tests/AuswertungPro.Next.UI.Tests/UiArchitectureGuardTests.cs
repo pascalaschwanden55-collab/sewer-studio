@@ -83,6 +83,7 @@ public sealed class UiArchitectureGuardTests
             Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
         var windowRoot = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"));
         var wiring = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs"));
+        var quickScanPartial = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.QuickScan.cs"));
         var controller = File.ReadAllText(controllerPath);
 
         Assert.DoesNotContain("_heatmapRects", windowText);
@@ -93,7 +94,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("new QuickScanController", windowRoot);
         Assert.Contains("_quickScanController.Reposition()", wiring);
         Assert.Contains("_quickScanController.Cancel()", wiring);
-        Assert.Contains("_quickScanController.ToggleAsync()", windowText);
+        Assert.Contains("_quickScanController.ToggleAsync()", quickScanPartial);
+        Assert.DoesNotContain("private async void QuickScan_Click", quickScanPartial);
+        Assert.Contains(".SafeFireAndForget(\"QuickScan\")", quickScanPartial);
         Assert.Contains("private readonly List<(QuickScanSegment Seg", controller);
         Assert.Contains("QuickScanHeatmapLayoutPolicy", controller);
     }
@@ -924,7 +927,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private async void LiveDetection_Click", liveDetection);
         Assert.DoesNotContain("private async Task StartLiveDetectionAsync", liveDetection);
         Assert.DoesNotContain("private void StopLiveDetection", liveDetection);
-        Assert.Contains("private async void LiveDetection_Click", lifecycle);
+        Assert.DoesNotContain("private async void LiveDetection_Click", lifecycle);
+        Assert.Contains("private void LiveDetection_Click", lifecycle);
+        Assert.Contains(".SafeFireAndForget(\"LiveDetectionClick\")", lifecycle);
+        Assert.Contains("private async Task HandleLiveDetectionClickAsync", lifecycle);
         Assert.Contains("private async Task StartLiveDetectionAsync", lifecycle);
         Assert.DoesNotContain("private void StopLiveDetection", lifecycle);
         Assert.Contains("PlayerAiSettingsLoader.LoadRuntimeSettings", lifecycle);

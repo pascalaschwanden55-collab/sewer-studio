@@ -11,7 +11,10 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private async void LiveDetection_Click(object sender, RoutedEventArgs e)
+    private void LiveDetection_Click(object sender, RoutedEventArgs e)
+        => HandleLiveDetectionClickAsync().SafeFireAndForget("LiveDetectionClick");
+
+    private async Task HandleLiveDetectionClickAsync()
     {
         if (_isDetecting)
         {
