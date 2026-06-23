@@ -3496,12 +3496,14 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiOverlayLifecycle.cs");
         var aiEventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs");
+        var exitPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
         var cleanerPath = Path.Combine(uiRoot, "Player", "DetectionOverlayCleaner.cs");
 
         Assert.True(File.Exists(cleanerPath), "Detection-Overlay-Cleanup muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var lifecycle = File.ReadAllText(lifecyclePath);
         var aiEvents = File.ReadAllText(aiEventsPath);
+        var exit = File.ReadAllText(exitPath);
         var cleaner = File.Exists(cleanerPath) ? File.ReadAllText(cleanerPath) : "";
 
         Assert.Contains("DetectionOverlayCleaner.ClearAll", lifecycle);
@@ -3510,9 +3512,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("DetectionOverlayCleaner.ClearFindingsAndCanvas", aiEvents);
         Assert.Contains("DetectionOverlayCleaner.ClearVisuals", aiEvents);
         Assert.DoesNotContain("DetectionCanvas.Children.Clear()", aiEvents);
+        Assert.Contains("DetectionOverlayCleaner.ClearCanvas", exit);
+        Assert.DoesNotContain("DetectionCanvas.Children.Clear()", exit);
         Assert.Contains("public static void ClearAll", cleaner);
         Assert.Contains("public static void ClearVisuals", cleaner);
         Assert.Contains("public static void ClearFindingsAndCanvas", cleaner);
+        Assert.Contains("public static void ClearCanvas", cleaner);
     }
 
     [Fact]

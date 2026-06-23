@@ -121,4 +121,42 @@ public sealed class DetectionOverlayCleanerTests
         Assert.Equal(Visibility.Visible, overlayVisibility);
         Assert.Null(itemsSource);
     }
+
+    [Theory]
+    [InlineData(true, Visibility.Collapsed)]
+    [InlineData(false, Visibility.Visible)]
+    public void ClearCanvas_clears_canvas_and_hides_overlay_only_when_requested(
+        bool hideOverlay,
+        Visibility expectedVisibility)
+    {
+        Exception? threadError = null;
+        int childCount = -1;
+        Visibility overlayVisibility = Visibility.Visible;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var canvas = new Canvas();
+                canvas.Children.Add(new Border());
+                var overlay = new Grid { Visibility = Visibility.Visible };
+
+                DetectionOverlayCleaner.ClearCanvas(canvas, overlay, hideOverlay);
+
+                childCount = canvas.Children.Count;
+                overlayVisibility = overlay.Visibility;
+            }
+            catch (Exception ex)
+            {
+                threadError = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(threadError);
+        Assert.Equal(0, childCount);
+        Assert.Equal(expectedVisibility, overlayVisibility);
+    }
 }

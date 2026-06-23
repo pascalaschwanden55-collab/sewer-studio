@@ -24,12 +24,21 @@ public static class DetectionOverlayCleaner
         findingsList.ItemsSource = null;
     }
 
-    public static void ClearVisuals(Canvas canvas, FrameworkElement overlay)
+    public static void ClearCanvas(Canvas canvas, FrameworkElement overlay, bool hideOverlay)
     {
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(overlay);
 
         canvas.Children.Clear();
-        overlay.Visibility = Visibility.Collapsed;
+        if (hideOverlay)
+            overlay.Visibility = Visibility.Collapsed;
+    }
+
+    public static void ClearVisuals(Canvas canvas, FrameworkElement overlay)
+    {
+        ArgumentNullException.ThrowIfNull(canvas);
+        ArgumentNullException.ThrowIfNull(overlay);
+
+        ClearCanvas(canvas, overlay, hideOverlay: true);
     }
 }

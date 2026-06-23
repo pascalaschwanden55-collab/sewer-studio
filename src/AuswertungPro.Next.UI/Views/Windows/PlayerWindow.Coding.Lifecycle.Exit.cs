@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -52,9 +53,7 @@ public partial class PlayerWindow
         _detectionPendingFindings = null;
         _detectionPendingFrameBytes = null;
         _detectionPendingTimestampSec = null;
-        DetectionCanvas.Children.Clear();
-        if (!_isDetecting)
-            DetectionOverlayGrid.Visibility = Visibility.Collapsed;
+        DetectionOverlayCleaner.ClearCanvas(DetectionCanvas, DetectionOverlayGrid, hideOverlay: !_isDetecting);
 
         if (CodingOverlayCanvas.IsMouseCaptured)
             CodingOverlayCanvas.ReleaseMouseCapture();
