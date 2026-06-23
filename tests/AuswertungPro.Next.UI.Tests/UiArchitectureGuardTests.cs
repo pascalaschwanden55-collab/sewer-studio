@@ -2939,17 +2939,22 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var specialShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.cs");
         var levelPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.Level.cs");
+        var dispatcherPath = Path.Combine(uiRoot, "Player", "CodingOverlayGeometryRenderer.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingLevelOverlayRenderer.cs");
 
         Assert.False(File.Exists(specialShapesPath), "Das allgemeine SpecialShapes-Partial soll entfernt bleiben.");
         Assert.False(File.Exists(levelPath), "Level-Overlay-Wrapper soll nicht mehr als PlayerWindow-Partial leben.");
+        Assert.True(File.Exists(dispatcherPath), "Overlay-Dispatcher soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(rendererPath), "Level-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayRendering = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs"));
+        var dispatcher = File.ReadAllText(dispatcherPath);
         var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("RenderLevelOverlay", overlayRendering);
-        Assert.Contains("CodingLevelOverlayRenderer.Render", overlayRendering);
+        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.DoesNotContain("CodingLevelOverlayRenderer.Render", overlayRendering);
+        Assert.Contains("CodingLevelOverlayRenderer.Render", dispatcher);
         Assert.Contains("public static class CodingLevelOverlayRenderer", renderer);
         Assert.Contains("LevelMode.Obstacle", renderer);
         Assert.Contains("CodingSchemaOverlayRenderer.AddPipeReference", renderer);
@@ -3015,19 +3020,24 @@ public sealed class UiArchitectureGuardTests
         var overlayRenderingPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs");
         var aiRenderingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.cs");
         var specialShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.cs");
+        var dispatcherPath = Path.Combine(uiRoot, "Player", "CodingOverlayGeometryRenderer.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingArcOverlayRenderer.cs");
         var aiRendererPath = Path.Combine(uiRoot, "Player", "CodingAiOverlayRenderer.cs");
 
         Assert.False(File.Exists(specialShapesPath), "Das allgemeine SpecialShapes-Partial soll nach der Arc-Extraktion entfernt bleiben.");
+        Assert.True(File.Exists(dispatcherPath), "Overlay-Dispatcher soll Arc-Rendering ausserhalb von PlayerWindow erreichen.");
         Assert.True(File.Exists(rendererPath), "Arc-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(aiRendererPath), "AI-Overlay-Orchestrierung soll Arc-Rendering ebenfalls ausserhalb von PlayerWindow erreichen.");
 
         var overlayRendering = File.ReadAllText(overlayRenderingPath);
         var aiRendering = File.ReadAllText(aiRenderingPath);
+        var dispatcher = File.ReadAllText(dispatcherPath);
         var renderer = File.ReadAllText(rendererPath);
         var aiRenderer = File.ReadAllText(aiRendererPath);
 
-        Assert.Contains("CodingArcOverlayRenderer.Render", overlayRendering);
+        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.DoesNotContain("CodingArcOverlayRenderer.Render", overlayRendering);
+        Assert.Contains("CodingArcOverlayRenderer.Render", dispatcher);
         Assert.Contains("CodingAiOverlayRenderer.Render", aiRendering);
         Assert.Contains("CodingArcOverlayRenderer.Render", aiRenderer);
         Assert.DoesNotContain("CreateArcPath", overlayRendering);
@@ -3045,17 +3055,22 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var specialShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.cs");
         var rulerPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.Ruler.cs");
+        var dispatcherPath = Path.Combine(uiRoot, "Player", "CodingOverlayGeometryRenderer.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingRulerOverlayRenderer.cs");
 
         Assert.False(File.Exists(specialShapesPath), "Das allgemeine SpecialShapes-Partial soll entfernt bleiben.");
         Assert.False(File.Exists(rulerPath), "Ruler-Overlay-Wrapper soll nicht mehr als PlayerWindow-Partial leben.");
+        Assert.True(File.Exists(dispatcherPath), "Overlay-Dispatcher soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(rendererPath), "Ruler-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayRendering = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs"));
+        var dispatcher = File.ReadAllText(dispatcherPath);
         var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("RenderRulerOverlay", overlayRendering);
-        Assert.Contains("CodingRulerOverlayRenderer.Render", overlayRendering);
+        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.DoesNotContain("CodingRulerOverlayRenderer.Render", overlayRendering);
+        Assert.Contains("CodingRulerOverlayRenderer.Render", dispatcher);
         Assert.Contains("public static class CodingRulerOverlayRenderer", renderer);
         Assert.Contains("new System.Windows.Shapes.Line", renderer);
         Assert.Contains("new TextBlock", renderer);
@@ -3072,21 +3087,26 @@ public sealed class UiArchitectureGuardTests
         var specialShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.cs");
         var pipeBendPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.PipeBend.cs");
         var helperPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Helpers.cs");
+        var dispatcherPath = Path.Combine(uiRoot, "Player", "CodingOverlayGeometryRenderer.cs");
         var dotRendererPath = Path.Combine(uiRoot, "Player", "CodingOverlayDotMarkerRenderer.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingPipeBendOverlayRenderer.cs");
 
         Assert.False(File.Exists(specialShapesPath), "Das allgemeine SpecialShapes-Partial soll entfernt bleiben.");
         Assert.False(File.Exists(pipeBendPath), "Pipe-Bend-Overlay-Wrapper soll nicht mehr als PlayerWindow-Partial leben.");
         Assert.False(File.Exists(helperPath), "Dot-Marker-Rendering soll nicht mehr als PlayerWindow-Partial leben.");
+        Assert.True(File.Exists(dispatcherPath), "Overlay-Dispatcher soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dotRendererPath), "Dot-Marker-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(rendererPath), "Pipe-Bend-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayRendering = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs"));
+        var dispatcher = File.ReadAllText(dispatcherPath);
         var dotRenderer = File.ReadAllText(dotRendererPath);
         var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("RenderPipeBendOverlay", overlayRendering);
-        Assert.Contains("CodingPipeBendOverlayRenderer.Render", overlayRendering);
+        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.DoesNotContain("CodingPipeBendOverlayRenderer.Render", overlayRendering);
+        Assert.Contains("CodingPipeBendOverlayRenderer.Render", dispatcher);
         Assert.Contains("public static class CodingOverlayDotMarkerRenderer", dotRenderer);
         Assert.Contains("new System.Windows.Shapes.Ellipse", dotRenderer);
         Assert.Contains("public static class CodingPipeBendOverlayRenderer", renderer);
@@ -3103,17 +3123,22 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var specialShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.cs");
         var lateralCirclePath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.SpecialShapes.LateralCircle.cs");
+        var dispatcherPath = Path.Combine(uiRoot, "Player", "CodingOverlayGeometryRenderer.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingLateralCircleOverlayRenderer.cs");
 
         Assert.False(File.Exists(specialShapesPath), "Das allgemeine SpecialShapes-Partial soll entfernt bleiben.");
         Assert.False(File.Exists(lateralCirclePath), "Lateral-Circle-Overlay-Wrapper soll nicht mehr als PlayerWindow-Partial leben.");
+        Assert.True(File.Exists(dispatcherPath), "Overlay-Dispatcher soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(rendererPath), "Lateral-Circle-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayRendering = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs"));
+        var dispatcher = File.ReadAllText(dispatcherPath);
         var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("RenderLateralCircleOverlay", overlayRendering);
-        Assert.Contains("CodingLateralCircleOverlayRenderer.Render", overlayRendering);
+        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.DoesNotContain("CodingLateralCircleOverlayRenderer.Render", overlayRendering);
+        Assert.Contains("CodingLateralCircleOverlayRenderer.Render", dispatcher);
         Assert.Contains("public static class CodingLateralCircleOverlayRenderer", renderer);
         Assert.Contains("overlay.DnRatioPercent", renderer);
         Assert.Contains("DN {overlay.Q1Mm.Value:F0}", renderer);
@@ -3147,14 +3172,19 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayRenderingPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs");
+        var dispatcherPath = Path.Combine(uiRoot, "Player", "CodingOverlayGeometryRenderer.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingOverlayMeasurementLabelRenderer.cs");
 
+        Assert.True(File.Exists(dispatcherPath), "Overlay-Dispatcher soll Messlabel ausserhalb von PlayerWindow erreichen.");
         Assert.True(File.Exists(rendererPath), "Overlay-Messlabel soll ausserhalb der PlayerWindow-Partials gerendert werden.");
 
         var overlayRendering = File.ReadAllText(overlayRenderingPath);
+        var dispatcher = File.ReadAllText(dispatcherPath);
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.Contains("CodingOverlayMeasurementLabelRenderer.Add", overlayRendering);
+        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.DoesNotContain("CodingOverlayMeasurementLabelRenderer.Add", overlayRendering);
+        Assert.Contains("CodingOverlayMeasurementLabelRenderer.Add", dispatcher);
         Assert.DoesNotContain("new TextBlock", overlayRendering);
         Assert.DoesNotContain("FontWeights.SemiBold", overlayRendering);
         Assert.Contains("public static class CodingOverlayMeasurementLabelRenderer", renderer);
@@ -3170,12 +3200,15 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayRenderingPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs");
         var basicShapesPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.BasicShapes.cs");
+        var dispatcherPath = Path.Combine(uiRoot, "Player", "CodingOverlayGeometryRenderer.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingBasicOverlayRenderer.cs");
 
         Assert.False(File.Exists(basicShapesPath), "Basisformen-Wrapper sollen nicht mehr als PlayerWindow-Partial leben.");
+        Assert.True(File.Exists(dispatcherPath), "Overlay-Dispatcher soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(rendererPath), "Basisformen-Rendering soll ausserhalb der PlayerWindow-Partials gerendert werden.");
 
         var overlayRendering = File.ReadAllText(overlayRenderingPath);
+        var dispatcher = File.ReadAllText(dispatcherPath);
         var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("var rect = new Rectangle", overlayRendering);
@@ -3186,7 +3219,13 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("RenderPointOverlay", overlayRendering);
         Assert.DoesNotContain("RenderEllipseOverlay", overlayRendering);
         Assert.DoesNotContain("RenderFreehandOverlay", overlayRendering);
-        Assert.Contains("CodingBasicOverlayRenderer.Render", overlayRendering);
+        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.DoesNotContain("switch (overlay.ToolType)", overlayRendering);
+        Assert.DoesNotContain("new SolidColorBrush", overlayRendering);
+        Assert.DoesNotContain("CodingBasicOverlayRenderer.Render", overlayRendering);
+        Assert.Contains("public static class CodingOverlayGeometryRenderer", dispatcher);
+        Assert.Contains("switch (overlay.ToolType)", dispatcher);
+        Assert.Contains("CodingBasicOverlayRenderer.Render", dispatcher);
         Assert.Contains("public static class CodingBasicOverlayRenderer", renderer);
         Assert.Contains("new Rectangle", renderer);
         Assert.Contains("new System.Windows.Shapes.Line", renderer);
