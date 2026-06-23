@@ -1230,15 +1230,18 @@ public sealed class UiArchitectureGuardTests
         var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Live.cs");
         var appenderPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingSessionAppender.cs");
         var confirmationTrackerPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingConfirmationTracker.cs");
+        var addDecisionPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingAddDecisionPolicy.cs");
 
         Assert.True(File.Exists(livePath), "Live/Qwen-Event-Erzeugung soll aus dem allgemeinen AiEvents-Partial heraus.");
         Assert.True(File.Exists(appenderPath), "Live/Qwen-Event-Anwendung auf die Session soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(confirmationTrackerPath), "Live/Qwen-Bestaetigungsauswahl soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(addDecisionPath), "Live/Qwen-Add-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var aiEvents = File.ReadAllText(aiEventsPath);
         var live = File.ReadAllText(livePath);
         var appender = File.ReadAllText(appenderPath);
         var confirmationTracker = File.ReadAllText(confirmationTrackerPath);
+        var addDecision = File.ReadAllText(addDecisionPath);
 
         Assert.DoesNotContain("private void AddAiFindingsAsEvents", aiEvents);
         Assert.Contains("private void AddAiFindingsAsEvents", live);
@@ -1246,15 +1249,23 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingLiveFindingQualityGatePolicy.Evaluate", live);
         Assert.Contains("CodingLiveFindingSessionAppender.Append", live);
         Assert.Contains("CodingLiveFindingConfirmationTracker", live);
+        Assert.Contains("CodingLiveFindingAddDecisionPolicy.Decide", live);
         Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", live);
         Assert.DoesNotContain("codingEvent.AiContext = draft.AiContext", live);
         Assert.DoesNotContain("CodingLiveFindingAcceptancePolicy.NeedsConfirmation", live);
+        Assert.DoesNotContain("CodingLiveFindingAcceptancePolicy.ShouldSkipAsTooFarAhead", live);
+        Assert.DoesNotContain("CodingOneTimeCodeDuplicatePolicy.AlreadyExists", live);
+        Assert.DoesNotContain("CodingFindingCoveragePolicy.FindCoveringEvent", live);
         Assert.Contains("public static class CodingLiveFindingSessionAppender", appender);
         Assert.Contains("attachAnalyzedFramePhoto(draft.Entry)", appender);
         Assert.Contains("addEvent(draft.Entry)", appender);
         Assert.Contains("codingEvent.AiContext = draft.AiContext", appender);
         Assert.Contains("public sealed class CodingLiveFindingConfirmationTracker", confirmationTracker);
         Assert.Contains("CodingLiveFindingAcceptancePolicy.NeedsConfirmation", confirmationTracker);
+        Assert.Contains("public static CodingLiveFindingAddDecision Decide", addDecision);
+        Assert.Contains("CodingLiveFindingAcceptancePolicy.ShouldSkipAsTooFarAhead", addDecision);
+        Assert.Contains("CodingOneTimeCodeDuplicatePolicy.AlreadyExists", addDecision);
+        Assert.Contains("CodingFindingCoveragePolicy.FindCoveringEvent", addDecision);
     }
 
     [Fact]

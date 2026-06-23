@@ -39,47 +39,31 @@ public partial class PlayerWindow
             // Kein zweiter Inferenzpfad hier - nur uebernehmen.
             string code = finding.VsaCodeHint!;
 
-            // Naehe-Gate (Fachregel User 2026-06-16): Ereignis noch ganz im DN-Kreis
-            // (zu weit voraus) -> nur intern erkannt, NICHT codieren. Erst wenn es ueber
-            // den DN-Kreis nach aussen reicht, stimmt die Distanz.
-            // Ausnahme: Steuercodes BCD/BCE (Rohranfang/-ende) sind Pflicht und duerfen
-            // nicht weggemerkt werden.
-            if (CodingLiveFindingAcceptancePolicy.ShouldSkipAsTooFarAhead(code, IsFindingTooFarAhead(finding)))
+            var addDecision = CodingLiveFindingAddDecisionPolicy.Decide(
+                    code,
+                    finding,
+                    meter,
+                    IsFindingTooFarAhead(finding),
+                    codingSessionService.ActiveSession?.Events,
+                    codingVm.Events);
+
+            if (addDecision.TraceMessage != null)
+                PlayerTrace.WriteLine(addDecision.TraceMessage);
+
+            if (addDecision.Kind is CodingLiveFindingAddDecisionKind.SkipTooFarAhead
+                or CodingLiveFindingAddDecisionKind.SkipOneTimeDuplicate)
             {
-                PlayerTrace.WriteLine(
-                    $"[Qwen] {code} bei {meter:F2}m nur voraus erkannt (im DN-Kreis) - nicht protokolliert");
                 continue;
             }
 
-            // BCD/BCE existieren pro Haltung nur EINMAL - Meterstand-unabhaengige Dedup.
-            // Primaer gegen session.Events pruefen (wird nie gecleared, im Gegensatz zu _codingVm.Events).
-            if (CodingOneTimeCodeDuplicatePolicy.AlreadyExists(
-                    code,
-                    codingSessionService.ActiveSession?.Events,
-                    codingVm.Events))
+            if (addDecision.Kind == CodingLiveFindingAddDecisionKind.CoveredExisting)
             {
-                PlayerTrace.WriteLine($"[BCD-Dedup] AddFindings: {code} uebersprungen (bereits vorhanden)");
+                CodingFindingCoveragePolicy.MarkCoveredAgain(addDecision.CoveringEvent!, meter);
                 continue;
             }
 
             // Klartext aufloesen (voller Code -> Hauptcode -> Gruppe)
             var officialLabel = LookupVsaLabel(code);
-
-            // Duplikat-Check: gleicher Code (oder gleicher Hauptcode) bereits vorhanden?
-            // Hauptcode-Match: BCAEB vs BCA = gleiche Schadensgruppe -> Duplikat.
-            // 1. Punktschaden: code + meter +/-0.3m + gleiche Position
-            // 2. Streckenschaden: code faellt in den MeterStart..MeterEnd Bereich
-            // 3. Bereits akzeptierter/bearbeiteter Code: nicht nochmal melden
-            var coveringEvent = CodingFindingCoveragePolicy.FindCoveringEvent(
-                codingVm.Events,
-                code,
-                meter,
-                finding);
-            if (coveringEvent != null)
-            {
-                CodingFindingCoveragePolicy.MarkCoveredAgain(coveringEvent, meter);
-                continue;
-            }
 
             var gateResult = CodingLiveFindingQualityGatePolicy.Evaluate(_codingQualityGate, finding);
 
