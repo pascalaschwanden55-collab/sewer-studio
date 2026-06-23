@@ -1264,6 +1264,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_protocol_match_highlighting_lives_in_highlighting_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var protocolMatchPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.cs");
+        var highlightingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Highlighting.cs");
+
+        Assert.True(File.Exists(highlightingPath), "ProtocolMatch-Listenhighlighting soll aus dem Match-Partial heraus.");
+
+        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var highlighting = File.ReadAllText(highlightingPath);
+
+        Assert.DoesNotContain("private void ApplyCodingProtocolMatchListHighlights()", protocolMatch);
+        Assert.DoesNotContain("private void ApplyCodingProtocolMatchListHighlights(ListBox listBox)", protocolMatch);
+        Assert.Contains("private void ApplyCodingProtocolMatchListHighlights()", highlighting);
+        Assert.Contains("private void ApplyCodingProtocolMatchListHighlights(ListBox listBox)", highlighting);
+        Assert.Contains("CodingProtocolMatchDisplayPolicy.BackgroundColor", highlighting);
+        Assert.Contains("CodingProtocolMatchDisplayPolicy.BadgeText", highlighting);
+    }
+
+    [Fact]
     public void PlayerWindow_osd_badge_meter_text_uses_display_policy()
     {
         var root = FindRepositoryRoot();
