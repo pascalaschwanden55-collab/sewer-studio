@@ -446,6 +446,34 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_shell_project_access_uses_service()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
+        var applyPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Apply.cs");
+        var servicePath = Path.Combine(uiRoot, "Player", "PlayerShellProjectService.cs");
+        var factoryPath = Path.Combine(uiRoot, "Player", "PlayerShellProjectServiceFactory.cs");
+        var shellPath = Path.Combine(uiRoot, "ViewModels", "ShellViewModel.cs");
+
+        Assert.True(File.Exists(servicePath), "Shell-Projektzugriff soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(factoryPath), "PlayerWindow soll Shell-Projektzugriff ueber eine Factory beziehen.");
+
+        var protocol = File.ReadAllText(protocolPath);
+        var apply = File.ReadAllText(applyPath);
+        var service = File.ReadAllText(servicePath);
+        var factory = File.ReadAllText(factoryPath);
+        var shell = File.ReadAllText(shellPath);
+
+        Assert.Contains("PlayerShellProjectServiceFactory.Create", protocol);
+        Assert.Contains("PlayerShellProjectServiceFactory.Create", apply);
+        Assert.DoesNotContain("App.Current", protocol + apply);
+        Assert.Contains("IPlayerShellProjectContext", service);
+        Assert.Contains("IPlayerShellProjectContext", shell);
+        Assert.Contains("App.Current", factory);
+    }
+
+    [Fact]
     public void PlayerWindow_inline_evidence_preview_uses_service()
     {
         var root = FindRepositoryRoot();

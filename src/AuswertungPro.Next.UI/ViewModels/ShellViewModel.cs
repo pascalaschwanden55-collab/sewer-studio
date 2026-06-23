@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows.Data;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.ViewModels;
 
@@ -18,7 +19,7 @@ public static class ShellNavigationPolicy
         => title is "Uebersicht" or "Projekt" or "Export" or "Einstellungen";
 }
 
-public sealed partial class ShellViewModel : ObservableObject, IDisposable
+public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPlayerShellProjectContext
 {
     private readonly ServiceProvider _sp;
     private bool _disposed;

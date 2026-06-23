@@ -107,11 +107,8 @@ public partial class PlayerWindow
 
     private void MarkProjectDirtyForCoding()
     {
-        if (App.Current?.MainWindow?.DataContext is ViewModels.ShellViewModel shell)
-        {
-            shell.MarkProjectDirty(_haltungRecord);
+        if (PlayerShellProjectServiceFactory.Create().MarkProjectDirty(_haltungRecord))
             return;
-        }
 
         if (_haltungRecord is not null)
             _haltungRecord.ModifiedAtUtc = PlayerClock.UtcNow();
@@ -121,7 +118,6 @@ public partial class PlayerWindow
     {
         // Nur speichern, wenn das Projekt bereits einen Pfad hat. Sonst wuerde TrySaveProject
         // mitten im Codieren oder beim Fensterschliessen einen Speichern-unter-Dialog oeffnen.
-        if (App.Current?.MainWindow?.DataContext is ViewModels.ShellViewModel shell && shell.IsProjectReady)
-            shell.TrySaveProject();
+        PlayerShellProjectServiceFactory.Create().TrySaveProjectIfReady();
     }
 }

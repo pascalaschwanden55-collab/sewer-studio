@@ -33,7 +33,7 @@ public partial class PlayerWindow
             var outputPath = CodingProtocolPdfSavePathDialogFactory.Create().Show(plan.DefaultFileName);
             if (outputPath == null) return;
 
-            var project = ((ViewModels.ShellViewModel?)App.Current.MainWindow?.DataContext)?.Project;
+            var project = PlayerShellProjectServiceFactory.Create().GetCurrentProject();
             var pdf = _serviceProvider.ProtocolPdfExporter.BuildHaltungsprotokollPdf(
                 project!, _haltungRecord, doc, plan.ProjectRoot, plan.Options);
             CodingProtocolPdfFileServiceFactory.Create().SaveAndOpen(outputPath, pdf);
@@ -87,7 +87,7 @@ public partial class PlayerWindow
 
         if (!showProtocol) return;
 
-        var project = ((ViewModels.ShellViewModel?)App.Current.MainWindow?.DataContext)?.Project;
+        var project = PlayerShellProjectServiceFactory.Create().GetCurrentProject();
         if (project == null) return;
 
         var projectFolder = CodingProjectFolderResolver.ResolveNullable(_serviceProvider.Settings.LastProjectPath);
