@@ -923,7 +923,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
+        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceTransfer.cs");
 
         Assert.True(File.Exists(policyPath), "Import-Referenz-Transfer muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -1805,7 +1805,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
+        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingDnCalibrationPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "DN-/Kalibrierungsinitialisierung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -2290,15 +2290,24 @@ public sealed class UiArchitectureGuardTests
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.cs");
         var exitPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Exit.cs");
         var importPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Import.cs");
+        var sessionPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Session.cs");
+        var importReferencePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
+        var uiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Ui.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(exitPath), "Codiermodus-Exit soll aus dem allgemeinen Lifecycle-Partial heraus.");
         Assert.True(File.Exists(importPath), "Import-Referenz-Laden soll aus dem allgemeinen Lifecycle-Partial heraus.");
+        Assert.True(File.Exists(sessionPath), "Codiermodus-Session-Aufbau soll aus dem Enter-Partial heraus.");
+        Assert.True(File.Exists(importReferencePath), "Codiermodus-Importreferenz-Aufbau soll aus dem Enter-Partial heraus.");
+        Assert.True(File.Exists(uiPath), "Codiermodus-UI-Aktivierung soll aus dem Enter-Partial heraus.");
 
         var coding = File.ReadAllText(codingPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var exit = File.ReadAllText(exitPath);
         var import = File.ReadAllText(importPath);
+        var session = File.ReadAllText(sessionPath);
+        var importReference = File.ReadAllText(importReferencePath);
+        var ui = File.ReadAllText(uiPath);
 
         Assert.DoesNotContain("private void EnterCodingMode", coding);
         Assert.DoesNotContain("private void ExitCodingMode", coding);
@@ -2310,6 +2319,17 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void LoadExistingProtocolEventsAsImport", import);
         Assert.Contains("private void ExitCodingMode", exit);
         Assert.Contains("private void CodingModeExit_Click", exit);
+        Assert.Contains("private void CreateCodingSessionState", session);
+        Assert.Contains("private bool TryStartCodingSession", session);
+        Assert.Contains("private void InitializeCodingImportReferences", importReference);
+        Assert.Contains("private void ActivateDefaultCodingTool", ui);
+        Assert.Contains("private void ShowCodingModeUi", ui);
+        Assert.Contains("CreateCodingSessionState();", lifecycle);
+        Assert.Contains("InitializeCodingImportReferences();", lifecycle);
+        Assert.Contains("ShowCodingModeUi();", lifecycle);
+        Assert.DoesNotContain("new CodingSessionViewModel", lifecycle);
+        Assert.DoesNotContain("CodingImportReferenceTransfer.MoveExistingEventsToImportReference", lifecycle);
+        Assert.DoesNotContain("CodingOverlayPopup.IsOpen = true", lifecycle);
     }
 
     [Fact]
