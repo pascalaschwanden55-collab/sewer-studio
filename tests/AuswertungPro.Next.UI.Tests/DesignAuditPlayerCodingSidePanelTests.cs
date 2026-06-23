@@ -416,10 +416,11 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var workflowFactory = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
         Assert.Contains("await ConfirmImportAsTrainingAsync(importEvent)", importConfirmBody);
-        Assert.Contains("_lastCodingMatch.Trainingskandidaten", greenBody);
-        Assert.Contains("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", greenBody);
+        Assert.Contains("CodingProtocolGreenMatchTrainingRunner.AcceptGreenMatchesAsync", greenBody);
+        Assert.DoesNotContain("_lastCodingMatch.Trainingskandidaten", greenBody);
+        Assert.DoesNotContain("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", greenBody);
         Assert.DoesNotContain("_codingImportEvents.FirstOrDefault", greenBody);
-        Assert.Contains("await ConfirmImportAsTrainingAsync(importEvent)", greenBody);
+        Assert.DoesNotContain("foreach (var importEvent", greenBody);
         Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", coreBody);
         Assert.DoesNotContain("TeacherAnnotationStore.AppendAsync(annotation)", coreBody);
         Assert.Contains("await _seekAndWait(importEvent)", workflow);

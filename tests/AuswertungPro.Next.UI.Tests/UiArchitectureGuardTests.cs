@@ -407,19 +407,25 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var trainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var resolverPath = Path.Combine(uiRoot, "Ai", "CodingProtocolTrainingCandidateResolver.cs");
+        var runnerPath = Path.Combine(uiRoot, "Ai", "CodingProtocolGreenMatchTrainingRunner.cs");
         var snapshotStorePath = Path.Combine(uiRoot, "Ai", "CodingProtocolTrainingSnapshotStore.cs");
         var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
         Assert.True(File.Exists(resolverPath), "Gruene Protokoll-Trainingskandidaten muessen ausserhalb der PlayerWindow-Partials auf Import-Events gemappt werden.");
+        Assert.True(File.Exists(runnerPath), "Gruene Protokoll-Trainingskandidaten muessen ausserhalb der PlayerWindow-Partials abgearbeitet werden.");
         Assert.True(File.Exists(snapshotStorePath), "Gruene Protokoll-Trainingssnapshots sollen ausserhalb der PlayerWindow-Partials kopiert werden.");
         Assert.True(File.Exists(workflowFactoryPath), "Gruene Protokoll-Trainingsuebernahme soll ausserhalb der PlayerWindow-Partials verdrahtet werden.");
 
         var training = File.ReadAllText(trainingPath);
         var resolver = File.ReadAllText(resolverPath);
+        var runner = File.Exists(runnerPath) ? File.ReadAllText(runnerPath) : "";
         var snapshotStore = File.ReadAllText(snapshotStorePath);
         var workflowFactory = File.ReadAllText(workflowFactoryPath);
 
-        Assert.Contains("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", training);
+        Assert.Contains("CodingProtocolGreenMatchTrainingRunner.AcceptGreenMatchesAsync", training);
+        Assert.DoesNotContain("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", training);
+        Assert.Contains("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", runner);
+        Assert.Contains("public static async Task<CodingProtocolMatchOverlayState?> AcceptGreenMatchesAsync", runner);
         Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", training);
         Assert.DoesNotContain("CodingProtocolTrainingSnapshotStoreFactory.Create", training);
         Assert.DoesNotContain("Guid.TryParse(pair.Gt.RefId", training);
@@ -2291,11 +2297,15 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var trainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchDisplayPolicy.cs");
+        var runnerPath = Path.Combine(uiRoot, "Ai", "CodingProtocolGreenMatchTrainingRunner.cs");
 
         var training = File.ReadAllText(trainingPath);
         var policy = File.ReadAllText(policyPath);
+        var runner = File.Exists(runnerPath) ? File.ReadAllText(runnerPath) : "";
 
-        Assert.Contains("CodingProtocolMatchDisplayPolicy.BuildAcceptedGreenMatchesOverlay", training);
+        Assert.Contains("CodingProtocolGreenMatchTrainingRunner.AcceptGreenMatchesAsync", training);
+        Assert.DoesNotContain("CodingProtocolMatchDisplayPolicy.BuildAcceptedGreenMatchesOverlay", training);
+        Assert.Contains("CodingProtocolMatchDisplayPolicy.BuildAcceptedGreenMatchesOverlay", runner);
         Assert.DoesNotContain("gruene Treffer als Training uebernommen", training);
         Assert.DoesNotContain("ShowOverlay($\"{accepted}", training);
         Assert.Contains("public static CodingProtocolMatchOverlayState BuildAcceptedGreenMatchesOverlay", policy);

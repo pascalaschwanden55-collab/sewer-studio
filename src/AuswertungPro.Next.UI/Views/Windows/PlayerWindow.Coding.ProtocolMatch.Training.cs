@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
@@ -18,20 +17,15 @@ public partial class PlayerWindow
         if (_codingVm == null) return;
         if (_lastCodingMatch == null)
             RunCodingProtocolMatch();
-        if (_lastCodingMatch == null || _lastCodingMatch.Trainingskandidaten.Count == 0)
+        if (_lastCodingMatch == null)
             return;
 
-        var accepted = 0;
-        foreach (var importEvent in CodingProtocolTrainingCandidateResolver.ResolveImportEvents(
-                     _lastCodingMatch.Trainingskandidaten,
-                     _codingImportEvents))
-        {
-            if (await ConfirmImportAsTrainingAsync(importEvent))
-                accepted++;
-        }
-
-        var overlay = CodingProtocolMatchDisplayPolicy.BuildAcceptedGreenMatchesOverlay(accepted);
-        ShowOverlay(overlay.Text, overlay.Duration);
+        var overlay = await CodingProtocolGreenMatchTrainingRunner.AcceptGreenMatchesAsync(
+            _lastCodingMatch,
+            _codingImportEvents,
+            ConfirmImportAsTrainingAsync);
+        if (overlay.HasValue)
+            ShowOverlay(overlay.Value.Text, overlay.Value.Duration);
     }
 
     private void ImportConfirm_Click(object sender, RoutedEventArgs e)
