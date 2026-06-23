@@ -1,7 +1,6 @@
 using System;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
-using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -25,30 +24,14 @@ public partial class PlayerWindow
             }
 
             var timestampSec = _detectionPendingTimestampSec ?? (_player.Time / 1000.0);
-            var frameExporter = new LiveDetectionTrainingFrameExporter(
-                AuswertungPro.Next.UI.Ai.Teacher.TrainingAnnotationExportServiceFactory.Create());
+            var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
 
             foreach (var finding in _detectionPendingFindings)
             {
-                var annotationId = LiveDetectionTrainingExportPlanner.CreateAnnotationId();
-                var exportPlan = LiveDetectionTrainingExportPlanner.BuildAccepted(finding, annotationId);
-
-                var exportResult = await frameExporter.ExportAsync(
+                await annotationWriter.SaveAcceptedAsync(
                     frameBytes,
-                    exportPlan.BoundingBox,
-                    exportPlan.Code,
-                    exportPlan.ClassId,
-                    exportPlan.BaseName,
-                    annotationId);
-
-                var annotation = LiveDetectionTeacherAnnotationFactory.CreateDetection(
-                    annotationId,
                     finding,
-                    exportPlan.Code,
-                    exportPlan.BoundingBox,
-                    TimeSpan.FromSeconds(timestampSec),
-                    exportResult);
-                await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
+                    TimeSpan.FromSeconds(timestampSec));
             }
 
             ShowOsdMeterStatus($"âœ“ {_detectionPendingFindings.Count} Befund(e) gespeichert", resetAfterDelay: true);
@@ -99,27 +82,12 @@ public partial class PlayerWindow
 
             var primary = _detectionPendingFindings[0];
             var timestampSecForFrame = _detectionPendingTimestampSec ?? timestampSec;
-            var annotationId = LiveDetectionTrainingExportPlanner.CreateAnnotationId();
-            var exportPlan = LiveDetectionTrainingExportPlanner.BuildCorrected(primary, selectedEntry.Code, annotationId);
-
-            var frameExporter = new LiveDetectionTrainingFrameExporter(
-                AuswertungPro.Next.UI.Ai.Teacher.TrainingAnnotationExportServiceFactory.Create());
-            var exportResult = await frameExporter.ExportAsync(
+            var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
+            await annotationWriter.SaveCorrectedAsync(
                 frameBytes,
-                exportPlan.BoundingBox,
-                exportPlan.Code,
-                exportPlan.ClassId,
-                exportPlan.BaseName,
-                annotationId);
-
-            var annotation = LiveDetectionTeacherAnnotationFactory.CreateCorrectedDetection(
-                annotationId,
                 primary,
                 selectedEntry,
-                exportPlan.BoundingBox,
-                TimeSpan.FromSeconds(timestampSecForFrame),
-                exportResult);
-            await InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation);
+                TimeSpan.FromSeconds(timestampSecForFrame));
 
             ShowOsdMeterStatus($"âœ“ Training: {selectedEntry.Code} (korrigiert)", resetAfterDelay: true);
         }

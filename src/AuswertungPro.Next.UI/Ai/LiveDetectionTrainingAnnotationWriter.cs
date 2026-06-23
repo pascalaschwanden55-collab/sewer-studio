@@ -1,0 +1,84 @@
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Ai.Teacher;
+using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.UI.Ai.Teacher;
+using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
+
+namespace AuswertungPro.Next.UI.Ai;
+
+public sealed class LiveDetectionTrainingAnnotationWriter
+{
+    private readonly LiveDetectionTrainingFrameExporter _frameExporter;
+    private readonly Func<string> _annotationIdFactory;
+    private readonly Func<TeacherAnnotation, Task> _appendAsync;
+
+    public LiveDetectionTrainingAnnotationWriter(
+        LiveDetectionTrainingFrameExporter frameExporter,
+        Func<string>? annotationIdFactory = null,
+        Func<TeacherAnnotation, Task>? appendAsync = null)
+    {
+        _frameExporter = frameExporter;
+        _annotationIdFactory = annotationIdFactory ?? LiveDetectionTrainingExportPlanner.CreateAnnotationId;
+        _appendAsync = appendAsync ?? (annotation => InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation));
+    }
+
+    public static LiveDetectionTrainingAnnotationWriter CreateDefault()
+        => new(new LiveDetectionTrainingFrameExporter(TrainingAnnotationExportServiceFactory.Create()));
+
+    public async Task<TeacherAnnotation> SaveAcceptedAsync(
+        byte[] frameBytes,
+        LiveFrameFinding finding,
+        TimeSpan videoTimestamp,
+        CancellationToken ct = default)
+    {
+        var annotationId = _annotationIdFactory();
+        var exportPlan = LiveDetectionTrainingExportPlanner.BuildAccepted(finding, annotationId);
+        var exportResult = await _frameExporter.ExportAsync(
+            frameBytes,
+            exportPlan.BoundingBox,
+            exportPlan.Code,
+            exportPlan.ClassId,
+            exportPlan.BaseName,
+            annotationId,
+            ct);
+
+        var annotation = LiveDetectionTeacherAnnotationFactory.CreateDetection(
+            annotationId,
+            finding,
+            exportPlan.Code,
+            exportPlan.BoundingBox,
+            videoTimestamp,
+            exportResult);
+        await _appendAsync(annotation);
+        return annotation;
+    }
+
+    public async Task<TeacherAnnotation> SaveCorrectedAsync(
+        byte[] frameBytes,
+        LiveFrameFinding sourceFinding,
+        ProtocolEntry selectedEntry,
+        TimeSpan videoTimestamp,
+        CancellationToken ct = default)
+    {
+        var annotationId = _annotationIdFactory();
+        var exportPlan = LiveDetectionTrainingExportPlanner.BuildCorrected(sourceFinding, selectedEntry.Code, annotationId);
+        var exportResult = await _frameExporter.ExportAsync(
+            frameBytes,
+            exportPlan.BoundingBox,
+            exportPlan.Code,
+            exportPlan.ClassId,
+            exportPlan.BaseName,
+            annotationId,
+            ct);
+
+        var annotation = LiveDetectionTeacherAnnotationFactory.CreateCorrectedDetection(
+            annotationId,
+            sourceFinding,
+            selectedEntry,
+            exportPlan.BoundingBox,
+            videoTimestamp,
+            exportResult);
+        await _appendAsync(annotation);
+        return annotation;
+    }
+}

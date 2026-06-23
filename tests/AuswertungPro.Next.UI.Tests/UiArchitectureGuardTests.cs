@@ -1773,17 +1773,20 @@ public sealed class UiArchitectureGuardTests
         var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.Training.cs");
         var frameExporterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingFrameExporter.cs");
         var exportPlannerPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingExportPlanner.cs");
+        var annotationWriterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingAnnotationWriter.cs");
 
         Assert.True(File.Exists(actionsPath), "LiveDetection-Bestaetigungsaktionen sollen aus dem Anzeige-Partial heraus.");
         Assert.True(File.Exists(trainingPath), "LiveDetection-Trainingsuebernahme soll aus den simplen Bestaetigungsaktionen heraus.");
         Assert.True(File.Exists(frameExporterPath), "Detection-Training-Frame-Export soll ausserhalb der PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(exportPlannerPath), "Detection-Training-Exportplanung soll ausserhalb der PlayerWindow-Partials gekapselt sein.");
+        Assert.True(File.Exists(annotationWriterPath), "Detection-Training-Annotationen sollen ausserhalb der PlayerWindow-Partials geschrieben werden.");
 
         var confirmation = File.ReadAllText(confirmationPath);
         var actions = File.ReadAllText(actionsPath);
         var training = File.ReadAllText(trainingPath);
         var frameExporter = File.ReadAllText(frameExporterPath);
         var exportPlanner = File.ReadAllText(exportPlannerPath);
+        var annotationWriter = File.ReadAllText(annotationWriterPath);
 
         Assert.Contains("private void ShowDetectionConfirmation", confirmation);
         Assert.Contains("private void ResumeDetection", confirmation);
@@ -1796,23 +1799,29 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", actions);
         Assert.Contains("private async void DetectionAccept_Click", training);
         Assert.Contains("private async void DetectionCorrect_Click", training);
-        Assert.Contains("TrainingAnnotationExportServiceFactory.Create", training);
-        Assert.Contains("LiveDetectionTrainingFrameExporter", training);
-        Assert.Contains("LiveDetectionTrainingExportPlanner.BuildAccepted", training);
-        Assert.Contains("LiveDetectionTrainingExportPlanner.BuildCorrected", training);
+        Assert.Contains("LiveDetectionTrainingAnnotationWriter.CreateDefault", training);
+        Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", training);
+        Assert.DoesNotContain("LiveDetectionTrainingFrameExporter", training);
+        Assert.DoesNotContain("LiveDetectionTrainingExportPlanner.BuildAccepted", training);
+        Assert.DoesNotContain("LiveDetectionTrainingExportPlanner.BuildCorrected", training);
         Assert.DoesNotContain("VsaYoloClassMap.GetClassId", training);
         Assert.DoesNotContain("BBoxFromClockPosition", training);
         Assert.DoesNotContain("det_corr_", training);
         Assert.DoesNotContain("File.WriteAllBytesAsync", training);
         Assert.DoesNotContain("File.Delete", training);
         Assert.DoesNotContain("Path.GetTempPath", training);
-        Assert.Contains("TeacherAnnotationStore.AppendAsync", training);
+        Assert.DoesNotContain("TeacherAnnotationStore.AppendAsync", training);
         Assert.Contains("public sealed class LiveDetectionTrainingFrameExporter", frameExporter);
         Assert.Contains("File.WriteAllBytesAsync", frameExporter);
         Assert.Contains("BestEffort.Try", frameExporter);
         Assert.Contains("public static class LiveDetectionTrainingExportPlanner", exportPlanner);
         Assert.Contains("VsaYoloClassMap.GetClassId", exportPlanner);
         Assert.Contains("LiveDetectionGeometryMapper.BBoxFromClockPosition", exportPlanner);
+        Assert.Contains("public sealed class LiveDetectionTrainingAnnotationWriter", annotationWriter);
+        Assert.Contains("TrainingAnnotationExportServiceFactory.Create", annotationWriter);
+        Assert.Contains("LiveDetectionTrainingExportPlanner.BuildAccepted", annotationWriter);
+        Assert.Contains("LiveDetectionTrainingExportPlanner.BuildCorrected", annotationWriter);
+        Assert.Contains("TeacherAnnotationStore.AppendAsync", annotationWriter);
     }
 
     [Fact]
