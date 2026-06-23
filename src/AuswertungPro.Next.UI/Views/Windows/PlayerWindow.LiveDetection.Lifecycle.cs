@@ -32,14 +32,14 @@ public partial class PlayerWindow
         }
         catch
         {
-            DialogHost.Current.Warn("KI-Konfiguration konnte nicht geladen werden.", "Live-KI");
+            LiveDetectionDialogServiceFactory.Create().ShowRuntimeSettingsLoadFailed();
             LiveDetectionButton.IsChecked = false;
             return;
         }
 
         if (!cfg.Enabled)
         {
-            DialogHost.Current.Info("KI ist deaktiviert. Bitte in den Einstellungen aktivieren.", "Live-KI");
+            LiveDetectionDialogServiceFactory.Create().ShowDisabled();
             LiveDetectionButton.IsChecked = false;
             return;
         }
@@ -69,7 +69,7 @@ public partial class PlayerWindow
         catch (Exception ex)
         {
             LiveDetectionButton.IsChecked = false;
-            DialogHost.Current.Warn($"Live-KI konnte nicht gestartet werden: {ex.Message}", "Live-KI");
+            LiveDetectionDialogServiceFactory.Create().ShowStartFailed(ex.Message);
         }
     }
 

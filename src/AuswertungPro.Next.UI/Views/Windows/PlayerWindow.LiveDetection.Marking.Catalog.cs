@@ -45,10 +45,7 @@ public partial class PlayerWindow
 
         if (sp?.CodeCatalog is null)
         {
-            DialogHost.Current.Info(
-                "Schadenscode-Katalog nicht verf\u00fcgbar.\n" +
-                "Bitte die App neu starten oder KI-Einstellungen pr\u00fcfen.",
-                "Markieren");
+            LiveDetectionDialogServiceFactory.Create().ShowCodeCatalogUnavailable();
             return;
         }
 
