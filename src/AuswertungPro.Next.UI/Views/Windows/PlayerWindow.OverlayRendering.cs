@@ -32,15 +32,27 @@ public partial class PlayerWindow
         {
             case OverlayToolType.Line:
             case OverlayToolType.Stretch:
-                RenderLineOverlay(overlay, isPreview, stroke, glowEffect, tag);
+                CodingBasicOverlayRenderer.Render(
+                    CodingOverlayCanvas,
+                    overlay,
+                    CodingNormToPixel,
+                    new CodingBasicOverlayRenderStyle(isPreview, stroke, Brushes.Transparent, glowEffect, tag));
                 break;
 
             case OverlayToolType.Rectangle:
-                RenderRectangleOverlay(overlay, isPreview, stroke, fill, glowEffect, tag);
+                CodingBasicOverlayRenderer.Render(
+                    CodingOverlayCanvas,
+                    overlay,
+                    CodingNormToPixel,
+                    new CodingBasicOverlayRenderStyle(isPreview, stroke, fill, glowEffect, tag));
                 break;
 
             case OverlayToolType.Point:
-                RenderPointOverlay(overlay, stroke, glowEffect, tag);
+                CodingBasicOverlayRenderer.Render(
+                    CodingOverlayCanvas,
+                    overlay,
+                    CodingNormToPixel,
+                    new CodingBasicOverlayRenderStyle(false, stroke, Brushes.Transparent, glowEffect, tag));
                 break;
 
             case OverlayToolType.Arc:
@@ -76,11 +88,19 @@ public partial class PlayerWindow
                 return; // Eigenes Label-Rendering
 
             case OverlayToolType.Ellipse:
-                RenderEllipseOverlay(overlay, isPreview, glowEffect, tag);
+                CodingBasicOverlayRenderer.Render(
+                    CodingOverlayCanvas,
+                    overlay,
+                    CodingNormToPixel,
+                    new CodingBasicOverlayRenderStyle(isPreview, Brushes.Transparent, Brushes.Transparent, glowEffect, tag));
                 break;
 
             case OverlayToolType.Freehand:
-                RenderFreehandOverlay(overlay, isPreview, glowEffect, tag);
+                CodingBasicOverlayRenderer.Render(
+                    CodingOverlayCanvas,
+                    overlay,
+                    CodingNormToPixel,
+                    new CodingBasicOverlayRenderStyle(isPreview, Brushes.Transparent, Brushes.Transparent, glowEffect, tag));
                 break;
         }
 
