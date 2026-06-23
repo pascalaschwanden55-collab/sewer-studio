@@ -90,7 +90,10 @@ public partial class PlayerWindow
         // Vor dem Hinzufuegen pruefen, welche Befunde schon bekannt/abgehandelt sind
         // (durch ein bestehendes Event abgedeckt). Nur NEUE bekommen eine Box — sonst
         // tauchen akzeptierte Befunde bei jeder erneuten Analyse wieder als Box auf.
-        var findingsToDraw = validFindings.Where(f => !IsFindingAlreadyKnown(f, currentMeter)).ToList();
+        var findingsToDraw = CodingNewFindingOverlaySelector.Select(
+            validFindings,
+            currentMeter,
+            IsFindingAlreadyKnown);
 
         // KI-Findings als CodingEvents mit AiContext in die Ereignisliste einfuegen
         AddAiFindingsAsEvents(result, validFindings);

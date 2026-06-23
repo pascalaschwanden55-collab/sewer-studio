@@ -1267,15 +1267,18 @@ public sealed class UiArchitectureGuardTests
         var filteringPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Filtering.cs");
         var meterPolicyPath = Path.Combine(uiRoot, "Ai", "CodingResultMeterReadingPolicy.cs");
         var warmupPolicyPath = Path.Combine(uiRoot, "Ai", "CodingWarmupResultBufferPolicy.cs");
+        var overlaySelectorPath = Path.Combine(uiRoot, "Ai", "CodingNewFindingOverlaySelector.cs");
 
         Assert.True(File.Exists(filteringPath), "KI-Finding-Filteradapter sollen aus dem allgemeinen AiEvents-Partial heraus.");
         Assert.True(File.Exists(meterPolicyPath), "OSD-Meteruebernahme aus KI-Ergebnissen muss ausserhalb der PlayerWindow-Partials entschieden werden.");
         Assert.True(File.Exists(warmupPolicyPath), "Warmup-Puffer-Auswahl muss ausserhalb der PlayerWindow-Partials entschieden werden.");
+        Assert.True(File.Exists(overlaySelectorPath), "Auswahl neuer Overlay-Findings muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var aiEvents = File.ReadAllText(aiEventsPath);
         var filtering = File.ReadAllText(filteringPath);
         var meterPolicy = File.ReadAllText(meterPolicyPath);
         var warmupPolicy = File.ReadAllText(warmupPolicyPath);
+        var overlaySelector = File.ReadAllText(overlaySelectorPath);
 
         Assert.DoesNotContain("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", aiEvents);
         Assert.DoesNotContain("private static string? LookupVsaLabel", aiEvents);
@@ -1288,6 +1291,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("var buffered = _pendingWarmupResult", aiEvents);
         Assert.DoesNotContain("buffered.Findings.Count", aiEvents);
         Assert.Contains("CodingWarmupResultBufferPolicy.Select", aiEvents);
+        Assert.DoesNotContain("validFindings.Where(f => !IsFindingAlreadyKnown", aiEvents);
+        Assert.Contains("CodingNewFindingOverlaySelector.Select", aiEvents);
         Assert.Contains("AiFindingDisplayItemFactory.ForFindings(validFindings)", aiEvents);
         Assert.Contains("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", filtering);
         Assert.Contains("private static string? LookupVsaLabel", filtering);
@@ -1298,6 +1303,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingKnownFindingPolicy.IsKnown", filtering);
         Assert.Contains("public static bool TryAccept", meterPolicy);
         Assert.Contains("public static CodingWarmupResultSelection Select", warmupPolicy);
+        Assert.Contains("public static IReadOnlyList<LiveFrameFinding> Select", overlaySelector);
     }
 
     [Fact]
