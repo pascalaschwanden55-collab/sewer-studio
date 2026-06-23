@@ -40,7 +40,7 @@ public partial class PlayerWindow
         }
         catch (Exception ex)
         {
-            DialogHost.Current.Warn(ex.Message, "Codier-Modus");
+            CodingModeDialogServiceFactory.Create().ShowSessionStartFailed(ex.Message);
             ExitCodingMode();
             return false;
         }

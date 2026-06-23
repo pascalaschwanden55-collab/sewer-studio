@@ -4,7 +4,6 @@ using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.Services;
 using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -45,8 +44,7 @@ public partial class PlayerWindow
 
         if (!TryTakeSnapshot(out var snapshotPath))
         {
-            DialogHost.Current.Warn("Frame konnte nicht aufgenommen werden.\nBitte pruefen Sie ob das Video laeuft.",
-                "Import bestaetigen");
+            CodingModeDialogServiceFactory.Create().ShowImportFrameCaptureFailed();
             return false;
         }
 
@@ -55,8 +53,7 @@ public partial class PlayerWindow
         var destFrame = snapshotStore.CopySnapshotToTrainingImages(snapshotPath, annotationId);
         if (destFrame == null)
         {
-            DialogHost.Current.Warn("Frame konnte nicht aufgenommen werden.\nBitte pruefen Sie ob das Video laeuft.",
-                "Import bestaetigen");
+            CodingModeDialogServiceFactory.Create().ShowImportFrameCaptureFailed();
             return false;
         }
 

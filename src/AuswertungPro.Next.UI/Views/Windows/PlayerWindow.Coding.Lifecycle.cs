@@ -1,5 +1,5 @@
 using System.Windows;
-using AuswertungPro.Next.UI.Services;
+using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -9,10 +9,7 @@ public partial class PlayerWindow
     {
         if (_haltungRecord == null)
         {
-            DialogHost.Current.Info(
-                "Codier-Modus benötigt eine Haltung.\n" +
-                "Bitte das Video über die Datenseite mit einer Haltung öffnen.",
-                "Codier-Modus");
+            CodingModeDialogServiceFactory.Create().ShowMissingHaltung();
             return;
         }
 
@@ -29,7 +26,7 @@ public partial class PlayerWindow
         CreateCodingSessionState();
         ApplyCodingDnCalibration();
 
-        // Fallback: Haltungslaenge pruefen, ggf. manuell abfragen
+        // Fallback: Haltungslaenge pruefen, ggf. manuell abfragen.
         EnsureHaltungslaenge(_haltungRecord);
 
         if (!TryStartCodingSession())
@@ -43,10 +40,10 @@ public partial class PlayerWindow
         StartCodingModeBackgroundServices();
 
         // Bestehende Protokoll-Eintraege direkt in Import-Referenz laden
-        // (NICHT in KI-Befunde - die startet leer)
+        // (NICHT in KI-Befunde - die startet leer).
         LoadExistingProtocolEventsAsImport();
 
-        // Video an Anfang setzen (direkt, nicht ueber PropertyChanged)
+        // Video an Anfang setzen (direkt, nicht ueber PropertyChanged).
         _codingNavPending = true;
         SyncVideoToCodingMeter();
     }

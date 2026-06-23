@@ -3877,6 +3877,38 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("new CodingFeedbackRecorder", factory);
     }
 
+    [Fact]
+    public void PlayerWindow_coding_mode_dialogs_live_in_service()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.cs");
+        var sessionPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Session.cs");
+        var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Training.cs");
+        var servicePath = Path.Combine(uiRoot, "Ai", "CodingModeDialogService.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "CodingModeDialogServiceFactory.cs");
+
+        Assert.True(File.Exists(servicePath), "Coding-Modus-Dialogtexte muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(factoryPath), "Coding-Modus-DialogHost-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var lifecycle = File.ReadAllText(lifecyclePath);
+        var session = File.ReadAllText(sessionPath);
+        var training = File.ReadAllText(trainingPath);
+        var playerText = lifecycle + session + training;
+        var service = File.ReadAllText(servicePath);
+        var factory = File.ReadAllText(factoryPath);
+
+        Assert.Contains("CodingModeDialogServiceFactory.Create", playerText);
+        Assert.DoesNotContain("DialogHost.Current", playerText);
+        Assert.DoesNotContain("Codier-Modus ben", playerText);
+        Assert.DoesNotContain("Frame konnte nicht aufgenommen werden.", playerText);
+        Assert.Contains("ShowMissingHaltung", service);
+        Assert.Contains("ShowSessionStartFailed", service);
+        Assert.Contains("ShowImportFrameCaptureFailed", service);
+        Assert.Contains("DialogHost.Current", factory);
+    }
+
     private static bool IsBuildOutput(string path)
     {
         var normalized = Normalize(path);
