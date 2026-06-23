@@ -440,6 +440,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_live_ai_wiring_lives_in_live_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
+        var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Live.cs");
+
+        Assert.True(File.Exists(livePath), "Coding-Live-AI-Button- und Timer-Wiring soll in ein eigenes Partial.");
+
+        var ai = File.ReadAllText(aiPath);
+        var live = File.ReadAllText(livePath);
+
+        Assert.DoesNotContain("private void CodingLiveAi_Click", ai);
+        Assert.DoesNotContain("private async void CodingLiveAiTimer_Tick", ai);
+        Assert.Contains("private void CodingLiveAi_Click", live);
+        Assert.Contains("private async void CodingLiveAiTimer_Tick", live);
+        Assert.Contains("CodingLiveAiTimerController", live);
+        Assert.Contains("CodingLiveAiTickPolicy.ShouldAnalyze", live);
+    }
+
+    [Fact]
     public void PlayerWindow_bounds_adjustment_lives_in_policy()
     {
         var root = FindRepositoryRoot();
@@ -684,19 +706,19 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
+        var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Live.cs");
         var confirmationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Confirmation.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
 
-        var ai = File.ReadAllText(aiPath);
+        var live = File.ReadAllText(livePath);
         var confirmation = File.ReadAllText(confirmationPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", ai);
+        Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", live);
         Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", confirmation);
-        Assert.DoesNotContain("Automatische KI-Analyse aktiv", ai);
+        Assert.DoesNotContain("Automatische KI-Analyse aktiv", live);
         Assert.DoesNotContain("Automatische KI-Analyse aktiv", confirmation);
-        Assert.DoesNotContain("Intervall alle 5 Sekunden", ai);
+        Assert.DoesNotContain("Intervall alle 5 Sekunden", live);
         Assert.DoesNotContain("Intervall alle 5 Sekunden", confirmation);
         Assert.Contains("public static CodingLiveAiStatusState BuildStatus", policy);
     }
@@ -706,7 +728,7 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiTickPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Live-AI-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -756,6 +778,7 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
+        var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Live.cs");
         var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.cs");
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
@@ -764,19 +787,20 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(controllerPath), "Live-AI-Timer-Wiring muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
+        var live = File.ReadAllText(livePath);
         var coding = File.ReadAllText(codingPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var playback = File.ReadAllText(playbackPath);
         var controller = File.ReadAllText(controllerPath);
 
         Assert.Contains("CodingLiveAiTimerController", coding);
-        Assert.Contains("_codingLiveAiTimers.Start()", ai);
-        Assert.Contains("_codingLiveAiTimers.Stop(resetButton: true)", ai);
+        Assert.Contains("_codingLiveAiTimers.Start()", live);
+        Assert.Contains("_codingLiveAiTimers.Stop(resetButton: true)", live);
         Assert.Contains("_codingLiveAiTimers?.Stop(resetButton: true)", lifecycle);
         Assert.Contains("_codingLiveAiTimers?.StopTimers()", playback);
-        Assert.DoesNotContain("_codingLiveAiBlinkTimer", coding + lifecycle + ai + playback);
-        Assert.DoesNotContain("_codingLiveAiBlinkState", coding + lifecycle + ai + playback);
-        Assert.DoesNotContain("new DispatcherTimer { Interval = CodingLiveAiTimerSettings", ai);
+        Assert.DoesNotContain("_codingLiveAiBlinkTimer", coding + lifecycle + ai + live + playback);
+        Assert.DoesNotContain("_codingLiveAiBlinkState", coding + lifecycle + ai + live + playback);
+        Assert.DoesNotContain("new DispatcherTimer { Interval = CodingLiveAiTimerSettings", live);
         Assert.Contains("public sealed class CodingLiveAiTimerController", controller);
         Assert.Contains("CodingLiveAiButtonDisplayPolicy.BlinkColor", controller);
     }

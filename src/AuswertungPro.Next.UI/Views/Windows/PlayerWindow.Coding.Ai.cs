@@ -378,54 +378,6 @@ public partial class PlayerWindow
     /// und Label-Pfad wie der Qwen/Enhanced-Pfad (ResolveFindingCodeForCoding, LookupVsaLabel).
     /// </summary>
 
-    private void CodingLiveAi_Click(object sender, RoutedEventArgs e)
-    {
-        _codingLiveAiTimers ??= new CodingLiveAiTimerController(
-            BtnCodingLiveAi,
-            CodingLiveAiTimer_Tick,
-            () => !_closing && _player is not null);
-
-        if (BtnCodingLiveAi.IsChecked == true)
-        {
-            _codingLiveAiTimers.Start();
-
-            var status = CodingLiveAiButtonDisplayPolicy.BuildStatus(
-                isActive: true,
-                LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName));
-            SetCodingAiState(status.StatusText, PlayerStatusColors.Success, status.DetailText);
-        }
-        else
-        {
-            _codingLiveAiTimers.Stop(resetButton: true);
-
-            var status = CodingLiveAiButtonDisplayPolicy.BuildStatus(
-                isActive: false,
-                LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName));
-            SetCodingAiState(status.StatusText, PlayerStatusColors.Success, status.DetailText);
-        }
-    }
-
-    private async void CodingLiveAiTimer_Tick(object? sender, EventArgs e)
-    {
-        try
-        {
-            // Nicht analysieren wenn: bereits analysierend, Video pausiert, WaitingForUserInput
-            if (!CodingLiveAiTickPolicy.ShouldAnalyze(
-                    _closing,
-                    hasPlayer: _player is not null,
-                    hasLiveDetection: _codingLiveDetection is not null,
-                    _codingSessionService?.ActiveSession?.State,
-                    isPlayerPlaying: _player?.IsPlaying == true))
-                return;
-
-            await RunCodingAnalysisAsync("Automatische KI-Analyse: Analysiere...");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[PlayerWindow] CodingLiveAiTimer_Tick error: {ex.Message}");
-        }
-    }
-
     private Task<byte[]?> CaptureSnapshotAsync(CancellationToken ct)
         => new CodingSnapshotCaptureService(path => TakeSnapshotSafe(path)).CapturePngAsync(ct);
 
