@@ -1517,6 +1517,30 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_schema_overlay_wiring_lives_in_schema_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
+        var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
+
+        Assert.True(File.Exists(schemaPath), "Schema-Overlay-Wiring soll aus dem allgemeinen OverlayInput-Partial heraus.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var schema = File.ReadAllText(schemaPath);
+
+        Assert.DoesNotContain("private bool IsCodingSchemaToolSelected", overlayInput);
+        Assert.DoesNotContain("private SchemaOverlayBase? CreateCodingSchemaOverlay", overlayInput);
+        Assert.DoesNotContain("private void UpdateCodingSchemaOverlay", overlayInput);
+        Assert.DoesNotContain("private void ClearCodingSchemaOverlay", overlayInput);
+        Assert.Contains("private bool IsCodingSchemaToolSelected", schema);
+        Assert.Contains("CodingSchemaOverlayBuilder.Create", schema);
+        Assert.Contains("CodingSchemaOverlayBuilder.BuildGeometry", schema);
+        Assert.Contains("private void UpdateCodingSchemaOverlay", schema);
+    }
+
+    [Fact]
     public void PlayerWindow_eingabemarker_geometry_lives_in_policy()
     {
         var root = FindRepositoryRoot();
