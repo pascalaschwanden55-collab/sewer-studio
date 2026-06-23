@@ -692,6 +692,32 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_osd_reading_lives_in_reading_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var osdPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.cs");
+        var readingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Reading.cs");
+
+        Assert.True(File.Exists(readingPath), "OSD-OCR und Snapshot-Lesen sollen aus dem Meter-Resolver-Partial heraus.");
+
+        var osd = File.ReadAllText(osdPath);
+        var reading = File.ReadAllText(readingPath);
+
+        Assert.Contains("private double ResolveCodingMeterForFrame", osd);
+        Assert.Contains("private double? GetMeterFromVideoPosition", osd);
+        Assert.DoesNotContain("private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync", osd);
+        Assert.DoesNotContain("private async Task<double?> TryReadOsdMeterFromFrameBytesAsync", osd);
+        Assert.DoesNotContain("private async Task<double?> CodingReadOsdMeterAsync", osd);
+        Assert.Contains("private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync", reading);
+        Assert.Contains("private async Task<double?> TryReadOsdMeterFromFrameBytesAsync", reading);
+        Assert.Contains("private async Task<double?> CodingReadOsdMeterAsync", reading);
+        Assert.Contains("GetCodingOsdMeterService().ReadMeterAsync", reading);
+        Assert.Contains("new CodingSnapshotCaptureService", reading);
+    }
+
+    [Fact]
     public void PlayerWindow_multi_model_ai_events_live_in_multimodel_partial()
     {
         var root = FindRepositoryRoot();
@@ -1417,6 +1443,7 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var osdPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.cs");
+        var osdReadingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Reading.cs");
         var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingOsdBadgeDisplayPolicy.cs");
@@ -1424,14 +1451,16 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(policyPath), "OSD-Badge-Textformat muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var osd = File.ReadAllText(osdPath);
+        var osdReading = File.ReadAllText(osdReadingPath);
         var aiEvents = File.ReadAllText(aiEventsPath);
         var marking = File.ReadAllText(markingPath);
         var policy = File.ReadAllText(policyPath);
+        var osdText = osd + osdReading;
 
-        Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", osd);
+        Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", osdText);
         Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", aiEvents);
         Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", marking);
-        Assert.DoesNotContain(":F2}m (OSD)", osd);
+        Assert.DoesNotContain(":F2}m (OSD)", osdText);
         Assert.DoesNotContain(":F2}m (OSD)", aiEvents);
         Assert.DoesNotContain(":F2}m (OSD)", marking);
         Assert.Contains("public static string BuildMeterText", policy);
