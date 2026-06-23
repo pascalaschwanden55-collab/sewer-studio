@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -37,19 +38,16 @@ public partial class PlayerWindow
             var explorerVm = CreateVsaCodeExplorerViewModel(
                 entry, meterValue, videoZeit);
 
-            var dlg = new VsaCodeExplorerWindow(explorerVm, _videoPath, videoZeit)
-            {
-                Owner = this,
-                LiveSnapshotProvider = () =>
-                {
-                    var snapPath = CodingLiveSnapshotPathPolicy.CreateTempPath();
-                    return TakeSnapshotSafe(snapPath) ? snapPath : null;
-                }
-            };
+            var dialogResult = VsaCodeExplorerDialogServiceFactory.Create().Show(
+                explorerVm,
+                _videoPath,
+                videoZeit,
+                this,
+                CreateVsaCodeExplorerLiveSnapshotProvider());
 
-            if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
+            if (dialogResult.Accepted && dialogResult.SelectedEntry is not null)
             {
-                var result = dlg.SelectedEntry;
+                var result = dialogResult.SelectedEntry;
                 CodingProtocolEntryCopier.CopyEditableValues(result, entry);
 
                 var createdEvent = _codingSessionService!.AddEvent(entry, _codingVm.CurrentOverlay);

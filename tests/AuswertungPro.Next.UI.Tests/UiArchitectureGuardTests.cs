@@ -1353,16 +1353,22 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
         var detailActionsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.Actions.cs");
+        var codeExplorerDialogPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.CodeExplorer.Dialog.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "CodingLiveSnapshotPathPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Temp-Pfade fuer Live-Snapshots muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(codeExplorerDialogPath), "Live-Snapshot-Provider fuer den Code-Explorer muss gebuendelt bleiben.");
 
         var events = File.ReadAllText(eventsPath);
         var detailActions = File.ReadAllText(detailActionsPath);
+        var codeExplorerDialog = File.ReadAllText(codeExplorerDialogPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingLiveSnapshotPathPolicy.CreateTempPath", events);
-        Assert.Contains("CodingLiveSnapshotPathPolicy.CreateTempPath", detailActions);
+        Assert.Contains("CreateVsaCodeExplorerLiveSnapshotProvider", events);
+        Assert.Contains("CreateVsaCodeExplorerLiveSnapshotProvider", detailActions);
+        Assert.Contains("CodingLiveSnapshotPathPolicy.CreateTempPath", codeExplorerDialog);
+        Assert.DoesNotContain("CodingLiveSnapshotPathPolicy.CreateTempPath", events);
+        Assert.DoesNotContain("CodingLiveSnapshotPathPolicy.CreateTempPath", detailActions);
         Assert.DoesNotContain("coding_live_{Guid.NewGuid()", events);
         Assert.DoesNotContain("coding_live_{Guid.NewGuid()", detailActions);
         Assert.Contains("public static string BuildTempPath", policy);
@@ -1682,6 +1688,34 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("entry.FotoPaths = result.FotoPaths", events);
         Assert.DoesNotContain("entry.FotoPaths = result.FotoPaths", detailsActions);
         Assert.Contains("public static void CopyEditableValues", copier);
+    }
+
+    [Fact]
+    public void PlayerWindow_vsa_code_explorer_window_creation_lives_in_dialog_service()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var servicePath = Path.Combine(uiRoot, "Services", "VsaCodeExplorerDialogService.cs");
+        var factoryPath = Path.Combine(uiRoot, "Services", "VsaCodeExplorerDialogServiceFactory.cs");
+
+        Assert.True(File.Exists(servicePath), "VSA-Code-Explorer-Dialoggrenze muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(factoryPath), "VSA-Code-Explorer-Fenstererzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var playerWindowText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
+        var service = File.ReadAllText(servicePath);
+        var factory = File.ReadAllText(factoryPath);
+
+        Assert.Contains("VsaCodeExplorerDialogServiceFactory.Create", playerWindowText);
+        Assert.Contains("CreateVsaCodeExplorerLiveSnapshotProvider", playerWindowText);
+        Assert.DoesNotContain("new VsaCodeExplorerWindow", playerWindowText);
+        Assert.DoesNotContain("new Views.Windows.VsaCodeExplorerWindow", playerWindowText);
+        Assert.Contains("public sealed record VsaCodeExplorerDialogRequest", service);
+        Assert.Contains("public sealed record VsaCodeExplorerDialogResult", service);
+        Assert.Contains("new VsaCodeExplorerWindow", factory);
+        Assert.Contains("LiveSnapshotProvider", factory);
     }
 
     [Fact]

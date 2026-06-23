@@ -62,14 +62,15 @@ public partial class PlayerWindow
             _codingLastOsdMeter ?? GetMeterFromVideoPosition(),
             TimeSpan.FromSeconds(timestampSec));
 
-        var dlg = new VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
-        {
-            Owner = this
-        };
+        var dialogResult = VsaCodeExplorerDialogServiceFactory.Create().Show(
+            explorerVm,
+            _videoPath,
+            TimeSpan.FromSeconds(timestampSec),
+            this);
 
-        if (dlg.ShowDialog() == true && dlg.SelectedEntry is not null)
+        if (dialogResult.Accepted && dialogResult.SelectedEntry is not null)
         {
-            var result = dlg.SelectedEntry;
+            var result = dialogResult.SelectedEntry;
             entry.Code = result.Code;
             entry.Beschreibung = result.Beschreibung;
             entry.CodeMeta = result.CodeMeta;

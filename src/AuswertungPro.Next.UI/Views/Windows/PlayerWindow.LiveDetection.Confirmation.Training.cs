@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -60,12 +61,13 @@ public partial class PlayerWindow
             var autoMeter2 = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
             var entry = CodingExplorerEntryFactory.CreateSeed();
             var explorerVm = CreateVsaCodeExplorerViewModel(entry, autoMeter2, TimeSpan.FromSeconds(timestampSec));
-            var explorer = new Views.Windows.VsaCodeExplorerWindow(explorerVm, _videoPath, TimeSpan.FromSeconds(timestampSec))
-            {
-                Owner = this
-            };
+            var explorer = VsaCodeExplorerDialogServiceFactory.Create().Show(
+                explorerVm,
+                _videoPath,
+                TimeSpan.FromSeconds(timestampSec),
+                this);
 
-            if (explorer.ShowDialog() != true || explorer.SelectedEntry == null)
+            if (!explorer.Accepted || explorer.SelectedEntry == null)
             {
                 ResumeDetection();
                 return;
