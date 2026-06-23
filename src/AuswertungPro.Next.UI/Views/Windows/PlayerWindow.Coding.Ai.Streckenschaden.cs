@@ -11,7 +11,7 @@ public partial class PlayerWindow
     /// Automatische Streckenschaden-Verfolgung (VSA 2.1.2). Laeuft bei JEDEM Analyse-Tick,
     /// auch mit leerer Streckenschaden-Liste - sonst koennte der Tracker offene Strecken nie
     /// automatisch schliessen. Die Fachregel liegt in Application (StreckenschadenTracker +
-    /// StreckenschadenActionMapper); hier wird nur gefiltert, aufgerufen und Events angelegt/geaendert.
+    /// StreckenschadenActionMapper); hier wird nur gefiltert, der Tracker gefuettert und der Applier aufgerufen.
     ///
     /// Streckenschaden-Befunde (Code mit IsStreckenschadenCode) werden NICHT als Punkt-Events
     /// gefuehrt - die hier "verbrauchten" Segmente werden zurueckgegeben, damit der normale
@@ -35,64 +35,27 @@ public partial class PlayerWindow
         var actions = _streckenTracker.Update(trackingInput.Observations, meter);
 
         // 3) Aktionen in konkrete Anweisungen uebersetzen und ausfuehren.
-        ApplyStreckenschadenActions(actions, videoTime);
+        if (TryApplyStreckenschadenActions(actions, videoTime))
+            RefreshCodingEventsList();
         return trackingInput.ConsumedSegments;
     }
 
-    /// <summary>
-    /// Fuehrt die vom Mapper bestimmten Anweisungen aus: offenen Streckenschaden-Eintrag anlegen
-    /// bzw. einen bestehenden schliessen (MeterEnd setzen). Keine Fachlogik hier.
-    /// </summary>
-    private void ApplyStreckenschadenActions(
+    private bool TryApplyStreckenschadenActions(
         IReadOnlyList<StreckenschadenTracker.SegmentAction> actions,
         TimeSpan videoTime)
     {
         var codingSessionService = _codingSessionService;
         var codingVm = _codingVm;
         if (codingSessionService == null || codingVm == null || actions.Count == 0)
-            return;
+            return false;
 
-        // Aktuell offene Streckenschaden-Eintraege als Mapper-Sicht (Referenz = CodingEvent).
-        var openEntries = CodingStreckenschadenActionInputBuilder.BuildOpenEntries(codingVm.Events);
-
-        var instructions = StreckenschadenActionMapper.MapAll(actions, openEntries);
-        if (instructions.Count == 0) return;
-
-        bool anyChanged = false;
-        foreach (var instr in instructions)
-        {
-            switch (instr.Kind)
-            {
-                case StreckenschadenActionMapper.InstructionKind.CreateOpen:
-                {
-                    var draft = CodingStreckenschadenEventFactory.CreateOpen(
-                        instr.MainCode,
-                        LookupVsaLabel(instr.MainCode),
-                        instr.StartMeter,
-                        videoTime);
-                    AttachAnalyzedFramePhoto(draft.Entry);
-                    var ev = codingSessionService.AddEvent(draft.Entry);
-                    ev.MeterAtCapture = instr.StartMeter;
-                    ev.AiContext = draft.AiContext;
-                    anyChanged = true;
-                    break;
-                }
-                case StreckenschadenActionMapper.InstructionKind.CloseExisting:
-                {
-                    if (instr.TargetReference is CodingEvent target)
-                    {
-                        target.Entry.MeterEnd = instr.EndMeter;
-                        target.Entry.IsStreckenschaden = true;
-                        codingSessionService.UpdateEvent(target.EventId, target.Entry, target.Overlay);
-                        anyChanged = true;
-                    }
-                    break;
-                }
-            }
-        }
-
-        if (anyChanged)
-            RefreshCodingEventsList();
+        return CodingStreckenschadenActionApplier.Apply(
+            actions,
+            codingVm.Events,
+            codingSessionService,
+            videoTime,
+            LookupVsaLabel,
+            entry => AttachAnalyzedFramePhoto(entry));
     }
 
     /// <summary>
@@ -105,6 +68,7 @@ public partial class PlayerWindow
         var actions = _streckenTracker.CloseAll(endMeter);
         if (actions.Count == 0) return;
         var videoTime = _player != null ? TimeSpan.FromMilliseconds(_player.Time) : TimeSpan.Zero;
-        ApplyStreckenschadenActions(actions, videoTime);
+        if (TryApplyStreckenschadenActions(actions, videoTime))
+            RefreshCodingEventsList();
     }
 }
