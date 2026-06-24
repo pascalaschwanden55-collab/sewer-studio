@@ -33,15 +33,19 @@ public partial class PlayerWindow
 
     private void Cleanup()
     {
-        if (_playbackDisposed)
-            return;
-
-        _playbackDisposed = true;
-        StopPlayerTimers();
-        PlayerPlaybackResourceCleaner.DetachVideoView(
-            () => { if (VideoView != null) VideoView.MediaPlayer = null; });
-        PlayerPlaybackResourceCleaner.DisposeMediaPlayer(_player, message => PlayerTrace.WriteLine(message));
-        PlayerPlaybackResourceCleaner.DisposeLibVlc(_libVlc, message => PlayerTrace.WriteLine(message));
+        PlayerWindowCleanupWorkflow.Execute(
+            new PlayerWindowCleanupWorkflowRequest(_playbackDisposed),
+            new PlayerWindowCleanupWorkflowActions(
+                MarkPlaybackDisposed: () => _playbackDisposed = true,
+                StopPlayerTimers: StopPlayerTimers,
+                DetachVideoView: () => PlayerPlaybackResourceCleaner.DetachVideoView(
+                    () => { if (VideoView != null) VideoView.MediaPlayer = null; }),
+                DisposeMediaPlayer: () => PlayerPlaybackResourceCleaner.DisposeMediaPlayer(
+                    _player,
+                    message => PlayerTrace.WriteLine(message)),
+                DisposeLibVlc: () => PlayerPlaybackResourceCleaner.DisposeLibVlc(
+                    _libVlc,
+                    message => PlayerTrace.WriteLine(message))));
     }
 
     private void StopPlayerTimers()

@@ -2748,15 +2748,18 @@ public sealed class UiArchitectureGuardTests
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Lifecycle.cs");
         var cleanerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackResourceCleaner.cs");
         var closingWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosingWorkflow.cs");
+        var cleanupWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowCleanupWorkflow.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Playback-Closing/Cleanup soll aus dem allgemeinen Playback-Partial heraus.");
         Assert.True(File.Exists(cleanerPath), "Playback-Resource-Cleanup soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(closingWorkflowPath), "Playback-Closing-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(cleanupWorkflowPath), "Playback-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var playback = File.ReadAllText(playbackPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var cleaner = File.Exists(cleanerPath) ? File.ReadAllText(cleanerPath) : "";
         var closingWorkflow = File.Exists(closingWorkflowPath) ? File.ReadAllText(closingWorkflowPath) : "";
+        var cleanupWorkflow = File.Exists(cleanupWorkflowPath) ? File.ReadAllText(cleanupWorkflowPath) : "";
 
         Assert.DoesNotContain("private void OnClosing", playback);
         Assert.DoesNotContain("private void Cleanup", playback);
@@ -2765,6 +2768,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void Cleanup", lifecycle);
         Assert.Contains("private void StopPlayerTimers", lifecycle);
         Assert.Contains("PlayerWindowClosingWorkflow.Execute", lifecycle);
+        Assert.Contains("PlayerWindowCleanupWorkflow.Execute", lifecycle);
         Assert.Contains("ConfirmUnappliedCodingChangesOnClose", lifecycle);
         Assert.Contains("PlayerPlaybackResourceCleaner.DetachVideoView", lifecycle);
         Assert.Contains("PlayerPlaybackResourceCleaner.StopPlayer", lifecycle);
@@ -2776,6 +2780,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static class PlayerWindowClosingWorkflow", closingWorkflow);
         Assert.Contains("ConfirmCanClose", closingWorkflow);
         Assert.Contains("LogCleanupError", closingWorkflow);
+        Assert.Contains("public static class PlayerWindowCleanupWorkflow", cleanupWorkflow);
+        Assert.Contains("IsPlaybackDisposed", cleanupWorkflow);
+        Assert.Contains("actions.MarkPlaybackDisposed()", cleanupWorkflow);
         Assert.Contains("public static class PlayerPlaybackResourceCleaner", cleaner);
         Assert.Contains("AuswertungPro.Next.Application.Common.BestEffort.Try", cleaner);
     }
