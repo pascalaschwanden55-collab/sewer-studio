@@ -44,8 +44,7 @@ public partial class PlayerWindow
         UpdateCodingProtocolMatchSummary(_lastCodingMatch);
         LstImportEvents.ItemsSource = null;
 
-        CodingConfirmationPanel.Visibility = Visibility.Collapsed;
-        DetectionConfirmationPanel.Visibility = Visibility.Collapsed;
+        CodingModeChromeControls.HideConfirmationPanels(CodingConfirmationPanel, DetectionConfirmationPanel);
         _codingPendingConfirmEvent = null;
         _codingPendingGateResult = null;
         _detectionPendingFindings = null;

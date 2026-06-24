@@ -101,4 +101,15 @@ public static class CodingModeChromeControls
         liveAiButton.IsChecked = false;
         aiStageText.Text = string.Empty;
     }
+
+    public static void HideConfirmationPanels(
+        FrameworkElement codingConfirmationPanel,
+        FrameworkElement detectionConfirmationPanel)
+    {
+        ArgumentNullException.ThrowIfNull(codingConfirmationPanel);
+        ArgumentNullException.ThrowIfNull(detectionConfirmationPanel);
+
+        codingConfirmationPanel.Visibility = Visibility.Collapsed;
+        detectionConfirmationPanel.Visibility = Visibility.Collapsed;
+    }
 }

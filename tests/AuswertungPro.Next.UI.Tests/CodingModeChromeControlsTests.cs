@@ -136,6 +136,26 @@ public sealed class CodingModeChromeControlsTests
         });
     }
 
+    [Fact]
+    public void HideConfirmationPanels_collapses_coding_and_detection_confirmation_panels()
+    {
+        RunOnStaThread(() =>
+        {
+            var codingConfirmation = new Border { Visibility = Visibility.Visible };
+            var detectionConfirmation = new Border { Visibility = Visibility.Visible };
+            var hide = FindLiveDetectionEntryMethod(
+                "HideConfirmationPanels",
+                typeof(FrameworkElement),
+                typeof(FrameworkElement));
+            Assert.NotNull(hide);
+
+            hide.Invoke(null, [codingConfirmation, detectionConfirmation]);
+
+            Assert.Equal(Visibility.Collapsed, codingConfirmation.Visibility);
+            Assert.Equal(Visibility.Collapsed, detectionConfirmation.Visibility);
+        });
+    }
+
     private static MethodInfo? FindShowCodingSurfaceMethod()
         => typeof(CodingOverlayMeasurementFormatter).Assembly
             .GetType("AuswertungPro.Next.UI.Ai.CodingModeChromeControls")

@@ -4341,6 +4341,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingModeChromeControls.HideLiveDetectionEntry", ui);
         Assert.Contains("CodingModeChromeControls.ShowLiveDetectionEntry", exit);
         Assert.Contains("CodingModeChromeControls.ResetCodingIndicators", exit);
+        Assert.Contains("CodingModeChromeControls.HideConfirmationPanels", exit);
+        Assert.DoesNotContain("CodingConfirmationPanel.Visibility = Visibility.Collapsed", exit);
+        Assert.DoesNotContain("DetectionConfirmationPanel.Visibility = Visibility.Collapsed", exit);
         Assert.DoesNotContain("LiveDetectionButton.Visibility = Visibility.Collapsed", ui);
         Assert.DoesNotContain("LiveDetectionButton.Visibility = Visibility.Visible", exit);
         Assert.DoesNotContain("LiveDetectionStatusControls.HideDetectionStatus", ui);
