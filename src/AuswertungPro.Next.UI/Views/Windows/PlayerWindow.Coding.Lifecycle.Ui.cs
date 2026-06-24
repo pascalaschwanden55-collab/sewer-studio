@@ -22,8 +22,7 @@ public partial class PlayerWindow
             LiveDetectionButton.IsChecked = false;
         }
 
-        LiveDetectionButton.Visibility = Visibility.Collapsed;
-        LiveDetectionStatusControls.HideDetectionStatus(LiveDetectionStatusText);
+        CodingModeChromeControls.HideLiveDetectionEntry(LiveDetectionButton, LiveDetectionStatusText);
     }
 
     private void ActivateDefaultCodingTool()

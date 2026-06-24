@@ -72,6 +72,47 @@ public sealed class CodingModeChromeControlsTests
         });
     }
 
+    [Fact]
+    public void HideLiveDetectionEntry_collapses_button_and_status()
+    {
+        RunOnStaThread(() =>
+        {
+            var button = new ToggleButton { Visibility = Visibility.Visible };
+            var statusText = new TextBlock { Visibility = Visibility.Visible };
+            var hide = FindLiveDetectionEntryMethod(
+                "HideLiveDetectionEntry",
+                typeof(ToggleButton),
+                typeof(TextBlock));
+            Assert.NotNull(hide);
+
+            hide.Invoke(null, [button, statusText]);
+
+            Assert.Equal(Visibility.Collapsed, button.Visibility);
+            Assert.Equal(Visibility.Collapsed, statusText.Visibility);
+        });
+    }
+
+    [Fact]
+    public void ShowLiveDetectionEntry_shows_button_and_restores_status_visibility_when_detecting()
+    {
+        RunOnStaThread(() =>
+        {
+            var button = new ToggleButton { Visibility = Visibility.Collapsed };
+            var statusText = new TextBlock { Visibility = Visibility.Collapsed };
+            var show = FindLiveDetectionEntryMethod(
+                "ShowLiveDetectionEntry",
+                typeof(ToggleButton),
+                typeof(TextBlock),
+                typeof(bool));
+            Assert.NotNull(show);
+
+            show.Invoke(null, [button, statusText, true]);
+
+            Assert.Equal(Visibility.Visible, button.Visibility);
+            Assert.Equal(Visibility.Visible, statusText.Visibility);
+        });
+    }
+
     private static MethodInfo? FindShowCodingSurfaceMethod()
         => typeof(CodingOverlayMeasurementFormatter).Assembly
             .GetType("AuswertungPro.Next.UI.Ai.CodingModeChromeControls")
@@ -108,6 +149,16 @@ public sealed class CodingModeChromeControlsTests
                     typeof(FrameworkElement),
                     typeof(FrameworkElement)
                 ],
+                modifiers: null);
+
+    private static MethodInfo? FindLiveDetectionEntryMethod(string name, params Type[] parameterTypes)
+        => typeof(CodingOverlayMeasurementFormatter).Assembly
+            .GetType("AuswertungPro.Next.UI.Ai.CodingModeChromeControls")
+            ?.GetMethod(
+                name,
+                BindingFlags.Public | BindingFlags.Static,
+                binder: null,
+                types: parameterTypes,
                 modifiers: null);
 
     private static void RunOnStaThread(Action action)

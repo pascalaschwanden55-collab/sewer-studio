@@ -64,8 +64,7 @@ public partial class PlayerWindow
             CodingMeasurementPanel);
         HideInlineDefectDetail();
         CodingOsdBadgeControls.Hide(OsdMeterBadge);
-        LiveDetectionButton.Visibility = Visibility.Visible;
-        LiveDetectionStatusControls.SetDetectionStatusVisibility(LiveDetectionStatusText, _isDetecting);
+        CodingModeChromeControls.ShowLiveDetectionEntry(LiveDetectionButton, LiveDetectionStatusText, _isDetecting);
 
         _activeCodingToolName = null;
         TxtActiveToolLabel.Text = "";

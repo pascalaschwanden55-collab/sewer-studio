@@ -62,4 +62,29 @@ public static class CodingModeChromeControls
         calibrationHint.Visibility = Visibility.Collapsed;
         measurementPanel.Visibility = Visibility.Collapsed;
     }
+
+    public static void HideLiveDetectionEntry(
+        ToggleButton liveDetectionButton,
+        TextBlock statusText)
+    {
+        ArgumentNullException.ThrowIfNull(liveDetectionButton);
+        ArgumentNullException.ThrowIfNull(statusText);
+
+        liveDetectionButton.Visibility = Visibility.Collapsed;
+        statusText.Visibility = Visibility.Collapsed;
+    }
+
+    public static void ShowLiveDetectionEntry(
+        ToggleButton liveDetectionButton,
+        TextBlock statusText,
+        bool isDetecting)
+    {
+        ArgumentNullException.ThrowIfNull(liveDetectionButton);
+        ArgumentNullException.ThrowIfNull(statusText);
+
+        liveDetectionButton.Visibility = Visibility.Visible;
+        statusText.Visibility = isDetecting
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
 }
