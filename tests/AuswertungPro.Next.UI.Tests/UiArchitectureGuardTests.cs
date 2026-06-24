@@ -4280,21 +4280,31 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
-    public void PlayerWindow_auto_calibration_frame_loading_lives_in_service()
+    public void PlayerWindow_auto_calibration_workflow_lives_outside_window()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var autoCalibrationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AutoCalibration.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingAutoCalibrationWorkflow.cs");
         var servicePath = Path.Combine(uiRoot, "Ai", "CodingAutoCalibrationFrameService.cs");
 
+        Assert.True(File.Exists(workflowPath), "AutoCalibration-Ablaufentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(servicePath), "AutoCalibration-Framebytes sollen ausserhalb der PlayerWindow-Partials in ein Bitmap geladen werden.");
 
         var autoCalibration = File.ReadAllText(autoCalibrationPath);
+        var workflow = File.ReadAllText(workflowPath);
         var service = File.ReadAllText(servicePath);
 
+        Assert.Contains("CodingAutoCalibrationWorkflow.ExecuteAsync", autoCalibration);
         Assert.Contains("CodingAutoCalibrationFrameService.TryAutoCalibrate", autoCalibration);
+        Assert.DoesNotContain("Fields.TryGetValue(\"DN_mm\"", autoCalibration);
+        Assert.DoesNotContain("int.TryParse", autoCalibration);
+        Assert.DoesNotContain("catch (Exception ex)", autoCalibration);
         Assert.DoesNotContain("BitmapImage", autoCalibration);
         Assert.DoesNotContain("MemoryStream", autoCalibration);
+        Assert.Contains("TryGetValue(\"DN_mm\"", workflow);
+        Assert.Contains("PlayerStatusColors.Success", workflow);
+        Assert.Contains("TraceError(ex.Message)", workflow);
         Assert.Contains("BitmapImage", service);
         Assert.Contains("AutoCalibrationService.TryAutoCalibrate", service);
     }
