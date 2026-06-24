@@ -6,13 +6,17 @@ public partial class PlayerWindow
 {
     private void InitializeCodingImportReferences()
     {
-        if (_codingVm == null)
+        if (!_codingSessionHost.HasViewModel)
+            return;
+
+        var eventCollection = _codingSessionHost.EventCollection;
+        if (eventCollection is null)
             return;
 
         _lastCodingMatch = CodingProtocolMatchStateResetter.Reset(_codingProtocolMatchBuckets);
         UpdateCodingProtocolMatchSummary(_lastCodingMatch);
         CodingImportReferenceTransfer.MoveExistingEventsToImportReference(
-            _codingVm.Events,
+            eventCollection,
             _codingImportEvents);
         LstImportEvents.ItemsSource = _codingImportEvents;
         CodingImportReferenceControls.SetCount(RunImportDefectCount, _codingImportEvents.Count);
@@ -20,9 +24,9 @@ public partial class PlayerWindow
         // CompleteSession soll nur neue KI-Events enthalten.
         CodingSessionEventResetter.ClearActiveSessionEvents(_codingSessionService);
 
-        LstCodingEvents.ItemsSource = _codingVm.Events;
+        LstCodingEvents.ItemsSource = eventCollection;
         CodingImportReferenceControls.SetCount(RunCodingDefectCount, 0);
-        _codingBaselineSignature = CodingEventsSignatureBuilder.Build(_codingVm.Events);
+        _codingBaselineSignature = CodingEventsSignatureBuilder.Build(eventCollection);
         _streckenTracker.Reset();
     }
 }

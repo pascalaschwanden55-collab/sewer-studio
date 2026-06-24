@@ -2283,6 +2283,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingImportReferenceTransfer.MoveExistingEventsToImportReference", coding);
         Assert.Contains("CodingSessionEventResetter.ClearActiveSessionEvents", coding);
         Assert.Contains("CodingProtocolMatchStateResetter.Reset", coding);
+        Assert.Contains("_codingSessionHost", coding);
+        Assert.DoesNotContain("_codingVm", coding);
         Assert.Contains("CodingImportReferenceControls.SetCount", import);
         Assert.Contains("CodingImportReferenceControls.SetCount", coding);
         Assert.DoesNotContain("RunImportDefectCount.Text", import + coding);
