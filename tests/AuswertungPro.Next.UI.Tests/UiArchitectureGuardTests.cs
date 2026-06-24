@@ -4047,6 +4047,12 @@ public sealed class UiArchitectureGuardTests
         var policy = File.ReadAllText(policyPath);
 
         Assert.Contains("CodingModeExitFinalizationWorkflow.Execute", coding);
+        Assert.Contains("_codingSessionHost.EventCollection", coding);
+        Assert.Contains("_codingSessionHost.EndMeter", coding);
+        Assert.Contains("HasCodingViewModel: _codingSessionHost.HasViewModel", coding);
+        Assert.DoesNotContain("_codingVm?.Events", coding);
+        Assert.DoesNotContain("_codingVm?.EndMeter", coding);
+        Assert.DoesNotContain("HasCodingViewModel: _codingVm is not null", coding);
         Assert.DoesNotContain("CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode", coding);
         Assert.Contains("CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode", workflow);
         Assert.DoesNotContain("string.Equals(e.Entry.Code, \"BCE\"", coding + workflow);

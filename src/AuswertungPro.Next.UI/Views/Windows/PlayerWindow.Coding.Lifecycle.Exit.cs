@@ -16,9 +16,9 @@ public partial class PlayerWindow
 
         var finalization = CodingModeExitFinalizationWorkflow.Execute(
             new CodingModeExitFinalizationWorkflowRequest(
-                _codingVm?.Events,
+                _codingSessionHost.EventCollection,
                 _codingOsdMeterController.LastMeter,
-                _codingVm?.EndMeter ?? 0,
+                _codingSessionHost.EndMeter,
                 TimeSpan.FromMilliseconds(_player?.Length ?? 0),
                 _detectionConfirmationBuffer.FrameBytes),
             new CodingModeExitFinalizationWorkflowActions(
@@ -34,7 +34,7 @@ public partial class PlayerWindow
         CodingModeExitTeardownWorkflow.Execute(
             new CodingModeExitTeardownWorkflowRequest(
                 HasCodingLiveAiTimers: _codingLiveAiTimers is not null,
-                HasCodingViewModel: _codingVm is not null,
+                HasCodingViewModel: _codingSessionHost.HasViewModel,
                 IsLiveDetectionRunning: _liveDetectionController.IsDetecting),
             new CodingModeExitTeardownWorkflowActions(
                 StopCodingOsdTimer: StopCodingOsdTimer,
