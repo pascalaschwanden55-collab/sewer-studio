@@ -3898,29 +3898,42 @@ public sealed class UiArchitectureGuardTests
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingManualCalibrationPolicy.cs");
         var previewPolicyPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationPreviewPolicy.cs");
         var togglePolicyPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationTogglePolicy.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationControls.cs");
 
         Assert.True(File.Exists(policyPath), "Manuelle Kalibrierungsberechnung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(previewPolicyPath), "Manuelle Kalibrierungsvorschau muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(togglePolicyPath), "Manuelle Kalibrierungs-Toggle-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controlsPath), "Manuelle Kalibrierungs-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var calibration = File.ReadAllText(calibrationPath);
         var policy = File.ReadAllText(policyPath);
         var previewPolicy = File.ReadAllText(previewPolicyPath);
         var togglePolicy = File.ReadAllText(togglePolicyPath);
+        var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
 
         Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
         Assert.Contains("CodingCalibrationPreviewPolicy.Build", calibration);
         Assert.Contains("CodingCalibrationTogglePolicy.Build", calibration);
+        Assert.Contains("CodingCalibrationControls.ApplyToggle", calibration);
+        Assert.Contains("CodingCalibrationControls.ShowHint", calibration);
+        Assert.Contains("CodingCalibrationControls.ApplyManualResult", calibration);
+        Assert.Contains("CodingCalibrationControls.ApplyPreview", calibration);
+        Assert.Contains("CodingCalibrationControls.HideHint", calibration);
         Assert.DoesNotContain("double pixelDiameter = Math.Sqrt", overlayInput + calibration);
         Assert.DoesNotContain("Math.Sqrt(Math.Pow(p2.X - p1.X, 2)", overlayInput + calibration);
         Assert.DoesNotContain("_codingIsCalibrating = !_codingIsCalibrating", overlayInput + calibration);
         Assert.DoesNotContain("\"BtnCodingCalibrate\"", overlayInput + calibration);
         Assert.DoesNotContain("new PipeCalibration", overlayInput + calibration);
+        Assert.DoesNotContain("CodingCalibrationHint.Visibility", calibration);
+        Assert.DoesNotContain("TxtCodingCalibHint.Text", calibration);
+        Assert.DoesNotContain("TxtCodingCalibStatus.Text", calibration);
         Assert.Contains("public static CodingManualCalibrationResult Build", policy);
         Assert.Contains("CalibrationSource.Manual", policy);
         Assert.Contains("public static CodingCalibrationPreviewState Build", previewPolicy);
         Assert.Contains("public static CodingCalibrationToggleState Build", togglePolicy);
+        Assert.Contains("public static void ApplyToggle", controls);
+        Assert.Contains("public static void ApplyManualResult", controls);
     }
 
     [Fact]

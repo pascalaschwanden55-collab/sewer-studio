@@ -22,8 +22,7 @@ public partial class PlayerWindow
         BtnCodingCreateEvent.IsEnabled = false;
         UpdateCodingOverlayInfo(null);
 
-        CodingCalibrationHint.Visibility = state.ShowHint ? Visibility.Visible : Visibility.Collapsed;
-        TxtCodingCalibHint.Text = state.HintText;
+        CodingCalibrationControls.ApplyToggle(CodingCalibrationHint, TxtCodingCalibHint, state);
         UpdateCodingOverlayCursor();
         RedrawCodingCanvas(includeManualOverlay: false);
     }
@@ -37,7 +36,7 @@ public partial class PlayerWindow
         var result = CodingManualCalibrationPolicy.Build(start, end, p1, p2, dn);
         if (!result.IsValid || result.Calibration == null)
         {
-            TxtCodingCalibHint.Text = result.HintText;
+            CodingCalibrationControls.ShowHint(TxtCodingCalibHint, result.HintText);
             _codingCalibStart = null;
             return;
         }
@@ -46,14 +45,13 @@ public partial class PlayerWindow
         _codingOverlayService.SetCalibration(cal);
         _codingSchemaManager.Active?.ApplyCalibration(cal);
 
-        TxtCodingCalibStatus.Text = result.StatusText;
-        TxtCodingCalibHint.Text = result.HintText;
+        CodingCalibrationControls.ApplyManualResult(TxtCodingCalibStatus, TxtCodingCalibHint, result);
 
         _codingIsCalibrating = false;
         _codingCalibStart = null;
         if (string.Equals(_activeCodingToolName, CodingCalibrationTogglePolicy.CalibrateButtonName))
             _activeCodingToolName = null;
-        CodingCalibrationHint.Visibility = Visibility.Collapsed;
+        CodingCalibrationControls.HideHint(CodingCalibrationHint);
         UpdateCodingOverlayCursor();
         if (_codingSchemaManager.IsActive)
             UpdateCodingSchemaOverlay(enableCreateEvent: true);
@@ -85,7 +83,7 @@ public partial class PlayerWindow
         var p2 = CodingNormToPixel(norm);
         var preview = CodingCalibrationPreviewPolicy.Build(p1, p2);
         _codingPreviewLine = CodingCalibrationPreviewLineRenderer.Render(CodingOverlayCanvas, preview);
-        TxtCodingCalibHint.Text = preview.HintText;
+        CodingCalibrationControls.ApplyPreview(TxtCodingCalibHint, preview);
         return true;
     }
 
