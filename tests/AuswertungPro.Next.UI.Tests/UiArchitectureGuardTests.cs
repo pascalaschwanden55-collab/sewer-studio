@@ -1370,16 +1370,19 @@ public sealed class UiArchitectureGuardTests
         var classifierPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.cs");
         var boundaryPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Boundary.cs");
         var structuralPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Structural.cs");
+        var boundaryWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingBoundaryClassifierResultWorkflow.cs");
         var structuralWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingStructuralClassifierResultWorkflow.cs");
 
         Assert.True(File.Exists(boundaryPath), "Boundary-Classifier-Ergebnisbehandlung soll in ein eigenes Partial.");
         Assert.True(File.Exists(structuralPath), "Structural-Classifier-Ergebnisbehandlung soll in ein eigenes Partial.");
+        Assert.True(File.Exists(boundaryWorkflowPath), "Boundary-Classifier-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(structuralWorkflowPath), "Structural-Classifier-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var classifier = File.Exists(classifierPath) ? File.ReadAllText(classifierPath) : string.Empty;
         var boundary = File.ReadAllText(boundaryPath);
         var structural = File.ReadAllText(structuralPath);
+        var boundaryWorkflow = File.ReadAllText(boundaryWorkflowPath);
         var structuralWorkflow = File.ReadAllText(structuralWorkflowPath);
 
         Assert.DoesNotContain("private bool TryHandleBoundaryClassifierResult", ai);
@@ -1387,7 +1390,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private bool TryHandleBoundaryClassifierResult", classifier);
         Assert.DoesNotContain("private bool TryHandleStructuralClassifierResult", classifier);
         Assert.Contains("private bool TryHandleBoundaryClassifierResult", boundary);
-        Assert.Contains("CodingClassifierDisplayPolicy.IsBoundaryClassifierCode", boundary);
+        Assert.Contains("CodingBoundaryClassifierResultWorkflow.Execute", boundary);
+        Assert.DoesNotContain("CodingClassifierDisplayPolicy.IsBoundaryClassifierCode", boundary);
+        Assert.Contains("CodingClassifierDisplayPolicy.IsBoundaryClassifierCode", boundaryWorkflow);
+        Assert.Contains("CodingDedupPolicy.IsBoundaryEndCodePlausible", boundaryWorkflow);
         Assert.Contains("private bool TryHandleStructuralClassifierResult", structural);
         Assert.Contains("CodingStructuralClassifierResultWorkflow.Execute", structural);
         Assert.DoesNotContain("CodingStructuralClassifierEventFactory.Create", structural);

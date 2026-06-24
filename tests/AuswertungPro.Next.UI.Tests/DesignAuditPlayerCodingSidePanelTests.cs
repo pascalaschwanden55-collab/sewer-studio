@@ -227,8 +227,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var boundaryBody = ExtractMethodBody(coding, "private bool TryHandleBoundaryClassifierResult");
 
-        Assert.Contains("EnsureRohranfangExists(meter, videoTime, _detectionConfirmationBuffer.FrameBytes, ref anyAdded)", boundaryBody);
-        Assert.Contains("EnsureRohrendeExists(_codingVm.EndMeter, videoTime, _detectionConfirmationBuffer.FrameBytes)", boundaryBody);
+        Assert.Contains("_detectionConfirmationBuffer.FrameBytes", boundaryBody);
+        Assert.Contains("EnsureRohranfangExists(startMeter, startTime, frameBytes, ref anyAdded)", boundaryBody);
+        Assert.Contains("EnsureRohrendeExists(meterEnd, endTime, frameBytes)", boundaryBody);
     }
 
     [Fact]
