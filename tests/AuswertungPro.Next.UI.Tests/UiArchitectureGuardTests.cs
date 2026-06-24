@@ -2317,8 +2317,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingProtocolRevisionUpdater.ApplyCodingEvents", apply);
         Assert.Contains("CodingApplyEmptyProtocolGuard.Build", apply);
         Assert.Contains("CodingApplyDialogServiceFactory.Create", apply);
+        Assert.Contains("_codingSessionHost", apply);
         Assert.Contains("ConfirmEmptyProtocol", apply);
         Assert.Contains("ConfirmUnappliedChangesOnClose", apply);
+        Assert.DoesNotContain("_codingVm", apply);
         Assert.DoesNotContain("new ProtocolDocument", apply);
         Assert.DoesNotContain("ProtocolRevisionCloner.CloneDocument", apply);
         Assert.DoesNotContain("doc.Current ??=", apply);

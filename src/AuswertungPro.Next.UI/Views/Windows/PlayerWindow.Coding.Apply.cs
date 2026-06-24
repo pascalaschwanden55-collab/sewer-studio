@@ -11,9 +11,12 @@ public partial class PlayerWindow
 
     private bool ApplyCodingChanges(bool showOverlay)
     {
-        if (_codingVm == null || _haltungRecord == null) return false;
+        if (!_codingSessionHost.HasViewModel || _haltungRecord == null) return false;
 
-        var update = CodingApplyProtocolUpdateBuilder.Create(_haltungRecord, _codingVm.Events);
+        var events = _codingSessionHost.EventCollection;
+        if (events is null) return false;
+
+        var update = CodingApplyProtocolUpdateBuilder.Create(_haltungRecord, events);
         var emptyGuard = CodingApplyEmptyProtocolGuard.Build(update.EventEntryCount, update.CurrentRevision.Entries);
         if (!CodingApplyDialogServiceFactory.Create().ConfirmEmptyProtocol(emptyGuard))
             return false;
@@ -28,15 +31,15 @@ public partial class PlayerWindow
 
         PersistCodingEventsAsTrainingSamples();
 
-        _codingBaselineSignature = CodingEventsSignatureBuilder.Build(_codingVm.Events);
+        _codingBaselineSignature = CodingEventsSignatureBuilder.Build(events);
 
         SaveProjectAfterCoding();
 
         if (showOverlay)
         {
-            var message = _codingVm.Events.Count == 0
+            var message = events.Count == 0
                 ? "Prim\u00e4re Sch\u00e4den geleert"
-                : $"{_codingVm.Events.Count} Ereignisse in Prim\u00e4re Sch\u00e4den \u00fcbernommen";
+                : $"{events.Count} Ereignisse in Prim\u00e4re Sch\u00e4den \u00fcbernommen";
             ShowOverlay(message, TimeSpan.FromSeconds(4));
         }
 
@@ -65,10 +68,10 @@ public partial class PlayerWindow
 
     private bool HasUnappliedCodingChanges()
     {
-        if (!_isCodingMode || _codingVm is null)
+        if (!_isCodingMode || !_codingSessionHost.HasViewModel)
             return false;
 
-        var current = CodingEventsSignatureBuilder.Build(_codingVm.Events);
+        var current = CodingEventsSignatureBuilder.Build(_codingSessionHost.Events);
         return !string.Equals(current, _codingBaselineSignature, StringComparison.Ordinal);
     }
 
