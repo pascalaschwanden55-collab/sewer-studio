@@ -69,4 +69,11 @@ public static class CodingOverlayInputControls
 
         overlayCanvas.Cursor = Cursors.Arrow;
     }
+
+    public static void ApplyCanvasCursor(Canvas overlayCanvas, bool useCrossCursor)
+    {
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+
+        overlayCanvas.Cursor = useCrossCursor ? Cursors.Cross : Cursors.Arrow;
+    }
 }

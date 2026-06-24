@@ -5123,6 +5123,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_overlay_canvas_cursor_uses_controls_adapter()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputControls.cs");
+
+        var joinedPartials = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
+        var tools = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Tools.cs"));
+        var marking = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs"));
+        var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+
+        Assert.Contains("CodingOverlayInputControls.ApplyCanvasCursor", tools);
+        Assert.Contains("CodingOverlayInputControls.ApplyCanvasCursor", marking);
+        Assert.DoesNotContain("CodingOverlayCanvas.Cursor =", joinedPartials);
+        Assert.Contains("public static void ApplyCanvasCursor", controls);
+    }
+
+    [Fact]
     public void PlayerWindow_eingabemarker_submission_lives_in_submission_partial()
     {
         var root = FindRepositoryRoot();

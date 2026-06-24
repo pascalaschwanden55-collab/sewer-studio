@@ -100,7 +100,7 @@ public partial class PlayerWindow
                 _codingVm.SelectedCodeDescription = "";
             },
             RedrawCanvas: () => RedrawCodingCanvas(includeManualOverlay: false),
-            ClearSelectedCodeText: () => TxtCodingSelectedCode.Text = "",
+            ClearSelectedCodeText: () => CodingSelectedCodeControls.Clear(TxtCodingSelectedCode),
             DisableCreateEvent: () => CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false),
             ClearOverlayInfo: () => UpdateCodingOverlayInfo(null));
     }

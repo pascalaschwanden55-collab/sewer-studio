@@ -132,6 +132,23 @@ public sealed class CodingOverlayInputControlsTests
         });
     }
 
+    [Fact]
+    public void ApplyCanvasCursor_sets_cross_or_arrow_cursor()
+    {
+        RunOnStaThread(() =>
+        {
+            var canvas = new Canvas { Cursor = Cursors.Arrow };
+
+            CodingOverlayInputControls.ApplyCanvasCursor(canvas, useCrossCursor: true);
+
+            Assert.Same(Cursors.Cross, canvas.Cursor);
+
+            CodingOverlayInputControls.ApplyCanvasCursor(canvas, useCrossCursor: false);
+
+            Assert.Same(Cursors.Arrow, canvas.Cursor);
+        });
+    }
+
     private static void RunOnStaThread(Action action)
     {
         Exception? exception = null;

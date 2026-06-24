@@ -79,11 +79,11 @@ public partial class PlayerWindow
     private void UpdateCodingOverlayCursor()
     {
         var activeTool = _codingOverlayService?.ActiveTool ?? OverlayToolType.None;
-        CodingOverlayCanvas.Cursor = CodingOverlayCursorPolicy.ShouldUseCrossCursor(
-            CodingOverlayPopup.IsOpen,
-            _codingIsCalibrating,
-            activeTool)
-            ? Cursors.Cross
-            : Cursors.Arrow;
+        CodingOverlayInputControls.ApplyCanvasCursor(
+            CodingOverlayCanvas,
+            CodingOverlayCursorPolicy.ShouldUseCrossCursor(
+                CodingOverlayPopup.IsOpen,
+                _codingIsCalibrating,
+                activeTool));
     }
 }
