@@ -22,7 +22,7 @@ public partial class PlayerWindow
         SchemaType? schemaType = null,
         LevelMode? levelMode = null)
     {
-        if (_codingOverlayService == null || _codingVm == null) return;
+        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel) return;
         _codingIsCalibrating = false;
         _codingCalibStart = null;
 
@@ -48,7 +48,7 @@ public partial class PlayerWindow
 
         CodingOverlayInputControls.ApplyActiveToolSelection(TxtActiveToolLabel, BtnCodingCreateEvent, selection.LabelText);
 
-        _codingVm.CurrentOverlay = null;
+        _codingSessionHost.ClearCurrentOverlay();
         UpdateCodingOverlayInfo(null);
         UpdateCodingOverlayCursor();
         RedrawCodingCanvas(includeManualOverlay: false);

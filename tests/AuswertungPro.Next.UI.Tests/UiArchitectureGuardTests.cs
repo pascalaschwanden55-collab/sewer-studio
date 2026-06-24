@@ -4986,6 +4986,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void SetCodingTool", tools);
         Assert.Contains("private void UpdateCodingOverlayCursor", tools);
         Assert.Contains("CodingToolSelectionPolicy.Build", tools);
+        Assert.Contains("_codingSessionHost", tools);
+        Assert.DoesNotContain("_codingVm", tools);
         Assert.Contains("LiveDetectionStatusControls.ShowStatusMessage", tools);
         Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", tools);
         Assert.DoesNotContain("LiveDetectionStatusText.Text = msg", tools);
