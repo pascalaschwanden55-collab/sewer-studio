@@ -114,6 +114,21 @@ public static class LiveDetectionStatusControls
         statusText.Visibility = Visibility.Collapsed;
     }
 
+    public static void ShowWaitingForFrame(TextBlock statusText)
+    {
+        ArgumentNullException.ThrowIfNull(statusText);
+
+        statusText.Text = "Warte auf Frame...";
+        statusText.Visibility = Visibility.Visible;
+    }
+
+    public static void ShowDetectionError(TextBlock statusText, string message)
+    {
+        ArgumentNullException.ThrowIfNull(statusText);
+
+        statusText.Text = $"Fehler: {message}";
+    }
+
     public static void ShowPipelineHealthDetails(
         TextBlock sidecar,
         TextBlock token,

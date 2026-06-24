@@ -186,6 +186,38 @@ public sealed class LiveDetectionStatusControlsTests
     }
 
     [Fact]
+    public void ShowWaitingForFrame_shows_waiting_status()
+    {
+        RunOnStaThread(() =>
+        {
+            var status = new TextBlock { Visibility = Visibility.Collapsed, Text = "alt" };
+            var show = FindMethod("ShowWaitingForFrame", typeof(TextBlock));
+            Assert.NotNull(show);
+
+            show.Invoke(null, [status]);
+
+            Assert.Equal("Warte auf Frame...", status.Text);
+            Assert.Equal(Visibility.Visible, status.Visibility);
+        });
+    }
+
+    [Fact]
+    public void ShowDetectionError_sets_error_text_without_changing_visibility()
+    {
+        RunOnStaThread(() =>
+        {
+            var status = new TextBlock { Visibility = Visibility.Collapsed };
+            var show = FindMethod("ShowDetectionError", typeof(TextBlock), typeof(string));
+            Assert.NotNull(show);
+
+            show.Invoke(null, [status, "Timeout"]);
+
+            Assert.Equal("Fehler: Timeout", status.Text);
+            Assert.Equal(Visibility.Collapsed, status.Visibility);
+        });
+    }
+
+    [Fact]
     public void ShowPipelineHealthDetails_sets_all_health_lines()
     {
         RunOnStaThread(() =>

@@ -96,7 +96,7 @@ public partial class PlayerWindow
                 if (_closing || _playbackDisposed)
                     return;
 
-                LiveDetectionStatusText.Text = $"Fehler: {msg}";
+                LiveDetectionStatusControls.ShowDetectionError(LiveDetectionStatusText, msg);
                 SetLiveDetectionBadge("KI Fehler", PlayerStatusColors.Error,
                     LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName));
             });

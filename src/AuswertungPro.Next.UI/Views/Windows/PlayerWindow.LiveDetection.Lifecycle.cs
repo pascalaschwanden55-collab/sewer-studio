@@ -61,8 +61,7 @@ public partial class PlayerWindow
                 $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(runtime.VisionModel)}");
             SetYoloStatus("Aktiv", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(runtime.VisionModel));
 
-            LiveDetectionStatusText.Visibility = Visibility.Visible;
-            LiveDetectionStatusText.Text = "Warte auf Frame...";
+            LiveDetectionStatusControls.ShowWaitingForFrame(LiveDetectionStatusText);
 
             _detectionTimer = PlayerWindowTimerFactory.CreateLiveDetectionTimer(DetectionTimer_Tick);
             _detectionTimer.Start();

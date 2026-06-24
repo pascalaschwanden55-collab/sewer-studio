@@ -997,6 +997,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveDetectionStatusControls.ShowYoloStatus", status);
         Assert.Contains("LiveDetectionStatusControls.ShowCodingAiState", status);
         Assert.Contains("LiveDetectionStatusControls.ShowDetectionStatus", status);
+        Assert.Contains("LiveDetectionStatusControls.ShowDetectionError", liveDetection);
+        Assert.DoesNotContain("LiveDetectionStatusText.Text = $\"Fehler:", liveDetection);
         Assert.DoesNotContain("AiStatusBadge.Visibility", status);
         Assert.DoesNotContain("YoloStatusBar.Visibility", status);
         Assert.DoesNotContain("TxtCodingAiStatus.Text", status);
@@ -1052,6 +1054,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("new LiveDetectionService", lifecycle);
         Assert.DoesNotContain("new DispatcherTimer", lifecycle);
         Assert.Contains("PlayerWindowTimerFactory.CreateLiveDetectionTimer", lifecycle);
+        Assert.Contains("LiveDetectionStatusControls.ShowWaitingForFrame", lifecycle);
+        Assert.DoesNotContain("LiveDetectionStatusText.Text = \"Warte auf Frame...\"", lifecycle);
+        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Visible", lifecycle);
         Assert.DoesNotContain("VisionModelSelectionPolicy.Select", lifecycle);
         Assert.Contains("new OllamaClient", factory);
         Assert.Contains("new LiveDetectionService", factory);
