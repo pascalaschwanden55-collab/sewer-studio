@@ -111,19 +111,26 @@ public sealed class UiArchitectureGuardTests
         var wiringPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs");
         var sliderPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs");
         var dragPlaybackPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragPlayback.cs");
+        var headerControlsPath = Path.Combine(uiRoot, "Player", "PlayerWindowHeaderControls.cs");
 
         Assert.True(File.Exists(wiringPath), "Fenster-, Slider- und Viewport-Wiring soll aus dem Konstruktor heraus.");
         Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
         Assert.True(File.Exists(dragPlaybackPath), "PositionSlider-Drag-Pause-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(headerControlsPath), "Player-Header-Control-Zuweisungen sollen ausserhalb des Konstruktors liegen.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var wiring = File.ReadAllText(wiringPath);
         var slider = File.ReadAllText(sliderPath);
         var dragPlayback = File.Exists(dragPlaybackPath) ? File.ReadAllText(dragPlaybackPath) : "";
+        var headerControls = File.Exists(headerControlsPath) ? File.ReadAllText(headerControlsPath) : "";
 
         Assert.Contains("WireWindowLifecycleEvents();", windowRoot);
         Assert.Contains("WirePositionSliderEvents();", windowRoot);
         Assert.Contains("WireWindowSurfaceEvents();", windowRoot);
+        Assert.Contains("PlayerWindowHeaderControls.ApplyVideoInfo", windowRoot);
+        Assert.DoesNotContain("VideoNameText.Text", windowRoot);
+        Assert.DoesNotContain("VideoPathText.Text", windowRoot);
+        Assert.Contains("public static void ApplyVideoInfo", headerControls);
         Assert.DoesNotContain("PositionSlider.AddHandler", windowRoot);
         Assert.DoesNotContain("Closed += (_, __)", windowRoot);
         Assert.DoesNotContain("Deactivated += (_, _)", windowRoot);

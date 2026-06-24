@@ -42,9 +42,7 @@ public partial class PlayerWindow : Window
         _haltungRecord = haltungRecord;
         _initialOverlayText = initialOverlayText;
 
-        Title = $"Video - {videoInfo.DisplayName}";
-        VideoNameText.Text = videoInfo.DisplayName;
-        VideoPathText.Text = videoInfo.VideoPath;
+        PlayerWindowHeaderControls.ApplyVideoInfo(this, VideoNameText, VideoPathText, videoInfo);
 
         Core.Initialize();
 
