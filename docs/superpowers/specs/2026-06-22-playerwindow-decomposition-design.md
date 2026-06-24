@@ -1,7 +1,7 @@
 # Design: PlayerWindow schrittweise entflechten — Pilot DamageMarkerController
 
 - **Datum:** 2026-06-22
-- **Fortschreibung 2026-06-24:** Die Spec bleibt massgeblich. Aktueller Stand: `DamageMarkerController`, `QuickScanController`, Schritt 3 `CodingOverlayRenderController`, `DetectionConfirmationBuffer`, der erste `LiveDetectionController`-Schnitt, `CodingOsdMeterController`, der erste `CodingAiController`-Schnitt inklusive Health-Monitor-State, `CodingFrameReadinessController`, `CodingLiveFindingEventWorkflow`, `CodingMultiModelFindingEventWorkflow`, `CodingAiResultWorkflow`, `CodingMultiModelAnalysisResultWorkflow`, `CodingStructuralClassifierResultWorkflow`, `CodingBoundaryClassifierResultWorkflow`, `CodingBoundaryEventWorkflow`, `LiveDetectionResultWorkflow`, `LiveDetectionErrorWorkflow`, `LiveDetectionSnapshotWorkflow`, `LiveDetectionTickStartWorkflow`, `LiveDetectionInferenceWorkflow`, `LiveDetectionStopUiWorkflow`, `PlayerWindowClosingWorkflow`, `PlayerWindowCleanupWorkflow` und `PlayerWindowClosedWorkflow` sind umgesetzt; dazu kamen `CodingUiUpdateWorkflow`, `LiveDetectionRuntimeStartWorkflow` und mehrere UI-Adapter. Aktuelle Vermessung: `PlayerWindow*.cs` = 95 Dateien / 4853 Zeilen, `PlayerWindow.xaml` = 822 Zeilen, zusammen 5675 Zeilen. Die alte Angabe "33 Dateien / ~7.500 Zeilen" ist historisch.
+- **Fortschreibung 2026-06-24:** Die Spec bleibt massgeblich. Aktueller Stand: `DamageMarkerController`, `QuickScanController`, Schritt 3 `CodingOverlayRenderController`, `DetectionConfirmationBuffer`, der erste `LiveDetectionController`-Schnitt, `CodingOsdMeterController`, der erste `CodingAiController`-Schnitt inklusive Health-Monitor-State, `CodingFrameReadinessController`, `CodingLiveFindingEventWorkflow`, `CodingMultiModelFindingEventWorkflow`, `CodingAiResultWorkflow`, `CodingMultiModelAnalysisResultWorkflow`, `CodingStructuralClassifierResultWorkflow`, `CodingBoundaryClassifierResultWorkflow`, `CodingBoundaryEventWorkflow`, `LiveDetectionResultWorkflow`, `LiveDetectionErrorWorkflow`, `LiveDetectionSnapshotWorkflow`, `LiveDetectionTickStartWorkflow`, `LiveDetectionInferenceWorkflow`, `LiveDetectionStopUiWorkflow`, `PlayerWindowClosingWorkflow`, `PlayerWindowCleanupWorkflow`, `PlayerWindowClosedWorkflow` und `CodingModePreparePlaybackWorkflow` sind umgesetzt; dazu kamen `CodingUiUpdateWorkflow`, `LiveDetectionRuntimeStartWorkflow` und mehrere UI-Adapter. Aktuelle Vermessung: `PlayerWindow*.cs` = 95 Dateien / 4855 Zeilen, `PlayerWindow.xaml` = 822 Zeilen, zusammen 5677 Zeilen. Die alte Angabe "33 Dateien / ~7.500 Zeilen" ist historisch.
 - **Aktualisierte Reihenfolge 2026-06-24:** 1) Overlay-Abstraktion / `CodingOverlayRenderController`, 2) `ConfirmationBuffer` fuer `_detectionPending*`, 3) `LiveDetectionController`, 4) `CodingAiController` in zwei Stufen. Damit wird die alte Reihenfolge "CodingAi vor LiveDetection" ueberschrieben, weil der geteilte Puffer vor den grossen Controllern als eigenes Objekt herausgezogen wurde.
 - **Status:** Design freigegeben (Pilot-Zuschnitt: schlank & direkt)
 - **Scope-Entscheidung:** Pilot zuerst — diese Spec beschreibt EINEN Pilot-Schnitt im Detail, der Rest ist nur skizziert.
@@ -9,7 +9,7 @@
 
 ## 1. Kontext & Problem
 
-`PlayerWindow` ist aktuell eine `partial class` über **95 Dateien / 4853 Zeilen** plus **822 Zeilen XAML**. Das Aufteilen in viele kleine Partial-Dateien hat die Lesbarkeit verbessert, aber die eigentliche Kopplung entsteht weiterhin dort, wo veränderlicher Zustand im Fenster geteilt bleibt. Genau diese Felder werden Schritt für Schritt in fokussierte Controller verschoben.
+`PlayerWindow` ist aktuell eine `partial class` über **95 Dateien / 4855 Zeilen** plus **822 Zeilen XAML**. Das Aufteilen in viele kleine Partial-Dateien hat die Lesbarkeit verbessert, aber die eigentliche Kopplung entsteht weiterhin dort, wo veränderlicher Zustand im Fenster geteilt bleibt. Genau diese Felder werden Schritt für Schritt in fokussierte Controller verschoben.
 
 Das ist kein Stabilitäts-, sondern ein Wartbarkeitsrisiko: eine Änderung kann Playback, Codierung, Overlay, Live-Erkennung und Speichern gleichzeitig betreffen, weil sie sich denselben Zustand teilen.
 
@@ -73,7 +73,7 @@ Es darf sich **nichts** am sichtbaren Verhalten ändern: Marker an identischer P
 
 ## 5. Verifikation
 - `dotnet build AuswertungPro.sln` → 0 Fehler, 0 Warnungen.
-- `dotnet test AuswertungPro.sln` → aktueller Stand: **2.970** Tests grün, **1** Test übersprungen (kein Test darf brechen).
+- `dotnet test AuswertungPro.sln` → aktueller Stand: **2.972** Tests grün, **1** Test übersprungen (kein Test darf brechen).
 - Optional: ein kleiner Unit-Test, der den Controller mit einem Fake-Overlay baut und prüft, dass `Build()` die erwartete Marker-Anzahl auf das Canvas legt (soweit ohne echtes WPF-Rendering testbar).
 - **Manueller Gegencheck im laufenden Player** (Pflicht, da WPF schwer unit-testbar): Video mit Befunden öffnen → Marker erscheinen an richtiger Stelle, Labels/Tooltips korrekt, Klick auf Marker springt auf den richtigen Meterstand, Fenster-Größenänderung positioniert korrekt nach.
 

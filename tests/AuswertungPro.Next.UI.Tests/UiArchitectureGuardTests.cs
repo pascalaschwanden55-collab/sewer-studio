@@ -2602,21 +2602,28 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var helperPath = Path.Combine(uiRoot, "Player", "PlayerCodingPlayback.cs");
+        var preparePlaybackWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModePreparePlaybackWorkflow.cs");
+        var lifecycleUiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Ui.cs");
         var codingPaths = new[]
         {
             Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs"),
             Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs"),
             Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.Actions.cs"),
             Path.Combine(windowsRoot, "PlayerWindow.Coding.Eingabemarker.cs"),
-            Path.Combine(windowsRoot, "PlayerWindow.Coding.Navigation.cs"),
-            Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Ui.cs")
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.Navigation.cs")
         };
 
         Assert.True(File.Exists(helperPath), "Coding-Interaktions-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(preparePlaybackWorkflowPath), "Coding-Mode-Playback-Vorbereitung soll den Pause-Helper verwenden.");
 
         var helper = File.ReadAllText(helperPath);
+        var workflow = File.ReadAllText(preparePlaybackWorkflowPath);
+        var lifecycleUi = File.ReadAllText(lifecycleUiPath);
         Assert.Contains("public static class PlayerCodingPlayback", helper);
         Assert.Contains("PauseForCodingInteraction", helper);
+        Assert.Contains("PlayerCodingPlayback.PauseForCodingInteraction", workflow);
+        Assert.Contains("CodingModePreparePlaybackWorkflow.Execute", lifecycleUi);
+        Assert.DoesNotContain("PlayerCodingPlayback.PauseForCodingInteraction", lifecycleUi);
 
         foreach (var path in codingPaths)
         {
@@ -4629,6 +4636,7 @@ public sealed class UiArchitectureGuardTests
         var uiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Ui.cs");
         var importReferenceResetterPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceStateResetter.cs");
         var matchResetterPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchStateResetter.cs");
+        var preparePlaybackWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModePreparePlaybackWorkflow.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(exitPath), "Codiermodus-Exit soll aus dem allgemeinen Lifecycle-Partial heraus.");
@@ -4638,6 +4646,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(uiPath), "Codiermodus-UI-Aktivierung soll aus dem Enter-Partial heraus.");
         Assert.True(File.Exists(importReferenceResetterPath), "Import-Referenz-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(matchResetterPath), "Protocol-Match-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(preparePlaybackWorkflowPath), "Coding-Mode-Playback-Vorbereitung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var coding = File.ReadAllText(codingPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
@@ -4648,6 +4657,7 @@ public sealed class UiArchitectureGuardTests
         var ui = File.ReadAllText(uiPath);
         var importReferenceResetter = File.Exists(importReferenceResetterPath) ? File.ReadAllText(importReferenceResetterPath) : "";
         var matchResetter = File.Exists(matchResetterPath) ? File.ReadAllText(matchResetterPath) : "";
+        var preparePlaybackWorkflow = File.Exists(preparePlaybackWorkflowPath) ? File.ReadAllText(preparePlaybackWorkflowPath) : "";
 
         Assert.DoesNotContain("private void EnterCodingMode", coding);
         Assert.DoesNotContain("private void ExitCodingMode", coding);
@@ -4675,6 +4685,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingProtocolMatchBuckets.Clear()", exit);
         Assert.DoesNotContain("_codingImportEvents.Clear()", exit);
         Assert.Contains("ShowCodingModeUi();", lifecycle);
+        Assert.Contains("CodingModePreparePlaybackWorkflow.Execute", ui);
+        Assert.DoesNotContain("if (_liveDetectionController.IsDetecting)", ui);
+        Assert.Contains("PlayerCodingPlayback.PauseForCodingInteraction", preparePlaybackWorkflow);
+        Assert.Contains("actions.StopLiveDetection()", preparePlaybackWorkflow);
         Assert.DoesNotContain("LiveDetectionStatusText.Visibility = _isDetecting", exit);
         Assert.Contains("CodingModeChromeControls.HideLiveDetectionEntry", ui);
         Assert.Contains("CodingModeChromeControls.ShowLiveDetectionEntry", exit);

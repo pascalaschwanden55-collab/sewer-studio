@@ -14,15 +14,15 @@ public partial class PlayerWindow
 {
     private void PrepareCodingModePlayback()
     {
-        PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause));
-
-        if (_liveDetectionController.IsDetecting)
-        {
-            StopLiveDetection();
-            LiveDetectionToggleControls.Uncheck(LiveDetectionButton);
-        }
-
-        CodingModeChromeControls.HideLiveDetectionEntry(LiveDetectionButton, LiveDetectionStatusText);
+        CodingModePreparePlaybackWorkflow.Execute(
+            new CodingModePreparePlaybackWorkflowRequest(_liveDetectionController.IsDetecting),
+            new CodingModePreparePlaybackWorkflowActions(
+                SetPause: pause => _player.SetPause(pause),
+                StopLiveDetection: StopLiveDetection,
+                UncheckLiveDetectionToggle: () => LiveDetectionToggleControls.Uncheck(LiveDetectionButton),
+                HideLiveDetectionEntry: () => CodingModeChromeControls.HideLiveDetectionEntry(
+                    LiveDetectionButton,
+                    LiveDetectionStatusText)));
     }
 
     private void ActivateDefaultCodingTool()
