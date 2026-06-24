@@ -2030,18 +2030,23 @@ public sealed class UiArchitectureGuardTests
         var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenEventFactory.cs");
         var applierPath = Path.Combine(uiRoot, "Ai", "CodingStretchDamageManualCloseApplier.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventListActionWorkflow.cs");
 
         Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionen sollen in einem eigenen Partial liegen.");
         Assert.True(File.Exists(applierPath), "Manuelles Streckenschaden-Schliessen soll ausserhalb der PlayerWindow-Partials angewendet werden.");
+        Assert.True(File.Exists(workflowPath), "Streckenschaden-Schliessen soll ueber den Coding-Event-Listenworkflow laufen.");
 
         var events = File.ReadAllText(eventsPath);
         var actions = File.ReadAllText(actionsPath);
         var factory = File.ReadAllText(factoryPath);
         var applier = File.ReadAllText(applierPath);
+        var workflow = File.ReadAllText(workflowPath);
 
         Assert.DoesNotContain("CodingStreckenschadenEventFactory.CloseStart", events);
         Assert.DoesNotContain("CodingStreckenschadenEventFactory.CloseStart", actions);
-        Assert.Contains("CodingStretchDamageManualCloseApplier.Apply", actions);
+        Assert.DoesNotContain("CodingStretchDamageManualCloseApplier.Apply", actions);
+        Assert.Contains("CodingEventListActionWorkflow.CloseStretch", actions);
+        Assert.Contains("CodingStretchDamageManualCloseApplier.Apply", workflow);
         Assert.Contains("CodingStreckenschadenEventFactory.CloseStart", applier);
         Assert.DoesNotContain("Beschreibung + \" (Ende)\"", events + actions);
         Assert.Contains("public static ProtocolEntry CloseStart", factory);
@@ -2120,8 +2125,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void CodingEventDelete_Click", actions);
         Assert.Contains("CodingEventActionDialogServiceFactory.Create", actions);
         Assert.Contains("CodingEventListActionWorkflow.CompleteEdit", actions);
+        Assert.Contains("CodingEventListActionWorkflow.CloseStretch", actions);
         Assert.Contains("CodingEventListActionWorkflow.Delete", actions);
         Assert.DoesNotContain("CodingEventEditApplier.Apply", actions);
+        Assert.DoesNotContain("CodingStretchDamageManualCloseApplier.Apply", actions);
+        Assert.DoesNotContain("CodingStretchDamageManualCloseResultKind", actions);
         Assert.DoesNotContain("CodingEventDeleteApplier.Apply", actions);
         Assert.DoesNotContain("_codingSessionService?.UpdateEvent", actions);
         Assert.DoesNotContain("codingEvent.MeterAtCapture = entry.MeterStart", actions);
@@ -2131,6 +2139,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("Der aktuelle Meterstand", actions);
         Assert.DoesNotContain("Ereignis '", actions);
         Assert.Contains("CodingEventEditApplier.Apply", workflow);
+        Assert.Contains("CodingStretchDamageManualCloseApplier.Apply", workflow);
         Assert.Contains("CodingEventDeleteApplier.Apply", workflow);
         Assert.Contains("ShowStretchCloseRequiresLaterMeter", dialogService);
         Assert.Contains("ConfirmDelete", dialogService);

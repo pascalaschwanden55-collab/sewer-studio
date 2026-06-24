@@ -9,6 +9,12 @@ public sealed record CodingEventListDeleteResult(
     bool Deleted,
     bool ShouldClearSelectedDefect);
 
+public sealed record CodingEventCloseStretchActionResult(
+    bool Applied,
+    bool RequiresLaterMeterPrompt,
+    bool ShouldRefreshEvents,
+    string StatusText);
+
 public static class CodingEventListActionWorkflow
 {
     public static bool CompleteEdit(
@@ -44,5 +50,38 @@ public static class CodingEventListActionWorkflow
         return new CodingEventListDeleteResult(
             Deleted: true,
             deleteResult.ShouldClearSelectedDefect);
+    }
+
+    public static CodingEventCloseStretchActionResult CloseStretch(
+        CodingEvent? startEvent,
+        ICodingSessionService? codingSessionService,
+        double currentMeter,
+        TimeSpan currentVideoTime)
+    {
+        if (startEvent is null || codingSessionService is null)
+            return new CodingEventCloseStretchActionResult(
+                Applied: false,
+                RequiresLaterMeterPrompt: false,
+                ShouldRefreshEvents: false,
+                StatusText: "");
+
+        var closeResult = CodingStretchDamageManualCloseApplier.Apply(
+            startEvent,
+            currentMeter,
+            currentVideoTime,
+            codingSessionService);
+
+        if (closeResult.Kind == CodingStretchDamageManualCloseResultKind.RequiresLaterMeter)
+            return new CodingEventCloseStretchActionResult(
+                Applied: true,
+                RequiresLaterMeterPrompt: true,
+                ShouldRefreshEvents: false,
+                StatusText: "");
+
+        return new CodingEventCloseStretchActionResult(
+            Applied: true,
+            RequiresLaterMeterPrompt: false,
+            ShouldRefreshEvents: true,
+            closeResult.StatusText ?? "");
     }
 }

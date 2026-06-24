@@ -94,6 +94,84 @@ public sealed class CodingEventListActionWorkflowTests
         Assert.Empty(service.RemovedEventIds);
     }
 
+    [Fact]
+    public void CloseStretch_requires_later_meter_without_refresh_status()
+    {
+        var service = new RecordingCodingSessionService();
+        var ev = Event("BAJ");
+        ev.MeterAtCapture = 5.0;
+        ev.Entry.MeterStart = 5.0;
+        ev.Entry.IsStreckenschaden = true;
+        var method = FindCloseStretchMethod();
+        Assert.NotNull(method);
+
+        var result = method.Invoke(null, [
+            ev,
+            service,
+            5.0,
+            TimeSpan.FromSeconds(20)
+        ]);
+
+        AssertCloseStretchResult(
+            result,
+            expectedApplied: true,
+            expectedRequiresLaterMeterPrompt: true,
+            expectedShouldRefreshEvents: false,
+            expectedStatusText: "");
+        Assert.Empty(service.AddedEvents);
+    }
+
+    [Fact]
+    public void CloseStretch_closes_damage_and_returns_refresh_status()
+    {
+        var service = new RecordingCodingSessionService();
+        var ev = Event("BAJ");
+        ev.MeterAtCapture = 2.0;
+        ev.Entry.MeterStart = 2.0;
+        ev.Entry.IsStreckenschaden = true;
+        var method = FindCloseStretchMethod();
+        Assert.NotNull(method);
+
+        var result = method.Invoke(null, [
+            ev,
+            service,
+            3.5,
+            TimeSpan.FromSeconds(33)
+        ]);
+
+        AssertCloseStretchResult(
+            result,
+            expectedApplied: true,
+            expectedRequiresLaterMeterPrompt: false,
+            expectedShouldRefreshEvents: true,
+            expectedStatusText: "Streckenschaden geschlossen: BAJ 2.00m - 3.50m");
+        var added = Assert.Single(service.AddedEvents);
+        Assert.Equal(TimeSpan.FromSeconds(33), added.VideoTimestamp);
+    }
+
+    [Fact]
+    public void CloseStretch_returns_unapplied_without_event_or_session()
+    {
+        var method = FindCloseStretchMethod();
+        Assert.NotNull(method);
+
+        var withoutEvent = method.Invoke(null, [
+            null,
+            new RecordingCodingSessionService(),
+            3.5,
+            TimeSpan.FromSeconds(33)
+        ]);
+        var withoutSession = method.Invoke(null, [
+            Event("BAJ"),
+            null,
+            3.5,
+            TimeSpan.FromSeconds(33)
+        ]);
+
+        AssertCloseStretchResult(withoutEvent, expectedApplied: false);
+        AssertCloseStretchResult(withoutSession, expectedApplied: false);
+    }
+
     private static CodingEvent Event(string code)
         => new()
         {
@@ -121,6 +199,14 @@ public sealed class CodingEventListActionWorkflowTests
             types: [typeof(CodingEvent), typeof(ICodingSessionService), typeof(ICollection<CodingEvent>), typeof(CodingEvent)],
             modifiers: null);
 
+    private static MethodInfo? FindCloseStretchMethod()
+        => WorkflowType?.GetMethod(
+            "CloseStretch",
+            BindingFlags.Public | BindingFlags.Static,
+            binder: null,
+            types: [typeof(CodingEvent), typeof(ICodingSessionService), typeof(double), typeof(TimeSpan)],
+            modifiers: null);
+
     private static void AssertDeleteResult(object? result, bool expectedDeleted, bool expectedClear)
     {
         Assert.NotNull(result);
@@ -129,10 +215,26 @@ public sealed class CodingEventListActionWorkflowTests
         Assert.Equal(expectedClear, type.GetProperty("ShouldClearSelectedDefect")?.GetValue(result));
     }
 
+    private static void AssertCloseStretchResult(
+        object? result,
+        bool expectedApplied,
+        bool expectedRequiresLaterMeterPrompt = false,
+        bool expectedShouldRefreshEvents = false,
+        string expectedStatusText = "")
+    {
+        Assert.NotNull(result);
+        var type = result.GetType();
+        Assert.Equal(expectedApplied, type.GetProperty("Applied")?.GetValue(result));
+        Assert.Equal(expectedRequiresLaterMeterPrompt, type.GetProperty("RequiresLaterMeterPrompt")?.GetValue(result));
+        Assert.Equal(expectedShouldRefreshEvents, type.GetProperty("ShouldRefreshEvents")?.GetValue(result));
+        Assert.Equal(expectedStatusText, type.GetProperty("StatusText")?.GetValue(result));
+    }
+
     private sealed class RecordingCodingSessionService : ICodingSessionService
     {
         public List<Guid> UpdatedEventIds { get; } = new();
         public List<Guid> RemovedEventIds { get; } = new();
+        public List<CodingEvent> AddedEvents { get; } = new();
 
         public double CurrentMeter => 0;
         public double EndMeter => 0;
@@ -153,7 +255,12 @@ public sealed class CodingEventListActionWorkflowTests
         public void MoveNext(double stepSizeM = 0.5) { }
         public void MovePrevious(double stepSizeM = 0.5) { }
         public void MoveToMeter(double meter) { }
-        public CodingEvent AddEvent(ProtocolEntry entry, OverlayGeometry? overlay = null) => new() { Entry = entry, Overlay = overlay };
+        public CodingEvent AddEvent(ProtocolEntry entry, OverlayGeometry? overlay = null)
+        {
+            var ev = new CodingEvent { Entry = entry, Overlay = overlay };
+            AddedEvents.Add(ev);
+            return ev;
+        }
         public void UpdateEvent(Guid eventId, ProtocolEntry entry, OverlayGeometry? overlay = null) => UpdatedEventIds.Add(eventId);
         public void RemoveEvent(Guid eventId) => RemovedEventIds.Add(eventId);
 

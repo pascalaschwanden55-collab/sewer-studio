@@ -60,24 +60,27 @@ public partial class PlayerWindow
     private void CodingEventCloseStretch_Click(object sender, RoutedEventArgs e)
     {
         if (LstCodingEvents.SelectedItem is not CodingEvent startEvent) return;
-        if (_codingSessionService == null || _codingVm == null) return;
+        if (_codingVm == null) return;
 
-        double currentMeter = _codingVm.CurrentMeter;
-        var closeResult = CodingStretchDamageManualCloseApplier.Apply(
+        var closeAction = CodingEventListActionWorkflow.CloseStretch(
             startEvent,
-            currentMeter,
-            _player != null ? TimeSpan.FromMilliseconds(_player.Time) : TimeSpan.Zero,
-            _codingSessionService);
+            _codingSessionService,
+            _codingVm.CurrentMeter,
+            _player != null ? TimeSpan.FromMilliseconds(_player.Time) : TimeSpan.Zero);
 
-        if (closeResult.Kind == CodingStretchDamageManualCloseResultKind.RequiresLaterMeter)
+        if (!closeAction.Applied)
+            return;
+
+        if (closeAction.RequiresLaterMeterPrompt)
         {
             CodingEventActionDialogServiceFactory.Create().ShowStretchCloseRequiresLaterMeter();
             return;
         }
 
-        RefreshCodingEventsList();
+        if (closeAction.ShouldRefreshEvents)
+            RefreshCodingEventsList();
 
-        SetCodingAiState(closeResult.StatusText ?? "", PlayerStatusColors.Success, "");
+        SetCodingAiState(closeAction.StatusText, PlayerStatusColors.Success, "");
     }
 
     private void CodingEventDelete_Click(object sender, RoutedEventArgs e)
