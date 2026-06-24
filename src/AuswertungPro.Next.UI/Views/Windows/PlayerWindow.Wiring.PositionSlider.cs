@@ -1,5 +1,6 @@
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -15,10 +16,10 @@ public partial class PlayerWindow
 
     private void PositionSlider_DragStarted(object sender, DragStartedEventArgs e)
     {
-        _wasPlayingBeforeDrag = _player.IsPlaying;
+        _wasPlayingBeforeDrag = PlayerPositionSliderDragPlayback.Start(
+            _player.IsPlaying,
+            pause => _player.SetPause(pause));
         _isDragging = true;
-        if (_wasPlayingBeforeDrag)
-            _player.SetPause(true);
         ScrubSeekToSlider();
     }
 
@@ -27,8 +28,9 @@ public partial class PlayerWindow
         _scrubTimer.Stop();
         SeekToSlider();
         _isDragging = false;
-        if (_wasPlayingBeforeDrag)
-            _player.SetPause(false);
+        PlayerPositionSliderDragPlayback.Complete(
+            _wasPlayingBeforeDrag,
+            pause => _player.SetPause(pause));
     }
 
     private void PositionSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -45,7 +47,8 @@ public partial class PlayerWindow
         _scrubTimer.Stop();
         SeekToSlider();
         _isDragging = false;
-        if (_wasPlayingBeforeDrag)
-            _player.SetPause(false);
+        PlayerPositionSliderDragPlayback.Complete(
+            _wasPlayingBeforeDrag,
+            pause => _player.SetPause(pause));
     }
 }

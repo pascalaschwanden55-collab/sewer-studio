@@ -110,13 +110,16 @@ public sealed class UiArchitectureGuardTests
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var wiringPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs");
         var sliderPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs");
+        var dragPlaybackPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragPlayback.cs");
 
         Assert.True(File.Exists(wiringPath), "Fenster-, Slider- und Viewport-Wiring soll aus dem Konstruktor heraus.");
         Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
+        Assert.True(File.Exists(dragPlaybackPath), "PositionSlider-Drag-Pause-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var wiring = File.ReadAllText(wiringPath);
         var slider = File.ReadAllText(sliderPath);
+        var dragPlayback = File.Exists(dragPlaybackPath) ? File.ReadAllText(dragPlaybackPath) : "";
 
         Assert.Contains("WireWindowLifecycleEvents();", windowRoot);
         Assert.Contains("WirePositionSliderEvents();", windowRoot);
@@ -132,6 +135,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PositionSlider.AddHandler", slider);
         Assert.Contains("private void PositionSlider_DragStarted", slider);
         Assert.Contains("private void PositionSlider_LostMouseCapture", slider);
+        Assert.Contains("PlayerPositionSliderDragPlayback.Start", slider);
+        Assert.Contains("PlayerPositionSliderDragPlayback.Complete", slider);
+        Assert.DoesNotContain("_player.SetPause(true)", slider);
+        Assert.DoesNotContain("_player.SetPause(false)", slider);
+        Assert.Contains("public static class PlayerPositionSliderDragPlayback", dragPlayback);
         Assert.Contains("private void WireWindowSurfaceEvents", wiring);
     }
 
