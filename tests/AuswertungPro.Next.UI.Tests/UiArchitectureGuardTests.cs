@@ -2173,15 +2173,30 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var confirmationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs");
         var deleteApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteApplier.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationDecisionWorkflow.cs");
 
         Assert.True(File.Exists(deleteApplierPath), "Confirm-Reject muss die gemeinsame Coding-Event-Loeschanwendung nutzen.");
+        Assert.True(File.Exists(workflowPath), "Confirm-Decision-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var confirmation = File.ReadAllText(confirmationPath);
         var deleteApplier = File.ReadAllText(deleteApplierPath);
+        var workflow = File.ReadAllText(workflowPath);
 
-        Assert.Contains("CodingEventDeleteApplier.Apply", confirmation);
+        Assert.Contains("CodingConfirmationDecisionWorkflow.Accept", confirmation);
+        Assert.Contains("CodingConfirmationDecisionWorkflow.Edit", confirmation);
+        Assert.Contains("CodingConfirmationDecisionWorkflow.Reject", confirmation);
+        var editHandlerIndex = confirmation.IndexOf("private void ConfirmEdit_Click", StringComparison.Ordinal);
+        var editWorkflowIndex = confirmation.IndexOf("CodingConfirmationDecisionWorkflow.Edit", editHandlerIndex, StringComparison.Ordinal);
+        var editCloseIndex = confirmation.IndexOf("CloseConfirmationPanel();", editHandlerIndex, StringComparison.Ordinal);
+        Assert.True(
+            editWorkflowIndex >= 0 && editWorkflowIndex < editCloseIndex,
+            "ConfirmEdit muss den Pending-State entscheiden, bevor CloseConfirmationPanel ihn leert.");
+        Assert.DoesNotContain("CodingEventDecisionPolicy.ApplyAiConfirmationDecision", confirmation);
+        Assert.DoesNotContain("CodingEventDeleteApplier.Apply", confirmation);
         Assert.DoesNotContain("_codingSessionService?.RemoveEvent", confirmation);
         Assert.DoesNotContain("_codingVm?.Events.Remove", confirmation);
+        Assert.Contains("CodingEventDecisionPolicy.ApplyAiConfirmationDecision", workflow);
+        Assert.Contains("CodingEventDeleteApplier.Apply", workflow);
         Assert.Contains("codingSessionService?.RemoveEvent", deleteApplier);
         Assert.Contains("codingEvents?.Remove", deleteApplier);
     }

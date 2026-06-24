@@ -36,48 +36,37 @@ public partial class PlayerWindow
 
     private void ConfirmAccept_Click(object sender, RoutedEventArgs e)
     {
-        if (CodingEventDecisionPolicy.ApplyAiConfirmationDecision(
-                _codingPendingConfirmEvent,
-                CodingUserDecision.Accepted,
-                _codingPendingGateResult))
-        {
-            PersistSingleEventAsTrainingSample(_codingPendingConfirmEvent!).SafeFireAndForget("TrainingSaveAccept");
-        }
+        CodingConfirmationDecisionWorkflow.Accept(
+            _codingPendingConfirmEvent,
+            _codingPendingGateResult,
+            codingEvent => PersistSingleEventAsTrainingSample(codingEvent).SafeFireAndForget("TrainingSaveAccept"));
 
         CloseConfirmationAndResume();
     }
 
     private void ConfirmEdit_Click(object sender, RoutedEventArgs e)
     {
+        var selectedEvent = CodingConfirmationDecisionWorkflow.Edit(
+            _codingPendingConfirmEvent,
+            _codingPendingGateResult);
+
         CloseConfirmationPanel();
 
-        if (_codingPendingConfirmEvent != null)
-        {
-            CodingEventDecisionPolicy.ApplyAiConfirmationDecision(
-                _codingPendingConfirmEvent,
-                CodingUserDecision.AcceptedWithEdit,
-                _codingPendingGateResult);
-            LstCodingEvents.SelectedItem = _codingPendingConfirmEvent;
-        }
+        if (selectedEvent != null)
+            LstCodingEvents.SelectedItem = selectedEvent;
 
         ResumeAfterConfirmation();
     }
 
     private void ConfirmReject_Click(object sender, RoutedEventArgs e)
     {
-        if (_codingPendingConfirmEvent != null)
-        {
-            CodingEventDecisionPolicy.ApplyAiConfirmationDecision(
-                _codingPendingConfirmEvent,
-                CodingUserDecision.Rejected,
-                _codingPendingGateResult);
-
-            PersistSingleEventAsTrainingSample(_codingPendingConfirmEvent).SafeFireAndForget("TrainingSaveReject");
-
-            CodingEventDeleteApplier.Apply(
-                _codingPendingConfirmEvent, _codingSessionService, _codingVm?.Events, selectedDefect: null);
-            RefreshCodingEventsList();
-        }
+        CodingConfirmationDecisionWorkflow.Reject(
+            _codingPendingConfirmEvent,
+            _codingPendingGateResult,
+            _codingSessionService,
+            _codingVm?.Events,
+            codingEvent => PersistSingleEventAsTrainingSample(codingEvent).SafeFireAndForget("TrainingSaveReject"),
+            RefreshCodingEventsList);
 
         CloseConfirmationAndResume();
     }
