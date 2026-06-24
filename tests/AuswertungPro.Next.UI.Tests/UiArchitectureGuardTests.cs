@@ -1767,16 +1767,24 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var snapshotPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Snapshot.cs");
+        var pauseRestorerPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotPauseRestorer.cs");
 
         Assert.True(File.Exists(snapshotPath), "Playback-Snapshot-Erzeugung soll aus dem allgemeinen Playback-Partial heraus.");
+        Assert.True(File.Exists(pauseRestorerPath), "Snapshot-Pause-Resume muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var playback = File.ReadAllText(playbackPath);
         var snapshot = File.ReadAllText(snapshotPath);
+        var pauseRestorer = File.Exists(pauseRestorerPath) ? File.ReadAllText(pauseRestorerPath) : "";
 
         Assert.DoesNotContain("public static bool TryTakeSnapshot", playback);
         Assert.DoesNotContain("private bool TakeSnapshotSafe", playback);
         Assert.Contains("public static bool TryTakeSnapshot", snapshot);
         Assert.Contains("private bool TakeSnapshotSafe", snapshot);
+        Assert.Contains("PlayerSnapshotPauseRestorer.ResumeIfNeeded", snapshot);
+        Assert.DoesNotContain("AuswertungPro.Next.Application.Common.BestEffort.Try", snapshot);
+        Assert.DoesNotContain("VLC: Pause aufheben", snapshot);
+        Assert.Contains("public static void ResumeIfNeeded", pauseRestorer);
+        Assert.Contains("AuswertungPro.Next.Application.Common.BestEffort.Try", pauseRestorer);
     }
 
     [Fact]

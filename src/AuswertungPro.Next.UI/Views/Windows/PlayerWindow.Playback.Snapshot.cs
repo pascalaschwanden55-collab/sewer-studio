@@ -1,4 +1,3 @@
-using LibVLCSharp.Shared;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -55,10 +54,11 @@ public partial class PlayerWindow
         }
         finally
         {
-            if (wasPlaying && !_closing && !_playbackDisposed)
-                AuswertungPro.Next.Application.Common.BestEffort.Try(
-                    () => _player.SetPause(false),
-                    "VLC: Pause aufheben");
+            PlayerSnapshotPauseRestorer.ResumeIfNeeded(
+                wasPlaying,
+                _closing,
+                _playbackDisposed,
+                () => _player.SetPause(false));
         }
     }
 }
