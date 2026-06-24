@@ -36,23 +36,34 @@ public partial class PlayerWindow
     }
 
     private void StartLiveDetectionRuntime(LiveDetectionRuntime runtime)
+        => LiveDetectionRuntimeStartWorkflow.Start(
+            runtime,
+            new LiveDetectionRuntimeStartActions(
+                StoreRuntime: StoreLiveDetectionRuntime,
+                ResetCancellation: () => _detectionCts = CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_detectionCts),
+                MarkDetecting: () => _isDetecting = true,
+                ShowOverlay: () => LiveDetectionOverlayControls.Show(DetectionOverlayGrid),
+                ApplyActiveStatus: ApplyLiveDetectionRuntimeStartStatus,
+                ShowWaitingForFrame: () => LiveDetectionStatusControls.ShowWaitingForFrame(LiveDetectionStatusText),
+                StartTimer: StartLiveDetectionTimer,
+                RunFirstDetection: () => RunDetectionAsync().SafeFireAndForget("LiveDetection")));
+
+    private void StoreLiveDetectionRuntime(LiveDetectionRuntime runtime)
     {
         _liveDetectionClient = runtime.Client;
         _liveDetectionService = runtime.Service;
         _liveDetectionModelName = runtime.VisionModel;
-        _detectionCts = CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_detectionCts);
-        _isDetecting = true;
+    }
 
-        LiveDetectionOverlayControls.Show(DetectionOverlayGrid);
-        SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Success,
-            $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(runtime.VisionModel)}");
-        SetYoloStatus("Aktiv", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(runtime.VisionModel));
+    private void ApplyLiveDetectionRuntimeStartStatus(LiveDetectionRuntimeStartStatus status)
+    {
+        SetLiveDetectionBadge(status.BadgeText, status.StatusColor, status.BadgeDetails);
+        SetYoloStatus(status.YoloText, status.StatusColor, status.ModelLabel);
+    }
 
-        LiveDetectionStatusControls.ShowWaitingForFrame(LiveDetectionStatusText);
-
+    private void StartLiveDetectionTimer()
+    {
         _detectionTimer = PlayerWindowTimerFactory.CreateLiveDetectionTimer(DetectionTimer_Tick);
         _detectionTimer.Start();
-
-        RunDetectionAsync().SafeFireAndForget("LiveDetection");
     }
 }

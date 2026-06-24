@@ -1051,6 +1051,7 @@ public sealed class UiArchitectureGuardTests
         var stopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeFactory.cs");
         var startupWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupWorkflow.cs");
+        var runtimeStartWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeStartWorkflow.cs");
         var toggleControlsPath = Path.Combine(windowsRoot, "LiveDetectionToggleControls.cs");
         var disposableLifecyclePath = Path.Combine(uiRoot, "Player", "DisposableReferenceLifecycle.cs");
 
@@ -1058,6 +1059,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(stopPath), "LiveDetection-Stop/Cleanup soll aus dem Start-Lifecycle-Partial heraus.");
         Assert.True(File.Exists(factoryPath), "LiveDetection-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(startupWorkflowPath), "LiveDetection-Startup-Entscheidungen sollen ausserhalb von PlayerWindow orchestriert werden.");
+        Assert.True(File.Exists(runtimeStartWorkflowPath), "LiveDetection-Runtime-Startreihenfolge soll ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(toggleControlsPath), "LiveDetection-Toggle-State soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
         Assert.True(File.Exists(disposableLifecyclePath), "Disposable-Referenz-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -1066,6 +1068,7 @@ public sealed class UiArchitectureGuardTests
         var stop = File.ReadAllText(stopPath);
         var factory = File.ReadAllText(factoryPath);
         var startupWorkflow = File.Exists(startupWorkflowPath) ? File.ReadAllText(startupWorkflowPath) : "";
+        var runtimeStartWorkflow = File.Exists(runtimeStartWorkflowPath) ? File.ReadAllText(runtimeStartWorkflowPath) : "";
         var toggleControls = File.Exists(toggleControlsPath) ? File.ReadAllText(toggleControlsPath) : "";
         var disposableLifecycle = File.Exists(disposableLifecyclePath) ? File.ReadAllText(disposableLifecyclePath) : "";
         var playerWindowPartials = string.Join(
@@ -1093,10 +1096,19 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerAiSettingsLoader.LoadRuntimeSettings", lifecycle);
         Assert.DoesNotContain("AppSettingsAiSettingsProvider", lifecycle);
         Assert.Contains("LiveDetectionRuntimeFactory.CreateAsync", lifecycle);
+        Assert.Contains("LiveDetectionRuntimeStartWorkflow.Start", lifecycle);
+        Assert.Contains("new LiveDetectionRuntimeStartActions", lifecycle);
+        Assert.DoesNotContain("\"KI aktiv\"", lifecycle);
+        Assert.DoesNotContain("\"Aktiv\"", lifecycle);
+        Assert.DoesNotContain("LiveDetectionDisplayPolicy.CompactModelName", lifecycle);
         Assert.Contains("public static class LiveDetectionStartupWorkflow", startupWorkflow);
         Assert.Contains("ShowRuntimeSettingsLoadFailed", startupWorkflow);
         Assert.Contains("ShowDisabled", startupWorkflow);
         Assert.Contains("ShowStartFailed", startupWorkflow);
+        Assert.Contains("public static class LiveDetectionRuntimeStartWorkflow", runtimeStartWorkflow);
+        Assert.Contains("LiveDetectionDisplayPolicy.CompactModelName", runtimeStartWorkflow);
+        Assert.Contains("\"KI aktiv\"", runtimeStartWorkflow);
+        Assert.Contains("\"Aktiv\"", runtimeStartWorkflow);
         Assert.Contains("public static class LiveDetectionToggleControls", toggleControls);
         Assert.Contains("public static void Uncheck", toggleControls);
         Assert.DoesNotContain("new OllamaClient", lifecycle);
