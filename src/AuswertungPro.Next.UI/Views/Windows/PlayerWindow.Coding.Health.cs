@@ -19,7 +19,7 @@ public partial class PlayerWindow
             if (!config.Enabled)
             {
                 SetCodingAiState("Künstliche Intelligenz deaktiviert", PlayerStatusColors.Muted, "Modell: aus");
-                BtnCodingAnalyze.IsEnabled = false;
+                CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, false);
                 return;
             }
 
@@ -56,7 +56,7 @@ public partial class PlayerWindow
         {
             SetCodingAiState($"Fehler: {ex.Message}", PlayerStatusColors.Error,
                 $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
-            BtnCodingAnalyze.IsEnabled = false;
+            CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, false);
         }
     }
 

@@ -1221,16 +1221,21 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
         var healthPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Health.cs");
         var monitoringPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Health.Monitoring.cs");
         var statusControlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
+        var analyzeButtonControlsPath = Path.Combine(uiRoot, "Ai", "CodingAnalyzeButtonControls.cs");
 
         Assert.True(File.Exists(monitoringPath), "Pipeline-Health-Monitoring soll aus dem Initialisierungs-Partial heraus.");
         Assert.True(File.Exists(statusControlsPath), "Pipeline-Health-Detail-Zuweisung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(analyzeButtonControlsPath), "Coding-Analyse-Button-Zustand soll ausserhalb der PlayerWindow-Partials liegen.");
 
+        var ai = File.ReadAllText(aiPath);
         var health = File.ReadAllText(healthPath);
         var monitoring = File.ReadAllText(monitoringPath);
         var statusControls = File.ReadAllText(statusControlsPath);
+        var analyzeButtonControls = File.Exists(analyzeButtonControlsPath) ? File.ReadAllText(analyzeButtonControlsPath) : "";
 
         Assert.Contains("private async Task InitCodingAi", health);
         Assert.DoesNotContain("private void OnPipelineHealthChanged", health);
@@ -1243,7 +1248,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void StopPipelineHealthMonitor", monitoring);
         Assert.Contains("PipelineHealthUiStateFactory.Create", monitoring);
         Assert.Contains("LiveDetectionStatusControls.ShowPipelineHealthDetails", monitoring);
+        Assert.Contains("CodingAnalyzeButtonControls.SetEnabled", ai);
+        Assert.Contains("CodingAnalyzeButtonControls.SetEnabled", health);
+        Assert.Contains("CodingAnalyzeButtonControls.SetEnabled", monitoring);
+        Assert.DoesNotContain("BtnCodingAnalyze.IsEnabled", ai + health + monitoring);
         Assert.DoesNotContain("Hd_Sidecar.Text", monitoring);
+        Assert.Contains("public static void SetEnabled", analyzeButtonControls);
         Assert.Contains("public static void ShowPipelineHealthDetails", statusControls);
         Assert.Contains("details.Sidecar", statusControls);
         Assert.DoesNotContain("_ = _codingHealthMonitor.StopAsync()", monitoring);

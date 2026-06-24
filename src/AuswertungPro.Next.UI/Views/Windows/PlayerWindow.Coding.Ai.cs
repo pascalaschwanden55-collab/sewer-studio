@@ -34,7 +34,7 @@ public partial class PlayerWindow
         try
         {
             if (disableAnalyzeButton)
-                BtnCodingAnalyze.IsEnabled = false;
+                CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, false);
 
             var captureTimestampSec = _player.Time / 1000.0;
             var currentMeterForStop = ResolveCodingMeterForFrame(captureTimestampSec);
@@ -106,7 +106,7 @@ public partial class PlayerWindow
         {
             _codingIsAnalyzing = false;
             if (disableAnalyzeButton)
-                BtnCodingAnalyze.IsEnabled = true;
+                CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, true);
         }
     }
 

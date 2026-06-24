@@ -35,7 +35,7 @@ public partial class PlayerWindow
 
         var uiState = PipelineHealthUiStateFactory.Create(status);
         SetCodingAiState(uiState.Summary, uiState.Color, uiState.Detail);
-        BtnCodingAnalyze.IsEnabled = uiState.AnalysisEnabled;
+        CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, uiState.AnalysisEnabled);
         UpdatePipelineHealthDetails(uiState.Details);
     }
 
