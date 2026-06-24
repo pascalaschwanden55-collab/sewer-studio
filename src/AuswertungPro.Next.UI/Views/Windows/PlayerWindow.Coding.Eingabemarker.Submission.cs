@@ -21,11 +21,11 @@ public partial class PlayerWindow
 
         try
         {
-            if (_codingVm != null && codeHint != null)
+            if (_codingSessionHost.HasViewModel && codeHint != null)
             {
-                var checkMeter = _codingOsdMeterController.LastMeter ?? _codingVm.CurrentMeter;
+                var checkMeter = _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter;
                 var existingDup = CodingEingabemarkerDuplicatePolicy.FindDuplicate(
-                    _codingVm.Events,
+                    _codingSessionHost.Events,
                     codeHint,
                     checkMeter);
                 if (existingDup != null)
@@ -37,10 +37,10 @@ public partial class PlayerWindow
                 }
             }
 
-            if (codeHint != null && _codingVm != null && _codingSessionService != null)
+            if (codeHint != null && _codingSessionHost.HasViewModel && _codingSessionService != null)
             {
-                var meter = _codingOsdMeterController.LastMeter ?? _codingVm.CurrentMeter;
-                var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
+                var meter = _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter;
+                var videoTime = _codingSessionHost.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
                 var label = LookupVsaLabel(codeHint) ?? keyword;
 
                 var draft = CodingEingabemarkerEventFactory.CreateAccepted(
@@ -53,7 +53,7 @@ public partial class PlayerWindow
                 var fotoPath = CodingCaptureSnapshot(draft.Entry);
                 CodingProtocolEntryPhotoPathAppender.AddIfPresent(draft.Entry, fotoPath);
 
-                var ev = CodingEingabemarkerEventAppender.Apply(draft, _codingVm.CurrentOverlay, _codingSessionService);
+                var ev = CodingEingabemarkerEventAppender.Apply(draft, _codingSessionHost.CurrentOverlay, _codingSessionService);
                 RefreshCodingEventsList();
                 UpdateToolBadge();
                 PersistSingleEventAsTrainingSample(ev).SafeFireAndForget("TrainingSaveSingle");

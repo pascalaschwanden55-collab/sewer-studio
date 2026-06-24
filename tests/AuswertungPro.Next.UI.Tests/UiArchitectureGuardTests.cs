@@ -5738,6 +5738,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private async Task SubmitEingabemarker", submission);
         Assert.Contains("CodingEingabemarkerDuplicatePolicy.FindDuplicate", submission);
         Assert.Contains("CodingEingabemarkerEventAppender.Apply", submission);
+        Assert.Contains("_codingSessionHost", submission);
+        Assert.DoesNotContain("_codingVm", submission);
         Assert.DoesNotContain("_codingSessionService.AddEvent(draft.Entry", submission);
         Assert.Contains("CodingEingabemarkerPopupControls.Hide", submission);
         Assert.DoesNotContain("EingabemarkerPopup.Visibility = Visibility.Collapsed", submission);
