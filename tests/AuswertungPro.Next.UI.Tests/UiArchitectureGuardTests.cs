@@ -1441,18 +1441,23 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
+        var multiModelPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.MultiModel.cs");
         var helpersPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Helpers.cs");
         var preflightWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAnalysisPreflightWorkflow.cs");
         var singleModelWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSingleModelAnalysisWorkflow.cs");
+        var multiModelStartWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelAnalysisStartWorkflow.cs");
 
         Assert.True(File.Exists(helpersPath), "Gemeinsame Coding-AI-Helper sollen aus dem Orchestrator-Partial heraus.");
         Assert.True(File.Exists(preflightWorkflowPath), "Coding-AI-Preflight-Entscheidungen sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(singleModelWorkflowPath), "Coding-AI-Single-Model-Ablauf soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(multiModelStartWorkflowPath), "Coding-AI-Multi-Model-Startablauf soll ausserhalb von PlayerWindow liegen.");
 
         var ai = File.ReadAllText(aiPath);
+        var multiModel = File.ReadAllText(multiModelPath);
         var helpers = File.ReadAllText(helpersPath);
         var preflightWorkflow = File.ReadAllText(preflightWorkflowPath);
         var singleModelWorkflow = File.ReadAllText(singleModelWorkflowPath);
+        var multiModelStartWorkflow = File.ReadAllText(multiModelStartWorkflowPath);
 
         Assert.DoesNotContain("private async void CodingAnalyzeFrame_Click", ai);
         Assert.Contains("private void CodingAnalyzeFrame_Click", ai);
@@ -1480,6 +1485,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.TryReadAnalyzedFrameOsdMeterAsync", singleModelWorkflow);
         Assert.Contains("result with { MeterReading = frameOsdMeter }", singleModelWorkflow);
         Assert.Contains("\"Frame nicht extrahierbar\"", singleModelWorkflow);
+        Assert.Contains("CodingMultiModelAnalysisStartWorkflow.ExecuteAsync", multiModel);
+        Assert.DoesNotContain("\"Schritt 1 von 4: Snapshot\"", multiModel);
+        Assert.DoesNotContain("\"Dateneinblendung erkannt - uebersprungen\"", multiModel);
+        Assert.Contains("actions.StoreAnalyzedFrame(pngBytes, request.CaptureTimestampSeconds)", multiModelStartWorkflow);
+        Assert.Contains("actions.UpdateFrameReadiness", multiModelStartWorkflow);
+        Assert.Contains("\"Schritt 2 von 4: YOLO und DINO\"", multiModelStartWorkflow);
     }
 
     [Fact]

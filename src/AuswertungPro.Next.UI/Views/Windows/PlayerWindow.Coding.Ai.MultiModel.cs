@@ -1,9 +1,5 @@
-using System;
 using System.Threading.Tasks;
-using System.Windows.Media;
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
-
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -17,38 +13,25 @@ public partial class PlayerWindow
         if (multiModel == null || analysisCts == null)
             return;
 
-        SetCodingAiState(activityText, PlayerStatusColors.Warning,
-            "Schritt 1 von 4: Snapshot", pulse: true);
-
-        var pngBytes = await CaptureSnapshotAsync(analysisCts.Token);
-        if (pngBytes == null || pngBytes.Length == 0)
-        {
-            SetCodingAiState("Frame nicht extrahierbar", PlayerStatusColors.Error,
-                "Multi-Model");
+        var start = await CodingMultiModelAnalysisStartWorkflow.ExecuteAsync(
+            new CodingMultiModelAnalysisStartWorkflowRequest(
+                activityText,
+                captureTimestampSec,
+                analysisCts.Token),
+            new CodingMultiModelAnalysisStartWorkflowActions(
+                SetCodingAiState: SetCodingAiState,
+                CaptureSnapshotAsync: CaptureSnapshotAsync,
+                StoreAnalyzedFrame: (frameBytes, timestamp) => _detectionConfirmationBuffer.StoreAnalyzedFrame(
+                    frameBytes,
+                    timestamp),
+                TryReadAnalyzedFrameOsdMeterAsync: TryReadAnalyzedFrameOsdMeterAsync,
+                UpdateFrameReadiness: UpdateFrameReadiness,
+                IsFrameReady: IsFrameReady));
+        if (start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready)
             return;
-        }
 
-        _detectionConfirmationBuffer.StoreAnalyzedFrame(pngBytes, captureTimestampSec);
-        var frameOsdMeter = await TryReadAnalyzedFrameOsdMeterAsync(
-            pngBytes,
-            captureTimestampSec,
-            analysisCts.Token);
-
-        var readinessProbe = new LiveDetection(
-            captureTimestampSec,
-            Array.Empty<LiveFrameFinding>(),
-            frameOsdMeter,
-            null);
-        UpdateFrameReadiness(readinessProbe);
-        if (!IsFrameReady())
-        {
-            SetCodingAiState("Dateneinblendung erkannt - uebersprungen",
-                PlayerStatusColors.Muted, "Warte auf sauberes Videobild...");
-            return;
-        }
-
-        SetCodingAiState(activityText, PlayerStatusColors.Warning,
-            "Schritt 2 von 4: YOLO und DINO", pulse: true);
+        var pngBytes = start.FrameBytes!;
+        var frameOsdMeter = start.FrameOsdMeter;
 
         var currentMeterForClassifier = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
         var classifierInput = CodingMultiModelClassifierInputPolicy.Build(

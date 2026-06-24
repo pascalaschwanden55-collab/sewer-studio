@@ -196,13 +196,19 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_coding_analysis_keeps_analyzed_frame_for_gold_snapshot()
     {
         var coding = ReadCodingPartials();
+        var startWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisStartWorkflow.cs");
         var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
 
-        Assert.Contains("_detectionConfirmationBuffer.StoreAnalyzedFrame(pngBytes, captureTimestampSec)", multiModelBody);
+        Assert.Contains("CodingMultiModelAnalysisStartWorkflow.ExecuteAsync", multiModelBody);
+        Assert.Contains("actions.StoreAnalyzedFrame(pngBytes, request.CaptureTimestampSeconds)", startWorkflow);
         Assert.True(
-            multiModelBody.IndexOf("_detectionConfirmationBuffer.StoreAnalyzedFrame(pngBytes, captureTimestampSec)", StringComparison.Ordinal)
+            multiModelBody.IndexOf("CodingMultiModelAnalysisStartWorkflow.ExecuteAsync", StringComparison.Ordinal)
             < multiModelBody.IndexOf("TryHandleBoundaryClassifierResult", StringComparison.Ordinal),
-            "Der Gold-Snapshot muss den analysierten Frame bekommen, bevor ein BCD/BCE-Event entstehen kann.");
+            "Der Gold-Snapshot muss im Startworkflow gesetzt werden, bevor ein BCD/BCE-Event entstehen kann.");
+        Assert.True(
+            startWorkflow.IndexOf("actions.StoreAnalyzedFrame(pngBytes, request.CaptureTimestampSeconds)", StringComparison.Ordinal)
+            < startWorkflow.IndexOf("CodingMultiModelAnalysisStartWorkflowOutcome.Ready", StringComparison.Ordinal),
+            "Der Startworkflow darf erst nach dem Speichern des analysierten Frames als Ready zurueckkehren.");
     }
 
     [Fact]
