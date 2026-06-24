@@ -1520,12 +1520,14 @@ public sealed class UiArchitectureGuardTests
         var readingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Reading.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingSnapshotCaptureFactory.cs");
         var readWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterReadWorkflow.cs");
+        var snapshotWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterSnapshotWorkflow.cs");
         var osdControllerPath = Path.Combine(uiRoot, "Player", "CodingOsdMeterController.cs");
         var disposableLifecyclePath = Path.Combine(uiRoot, "Player", "DisposableReferenceLifecycle.cs");
 
         Assert.True(File.Exists(readingPath), "OSD-OCR und Snapshot-Lesen sollen aus dem Meter-Resolver-Partial heraus.");
         Assert.True(File.Exists(factoryPath), "Snapshot-Capture-Erzeugung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(readWorkflowPath), "OSD-Read-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(snapshotWorkflowPath), "OSD-Snapshot-Read-Ablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(osdControllerPath), "OSD-Service-Lifecycle soll im CodingOsdMeterController liegen.");
         Assert.True(File.Exists(disposableLifecyclePath), "Disposable-Referenz-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -1534,6 +1536,7 @@ public sealed class UiArchitectureGuardTests
         var reading = File.ReadAllText(readingPath);
         var factory = File.ReadAllText(factoryPath);
         var readWorkflow = File.ReadAllText(readWorkflowPath);
+        var snapshotWorkflow = File.ReadAllText(snapshotWorkflowPath);
         var osdController = File.ReadAllText(osdControllerPath);
         var disposableLifecycle = File.Exists(disposableLifecyclePath) ? File.ReadAllText(disposableLifecyclePath) : "";
 
@@ -1550,14 +1553,21 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync", reading);
         Assert.Contains("private async Task<double?> TryReadOsdMeterFromFrameBytesAsync", reading);
         Assert.Contains("private async Task<double?> CodingReadOsdMeterAsync", reading);
+        Assert.Contains("CodingOsdMeterSnapshotWorkflow.ExecuteAsync", reading);
         Assert.Contains("CodingOsdMeterReadWorkflow.ExecuteAsync", reading);
         Assert.Contains("GetCodingOsdMeterService().ReadMeterAsync", reading);
+        Assert.DoesNotContain("if (_codingAiController.LiveDetection == null)", reading);
+        Assert.DoesNotContain("_player.Time >= 0", reading);
+        Assert.DoesNotContain("catch", reading);
         Assert.DoesNotContain("CodingOsdMeterStateWorkflow.FromReadResult", reading);
         Assert.DoesNotContain("Meter verworfen", reading);
         Assert.DoesNotContain("Frame-Meter nicht lesbar", reading);
         Assert.Contains("CodingOsdMeterStateWorkflow.FromReadResult", readWorkflow);
         Assert.Contains("Meter verworfen", readWorkflow);
         Assert.Contains("Frame-Meter nicht lesbar", readWorkflow);
+        Assert.Contains("!request.HasLiveDetection", snapshotWorkflow);
+        Assert.Contains("ResolveTimestampSeconds", snapshotWorkflow);
+        Assert.Contains("catch", snapshotWorkflow);
         Assert.Contains("CodingSnapshotCaptureFactory.CapturePngAsync", reading);
         Assert.Contains("CodingSnapshotCaptureFactory.CapturePngAsync", helpers);
         Assert.DoesNotContain("new CodingSnapshotCaptureService", reading);

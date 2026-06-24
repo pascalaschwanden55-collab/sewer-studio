@@ -1,6 +1,5 @@
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -47,26 +46,17 @@ public partial class PlayerWindow
 
     private async Task<double?> CodingReadOsdMeterAsync()
     {
-        if (_codingAiController.LiveDetection == null) return null;
+        var result = await CodingOsdMeterSnapshotWorkflow.ExecuteAsync(
+            new CodingOsdMeterSnapshotWorkflowRequest(
+                HasLiveDetection: _codingAiController.LiveDetection != null,
+                PlayerTimeMilliseconds: _player?.Time),
+            new CodingOsdMeterSnapshotWorkflowActions(
+                CaptureSnapshotAsync: () => CodingSnapshotCaptureFactory.CapturePngAsync(path => TakeSnapshotSafe(path)),
+                ReadOsdMeterAsync: (pngBytes, timestampSeconds) => TryReadOsdMeterFromFrameBytesAsync(
+                    pngBytes,
+                    timestampSeconds,
+                    CancellationToken.None)));
 
-        try
-        {
-            var snapshotTimestampSec = _player != null && _player.Time >= 0
-                ? _player.Time / 1000.0
-                : (double?)null;
-
-            var pngBytes = await CodingSnapshotCaptureFactory.CapturePngAsync(path => TakeSnapshotSafe(path));
-            if (pngBytes == null || pngBytes.Length == 0)
-                return null;
-
-            return await TryReadOsdMeterFromFrameBytesAsync(
-                pngBytes,
-                snapshotTimestampSec,
-                CancellationToken.None);
-        }
-        catch
-        {
-            return null;
-        }
+        return result.Meter;
     }
 }
