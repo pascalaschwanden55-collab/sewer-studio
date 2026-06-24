@@ -36,12 +36,9 @@ public partial class PlayerWindow
         var wasPlaying = false;
         try
         {
-            wasPlaying = _player.IsPlaying;
-            if (wasPlaying)
-            {
-                _player.SetPause(true);
-                PlayerSnapshotPauseDelay.WaitAfterPause();
-            }
+            wasPlaying = PlayerSnapshotPauseStarter.PauseIfPlaying(
+                _player.IsPlaying,
+                _player.SetPause);
             if (_closing || _playbackDisposed)
                 return false;
 
