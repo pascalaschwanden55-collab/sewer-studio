@@ -52,11 +52,12 @@ public partial class PlayerWindow
                 return null;
             }
 
-            _codingLastOsdMeter = result.Meter.Value;
-            _codingLastOsdTimestampSec = frameTimestampSec;
-            OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = CodingOsdBadgeDisplayPolicy.BuildMeterText(result.Meter.Value);
-            return result.Meter.Value;
+            var acceptedState = CodingOsdMeterStateWorkflow.FromReadResult(result, frameTimestampSec);
+            if (!acceptedState.HasValue)
+                return null;
+
+            ApplyCodingOsdMeterState(acceptedState.Value);
+            return acceptedState.Value.Meter;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {

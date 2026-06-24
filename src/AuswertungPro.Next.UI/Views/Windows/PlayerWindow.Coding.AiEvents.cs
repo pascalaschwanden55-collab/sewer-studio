@@ -59,13 +59,11 @@ public partial class PlayerWindow
         // â”€â”€ Ab hier: Frame ist bereit fuer Analyse â”€â”€
 
         // OSD-Meterstand uebernehmen (Defense-in-Depth: nochmals Plausibilitaet pruefen)
-        if (_codingVm != null && CodingResultMeterReadingPolicy.TryAccept(result, out var acceptedMeter))
+        var acceptedOsdMeter = CodingOsdMeterStateWorkflow.FromDetectionResult(result);
+        if (_codingVm != null && acceptedOsdMeter.HasValue)
         {
-            _codingLastOsdMeter = acceptedMeter.Meter;
-            _codingLastOsdTimestampSec = acceptedMeter.TimestampSeconds;
-            _codingSessionService?.MoveToMeter(acceptedMeter.Meter);
-            OsdMeterBadge.Visibility = Visibility.Visible;
-            TxtOsdMeter.Text = CodingOsdBadgeDisplayPolicy.BuildMeterText(acceptedMeter.Meter);
+            ApplyCodingOsdMeterState(acceptedOsdMeter.Value);
+            _codingSessionService?.MoveToMeter(acceptedOsdMeter.Value.Meter);
         }
 
         // â”€â”€ Findings filtern: VSA-Validierung + Deduplizierung â”€â”€

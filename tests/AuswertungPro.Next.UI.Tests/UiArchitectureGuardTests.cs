@@ -1393,17 +1393,20 @@ public sealed class UiArchitectureGuardTests
         var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
         var filteringPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Filtering.cs");
         var meterPolicyPath = Path.Combine(uiRoot, "Ai", "CodingResultMeterReadingPolicy.cs");
+        var osdStateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterStateWorkflow.cs");
         var warmupPolicyPath = Path.Combine(uiRoot, "Ai", "CodingWarmupResultBufferPolicy.cs");
         var overlaySelectorPath = Path.Combine(uiRoot, "Ai", "CodingNewFindingOverlaySelector.cs");
 
         Assert.True(File.Exists(filteringPath), "KI-Finding-Filteradapter sollen aus dem allgemeinen AiEvents-Partial heraus.");
         Assert.True(File.Exists(meterPolicyPath), "OSD-Meteruebernahme aus KI-Ergebnissen muss ausserhalb der PlayerWindow-Partials entschieden werden.");
+        Assert.True(File.Exists(osdStateWorkflowPath), "OSD-Meteruebernahme soll als State-Workflow ausserhalb der PlayerWindow-Partials angewendet werden.");
         Assert.True(File.Exists(warmupPolicyPath), "Warmup-Puffer-Auswahl muss ausserhalb der PlayerWindow-Partials entschieden werden.");
         Assert.True(File.Exists(overlaySelectorPath), "Auswahl neuer Overlay-Findings muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var aiEvents = File.ReadAllText(aiEventsPath);
         var filtering = File.ReadAllText(filteringPath);
         var meterPolicy = File.ReadAllText(meterPolicyPath);
+        var osdStateWorkflow = File.ReadAllText(osdStateWorkflowPath);
         var warmupPolicy = File.ReadAllText(warmupPolicyPath);
         var overlaySelector = File.ReadAllText(overlaySelectorPath);
 
@@ -1414,7 +1417,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("new AiFindingDisplayItem", aiEvents);
         Assert.DoesNotContain("MeterReading.Value <= 500", aiEvents);
         Assert.DoesNotContain("MeterReading.HasValue &&", aiEvents);
-        Assert.Contains("CodingResultMeterReadingPolicy.TryAccept", aiEvents);
+        Assert.DoesNotContain("CodingResultMeterReadingPolicy.TryAccept", aiEvents);
+        Assert.Contains("CodingOsdMeterStateWorkflow.FromDetectionResult", aiEvents);
+        Assert.Contains("CodingResultMeterReadingPolicy.TryAccept", osdStateWorkflow);
         Assert.DoesNotContain("var buffered = _pendingWarmupResult", aiEvents);
         Assert.DoesNotContain("buffered.Findings.Count", aiEvents);
         Assert.Contains("CodingWarmupResultBufferPolicy.Select", aiEvents);
@@ -2649,23 +2654,29 @@ public sealed class UiArchitectureGuardTests
         var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingOsdBadgeDisplayPolicy.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterStateWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "OSD-Badge-Textformat muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "OSD-Meter-Akzeptanz und Badge-State sollen ausserhalb der PlayerWindow-Partials liegen.");
 
         var osd = File.ReadAllText(osdPath);
         var osdReading = File.ReadAllText(osdReadingPath);
         var aiEvents = File.ReadAllText(aiEventsPath);
         var marking = File.ReadAllText(markingPath);
         var policy = File.ReadAllText(policyPath);
+        var workflow = File.ReadAllText(workflowPath);
         var osdText = osd + osdReading;
 
-        Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", osdText);
-        Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", aiEvents);
+        Assert.Contains("CodingOsdMeterStateWorkflow.FromReadResult", osdReading);
+        Assert.Contains("CodingOsdMeterStateWorkflow.FromDetectionResult", aiEvents);
+        Assert.DoesNotContain("CodingOsdBadgeDisplayPolicy.BuildMeterText", osdText);
+        Assert.DoesNotContain("CodingOsdBadgeDisplayPolicy.BuildMeterText", aiEvents);
         Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", marking);
         Assert.DoesNotContain(":F2}m (OSD)", osdText);
         Assert.DoesNotContain(":F2}m (OSD)", aiEvents);
         Assert.DoesNotContain(":F2}m (OSD)", marking);
         Assert.Contains("public static string BuildMeterText", policy);
+        Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", workflow);
     }
 
     [Fact]

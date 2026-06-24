@@ -1,3 +1,4 @@
+using System.Windows;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -16,6 +17,14 @@ public partial class PlayerWindow
 
     private CodingOsdMeterService GetCodingOsdMeterService()
         => _codingOsdMeterService ??= CodingOsdMeterService.CreateDefault();
+
+    private void ApplyCodingOsdMeterState(CodingOsdMeterState state)
+    {
+        _codingLastOsdMeter = state.Meter;
+        _codingLastOsdTimestampSec = state.TimestampSeconds;
+        OsdMeterBadge.Visibility = Visibility.Visible;
+        TxtOsdMeter.Text = state.BadgeText;
+    }
 
     private void DisposeCodingOsdMeterService()
     {
