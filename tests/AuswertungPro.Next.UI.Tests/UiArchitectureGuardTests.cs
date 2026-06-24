@@ -2169,6 +2169,8 @@ public sealed class UiArchitectureGuardTests
         var coordinator = File.ReadAllText(coordinatorPath);
 
         Assert.Contains("CodingTrainingSamplePersistenceCoordinator", persistence);
+        Assert.Contains("_codingSessionHost", persistence);
+        Assert.DoesNotContain("_codingVm", persistence);
         Assert.DoesNotContain("CodingTrainingFrameStore", persistence);
         Assert.DoesNotContain("CodingTrainingSamplePersister", persistence);
         Assert.DoesNotContain("CodingTrainingSampleEvalProtector", persistence);

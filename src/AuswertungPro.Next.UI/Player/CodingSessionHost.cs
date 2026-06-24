@@ -15,6 +15,7 @@ public interface ICodingSessionHost
     ObservableCollection<CodingEvent>? EventCollection { get; }
     IEnumerable<CodingEvent> Events { get; }
     CodingEvent? SelectedDefect { get; }
+    string? HaltungName { get; }
     string? VideoPath { get; }
     TimeSpan? CurrentVideoTime { get; }
     string SelectedCode { get; }
@@ -65,6 +66,8 @@ public sealed class CodingSessionHost : ICodingSessionHost
     public string SelectedCodeDescription => ViewModel?.SelectedCodeDescription ?? string.Empty;
 
     public CodingEvent? SelectedDefect => ViewModel?.SelectedDefect;
+
+    public string? HaltungName => ViewModel?.HaltungName;
 
     public string? VideoPath => ViewModel?.VideoPath;
 

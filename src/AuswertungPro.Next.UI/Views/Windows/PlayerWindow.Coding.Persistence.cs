@@ -22,18 +22,19 @@ public partial class PlayerWindow
 
     private void PersistCodingEventsAsTrainingSamples()
     {
-        if (_codingVm == null || _codingVm.Events.Count == 0) return;
+        var events = _codingSessionHost.EventCollection;
+        if (!_codingSessionHost.HasViewModel || events is null || events.Count == 0) return;
 
         CodingTrainingSamples
             .PersistEventsAsync(
-                _codingVm.Events,
+                events,
                 CreateCodingTrainingSamplePersistenceRequest(_detectionConfirmationBuffer.FrameBytes))
             .SafeFireAndForget("TrainingSave");
     }
 
     private CodingTrainingSamplePersistenceRequest CreateCodingTrainingSamplePersistenceRequest(byte[]? preferredFrameBytes)
         => CodingTrainingSamplePersistenceRequest.FromPlayerContext(
-            _codingVm?.HaltungName ?? "unknown",
+            _codingSessionHost.HaltungName ?? "unknown",
             _haltungRecord?.GetFieldValue("Datum_Jahr"),
             PlayerUserNameProvider.Current(),
             PlayerClock.UtcNow(),

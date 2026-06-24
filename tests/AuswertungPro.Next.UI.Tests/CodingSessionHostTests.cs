@@ -20,6 +20,7 @@ public sealed class CodingSessionHostTests
         Assert.Null(Get<object?>(host, "CurrentOverlay"));
         Assert.Null(Get<object?>(host, "EventCollection"));
         Assert.Null(Get<object?>(host, "SelectedDefect"));
+        Assert.Null(Get<string?>(host, "HaltungName"));
         Assert.Null(Get<object?>(host, "VideoPath"));
         Assert.Null(Get<object?>(host, "CurrentVideoTime"));
         Assert.Equal(string.Empty, Get<string>(host, "SelectedCode"));
@@ -61,6 +62,7 @@ public sealed class CodingSessionHostTests
         vm.SelectedCode = "BCA";
         vm.SelectedCodeDescription = "Anschluss";
         vm.SelectedDefect = codingEvent;
+        vm.HaltungName = "H-42";
         vm.VideoPath = "video.mp4";
         vm.CurrentVideoTime = TimeSpan.FromSeconds(4);
         vm.Events.Add(codingEvent);
@@ -73,6 +75,7 @@ public sealed class CodingSessionHostTests
         Assert.Same(overlay, Get<object?>(host, "CurrentOverlay"));
         Assert.Same(vm.Events, Get<object?>(host, "EventCollection"));
         Assert.Same(codingEvent, Get<object?>(host, "SelectedDefect"));
+        Assert.Equal("H-42", Get<string?>(host, "HaltungName"));
         Assert.Equal("video.mp4", Get<string?>(host, "VideoPath"));
         Assert.Equal(TimeSpan.FromSeconds(4), Get<TimeSpan?>(host, "CurrentVideoTime"));
         Assert.Equal("BCA", Get<string>(host, "SelectedCode"));
