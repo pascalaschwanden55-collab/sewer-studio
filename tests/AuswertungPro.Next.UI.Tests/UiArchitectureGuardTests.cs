@@ -4342,11 +4342,13 @@ public sealed class UiArchitectureGuardTests
         var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
         var calibrationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Calibration.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingManualCalibrationPolicy.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingManualCalibrationWorkflow.cs");
         var previewPolicyPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationPreviewPolicy.cs");
         var togglePolicyPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationTogglePolicy.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationControls.cs");
 
         Assert.True(File.Exists(policyPath), "Manuelle Kalibrierungsberechnung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "Manueller Kalibrierungsablauf muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(previewPolicyPath), "Manuelle Kalibrierungsvorschau muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(togglePolicyPath), "Manuelle Kalibrierungs-Toggle-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Manuelle Kalibrierungs-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
@@ -4354,11 +4356,13 @@ public sealed class UiArchitectureGuardTests
         var overlayInput = File.ReadAllText(overlayInputPath);
         var calibration = File.ReadAllText(calibrationPath);
         var policy = File.ReadAllText(policyPath);
+        var workflow = File.ReadAllText(workflowPath);
         var previewPolicy = File.ReadAllText(previewPolicyPath);
         var togglePolicy = File.ReadAllText(togglePolicyPath);
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
 
         Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
+        Assert.Contains("CodingManualCalibrationWorkflow.Apply", calibration);
         Assert.Contains("CodingCalibrationPreviewPolicy.Build", calibration);
         Assert.Contains("CodingCalibrationTogglePolicy.Build", calibration);
         Assert.Contains("CodingCalibrationControls.ApplyToggle", calibration);
@@ -4371,11 +4375,16 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingIsCalibrating = !_codingIsCalibrating", overlayInput + calibration);
         Assert.DoesNotContain("\"BtnCodingCalibrate\"", overlayInput + calibration);
         Assert.DoesNotContain("new PipeCalibration", overlayInput + calibration);
+        Assert.DoesNotContain("if (!result.IsValid", calibration);
+        Assert.DoesNotContain("if (_codingSchemaManager.IsActive)", calibration);
         Assert.DoesNotContain("CodingCalibrationHint.Visibility", calibration);
         Assert.DoesNotContain("TxtCodingCalibHint.Text", calibration);
         Assert.DoesNotContain("TxtCodingCalibStatus.Text", calibration);
         Assert.Contains("public static CodingManualCalibrationResult Build", policy);
         Assert.Contains("CalibrationSource.Manual", policy);
+        Assert.Contains("!result.IsValid || result.Calibration == null", workflow);
+        Assert.Contains("CodingCalibrationTogglePolicy.CalibrateButtonName", workflow);
+        Assert.Contains("request.IsCodingSchemaActive", workflow);
         Assert.Contains("public static CodingCalibrationPreviewState Build", previewPolicy);
         Assert.Contains("public static CodingCalibrationToggleState Build", togglePolicy);
         Assert.Contains("public static void ApplyToggle", controls);
@@ -4408,6 +4417,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private bool TryFinishCodingCalibration", calibration);
         Assert.Contains("CodingCalibrationTogglePolicy.Build", calibration);
         Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
+        Assert.Contains("CodingManualCalibrationWorkflow.Apply", calibration);
     }
 
     [Fact]

@@ -33,27 +33,29 @@ public partial class PlayerWindow
         var p2 = CodingNormToPixel(end);
         int dn = _codingOverlayService.Calibration?.NominalDiameterMm ?? 300;
         var result = CodingManualCalibrationPolicy.Build(start, end, p1, p2, dn);
-        if (!result.IsValid || result.Calibration == null)
-        {
-            CodingCalibrationControls.ShowHint(TxtCodingCalibHint, result.HintText);
-            _codingCalibStart = null;
-            return;
-        }
-
-        var cal = result.Calibration;
-        _codingOverlayService.SetCalibration(cal);
-        _codingSchemaManager.Active?.ApplyCalibration(cal);
-
-        CodingCalibrationControls.ApplyManualResult(TxtCodingCalibStatus, TxtCodingCalibHint, result);
-
-        _codingIsCalibrating = false;
-        _codingCalibStart = null;
-        if (string.Equals(_activeCodingToolName, CodingCalibrationTogglePolicy.CalibrateButtonName))
-            _activeCodingToolName = null;
-        CodingCalibrationControls.HideHint(CodingCalibrationHint);
-        UpdateCodingOverlayCursor();
-        if (_codingSchemaManager.IsActive)
-            UpdateCodingSchemaOverlay(enableCreateEvent: true);
+        CodingManualCalibrationWorkflow.Apply(
+            new CodingManualCalibrationWorkflowRequest(
+                result,
+                _activeCodingToolName,
+                _codingSchemaManager.IsActive),
+            new CodingManualCalibrationWorkflowActions(
+                ShowInvalidHint: text => CodingCalibrationControls.ShowHint(TxtCodingCalibHint, text),
+                ClearCalibrationStart: () => _codingCalibStart = null,
+                SetOverlayCalibration: calibration => _codingOverlayService.SetCalibration(calibration),
+                ApplySchemaCalibration: calibration => _codingSchemaManager.Active?.ApplyCalibration(calibration),
+                ApplyManualResult: manualResult => CodingCalibrationControls.ApplyManualResult(
+                    TxtCodingCalibStatus,
+                    TxtCodingCalibHint,
+                    manualResult),
+                EndCalibrationMode: () =>
+                {
+                    _codingIsCalibrating = false;
+                    _codingCalibStart = null;
+                },
+                ClearActiveToolName: () => _activeCodingToolName = null,
+                HideHint: () => CodingCalibrationControls.HideHint(CodingCalibrationHint),
+                UpdateOverlayCursor: UpdateCodingOverlayCursor,
+                EnableCodingSchemaOverlay: () => UpdateCodingSchemaOverlay(enableCreateEvent: true)));
     }
 
     private bool TryStartCodingCalibration(NormalizedPoint norm)
