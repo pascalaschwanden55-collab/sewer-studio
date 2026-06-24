@@ -2723,14 +2723,17 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
         var markingTrainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Training.cs");
+        var manualMarkWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingWorkflow.cs");
         var resolverPath = Path.Combine(uiRoot, "Ai", "CodingCurrentMeterResolver.cs");
 
         var events = File.ReadAllText(eventsPath);
         var markingTraining = File.ReadAllText(markingTrainingPath);
+        var manualMarkWorkflow = File.Exists(manualMarkWorkflowPath) ? File.ReadAllText(manualMarkWorkflowPath) : "";
         var resolver = File.ReadAllText(resolverPath);
 
         Assert.Contains("CodingCurrentMeterResolver.ResolveManualEntry", events);
-        Assert.Contains("CodingCurrentMeterResolver.ParseDisplayedMeterOrZero", markingTraining);
+        Assert.DoesNotContain("CodingCurrentMeterResolver.ParseDisplayedMeterOrZero", markingTraining);
+        Assert.Contains("CodingCurrentMeterResolver.ParseDisplayedMeterOrZero", manualMarkWorkflow);
         Assert.DoesNotContain("Math.Round(Math.Max(0, osdMeter", events);
         Assert.DoesNotContain("TxtCodingMeter?.Text?.Replace(\"m\"", markingTraining);
         Assert.Contains("public static double ResolveManualEntry", resolver);
@@ -3178,22 +3181,27 @@ public sealed class UiArchitectureGuardTests
         var appenderPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkEventAppender.cs");
         var frameExporterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingFrameExporter.cs");
         var annotationWriterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingAnnotationWriter.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingWorkflow.cs");
 
         Assert.True(File.Exists(trainingPath), "Manual-Mark-Training-Speicherung soll aus dem grossen Marking-Partial heraus.");
         Assert.True(File.Exists(appenderPath), "Manual-Mark-Session-Anlage soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(frameExporterPath), "Manual-Mark-Training soll den bestehenden FrameExporter fuer Tempframe-I/O nutzen.");
         Assert.True(File.Exists(annotationWriterPath), "Manual-Mark-Training soll den bestehenden AnnotationWriter nutzen.");
+        Assert.True(File.Exists(workflowPath), "Manual-Mark-Training-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var marking = File.ReadAllText(markingPath);
         var training = File.ReadAllText(trainingPath);
         var appender = File.Exists(appenderPath) ? File.ReadAllText(appenderPath) : "";
         var frameExporter = File.ReadAllText(frameExporterPath);
         var annotationWriter = File.ReadAllText(annotationWriterPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.DoesNotContain("private async Task<bool> SaveMarkAsTrainingAsync", marking);
         Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", marking);
         Assert.Contains("private async Task<bool> SaveMarkAsTrainingAsync", training);
-        Assert.Contains("LiveDetectionManualMarkEventAppender.Apply", training);
+        Assert.Contains("LiveDetectionManualMarkTrainingWorkflow.SaveAsync", training);
+        Assert.DoesNotContain("LiveDetectionManualMarkEventAppender.Apply", training);
+        Assert.DoesNotContain("CodingProtocolEntryPhotoPathAppender.AddIfPresent", training);
         Assert.DoesNotContain("_codingSessionService.AddEvent(manualEntry", training);
         Assert.Contains("CodingExplorerEntryFactory.CreateManualFromSelected", appender);
         Assert.Contains("LiveDetectionTrainingAnnotationWriter.CreateDefault", training);
@@ -3205,6 +3213,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("File.Delete(tempFrame)", training);
         Assert.DoesNotContain("Path.GetTempPath", training);
         Assert.DoesNotContain("LiveDetectionTeacherAnnotationFactory.CreateManualMark", training);
+        Assert.Contains("LiveDetectionManualMarkEventAppender.Apply", workflow);
+        Assert.Contains("CodingProtocolEntryPhotoPathAppender.AddIfPresent", workflow);
+        Assert.Contains("saveManualMarkAsync", workflow);
         Assert.Contains("File.WriteAllBytesAsync", frameExporter);
         Assert.Contains("BestEffort.Try", frameExporter);
         Assert.Contains("SaveManualMarkAsync", annotationWriter);

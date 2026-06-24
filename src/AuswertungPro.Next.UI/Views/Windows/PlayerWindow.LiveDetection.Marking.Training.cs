@@ -23,38 +23,29 @@ public partial class PlayerWindow
             if (selectedEntry == null)
                 return false;
 
-            CodingEvent? manualEvent = null;
-            if (_codingSessionService != null && _codingVm != null)
-            {
-                var manualMeter = CodingCurrentMeterResolver.ParseDisplayedMeterOrZero(TxtCodingMeter?.Text);
-                manualEvent = LiveDetectionManualMarkEventAppender.Apply(
-                    selectedEntry, manualMeter, TimeSpan.FromSeconds(timestampSec), overlay, _codingSessionService);
-                RefreshCodingEventsList();
-            }
-
-            var frameBytes = preCapturedFrame ?? await CaptureCurrentFrameAsync();
-            if (frameBytes == null)
-                return false;
-
-            var captureMeter = CodingCurrentMeterResolver.ParseDisplayedMeterOrZero(TxtCodingMeter?.Text);
-            var annotation = await LiveDetectionTrainingAnnotationWriter.CreateDefault()
-                .SaveManualMarkAsync(
-                frameBytes,
+            var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
+            var result = await LiveDetectionManualMarkTrainingWorkflow.SaveAsync(
                 selectedEntry,
                 overlay,
+                timestampSec,
                 clockPosition,
-                captureMeter,
-                TimeSpan.FromSeconds(timestampSec));
-            if (annotation == null)
+                TxtCodingMeter?.Text,
+                _codingVm != null ? _codingSessionService : null,
+                preCapturedFrame,
+                CaptureCurrentFrameAsync,
+                (frameBytes, entry, markOverlay, clock, meter, videoTimestamp) =>
+                    annotationWriter.SaveManualMarkAsync(
+                        frameBytes,
+                        entry,
+                        markOverlay,
+                        clock,
+                        meter,
+                        videoTimestamp),
+                RefreshCodingEventsList);
+            if (!result.Saved)
                 return false;
 
-            if (manualEvent != null
-                && CodingProtocolEntryPhotoPathAppender.AddIfPresent(manualEvent.Entry, annotation.FullFramePath))
-            {
-                RefreshCodingEventsList();
-            }
-
-            ShowOsdMeterStatus($"\u2713 {selectedEntry.Code} gespeichert", resetAfterDelay: true);
+            ShowOsdMeterStatus($"\u2713 {result.Code} gespeichert", resetAfterDelay: true);
             return true;
         }
         catch (Exception ex)
