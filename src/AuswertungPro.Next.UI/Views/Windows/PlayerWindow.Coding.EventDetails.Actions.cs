@@ -10,13 +10,15 @@ public partial class PlayerWindow
 {
     private void CodingAcceptDefect_Click(object sender, RoutedEventArgs e)
     {
-        _codingVm?.AcceptDefectCommand.Execute(null);
-        if (_codingVm?.SelectedDefect != null)
+        var acceptedDefect = CodingInlineDefectDecisionWorkflow.Accept(
+            () => _codingVm?.SelectedDefect,
+            () => _codingVm?.AcceptDefectCommand.Execute(null),
+            codingEvent => PersistSingleEventAsTrainingSample(codingEvent)
+                .SafeFireAndForget("TrainingSaveAcceptInline"));
+
+        if (acceptedDefect != null)
         {
-            // Mensch akzeptiert = bestaetigtes Gold -> als Trainingssample sichern (eval-geschuetzt).
-            PersistSingleEventAsTrainingSample(_codingVm.SelectedDefect)
-                .SafeFireAndForget("TrainingSaveAcceptInline");
-            UpdateInlineDefectDetail(_codingVm.SelectedDefect);
+            UpdateInlineDefectDetail(acceptedDefect);
             RefreshCodingEventsList();
             FadeOutAiOverlayAfterAction();
         }
@@ -50,15 +52,18 @@ public partial class PlayerWindow
 
             if (edited)
             {
-                CodingEventEditApplier.Apply(ev, _codingSessionService);
+                var completed = CodingInlineDefectDecisionWorkflow.CompleteEdit(
+                    ev,
+                    _codingSessionService,
+                    () => _codingVm.EditDefectCommand.Execute(null),
+                    codingEvent => PersistSingleEventAsTrainingSample(codingEvent)
+                        .SafeFireAndForget("TrainingSaveEditInline"));
 
-                if (ev.AiContext != null)
-                    _codingVm.EditDefectCommand.Execute(null);
-
-                // Bearbeitet+uebernommen = korrigiertes Gold -> als Trainingssample sichern.
-                PersistSingleEventAsTrainingSample(ev).SafeFireAndForget("TrainingSaveEditInline");
-                RefreshCodingEventsList();
-                UpdateInlineDefectDetail(ev);
+                if (completed)
+                {
+                    RefreshCodingEventsList();
+                    UpdateInlineDefectDetail(ev);
+                }
             }
         }
         finally
@@ -69,13 +74,16 @@ public partial class PlayerWindow
 
     private void CodingRejectDefect_Click(object sender, RoutedEventArgs e)
     {
-        var ev = _codingVm?.SelectedDefect ?? LstCodingEvents.SelectedItem as CodingEvent;
-        if (ev == null || _codingVm == null)
+        var rejectResult = CodingInlineDefectDecisionWorkflow.Reject(
+            _codingVm?.SelectedDefect,
+            LstCodingEvents.SelectedItem as CodingEvent,
+            _codingSessionService,
+            _codingVm?.Events);
+
+        if (!rejectResult.Rejected || _codingVm == null)
             return;
 
-        // Ablehnen = Eintrag komplett entfernen, nicht nur Status setzen.
-        var deleteResult = CodingEventDeleteApplier.Apply(ev, _codingSessionService, _codingVm.Events, _codingVm.SelectedDefect);
-        if (deleteResult.ShouldClearSelectedDefect)
+        if (rejectResult.ShouldClearSelectedDefect)
             _codingVm.SelectedDefect = null;
         HideInlineDefectDetail();
         RefreshCodingEventsList();

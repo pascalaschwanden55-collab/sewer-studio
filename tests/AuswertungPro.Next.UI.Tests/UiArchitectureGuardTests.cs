@@ -1549,15 +1549,18 @@ public sealed class UiArchitectureGuardTests
         var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.Actions.cs");
         var deleteApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteApplier.cs");
         var editApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventEditApplier.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectDecisionWorkflow.cs");
 
         Assert.True(File.Exists(actionsPath), "Inline-Defekt-Aktionshandler sollen aus dem allgemeinen EventDetails-Partial heraus.");
         Assert.True(File.Exists(deleteApplierPath), "Inline-Defekt-Ablehnen muss die gemeinsame Coding-Event-Loeschanwendung nutzen.");
         Assert.True(File.Exists(editApplierPath), "Inline-Defekt-Bearbeiten muss die gemeinsame Coding-Event-Edit-Anwendung nutzen.");
+        Assert.True(File.Exists(workflowPath), "Inline-Defekt-Entscheidungen sollen ausserhalb der PlayerWindow-Partials liegen.");
 
         var detail = File.ReadAllText(detailPath);
         var actions = File.ReadAllText(actionsPath);
         var deleteApplier = File.ReadAllText(deleteApplierPath);
         var editApplier = File.ReadAllText(editApplierPath);
+        var workflow = File.ReadAllText(workflowPath);
 
         Assert.DoesNotContain("private void CodingAcceptDefect_Click", detail);
         Assert.DoesNotContain("private void CodingEditDefect_Click", detail);
@@ -1565,12 +1568,17 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void CodingAcceptDefect_Click", actions);
         Assert.Contains("private void CodingEditDefect_Click", actions);
         Assert.Contains("private void CodingRejectDefect_Click", actions);
-        Assert.Contains("CodingEventEditApplier.Apply", actions);
-        Assert.Contains("CodingEventDeleteApplier.Apply", actions);
+        Assert.Contains("CodingInlineDefectDecisionWorkflow.Accept", actions);
+        Assert.Contains("CodingInlineDefectDecisionWorkflow.CompleteEdit", actions);
+        Assert.Contains("CodingInlineDefectDecisionWorkflow.Reject", actions);
+        Assert.DoesNotContain("CodingEventEditApplier.Apply", actions);
+        Assert.DoesNotContain("CodingEventDeleteApplier.Apply", actions);
         Assert.DoesNotContain("_codingSessionService?.UpdateEvent", actions);
         Assert.DoesNotContain("ev.MeterAtCapture = entry.MeterStart", actions);
         Assert.DoesNotContain("_codingSessionService?.RemoveEvent", actions);
         Assert.DoesNotContain("_codingVm.Events.Remove", actions);
+        Assert.Contains("CodingEventEditApplier.Apply", workflow);
+        Assert.Contains("CodingEventDeleteApplier.Apply", workflow);
         Assert.Contains("codingSessionService?.UpdateEvent", editApplier);
         Assert.Contains("codingSessionService?.RemoveEvent", deleteApplier);
         Assert.Contains("codingEvents?.Remove", deleteApplier);
