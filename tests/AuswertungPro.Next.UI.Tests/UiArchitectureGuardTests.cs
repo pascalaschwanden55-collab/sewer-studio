@@ -5021,6 +5021,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private bool TryHandleCodingSchemaMouseUp", schema);
         Assert.Contains("CodingSchemaOverlayBuilder.Create", schema);
         Assert.Contains("CodingSchemaOverlayBuilder.BuildGeometry", schema);
+        Assert.Contains("_codingSessionHost", schema);
+        Assert.DoesNotContain("_codingVm", schema);
         Assert.Contains("private void UpdateCodingSchemaOverlay", schema);
     }
 

@@ -23,6 +23,7 @@ public interface ICodingSessionHost
     void SetCurrentVideoTime(TimeSpan videoTime);
     void SelectDefect(CodingEvent? codingEvent);
     void ClearSelectedDefect();
+    void SetCurrentOverlay(OverlayGeometry? overlay);
     void ClearCurrentOverlay();
     void ClearSelectedCode();
     void BeginOverlayDraw(NormalizedPoint point);
@@ -101,14 +102,17 @@ public sealed class CodingSessionHost : ICodingSessionHost
     public void ClearSelectedDefect()
         => SelectDefect(null);
 
-    public void ClearCurrentOverlay()
+    public void SetCurrentOverlay(OverlayGeometry? overlay)
     {
         var viewModel = ViewModel;
         if (viewModel is null)
             return;
 
-        viewModel.CurrentOverlay = null;
+        viewModel.CurrentOverlay = overlay;
     }
+
+    public void ClearCurrentOverlay()
+        => SetCurrentOverlay(null);
 
     public void ClearSelectedCode()
     {

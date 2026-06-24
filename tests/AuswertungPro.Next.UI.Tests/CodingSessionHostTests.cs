@@ -34,6 +34,7 @@ public sealed class CodingSessionHostTests
         hostType.GetMethod("SetCurrentVideoTime")!.Invoke(host, [TimeSpan.FromSeconds(7)]);
         hostType.GetMethod("SelectDefect")!.Invoke(host, [new CodingEvent()]);
         hostType.GetMethod("ClearSelectedDefect")!.Invoke(host, []);
+        hostType.GetMethod("SetCurrentOverlay")!.Invoke(host, [new OverlayGeometry()]);
         hostType.GetMethod("ClearCurrentOverlay")!.Invoke(host, []);
         hostType.GetMethod("ClearSelectedCode")!.Invoke(host, []);
         hostType.GetMethod("BeginOverlayDraw")!.Invoke(host, [new NormalizedPoint(0.1, 0.2)]);
@@ -112,6 +113,9 @@ public sealed class CodingSessionHostTests
 
         host.GetType().GetMethod("ClearSelectedDefect")!.Invoke(host, []);
         Assert.Null(vm.SelectedDefect);
+
+        host.GetType().GetMethod("SetCurrentOverlay")!.Invoke(host, [overlay]);
+        Assert.Same(overlay, vm.CurrentOverlay);
 
         host.GetType().GetMethod("ClearCurrentOverlay")!.Invoke(host, []);
         Assert.Null(vm.CurrentOverlay);
