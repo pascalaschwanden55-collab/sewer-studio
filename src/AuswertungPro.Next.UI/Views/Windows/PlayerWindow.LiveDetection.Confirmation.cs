@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Windows;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -12,8 +13,10 @@ public partial class PlayerWindow
         if (findings.Count == 0) return;
 
         // Video pausieren und zur Fundstelle springen
-        if (_player != null && _player.IsPlaying)
-            _player.SetPause(true);
+        if (_player != null)
+            PlayerConfirmationPlayback.PauseLiveDetectionConfirmation(
+                _player.IsPlaying,
+                pause => _player.SetPause(pause));
 
         // Zur Fundstelle springen (Timestamp aus dem analysierten Frame)
         if (_detectionPendingTimestampSec.HasValue && _player != null)

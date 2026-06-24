@@ -2171,6 +2171,37 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_confirmation_playback_uses_player_helper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var helperPath = Path.Combine(uiRoot, "Player", "PlayerConfirmationPlayback.cs");
+        var codingConfirmationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Confirmation.cs");
+        var liveDetectionConfirmationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.cs");
+
+        Assert.True(File.Exists(helperPath), "Confirmation-Playback-Regeln sollen ausserhalb der PlayerWindow-Partials liegen.");
+
+        var helper = File.ReadAllText(helperPath);
+        var codingConfirmation = File.ReadAllText(codingConfirmationPath);
+        var liveDetectionConfirmation = File.ReadAllText(liveDetectionConfirmationPath);
+
+        Assert.Contains("public static class PlayerConfirmationPlayback", helper);
+        Assert.Contains("PauseCodingConfirmation", helper);
+        Assert.Contains("ResumeCodingLiveAi", helper);
+        Assert.Contains("PauseLiveDetectionConfirmation", helper);
+
+        Assert.Contains("PlayerConfirmationPlayback.PauseCodingConfirmation", codingConfirmation);
+        Assert.Contains("PlayerConfirmationPlayback.ResumeCodingLiveAi", codingConfirmation);
+        Assert.DoesNotContain("_player.SetPause(true)", codingConfirmation);
+        Assert.DoesNotContain("_player.SetPause(false)", codingConfirmation);
+
+        Assert.Contains("PlayerConfirmationPlayback.PauseLiveDetectionConfirmation", liveDetectionConfirmation);
+        Assert.DoesNotContain("_player.SetPause(true)", liveDetectionConfirmation);
+        Assert.DoesNotContain("_player.SetPause(false)", liveDetectionConfirmation);
+    }
+
+    [Fact]
     public void PlayerWindow_live_ai_timer_gate_uses_policy()
     {
         var root = FindRepositoryRoot();
