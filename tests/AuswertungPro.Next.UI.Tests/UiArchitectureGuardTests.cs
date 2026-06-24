@@ -2724,11 +2724,13 @@ public sealed class UiArchitectureGuardTests
         var playbackLifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Lifecycle.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingLiveAiTimerController.cs");
         var timerStopperPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerStopper.cs");
+        var exitTeardownWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeExitTeardownWorkflow.cs");
 
         Assert.True(File.Exists(codingExitPath), "Coding-Exit-Cleanup soll in einem eigenen Partial liegen.");
         Assert.True(File.Exists(playbackLifecyclePath), "Playback-Cleanup soll in einem eigenen Lifecycle-Partial liegen.");
         Assert.True(File.Exists(controllerPath), "Live-AI-Timer-Wiring muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(timerStopperPath), "Playback-Timer-Shutdown soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(exitTeardownWorkflowPath), "Coding-Exit-Teardown-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var live = File.ReadAllText(livePath);
@@ -2740,12 +2742,15 @@ public sealed class UiArchitectureGuardTests
         var playbackLifecycle = File.ReadAllText(playbackLifecyclePath);
         var controller = File.ReadAllText(controllerPath);
         var timerStopper = File.Exists(timerStopperPath) ? File.ReadAllText(timerStopperPath) : "";
+        var exitTeardownWorkflow = File.Exists(exitTeardownWorkflowPath) ? File.ReadAllText(exitTeardownWorkflowPath) : "";
 
         Assert.Contains("CodingLiveAiTimerController", state);
         Assert.Contains("_codingLiveAiTimers.Start()", live);
         Assert.Contains("_codingLiveAiTimers.Stop(resetButton: true)", live);
         Assert.DoesNotContain("_codingLiveAiTimers?.Stop(resetButton: true)", lifecycle);
-        Assert.Contains("_codingLiveAiTimers?.Stop(resetButton: true)", codingExit);
+        Assert.DoesNotContain("_codingLiveAiTimers?.Stop(resetButton: true)", codingExit);
+        Assert.Contains("StopCodingLiveAiTimers: resetButton => _codingLiveAiTimers!.Stop(resetButton)", codingExit);
+        Assert.Contains("actions.StopCodingLiveAiTimers(true)", exitTeardownWorkflow);
         Assert.DoesNotContain("_codingLiveAiTimers?.StopTimers()", playback);
         Assert.DoesNotContain("_codingLiveAiTimers?.StopTimers()", playbackLifecycle);
         Assert.Contains("PlayerWindowTimerStopper.StopPlaybackTimers", playbackLifecycle);
@@ -4405,6 +4410,7 @@ public sealed class UiArchitectureGuardTests
         var codingAiControllerPath = Path.Combine(uiRoot, "Player", "CodingAiController.cs");
         var closingWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosingWorkflow.cs");
         var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
+        var exitTeardownWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeExitTeardownWorkflow.cs");
         var helperPath = Path.Combine(uiRoot, "Player", "CancellationTokenSourceLifecycle.cs");
 
         Assert.True(File.Exists(helperPath), "CancellationTokenSource-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -4412,6 +4418,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(codingAiControllerPath), "Coding-AI-Analyse-CTS-Lifecycle soll im CodingAiController liegen.");
         Assert.True(File.Exists(closingWorkflowPath), "Closing-Cancel-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(closedWorkflowPath), "Closed-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(exitTeardownWorkflowPath), "Exit-Teardown-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var exit = File.ReadAllText(exitPath);
@@ -4421,11 +4428,13 @@ public sealed class UiArchitectureGuardTests
         var codingAiController = File.ReadAllText(codingAiControllerPath);
         var closingWorkflow = File.ReadAllText(closingWorkflowPath);
         var closedWorkflow = File.ReadAllText(closedWorkflowPath);
+        var exitTeardownWorkflow = File.Exists(exitTeardownWorkflowPath) ? File.ReadAllText(exitTeardownWorkflowPath) : "";
         var helper = File.Exists(helperPath) ? File.ReadAllText(helperPath) : "";
         var playerWindowText = ai + exit + wiring + playback;
 
         Assert.Contains("_codingAiController.TryBeginAnalysis()", ai);
-        Assert.Contains("_codingAiController.DisposeAnalysisCancellation()", exit);
+        Assert.Contains("DisposeAnalysisCancellation: _codingAiController.DisposeAnalysisCancellation", exit);
+        Assert.Contains("actions.DisposeAnalysisCancellation()", exitTeardownWorkflow);
         Assert.Contains("DisposeCodingAnalysisCancellation: _codingAiController.DisposeAnalysisCancellation", wiring);
         Assert.Contains("actions.DisposeCodingAnalysisCancellation()", closedWorkflow);
         Assert.Contains("CancelLiveDetection: _liveDetectionController.CancelDetectionIfPresent", playback);

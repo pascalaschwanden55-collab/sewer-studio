@@ -31,60 +31,75 @@ public partial class PlayerWindow
             return;
         }
 
-        StopCodingOsdTimer();
-        DisposeCodingOsdMeterService();
-        _codingLiveAiTimers?.Stop(resetButton: true);
-        StopCodingAiPulse();
-        StopPipelineHealthMonitor();
-
-        _codingAiController.DisposeAnalysisCancellation();
-
-        CodingImportReferenceStateResetter.ClearEvents(_codingImportEvents);
-        _lastCodingMatch = CodingProtocolMatchStateResetter.Reset(_codingProtocolMatchBuckets);
-        UpdateCodingProtocolMatchSummary(_lastCodingMatch);
-        LstImportEvents.ItemsSource = null;
-
-        CodingModeChromeControls.HideConfirmationPanels(CodingConfirmationPanel, DetectionConfirmationPanel);
-        _codingPendingConfirmEvent = null;
-        _codingPendingGateResult = null;
-        _detectionConfirmationBuffer.Clear();
-        DetectionOverlayCleaner.ClearCanvas(
-            DetectionCanvas,
-            DetectionOverlayGrid,
-            hideOverlay: !_liveDetectionController.IsDetecting);
-
-        CodingModeChromeControls.HideCodingSurface(
-            CodingOverlayPopup,
-            CodingOverlayCanvas,
-            CodingSidePanel,
-            CodingSidePanelColumn,
-            CodingToolbar,
-            CodingTimelinePanel,
-            CodingCalibrationHint,
-            CodingMeasurementPanel);
-        HideInlineDefectDetail();
-        CodingOsdBadgeControls.Hide(OsdMeterBadge);
-        CodingModeChromeControls.ShowLiveDetectionEntry(
-            LiveDetectionButton,
-            LiveDetectionStatusText,
-            _liveDetectionController.IsDetecting);
-
-        _activeCodingToolName = null;
-        CodingModeChromeControls.ResetCodingIndicators(TxtActiveToolLabel, BtnCodingLiveAi, TxtCodingAiStage);
-
-        _codingSchemaManager.Cancel();
-        _codingSchemaType = null;
-
-        if (_codingVm != null)
-            _codingVm.PropertyChanged -= CodingVm_PropertyChanged;
-        _codingVm = null;
-        _codingSessionService = null;
-        _codingOverlayService = null;
-        _codingIsCalibrating = false;
-        _codingCalibStart = null;
-        ResetFrameReadiness();
-        _codingOverlaySuspendDepth = 0;
-        _codingOverlayWasOpenBeforeSuspend = false;
+        CodingModeExitTeardownWorkflow.Execute(
+            new CodingModeExitTeardownWorkflowRequest(
+                HasCodingLiveAiTimers: _codingLiveAiTimers is not null,
+                HasCodingViewModel: _codingVm is not null,
+                IsLiveDetectionRunning: _liveDetectionController.IsDetecting),
+            new CodingModeExitTeardownWorkflowActions(
+                StopCodingOsdTimer: StopCodingOsdTimer,
+                DisposeCodingOsdMeterService: DisposeCodingOsdMeterService,
+                StopCodingLiveAiTimers: resetButton => _codingLiveAiTimers!.Stop(resetButton),
+                StopCodingAiPulse: StopCodingAiPulse,
+                StopPipelineHealthMonitor: StopPipelineHealthMonitor,
+                DisposeAnalysisCancellation: _codingAiController.DisposeAnalysisCancellation,
+                ClearImportReferenceEvents: () => CodingImportReferenceStateResetter.ClearEvents(_codingImportEvents),
+                ResetProtocolMatchState: () => _lastCodingMatch = CodingProtocolMatchStateResetter.Reset(_codingProtocolMatchBuckets),
+                UpdateProtocolMatchSummary: () => UpdateCodingProtocolMatchSummary(_lastCodingMatch),
+                ClearImportEventsListSource: () => LstImportEvents.ItemsSource = null,
+                HideConfirmationPanels: () => CodingModeChromeControls.HideConfirmationPanels(
+                    CodingConfirmationPanel,
+                    DetectionConfirmationPanel),
+                ClearPendingConfirmation: () =>
+                {
+                    _codingPendingConfirmEvent = null;
+                    _codingPendingGateResult = null;
+                },
+                ClearDetectionConfirmationBuffer: _detectionConfirmationBuffer.Clear,
+                ClearDetectionOverlay: hideOverlay => DetectionOverlayCleaner.ClearCanvas(
+                    DetectionCanvas,
+                    DetectionOverlayGrid,
+                    hideOverlay),
+                HideCodingSurface: () => CodingModeChromeControls.HideCodingSurface(
+                    CodingOverlayPopup,
+                    CodingOverlayCanvas,
+                    CodingSidePanel,
+                    CodingSidePanelColumn,
+                    CodingToolbar,
+                    CodingTimelinePanel,
+                    CodingCalibrationHint,
+                    CodingMeasurementPanel),
+                HideInlineDefectDetail: HideInlineDefectDetail,
+                HideOsdBadge: () => CodingOsdBadgeControls.Hide(OsdMeterBadge),
+                ShowLiveDetectionEntry: isDetecting => CodingModeChromeControls.ShowLiveDetectionEntry(
+                    LiveDetectionButton,
+                    LiveDetectionStatusText,
+                    isDetecting),
+                ClearActiveCodingToolName: () => _activeCodingToolName = null,
+                ResetCodingIndicators: () => CodingModeChromeControls.ResetCodingIndicators(
+                    TxtActiveToolLabel,
+                    BtnCodingLiveAi,
+                    TxtCodingAiStage),
+                CancelCodingSchema: _codingSchemaManager.Cancel,
+                ClearCodingSchemaType: () => _codingSchemaType = null,
+                DetachCodingViewModelPropertyChanged: () => _codingVm!.PropertyChanged -= CodingVm_PropertyChanged,
+                ClearCodingSessionReferences: () =>
+                {
+                    _codingVm = null;
+                    _codingSessionService = null;
+                    _codingOverlayService = null;
+                },
+                ClearCodingCalibrationState: () =>
+                {
+                    _codingIsCalibrating = false;
+                    _codingCalibStart = null;
+                },
+                ResetFrameReadiness: ResetFrameReadiness,
+                ResetCodingOverlaySuspendState: () =>
+                {
+                    _codingOverlaySuspendDepth = 0;
+                    _codingOverlayWasOpenBeforeSuspend = false;
+                }));
     }
 
     private void CodingModeExit_Click(object sender, RoutedEventArgs e) => ExitCodingMode();
