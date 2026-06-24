@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel;
 using AuswertungPro.Next.UI.Player;
 
@@ -8,39 +7,28 @@ public partial class PlayerWindow
 {
     private void OnClosing(object? sender, CancelEventArgs e)
     {
-        if (_closing)
-            return;
-
-        if (!ConfirmUnappliedCodingChangesOnClose())
-        {
-            e.Cancel = true;
-            return;
-        }
-
-        _closing = true;
-        if (ReferenceEquals(_lastOpened, this))
-            _lastOpened = null;
-
-        StopPlayerTimers();
-        _quickScanController.Cancel();
-        _liveDetectionController.CancelDetectionIfPresent();
-        _codingAiController.CancelAnalysisIfPresent();
-        StopLiveDetection();
-        StopPipelineHealthMonitor();
-
-        PlayerPlaybackResourceCleaner.DetachVideoView(
-            () => { if (VideoView != null) VideoView.MediaPlayer = null; });
-
-        PlayerPlaybackResourceCleaner.StopPlayer(() => _player.Stop());
-
-        try
-        {
-            Cleanup();
-        }
-        catch (Exception ex)
-        {
-            PlayerTrace.WriteLine($"[PlayerWindow] OnClosing error: {ex.Message}");
-        }
+        var result = PlayerWindowClosingWorkflow.Execute(
+            new PlayerWindowClosingWorkflowRequest(_closing),
+            new PlayerWindowClosingWorkflowActions(
+                ConfirmCanClose: ConfirmUnappliedCodingChangesOnClose,
+                MarkClosing: () => _closing = true,
+                ClearLastOpened: () =>
+                {
+                    if (ReferenceEquals(_lastOpened, this))
+                        _lastOpened = null;
+                },
+                StopPlayerTimers: StopPlayerTimers,
+                CancelQuickScan: _quickScanController.Cancel,
+                CancelLiveDetection: _liveDetectionController.CancelDetectionIfPresent,
+                CancelCodingAnalysis: _codingAiController.CancelAnalysisIfPresent,
+                StopLiveDetection: StopLiveDetection,
+                StopPipelineHealthMonitor: StopPipelineHealthMonitor,
+                DetachVideoView: () => PlayerPlaybackResourceCleaner.DetachVideoView(
+                    () => { if (VideoView != null) VideoView.MediaPlayer = null; }),
+                StopPlayer: () => PlayerPlaybackResourceCleaner.StopPlayer(() => _player.Stop()),
+                Cleanup: Cleanup,
+                LogCleanupError: ex => PlayerTrace.WriteLine($"[PlayerWindow] OnClosing error: {ex.Message}")));
+        e.Cancel = result.CancelClose;
     }
 
     private void Cleanup()

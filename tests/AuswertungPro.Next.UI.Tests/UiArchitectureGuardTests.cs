@@ -2747,13 +2747,16 @@ public sealed class UiArchitectureGuardTests
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Lifecycle.cs");
         var cleanerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackResourceCleaner.cs");
+        var closingWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosingWorkflow.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Playback-Closing/Cleanup soll aus dem allgemeinen Playback-Partial heraus.");
         Assert.True(File.Exists(cleanerPath), "Playback-Resource-Cleanup soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(closingWorkflowPath), "Playback-Closing-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var playback = File.ReadAllText(playbackPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var cleaner = File.Exists(cleanerPath) ? File.ReadAllText(cleanerPath) : "";
+        var closingWorkflow = File.Exists(closingWorkflowPath) ? File.ReadAllText(closingWorkflowPath) : "";
 
         Assert.DoesNotContain("private void OnClosing", playback);
         Assert.DoesNotContain("private void Cleanup", playback);
@@ -2761,6 +2764,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void OnClosing", lifecycle);
         Assert.Contains("private void Cleanup", lifecycle);
         Assert.Contains("private void StopPlayerTimers", lifecycle);
+        Assert.Contains("PlayerWindowClosingWorkflow.Execute", lifecycle);
         Assert.Contains("ConfirmUnappliedCodingChangesOnClose", lifecycle);
         Assert.Contains("PlayerPlaybackResourceCleaner.DetachVideoView", lifecycle);
         Assert.Contains("PlayerPlaybackResourceCleaner.StopPlayer", lifecycle);
@@ -2769,6 +2773,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("AuswertungPro.Next.Application.Common.BestEffort.Try", lifecycle);
         Assert.DoesNotContain("_player.Dispose()", lifecycle);
         Assert.DoesNotContain("_libVlc.Dispose()", lifecycle);
+        Assert.Contains("public static class PlayerWindowClosingWorkflow", closingWorkflow);
+        Assert.Contains("ConfirmCanClose", closingWorkflow);
+        Assert.Contains("LogCleanupError", closingWorkflow);
         Assert.Contains("public static class PlayerPlaybackResourceCleaner", cleaner);
         Assert.Contains("AuswertungPro.Next.Application.Common.BestEffort.Try", cleaner);
     }
@@ -4364,11 +4371,13 @@ public sealed class UiArchitectureGuardTests
         var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Lifecycle.cs");
         var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var codingAiControllerPath = Path.Combine(uiRoot, "Player", "CodingAiController.cs");
+        var closingWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosingWorkflow.cs");
         var helperPath = Path.Combine(uiRoot, "Player", "CancellationTokenSourceLifecycle.cs");
 
         Assert.True(File.Exists(helperPath), "CancellationTokenSource-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(liveControllerPath), "LiveDetection-CTS-Lifecycle soll im LiveDetectionController liegen.");
         Assert.True(File.Exists(codingAiControllerPath), "Coding-AI-Analyse-CTS-Lifecycle soll im CodingAiController liegen.");
+        Assert.True(File.Exists(closingWorkflowPath), "Closing-Cancel-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var exit = File.ReadAllText(exitPath);
@@ -4376,17 +4385,20 @@ public sealed class UiArchitectureGuardTests
         var playback = File.ReadAllText(playbackPath);
         var liveController = File.ReadAllText(liveControllerPath);
         var codingAiController = File.ReadAllText(codingAiControllerPath);
+        var closingWorkflow = File.ReadAllText(closingWorkflowPath);
         var helper = File.Exists(helperPath) ? File.ReadAllText(helperPath) : "";
         var playerWindowText = ai + exit + wiring + playback;
 
         Assert.Contains("_codingAiController.TryBeginAnalysis()", ai);
         Assert.Contains("_codingAiController.DisposeAnalysisCancellation()", exit);
         Assert.Contains("_codingAiController.DisposeAnalysisCancellation()", wiring);
-        Assert.Contains("_liveDetectionController.CancelDetectionIfPresent()", playback);
+        Assert.Contains("CancelLiveDetection: _liveDetectionController.CancelDetectionIfPresent", playback);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_cancellation)", liveController);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_cancellation)", liveController);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear(_cancellation)", liveController);
-        Assert.Contains("_codingAiController.CancelAnalysisIfPresent()", playback);
+        Assert.Contains("CancelCodingAnalysis: _codingAiController.CancelAnalysisIfPresent", playback);
+        Assert.Contains("actions.CancelLiveDetection()", closingWorkflow);
+        Assert.Contains("actions.CancelCodingAnalysis()", closingWorkflow);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_analysisCancellation)", codingAiController);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_analysisCancellation)", codingAiController);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear(_analysisCancellation)", codingAiController);
