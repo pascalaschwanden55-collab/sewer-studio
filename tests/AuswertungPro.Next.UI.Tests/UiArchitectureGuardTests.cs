@@ -836,14 +836,18 @@ public sealed class UiArchitectureGuardTests
         var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
         var importPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Import.cs");
         var mapperPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEventMapper.cs");
+        var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(importPath), "Import-Referenz-Laden soll in einem eigenen Lifecycle-Partial liegen.");
+        Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var lifecycle = File.ReadAllText(lifecyclePath);
         var import = File.ReadAllText(importPath);
         var mapper = File.ReadAllText(mapperPath);
+        var enterWorkflow = File.ReadAllText(enterWorkflowPath);
 
-        Assert.Contains("LoadExistingProtocolEventsAsImport();", lifecycle);
+        Assert.Contains("LoadExistingProtocolEventsAsImport: LoadExistingProtocolEventsAsImport", lifecycle);
+        Assert.Contains("actions.LoadExistingProtocolEventsAsImport()", enterWorkflow);
         Assert.DoesNotContain("CodingProtocolEventMapper.BuildMissingImportEvents", lifecycle);
         Assert.Contains("CodingProtocolEventMapper.BuildMissingImportEvents", import);
         Assert.Contains("CodingProtocolEventCollectionAppender.Append", import);
@@ -3951,18 +3955,22 @@ public sealed class UiArchitectureGuardTests
         var lengthPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Length.cs");
         var ensureServicePath = Path.Combine(uiRoot, "Ai", "CodingHaltungslaengeEnsureService.cs");
         var ensureServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingHaltungslaengeEnsureServiceFactory.cs");
+        var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(lengthPath), "Haltungslaenge-Fallback gehoert in eine Lifecycle-Length-Partial, nicht in Persistence.");
         Assert.True(File.Exists(ensureServicePath), "Haltungslaenge-Fallbacklogik gehoert ausserhalb der PlayerWindow-Partials.");
         Assert.True(File.Exists(ensureServiceFactoryPath), "Haltungslaenge-Eingabe soll ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var lifecycle = File.ReadAllText(lifecyclePath);
         var persistence = File.ReadAllText(persistencePath);
         var length = File.ReadAllText(lengthPath);
         var ensureService = File.ReadAllText(ensureServicePath);
         var ensureServiceFactory = File.ReadAllText(ensureServiceFactoryPath);
+        var enterWorkflow = File.ReadAllText(enterWorkflowPath);
 
-        Assert.Contains("EnsureHaltungslaenge(_haltungRecord);", lifecycle);
+        Assert.Contains("EnsureHaltungslaenge: () => EnsureHaltungslaenge(_haltungRecord!)", lifecycle);
+        Assert.Contains("actions.EnsureHaltungslaenge()", enterWorkflow);
         Assert.DoesNotContain("private void EnsureHaltungslaenge", persistence);
         Assert.DoesNotContain("Microsoft.VisualBasic.Interaction.InputBox", persistence);
         Assert.Contains("private void EnsureHaltungslaenge", length);
@@ -4559,17 +4567,21 @@ public sealed class UiArchitectureGuardTests
         var timelinePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Timeline.cs");
         var accessorsPath = Path.Combine(uiRoot, "Ai", "CodingTimelineMarkerAccessors.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingTimelineControls.cs");
+        var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(timelinePath), "Coding-Timeline-Wiring soll in einem eigenen Lifecycle-Partial liegen.");
         Assert.True(File.Exists(accessorsPath), "Timeline-Marker-Regeln muessen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(controlsPath), "Timeline-Control-Konfiguration soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var playerCoding = File.ReadAllText(playerCodingPath);
         var timeline = File.ReadAllText(timelinePath);
         var accessors = File.ReadAllText(accessorsPath);
         var controls = File.ReadAllText(controlsPath);
+        var enterWorkflow = File.ReadAllText(enterWorkflowPath);
 
-        Assert.Contains("InitializeCodingTimeline();", playerCoding);
+        Assert.Contains("InitializeCodingTimeline: InitializeCodingTimeline", playerCoding);
+        Assert.Contains("actions.InitializeCodingTimeline()", enterWorkflow);
         Assert.DoesNotContain("PipeTimeline.MeterAccessor = CodingTimelineMarkerAccessors.Meter", playerCoding);
         Assert.Contains("private void InitializeCodingTimeline", timeline);
         Assert.Contains("CodingTimelineControls.Configure", timeline);
@@ -4654,6 +4666,7 @@ public sealed class UiArchitectureGuardTests
         var defaultToolWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeDefaultToolWorkflow.cs");
         var showUiWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeShowUiWorkflow.cs");
         var backgroundServicesWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeBackgroundServicesWorkflow.cs");
+        var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(exitPath), "Codiermodus-Exit soll aus dem allgemeinen Lifecycle-Partial heraus.");
@@ -4667,6 +4680,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(defaultToolWorkflowPath), "Coding-Mode-Default-Tool-Aktivierung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(showUiWorkflowPath), "Coding-Mode-UI-Anzeige-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(backgroundServicesWorkflowPath), "Coding-Mode-Background-Services-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var coding = File.ReadAllText(codingPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
@@ -4681,6 +4695,7 @@ public sealed class UiArchitectureGuardTests
         var defaultToolWorkflow = File.Exists(defaultToolWorkflowPath) ? File.ReadAllText(defaultToolWorkflowPath) : "";
         var showUiWorkflow = File.Exists(showUiWorkflowPath) ? File.ReadAllText(showUiWorkflowPath) : "";
         var backgroundServicesWorkflow = File.Exists(backgroundServicesWorkflowPath) ? File.ReadAllText(backgroundServicesWorkflowPath) : "";
+        var enterWorkflow = File.Exists(enterWorkflowPath) ? File.ReadAllText(enterWorkflowPath) : "";
 
         Assert.DoesNotContain("private void EnterCodingMode", coding);
         Assert.DoesNotContain("private void ExitCodingMode", coding);
@@ -4689,6 +4704,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void LoadExistingProtocolEventsAsImport", lifecycle);
         Assert.Contains("private void CodingMode_Click", lifecycle);
         Assert.Contains("private void EnterCodingMode", lifecycle);
+        Assert.Contains("CodingModeEnterWorkflow.Execute", lifecycle);
+        Assert.DoesNotContain("if (_isCodingMode || _haltungRecord == null) return", lifecycle);
+        Assert.Contains("if (request.IsCodingMode || !request.HasHaltungRecord)", enterWorkflow);
         Assert.Contains("private void LoadExistingProtocolEventsAsImport", import);
         Assert.Contains("private void ExitCodingMode", exit);
         Assert.Contains("private void CodingModeExit_Click", exit);
@@ -4716,14 +4734,17 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("request.HasOverlayService", defaultToolWorkflow);
         Assert.DoesNotContain("TxtMarkToolName.Text", ui);
         Assert.DoesNotContain("TxtActiveToolLabel.Text", ui);
-        Assert.Contains("CreateCodingSessionState();", lifecycle);
-        Assert.Contains("InitializeCodingImportReferences();", lifecycle);
+        Assert.Contains("CreateCodingSessionState: CreateCodingSessionState", lifecycle);
+        Assert.Contains("InitializeCodingImportReferences: InitializeCodingImportReferences", lifecycle);
+        Assert.Contains("actions.CreateCodingSessionState()", enterWorkflow);
+        Assert.Contains("actions.InitializeCodingImportReferences()", enterWorkflow);
         Assert.Contains("CodingImportReferenceStateResetter.ClearEvents", exit);
         Assert.Contains("CodingProtocolMatchStateResetter.Reset", exit);
         Assert.DoesNotContain("_lastCodingMatch = null", exit);
         Assert.DoesNotContain("_codingProtocolMatchBuckets.Clear()", exit);
         Assert.DoesNotContain("_codingImportEvents.Clear()", exit);
-        Assert.Contains("ShowCodingModeUi();", lifecycle);
+        Assert.Contains("ShowCodingModeUi: ShowCodingModeUi", lifecycle);
+        Assert.Contains("actions.ShowCodingModeUi()", enterWorkflow);
         Assert.Contains("CodingModePreparePlaybackWorkflow.Execute", ui);
         Assert.DoesNotContain("if (_liveDetectionController.IsDetecting)", ui);
         Assert.Contains("PlayerCodingPlayback.PauseForCodingInteraction", preparePlaybackWorkflow);

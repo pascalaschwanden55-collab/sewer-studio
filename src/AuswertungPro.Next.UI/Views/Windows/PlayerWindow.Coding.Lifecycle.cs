@@ -18,34 +18,26 @@ public partial class PlayerWindow
 
     private void EnterCodingMode()
     {
-        if (_isCodingMode || _haltungRecord == null) return;
-        _isCodingMode = true;
-        ResetFrameReadiness();
-
-        PrepareCodingModePlayback();
-        CreateCodingSessionState();
-        ApplyCodingDnCalibration();
-
-        // Fallback: Haltungslaenge pruefen, ggf. manuell abfragen.
-        EnsureHaltungslaenge(_haltungRecord);
-
-        if (!TryStartCodingSession())
-            return;
-
-        InitializeCodingImportReferences();
-        ActivateDefaultCodingTool();
-        ShowCodingModeUi();
-
-        InitializeCodingTimeline();
-        StartCodingModeBackgroundServices();
-
-        // Bestehende Protokoll-Eintraege direkt in Import-Referenz laden
-        // (NICHT in KI-Befunde - die startet leer).
-        LoadExistingProtocolEventsAsImport();
-
-        // Video an Anfang setzen (direkt, nicht ueber PropertyChanged).
-        _codingNavPending = true;
-        SyncVideoToCodingMeter();
+        CodingModeEnterWorkflow.Execute(
+            new CodingModeEnterWorkflowRequest(
+                _isCodingMode,
+                _haltungRecord is not null),
+            new CodingModeEnterWorkflowActions(
+                SetCodingMode: value => _isCodingMode = value,
+                ResetFrameReadiness: ResetFrameReadiness,
+                PrepareCodingModePlayback: PrepareCodingModePlayback,
+                CreateCodingSessionState: CreateCodingSessionState,
+                ApplyCodingDnCalibration: ApplyCodingDnCalibration,
+                EnsureHaltungslaenge: () => EnsureHaltungslaenge(_haltungRecord!),
+                TryStartCodingSession: TryStartCodingSession,
+                InitializeCodingImportReferences: InitializeCodingImportReferences,
+                ActivateDefaultCodingTool: ActivateDefaultCodingTool,
+                ShowCodingModeUi: ShowCodingModeUi,
+                InitializeCodingTimeline: InitializeCodingTimeline,
+                StartCodingModeBackgroundServices: StartCodingModeBackgroundServices,
+                LoadExistingProtocolEventsAsImport: LoadExistingProtocolEventsAsImport,
+                SetCodingNavigationPending: value => _codingNavPending = value,
+                SyncVideoToCodingMeter: SyncVideoToCodingMeter));
     }
 
 }
