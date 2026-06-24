@@ -2312,20 +2312,30 @@ public sealed class UiArchitectureGuardTests
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var keyboardPath = Path.Combine(windowsRoot, "PlayerWindow.Keyboard.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardActionController.cs");
+        var playbackRunnerPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardPlaybackCommandRunner.cs");
 
         Assert.True(File.Exists(keyboardPath), "Keyboard-Wiring soll in einem eigenen PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(controllerPath), "Shortcut-Aktionsausfuehrung soll ausserhalb des PlayerWindow liegen.");
+        Assert.True(File.Exists(playbackRunnerPath), "Keyboard-Playback-Kommandos sollen ausserhalb der PlayerWindow-Partials liegen.");
 
         var playback = File.ReadAllText(playbackPath);
         var keyboard = File.ReadAllText(keyboardPath);
         var controller = File.ReadAllText(controllerPath);
+        var playbackRunner = File.Exists(playbackRunnerPath) ? File.ReadAllText(playbackRunnerPath) : "";
 
         Assert.DoesNotContain("PlayerWindow_PreviewKeyDown", playback);
         Assert.Contains("PlayerWindow_PreviewKeyDown", keyboard);
         Assert.Contains("_keyboardActions.Execute(action)", keyboard);
         Assert.DoesNotContain("case PlayerKeyboardAction.", keyboard);
+        Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Stop", keyboard);
+        Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Pause", keyboard);
+        Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Resume", keyboard);
+        Assert.DoesNotContain("_player.Stop()", keyboard);
+        Assert.DoesNotContain("_player.SetPause(true)", keyboard);
+        Assert.DoesNotContain("_player.SetPause(false)", keyboard);
         Assert.Contains("public sealed class PlayerKeyboardActionController", controller);
         Assert.Contains("case PlayerKeyboardAction.ToggleDetection", controller);
+        Assert.Contains("public static class PlayerKeyboardPlaybackCommandRunner", playbackRunner);
     }
 
     [Fact]
