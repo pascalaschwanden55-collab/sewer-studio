@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -12,6 +13,8 @@ namespace AuswertungPro.Next.UI.Player;
 public sealed class CodingAiController
 {
     private CancellationTokenSource? _analysisCancellation;
+    private IPipelineHealthMonitor? _healthMonitor;
+    private EventHandler<PipelineHealthStatus>? _healthStatusChanged;
 
     public LiveDetectionService? LiveDetection { get; private set; }
     public EnhancedVisionAnalysisService? EnhancedVision { get; private set; }
@@ -25,6 +28,7 @@ public sealed class CodingAiController
     public PipelineConfig? PipelineConfig { get; private set; }
     public bool UseMultiModel { get; private set; }
     public bool AiEnabled { get; private set; }
+    public bool HasHealthMonitor => _healthMonitor is not null;
     public bool QwenAvailable => LiveDetection is not null || EnhancedVision is not null;
     public bool CanAnalyze => LiveDetection is not null || EnhancedVision is not null || MultiModel is not null;
 
@@ -68,6 +72,42 @@ public sealed class CodingAiController
 
     public void SetAiEnabled(bool aiEnabled)
         => AiEnabled = aiEnabled;
+
+    public void StartHealthMonitor(
+        IPipelineHealthMonitor monitor,
+        EventHandler<PipelineHealthStatus> statusChanged)
+    {
+        ArgumentNullException.ThrowIfNull(monitor);
+        ArgumentNullException.ThrowIfNull(statusChanged);
+
+        _healthMonitor = monitor;
+        _healthStatusChanged = statusChanged;
+        _healthMonitor.StatusChanged += statusChanged;
+        _healthMonitor.Start();
+    }
+
+    public Task<PipelineHealthStatus> RefreshHealthOnceAsync(CancellationToken ct = default)
+    {
+        if (_healthMonitor is null)
+            throw new InvalidOperationException("Pipeline health monitor has not been started.");
+
+        return _healthMonitor.RefreshOnceAsync(ct);
+    }
+
+    public Task? StopHealthMonitor()
+    {
+        AiEnabled = false;
+        if (_healthMonitor is null)
+            return null;
+
+        if (_healthStatusChanged is not null)
+            _healthMonitor.StatusChanged -= _healthStatusChanged;
+
+        var stopTask = _healthMonitor.StopAsync();
+        _healthMonitor = null;
+        _healthStatusChanged = null;
+        return stopTask;
+    }
 
     public SingleFrameMultiModelService? EnsureMultiModel(Func<IVisionPipelineClient, PipelineConfig?, SingleFrameMultiModelService> create)
     {

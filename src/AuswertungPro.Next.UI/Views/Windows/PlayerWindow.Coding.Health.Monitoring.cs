@@ -17,13 +17,13 @@ public partial class PlayerWindow
         {
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                if (!_closing && _isCodingMode && _codingHealthMonitor != null)
+                if (!_closing && _isCodingMode && _codingAiController.HasHealthMonitor)
                     ApplyPipelineHealth(status);
             }));
             return;
         }
 
-        if (_isCodingMode && _codingHealthMonitor != null)
+        if (_isCodingMode && _codingAiController.HasHealthMonitor)
             ApplyPipelineHealth(status);
     }
 
@@ -53,12 +53,8 @@ public partial class PlayerWindow
 
     private void StopPipelineHealthMonitor()
     {
-        _codingAiController.SetAiEnabled(false);
-        if (_codingHealthMonitor != null)
-        {
-            _codingHealthMonitor.StatusChanged -= OnPipelineHealthChanged;
-            _codingHealthMonitor.StopAsync().SafeFireAndForget("PipelineHealthMonitorStop");
-            _codingHealthMonitor = null;
-        }
+        _codingAiController
+            .StopHealthMonitor()
+            ?.SafeFireAndForget("PipelineHealthMonitorStop");
     }
 }

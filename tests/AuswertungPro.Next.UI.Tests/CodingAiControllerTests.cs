@@ -63,6 +63,36 @@ public sealed class CodingAiControllerTests
         Assert.Null(controller.AnalysisCancellation);
     }
 
+    [Fact]
+    public async Task Health_monitor_lifecycle_starts_refreshes_stops_and_unsubscribes()
+    {
+        var controller = new CodingAiController();
+        var monitor = new FakePipelineHealthMonitor();
+        var received = 0;
+
+        controller.SetAiEnabled(true);
+        controller.StartHealthMonitor(monitor, (_, _) => received++);
+
+        Assert.True(monitor.Started);
+        Assert.True(controller.HasHealthMonitor);
+
+        var status = await controller.RefreshHealthOnceAsync();
+        monitor.RaiseStatus();
+
+        Assert.Same(monitor.CurrentStatus, status);
+        Assert.Equal(1, received);
+
+        var stopTask = controller.StopHealthMonitor();
+        Assert.NotNull(stopTask);
+        await stopTask;
+        monitor.RaiseStatus();
+
+        Assert.True(monitor.Stopped);
+        Assert.False(controller.HasHealthMonitor);
+        Assert.False(controller.AiEnabled);
+        Assert.Equal(1, received);
+    }
+
     private static CodingAiRuntime Runtime(
         bool enabled,
         LiveDetectionService? liveDetection,
@@ -98,4 +128,43 @@ public sealed class CodingAiControllerTests
             MultiModel: null,
             BoxSegmentation: null,
             MultiModelError: null);
+
+    private sealed class FakePipelineHealthMonitor : IPipelineHealthMonitor
+    {
+        public PipelineHealthStatus CurrentStatus { get; } = new(
+            PipelineHealthLevel.Full,
+            MultiModelActive: true,
+            SidecarReachable: true,
+            TokenValid: true,
+            SidecarHealthy: true,
+            QwenAvailable: true,
+            YoloLoaded: true,
+            DinoLoaded: true,
+            SamLoaded: true,
+            Summary: "ok",
+            Detail: "ready");
+
+        public bool Started { get; private set; }
+        public bool Stopped { get; private set; }
+
+        public event EventHandler<PipelineHealthStatus>? StatusChanged;
+
+        public void Start()
+            => Started = true;
+
+        public Task StopAsync()
+        {
+            Stopped = true;
+            return Task.CompletedTask;
+        }
+
+        public Task<PipelineHealthStatus> RefreshOnceAsync(CancellationToken ct = default)
+            => Task.FromResult(CurrentStatus);
+
+        public ValueTask DisposeAsync()
+            => ValueTask.CompletedTask;
+
+        public void RaiseStatus()
+            => StatusChanged?.Invoke(this, CurrentStatus);
+    }
 }

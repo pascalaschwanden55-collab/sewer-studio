@@ -24,14 +24,13 @@ public partial class PlayerWindow
 
             if (runtime.MultiModelAvailable && runtime.VisionClient is not null)
             {
-                _codingHealthMonitor = CodingAiRuntimeFactory.CreateHealthMonitor(
+                var healthMonitor = CodingAiRuntimeFactory.CreateHealthMonitor(
                     _codingAiController.VisionClient!,
                     aiEnabled: () => _codingAiController.AiEnabled,
                     qwenAvailable: () => _codingAiController.QwenAvailable);
-                _codingHealthMonitor.StatusChanged += OnPipelineHealthChanged;
-                _codingHealthMonitor.Start();
+                _codingAiController.StartHealthMonitor(healthMonitor, OnPipelineHealthChanged);
 
-                var initial = await _codingHealthMonitor.RefreshOnceAsync();
+                var initial = await _codingAiController.RefreshHealthOnceAsync();
                 ApplyPipelineHealth(initial);
             }
             else if (!string.IsNullOrWhiteSpace(runtime.MultiModelError))

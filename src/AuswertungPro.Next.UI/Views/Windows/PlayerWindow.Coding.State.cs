@@ -51,8 +51,6 @@ public partial class PlayerWindow
     private Rect _eingabemarkerRectNorm;
     private System.Windows.Shapes.Rectangle? _eingabemarkerPreviewRect;
 
-    private IPipelineHealthMonitor? _codingHealthMonitor;
-
     private readonly ObservableCollection<CodingEvent> _codingImportEvents = new();
     private CodingMatchRouting? _lastCodingMatch;
     private readonly Dictionary<Guid, CodingProtocolMatchBucket> _codingProtocolMatchBuckets = new();

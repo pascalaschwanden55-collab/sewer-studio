@@ -1320,16 +1320,19 @@ public sealed class UiArchitectureGuardTests
         var monitoringPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Health.Monitoring.cs");
         var statusControlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
         var analyzeButtonControlsPath = Path.Combine(uiRoot, "Ai", "CodingAnalyzeButtonControls.cs");
+        var codingAiControllerPath = Path.Combine(uiRoot, "Player", "CodingAiController.cs");
 
         Assert.True(File.Exists(monitoringPath), "Pipeline-Health-Monitoring soll aus dem Initialisierungs-Partial heraus.");
         Assert.True(File.Exists(statusControlsPath), "Pipeline-Health-Detail-Zuweisung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(analyzeButtonControlsPath), "Coding-Analyse-Button-Zustand soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(codingAiControllerPath), "Pipeline-Health-Monitor-Zustand soll im CodingAiController liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var health = File.ReadAllText(healthPath);
         var monitoring = File.ReadAllText(monitoringPath);
         var statusControls = File.ReadAllText(statusControlsPath);
         var analyzeButtonControls = File.Exists(analyzeButtonControlsPath) ? File.ReadAllText(analyzeButtonControlsPath) : "";
+        var codingAiController = File.ReadAllText(codingAiControllerPath);
 
         Assert.Contains("private async Task InitCodingAi", health);
         Assert.DoesNotContain("private void OnPipelineHealthChanged", health);
@@ -1350,8 +1353,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static void SetEnabled", analyzeButtonControls);
         Assert.Contains("public static void ShowPipelineHealthDetails", statusControls);
         Assert.Contains("details.Sidecar", statusControls);
-        Assert.DoesNotContain("_ = _codingHealthMonitor.StopAsync()", monitoring);
-        Assert.Contains("_codingHealthMonitor.StopAsync().SafeFireAndForget(\"PipelineHealthMonitorStop\")", monitoring);
+        Assert.DoesNotContain("_codingHealthMonitor", monitoring);
+        Assert.Contains(".StopHealthMonitor()", monitoring);
+        Assert.Contains(".SafeFireAndForget(\"PipelineHealthMonitorStop\")", monitoring);
+        Assert.Contains("_healthMonitor.StatusChanged -= _healthStatusChanged", codingAiController);
+        Assert.Contains("_healthMonitor.StopAsync()", codingAiController);
     }
 
     [Fact]
