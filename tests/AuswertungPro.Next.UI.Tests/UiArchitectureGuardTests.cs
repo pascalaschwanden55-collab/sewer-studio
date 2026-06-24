@@ -186,6 +186,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.DoesNotContain("private readonly LibVLC _libVlc", windowRoot);
         Assert.DoesNotContain("private OllamaClient? _liveDetectionClient", windowRoot);
+        Assert.DoesNotContain("private OllamaClient? _liveDetectionClient", state);
         Assert.DoesNotContain("private static PlayerWindow? _lastOpened", windowRoot);
         Assert.Contains("private readonly LibVLC _libVlc", state);
         Assert.Contains("private readonly MediaPlayer _player", state);
@@ -194,7 +195,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private readonly PlayerMarkToolControls _markToolControls", state);
         Assert.Contains("private readonly DamageMarkerController _damageMarkerController", state);
         Assert.Contains("private readonly QuickScanController _quickScanController", state);
-        Assert.Contains("private OllamaClient? _liveDetectionClient", state);
+        Assert.Contains("private readonly LiveDetectionController _liveDetectionController = new();", state);
         Assert.Contains("private static PlayerWindow? _lastOpened", state);
     }
 
@@ -710,18 +711,22 @@ public sealed class UiArchitectureGuardTests
         var playbackLifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Lifecycle.cs");
         var liveStopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
         var osdTimerPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Timer.cs");
+        var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var stopperPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerStopper.cs");
 
         Assert.True(File.Exists(stopperPath), "PlayerWindow-Timer-Shutdown soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(liveControllerPath), "LiveDetection-Timerzustand soll im LiveDetectionController liegen.");
 
         var playbackLifecycle = File.ReadAllText(playbackLifecyclePath);
         var liveStop = File.ReadAllText(liveStopPath);
         var osdTimer = File.ReadAllText(osdTimerPath);
+        var liveController = File.ReadAllText(liveControllerPath);
         var stopper = File.Exists(stopperPath) ? File.ReadAllText(stopperPath) : "";
-        var directTimerShutdownText = liveStop + osdTimer;
+        var directTimerShutdownText = liveStop + osdTimer + liveController;
 
         Assert.Contains("PlayerWindowTimerStopper.StopPlaybackTimers", playbackLifecycle);
-        Assert.Contains("_detectionTimer = PlayerWindowTimerStopper.StopAndClear(_detectionTimer)", liveStop);
+        Assert.Contains("_liveDetectionController.DetectionTimer", playbackLifecycle);
+        Assert.Contains("_timer = PlayerWindowTimerStopper.StopAndClear(_timer)", liveController);
         Assert.Contains("_codingOsdTimer = PlayerWindowTimerStopper.StopAndClear(_codingOsdTimer)", osdTimer);
         Assert.DoesNotContain("_detectionTimer?.Stop();", directTimerShutdownText);
         Assert.DoesNotContain("_detectionTimer = null;", directTimerShutdownText);
@@ -1077,6 +1082,7 @@ public sealed class UiArchitectureGuardTests
         var startupWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupWorkflow.cs");
         var runtimeStartWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeStartWorkflow.cs");
         var toggleControlsPath = Path.Combine(windowsRoot, "LiveDetectionToggleControls.cs");
+        var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var disposableLifecyclePath = Path.Combine(uiRoot, "Player", "DisposableReferenceLifecycle.cs");
 
         Assert.True(File.Exists(lifecyclePath), "LiveDetection-Start/Stop-Wiring soll in ein eigenes Lifecycle-Partial.");
@@ -1085,6 +1091,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(startupWorkflowPath), "LiveDetection-Startup-Entscheidungen sollen ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(runtimeStartWorkflowPath), "LiveDetection-Runtime-Startreihenfolge soll ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(toggleControlsPath), "LiveDetection-Toggle-State soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
+        Assert.True(File.Exists(liveControllerPath), "LiveDetection-Runtime-Zustand soll im LiveDetectionController liegen.");
         Assert.True(File.Exists(disposableLifecyclePath), "Disposable-Referenz-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
@@ -1094,6 +1101,7 @@ public sealed class UiArchitectureGuardTests
         var startupWorkflow = File.Exists(startupWorkflowPath) ? File.ReadAllText(startupWorkflowPath) : "";
         var runtimeStartWorkflow = File.Exists(runtimeStartWorkflowPath) ? File.ReadAllText(runtimeStartWorkflowPath) : "";
         var toggleControls = File.Exists(toggleControlsPath) ? File.ReadAllText(toggleControlsPath) : "";
+        var liveController = File.Exists(liveControllerPath) ? File.ReadAllText(liveControllerPath) : "";
         var disposableLifecycle = File.Exists(disposableLifecyclePath) ? File.ReadAllText(disposableLifecyclePath) : "";
         var playerWindowPartials = string.Join(
             Environment.NewLine,
@@ -1120,8 +1128,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerAiSettingsLoader.LoadRuntimeSettings", lifecycle);
         Assert.DoesNotContain("AppSettingsAiSettingsProvider", lifecycle);
         Assert.Contains("LiveDetectionRuntimeFactory.CreateAsync", lifecycle);
-        Assert.Contains("LiveDetectionRuntimeStartWorkflow.Start", lifecycle);
-        Assert.Contains("new LiveDetectionRuntimeStartActions", lifecycle);
+        Assert.Contains("_liveDetectionController.StartRuntime", lifecycle);
+        Assert.DoesNotContain("LiveDetectionRuntimeStartWorkflow.Start", lifecycle);
+        Assert.DoesNotContain("new LiveDetectionRuntimeStartActions", lifecycle);
+        Assert.Contains("LiveDetectionRuntimeStartWorkflow.Start", liveController);
+        Assert.Contains("new LiveDetectionRuntimeStartActions", liveController);
         Assert.DoesNotContain("\"KI aktiv\"", lifecycle);
         Assert.DoesNotContain("\"Aktiv\"", lifecycle);
         Assert.DoesNotContain("LiveDetectionDisplayPolicy.CompactModelName", lifecycle);
@@ -1154,13 +1165,13 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("LiveDetectionStatusText.Text", stop);
         Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Visible", stop);
         Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Collapsed", stop);
-        Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate", lifecycle);
-        Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", stop);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate", liveController);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", liveController);
         Assert.DoesNotContain("_detectionCts = new CancellationTokenSource();", lifecycle + stop);
         Assert.DoesNotContain("_detectionCts?.Cancel();", lifecycle + stop);
         Assert.DoesNotContain("_detectionCts?.Dispose();", lifecycle + stop);
         Assert.DoesNotContain("_detectionCts = null;", lifecycle + stop);
-        Assert.Contains("_liveDetectionClient = DisposableReferenceLifecycle.DisposeAndClear(_liveDetectionClient)", stop);
+        Assert.Contains("_client = DisposableReferenceLifecycle.DisposeAndClear(_client)", liveController);
         Assert.DoesNotContain("_liveDetectionClient?.Dispose()", stop);
         Assert.DoesNotContain("_liveDetectionClient = null;", stop);
         Assert.Contains("public static T? DisposeAndClear<T>", disposableLifecycle);
@@ -3250,11 +3261,14 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var liveDetectionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.cs");
+        var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTimerPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "LiveDetection-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(liveControllerPath), "LiveDetection-Timer-Gate soll vom LiveDetectionController aufgerufen werden.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
+        var liveController = File.ReadAllText(liveControllerPath);
         var policy = File.ReadAllText(policyPath);
 
         Assert.DoesNotContain("private async void DetectionTimer_Tick", liveDetection);
@@ -3262,7 +3276,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("SafeFireAndForget", liveDetection);
         Assert.Contains("\"DetectionTimer\"", liveDetection);
         Assert.Contains("private async Task RunDetectionAsync", liveDetection);
-        Assert.Contains("LiveDetectionTimerPolicy.ShouldRunTick", liveDetection);
+        Assert.Contains("_liveDetectionController.ShouldRunTick", liveDetection);
+        Assert.Contains("LiveDetectionTimerPolicy.ShouldRunTick", liveController);
         Assert.DoesNotContain("_isDetectionInFlight || _liveDetectionService is null || _detectionCts is null", liveDetection);
         Assert.DoesNotContain("!_player.IsPlaying", liveDetection);
         Assert.DoesNotContain("if (_detectionPendingFindings != null)", liveDetection);
@@ -4211,21 +4226,27 @@ public sealed class UiArchitectureGuardTests
         var exitPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
         var wiringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Wiring.cs");
         var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Lifecycle.cs");
+        var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var helperPath = Path.Combine(uiRoot, "Player", "CancellationTokenSourceLifecycle.cs");
 
         Assert.True(File.Exists(helperPath), "CancellationTokenSource-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(liveControllerPath), "LiveDetection-CTS-Lifecycle soll im LiveDetectionController liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var exit = File.ReadAllText(exitPath);
         var wiring = File.ReadAllText(wiringPath);
         var playback = File.ReadAllText(playbackPath);
+        var liveController = File.ReadAllText(liveControllerPath);
         var helper = File.Exists(helperPath) ? File.ReadAllText(helperPath) : "";
         var playerWindowText = ai + exit + wiring + playback;
 
         Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate", ai);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", exit);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", wiring);
-        Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_detectionCts)", playback);
+        Assert.Contains("_liveDetectionController.CancelDetectionIfPresent()", playback);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_cancellation)", liveController);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_cancellation)", liveController);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear(_cancellation)", liveController);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_codingAnalysisCts)", playback);
         Assert.DoesNotContain("_codingAnalysisCts?.Cancel();", playerWindowText);
         Assert.DoesNotContain("_codingAnalysisCts?.Dispose();", playerWindowText);

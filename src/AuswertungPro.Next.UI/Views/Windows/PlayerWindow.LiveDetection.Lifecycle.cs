@@ -14,7 +14,7 @@ public partial class PlayerWindow
 
     private async Task HandleLiveDetectionClickAsync()
     {
-        if (_isDetecting)
+        if (_liveDetectionController.IsDetecting)
         {
             StopLiveDetection();
             LiveDetectionToggleControls.Uncheck(LiveDetectionButton);
@@ -36,34 +36,18 @@ public partial class PlayerWindow
     }
 
     private void StartLiveDetectionRuntime(LiveDetectionRuntime runtime)
-        => LiveDetectionRuntimeStartWorkflow.Start(
+        => _liveDetectionController.StartRuntime(
             runtime,
-            new LiveDetectionRuntimeStartActions(
-                StoreRuntime: StoreLiveDetectionRuntime,
-                ResetCancellation: () => _detectionCts = CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_detectionCts),
-                MarkDetecting: () => _isDetecting = true,
+            new LiveDetectionControllerStartActions(
                 ShowOverlay: () => LiveDetectionOverlayControls.Show(DetectionOverlayGrid),
                 ApplyActiveStatus: ApplyLiveDetectionRuntimeStartStatus,
                 ShowWaitingForFrame: () => LiveDetectionStatusControls.ShowWaitingForFrame(LiveDetectionStatusText),
-                StartTimer: StartLiveDetectionTimer,
+                CreateTimer: () => PlayerWindowTimerFactory.CreateLiveDetectionTimer(DetectionTimer_Tick),
                 RunFirstDetection: () => RunDetectionAsync().SafeFireAndForget("LiveDetection")));
-
-    private void StoreLiveDetectionRuntime(LiveDetectionRuntime runtime)
-    {
-        _liveDetectionClient = runtime.Client;
-        _liveDetectionService = runtime.Service;
-        _liveDetectionModelName = runtime.VisionModel;
-    }
 
     private void ApplyLiveDetectionRuntimeStartStatus(LiveDetectionRuntimeStartStatus status)
     {
         SetLiveDetectionBadge(status.BadgeText, status.StatusColor, status.BadgeDetails);
         SetYoloStatus(status.YoloText, status.StatusColor, status.ModelLabel);
-    }
-
-    private void StartLiveDetectionTimer()
-    {
-        _detectionTimer = PlayerWindowTimerFactory.CreateLiveDetectionTimer(DetectionTimer_Tick);
-        _detectionTimer.Start();
     }
 }

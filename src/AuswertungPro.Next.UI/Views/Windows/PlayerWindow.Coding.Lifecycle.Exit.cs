@@ -48,7 +48,10 @@ public partial class PlayerWindow
         _codingPendingConfirmEvent = null;
         _codingPendingGateResult = null;
         _detectionConfirmationBuffer.Clear();
-        DetectionOverlayCleaner.ClearCanvas(DetectionCanvas, DetectionOverlayGrid, hideOverlay: !_isDetecting);
+        DetectionOverlayCleaner.ClearCanvas(
+            DetectionCanvas,
+            DetectionOverlayGrid,
+            hideOverlay: !_liveDetectionController.IsDetecting);
 
         CodingModeChromeControls.HideCodingSurface(
             CodingOverlayPopup,
@@ -61,7 +64,10 @@ public partial class PlayerWindow
             CodingMeasurementPanel);
         HideInlineDefectDetail();
         CodingOsdBadgeControls.Hide(OsdMeterBadge);
-        CodingModeChromeControls.ShowLiveDetectionEntry(LiveDetectionButton, LiveDetectionStatusText, _isDetecting);
+        CodingModeChromeControls.ShowLiveDetectionEntry(
+            LiveDetectionButton,
+            LiveDetectionStatusText,
+            _liveDetectionController.IsDetecting);
 
         _activeCodingToolName = null;
         CodingModeChromeControls.ResetCodingIndicators(TxtActiveToolLabel, BtnCodingLiveAi, TxtCodingAiStage);

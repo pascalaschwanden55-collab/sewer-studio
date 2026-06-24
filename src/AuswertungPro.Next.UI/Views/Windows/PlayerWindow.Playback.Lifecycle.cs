@@ -23,7 +23,7 @@ public partial class PlayerWindow
 
         StopPlayerTimers();
         _quickScanController.Cancel();
-        CancellationTokenSourceLifecycle.CancelIfPresent(_detectionCts);
+        _liveDetectionController.CancelDetectionIfPresent();
         CancellationTokenSourceLifecycle.CancelIfPresent(_codingAnalysisCts);
         StopLiveDetection();
         StopPipelineHealthMonitor();
@@ -60,7 +60,7 @@ public partial class PlayerWindow
         => PlayerWindowTimerStopper.StopPlaybackTimers(
             _timer,
             _scrubTimer,
-            _detectionTimer,
+            _liveDetectionController.DetectionTimer,
             _codingLiveAiTimers,
             _codingOsdTimer);
 }

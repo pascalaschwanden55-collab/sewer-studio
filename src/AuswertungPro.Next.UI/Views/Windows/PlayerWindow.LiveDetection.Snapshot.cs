@@ -11,6 +11,6 @@ public partial class PlayerWindow
         return await LiveDetectionFrameCaptureServiceFactory.Create((path, width) => TakeSnapshotSafe(path, width))
             .CaptureAsync(
                 () => _closing || _playbackDisposed,
-                _detectionCts?.Token ?? CancellationToken.None);
+                _liveDetectionController.DetectionCancellation?.Token ?? CancellationToken.None);
     }
 }

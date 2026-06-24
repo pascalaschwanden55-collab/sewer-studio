@@ -1,12 +1,7 @@
 using System;
-using System.Collections.Generic;
-using System.Threading;
 using System.Windows.Threading;
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
-using AuswertungPro.Next.Infrastructure.Ai;
-using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
@@ -37,18 +32,10 @@ public partial class PlayerWindow
     private readonly CodingOverlayRenderController _codingOverlayRenderController;
 
     // Live detection state.
-    private OllamaClient? _liveDetectionClient;
-    private LiveDetectionService? _liveDetectionService;
-    private DispatcherTimer? _detectionTimer;
-    private CancellationTokenSource? _detectionCts;
-    private bool _isDetecting;
-    private bool _isDetectionInFlight;
+    private readonly LiveDetectionController _liveDetectionController = new();
     private bool _isManualMarkMode;
     private OverlayToolType _markToolType = OverlayToolType.None;
-    private double _lastDetectionTimestamp;
-    private readonly List<LiveFrameFinding> _currentFindings = new();
     private readonly DetectionConfirmationBuffer _detectionConfirmationBuffer = new();
-    private string _liveDetectionModelName = string.Empty;
 
     // Protocol integration state.
     private readonly ServiceProvider? _serviceProvider;

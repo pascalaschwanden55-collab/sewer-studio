@@ -1,15 +1,15 @@
 # Design: PlayerWindow schrittweise entflechten — Pilot DamageMarkerController
 
 - **Datum:** 2026-06-22
-- **Fortschreibung 2026-06-24:** Die Spec bleibt massgeblich. Aktueller Stand: `DamageMarkerController`, `QuickScanController`, Schritt 3 `CodingOverlayRenderController` und `DetectionConfirmationBuffer` sind umgesetzt; dazu kamen `CodingUiUpdateWorkflow`, `LiveDetectionRuntimeStartWorkflow` und mehrere UI-Adapter. Aktuelle Vermessung: `PlayerWindow*.cs` = 95 Dateien / 5096 Zeilen, `PlayerWindow.xaml` = 822 Zeilen, zusammen 5918 Zeilen. Die alte Angabe "33 Dateien / ~7.500 Zeilen" ist historisch.
-- **Aktualisierte Reihenfolge 2026-06-24:** 1) Overlay-Abstraktion / `CodingOverlayRenderController`, 2) `ConfirmationBuffer` fuer `_detectionPending*`, 3) `LiveDetectionController`, 4) `CodingAiController` in zwei Stufen. Damit wird die alte Reihenfolge "CodingAi vor LiveDetection" ueberschrieben, weil der geteilte Puffer vor den grossen Controllern als eigenes Objekt herausgezogen wird.
+- **Fortschreibung 2026-06-24:** Die Spec bleibt massgeblich. Aktueller Stand: `DamageMarkerController`, `QuickScanController`, Schritt 3 `CodingOverlayRenderController`, `DetectionConfirmationBuffer` und der erste `LiveDetectionController`-Schnitt sind umgesetzt; dazu kamen `CodingUiUpdateWorkflow`, `LiveDetectionRuntimeStartWorkflow` und mehrere UI-Adapter. Aktuelle Vermessung: `PlayerWindow*.cs` = 95 Dateien / 5078 Zeilen, `PlayerWindow.xaml` = 822 Zeilen, zusammen 5900 Zeilen. Die alte Angabe "33 Dateien / ~7.500 Zeilen" ist historisch.
+- **Aktualisierte Reihenfolge 2026-06-24:** 1) Overlay-Abstraktion / `CodingOverlayRenderController`, 2) `ConfirmationBuffer` fuer `_detectionPending*`, 3) `LiveDetectionController`, 4) `CodingAiController` in zwei Stufen. Damit wird die alte Reihenfolge "CodingAi vor LiveDetection" ueberschrieben, weil der geteilte Puffer vor den grossen Controllern als eigenes Objekt herausgezogen wurde.
 - **Status:** Design freigegeben (Pilot-Zuschnitt: schlank & direkt)
 - **Scope-Entscheidung:** Pilot zuerst — diese Spec beschreibt EINEN Pilot-Schnitt im Detail, der Rest ist nur skizziert.
 - **Grundlage:** Kopplungsanalyse 2026-06-22 (6 Subsysteme kartiert, synthetisiert) + Architektur-Audit 2026-06-21 (Gesamtnote B-, `PlayerWindow` als einziger God-Class-Befund).
 
 ## 1. Kontext & Problem
 
-`PlayerWindow` ist eine `partial class` über **33 Dateien (~7.500 Zeilen)** mit **~45 geteilten veränderlichen Instanzfeldern**, die quer über die Partials gelesen und geschrieben werden. Das Aufteilen in viele kleine Partial-Dateien hat die Lesbarkeit verbessert (größte Datei heute 585 statt früher 1.443 Zeilen), aber die eigentliche Kopplung — der gemeinsame veränderliche Zustand — ist unverändert. Es ist weiterhin **eine** Klasse; die Partials sind 33 Fenster auf dasselbe große Objekt.
+`PlayerWindow` ist aktuell eine `partial class` über **95 Dateien / 5078 Zeilen** plus **822 Zeilen XAML**. Das Aufteilen in viele kleine Partial-Dateien hat die Lesbarkeit verbessert, aber die eigentliche Kopplung entsteht weiterhin dort, wo veränderlicher Zustand im Fenster geteilt bleibt. Genau diese Felder werden Schritt für Schritt in fokussierte Controller verschoben.
 
 Das ist kein Stabilitäts-, sondern ein Wartbarkeitsrisiko: eine Änderung kann Playback, Codierung, Overlay, Live-Erkennung und Speichern gleichzeitig betreffen, weil sie sich denselben Zustand teilen.
 
@@ -80,7 +80,7 @@ Es darf sich **nichts** am sichtbaren Verhalten ändern: Marker an identischer P
 ## 6. Strategie für geteilten Zustand (für spätere Schritte, nicht Teil des Pilots)
 1. **Subsystem-exklusive Felder** (z.B. `_damageMarkers`, `_heatmapRects`, `_quickScanCts`): wandern als private Felder in den jeweiligen Controller. Reines Verschieben.
 2. **Readonly ctor-injizierte Eingaben** (z.B. `_damageOverlay`, `_videoPath`): per Konstruktor durchreichen; das Window behält seine Referenz für die wenigen value-only-Fremd-Reads.
-3. **Echt geteilte Felder** (die heikelsten): (a) Playback-Kern `_player`/`_libVlc` → bleiben im künftigen `PlaybackController`, werden über eine schmale Lese-API exponiert. (b) Coding-Kern `_codingVm`/`_codingSessionService` → als gemeinsames `CodingSessionState`-Objekt bündeln. (c) Brückenpuffer `_detectionPending*` → zunächst im Window belassen, erst wenn LiveDetection UND Coding-Multi-Model gemeinsam extrahiert sind in ein eigenes `ConfirmationBuffer`-Objekt ziehen.
+3. **Echt geteilte Felder** (die heikelsten): (a) Playback-Kern `_player`/`_libVlc` bleibt bis zu einem eigenen Playback-Schnitt im Window und wird nur über schmale Delegates gelesen. (b) Coding-Kern `_codingVm`/`_codingSessionService` wird später als gemeinsames `CodingSessionState`-Objekt gebündelt. (c) Der frühere Brückenpuffer `_detectionPending*` ist umgesetzt als `DetectionConfirmationBuffer`; LiveDetection und Coding-Multi-Model teilen damit kein loses Feldbündel mehr im Window.
 
 ## 7. Extraktions-Reihenfolge (Skizze — erst nach dem Pilot entscheiden)
 
@@ -91,13 +91,13 @@ Es darf sich **nichts** am sichtbaren Verhalten ändern: Marker an identischer P
 3. **CodingOverlayRenderController** — rein lesend; erzwingt die drei wiederverwendbaren Bausteine `IOverlaySurface` (für `CodingOverlayCanvas`), injizierter Coordinate-Mapper und gemeinsame `OverlayTags`-Konstanten.
 4. **PlaybackController** — spät, weil `_player` von ~10 Partials gelesen wird; erst schmale Lese-API exponieren. `OnClosing` bleibt als Koordinator im Window.
 5. **CodingAiAnalysisController** — 2-stufig (erst Services/Health/CTS/OSD/FrameReadiness hinter Host-Interface, dann die UI-nahe Result-Anzeige).
-6. **LiveDetectionController** — erst jetzt sinnvoll; Brückenpuffer gemeinsam mit Schritt 5 mitnehmen.
+6. **LiveDetectionController** — historisch hier geplant; durch `DetectionConfirmationBuffer` inzwischen vor `CodingAiController` vorgezogen.
 7. **CodingSessionController + OverlayInteractionController + Eingabemarker** — zuletzt; erfordert Migration des `Enter/ExitCodingMode`-Lebenszyklus und von `_codingVm`/`_codingSessionService`.
 
 ## 8. Risiken
 - **Threading/Reentrancy** (bei späteren Schritten): `async void`-Handler, `SafeFireAndForget` und DispatcherTimer-Callbacks müssen die `_closing`/`_playbackDisposed`-Guards in identischer Reihenfolge behalten. **Der Pilot ist davon bewusst nicht betroffen.**
 - **Tag-String-Konvention** beim Overlay-Rendering (`ai_`/`overlay_`/`ref_dn`/`tool_badge`): vor Schritt 3 zentralisieren, sonst stille Render-Leichen.
-- **Geteilter `_detectionPending*`-Puffer**: bis Schritte 5+6 im Window halten, sonst Race.
+- **Bestätigungs-Puffer**: `DetectionConfirmationBuffer` ist der gemeinsame Puffer. Neue LiveDetection- oder CodingAi-Schnitte dürfen keine `_detectionPending*`-Felder im Window wieder einführen.
 - **`_player` als Querschnitts-Lesezustand**: erst Lese-API, dann verschieben.
 - **`OnClosing`-Reihenfolge** ist sicherheitskritisch: bleibt als Koordinator im Window.
 - **Verstecktes Singleton**: `Coding.Apply.cs:129` greift via `App.Current.MainWindow.DataContext` aufs ShellViewModel — beim späteren Coding-Schnitt explizit als Abhängigkeit sichtbar machen.

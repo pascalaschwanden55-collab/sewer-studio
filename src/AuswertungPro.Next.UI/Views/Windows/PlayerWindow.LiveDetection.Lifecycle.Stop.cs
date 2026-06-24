@@ -9,37 +9,41 @@ public partial class PlayerWindow
     {
         var updateUi = !_closing && !_playbackDisposed;
 
-        _detectionTimer = PlayerWindowTimerStopper.StopAndClear(_detectionTimer);
-        _detectionCts = CancellationTokenSourceLifecycle.CancelDisposeAndClear(_detectionCts);
-        _isDetecting = false;
-        _isDetectionInFlight = false;
-        _liveDetectionService = null;
-        _liveDetectionClient = DisposableReferenceLifecycle.DisposeAndClear(_liveDetectionClient);
-        _liveDetectionModelName = string.Empty;
-        _currentFindings.Clear();
+        _liveDetectionController.Stop(
+            updateUi,
+            new LiveDetectionControllerStopActions(
+                SetStoppedStatus: () => SetYoloStatus("Gestoppt", PlayerStatusColors.Muted),
+                ClearOverlay: () => DetectionOverlayCleaner.ClearCanvas(
+                    DetectionCanvas,
+                    DetectionOverlayGrid,
+                    hideOverlay: !_isManualMarkMode),
+                ShowStoppedDetectionStatus: ShowStoppedDetectionStatus,
+                PausePlaybackIfRunning: PauseLiveDetectionPlaybackIfRunning,
+                StartHideStatusTimer: StartLiveDetectionHideStatusTimer));
+    }
 
-        if (!updateUi)
-            return;
-
-        SetYoloStatus("Gestoppt", PlayerStatusColors.Muted);
-        DetectionOverlayCleaner.ClearCanvas(DetectionCanvas, DetectionOverlayGrid, hideOverlay: !_isManualMarkMode);
-
+    private void ShowStoppedDetectionStatus()
+    {
         var totalEvents = _codingVm?.Events?.Count ?? 0;
         LiveDetectionStatusControls.ShowStoppedDetectionStatus(
             AiStatusBadge,
             FindingSummaryPanel,
             LiveDetectionStatusText,
             totalEvents);
+    }
 
-        PlayerLiveDetectionStopPlayback.PauseIfRunning(
+    private void PauseLiveDetectionPlaybackIfRunning()
+        => PlayerLiveDetectionStopPlayback.PauseIfRunning(
             _player != null,
             _playbackDisposed,
             _player?.IsPlaying == true,
             pause => _player!.SetPause(pause));
 
+    private void StartLiveDetectionHideStatusTimer()
+    {
         var hideTimer = PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromSeconds(5), () =>
         {
-            if (!_isDetecting)
+            if (!_liveDetectionController.IsDetecting)
                 LiveDetectionStatusControls.HideDetectionStatus(LiveDetectionStatusText);
         });
         hideTimer.Start();

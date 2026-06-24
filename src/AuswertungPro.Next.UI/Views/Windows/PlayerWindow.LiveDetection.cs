@@ -20,56 +20,53 @@ public partial class PlayerWindow
     private async Task RunDetectionAsync()
     {
         var player = _player;
-        if (!LiveDetectionTimerPolicy.ShouldRunTick(
+        if (!_liveDetectionController.ShouldRunTick(
                 isClosing: _closing,
                 hasPlayer: player is not null,
-                isDetectionInFlight: _isDetectionInFlight,
-                hasLiveDetectionService: _liveDetectionService is not null,
-                hasDetectionCancellation: _detectionCts is not null,
                 isPlayerPlaying: player?.IsPlaying == true,
                 hasPendingFindings: _detectionConfirmationBuffer.HasFindings))
             return;
 
-        _isDetectionInFlight = true;
+        _liveDetectionController.BeginDetection();
         SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Warning,
-            $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Snapshot");
+            $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionController.ModelName)} | Snapshot");
 
         try
         {
             var snapshot = await CaptureCurrentFrameAsync();
             if (snapshot is null)
             {
-                _isDetectionInFlight = false;
+                _liveDetectionController.EndDetection();
                 if (!_closing && !_playbackDisposed)
                 {
                     SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Success,
-                        $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Bereit");
+                        $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionController.ModelName)} | Bereit");
                 }
                 return;
             }
 
-            if (_closing || _playbackDisposed || _liveDetectionService is null || _detectionCts is null)
+            var service = _liveDetectionController.Service;
+            var cancellation = _liveDetectionController.DetectionCancellation;
+            if (_closing || _playbackDisposed || service is null || cancellation is null)
                 return;
 
             SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Warning,
-                $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Inferenz");
+                $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionController.ModelName)} | Inferenz");
             var timestampSec = player!.Time / 1000.0;
-            var result = await _liveDetectionService.AnalyzeFrameAsync(
-                snapshot, timestampSec, _detectionCts.Token).ConfigureAwait(false);
+            var result = await service.AnalyzeFrameAsync(
+                snapshot, timestampSec, cancellation.Token).ConfigureAwait(false);
 
             Dispatcher.Invoke(() =>
             {
-                if (_closing || _playbackDisposed || !_isDetecting) return;
+                if (_closing || _playbackDisposed || !_liveDetectionController.IsDetecting) return;
 
-                _lastDetectionTimestamp = result.TimestampSeconds;
-                _currentFindings.Clear();
-                _currentFindings.AddRange(result.Findings);
+                _liveDetectionController.ApplyDetectionResult(result);
 
                 RenderDetectionOverlay(result.Findings, result.TimestampSeconds);
                 UpdateDetectionStatus(result);
 
                 SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Success,
-                    $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Overlay");
+                    $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionController.ModelName)} | Overlay");
 
                 var significantFindings = LiveDetectionConfirmationPolicy.SelectSignificantFindings(result.Findings);
                 if (significantFindings.Count > 0)
@@ -80,7 +77,7 @@ public partial class PlayerWindow
                         result.TimestampSeconds);
                     ShowDetectionConfirmation(significantFindings);
                     SetLiveDetectionBadge("Befund erkannt", PlayerStatusColors.Warning,
-                        $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Warte auf Bestaetigung");
+                        $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionController.ModelName)} | Warte auf Bestaetigung");
                 }
             });
         }
@@ -99,12 +96,12 @@ public partial class PlayerWindow
 
                 LiveDetectionStatusControls.ShowDetectionError(LiveDetectionStatusText, msg);
                 SetLiveDetectionBadge("KI Fehler", PlayerStatusColors.Error,
-                    LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName));
+                    LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionController.ModelName));
             });
         }
         finally
         {
-            _isDetectionInFlight = false;
+            _liveDetectionController.EndDetection();
         }
     }
 }

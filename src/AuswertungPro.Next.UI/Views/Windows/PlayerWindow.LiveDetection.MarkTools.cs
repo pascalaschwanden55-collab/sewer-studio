@@ -82,7 +82,7 @@ public partial class PlayerWindow
         _markToolType = OverlayToolType.None;
         _isManualMarkMode = false;
         _markToolControls.ResetToolLabel();
-        _markToolControls.DeactivateDetectionSide(_isDetecting);
+        _markToolControls.DeactivateDetectionSide(_liveDetectionController.IsDetecting);
 
         if (!_isCodingMode)
         {

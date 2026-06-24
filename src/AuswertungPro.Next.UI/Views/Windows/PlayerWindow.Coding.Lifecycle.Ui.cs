@@ -16,7 +16,7 @@ public partial class PlayerWindow
     {
         PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause));
 
-        if (_isDetecting)
+        if (_liveDetectionController.IsDetecting)
         {
             StopLiveDetection();
             LiveDetectionToggleControls.Uncheck(LiveDetectionButton);
