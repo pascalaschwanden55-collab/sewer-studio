@@ -1808,6 +1808,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static bool TryTakeSnapshot", snapshot);
         Assert.Contains("private bool TakeSnapshotSafe", snapshot);
         Assert.Contains("PlayerSnapshotPauseRestorer.ResumeIfNeeded", snapshot);
+        Assert.DoesNotContain("_player.SetPause(false)", snapshot);
         Assert.DoesNotContain("AuswertungPro.Next.Application.Common.BestEffort.Try", snapshot);
         Assert.DoesNotContain("VLC: Pause aufheben", snapshot);
         Assert.Contains("public static void ResumeIfNeeded", pauseRestorer);

@@ -17,4 +17,11 @@ public static class PlayerSnapshotPauseRestorer
             resumePlayback,
             "VLC: Pause aufheben");
     }
+
+    public static void ResumeIfNeeded(
+        bool wasPlaying,
+        bool closing,
+        bool playbackDisposed,
+        Action<bool> setPause)
+        => ResumeIfNeeded(wasPlaying, closing, playbackDisposed, () => setPause(false));
 }

@@ -17,6 +17,18 @@ public sealed class PlayerSnapshotPauseRestorerTests
         Assert.True(called);
     }
 
+    [Fact]
+    public void ResumeIfNeeded_set_pause_overload_sets_pause_false_when_resume_is_allowed()
+    {
+        var method = FindSetPauseResumeIfNeededMethod();
+        Assert.NotNull(method);
+        bool? pauseValue = null;
+
+        method.Invoke(null, [true, false, false, new Action<bool>(pause => pauseValue = pause)]);
+
+        Assert.False(pauseValue);
+    }
+
     [Theory]
     [InlineData(false, false, false)]
     [InlineData(true, true, false)]
@@ -49,5 +61,15 @@ public sealed class PlayerSnapshotPauseRestorerTests
                 BindingFlags.Public | BindingFlags.Static,
                 binder: null,
                 types: [typeof(bool), typeof(bool), typeof(bool), typeof(Action)],
+                modifiers: null);
+
+    private static MethodInfo? FindSetPauseResumeIfNeededMethod()
+        => typeof(PlayerSnapshotPathPolicy).Assembly
+            .GetType("AuswertungPro.Next.UI.Player.PlayerSnapshotPauseRestorer")
+            ?.GetMethod(
+                "ResumeIfNeeded",
+                BindingFlags.Public | BindingFlags.Static,
+                binder: null,
+                types: [typeof(bool), typeof(bool), typeof(bool), typeof(Action<bool>)],
                 modifiers: null);
 }

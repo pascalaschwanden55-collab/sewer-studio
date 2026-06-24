@@ -55,7 +55,7 @@ public partial class PlayerWindow
                 wasPlaying,
                 _closing,
                 _playbackDisposed,
-                () => _player.SetPause(false));
+                _player.SetPause);
         }
     }
 }
