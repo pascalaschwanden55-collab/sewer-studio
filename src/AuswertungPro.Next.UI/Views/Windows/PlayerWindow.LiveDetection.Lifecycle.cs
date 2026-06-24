@@ -56,7 +56,7 @@ public partial class PlayerWindow
             _detectionCts = CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_detectionCts);
             _isDetecting = true;
 
-            DetectionOverlayGrid.Visibility = Visibility.Visible;
+            LiveDetectionOverlayControls.Show(DetectionOverlayGrid);
             SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Success,
                 $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(runtime.VisionModel)}");
             SetYoloStatus("Aktiv", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(runtime.VisionModel));

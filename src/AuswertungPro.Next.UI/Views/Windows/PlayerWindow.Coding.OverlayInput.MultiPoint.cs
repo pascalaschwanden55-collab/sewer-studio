@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -13,7 +14,7 @@ public partial class PlayerWindow
         if (_codingOverlayService.DrawPointCount == 0)
         {
             _codingVm.CurrentOverlay = null;
-            BtnCodingCreateEvent.IsEnabled = false;
+            CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false);
             UpdateCodingOverlayInfo(null);
         }
 
@@ -29,7 +30,7 @@ public partial class PlayerWindow
         if (complete)
         {
             UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
-            BtnCodingCreateEvent.IsEnabled = true;
+            CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, true);
             if (BtnCodingLiveAi.IsChecked == true && _codingVm.CurrentOverlay != null)
                 AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay).SafeFireAndForget("OverlayHint");
         }

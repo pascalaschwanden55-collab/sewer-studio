@@ -60,6 +60,21 @@ public sealed class CodingEingabemarkerPopupControlsTests
         });
     }
 
+    [Fact]
+    public void ApplyQuickSelection_sets_input_text()
+    {
+        RunOnStaThread(() =>
+        {
+            var text = new TextBox { Text = "alt" };
+            var apply = FindMethod("ApplyQuickSelection", typeof(TextBox), typeof(string));
+            Assert.NotNull(apply);
+
+            apply.Invoke(null, [text, "Riss bei 3 Uhr"]);
+
+            Assert.Equal("Riss bei 3 Uhr", text.Text);
+        });
+    }
+
     private static MethodInfo? FindMethod(string name, params Type[] parameterTypes)
         => typeof(PlayerStatusColors).Assembly
             .GetType("AuswertungPro.Next.UI.Views.Windows.CodingEingabemarkerPopupControls")

@@ -46,10 +46,9 @@ public partial class PlayerWindow
         _codingSchemaType = selection.ActiveSchemaType;
         _codingSchemaManager.Cancel();
 
-        TxtActiveToolLabel.Text = selection.LabelText;
+        CodingOverlayInputControls.ApplyActiveToolSelection(TxtActiveToolLabel, BtnCodingCreateEvent, selection.LabelText);
 
         _codingVm.CurrentOverlay = null;
-        BtnCodingCreateEvent.IsEnabled = false;
         UpdateCodingOverlayInfo(null);
         UpdateCodingOverlayCursor();
         RedrawCodingCanvas(includeManualOverlay: false);

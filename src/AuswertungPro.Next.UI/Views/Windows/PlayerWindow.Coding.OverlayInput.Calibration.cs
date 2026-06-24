@@ -16,10 +16,9 @@ public partial class PlayerWindow
         _codingCalibStart = null;
         _codingOverlayService.ActiveTool = state.ActiveTool;
         _activeCodingToolName = state.ActiveToolName;
-        TxtActiveToolLabel.Text = state.ToolLabel;
+        CodingOverlayInputControls.ApplyActiveToolSelection(TxtActiveToolLabel, BtnCodingCreateEvent, state.ToolLabel);
 
         _codingVm.CurrentOverlay = null;
-        BtnCodingCreateEvent.IsEnabled = false;
         UpdateCodingOverlayInfo(null);
 
         CodingCalibrationControls.ApplyToggle(CodingCalibrationHint, TxtCodingCalibHint, state);

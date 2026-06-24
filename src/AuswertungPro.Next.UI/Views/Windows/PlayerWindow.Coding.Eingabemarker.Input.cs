@@ -25,7 +25,7 @@ public partial class PlayerWindow
         if (!CodingEingabemarkerPopupControls.IsVisible(EingabemarkerPopup)) return;
         if (CmbEingabemarker.SelectedItem is ComboBoxItem item && item.Content is string text && !string.IsNullOrEmpty(text))
         {
-            TxtEingabemarker.Text = text;
+            CodingEingabemarkerPopupControls.ApplyQuickSelection(TxtEingabemarker, text);
             SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker");
         }
     }

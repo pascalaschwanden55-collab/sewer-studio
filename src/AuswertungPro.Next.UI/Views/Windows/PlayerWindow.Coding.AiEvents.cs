@@ -97,7 +97,7 @@ public partial class PlayerWindow
         // Nur NEUE Befunde als visuelle Overlays auf dem Videobild anzeigen
         if (findingsToDraw.Count > 0 && !CodingOverlayPopup.IsOpen)
         {
-            DetectionOverlayGrid.Visibility = Visibility.Visible;
+            LiveDetectionOverlayControls.Show(DetectionOverlayGrid);
             RenderDetectionOverlay(findingsToDraw, _player.Time / 1000.0);
             ScheduleDetectionAutoHide();   // verbleibende Boxen nach 3s ausblenden (Liste bleibt)
         }

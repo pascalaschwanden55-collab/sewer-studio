@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -38,7 +39,7 @@ public partial class PlayerWindow
         if (_codingVm != null)
         {
             _codingVm.CurrentOverlay = null;
-            BtnCodingCreateEvent.IsEnabled = false;
+            CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false);
             UpdateCodingOverlayInfo(null);
         }
         if (CodingOverlayPopup.IsOpen)

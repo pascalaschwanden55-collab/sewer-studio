@@ -1,6 +1,7 @@
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.UI.Ai;
 using System.Windows.Input;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -83,7 +84,9 @@ public partial class PlayerWindow
 
         _codingVm.CurrentOverlay = BuildCodingSchemaGeometry();
         UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
-        BtnCodingCreateEvent.IsEnabled = enableCreateEvent && _codingVm.CurrentOverlay != null;
+        CodingOverlayInputControls.SetCreateEventEnabled(
+            BtnCodingCreateEvent,
+            enableCreateEvent && _codingVm.CurrentOverlay != null);
 
         ClearTransientCodingCanvas(clearManualOverlay: true);
         RenderAiOverlays();
@@ -97,7 +100,7 @@ public partial class PlayerWindow
         _codingSchemaManager.Cancel();
         if (_codingVm != null)
             _codingVm.CurrentOverlay = null;
-        BtnCodingCreateEvent.IsEnabled = false;
+        CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false);
         UpdateCodingOverlayInfo(null);
         if (redraw)
             RedrawCodingCanvas(includeManualOverlay: false);

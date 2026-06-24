@@ -28,6 +28,13 @@ public static class CodingEingabemarkerPopupControls
         popup.Visibility = Visibility.Collapsed;
     }
 
+    public static void ApplyQuickSelection(TextBox inputText, string text)
+    {
+        ArgumentNullException.ThrowIfNull(inputText);
+
+        inputText.Text = text;
+    }
+
     public static bool IsVisible(FrameworkElement popup)
     {
         ArgumentNullException.ThrowIfNull(popup);

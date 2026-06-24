@@ -4600,6 +4600,39 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_overlay_input_create_event_state_uses_controls_adapter()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputControls.cs");
+        var relevantPartials = new[]
+        {
+            "PlayerWindow.Coding.OverlayInput.Tools.cs",
+            "PlayerWindow.Coding.OverlayInput.Standard.cs",
+            "PlayerWindow.Coding.OverlayInput.Schema.cs",
+            "PlayerWindow.Coding.OverlayInput.Calibration.cs",
+            "PlayerWindow.Coding.OverlayInput.MultiPoint.cs",
+            "PlayerWindow.Keyboard.cs"
+        };
+
+        Assert.True(File.Exists(controlsPath), "OverlayInput-Toollabel und Create-Event-Button sollen ausserhalb der PlayerWindow-Partials gesetzt werden.");
+
+        var joinedPartials = string.Join(
+            Environment.NewLine,
+            relevantPartials.Select(file => File.ReadAllText(Path.Combine(windowsRoot, file))));
+        var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+
+        Assert.Contains("CodingOverlayInputControls.ApplyActiveToolSelection", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.SetCreateEventEnabled", joinedPartials);
+        Assert.DoesNotContain("TxtActiveToolLabel.Text =", joinedPartials);
+        Assert.DoesNotContain("BtnCodingCreateEvent.IsEnabled =", joinedPartials);
+        Assert.Contains("public static class CodingOverlayInputControls", controls);
+        Assert.Contains("public static void ApplyActiveToolSelection", controls);
+        Assert.Contains("public static void SetCreateEventEnabled", controls);
+    }
+
+    [Fact]
     public void PlayerWindow_overlay_viewport_mapping_lives_in_viewport_partial()
     {
         var root = FindRepositoryRoot();
@@ -5036,9 +5069,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingEingabemarkerPopupControls.ShowInput", marker);
         Assert.Contains("CodingEingabemarkerPopupControls.Hide", marker);
         Assert.Contains("CodingEingabemarkerPopupControls.IsVisible", input);
+        Assert.Contains("CodingEingabemarkerPopupControls.ApplyQuickSelection", input);
         Assert.DoesNotContain("EingabemarkerPopup.Visibility = Visibility.Visible", marker);
         Assert.DoesNotContain("EingabemarkerPopup.Visibility = Visibility.Collapsed", marker);
         Assert.DoesNotContain("TxtEingabemarker.Text = \"\"", marker);
+        Assert.DoesNotContain("TxtEingabemarker.Text = text", input);
         Assert.DoesNotContain("CmbEingabemarker.SelectedIndex = -1", marker);
         Assert.DoesNotContain("EingabemarkerPopup.Visibility != Visibility.Visible", input);
         Assert.Contains("private void CmbEingabemarker_KeyDown", input);
@@ -5048,6 +5083,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static void ShowInput", popupControls);
         Assert.Contains("public static void Hide", popupControls);
         Assert.Contains("public static bool IsVisible", popupControls);
+        Assert.Contains("public static void ApplyQuickSelection", popupControls);
     }
 
     [Fact]

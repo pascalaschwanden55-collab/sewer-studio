@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Helpers;
+using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -11,7 +12,7 @@ public partial class PlayerWindow
             return;
 
         _codingVm.CurrentOverlay = null;
-        BtnCodingCreateEvent.IsEnabled = false;
+        CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false);
         UpdateCodingOverlayInfo(null);
 
         _codingVm.OnCanvasMouseDown(norm);
@@ -70,7 +71,7 @@ public partial class PlayerWindow
             }
 
             UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
-            BtnCodingCreateEvent.IsEnabled = true;
+            CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, true);
 
             // Wenn Auto-KI aktiv: Overlay-Zeichnung -> KI analysiert markierte Stelle
             if (BtnCodingLiveAi.IsChecked == true)
@@ -79,7 +80,7 @@ public partial class PlayerWindow
         else
         {
             UpdateCodingOverlayInfo(null);
-            BtnCodingCreateEvent.IsEnabled = false;
+            CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false);
         }
 
         return true;
