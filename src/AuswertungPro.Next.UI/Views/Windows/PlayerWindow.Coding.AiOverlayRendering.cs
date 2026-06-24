@@ -1,4 +1,3 @@
-using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -9,10 +8,10 @@ public partial class PlayerWindow
 
     private void RenderAiOverlays()
     {
-        if (_codingVm == null) return;
+        if (!_codingSessionHost.HasViewModel) return;
 
         _codingOverlayRenderController.RenderAiOverlays(
-            _codingVm.Events,
+            _codingSessionHost.Events,
             _codingOverlayService?.Calibration);
     }
 }

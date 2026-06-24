@@ -5525,6 +5525,8 @@ public sealed class UiArchitectureGuardTests
 
         Assert.DoesNotContain("RenderAiRectangleOverlay(", aiOverlay);
         Assert.Contains("_codingOverlayRenderController.RenderAiOverlays", aiOverlay);
+        Assert.Contains("_codingSessionHost", aiOverlay);
+        Assert.DoesNotContain("_codingVm", aiOverlay);
         Assert.DoesNotContain("CodingAiRectangleOverlayRenderer.Render", aiOverlay);
         Assert.DoesNotContain("CodingAiPrimitiveOverlayRenderer.Render", aiOverlay);
         Assert.DoesNotContain("CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag", aiOverlay);
