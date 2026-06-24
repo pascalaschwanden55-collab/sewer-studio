@@ -41,12 +41,14 @@ public partial class PlayerWindow
 
     private void UpdatePipelineHealthDetails(PipelineHealthDetailsUiState details)
     {
-        Hd_Sidecar.Text = details.Sidecar;
-        Hd_Token.Text = details.Token;
-        Hd_Yolo.Text = details.Yolo;
-        Hd_Dino.Text = details.Dino;
-        Hd_Sam.Text = details.Sam;
-        Hd_Mode.Text = details.Mode;
+        LiveDetectionStatusControls.ShowPipelineHealthDetails(
+            Hd_Sidecar,
+            Hd_Token,
+            Hd_Yolo,
+            Hd_Dino,
+            Hd_Sam,
+            Hd_Mode,
+            details);
     }
 
     private void StopPipelineHealthMonitor()

@@ -1,0 +1,118 @@
+using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
+using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.UI.Ai;
+
+namespace AuswertungPro.Next.UI.Views.Windows;
+
+public static class LiveDetectionStatusControls
+{
+    public static void ShowLiveDetectionBadge(
+        FrameworkElement badge,
+        TextBlock statusText,
+        Shape dot,
+        string status,
+        Color dotColor,
+        string? stage = null)
+    {
+        ArgumentNullException.ThrowIfNull(badge);
+        ArgumentNullException.ThrowIfNull(statusText);
+        ArgumentNullException.ThrowIfNull(dot);
+
+        var stageSuffix = string.IsNullOrWhiteSpace(stage) ? string.Empty : $" | {stage}";
+        badge.Visibility = Visibility.Visible;
+        statusText.Text = $"{status}{stageSuffix}";
+        dot.Fill = new SolidColorBrush(dotColor);
+    }
+
+    public static void ShowYoloStatus(
+        FrameworkElement statusBar,
+        TextBlock statusText,
+        Shape dot,
+        TextBlock modelText,
+        string text,
+        Color dotColor,
+        string? model = null)
+    {
+        ArgumentNullException.ThrowIfNull(statusBar);
+        ArgumentNullException.ThrowIfNull(statusText);
+        ArgumentNullException.ThrowIfNull(dot);
+        ArgumentNullException.ThrowIfNull(modelText);
+
+        statusBar.Visibility = Visibility.Visible;
+        statusText.Text = $"YOLO: {text}";
+        dot.Fill = new SolidColorBrush(dotColor);
+        modelText.Text = model ?? string.Empty;
+    }
+
+    public static void ShowCodingAiState(
+        TextBlock statusText,
+        TextBlock stageText,
+        Shape dot,
+        string status,
+        Color dotColor,
+        string? stage = null)
+    {
+        ArgumentNullException.ThrowIfNull(statusText);
+        ArgumentNullException.ThrowIfNull(stageText);
+        ArgumentNullException.ThrowIfNull(dot);
+
+        statusText.Text = status;
+        stageText.Text = stage ?? string.Empty;
+        dot.Fill = new SolidColorBrush(dotColor);
+    }
+
+    public static void ShowDetectionStatus(
+        TextBlock statusText,
+        FrameworkElement summaryPanel,
+        TextBlock summaryText,
+        LiveDetection result)
+    {
+        ArgumentNullException.ThrowIfNull(statusText);
+        ArgumentNullException.ThrowIfNull(summaryPanel);
+        ArgumentNullException.ThrowIfNull(summaryText);
+        ArgumentNullException.ThrowIfNull(result);
+
+        statusText.Text = LiveDetectionDisplayPolicy.BuildDetectionStatusText(result);
+        if (result.Error is not null)
+            return;
+
+        if (result.Findings.Count > 0)
+        {
+            summaryPanel.Visibility = Visibility.Visible;
+            summaryText.Text = LiveDetectionDisplayPolicy.BuildFindingSummaryText(result.Findings);
+        }
+        else
+        {
+            summaryPanel.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    public static void ShowPipelineHealthDetails(
+        TextBlock sidecar,
+        TextBlock token,
+        TextBlock yolo,
+        TextBlock dino,
+        TextBlock sam,
+        TextBlock mode,
+        PipelineHealthDetailsUiState details)
+    {
+        ArgumentNullException.ThrowIfNull(sidecar);
+        ArgumentNullException.ThrowIfNull(token);
+        ArgumentNullException.ThrowIfNull(yolo);
+        ArgumentNullException.ThrowIfNull(dino);
+        ArgumentNullException.ThrowIfNull(sam);
+        ArgumentNullException.ThrowIfNull(mode);
+        ArgumentNullException.ThrowIfNull(details);
+
+        sidecar.Text = details.Sidecar;
+        token.Text = details.Token;
+        yolo.Text = details.Yolo;
+        dino.Text = details.Dino;
+        sam.Text = details.Sam;
+        mode.Text = details.Mode;
+    }
+}

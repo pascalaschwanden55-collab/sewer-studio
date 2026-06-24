@@ -1,7 +1,5 @@
-using System.Windows;
 using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -15,10 +13,7 @@ public partial class PlayerWindow
             return;
         }
 
-        var stageSuffix = string.IsNullOrWhiteSpace(stage) ? string.Empty : $" | {stage}";
-        AiStatusBadge.Visibility = Visibility.Visible;
-        AiStatusText.Text = $"{status}{stageSuffix}";
-        AiStatusDot.Fill = new SolidColorBrush(dotColor);
+        LiveDetectionStatusControls.ShowLiveDetectionBadge(AiStatusBadge, AiStatusText, AiStatusDot, status, dotColor, stage);
     }
 
     private void SetYoloStatus(string text, Color dotColor, string? model = null)
@@ -29,10 +24,7 @@ public partial class PlayerWindow
             return;
         }
 
-        YoloStatusBar.Visibility = Visibility.Visible;
-        TxtYoloStatus.Text = $"YOLO: {text}";
-        YoloDot.Fill = new SolidColorBrush(dotColor);
-        TxtYoloModel.Text = model ?? string.Empty;
+        LiveDetectionStatusControls.ShowYoloStatus(YoloStatusBar, TxtYoloStatus, YoloDot, TxtYoloModel, text, dotColor, model);
     }
 
     private void SetCodingAiState(string status, Color dotColor, string? stage = null, bool pulse = false)
@@ -43,9 +35,7 @@ public partial class PlayerWindow
             return;
         }
 
-        TxtCodingAiStatus.Text = status;
-        TxtCodingAiStage.Text = stage ?? string.Empty;
-        CodingAiDot.Fill = new SolidColorBrush(dotColor);
+        LiveDetectionStatusControls.ShowCodingAiState(TxtCodingAiStatus, TxtCodingAiStage, CodingAiDot, status, dotColor, stage);
         if (pulse)
             StartCodingAiPulse();
         else
@@ -54,18 +44,10 @@ public partial class PlayerWindow
 
     private void UpdateDetectionStatus(LiveDetection result)
     {
-        LiveDetectionStatusText.Text = LiveDetectionDisplayPolicy.BuildDetectionStatusText(result);
-        if (result.Error is not null)
-            return;
-
-        if (result.Findings.Count > 0)
-        {
-            FindingSummaryPanel.Visibility = Visibility.Visible;
-            FindingSummaryText.Text = LiveDetectionDisplayPolicy.BuildFindingSummaryText(result.Findings);
-        }
-        else
-        {
-            FindingSummaryPanel.Visibility = Visibility.Collapsed;
-        }
+        LiveDetectionStatusControls.ShowDetectionStatus(
+            LiveDetectionStatusText,
+            FindingSummaryPanel,
+            FindingSummaryText,
+            result);
     }
 }

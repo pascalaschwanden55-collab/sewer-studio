@@ -969,13 +969,16 @@ public sealed class UiArchitectureGuardTests
         var liveDetectionPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.cs");
         var statusPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Status.cs");
         var pulsePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Status.Pulse.cs");
+        var controlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
 
         Assert.True(File.Exists(statusPath), "LiveDetection-Status-UI soll in ein eigenes Partial.");
         Assert.True(File.Exists(pulsePath), "Coding-AI-Pulsanimation soll aus dem Status-Orchestrator heraus.");
+        Assert.True(File.Exists(controlsPath), "LiveDetection-Status-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var status = File.ReadAllText(statusPath);
         var pulse = File.ReadAllText(pulsePath);
+        var controls = File.ReadAllText(controlsPath);
 
         Assert.DoesNotContain("private void SetLiveDetectionBadge", liveDetection);
         Assert.DoesNotContain("private void SetYoloStatus", liveDetection);
@@ -990,6 +993,20 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void StopCodingAiPulse", status);
         Assert.Contains("private void UpdateDetectionStatus", status);
         Assert.Contains("Dispatcher.Invoke", status);
+        Assert.Contains("LiveDetectionStatusControls.ShowLiveDetectionBadge", status);
+        Assert.Contains("LiveDetectionStatusControls.ShowYoloStatus", status);
+        Assert.Contains("LiveDetectionStatusControls.ShowCodingAiState", status);
+        Assert.Contains("LiveDetectionStatusControls.ShowDetectionStatus", status);
+        Assert.DoesNotContain("AiStatusBadge.Visibility", status);
+        Assert.DoesNotContain("YoloStatusBar.Visibility", status);
+        Assert.DoesNotContain("TxtCodingAiStatus.Text", status);
+        Assert.DoesNotContain("FindingSummaryPanel.Visibility", status);
+        Assert.Contains("public static void ShowLiveDetectionBadge", controls);
+        Assert.Contains("public static void ShowYoloStatus", controls);
+        Assert.Contains("public static void ShowCodingAiState", controls);
+        Assert.Contains("public static void ShowDetectionStatus", controls);
+        Assert.Contains("LiveDetectionDisplayPolicy.BuildDetectionStatusText", controls);
+        Assert.Contains("LiveDetectionDisplayPolicy.BuildFindingSummaryText", controls);
         Assert.Contains("private void StartCodingAiPulse", pulse);
         Assert.Contains("private void StopCodingAiPulse", pulse);
         Assert.Contains("DoubleAnimation", pulse);
@@ -1188,11 +1205,14 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var healthPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Health.cs");
         var monitoringPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Health.Monitoring.cs");
+        var statusControlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
 
         Assert.True(File.Exists(monitoringPath), "Pipeline-Health-Monitoring soll aus dem Initialisierungs-Partial heraus.");
+        Assert.True(File.Exists(statusControlsPath), "Pipeline-Health-Detail-Zuweisung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var health = File.ReadAllText(healthPath);
         var monitoring = File.ReadAllText(monitoringPath);
+        var statusControls = File.ReadAllText(statusControlsPath);
 
         Assert.Contains("private async Task InitCodingAi", health);
         Assert.DoesNotContain("private void OnPipelineHealthChanged", health);
@@ -1204,6 +1224,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void UpdatePipelineHealthDetails", monitoring);
         Assert.Contains("private void StopPipelineHealthMonitor", monitoring);
         Assert.Contains("PipelineHealthUiStateFactory.Create", monitoring);
+        Assert.Contains("LiveDetectionStatusControls.ShowPipelineHealthDetails", monitoring);
+        Assert.DoesNotContain("Hd_Sidecar.Text", monitoring);
+        Assert.Contains("public static void ShowPipelineHealthDetails", statusControls);
+        Assert.Contains("details.Sidecar", statusControls);
         Assert.DoesNotContain("_ = _codingHealthMonitor.StopAsync()", monitoring);
         Assert.Contains("_codingHealthMonitor.StopAsync().SafeFireAndForget(\"PipelineHealthMonitorStop\")", monitoring);
     }
