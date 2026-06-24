@@ -6,25 +6,21 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class PlayerWindow
 {
     private void Play_Click(object sender, RoutedEventArgs e)
-    {
-        EnsurePlaying();
-        _player.SetPause(false);
-        UpdateRateLabel();
-        // Overlays aufraeumen; beim Abspielen sind alte Markierungen irrelevant.
-        ClearDetectionOverlays();
-    }
+        => PlayerPlaybackCommandRunner.Play(
+            EnsurePlaying,
+            pause => _player.SetPause(pause),
+            UpdateRateLabel,
+            ClearDetectionOverlays);
 
     private void Pause_Click(object sender, RoutedEventArgs e)
-    {
-        _player.SetPause(true);
-        UpdateRateLabel();
-    }
+        => PlayerPlaybackCommandRunner.Pause(
+            pause => _player.SetPause(pause),
+            UpdateRateLabel);
 
     private void Stop_Click(object sender, RoutedEventArgs e)
-    {
-        _player.Stop();
-        UpdateRateLabel();
-    }
+        => PlayerPlaybackCommandRunner.Stop(
+            () => _player.Stop(),
+            UpdateRateLabel);
 
     private void Speed05_Click(object sender, RoutedEventArgs e) => SetSpeed(0.5f);
 

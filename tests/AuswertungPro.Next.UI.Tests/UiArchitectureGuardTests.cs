@@ -876,17 +876,26 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var controlsPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Controls.cs");
+        var commandRunnerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackCommandRunner.cs");
 
         Assert.True(File.Exists(controlsPath), "Playback-Button- und Slider-Wiring soll in ein eigenes Partial.");
+        Assert.True(File.Exists(commandRunnerPath), "Playback-Button-Kommandos sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var playback = File.ReadAllText(playbackPath);
         var controls = File.ReadAllText(controlsPath);
+        var commandRunner = File.Exists(commandRunnerPath) ? File.ReadAllText(commandRunnerPath) : "";
 
         Assert.DoesNotContain("private void Play_Click", playback);
         Assert.DoesNotContain("private void PositionSlider_ValueChanged", playback);
         Assert.DoesNotContain("private void SetSpeed", playback);
         Assert.DoesNotContain("private void UpdateSpeedButtons", playback);
         Assert.Contains("private void Play_Click", controls);
+        Assert.Contains("PlayerPlaybackCommandRunner.Play", controls);
+        Assert.Contains("PlayerPlaybackCommandRunner.Pause", controls);
+        Assert.Contains("PlayerPlaybackCommandRunner.Stop", controls);
+        Assert.DoesNotContain("_player.SetPause(true)", controls);
+        Assert.DoesNotContain("_player.SetPause(false)", controls);
+        Assert.DoesNotContain("_player.Stop();", controls);
         Assert.Contains("private void PositionSlider_ValueChanged", controls);
         Assert.Contains("private void SetSpeed", controls);
         Assert.DoesNotContain("private void UpdateSpeedButtons", controls);
@@ -895,6 +904,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_positionControls.ApplySeekPreview", controls);
         Assert.Contains("_positionControls.ApplyScrubPreview", controls);
         Assert.Contains("_speedControls.Update", controls);
+        Assert.Contains("public static class PlayerPlaybackCommandRunner", commandRunner);
+        Assert.Contains("public static void Play", commandRunner);
+        Assert.Contains("public static void Pause", commandRunner);
+        Assert.Contains("public static void Stop", commandRunner);
     }
 
     [Fact]
