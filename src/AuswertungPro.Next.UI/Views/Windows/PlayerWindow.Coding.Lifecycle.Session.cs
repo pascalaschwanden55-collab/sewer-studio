@@ -33,30 +33,17 @@ public partial class PlayerWindow
 
     private bool TryStartCodingSession()
     {
-        if (_haltungRecord == null || _codingVm == null || _codingSessionService == null)
-            return false;
-
-        try
-        {
-            _codingVm.StartSessionCommand.Execute(_haltungRecord);
-        }
-        catch (Exception ex)
-        {
-            CodingModeDialogServiceFactory.Create().ShowSessionStartFailed(ex.Message);
-            ExitCodingMode();
-            return false;
-        }
-
-        // StartSessionCommand faengt Fehler intern ab, z.B. fehlende Haltungslaenge.
-        if (_codingSessionService.ActiveSession == null)
-        {
-            ExitCodingMode();
-            return false;
-        }
-
-        _codingSessionService.PauseSession();
-        CodingSessionHeaderControls.SetRangeText(TxtCodingRange, _codingVm.EndMeter);
-        CodingMeterTimelineControls.SetText(TxtCodingMeter, 0.0);
-        return true;
+        return CodingSessionStartWorkflow.Execute(
+            new CodingSessionStartWorkflowRequest(
+                HasRequiredState: _haltungRecord != null && _codingVm != null && _codingSessionService != null,
+                EndMeter: _codingVm?.EndMeter ?? 0),
+            new CodingSessionStartWorkflowActions(
+                ExecuteStartSession: () => _codingVm!.StartSessionCommand.Execute(_haltungRecord!),
+                HasActiveSession: () => _codingSessionService!.ActiveSession != null,
+                ShowSessionStartFailed: message => CodingModeDialogServiceFactory.Create().ShowSessionStartFailed(message),
+                ExitCodingMode: ExitCodingMode,
+                PauseSession: () => _codingSessionService!.PauseSession(),
+                SetRangeText: endMeter => CodingSessionHeaderControls.SetRangeText(TxtCodingRange, endMeter),
+                SetMeterText: meter => CodingMeterTimelineControls.SetText(TxtCodingMeter, meter)));
     }
 }

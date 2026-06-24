@@ -4667,6 +4667,7 @@ public sealed class UiArchitectureGuardTests
         var showUiWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeShowUiWorkflow.cs");
         var backgroundServicesWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeBackgroundServicesWorkflow.cs");
         var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
+        var sessionStartWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSessionStartWorkflow.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(exitPath), "Codiermodus-Exit soll aus dem allgemeinen Lifecycle-Partial heraus.");
@@ -4681,6 +4682,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(showUiWorkflowPath), "Coding-Mode-UI-Anzeige-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(backgroundServicesWorkflowPath), "Coding-Mode-Background-Services-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(sessionStartWorkflowPath), "Coding-Session-Start-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var coding = File.ReadAllText(codingPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
@@ -4696,6 +4698,7 @@ public sealed class UiArchitectureGuardTests
         var showUiWorkflow = File.Exists(showUiWorkflowPath) ? File.ReadAllText(showUiWorkflowPath) : "";
         var backgroundServicesWorkflow = File.Exists(backgroundServicesWorkflowPath) ? File.ReadAllText(backgroundServicesWorkflowPath) : "";
         var enterWorkflow = File.Exists(enterWorkflowPath) ? File.ReadAllText(enterWorkflowPath) : "";
+        var sessionStartWorkflow = File.Exists(sessionStartWorkflowPath) ? File.ReadAllText(sessionStartWorkflowPath) : "";
 
         Assert.DoesNotContain("private void EnterCodingMode", coding);
         Assert.DoesNotContain("private void ExitCodingMode", coding);
@@ -4712,6 +4715,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void CodingModeExit_Click", exit);
         Assert.Contains("private void CreateCodingSessionState", session);
         Assert.Contains("private bool TryStartCodingSession", session);
+        Assert.Contains("CodingSessionStartWorkflow.Execute", session);
+        Assert.DoesNotContain("catch (Exception ex)", session);
+        Assert.Contains("actions.ExecuteStartSession()", sessionStartWorkflow);
+        Assert.Contains("actions.HasActiveSession()", sessionStartWorkflow);
+        Assert.Contains("actions.PauseSession()", sessionStartWorkflow);
+        Assert.Contains("actions.SetRangeText(request.EndMeter)", sessionStartWorkflow);
+        Assert.Contains("actions.SetMeterText(0.0)", sessionStartWorkflow);
         Assert.Contains("private void InitializeCodingImportReferences", importReference);
         Assert.Contains("private void ActivateDefaultCodingTool", ui);
         Assert.Contains("private void ShowCodingModeUi", ui);
