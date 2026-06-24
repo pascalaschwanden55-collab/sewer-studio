@@ -84,16 +84,19 @@ public partial class PlayerWindow
             if (_closing || _playbackDisposed)
                 return;
 
-            var msg = ex.Message;
-            if (msg.Length > 200) msg = msg[..200] + "...";
             Dispatcher.Invoke(() =>
             {
-                if (_closing || _playbackDisposed)
-                    return;
-
-                LiveDetectionStatusControls.ShowDetectionError(LiveDetectionStatusText, msg);
-                SetLiveDetectionBadge("KI Fehler", PlayerStatusColors.Error,
-                    LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionController.ModelName));
+                LiveDetectionErrorWorkflow.Execute(
+                    new LiveDetectionErrorWorkflowRequest(
+                        ex,
+                        _closing,
+                        _playbackDisposed,
+                        _liveDetectionController.ModelName),
+                    new LiveDetectionErrorWorkflowActions(
+                        message => LiveDetectionStatusControls.ShowDetectionError(
+                            LiveDetectionStatusText,
+                            message),
+                        SetLiveDetectionBadge));
             });
         }
         finally
