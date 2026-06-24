@@ -14,7 +14,7 @@ public partial class PlayerWindow
 
     private async Task HandleCodingAcceptGreenMatchesAsync()
     {
-        if (_codingVm == null) return;
+        if (!_codingSessionHost.HasViewModel) return;
         if (_lastCodingMatch == null)
             RunCodingProtocolMatch();
         if (_lastCodingMatch == null)

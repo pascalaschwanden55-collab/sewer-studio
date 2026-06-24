@@ -3116,6 +3116,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private async Task HandleImportConfirmAsync", training);
         Assert.Contains("private async Task<bool> ConfirmImportAsTrainingAsync", training);
         Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", training);
+        Assert.Contains("_codingSessionHost", training);
+        Assert.DoesNotContain("_codingVm", training);
         Assert.DoesNotContain("TeacherAnnotationStore.AppendAsync", training);
         Assert.DoesNotContain("LiveDetectionTeacherAnnotationFactory.CreateImportConfirmation", training);
         Assert.DoesNotContain("CodingProtocolTrainingSnapshotStoreFactory.Create", training);
