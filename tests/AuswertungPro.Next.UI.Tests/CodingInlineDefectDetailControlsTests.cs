@@ -96,6 +96,30 @@ public sealed class CodingInlineDefectDetailControlsTests
         });
     }
 
+    [Fact]
+    public void ApplyPreview_writes_preview_state()
+    {
+        RunOnStaThread(() =>
+        {
+            var controls = CreateHarness();
+            var image = new DrawingImage();
+            var state = new CodingInlineEvidencePreviewState(
+                Source: image,
+                ImageVisible: true,
+                StatusText: "Bild vorhanden",
+                StatusVisible: false);
+            var method = FindApplyPreviewMethod();
+            Assert.NotNull(method);
+
+            method.Invoke(controls.Instance, [state]);
+
+            Assert.Same(image, controls.Preview.Source);
+            Assert.Equal(Visibility.Visible, controls.Preview.Visibility);
+            Assert.Equal("Bild vorhanden", controls.PreviewStatus.Text);
+            Assert.Equal(Visibility.Collapsed, controls.PreviewStatus.Visibility);
+        });
+    }
+
     private static InlineDetailHarness CreateHarness()
     {
         var type = ControlsType;
@@ -154,6 +178,14 @@ public sealed class CodingInlineDefectDetailControlsTests
             BindingFlags.Public | BindingFlags.Instance,
             binder: null,
             types: Type.EmptyTypes,
+            modifiers: null);
+
+    private static MethodInfo? FindApplyPreviewMethod()
+        => ControlsType?.GetMethod(
+            "ApplyPreview",
+            BindingFlags.Public | BindingFlags.Instance,
+            binder: null,
+            types: [typeof(CodingInlineEvidencePreviewState)],
             modifiers: null);
 
     private sealed class InlineDetailHarness

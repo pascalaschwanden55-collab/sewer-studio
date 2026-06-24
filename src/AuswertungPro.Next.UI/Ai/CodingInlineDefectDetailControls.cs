@@ -72,4 +72,14 @@ public sealed class CodingInlineDefectDetailControls
         CodingDefectDetailInline.Visibility = Visibility.Collapsed;
         ColDefectDetail.Width = new GridLength(0);
     }
+
+    public void ApplyPreview(CodingInlineEvidencePreviewState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        ImgInlineEvidencePreview.Source = state.Source;
+        ImgInlineEvidencePreview.Visibility = state.ImageVisible ? Visibility.Visible : Visibility.Collapsed;
+        TxtInlineEvidencePreviewStatus.Text = state.StatusText ?? "";
+        TxtInlineEvidencePreviewStatus.Visibility = state.StatusVisible ? Visibility.Visible : Visibility.Collapsed;
+    }
 }

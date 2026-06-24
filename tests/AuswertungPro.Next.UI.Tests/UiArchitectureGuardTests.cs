@@ -1561,6 +1561,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("BitmapImage", detail);
         Assert.Contains("private void UpdateInlineEvidencePreview", preview);
         Assert.Contains("CodingInlineEvidencePreviewService.Build", preview);
+        Assert.Contains("_codingInlineDefectDetailControls.ApplyPreview", preview);
+        Assert.DoesNotContain("ImgInlineEvidencePreview.Source = state.Source", preview);
+        Assert.DoesNotContain("ImgInlineEvidencePreview.Visibility = state.ImageVisible", preview);
+        Assert.DoesNotContain("TxtInlineEvidencePreviewStatus.Text = state.StatusText", preview);
+        Assert.DoesNotContain("TxtInlineEvidencePreviewStatus.Visibility = state.StatusVisible", preview);
+        Assert.Contains("public void ApplyPreview", File.ReadAllText(Path.Combine(uiRoot, "Ai", "CodingInlineDefectDetailControls.cs")));
         Assert.DoesNotContain("CodingDefectPreviewService.BuildPreviewImagePath", preview);
         Assert.DoesNotContain("BitmapImage", preview);
         Assert.Contains("CodingDefectPreviewService.BuildPreviewImagePath", previewService);

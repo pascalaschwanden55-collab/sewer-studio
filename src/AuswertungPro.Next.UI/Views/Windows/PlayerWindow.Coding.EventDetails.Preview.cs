@@ -1,5 +1,4 @@
 using System;
-using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
@@ -23,9 +22,6 @@ public partial class PlayerWindow
 
     private void ApplyInlineEvidencePreviewState(CodingInlineEvidencePreviewState state)
     {
-        ImgInlineEvidencePreview.Source = state.Source;
-        ImgInlineEvidencePreview.Visibility = state.ImageVisible ? Visibility.Visible : Visibility.Collapsed;
-        TxtInlineEvidencePreviewStatus.Text = state.StatusText ?? "";
-        TxtInlineEvidencePreviewStatus.Visibility = state.StatusVisible ? Visibility.Visible : Visibility.Collapsed;
+        _codingInlineDefectDetailControls.ApplyPreview(state);
     }
 }
