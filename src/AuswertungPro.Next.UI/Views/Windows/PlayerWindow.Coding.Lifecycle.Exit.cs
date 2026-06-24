@@ -37,7 +37,7 @@ public partial class PlayerWindow
         StopCodingAiPulse();
         StopPipelineHealthMonitor();
 
-        _codingAnalysisCts = CancellationTokenSourceLifecycle.CancelDisposeAndClear(_codingAnalysisCts);
+        _codingAiController.DisposeAnalysisCancellation();
 
         CodingImportReferenceStateResetter.ClearEvents(_codingImportEvents);
         _lastCodingMatch = CodingProtocolMatchStateResetter.Reset(_codingProtocolMatchBuckets);

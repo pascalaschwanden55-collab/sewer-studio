@@ -61,7 +61,7 @@ public partial class PlayerWindow
 
             double dinoConf = dino?.Confidence ?? quant.Confidence;
             var gateResult = CodingMultiModelQualityGatePolicy.Evaluate(
-                _codingQualityGate,
+                _codingAiController.QualityGate,
                 yoloMaxConfidence,
                 dinoConf,
                 quant.Confidence,

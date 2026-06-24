@@ -65,7 +65,7 @@ public partial class PlayerWindow
             // Klartext aufloesen (voller Code -> Hauptcode -> Gruppe)
             var officialLabel = LookupVsaLabel(code);
 
-            var gateResult = CodingLiveFindingQualityGatePolicy.Evaluate(_codingQualityGate, finding);
+            var gateResult = CodingLiveFindingQualityGatePolicy.Evaluate(_codingAiController.QualityGate, finding);
 
             var draft = CodingLiveFindingEventFactory.Create(
                 code,

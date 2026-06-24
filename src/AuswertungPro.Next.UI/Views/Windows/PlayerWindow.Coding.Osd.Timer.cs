@@ -14,8 +14,8 @@ public partial class PlayerWindow
                 IsClosing: _closing,
                 HasPlayer: _player is not null,
                 IsCodingMode: _isCodingMode,
-                IsCodingAnalyzing: _codingIsAnalyzing,
-                HasLiveDetection: _codingLiveDetection is not null),
+                IsCodingAnalyzing: _codingAiController.IsAnalyzing,
+                HasLiveDetection: _codingAiController.LiveDetection is not null),
             CodingReadOsdMeterAsync);
     }
 

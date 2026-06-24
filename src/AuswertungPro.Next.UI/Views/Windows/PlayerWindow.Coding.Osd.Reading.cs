@@ -76,7 +76,7 @@ public partial class PlayerWindow
 
     private async Task<double?> CodingReadOsdMeterAsync()
     {
-        if (_codingLiveDetection == null) return null;
+        if (_codingAiController.LiveDetection == null) return null;
 
         try
         {

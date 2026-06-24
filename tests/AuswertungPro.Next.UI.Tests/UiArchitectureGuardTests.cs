@@ -4240,27 +4240,33 @@ public sealed class UiArchitectureGuardTests
         var wiringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Wiring.cs");
         var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Lifecycle.cs");
         var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
+        var codingAiControllerPath = Path.Combine(uiRoot, "Player", "CodingAiController.cs");
         var helperPath = Path.Combine(uiRoot, "Player", "CancellationTokenSourceLifecycle.cs");
 
         Assert.True(File.Exists(helperPath), "CancellationTokenSource-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(liveControllerPath), "LiveDetection-CTS-Lifecycle soll im LiveDetectionController liegen.");
+        Assert.True(File.Exists(codingAiControllerPath), "Coding-AI-Analyse-CTS-Lifecycle soll im CodingAiController liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var exit = File.ReadAllText(exitPath);
         var wiring = File.ReadAllText(wiringPath);
         var playback = File.ReadAllText(playbackPath);
         var liveController = File.ReadAllText(liveControllerPath);
+        var codingAiController = File.ReadAllText(codingAiControllerPath);
         var helper = File.Exists(helperPath) ? File.ReadAllText(helperPath) : "";
         var playerWindowText = ai + exit + wiring + playback;
 
-        Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate", ai);
-        Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", exit);
-        Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", wiring);
+        Assert.Contains("_codingAiController.TryBeginAnalysis()", ai);
+        Assert.Contains("_codingAiController.DisposeAnalysisCancellation()", exit);
+        Assert.Contains("_codingAiController.DisposeAnalysisCancellation()", wiring);
         Assert.Contains("_liveDetectionController.CancelDetectionIfPresent()", playback);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_cancellation)", liveController);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_cancellation)", liveController);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear(_cancellation)", liveController);
-        Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_codingAnalysisCts)", playback);
+        Assert.Contains("_codingAiController.CancelAnalysisIfPresent()", playback);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_analysisCancellation)", codingAiController);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_analysisCancellation)", codingAiController);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear(_analysisCancellation)", codingAiController);
         Assert.DoesNotContain("_codingAnalysisCts?.Cancel();", playerWindowText);
         Assert.DoesNotContain("_codingAnalysisCts?.Dispose();", playerWindowText);
         Assert.DoesNotContain("_detectionCts?.Cancel();", playerWindowText);

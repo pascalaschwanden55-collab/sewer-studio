@@ -22,7 +22,7 @@ public partial class PlayerWindow
 
             var status = CodingLiveAiButtonDisplayPolicy.BuildStatus(
                 isActive: true,
-                LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName));
+                LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName));
             SetCodingAiState(status.StatusText, PlayerStatusColors.Success, status.DetailText);
         }
         else
@@ -31,7 +31,7 @@ public partial class PlayerWindow
 
             var status = CodingLiveAiButtonDisplayPolicy.BuildStatus(
                 isActive: false,
-                LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName));
+                LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName));
             SetCodingAiState(status.StatusText, PlayerStatusColors.Success, status.DetailText);
         }
     }
@@ -47,7 +47,7 @@ public partial class PlayerWindow
             if (!CodingLiveAiTickPolicy.ShouldAnalyze(
                     _closing,
                     hasPlayer: _player is not null,
-                    hasLiveDetection: _codingLiveDetection is not null,
+                    hasLiveDetection: _codingAiController.LiveDetection is not null,
                     _codingSessionService?.ActiveSession?.State,
                     isPlayerPlaying: _player?.IsPlaying == true))
                 return;

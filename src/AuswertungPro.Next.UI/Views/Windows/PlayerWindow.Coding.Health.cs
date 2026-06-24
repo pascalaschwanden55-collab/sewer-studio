@@ -13,9 +13,8 @@ public partial class PlayerWindow
         {
             var platformConfig = PlayerAiSettingsLoader.LoadPlatformSettings();
             var runtime = CodingAiRuntimeFactory.Create(platformConfig, CodeCatalog, _dependencies.PipelineConfig);
+            _codingAiController.ApplyRuntime(runtime);
             var config = runtime.RuntimeSettings;
-            _codingPipelineConfig = runtime.PipelineConfig;
-            _codingAiModelName = runtime.ModelName;
             if (!config.Enabled)
             {
                 SetCodingAiState("Künstliche Intelligenz deaktiviert", PlayerStatusColors.Muted, "Modell: aus");
@@ -23,21 +22,12 @@ public partial class PlayerWindow
                 return;
             }
 
-            _codingLiveDetection = runtime.LiveDetection;
-            _codingEnhancedVision = runtime.EnhancedVision;
-            _codingQualityGate = runtime.QualityGate;
-
             if (runtime.MultiModelAvailable && runtime.VisionClient is not null)
             {
-                _codingVisionClient = runtime.VisionClient;
-                _codingMultiModel = runtime.MultiModel;
-                _codingBoxSegmentation = runtime.BoxSegmentation;
-                _codingAiEnabled = true;
-
                 _codingHealthMonitor = CodingAiRuntimeFactory.CreateHealthMonitor(
-                    _codingVisionClient,
-                    aiEnabled: () => _codingAiEnabled,
-                    qwenAvailable: () => _codingLiveDetection != null || _codingEnhancedVision != null);
+                    _codingAiController.VisionClient!,
+                    aiEnabled: () => _codingAiController.AiEnabled,
+                    qwenAvailable: () => _codingAiController.QwenAvailable);
                 _codingHealthMonitor.StatusChanged += OnPipelineHealthChanged;
                 _codingHealthMonitor.Start();
 
@@ -46,16 +36,16 @@ public partial class PlayerWindow
             }
             else if (!string.IsNullOrWhiteSpace(runtime.MultiModelError))
             {
-                _codingUseMultiModel = false;
+                _codingAiController.SetUseMultiModel(false);
                 SetCodingAiState("Künstliche Intelligenz bereit (Qwen)", PlayerStatusColors.Success,
                     $"Monitor-Fehler: {runtime.MultiModelError}");
             }
-            SetYoloStatus("Bereit", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName));
+            SetYoloStatus("Bereit", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName));
         }
         catch (Exception ex)
         {
             SetCodingAiState($"Fehler: {ex.Message}", PlayerStatusColors.Error,
-                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
+                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName)}");
             CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, false);
         }
     }

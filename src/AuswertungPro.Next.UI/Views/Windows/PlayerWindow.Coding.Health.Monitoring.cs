@@ -29,9 +29,9 @@ public partial class PlayerWindow
 
     private void ApplyPipelineHealth(PipelineHealthStatus status)
     {
-        _codingUseMultiModel = status.MultiModelActive;
-        if (status.MultiModelActive && _codingMultiModel == null && _codingVisionClient != null)
-            _codingMultiModel = CodingAiRuntimeFactory.CreateMultiModelService(_codingVisionClient, _codingPipelineConfig);
+        _codingAiController.SetUseMultiModel(status.MultiModelActive);
+        if (status.MultiModelActive)
+            _codingAiController.EnsureMultiModel(CodingAiRuntimeFactory.CreateMultiModelService);
 
         var uiState = PipelineHealthUiStateFactory.Create(status);
         SetCodingAiState(uiState.Summary, uiState.Color, uiState.Detail);
@@ -53,7 +53,7 @@ public partial class PlayerWindow
 
     private void StopPipelineHealthMonitor()
     {
-        _codingAiEnabled = false;
+        _codingAiController.SetAiEnabled(false);
         if (_codingHealthMonitor != null)
         {
             _codingHealthMonitor.StatusChanged -= OnPipelineHealthChanged;

@@ -91,7 +91,7 @@ public partial class PlayerWindow
         var result = CodingConfirmationResumeWorkflow.Apply(
             _codingSessionService,
             BtnCodingLiveAi.IsChecked == true,
-            _codingAiModelName,
+            _codingAiController.ModelName,
             pause => _player.SetPause(pause));
 
         SetCodingAiState(result.Status.StatusText, PlayerStatusColors.Success, result.Status.DetailText);

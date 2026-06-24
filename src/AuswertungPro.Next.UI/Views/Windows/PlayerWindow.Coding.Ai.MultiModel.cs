@@ -12,14 +12,15 @@ public partial class PlayerWindow
 {
     private async Task RunCodingMultiModelAnalysisAsync(string activityText, double captureTimestampSec)
     {
-        var multiModel = _codingMultiModel;
-        if (multiModel == null || _codingAnalysisCts == null)
+        var multiModel = _codingAiController.MultiModel;
+        var analysisCts = _codingAiController.AnalysisCancellation;
+        if (multiModel == null || analysisCts == null)
             return;
 
         SetCodingAiState(activityText, PlayerStatusColors.Warning,
             "Schritt 1 von 4: Snapshot", pulse: true);
 
-        var pngBytes = await CaptureSnapshotAsync(_codingAnalysisCts.Token);
+        var pngBytes = await CaptureSnapshotAsync(analysisCts.Token);
         if (pngBytes == null || pngBytes.Length == 0)
         {
             SetCodingAiState("Frame nicht extrahierbar", PlayerStatusColors.Error,
@@ -31,7 +32,7 @@ public partial class PlayerWindow
         var frameOsdMeter = await TryReadAnalyzedFrameOsdMeterAsync(
             pngBytes,
             captureTimestampSec,
-            _codingAnalysisCts.Token);
+            analysisCts.Token);
 
         var readinessProbe = new LiveDetection(
             captureTimestampSec,
@@ -57,7 +58,7 @@ public partial class PlayerWindow
 
         var mmResult = await multiModel.AnalyzeFrameAsync(
             pngBytes, classifierInput.NominalDiameterMm, _codingOverlayService?.Calibration,
-            _codingAnalysisCts.Token,
+            analysisCts.Token,
             classifierInput.CurrentMeter,
             classifierInput.ReachLength);
 

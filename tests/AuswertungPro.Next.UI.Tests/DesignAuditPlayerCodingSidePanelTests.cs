@@ -139,7 +139,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
 
         var stopIndex = runBody.IndexOf("IsCodingAfterTerminalBoundary", StringComparison.Ordinal);
-        var captureIndex = runBody.IndexOf("await CaptureSnapshotAsync(_codingAnalysisCts.Token)", StringComparison.Ordinal);
+        var captureIndex = runBody.IndexOf("await CaptureSnapshotAsync(analysisCts.Token)", StringComparison.Ordinal);
 
         Assert.True(stopIndex >= 0, "RunCodingAnalysisAsync muss nach BCE/BDC stoppen.");
         Assert.True(captureIndex >= 0, "RunCodingAnalysisAsync muss weiterhin Frames mit Analyse-Cancellation capturen koennen.");

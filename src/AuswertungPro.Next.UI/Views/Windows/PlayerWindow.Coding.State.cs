@@ -33,13 +33,9 @@ public partial class PlayerWindow
     private bool _deactivatedByExternalWindow;
     private bool _showReferenceDn;
 
-    private LiveDetectionService? _codingLiveDetection;
-    private EnhancedVisionAnalysisService? _codingEnhancedVision;
-    private CancellationTokenSource? _codingAnalysisCts;
-    private bool _codingIsAnalyzing;
-    private string _codingAiModelName = string.Empty;
     private bool _codingAiPulseRunning;
     private readonly StreckenschadenTracker _streckenTracker = new();
+    private readonly CodingAiController _codingAiController = new();
     private CodingLiveAiTimerController? _codingLiveAiTimers;
     private readonly CodingOsdMeterController _codingOsdMeterController = new();
     private CodingEventsListControls _codingEventsListControls = null!;
@@ -47,7 +43,6 @@ public partial class PlayerWindow
     private CodingInlineDefectDetailControls _codingInlineDefectDetailControls = null!;
     private CodingEventCreationPostActions _codingEventCreationPostActions = null!;
     private CodingConfirmationPanelControls _codingConfirmationPanelControls = null!;
-    private QualityGateService? _codingQualityGate;
 
     private enum EingabemarkerPhase { Inactive, Drawing, Input, Analyzing }
     private EingabemarkerPhase _eingabemarkerPhase = EingabemarkerPhase.Inactive;
@@ -55,13 +50,7 @@ public partial class PlayerWindow
     private Rect _eingabemarkerRectNorm;
     private System.Windows.Shapes.Rectangle? _eingabemarkerPreviewRect;
 
-    private SingleFrameMultiModelService? _codingMultiModel;
-    private IVisionPipelineClient? _codingVisionClient;
-    private MarkBoxSegmentationService? _codingBoxSegmentation;
-    private PipelineConfig? _codingPipelineConfig;
-    private bool _codingUseMultiModel;
     private IPipelineHealthMonitor? _codingHealthMonitor;
-    private bool _codingAiEnabled;
 
     private readonly ObservableCollection<CodingEvent> _codingImportEvents = new();
     private CodingMatchRouting? _lastCodingMatch;

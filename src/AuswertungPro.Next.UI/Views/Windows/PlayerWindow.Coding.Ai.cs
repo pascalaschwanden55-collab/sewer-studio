@@ -24,12 +24,10 @@ public partial class PlayerWindow
         string? keywordHint = null,
         string? codeHint = null)
     {
-        if ((_codingEnhancedVision == null && _codingLiveDetection == null && _codingMultiModel == null)
-            || _codingIsAnalyzing)
+        if (!_codingAiController.TryBeginAnalysis())
             return;
 
-        _codingIsAnalyzing = true;
-        _codingAnalysisCts = CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_codingAnalysisCts);
+        var analysisCts = _codingAiController.AnalysisCancellation!;
 
         try
         {
@@ -48,7 +46,7 @@ public partial class PlayerWindow
                 return;
             }
 
-            if (_codingUseMultiModel && _codingMultiModel != null)
+            if (_codingAiController.UseMultiModel && _codingAiController.MultiModel != null)
             {
                 await RunCodingMultiModelAnalysisAsync(activityText, captureTimestampSec);
                 return;
@@ -57,11 +55,11 @@ public partial class PlayerWindow
             SetCodingAiState(activityText, PlayerStatusColors.Warning,
                 "Schritt 1 von 3: Snapshot", pulse: true);
 
-            var pngBytes = await CaptureSnapshotAsync(_codingAnalysisCts.Token);
+            var pngBytes = await CaptureSnapshotAsync(analysisCts.Token);
             if (pngBytes == null || pngBytes.Length == 0)
             {
                 SetCodingAiState("Frame nicht extrahierbar", PlayerStatusColors.Error,
-                    $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
+                    $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName)}");
                 return;
             }
 
@@ -69,25 +67,25 @@ public partial class PlayerWindow
             var frameOsdMeter = await TryReadAnalyzedFrameOsdMeterAsync(
                 pngBytes,
                 captureTimestampSec,
-                _codingAnalysisCts.Token);
+                analysisCts.Token);
 
             SetCodingAiState(activityText, PlayerStatusColors.Warning,
-                $"Schritt 2 von 3: Inferenz ({LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)})",
+                $"Schritt 2 von 3: Inferenz ({LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName)})",
                 pulse: true);
 
             LiveDetection result;
-            if (_codingEnhancedVision != null)
+            if (_codingAiController.EnhancedVision != null)
             {
                 var b64 = Convert.ToBase64String(pngBytes);
                 var importContext = GatherImportContext();
-                var enhanced = await _codingEnhancedVision.AnalyzeAsync(
-                    b64, importContext, _codingAnalysisCts.Token);
+                var enhanced = await _codingAiController.EnhancedVision.AnalyzeAsync(
+                    b64, importContext, analysisCts.Token);
                 result = LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
             }
             else
             {
-                result = await _codingLiveDetection!.AnalyzeFrameAsync(
-                    pngBytes, captureTimestampSec, _codingAnalysisCts.Token);
+                result = await _codingAiController.LiveDetection!.AnalyzeFrameAsync(
+                    pngBytes, captureTimestampSec, analysisCts.Token);
             }
 
             result = result with { MeterReading = frameOsdMeter };
@@ -99,11 +97,11 @@ public partial class PlayerWindow
         catch (Exception ex)
         {
             SetCodingAiState($"Fehler: {ex.Message}", PlayerStatusColors.Error,
-                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName)}");
+                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName)}");
         }
         finally
         {
-            _codingIsAnalyzing = false;
+            _codingAiController.EndAnalysis();
             if (disableAnalyzeButton)
                 CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, true);
         }

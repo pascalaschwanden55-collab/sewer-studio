@@ -1,7 +1,7 @@
 # Design: PlayerWindow schrittweise entflechten — Pilot DamageMarkerController
 
 - **Datum:** 2026-06-22
-- **Fortschreibung 2026-06-24:** Die Spec bleibt massgeblich. Aktueller Stand: `DamageMarkerController`, `QuickScanController`, Schritt 3 `CodingOverlayRenderController`, `DetectionConfirmationBuffer`, der erste `LiveDetectionController`-Schnitt und `CodingOsdMeterController` sind umgesetzt; dazu kamen `CodingUiUpdateWorkflow`, `LiveDetectionRuntimeStartWorkflow` und mehrere UI-Adapter. Aktuelle Vermessung: `PlayerWindow*.cs` = 95 Dateien / 5048 Zeilen, `PlayerWindow.xaml` = 822 Zeilen, zusammen 5870 Zeilen. Die alte Angabe "33 Dateien / ~7.500 Zeilen" ist historisch.
+- **Fortschreibung 2026-06-24:** Die Spec bleibt massgeblich. Aktueller Stand: `DamageMarkerController`, `QuickScanController`, Schritt 3 `CodingOverlayRenderController`, `DetectionConfirmationBuffer`, der erste `LiveDetectionController`-Schnitt, `CodingOsdMeterController` und der erste `CodingAiController`-Schnitt sind umgesetzt; dazu kamen `CodingUiUpdateWorkflow`, `LiveDetectionRuntimeStartWorkflow` und mehrere UI-Adapter. Aktuelle Vermessung: `PlayerWindow*.cs` = 95 Dateien / 5028 Zeilen, `PlayerWindow.xaml` = 822 Zeilen, zusammen 5850 Zeilen. Die alte Angabe "33 Dateien / ~7.500 Zeilen" ist historisch.
 - **Aktualisierte Reihenfolge 2026-06-24:** 1) Overlay-Abstraktion / `CodingOverlayRenderController`, 2) `ConfirmationBuffer` fuer `_detectionPending*`, 3) `LiveDetectionController`, 4) `CodingAiController` in zwei Stufen. Damit wird die alte Reihenfolge "CodingAi vor LiveDetection" ueberschrieben, weil der geteilte Puffer vor den grossen Controllern als eigenes Objekt herausgezogen wurde.
 - **Status:** Design freigegeben (Pilot-Zuschnitt: schlank & direkt)
 - **Scope-Entscheidung:** Pilot zuerst — diese Spec beschreibt EINEN Pilot-Schnitt im Detail, der Rest ist nur skizziert.
@@ -9,7 +9,7 @@
 
 ## 1. Kontext & Problem
 
-`PlayerWindow` ist aktuell eine `partial class` über **95 Dateien / 5048 Zeilen** plus **822 Zeilen XAML**. Das Aufteilen in viele kleine Partial-Dateien hat die Lesbarkeit verbessert, aber die eigentliche Kopplung entsteht weiterhin dort, wo veränderlicher Zustand im Fenster geteilt bleibt. Genau diese Felder werden Schritt für Schritt in fokussierte Controller verschoben.
+`PlayerWindow` ist aktuell eine `partial class` über **95 Dateien / 5028 Zeilen** plus **822 Zeilen XAML**. Das Aufteilen in viele kleine Partial-Dateien hat die Lesbarkeit verbessert, aber die eigentliche Kopplung entsteht weiterhin dort, wo veränderlicher Zustand im Fenster geteilt bleibt. Genau diese Felder werden Schritt für Schritt in fokussierte Controller verschoben.
 
 Das ist kein Stabilitäts-, sondern ein Wartbarkeitsrisiko: eine Änderung kann Playback, Codierung, Overlay, Live-Erkennung und Speichern gleichzeitig betreffen, weil sie sich denselben Zustand teilen.
 

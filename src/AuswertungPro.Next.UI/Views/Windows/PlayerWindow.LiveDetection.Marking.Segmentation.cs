@@ -14,7 +14,8 @@ public partial class PlayerWindow
     private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync(
         OverlayGeometry overlay, byte[]? frameBytes)
     {
-        if (_codingBoxSegmentation == null || frameBytes == null || frameBytes.Length == 0
+        var boxSegmentation = _codingAiController.BoxSegmentation;
+        if (boxSegmentation == null || frameBytes == null || frameBytes.Length == 0
             || overlay.Points.Count < 2)
             return null;
         try
@@ -23,7 +24,7 @@ public partial class PlayerWindow
             var calibration = _codingOverlayService?.Calibration;
             int dn = calibration?.NominalDiameterMm ?? 0;
 
-            var result = await _codingBoxSegmentation.SegmentBoxAsync(
+            var result = await boxSegmentation.SegmentBoxAsync(
                 frameBytes, box, dn, calibration, System.Threading.CancellationToken.None);
             if (result == null)
                 return null;
