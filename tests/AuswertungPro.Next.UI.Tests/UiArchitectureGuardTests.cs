@@ -4338,6 +4338,11 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("LiveDetectionStatusText.Visibility = _isDetecting", exit);
         Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", ui);
         Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Collapsed", ui);
+        Assert.Contains("CodingModeChromeControls.HideCodingSurface", exit);
+        Assert.DoesNotContain("CodingOverlayPopup.IsOpen = false", exit);
+        Assert.DoesNotContain("CodingOverlayCanvas.Children.Clear", exit);
+        Assert.DoesNotContain("CodingSidePanel.Visibility = Visibility.Collapsed", exit);
+        Assert.DoesNotContain("CodingToolbar.Visibility = Visibility.Collapsed", exit);
         Assert.DoesNotContain("new CodingSessionViewModel", lifecycle);
         Assert.DoesNotContain("CodingImportReferenceTransfer.MoveExistingEventsToImportReference", lifecycle);
         Assert.DoesNotContain("CodingOverlayPopup.IsOpen = true", lifecycle);

@@ -53,19 +53,16 @@ public partial class PlayerWindow
         _detectionPendingTimestampSec = null;
         DetectionOverlayCleaner.ClearCanvas(DetectionCanvas, DetectionOverlayGrid, hideOverlay: !_isDetecting);
 
-        if (CodingOverlayCanvas.IsMouseCaptured)
-            CodingOverlayCanvas.ReleaseMouseCapture();
-        CodingOverlayPopup.IsOpen = false;
-        CodingOverlayCanvas.Children.Clear();
-        CodingOverlayCanvas.IsHitTestVisible = false;
-        CodingOverlayCanvas.Cursor = Cursors.Arrow;
-        CodingSidePanel.Visibility = Visibility.Collapsed;
-        CodingSidePanelColumn.Width = new GridLength(0);
-        CodingToolbar.Visibility = Visibility.Collapsed;
-        CodingTimelinePanel.Visibility = Visibility.Collapsed;
+        CodingModeChromeControls.HideCodingSurface(
+            CodingOverlayPopup,
+            CodingOverlayCanvas,
+            CodingSidePanel,
+            CodingSidePanelColumn,
+            CodingToolbar,
+            CodingTimelinePanel,
+            CodingCalibrationHint,
+            CodingMeasurementPanel);
         HideInlineDefectDetail();
-        CodingCalibrationHint.Visibility = Visibility.Collapsed;
-        CodingMeasurementPanel.Visibility = Visibility.Collapsed;
         CodingOsdBadgeControls.Hide(OsdMeterBadge);
         LiveDetectionButton.Visibility = Visibility.Visible;
         LiveDetectionStatusControls.SetDetectionStatusVisibility(LiveDetectionStatusText, _isDetecting);
