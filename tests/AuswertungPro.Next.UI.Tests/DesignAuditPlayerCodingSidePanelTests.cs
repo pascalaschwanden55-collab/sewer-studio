@@ -343,11 +343,16 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_auto_boundary_events_attach_passed_frame_before_add_event()
     {
         var coding = ReadCodingPartials();
+        var workflow = ReadUiFile("Ai", "CodingBoundaryEventWorkflow.cs");
         var bcdBody = ExtractMethodBody(coding, "private void EnsureRohranfangExists");
         var bceBody = ExtractMethodBody(coding, "private void EnsureRohrendeExists");
+        var workflowStartBody = ExtractMethodBody(workflow, "public static CodingBoundaryEventWorkflowResult EnsureStart");
+        var workflowEndBody = ExtractMethodBody(workflow, "public static CodingBoundaryEventWorkflowResult EnsureEnd");
 
-        AssertBoundaryFrameAttachedBeforeAddEvent(bcdBody);
-        AssertBoundaryFrameAttachedBeforeAddEvent(bceBody);
+        Assert.Contains("CodingBoundaryEventWorkflow.EnsureStart", bcdBody);
+        Assert.Contains("CodingBoundaryEventWorkflow.EnsureEnd", bceBody);
+        AssertBoundaryFrameAttachedBeforeAddEvent(workflowStartBody);
+        AssertBoundaryFrameAttachedBeforeAddEvent(workflowEndBody);
     }
 
     [Fact]
@@ -517,7 +522,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var attachIndex = FirstIndexOf(
             methodBody,
             "AttachBoundaryAnalyzedFramePhoto(entry, analyzedFrameBytes)",
-            "AttachBoundaryAnalyzedFramePhoto(draft.Entry, analyzedFrameBytes)");
+            "AttachBoundaryAnalyzedFramePhoto(draft.Entry, analyzedFrameBytes)",
+            "actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, frameBytes)",
+            "actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, request.AnalyzedFrameBytes)");
         var addIndex = FirstIndexOf(
             methodBody,
             "_codingSessionService.AddEvent(entry)",
