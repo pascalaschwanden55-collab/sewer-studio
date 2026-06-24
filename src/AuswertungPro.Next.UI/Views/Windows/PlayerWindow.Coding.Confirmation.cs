@@ -88,25 +88,12 @@ public partial class PlayerWindow
 
     private void ResumeAfterConfirmation()
     {
-        if (_codingSessionService?.ActiveSession?.State == CodingSessionState.WaitingForUserInput)
-            _codingSessionService.ResumeSession();
+        var result = CodingConfirmationResumeWorkflow.Apply(
+            _codingSessionService,
+            BtnCodingLiveAi.IsChecked == true,
+            _codingAiModelName,
+            pause => _player.SetPause(pause));
 
-        var isLiveAiEnabled = BtnCodingLiveAi.IsChecked == true;
-        PlayerConfirmationPlayback.ResumeCodingLiveAi(isLiveAiEnabled, pause => _player.SetPause(pause));
-
-        if (isLiveAiEnabled)
-        {
-            var status = CodingLiveAiButtonDisplayPolicy.BuildStatus(
-                isActive: true,
-                LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName));
-            SetCodingAiState(status.StatusText, PlayerStatusColors.Success, status.DetailText);
-        }
-        else
-        {
-            var status = CodingLiveAiButtonDisplayPolicy.BuildStatus(
-                isActive: false,
-                LiveDetectionDisplayPolicy.CompactModelName(_codingAiModelName));
-            SetCodingAiState(status.StatusText, PlayerStatusColors.Success, status.DetailText);
-        }
+        SetCodingAiState(result.Status.StatusText, PlayerStatusColors.Success, result.Status.DetailText);
     }
 }

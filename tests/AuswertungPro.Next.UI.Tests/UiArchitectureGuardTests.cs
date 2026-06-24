@@ -2217,16 +2217,23 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Live.cs");
         var confirmationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Confirmation.cs");
+        var resumeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationResumeWorkflow.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
+
+        Assert.True(File.Exists(resumeWorkflowPath), "Confirmation-Resume-Statusentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var live = File.ReadAllText(livePath);
         var confirmation = File.ReadAllText(confirmationPath);
+        var resumeWorkflow = File.ReadAllText(resumeWorkflowPath);
         var policy = File.ReadAllText(policyPath);
 
         Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", live);
-        Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", confirmation);
+        Assert.Contains("CodingConfirmationResumeWorkflow.Apply", confirmation);
+        Assert.DoesNotContain("CodingLiveAiButtonDisplayPolicy.BuildStatus", confirmation);
+        Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", resumeWorkflow);
         Assert.DoesNotContain("Automatische KI-Analyse aktiv", live);
         Assert.DoesNotContain("Automatische KI-Analyse aktiv", confirmation);
+        Assert.DoesNotContain("Automatische KI-Analyse aktiv", resumeWorkflow);
         Assert.DoesNotContain("Intervall alle 5 Sekunden", live);
         Assert.DoesNotContain("Intervall alle 5 Sekunden", confirmation);
         Assert.Contains("public static CodingLiveAiStatusState BuildStatus", policy);
@@ -2301,12 +2308,15 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var helperPath = Path.Combine(uiRoot, "Player", "PlayerConfirmationPlayback.cs");
+        var resumeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationResumeWorkflow.cs");
         var codingConfirmationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Confirmation.cs");
         var liveDetectionConfirmationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.cs");
 
         Assert.True(File.Exists(helperPath), "Confirmation-Playback-Regeln sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(resumeWorkflowPath), "Coding-Confirmation-Resume-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var helper = File.ReadAllText(helperPath);
+        var resumeWorkflow = File.ReadAllText(resumeWorkflowPath);
         var codingConfirmation = File.ReadAllText(codingConfirmationPath);
         var liveDetectionConfirmation = File.ReadAllText(liveDetectionConfirmationPath);
 
@@ -2316,7 +2326,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PauseLiveDetectionConfirmation", helper);
 
         Assert.Contains("PlayerConfirmationPlayback.PauseCodingConfirmation", codingConfirmation);
-        Assert.Contains("PlayerConfirmationPlayback.ResumeCodingLiveAi", codingConfirmation);
+        Assert.Contains("CodingConfirmationResumeWorkflow.Apply", codingConfirmation);
+        Assert.DoesNotContain("PlayerConfirmationPlayback.ResumeCodingLiveAi", codingConfirmation);
+        Assert.Contains("PlayerConfirmationPlayback.ResumeCodingLiveAi", resumeWorkflow);
         Assert.DoesNotContain("_player.SetPause(true)", codingConfirmation);
         Assert.DoesNotContain("_player.SetPause(false)", codingConfirmation);
 
