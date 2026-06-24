@@ -4326,6 +4326,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void InitializeCodingImportReferences", importReference);
         Assert.Contains("private void ActivateDefaultCodingTool", ui);
         Assert.Contains("private void ShowCodingModeUi", ui);
+        Assert.Contains("_markToolControls.SetToolLabels(\"Rechteck\")", ui);
+        Assert.DoesNotContain("TxtMarkToolName.Text", ui);
+        Assert.DoesNotContain("TxtActiveToolLabel.Text", ui);
         Assert.Contains("CreateCodingSessionState();", lifecycle);
         Assert.Contains("InitializeCodingImportReferences();", lifecycle);
         Assert.Contains("CodingImportReferenceStateResetter.ClearEvents", exit);

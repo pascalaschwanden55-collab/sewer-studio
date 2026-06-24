@@ -57,6 +57,11 @@ public sealed class PlayerMarkToolControls
         _markToolPopup.IsOpen = false;
         _codingMarkToolPopup.IsOpen = false;
         _toolsDropdownPopup.IsOpen = false;
+        SetToolLabels(label);
+    }
+
+    public void SetToolLabels(string label)
+    {
         _markToolName.Text = label;
         _activeToolLabel.Text = label;
     }

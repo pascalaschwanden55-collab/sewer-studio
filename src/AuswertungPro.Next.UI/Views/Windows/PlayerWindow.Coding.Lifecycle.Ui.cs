@@ -28,8 +28,7 @@ public partial class PlayerWindow
     private void ActivateDefaultCodingTool()
     {
         _markToolType = OverlayToolType.Rectangle;
-        TxtMarkToolName.Text = "Rechteck";
-        TxtActiveToolLabel.Text = "Rechteck";
+        _markToolControls.SetToolLabels("Rechteck");
         if (_codingOverlayService != null)
             _codingOverlayService.ActiveTool = OverlayToolType.Rectangle;
     }

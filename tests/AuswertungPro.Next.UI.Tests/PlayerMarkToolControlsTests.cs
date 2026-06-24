@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -54,6 +55,33 @@ public sealed class PlayerMarkToolControlsTests
             Assert.False(state.MarkToolPopup.IsOpen);
             Assert.False(state.CodingMarkToolPopup.IsOpen);
             Assert.False(state.ToolsDropdownPopup.IsOpen);
+            Assert.Equal("Rechteck", state.MarkToolName.Text);
+            Assert.Equal("Rechteck", state.ActiveToolLabel.Text);
+        });
+    }
+
+    [Fact]
+    public void SetToolLabels_updates_labels_without_closing_popups()
+    {
+        RunOnStaThread(() =>
+        {
+            var controls = CreateControls(out var state);
+            state.MarkToolPopup.IsOpen = true;
+            state.CodingMarkToolPopup.IsOpen = true;
+            state.ToolsDropdownPopup.IsOpen = true;
+            var setLabels = typeof(PlayerMarkToolControls).GetMethod(
+                "SetToolLabels",
+                BindingFlags.Public | BindingFlags.Instance,
+                binder: null,
+                types: [typeof(string)],
+                modifiers: null);
+            Assert.NotNull(setLabels);
+
+            setLabels.Invoke(controls, ["Rechteck"]);
+
+            Assert.True(state.MarkToolPopup.IsOpen);
+            Assert.True(state.CodingMarkToolPopup.IsOpen);
+            Assert.True(state.ToolsDropdownPopup.IsOpen);
             Assert.Equal("Rechteck", state.MarkToolName.Text);
             Assert.Equal("Rechteck", state.ActiveToolLabel.Text);
         });
