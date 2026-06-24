@@ -87,4 +87,18 @@ public static class CodingModeChromeControls
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
+
+    public static void ResetCodingIndicators(
+        TextBlock activeToolLabel,
+        ToggleButton liveAiButton,
+        TextBlock aiStageText)
+    {
+        ArgumentNullException.ThrowIfNull(activeToolLabel);
+        ArgumentNullException.ThrowIfNull(liveAiButton);
+        ArgumentNullException.ThrowIfNull(aiStageText);
+
+        activeToolLabel.Text = "";
+        liveAiButton.IsChecked = false;
+        aiStageText.Text = string.Empty;
+    }
 }

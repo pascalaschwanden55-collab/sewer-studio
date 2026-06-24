@@ -113,6 +113,29 @@ public sealed class CodingModeChromeControlsTests
         });
     }
 
+    [Fact]
+    public void ResetCodingIndicators_clears_active_tool_live_ai_and_stage()
+    {
+        RunOnStaThread(() =>
+        {
+            var activeToolLabel = new TextBlock { Text = "Rechteck" };
+            var liveAiButton = new ToggleButton { IsChecked = true };
+            var aiStageText = new TextBlock { Text = "Analysiere" };
+            var reset = FindLiveDetectionEntryMethod(
+                "ResetCodingIndicators",
+                typeof(TextBlock),
+                typeof(ToggleButton),
+                typeof(TextBlock));
+            Assert.NotNull(reset);
+
+            reset.Invoke(null, [activeToolLabel, liveAiButton, aiStageText]);
+
+            Assert.Equal("", activeToolLabel.Text);
+            Assert.False(liveAiButton.IsChecked);
+            Assert.Equal("", aiStageText.Text);
+        });
+    }
+
     private static MethodInfo? FindShowCodingSurfaceMethod()
         => typeof(CodingOverlayMeasurementFormatter).Assembly
             .GetType("AuswertungPro.Next.UI.Ai.CodingModeChromeControls")

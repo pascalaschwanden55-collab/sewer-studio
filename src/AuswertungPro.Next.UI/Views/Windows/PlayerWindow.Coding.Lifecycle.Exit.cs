@@ -67,9 +67,7 @@ public partial class PlayerWindow
         CodingModeChromeControls.ShowLiveDetectionEntry(LiveDetectionButton, LiveDetectionStatusText, _isDetecting);
 
         _activeCodingToolName = null;
-        TxtActiveToolLabel.Text = "";
-        BtnCodingLiveAi.IsChecked = false;
-        TxtCodingAiStage.Text = string.Empty;
+        CodingModeChromeControls.ResetCodingIndicators(TxtActiveToolLabel, BtnCodingLiveAi, TxtCodingAiStage);
 
         _codingSchemaManager.Cancel();
         _codingSchemaType = null;
