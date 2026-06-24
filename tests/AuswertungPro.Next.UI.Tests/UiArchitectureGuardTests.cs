@@ -2045,12 +2045,14 @@ public sealed class UiArchitectureGuardTests
         var dialogServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingEventActionDialogServiceFactory.cs");
         var deleteApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteApplier.cs");
         var editApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventEditApplier.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventListActionWorkflow.cs");
 
         Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionshandler sollen aus dem allgemeinen Events-Partial heraus.");
         Assert.True(File.Exists(dialogServicePath), "Coding-Event-Aktionsdialoge muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServiceFactoryPath), "Coding-Event-Aktionsdialog-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(deleteApplierPath), "Coding-Event-Loeschanwendung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(editApplierPath), "Coding-Event-Bearbeitungsanwendung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "Coding-Event-Listenaktionen sollen die Apply/Delete-Nachbearbeitung ausserhalb der PlayerWindow-Partials kapseln.");
 
         var events = File.ReadAllText(eventsPath);
         var actions = File.ReadAllText(actionsPath);
@@ -2058,6 +2060,7 @@ public sealed class UiArchitectureGuardTests
         var dialogServiceFactory = File.ReadAllText(dialogServiceFactoryPath);
         var deleteApplier = File.ReadAllText(deleteApplierPath);
         var editApplier = File.ReadAllText(editApplierPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.DoesNotContain("private void CodingEvents_DoubleClick", events);
         Assert.DoesNotContain("private void CodingEventEdit_Click", events);
@@ -2070,8 +2073,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void CodingEventCloseStretch_Click", actions);
         Assert.Contains("private void CodingEventDelete_Click", actions);
         Assert.Contains("CodingEventActionDialogServiceFactory.Create", actions);
-        Assert.Contains("CodingEventEditApplier.Apply", actions);
-        Assert.Contains("CodingEventDeleteApplier.Apply", actions);
+        Assert.Contains("CodingEventListActionWorkflow.CompleteEdit", actions);
+        Assert.Contains("CodingEventListActionWorkflow.Delete", actions);
+        Assert.DoesNotContain("CodingEventEditApplier.Apply", actions);
+        Assert.DoesNotContain("CodingEventDeleteApplier.Apply", actions);
         Assert.DoesNotContain("_codingSessionService?.UpdateEvent", actions);
         Assert.DoesNotContain("codingEvent.MeterAtCapture = entry.MeterStart", actions);
         Assert.DoesNotContain("_codingSessionService?.RemoveEvent", actions);
@@ -2079,6 +2084,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("DialogHost.Current", actions);
         Assert.DoesNotContain("Der aktuelle Meterstand", actions);
         Assert.DoesNotContain("Ereignis '", actions);
+        Assert.Contains("CodingEventEditApplier.Apply", workflow);
+        Assert.Contains("CodingEventDeleteApplier.Apply", workflow);
         Assert.Contains("ShowStretchCloseRequiresLaterMeter", dialogService);
         Assert.Contains("ConfirmDelete", dialogService);
         Assert.Contains("DialogHost.Current", dialogServiceFactory);

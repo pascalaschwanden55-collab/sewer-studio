@@ -37,8 +37,10 @@ public partial class PlayerWindow
 
         if (edited)
         {
-            CodingEventEditApplier.Apply(codingEvent, _codingSessionService);
-            RefreshCodingEventsList();
+            CodingEventListActionWorkflow.CompleteEdit(
+                codingEvent,
+                _codingSessionService,
+                RefreshCodingEventsList);
         }
     }
 
@@ -93,8 +95,10 @@ public partial class PlayerWindow
         }
         if (!confirm) return;
 
-        var deleteResult = CodingEventDeleteApplier.Apply(
+        var deleteResult = CodingEventListActionWorkflow.Delete(
             codingEvent, _codingSessionService, _codingVm?.Events, _codingVm?.SelectedDefect);
+        if (!deleteResult.Deleted) return;
+
         if (_codingVm != null && deleteResult.ShouldClearSelectedDefect)
             _codingVm.SelectedDefect = null;
         HideInlineDefectDetail();
