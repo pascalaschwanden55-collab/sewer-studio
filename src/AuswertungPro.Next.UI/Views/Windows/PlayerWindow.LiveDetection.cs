@@ -33,17 +33,19 @@ public partial class PlayerWindow
 
         try
         {
-            var snapshot = await CaptureCurrentFrameAsync();
-            if (snapshot is null)
-            {
-                _liveDetectionController.EndDetection();
-                if (!_closing && !_playbackDisposed)
-                {
-                    SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Success,
-                        $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionController.ModelName)} | Bereit");
-                }
+            var snapshotResult = LiveDetectionSnapshotWorkflow.Handle(
+                new LiveDetectionSnapshotWorkflowRequest(
+                    await CaptureCurrentFrameAsync(),
+                    _closing,
+                    _playbackDisposed,
+                    _liveDetectionController.ModelName),
+                new LiveDetectionSnapshotWorkflowActions(
+                    _liveDetectionController.EndDetection,
+                    SetLiveDetectionBadge));
+            if (!snapshotResult.HasSnapshot)
                 return;
-            }
+
+            var snapshot = snapshotResult.Snapshot!;
 
             var service = _liveDetectionController.Service;
             var cancellation = _liveDetectionController.DetectionCancellation;

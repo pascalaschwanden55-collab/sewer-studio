@@ -1021,12 +1021,14 @@ public sealed class UiArchitectureGuardTests
         var statusPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Status.cs");
         var pulsePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Status.Pulse.cs");
         var errorWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionErrorWorkflow.cs");
+        var snapshotWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionSnapshotWorkflow.cs");
         var controlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
         var pulseControlsPath = Path.Combine(windowsRoot, "LiveDetectionPulseControls.cs");
 
         Assert.True(File.Exists(statusPath), "LiveDetection-Status-UI soll in ein eigenes Partial.");
         Assert.True(File.Exists(pulsePath), "Coding-AI-Pulsanimation soll aus dem Status-Orchestrator heraus.");
         Assert.True(File.Exists(errorWorkflowPath), "LiveDetection-Fehlerentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(snapshotWorkflowPath), "LiveDetection-Snapshot-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "LiveDetection-Status-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pulseControlsPath), "Coding-AI-Pulsanimation soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
@@ -1034,6 +1036,7 @@ public sealed class UiArchitectureGuardTests
         var status = File.ReadAllText(statusPath);
         var pulse = File.ReadAllText(pulsePath);
         var errorWorkflow = File.ReadAllText(errorWorkflowPath);
+        var snapshotWorkflow = File.ReadAllText(snapshotWorkflowPath);
         var controls = File.ReadAllText(controlsPath);
         var pulseControls = File.Exists(pulseControlsPath) ? File.ReadAllText(pulseControlsPath) : "";
 
@@ -1056,6 +1059,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveDetectionStatusControls.ShowDetectionStatus", status);
         Assert.Contains("LiveDetectionStatusControls.ShowDetectionError", liveDetection);
         Assert.Contains("LiveDetectionErrorWorkflow.Execute", liveDetection);
+        Assert.Contains("LiveDetectionSnapshotWorkflow.Handle", liveDetection);
+        Assert.DoesNotContain("| Bereit", liveDetection);
+        Assert.Contains("| Bereit", snapshotWorkflow);
         Assert.DoesNotContain("msg.Length > 200", liveDetection);
         Assert.Contains("message.Length > 200", errorWorkflow);
         Assert.DoesNotContain("LiveDetectionStatusText.Text = $\"Fehler:", liveDetection);
