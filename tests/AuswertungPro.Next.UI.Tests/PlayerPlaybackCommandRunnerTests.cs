@@ -53,6 +53,48 @@ public sealed class PlayerPlaybackCommandRunnerTests
     }
 
     [Fact]
+    public void SetSpeed_clamps_rate_sets_player_rate_and_updates_label()
+    {
+        var method = FindMethod("SetSpeed", typeof(float), typeof(Func<float, int>), typeof(Action<float>), typeof(Action));
+        Assert.NotNull(method);
+        var calls = new List<string>();
+
+        method.Invoke(null, [
+            12f,
+            new Func<float, int>(rate =>
+            {
+                calls.Add($"set:{rate:0.##}");
+                return 0;
+            }),
+            new Action<float>(rate => calls.Add($"unsupported:{rate:0.##}")),
+            new Action(() => calls.Add("rate-label"))
+        ]);
+
+        Assert.Equal(["set:8", "rate-label"], calls);
+    }
+
+    [Fact]
+    public void SetSpeed_shows_unsupported_rate_dialog_when_player_rejects_rate()
+    {
+        var method = FindMethod("SetSpeed", typeof(float), typeof(Func<float, int>), typeof(Action<float>), typeof(Action));
+        Assert.NotNull(method);
+        var calls = new List<string>();
+
+        method.Invoke(null, [
+            0.5f,
+            new Func<float, int>(rate =>
+            {
+                calls.Add($"set:{rate:0.##}");
+                return -1;
+            }),
+            new Action<float>(rate => calls.Add($"unsupported:{rate:0.##}")),
+            new Action(() => calls.Add("rate-label"))
+        ]);
+
+        Assert.Equal(["set:0.5", "unsupported:0.5", "rate-label"], calls);
+    }
+
+    [Fact]
     public void TogglePlayPause_ensures_playback_and_sets_pause_to_current_playing_state()
     {
         var method = FindMethod("TogglePlayPause", typeof(Action), typeof(Func<bool>), typeof(Action<bool>));

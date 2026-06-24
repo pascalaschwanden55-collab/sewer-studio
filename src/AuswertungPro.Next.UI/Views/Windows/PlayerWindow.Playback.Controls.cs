@@ -75,16 +75,11 @@ public partial class PlayerWindow
     }
 
     private void SetSpeed(float rate)
-    {
-        var clamped = PlayerPlaybackState.ClampRate(rate);
-        var result = _player.SetRate(clamped);
-        if (result != 0)
-        {
-            PlayerPlaybackDialogServiceFactory.Create().ShowUnsupportedRate(clamped);
-        }
-
-        UpdateRateLabel();
-    }
+        => PlayerPlaybackCommandRunner.SetSpeed(
+            rate,
+            _player.SetRate,
+            clamped => PlayerPlaybackDialogServiceFactory.Create().ShowUnsupportedRate(clamped),
+            UpdateRateLabel);
 
     private void UpdateRateLabel()
     {

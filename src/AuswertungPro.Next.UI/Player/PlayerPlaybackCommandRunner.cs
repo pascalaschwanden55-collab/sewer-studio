@@ -28,6 +28,19 @@ public static class PlayerPlaybackCommandRunner
         updateRateLabel();
     }
 
+    public static void SetSpeed(
+        float rate,
+        Func<float, int> setRate,
+        Action<float> showUnsupportedRate,
+        Action updateRateLabel)
+    {
+        var clamped = PlayerPlaybackState.ClampRate(rate);
+        if (setRate(clamped) != 0)
+            showUnsupportedRate(clamped);
+
+        updateRateLabel();
+    }
+
     public static void TogglePlayPause(Action ensurePlaying, Func<bool> isPlaying, Action<bool> setPause)
     {
         ensurePlaying();

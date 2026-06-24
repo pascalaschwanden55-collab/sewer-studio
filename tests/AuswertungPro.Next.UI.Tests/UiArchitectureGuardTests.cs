@@ -912,9 +912,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerPlaybackCommandRunner.Play", controls);
         Assert.Contains("PlayerPlaybackCommandRunner.Pause", controls);
         Assert.Contains("PlayerPlaybackCommandRunner.Stop", controls);
+        Assert.Contains("PlayerPlaybackCommandRunner.SetSpeed", controls);
         Assert.DoesNotContain("_player.SetPause(true)", controls);
         Assert.DoesNotContain("_player.SetPause(false)", controls);
         Assert.DoesNotContain("_player.Stop();", controls);
+        Assert.DoesNotContain("var result = _player.SetRate", controls);
+        Assert.DoesNotContain("PlayerPlaybackState.ClampRate", controls);
         Assert.Contains("private void PositionSlider_ValueChanged", controls);
         Assert.Contains("private void SetSpeed", controls);
         Assert.DoesNotContain("private void UpdateSpeedButtons", controls);
