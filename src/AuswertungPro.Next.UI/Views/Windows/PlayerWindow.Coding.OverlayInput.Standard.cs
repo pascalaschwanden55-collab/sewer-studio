@@ -8,14 +8,14 @@ public partial class PlayerWindow
 {
     private void HandleCodingStandardMouseDown(NormalizedPoint norm)
     {
-        if (_codingVm == null)
+        if (!_codingSessionHost.HasViewModel)
             return;
 
-        _codingVm.CurrentOverlay = null;
+        _codingSessionHost.ClearCurrentOverlay();
         CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false);
         UpdateCodingOverlayInfo(null);
 
-        _codingVm.OnCanvasMouseDown(norm);
+        _codingSessionHost.BeginOverlayDraw(norm);
         CodingOverlayCanvas.CaptureMouse();
         ClearTransientCodingCanvas(clearManualOverlay: true);
         RenderAiOverlays();
@@ -25,33 +25,34 @@ public partial class PlayerWindow
 
     private bool TryHandleCodingStandardMouseMove(NormalizedPoint norm)
     {
-        if (_codingOverlayService == null || _codingVm == null)
+        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel)
             return false;
 
         if (!_codingOverlayService.IsDrawing)
             return false;
 
-        _codingVm.OnCanvasMouseMove(norm);
-        if (_codingVm.CurrentOverlay == null)
+        _codingSessionHost.UpdateOverlayDraw(norm);
+        var overlay = _codingSessionHost.CurrentOverlay;
+        if (overlay == null)
             return true;
 
         ClearTransientCodingCanvas(clearManualOverlay: true);
         RenderAiOverlays();
         RenderReferenceDn();
         UpdateToolBadge();
-        RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: true, labelAnchor: norm);
+        RenderOverlayGeometry(overlay, isPreview: true, labelAnchor: norm);
         return true;
     }
 
     private bool TryHandleCodingStandardMouseUp(NormalizedPoint norm)
     {
-        if (_codingOverlayService == null || _codingVm == null)
+        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel)
             return false;
 
         if (!_codingOverlayService.IsDrawing)
             return false;
 
-        _codingVm.OnCanvasMouseUp(norm);
+        _codingSessionHost.CompleteOverlayDraw(norm);
         CodingOverlayCanvas.ReleaseMouseCapture();
 
         ClearTransientCodingCanvas(clearManualOverlay: true);
@@ -59,9 +60,10 @@ public partial class PlayerWindow
         RenderReferenceDn();
         UpdateToolBadge();
 
-        if (_codingVm.CurrentOverlay != null)
+        var overlay = _codingSessionHost.CurrentOverlay;
+        if (overlay != null)
         {
-            RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: false);
+            RenderOverlayGeometry(overlay, isPreview: false);
 
             // Mark-Modus: direkt VsaCodeExplorer oeffnen + Training speichern
             if (_markToolType != OverlayToolType.None)
@@ -70,12 +72,12 @@ public partial class PlayerWindow
                 return true;
             }
 
-            UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
+            UpdateCodingOverlayInfo(overlay);
             CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, true);
 
             // Wenn Auto-KI aktiv: Overlay-Zeichnung -> KI analysiert markierte Stelle
             if (BtnCodingLiveAi.IsChecked == true)
-                AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay).SafeFireAndForget("OverlayHint");
+                AnalyzeWithOverlayHintAsync(overlay).SafeFireAndForget("OverlayHint");
         }
         else
         {

@@ -5085,8 +5085,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private bool TryHandleCodingStandardMouseMove", standard);
         Assert.Contains("private bool TryHandleCodingStandardMouseUp", standard);
         Assert.Contains("HandleMarkDrawingComplete", standard);
+        Assert.Contains("_codingSessionHost", standard);
+        Assert.DoesNotContain("_codingVm", standard);
         Assert.DoesNotContain("_ = AnalyzeWithOverlayHintAsync", standard);
-        Assert.Contains("AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay).SafeFireAndForget(\"OverlayHint\")", standard);
+        Assert.Contains("AnalyzeWithOverlayHintAsync(overlay).SafeFireAndForget(\"OverlayHint\")", standard);
     }
 
     [Fact]

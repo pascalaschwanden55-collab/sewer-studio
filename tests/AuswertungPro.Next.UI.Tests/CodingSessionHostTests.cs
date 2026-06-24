@@ -36,16 +36,22 @@ public sealed class CodingSessionHostTests
         hostType.GetMethod("ClearSelectedDefect")!.Invoke(host, []);
         hostType.GetMethod("ClearCurrentOverlay")!.Invoke(host, []);
         hostType.GetMethod("ClearSelectedCode")!.Invoke(host, []);
+        hostType.GetMethod("BeginOverlayDraw")!.Invoke(host, [new NormalizedPoint(0.1, 0.2)]);
+        hostType.GetMethod("UpdateOverlayDraw")!.Invoke(host, [new NormalizedPoint(0.2, 0.3)]);
+        hostType.GetMethod("CompleteOverlayDraw")!.Invoke(host, [new NormalizedPoint(0.3, 0.4)]);
     }
 
     [Fact]
     public void Host_exposes_navigation_state_and_forwards_move_commands()
     {
         var sessionService = new RecordingCodingSessionService();
+        var overlayService = new FakeOverlayToolService();
         using var vm = new CodingSessionViewModel(
             sessionService,
-            new FakeOverlayToolService());
+            overlayService);
         var overlay = new OverlayGeometry();
+        var previewOverlay = new OverlayGeometry { ToolType = OverlayToolType.Rectangle };
+        var completedOverlay = new OverlayGeometry { ToolType = OverlayToolType.Ellipse };
         var codingEvent = new CodingEvent
         {
             Entry = new ProtocolEntry { Code = "BBA" },
@@ -111,6 +117,22 @@ public sealed class CodingSessionHostTests
         host.GetType().GetMethod("ClearSelectedCode")!.Invoke(host, []);
         Assert.Equal(string.Empty, vm.SelectedCode);
         Assert.Equal(string.Empty, vm.SelectedCodeDescription);
+
+        overlayService.ActiveTool = OverlayToolType.Rectangle;
+        overlayService.PreviewGeometryToReturn = previewOverlay;
+        overlayService.EndDrawResult = completedOverlay;
+
+        host.GetType().GetMethod("BeginOverlayDraw")!.Invoke(host, [new NormalizedPoint(0.1, 0.2)]);
+        Assert.Equal(1, overlayService.BeginDrawCalls);
+
+        host.GetType().GetMethod("UpdateOverlayDraw")!.Invoke(host, [new NormalizedPoint(0.2, 0.3)]);
+        Assert.Equal(1, overlayService.UpdateDrawCalls);
+        Assert.Same(previewOverlay, vm.CurrentOverlay);
+
+        host.GetType().GetMethod("CompleteOverlayDraw")!.Invoke(host, [new NormalizedPoint(0.3, 0.4)]);
+        Assert.Equal(2, overlayService.UpdateDrawCalls);
+        Assert.Equal(1, overlayService.EndDrawCalls);
+        Assert.Same(completedOverlay, vm.CurrentOverlay);
     }
 
     private static object CreateHost(Func<CodingSessionViewModel?> resolveViewModel)
@@ -180,22 +202,38 @@ public sealed class CodingSessionHostTests
         public LevelMode ActiveLevelMode { get; set; }
         public bool PipeBendSnapEnabled { get; set; }
         public PipeCalibration? Calibration { get; private set; }
+        public OverlayGeometry? PreviewGeometryToReturn { get; set; }
+        public OverlayGeometry? EndDrawResult { get; set; }
+        public int BeginDrawCalls { get; private set; }
+        public int UpdateDrawCalls { get; private set; }
+        public int EndDrawCalls { get; private set; }
         public bool IsCalibrated => Calibration?.IsCalibrated == true;
-        public bool IsDrawing => false;
+        public bool IsDrawing { get; private set; }
         public bool IsMultiPointTool => false;
         public int RequiredPointCount => 0;
         public int DrawPointCount => 0;
         public IReadOnlyList<NormalizedPoint> DrawPoints => [];
         public NormalizedPoint? DrawStartPoint => null;
         public NormalizedPoint? DrawCurrentPoint => null;
-        public OverlayGeometry? PreviewGeometry => null;
+        public OverlayGeometry? PreviewGeometry => PreviewGeometryToReturn;
 
         public event EventHandler<OverlayToolType>? ToolChanged;
 
         public void SetCalibration(PipeCalibration calibration) => Calibration = calibration;
-        public void BeginDraw(NormalizedPoint startPoint) { }
-        public void UpdateDraw(NormalizedPoint currentPoint) { }
-        public OverlayGeometry? EndDraw() => null;
+        public void BeginDraw(NormalizedPoint startPoint)
+        {
+            BeginDrawCalls++;
+            IsDrawing = true;
+        }
+
+        public void UpdateDraw(NormalizedPoint currentPoint) => UpdateDrawCalls++;
+
+        public OverlayGeometry? EndDraw()
+        {
+            EndDrawCalls++;
+            IsDrawing = false;
+            return EndDrawResult;
+        }
         public void CancelDraw() { }
         public bool AddDrawPoint(NormalizedPoint point) => false;
         public double PixelToMm(double normalizedPixels, double frameWidthPx) => 0;

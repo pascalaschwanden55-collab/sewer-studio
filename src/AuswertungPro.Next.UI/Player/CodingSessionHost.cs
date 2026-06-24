@@ -25,6 +25,9 @@ public interface ICodingSessionHost
     void ClearSelectedDefect();
     void ClearCurrentOverlay();
     void ClearSelectedCode();
+    void BeginOverlayDraw(NormalizedPoint point);
+    void UpdateOverlayDraw(NormalizedPoint point);
+    void CompleteOverlayDraw(NormalizedPoint point);
     bool ExecuteMoveNext();
     bool ExecuteMovePrevious();
     bool ExecuteAcceptDefect();
@@ -113,6 +116,33 @@ public sealed class CodingSessionHost : ICodingSessionHost
 
         viewModel.SelectedCode = string.Empty;
         viewModel.SelectedCodeDescription = string.Empty;
+    }
+
+    public void BeginOverlayDraw(NormalizedPoint point)
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null)
+            return;
+
+        viewModel.OnCanvasMouseDown(point);
+    }
+
+    public void UpdateOverlayDraw(NormalizedPoint point)
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null)
+            return;
+
+        viewModel.OnCanvasMouseMove(point);
+    }
+
+    public void CompleteOverlayDraw(NormalizedPoint point)
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null)
+            return;
+
+        viewModel.OnCanvasMouseUp(point);
     }
 
     public bool ExecuteMoveNext()
