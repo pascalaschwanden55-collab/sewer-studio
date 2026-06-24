@@ -17,7 +17,7 @@ public partial class PlayerWindow
         if (_isDetecting)
         {
             StopLiveDetection();
-            LiveDetectionButton.IsChecked = false;
+            LiveDetectionToggleControls.Uncheck(LiveDetectionButton);
             return;
         }
 
@@ -31,7 +31,7 @@ public partial class PlayerWindow
             settings => LiveDetectionRuntimeFactory.CreateAsync(settings),
             LiveDetectionDialogServiceFactory.Create(),
             new LiveDetectionStartupActions(
-                UncheckToggle: () => LiveDetectionButton.IsChecked = false,
+                UncheckToggle: () => LiveDetectionToggleControls.Uncheck(LiveDetectionButton),
                 StartRuntime: StartLiveDetectionRuntime));
     }
 

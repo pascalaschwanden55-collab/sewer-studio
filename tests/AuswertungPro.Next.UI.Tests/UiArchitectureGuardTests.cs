@@ -390,11 +390,13 @@ public sealed class UiArchitectureGuardTests
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsControls.cs");
         var refreshPolicyPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsRefreshPolicy.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventsRefreshWorkflow.cs");
+        var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingUiUpdateWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Coding-Statistik-Berechnung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Coding-Statistik-Anzeige muss ausserhalb der PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(refreshPolicyPath), "Coding-Statistik-Refresh-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Coding-Eventlisten-Refresh soll Sortierung und Statistik ausserhalb der PlayerWindow-Partials koordinieren.");
+        Assert.True(File.Exists(uiUpdateWorkflowPath), "Coding-UI-Refresh-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var events = File.ReadAllText(eventsPath);
         var coding = File.ReadAllText(codingPath);
@@ -403,11 +405,14 @@ public sealed class UiArchitectureGuardTests
         var controls = File.ReadAllText(controlsPath);
         var refreshPolicy = File.ReadAllText(refreshPolicyPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
+        var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
 
         Assert.Contains("CodingEventsRefreshWorkflow.RefreshStatistics", events);
         Assert.DoesNotContain("CodingStatisticsPolicy.Build", events);
         Assert.DoesNotContain("_codingStatisticsControls.Apply(summary)", events);
-        Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", navigation);
+        Assert.Contains("CodingUiUpdateWorkflow.Apply", navigation);
+        Assert.DoesNotContain("CodingStatisticsRefreshPolicy.ShouldRefresh", navigation);
+        Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", uiUpdateWorkflow);
         Assert.DoesNotContain("Average(e => e.AiContext!.Confidence)", events);
         Assert.DoesNotContain("nameof(CodingSessionViewModel.StatAutoAccepted) or", coding + navigation);
         Assert.DoesNotContain("int autoAccepted = 0", events);
@@ -1046,12 +1051,14 @@ public sealed class UiArchitectureGuardTests
         var stopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeFactory.cs");
         var startupWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupWorkflow.cs");
+        var toggleControlsPath = Path.Combine(windowsRoot, "LiveDetectionToggleControls.cs");
         var disposableLifecyclePath = Path.Combine(uiRoot, "Player", "DisposableReferenceLifecycle.cs");
 
         Assert.True(File.Exists(lifecyclePath), "LiveDetection-Start/Stop-Wiring soll in ein eigenes Lifecycle-Partial.");
         Assert.True(File.Exists(stopPath), "LiveDetection-Stop/Cleanup soll aus dem Start-Lifecycle-Partial heraus.");
         Assert.True(File.Exists(factoryPath), "LiveDetection-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(startupWorkflowPath), "LiveDetection-Startup-Entscheidungen sollen ausserhalb von PlayerWindow orchestriert werden.");
+        Assert.True(File.Exists(toggleControlsPath), "LiveDetection-Toggle-State soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
         Assert.True(File.Exists(disposableLifecyclePath), "Disposable-Referenz-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
@@ -1059,7 +1066,11 @@ public sealed class UiArchitectureGuardTests
         var stop = File.ReadAllText(stopPath);
         var factory = File.ReadAllText(factoryPath);
         var startupWorkflow = File.Exists(startupWorkflowPath) ? File.ReadAllText(startupWorkflowPath) : "";
+        var toggleControls = File.Exists(toggleControlsPath) ? File.ReadAllText(toggleControlsPath) : "";
         var disposableLifecycle = File.Exists(disposableLifecyclePath) ? File.ReadAllText(disposableLifecyclePath) : "";
+        var playerWindowPartials = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
 
         Assert.DoesNotContain("private async void LiveDetection_Click", liveDetection);
         Assert.DoesNotContain("private async Task StartLiveDetectionAsync", liveDetection);
@@ -1072,6 +1083,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void StopLiveDetection", lifecycle);
         Assert.Contains("LiveDetectionStartupWorkflow.StartAsync", lifecycle);
         Assert.Contains("new LiveDetectionStartupActions", lifecycle);
+        Assert.Contains("LiveDetectionToggleControls.Uncheck", lifecycle);
+        Assert.DoesNotContain("LiveDetectionButton.IsChecked = false", playerWindowPartials);
         Assert.DoesNotContain("AiRuntimeSettings cfg", lifecycle);
         Assert.DoesNotContain("ShowRuntimeSettingsLoadFailed", lifecycle);
         Assert.DoesNotContain("ShowDisabled", lifecycle);
@@ -1084,6 +1097,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("ShowRuntimeSettingsLoadFailed", startupWorkflow);
         Assert.Contains("ShowDisabled", startupWorkflow);
         Assert.Contains("ShowStartFailed", startupWorkflow);
+        Assert.Contains("public static class LiveDetectionToggleControls", toggleControls);
+        Assert.Contains("public static void Uncheck", toggleControls);
         Assert.DoesNotContain("new OllamaClient", lifecycle);
         Assert.DoesNotContain("new LiveDetectionService", lifecycle);
         Assert.DoesNotContain("new DispatcherTimer", lifecycle);
@@ -4333,13 +4348,16 @@ public sealed class UiArchitectureGuardTests
         var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
         var navigationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Navigation.cs");
         var controllerPath = Path.Combine(uiRoot, "Ai", "CodingVideoNavigationController.cs");
+        var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingUiUpdateWorkflow.cs");
 
         Assert.True(File.Exists(navigationPath), "Coding-Navigation soll nicht im grossen Coding-Partial liegen.");
         Assert.True(File.Exists(controllerPath), "Coding-Video-Navigationsregeln sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(uiUpdateWorkflowPath), "Coding-UI-Update-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var coding = File.ReadAllText(codingPath);
         var navigation = File.ReadAllText(navigationPath);
         var controller = File.ReadAllText(controllerPath);
+        var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
 
         Assert.DoesNotContain("private async void CodingNext_Click", coding);
         Assert.DoesNotContain("private async void CodingPrevious_Click", coding);
@@ -4352,6 +4370,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains(".SafeFireAndForget(\"CodingNext\")", navigation);
         Assert.Contains(".SafeFireAndForget(\"CodingPrevious\")", navigation);
         Assert.Contains("private async Task MoveCodingByCommandAsync", navigation);
+        Assert.Contains("CodingUiUpdateWorkflow.Apply", navigation);
+        Assert.Contains("new CodingUiUpdateActions", navigation);
+        Assert.DoesNotContain("CodingStatisticsRefreshPolicy.ShouldRefresh", navigation);
+        Assert.DoesNotContain("if (propertyName is nameof(CodingSessionViewModel.CurrentMeter) && _codingNavPending)", navigation);
         Assert.Contains("CodingVideoNavigationController.ResolveDisplayMeter", navigation);
         Assert.Contains("CodingVideoNavigationController.SyncVideoToCodingMeter", navigation);
         Assert.Contains("CodingVideoNavigationController.PrepareMoveByCommand", navigation);
@@ -4361,6 +4383,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingCurrentMeterResolver.Resolve", controller);
         Assert.Contains("CodingVideoSyncPolicy.TryResolveTargetTimeMs", controller);
         Assert.Contains("PrepareMoveByCommand", controller);
+        Assert.Contains("public static class CodingUiUpdateWorkflow", uiUpdateWorkflow);
+        Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", uiUpdateWorkflow);
     }
 
     [Fact]

@@ -19,24 +19,17 @@ public partial class PlayerWindow
     private void UpdateCodingUi(string? propertyName)
     {
         if (_codingVm == null) return;
-        CodingMeterTimelineControls.Apply(TxtCodingMeter, PipeTimeline, _codingVm.CurrentMeter);
-        // Video NUR synchronisieren wenn explizite Navigation (Next/Previous)
-        // Verhindert Zurueckspringen beim normalen Abspielen
-        if (propertyName is nameof(CodingSessionViewModel.CurrentMeter) && _codingNavPending)
-        {
-            _codingNavPending = false;
-            SyncVideoToCodingMeter();
-        }
-        UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
 
-        // Aktuellen Code am Zeitstempel anzeigen (Echtzeit)
-        UpdateCodingCurrentCode();
-
-        // Statistiken aktualisieren (nur bei relevanten Property-Aenderungen)
-        if (CodingStatisticsRefreshPolicy.ShouldRefresh(propertyName))
-        {
-            UpdateCodingStatistics();
-        }
+        var result = CodingUiUpdateWorkflow.Apply(
+            propertyName,
+            _codingNavPending,
+            new CodingUiUpdateActions(
+                ApplyMeterTimeline: () => CodingMeterTimelineControls.Apply(TxtCodingMeter, PipeTimeline, _codingVm.CurrentMeter),
+                SyncVideoToCodingMeter: SyncVideoToCodingMeter,
+                UpdateOverlayInfo: () => UpdateCodingOverlayInfo(_codingVm.CurrentOverlay),
+                UpdateCurrentCode: UpdateCodingCurrentCode,
+                UpdateStatistics: UpdateCodingStatistics));
+        _codingNavPending = result.NavigationPending;
     }
 
     /// <summary>

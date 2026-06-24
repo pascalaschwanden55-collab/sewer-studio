@@ -19,7 +19,7 @@ public partial class PlayerWindow
         if (_isDetecting)
         {
             StopLiveDetection();
-            LiveDetectionButton.IsChecked = false;
+            LiveDetectionToggleControls.Uncheck(LiveDetectionButton);
         }
 
         CodingModeChromeControls.HideLiveDetectionEntry(LiveDetectionButton, LiveDetectionStatusText);
