@@ -25,8 +25,10 @@ public partial class PlayerWindow
         var dnCalibration = CodingDnCalibrationPolicy.Build(_haltungRecord.Fields);
         if (dnCalibration.Calibration != null)
             _codingOverlayService.SetCalibration(dnCalibration.Calibration);
-        TxtCodingCalibDn.Text = dnCalibration.DnText;
-        TxtCodingCalibStatus.Text = dnCalibration.CalibrationStatusText;
+        CodingSessionHeaderControls.ApplyCalibration(
+            TxtCodingCalibDn,
+            TxtCodingCalibStatus,
+            dnCalibration);
     }
 
     private bool TryStartCodingSession()
@@ -53,7 +55,7 @@ public partial class PlayerWindow
         }
 
         _codingSessionService.PauseSession();
-        TxtCodingRange.Text = $"/ {_codingVm.EndMeter:F2}m";
+        CodingSessionHeaderControls.SetRangeText(TxtCodingRange, _codingVm.EndMeter);
         CodingMeterTimelineControls.SetText(TxtCodingMeter, 0.0);
         return true;
     }

@@ -3534,17 +3534,28 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingDnCalibrationPolicy.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingSessionHeaderControls.cs");
 
         Assert.True(File.Exists(policyPath), "DN-/Kalibrierungsinitialisierung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controlsPath), "DN-/Range-Anzeigetexte sollen ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
         var coding = File.ReadAllText(codingPath);
         var policy = File.ReadAllText(policyPath);
+        var controls = File.ReadAllText(controlsPath);
 
         Assert.Contains("CodingDnCalibrationPolicy.Build", coding);
+        Assert.Contains("CodingSessionHeaderControls.ApplyCalibration", coding);
+        Assert.Contains("CodingSessionHeaderControls.SetRangeText", coding);
         Assert.DoesNotContain("_haltungRecord.Fields.TryGetValue(\"DN_mm\"", coding);
         Assert.DoesNotContain("int.TryParse(dnStr", coding);
+        Assert.DoesNotContain("TxtCodingCalibDn.Text", coding);
+        Assert.DoesNotContain("TxtCodingCalibStatus.Text", coding);
+        Assert.DoesNotContain("TxtCodingRange.Text", coding);
         Assert.Contains("public static CodingDnCalibrationState Build", policy);
         Assert.Contains("new PipeCalibration", policy);
+        Assert.Contains("public static class CodingSessionHeaderControls", controls);
+        Assert.Contains("ApplyCalibration", controls);
+        Assert.Contains("SetRangeText", controls);
     }
 
     [Fact]
