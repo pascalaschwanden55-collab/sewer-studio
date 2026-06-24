@@ -22,7 +22,7 @@ public partial class PlayerWindow
 
     private void CmbEingabemarker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (EingabemarkerPopup.Visibility != Visibility.Visible) return;
+        if (!CodingEingabemarkerPopupControls.IsVisible(EingabemarkerPopup)) return;
         if (CmbEingabemarker.SelectedItem is ComboBoxItem item && item.Content is string text && !string.IsNullOrEmpty(text))
         {
             TxtEingabemarker.Text = text;

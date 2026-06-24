@@ -4900,19 +4900,33 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
         var inputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Input.cs");
+        var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
 
         Assert.True(File.Exists(inputPath), "Eingabemarker-Eingabe-Wiring muss in einer eigenen PlayerWindow-Partial liegen.");
+        Assert.True(File.Exists(popupControlsPath), "Eingabemarker-Popup-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
         var marker = File.ReadAllText(markerPath);
         var input = File.ReadAllText(inputPath);
+        var popupControls = File.Exists(popupControlsPath) ? File.ReadAllText(popupControlsPath) : "";
 
         Assert.DoesNotContain("private void CmbEingabemarker_KeyDown", marker);
         Assert.DoesNotContain("private void CmbEingabemarker_SelectionChanged", marker);
         Assert.DoesNotContain("private static string? ResolveEingabemarkerCodeHint", marker);
+        Assert.Contains("CodingEingabemarkerPopupControls.ShowInput", marker);
+        Assert.Contains("CodingEingabemarkerPopupControls.Hide", marker);
+        Assert.Contains("CodingEingabemarkerPopupControls.IsVisible", input);
+        Assert.DoesNotContain("EingabemarkerPopup.Visibility = Visibility.Visible", marker);
+        Assert.DoesNotContain("EingabemarkerPopup.Visibility = Visibility.Collapsed", marker);
+        Assert.DoesNotContain("TxtEingabemarker.Text = \"\"", marker);
+        Assert.DoesNotContain("CmbEingabemarker.SelectedIndex = -1", marker);
+        Assert.DoesNotContain("EingabemarkerPopup.Visibility != Visibility.Visible", input);
         Assert.Contains("private void CmbEingabemarker_KeyDown", input);
         Assert.Contains("private void CmbEingabemarker_SelectionChanged", input);
         Assert.Contains("private static string? ResolveEingabemarkerCodeHint", input);
         Assert.Contains("SubmitEingabemarker().SafeFireAndForget", input);
+        Assert.Contains("public static void ShowInput", popupControls);
+        Assert.Contains("public static void Hide", popupControls);
+        Assert.Contains("public static bool IsVisible", popupControls);
     }
 
     [Fact]
@@ -4922,8 +4936,10 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
         var submissionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Submission.cs");
+        var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
 
         Assert.True(File.Exists(submissionPath), "Eingabemarker-Submission muss in einer eigenen PlayerWindow-Partial liegen.");
+        Assert.True(File.Exists(popupControlsPath), "Eingabemarker-Popup-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
         var marker = File.ReadAllText(markerPath);
         var submission = File.ReadAllText(submissionPath);
@@ -4934,6 +4950,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingEingabemarkerDuplicatePolicy.FindDuplicate", submission);
         Assert.Contains("CodingEingabemarkerEventAppender.Apply", submission);
         Assert.DoesNotContain("_codingSessionService.AddEvent(draft.Entry", submission);
+        Assert.Contains("CodingEingabemarkerPopupControls.Hide", submission);
+        Assert.DoesNotContain("EingabemarkerPopup.Visibility = Visibility.Collapsed", submission);
         Assert.Contains("RunCodingAnalysisAsync", submission);
     }
 

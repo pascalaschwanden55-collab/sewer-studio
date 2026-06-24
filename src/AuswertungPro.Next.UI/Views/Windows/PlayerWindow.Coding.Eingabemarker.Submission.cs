@@ -14,7 +14,7 @@ public partial class PlayerWindow
         var keyword = TxtEingabemarker.Text?.Trim() ?? "";
         if (string.IsNullOrEmpty(keyword)) return;
 
-        EingabemarkerPopup.Visibility = Visibility.Collapsed;
+        CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup);
         _eingabemarkerPhase = EingabemarkerPhase.Analyzing;
 
         var codeHint = ResolveEingabemarkerCodeHint(keyword);

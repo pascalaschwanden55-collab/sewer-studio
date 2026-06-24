@@ -33,7 +33,7 @@ public partial class PlayerWindow
     {
         _eingabemarkerPhase = EingabemarkerPhase.Inactive;
         BtnEingabemarker.IsChecked = false;
-        EingabemarkerPopup.Visibility = Visibility.Collapsed;
+        CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup);
         if (_eingabemarkerPreviewRect != null)
         {
             CodingOverlayCanvas.Children.Remove(_eingabemarkerPreviewRect);
@@ -81,9 +81,7 @@ public partial class PlayerWindow
         CodingOverlayCanvas.IsHitTestVisible = false;
         CodingOverlayCanvas.Cursor = System.Windows.Input.Cursors.Arrow;
 
-        EingabemarkerPopup.Visibility = Visibility.Visible;
-        TxtEingabemarker.Text = "";
-        CmbEingabemarker.SelectedIndex = -1;
+        CodingEingabemarkerPopupControls.ShowInput(EingabemarkerPopup, TxtEingabemarker, CmbEingabemarker);
         Dispatcher.BeginInvoke(new Action(() => TxtEingabemarker.Focus()),
             System.Windows.Threading.DispatcherPriority.Input);
 
