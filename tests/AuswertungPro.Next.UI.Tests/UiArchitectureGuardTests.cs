@@ -3293,6 +3293,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingSelectedCodeEventWorkflow.Create", events);
         Assert.Contains("CodingManualEventAppender.Apply", events);
         Assert.Contains("CodingEventCreationPostWorkflow.Apply", events);
+        Assert.Contains("_codingSessionHost", events);
+        Assert.DoesNotContain("_codingVm", events);
         Assert.DoesNotContain("_codingSchemaManager.Cancel()", events);
         Assert.DoesNotContain("_codingVm.CurrentOverlay = null", events);
         Assert.DoesNotContain("TxtCodingSelectedCode.Text = \"\"", events);

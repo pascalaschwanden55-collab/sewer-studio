@@ -18,6 +18,9 @@ public sealed class CodingSessionHostTests
         Assert.Equal(0, Get<double>(host, "CurrentMeter"));
         Assert.Equal(0, Get<double>(host, "EndMeter"));
         Assert.Null(Get<object?>(host, "CurrentOverlay"));
+        Assert.Null(Get<object?>(host, "EventCollection"));
+        Assert.Equal(string.Empty, Get<string>(host, "SelectedCode"));
+        Assert.Equal(string.Empty, Get<string>(host, "SelectedCodeDescription"));
         Assert.Empty(GetEvents(host));
         Assert.False(InvokeBool(host, "ExecuteMoveNext"));
         Assert.False(InvokeBool(host, "ExecuteMovePrevious"));
@@ -42,6 +45,8 @@ public sealed class CodingSessionHostTests
         vm.CurrentMeter = 3.25;
         vm.EndMeter = 17.5;
         vm.CurrentOverlay = overlay;
+        vm.SelectedCode = "BCA";
+        vm.SelectedCodeDescription = "Anschluss";
         vm.Events.Add(codingEvent);
 
         var host = CreateHost(() => vm);
@@ -50,6 +55,9 @@ public sealed class CodingSessionHostTests
         Assert.Equal(3.25, Get<double>(host, "CurrentMeter"));
         Assert.Equal(17.5, Get<double>(host, "EndMeter"));
         Assert.Same(overlay, Get<object?>(host, "CurrentOverlay"));
+        Assert.Same(vm.Events, Get<object?>(host, "EventCollection"));
+        Assert.Equal("BCA", Get<string>(host, "SelectedCode"));
+        Assert.Equal("Anschluss", Get<string>(host, "SelectedCodeDescription"));
         Assert.Same(codingEvent, Assert.Single(GetEvents(host)));
 
         host.GetType().GetMethod("SetCurrentVideoTime")!.Invoke(host, [TimeSpan.FromSeconds(9)]);

@@ -17,7 +17,7 @@ public partial class PlayerWindow
 
     private async Task HandleCodingSelectCodeAsync()
     {
-        if (_codingVm == null) return;
+        if (!_codingSessionHost.HasViewModel) return;
 
         PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause));
         SuspendCodingOverlayInput();
@@ -32,12 +32,12 @@ public partial class PlayerWindow
                 _codingOsdMeterController.LastMeter,
                 _player.Time,
                 _player.Length,
-                _codingVm.EndMeter,
-                _codingVm.CurrentMeter);
+                _codingSessionHost.EndMeter,
+                _codingSessionHost.CurrentMeter);
 
             var entry = CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
                 .CreateManualEntry(
-                    _codingVm.CurrentOverlay,
+                    _codingSessionHost.CurrentOverlay,
                     meterValue,
                     videoZeit,
                     _videoPath,
@@ -46,7 +46,7 @@ public partial class PlayerWindow
 
             if (entry is not null)
             {
-                var createdEvent = CodingManualEventAppender.Apply(entry, _codingVm.CurrentOverlay, _codingSessionService!);
+                var createdEvent = CodingManualEventAppender.Apply(entry, _codingSessionHost.CurrentOverlay, _codingSessionService!);
 
                 CodingEventCreationPostWorkflow.Apply(
                     createdEvent,
@@ -64,16 +64,16 @@ public partial class PlayerWindow
 
     private void CodingCreateEvent_Click(object sender, RoutedEventArgs e)
     {
-        if (_codingVm == null) return;
+        if (!_codingSessionHost.HasViewModel) return;
 
         var videoTime = TimeSpan.FromMilliseconds(_player.Time);
-        _codingVm.CurrentVideoTime = videoTime;
+        _codingSessionHost.SetCurrentVideoTime(videoTime);
         var createdEvent = CodingSelectedCodeEventWorkflow.Create(
-            _codingVm.SelectedCode,
-            _codingVm.SelectedCodeDescription,
-            _codingOsdMeterController.LastMeter ?? _codingVm.CurrentMeter,
+            _codingSessionHost.SelectedCode,
+            _codingSessionHost.SelectedCodeDescription,
+            _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter,
             videoTime,
-            _codingVm.CurrentOverlay,
+            _codingSessionHost.CurrentOverlay,
             _codingSessionService,
             CodingCaptureSnapshot);
         if (createdEvent == null)
@@ -90,7 +90,7 @@ public partial class PlayerWindow
     private void RefreshCodingEventsList()
     {
         if (!CodingEventsRefreshWorkflow.RefreshListAndStatistics(
-                _codingVm?.Events,
+                _codingSessionHost.EventCollection,
                 _codingEventsListControls,
                 _codingStatisticsControls,
                 CodingSessionViewModel.GetDefectStatus))
@@ -102,7 +102,7 @@ public partial class PlayerWindow
     private void UpdateCodingStatistics()
     {
         CodingEventsRefreshWorkflow.RefreshStatistics(
-            _codingVm?.Events,
+            _codingSessionHost.HasViewModel ? _codingSessionHost.Events : null,
             _codingStatisticsControls,
             CodingSessionViewModel.GetDefectStatus);
     }

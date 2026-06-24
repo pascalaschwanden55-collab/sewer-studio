@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -11,7 +12,10 @@ public interface ICodingSessionHost
     double CurrentMeter { get; }
     double EndMeter { get; }
     OverlayGeometry? CurrentOverlay { get; }
+    ObservableCollection<CodingEvent>? EventCollection { get; }
     IEnumerable<CodingEvent> Events { get; }
+    string SelectedCode { get; }
+    string SelectedCodeDescription { get; }
     void SetCurrentVideoTime(TimeSpan videoTime);
     bool ExecuteMoveNext();
     bool ExecuteMovePrevious();
@@ -38,14 +42,20 @@ public sealed class CodingSessionHost : ICodingSessionHost
 
     public OverlayGeometry? CurrentOverlay => ViewModel?.CurrentOverlay;
 
+    public ObservableCollection<CodingEvent>? EventCollection => ViewModel?.Events;
+
     public IEnumerable<CodingEvent> Events
     {
         get
         {
-            var viewModel = ViewModel;
-            return viewModel is null ? EmptyEvents : viewModel.Events;
+            var eventCollection = EventCollection;
+            return eventCollection is null ? EmptyEvents : eventCollection;
         }
     }
+
+    public string SelectedCode => ViewModel?.SelectedCode ?? string.Empty;
+
+    public string SelectedCodeDescription => ViewModel?.SelectedCodeDescription ?? string.Empty;
 
     public void SetCurrentVideoTime(TimeSpan videoTime)
     {
