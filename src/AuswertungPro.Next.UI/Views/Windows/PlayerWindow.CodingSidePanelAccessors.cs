@@ -74,5 +74,17 @@ public partial class PlayerWindow
             TxtCodingStatPending,
             TxtCodingStatReviewRequired,
             TxtCodingStatAvgConfidence);
+        _codingInlineDefectDetailControls = new CodingInlineDefectDetailControls(
+            TxtInlineDetailCode,
+            TxtInlineDetailDesc,
+            TxtInlineDetailDistance,
+            TxtInlineDetailConfidence,
+            TxtInlineDetailStatus,
+            ImgInlineEvidencePreview,
+            TxtInlineEvidencePreviewStatus,
+            BtnInlineAccept,
+            BtnInlineReject,
+            CodingDefectDetailInline,
+            ColDefectDetail);
     }
 }

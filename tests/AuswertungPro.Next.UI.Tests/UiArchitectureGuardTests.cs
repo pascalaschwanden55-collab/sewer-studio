@@ -1469,14 +1469,25 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var detailPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingDefectStatusDisplayPolicy.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectDetailControls.cs");
 
         var detail = File.ReadAllText(detailPath);
         var policy = File.ReadAllText(policyPath);
+        var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
 
+        Assert.True(File.Exists(controlsPath), "Inline-Defekt-Detail-Control-Mapping soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.Contains("CodingDefectStatusDisplayPolicy.BuildInlineDetail", detail);
+        Assert.Contains("_codingInlineDefectDetailControls.Apply(state)", detail);
+        Assert.Contains("_codingInlineDefectDetailControls.Hide()", detail);
+        Assert.DoesNotContain("TxtInlineDetailCode.Text = state.CodeText", detail);
+        Assert.DoesNotContain("BtnInlineAccept.Visibility = state.CanAct", detail);
+        Assert.DoesNotContain("ImgInlineEvidencePreview.Source = null", detail);
         Assert.DoesNotContain("$\"{ev.MeterAtCapture:F2}m\"", detail);
         Assert.DoesNotContain("$\"{conf * 100:F0}%\"", detail);
         Assert.Contains("public static CodingInlineDefectDetailState BuildInlineDetail", policy);
+        Assert.Contains("TxtInlineDetailCode.Text = state.CodeText", controls);
+        Assert.Contains("BtnInlineAccept.Visibility = state.CanAct", controls);
+        Assert.Contains("ImgInlineEvidencePreview.Source = null", controls);
     }
 
     [Fact]

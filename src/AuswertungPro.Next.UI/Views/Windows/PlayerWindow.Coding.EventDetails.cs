@@ -31,31 +31,8 @@ public partial class PlayerWindow
     private void UpdateInlineDefectDetail(CodingEvent ev)
     {
         var state = CodingDefectStatusDisplayPolicy.BuildInlineDetail(ev);
-        TxtInlineDetailCode.Text = state.CodeText;
-        TxtInlineDetailDesc.Text = state.DescriptionText;
-        TxtInlineDetailDistance.Text = state.DistanceText;
-        TxtInlineDetailConfidence.Text = state.ConfidenceText;
-
-        if (state.Confidence.HasValue)
-        {
-            TxtInlineDetailConfidence.Foreground =
-                ViewModels.Windows.CodingSessionViewModel.GetConfidenceBrush(state.Confidence.Value);
-        }
-        else
-        {
-            TxtInlineDetailConfidence.Foreground =
-                new System.Windows.Media.SolidColorBrush(
-                    PlayerStatusColors.Muted);
-        }
-
-        BtnInlineAccept.Visibility = state.CanAct ? Visibility.Visible : Visibility.Collapsed;
-        BtnInlineReject.Visibility = state.CanAct ? Visibility.Visible : Visibility.Collapsed;
-        TxtInlineDetailStatus.Text = state.StatusText;
+        _codingInlineDefectDetailControls.Apply(state);
         UpdateInlineEvidencePreview(ev);
-
-        // Mittlere Spalte einblenden
-        CodingDefectDetailInline.Visibility = Visibility.Visible;
-        ColDefectDetail.Width = new GridLength(300);
     }
 
     private double GetCodingSidePanelWidth()
@@ -63,11 +40,7 @@ public partial class PlayerWindow
 
     private void HideInlineDefectDetail()
     {
-        ImgInlineEvidencePreview.Source = null;
-        ImgInlineEvidencePreview.Visibility = Visibility.Collapsed;
-        TxtInlineEvidencePreviewStatus.Visibility = Visibility.Visible;
-        CodingDefectDetailInline.Visibility = Visibility.Collapsed;
-        ColDefectDetail.Width = new GridLength(0);
+        _codingInlineDefectDetailControls.Hide();
     }
 
     private void CodingEvents_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)

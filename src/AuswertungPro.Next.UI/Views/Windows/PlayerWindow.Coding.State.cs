@@ -44,6 +44,7 @@ public partial class PlayerWindow
     private CodingLiveAiTimerController? _codingLiveAiTimers;
     private CodingEventsListControls _codingEventsListControls = null!;
     private CodingStatisticsControls _codingStatisticsControls = null!;
+    private CodingInlineDefectDetailControls _codingInlineDefectDetailControls = null!;
     private QualityGateService? _codingQualityGate;
 
     private enum EingabemarkerPhase { Inactive, Drawing, Input, Analyzing }
