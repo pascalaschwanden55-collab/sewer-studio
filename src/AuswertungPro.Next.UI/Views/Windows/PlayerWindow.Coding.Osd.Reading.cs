@@ -1,5 +1,3 @@
-using System;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -26,52 +24,25 @@ public partial class PlayerWindow
         double? frameTimestampSec,
         CancellationToken ct)
     {
-        if (pngBytes.Length == 0)
-            return null;
-
-        try
-        {
-            var result = await GetCodingOsdMeterService().ReadMeterAsync(
+        var result = await CodingOsdMeterReadWorkflow.ExecuteAsync(
+            new CodingOsdMeterReadWorkflowRequest(
                 pngBytes,
                 frameTimestampSec,
                 _codingOsdMeterController.LastMeter,
                 _codingOsdMeterController.LastTimestampSeconds,
-                ct).ConfigureAwait(true);
+                ct),
+            new CodingOsdMeterReadWorkflowActions(
+                ReadMeterAsync: (bytes, timestamp, lastMeter, lastTimestamp, cancellationToken) =>
+                    GetCodingOsdMeterService().ReadMeterAsync(
+                        bytes,
+                        timestamp,
+                        lastMeter,
+                        lastTimestamp,
+                        cancellationToken),
+                ApplyMeterState: ApplyCodingOsdMeterState,
+                Trace: message => PlayerTrace.WriteLine(message)));
 
-            if (!result.Meter.HasValue)
-            {
-                if (!string.IsNullOrWhiteSpace(result.Error))
-                {
-                    PlayerTrace.WriteLine($"[OSD] Frame-Meter nicht lesbar: {result.Error}");
-                }
-                else if (!string.IsNullOrWhiteSpace(result.RawReply) || result.Candidate.HasValue)
-                {
-                    PlayerTrace.WriteLine(
-                        $"[OSD] Meter verworfen. Raw='{result.RawReply}', Candidate={result.Candidate?.ToString("F2", CultureInfo.InvariantCulture) ?? "null"}, Last={result.RecentMeter?.ToString("F2", CultureInfo.InvariantCulture) ?? "null"}");
-                }
-                return null;
-            }
-
-            var acceptedState = CodingOsdMeterStateWorkflow.FromReadResult(result, frameTimestampSec);
-            if (!acceptedState.HasValue)
-                return null;
-
-            ApplyCodingOsdMeterState(acceptedState.Value);
-            return acceptedState.Value.Meter;
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (OperationCanceledException)
-        {
-            return null;
-        }
-        catch (Exception ex)
-        {
-            PlayerTrace.WriteLine($"[OSD] Frame-Meter nicht lesbar: {ex.Message}");
-            return null;
-        }
+        return result.Meter;
     }
 
     private async Task<double?> CodingReadOsdMeterAsync()

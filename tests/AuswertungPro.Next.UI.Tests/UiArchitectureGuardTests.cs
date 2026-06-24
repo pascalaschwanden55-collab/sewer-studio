@@ -1519,11 +1519,13 @@ public sealed class UiArchitectureGuardTests
         var helpersPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Helpers.cs");
         var readingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Reading.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingSnapshotCaptureFactory.cs");
+        var readWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterReadWorkflow.cs");
         var osdControllerPath = Path.Combine(uiRoot, "Player", "CodingOsdMeterController.cs");
         var disposableLifecyclePath = Path.Combine(uiRoot, "Player", "DisposableReferenceLifecycle.cs");
 
         Assert.True(File.Exists(readingPath), "OSD-OCR und Snapshot-Lesen sollen aus dem Meter-Resolver-Partial heraus.");
         Assert.True(File.Exists(factoryPath), "Snapshot-Capture-Erzeugung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(readWorkflowPath), "OSD-Read-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(osdControllerPath), "OSD-Service-Lifecycle soll im CodingOsdMeterController liegen.");
         Assert.True(File.Exists(disposableLifecyclePath), "Disposable-Referenz-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -1531,6 +1533,7 @@ public sealed class UiArchitectureGuardTests
         var helpers = File.ReadAllText(helpersPath);
         var reading = File.ReadAllText(readingPath);
         var factory = File.ReadAllText(factoryPath);
+        var readWorkflow = File.ReadAllText(readWorkflowPath);
         var osdController = File.ReadAllText(osdControllerPath);
         var disposableLifecycle = File.Exists(disposableLifecyclePath) ? File.ReadAllText(disposableLifecyclePath) : "";
 
@@ -1547,7 +1550,14 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync", reading);
         Assert.Contains("private async Task<double?> TryReadOsdMeterFromFrameBytesAsync", reading);
         Assert.Contains("private async Task<double?> CodingReadOsdMeterAsync", reading);
+        Assert.Contains("CodingOsdMeterReadWorkflow.ExecuteAsync", reading);
         Assert.Contains("GetCodingOsdMeterService().ReadMeterAsync", reading);
+        Assert.DoesNotContain("CodingOsdMeterStateWorkflow.FromReadResult", reading);
+        Assert.DoesNotContain("Meter verworfen", reading);
+        Assert.DoesNotContain("Frame-Meter nicht lesbar", reading);
+        Assert.Contains("CodingOsdMeterStateWorkflow.FromReadResult", readWorkflow);
+        Assert.Contains("Meter verworfen", readWorkflow);
+        Assert.Contains("Frame-Meter nicht lesbar", readWorkflow);
         Assert.Contains("CodingSnapshotCaptureFactory.CapturePngAsync", reading);
         Assert.Contains("CodingSnapshotCaptureFactory.CapturePngAsync", helpers);
         Assert.DoesNotContain("new CodingSnapshotCaptureService", reading);
@@ -3143,10 +3153,12 @@ public sealed class UiArchitectureGuardTests
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingOsdBadgeDisplayPolicy.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOsdBadgeControls.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterStateWorkflow.cs");
+        var readWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterReadWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "OSD-Badge-Textformat muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "OSD-Badge-Control-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
         Assert.True(File.Exists(workflowPath), "OSD-Meter-Akzeptanz und Badge-State sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(readWorkflowPath), "OSD-Read-Ablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var osd = File.ReadAllText(osdPath);
         var osdReading = File.ReadAllText(osdReadingPath);
@@ -3158,9 +3170,12 @@ public sealed class UiArchitectureGuardTests
         var policy = File.ReadAllText(policyPath);
         var controls = File.ReadAllText(controlsPath);
         var workflow = File.ReadAllText(workflowPath);
+        var readWorkflow = File.ReadAllText(readWorkflowPath);
         var osdText = osd + osdReading + marking + lifecycleUi + lifecycleExit + protocolTraining;
 
-        Assert.Contains("CodingOsdMeterStateWorkflow.FromReadResult", osdReading);
+        Assert.Contains("CodingOsdMeterReadWorkflow.ExecuteAsync", osdReading);
+        Assert.DoesNotContain("CodingOsdMeterStateWorkflow.FromReadResult", osdReading);
+        Assert.Contains("CodingOsdMeterStateWorkflow.FromReadResult", readWorkflow);
         Assert.Contains("CodingOsdMeterStateWorkflow.FromDetectionResult", aiEvents);
         Assert.Contains("CodingOsdBadgeControls.Show", osdText);
         Assert.Contains("CodingOsdBadgeControls.ShowInitial", lifecycleUi);
