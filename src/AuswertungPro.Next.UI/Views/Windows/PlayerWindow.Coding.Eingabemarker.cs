@@ -13,7 +13,7 @@ public partial class PlayerWindow
     {
         if (BtnEingabemarker.IsChecked == true)
         {
-            _player.SetPause(true);
+            PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause));
             _eingabemarkerPhase = EingabemarkerPhase.Drawing;
             EnsureMarkOverlayReady();
             CodingOverlayPopup.IsOpen = true;

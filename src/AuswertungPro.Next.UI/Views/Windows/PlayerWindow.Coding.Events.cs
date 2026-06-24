@@ -19,7 +19,7 @@ public partial class PlayerWindow
     {
         if (_codingVm == null) return;
 
-        _player.SetPause(true);
+        PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause));
         SuspendCodingOverlayInput();
 
         try

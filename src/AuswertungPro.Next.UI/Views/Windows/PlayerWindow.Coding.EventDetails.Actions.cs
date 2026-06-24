@@ -32,7 +32,7 @@ public partial class PlayerWindow
             return;
 
         _codingVm.SelectedDefect = ev;
-        _player.SetPause(true);
+        PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause));
         SuspendCodingOverlayInput();
 
         try

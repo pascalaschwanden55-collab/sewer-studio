@@ -106,7 +106,7 @@ public partial class PlayerWindow
             if (_codingVm == null) return;
             _codingNavPending = true;
             executeMoveCommand(_codingVm);
-            _player.SetPause(true);
+            PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause));
             _codingLastOsdMeter = null;
             _codingLastOsdTimestampSec = null;
             await CodingReadOsdMeterAsync();
