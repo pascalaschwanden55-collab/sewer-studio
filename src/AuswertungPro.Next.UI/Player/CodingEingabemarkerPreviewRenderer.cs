@@ -34,4 +34,16 @@ public static class CodingEingabemarkerPreviewRenderer
         rect.Width = bounds.Width;
         rect.Height = bounds.Height;
     }
+
+    public static System.Windows.Shapes.Rectangle? Clear(
+        Canvas canvas,
+        System.Windows.Shapes.Rectangle? previewRect)
+    {
+        ArgumentNullException.ThrowIfNull(canvas);
+
+        if (previewRect is not null)
+            canvas.Children.Remove(previewRect);
+
+        return null;
+    }
 }

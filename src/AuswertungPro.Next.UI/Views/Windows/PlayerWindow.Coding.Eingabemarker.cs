@@ -33,11 +33,9 @@ public partial class PlayerWindow
         _eingabemarkerPhase = EingabemarkerPhase.Inactive;
         BtnEingabemarker.IsChecked = false;
         CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup);
-        if (_eingabemarkerPreviewRect != null)
-        {
-            CodingOverlayCanvas.Children.Remove(_eingabemarkerPreviewRect);
-            _eingabemarkerPreviewRect = null;
-        }
+        _eingabemarkerPreviewRect = CodingEingabemarkerPreviewRenderer.Clear(
+            CodingOverlayCanvas,
+            _eingabemarkerPreviewRect);
         CodingOverlayInputControls.ResetCanvasCursor(CodingOverlayCanvas);
     }
 

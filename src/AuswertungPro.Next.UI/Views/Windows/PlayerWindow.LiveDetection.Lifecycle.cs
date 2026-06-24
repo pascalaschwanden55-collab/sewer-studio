@@ -1,8 +1,6 @@
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
@@ -28,51 +26,33 @@ public partial class PlayerWindow
 
     private async Task StartLiveDetectionAsync()
     {
-        AiRuntimeSettings cfg;
-        try
-        {
-            cfg = PlayerAiSettingsLoader.LoadRuntimeSettings();
-        }
-        catch
-        {
-            LiveDetectionDialogServiceFactory.Create().ShowRuntimeSettingsLoadFailed();
-            LiveDetectionButton.IsChecked = false;
-            return;
-        }
-
-        if (!cfg.Enabled)
-        {
-            LiveDetectionDialogServiceFactory.Create().ShowDisabled();
-            LiveDetectionButton.IsChecked = false;
-            return;
-        }
-
-        try
-        {
-            var runtime = await LiveDetectionRuntimeFactory.CreateAsync(cfg);
-            _liveDetectionClient = runtime.Client;
-            _liveDetectionService = runtime.Service;
-            _liveDetectionModelName = runtime.VisionModel;
-            _detectionCts = CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_detectionCts);
-            _isDetecting = true;
-
-            LiveDetectionOverlayControls.Show(DetectionOverlayGrid);
-            SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Success,
-                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(runtime.VisionModel)}");
-            SetYoloStatus("Aktiv", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(runtime.VisionModel));
-
-            LiveDetectionStatusControls.ShowWaitingForFrame(LiveDetectionStatusText);
-
-            _detectionTimer = PlayerWindowTimerFactory.CreateLiveDetectionTimer(DetectionTimer_Tick);
-            _detectionTimer.Start();
-
-            RunDetectionAsync().SafeFireAndForget("LiveDetection");
-        }
-        catch (Exception ex)
-        {
-            LiveDetectionButton.IsChecked = false;
-            LiveDetectionDialogServiceFactory.Create().ShowStartFailed(ex.Message);
-        }
+        await LiveDetectionStartupWorkflow.StartAsync(
+            () => PlayerAiSettingsLoader.LoadRuntimeSettings(),
+            settings => LiveDetectionRuntimeFactory.CreateAsync(settings),
+            LiveDetectionDialogServiceFactory.Create(),
+            new LiveDetectionStartupActions(
+                UncheckToggle: () => LiveDetectionButton.IsChecked = false,
+                StartRuntime: StartLiveDetectionRuntime));
     }
 
+    private void StartLiveDetectionRuntime(LiveDetectionRuntime runtime)
+    {
+        _liveDetectionClient = runtime.Client;
+        _liveDetectionService = runtime.Service;
+        _liveDetectionModelName = runtime.VisionModel;
+        _detectionCts = CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_detectionCts);
+        _isDetecting = true;
+
+        LiveDetectionOverlayControls.Show(DetectionOverlayGrid);
+        SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Success,
+            $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(runtime.VisionModel)}");
+        SetYoloStatus("Aktiv", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(runtime.VisionModel));
+
+        LiveDetectionStatusControls.ShowWaitingForFrame(LiveDetectionStatusText);
+
+        _detectionTimer = PlayerWindowTimerFactory.CreateLiveDetectionTimer(DetectionTimer_Tick);
+        _detectionTimer.Start();
+
+        RunDetectionAsync().SafeFireAndForget("LiveDetection");
+    }
 }

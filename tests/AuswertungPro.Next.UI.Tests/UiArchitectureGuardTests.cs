@@ -1045,17 +1045,20 @@ public sealed class UiArchitectureGuardTests
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.cs");
         var stopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeFactory.cs");
+        var startupWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupWorkflow.cs");
         var disposableLifecyclePath = Path.Combine(uiRoot, "Player", "DisposableReferenceLifecycle.cs");
 
         Assert.True(File.Exists(lifecyclePath), "LiveDetection-Start/Stop-Wiring soll in ein eigenes Lifecycle-Partial.");
         Assert.True(File.Exists(stopPath), "LiveDetection-Stop/Cleanup soll aus dem Start-Lifecycle-Partial heraus.");
         Assert.True(File.Exists(factoryPath), "LiveDetection-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(startupWorkflowPath), "LiveDetection-Startup-Entscheidungen sollen ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(disposableLifecyclePath), "Disposable-Referenz-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var stop = File.ReadAllText(stopPath);
         var factory = File.ReadAllText(factoryPath);
+        var startupWorkflow = File.Exists(startupWorkflowPath) ? File.ReadAllText(startupWorkflowPath) : "";
         var disposableLifecycle = File.Exists(disposableLifecyclePath) ? File.ReadAllText(disposableLifecyclePath) : "";
 
         Assert.DoesNotContain("private async void LiveDetection_Click", liveDetection);
@@ -1067,9 +1070,20 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private async Task HandleLiveDetectionClickAsync", lifecycle);
         Assert.Contains("private async Task StartLiveDetectionAsync", lifecycle);
         Assert.DoesNotContain("private void StopLiveDetection", lifecycle);
+        Assert.Contains("LiveDetectionStartupWorkflow.StartAsync", lifecycle);
+        Assert.Contains("new LiveDetectionStartupActions", lifecycle);
+        Assert.DoesNotContain("AiRuntimeSettings cfg", lifecycle);
+        Assert.DoesNotContain("ShowRuntimeSettingsLoadFailed", lifecycle);
+        Assert.DoesNotContain("ShowDisabled", lifecycle);
+        Assert.DoesNotContain("ShowStartFailed", lifecycle);
+        Assert.DoesNotContain("catch (Exception ex)", lifecycle);
         Assert.Contains("PlayerAiSettingsLoader.LoadRuntimeSettings", lifecycle);
         Assert.DoesNotContain("AppSettingsAiSettingsProvider", lifecycle);
         Assert.Contains("LiveDetectionRuntimeFactory.CreateAsync", lifecycle);
+        Assert.Contains("public static class LiveDetectionStartupWorkflow", startupWorkflow);
+        Assert.Contains("ShowRuntimeSettingsLoadFailed", startupWorkflow);
+        Assert.Contains("ShowDisabled", startupWorkflow);
+        Assert.Contains("ShowStartFailed", startupWorkflow);
         Assert.DoesNotContain("new OllamaClient", lifecycle);
         Assert.DoesNotContain("new LiveDetectionService", lifecycle);
         Assert.DoesNotContain("new DispatcherTimer", lifecycle);
@@ -5049,15 +5063,18 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection", marker);
         Assert.Contains("CodingEingabemarkerPreviewRenderer.Create", marker);
         Assert.Contains("CodingEingabemarkerPreviewRenderer.Update", marker);
+        Assert.Contains("CodingEingabemarkerPreviewRenderer.Clear", marker);
         Assert.DoesNotContain("Math.Min(_eingabemarkerDragStart.X", marker);
         Assert.DoesNotContain("Math.Abs(canvasPos.X - _eingabemarkerDragStart.X)", marker);
         Assert.DoesNotContain("Math.Max(_eingabemarkerDragStart.X", marker);
         Assert.DoesNotContain("new System.Windows.Shapes.Rectangle", marker);
         Assert.DoesNotContain("Canvas.SetLeft(_eingabemarkerPreviewRect", marker);
+        Assert.DoesNotContain("CodingOverlayCanvas.Children.Remove(_eingabemarkerPreviewRect)", marker);
         Assert.Contains("public static Rect BuildPreviewRect", policy);
         Assert.Contains("public static Rect? BuildNormalizedSelection", policy);
         Assert.Contains("public static class CodingEingabemarkerPreviewRenderer", renderer);
         Assert.Contains("new System.Windows.Shapes.Rectangle", renderer);
+        Assert.Contains("public static System.Windows.Shapes.Rectangle? Clear", renderer);
     }
 
     [Fact]

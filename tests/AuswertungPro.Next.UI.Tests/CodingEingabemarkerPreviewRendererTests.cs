@@ -48,6 +48,35 @@ public sealed class CodingEingabemarkerPreviewRendererTests
         });
     }
 
+    [Fact]
+    public void Clear_removes_existing_preview_rectangle_and_returns_null()
+    {
+        RunOnStaThread(() =>
+        {
+            var canvas = new Canvas();
+            var rect = CodingEingabemarkerPreviewRenderer.Create(canvas, new Point(20, 30));
+
+            var current = CodingEingabemarkerPreviewRenderer.Clear(canvas, rect);
+
+            Assert.Null(current);
+            Assert.Empty(canvas.Children);
+        });
+    }
+
+    [Fact]
+    public void Clear_allows_missing_preview_rectangle()
+    {
+        RunOnStaThread(() =>
+        {
+            var canvas = new Canvas();
+
+            var current = CodingEingabemarkerPreviewRenderer.Clear(canvas, previewRect: null);
+
+            Assert.Null(current);
+            Assert.Empty(canvas.Children);
+        });
+    }
+
     private static void RunOnStaThread(Action action)
     {
         Exception? exception = null;
