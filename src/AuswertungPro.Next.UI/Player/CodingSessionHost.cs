@@ -36,6 +36,7 @@ public interface ICodingSessionHost
     bool ExecuteMovePrevious();
     bool ExecuteAcceptDefect();
     bool ExecuteEditDefect();
+    bool ExecuteStartSession(HaltungRecord? haltung);
     bool ExecuteJumpToDefect(CodingEvent? codingEvent);
 }
 
@@ -217,6 +218,16 @@ public sealed class CodingSessionHost : ICodingSessionHost
             return false;
 
         viewModel.EditDefectCommand.Execute(null);
+        return true;
+    }
+
+    public bool ExecuteStartSession(HaltungRecord? haltung)
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null || haltung is null)
+            return false;
+
+        viewModel.StartSessionCommand.Execute(haltung);
         return true;
     }
 

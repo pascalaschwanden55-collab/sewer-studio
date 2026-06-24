@@ -31,6 +31,7 @@ public sealed class CodingSessionHostTests
         Assert.False(InvokeBool(host, "ExecuteMovePrevious"));
         Assert.False(InvokeBool(host, "ExecuteAcceptDefect"));
         Assert.False(InvokeBool(host, "ExecuteEditDefect"));
+        Assert.False((bool)hostType.GetMethod("ExecuteStartSession")!.Invoke(host, [new HaltungRecord()])!);
         Assert.False((bool)hostType.GetMethod("ExecuteJumpToDefect")!.Invoke(host, [new CodingEvent()])!);
 
         hostType.GetMethod("SetCurrentVideoTime")!.Invoke(host, [TimeSpan.FromSeconds(7)]);
@@ -123,6 +124,12 @@ public sealed class CodingSessionHostTests
         Assert.Same(codingEvent, vm.SelectedDefect);
         Assert.Equal(3.25, sessionService.LastMoveToMeter);
 
+        var haltung = new HaltungRecord();
+        Assert.True((bool)host.GetType().GetMethod("ExecuteStartSession")!.Invoke(host, [haltung])!);
+        Assert.Equal(1, sessionService.StartSessionCalls);
+        Assert.Same(haltung, sessionService.LastStartedHaltung);
+        Assert.Equal("video.mp4", sessionService.LastStartedVideoPath);
+
         var replacement = new CodingEvent { Entry = new ProtocolEntry { Code = "BBC" } };
         host.GetType().GetMethod("SelectDefect")!.Invoke(host, [replacement]);
         Assert.Same(replacement, vm.SelectedDefect);
@@ -211,6 +218,9 @@ public sealed class CodingSessionHostTests
     {
         public int MoveNextCalls { get; private set; }
         public int MovePreviousCalls { get; private set; }
+        public int StartSessionCalls { get; private set; }
+        public HaltungRecord? LastStartedHaltung { get; private set; }
+        public string? LastStartedVideoPath { get; private set; }
         public double? LastMoveToMeter { get; private set; }
 
         public double CurrentMeter => 0;
@@ -223,7 +233,13 @@ public sealed class CodingSessionHostTests
         public event EventHandler<double>? MeterChanged;
         public event EventHandler<CodingEvent>? EventAdded;
 
-        public CodingSession StartSession(HaltungRecord haltung, string? videoPath) => new();
+        public CodingSession StartSession(HaltungRecord haltung, string? videoPath)
+        {
+            StartSessionCalls++;
+            LastStartedHaltung = haltung;
+            LastStartedVideoPath = videoPath;
+            return new CodingSession { EndMeter = 17.5, HaltungName = "H-42" };
+        }
         public void PauseSession() { }
         public void ResumeSession() { }
         public void SetWaitingForInput() { }

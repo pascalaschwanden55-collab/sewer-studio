@@ -35,10 +35,10 @@ public partial class PlayerWindow
     {
         return CodingSessionStartWorkflow.Execute(
             new CodingSessionStartWorkflowRequest(
-                HasRequiredState: _haltungRecord != null && _codingVm != null && _codingSessionService != null,
-                EndMeter: _codingVm?.EndMeter ?? 0),
+                HasRequiredState: _haltungRecord != null && _codingSessionHost.HasViewModel && _codingSessionService != null,
+                EndMeter: _codingSessionHost.EndMeter),
             new CodingSessionStartWorkflowActions(
-                ExecuteStartSession: () => _codingVm!.StartSessionCommand.Execute(_haltungRecord!),
+                ExecuteStartSession: () => _codingSessionHost.ExecuteStartSession(_haltungRecord!),
                 HasActiveSession: () => _codingSessionService!.ActiveSession != null,
                 ShowSessionStartFailed: message => CodingModeDialogServiceFactory.Create().ShowSessionStartFailed(message),
                 ExitCodingMode: ExitCodingMode,

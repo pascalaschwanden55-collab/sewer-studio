@@ -64,7 +64,7 @@ public partial class PlayerWindow
     /// </summary>
     private void EnsureMarkOverlayReady()
     {
-        if (_codingOverlayService != null && _codingVm != null) return;
+        if (_codingOverlayService != null && _codingSessionHost.HasViewModel) return;
 
         var state = CodingSessionStateFactory.Create(
             _videoPath,

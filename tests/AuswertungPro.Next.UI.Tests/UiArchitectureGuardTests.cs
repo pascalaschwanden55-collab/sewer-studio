@@ -3902,7 +3902,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_codingSessionHost", marking);
         Assert.DoesNotContain("_codingVm", marking);
         Assert.Contains("_codingSessionHost.ClearCurrentOverlay", markTools);
+        Assert.Contains("_codingSessionHost.HasViewModel", markTools);
         Assert.DoesNotContain("_codingVm.CurrentOverlay = null", markTools);
+        Assert.DoesNotContain("_codingOverlayService != null && _codingVm != null", markTools);
         Assert.Contains("private void ActivateMarkTool", markTools);
         Assert.Contains("private void EnsureMarkOverlayReady", markTools);
         Assert.Contains("private void DeactivateMarkTool", markTools);
@@ -4899,6 +4901,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void CodingModeExit_Click", exit);
         Assert.Contains("private void CreateCodingSessionState", session);
         Assert.Contains("private bool TryStartCodingSession", session);
+        Assert.Contains("_codingSessionHost", session);
+        Assert.DoesNotContain("HasRequiredState: _haltungRecord != null && _codingVm != null", session);
+        Assert.DoesNotContain("EndMeter: _codingVm?.EndMeter ?? 0", session);
+        Assert.DoesNotContain("_codingVm!.StartSessionCommand.Execute", session);
         Assert.Contains("CodingSessionStartWorkflow.Execute", session);
         Assert.DoesNotContain("catch (Exception ex)", session);
         Assert.Contains("actions.ExecuteStartSession()", sessionStartWorkflow);
