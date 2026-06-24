@@ -802,14 +802,20 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var overlayPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.OverlayRendering.MeasurementPanel.cs");
         var formatterPath = Path.Combine(uiRoot, "Ai", "CodingOverlayMeasurementFormatter.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingMeasurementPanelControls.cs");
 
         var overlay = File.ReadAllText(overlayPath);
         var formatter = File.ReadAllText(formatterPath);
+        var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
 
         Assert.Contains("CodingOverlayMeasurementFormatter.BuildPanelState", overlay);
+        Assert.Contains("CodingMeasurementPanelControls.Apply", overlay);
         Assert.DoesNotContain("overlay.Q1Mm.HasValue ? $\"Q1:", overlay);
         Assert.DoesNotContain("overlay.ToolType == OverlayToolType.Level && overlay.FillPercent.HasValue", overlay);
+        Assert.DoesNotContain("TxtCodingQ1.Text", overlay);
+        Assert.DoesNotContain("CodingMeasurementPanel.Visibility", overlay);
         Assert.Contains("public static CodingOverlayMeasurementPanelState BuildPanelState", formatter);
+        Assert.Contains("public static void Apply", controls);
     }
 
     [Fact]
@@ -4749,16 +4755,22 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayRenderingPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.cs");
         var measurementPanelPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.MeasurementPanel.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingMeasurementPanelControls.cs");
 
         Assert.True(File.Exists(measurementPanelPath), "Overlay-Messwert-Panel soll aus dem allgemeinen OverlayRendering-Partial heraus.");
+        Assert.True(File.Exists(controlsPath), "Overlay-Messwert-Panel-Control-Zuweisungen sollen ausserhalb des PlayerWindow-Partials liegen.");
 
         var overlayRendering = File.ReadAllText(overlayRenderingPath);
         var measurementPanel = File.ReadAllText(measurementPanelPath);
+        var controls = File.ReadAllText(controlsPath);
 
         Assert.DoesNotContain("private void UpdateCodingOverlayInfo", overlayRendering);
         Assert.Contains("private void UpdateCodingOverlayInfo", measurementPanel);
         Assert.Contains("CodingOverlayMeasurementFormatter.BuildPanelState", measurementPanel);
-        Assert.Contains("CodingMeasurementPanel.Visibility", measurementPanel);
+        Assert.Contains("CodingMeasurementPanelControls.Apply", measurementPanel);
+        Assert.DoesNotContain("CodingMeasurementPanel.Visibility", measurementPanel);
+        Assert.DoesNotContain("TxtCodingMeasurement.Text", measurementPanel);
+        Assert.Contains("public static void Apply", controls);
     }
 
     [Fact]
