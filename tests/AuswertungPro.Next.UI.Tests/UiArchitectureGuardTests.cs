@@ -4748,6 +4748,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("PipeTimeline.MeterAccessor = CodingTimelineMarkerAccessors.Meter", playerCoding);
         Assert.Contains("private void InitializeCodingTimeline", timeline);
         Assert.Contains("CodingTimelineControls.Configure", timeline);
+        Assert.Contains("_codingSessionHost", timeline);
+        Assert.DoesNotContain("_codingVm", timeline);
         Assert.DoesNotContain("PipeTimeline.TotalLength =", timeline);
         Assert.DoesNotContain("PipeTimeline.MeterAccessor =", timeline);
         Assert.DoesNotContain("PipeTimeline.CodeAccessor =", timeline);
@@ -4929,6 +4931,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_lastCodingMatch = null", exit);
         Assert.DoesNotContain("_codingProtocolMatchBuckets.Clear()", exit);
         Assert.DoesNotContain("_codingImportEvents.Clear()", exit);
+        Assert.Contains("_codingSessionHost.EventCollection", exit);
+        Assert.Contains("_codingSessionHost.EndMeter", exit);
+        Assert.Contains("HasCodingViewModel: _codingSessionHost.HasViewModel", exit);
+        Assert.DoesNotContain("_codingVm?.Events", exit);
+        Assert.DoesNotContain("_codingVm?.EndMeter", exit);
+        Assert.DoesNotContain("HasCodingViewModel: _codingVm is not null", exit);
         Assert.Contains("ShowCodingModeUi: ShowCodingModeUi", lifecycle);
         Assert.Contains("actions.ShowCodingModeUi()", enterWorkflow);
         Assert.Contains("CodingModePreparePlaybackWorkflow.Execute", ui);

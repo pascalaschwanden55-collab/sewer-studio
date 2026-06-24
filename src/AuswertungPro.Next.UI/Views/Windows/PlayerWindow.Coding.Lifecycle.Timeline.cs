@@ -8,11 +8,12 @@ public partial class PlayerWindow
 {
     private void InitializeCodingTimeline()
     {
-        var codingVm = _codingVm ?? throw new InvalidOperationException("Coding timeline requires an active coding view model.");
+        if (!_codingSessionHost.HasViewModel)
+            throw new InvalidOperationException("Coding timeline requires an active coding view model.");
 
         var navigateToMeterCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<double>(meter =>
         {
-            if (_codingSessionService != null && (codingVm.IsRunning || codingVm.IsPaused))
+            if (_codingSessionService != null && _codingSessionHost.IsRunningOrPaused)
             {
                 _codingSessionService.MoveToMeter(meter);
                 _codingNavPending = true;
@@ -23,7 +24,7 @@ public partial class PlayerWindow
         {
             if (item is CodingEvent ce)
             {
-                codingVm.JumpToDefectCommand.Execute(ce);
+                _codingSessionHost.ExecuteJumpToDefect(ce);
                 LstCodingEvents.SelectedItem = ce;
             }
         });
@@ -31,8 +32,8 @@ public partial class PlayerWindow
         CodingTimelineControls.Configure(
             PipeTimeline,
             CodingTimelinePanel,
-            codingVm.EndMeter,
-            codingVm.Events,
+            _codingSessionHost.EndMeter,
+            _codingSessionHost.Events,
             navigateToMeterCommand,
             markerClickedCommand);
     }

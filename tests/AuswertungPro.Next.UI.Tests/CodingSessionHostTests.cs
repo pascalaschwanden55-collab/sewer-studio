@@ -15,6 +15,7 @@ public sealed class CodingSessionHostTests
         var hostType = host.GetType();
 
         Assert.False(Get<bool>(host, "HasViewModel"));
+        Assert.False(Get<bool>(host, "IsRunningOrPaused"));
         Assert.Equal(0, Get<double>(host, "CurrentMeter"));
         Assert.Equal(0, Get<double>(host, "EndMeter"));
         Assert.Null(Get<object?>(host, "CurrentOverlay"));
@@ -30,6 +31,7 @@ public sealed class CodingSessionHostTests
         Assert.False(InvokeBool(host, "ExecuteMovePrevious"));
         Assert.False(InvokeBool(host, "ExecuteAcceptDefect"));
         Assert.False(InvokeBool(host, "ExecuteEditDefect"));
+        Assert.False((bool)hostType.GetMethod("ExecuteJumpToDefect")!.Invoke(host, [new CodingEvent()])!);
 
         hostType.GetMethod("SetCurrentVideoTime")!.Invoke(host, [TimeSpan.FromSeconds(7)]);
         hostType.GetMethod("SelectDefect")!.Invoke(host, [new CodingEvent()]);
@@ -81,6 +83,7 @@ public sealed class CodingSessionHostTests
         var host = CreateHost(() => vm);
 
         Assert.True(Get<bool>(host, "HasViewModel"));
+        Assert.False(Get<bool>(host, "IsRunningOrPaused"));
         Assert.Equal(3.25, Get<double>(host, "CurrentMeter"));
         Assert.Equal(17.5, Get<double>(host, "EndMeter"));
         Assert.Same(overlay, Get<object?>(host, "CurrentOverlay"));
@@ -106,6 +109,19 @@ public sealed class CodingSessionHostTests
 
         Assert.True(InvokeBool(host, "ExecuteEditDefect"));
         Assert.Equal(CodingUserDecision.AcceptedWithEdit, vm.SelectedDefect!.AiContext!.Decision);
+
+        vm.SessionState = CodingSessionState.Running;
+        Assert.True(Get<bool>(host, "IsRunningOrPaused"));
+
+        vm.SessionState = CodingSessionState.Paused;
+        Assert.True(Get<bool>(host, "IsRunningOrPaused"));
+
+        vm.SessionState = CodingSessionState.Completed;
+        Assert.False(Get<bool>(host, "IsRunningOrPaused"));
+
+        Assert.True((bool)host.GetType().GetMethod("ExecuteJumpToDefect")!.Invoke(host, [codingEvent])!);
+        Assert.Same(codingEvent, vm.SelectedDefect);
+        Assert.Equal(3.25, sessionService.LastMoveToMeter);
 
         var replacement = new CodingEvent { Entry = new ProtocolEntry { Code = "BBC" } };
         host.GetType().GetMethod("SelectDefect")!.Invoke(host, [replacement]);
@@ -195,6 +211,7 @@ public sealed class CodingSessionHostTests
     {
         public int MoveNextCalls { get; private set; }
         public int MovePreviousCalls { get; private set; }
+        public double? LastMoveToMeter { get; private set; }
 
         public double CurrentMeter => 0;
         public double EndMeter => 0;
@@ -214,7 +231,7 @@ public sealed class CodingSessionHostTests
         public ProtocolDocument CompleteSession() => new();
         public void MoveNext(double stepSizeM = 0.5) => MoveNextCalls++;
         public void MovePrevious(double stepSizeM = 0.5) => MovePreviousCalls++;
-        public void MoveToMeter(double meter) { }
+        public void MoveToMeter(double meter) => LastMoveToMeter = meter;
         public CodingEvent AddEvent(ProtocolEntry entry, OverlayGeometry? overlay = null) => new() { Entry = entry, Overlay = overlay };
         public void UpdateEvent(Guid eventId, ProtocolEntry entry, OverlayGeometry? overlay = null) { }
         public void RemoveEvent(Guid eventId) { }

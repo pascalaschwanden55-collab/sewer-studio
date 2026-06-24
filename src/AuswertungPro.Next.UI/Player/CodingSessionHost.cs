@@ -9,6 +9,7 @@ namespace AuswertungPro.Next.UI.Player;
 public interface ICodingSessionHost
 {
     bool HasViewModel { get; }
+    bool IsRunningOrPaused { get; }
     double CurrentMeter { get; }
     double EndMeter { get; }
     OverlayGeometry? CurrentOverlay { get; }
@@ -35,6 +36,7 @@ public interface ICodingSessionHost
     bool ExecuteMovePrevious();
     bool ExecuteAcceptDefect();
     bool ExecuteEditDefect();
+    bool ExecuteJumpToDefect(CodingEvent? codingEvent);
 }
 
 public sealed class CodingSessionHost : ICodingSessionHost
@@ -51,6 +53,15 @@ public sealed class CodingSessionHost : ICodingSessionHost
     private CodingSessionViewModel? ViewModel => _resolveViewModel();
 
     public bool HasViewModel => ViewModel is not null;
+
+    public bool IsRunningOrPaused
+    {
+        get
+        {
+            var viewModel = ViewModel;
+            return viewModel is not null && (viewModel.IsRunning || viewModel.IsPaused);
+        }
+    }
 
     public double CurrentMeter => ViewModel?.CurrentMeter ?? 0;
 
@@ -206,6 +217,16 @@ public sealed class CodingSessionHost : ICodingSessionHost
             return false;
 
         viewModel.EditDefectCommand.Execute(null);
+        return true;
+    }
+
+    public bool ExecuteJumpToDefect(CodingEvent? codingEvent)
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null || codingEvent is null)
+            return false;
+
+        viewModel.JumpToDefectCommand.Execute(codingEvent);
         return true;
     }
 }
