@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai;
@@ -33,7 +34,6 @@ public sealed class LiveDetectionController
     private readonly List<LiveFrameFinding> _currentFindings = new();
     private string _modelName = string.Empty;
 
-    public LiveDetectionService? Service => _service;
     public DispatcherTimer? DetectionTimer => _timer;
     public CancellationTokenSource? DetectionCancellation => _cancellation;
     public bool IsDetecting => _isDetecting;
@@ -92,6 +92,14 @@ public sealed class LiveDetectionController
 
     public void CancelDetectionIfPresent()
         => CancellationTokenSourceLifecycle.CancelIfPresent(_cancellation);
+
+    public Func<byte[], double, CancellationToken, Task<LiveDetection>>? CreateAnalyzeFrameAsync()
+    {
+        var service = _service;
+        return service is null
+            ? null
+            : (frame, timestamp, cancellation) => service.AnalyzeFrameAsync(frame, timestamp, cancellation);
+    }
 
     public void Stop(bool updateUi, LiveDetectionControllerStopActions actions)
     {

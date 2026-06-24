@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -132,6 +133,49 @@ public sealed class LiveDetectionControllerTests
         Assert.Equal(string.Empty, modelName);
         Assert.Equal(0, findingCount);
         Assert.Equal(["status", "overlay", "panel", "pause", "hide"], calls);
+    }
+
+    [Fact]
+    public void CreateAnalyzeFrameAsync_returns_null_until_runtime_has_service()
+    {
+        Exception? threadError = null;
+        var hasAnalyzerBeforeRuntime = true;
+        var hasAnalyzerAfterRuntime = false;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var controller = new LiveDetectionController();
+                hasAnalyzerBeforeRuntime = controller.CreateAnalyzeFrameAsync() is not null;
+
+                controller.StartRuntime(
+                    new LiveDetectionRuntime(
+                        null!,
+                        new LiveDetectionService(null!, "models/qwen2.5-vl:7b"),
+                        "models/qwen2.5-vl:7b"),
+                    new LiveDetectionControllerStartActions(
+                        ShowOverlay: () => { },
+                        ApplyActiveStatus: _ => { },
+                        ShowWaitingForFrame: () => { },
+                        CreateTimer: () => new DispatcherTimer(),
+                        RunFirstDetection: () => { }));
+
+                hasAnalyzerAfterRuntime = controller.CreateAnalyzeFrameAsync() is not null;
+                controller.Stop(updateUi: false, StopActions(new List<string>()));
+            }
+            catch (Exception ex)
+            {
+                threadError = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(threadError);
+        Assert.False(hasAnalyzerBeforeRuntime);
+        Assert.True(hasAnalyzerAfterRuntime);
     }
 
     private static LiveDetectionControllerStopActions StopActions(List<string> calls)

@@ -50,16 +50,23 @@ public partial class PlayerWindow
 
             var snapshot = snapshotResult.Snapshot!;
 
-            var service = _liveDetectionController.Service;
             var cancellation = _liveDetectionController.DetectionCancellation;
-            if (_closing || _playbackDisposed || service is null || cancellation is null)
+            var analyzeFrameAsync = _liveDetectionController.CreateAnalyzeFrameAsync();
+            var inference = await LiveDetectionInferenceWorkflow.ExecuteAsync(
+                new LiveDetectionInferenceWorkflowRequest(
+                    snapshot,
+                    player!.Time / 1000.0,
+                    _closing,
+                    _playbackDisposed,
+                    _liveDetectionController.ModelName,
+                    cancellation?.Token),
+                new LiveDetectionInferenceWorkflowActions(
+                    analyzeFrameAsync,
+                    SetLiveDetectionBadge));
+            if (!inference.HasResult)
                 return;
 
-            SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Warning,
-                $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionController.ModelName)} | Inferenz");
-            var timestampSec = player!.Time / 1000.0;
-            var result = await service.AnalyzeFrameAsync(
-                snapshot, timestampSec, cancellation.Token).ConfigureAwait(false);
+            var result = inference.Result!;
 
             Dispatcher.Invoke(() =>
             {
