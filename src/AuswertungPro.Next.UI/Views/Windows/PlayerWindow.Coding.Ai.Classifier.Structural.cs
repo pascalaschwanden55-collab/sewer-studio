@@ -59,7 +59,7 @@ public partial class PlayerWindow
             mmResult.ClassifierConfidence,
             meter,
             videoTime,
-            meterFromOsd: _lastResolvedMeterIsOsd);
+            meterFromOsd: _codingOsdMeterController.LastResolvedMeterIsOsd);
 
         AttachAnalyzedFramePhoto(draft.Entry);
 

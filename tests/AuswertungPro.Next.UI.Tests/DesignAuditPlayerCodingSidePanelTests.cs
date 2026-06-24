@@ -254,21 +254,23 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_coding_analysis_prefers_video_position_over_stale_viewmodel_meter_for_classifier()
     {
         var coding = ReadCodingPartials();
+        var osdController = ReadUiFile("Player", "CodingOsdMeterController.cs");
         var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
         var resolveBody = ExtractMethodBody(coding, "private double ResolveCodingMeterForFrame");
 
         var meterStart = multiModelBody.IndexOf("var currentMeterForClassifier", StringComparison.Ordinal);
         var resolveIndex = multiModelBody.IndexOf("ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter)", meterStart, StringComparison.Ordinal);
-        var resolverIndex = resolveBody.IndexOf("CodingMeterResolver.Resolve", StringComparison.Ordinal);
+        var controllerResolverIndex = resolveBody.IndexOf("_codingOsdMeterController.ResolveMeter", StringComparison.Ordinal);
         var viewModelMeterIndex = resolveBody.IndexOf("_codingVm?.CurrentMeter", StringComparison.Ordinal);
 
         Assert.True(meterStart >= 0, "Analyse muss einen Meter fuer den Klassifikator bestimmen.");
         Assert.True(resolveIndex >= 0, "Der Klassifikator muss den gemeinsamen Frame-Meter-Resolver verwenden.");
         Assert.Contains("CodingMultiModelClassifierInputPolicy.Build", multiModelBody);
-        Assert.True(resolverIndex >= 0, "Video-Positions-Fallback muss im ausgelagerten Meter-Resolver liegen.");
+        Assert.True(controllerResolverIndex >= 0, "Video-Positions-Fallback muss ueber den OSD-Meter-Controller laufen.");
+        Assert.Contains("CodingMeterResolver.Resolve", osdController);
         Assert.True(viewModelMeterIndex >= 0, "ViewModel-Meter darf nur als spaeter Fallback genutzt werden.");
         Assert.True(
-            resolverIndex < viewModelMeterIndex,
+            controllerResolverIndex < viewModelMeterIndex,
             "Staler CurrentMeter=0 darf die echte Videoposition nicht ueberstimmen, sonst blockiert BCD die Pipeline.");
     }
 

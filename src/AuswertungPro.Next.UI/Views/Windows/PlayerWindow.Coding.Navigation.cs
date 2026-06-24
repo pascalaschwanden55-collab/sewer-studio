@@ -57,7 +57,7 @@ public partial class PlayerWindow
         => _codingVm == null
             ? 0
             : CodingVideoNavigationController.ResolveDisplayMeter(
-                _codingLastOsdMeter,
+                _codingOsdMeterController.LastMeter,
                 _player.Time,
                 _player.Length,
                 _codingVm.EndMeter,
@@ -100,8 +100,7 @@ public partial class PlayerWindow
                     () => PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause)),
                     () =>
                     {
-                        _codingLastOsdMeter = null;
-                        _codingLastOsdTimestampSec = null;
+                        _codingOsdMeterController.ResetRecentMeter();
                     }))
                 return;
 

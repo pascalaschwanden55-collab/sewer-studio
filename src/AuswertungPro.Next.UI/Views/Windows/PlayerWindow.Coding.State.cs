@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Windows;
-using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Evaluation;
 using AuswertungPro.Next.Application.Ai.QualityGate;
@@ -42,6 +41,7 @@ public partial class PlayerWindow
     private bool _codingAiPulseRunning;
     private readonly StreckenschadenTracker _streckenTracker = new();
     private CodingLiveAiTimerController? _codingLiveAiTimers;
+    private readonly CodingOsdMeterController _codingOsdMeterController = new();
     private CodingEventsListControls _codingEventsListControls = null!;
     private CodingStatisticsControls _codingStatisticsControls = null!;
     private CodingInlineDefectDetailControls _codingInlineDefectDetailControls = null!;
@@ -70,8 +70,6 @@ public partial class PlayerWindow
     private CodingEvent? _codingPendingConfirmEvent;
     private QualityGateResult? _codingPendingGateResult;
 
-    private DispatcherTimer? _codingOsdTimer;
-    private bool _codingOsdReading;
     private int _codingOverlaySuspendDepth;
     private bool _codingOverlayWasOpenBeforeSuspend;
     private bool _codingOverlayWasOpenBeforeExternalHide;

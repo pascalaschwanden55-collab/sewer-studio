@@ -64,7 +64,7 @@ public partial class PlayerWindow
             var timestampSec = _player.Time / 1000.0;
 
             // VsaCodeExplorer oeffnen fuer Korrektur - Meter aus OSD/Video
-            var autoMeter2 = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
+            var autoMeter2 = _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition();
             var selectedEntry = LiveDetectionCorrectionCodeSelectionServiceFactory.Create(
                     CreateVsaCodeExplorerViewModel)
                 .Select(

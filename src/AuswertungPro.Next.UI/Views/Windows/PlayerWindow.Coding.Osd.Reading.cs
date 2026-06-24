@@ -34,8 +34,8 @@ public partial class PlayerWindow
             var result = await GetCodingOsdMeterService().ReadMeterAsync(
                 pngBytes,
                 frameTimestampSec,
-                _codingLastOsdMeter,
-                _codingLastOsdTimestampSec,
+                _codingOsdMeterController.LastMeter,
+                _codingOsdMeterController.LastTimestampSeconds,
                 ct).ConfigureAwait(true);
 
             if (!result.Meter.HasValue)

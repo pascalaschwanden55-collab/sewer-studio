@@ -29,7 +29,7 @@ public partial class PlayerWindow
             var osdMeter = await CodingReadOsdMeterAsync();
             var meterValue = CodingCurrentMeterResolver.ResolveManualEntry(
                 osdMeter,
-                _codingLastOsdMeter,
+                _codingOsdMeterController.LastMeter,
                 _player.Time,
                 _player.Length,
                 _codingVm.EndMeter,
@@ -71,7 +71,7 @@ public partial class PlayerWindow
         var createdEvent = CodingSelectedCodeEventWorkflow.Create(
             _codingVm.SelectedCode,
             _codingVm.SelectedCodeDescription,
-            _codingLastOsdMeter ?? _codingVm.CurrentMeter,
+            _codingOsdMeterController.LastMeter ?? _codingVm.CurrentMeter,
             videoTime,
             _codingVm.CurrentOverlay,
             _codingSessionService,

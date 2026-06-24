@@ -50,7 +50,7 @@ public partial class PlayerWindow
                 clockPosition,
                 timestampSec,
                 suggestedCode,
-                _codingLastOsdMeter ?? GetMeterFromVideoPosition(),
+                _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition(),
                 _videoPath,
                 this);
     }

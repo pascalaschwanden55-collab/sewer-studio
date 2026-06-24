@@ -12,7 +12,7 @@ public partial class PlayerWindow
     {
         try
         {
-            var autoMeter = _codingLastOsdMeter ?? GetMeterFromVideoPosition();
+            var autoMeter = _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition();
             var selectedEntry = CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
                 .SelectSeed(
                     overlay,

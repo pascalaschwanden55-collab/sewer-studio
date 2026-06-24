@@ -23,7 +23,7 @@ public partial class PlayerWindow
         {
             if (_codingVm != null && codeHint != null)
             {
-                var checkMeter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
+                var checkMeter = _codingOsdMeterController.LastMeter ?? _codingVm.CurrentMeter;
                 var existingDup = CodingEingabemarkerDuplicatePolicy.FindDuplicate(
                     _codingVm.Events,
                     codeHint,
@@ -39,7 +39,7 @@ public partial class PlayerWindow
 
             if (codeHint != null && _codingVm != null && _codingSessionService != null)
             {
-                var meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter;
+                var meter = _codingOsdMeterController.LastMeter ?? _codingVm.CurrentMeter;
                 var videoTime = _codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
                 var label = LookupVsaLabel(codeHint) ?? keyword;
 

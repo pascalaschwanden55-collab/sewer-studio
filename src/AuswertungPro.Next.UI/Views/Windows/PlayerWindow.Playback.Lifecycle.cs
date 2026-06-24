@@ -62,5 +62,5 @@ public partial class PlayerWindow
             _scrubTimer,
             _liveDetectionController.DetectionTimer,
             _codingLiveAiTimers,
-            _codingOsdTimer);
+            _codingOsdMeterController.Timer);
 }

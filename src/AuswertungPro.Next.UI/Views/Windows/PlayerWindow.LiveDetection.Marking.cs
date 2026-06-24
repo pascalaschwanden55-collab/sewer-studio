@@ -78,8 +78,8 @@ public partial class PlayerWindow
 
         var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromSeconds(3), () =>
         {
-            if (_codingLastOsdMeter.HasValue)
-                CodingOsdBadgeControls.ShowMeter(OsdMeterBadge, TxtOsdMeter, _codingLastOsdMeter.Value);
+            if (_codingOsdMeterController.LastMeter.HasValue)
+                CodingOsdBadgeControls.ShowMeter(OsdMeterBadge, TxtOsdMeter, _codingOsdMeterController.LastMeter.Value);
             else
                 CodingOsdBadgeControls.Hide(OsdMeterBadge);
         });

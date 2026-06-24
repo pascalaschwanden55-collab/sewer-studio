@@ -16,7 +16,7 @@ public partial class PlayerWindow
 
         if (_codingVm != null && _codingVm.Events.Count > 0)
         {
-            var endMeter = _codingLastOsdMeter ?? _codingVm.EndMeter;
+            var endMeter = _codingOsdMeterController.LastMeter ?? _codingVm.EndMeter;
             CloseTrackedStreckenschaeden(endMeter);
             if (!CloseOpenStreckenschaeden(endMeter))
             {

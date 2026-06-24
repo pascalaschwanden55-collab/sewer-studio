@@ -712,22 +712,26 @@ public sealed class UiArchitectureGuardTests
         var liveStopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
         var osdTimerPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Timer.cs");
         var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
+        var osdControllerPath = Path.Combine(uiRoot, "Player", "CodingOsdMeterController.cs");
         var stopperPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerStopper.cs");
 
         Assert.True(File.Exists(stopperPath), "PlayerWindow-Timer-Shutdown soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(liveControllerPath), "LiveDetection-Timerzustand soll im LiveDetectionController liegen.");
+        Assert.True(File.Exists(osdControllerPath), "Coding-OSD-Timerzustand soll im CodingOsdMeterController liegen.");
 
         var playbackLifecycle = File.ReadAllText(playbackLifecyclePath);
         var liveStop = File.ReadAllText(liveStopPath);
         var osdTimer = File.ReadAllText(osdTimerPath);
         var liveController = File.ReadAllText(liveControllerPath);
+        var osdController = File.ReadAllText(osdControllerPath);
         var stopper = File.Exists(stopperPath) ? File.ReadAllText(stopperPath) : "";
-        var directTimerShutdownText = liveStop + osdTimer + liveController;
+        var directTimerShutdownText = liveStop + osdTimer + liveController + osdController;
 
         Assert.Contains("PlayerWindowTimerStopper.StopPlaybackTimers", playbackLifecycle);
         Assert.Contains("_liveDetectionController.DetectionTimer", playbackLifecycle);
+        Assert.Contains("_codingOsdMeterController.Timer", playbackLifecycle);
         Assert.Contains("_timer = PlayerWindowTimerStopper.StopAndClear(_timer)", liveController);
-        Assert.Contains("_codingOsdTimer = PlayerWindowTimerStopper.StopAndClear(_codingOsdTimer)", osdTimer);
+        Assert.Contains("_timer = PlayerWindowTimerStopper.StopAndClear(_timer)", osdController);
         Assert.DoesNotContain("_detectionTimer?.Stop();", directTimerShutdownText);
         Assert.DoesNotContain("_detectionTimer = null;", directTimerShutdownText);
         Assert.DoesNotContain("_codingOsdTimer?.Stop();", directTimerShutdownText);
@@ -1420,23 +1424,27 @@ public sealed class UiArchitectureGuardTests
         var helpersPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Helpers.cs");
         var readingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Reading.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingSnapshotCaptureFactory.cs");
+        var osdControllerPath = Path.Combine(uiRoot, "Player", "CodingOsdMeterController.cs");
         var disposableLifecyclePath = Path.Combine(uiRoot, "Player", "DisposableReferenceLifecycle.cs");
 
         Assert.True(File.Exists(readingPath), "OSD-OCR und Snapshot-Lesen sollen aus dem Meter-Resolver-Partial heraus.");
         Assert.True(File.Exists(factoryPath), "Snapshot-Capture-Erzeugung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(osdControllerPath), "OSD-Service-Lifecycle soll im CodingOsdMeterController liegen.");
         Assert.True(File.Exists(disposableLifecyclePath), "Disposable-Referenz-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var osd = File.ReadAllText(osdPath);
         var helpers = File.ReadAllText(helpersPath);
         var reading = File.ReadAllText(readingPath);
         var factory = File.ReadAllText(factoryPath);
+        var osdController = File.ReadAllText(osdControllerPath);
         var disposableLifecycle = File.Exists(disposableLifecyclePath) ? File.ReadAllText(disposableLifecyclePath) : "";
 
         Assert.Contains("private double ResolveCodingMeterForFrame", osd);
         Assert.Contains("private double? GetMeterFromVideoPosition", osd);
         Assert.DoesNotContain("private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync", osd);
         Assert.DoesNotContain("private async Task<double?> TryReadOsdMeterFromFrameBytesAsync", osd);
-        Assert.Contains("_codingOsdMeterService = DisposableReferenceLifecycle.DisposeAndClear(_codingOsdMeterService)", osd);
+        Assert.Contains("_codingOsdMeterController.DisposeService()", osd);
+        Assert.Contains("_service = DisposableReferenceLifecycle.DisposeAndClear(_service)", osdController);
         Assert.DoesNotContain("_codingOsdMeterService?.Dispose()", osd);
         Assert.DoesNotContain("_codingOsdMeterService = null;", osd);
         Assert.Contains("public static T? DisposeAndClear<T>", disposableLifecycle);
@@ -3001,14 +3009,17 @@ public sealed class UiArchitectureGuardTests
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
         var osdPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Osd.cs");
         var timerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Osd.Timer.cs");
+        var osdControllerPath = Path.Combine(uiRoot, "Player", "CodingOsdMeterController.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingOsdTimerPolicy.cs");
 
         Assert.True(File.Exists(timerPath), "OSD-Timer-Wiring soll in einem eigenen OSD-Partial liegen.");
+        Assert.True(File.Exists(osdControllerPath), "OSD-Timerzustand soll im CodingOsdMeterController liegen.");
         Assert.True(File.Exists(policyPath), "OSD-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var events = File.ReadAllText(eventsPath);
         var osd = File.ReadAllText(osdPath);
         var timer = File.ReadAllText(timerPath);
+        var osdController = File.ReadAllText(osdControllerPath);
         var policy = File.ReadAllText(policyPath);
         var timerStart = timer.IndexOf("private void StartCodingOsdTimer", StringComparison.Ordinal);
         var timerEnd = timer.IndexOf("private void StopCodingOsdTimer", StringComparison.Ordinal);
@@ -3022,9 +3033,11 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void StopCodingOsdTimer", osd);
         Assert.Contains("private void StartCodingOsdTimer", timer);
         Assert.Contains("private void StopCodingOsdTimer", timer);
+        Assert.Contains("_codingOsdMeterController.StartTimer", timerBlock);
+        Assert.Contains("new CodingOsdTimerContext", timerBlock);
         Assert.Contains("PlayerWindowTimerFactory.CreateCodingOsdTimer", timerBlock);
         Assert.DoesNotContain("new DispatcherTimer", timerBlock);
-        Assert.Contains("CodingOsdTimerPolicy.ShouldReadMeter", timerBlock);
+        Assert.Contains("CodingOsdTimerPolicy.ShouldReadMeter", osdController);
         Assert.DoesNotContain("!_isCodingMode || _codingOsdReading || _codingIsAnalyzing", timerBlock);
         Assert.DoesNotContain("_codingLiveDetection == null) return", timerBlock);
         Assert.Contains("public static bool ShouldReadMeter", policy);

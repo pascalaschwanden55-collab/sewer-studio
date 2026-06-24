@@ -67,7 +67,7 @@ public partial class PlayerWindow
 
         var endReference = CodingBoundaryImportReferencePolicy.ResolveEnd(
             _codingImportEvents,
-            _codingLastOsdMeter,
+            _codingOsdMeterController.LastMeter,
             meterEnd,
             _codingVm.EndMeter,
             fallbackEndTime);

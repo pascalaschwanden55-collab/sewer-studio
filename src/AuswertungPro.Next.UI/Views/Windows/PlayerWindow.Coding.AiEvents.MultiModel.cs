@@ -78,7 +78,7 @@ public partial class PlayerWindow
                 gateResult.CompositeConfidence,
                 imageWidth,
                 imageHeight,
-                meterFromOsd: _lastResolvedMeterIsOsd,
+                meterFromOsd: _codingOsdMeterController.LastResolvedMeterIsOsd,
                 calibration: _codingOverlayService?.Calibration,
                 manifestRule: quantRule);
 

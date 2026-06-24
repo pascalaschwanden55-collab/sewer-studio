@@ -12,8 +12,7 @@ public partial class PlayerWindow
     private void ResetFrameReadiness()
     {
         _codingFrameReadiness.Reset();
-        _codingLastOsdMeter = null; // Stale Meter aus vorheriger Session verhindern
-        _codingLastOsdTimestampSec = null;
+        _codingOsdMeterController.ResetRecentMeter();
         _pendingWarmupResult = null;
     }
 
