@@ -1,5 +1,6 @@
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -32,7 +33,7 @@ public partial class PlayerWindow
     {
         _markToolControls.BeginActivation(label);
         _markToolType = tool;
-        _player.SetPause(true);
+        PlayerManualMarkPlayback.PauseForManualMarking(pause => _player.SetPause(pause));
         _codingSchemaManager.Cancel();
         _codingSchemaType = null;
 

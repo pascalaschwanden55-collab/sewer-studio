@@ -3147,6 +3147,32 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_detection_marking_playback_uses_player_helper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var helperPath = Path.Combine(uiRoot, "Player", "PlayerManualMarkPlayback.cs");
+        var markToolsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.MarkTools.cs");
+        var markCatalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
+
+        Assert.True(File.Exists(helperPath), "Manuelle Markier-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
+
+        var helper = File.ReadAllText(helperPath);
+        var markTools = File.ReadAllText(markToolsPath);
+        var markCatalog = File.ReadAllText(markCatalogPath);
+
+        Assert.Contains("public static class PlayerManualMarkPlayback", helper);
+        Assert.Contains("PauseForManualMarking", helper);
+        Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", markTools);
+        Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", markCatalog);
+        Assert.DoesNotContain("_player.SetPause(true)", markTools);
+        Assert.DoesNotContain("_player.SetPause(false)", markTools);
+        Assert.DoesNotContain("_player.SetPause(true)", markCatalog);
+        Assert.DoesNotContain("_player.SetPause(false)", markCatalog);
+    }
+
+    [Fact]
     public void PlayerWindow_live_detection_mark_catalog_lives_in_catalog_partial()
     {
         var root = FindRepositoryRoot();

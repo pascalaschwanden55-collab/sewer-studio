@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Input;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -20,7 +21,7 @@ public partial class PlayerWindow
         if (canvasSize.Width < 60 || canvasSize.Height < 60)
             return;
 
-        _player.SetPause(true);
+        PlayerManualMarkPlayback.PauseForManualMarking(pause => _player.SetPause(pause));
 
         var clockPosition = LiveDetectionGeometryMapper.ClickToClockPosition(clickPoint, canvasSize);
         var timestampSec = _player.Time / 1000.0;
@@ -31,7 +32,7 @@ public partial class PlayerWindow
 
     private void OnFindingClicked(LiveFrameFinding finding, double timestampSec)
     {
-        _player.SetPause(true);
+        PlayerManualMarkPlayback.PauseForManualMarking(pause => _player.SetPause(pause));
         OpenCodeCatalogForMark(
             finding.PositionClock,
             timestampSec,
