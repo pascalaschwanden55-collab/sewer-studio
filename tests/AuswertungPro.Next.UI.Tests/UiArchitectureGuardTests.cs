@@ -1370,14 +1370,17 @@ public sealed class UiArchitectureGuardTests
         var classifierPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.cs");
         var boundaryPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Boundary.cs");
         var structuralPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Structural.cs");
+        var structuralWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingStructuralClassifierResultWorkflow.cs");
 
         Assert.True(File.Exists(boundaryPath), "Boundary-Classifier-Ergebnisbehandlung soll in ein eigenes Partial.");
         Assert.True(File.Exists(structuralPath), "Structural-Classifier-Ergebnisbehandlung soll in ein eigenes Partial.");
+        Assert.True(File.Exists(structuralWorkflowPath), "Structural-Classifier-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var classifier = File.Exists(classifierPath) ? File.ReadAllText(classifierPath) : string.Empty;
         var boundary = File.ReadAllText(boundaryPath);
         var structural = File.ReadAllText(structuralPath);
+        var structuralWorkflow = File.ReadAllText(structuralWorkflowPath);
 
         Assert.DoesNotContain("private bool TryHandleBoundaryClassifierResult", ai);
         Assert.DoesNotContain("private bool TryHandleStructuralClassifierResult", ai);
@@ -1386,7 +1389,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private bool TryHandleBoundaryClassifierResult", boundary);
         Assert.Contains("CodingClassifierDisplayPolicy.IsBoundaryClassifierCode", boundary);
         Assert.Contains("private bool TryHandleStructuralClassifierResult", structural);
-        Assert.Contains("CodingStructuralClassifierEventFactory.Create", structural);
+        Assert.Contains("CodingStructuralClassifierResultWorkflow.Execute", structural);
+        Assert.DoesNotContain("CodingStructuralClassifierEventFactory.Create", structural);
+        Assert.Contains("CodingStructuralClassifierEventFactory.Create", structuralWorkflow);
     }
 
     [Fact]
@@ -4020,15 +4025,21 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.Structural.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingStructuralClassifierResultWorkflow.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingStructuralClassifierFindingFactory.cs");
 
         Assert.True(File.Exists(factoryPath), "Structural-Classifier-Finding-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "Structural-Classifier-Workflow muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
+        var workflow = File.ReadAllText(workflowPath);
         var factory = File.ReadAllText(factoryPath);
 
-        Assert.Contains("CodingStructuralClassifierFindingFactory.Create", ai);
-        Assert.Contains("CodingFindingCoveragePolicy.FindCoveringEvent", ai);
+        Assert.Contains("CodingStructuralClassifierResultWorkflow.Execute", ai);
+        Assert.DoesNotContain("CodingStructuralClassifierFindingFactory.Create", ai);
+        Assert.DoesNotContain("CodingFindingCoveragePolicy.FindCoveringEvent", ai);
+        Assert.Contains("CodingStructuralClassifierFindingFactory.Create", workflow);
+        Assert.Contains("CodingFindingCoveragePolicy.FindCoveringEvent", workflow);
         Assert.DoesNotContain("new LiveFrameFinding(", ai);
         Assert.DoesNotContain("CodingFindingCoveragePolicy.IsCovered(e, meter, finding)", ai);
         Assert.Contains("public static LiveFrameFinding Create", factory);

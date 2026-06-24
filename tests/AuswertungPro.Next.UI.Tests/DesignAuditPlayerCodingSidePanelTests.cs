@@ -238,6 +238,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
         var structuralBody = ExtractMethodBody(coding, "private bool TryHandleStructuralClassifierResult");
         var resultWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisResultWorkflow.cs");
+        var structuralWorkflow = ReadUiFile("Ai", "CodingStructuralClassifierResultWorkflow.cs");
 
         var boundaryIndex = multiModelBody.IndexOf("TryHandleBoundaryClassifierResult", StringComparison.Ordinal);
         var structuralIndex = multiModelBody.IndexOf("TryHandleStructuralClassifierResult", StringComparison.Ordinal);
@@ -247,13 +248,14 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.True(structuralIndex > boundaryIndex, "BCA/BCC darf BCD/BCE nicht ueberholen.");
         Assert.True(resultWorkflowIndex > structuralIndex, "BCA/BCC muss vor dem YOLO/DINO-No-Detection-Abbruch behandelt werden.");
         Assert.Contains("!result.IsRelevant || !result.HasDetections", resultWorkflow);
-        Assert.Contains("CodingClassifierDisplayPolicy.IsStructuralClassifierCode(code)", structuralBody);
-        Assert.Contains("CodingStructuralClassifierEventFactory.Create", structuralBody);
-        Assert.Contains("CodingStructuralClassifierEventAppender.Apply", structuralBody);
+        Assert.Contains("CodingStructuralClassifierResultWorkflow.Execute", structuralBody);
+        Assert.Contains("CodingClassifierDisplayPolicy.IsStructuralClassifierCode(code)", structuralWorkflow);
+        Assert.Contains("CodingStructuralClassifierEventFactory.Create", structuralWorkflow);
+        Assert.Contains("CodingStructuralClassifierEventAppender.Apply", structuralWorkflow);
         Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", structuralBody);
 
-        var clearIndex = structuralBody.IndexOf("ClearDetectionOverlays()", StringComparison.Ordinal);
-        var listIndex = structuralBody.IndexOf("CodingFindingsListControls.ShowResolvedFinding", StringComparison.Ordinal);
+        var clearIndex = structuralWorkflow.IndexOf("actions.ClearDetectionOverlays()", StringComparison.Ordinal);
+        var listIndex = structuralWorkflow.IndexOf("actions.ShowResolvedFinding", StringComparison.Ordinal);
         Assert.True(clearIndex >= 0 && listIndex > clearIndex,
             "Die Befundliste muss nach dem Overlay-Clear gesetzt werden, sonst verschwindet der Bogen-Hinweis.");
     }

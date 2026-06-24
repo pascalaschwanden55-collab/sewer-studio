@@ -12,15 +12,6 @@ public partial class PlayerWindow
         double captureTimestampSec,
         double? frameOsdMeter)
     {
-        var code = mmResult.ClassifierCode;
-        if (!CodingClassifierDisplayPolicy.IsStructuralClassifierCode(code))
-            return false;
-        var structuralCode = code!;
-
-        // Wenn DINO/SAM Befunde liefert, bleibt der praezisere Maskenpfad zustaendig.
-        if (mmResult.HasDetections)
-            return false;
-
         var codingVm = _codingVm;
         var codingSessionService = _codingSessionService;
         if (codingVm == null || codingSessionService == null)
@@ -28,47 +19,26 @@ public partial class PlayerWindow
 
         var meter = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
         var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);
-        var label = CodingClassifierDisplayPolicy.ResolveStructuralLabel(structuralCode, LookupVsaLabel(structuralCode));
-        var finding = CodingStructuralClassifierFindingFactory.Create(structuralCode, label);
-        var resolvedCode = ResolveFindingCodeForCoding(finding, meter);
-        if (resolvedCode == null || !resolvedCode.StartsWith(structuralCode, StringComparison.OrdinalIgnoreCase))
-            return false;
-
-        var coveringEvent = CodingFindingCoveragePolicy.FindCoveringEvent(
-            codingVm.Events,
-            resolvedCode,
-            meter,
-            finding);
-
-        ClearDetectionOverlays();
-        Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
-        CodingFindingsListControls.ShowResolvedFinding(CodingFindingsList, finding, resolvedCode);
-
-        if (coveringEvent != null)
-        {
-            SetCodingAiState(CodingClassifierDisplayPolicy.BuildDetectedStatusText(label, added: false),
-                PlayerStatusColors.Success,
-                CodingClassifierDisplayPolicy.BuildClassifierDetail(mmResult.ClassifierConfidence));
-            return true;
-        }
-
-        var draft = CodingStructuralClassifierEventFactory.Create(
-            resolvedCode,
-            LookupVsaLabel(resolvedCode) ?? label,
-            label,
-            mmResult.ClassifierConfidence,
-            meter,
-            videoTime,
-            meterFromOsd: _codingOsdMeterController.LastResolvedMeterIsOsd);
-
-        AttachAnalyzedFramePhoto(draft.Entry);
-
-        CodingStructuralClassifierEventAppender.Apply(draft, meter, videoTime, codingSessionService);
-
-        RefreshCodingEventsList();
-        SetCodingAiState(CodingClassifierDisplayPolicy.BuildDetectedStatusText(draft.Entry.Beschreibung, added: true),
-            PlayerStatusColors.Success,
-            CodingClassifierDisplayPolicy.BuildClassifierDetail(mmResult.ClassifierConfidence));
-        return true;
+        var result = CodingStructuralClassifierResultWorkflow.Execute(
+            new CodingStructuralClassifierResultWorkflowRequest(
+                mmResult,
+                meter,
+                videoTime,
+                codingVm.Events,
+                codingSessionService,
+                _codingOsdMeterController.LastResolvedMeterIsOsd),
+            new CodingStructuralClassifierResultWorkflowActions(
+                LookupVsaLabel,
+                ResolveFindingCodeForCoding,
+                ClearDetectionOverlays,
+                () => Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas),
+                (finding, resolvedCode) => CodingFindingsListControls.ShowResolvedFinding(
+                    CodingFindingsList,
+                    finding,
+                    resolvedCode),
+                entry => AttachAnalyzedFramePhoto(entry),
+                RefreshCodingEventsList,
+                (status, color, detail) => SetCodingAiState(status, color, detail)));
+        return result.Handled;
     }
 }
