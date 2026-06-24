@@ -837,11 +837,15 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("PlayerPlaybackGateway.TryGetCurrentTime", playback);
         Assert.Contains("PlayerPlaybackGateway.TrySeekTo", playback);
+        Assert.Contains("PlayerPlaybackCommandRunner.TogglePlayPause", playback);
+        Assert.Contains("PlayerPlaybackCommandRunner.JumpSeconds", playback);
         Assert.Contains("PlayerSliderSeekController.SeekToSlider", playback);
         Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", playback);
         Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", playback);
         Assert.Contains("_positionControls.ApplyPlaybackState", playback);
         Assert.Contains("_speedControls.Update", playback);
+        Assert.DoesNotContain("_player.SetPause(_player.IsPlaying)", playback);
+        Assert.DoesNotContain("PlayerPlaybackState.AddSeconds", playback);
         Assert.DoesNotContain("PlayerPlaybackState.ResolveSliderSeekTarget", playback);
         Assert.DoesNotContain("PlayerPlaybackState.BuildSeekPreviewText", playback);
         Assert.DoesNotContain("PlayerPlaybackState.BuildUiState", playback);

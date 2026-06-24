@@ -52,6 +52,80 @@ public sealed class PlayerPlaybackCommandRunnerTests
         Assert.Equal(["stop", "rate"], calls);
     }
 
+    [Fact]
+    public void TogglePlayPause_ensures_playback_and_sets_pause_to_current_playing_state()
+    {
+        var method = FindMethod("TogglePlayPause", typeof(Action), typeof(Func<bool>), typeof(Action<bool>));
+        Assert.NotNull(method);
+        var calls = new List<string>();
+
+        method.Invoke(null, [
+            new Action(() => calls.Add("ensure")),
+            new Func<bool>(() =>
+            {
+                calls.Add("is-playing");
+                return true;
+            }),
+            new Action<bool>(pause => calls.Add(pause ? "pause" : "resume"))
+        ]);
+
+        Assert.Equal(["ensure", "is-playing", "pause"], calls);
+    }
+
+    [Fact]
+    public void JumpSeconds_moves_player_clears_detection_overlays_and_updates_ui()
+    {
+        var method = FindMethod(
+            "JumpSeconds",
+            typeof(long),
+            typeof(long),
+            typeof(int),
+            typeof(Action<long>),
+            typeof(Action),
+            typeof(Action));
+        Assert.NotNull(method);
+        var calls = new List<string>();
+
+        var result = method.Invoke(null, [
+            10_000L,
+            120_000L,
+            30,
+            new Action<long>(value => calls.Add($"time:{value}")),
+            new Action(() => calls.Add("clear")),
+            new Action(() => calls.Add("update"))
+        ]);
+
+        Assert.Equal(true, result);
+        Assert.Equal(["time:40000", "clear", "update"], calls);
+    }
+
+    [Fact]
+    public void JumpSeconds_skips_when_duration_is_unknown()
+    {
+        var method = FindMethod(
+            "JumpSeconds",
+            typeof(long),
+            typeof(long),
+            typeof(int),
+            typeof(Action<long>),
+            typeof(Action),
+            typeof(Action));
+        Assert.NotNull(method);
+        var calls = new List<string>();
+
+        var result = method.Invoke(null, [
+            10_000L,
+            0L,
+            30,
+            new Action<long>(_ => calls.Add("time")),
+            new Action(() => calls.Add("clear")),
+            new Action(() => calls.Add("update"))
+        ]);
+
+        Assert.Equal(false, result);
+        Assert.Empty(calls);
+    }
+
     private static MethodInfo? FindMethod(string name, params Type[] parameterTypes)
         => typeof(PlayerPlaybackState).Assembly
             .GetType("AuswertungPro.Next.UI.Player.PlayerPlaybackCommandRunner")

@@ -42,10 +42,10 @@ public partial class PlayerWindow
             UpdateUi);
 
     private void TogglePlayPause()
-    {
-        EnsurePlaying();
-        _player.SetPause(_player.IsPlaying);
-    }
+        => PlayerPlaybackCommandRunner.TogglePlayPause(
+            EnsurePlaying,
+            () => _player.IsPlaying,
+            pause => _player.SetPause(pause));
 
     private void EnsurePlaying()
     {
@@ -60,14 +60,13 @@ public partial class PlayerWindow
     }
 
     private void JumpSeconds(int seconds)
-    {
-        if (_player.Length <= 0)
-            return;
-
-        _player.Time = AuswertungPro.Next.UI.Player.PlayerPlaybackState.AddSeconds(_player.Time, _player.Length, seconds);
-        ClearDetectionOverlays(); // Alte Overlays bei Navigation entfernen
-        UpdateUi();
-    }
+        => PlayerPlaybackCommandRunner.JumpSeconds(
+            _player.Time,
+            _player.Length,
+            seconds,
+            targetMs => _player.Time = targetMs,
+            ClearDetectionOverlays,
+            UpdateUi);
 
     private void Play(string path)
     {

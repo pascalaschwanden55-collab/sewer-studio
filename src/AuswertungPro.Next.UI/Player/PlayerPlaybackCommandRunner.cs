@@ -27,4 +27,27 @@ public static class PlayerPlaybackCommandRunner
         stopPlayer();
         updateRateLabel();
     }
+
+    public static void TogglePlayPause(Action ensurePlaying, Func<bool> isPlaying, Action<bool> setPause)
+    {
+        ensurePlaying();
+        setPause(isPlaying());
+    }
+
+    public static bool JumpSeconds(
+        long currentTimeMs,
+        long durationMs,
+        int seconds,
+        Action<long> setTimeMs,
+        Action clearDetectionOverlays,
+        Action updateUi)
+    {
+        if (durationMs <= 0)
+            return false;
+
+        setTimeMs(PlayerPlaybackState.AddSeconds(currentTimeMs, durationMs, seconds));
+        clearDetectionOverlays();
+        updateUi();
+        return true;
+    }
 }
