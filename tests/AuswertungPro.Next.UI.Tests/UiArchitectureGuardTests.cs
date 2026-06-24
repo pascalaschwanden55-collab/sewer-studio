@@ -4309,6 +4309,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingProtocolMatchBuckets.Clear()", exit);
         Assert.DoesNotContain("_codingImportEvents.Clear()", exit);
         Assert.Contains("ShowCodingModeUi();", lifecycle);
+        Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", ui);
+        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Collapsed", ui);
         Assert.DoesNotContain("new CodingSessionViewModel", lifecycle);
         Assert.DoesNotContain("CodingImportReferenceTransfer.MoveExistingEventsToImportReference", lifecycle);
         Assert.DoesNotContain("CodingOverlayPopup.IsOpen = true", lifecycle);

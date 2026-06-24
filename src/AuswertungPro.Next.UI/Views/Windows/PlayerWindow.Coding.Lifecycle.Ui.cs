@@ -23,7 +23,7 @@ public partial class PlayerWindow
         }
 
         LiveDetectionButton.Visibility = Visibility.Collapsed;
-        LiveDetectionStatusText.Visibility = Visibility.Collapsed;
+        LiveDetectionStatusControls.HideDetectionStatus(LiveDetectionStatusText);
     }
 
     private void ActivateDefaultCodingTool()
