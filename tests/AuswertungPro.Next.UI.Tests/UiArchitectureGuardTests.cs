@@ -1030,6 +1030,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("AuswertungPro.Next.Infrastructure", overlayInput);
         Assert.DoesNotContain("AuswertungPro.Next.UI.Services", overlayInput);
         Assert.DoesNotContain("InfraTeacher", overlayInput);
+        Assert.Contains("_codingSessionHost", overlayInput);
+        Assert.DoesNotContain("_codingVm", overlayInput);
     }
 
     [Fact]
