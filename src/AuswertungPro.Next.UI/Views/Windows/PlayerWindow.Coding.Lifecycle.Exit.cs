@@ -14,21 +14,21 @@ public partial class PlayerWindow
         if (!_isCodingMode) return;
         _isCodingMode = false;
 
-        if (_codingVm != null && _codingVm.Events.Count > 0)
+        var finalization = CodingModeExitFinalizationWorkflow.Execute(
+            new CodingModeExitFinalizationWorkflowRequest(
+                _codingVm?.Events,
+                _codingOsdMeterController.LastMeter,
+                _codingVm?.EndMeter ?? 0,
+                TimeSpan.FromMilliseconds(_player?.Length ?? 0),
+                _detectionConfirmationBuffer.FrameBytes),
+            new CodingModeExitFinalizationWorkflowActions(
+                CloseTrackedStreckenschaeden,
+                CloseOpenStreckenschaeden,
+                EnsureRohrendeExists));
+        if (!finalization.CanExit)
         {
-            var endMeter = _codingOsdMeterController.LastMeter ?? _codingVm.EndMeter;
-            CloseTrackedStreckenschaeden(endMeter);
-            if (!CloseOpenStreckenschaeden(endMeter))
-            {
-                _isCodingMode = true;
-                return;
-            }
-
-            if (!CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode(_codingVm.Events))
-            {
-                var endTime = TimeSpan.FromMilliseconds(_player?.Length ?? 0);
-                EnsureRohrendeExists(_codingVm.EndMeter, endTime, _detectionConfirmationBuffer.FrameBytes);
-            }
+            _isCodingMode = true;
+            return;
         }
 
         StopCodingOsdTimer();

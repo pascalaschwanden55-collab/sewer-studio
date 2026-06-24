@@ -3885,17 +3885,22 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingModeExitFinalizationWorkflow.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingTerminalBoundaryPresencePolicy.cs");
 
         Assert.True(File.Exists(codingPath), "Coding-Exit-Cleanup soll in einem eigenen Partial liegen.");
+        Assert.True(File.Exists(workflowPath), "Coding-Exit-Finalisierung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(policyPath), "Exit-Pruefung fuer BCE/BDC* muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var coding = File.ReadAllText(codingPath);
+        var workflow = File.ReadAllText(workflowPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode", coding);
-        Assert.DoesNotContain("string.Equals(e.Entry.Code, \"BCE\"", coding);
-        Assert.DoesNotContain("string.Equals(e.Entry.Code, \"BDC\"", coding);
+        Assert.Contains("CodingModeExitFinalizationWorkflow.Execute", coding);
+        Assert.DoesNotContain("CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode", coding);
+        Assert.Contains("CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode", workflow);
+        Assert.DoesNotContain("string.Equals(e.Entry.Code, \"BCE\"", coding + workflow);
+        Assert.DoesNotContain("string.Equals(e.Entry.Code, \"BDC\"", coding + workflow);
         Assert.Contains("public static bool HasEndOrAbortCode", policy);
         Assert.Contains("MainCode(e.Entry.Code) is \"BCE\" or \"BDC\"", policy);
     }

@@ -265,9 +265,13 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_exit_coding_mode_passes_current_analyzed_frame_to_auto_rohrende()
     {
         var coding = ReadCodingPartials();
+        var workflow = ReadUiFile("Ai", "CodingModeExitFinalizationWorkflow.cs");
         var exitBody = ExtractMethodBody(coding, "private void ExitCodingMode");
 
-        Assert.Contains("EnsureRohrendeExists(_codingVm.EndMeter, endTime, _detectionConfirmationBuffer.FrameBytes)", exitBody);
+        Assert.Contains("CodingModeExitFinalizationWorkflow.Execute", exitBody);
+        Assert.Contains("_detectionConfirmationBuffer.FrameBytes", exitBody);
+        Assert.Contains("request.AnalyzedFrameBytes", workflow);
+        Assert.Contains("actions.EnsureRohrendeExists", workflow);
     }
 
     [Fact]
