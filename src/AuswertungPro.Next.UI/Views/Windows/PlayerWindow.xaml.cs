@@ -29,6 +29,7 @@ public partial class PlayerWindow : Window
         InitializeComponent();
         WireCodingSidePanelEvents();
         InitializeCodingSidePanelControllers();
+        InitializeCodingConfirmationPanelControls();
         WindowStateManager.Track(this);
 
         _videoPath = videoInfo.VideoPath;

@@ -2268,6 +2268,33 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_confirmation_panel_display_uses_controls_adapter()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var confirmationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationPanelControls.cs");
+
+        Assert.True(File.Exists(controlsPath), "Coding-Bestaetigungspanel-Anzeige soll ausserhalb der PlayerWindow-Partials liegen.");
+
+        var confirmation = File.ReadAllText(confirmationPath);
+        var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+
+        Assert.Contains("_codingConfirmationPanelControls.Apply", confirmation);
+        Assert.Contains("_codingConfirmationPanelControls.Hide()", confirmation);
+        Assert.DoesNotContain("ConfirmAmpel.Fill", confirmation);
+        Assert.DoesNotContain("TxtConfirmCode.Text", confirmation);
+        Assert.DoesNotContain("TxtConfirmConfidence.Text", confirmation);
+        Assert.DoesNotContain("TxtConfirmDescription.Text", confirmation);
+        Assert.DoesNotContain("TxtConfirmDetail.Text", confirmation);
+        Assert.DoesNotContain("CodingConfirmationPanel.Visibility = Visibility.Visible", confirmation);
+        Assert.DoesNotContain("CodingConfirmationPanel.Visibility = Visibility.Collapsed", confirmation);
+        Assert.Contains("public sealed class CodingConfirmationPanelControls", controls);
+        Assert.Contains("ConfirmAmpel.Fill", controls);
+        Assert.Contains("CodingConfirmationPanel.Visibility = Visibility.Visible", controls);
+    }
+
+    [Fact]
     public void PlayerWindow_confirmation_playback_uses_player_helper()
     {
         var root = FindRepositoryRoot();

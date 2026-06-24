@@ -46,6 +46,7 @@ public partial class PlayerWindow
     private CodingStatisticsControls _codingStatisticsControls = null!;
     private CodingInlineDefectDetailControls _codingInlineDefectDetailControls = null!;
     private CodingEventCreationPostActions _codingEventCreationPostActions = null!;
+    private CodingConfirmationPanelControls _codingConfirmationPanelControls = null!;
     private QualityGateService? _codingQualityGate;
 
     private enum EingabemarkerPhase { Inactive, Drawing, Input, Analyzing }

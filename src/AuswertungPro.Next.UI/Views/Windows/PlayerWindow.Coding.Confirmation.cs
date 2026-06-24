@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.Models;
@@ -12,6 +11,17 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
+    private void InitializeCodingConfirmationPanelControls()
+    {
+        _codingConfirmationPanelControls = new CodingConfirmationPanelControls(
+            CodingConfirmationPanel,
+            ConfirmAmpel,
+            TxtConfirmCode,
+            TxtConfirmConfidence,
+            TxtConfirmDescription,
+            TxtConfirmDetail);
+    }
+
     private void PauseAndAskConfirmation(CodingEvent codingEvent, QualityGateResult gateResult)
     {
         PlayerConfirmationPlayback.PauseCodingConfirmation(pause => _player.SetPause(pause));
@@ -20,18 +30,10 @@ public partial class PlayerWindow
         _codingPendingConfirmEvent = codingEvent;
         _codingPendingGateResult = gateResult;
 
-        var ampelColor = CodingConfirmationDisplayPolicy.AmpelColor(gateResult);
-        ConfirmAmpel.Fill = new SolidColorBrush(ampelColor);
+        var ampelColor = _codingConfirmationPanelControls.Apply(codingEvent, gateResult);
 
         SetCodingAiState(TxtCodingAiStatus.Text, ampelColor,
             CodingConfirmationDisplayPolicy.QualityGateStatusText(gateResult));
-
-        TxtConfirmCode.Text = codingEvent.Entry.Code ?? "???";
-        TxtConfirmConfidence.Text = $"({gateResult.CompositeConfidence:P0})";
-        TxtConfirmDescription.Text = codingEvent.Entry.Beschreibung ?? codingEvent.AiContext?.Reason ?? "";
-        TxtConfirmDetail.Text = CodingConfirmationDisplayPolicy.ConfirmationDetail(gateResult);
-
-        CodingConfirmationPanel.Visibility = Visibility.Visible;
     }
 
     private void ConfirmAccept_Click(object sender, RoutedEventArgs e)
@@ -79,7 +81,7 @@ public partial class PlayerWindow
 
     private void CloseConfirmationPanel()
     {
-        CodingConfirmationPanel.Visibility = Visibility.Collapsed;
+        _codingConfirmationPanelControls.Hide();
         _codingPendingConfirmEvent = null;
         _codingPendingGateResult = null;
     }
