@@ -4595,6 +4595,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void RestoreCodingOverlayAfterExternalWindow", overlayInput);
         Assert.Contains("private void SuspendCodingOverlayInput", visibility);
         Assert.Contains("_codingOverlaySuspendDepth++", visibility);
+        Assert.Contains("CodingOverlayInputControls.SuspendCanvas", visibility);
+        Assert.Contains("CodingOverlayInputControls.ResumeCanvas", visibility);
+        Assert.DoesNotContain("CodingOverlayCanvas.Visibility = Visibility.Hidden", visibility);
+        Assert.DoesNotContain("CodingOverlayCanvas.Visibility = Visibility.Visible", visibility);
+        Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible = false", visibility);
+        Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible = true", visibility);
         Assert.Contains("CodingOverlayPopup.IsOpen = false", visibility);
         Assert.Contains("private void RestoreCodingOverlayAfterExternalWindow", visibility);
     }

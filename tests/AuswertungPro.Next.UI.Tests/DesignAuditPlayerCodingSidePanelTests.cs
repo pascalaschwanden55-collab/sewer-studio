@@ -33,13 +33,15 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var window = ReadUiFile("Views", "Windows", "PlayerWindow.Wiring.cs");
+        var controls = ReadUiFile("Ai", "CodingOverlayInputControls.cs");
         var suspendBody = ExtractMethodBody(coding, "private void SuspendCodingOverlayInput()");
 
         Assert.Contains("HideCodingOverlayForExternalWindow", window);
         Assert.Contains("CodingOverlayPopup.IsOpen = false", coding);
         Assert.Contains("RestoreCodingOverlayAfterExternalWindow", window);
         Assert.DoesNotContain("CodingOverlayPopup.IsOpen = false", suspendBody);
-        Assert.Contains("CodingOverlayCanvas.IsHitTestVisible = false", suspendBody);
+        Assert.Contains("CodingOverlayInputControls.SuspendCanvas(CodingOverlayCanvas)", suspendBody);
+        Assert.Contains("overlayCanvas.IsHitTestVisible = false", controls);
     }
 
     [Fact]
