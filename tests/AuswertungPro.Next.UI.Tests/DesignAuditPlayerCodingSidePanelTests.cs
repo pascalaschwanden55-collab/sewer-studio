@@ -307,7 +307,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var qwenBody = ExtractMethodBody(coding, "private void AddAiFindingsAsEvents");
         var boundaryBody = ExtractMethodBody(coding, "private bool TryHandleBoundaryClassifierResult");
 
-        Assert.Contains("ResolveCodingMeterForFrame(captureTimestampSec", runBody);
+        Assert.Contains("CodingAnalysisPreflightWorkflow.Execute", runBody);
+        Assert.Contains("ResolveCodingMeterForFrame(timestamp)", runBody);
         Assert.Contains("ResolveCodingMeterForFrame(captureTimestampSec", multiModelBody);
         Assert.Contains("ResolveCodingMeterForFrame(result.TimestampSeconds, result.MeterReading", qwenBody);
         Assert.Contains("ResolveCodingMeterForFrame(captureTimestampSec", boundaryBody);

@@ -1442,18 +1442,23 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
         var helpersPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Helpers.cs");
+        var preflightWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAnalysisPreflightWorkflow.cs");
 
         Assert.True(File.Exists(helpersPath), "Gemeinsame Coding-AI-Helper sollen aus dem Orchestrator-Partial heraus.");
+        Assert.True(File.Exists(preflightWorkflowPath), "Coding-AI-Preflight-Entscheidungen sollen ausserhalb von PlayerWindow liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var helpers = File.ReadAllText(helpersPath);
+        var preflightWorkflow = File.ReadAllText(preflightWorkflowPath);
 
         Assert.DoesNotContain("private async void CodingAnalyzeFrame_Click", ai);
         Assert.Contains("private void CodingAnalyzeFrame_Click", ai);
         Assert.Contains("SafeFireAndForget", ai);
         Assert.Contains("\"CodingAnalyzeFrame\"", ai);
         Assert.Contains("private async Task RunCodingAnalysisAsync", ai);
+        Assert.Contains("CodingAnalysisPreflightWorkflow.Execute", ai);
         Assert.DoesNotContain("private bool IsCodingAfterTerminalBoundary", ai);
+        Assert.DoesNotContain("\"Rohrende erreicht - KI-Analyse gestoppt\"", ai);
         Assert.DoesNotContain("private bool IsFindingTooFarAhead", ai);
         Assert.DoesNotContain("private IReadOnlyList<SegmentedFinding> BuildCodingSegmentedFindings", ai);
         Assert.DoesNotContain("private Task<byte[]?> CaptureSnapshotAsync", ai);
@@ -1463,6 +1468,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private Task<byte[]?> CaptureSnapshotAsync", helpers);
         Assert.Contains("CodingTerminalBoundaryCandidateBuilder.Enumerate", helpers);
         Assert.Contains("SegmentedFindingBuilder.Build", helpers);
+        Assert.Contains("actions.IsAfterTerminalBoundary(framePosition)", preflightWorkflow);
+        Assert.Contains("\"Rohrende erreicht - KI-Analyse gestoppt\"", preflightWorkflow);
     }
 
     [Fact]

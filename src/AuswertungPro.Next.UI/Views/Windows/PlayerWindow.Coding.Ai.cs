@@ -31,22 +31,33 @@ public partial class PlayerWindow
 
         try
         {
-            if (disableAnalyzeButton)
-                CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, false);
+            var preflight = CodingAnalysisPreflightWorkflow.Execute(
+                new CodingAnalysisPreflightWorkflowRequest(
+                    disableAnalyzeButton,
+                    _codingAiController.UseMultiModel,
+                    _codingAiController.MultiModel != null),
+                new CodingAnalysisPreflightWorkflowActions(
+                    SetAnalyzeButtonEnabled: enabled => CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, enabled),
+                    ResolveFramePosition: () =>
+                    {
+                        var timestamp = _player.Time / 1000.0;
+                        return new CodingAnalysisFramePosition(
+                            timestamp,
+                            ResolveCodingMeterForFrame(timestamp),
+                            TimeSpan.FromSeconds(timestamp));
+                    },
+                    IsAfterTerminalBoundary: framePosition => IsCodingAfterTerminalBoundary(
+                        framePosition.CurrentMeter,
+                        framePosition.VideoTime),
+                    ClearDetectionOverlays: ClearDetectionOverlays,
+                    ClearSamMasks: () => Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas),
+                    SetCodingAiState: (status, color, detail) => SetCodingAiState(status, color, detail)));
 
-            var captureTimestampSec = _player.Time / 1000.0;
-            var currentMeterForStop = ResolveCodingMeterForFrame(captureTimestampSec);
-            var currentVideoTimeForStop = TimeSpan.FromSeconds(captureTimestampSec);
-            if (IsCodingAfterTerminalBoundary(currentMeterForStop, currentVideoTimeForStop))
-            {
-                ClearDetectionOverlays();
-                Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
-                SetCodingAiState("Rohrende erreicht - KI-Analyse gestoppt",
-                    PlayerStatusColors.Success, "Codierung abgeschlossen");
+            var captureTimestampSec = preflight.CaptureTimestampSeconds;
+            if (preflight.Outcome == CodingAnalysisPreflightWorkflowOutcome.StopAtTerminalBoundary)
                 return;
-            }
 
-            if (_codingAiController.UseMultiModel && _codingAiController.MultiModel != null)
+            if (preflight.Outcome == CodingAnalysisPreflightWorkflowOutcome.RunMultiModel)
             {
                 await RunCodingMultiModelAnalysisAsync(activityText, captureTimestampSec);
                 return;
