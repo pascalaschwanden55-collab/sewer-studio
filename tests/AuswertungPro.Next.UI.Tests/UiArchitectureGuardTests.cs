@@ -1752,6 +1752,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingFindingFilterPolicy.FilterValid", filtering);
         Assert.Contains("CodingFindingCodeResolver.Resolve", filtering);
         Assert.Contains("CodingKnownFindingPolicy.IsKnown", filtering);
+        Assert.Contains("_codingSessionHost", filtering);
+        Assert.DoesNotContain("_codingVm", filtering);
         Assert.Contains("public static bool TryAccept", meterPolicy);
         Assert.Contains("public static CodingWarmupResultSelection Select", warmupPolicy);
         Assert.Contains("public static IReadOnlyList<LiveFrameFinding> Select", overlaySelector);
@@ -2619,6 +2621,8 @@ public sealed class UiArchitectureGuardTests
             "ConfirmEdit muss den Pending-State entscheiden, bevor CloseConfirmationPanel ihn leert.");
         Assert.DoesNotContain("CodingEventDecisionPolicy.ApplyAiConfirmationDecision", confirmation);
         Assert.DoesNotContain("CodingEventDeleteApplier.Apply", confirmation);
+        Assert.Contains("_codingSessionHost", confirmation);
+        Assert.DoesNotContain("_codingVm", confirmation);
         Assert.DoesNotContain("_codingSessionService?.RemoveEvent", confirmation);
         Assert.DoesNotContain("_codingVm?.Events.Remove", confirmation);
         Assert.Contains("CodingEventDecisionPolicy.ApplyAiConfirmationDecision", workflow);
@@ -3069,6 +3073,8 @@ public sealed class UiArchitectureGuardTests
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
 
         Assert.Contains("CodingProtocolMatchSummaryControls.Apply", protocolMatch);
+        Assert.Contains("_codingSessionHost", protocolMatch);
+        Assert.DoesNotContain("_codingVm", protocolMatch);
         Assert.DoesNotContain("TxtCodingProtocolMatchSummary.Text", protocolMatch);
         Assert.DoesNotContain("BtnAcceptGreenCodingMatches.IsEnabled", protocolMatch);
         Assert.Contains("CodingProtocolMatchSummaryFormatter.Format", controls);

@@ -40,11 +40,11 @@ public partial class PlayerWindow
 
     private void RunCodingProtocolMatch()
     {
-        if (_codingVm == null) return;
+        if (!_codingSessionHost.HasViewModel) return;
 
         _lastCodingMatch = CodingProtocolMatchRunner.Run(
             _codingImportEvents,
-            _codingVm.Events,
+            _codingSessionHost.Events,
             _codingProtocolMatchBuckets);
         UpdateCodingProtocolMatchSummary(_lastCodingMatch);
         RefreshCodingEventsList();

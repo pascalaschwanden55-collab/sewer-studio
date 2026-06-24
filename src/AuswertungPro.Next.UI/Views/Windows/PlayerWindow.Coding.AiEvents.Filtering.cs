@@ -21,7 +21,7 @@ public partial class PlayerWindow
             currentMeter,
             ResolveFindingCodeForCoding,
             _codingSessionService?.ActiveSession?.Events,
-            _codingVm?.Events,
+            _codingSessionHost.Events,
             message => PlayerTrace.WriteLine(message));
     }
 
@@ -43,6 +43,6 @@ public partial class PlayerWindow
             finding,
             meter,
             _codingSessionService?.ActiveSession?.Events,
-            _codingVm?.Events);
+            _codingSessionHost.Events);
     }
 }

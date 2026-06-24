@@ -66,7 +66,7 @@ public partial class PlayerWindow
             _codingPendingConfirmEvent,
             _codingPendingGateResult,
             _codingSessionService,
-            _codingVm?.Events,
+            _codingSessionHost.EventCollection,
             codingEvent => PersistSingleEventAsTrainingSample(codingEvent).SafeFireAndForget("TrainingSaveReject"),
             RefreshCodingEventsList);
 
