@@ -152,14 +152,17 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var policy = ReadUiFile("Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
+        var workflow = ReadUiFile("Ai", "CodingMultiModelFindingEventWorkflow.cs");
         var addBody = ExtractMethodBody(coding, "private void AddMultiModelFindingsAsEvents");
 
         Assert.Contains("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", policy);
-        Assert.Contains("CodingMultiModelFindingAddDecisionPolicy.Decide", addBody);
+        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", addBody);
+        Assert.DoesNotContain("CodingMultiModelFindingAddDecisionPolicy.Decide", addBody);
+        Assert.Contains("CodingMultiModelFindingAddDecisionPolicy.Decide", workflow);
         Assert.True(
-            addBody.IndexOf("CodingMultiModelFindingAddDecisionPolicy.Decide", StringComparison.Ordinal)
+            workflow.IndexOf("CodingMultiModelFindingAddDecisionPolicy.Decide", StringComparison.Ordinal)
             < FirstIndexOf(
-                addBody,
+                workflow,
                 "codingSessionService.AddEvent(entry)",
                 "codingSessionService.AddEvent(draft.Entry)",
                 "CodingMultiModelEventAppender.Apply"),
@@ -202,13 +205,16 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var qwenAppender = ReadUiFile("Ai", "CodingLiveFindingSessionAppender.cs");
         var qwenAppenderBody = ExtractMethodBody(qwenAppender, "Func<ProtocolEntry, CodingEvent> addEvent)");
         var multiModelBody = ExtractMethodBody(coding, "private void AddMultiModelFindingsAsEvents");
+        var multiModelWorkflow = ReadUiFile("Ai", "CodingMultiModelFindingEventWorkflow.cs");
 
         Assert.Contains("CodingLiveFindingEventWorkflow.Execute", qwenBody);
         Assert.Contains("CodingLiveFindingSessionAppender.Append", qwenWorkflow);
         AssertAnalyzedFrameAttachedBeforeAddEvent(qwenAppenderBody);
-        AssertAnalyzedFrameAttachedBeforeAddEvent(multiModelBody);
+        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", multiModelBody);
+        AssertAnalyzedFrameAttachedBeforeAddEvent(multiModelWorkflow);
         Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", qwenBody);
-        Assert.Contains("CodingMultiModelEventAppender.Apply", multiModelBody);
+        Assert.Contains("CodingMultiModelEventAppender.Apply", multiModelWorkflow);
+        Assert.DoesNotContain("CodingMultiModelEventAppender.Apply", multiModelBody);
         Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", multiModelBody);
     }
 
@@ -475,7 +481,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
             methodBody,
             "AttachAnalyzedFramePhoto(entry)",
             "AttachAnalyzedFramePhoto(draft.Entry)",
-            "attachAnalyzedFramePhoto(draft.Entry)");
+            "attachAnalyzedFramePhoto(draft.Entry)",
+            "actions.AttachAnalyzedFramePhoto(draft.Entry)");
         var addIndex = FirstIndexOf(
             methodBody,
             "codingSessionService.AddEvent(entry)",

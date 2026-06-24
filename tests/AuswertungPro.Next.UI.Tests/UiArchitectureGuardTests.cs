@@ -1474,23 +1474,31 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
         var multiModelPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.MultiModel.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelFindingEventWorkflow.cs");
         var addDecisionPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
 
         Assert.True(File.Exists(multiModelPath), "Multi-Model-Event-Erzeugung soll aus dem allgemeinen AiEvents-Partial heraus.");
+        Assert.True(File.Exists(workflowPath), "Multi-Model-Event-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(addDecisionPath), "Multi-Model-Add-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var aiEvents = File.ReadAllText(aiEventsPath);
         var multiModel = File.ReadAllText(multiModelPath);
+        var workflow = File.ReadAllText(workflowPath);
         var addDecision = File.ReadAllText(addDecisionPath);
 
         Assert.DoesNotContain("private void AddMultiModelFindingsAsEvents", aiEvents);
         Assert.Contains("private void AddMultiModelFindingsAsEvents", multiModel);
-        Assert.Contains("CodingSegmentedFindingFrameMapper.Build", multiModel);
-        Assert.Contains("CodingMultiModelQualityGatePolicy.Evaluate", multiModel);
-        Assert.Contains("CodingMultiModelFindingAddDecisionPolicy.Decide", multiModel);
+        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", multiModel);
+        Assert.DoesNotContain("CodingSegmentedFindingFrameMapper.Build", multiModel);
+        Assert.DoesNotContain("CodingMultiModelQualityGatePolicy.Evaluate", multiModel);
+        Assert.DoesNotContain("CodingMultiModelFindingAddDecisionPolicy.Decide", multiModel);
         Assert.DoesNotContain("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", multiModel);
         Assert.DoesNotContain("CodingOneTimeCodeDuplicatePolicy.AlreadyExists", multiModel);
         Assert.DoesNotContain("CodingFindingCoveragePolicy.FindCoveringEvent", multiModel);
+        Assert.Contains("public static class CodingMultiModelFindingEventWorkflow", workflow);
+        Assert.Contains("CodingSegmentedFindingFrameMapper.Build", workflow);
+        Assert.Contains("CodingMultiModelQualityGatePolicy.Evaluate", workflow);
+        Assert.Contains("CodingMultiModelFindingAddDecisionPolicy.Decide", workflow);
         Assert.Contains("public static CodingMultiModelFindingAddDecision Decide", addDecision);
         Assert.Contains("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", addDecision);
         Assert.Contains("CodingOneTimeCodeDuplicatePolicy.AlreadyExists", addDecision);
@@ -3896,17 +3904,21 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelFindingEventWorkflow.cs");
         var mapperPath = Path.Combine(uiRoot, "Ai", "CodingSegmentedFindingFrameMapper.cs");
 
         Assert.True(File.Exists(mapperPath), "SegmentedFinding-zu-LiveFrameFinding-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var events = File.ReadAllText(eventsPath);
+        var workflow = File.ReadAllText(workflowPath);
         var mapper = File.ReadAllText(mapperPath);
 
-        Assert.Contains("CodingSegmentedFindingFrameMapper.Build", events);
+        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", events);
+        Assert.DoesNotContain("CodingSegmentedFindingFrameMapper.Build", events);
         Assert.DoesNotContain("new LiveFrameFinding(", events);
         Assert.DoesNotContain("QuantificationSeverityPolicy.Estimate(", events);
         Assert.DoesNotContain("dino.X1 / imageWidth", events);
+        Assert.Contains("CodingSegmentedFindingFrameMapper.Build", workflow);
         Assert.Contains("public static LiveFrameFinding Build", mapper);
         Assert.Contains("VsaCodeResolver.NormalizeClock", mapper);
     }
@@ -3917,13 +3929,17 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelFindingEventWorkflow.cs");
         var decisionPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
 
         var events = File.ReadAllText(eventsPath);
+        var workflow = File.ReadAllText(workflowPath);
         var decision = File.ReadAllText(decisionPath);
 
-        Assert.Contains("CodingMultiModelFindingAddDecisionPolicy.Decide", events);
+        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", events);
+        Assert.DoesNotContain("CodingMultiModelFindingAddDecisionPolicy.Decide", events);
         Assert.DoesNotContain("CodingFindingCoveragePolicy.FindCoveringEvent", events);
+        Assert.Contains("CodingMultiModelFindingAddDecisionPolicy.Decide", workflow);
         Assert.Contains("CodingFindingCoveragePolicy.FindCoveringEvent", decision);
         Assert.DoesNotContain("CodingFindingCoveragePolicy.IsCovered(e, meter, pseudoFinding)", events);
     }
@@ -3934,16 +3950,20 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelFindingEventWorkflow.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelQualityGatePolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Multi-Model-QualityGate-Evidenz muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var events = File.ReadAllText(eventsPath);
+        var workflow = File.ReadAllText(workflowPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingMultiModelQualityGatePolicy.Evaluate", events);
+        Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", events);
+        Assert.DoesNotContain("CodingMultiModelQualityGatePolicy.Evaluate", events);
         Assert.DoesNotContain("new EvidenceVector(", events);
         Assert.DoesNotContain("new QualityGateResult(dinoConf", events);
+        Assert.Contains("CodingMultiModelQualityGatePolicy.Evaluate", workflow);
         Assert.Contains("public static QualityGateResult Evaluate", policy);
         Assert.Contains("YoloConf: yoloMaxConfidence", policy);
         Assert.Contains("PlausibilityScore: officialLabel != null ? 0.8 : 0.4", policy);
