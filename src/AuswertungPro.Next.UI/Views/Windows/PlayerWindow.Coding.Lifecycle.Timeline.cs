@@ -1,5 +1,4 @@
 using System;
-using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 
@@ -11,13 +10,7 @@ public partial class PlayerWindow
     {
         var codingVm = _codingVm ?? throw new InvalidOperationException("Coding timeline requires an active coding view model.");
 
-        PipeTimeline.TotalLength = codingVm.EndMeter;
-        PipeTimeline.MeterAccessor = CodingTimelineMarkerAccessors.Meter;
-        PipeTimeline.CodeAccessor = CodingTimelineMarkerAccessors.Code;
-        PipeTimeline.ConfidenceAccessor = CodingTimelineMarkerAccessors.Confidence;
-        PipeTimeline.IsRejectedAccessor = CodingTimelineMarkerAccessors.IsRejected;
-        PipeTimeline.Markers = codingVm.Events;
-        PipeTimeline.NavigateToMeterCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<double>(meter =>
+        var navigateToMeterCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<double>(meter =>
         {
             if (_codingSessionService != null && (codingVm.IsRunning || codingVm.IsPaused))
             {
@@ -26,7 +19,7 @@ public partial class PlayerWindow
                 SyncVideoToCodingMeter();
             }
         });
-        PipeTimeline.MarkerClickedCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<object>(item =>
+        var markerClickedCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<object>(item =>
         {
             if (item is CodingEvent ce)
             {
@@ -34,6 +27,13 @@ public partial class PlayerWindow
                 LstCodingEvents.SelectedItem = ce;
             }
         });
-        CodingTimelinePanel.Visibility = Visibility.Visible;
+
+        CodingTimelineControls.Configure(
+            PipeTimeline,
+            CodingTimelinePanel,
+            codingVm.EndMeter,
+            codingVm.Events,
+            navigateToMeterCommand,
+            markerClickedCommand);
     }
 }

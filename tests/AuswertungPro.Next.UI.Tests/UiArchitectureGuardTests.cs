@@ -4106,21 +4106,31 @@ public sealed class UiArchitectureGuardTests
         var playerCodingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
         var timelinePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Timeline.cs");
         var accessorsPath = Path.Combine(uiRoot, "Ai", "CodingTimelineMarkerAccessors.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingTimelineControls.cs");
 
         Assert.True(File.Exists(timelinePath), "Coding-Timeline-Wiring soll in einem eigenen Lifecycle-Partial liegen.");
         Assert.True(File.Exists(accessorsPath), "Timeline-Marker-Regeln muessen ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(controlsPath), "Timeline-Control-Konfiguration soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var playerCoding = File.ReadAllText(playerCodingPath);
         var timeline = File.ReadAllText(timelinePath);
         var accessors = File.ReadAllText(accessorsPath);
+        var controls = File.ReadAllText(controlsPath);
 
         Assert.Contains("InitializeCodingTimeline();", playerCoding);
         Assert.DoesNotContain("PipeTimeline.MeterAccessor = CodingTimelineMarkerAccessors.Meter", playerCoding);
         Assert.Contains("private void InitializeCodingTimeline", timeline);
-        Assert.Contains("CodingTimelineMarkerAccessors.Meter", timeline);
-        Assert.Contains("CodingTimelineMarkerAccessors.Code", timeline);
-        Assert.Contains("CodingTimelineMarkerAccessors.Confidence", timeline);
-        Assert.Contains("CodingTimelineMarkerAccessors.IsRejected", timeline);
+        Assert.Contains("CodingTimelineControls.Configure", timeline);
+        Assert.DoesNotContain("PipeTimeline.TotalLength =", timeline);
+        Assert.DoesNotContain("PipeTimeline.MeterAccessor =", timeline);
+        Assert.DoesNotContain("PipeTimeline.CodeAccessor =", timeline);
+        Assert.DoesNotContain("PipeTimeline.ConfidenceAccessor =", timeline);
+        Assert.DoesNotContain("PipeTimeline.IsRejectedAccessor =", timeline);
+        Assert.DoesNotContain("PipeTimeline.Markers =", timeline);
+        Assert.Contains("CodingTimelineMarkerAccessors.Meter", controls);
+        Assert.Contains("CodingTimelineMarkerAccessors.Code", controls);
+        Assert.Contains("CodingTimelineMarkerAccessors.Confidence", controls);
+        Assert.Contains("CodingTimelineMarkerAccessors.IsRejected", controls);
         Assert.DoesNotContain("PipeTimeline.MeterAccessor = obj => obj is CodingEvent", timeline);
         Assert.Contains("public static double Meter", accessors);
     }
