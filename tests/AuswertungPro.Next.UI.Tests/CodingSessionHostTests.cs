@@ -34,6 +34,8 @@ public sealed class CodingSessionHostTests
         hostType.GetMethod("SetCurrentVideoTime")!.Invoke(host, [TimeSpan.FromSeconds(7)]);
         hostType.GetMethod("SelectDefect")!.Invoke(host, [new CodingEvent()]);
         hostType.GetMethod("ClearSelectedDefect")!.Invoke(host, []);
+        hostType.GetMethod("ClearCurrentOverlay")!.Invoke(host, []);
+        hostType.GetMethod("ClearSelectedCode")!.Invoke(host, []);
     }
 
     [Fact]
@@ -102,6 +104,13 @@ public sealed class CodingSessionHostTests
 
         host.GetType().GetMethod("ClearSelectedDefect")!.Invoke(host, []);
         Assert.Null(vm.SelectedDefect);
+
+        host.GetType().GetMethod("ClearCurrentOverlay")!.Invoke(host, []);
+        Assert.Null(vm.CurrentOverlay);
+
+        host.GetType().GetMethod("ClearSelectedCode")!.Invoke(host, []);
+        Assert.Equal(string.Empty, vm.SelectedCode);
+        Assert.Equal(string.Empty, vm.SelectedCodeDescription);
     }
 
     private static object CreateHost(Func<CodingSessionViewModel?> resolveViewModel)

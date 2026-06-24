@@ -23,6 +23,8 @@ public interface ICodingSessionHost
     void SetCurrentVideoTime(TimeSpan videoTime);
     void SelectDefect(CodingEvent? codingEvent);
     void ClearSelectedDefect();
+    void ClearCurrentOverlay();
+    void ClearSelectedCode();
     bool ExecuteMoveNext();
     bool ExecuteMovePrevious();
     bool ExecuteAcceptDefect();
@@ -93,6 +95,25 @@ public sealed class CodingSessionHost : ICodingSessionHost
 
     public void ClearSelectedDefect()
         => SelectDefect(null);
+
+    public void ClearCurrentOverlay()
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null)
+            return;
+
+        viewModel.CurrentOverlay = null;
+    }
+
+    public void ClearSelectedCode()
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null)
+            return;
+
+        viewModel.SelectedCode = string.Empty;
+        viewModel.SelectedCodeDescription = string.Empty;
+    }
 
     public bool ExecuteMoveNext()
     {

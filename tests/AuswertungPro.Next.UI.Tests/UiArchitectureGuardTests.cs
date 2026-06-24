@@ -2957,6 +2957,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Stop", keyboard);
         Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Pause", keyboard);
         Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Resume", keyboard);
+        Assert.Contains("_codingSessionHost", keyboard);
+        Assert.DoesNotContain("_codingVm", keyboard);
         Assert.DoesNotContain("_player.Stop()", keyboard);
         Assert.DoesNotContain("_player.SetPause(true)", keyboard);
         Assert.DoesNotContain("_player.SetPause(false)", keyboard);
@@ -3341,6 +3343,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingManualEventAppender.Apply", selectedCodeWorkflow);
         Assert.Contains("public static bool Apply", postWorkflow);
         Assert.Contains("new CodingEventCreationPostActions", accessors);
+        Assert.Contains("_codingSessionHost", accessors);
+        Assert.DoesNotContain("_codingVm", accessors);
         Assert.Contains("CodingManualEventFactory.CreateUnconfirmedContext", appender);
         Assert.DoesNotContain("new CodingEventAiContext", events);
         Assert.Contains("public static CodingEventAiContext CreateUnconfirmedContext", factory);

@@ -90,15 +90,8 @@ public partial class PlayerWindow
             RefreshEvents: RefreshCodingEventsList,
             SelectCreatedEvent: ev => LstCodingEvents.SelectedItem = ev,
             CancelSchema: () => _codingSchemaManager.Cancel(),
-            ClearCurrentOverlay: () => { if (_codingVm != null) _codingVm.CurrentOverlay = null; },
-            ClearSelectedCode: () =>
-            {
-                if (_codingVm == null)
-                    return;
-
-                _codingVm.SelectedCode = "";
-                _codingVm.SelectedCodeDescription = "";
-            },
+            ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
+            ClearSelectedCode: _codingSessionHost.ClearSelectedCode,
             RedrawCanvas: () => RedrawCodingCanvas(includeManualOverlay: false),
             ClearSelectedCodeText: () => CodingSelectedCodeControls.Clear(TxtCodingSelectedCode),
             DisableCreateEvent: () => CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false),

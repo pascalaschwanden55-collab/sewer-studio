@@ -36,9 +36,9 @@ public partial class PlayerWindow
         _codingSchemaManager.Cancel();
         if (CodingOverlayCanvas.IsMouseCaptured)
             CodingOverlayCanvas.ReleaseMouseCapture();
-        if (_codingVm != null)
+        if (_codingSessionHost.HasViewModel)
         {
-            _codingVm.CurrentOverlay = null;
+            _codingSessionHost.ClearCurrentOverlay();
             CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false);
             UpdateCodingOverlayInfo(null);
         }
