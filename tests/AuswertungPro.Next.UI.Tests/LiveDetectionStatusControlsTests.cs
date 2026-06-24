@@ -186,6 +186,25 @@ public sealed class LiveDetectionStatusControlsTests
     }
 
     [Fact]
+    public void SetDetectionStatusVisibility_applies_visible_or_collapsed_state()
+    {
+        RunOnStaThread(() =>
+        {
+            var status = new TextBlock { Visibility = Visibility.Collapsed };
+            var set = FindMethod("SetDetectionStatusVisibility", typeof(TextBlock), typeof(bool));
+            Assert.NotNull(set);
+
+            set.Invoke(null, [status, true]);
+
+            Assert.Equal(Visibility.Visible, status.Visibility);
+
+            set.Invoke(null, [status, false]);
+
+            Assert.Equal(Visibility.Collapsed, status.Visibility);
+        });
+    }
+
+    [Fact]
     public void ShowWaitingForFrame_shows_waiting_status()
     {
         RunOnStaThread(() =>
@@ -214,6 +233,22 @@ public sealed class LiveDetectionStatusControlsTests
 
             Assert.Equal("Fehler: Timeout", status.Text);
             Assert.Equal(Visibility.Collapsed, status.Visibility);
+        });
+    }
+
+    [Fact]
+    public void ShowStatusMessage_sets_text_and_shows_status()
+    {
+        RunOnStaThread(() =>
+        {
+            var status = new TextBlock { Visibility = Visibility.Collapsed, Text = "alt" };
+            var show = FindMethod("ShowStatusMessage", typeof(TextBlock), typeof(string));
+            Assert.NotNull(show);
+
+            show.Invoke(null, [status, "Fenster in Zwischenablage kopiert"]);
+
+            Assert.Equal("Fenster in Zwischenablage kopiert", status.Text);
+            Assert.Equal(Visibility.Visible, status.Visibility);
         });
     }
 

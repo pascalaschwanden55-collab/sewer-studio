@@ -65,10 +65,13 @@ public partial class PlayerWindow
     {
         try
         {
-            LiveDetectionStatusText.Text = msg;
-            LiveDetectionStatusText.Visibility = Visibility.Visible;
+            LiveDetectionStatusControls.ShowStatusMessage(LiveDetectionStatusText, msg);
             var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
-            t.Tick += (s, ev) => { LiveDetectionStatusText.Visibility = Visibility.Collapsed; t.Stop(); };
+            t.Tick += (s, ev) =>
+            {
+                LiveDetectionStatusControls.HideDetectionStatus(LiveDetectionStatusText);
+                t.Stop();
+            };
             t.Start();
         }
         catch { }

@@ -4309,6 +4309,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingProtocolMatchBuckets.Clear()", exit);
         Assert.DoesNotContain("_codingImportEvents.Clear()", exit);
         Assert.Contains("ShowCodingModeUi();", lifecycle);
+        Assert.Contains("LiveDetectionStatusControls.SetDetectionStatusVisibility", exit);
+        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = _isDetecting", exit);
         Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", ui);
         Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Collapsed", ui);
         Assert.DoesNotContain("new CodingSessionViewModel", lifecycle);
@@ -4339,6 +4341,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void SetCodingTool", tools);
         Assert.Contains("private void UpdateCodingOverlayCursor", tools);
         Assert.Contains("CodingToolSelectionPolicy.Build", tools);
+        Assert.Contains("LiveDetectionStatusControls.ShowStatusMessage", tools);
+        Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", tools);
+        Assert.DoesNotContain("LiveDetectionStatusText.Text = msg", tools);
+        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Visible", tools);
+        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Collapsed", tools);
         Assert.DoesNotContain("bool activate = !string.Equals(_activeCodingToolName, btnName)", tools);
         Assert.Contains("public static CodingToolSelectionState Build", policy);
     }

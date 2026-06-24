@@ -68,7 +68,7 @@ public partial class PlayerWindow
         CodingMeasurementPanel.Visibility = Visibility.Collapsed;
         CodingOsdBadgeControls.Hide(OsdMeterBadge);
         LiveDetectionButton.Visibility = Visibility.Visible;
-        LiveDetectionStatusText.Visibility = _isDetecting ? Visibility.Visible : Visibility.Collapsed;
+        LiveDetectionStatusControls.SetDetectionStatusVisibility(LiveDetectionStatusText, _isDetecting);
 
         _activeCodingToolName = null;
         TxtActiveToolLabel.Text = "";

@@ -114,6 +114,13 @@ public static class LiveDetectionStatusControls
         statusText.Visibility = Visibility.Collapsed;
     }
 
+    public static void SetDetectionStatusVisibility(TextBlock statusText, bool isVisible)
+    {
+        ArgumentNullException.ThrowIfNull(statusText);
+
+        statusText.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     public static void ShowWaitingForFrame(TextBlock statusText)
     {
         ArgumentNullException.ThrowIfNull(statusText);
@@ -127,6 +134,14 @@ public static class LiveDetectionStatusControls
         ArgumentNullException.ThrowIfNull(statusText);
 
         statusText.Text = $"Fehler: {message}";
+    }
+
+    public static void ShowStatusMessage(TextBlock statusText, string message)
+    {
+        ArgumentNullException.ThrowIfNull(statusText);
+
+        statusText.Text = message;
+        statusText.Visibility = Visibility.Visible;
     }
 
     public static void ShowPipelineHealthDetails(
