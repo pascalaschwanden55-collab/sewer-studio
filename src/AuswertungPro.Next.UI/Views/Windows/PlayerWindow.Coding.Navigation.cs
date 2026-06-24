@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
-using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -18,15 +17,15 @@ public partial class PlayerWindow
 
     private void UpdateCodingUi(string? propertyName)
     {
-        if (_codingVm == null) return;
+        if (!_codingSessionHost.HasViewModel) return;
 
         var result = CodingUiUpdateWorkflow.Apply(
             propertyName,
             _codingNavPending,
             new CodingUiUpdateActions(
-                ApplyMeterTimeline: () => CodingMeterTimelineControls.Apply(TxtCodingMeter, PipeTimeline, _codingVm.CurrentMeter),
+                ApplyMeterTimeline: () => CodingMeterTimelineControls.Apply(TxtCodingMeter, PipeTimeline, _codingSessionHost.CurrentMeter),
                 SyncVideoToCodingMeter: SyncVideoToCodingMeter,
-                UpdateOverlayInfo: () => UpdateCodingOverlayInfo(_codingVm.CurrentOverlay),
+                UpdateOverlayInfo: () => UpdateCodingOverlayInfo(_codingSessionHost.CurrentOverlay),
                 UpdateCurrentCode: UpdateCodingCurrentCode,
                 UpdateStatistics: UpdateCodingStatistics));
         _codingNavPending = result.NavigationPending;
@@ -37,7 +36,7 @@ public partial class PlayerWindow
     /// </summary>
     private void UpdateCodingCurrentCode()
     {
-        if (_codingVm == null)
+        if (!_codingSessionHost.HasViewModel)
         {
             CodingCurrentCodeBadgeControls.Apply(
                 CodingCurrentCodeBadge,
@@ -47,54 +46,54 @@ public partial class PlayerWindow
         }
 
         var state = CodingCurrentCodeBadgePolicy.Build(
-            _codingVm.Events,
+            _codingSessionHost.Events,
             ResolveCurrentCodingDisplayMeter());
 
         CodingCurrentCodeBadgeControls.Apply(CodingCurrentCodeBadge, TxtCodingCurrentCode, state);
     }
 
     private double ResolveCurrentCodingDisplayMeter()
-        => _codingVm == null
+        => !_codingSessionHost.HasViewModel
             ? 0
             : CodingVideoNavigationController.ResolveDisplayMeter(
                 _codingOsdMeterController.LastMeter,
                 _player.Time,
                 _player.Length,
-                _codingVm.EndMeter,
-                _codingVm.CurrentMeter);
+                _codingSessionHost.EndMeter,
+                _codingSessionHost.CurrentMeter);
 
     private void SyncVideoToCodingMeter()
     {
-        if (_codingVm == null) return;
+        if (!_codingSessionHost.HasViewModel) return;
         CodingVideoNavigationController.SyncVideoToCodingMeter(
-            _codingVm.CurrentMeter,
-            _codingVm.EndMeter,
+            _codingSessionHost.CurrentMeter,
+            _codingSessionHost.EndMeter,
             _player.Length,
             targetMs => _player.Time = targetMs,
             () => _player.Time,
-            videoTime => _codingVm.CurrentVideoTime = videoTime);
+            _codingSessionHost.SetCurrentVideoTime);
     }
 
     private void CodingNext_Click(object sender, RoutedEventArgs e)
         => MoveCodingByCommandAsync(
-            vm => vm.MoveNextCommand.Execute(null),
+            host => host.ExecuteMoveNext(),
             nameof(CodingNext_Click))
             .SafeFireAndForget("CodingNext");
 
     private void CodingPrevious_Click(object sender, RoutedEventArgs e)
         => MoveCodingByCommandAsync(
-            vm => vm.MovePreviousCommand.Execute(null),
+            host => host.ExecuteMovePrevious(),
             nameof(CodingPrevious_Click))
             .SafeFireAndForget("CodingPrevious");
 
     private async Task MoveCodingByCommandAsync(
-        Action<CodingSessionViewModel> executeMoveCommand,
+        Action<ICodingSessionHost> executeMoveCommand,
         string traceName)
     {
         try
         {
             if (!CodingVideoNavigationController.PrepareMoveByCommand(
-                    _codingVm,
+                    _codingSessionHost.HasViewModel ? _codingSessionHost : null,
                     executeMoveCommand,
                     () => _codingNavPending = true,
                     () => PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause)),

@@ -44,6 +44,7 @@ public partial class PlayerWindow
     private CodingInlineDefectDetailControls _codingInlineDefectDetailControls = null!;
     private CodingEventCreationPostActions _codingEventCreationPostActions = null!;
     private CodingConfirmationPanelControls _codingConfirmationPanelControls = null!;
+    private readonly ICodingSessionHost _codingSessionHost;
 
     private enum EingabemarkerPhase { Inactive, Drawing, Input, Analyzing }
     private EingabemarkerPhase _eingabemarkerPhase = EingabemarkerPhase.Inactive;
