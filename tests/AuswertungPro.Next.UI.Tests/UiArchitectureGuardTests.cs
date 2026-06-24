@@ -1571,6 +1571,7 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
+        var resultWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiResultWorkflow.cs");
         var filteringPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Filtering.cs");
         var meterPolicyPath = Path.Combine(uiRoot, "Ai", "CodingResultMeterReadingPolicy.cs");
         var osdStateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterStateWorkflow.cs");
@@ -1580,6 +1581,7 @@ public sealed class UiArchitectureGuardTests
         var findingsControlsPath = Path.Combine(windowsRoot, "CodingFindingsListControls.cs");
 
         Assert.True(File.Exists(filteringPath), "KI-Finding-Filteradapter sollen aus dem allgemeinen AiEvents-Partial heraus.");
+        Assert.True(File.Exists(resultWorkflowPath), "Coding-AI-Result-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(meterPolicyPath), "OSD-Meteruebernahme aus KI-Ergebnissen muss ausserhalb der PlayerWindow-Partials entschieden werden.");
         Assert.True(File.Exists(osdStateWorkflowPath), "OSD-Meteruebernahme soll als State-Workflow ausserhalb der PlayerWindow-Partials angewendet werden.");
         Assert.True(File.Exists(warmupPolicyPath), "Warmup-Puffer-Auswahl muss ausserhalb der PlayerWindow-Partials entschieden werden.");
@@ -1588,6 +1590,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(findingsControlsPath), "Coding-Findings-Listenzuweisung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var aiEvents = File.ReadAllText(aiEventsPath);
+        var resultWorkflow = File.ReadAllText(resultWorkflowPath);
         var filtering = File.ReadAllText(filteringPath);
         var meterPolicy = File.ReadAllText(meterPolicyPath);
         var osdStateWorkflow = File.ReadAllText(osdStateWorkflowPath);
@@ -1605,15 +1608,21 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("MeterReading.Value <= 500", aiEvents);
         Assert.DoesNotContain("MeterReading.HasValue &&", aiEvents);
         Assert.DoesNotContain("CodingResultMeterReadingPolicy.TryAccept", aiEvents);
+        Assert.Contains("CodingAiResultWorkflow.Execute", aiEvents);
+        Assert.DoesNotContain("CodingOsdMeterStateWorkflow.FromDetectionResult(result)", aiEvents);
         Assert.Contains("CodingOsdMeterStateWorkflow.FromDetectionResult", aiEvents);
+        Assert.Contains("ResolveOsdMeterState", resultWorkflow);
         Assert.Contains("CodingResultMeterReadingPolicy.TryAccept", osdStateWorkflow);
         Assert.DoesNotContain("var buffered = _pendingWarmupResult", aiEvents);
         Assert.DoesNotContain("buffered.Findings.Count", aiEvents);
         Assert.Contains("_codingFrameReadinessController.SelectReadyResult", aiEvents);
+        Assert.Contains("SelectReadyResult", resultWorkflow);
         Assert.Contains("CodingWarmupResultBufferPolicy.Select", frameReadinessController);
         Assert.DoesNotContain("validFindings.Where(f => !IsFindingAlreadyKnown", aiEvents);
         Assert.Contains("CodingNewFindingOverlaySelector.Select", aiEvents);
-        Assert.Contains("CodingFindingsListControls.ShowFindings(CodingFindingsList, validFindings)", aiEvents);
+        Assert.Contains("SelectFindingsToDraw", resultWorkflow);
+        Assert.Contains("CodingFindingsListControls.ShowFindings(CodingFindingsList, findings)", aiEvents);
+        Assert.Contains("ShowFindings", resultWorkflow);
         Assert.Contains("AiFindingDisplayItemFactory.ForFindings", findingsControls);
         Assert.Contains("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", filtering);
         Assert.Contains("private static string? LookupVsaLabel", filtering);

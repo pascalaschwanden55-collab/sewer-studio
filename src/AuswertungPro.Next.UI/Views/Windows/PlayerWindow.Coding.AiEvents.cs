@@ -24,84 +24,37 @@ public partial class PlayerWindow
 
     private void ShowCodingAiResults(LiveDetection result)
     {
-        if (result.Error != null)
-        {
-            SetCodingAiState($"Fehler: {result.Error}", PlayerStatusColors.Error,
-                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName)}");
-            DetectionOverlayCleaner.ClearFindings(CodingFindingsList);
-            return;
-        }
-
-        // â”€â”€ Zustandsautomat: Einblendung vs. echtes Videobild â”€â”€
-        // Zuerst State aktualisieren, dann pruefen ob Frame analysiert werden darf.
-        // Gating BEVOR irgendetwas ins UI geschrieben wird.
-        UpdateFrameReadiness(result);
-
-        if (!IsFrameReady())
-        {
-            // Ergebnis puffern statt verwerfen (Warmup-Phase)
-            _codingFrameReadinessController.StorePendingWarmupResult(result);
-
-            SetCodingAiState("Dateneinblendung erkannt \u2014 \u00fcbersprungen",
-                PlayerStatusColors.Muted,
-                $"Warte auf Videobild... (Bild {_codingFrameReadinessController.SkippedFrames} von 3)");
-            DetectionOverlayCleaner.ClearFindingsAndCanvas(DetectionCanvas, CodingFindingsList);
-            return;
-        }
-
-        // Warmup-Puffer nachtraeglich verarbeiten (erste Ready-Transition)
-        result = _codingFrameReadinessController.SelectReadyResult(result);
-
-        // â”€â”€ Ab hier: Frame ist bereit fuer Analyse â”€â”€
-
-        // OSD-Meterstand uebernehmen (Defense-in-Depth: nochmals Plausibilitaet pruefen)
-        var acceptedOsdMeter = CodingOsdMeterStateWorkflow.FromDetectionResult(result);
-        if (_codingVm != null && acceptedOsdMeter.HasValue)
-        {
-            ApplyCodingOsdMeterState(acceptedOsdMeter.Value);
-            _codingSessionService?.MoveToMeter(acceptedOsdMeter.Value.Meter);
-        }
-
-        // â”€â”€ Findings filtern: VSA-Validierung + Deduplizierung â”€â”€
-        // Eine einzige gefilterte Liste fuer UI, Overlays und Event-Erstellung.
-        var currentMeter = ResolveCodingMeterForFrame(result.TimestampSeconds, result.MeterReading);
-        var validFindings = FilterValidFindings(result.Findings, currentMeter);
-
-        if (validFindings.Count == 0)
-        {
-            var noDamageText = LiveDetectionDisplayPolicy.BuildCodingNoDamageStatusText(result.MeterReading);
-            SetCodingAiState(noDamageText, PlayerStatusColors.Success, "Schritt 3 von 3: Overlay aktualisiert");
-            DetectionOverlayCleaner.ClearFindingsAndCanvas(DetectionCanvas, CodingFindingsList);
-            return;
-        }
-
-        var findingsText = LiveDetectionDisplayPolicy.BuildCodingFindingsStatusText(result.MeterReading, validFindings.Count);
-        SetCodingAiState(findingsText, PlayerStatusColors.Success, "Schritt 3 von 3: Overlay und Events");
-        CodingFindingsListControls.ShowFindings(CodingFindingsList, validFindings);
-
-        // Vor dem Hinzufuegen pruefen, welche Befunde schon bekannt/abgehandelt sind
-        // (durch ein bestehendes Event abgedeckt). Nur NEUE bekommen eine Box — sonst
-        // tauchen akzeptierte Befunde bei jeder erneuten Analyse wieder als Box auf.
-        var findingsToDraw = CodingNewFindingOverlaySelector.Select(
-            validFindings,
-            currentMeter,
-            IsFindingAlreadyKnown);
-
-        // KI-Findings als CodingEvents mit AiContext in die Ereignisliste einfuegen
-        AddAiFindingsAsEvents(result, validFindings);
-
-        // Nur NEUE Befunde als visuelle Overlays auf dem Videobild anzeigen
-        if (findingsToDraw.Count > 0 && !CodingOverlayPopup.IsOpen)
-        {
-            LiveDetectionOverlayControls.Show(DetectionOverlayGrid);
-            RenderDetectionOverlay(findingsToDraw, _player.Time / 1000.0);
-            ScheduleDetectionAutoHide();   // verbleibende Boxen nach 3s ausblenden (Liste bleibt)
-        }
-        else
-        {
-            // Nichts Neues zu zeigen -> evtl. noch sichtbare Alt-Boxen wegnehmen (Liste bleibt)
-            DetectionOverlayCleaner.ClearVisuals(DetectionCanvas, DetectionOverlayGrid);
-        }
+        CodingAiResultWorkflow.Execute(
+            new CodingAiResultWorkflowRequest(
+                result,
+                _codingAiController.ModelName,
+                _codingVm != null,
+                CodingOverlayPopup.IsOpen,
+                _player.Time / 1000.0),
+            new CodingAiResultWorkflowActions(
+                (status, color, detail) => SetCodingAiState(status, color, detail),
+                () => DetectionOverlayCleaner.ClearFindings(CodingFindingsList),
+                () => DetectionOverlayCleaner.ClearFindingsAndCanvas(DetectionCanvas, CodingFindingsList),
+                () => DetectionOverlayCleaner.ClearVisuals(DetectionCanvas, DetectionOverlayGrid),
+                UpdateFrameReadiness,
+                IsFrameReady,
+                pending => _codingFrameReadinessController.StorePendingWarmupResult(pending),
+                () => _codingFrameReadinessController.SkippedFrames,
+                _codingFrameReadinessController.SelectReadyResult,
+                CodingOsdMeterStateWorkflow.FromDetectionResult,
+                ApplyCodingOsdMeterState,
+                meter => _codingSessionService?.MoveToMeter(meter),
+                ResolveCodingMeterForFrame,
+                FilterValidFindings,
+                findings => CodingFindingsListControls.ShowFindings(CodingFindingsList, findings),
+                (findings, currentMeter) => CodingNewFindingOverlaySelector.Select(
+                    findings,
+                    currentMeter,
+                    IsFindingAlreadyKnown),
+                AddAiFindingsAsEvents,
+                () => LiveDetectionOverlayControls.Show(DetectionOverlayGrid),
+                RenderDetectionOverlay,
+                ScheduleDetectionAutoHide));
     }
 
 }
