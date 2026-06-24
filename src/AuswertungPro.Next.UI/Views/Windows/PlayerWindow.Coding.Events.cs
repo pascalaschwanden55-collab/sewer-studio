@@ -67,21 +67,21 @@ public partial class PlayerWindow
 
     private void CodingCreateEvent_Click(object sender, RoutedEventArgs e)
     {
-        if (_codingVm == null || string.IsNullOrWhiteSpace(_codingVm.SelectedCode)) return;
+        if (_codingVm == null) return;
 
-        _codingVm.CurrentVideoTime = TimeSpan.FromMilliseconds(_player.Time);
-
-        var draft = CodingManualEventFactory.CreateUnconfirmed(
+        var videoTime = TimeSpan.FromMilliseconds(_player.Time);
+        _codingVm.CurrentVideoTime = videoTime;
+        var createdEvent = CodingSelectedCodeEventWorkflow.Create(
             _codingVm.SelectedCode,
             _codingVm.SelectedCodeDescription,
             _codingLastOsdMeter ?? _codingVm.CurrentMeter,
-            TimeSpan.FromMilliseconds(_player.Time),
-            _codingVm.CurrentOverlay);
+            videoTime,
+            _codingVm.CurrentOverlay,
+            _codingSessionService,
+            CodingCaptureSnapshot);
+        if (createdEvent == null)
+            return;
 
-        var fotoPath = CodingCaptureSnapshot(draft.Entry);
-        CodingProtocolEntryPhotoPathAppender.AddIfPresent(draft.Entry, fotoPath);
-
-        CodingManualEventAppender.Apply(draft, _codingVm.CurrentOverlay, _codingSessionService!);
         RefreshCodingEventsList();
 
         _codingSchemaManager.Cancel();

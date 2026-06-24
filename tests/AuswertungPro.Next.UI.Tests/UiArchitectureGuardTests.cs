@@ -2745,13 +2745,22 @@ public sealed class UiArchitectureGuardTests
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingManualEventFactory.cs");
         var appenderPath = Path.Combine(uiRoot, "Ai", "CodingManualEventAppender.cs");
+        var selectedCodeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSelectedCodeEventWorkflow.cs");
 
         var events = File.ReadAllText(eventsPath);
         var factory = File.ReadAllText(factoryPath);
         var appender = File.Exists(appenderPath) ? File.ReadAllText(appenderPath) : "";
+        var selectedCodeWorkflow = File.Exists(selectedCodeWorkflowPath) ? File.ReadAllText(selectedCodeWorkflowPath) : "";
 
+        Assert.True(File.Exists(selectedCodeWorkflowPath), "Manueller Selected-Code-Event-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.Contains("CodingSelectedCodeEventWorkflow.Create", events);
         Assert.Contains("CodingManualEventAppender.Apply", events);
+        Assert.DoesNotContain("CodingManualEventFactory.CreateUnconfirmed", events);
         Assert.DoesNotContain("CodingManualEventFactory.CreateUnconfirmedContext", events);
+        Assert.DoesNotContain("CodingProtocolEntryPhotoPathAppender", events);
+        Assert.Contains("CodingManualEventFactory.CreateUnconfirmed", selectedCodeWorkflow);
+        Assert.Contains("CodingProtocolEntryPhotoPathAppender.AddIfPresent", selectedCodeWorkflow);
+        Assert.Contains("CodingManualEventAppender.Apply", selectedCodeWorkflow);
         Assert.Contains("CodingManualEventFactory.CreateUnconfirmedContext", appender);
         Assert.DoesNotContain("new CodingEventAiContext", events);
         Assert.Contains("public static CodingEventAiContext CreateUnconfirmedContext", factory);
