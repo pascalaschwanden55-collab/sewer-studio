@@ -1199,6 +1199,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("VisionModelSelectionPolicy.Select", factory);
         Assert.Contains("private void StopLiveDetection", stop);
         Assert.Contains("LiveDetectionStopUiWorkflow.Execute", stop);
+        Assert.Contains("_codingSessionHost", stop);
+        Assert.DoesNotContain("_codingVm", stop);
         Assert.Contains("public static class LiveDetectionStopUiWorkflow", stopUiWorkflow);
         Assert.Contains("LiveDetectionStatusControls.ShowStoppedDetectionStatus", stop);
         Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", stop);
@@ -3836,6 +3838,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", marking);
         Assert.Contains("private async Task<bool> SaveMarkAsTrainingAsync", training);
         Assert.Contains("LiveDetectionManualMarkTrainingWorkflow.SaveAsync", training);
+        Assert.Contains("_codingSessionHost", training);
+        Assert.DoesNotContain("_codingVm", training);
         Assert.DoesNotContain("LiveDetectionManualMarkEventAppender.Apply", training);
         Assert.DoesNotContain("CodingProtocolEntryPhotoPathAppender.AddIfPresent", training);
         Assert.DoesNotContain("_codingSessionService.AddEvent(manualEntry", training);

@@ -14,7 +14,7 @@ public partial class PlayerWindow
             new LiveDetectionStopUiWorkflowRequest(
                 ShouldUpdateUi: !_closing && !_playbackDisposed,
                 HideOverlay: !_isManualMarkMode,
-                TotalEvents: _codingVm?.Events?.Count ?? 0,
+                TotalEvents: _codingSessionHost.EventCollection?.Count ?? 0,
                 HasPlayer: _player is not null,
                 IsPlaybackDisposed: _playbackDisposed,
                 IsPlayerPlaying: _player?.IsPlaying == true),
