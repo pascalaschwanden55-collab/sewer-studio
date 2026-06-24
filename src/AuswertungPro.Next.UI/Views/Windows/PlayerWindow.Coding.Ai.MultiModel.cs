@@ -30,47 +30,40 @@ public partial class PlayerWindow
         if (start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready)
             return;
 
-        var pngBytes = start.FrameBytes!;
-        var frameOsdMeter = start.FrameOsdMeter;
-
-        var currentMeterForClassifier = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
-        var classifierInput = CodingMultiModelClassifierInputPolicy.Build(
-            _codingOverlayService?.Calibration?.NominalDiameterMm,
-            currentMeterForClassifier,
-            _codingVm?.EndMeter);
-
-        var mmResult = await multiModel.AnalyzeFrameAsync(
-            pngBytes, classifierInput.NominalDiameterMm, _codingOverlayService?.Calibration,
-            analysisCts.Token,
-            classifierInput.CurrentMeter,
-            classifierInput.ReachLength);
-
-        if (mmResult.Error != null)
-        {
-            SetCodingAiState($"Fehler: {mmResult.Error}", PlayerStatusColors.Error,
-                "Multi-Model");
-            return;
-        }
-
-        if (TryHandleBoundaryClassifierResult(mmResult, captureTimestampSec, frameOsdMeter))
-            return;
-
-        if (TryHandleStructuralClassifierResult(mmResult, captureTimestampSec, frameOsdMeter))
-            return;
-
-        CodingMultiModelAnalysisResultWorkflow.Execute(
-            new CodingMultiModelAnalysisResultWorkflowRequest(mmResult, activityText),
-            new CodingMultiModelAnalysisResultWorkflowActions(
-                SetCodingAiState,
-                () => Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas),
-                BuildCodingSegmentedFindings,
-                ShowMultiModelResults,
-                (findings, imageWidth, imageHeight, yoloMaxConfidence) => AddMultiModelFindingsAsEvents(
-                    findings,
-                    imageWidth,
-                    imageHeight,
-                    yoloMaxConfidence,
-                    captureTimestampSec,
-                    frameOsdMeter)));
+        await CodingMultiModelInferenceWorkflow.ExecuteAsync(
+            new CodingMultiModelInferenceWorkflowRequest(
+                activityText,
+                start.FrameBytes!,
+                captureTimestampSec,
+                start.FrameOsdMeter,
+                _codingOverlayService?.Calibration?.NominalDiameterMm,
+                _codingVm?.EndMeter,
+                analysisCts.Token),
+            new CodingMultiModelInferenceWorkflowActions(
+                ResolveCurrentMeter: ResolveCodingMeterForFrame,
+                AnalyzeFrameAsync: (frameBytes, classifierInput, cancellationToken) => multiModel.AnalyzeFrameAsync(
+                    frameBytes,
+                    classifierInput.NominalDiameterMm,
+                    _codingOverlayService?.Calibration,
+                    cancellationToken,
+                    classifierInput.CurrentMeter,
+                    classifierInput.ReachLength),
+                SetCodingAiState: SetCodingAiState,
+                TryHandleBoundaryClassifierResult: TryHandleBoundaryClassifierResult,
+                TryHandleStructuralClassifierResult: TryHandleStructuralClassifierResult,
+                HandleAnalysisResult: result => CodingMultiModelAnalysisResultWorkflow.Execute(
+                    new CodingMultiModelAnalysisResultWorkflowRequest(result, activityText),
+                    new CodingMultiModelAnalysisResultWorkflowActions(
+                        SetCodingAiState,
+                        () => Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas),
+                        BuildCodingSegmentedFindings,
+                        ShowMultiModelResults,
+                        (findings, imageWidth, imageHeight, yoloMaxConfidence) => AddMultiModelFindingsAsEvents(
+                            findings,
+                            imageWidth,
+                            imageHeight,
+                            yoloMaxConfidence,
+                            captureTimestampSec,
+                            start.FrameOsdMeter)))));
     }
 }

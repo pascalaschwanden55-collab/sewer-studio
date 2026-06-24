@@ -291,17 +291,22 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var osdController = ReadUiFile("Player", "CodingOsdMeterController.cs");
+        var inferenceWorkflow = ReadUiFile("Ai", "CodingMultiModelInferenceWorkflow.cs");
         var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
         var resolveBody = ExtractMethodBody(coding, "private double ResolveCodingMeterForFrame");
 
-        var meterStart = multiModelBody.IndexOf("var currentMeterForClassifier", StringComparison.Ordinal);
-        var resolveIndex = multiModelBody.IndexOf("ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter)", meterStart, StringComparison.Ordinal);
+        var meterStart = inferenceWorkflow.IndexOf("var currentMeterForClassifier", StringComparison.Ordinal);
+        var resolveIndex = inferenceWorkflow.IndexOf("actions.ResolveCurrentMeter", StringComparison.Ordinal);
+        var inputIndex = inferenceWorkflow.IndexOf("CodingMultiModelClassifierInputPolicy.Build", StringComparison.Ordinal);
         var controllerResolverIndex = resolveBody.IndexOf("_codingOsdMeterController.ResolveMeter", StringComparison.Ordinal);
         var viewModelMeterIndex = resolveBody.IndexOf("_codingVm?.CurrentMeter", StringComparison.Ordinal);
 
         Assert.True(meterStart >= 0, "Analyse muss einen Meter fuer den Klassifikator bestimmen.");
         Assert.True(resolveIndex >= 0, "Der Klassifikator muss den gemeinsamen Frame-Meter-Resolver verwenden.");
-        Assert.Contains("CodingMultiModelClassifierInputPolicy.Build", multiModelBody);
+        Assert.True(inputIndex > resolveIndex, "Der Klassifikator-Input muss nach der Frame-Meter-Aufloesung gebaut werden.");
+        Assert.Contains("CodingMultiModelInferenceWorkflow.ExecuteAsync", multiModelBody);
+        Assert.Contains("ResolveCurrentMeter: ResolveCodingMeterForFrame", multiModelBody);
+        Assert.Contains("CodingMultiModelClassifierInputPolicy.Build", inferenceWorkflow);
         Assert.True(controllerResolverIndex >= 0, "Video-Positions-Fallback muss ueber den OSD-Meter-Controller laufen.");
         Assert.Contains("CodingMeterResolver.Resolve", osdController);
         Assert.True(viewModelMeterIndex >= 0, "ViewModel-Meter darf nur als spaeter Fallback genutzt werden.");
@@ -336,19 +341,23 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var osdService = ReadUiFile("Ai", "CodingOsdMeterService.cs");
         var singleModelWorkflow = ReadUiFile("Ai", "CodingSingleModelAnalysisWorkflow.cs");
+        var startWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisStartWorkflow.cs");
+        var inferenceWorkflow = ReadUiFile("Ai", "CodingMultiModelInferenceWorkflow.cs");
         var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
         var readerBody = ExtractMethodBody(coding, "private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync");
         var helperBody = ExtractMethodBody(coding, "private async Task<double?> TryReadOsdMeterFromFrameBytesAsync");
 
-        var osdReadIndex = multiModelBody.IndexOf("TryReadAnalyzedFrameOsdMeterAsync", StringComparison.Ordinal);
-        var classifierIndex = multiModelBody.IndexOf("var currentMeterForClassifier", StringComparison.Ordinal);
+        var startIndex = multiModelBody.IndexOf("CodingMultiModelAnalysisStartWorkflow.ExecuteAsync", StringComparison.Ordinal);
+        var inferenceIndex = multiModelBody.IndexOf("CodingMultiModelInferenceWorkflow.ExecuteAsync", StringComparison.Ordinal);
         var addIndex = multiModelBody.IndexOf("AddMultiModelFindingsAsEvents(", StringComparison.Ordinal);
 
-        Assert.True(osdReadIndex >= 0, "Multi-Model muss den OSD-Meter aus exakt dem analysierten Frame lesen.");
-        Assert.True(classifierIndex >= 0, "Test erwartet den Klassifikator-Meter im Multi-Model-Pfad.");
-        Assert.True(osdReadIndex < classifierIndex, "OSD-Meter muss vor Klassifikator/Boundary-Logik vorliegen.");
-        Assert.Contains("frameOsdMeter", multiModelBody);
-        Assert.Contains("frameOsdMeter", multiModelBody[addIndex..]);
+        Assert.True(startIndex >= 0, "Multi-Model muss den OSD-Meter aus exakt dem analysierten Frame lesen.");
+        Assert.True(inferenceIndex >= 0, "Test erwartet den Klassifikator-Meter im Multi-Model-Pfad.");
+        Assert.True(startIndex < inferenceIndex, "OSD-Meter muss vor Klassifikator/Boundary-Logik vorliegen.");
+        Assert.Contains("actions.TryReadAnalyzedFrameOsdMeterAsync", startWorkflow);
+        Assert.Contains("request.FrameOsdMeter", inferenceWorkflow);
+        Assert.Contains("start.FrameOsdMeter", multiModelBody);
+        Assert.Contains("start.FrameOsdMeter", multiModelBody[addIndex..]);
         Assert.Contains("actions.TryReadAnalyzedFrameOsdMeterAsync", singleModelWorkflow);
         Assert.Contains("result with { MeterReading = frameOsdMeter }", singleModelWorkflow);
         Assert.Contains("TryReadOsdMeterFromFrameBytesAsync", readerBody);

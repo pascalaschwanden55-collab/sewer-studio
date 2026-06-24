@@ -1446,11 +1446,13 @@ public sealed class UiArchitectureGuardTests
         var preflightWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAnalysisPreflightWorkflow.cs");
         var singleModelWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSingleModelAnalysisWorkflow.cs");
         var multiModelStartWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelAnalysisStartWorkflow.cs");
+        var multiModelInferenceWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelInferenceWorkflow.cs");
 
         Assert.True(File.Exists(helpersPath), "Gemeinsame Coding-AI-Helper sollen aus dem Orchestrator-Partial heraus.");
         Assert.True(File.Exists(preflightWorkflowPath), "Coding-AI-Preflight-Entscheidungen sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(singleModelWorkflowPath), "Coding-AI-Single-Model-Ablauf soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(multiModelStartWorkflowPath), "Coding-AI-Multi-Model-Startablauf soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(multiModelInferenceWorkflowPath), "Coding-AI-Multi-Model-Inferenzablauf soll ausserhalb von PlayerWindow liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var multiModel = File.ReadAllText(multiModelPath);
@@ -1458,6 +1460,7 @@ public sealed class UiArchitectureGuardTests
         var preflightWorkflow = File.ReadAllText(preflightWorkflowPath);
         var singleModelWorkflow = File.ReadAllText(singleModelWorkflowPath);
         var multiModelStartWorkflow = File.ReadAllText(multiModelStartWorkflowPath);
+        var multiModelInferenceWorkflow = File.ReadAllText(multiModelInferenceWorkflowPath);
 
         Assert.DoesNotContain("private async void CodingAnalyzeFrame_Click", ai);
         Assert.Contains("private void CodingAnalyzeFrame_Click", ai);
@@ -1486,11 +1489,19 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("result with { MeterReading = frameOsdMeter }", singleModelWorkflow);
         Assert.Contains("\"Frame nicht extrahierbar\"", singleModelWorkflow);
         Assert.Contains("CodingMultiModelAnalysisStartWorkflow.ExecuteAsync", multiModel);
+        Assert.Contains("CodingMultiModelInferenceWorkflow.ExecuteAsync", multiModel);
         Assert.DoesNotContain("\"Schritt 1 von 4: Snapshot\"", multiModel);
         Assert.DoesNotContain("\"Dateneinblendung erkannt - uebersprungen\"", multiModel);
+        Assert.DoesNotContain("var currentMeterForClassifier", multiModel);
+        Assert.DoesNotContain("if (mmResult.Error != null)", multiModel);
+        Assert.DoesNotContain("if (TryHandleBoundaryClassifierResult", multiModel);
         Assert.Contains("actions.StoreAnalyzedFrame(pngBytes, request.CaptureTimestampSeconds)", multiModelStartWorkflow);
         Assert.Contains("actions.UpdateFrameReadiness", multiModelStartWorkflow);
         Assert.Contains("\"Schritt 2 von 4: YOLO und DINO\"", multiModelStartWorkflow);
+        Assert.Contains("CodingMultiModelClassifierInputPolicy.Build", multiModelInferenceWorkflow);
+        Assert.Contains("actions.TryHandleBoundaryClassifierResult", multiModelInferenceWorkflow);
+        Assert.Contains("actions.TryHandleStructuralClassifierResult", multiModelInferenceWorkflow);
+        Assert.Contains("actions.HandleAnalysisResult(result)", multiModelInferenceWorkflow);
     }
 
     [Fact]
