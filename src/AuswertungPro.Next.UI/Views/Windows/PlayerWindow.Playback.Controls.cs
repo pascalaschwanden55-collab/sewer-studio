@@ -42,53 +42,36 @@ public partial class PlayerWindow
 
     private void SeekToSlider()
     {
-        var target = PlayerPlaybackState.ResolveSliderSeekTarget(
+        PlayerSliderSeekController.SeekToSlider(
             PositionSlider.Value,
             PositionSlider.Maximum,
-            _player.Length);
-        if (!target.IsValid)
-            return;
-
-        ApplySliderSeekTarget(target);
-        UpdateUi();
-    }
-
-    private void ApplySliderSeekTarget(PlayerSliderSeekTarget target)
-    {
-        if (target.TimeMs.HasValue)
-            _player.Time = target.TimeMs.Value;
-        else if (target.Position.HasValue)
-            _player.Position = target.Position.Value;
+            _player.Length,
+            targetMs => _player.Time = targetMs,
+            position => _player.Position = position,
+            UpdateUi);
     }
 
     private void UpdateSeekPreview()
     {
-        var target = PlayerPlaybackState.ResolveSliderSeekTarget(
+        PlayerSliderSeekController.UpdateSeekPreview(
             PositionSlider.Value,
             PositionSlider.Maximum,
-            _player.Length);
-        if (!target.IsValid)
-            return;
-
-        _positionControls.ApplySeekPreview(target.Ratio, _player.Length);
-
-        // Throttled live seek: schedule scrub if not already pending.
-        if (_isDragging && !_scrubTimer.IsEnabled)
-            _scrubTimer.Start();
+            _player.Length,
+            _isDragging,
+            _scrubTimer.IsEnabled,
+            _positionControls.ApplySeekPreview,
+            _scrubTimer.Start);
     }
 
     private void ScrubSeekToSlider()
     {
-        var target = PlayerPlaybackState.ResolveSliderSeekTarget(
+        PlayerSliderSeekController.ScrubSeekToSlider(
             PositionSlider.Value,
             PositionSlider.Maximum,
-            _player.Length);
-        if (!target.IsValid)
-            return;
-
-        ApplySliderSeekTarget(target);
-
-        _positionControls.ApplyScrubPreview(target.Ratio, _player.Length);
+            _player.Length,
+            targetMs => _player.Time = targetMs,
+            position => _player.Position = position,
+            _positionControls.ApplyScrubPreview);
     }
 
     private void SetSpeed(float rate)

@@ -815,18 +815,21 @@ public sealed class UiArchitectureGuardTests
         var controlsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Controls.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackState.cs");
         var gatewayPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackGateway.cs");
+        var sliderSeekControllerPath = Path.Combine(uiRoot, "Player", "PlayerSliderSeekController.cs");
         var positionControlsPath = Path.Combine(uiRoot, "Player", "PlayerPositionControls.cs");
         var speedControlsPath = Path.Combine(uiRoot, "Player", "PlayerSpeedControls.cs");
         var dialogServicePath = Path.Combine(uiRoot, "Player", "PlayerPlaybackDialogService.cs");
         var dialogServiceFactoryPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackDialogServiceFactory.cs");
 
         Assert.True(File.Exists(gatewayPath), "Try-Playback-Zugriffe sollen ausserhalb des PlayerWindow-Partials gekapselt sein.");
+        Assert.True(File.Exists(sliderSeekControllerPath), "Slider-Seek-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServicePath), "Playback-Dialogtexte sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServiceFactoryPath), "Playback-DialogHost-Verdrahtung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var playback = File.ReadAllText(playbackPath) + File.ReadAllText(controlsPath);
         var policy = File.ReadAllText(policyPath);
         var gateway = File.ReadAllText(gatewayPath);
+        var sliderSeekController = File.ReadAllText(sliderSeekControllerPath);
         var positionControls = File.ReadAllText(positionControlsPath);
         var speedControls = File.ReadAllText(speedControlsPath);
         var dialogService = File.ReadAllText(dialogServicePath);
@@ -834,15 +837,17 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("PlayerPlaybackGateway.TryGetCurrentTime", playback);
         Assert.Contains("PlayerPlaybackGateway.TrySeekTo", playback);
-        Assert.Contains("PlayerPlaybackState.ResolveSliderSeekTarget", playback);
+        Assert.Contains("PlayerSliderSeekController.SeekToSlider", playback);
+        Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", playback);
+        Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", playback);
         Assert.Contains("_positionControls.ApplyPlaybackState", playback);
-        Assert.Contains("_positionControls.ApplySeekPreview", playback);
-        Assert.Contains("_positionControls.ApplyScrubPreview", playback);
         Assert.Contains("_speedControls.Update", playback);
+        Assert.DoesNotContain("PlayerPlaybackState.ResolveSliderSeekTarget", playback);
         Assert.DoesNotContain("PlayerPlaybackState.BuildSeekPreviewText", playback);
         Assert.DoesNotContain("PlayerPlaybackState.BuildUiState", playback);
         Assert.DoesNotContain("PlayerPlaybackState.FormatRateLabel", playback);
         Assert.DoesNotContain("PlayerPlaybackState.IsRateButtonChecked", playback);
+        Assert.DoesNotContain("private void ApplySliderSeekTarget", playback);
         Assert.DoesNotContain("RateText.Text", playback);
         Assert.DoesNotContain("CurrentTimeText.Text", playback);
         Assert.DoesNotContain("DurationText.Text", playback);
@@ -859,6 +864,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static class PlayerPlaybackGateway", gateway);
         Assert.Contains("PlayerPlaybackState.ResolveSeekTargetMs", gateway);
         Assert.Contains("TimeSpan.FromMilliseconds(Math.Max(0, getCurrentTimeMs()))", gateway);
+        Assert.Contains("public static class PlayerSliderSeekController", sliderSeekController);
+        Assert.Contains("PlayerPlaybackState.ResolveSliderSeekTarget", sliderSeekController);
         Assert.Contains("public sealed class PlayerPositionControls", positionControls);
         Assert.Contains("PlayerPlaybackState.BuildUiState", positionControls);
         Assert.Contains("PlayerPlaybackState.BuildSeekPreviewText", positionControls);
@@ -908,9 +915,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void SetSpeed", controls);
         Assert.DoesNotContain("private void UpdateSpeedButtons", controls);
         Assert.DoesNotContain("private static void SetSpeedButtonState", controls);
-        Assert.Contains("PlayerPlaybackState.ResolveSliderSeekTarget", controls);
-        Assert.Contains("_positionControls.ApplySeekPreview", controls);
-        Assert.Contains("_positionControls.ApplyScrubPreview", controls);
+        Assert.Contains("PlayerSliderSeekController.SeekToSlider", controls);
+        Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", controls);
+        Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", controls);
+        Assert.DoesNotContain("PlayerPlaybackState.ResolveSliderSeekTarget", controls);
         Assert.Contains("_speedControls.Update", controls);
         Assert.Contains("public static class PlayerPlaybackCommandRunner", commandRunner);
         Assert.Contains("public static void Play", commandRunner);
