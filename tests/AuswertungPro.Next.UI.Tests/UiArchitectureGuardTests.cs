@@ -4642,6 +4642,7 @@ public sealed class UiArchitectureGuardTests
         var importReferenceResetterPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceStateResetter.cs");
         var matchResetterPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchStateResetter.cs");
         var preparePlaybackWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModePreparePlaybackWorkflow.cs");
+        var defaultToolWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeDefaultToolWorkflow.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(exitPath), "Codiermodus-Exit soll aus dem allgemeinen Lifecycle-Partial heraus.");
@@ -4652,6 +4653,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(importReferenceResetterPath), "Import-Referenz-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(matchResetterPath), "Protocol-Match-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(preparePlaybackWorkflowPath), "Coding-Mode-Playback-Vorbereitung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(defaultToolWorkflowPath), "Coding-Mode-Default-Tool-Aktivierung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var coding = File.ReadAllText(codingPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
@@ -4663,6 +4665,7 @@ public sealed class UiArchitectureGuardTests
         var importReferenceResetter = File.Exists(importReferenceResetterPath) ? File.ReadAllText(importReferenceResetterPath) : "";
         var matchResetter = File.Exists(matchResetterPath) ? File.ReadAllText(matchResetterPath) : "";
         var preparePlaybackWorkflow = File.Exists(preparePlaybackWorkflowPath) ? File.ReadAllText(preparePlaybackWorkflowPath) : "";
+        var defaultToolWorkflow = File.Exists(defaultToolWorkflowPath) ? File.ReadAllText(defaultToolWorkflowPath) : "";
 
         Assert.DoesNotContain("private void EnterCodingMode", coding);
         Assert.DoesNotContain("private void ExitCodingMode", coding);
@@ -4679,7 +4682,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void InitializeCodingImportReferences", importReference);
         Assert.Contains("private void ActivateDefaultCodingTool", ui);
         Assert.Contains("private void ShowCodingModeUi", ui);
-        Assert.Contains("_markToolControls.SetToolLabels(\"Rechteck\")", ui);
+        Assert.Contains("CodingModeDefaultToolWorkflow.Execute", ui);
+        Assert.DoesNotContain("_markToolControls.SetToolLabels(\"Rechteck\")", ui);
+        Assert.Contains("DefaultToolLabel = \"Rechteck\"", defaultToolWorkflow);
+        Assert.Contains("DefaultTool = OverlayToolType.Rectangle", defaultToolWorkflow);
+        Assert.Contains("request.HasOverlayService", defaultToolWorkflow);
         Assert.DoesNotContain("TxtMarkToolName.Text", ui);
         Assert.DoesNotContain("TxtActiveToolLabel.Text", ui);
         Assert.Contains("CreateCodingSessionState();", lifecycle);

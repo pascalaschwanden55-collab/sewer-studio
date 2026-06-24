@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
@@ -27,10 +26,12 @@ public partial class PlayerWindow
 
     private void ActivateDefaultCodingTool()
     {
-        _markToolType = OverlayToolType.Rectangle;
-        _markToolControls.SetToolLabels("Rechteck");
-        if (_codingOverlayService != null)
-            _codingOverlayService.ActiveTool = OverlayToolType.Rectangle;
+        CodingModeDefaultToolWorkflow.Execute(
+            new CodingModeDefaultToolWorkflowRequest(_codingOverlayService is not null),
+            new CodingModeDefaultToolWorkflowActions(
+                SetMarkToolType: tool => _markToolType = tool,
+                SetToolLabels: _markToolControls.SetToolLabels,
+                SetOverlayActiveTool: tool => _codingOverlayService!.ActiveTool = tool));
     }
 
     private void ShowCodingModeUi()
