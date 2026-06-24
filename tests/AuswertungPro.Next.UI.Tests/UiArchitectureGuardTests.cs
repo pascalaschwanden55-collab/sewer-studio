@@ -4939,6 +4939,33 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_meter_timeline_uses_controls_adapter()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var navigationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Navigation.cs");
+        var sessionPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Session.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingMeterTimelineControls.cs");
+
+        Assert.True(File.Exists(controlsPath), "Meteranzeige und Timeline-Playhead sollen ausserhalb der PlayerWindow-Partials gesetzt werden.");
+
+        var navigation = File.ReadAllText(navigationPath);
+        var session = File.ReadAllText(sessionPath);
+        var controls = File.ReadAllText(controlsPath);
+        var playerText = navigation + session;
+
+        Assert.Contains("CodingMeterTimelineControls.Apply", navigation);
+        Assert.Contains("CodingMeterTimelineControls.SetText", session);
+        Assert.DoesNotContain("TxtCodingMeter.Text", playerText);
+        Assert.DoesNotContain("PipeTimeline.CurrentMeter", playerText);
+        Assert.Contains("public static class CodingMeterTimelineControls", controls);
+        Assert.Contains("PipeGraphTimeline", controls);
+        Assert.Contains("meterText.Text", controls);
+        Assert.Contains("timeline.CurrentMeter", controls);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_mode_dialogs_live_in_service()
     {
         var root = FindRepositoryRoot();

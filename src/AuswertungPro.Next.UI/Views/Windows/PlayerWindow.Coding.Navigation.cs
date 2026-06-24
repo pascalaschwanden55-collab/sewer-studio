@@ -19,8 +19,7 @@ public partial class PlayerWindow
     private void UpdateCodingUi(string? propertyName)
     {
         if (_codingVm == null) return;
-        TxtCodingMeter.Text = $"{_codingVm.CurrentMeter:F2}m";
-        PipeTimeline.CurrentMeter = _codingVm.CurrentMeter;
+        CodingMeterTimelineControls.Apply(TxtCodingMeter, PipeTimeline, _codingVm.CurrentMeter);
         // Video NUR synchronisieren wenn explizite Navigation (Next/Previous)
         // Verhindert Zurueckspringen beim normalen Abspielen
         if (propertyName is nameof(CodingSessionViewModel.CurrentMeter) && _codingNavPending)

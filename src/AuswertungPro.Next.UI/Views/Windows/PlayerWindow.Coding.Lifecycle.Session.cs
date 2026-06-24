@@ -54,7 +54,7 @@ public partial class PlayerWindow
 
         _codingSessionService.PauseSession();
         TxtCodingRange.Text = $"/ {_codingVm.EndMeter:F2}m";
-        TxtCodingMeter.Text = "0.00m";
+        CodingMeterTimelineControls.SetText(TxtCodingMeter, 0.0);
         return true;
     }
 }
