@@ -28,12 +28,15 @@ public partial class PlayerWindow
     /// </summary>
     private void LoadExistingProtocolEntries()
     {
-        if (_codingVm == null || _haltungRecord == null) return;
+        if (!_codingSessionHost.HasViewModel || _haltungRecord == null) return;
 
         var events = CodingProtocolEventMapper.BuildExistingEvents(_haltungRecord.Protocol);
         if (events.Count == 0) return;
 
-        CodingProtocolEventCollectionAppender.Append(_codingVm.Events, events);
+        var eventCollection = _codingSessionHost.EventCollection;
+        if (eventCollection is null) return;
+
+        CodingProtocolEventCollectionAppender.Append(eventCollection, events);
     }
 
     // --- Coding: Primaere Schaeden synchronisieren ---

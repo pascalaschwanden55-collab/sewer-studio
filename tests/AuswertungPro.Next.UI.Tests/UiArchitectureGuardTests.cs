@@ -821,6 +821,8 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("CodingProtocolEventMapper.BuildExistingEvents", protocol);
         Assert.Contains("CodingProtocolEventCollectionAppender.Append", protocol);
+        Assert.Contains("_codingSessionHost", protocol);
+        Assert.DoesNotContain("_codingVm", protocol);
         Assert.DoesNotContain("_codingVm.Events.Add", protocol);
         Assert.DoesNotContain("new CodingEvent", protocol);
         Assert.DoesNotContain("OrderBy(e => e.MeterStart ?? 0)", protocol);
