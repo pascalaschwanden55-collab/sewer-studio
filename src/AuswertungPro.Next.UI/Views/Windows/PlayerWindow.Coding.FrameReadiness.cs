@@ -4,23 +4,18 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    // Warmup-Puffer: Ergebnis aus der Warmup-Phase wird zwischengespeichert
-    // und nach Transition zu Ready nachtraeglich verarbeitet.
-    private LiveDetection? _pendingWarmupResult;
-
     /// <summary>Setzt den Einblendungs-Zustand zurueck (bei Eintritt/Austritt Codier-Modus).</summary>
     private void ResetFrameReadiness()
     {
-        _codingFrameReadiness.Reset();
+        _codingFrameReadinessController.Reset();
         _codingOsdMeterController.ResetRecentMeter();
-        _pendingWarmupResult = null;
     }
 
     /// <summary>
     /// Reine Bewertung: Ist der aktuelle Frame bereit fuer die Analyse?
     /// Aendert KEINEN Zustand - dafuer ist UpdateFrameReadiness zustaendig.
     /// </summary>
-    private bool IsFrameReady() => _codingFrameReadiness.IsReady;
+    private bool IsFrameReady() => _codingFrameReadinessController.IsReady;
 
     /// <summary>
     /// Aktualisiert den Einblendungs-Zustand anhand des aktuellen Analyse-Ergebnisses.
@@ -35,6 +30,6 @@ public partial class PlayerWindow
     private void UpdateFrameReadiness(LiveDetection result)
     {
         var fallbackTimestamp = _player != null ? _player.Time / 1000.0 : 0.0;
-        _codingFrameReadiness.Update(result.TimestampSeconds, result.MeterReading.HasValue, fallbackTimestamp);
+        _codingFrameReadinessController.Update(result, fallbackTimestamp);
     }
 }

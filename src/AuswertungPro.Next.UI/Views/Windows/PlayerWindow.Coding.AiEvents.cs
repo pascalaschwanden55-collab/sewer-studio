@@ -40,21 +40,17 @@ public partial class PlayerWindow
         if (!IsFrameReady())
         {
             // Ergebnis puffern statt verwerfen (Warmup-Phase)
-            if (result.Findings.Count > 0)
-                _pendingWarmupResult = result;
+            _codingFrameReadinessController.StorePendingWarmupResult(result);
 
             SetCodingAiState("Dateneinblendung erkannt \u2014 \u00fcbersprungen",
                 PlayerStatusColors.Muted,
-                $"Warte auf Videobild... (Bild {_codingFrameReadiness.SkippedFrames} von 3)");
+                $"Warte auf Videobild... (Bild {_codingFrameReadinessController.SkippedFrames} von 3)");
             DetectionOverlayCleaner.ClearFindingsAndCanvas(DetectionCanvas, CodingFindingsList);
             return;
         }
 
         // Warmup-Puffer nachtraeglich verarbeiten (erste Ready-Transition)
-        var warmupSelection = CodingWarmupResultBufferPolicy.Select(result, _pendingWarmupResult);
-        if (warmupSelection.ShouldClearPending)
-            _pendingWarmupResult = null;
-        result = warmupSelection.Result;
+        result = _codingFrameReadinessController.SelectReadyResult(result);
 
         // â”€â”€ Ab hier: Frame ist bereit fuer Analyse â”€â”€
 

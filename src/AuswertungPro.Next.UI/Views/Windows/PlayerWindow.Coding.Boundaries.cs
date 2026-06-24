@@ -36,7 +36,7 @@ public partial class PlayerWindow
         // Rohranfang-Foto: NICHT den Videoanfang nehmen (dort laeuft die Dateneinblendung).
         // Bevorzugt den ersten sauberen Frame NACH der Einblendung (FrameReadiness -> Ready)
         // gezielt per ffmpeg greifen; sonst Fallback auf den uebergebenen analysierten Frame.
-        analyzedFrameBytes = TryExtractFrameAtSeconds(_codingFrameReadiness.FirstCleanFrameSeconds) ?? analyzedFrameBytes;
+        analyzedFrameBytes = TryExtractFrameAtSeconds(_codingFrameReadinessController.FirstCleanFrameSeconds) ?? analyzedFrameBytes;
         AttachBoundaryAnalyzedFramePhoto(draft.Entry, analyzedFrameBytes);
 
         CodingBoundaryEventAppender.Apply(draft, startReference.Meter, startReference.VideoTime, _codingSessionService);

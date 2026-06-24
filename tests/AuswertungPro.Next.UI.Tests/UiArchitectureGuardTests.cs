@@ -1551,6 +1551,7 @@ public sealed class UiArchitectureGuardTests
         var meterPolicyPath = Path.Combine(uiRoot, "Ai", "CodingResultMeterReadingPolicy.cs");
         var osdStateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterStateWorkflow.cs");
         var warmupPolicyPath = Path.Combine(uiRoot, "Ai", "CodingWarmupResultBufferPolicy.cs");
+        var frameReadinessControllerPath = Path.Combine(uiRoot, "Player", "CodingFrameReadinessController.cs");
         var overlaySelectorPath = Path.Combine(uiRoot, "Ai", "CodingNewFindingOverlaySelector.cs");
         var findingsControlsPath = Path.Combine(windowsRoot, "CodingFindingsListControls.cs");
 
@@ -1558,6 +1559,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(meterPolicyPath), "OSD-Meteruebernahme aus KI-Ergebnissen muss ausserhalb der PlayerWindow-Partials entschieden werden.");
         Assert.True(File.Exists(osdStateWorkflowPath), "OSD-Meteruebernahme soll als State-Workflow ausserhalb der PlayerWindow-Partials angewendet werden.");
         Assert.True(File.Exists(warmupPolicyPath), "Warmup-Puffer-Auswahl muss ausserhalb der PlayerWindow-Partials entschieden werden.");
+        Assert.True(File.Exists(frameReadinessControllerPath), "FrameReadiness- und Warmup-Pufferzustand soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(overlaySelectorPath), "Auswahl neuer Overlay-Findings muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(findingsControlsPath), "Coding-Findings-Listenzuweisung soll ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -1566,6 +1568,7 @@ public sealed class UiArchitectureGuardTests
         var meterPolicy = File.ReadAllText(meterPolicyPath);
         var osdStateWorkflow = File.ReadAllText(osdStateWorkflowPath);
         var warmupPolicy = File.ReadAllText(warmupPolicyPath);
+        var frameReadinessController = File.ReadAllText(frameReadinessControllerPath);
         var overlaySelector = File.ReadAllText(overlaySelectorPath);
         var findingsControls = File.ReadAllText(findingsControlsPath);
 
@@ -1582,7 +1585,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingResultMeterReadingPolicy.TryAccept", osdStateWorkflow);
         Assert.DoesNotContain("var buffered = _pendingWarmupResult", aiEvents);
         Assert.DoesNotContain("buffered.Findings.Count", aiEvents);
-        Assert.Contains("CodingWarmupResultBufferPolicy.Select", aiEvents);
+        Assert.Contains("_codingFrameReadinessController.SelectReadyResult", aiEvents);
+        Assert.Contains("CodingWarmupResultBufferPolicy.Select", frameReadinessController);
         Assert.DoesNotContain("validFindings.Where(f => !IsFindingAlreadyKnown", aiEvents);
         Assert.Contains("CodingNewFindingOverlaySelector.Select", aiEvents);
         Assert.Contains("CodingFindingsListControls.ShowFindings(CodingFindingsList, validFindings)", aiEvents);

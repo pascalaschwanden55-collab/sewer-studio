@@ -36,6 +36,7 @@ public partial class PlayerWindow
     private bool _codingAiPulseRunning;
     private readonly StreckenschadenTracker _streckenTracker = new();
     private readonly CodingAiController _codingAiController = new();
+    private readonly CodingFrameReadinessController _codingFrameReadinessController = new();
     private CodingLiveAiTimerController? _codingLiveAiTimers;
     private readonly CodingOsdMeterController _codingOsdMeterController = new();
     private CodingEventsListControls _codingEventsListControls = null!;
@@ -63,5 +64,4 @@ public partial class PlayerWindow
     private bool _codingOverlayWasOpenBeforeSuspend;
     private bool _codingOverlayWasOpenBeforeExternalHide;
     private string _codingBaselineSignature = string.Empty;
-    private readonly CodingFrameReadinessTracker _codingFrameReadiness = new();
 }

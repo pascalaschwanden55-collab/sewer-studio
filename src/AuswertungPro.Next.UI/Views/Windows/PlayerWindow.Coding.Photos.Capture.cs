@@ -20,7 +20,7 @@ public partial class PlayerWindow
     {
         var sec = CodingAnalyzedFrameTimestampPolicy.Resolve(
             _detectionConfirmationBuffer.TimestampSeconds,
-            _codingFrameReadiness.FirstCleanFrameSeconds);
+            _codingFrameReadinessController.FirstCleanFrameSeconds);
         return TryExtractFrameAtSeconds(sec);
     }
 
