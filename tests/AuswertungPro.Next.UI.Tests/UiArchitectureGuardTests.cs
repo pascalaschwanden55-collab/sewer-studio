@@ -4917,6 +4917,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_current_code_badge_uses_controls_adapter()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var navigationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Navigation.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingCurrentCodeBadgeControls.cs");
+
+        Assert.True(File.Exists(controlsPath), "Current-Code-Badge-Text und Visibility sollen ausserhalb der PlayerWindow-Partials gesetzt werden.");
+
+        var navigation = File.ReadAllText(navigationPath);
+        var controls = File.ReadAllText(controlsPath);
+
+        Assert.Contains("CodingCurrentCodeBadgeControls.Apply", navigation);
+        Assert.DoesNotContain("TxtCodingCurrentCode.Text", navigation);
+        Assert.DoesNotContain("CodingCurrentCodeBadge.Visibility", navigation);
+        Assert.Contains("public static class CodingCurrentCodeBadgeControls", controls);
+        Assert.Contains("TextBlock", controls);
+        Assert.Contains("Visibility.Visible", controls);
+        Assert.Contains("Visibility.Collapsed", controls);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_mode_dialogs_live_in_service()
     {
         var root = FindRepositoryRoot();

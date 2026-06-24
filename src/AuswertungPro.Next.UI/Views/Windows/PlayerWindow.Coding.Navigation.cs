@@ -47,7 +47,10 @@ public partial class PlayerWindow
     {
         if (_codingVm == null)
         {
-            CodingCurrentCodeBadge.Visibility = Visibility.Collapsed;
+            CodingCurrentCodeBadgeControls.Apply(
+                CodingCurrentCodeBadge,
+                TxtCodingCurrentCode,
+                CodingCurrentCodeBadgeState.Hidden);
             return;
         }
 
@@ -55,10 +58,7 @@ public partial class PlayerWindow
             _codingVm.Events,
             ResolveCurrentCodingDisplayMeter());
 
-        TxtCodingCurrentCode.Text = state.Text;
-        CodingCurrentCodeBadge.Visibility = state.IsVisible
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        CodingCurrentCodeBadgeControls.Apply(CodingCurrentCodeBadge, TxtCodingCurrentCode, state);
     }
 
     private double ResolveCurrentCodingDisplayMeter()
