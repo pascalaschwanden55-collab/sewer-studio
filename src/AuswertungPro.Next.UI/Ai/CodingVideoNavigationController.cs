@@ -36,4 +36,22 @@ public static class CodingVideoNavigationController
         setCurrentVideoTime(TimeSpan.FromMilliseconds(getPlayerTimeMs()));
         return true;
     }
+
+    public static bool PrepareMoveByCommand<TViewModel>(
+        TViewModel? viewModel,
+        Action<TViewModel> executeMoveCommand,
+        Action markNavigationPending,
+        Action pausePlayback,
+        Action resetRecentOsdTracking)
+        where TViewModel : class
+    {
+        if (viewModel == null)
+            return false;
+
+        markNavigationPending();
+        executeMoveCommand(viewModel);
+        pausePlayback();
+        resetRecentOsdTracking();
+        return true;
+    }
 }

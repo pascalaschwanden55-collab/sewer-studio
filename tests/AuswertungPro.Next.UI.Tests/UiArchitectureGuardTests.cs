@@ -3972,11 +3972,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private async Task MoveCodingByCommandAsync", navigation);
         Assert.Contains("CodingVideoNavigationController.ResolveDisplayMeter", navigation);
         Assert.Contains("CodingVideoNavigationController.SyncVideoToCodingMeter", navigation);
+        Assert.Contains("CodingVideoNavigationController.PrepareMoveByCommand", navigation);
         Assert.DoesNotContain("CodingCurrentMeterResolver.Resolve", navigation);
         Assert.DoesNotContain("CodingVideoSyncPolicy.TryResolveTargetTimeMs", navigation);
         Assert.Contains("public static class CodingVideoNavigationController", controller);
         Assert.Contains("CodingCurrentMeterResolver.Resolve", controller);
         Assert.Contains("CodingVideoSyncPolicy.TryResolveTargetTimeMs", controller);
+        Assert.Contains("PrepareMoveByCommand", controller);
     }
 
     [Fact]

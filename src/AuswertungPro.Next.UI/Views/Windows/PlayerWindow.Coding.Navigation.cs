@@ -101,12 +101,18 @@ public partial class PlayerWindow
     {
         try
         {
-            if (_codingVm == null) return;
-            _codingNavPending = true;
-            executeMoveCommand(_codingVm);
-            PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause));
-            _codingLastOsdMeter = null;
-            _codingLastOsdTimestampSec = null;
+            if (!CodingVideoNavigationController.PrepareMoveByCommand(
+                    _codingVm,
+                    executeMoveCommand,
+                    () => _codingNavPending = true,
+                    () => PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause)),
+                    () =>
+                    {
+                        _codingLastOsdMeter = null;
+                        _codingLastOsdTimestampSec = null;
+                    }))
+                return;
+
             await CodingReadOsdMeterAsync();
         }
         catch (Exception ex)
