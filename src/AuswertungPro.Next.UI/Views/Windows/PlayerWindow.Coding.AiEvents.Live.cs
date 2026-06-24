@@ -14,12 +14,11 @@ public partial class PlayerWindow
     /// </summary>
     private void AddAiFindingsAsEvents(LiveDetection result, IReadOnlyList<LiveFrameFinding> validFindings)
     {
-        var codingVm = _codingVm;
         var codingSessionService = _codingSessionService;
-        if (codingVm == null || codingSessionService == null) return;
+        if (!_codingSessionHost.HasViewModel || codingSessionService == null) return;
 
         double meter = ResolveCodingMeterForFrame(result.TimestampSeconds, result.MeterReading);
-        var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
+        var videoTime = _codingSessionHost.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
 
         // BCD wird NICHT mehr automatisch erzeugt - nur durch Eingabemarker oder Qwen-Erkennung.
         // EnsureRohranfangExists(meter, videoTime, ref anyAdded);
@@ -30,7 +29,7 @@ public partial class PlayerWindow
                 meter,
                 videoTime,
                 codingSessionService,
-                codingVm.Events,
+                _codingSessionHost.Events,
                 _codingAiController.QualityGate),
             new CodingLiveFindingEventWorkflowActions(
                 IsFindingTooFarAhead,
@@ -39,11 +38,12 @@ public partial class PlayerWindow
                 message => PlayerTrace.WriteLine(message),
                 RefreshCodingEventsList,
                 RenderAiOverlays,
-                () => codingVm.CurrentOverlay != null,
+                () => _codingSessionHost.CurrentOverlay != null,
                 () =>
                 {
-                    if (codingVm.CurrentOverlay != null)
-                        RenderOverlayGeometry(codingVm.CurrentOverlay, isPreview: false);
+                    var overlay = _codingSessionHost.CurrentOverlay;
+                    if (overlay != null)
+                        RenderOverlayGeometry(overlay, isPreview: false);
                 },
                 UpdateToolBadge,
                 PauseAndAskConfirmation));

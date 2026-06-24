@@ -13,12 +13,11 @@ public partial class PlayerWindow
         IReadOnlyList<SegmentedFinding> segmented, double imageWidth, double imageHeight,
         double? yoloMaxConfidence, double captureTimestampSec, double? frameOsdMeter)
     {
-        var codingVm = _codingVm;
         var codingSessionService = _codingSessionService;
-        if (codingVm == null || codingSessionService == null) return;
+        if (!_codingSessionHost.HasViewModel || codingSessionService == null) return;
 
         double meter = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
-        var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
+        var videoTime = _codingSessionHost.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
 
         // Streckenschaden-Befunde (laengs > 1 m) laufen NICHT als Punkt-Events, sondern ueber den
         // automatischen Tracker. Laeuft bei jedem Tick (auch leer) -> ermoeglicht Auto-Schliessen.
@@ -36,7 +35,7 @@ public partial class PlayerWindow
                 imageHeight,
                 yoloMaxConfidence,
                 codingSessionService,
-                codingVm.Events,
+                _codingSessionHost.Events,
                 _codingAiController.QualityGate,
                 _codingOsdMeterController.LastResolvedMeterIsOsd,
                 _codingOverlayService?.Calibration,

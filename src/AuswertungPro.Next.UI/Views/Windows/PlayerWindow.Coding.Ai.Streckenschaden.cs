@@ -21,8 +21,7 @@ public partial class PlayerWindow
         IReadOnlyList<SegmentedFinding> segmented, double meter, TimeSpan videoTime)
     {
         var codingSessionService = _codingSessionService;
-        var codingVm = _codingVm;
-        if (codingSessionService == null || codingVm == null)
+        if (codingSessionService == null || !_codingSessionHost.HasViewModel)
             return [];
 
         // 1) Codierbare Streckenschaden-Befunde sammeln und Code aufloesen (gleicher Resolver wie Loop).
@@ -45,13 +44,13 @@ public partial class PlayerWindow
         TimeSpan videoTime)
     {
         var codingSessionService = _codingSessionService;
-        var codingVm = _codingVm;
-        if (codingSessionService == null || codingVm == null || actions.Count == 0)
+        var codingEvents = _codingSessionHost.EventCollection;
+        if (codingSessionService == null || codingEvents == null || actions.Count == 0)
             return false;
 
         return CodingStreckenschadenActionApplier.Apply(
             actions,
-            codingVm.Events,
+            codingEvents,
             codingSessionService,
             videoTime,
             LookupVsaLabel,

@@ -12,19 +12,19 @@ public partial class PlayerWindow
         double captureTimestampSec,
         double? frameOsdMeter)
     {
-        var codingVm = _codingVm;
         var codingSessionService = _codingSessionService;
-        if (codingVm == null || codingSessionService == null)
+        var viewEvents = _codingSessionHost.EventCollection;
+        if (viewEvents == null || codingSessionService == null)
             return false;
 
         var meter = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
-        var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);
+        var videoTime = _codingSessionHost.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);
         var result = CodingStructuralClassifierResultWorkflow.Execute(
             new CodingStructuralClassifierResultWorkflowRequest(
                 mmResult,
                 meter,
                 videoTime,
-                codingVm.Events,
+                viewEvents,
                 codingSessionService,
                 _codingOsdMeterController.LastResolvedMeterIsOsd),
             new CodingStructuralClassifierResultWorkflowActions(

@@ -1659,6 +1659,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void AddAiFindingsAsEvents", aiEvents);
         Assert.Contains("private void AddAiFindingsAsEvents", live);
         Assert.Contains("CodingLiveFindingEventWorkflow.Execute", live);
+        Assert.Contains("_codingSessionHost", live);
+        Assert.DoesNotContain("_codingVm", live);
         Assert.DoesNotContain("CodingLiveFindingEventFactory.Create", live);
         Assert.DoesNotContain("CodingLiveFindingQualityGatePolicy.Evaluate", live);
         Assert.DoesNotContain("CodingLiveFindingSessionAppender.Append", live);
@@ -5900,6 +5902,29 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("ShowSessionStartFailed", service);
         Assert.Contains("ShowImportFrameCaptureFailed", service);
         Assert.Contains("DialogHost.Current", factory);
+    }
+
+    [Fact]
+    public void PlayerWindow_ai_event_partials_read_session_state_through_session_host()
+    {
+        var root = FindRepositoryRoot();
+        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var paths = new[]
+        {
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Live.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.MultiModel.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Boundary.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Structural.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Streckenschaden.cs")
+        };
+
+        foreach (var path in paths)
+        {
+            Assert.True(File.Exists(path), $"{Path.GetFileName(path)} muss als PlayerWindow-Partial existieren.");
+            var text = File.ReadAllText(path);
+            Assert.Contains("_codingSessionHost", text);
+            Assert.DoesNotContain("_codingVm", text);
+        }
     }
 
     private static bool IsBuildOutput(string path)

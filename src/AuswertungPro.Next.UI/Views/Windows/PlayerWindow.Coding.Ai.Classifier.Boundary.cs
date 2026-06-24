@@ -15,19 +15,19 @@ public partial class PlayerWindow
         if (!CodingBoundaryClassifierResultWorkflow.CanHandle(mmResult))
             return false;
 
-        var codingVm = _codingVm;
-        if (codingVm == null || _codingSessionService == null)
+        if (!_codingSessionHost.HasViewModel || _codingSessionService == null)
             return false;
 
-        var videoTime = codingVm.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);
+        var videoTime = _codingSessionHost.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);
         var meter = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
+        var eventCount = _codingSessionHost.EventCollection?.Count ?? 0;
         var result = CodingBoundaryClassifierResultWorkflow.Execute(
             new CodingBoundaryClassifierResultWorkflowRequest(
                 mmResult,
                 meter,
-                codingVm.EndMeter,
+                _codingSessionHost.EndMeter,
                 videoTime,
-                codingVm.Events.Count,
+                eventCount,
                 _detectionConfirmationBuffer.FrameBytes),
             new CodingBoundaryClassifierResultWorkflowActions(
                 LookupVsaLabel,
@@ -50,7 +50,7 @@ public partial class PlayerWindow
                 },
                 CloseTrackedStreckenschaeden,
                 (meterEnd, endTime, frameBytes) => EnsureRohrendeExists(meterEnd, endTime, frameBytes),
-                () => codingVm.Events.Count,
+                () => _codingSessionHost.EventCollection?.Count ?? 0,
                 (status, color, detail) => SetCodingAiState(status, color, detail)));
         return result.Handled;
     }
