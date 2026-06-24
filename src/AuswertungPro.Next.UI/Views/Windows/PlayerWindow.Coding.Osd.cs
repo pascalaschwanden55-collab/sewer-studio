@@ -28,8 +28,8 @@ public partial class PlayerWindow
             SameFrameOsdMeter: sameFrameOsdMeter,
             CurrentPlayerSeconds: currentPlayerSeconds,
             DurationSeconds: durationSeconds,
-            EndMeter: _codingVm?.EndMeter ?? 0,
-            CurrentMeter: _codingVm?.CurrentMeter ?? 0));
+            EndMeter: _codingSessionHost.EndMeter,
+            CurrentMeter: _codingSessionHost.CurrentMeter));
     }
 
     private double? GetMeterFromVideoPosition()
@@ -39,7 +39,7 @@ public partial class PlayerWindow
         return _codingOsdMeterController.EstimateFromVideo(
             currentPlayerSeconds,
             durationSeconds,
-            _codingVm?.EndMeter ?? 0);
+            _codingSessionHost.EndMeter);
     }
 
 }

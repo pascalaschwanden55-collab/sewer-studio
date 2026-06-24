@@ -1542,6 +1542,8 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("private double ResolveCodingMeterForFrame", osd);
         Assert.Contains("private double? GetMeterFromVideoPosition", osd);
+        Assert.Contains("_codingSessionHost", osd);
+        Assert.DoesNotContain("_codingVm", osd);
         Assert.DoesNotContain("private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync", osd);
         Assert.DoesNotContain("private async Task<double?> TryReadOsdMeterFromFrameBytesAsync", osd);
         Assert.Contains("_codingOsdMeterController.DisposeService()", osd);

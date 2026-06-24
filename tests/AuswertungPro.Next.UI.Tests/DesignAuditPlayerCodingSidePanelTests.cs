@@ -299,7 +299,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var resolveIndex = inferenceWorkflow.IndexOf("actions.ResolveCurrentMeter", StringComparison.Ordinal);
         var inputIndex = inferenceWorkflow.IndexOf("CodingMultiModelClassifierInputPolicy.Build", StringComparison.Ordinal);
         var controllerResolverIndex = resolveBody.IndexOf("_codingOsdMeterController.ResolveMeter", StringComparison.Ordinal);
-        var viewModelMeterIndex = resolveBody.IndexOf("_codingVm?.CurrentMeter", StringComparison.Ordinal);
+        var viewModelMeterIndex = resolveBody.IndexOf("_codingSessionHost.CurrentMeter", StringComparison.Ordinal);
 
         Assert.True(meterStart >= 0, "Analyse muss einen Meter fuer den Klassifikator bestimmen.");
         Assert.True(resolveIndex >= 0, "Der Klassifikator muss den gemeinsamen Frame-Meter-Resolver verwenden.");
