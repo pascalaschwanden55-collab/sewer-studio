@@ -2741,6 +2741,26 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_protocol_match_summary_uses_controls_adapter()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var protocolMatchPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchSummaryControls.cs");
+
+        Assert.True(File.Exists(controlsPath), "Protocol-Match-Summary-Control-Zuweisung soll ausserhalb des PlayerWindow-Partials liegen.");
+
+        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+
+        Assert.Contains("CodingProtocolMatchSummaryControls.Apply", protocolMatch);
+        Assert.DoesNotContain("TxtCodingProtocolMatchSummary.Text", protocolMatch);
+        Assert.DoesNotContain("BtnAcceptGreenCodingMatches.IsEnabled", protocolMatch);
+        Assert.Contains("CodingProtocolMatchSummaryFormatter.Format", controls);
+        Assert.Contains("CodingProtocolMatchSummaryFormatter.CanAcceptGreenMatches", controls);
+    }
+
+    [Fact]
     public void PlayerWindow_protocol_match_training_lives_in_training_partial()
     {
         var root = FindRepositoryRoot();

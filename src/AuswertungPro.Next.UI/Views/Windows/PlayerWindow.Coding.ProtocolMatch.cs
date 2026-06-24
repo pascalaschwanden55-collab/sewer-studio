@@ -53,8 +53,10 @@ public partial class PlayerWindow
 
     private void UpdateCodingProtocolMatchSummary(CodingMatchRouting? routing)
     {
-        TxtCodingProtocolMatchSummary.Text = CodingProtocolMatchSummaryFormatter.Format(routing);
-        BtnAcceptGreenCodingMatches.IsEnabled = CodingProtocolMatchSummaryFormatter.CanAcceptGreenMatches(routing);
+        CodingProtocolMatchSummaryControls.Apply(
+            TxtCodingProtocolMatchSummary,
+            BtnAcceptGreenCodingMatches,
+            routing);
     }
 
 }
