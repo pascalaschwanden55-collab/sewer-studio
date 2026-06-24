@@ -146,6 +146,46 @@ public sealed class LiveDetectionStatusControlsTests
     }
 
     [Fact]
+    public void ShowStoppedDetectionStatus_hides_badge_and_summary_then_shows_stop_text()
+    {
+        RunOnStaThread(() =>
+        {
+            var badge = new Border { Visibility = Visibility.Visible };
+            var summaryPanel = new Border { Visibility = Visibility.Visible };
+            var status = new TextBlock { Visibility = Visibility.Collapsed };
+            var show = FindMethod(
+                "ShowStoppedDetectionStatus",
+                typeof(FrameworkElement),
+                typeof(FrameworkElement),
+                typeof(TextBlock),
+                typeof(int));
+            Assert.NotNull(show);
+
+            show.Invoke(null, [badge, summaryPanel, status, 7]);
+
+            Assert.Equal(Visibility.Collapsed, badge.Visibility);
+            Assert.Equal(Visibility.Collapsed, summaryPanel.Visibility);
+            Assert.Equal("KI-Analyse beendet — 7 Beobachtungen", status.Text);
+            Assert.Equal(Visibility.Visible, status.Visibility);
+        });
+    }
+
+    [Fact]
+    public void HideDetectionStatus_collapses_status_text()
+    {
+        RunOnStaThread(() =>
+        {
+            var status = new TextBlock { Visibility = Visibility.Visible };
+            var hide = FindMethod("HideDetectionStatus", typeof(TextBlock));
+            Assert.NotNull(hide);
+
+            hide.Invoke(null, [status]);
+
+            Assert.Equal(Visibility.Collapsed, status.Visibility);
+        });
+    }
+
+    [Fact]
     public void ShowPipelineHealthDetails_sets_all_health_lines()
     {
         RunOnStaThread(() =>

@@ -91,6 +91,29 @@ public static class LiveDetectionStatusControls
         }
     }
 
+    public static void ShowStoppedDetectionStatus(
+        FrameworkElement badge,
+        FrameworkElement summaryPanel,
+        TextBlock statusText,
+        int totalEvents)
+    {
+        ArgumentNullException.ThrowIfNull(badge);
+        ArgumentNullException.ThrowIfNull(summaryPanel);
+        ArgumentNullException.ThrowIfNull(statusText);
+
+        badge.Visibility = Visibility.Collapsed;
+        summaryPanel.Visibility = Visibility.Collapsed;
+        statusText.Text = $"KI-Analyse beendet — {totalEvents} Beobachtungen";
+        statusText.Visibility = Visibility.Visible;
+    }
+
+    public static void HideDetectionStatus(TextBlock statusText)
+    {
+        ArgumentNullException.ThrowIfNull(statusText);
+
+        statusText.Visibility = Visibility.Collapsed;
+    }
+
     public static void ShowPipelineHealthDetails(
         TextBlock sidecar,
         TextBlock token,

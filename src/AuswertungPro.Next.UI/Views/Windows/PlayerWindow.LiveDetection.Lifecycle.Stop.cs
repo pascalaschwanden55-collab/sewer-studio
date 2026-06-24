@@ -1,5 +1,4 @@
 using System;
-using System.Windows;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -22,14 +21,15 @@ public partial class PlayerWindow
         if (!updateUi)
             return;
 
-        AiStatusBadge.Visibility = Visibility.Collapsed;
         SetYoloStatus("Gestoppt", PlayerStatusColors.Muted);
         DetectionOverlayCleaner.ClearCanvas(DetectionCanvas, DetectionOverlayGrid, hideOverlay: !_isManualMarkMode);
-        FindingSummaryPanel.Visibility = Visibility.Collapsed;
 
         var totalEvents = _codingVm?.Events?.Count ?? 0;
-        LiveDetectionStatusText.Text = $"KI-Analyse beendet \u2014 {totalEvents} Beobachtungen";
-        LiveDetectionStatusText.Visibility = Visibility.Visible;
+        LiveDetectionStatusControls.ShowStoppedDetectionStatus(
+            AiStatusBadge,
+            FindingSummaryPanel,
+            LiveDetectionStatusText,
+            totalEvents);
 
         PlayerLiveDetectionStopPlayback.PauseIfRunning(
             _player != null,
@@ -40,7 +40,7 @@ public partial class PlayerWindow
         var hideTimer = PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromSeconds(5), () =>
         {
             if (!_isDetecting)
-                LiveDetectionStatusText.Visibility = Visibility.Collapsed;
+                LiveDetectionStatusControls.HideDetectionStatus(LiveDetectionStatusText);
         });
         hideTimer.Start();
     }

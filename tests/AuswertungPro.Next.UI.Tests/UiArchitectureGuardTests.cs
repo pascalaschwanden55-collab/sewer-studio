@@ -1057,6 +1057,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("new LiveDetectionService", factory);
         Assert.Contains("VisionModelSelectionPolicy.Select", factory);
         Assert.Contains("private void StopLiveDetection", stop);
+        Assert.Contains("LiveDetectionStatusControls.ShowStoppedDetectionStatus", stop);
+        Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", stop);
+        Assert.DoesNotContain("AiStatusBadge.Visibility", stop);
+        Assert.DoesNotContain("FindingSummaryPanel.Visibility", stop);
+        Assert.DoesNotContain("LiveDetectionStatusText.Text", stop);
+        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Visible", stop);
+        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Collapsed", stop);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate", lifecycle);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", stop);
         Assert.DoesNotContain("_detectionCts = new CancellationTokenSource();", lifecycle + stop);
