@@ -983,15 +983,18 @@ public sealed class UiArchitectureGuardTests
         var statusPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Status.cs");
         var pulsePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Status.Pulse.cs");
         var controlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
+        var pulseControlsPath = Path.Combine(windowsRoot, "LiveDetectionPulseControls.cs");
 
         Assert.True(File.Exists(statusPath), "LiveDetection-Status-UI soll in ein eigenes Partial.");
         Assert.True(File.Exists(pulsePath), "Coding-AI-Pulsanimation soll aus dem Status-Orchestrator heraus.");
         Assert.True(File.Exists(controlsPath), "LiveDetection-Status-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(pulseControlsPath), "Coding-AI-Pulsanimation soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var status = File.ReadAllText(statusPath);
         var pulse = File.ReadAllText(pulsePath);
         var controls = File.ReadAllText(controlsPath);
+        var pulseControls = File.Exists(pulseControlsPath) ? File.ReadAllText(pulseControlsPath) : "";
 
         Assert.DoesNotContain("private void SetLiveDetectionBadge", liveDetection);
         Assert.DoesNotContain("private void SetYoloStatus", liveDetection);
@@ -1024,8 +1027,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveDetectionDisplayPolicy.BuildFindingSummaryText", controls);
         Assert.Contains("private void StartCodingAiPulse", pulse);
         Assert.Contains("private void StopCodingAiPulse", pulse);
-        Assert.Contains("DoubleAnimation", pulse);
-        Assert.Contains("CodingAiPulseRing", pulse);
+        Assert.Contains("LiveDetectionPulseControls.Start(CodingAiPulseRing)", pulse);
+        Assert.Contains("LiveDetectionPulseControls.Stop(CodingAiPulseRing)", pulse);
+        Assert.DoesNotContain("DoubleAnimation", pulse);
+        Assert.Contains("DoubleAnimation", pulseControls);
+        Assert.Contains("public static void Start", pulseControls);
+        Assert.Contains("public static void Stop", pulseControls);
     }
 
     [Fact]
@@ -5090,6 +5097,29 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static void Hide", popupControls);
         Assert.Contains("public static bool IsVisible", popupControls);
         Assert.Contains("public static void ApplyQuickSelection", popupControls);
+    }
+
+    [Fact]
+    public void PlayerWindow_eingabemarker_canvas_state_uses_controls_adapter()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputControls.cs");
+
+        Assert.True(File.Exists(controlsPath), "Eingabemarker-Canvas-Zustand soll ueber den OverlayInput-Control-Adapter laufen.");
+
+        var marker = File.ReadAllText(markerPath);
+        var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+
+        Assert.Contains("CodingOverlayInputControls.EnableDrawingCanvas", marker);
+        Assert.Contains("CodingOverlayInputControls.DisableDrawingCanvas", marker);
+        Assert.Contains("CodingOverlayInputControls.ResetCanvasCursor", marker);
+        Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible =", marker);
+        Assert.DoesNotContain("CodingOverlayCanvas.Cursor =", marker);
+        Assert.Contains("public static void EnableDrawingCanvas", controls);
+        Assert.Contains("public static void DisableDrawingCanvas", controls);
+        Assert.Contains("public static void ResetCanvasCursor", controls);
     }
 
     [Fact]

@@ -18,8 +18,7 @@ public partial class PlayerWindow
             EnsureMarkOverlayReady();
             CodingOverlayPopup.IsOpen = true;
             UpdateCodingOverlayViewport();
-            CodingOverlayCanvas.IsHitTestVisible = true;
-            CodingOverlayCanvas.Cursor = System.Windows.Input.Cursors.Cross;
+            CodingOverlayInputControls.EnableDrawingCanvas(CodingOverlayCanvas);
             SetCodingAiState("Eingabemarker: Rechteck um die Beobachtung ziehen",
                 PlayerStatusColors.Info, "Klicken + Ziehen = Bereich markieren");
         }
@@ -39,7 +38,7 @@ public partial class PlayerWindow
             CodingOverlayCanvas.Children.Remove(_eingabemarkerPreviewRect);
             _eingabemarkerPreviewRect = null;
         }
-        CodingOverlayCanvas.Cursor = System.Windows.Input.Cursors.Arrow;
+        CodingOverlayInputControls.ResetCanvasCursor(CodingOverlayCanvas);
     }
 
     private void EingabemarkerCanvas_MouseDown(Point canvasPos)
@@ -78,8 +77,7 @@ public partial class PlayerWindow
 
         _eingabemarkerRectNorm = normalizedRect.Value;
         _eingabemarkerPhase = EingabemarkerPhase.Input;
-        CodingOverlayCanvas.IsHitTestVisible = false;
-        CodingOverlayCanvas.Cursor = System.Windows.Input.Cursors.Arrow;
+        CodingOverlayInputControls.DisableDrawingCanvas(CodingOverlayCanvas);
 
         CodingEingabemarkerPopupControls.ShowInput(EingabemarkerPopup, TxtEingabemarker, CmbEingabemarker);
         Dispatcher.BeginInvoke(new Action(() => TxtEingabemarker.Focus()),

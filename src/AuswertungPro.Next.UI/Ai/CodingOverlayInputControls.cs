@@ -46,4 +46,27 @@ public static class CodingOverlayInputControls
         overlayCanvas.Visibility = Visibility.Visible;
         overlayCanvas.IsHitTestVisible = true;
     }
+
+    public static void EnableDrawingCanvas(Canvas overlayCanvas)
+    {
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+
+        overlayCanvas.IsHitTestVisible = true;
+        overlayCanvas.Cursor = Cursors.Cross;
+    }
+
+    public static void DisableDrawingCanvas(Canvas overlayCanvas)
+    {
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+
+        overlayCanvas.IsHitTestVisible = false;
+        overlayCanvas.Cursor = Cursors.Arrow;
+    }
+
+    public static void ResetCanvasCursor(Canvas overlayCanvas)
+    {
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+
+        overlayCanvas.Cursor = Cursors.Arrow;
+    }
 }

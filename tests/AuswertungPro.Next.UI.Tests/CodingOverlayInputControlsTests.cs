@@ -78,6 +78,60 @@ public sealed class CodingOverlayInputControlsTests
         });
     }
 
+    [Fact]
+    public void EnableDrawingCanvas_enables_hit_testing_and_cross_cursor()
+    {
+        RunOnStaThread(() =>
+        {
+            var canvas = new Canvas
+            {
+                IsHitTestVisible = false,
+                Cursor = Cursors.Arrow
+            };
+
+            CodingOverlayInputControls.EnableDrawingCanvas(canvas);
+
+            Assert.True(canvas.IsHitTestVisible);
+            Assert.Same(Cursors.Cross, canvas.Cursor);
+        });
+    }
+
+    [Fact]
+    public void DisableDrawingCanvas_disables_hit_testing_and_arrow_cursor()
+    {
+        RunOnStaThread(() =>
+        {
+            var canvas = new Canvas
+            {
+                IsHitTestVisible = true,
+                Cursor = Cursors.Cross
+            };
+
+            CodingOverlayInputControls.DisableDrawingCanvas(canvas);
+
+            Assert.False(canvas.IsHitTestVisible);
+            Assert.Same(Cursors.Arrow, canvas.Cursor);
+        });
+    }
+
+    [Fact]
+    public void ResetCanvasCursor_sets_arrow_cursor_without_changing_hit_testing()
+    {
+        RunOnStaThread(() =>
+        {
+            var canvas = new Canvas
+            {
+                IsHitTestVisible = true,
+                Cursor = Cursors.Cross
+            };
+
+            CodingOverlayInputControls.ResetCanvasCursor(canvas);
+
+            Assert.True(canvas.IsHitTestVisible);
+            Assert.Same(Cursors.Arrow, canvas.Cursor);
+        });
+    }
+
     private static void RunOnStaThread(Action action)
     {
         Exception? exception = null;
