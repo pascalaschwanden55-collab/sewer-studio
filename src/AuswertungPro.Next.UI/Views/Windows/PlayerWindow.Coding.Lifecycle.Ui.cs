@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 
@@ -50,7 +51,6 @@ public partial class PlayerWindow
     {
         InitCodingAi().SafeFireAndForget("InitCodingAi");
         StartCodingOsdTimer();
-        OsdMeterBadge.Visibility = Visibility.Visible;
-        TxtOsdMeter.Text = "OSD: --";
+        CodingOsdBadgeControls.ShowInitial(OsdMeterBadge, TxtOsdMeter);
     }
 }

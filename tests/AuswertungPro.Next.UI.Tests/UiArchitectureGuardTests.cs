@@ -2760,29 +2760,44 @@ public sealed class UiArchitectureGuardTests
         var osdReadingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Reading.cs");
         var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
+        var lifecycleUiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Ui.cs");
+        var lifecycleExitPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var protocolTrainingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingOsdBadgeDisplayPolicy.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOsdBadgeControls.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterStateWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "OSD-Badge-Textformat muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controlsPath), "OSD-Badge-Control-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
         Assert.True(File.Exists(workflowPath), "OSD-Meter-Akzeptanz und Badge-State sollen ausserhalb der PlayerWindow-Partials liegen.");
 
         var osd = File.ReadAllText(osdPath);
         var osdReading = File.ReadAllText(osdReadingPath);
         var aiEvents = File.ReadAllText(aiEventsPath);
         var marking = File.ReadAllText(markingPath);
+        var lifecycleUi = File.ReadAllText(lifecycleUiPath);
+        var lifecycleExit = File.ReadAllText(lifecycleExitPath);
+        var protocolTraining = File.ReadAllText(protocolTrainingPath);
         var policy = File.ReadAllText(policyPath);
+        var controls = File.ReadAllText(controlsPath);
         var workflow = File.ReadAllText(workflowPath);
-        var osdText = osd + osdReading;
+        var osdText = osd + osdReading + marking + lifecycleUi + lifecycleExit + protocolTraining;
 
         Assert.Contains("CodingOsdMeterStateWorkflow.FromReadResult", osdReading);
         Assert.Contains("CodingOsdMeterStateWorkflow.FromDetectionResult", aiEvents);
+        Assert.Contains("CodingOsdBadgeControls.Show", osdText);
+        Assert.Contains("CodingOsdBadgeControls.ShowInitial", lifecycleUi);
+        Assert.Contains("CodingOsdBadgeControls.ShowMeter", marking);
+        Assert.Contains("CodingOsdBadgeControls.Hide", osdText);
+        Assert.DoesNotContain("OsdMeterBadge.Visibility", osdText);
+        Assert.DoesNotContain("TxtOsdMeter.Text", osdText);
         Assert.DoesNotContain("CodingOsdBadgeDisplayPolicy.BuildMeterText", osdText);
         Assert.DoesNotContain("CodingOsdBadgeDisplayPolicy.BuildMeterText", aiEvents);
-        Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", marking);
         Assert.DoesNotContain(":F2}m (OSD)", osdText);
         Assert.DoesNotContain(":F2}m (OSD)", aiEvents);
-        Assert.DoesNotContain(":F2}m (OSD)", marking);
         Assert.Contains("public static string BuildMeterText", policy);
+        Assert.Contains("public static class CodingOsdBadgeControls", controls);
+        Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", controls);
         Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", workflow);
     }
 

@@ -71,8 +71,7 @@ public partial class PlayerWindow
 
     private void ShowOsdMeterStatus(string message, bool resetAfterDelay)
     {
-        OsdMeterBadge.Visibility = Visibility.Visible;
-        TxtOsdMeter.Text = message;
+        CodingOsdBadgeControls.Show(OsdMeterBadge, TxtOsdMeter, message);
 
         if (!resetAfterDelay)
             return;
@@ -80,9 +79,9 @@ public partial class PlayerWindow
         var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromSeconds(3), () =>
         {
             if (_codingLastOsdMeter.HasValue)
-                TxtOsdMeter.Text = CodingOsdBadgeDisplayPolicy.BuildMeterText(_codingLastOsdMeter.Value);
+                CodingOsdBadgeControls.ShowMeter(OsdMeterBadge, TxtOsdMeter, _codingLastOsdMeter.Value);
             else
-                OsdMeterBadge.Visibility = Visibility.Collapsed;
+                CodingOsdBadgeControls.Hide(OsdMeterBadge);
         });
         resetTimer.Start();
     }

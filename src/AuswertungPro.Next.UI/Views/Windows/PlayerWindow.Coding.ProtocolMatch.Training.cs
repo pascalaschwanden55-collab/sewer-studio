@@ -47,11 +47,10 @@ public partial class PlayerWindow
             return false;
 
         var badge = result.Badge;
-        OsdMeterBadge.Visibility = Visibility.Visible;
-        TxtOsdMeter.Text = badge.Text;
+        CodingOsdBadgeControls.Show(OsdMeterBadge, TxtOsdMeter, badge.Text);
         var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(
             badge.AutoHideDelay,
-            () => OsdMeterBadge.Visibility = Visibility.Collapsed);
+            () => CodingOsdBadgeControls.Hide(OsdMeterBadge));
         resetTimer.Start();
         return true;
     }

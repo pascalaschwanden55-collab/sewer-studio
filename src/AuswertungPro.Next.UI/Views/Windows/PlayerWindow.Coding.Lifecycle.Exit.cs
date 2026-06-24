@@ -66,7 +66,7 @@ public partial class PlayerWindow
         HideInlineDefectDetail();
         CodingCalibrationHint.Visibility = Visibility.Collapsed;
         CodingMeasurementPanel.Visibility = Visibility.Collapsed;
-        OsdMeterBadge.Visibility = Visibility.Collapsed;
+        CodingOsdBadgeControls.Hide(OsdMeterBadge);
         LiveDetectionButton.Visibility = Visibility.Visible;
         LiveDetectionStatusText.Visibility = _isDetecting ? Visibility.Visible : Visibility.Collapsed;
 
