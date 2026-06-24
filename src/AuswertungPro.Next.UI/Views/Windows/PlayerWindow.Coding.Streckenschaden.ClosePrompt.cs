@@ -11,9 +11,9 @@ public partial class PlayerWindow
     /// </summary>
     private bool CloseOpenStreckenschaeden(double currentMeter)
     {
-        if (_codingVm == null) return true;
+        if (!_codingSessionHost.HasViewModel) return true;
 
-        var offene = CodingOpenStretchDamagePolicy.FindOpen(_codingVm.Events);
+        var offene = CodingOpenStretchDamagePolicy.FindOpen(_codingSessionHost.Events);
 
         if (offene.Count == 0) return true;
 

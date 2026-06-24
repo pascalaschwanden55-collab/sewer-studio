@@ -785,6 +785,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingOpenStretchDamageDialogServiceFactory.Create", closePrompt);
         Assert.Contains("CodingOpenStretchDamagePolicy.FindOpen", closePrompt);
         Assert.Contains("CodingOpenStretchDamageCloseApplier.Apply", closePrompt);
+        Assert.Contains("_codingSessionHost", closePrompt);
+        Assert.DoesNotContain("_codingVm", closePrompt);
         Assert.DoesNotContain("CodingOpenStretchDamagePolicy.ResolveCloseMeter", closePrompt);
         Assert.DoesNotContain("_codingSessionService?.UpdateEvent", closePrompt);
         Assert.DoesNotContain("DialogHost.Current", closePrompt);
