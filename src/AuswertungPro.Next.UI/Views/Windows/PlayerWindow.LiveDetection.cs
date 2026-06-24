@@ -20,16 +20,19 @@ public partial class PlayerWindow
     private async Task RunDetectionAsync()
     {
         var player = _player;
-        if (!_liveDetectionController.ShouldRunTick(
-                isClosing: _closing,
-                hasPlayer: player is not null,
-                isPlayerPlaying: player?.IsPlaying == true,
-                hasPendingFindings: _detectionConfirmationBuffer.HasFindings))
+        var tickStart = LiveDetectionTickStartWorkflow.Start(
+            new LiveDetectionTickStartWorkflowRequest(
+                _liveDetectionController.ShouldRunTick(
+                    isClosing: _closing,
+                    hasPlayer: player is not null,
+                    isPlayerPlaying: player?.IsPlaying == true,
+                    hasPendingFindings: _detectionConfirmationBuffer.HasFindings),
+                _liveDetectionController.ModelName),
+            new LiveDetectionTickStartWorkflowActions(
+                _liveDetectionController.BeginDetection,
+                SetLiveDetectionBadge));
+        if (!tickStart.Started)
             return;
-
-        _liveDetectionController.BeginDetection();
-        SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Warning,
-            $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionController.ModelName)} | Snapshot");
 
         try
         {

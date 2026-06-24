@@ -3341,13 +3341,16 @@ public sealed class UiArchitectureGuardTests
         var liveDetectionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.cs");
         var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTimerPolicy.cs");
+        var tickStartWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTickStartWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "LiveDetection-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(liveControllerPath), "LiveDetection-Timer-Gate soll vom LiveDetectionController aufgerufen werden.");
+        Assert.True(File.Exists(tickStartWorkflowPath), "LiveDetection-Tick-Start-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var liveController = File.ReadAllText(liveControllerPath);
         var policy = File.ReadAllText(policyPath);
+        var tickStartWorkflow = File.ReadAllText(tickStartWorkflowPath);
 
         Assert.DoesNotContain("private async void DetectionTimer_Tick", liveDetection);
         Assert.Contains("private void DetectionTimer_Tick", liveDetection);
@@ -3355,6 +3358,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("\"DetectionTimer\"", liveDetection);
         Assert.Contains("private async Task RunDetectionAsync", liveDetection);
         Assert.Contains("_liveDetectionController.ShouldRunTick", liveDetection);
+        Assert.Contains("LiveDetectionTickStartWorkflow.Start", liveDetection);
+        Assert.DoesNotContain("| Snapshot", liveDetection);
+        Assert.Contains("| Snapshot", tickStartWorkflow);
         Assert.Contains("LiveDetectionTimerPolicy.ShouldRunTick", liveController);
         Assert.DoesNotContain("_isDetectionInFlight || _liveDetectionService is null || _detectionCts is null", liveDetection);
         Assert.DoesNotContain("!_player.IsPlaying", liveDetection);
