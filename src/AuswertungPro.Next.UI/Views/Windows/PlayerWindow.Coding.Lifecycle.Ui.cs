@@ -36,16 +36,20 @@ public partial class PlayerWindow
 
     private void ShowCodingModeUi()
     {
-        CodingModeChromeControls.ShowCodingSurface(
-            CodingOverlayPopup,
-            CodingOverlayCanvas,
-            CodingSidePanel,
-            CodingSidePanelColumn,
-            CodingToolbar,
-            GetCodingSidePanelWidth());
-        UpdateCodingOverlayViewport();
-        UpdateCodingOverlayCursor();
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(UpdateCodingOverlayViewport));
+        CodingModeShowUiWorkflow.Execute(
+            new CodingModeShowUiWorkflowActions(
+                ShowCodingSurface: () => CodingModeChromeControls.ShowCodingSurface(
+                    CodingOverlayPopup,
+                    CodingOverlayCanvas,
+                    CodingSidePanel,
+                    CodingSidePanelColumn,
+                    CodingToolbar,
+                    GetCodingSidePanelWidth()),
+                UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
+                UpdateCodingOverlayCursor: UpdateCodingOverlayCursor,
+                ScheduleLoadedViewportUpdate: () => Dispatcher.BeginInvoke(
+                    DispatcherPriority.Loaded,
+                    new Action(UpdateCodingOverlayViewport))));
     }
 
     private void StartCodingModeBackgroundServices()
