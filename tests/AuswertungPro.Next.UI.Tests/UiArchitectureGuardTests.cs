@@ -2809,18 +2809,27 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var protocolMatchPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.cs");
         var highlightingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Highlighting.cs");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchHighlightControls.cs");
 
         Assert.True(File.Exists(highlightingPath), "ProtocolMatch-Listenhighlighting soll aus dem Match-Partial heraus.");
+        Assert.True(File.Exists(controlsPath), "ProtocolMatch-Listenhighlighting-Control-Zuweisung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var protocolMatch = File.ReadAllText(protocolMatchPath);
         var highlighting = File.ReadAllText(highlightingPath);
+        var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
 
         Assert.DoesNotContain("private void ApplyCodingProtocolMatchListHighlights()", protocolMatch);
         Assert.DoesNotContain("private void ApplyCodingProtocolMatchListHighlights(ListBox listBox)", protocolMatch);
         Assert.Contains("private void ApplyCodingProtocolMatchListHighlights()", highlighting);
         Assert.Contains("private void ApplyCodingProtocolMatchListHighlights(ListBox listBox)", highlighting);
-        Assert.Contains("CodingProtocolMatchDisplayPolicy.BackgroundColor", highlighting);
-        Assert.Contains("CodingProtocolMatchDisplayPolicy.BadgeText", highlighting);
+        Assert.Contains("CodingProtocolMatchHighlightControls.Clear", highlighting);
+        Assert.Contains("CodingProtocolMatchHighlightControls.Apply", highlighting);
+        Assert.DoesNotContain("CodingProtocolMatchDisplayPolicy.BackgroundColor", highlighting);
+        Assert.DoesNotContain("CodingProtocolMatchDisplayPolicy.BadgeText", highlighting);
+        Assert.DoesNotContain("badge.Visibility = Visibility.Visible", highlighting);
+        Assert.DoesNotContain("emptyBadge.Visibility = Visibility.Collapsed", highlighting);
+        Assert.Contains("CodingProtocolMatchDisplayPolicy.BackgroundColor", controls);
+        Assert.Contains("CodingProtocolMatchDisplayPolicy.BadgeText", controls);
     }
 
     [Fact]
