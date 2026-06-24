@@ -31,22 +31,15 @@ public partial class PlayerWindow
 
     private async Task HandleCodingLiveAiTimerTickAsync()
     {
-        try
-        {
-            // Nicht analysieren wenn: bereits analysierend, Video pausiert, WaitingForUserInput
-            if (!CodingLiveAiTickPolicy.ShouldAnalyze(
-                    _closing,
-                    hasPlayer: _player is not null,
-                    hasLiveDetection: _codingAiController.LiveDetection is not null,
-                    _codingSessionService?.ActiveSession?.State,
-                    isPlayerPlaying: _player?.IsPlaying == true))
-                return;
-
-            await RunCodingAnalysisAsync("Automatische KI-Analyse: Analysiere...");
-        }
-        catch (Exception ex)
-        {
-            PlayerTrace.WriteLine($"[PlayerWindow] CodingLiveAiTimer_Tick error: {ex.Message}");
-        }
+        await CodingLiveAiTimerTickWorkflow.ExecuteAsync(
+            new CodingLiveAiTimerTickWorkflowRequest(
+                IsClosing: _closing,
+                HasPlayer: _player is not null,
+                HasLiveDetection: _codingAiController.LiveDetection is not null,
+                SessionState: _codingSessionService?.ActiveSession?.State,
+                IsPlayerPlaying: _player?.IsPlaying == true),
+            new CodingLiveAiTimerTickWorkflowActions(
+                RunAnalysisAsync: () => RunCodingAnalysisAsync("Automatische KI-Analyse: Analysiere..."),
+                TraceError: message => PlayerTrace.WriteLine($"[PlayerWindow] CodingLiveAiTimer_Tick error: {message}")));
     }
 }

@@ -1326,11 +1326,14 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
         var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Live.cs");
+        var tickWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiTimerTickWorkflow.cs");
 
         Assert.True(File.Exists(livePath), "Coding-Live-AI-Button- und Timer-Wiring soll in ein eigenes Partial.");
+        Assert.True(File.Exists(tickWorkflowPath), "Coding-Live-AI-Tick-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var live = File.ReadAllText(livePath);
+        var tickWorkflow = File.ReadAllText(tickWorkflowPath);
 
         Assert.DoesNotContain("private void CodingLiveAi_Click", ai);
         Assert.DoesNotContain("private async void CodingLiveAiTimer_Tick", ai);
@@ -1340,7 +1343,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains(".SafeFireAndForget(\"CodingLiveAiTimer\")", live);
         Assert.Contains("private async Task HandleCodingLiveAiTimerTickAsync", live);
         Assert.Contains("CodingLiveAiTimerController", live);
-        Assert.Contains("CodingLiveAiTickPolicy.ShouldAnalyze", live);
+        Assert.Contains("CodingLiveAiTimerTickWorkflow.ExecuteAsync", live);
+        Assert.DoesNotContain("CodingLiveAiTickPolicy.ShouldAnalyze", live);
+        Assert.Contains("CodingLiveAiTickPolicy.ShouldAnalyze", tickWorkflow);
     }
 
     [Fact]
@@ -2717,13 +2722,20 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiTickPolicy.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiTimerTickWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Live-AI-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "Live-AI-Timer-Gate-Orchestrierung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var policy = File.ReadAllText(policyPath);
+        var workflow = File.ReadAllText(workflowPath);
 
-        Assert.Contains("CodingLiveAiTickPolicy.ShouldAnalyze", ai);
+        Assert.Contains("CodingLiveAiTimerTickWorkflow.ExecuteAsync", ai);
+        Assert.DoesNotContain("CodingLiveAiTickPolicy.ShouldAnalyze", ai);
+        Assert.Contains("CodingLiveAiTickPolicy.ShouldAnalyze", workflow);
+        Assert.Contains("actions.RunAnalysisAsync()", workflow);
+        Assert.Contains("actions.TraceError(ex.Message)", workflow);
         Assert.DoesNotContain("_codingLiveDetection == null) return", ai);
         Assert.DoesNotContain("ActiveSession?.State == CodingSessionState.WaitingForUserInput", ai);
         Assert.DoesNotContain("!_player.IsPlaying) return", ai);
