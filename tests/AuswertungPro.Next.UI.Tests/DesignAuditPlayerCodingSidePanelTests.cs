@@ -198,10 +198,16 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var qwenBody = ExtractMethodBody(coding, "private void AddAiFindingsAsEvents");
+        var qwenWorkflow = ReadUiFile("Ai", "CodingLiveFindingEventWorkflow.cs");
+        var qwenAppender = ReadUiFile("Ai", "CodingLiveFindingSessionAppender.cs");
+        var qwenAppenderBody = ExtractMethodBody(qwenAppender, "Func<ProtocolEntry, CodingEvent> addEvent)");
         var multiModelBody = ExtractMethodBody(coding, "private void AddMultiModelFindingsAsEvents");
 
-        AssertAnalyzedFrameAttachedBeforeAddEvent(qwenBody);
+        Assert.Contains("CodingLiveFindingEventWorkflow.Execute", qwenBody);
+        Assert.Contains("CodingLiveFindingSessionAppender.Append", qwenWorkflow);
+        AssertAnalyzedFrameAttachedBeforeAddEvent(qwenAppenderBody);
         AssertAnalyzedFrameAttachedBeforeAddEvent(multiModelBody);
+        Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", qwenBody);
         Assert.Contains("CodingMultiModelEventAppender.Apply", multiModelBody);
         Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", multiModelBody);
     }
@@ -465,20 +471,16 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
     private static void AssertAnalyzedFrameAttachedBeforeAddEvent(string methodBody)
     {
-        if (methodBody.Contains("CodingLiveFindingSessionAppender.Append", StringComparison.Ordinal))
-        {
-            Assert.Contains("AttachAnalyzedFramePhoto(entry)", methodBody);
-            return;
-        }
-
         var attachIndex = FirstIndexOf(
             methodBody,
             "AttachAnalyzedFramePhoto(entry)",
-            "AttachAnalyzedFramePhoto(draft.Entry)");
+            "AttachAnalyzedFramePhoto(draft.Entry)",
+            "attachAnalyzedFramePhoto(draft.Entry)");
         var addIndex = FirstIndexOf(
             methodBody,
             "codingSessionService.AddEvent(entry)",
             "codingSessionService.AddEvent(draft.Entry)",
+            "addEvent(draft.Entry)",
             "CodingMultiModelEventAppender.Apply");
 
         Assert.True(attachIndex >= 0, "KI-Befunde muessen den analysierten Frame in FotoPaths speichern.");

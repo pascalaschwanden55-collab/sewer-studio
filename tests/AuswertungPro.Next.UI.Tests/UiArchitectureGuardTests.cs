@@ -1505,28 +1505,32 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
         var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Live.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingEventWorkflow.cs");
         var appenderPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingSessionAppender.cs");
         var confirmationTrackerPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingConfirmationTracker.cs");
         var addDecisionPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingAddDecisionPolicy.cs");
 
         Assert.True(File.Exists(livePath), "Live/Qwen-Event-Erzeugung soll aus dem allgemeinen AiEvents-Partial heraus.");
+        Assert.True(File.Exists(workflowPath), "Live/Qwen-Event-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(appenderPath), "Live/Qwen-Event-Anwendung auf die Session soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(confirmationTrackerPath), "Live/Qwen-Bestaetigungsauswahl soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(addDecisionPath), "Live/Qwen-Add-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var aiEvents = File.ReadAllText(aiEventsPath);
         var live = File.ReadAllText(livePath);
+        var workflow = File.ReadAllText(workflowPath);
         var appender = File.ReadAllText(appenderPath);
         var confirmationTracker = File.ReadAllText(confirmationTrackerPath);
         var addDecision = File.ReadAllText(addDecisionPath);
 
         Assert.DoesNotContain("private void AddAiFindingsAsEvents", aiEvents);
         Assert.Contains("private void AddAiFindingsAsEvents", live);
-        Assert.Contains("CodingLiveFindingEventFactory.Create", live);
-        Assert.Contains("CodingLiveFindingQualityGatePolicy.Evaluate", live);
-        Assert.Contains("CodingLiveFindingSessionAppender.Append", live);
-        Assert.Contains("CodingLiveFindingConfirmationTracker", live);
-        Assert.Contains("CodingLiveFindingAddDecisionPolicy.Decide", live);
+        Assert.Contains("CodingLiveFindingEventWorkflow.Execute", live);
+        Assert.DoesNotContain("CodingLiveFindingEventFactory.Create", live);
+        Assert.DoesNotContain("CodingLiveFindingQualityGatePolicy.Evaluate", live);
+        Assert.DoesNotContain("CodingLiveFindingSessionAppender.Append", live);
+        Assert.DoesNotContain("CodingLiveFindingConfirmationTracker", live);
+        Assert.DoesNotContain("CodingLiveFindingAddDecisionPolicy.Decide", live);
         Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", live);
         Assert.DoesNotContain("codingSessionService.AddEvent(entry)", live);
         Assert.DoesNotContain("codingEvent.AiContext = draft.AiContext", live);
@@ -1534,6 +1538,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingLiveFindingAcceptancePolicy.ShouldSkipAsTooFarAhead", live);
         Assert.DoesNotContain("CodingOneTimeCodeDuplicatePolicy.AlreadyExists", live);
         Assert.DoesNotContain("CodingFindingCoveragePolicy.FindCoveringEvent", live);
+        Assert.Contains("public static class CodingLiveFindingEventWorkflow", workflow);
+        Assert.Contains("CodingLiveFindingEventFactory.Create", workflow);
+        Assert.Contains("CodingLiveFindingQualityGatePolicy.Evaluate", workflow);
+        Assert.Contains("CodingLiveFindingSessionAppender.Append", workflow);
+        Assert.Contains("CodingLiveFindingConfirmationTracker", workflow);
+        Assert.Contains("CodingLiveFindingAddDecisionPolicy.Decide", workflow);
         Assert.Contains("public static class CodingLiveFindingSessionAppender", appender);
         Assert.Contains("attachAnalyzedFramePhoto(draft.Entry)", appender);
         Assert.Contains("addEvent(draft.Entry)", appender);
