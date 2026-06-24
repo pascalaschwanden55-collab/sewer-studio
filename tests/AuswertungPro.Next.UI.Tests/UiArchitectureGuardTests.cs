@@ -3558,6 +3558,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingBoundaryPresencePolicy.ExistsInView", boundaries);
         Assert.Contains("CodingBoundaryPresencePolicy.CountExisting", workflow);
         Assert.Contains("CodingBoundaryPresencePolicy.ExistsInView", workflow);
+        Assert.Contains("_codingSessionHost", boundaries);
+        Assert.DoesNotContain("_codingVm", boundaries);
         Assert.DoesNotContain("var vmBcd = _codingVm.Events.Count", boundaries);
         Assert.DoesNotContain("_codingVm.Events.Any(e => string.Equals(e.Entry.Code, \"BCE\"", boundaries);
         Assert.Contains("public static CodingBoundaryPresence CountExisting", policy);
