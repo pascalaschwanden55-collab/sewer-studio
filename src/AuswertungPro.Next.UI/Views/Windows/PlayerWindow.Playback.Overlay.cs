@@ -32,9 +32,7 @@ public partial class PlayerWindow
 
             var t = PlayerWindowTimerFactory.CreateOneShotTimer(duration, () =>
             {
-                AuswertungPro.Next.Application.Common.BestEffort.Try(
-                    () => _player.SetMarqueeInt(VideoMarqueeOption.Enable, PlayerMarqueeOverlayPolicy.DisabledEnable),
-                    "VLC: Marquee deaktivieren");
+                PlayerMarqueeOverlayDisabler.Disable((option, value) => _player.SetMarqueeInt(option, value));
             });
             t.Start();
         }

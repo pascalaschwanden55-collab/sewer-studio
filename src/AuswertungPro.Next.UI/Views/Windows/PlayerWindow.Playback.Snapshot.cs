@@ -46,9 +46,7 @@ public partial class PlayerWindow
             if (_closing || _playbackDisposed)
                 return false;
 
-            AuswertungPro.Next.Application.Common.BestEffort.Try(
-                () => _player.SetMarqueeInt(VideoMarqueeOption.Enable, PlayerMarqueeOverlayPolicy.DisabledEnable),
-                "VLC: Marquee deaktivieren");
+            PlayerMarqueeOverlayDisabler.Disable((option, value) => _player.SetMarqueeInt(option, value));
             return _player.TakeSnapshot(0, filePath, width, height);
         }
         catch
