@@ -75,51 +75,19 @@ public partial class PlayerWindow
         if (TryHandleStructuralClassifierResult(mmResult, captureTimestampSec, frameOsdMeter))
             return;
 
-        if (!mmResult.IsRelevant || !mmResult.HasDetections)
-        {
-            SetCodingAiState("Kein Schaden erkannt", PlayerStatusColors.Success,
-                $"YOLO {mmResult.YoloTimeMs:F0}ms | {mmResult.DinoDetections.Count} Detektionen");
-            Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
-            return;
-        }
-
-        SetCodingAiState(activityText, PlayerStatusColors.Warning,
-            $"Schritt 3 von 4: SAM-Masken ({mmResult.DinoDetections.Count} Befunde)", pulse: true);
-
-        var segmented = BuildCodingSegmentedFindings(mmResult);
-        var findingSummary = CodingMultiModelFindingSummary.Build(segmented, mmResult);
-
-        ShowMultiModelResults(mmResult, segmented);
-
-        if (findingSummary.HasNoSegmentedFindings)
-        {
-            SetCodingAiState("SAM ohne Maske - Befund nicht segmentiert",
-                PlayerStatusColors.Warning,
-                mmResult.SamResponse?.Degraded == true
-                    ? $"SAM degraded ({mmResult.SamResponse.SkippedBoxes} Box(en) verloren)"
-                    : "keine Maske erzeugt");
-            return;
-        }
-
-        if (findingSummary.HasOnlyAheadFindings)
-        {
-            SetCodingAiState("Ereignis voraus erkannt - naeher heranfahren",
-                PlayerStatusColors.Warning,
-                $"{findingSummary.VorausCount} voraus");
-            return;
-        }
-
-        SetCodingAiState(
-            findingSummary.DetectedStatusText,
-            PlayerStatusColors.Success,
-            findingSummary.TimingText);
-
-        AddMultiModelFindingsAsEvents(
-            findingSummary.VisibleCodierbar,
-            mmResult.SamResponse?.ImageWidth ?? 1,
-            mmResult.SamResponse?.ImageHeight ?? 1,
-            mmResult.YoloMaxConfidence,
-            captureTimestampSec,
-            frameOsdMeter);
+        CodingMultiModelAnalysisResultWorkflow.Execute(
+            new CodingMultiModelAnalysisResultWorkflowRequest(mmResult, activityText),
+            new CodingMultiModelAnalysisResultWorkflowActions(
+                SetCodingAiState,
+                () => Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas),
+                BuildCodingSegmentedFindings,
+                ShowMultiModelResults,
+                (findings, imageWidth, imageHeight, yoloMaxConfidence) => AddMultiModelFindingsAsEvents(
+                    findings,
+                    imageWidth,
+                    imageHeight,
+                    yoloMaxConfidence,
+                    captureTimestampSec,
+                    frameOsdMeter)));
     }
 }

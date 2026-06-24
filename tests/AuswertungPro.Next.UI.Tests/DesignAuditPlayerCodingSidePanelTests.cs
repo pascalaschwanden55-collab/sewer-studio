@@ -49,11 +49,13 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var summary = ReadUiFile("Ai", "CodingMultiModelFindingSummary.cs");
+        var resultWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisResultWorkflow.cs");
 
-        Assert.Contains("CodingMultiModelFindingSummary.Build(segmented, mmResult)", coding);
+        Assert.Contains("CodingMultiModelAnalysisResultWorkflow.Execute", coding);
+        Assert.Contains("CodingMultiModelFindingSummary.Build(segmented, result)", resultWorkflow);
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleCodingFindings", summary);
         Assert.Contains("SamMaskRenderer.RenderCandidates", coding);
-        Assert.Contains("findingSummary.VisibleCodierbar", coding);
+        Assert.Contains("findingSummary.VisibleCodierbar", resultWorkflow);
         Assert.DoesNotContain("AddMultiModelFindingsAsEvents(\r\n                    segmented.Where(s => s.Proximity.IsCodierbar).ToList()", coding);
     }
 
@@ -62,23 +64,24 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var summary = ReadUiFile("Ai", "CodingMultiModelFindingSummary.cs");
+        var resultWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisResultWorkflow.cs");
         var showBody = ExtractMethodBody(coding, "private void ShowMultiModelResults");
 
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates", coding);
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates(segmented)", showBody);
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleCodingFindings(segmented)", summary);
         Assert.Contains("AddMultiModelFindingsAsEvents(", coding);
-        Assert.Contains("findingSummary.VisibleCodierbar", coding);
+        Assert.Contains("findingSummary.VisibleCodierbar", resultWorkflow);
     }
 
     [Fact]
     public void Player_status_mentions_background_masks_suppressed()
     {
-        var coding = ReadCodingPartials();
         var summary = ReadUiFile("Ai", "CodingMultiModelFindingSummary.cs");
+        var resultWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisResultWorkflow.cs");
 
         Assert.Contains("CodingSegmentedFindingVisibility.BuildOverlaySuppressionText", summary);
-        Assert.Contains("findingSummary.TimingText", coding);
+        Assert.Contains("findingSummary.TimingText", resultWorkflow);
     }
 
     [Fact]
@@ -234,14 +237,16 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
         var structuralBody = ExtractMethodBody(coding, "private bool TryHandleStructuralClassifierResult");
+        var resultWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisResultWorkflow.cs");
 
         var boundaryIndex = multiModelBody.IndexOf("TryHandleBoundaryClassifierResult", StringComparison.Ordinal);
         var structuralIndex = multiModelBody.IndexOf("TryHandleStructuralClassifierResult", StringComparison.Ordinal);
-        var noDetectionIndex = multiModelBody.IndexOf("!mmResult.IsRelevant || !mmResult.HasDetections", StringComparison.Ordinal);
+        var resultWorkflowIndex = multiModelBody.IndexOf("CodingMultiModelAnalysisResultWorkflow.Execute", StringComparison.Ordinal);
 
         Assert.True(boundaryIndex >= 0, "Boundary-Classifier muss zuerst behandelt werden.");
         Assert.True(structuralIndex > boundaryIndex, "BCA/BCC darf BCD/BCE nicht ueberholen.");
-        Assert.True(noDetectionIndex > structuralIndex, "BCA/BCC muss vor dem YOLO/DINO-No-Detection-Abbruch behandelt werden.");
+        Assert.True(resultWorkflowIndex > structuralIndex, "BCA/BCC muss vor dem YOLO/DINO-No-Detection-Abbruch behandelt werden.");
+        Assert.Contains("!result.IsRelevant || !result.HasDetections", resultWorkflow);
         Assert.Contains("CodingClassifierDisplayPolicy.IsStructuralClassifierCode(code)", structuralBody);
         Assert.Contains("CodingStructuralClassifierEventFactory.Create", structuralBody);
         Assert.Contains("CodingStructuralClassifierEventAppender.Apply", structuralBody);
