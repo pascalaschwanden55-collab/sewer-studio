@@ -94,28 +94,25 @@ public partial class PlayerWindow
 
     private void PlayerWindow_Closed(object? sender, EventArgs e)
     {
-        if (ReferenceEquals(_lastOpened, this))
-            _lastOpened = null;
-
-        // Codier-Modus sauber beenden: Timer + Hintergrund-Tasks stoppen.
-        // Cleanup() ist idempotent, weil OnClosing den VLC-Player bereits freigeben kann.
-        _isCodingMode = false;
-        StopCodingOsdTimer();
-        DisposeCodingOsdMeterService();
-        _codingAiController.DisposeAnalysisCancellation();
-        StopCodingAiPulse();
-
-        _quickScanController.Cancel();
-        StopLiveDetection();
-        StopPipelineHealthMonitor();
-        Cleanup();
-
         var main = System.Windows.Application.Current?.MainWindow;
-        if (main != null && !ReferenceEquals(main, this))
-        {
-            if (main.WindowState == WindowState.Minimized)
-                main.WindowState = WindowState.Normal;
-            main.Activate();
-        }
+        PlayerWindowClosedWorkflow.Execute(
+            new PlayerWindowClosedWorkflowRequest(
+                IsLastOpenedWindow: ReferenceEquals(_lastOpened, this),
+                HasMainWindow: main is not null,
+                IsMainWindowCurrentWindow: ReferenceEquals(main, this),
+                IsMainWindowMinimized: main?.WindowState == WindowState.Minimized),
+            new PlayerWindowClosedWorkflowActions(
+                ClearLastOpened: () => _lastOpened = null,
+                ExitCodingMode: () => _isCodingMode = false,
+                StopCodingOsdTimer: StopCodingOsdTimer,
+                DisposeCodingOsdMeterService: DisposeCodingOsdMeterService,
+                DisposeCodingAnalysisCancellation: _codingAiController.DisposeAnalysisCancellation,
+                StopCodingAiPulse: StopCodingAiPulse,
+                CancelQuickScan: _quickScanController.Cancel,
+                StopLiveDetection: StopLiveDetection,
+                StopPipelineHealthMonitor: StopPipelineHealthMonitor,
+                Cleanup: Cleanup,
+                RestoreMainWindow: () => main!.WindowState = WindowState.Normal,
+                ActivateMainWindow: () => main!.Activate()));
     }
 }

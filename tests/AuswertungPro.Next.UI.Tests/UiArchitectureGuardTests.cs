@@ -75,8 +75,10 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var controllerPath = Path.Combine(uiRoot, "Player", "QuickScanController.cs");
+        var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
 
         Assert.True(File.Exists(controllerPath), "QuickScanController muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(closedWorkflowPath), "QuickScan-Cancel beim Closed-Cleanup soll im Closed-Workflow laufen.");
 
         var windowText = string.Join(
             Environment.NewLine,
@@ -85,6 +87,7 @@ public sealed class UiArchitectureGuardTests
         var wiring = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs"));
         var quickScanPartial = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.QuickScan.cs"));
         var controller = File.ReadAllText(controllerPath);
+        var closedWorkflow = File.ReadAllText(closedWorkflowPath);
 
         Assert.DoesNotContain("_heatmapRects", windowText);
         Assert.DoesNotContain("_isQuickScanning", windowText);
@@ -93,7 +96,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("RepositionHeatmap", windowText);
         Assert.Contains("new QuickScanController", windowRoot);
         Assert.Contains("_quickScanController.Reposition()", wiring);
-        Assert.Contains("_quickScanController.Cancel()", wiring);
+        Assert.Contains("CancelQuickScan: _quickScanController.Cancel", wiring);
+        Assert.Contains("actions.CancelQuickScan()", closedWorkflow);
         Assert.Contains("_quickScanController.ToggleAsync()", quickScanPartial);
         Assert.DoesNotContain("private async void QuickScan_Click", quickScanPartial);
         Assert.Contains(".SafeFireAndForget(\"QuickScan\")", quickScanPartial);
@@ -112,17 +116,20 @@ public sealed class UiArchitectureGuardTests
         var sliderPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs");
         var dragPlaybackPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragPlayback.cs");
         var headerControlsPath = Path.Combine(uiRoot, "Player", "PlayerWindowHeaderControls.cs");
+        var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
 
         Assert.True(File.Exists(wiringPath), "Fenster-, Slider- und Viewport-Wiring soll aus dem Konstruktor heraus.");
         Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
         Assert.True(File.Exists(dragPlaybackPath), "PositionSlider-Drag-Pause-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(headerControlsPath), "Player-Header-Control-Zuweisungen sollen ausserhalb des Konstruktors liegen.");
+        Assert.True(File.Exists(closedWorkflowPath), "Closed-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var wiring = File.ReadAllText(wiringPath);
         var slider = File.ReadAllText(sliderPath);
         var dragPlayback = File.Exists(dragPlaybackPath) ? File.ReadAllText(dragPlaybackPath) : "";
         var headerControls = File.Exists(headerControlsPath) ? File.ReadAllText(headerControlsPath) : "";
+        var closedWorkflow = File.Exists(closedWorkflowPath) ? File.ReadAllText(closedWorkflowPath) : "";
 
         Assert.Contains("WireWindowLifecycleEvents();", windowRoot);
         Assert.Contains("WirePositionSliderEvents();", windowRoot);
@@ -136,6 +143,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("Deactivated += (_, _)", windowRoot);
         Assert.Contains("private void WireWindowLifecycleEvents", wiring);
         Assert.Contains("private void PlayerWindow_Closed", wiring);
+        Assert.Contains("PlayerWindowClosedWorkflow.Execute", wiring);
+        Assert.Contains("public static class PlayerWindowClosedWorkflow", closedWorkflow);
+        Assert.Contains("actions.StopCodingOsdTimer()", closedWorkflow);
+        Assert.Contains("actions.StopLiveDetection()", closedWorkflow);
+        Assert.DoesNotContain("Codier-Modus sauber", wiring);
+        Assert.DoesNotContain("Cleanup() ist idempotent", wiring);
         Assert.DoesNotContain("private void WirePositionSliderEvents", wiring);
         Assert.DoesNotContain("PositionSlider.AddHandler", wiring);
         Assert.Contains("private void WirePositionSliderEvents", slider);
@@ -4379,12 +4392,14 @@ public sealed class UiArchitectureGuardTests
         var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var codingAiControllerPath = Path.Combine(uiRoot, "Player", "CodingAiController.cs");
         var closingWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosingWorkflow.cs");
+        var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
         var helperPath = Path.Combine(uiRoot, "Player", "CancellationTokenSourceLifecycle.cs");
 
         Assert.True(File.Exists(helperPath), "CancellationTokenSource-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(liveControllerPath), "LiveDetection-CTS-Lifecycle soll im LiveDetectionController liegen.");
         Assert.True(File.Exists(codingAiControllerPath), "Coding-AI-Analyse-CTS-Lifecycle soll im CodingAiController liegen.");
         Assert.True(File.Exists(closingWorkflowPath), "Closing-Cancel-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(closedWorkflowPath), "Closed-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var exit = File.ReadAllText(exitPath);
@@ -4393,12 +4408,14 @@ public sealed class UiArchitectureGuardTests
         var liveController = File.ReadAllText(liveControllerPath);
         var codingAiController = File.ReadAllText(codingAiControllerPath);
         var closingWorkflow = File.ReadAllText(closingWorkflowPath);
+        var closedWorkflow = File.ReadAllText(closedWorkflowPath);
         var helper = File.Exists(helperPath) ? File.ReadAllText(helperPath) : "";
         var playerWindowText = ai + exit + wiring + playback;
 
         Assert.Contains("_codingAiController.TryBeginAnalysis()", ai);
         Assert.Contains("_codingAiController.DisposeAnalysisCancellation()", exit);
-        Assert.Contains("_codingAiController.DisposeAnalysisCancellation()", wiring);
+        Assert.Contains("DisposeCodingAnalysisCancellation: _codingAiController.DisposeAnalysisCancellation", wiring);
+        Assert.Contains("actions.DisposeCodingAnalysisCancellation()", closedWorkflow);
         Assert.Contains("CancelLiveDetection: _liveDetectionController.CancelDetectionIfPresent", playback);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_cancellation)", liveController);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_cancellation)", liveController);
