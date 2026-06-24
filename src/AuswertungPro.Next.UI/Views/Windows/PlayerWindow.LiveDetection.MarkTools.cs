@@ -51,8 +51,7 @@ public partial class PlayerWindow
             _codingOverlayService!.ActiveTool = tool;
 
             // Offene Zeichnung verwerfen
-            if (_codingVm != null)
-                _codingVm.CurrentOverlay = null;
+            _codingSessionHost.ClearCurrentOverlay();
 
             _markToolControls.OpenCodingOverlay();
             UpdateCodingOverlayViewport();

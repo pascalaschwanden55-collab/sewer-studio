@@ -22,7 +22,7 @@ public partial class PlayerWindow
     {
         try
         {
-            var overlay = _codingVm?.CurrentOverlay;
+            var overlay = _codingSessionHost.CurrentOverlay;
             if (overlay == null)
                 return;
 
@@ -47,8 +47,7 @@ public partial class PlayerWindow
             // Nach dem Dialog alle transienten Markierungsartefakte entfernen.
             Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
             BendMarkerRenderer.Clear(CodingOverlayCanvas);
-            if (_codingVm != null)
-                _codingVm.CurrentOverlay = null;
+            _codingSessionHost.ClearCurrentOverlay();
             RedrawCodingCanvas(includeManualOverlay: false);
 
             // Im Codiermodus Werkzeug aktiv lassen, damit mehrere Markierungen nacheinander moeglich sind.

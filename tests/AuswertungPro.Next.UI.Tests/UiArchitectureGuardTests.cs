@@ -3895,6 +3895,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("DetectionCanvas.Cursor", markTools);
         Assert.DoesNotContain("CodingOverlayPopup.IsOpen", markTools);
         Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible", markTools);
+        Assert.Contains("_codingSessionHost", marking);
+        Assert.DoesNotContain("_codingVm", marking);
+        Assert.Contains("_codingSessionHost.ClearCurrentOverlay", markTools);
+        Assert.DoesNotContain("_codingVm.CurrentOverlay = null", markTools);
         Assert.Contains("private void ActivateMarkTool", markTools);
         Assert.Contains("private void EnsureMarkOverlayReady", markTools);
         Assert.Contains("private void DeactivateMarkTool", markTools);
