@@ -404,7 +404,10 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.DoesNotContain("CodingProtocolMatchBucketBuilder.Rebuild", runBody);
         Assert.Contains("UpdateCodingProtocolMatchSummary(_lastCodingMatch)", runBody);
         Assert.Contains("RefreshCodingEventsList()", runBody);
-        Assert.Contains("CodingProtocolMatchDisplayPolicy.BadgeText", coding);
+        Assert.Contains("CodingProtocolMatchHighlightControls.Apply", coding);
+        Assert.Contains(
+            "CodingProtocolMatchDisplayPolicy.BadgeText",
+            ReadUiFile("Ai", "CodingProtocolMatchHighlightControls.cs"));
     }
 
     [Fact]
