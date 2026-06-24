@@ -3950,11 +3950,14 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
         var navigationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Navigation.cs");
+        var controllerPath = Path.Combine(uiRoot, "Ai", "CodingVideoNavigationController.cs");
 
         Assert.True(File.Exists(navigationPath), "Coding-Navigation soll nicht im grossen Coding-Partial liegen.");
+        Assert.True(File.Exists(controllerPath), "Coding-Video-Navigationsregeln sollen ausserhalb der PlayerWindow-Partials liegen.");
 
         var coding = File.ReadAllText(codingPath);
         var navigation = File.ReadAllText(navigationPath);
+        var controller = File.ReadAllText(controllerPath);
 
         Assert.DoesNotContain("private async void CodingNext_Click", coding);
         Assert.DoesNotContain("private async void CodingPrevious_Click", coding);
@@ -3967,7 +3970,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains(".SafeFireAndForget(\"CodingNext\")", navigation);
         Assert.Contains(".SafeFireAndForget(\"CodingPrevious\")", navigation);
         Assert.Contains("private async Task MoveCodingByCommandAsync", navigation);
-        Assert.Contains("CodingVideoSyncPolicy.TryResolveTargetTimeMs", navigation);
+        Assert.Contains("CodingVideoNavigationController.ResolveDisplayMeter", navigation);
+        Assert.Contains("CodingVideoNavigationController.SyncVideoToCodingMeter", navigation);
+        Assert.DoesNotContain("CodingCurrentMeterResolver.Resolve", navigation);
+        Assert.DoesNotContain("CodingVideoSyncPolicy.TryResolveTargetTimeMs", navigation);
+        Assert.Contains("public static class CodingVideoNavigationController", controller);
+        Assert.Contains("CodingCurrentMeterResolver.Resolve", controller);
+        Assert.Contains("CodingVideoSyncPolicy.TryResolveTargetTimeMs", controller);
     }
 
     [Fact]

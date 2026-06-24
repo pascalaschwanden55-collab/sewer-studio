@@ -64,7 +64,7 @@ public partial class PlayerWindow
     private double ResolveCurrentCodingDisplayMeter()
         => _codingVm == null
             ? 0
-            : CodingCurrentMeterResolver.Resolve(
+            : CodingVideoNavigationController.ResolveDisplayMeter(
                 _codingLastOsdMeter,
                 _player.Time,
                 _player.Length,
@@ -74,15 +74,13 @@ public partial class PlayerWindow
     private void SyncVideoToCodingMeter()
     {
         if (_codingVm == null) return;
-        if (!CodingVideoSyncPolicy.TryResolveTargetTimeMs(
-                _codingVm.CurrentMeter,
-                _codingVm.EndMeter,
-                _player.Length,
-                out var targetMs))
-            return;
-
-        _player.Time = targetMs;
-        _codingVm.CurrentVideoTime = TimeSpan.FromMilliseconds(_player.Time);
+        CodingVideoNavigationController.SyncVideoToCodingMeter(
+            _codingVm.CurrentMeter,
+            _codingVm.EndMeter,
+            _player.Length,
+            targetMs => _player.Time = targetMs,
+            () => _player.Time,
+            videoTime => _codingVm.CurrentVideoTime = videoTime);
     }
 
     private void CodingNext_Click(object sender, RoutedEventArgs e)
