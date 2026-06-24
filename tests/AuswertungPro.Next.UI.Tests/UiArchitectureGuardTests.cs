@@ -5060,8 +5060,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("OnCanvasMultiPointMove", overlayInput);
         Assert.Contains("private void HandleCodingMultiPointMouseDown", multiPoint);
         Assert.Contains("private bool TryHandleCodingMultiPointMouseMove", multiPoint);
-        Assert.Contains("OnCanvasMultiPointClick", multiPoint);
-        Assert.Contains("OnCanvasMultiPointMove", multiPoint);
+        Assert.Contains("_codingSessionHost", multiPoint);
+        Assert.DoesNotContain("_codingVm", multiPoint);
+        Assert.DoesNotContain("OnCanvasMultiPointClick", multiPoint);
+        Assert.DoesNotContain("OnCanvasMultiPointMove", multiPoint);
+        Assert.Contains("AddMultiPointOverlayPoint", multiPoint);
+        Assert.Contains("UpdateMultiPointOverlayPreview", multiPoint);
     }
 
     [Fact]

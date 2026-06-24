@@ -28,6 +28,8 @@ public interface ICodingSessionHost
     void BeginOverlayDraw(NormalizedPoint point);
     void UpdateOverlayDraw(NormalizedPoint point);
     void CompleteOverlayDraw(NormalizedPoint point);
+    bool AddMultiPointOverlayPoint(NormalizedPoint point);
+    void UpdateMultiPointOverlayPreview(NormalizedPoint point);
     bool ExecuteMoveNext();
     bool ExecuteMovePrevious();
     bool ExecuteAcceptDefect();
@@ -143,6 +145,24 @@ public sealed class CodingSessionHost : ICodingSessionHost
             return;
 
         viewModel.OnCanvasMouseUp(point);
+    }
+
+    public bool AddMultiPointOverlayPoint(NormalizedPoint point)
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null)
+            return false;
+
+        return viewModel.OnCanvasMultiPointClick(point);
+    }
+
+    public void UpdateMultiPointOverlayPreview(NormalizedPoint point)
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null)
+            return;
+
+        viewModel.OnCanvasMultiPointMove(point);
     }
 
     public bool ExecuteMoveNext()

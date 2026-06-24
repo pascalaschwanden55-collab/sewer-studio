@@ -39,6 +39,8 @@ public sealed class CodingSessionHostTests
         hostType.GetMethod("BeginOverlayDraw")!.Invoke(host, [new NormalizedPoint(0.1, 0.2)]);
         hostType.GetMethod("UpdateOverlayDraw")!.Invoke(host, [new NormalizedPoint(0.2, 0.3)]);
         hostType.GetMethod("CompleteOverlayDraw")!.Invoke(host, [new NormalizedPoint(0.3, 0.4)]);
+        Assert.False((bool)hostType.GetMethod("AddMultiPointOverlayPoint")!.Invoke(host, [new NormalizedPoint(0.4, 0.5)])!);
+        hostType.GetMethod("UpdateMultiPointOverlayPreview")!.Invoke(host, [new NormalizedPoint(0.5, 0.6)]);
     }
 
     [Fact]
@@ -133,6 +135,31 @@ public sealed class CodingSessionHostTests
         Assert.Equal(2, overlayService.UpdateDrawCalls);
         Assert.Equal(1, overlayService.EndDrawCalls);
         Assert.Same(completedOverlay, vm.CurrentOverlay);
+
+        overlayService.IsMultiPointToolValue = true;
+        overlayService.DrawPointCountValue = 1;
+        overlayService.PreviewGeometryToReturn = previewOverlay;
+        overlayService.AddDrawPointResult = false;
+
+        var incomplete = (bool)host.GetType()
+            .GetMethod("AddMultiPointOverlayPoint")!
+            .Invoke(host, [new NormalizedPoint(0.4, 0.5)])!;
+        Assert.False(incomplete);
+        Assert.Equal(1, overlayService.AddDrawPointCalls);
+        Assert.Same(previewOverlay, vm.CurrentOverlay);
+
+        overlayService.AddDrawPointResult = true;
+        var complete = (bool)host.GetType()
+            .GetMethod("AddMultiPointOverlayPoint")!
+            .Invoke(host, [new NormalizedPoint(0.5, 0.6)])!;
+        Assert.True(complete);
+        Assert.Equal(2, overlayService.AddDrawPointCalls);
+        Assert.Equal(2, overlayService.EndDrawCalls);
+        Assert.Same(completedOverlay, vm.CurrentOverlay);
+
+        host.GetType().GetMethod("UpdateMultiPointOverlayPreview")!.Invoke(host, [new NormalizedPoint(0.6, 0.7)]);
+        Assert.Equal(3, overlayService.UpdateDrawCalls);
+        Assert.Same(previewOverlay, vm.CurrentOverlay);
     }
 
     private static object CreateHost(Func<CodingSessionViewModel?> resolveViewModel)
@@ -204,14 +231,18 @@ public sealed class CodingSessionHostTests
         public PipeCalibration? Calibration { get; private set; }
         public OverlayGeometry? PreviewGeometryToReturn { get; set; }
         public OverlayGeometry? EndDrawResult { get; set; }
+        public bool IsMultiPointToolValue { get; set; }
+        public int DrawPointCountValue { get; set; }
+        public bool AddDrawPointResult { get; set; }
         public int BeginDrawCalls { get; private set; }
         public int UpdateDrawCalls { get; private set; }
         public int EndDrawCalls { get; private set; }
+        public int AddDrawPointCalls { get; private set; }
         public bool IsCalibrated => Calibration?.IsCalibrated == true;
         public bool IsDrawing { get; private set; }
-        public bool IsMultiPointTool => false;
+        public bool IsMultiPointTool => IsMultiPointToolValue;
         public int RequiredPointCount => 0;
-        public int DrawPointCount => 0;
+        public int DrawPointCount => DrawPointCountValue;
         public IReadOnlyList<NormalizedPoint> DrawPoints => [];
         public NormalizedPoint? DrawStartPoint => null;
         public NormalizedPoint? DrawCurrentPoint => null;
@@ -235,7 +266,11 @@ public sealed class CodingSessionHostTests
             return EndDrawResult;
         }
         public void CancelDraw() { }
-        public bool AddDrawPoint(NormalizedPoint point) => false;
+        public bool AddDrawPoint(NormalizedPoint point)
+        {
+            AddDrawPointCalls++;
+            return AddDrawPointResult;
+        }
         public double PixelToMm(double normalizedPixels, double frameWidthPx) => 0;
         public double PointToClockHour(NormalizedPoint point) => 0;
         public OverlayGeometry? BuildLevelGeometryFromSlider(double fillPercent, LevelMode mode) => null;

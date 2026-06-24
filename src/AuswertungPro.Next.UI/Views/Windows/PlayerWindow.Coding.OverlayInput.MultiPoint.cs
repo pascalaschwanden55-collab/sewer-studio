@@ -8,49 +8,51 @@ public partial class PlayerWindow
 {
     private void HandleCodingMultiPointMouseDown(NormalizedPoint norm)
     {
-        if (_codingOverlayService == null || _codingVm == null)
+        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel)
             return;
 
         if (_codingOverlayService.DrawPointCount == 0)
         {
-            _codingVm.CurrentOverlay = null;
+            _codingSessionHost.ClearCurrentOverlay();
             CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false);
             UpdateCodingOverlayInfo(null);
         }
 
-        bool complete = _codingVm.OnCanvasMultiPointClick(norm);
+        bool complete = _codingSessionHost.AddMultiPointOverlayPoint(norm);
         ClearTransientCodingCanvas(clearManualOverlay: true);
         RenderAiOverlays();
         RenderReferenceDn();
         UpdateToolBadge();
 
-        if (_codingVm.CurrentOverlay != null)
-            RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: !complete);
+        var overlay = _codingSessionHost.CurrentOverlay;
+        if (overlay != null)
+            RenderOverlayGeometry(overlay, isPreview: !complete);
 
         if (complete)
         {
-            UpdateCodingOverlayInfo(_codingVm.CurrentOverlay);
+            UpdateCodingOverlayInfo(overlay);
             CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, true);
-            if (BtnCodingLiveAi.IsChecked == true && _codingVm.CurrentOverlay != null)
-                AnalyzeWithOverlayHintAsync(_codingVm.CurrentOverlay).SafeFireAndForget("OverlayHint");
+            if (BtnCodingLiveAi.IsChecked == true && overlay != null)
+                AnalyzeWithOverlayHintAsync(overlay).SafeFireAndForget("OverlayHint");
         }
     }
 
     private bool TryHandleCodingMultiPointMouseMove(NormalizedPoint norm)
     {
-        if (_codingOverlayService == null || _codingVm == null)
+        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel)
             return false;
 
         if (!_codingOverlayService.IsMultiPointTool || _codingOverlayService.DrawPointCount <= 0)
             return false;
 
-        _codingVm.OnCanvasMultiPointMove(norm);
+        _codingSessionHost.UpdateMultiPointOverlayPreview(norm);
         ClearTransientCodingCanvas(clearManualOverlay: true);
         RenderAiOverlays();
         RenderReferenceDn();
         UpdateToolBadge();
-        if (_codingVm.CurrentOverlay != null)
-            RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: true, labelAnchor: norm);
+        var overlay = _codingSessionHost.CurrentOverlay;
+        if (overlay != null)
+            RenderOverlayGeometry(overlay, isPreview: true, labelAnchor: norm);
 
         return true;
     }
