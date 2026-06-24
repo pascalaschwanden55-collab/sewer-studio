@@ -13,8 +13,7 @@ public partial class PlayerWindow
         _codingOverlayService = state.OverlayService;
         _codingSchemaManager.Cancel();
         _codingSchemaType = null;
-        _codingVm = state.ViewModel;
-        _codingVm.PropertyChanged += CodingVm_PropertyChanged;
+        _codingSessionViewModelOwner.Set(state.ViewModel, observePropertyChanged: true);
     }
 
     private void ApplyCodingDnCalibration()

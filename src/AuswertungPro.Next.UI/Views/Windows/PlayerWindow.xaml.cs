@@ -100,7 +100,8 @@ public partial class PlayerWindow : Window
         _codingOverlayRenderController = new CodingOverlayRenderController(
             new CanvasOverlaySurface(CodingOverlayCanvas),
             new DelegateOverlayCoordinateMapper(CodingNormToPixel));
-        _codingSessionHost = new CodingSessionHost(() => _codingVm);
+        _codingSessionViewModelOwner = new CodingSessionViewModelOwner(CodingVm_PropertyChanged);
+        _codingSessionHost = new CodingSessionHost(() => _codingSessionViewModelOwner.ViewModel);
 
         _timer = CreateUpdateTimer();
         _scrubTimer = CreateScrubTimer();

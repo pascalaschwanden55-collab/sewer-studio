@@ -295,7 +295,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private enum EingabemarkerPhase", coding);
         Assert.DoesNotContain("private readonly ObservableCollection<CodingEvent> _codingImportEvents", coding);
         Assert.Contains("private bool _isCodingMode", state);
-        Assert.Contains("private CodingSessionViewModel? _codingVm", state);
+        Assert.Contains("private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner", state);
+        Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", state);
         Assert.Contains("private enum EingabemarkerPhase", state);
         Assert.Contains("private readonly ObservableCollection<CodingEvent> _codingImportEvents", state);
     }
@@ -3905,6 +3906,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_codingSessionHost.HasViewModel", markTools);
         Assert.DoesNotContain("_codingVm.CurrentOverlay = null", markTools);
         Assert.DoesNotContain("_codingOverlayService != null && _codingVm != null", markTools);
+        Assert.DoesNotContain("_codingVm", markTools);
         Assert.Contains("private void ActivateMarkTool", markTools);
         Assert.Contains("private void EnsureMarkOverlayReady", markTools);
         Assert.Contains("private void DeactivateMarkTool", markTools);
@@ -4829,8 +4831,16 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", uiUpdateWorkflow);
         Assert.Contains("public interface ICodingSessionHost", sessionHost);
         Assert.Contains("public sealed class CodingSessionHost", sessionHost);
+        Assert.Contains("public sealed class CodingSessionViewModelOwner", sessionHost);
         Assert.Contains("private readonly ICodingSessionHost _codingSessionHost", state);
-        Assert.Contains("new CodingSessionHost(() => _codingVm)", windowRoot);
+        Assert.Contains("new CodingSessionViewModelOwner(CodingVm_PropertyChanged)", windowRoot);
+        Assert.Contains("new CodingSessionHost(() => _codingSessionViewModelOwner.ViewModel)", windowRoot);
+        Assert.DoesNotContain("_codingVm", windowRoot + state);
+        foreach (var path in Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs"))
+        {
+            var text = File.ReadAllText(path);
+            Assert.DoesNotContain("_codingVm", text);
+        }
     }
 
     [Fact]
@@ -4905,6 +4915,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("HasRequiredState: _haltungRecord != null && _codingVm != null", session);
         Assert.DoesNotContain("EndMeter: _codingVm?.EndMeter ?? 0", session);
         Assert.DoesNotContain("_codingVm!.StartSessionCommand.Execute", session);
+        Assert.DoesNotContain("_codingVm", session);
         Assert.Contains("CodingSessionStartWorkflow.Execute", session);
         Assert.DoesNotContain("catch (Exception ex)", session);
         Assert.Contains("actions.ExecuteStartSession()", sessionStartWorkflow);
@@ -4949,6 +4960,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingVm?.Events", exit);
         Assert.DoesNotContain("_codingVm?.EndMeter", exit);
         Assert.DoesNotContain("HasCodingViewModel: _codingVm is not null", exit);
+        Assert.DoesNotContain("_codingVm", exit);
         Assert.Contains("ShowCodingModeUi: ShowCodingModeUi", lifecycle);
         Assert.Contains("actions.ShowCodingModeUi()", enterWorkflow);
         Assert.Contains("CodingModePreparePlaybackWorkflow.Execute", ui);

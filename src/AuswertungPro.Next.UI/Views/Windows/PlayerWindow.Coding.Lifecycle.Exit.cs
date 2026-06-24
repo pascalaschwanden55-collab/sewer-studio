@@ -82,10 +82,10 @@ public partial class PlayerWindow
                     TxtCodingAiStage),
                 CancelCodingSchema: _codingSchemaManager.Cancel,
                 ClearCodingSchemaType: () => _codingSchemaType = null,
-                DetachCodingViewModelPropertyChanged: () => _codingVm!.PropertyChanged -= CodingVm_PropertyChanged,
+                DetachCodingViewModelPropertyChanged: _codingSessionViewModelOwner.DetachPropertyChanged,
                 ClearCodingSessionReferences: () =>
                 {
-                    _codingVm = null;
+                    _codingSessionViewModelOwner.Clear();
                     _codingSessionService = null;
                     _codingOverlayService = null;
                 },

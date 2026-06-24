@@ -73,7 +73,7 @@ public partial class PlayerWindow
             _codingOverlayService);
         _codingSessionService = state.SessionService;
         _codingOverlayService = state.OverlayService;
-        _codingVm = state.ViewModel;
+        _codingSessionViewModelOwner.Set(state.ViewModel, observePropertyChanged: false);
     }
 
     private void DeactivateMarkTool()

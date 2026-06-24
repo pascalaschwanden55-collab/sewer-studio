@@ -14,14 +14,12 @@ using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
-using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
     private bool _isCodingMode;
-    private CodingSessionViewModel? _codingVm;
     private ICodingSessionService? _codingSessionService;
     private IOverlayToolService? _codingOverlayService;
     private readonly SchemaOverlayManager _codingSchemaManager = new();
@@ -44,6 +42,7 @@ public partial class PlayerWindow
     private CodingInlineDefectDetailControls _codingInlineDefectDetailControls = null!;
     private CodingEventCreationPostActions _codingEventCreationPostActions = null!;
     private CodingConfirmationPanelControls _codingConfirmationPanelControls = null!;
+    private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner;
     private readonly ICodingSessionHost _codingSessionHost;
 
     private enum EingabemarkerPhase { Inactive, Drawing, Input, Analyzing }
