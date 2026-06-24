@@ -4785,6 +4785,7 @@ public sealed class UiArchitectureGuardTests
         var controllerPath = Path.Combine(uiRoot, "Ai", "CodingVideoNavigationController.cs");
         var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingUiUpdateWorkflow.cs");
         var sessionHostPath = Path.Combine(uiRoot, "Player", "CodingSessionHost.cs");
+        var sessionOwnerPath = Path.Combine(uiRoot, "Player", "CodingSessionViewModelOwner.cs");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
 
@@ -4792,6 +4793,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(controllerPath), "Coding-Video-Navigationsregeln sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(uiUpdateWorkflowPath), "Coding-UI-Update-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(sessionHostPath), "_codingVm-Zugriffe sollen ueber einen schmalen CodingSessionHost laufen.");
+        Assert.True(File.Exists(sessionOwnerPath), "CodingSessionViewModel-Besitz soll in einem eigenen Player-Owner liegen.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var coding = File.ReadAllText(codingPath);
@@ -4799,6 +4801,7 @@ public sealed class UiArchitectureGuardTests
         var controller = File.ReadAllText(controllerPath);
         var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
         var sessionHost = File.Exists(sessionHostPath) ? File.ReadAllText(sessionHostPath) : "";
+        var sessionOwner = File.Exists(sessionOwnerPath) ? File.ReadAllText(sessionOwnerPath) : "";
         var state = File.ReadAllText(statePath);
 
         Assert.DoesNotContain("private async void CodingNext_Click", coding);
@@ -4831,7 +4834,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", uiUpdateWorkflow);
         Assert.Contains("public interface ICodingSessionHost", sessionHost);
         Assert.Contains("public sealed class CodingSessionHost", sessionHost);
-        Assert.Contains("public sealed class CodingSessionViewModelOwner", sessionHost);
+        Assert.DoesNotContain("public sealed class CodingSessionViewModelOwner", sessionHost);
+        Assert.Contains("public sealed class CodingSessionViewModelOwner", sessionOwner);
         Assert.Contains("private readonly ICodingSessionHost _codingSessionHost", state);
         Assert.Contains("new CodingSessionViewModelOwner(CodingVm_PropertyChanged)", windowRoot);
         Assert.Contains("new CodingSessionHost(() => _codingSessionViewModelOwner.ViewModel)", windowRoot);
