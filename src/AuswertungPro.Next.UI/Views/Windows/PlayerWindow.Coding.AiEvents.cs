@@ -28,7 +28,7 @@ public partial class PlayerWindow
             new CodingAiResultWorkflowRequest(
                 result,
                 _codingAiController.ModelName,
-                _codingVm != null,
+                _codingSessionHost.HasViewModel,
                 CodingOverlayPopup.IsOpen,
                 _player.Time / 1000.0),
             new CodingAiResultWorkflowActions(

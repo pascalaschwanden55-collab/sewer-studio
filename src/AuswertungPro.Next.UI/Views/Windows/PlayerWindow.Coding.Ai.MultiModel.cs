@@ -30,6 +30,10 @@ public partial class PlayerWindow
         if (start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready)
             return;
 
+        var endMeter = _codingSessionHost.HasViewModel
+            ? _codingSessionHost.EndMeter
+            : (double?)null;
+
         await CodingMultiModelInferenceWorkflow.ExecuteAsync(
             new CodingMultiModelInferenceWorkflowRequest(
                 activityText,
@@ -37,7 +41,7 @@ public partial class PlayerWindow
                 captureTimestampSec,
                 start.FrameOsdMeter,
                 _codingOverlayService?.Calibration?.NominalDiameterMm,
-                _codingVm?.EndMeter,
+                endMeter,
                 analysisCts.Token),
             new CodingMultiModelInferenceWorkflowActions(
                 ResolveCurrentMeter: ResolveCodingMeterForFrame,

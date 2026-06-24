@@ -16,7 +16,7 @@ public partial class PlayerWindow
         return CodingDedupPolicy.ShouldStopAnalysisAfterTerminalCode(
             CodingTerminalBoundaryCandidateBuilder.Enumerate(
                 _codingSessionService?.ActiveSession?.Events,
-                _codingVm?.Events,
+                _codingSessionHost.Events,
                 _codingImportEvents),
             currentMeter,
             currentVideoTime);

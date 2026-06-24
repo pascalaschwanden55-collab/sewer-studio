@@ -1491,6 +1491,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private Task<byte[]?> CaptureSnapshotAsync", helpers);
         Assert.Contains("CodingTerminalBoundaryCandidateBuilder.Enumerate", helpers);
         Assert.Contains("SegmentedFindingBuilder.Build", helpers);
+        Assert.Contains("_codingSessionHost", helpers);
+        Assert.DoesNotContain("_codingVm", helpers);
         Assert.Contains("actions.IsAfterTerminalBoundary(framePosition)", preflightWorkflow);
         Assert.Contains("\"Rohrende erreicht - KI-Analyse gestoppt\"", preflightWorkflow);
         Assert.Contains("actions.CaptureSnapshotAsync", singleModelWorkflow);
@@ -1499,6 +1501,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("\"Frame nicht extrahierbar\"", singleModelWorkflow);
         Assert.Contains("CodingMultiModelAnalysisStartWorkflow.ExecuteAsync", multiModel);
         Assert.Contains("CodingMultiModelInferenceWorkflow.ExecuteAsync", multiModel);
+        Assert.Contains("_codingSessionHost", multiModel);
+        Assert.DoesNotContain("_codingVm", multiModel);
         Assert.DoesNotContain("\"Schritt 1 von 4: Snapshot\"", multiModel);
         Assert.DoesNotContain("\"Dateneinblendung erkannt - uebersprungen\"", multiModel);
         Assert.DoesNotContain("var currentMeterForClassifier", multiModel);
@@ -1601,6 +1605,8 @@ public sealed class UiArchitectureGuardTests
         var workflow = File.ReadAllText(workflowPath);
         var addDecision = File.ReadAllText(addDecisionPath);
 
+        Assert.Contains("_codingSessionHost", aiEvents);
+        Assert.DoesNotContain("_codingVm", aiEvents);
         Assert.DoesNotContain("private void AddMultiModelFindingsAsEvents", aiEvents);
         Assert.Contains("private void AddMultiModelFindingsAsEvents", multiModel);
         Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", multiModel);
