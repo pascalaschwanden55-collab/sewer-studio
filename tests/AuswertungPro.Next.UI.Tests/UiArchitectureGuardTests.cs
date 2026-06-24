@@ -3066,6 +3066,7 @@ public sealed class UiArchitectureGuardTests
         var confirmationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.cs");
         var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.Actions.cs");
         var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.Training.cs");
+        var statusControlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
         var correctionSelectionPath = Path.Combine(uiRoot, "Ai", "LiveDetectionCorrectionCodeSelectionService.cs");
         var correctionSelectionFactoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionCorrectionCodeSelectionServiceFactory.cs");
         var frameExporterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingFrameExporter.cs");
@@ -3085,6 +3086,7 @@ public sealed class UiArchitectureGuardTests
         var confirmation = File.ReadAllText(confirmationPath);
         var actions = File.ReadAllText(actionsPath);
         var training = File.ReadAllText(trainingPath);
+        var statusControls = File.ReadAllText(statusControlsPath);
         var correctionSelection = File.ReadAllText(correctionSelectionPath);
         var correctionSelectionFactory = File.ReadAllText(correctionSelectionFactoryPath);
         var frameExporter = File.ReadAllText(frameExporterPath);
@@ -3094,6 +3096,12 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("private void ShowDetectionConfirmation", confirmation);
         Assert.Contains("private void ResumeDetection", confirmation);
+        Assert.Contains("LiveDetectionStatusControls.ShowDetectionConfirmation", confirmation);
+        Assert.Contains("LiveDetectionStatusControls.HideDetectionConfirmation", confirmation);
+        Assert.DoesNotContain("TxtDetectionFinding.Text", confirmation);
+        Assert.DoesNotContain("TxtDetectionDetail.Text", confirmation);
+        Assert.DoesNotContain("DetectionConfirmationPanel.Visibility = Visibility.Visible", confirmation);
+        Assert.DoesNotContain("DetectionConfirmationPanel.Visibility = Visibility.Collapsed", confirmation);
         Assert.DoesNotContain("private async void DetectionAccept_Click", confirmation);
         Assert.DoesNotContain("private async void DetectionCorrect_Click", confirmation);
         Assert.DoesNotContain("private void DetectionSkip_Click", confirmation);
@@ -3115,6 +3123,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveDetectionTrainingAnnotationWriter.CreateDefault", training);
         Assert.Contains("LiveDetectionConfirmationTrainingWorkflow.SaveAcceptedAsync", training);
         Assert.Contains("LiveDetectionConfirmationTrainingWorkflow.SaveCorrectedAsync", training);
+        Assert.Contains("public static void ShowDetectionConfirmation", statusControls);
+        Assert.Contains("public static void HideDetectionConfirmation", statusControls);
         Assert.DoesNotContain("foreach (var finding in _detectionPendingFindings)", training);
         Assert.DoesNotContain("annotationWriter.SaveAcceptedAsync", training);
         Assert.DoesNotContain("annotationWriter.SaveCorrectedAsync", training);

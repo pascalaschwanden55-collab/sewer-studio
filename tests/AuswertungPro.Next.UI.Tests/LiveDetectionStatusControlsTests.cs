@@ -146,6 +146,49 @@ public sealed class LiveDetectionStatusControlsTests
     }
 
     [Fact]
+    public void ShowDetectionConfirmation_sets_title_details_and_shows_panel()
+    {
+        RunOnStaThread(() =>
+        {
+            var panel = new Border { Visibility = Visibility.Collapsed };
+            var title = new TextBlock();
+            var detail = new TextBlock();
+            var findings = new[]
+            {
+                new LiveFrameFinding("Riss", 3, "3", 20)
+            };
+            var show = FindMethod(
+                "ShowDetectionConfirmation",
+                typeof(FrameworkElement),
+                typeof(TextBlock),
+                typeof(TextBlock),
+                typeof(IReadOnlyList<LiveFrameFinding>));
+            Assert.NotNull(show);
+
+            show.Invoke(null, [panel, title, detail, findings]);
+
+            Assert.Equal(Visibility.Visible, panel.Visibility);
+            Assert.Equal(LiveDetectionDisplayPolicy.BuildDetectionConfirmationTitle(findings), title.Text);
+            Assert.Equal(LiveDetectionDisplayPolicy.BuildDetectionConfirmationDetails(findings), detail.Text);
+        });
+    }
+
+    [Fact]
+    public void HideDetectionConfirmation_collapses_panel()
+    {
+        RunOnStaThread(() =>
+        {
+            var panel = new Border { Visibility = Visibility.Visible };
+            var hide = FindMethod("HideDetectionConfirmation", typeof(FrameworkElement));
+            Assert.NotNull(hide);
+
+            hide.Invoke(null, [panel]);
+
+            Assert.Equal(Visibility.Collapsed, panel.Visibility);
+        });
+    }
+
+    [Fact]
     public void ShowStoppedDetectionStatus_hides_badge_and_summary_then_shows_stop_text()
     {
         RunOnStaThread(() =>

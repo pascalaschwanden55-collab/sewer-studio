@@ -91,6 +91,29 @@ public static class LiveDetectionStatusControls
         }
     }
 
+    public static void ShowDetectionConfirmation(
+        FrameworkElement confirmationPanel,
+        TextBlock findingText,
+        TextBlock detailText,
+        IReadOnlyList<LiveFrameFinding> findings)
+    {
+        ArgumentNullException.ThrowIfNull(confirmationPanel);
+        ArgumentNullException.ThrowIfNull(findingText);
+        ArgumentNullException.ThrowIfNull(detailText);
+        ArgumentNullException.ThrowIfNull(findings);
+
+        findingText.Text = LiveDetectionDisplayPolicy.BuildDetectionConfirmationTitle(findings);
+        detailText.Text = LiveDetectionDisplayPolicy.BuildDetectionConfirmationDetails(findings);
+        confirmationPanel.Visibility = Visibility.Visible;
+    }
+
+    public static void HideDetectionConfirmation(FrameworkElement confirmationPanel)
+    {
+        ArgumentNullException.ThrowIfNull(confirmationPanel);
+
+        confirmationPanel.Visibility = Visibility.Collapsed;
+    }
+
     public static void ShowStoppedDetectionStatus(
         FrameworkElement badge,
         FrameworkElement summaryPanel,

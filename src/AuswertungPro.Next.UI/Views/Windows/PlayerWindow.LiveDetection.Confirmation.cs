@@ -25,10 +25,11 @@ public partial class PlayerWindow
             _player.Time = targetMs;
         }
 
-        TxtDetectionFinding.Text = LiveDetectionDisplayPolicy.BuildDetectionConfirmationTitle(findings);
-        TxtDetectionDetail.Text = LiveDetectionDisplayPolicy.BuildDetectionConfirmationDetails(findings);
-
-        DetectionConfirmationPanel.Visibility = Visibility.Visible;
+        LiveDetectionStatusControls.ShowDetectionConfirmation(
+            DetectionConfirmationPanel,
+            TxtDetectionFinding,
+            TxtDetectionDetail,
+            findings);
     }
 
     private void ResumeDetection()
@@ -36,7 +37,7 @@ public partial class PlayerWindow
         _detectionPendingFindings = null;
         _detectionPendingFrameBytes = null;
         _detectionPendingTimestampSec = null;
-        DetectionConfirmationPanel.Visibility = Visibility.Collapsed;
+        LiveDetectionStatusControls.HideDetectionConfirmation(DetectionConfirmationPanel);
 
         // Video automatisch weiterlaufen lassen nach Entscheidung
         if (_player != null && !_player.IsPlaying)
