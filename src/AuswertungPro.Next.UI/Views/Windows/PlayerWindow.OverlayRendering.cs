@@ -7,14 +7,10 @@ public partial class PlayerWindow
 {
     private void RenderOverlayGeometry(OverlayGeometry overlay, bool isPreview, NormalizedPoint? labelAnchor = null)
     {
-        CodingOverlayGeometryRenderer.Render(
-            CodingOverlayCanvas,
+        _codingOverlayRenderController.RenderOverlayGeometry(
             overlay,
             isPreview,
             labelAnchor,
-            CodingNormToPixel,
-            _codingOverlayService?.Calibration,
-            CodingOverlayCanvas.ActualWidth,
-            CodingOverlayCanvas.ActualHeight);
+            _codingOverlayService?.Calibration);
     }
 }

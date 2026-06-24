@@ -4116,16 +4116,21 @@ public sealed class UiArchitectureGuardTests
         var viewportPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Viewport.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupPolicy.cs");
         var cleanerPath = Path.Combine(uiRoot, "Player", "CodingOverlayCanvasCleaner.cs");
+        var surfacePath = Path.Combine(uiRoot, "Player", "IOverlaySurface.cs");
 
         Assert.True(File.Exists(policyPath), "Transient-Overlay-Cleanup muss den zentralen Tag-Vertrag verwenden.");
         Assert.True(File.Exists(cleanerPath), "Transient-Overlay-Cleanup der Canvas-Elemente muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(surfacePath), "Transient-Overlay-Cleanup soll ueber die Overlay-Surface laufen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var viewport = File.ReadAllText(viewportPath);
         var policy = File.ReadAllText(policyPath);
         var cleaner = File.ReadAllText(cleanerPath);
+        var surface = File.ReadAllText(surfacePath);
 
-        Assert.Contains("CodingOverlayCanvasCleaner.ClearTransient", viewport);
+        Assert.Contains("_codingOverlayRenderController.ClearTransient", viewport);
+        Assert.DoesNotContain("CodingOverlayCanvasCleaner.ClearTransient", overlayInput + viewport);
+        Assert.Contains("CodingOverlayCanvasCleaner.ClearTransient", surface);
         Assert.DoesNotContain("CodingOverlayCleanupPolicy.ShouldRemoveTransientTag(el.Tag", overlayInput + viewport);
         Assert.DoesNotContain(".OfType<FrameworkElement>()", overlayInput + viewport);
         Assert.DoesNotContain("tag == OverlayTags.ToolBadge ||", overlayInput + viewport);
@@ -4252,7 +4257,7 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
-    public void PlayerWindow_active_schema_rendering_delegates_to_shape_partials()
+    public void PlayerWindow_active_schema_rendering_delegates_to_render_controller()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
@@ -4261,53 +4266,40 @@ public sealed class UiArchitectureGuardTests
         var pipeBendPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.PipeBend.cs");
         var fillLevelPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.FillLevel.cs");
         var intrusionPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.Intrusion.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayRenderController.cs");
         var pipeBendRendererPath = Path.Combine(uiRoot, "Player", "CodingActivePipeBendSchemaRenderer.cs");
         var intrusionRendererPath = Path.Combine(uiRoot, "Player", "CodingActiveIntrusionSchemaRenderer.cs");
         var fillLevelRendererPath = Path.Combine(uiRoot, "Player", "CodingActiveFillLevelSchemaRenderer.cs");
 
-        Assert.True(File.Exists(pipeBendPath), "Aktives PipeBend-Rendering soll aus dem Dispatcher heraus.");
-        Assert.True(File.Exists(fillLevelPath), "Aktives FillLevel-Rendering soll aus dem Dispatcher heraus.");
-        Assert.True(File.Exists(intrusionPath), "Aktives Intrusion-Rendering soll aus dem Dispatcher heraus.");
+        Assert.False(File.Exists(pipeBendPath), "Aktives PipeBend-Rendering soll nicht mehr als PlayerWindow-Partial leben.");
+        Assert.False(File.Exists(fillLevelPath), "Aktives FillLevel-Rendering soll nicht mehr als PlayerWindow-Partial leben.");
+        Assert.False(File.Exists(intrusionPath), "Aktives Intrusion-Rendering soll nicht mehr als PlayerWindow-Partial leben.");
+        Assert.True(File.Exists(controllerPath), "Aktive Schema-Render-Orchestrierung soll im CodingOverlayRenderController liegen.");
         Assert.True(File.Exists(pipeBendRendererPath), "Aktives PipeBend-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(intrusionRendererPath), "Aktives Intrusion-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(fillLevelRendererPath), "Aktives FillLevel-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var active = File.ReadAllText(activePath);
-        var pipeBend = File.ReadAllText(pipeBendPath);
-        var fillLevel = File.ReadAllText(fillLevelPath);
-        var intrusion = File.ReadAllText(intrusionPath);
+        var controller = File.ReadAllText(controllerPath);
         var pipeBendRenderer = File.ReadAllText(pipeBendRendererPath);
         var intrusionRenderer = File.ReadAllText(intrusionRendererPath);
         var fillLevelRenderer = File.ReadAllText(fillLevelRendererPath);
 
-        Assert.Contains("RenderActivePipeBendSchema(bend, glowEffect)", active);
-        Assert.Contains("RenderActiveFillLevelSchema(fill, glowEffect)", active);
-        Assert.Contains("RenderActiveIntrusionSchema(intrusion, glowEffect)", active);
+        Assert.Contains("_codingOverlayRenderController.RenderActiveSchema", active);
+        Assert.Contains("PipeBendSchema bend => CodingActivePipeBendSchemaRenderer.Render", controller);
+        Assert.Contains("FillLevelSchema fill => CodingActiveFillLevelSchemaRenderer.Render", controller);
+        Assert.Contains("IntrusionSchema intrusion => CodingActiveIntrusionSchemaRenderer.Render", controller);
         Assert.DoesNotContain("RenderPipeBendOverlay(overlay, true, Brushes.Gold", active);
         Assert.DoesNotContain("new Rectangle", active);
         Assert.DoesNotContain("new System.Windows.Shapes.Polygon", active);
-        Assert.Contains("private void RenderActivePipeBendSchema", pipeBend);
-        Assert.Contains("CodingActivePipeBendSchemaRenderer.Render", pipeBend);
-        Assert.DoesNotContain("new System.Windows.Shapes.Line", pipeBend);
-        Assert.DoesNotContain("CodingOverlayDotMarkerRenderer.Add", pipeBend);
         Assert.Contains("public static class CodingActivePipeBendSchemaRenderer", pipeBendRenderer);
         Assert.Contains("CodingPipeBendOverlayRenderer.Render", pipeBendRenderer);
         Assert.Contains("new System.Windows.Shapes.Line", pipeBendRenderer);
         Assert.Contains("CodingOverlayDotMarkerRenderer.Add", pipeBendRenderer);
-        Assert.Contains("private void RenderActiveFillLevelSchema", fillLevel);
-        Assert.Contains("CodingActiveFillLevelSchemaRenderer.Render", fillLevel);
-        Assert.DoesNotContain("new Rectangle", fillLevel);
-        Assert.DoesNotContain("new System.Windows.Shapes.Line", fillLevel);
-        Assert.DoesNotContain("CodingOverlayDotMarkerRenderer.Add", fillLevel);
         Assert.Contains("public static class CodingActiveFillLevelSchemaRenderer", fillLevelRenderer);
         Assert.Contains("new Rectangle", fillLevelRenderer);
         Assert.Contains("new System.Windows.Shapes.Line", fillLevelRenderer);
         Assert.Contains("CodingOverlayDotMarkerRenderer.Add", fillLevelRenderer);
-        Assert.Contains("private void RenderActiveIntrusionSchema", intrusion);
-        Assert.Contains("CodingActiveIntrusionSchemaRenderer.Render", intrusion);
-        Assert.DoesNotContain("new System.Windows.Shapes.Polygon", intrusion);
-        Assert.DoesNotContain("new System.Windows.Shapes.Line", intrusion);
-        Assert.DoesNotContain("CodingOverlayDotMarkerRenderer.Add", intrusion);
         Assert.Contains("public static class CodingActiveIntrusionSchemaRenderer", intrusionRenderer);
         Assert.Contains("new System.Windows.Shapes.Polygon", intrusionRenderer);
         Assert.Contains("new System.Windows.Shapes.Line", intrusionRenderer);
@@ -4715,8 +4707,41 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void RedrawCodingCanvas", overlayInput);
         Assert.Contains("private Rect GetCodingContentRect", viewport);
         Assert.Contains("CodingOverlayViewportMapper.GetContentRect", viewport);
-        Assert.Contains("CodingOverlayCanvasCleaner.ClearTransient", viewport);
+        Assert.Contains("_codingOverlayRenderController.ClearTransient", viewport);
         Assert.Contains("private void RedrawCodingCanvas", viewport);
+    }
+
+    [Fact]
+    public void PlayerWindow_coding_overlay_rendering_lives_in_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayRenderController.cs");
+        var surfacePath = Path.Combine(uiRoot, "Player", "IOverlaySurface.cs");
+        var mapperPath = Path.Combine(uiRoot, "Player", "IOverlayCoordinateMapper.cs");
+
+        Assert.True(File.Exists(controllerPath), "Coding-Overlay-Rendering soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(surfacePath), "Coding-Overlay-Rendering braucht eine schmale Surface-Abstraktion statt direkten Canvas-Zugriff im Window.");
+        Assert.True(File.Exists(mapperPath), "Coding-Overlay-Rendering braucht einen injizierten Koordinaten-Mapper.");
+
+        var playerText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
+
+        Assert.DoesNotContain("CodingOverlayGeometryRenderer.Render", playerText);
+        Assert.DoesNotContain("CodingAiOverlayRenderer.Render", playerText);
+        Assert.DoesNotContain("ReferenceDnOverlayRenderer.Render", playerText);
+        Assert.DoesNotContain("CodingActivePipeBendSchemaRenderer.Render", playerText);
+        Assert.DoesNotContain("CodingActiveFillLevelSchemaRenderer.Render", playerText);
+        Assert.DoesNotContain("CodingActiveIntrusionSchemaRenderer.Render", playerText);
+        Assert.Contains("public sealed class CodingOverlayRenderController", controller);
+        Assert.Contains("IOverlaySurface", controller);
+        Assert.Contains("IOverlayCoordinateMapper", controller);
+        Assert.Contains("CodingOverlayGeometryRenderer.Render", controller);
+        Assert.Contains("CodingAiOverlayRenderer.Render", controller);
+        Assert.Contains("ReferenceDnOverlayRenderer.Render", controller);
     }
 
     [Fact]
@@ -4740,7 +4765,7 @@ public sealed class UiArchitectureGuardTests
         var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("RenderLevelOverlay", overlayRendering);
-        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
         Assert.DoesNotContain("CodingLevelOverlayRenderer.Render", overlayRendering);
         Assert.Contains("CodingLevelOverlayRenderer.Render", dispatcher);
         Assert.Contains("public static class CodingLevelOverlayRenderer", renderer);
@@ -4791,7 +4816,7 @@ public sealed class UiArchitectureGuardTests
         var schema = File.ReadAllText(schemaPath);
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.Contains("ReferenceDnOverlayRenderer.Render", schema);
+        Assert.Contains("_codingOverlayRenderController.RenderReferenceDn", schema);
         Assert.DoesNotContain("ReferenceDnGeometry.BuildCircleRect", schema);
         Assert.DoesNotContain("Ref: DN", schema);
         Assert.Contains("public static class ReferenceDnOverlayRenderer", renderer);
@@ -4823,10 +4848,10 @@ public sealed class UiArchitectureGuardTests
         var renderer = File.ReadAllText(rendererPath);
         var aiRenderer = File.ReadAllText(aiRendererPath);
 
-        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
         Assert.DoesNotContain("CodingArcOverlayRenderer.Render", overlayRendering);
         Assert.Contains("CodingArcOverlayRenderer.Render", dispatcher);
-        Assert.Contains("CodingAiOverlayRenderer.Render", aiRendering);
+        Assert.Contains("_codingOverlayRenderController.RenderAiOverlays", aiRendering);
         Assert.Contains("CodingArcOverlayRenderer.Render", aiRenderer);
         Assert.DoesNotContain("CreateArcPath", overlayRendering);
         Assert.DoesNotContain("CreateArcPath", aiRendering);
@@ -4856,7 +4881,7 @@ public sealed class UiArchitectureGuardTests
         var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("RenderRulerOverlay", overlayRendering);
-        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
         Assert.DoesNotContain("CodingRulerOverlayRenderer.Render", overlayRendering);
         Assert.Contains("CodingRulerOverlayRenderer.Render", dispatcher);
         Assert.Contains("public static class CodingRulerOverlayRenderer", renderer);
@@ -4892,7 +4917,7 @@ public sealed class UiArchitectureGuardTests
         var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("RenderPipeBendOverlay", overlayRendering);
-        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
         Assert.DoesNotContain("CodingPipeBendOverlayRenderer.Render", overlayRendering);
         Assert.Contains("CodingPipeBendOverlayRenderer.Render", dispatcher);
         Assert.Contains("public static class CodingOverlayDotMarkerRenderer", dotRenderer);
@@ -4924,7 +4949,7 @@ public sealed class UiArchitectureGuardTests
         var renderer = File.ReadAllText(rendererPath);
 
         Assert.DoesNotContain("RenderLateralCircleOverlay", overlayRendering);
-        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
         Assert.DoesNotContain("CodingLateralCircleOverlayRenderer.Render", overlayRendering);
         Assert.Contains("CodingLateralCircleOverlayRenderer.Render", dispatcher);
         Assert.Contains("public static class CodingLateralCircleOverlayRenderer", renderer);
@@ -4976,7 +5001,7 @@ public sealed class UiArchitectureGuardTests
         var dispatcher = File.ReadAllText(dispatcherPath);
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
         Assert.DoesNotContain("CodingOverlayMeasurementLabelRenderer.Add", overlayRendering);
         Assert.Contains("CodingOverlayMeasurementLabelRenderer.Add", dispatcher);
         Assert.DoesNotContain("new TextBlock", overlayRendering);
@@ -5013,7 +5038,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("RenderPointOverlay", overlayRendering);
         Assert.DoesNotContain("RenderEllipseOverlay", overlayRendering);
         Assert.DoesNotContain("RenderFreehandOverlay", overlayRendering);
-        Assert.Contains("CodingOverlayGeometryRenderer.Render", overlayRendering);
+        Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
         Assert.DoesNotContain("switch (overlay.ToolType)", overlayRendering);
         Assert.DoesNotContain("new SolidColorBrush", overlayRendering);
         Assert.DoesNotContain("CodingBasicOverlayRenderer.Render", overlayRendering);
@@ -5052,7 +5077,7 @@ public sealed class UiArchitectureGuardTests
         var rectangleRenderer = File.ReadAllText(rectangleRendererPath);
 
         Assert.DoesNotContain("RenderAiRectangleOverlay(", aiOverlay);
-        Assert.Contains("CodingAiOverlayRenderer.Render", aiOverlay);
+        Assert.Contains("_codingOverlayRenderController.RenderAiOverlays", aiOverlay);
         Assert.DoesNotContain("CodingAiRectangleOverlayRenderer.Render", aiOverlay);
         Assert.DoesNotContain("CodingAiPrimitiveOverlayRenderer.Render", aiOverlay);
         Assert.DoesNotContain("CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag", aiOverlay);

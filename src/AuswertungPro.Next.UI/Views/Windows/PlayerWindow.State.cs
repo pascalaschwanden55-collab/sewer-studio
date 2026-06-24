@@ -33,6 +33,7 @@ public partial class PlayerWindow
     private readonly PlayerMarkToolControls _markToolControls;
     private readonly DamageMarkerController _damageMarkerController;
     private readonly QuickScanController _quickScanController;
+    private readonly CodingOverlayRenderController _codingOverlayRenderController;
 
     // Live detection state.
     private OllamaClient? _liveDetectionClient;

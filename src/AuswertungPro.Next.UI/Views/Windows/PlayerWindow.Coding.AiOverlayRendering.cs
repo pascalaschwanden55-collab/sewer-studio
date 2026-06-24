@@ -11,12 +11,8 @@ public partial class PlayerWindow
     {
         if (_codingVm == null) return;
 
-        CodingAiOverlayRenderer.Render(
-            CodingOverlayCanvas,
+        _codingOverlayRenderController.RenderAiOverlays(
             _codingVm.Events,
-            CodingOverlayCanvas.ActualWidth,
-            CodingOverlayCanvas.ActualHeight,
-            _codingOverlayService?.Calibration?.PipeCenter ?? new NormalizedPoint(0.5, 0.5),
-            CodingNormToPixel);
+            _codingOverlayService?.Calibration);
     }
 }

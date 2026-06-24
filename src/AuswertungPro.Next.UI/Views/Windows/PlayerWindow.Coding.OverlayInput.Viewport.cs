@@ -34,7 +34,7 @@ public partial class PlayerWindow
 
     private void ClearTransientCodingCanvas(bool clearManualOverlay)
     {
-        CodingOverlayCanvasCleaner.ClearTransient(CodingOverlayCanvas, clearManualOverlay);
+        _codingOverlayRenderController.ClearTransient(clearManualOverlay);
     }
 
     private void RedrawCodingCanvas(bool includeManualOverlay)

@@ -1,5 +1,3 @@
-using System.Windows.Media;
-using System.Windows.Media.Effects;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -11,28 +9,19 @@ public partial class PlayerWindow
         if (!_codingSchemaManager.IsActive || _codingSchemaManager.Active == null)
             return;
 
-        var glowEffect = CreateActiveSchemaGlowEffect();
+        var overlay = BuildCodingSchemaGeometry();
 
         switch (_codingSchemaManager.Active)
         {
             case PipeBendSchema bend:
-                RenderActivePipeBendSchema(bend, glowEffect);
+                _codingOverlayRenderController.RenderActiveSchema(bend, overlay);
                 break;
             case FillLevelSchema fill:
-                RenderActiveFillLevelSchema(fill, glowEffect);
+                _codingOverlayRenderController.RenderActiveSchema(fill, overlay);
                 break;
             case IntrusionSchema intrusion:
-                RenderActiveIntrusionSchema(intrusion, glowEffect);
+                _codingOverlayRenderController.RenderActiveSchema(intrusion, overlay);
                 break;
         }
     }
-
-    private static DropShadowEffect CreateActiveSchemaGlowEffect()
-        => new()
-        {
-            Color = Colors.Black,
-            BlurRadius = 8,
-            ShadowDepth = 0,
-            Opacity = 0.95
-        };
 }

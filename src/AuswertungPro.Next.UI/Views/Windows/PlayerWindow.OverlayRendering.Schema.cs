@@ -6,11 +6,8 @@ public partial class PlayerWindow
 {
     private void RenderReferenceDn()
     {
-        ReferenceDnOverlayRenderer.Render(
-            CodingOverlayCanvas,
+        _codingOverlayRenderController.RenderReferenceDn(
             _codingOverlayService?.Calibration,
-            _showReferenceDn,
-            CodingOverlayCanvas.ActualWidth,
-            CodingOverlayCanvas.ActualHeight);
+            _showReferenceDn);
     }
 }

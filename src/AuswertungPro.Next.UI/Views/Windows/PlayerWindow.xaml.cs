@@ -97,6 +97,10 @@ public partial class PlayerWindow : Window
             CodingOverlayPopup,
             CodingOverlayCanvas);
 
+        _codingOverlayRenderController = new CodingOverlayRenderController(
+            new CanvasOverlaySurface(CodingOverlayCanvas),
+            new DelegateOverlayCoordinateMapper(CodingNormToPixel));
+
         _timer = CreateUpdateTimer();
         _scrubTimer = CreateScrubTimer();
         WirePositionSliderEvents();
