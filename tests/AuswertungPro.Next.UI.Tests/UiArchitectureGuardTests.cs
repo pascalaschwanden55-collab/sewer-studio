@@ -2808,21 +2808,33 @@ public sealed class UiArchitectureGuardTests
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingManualEventFactory.cs");
         var appenderPath = Path.Combine(uiRoot, "Ai", "CodingManualEventAppender.cs");
         var selectedCodeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSelectedCodeEventWorkflow.cs");
+        var postWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventCreationPostWorkflow.cs");
+        var accessorsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
 
         var events = File.ReadAllText(eventsPath);
         var factory = File.ReadAllText(factoryPath);
         var appender = File.Exists(appenderPath) ? File.ReadAllText(appenderPath) : "";
         var selectedCodeWorkflow = File.Exists(selectedCodeWorkflowPath) ? File.ReadAllText(selectedCodeWorkflowPath) : "";
+        var postWorkflow = File.Exists(postWorkflowPath) ? File.ReadAllText(postWorkflowPath) : "";
+        var accessors = File.ReadAllText(accessorsPath);
 
         Assert.True(File.Exists(selectedCodeWorkflowPath), "Manueller Selected-Code-Event-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(postWorkflowPath), "Nachbearbeitung manuell erzeugter Coding-Events soll ausserhalb der Events-Partial orchestriert werden.");
         Assert.Contains("CodingSelectedCodeEventWorkflow.Create", events);
         Assert.Contains("CodingManualEventAppender.Apply", events);
+        Assert.Contains("CodingEventCreationPostWorkflow.Apply", events);
+        Assert.DoesNotContain("_codingSchemaManager.Cancel()", events);
+        Assert.DoesNotContain("_codingVm.CurrentOverlay = null", events);
+        Assert.DoesNotContain("TxtCodingSelectedCode.Text = \"\"", events);
+        Assert.DoesNotContain("BtnCodingCreateEvent.IsEnabled = false", events);
         Assert.DoesNotContain("CodingManualEventFactory.CreateUnconfirmed", events);
         Assert.DoesNotContain("CodingManualEventFactory.CreateUnconfirmedContext", events);
         Assert.DoesNotContain("CodingProtocolEntryPhotoPathAppender", events);
         Assert.Contains("CodingManualEventFactory.CreateUnconfirmed", selectedCodeWorkflow);
         Assert.Contains("CodingProtocolEntryPhotoPathAppender.AddIfPresent", selectedCodeWorkflow);
         Assert.Contains("CodingManualEventAppender.Apply", selectedCodeWorkflow);
+        Assert.Contains("public static bool Apply", postWorkflow);
+        Assert.Contains("new CodingEventCreationPostActions", accessors);
         Assert.Contains("CodingManualEventFactory.CreateUnconfirmedContext", appender);
         Assert.DoesNotContain("new CodingEventAiContext", events);
         Assert.Contains("public static CodingEventAiContext CreateUnconfirmedContext", factory);

@@ -86,5 +86,22 @@ public partial class PlayerWindow
             BtnInlineReject,
             CodingDefectDetailInline,
             ColDefectDetail);
+        _codingEventCreationPostActions = new CodingEventCreationPostActions(
+            RefreshEvents: RefreshCodingEventsList,
+            SelectCreatedEvent: ev => LstCodingEvents.SelectedItem = ev,
+            CancelSchema: () => _codingSchemaManager.Cancel(),
+            ClearCurrentOverlay: () => { if (_codingVm != null) _codingVm.CurrentOverlay = null; },
+            ClearSelectedCode: () =>
+            {
+                if (_codingVm == null)
+                    return;
+
+                _codingVm.SelectedCode = "";
+                _codingVm.SelectedCodeDescription = "";
+            },
+            RedrawCanvas: () => RedrawCodingCanvas(includeManualOverlay: false),
+            ClearSelectedCodeText: () => TxtCodingSelectedCode.Text = "",
+            DisableCreateEvent: () => BtnCodingCreateEvent.IsEnabled = false,
+            ClearOverlayInfo: () => UpdateCodingOverlayInfo(null));
     }
 }

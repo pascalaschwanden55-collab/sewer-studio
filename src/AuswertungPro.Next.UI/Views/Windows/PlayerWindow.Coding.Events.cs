@@ -48,15 +48,12 @@ public partial class PlayerWindow
             {
                 var createdEvent = CodingManualEventAppender.Apply(entry, _codingVm.CurrentOverlay, _codingSessionService!);
 
-                RefreshCodingEventsList();
-                LstCodingEvents.SelectedItem = createdEvent;
-
-                _codingSchemaManager.Cancel();
-                _codingVm.CurrentOverlay = null;
-                RedrawCodingCanvas(includeManualOverlay: false);
-                TxtCodingSelectedCode.Text = "";
-                BtnCodingCreateEvent.IsEnabled = false;
-                UpdateCodingOverlayInfo(null);
+                CodingEventCreationPostWorkflow.Apply(
+                    createdEvent,
+                    _codingEventCreationPostActions,
+                    new CodingEventCreationPostOptions(
+                        SelectCreatedEvent: true,
+                        ClearSelectedCode: false));
             }
         }
         finally
@@ -82,16 +79,12 @@ public partial class PlayerWindow
         if (createdEvent == null)
             return;
 
-        RefreshCodingEventsList();
-
-        _codingSchemaManager.Cancel();
-        _codingVm.CurrentOverlay = null;
-        _codingVm.SelectedCode = "";
-        _codingVm.SelectedCodeDescription = "";
-        RedrawCodingCanvas(includeManualOverlay: false);
-        TxtCodingSelectedCode.Text = "";
-        BtnCodingCreateEvent.IsEnabled = false;
-        UpdateCodingOverlayInfo(null);
+        CodingEventCreationPostWorkflow.Apply(
+            createdEvent,
+            _codingEventCreationPostActions,
+            new CodingEventCreationPostOptions(
+                SelectCreatedEvent: false,
+                ClearSelectedCode: true));
     }
 
     private void RefreshCodingEventsList()
