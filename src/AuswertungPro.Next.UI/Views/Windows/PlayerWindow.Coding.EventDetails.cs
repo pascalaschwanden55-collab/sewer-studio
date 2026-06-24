@@ -15,16 +15,14 @@ public partial class PlayerWindow
 
     private void CodingEvents_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (LstCodingEvents.SelectedItem is CodingEvent ev)
-        {
-            if (_codingVm != null) _codingVm.SelectedDefect = ev;
-            UpdateInlineDefectDetail(ev);
-        }
+        var selection = CodingInlineDefectSelectionWorkflow.Apply(
+            LstCodingEvents.SelectedItem,
+            selected => { if (_codingVm != null) _codingVm.SelectedDefect = selected; });
+
+        if (selection.SelectedEvent is not null)
+            UpdateInlineDefectDetail(selection.SelectedEvent);
         else
-        {
-            if (_codingVm != null) _codingVm.SelectedDefect = null;
             HideInlineDefectDetail();
-        }
     }
 
     /// <summary>Mittlere Spalte: kompakte Defekt-Details inline anzeigen.</summary>
