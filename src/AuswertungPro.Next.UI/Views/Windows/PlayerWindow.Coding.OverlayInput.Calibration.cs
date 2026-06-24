@@ -9,7 +9,7 @@ public partial class PlayerWindow
 {
     private void CodingCalibrate_Click(object sender, RoutedEventArgs e)
     {
-        if (_codingOverlayService == null || _codingVm == null) return;
+        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel) return;
         ToolsDropdownPopup.IsOpen = false;
         var state = CodingCalibrationTogglePolicy.Build(_codingIsCalibrating);
         _codingIsCalibrating = state.IsCalibrating;
@@ -18,7 +18,7 @@ public partial class PlayerWindow
         _activeCodingToolName = state.ActiveToolName;
         CodingOverlayInputControls.ApplyActiveToolSelection(TxtActiveToolLabel, BtnCodingCreateEvent, state.ToolLabel);
 
-        _codingVm.CurrentOverlay = null;
+        _codingSessionHost.ClearCurrentOverlay();
         UpdateCodingOverlayInfo(null);
 
         CodingCalibrationControls.ApplyToggle(CodingCalibrationHint, TxtCodingCalibHint, state);

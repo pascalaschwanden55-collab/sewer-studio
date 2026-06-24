@@ -4463,6 +4463,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private bool TryStartCodingCalibration", calibration);
         Assert.Contains("private bool TryPreviewCodingCalibration", calibration);
         Assert.Contains("private bool TryFinishCodingCalibration", calibration);
+        Assert.Contains("_codingSessionHost", calibration);
+        Assert.DoesNotContain("_codingVm", calibration);
         Assert.Contains("CodingCalibrationTogglePolicy.Build", calibration);
         Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
         Assert.Contains("CodingManualCalibrationWorkflow.Apply", calibration);
@@ -5123,6 +5125,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_codingOverlaySuspendDepth++", visibility);
         Assert.Contains("CodingOverlayInputControls.SuspendCanvas", visibility);
         Assert.Contains("CodingOverlayInputControls.ResumeCanvas", visibility);
+        Assert.Contains("_codingSessionHost", visibility);
+        Assert.DoesNotContain("_codingVm", visibility);
         Assert.DoesNotContain("CodingOverlayCanvas.Visibility = Visibility.Hidden", visibility);
         Assert.DoesNotContain("CodingOverlayCanvas.Visibility = Visibility.Visible", visibility);
         Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible = false", visibility);
@@ -5185,6 +5189,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private Rect GetCodingContentRect", viewport);
         Assert.Contains("CodingOverlayViewportMapper.GetContentRect", viewport);
         Assert.Contains("_codingOverlayRenderController.ClearTransient", viewport);
+        Assert.Contains("_codingSessionHost", viewport);
+        Assert.DoesNotContain("_codingVm", viewport);
         Assert.Contains("private void RedrawCodingCanvas", viewport);
     }
 

@@ -46,8 +46,8 @@ public partial class PlayerWindow
 
         if (_codingSchemaManager.IsActive)
             RenderActiveCodingSchema();
-        else if (includeManualOverlay && _codingVm?.CurrentOverlay != null)
-            RenderOverlayGeometry(_codingVm.CurrentOverlay, isPreview: false);
+        else if (includeManualOverlay && _codingSessionHost.CurrentOverlay != null)
+            RenderOverlayGeometry(_codingSessionHost.CurrentOverlay, isPreview: false);
 
         UpdateToolBadge();
     }

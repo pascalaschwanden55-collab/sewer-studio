@@ -37,7 +37,7 @@ public partial class PlayerWindow
         {
             CodingOverlayPopup.IsOpen = true;
             UpdateCodingOverlayViewport();
-            RedrawCodingCanvas(includeManualOverlay: _codingVm?.CurrentOverlay != null);
+            RedrawCodingCanvas(includeManualOverlay: _codingSessionHost.CurrentOverlay != null);
         }
 
         UpdateCodingOverlayCursor();
@@ -59,7 +59,7 @@ public partial class PlayerWindow
         {
             CodingOverlayPopup.IsOpen = true;
             UpdateCodingOverlayViewport();
-            RedrawCodingCanvas(includeManualOverlay: _codingVm?.CurrentOverlay != null);
+            RedrawCodingCanvas(includeManualOverlay: _codingSessionHost.CurrentOverlay != null);
         }
 
         _codingOverlayWasOpenBeforeExternalHide = false;
