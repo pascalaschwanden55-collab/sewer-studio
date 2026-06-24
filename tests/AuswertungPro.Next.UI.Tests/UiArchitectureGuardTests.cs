@@ -2448,6 +2448,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingEventListActionWorkflow.CompleteEdit", actions);
         Assert.Contains("CodingEventListActionWorkflow.CloseStretch", actions);
         Assert.Contains("CodingEventListActionWorkflow.Delete", actions);
+        Assert.Contains("_codingSessionHost", actions);
+        Assert.DoesNotContain("_codingVm", actions);
         Assert.DoesNotContain("CodingEventEditApplier.Apply", actions);
         Assert.DoesNotContain("CodingStretchDamageManualCloseApplier.Apply", actions);
         Assert.DoesNotContain("CodingStretchDamageManualCloseResultKind", actions);

@@ -60,12 +60,12 @@ public partial class PlayerWindow
     private void CodingEventCloseStretch_Click(object sender, RoutedEventArgs e)
     {
         if (LstCodingEvents.SelectedItem is not CodingEvent startEvent) return;
-        if (_codingVm == null) return;
+        if (!_codingSessionHost.HasViewModel) return;
 
         var closeAction = CodingEventListActionWorkflow.CloseStretch(
             startEvent,
             _codingSessionService,
-            _codingVm.CurrentMeter,
+            _codingSessionHost.CurrentMeter,
             _player != null ? TimeSpan.FromMilliseconds(_player.Time) : TimeSpan.Zero);
 
         if (!closeAction.Applied)
@@ -99,11 +99,14 @@ public partial class PlayerWindow
         if (!confirm) return;
 
         var deleteResult = CodingEventListActionWorkflow.Delete(
-            codingEvent, _codingSessionService, _codingVm?.Events, _codingVm?.SelectedDefect);
+            codingEvent,
+            _codingSessionService,
+            _codingSessionHost.EventCollection,
+            _codingSessionHost.SelectedDefect);
         if (!deleteResult.Deleted) return;
 
-        if (_codingVm != null && deleteResult.ShouldClearSelectedDefect)
-            _codingVm.SelectedDefect = null;
+        if (deleteResult.ShouldClearSelectedDefect)
+            _codingSessionHost.ClearSelectedDefect();
         HideInlineDefectDetail();
         RefreshCodingEventsList();
     }
