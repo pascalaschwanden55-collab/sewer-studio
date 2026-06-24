@@ -18,6 +18,6 @@ public partial class PlayerWindow
                 _haltungRecord.Protocol,
                 _codingImportEvents));
 
-        RunImportDefectCount.Text = _codingImportEvents.Count.ToString();
+        CodingImportReferenceControls.SetCount(RunImportDefectCount, _codingImportEvents.Count);
     }
 }

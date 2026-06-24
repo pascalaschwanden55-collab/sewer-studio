@@ -15,13 +15,13 @@ public partial class PlayerWindow
             _codingVm.Events,
             _codingImportEvents);
         LstImportEvents.ItemsSource = _codingImportEvents;
-        RunImportDefectCount.Text = _codingImportEvents.Count.ToString();
+        CodingImportReferenceControls.SetCount(RunImportDefectCount, _codingImportEvents.Count);
 
         // CompleteSession soll nur neue KI-Events enthalten.
         CodingSessionEventResetter.ClearActiveSessionEvents(_codingSessionService);
 
         LstCodingEvents.ItemsSource = _codingVm.Events;
-        RunCodingDefectCount.Text = "0";
+        CodingImportReferenceControls.SetCount(RunCodingDefectCount, 0);
         _codingBaselineSignature = CodingEventsSignatureBuilder.Build(_codingVm.Events);
         _streckenTracker.Reset();
     }
