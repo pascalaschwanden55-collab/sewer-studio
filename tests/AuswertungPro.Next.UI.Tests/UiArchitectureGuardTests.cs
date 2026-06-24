@@ -4341,6 +4341,11 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("new CodingSessionViewModel", lifecycle);
         Assert.DoesNotContain("CodingImportReferenceTransfer.MoveExistingEventsToImportReference", lifecycle);
         Assert.DoesNotContain("CodingOverlayPopup.IsOpen = true", lifecycle);
+        Assert.Contains("CodingModeChromeControls.ShowCodingSurface", ui);
+        Assert.DoesNotContain("CodingOverlayPopup.IsOpen = true", ui);
+        Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible = true", ui);
+        Assert.DoesNotContain("CodingSidePanel.Visibility = Visibility.Visible", ui);
+        Assert.DoesNotContain("CodingToolbar.Visibility = Visibility.Visible", ui);
         Assert.Contains("public static int ClearEvents", importReferenceResetter);
         Assert.Contains("public static CodingMatchRouting? Reset", matchResetter);
     }

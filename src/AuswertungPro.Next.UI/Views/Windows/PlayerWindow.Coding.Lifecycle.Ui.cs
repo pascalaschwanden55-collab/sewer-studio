@@ -37,14 +37,16 @@ public partial class PlayerWindow
 
     private void ShowCodingModeUi()
     {
-        CodingOverlayPopup.IsOpen = true;
-        CodingOverlayCanvas.IsHitTestVisible = true;
+        CodingModeChromeControls.ShowCodingSurface(
+            CodingOverlayPopup,
+            CodingOverlayCanvas,
+            CodingSidePanel,
+            CodingSidePanelColumn,
+            CodingToolbar,
+            GetCodingSidePanelWidth());
         UpdateCodingOverlayViewport();
         UpdateCodingOverlayCursor();
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(UpdateCodingOverlayViewport));
-        CodingSidePanel.Visibility = Visibility.Visible;
-        CodingSidePanelColumn.Width = new GridLength(GetCodingSidePanelWidth());
-        CodingToolbar.Visibility = Visibility.Visible;
     }
 
     private void StartCodingModeBackgroundServices()
