@@ -1402,12 +1402,14 @@ public sealed class UiArchitectureGuardTests
         var osdStateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterStateWorkflow.cs");
         var warmupPolicyPath = Path.Combine(uiRoot, "Ai", "CodingWarmupResultBufferPolicy.cs");
         var overlaySelectorPath = Path.Combine(uiRoot, "Ai", "CodingNewFindingOverlaySelector.cs");
+        var findingsControlsPath = Path.Combine(windowsRoot, "CodingFindingsListControls.cs");
 
         Assert.True(File.Exists(filteringPath), "KI-Finding-Filteradapter sollen aus dem allgemeinen AiEvents-Partial heraus.");
         Assert.True(File.Exists(meterPolicyPath), "OSD-Meteruebernahme aus KI-Ergebnissen muss ausserhalb der PlayerWindow-Partials entschieden werden.");
         Assert.True(File.Exists(osdStateWorkflowPath), "OSD-Meteruebernahme soll als State-Workflow ausserhalb der PlayerWindow-Partials angewendet werden.");
         Assert.True(File.Exists(warmupPolicyPath), "Warmup-Puffer-Auswahl muss ausserhalb der PlayerWindow-Partials entschieden werden.");
         Assert.True(File.Exists(overlaySelectorPath), "Auswahl neuer Overlay-Findings muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(findingsControlsPath), "Coding-Findings-Listenzuweisung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var aiEvents = File.ReadAllText(aiEventsPath);
         var filtering = File.ReadAllText(filteringPath);
@@ -1415,12 +1417,14 @@ public sealed class UiArchitectureGuardTests
         var osdStateWorkflow = File.ReadAllText(osdStateWorkflowPath);
         var warmupPolicy = File.ReadAllText(warmupPolicyPath);
         var overlaySelector = File.ReadAllText(overlaySelectorPath);
+        var findingsControls = File.ReadAllText(findingsControlsPath);
 
         Assert.DoesNotContain("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", aiEvents);
         Assert.DoesNotContain("private static string? LookupVsaLabel", aiEvents);
         Assert.DoesNotContain("private string? ResolveFindingCodeForCoding", aiEvents);
         Assert.DoesNotContain("private bool IsFindingAlreadyKnown", aiEvents);
         Assert.DoesNotContain("new AiFindingDisplayItem", aiEvents);
+        Assert.DoesNotContain("CodingFindingsList.ItemsSource", aiEvents);
         Assert.DoesNotContain("MeterReading.Value <= 500", aiEvents);
         Assert.DoesNotContain("MeterReading.HasValue &&", aiEvents);
         Assert.DoesNotContain("CodingResultMeterReadingPolicy.TryAccept", aiEvents);
@@ -1431,7 +1435,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingWarmupResultBufferPolicy.Select", aiEvents);
         Assert.DoesNotContain("validFindings.Where(f => !IsFindingAlreadyKnown", aiEvents);
         Assert.Contains("CodingNewFindingOverlaySelector.Select", aiEvents);
-        Assert.Contains("AiFindingDisplayItemFactory.ForFindings(validFindings)", aiEvents);
+        Assert.Contains("CodingFindingsListControls.ShowFindings(CodingFindingsList, validFindings)", aiEvents);
+        Assert.Contains("AiFindingDisplayItemFactory.ForFindings", findingsControls);
         Assert.Contains("private IReadOnlyList<LiveFrameFinding> FilterValidFindings", filtering);
         Assert.Contains("private static string? LookupVsaLabel", filtering);
         Assert.Contains("private string? ResolveFindingCodeForCoding", filtering);
@@ -3776,16 +3781,26 @@ public sealed class UiArchitectureGuardTests
         var boundaryPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Boundary.cs");
         var structuralPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Structural.cs");
         var factoryPath = Path.Combine(uiRoot, "Views", "Windows", "AiFindingDisplayItemFactory.cs");
+        var controlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingFindingsListControls.cs");
 
         Assert.True(File.Exists(factoryPath), "Classifier-Befundlisten-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controlsPath), "Classifier-Befundlisten-Zuweisung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(boundaryPath) + File.ReadAllText(structuralPath);
         var factory = File.ReadAllText(factoryPath);
+        var controls = File.ReadAllText(controlsPath);
 
-        Assert.Contains("AiFindingDisplayItemFactory.ForPossibleBoundary", ai);
-        Assert.Contains("AiFindingDisplayItemFactory.ForBoundary", ai);
-        Assert.Contains("AiFindingDisplayItemFactory.ForResolvedFinding", ai);
+        Assert.Contains("CodingFindingsListControls.ShowPossibleBoundary", ai);
+        Assert.Contains("CodingFindingsListControls.ShowBoundary", ai);
+        Assert.Contains("CodingFindingsListControls.ShowResolvedFinding", ai);
+        Assert.DoesNotContain("CodingFindingsList.ItemsSource", ai);
+        Assert.DoesNotContain("AiFindingDisplayItemFactory.ForPossibleBoundary", ai);
+        Assert.DoesNotContain("AiFindingDisplayItemFactory.ForBoundary", ai);
+        Assert.DoesNotContain("AiFindingDisplayItemFactory.ForResolvedFinding", ai);
         Assert.DoesNotContain("new AiFindingDisplayItem", ai);
+        Assert.Contains("AiFindingDisplayItemFactory.ForPossibleBoundary", controls);
+        Assert.Contains("AiFindingDisplayItemFactory.ForBoundary", controls);
+        Assert.Contains("AiFindingDisplayItemFactory.ForResolvedFinding", controls);
         Assert.Contains("public static IReadOnlyList<AiFindingDisplayItem> ForPossibleBoundary", factory);
         Assert.Contains("public static IReadOnlyList<AiFindingDisplayItem> ForBoundary", factory);
         Assert.Contains("public static IReadOnlyList<AiFindingDisplayItem> ForResolvedFinding", factory);

@@ -235,7 +235,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", structuralBody);
 
         var clearIndex = structuralBody.IndexOf("ClearDetectionOverlays()", StringComparison.Ordinal);
-        var listIndex = structuralBody.IndexOf("CodingFindingsList.ItemsSource", StringComparison.Ordinal);
+        var listIndex = structuralBody.IndexOf("CodingFindingsListControls.ShowResolvedFinding", StringComparison.Ordinal);
         Assert.True(clearIndex >= 0 && listIndex > clearIndex,
             "Die Befundliste muss nach dem Overlay-Clear gesetzt werden, sonst verschwindet der Bogen-Hinweis.");
     }

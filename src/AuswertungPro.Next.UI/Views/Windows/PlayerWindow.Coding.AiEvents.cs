@@ -81,7 +81,7 @@ public partial class PlayerWindow
 
         var findingsText = LiveDetectionDisplayPolicy.BuildCodingFindingsStatusText(result.MeterReading, validFindings.Count);
         SetCodingAiState(findingsText, PlayerStatusColors.Success, "Schritt 3 von 3: Overlay und Events");
-        CodingFindingsList.ItemsSource = AiFindingDisplayItemFactory.ForFindings(validFindings);
+        CodingFindingsListControls.ShowFindings(CodingFindingsList, validFindings);
 
         // Vor dem Hinzufuegen pruefen, welche Befunde schon bekannt/abgehandelt sind
         // (durch ein bestehendes Event abgedeckt). Nur NEUE bekommen eine Box — sonst

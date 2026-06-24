@@ -38,7 +38,7 @@ public partial class PlayerWindow
                 PlayerStatusColors.Warning, CodingClassifierDisplayPolicy.PossibleBoundaryEndDetail);
             ClearDetectionOverlays();
             Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
-            CodingFindingsList.ItemsSource = AiFindingDisplayItemFactory.ForPossibleBoundary(boundaryCode, possibleLabel);
+            CodingFindingsListControls.ShowPossibleBoundary(CodingFindingsList, boundaryCode, possibleLabel);
             return true;
         }
 
@@ -65,7 +65,7 @@ public partial class PlayerWindow
         SetCodingAiState(statusText, PlayerStatusColors.Success,
             CodingClassifierDisplayPolicy.BuildClassifierDetail(mmResult.ClassifierConfidence));
 
-        CodingFindingsList.ItemsSource = AiFindingDisplayItemFactory.ForBoundary(boundaryCode, label);
+        CodingFindingsListControls.ShowBoundary(CodingFindingsList, boundaryCode, label);
 
         return true;
     }

@@ -42,7 +42,7 @@ public partial class PlayerWindow
 
         ClearDetectionOverlays();
         Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
-        CodingFindingsList.ItemsSource = AiFindingDisplayItemFactory.ForResolvedFinding(finding, resolvedCode);
+        CodingFindingsListControls.ShowResolvedFinding(CodingFindingsList, finding, resolvedCode);
 
         if (coveringEvent != null)
         {
