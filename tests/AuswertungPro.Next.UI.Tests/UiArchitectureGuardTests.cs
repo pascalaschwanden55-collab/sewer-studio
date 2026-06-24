@@ -3205,14 +3205,19 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var liveDetectionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionResultWorkflow.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationPolicy.cs");
 
+        Assert.True(File.Exists(workflowPath), "LiveDetection-Ergebnisentscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(policyPath), "LiveDetection-Bestaetigungsschwelle muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
+        var workflow = File.ReadAllText(workflowPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("LiveDetectionConfirmationPolicy.SelectSignificantFindings", liveDetection);
+        Assert.Contains("LiveDetectionResultWorkflow.Execute", liveDetection);
+        Assert.DoesNotContain("LiveDetectionConfirmationPolicy.SelectSignificantFindings", liveDetection);
+        Assert.Contains("LiveDetectionConfirmationPolicy.SelectSignificantFindings", workflow);
         Assert.DoesNotContain("Severity >= 2", liveDetection);
         Assert.Contains("MinimumConfirmationSeverity", policy);
     }

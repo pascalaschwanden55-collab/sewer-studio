@@ -58,27 +58,24 @@ public partial class PlayerWindow
 
             Dispatcher.Invoke(() =>
             {
-                if (_closing || _playbackDisposed || !_liveDetectionController.IsDetecting) return;
-
-                _liveDetectionController.ApplyDetectionResult(result);
-
-                RenderDetectionOverlay(result.Findings, result.TimestampSeconds);
-                UpdateDetectionStatus(result);
-
-                SetLiveDetectionBadge("KI aktiv", PlayerStatusColors.Success,
-                    $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionController.ModelName)} | Overlay");
-
-                var significantFindings = LiveDetectionConfirmationPolicy.SelectSignificantFindings(result.Findings);
-                if (significantFindings.Count > 0)
-                {
-                    _detectionConfirmationBuffer.StoreFindings(
-                        significantFindings,
+                LiveDetectionResultWorkflow.Execute(
+                    new LiveDetectionResultWorkflowRequest(
+                        result,
                         snapshot,
-                        result.TimestampSeconds);
-                    ShowDetectionConfirmation(significantFindings);
-                    SetLiveDetectionBadge("Befund erkannt", PlayerStatusColors.Warning,
-                        $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionController.ModelName)} | Warte auf Bestaetigung");
-                }
+                        _closing,
+                        _playbackDisposed,
+                        _liveDetectionController.IsDetecting,
+                        _liveDetectionController.ModelName),
+                    new LiveDetectionResultWorkflowActions(
+                        _liveDetectionController.ApplyDetectionResult,
+                        RenderDetectionOverlay,
+                        UpdateDetectionStatus,
+                        SetLiveDetectionBadge,
+                        (findings, frameBytes, timestamp) => _detectionConfirmationBuffer.StoreFindings(
+                            findings,
+                            frameBytes,
+                            timestamp),
+                        ShowDetectionConfirmation));
             });
         }
         catch (OperationCanceledException) { }
