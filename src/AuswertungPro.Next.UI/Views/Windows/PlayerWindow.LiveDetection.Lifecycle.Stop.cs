@@ -31,8 +31,11 @@ public partial class PlayerWindow
         LiveDetectionStatusText.Text = $"KI-Analyse beendet \u2014 {totalEvents} Beobachtungen";
         LiveDetectionStatusText.Visibility = Visibility.Visible;
 
-        if (_player != null && !_playbackDisposed && _player.IsPlaying)
-            _player.SetPause(true);
+        PlayerLiveDetectionStopPlayback.PauseIfRunning(
+            _player != null,
+            _playbackDisposed,
+            _player?.IsPlaying == true,
+            pause => _player!.SetPause(pause));
 
         var hideTimer = PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromSeconds(5), () =>
         {

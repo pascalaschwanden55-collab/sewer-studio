@@ -2234,6 +2234,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_detection_stop_playback_uses_player_helper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var helperPath = Path.Combine(uiRoot, "Player", "PlayerLiveDetectionStopPlayback.cs");
+        var stopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
+
+        Assert.True(File.Exists(helperPath), "LiveDetection-Stop-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
+
+        var helper = File.ReadAllText(helperPath);
+        var stop = File.ReadAllText(stopPath);
+
+        Assert.Contains("public static class PlayerLiveDetectionStopPlayback", helper);
+        Assert.Contains("PauseIfRunning", helper);
+        Assert.Contains("PlayerLiveDetectionStopPlayback.PauseIfRunning", stop);
+        Assert.DoesNotContain("_player.SetPause(true)", stop);
+        Assert.DoesNotContain("_player.SetPause(false)", stop);
+    }
+
+    [Fact]
     public void PlayerWindow_live_ai_timer_gate_uses_policy()
     {
         var root = FindRepositoryRoot();
