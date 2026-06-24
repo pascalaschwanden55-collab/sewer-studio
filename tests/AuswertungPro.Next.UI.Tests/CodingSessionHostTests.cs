@@ -19,13 +19,20 @@ public sealed class CodingSessionHostTests
         Assert.Equal(0, Get<double>(host, "EndMeter"));
         Assert.Null(Get<object?>(host, "CurrentOverlay"));
         Assert.Null(Get<object?>(host, "EventCollection"));
+        Assert.Null(Get<object?>(host, "SelectedDefect"));
+        Assert.Null(Get<object?>(host, "VideoPath"));
+        Assert.Null(Get<object?>(host, "CurrentVideoTime"));
         Assert.Equal(string.Empty, Get<string>(host, "SelectedCode"));
         Assert.Equal(string.Empty, Get<string>(host, "SelectedCodeDescription"));
         Assert.Empty(GetEvents(host));
         Assert.False(InvokeBool(host, "ExecuteMoveNext"));
         Assert.False(InvokeBool(host, "ExecuteMovePrevious"));
+        Assert.False(InvokeBool(host, "ExecuteAcceptDefect"));
+        Assert.False(InvokeBool(host, "ExecuteEditDefect"));
 
         hostType.GetMethod("SetCurrentVideoTime")!.Invoke(host, [TimeSpan.FromSeconds(7)]);
+        hostType.GetMethod("SelectDefect")!.Invoke(host, [new CodingEvent()]);
+        hostType.GetMethod("ClearSelectedDefect")!.Invoke(host, []);
     }
 
     [Fact]
@@ -39,7 +46,13 @@ public sealed class CodingSessionHostTests
         var codingEvent = new CodingEvent
         {
             Entry = new ProtocolEntry { Code = "BBA" },
-            MeterAtCapture = 3.25
+            MeterAtCapture = 3.25,
+            AiContext = new CodingEventAiContext
+            {
+                SuggestedCode = "BBA",
+                Confidence = 0.7,
+                Reason = "test"
+            }
         };
 
         vm.CurrentMeter = 3.25;
@@ -47,6 +60,9 @@ public sealed class CodingSessionHostTests
         vm.CurrentOverlay = overlay;
         vm.SelectedCode = "BCA";
         vm.SelectedCodeDescription = "Anschluss";
+        vm.SelectedDefect = codingEvent;
+        vm.VideoPath = "video.mp4";
+        vm.CurrentVideoTime = TimeSpan.FromSeconds(4);
         vm.Events.Add(codingEvent);
 
         var host = CreateHost(() => vm);
@@ -56,6 +72,9 @@ public sealed class CodingSessionHostTests
         Assert.Equal(17.5, Get<double>(host, "EndMeter"));
         Assert.Same(overlay, Get<object?>(host, "CurrentOverlay"));
         Assert.Same(vm.Events, Get<object?>(host, "EventCollection"));
+        Assert.Same(codingEvent, Get<object?>(host, "SelectedDefect"));
+        Assert.Equal("video.mp4", Get<string?>(host, "VideoPath"));
+        Assert.Equal(TimeSpan.FromSeconds(4), Get<TimeSpan?>(host, "CurrentVideoTime"));
         Assert.Equal("BCA", Get<string>(host, "SelectedCode"));
         Assert.Equal("Anschluss", Get<string>(host, "SelectedCodeDescription"));
         Assert.Same(codingEvent, Assert.Single(GetEvents(host)));
@@ -67,6 +86,19 @@ public sealed class CodingSessionHostTests
         Assert.True(InvokeBool(host, "ExecuteMovePrevious"));
         Assert.Equal(1, sessionService.MoveNextCalls);
         Assert.Equal(1, sessionService.MovePreviousCalls);
+
+        Assert.True(InvokeBool(host, "ExecuteAcceptDefect"));
+        Assert.Equal(CodingUserDecision.Accepted, vm.SelectedDefect!.AiContext!.Decision);
+
+        Assert.True(InvokeBool(host, "ExecuteEditDefect"));
+        Assert.Equal(CodingUserDecision.AcceptedWithEdit, vm.SelectedDefect!.AiContext!.Decision);
+
+        var replacement = new CodingEvent { Entry = new ProtocolEntry { Code = "BBC" } };
+        host.GetType().GetMethod("SelectDefect")!.Invoke(host, [replacement]);
+        Assert.Same(replacement, vm.SelectedDefect);
+
+        host.GetType().GetMethod("ClearSelectedDefect")!.Invoke(host, []);
+        Assert.Null(vm.SelectedDefect);
     }
 
     private static object CreateHost(Func<CodingSessionViewModel?> resolveViewModel)

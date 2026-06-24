@@ -1781,9 +1781,11 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(controlsPath), "Inline-Defekt-Detail-Control-Mapping soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(selectionWorkflowPath), "Inline-Defekt-Auswahlentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.Contains("CodingInlineDefectSelectionWorkflow.Apply", detail);
+        Assert.Contains("_codingSessionHost", detail);
         Assert.Contains("CodingDefectStatusDisplayPolicy.BuildInlineDetail", detail);
         Assert.Contains("_codingInlineDefectDetailControls.Apply(state)", detail);
         Assert.Contains("_codingInlineDefectDetailControls.Hide()", detail);
+        Assert.DoesNotContain("_codingVm", detail);
         Assert.DoesNotContain("LstCodingEvents.SelectedItem is CodingEvent", detail);
         Assert.DoesNotContain("_codingVm.SelectedDefect = ev", detail);
         Assert.DoesNotContain("_codingVm.SelectedDefect = null", detail);
@@ -1929,6 +1931,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingInlineDefectDecisionWorkflow.Accept", actions);
         Assert.Contains("CodingInlineDefectDecisionWorkflow.CompleteEdit", actions);
         Assert.Contains("CodingInlineDefectDecisionWorkflow.Reject", actions);
+        Assert.Contains("_codingSessionHost", actions);
+        Assert.DoesNotContain("_codingVm", actions);
         Assert.DoesNotContain("CodingEventEditApplier.Apply", actions);
         Assert.DoesNotContain("CodingEventDeleteApplier.Apply", actions);
         Assert.DoesNotContain("_codingSessionService?.UpdateEvent", actions);

@@ -15,7 +15,7 @@ public partial class PlayerWindow
     {
         var selection = CodingInlineDefectSelectionWorkflow.Apply(
             LstCodingEvents.SelectedItem,
-            selected => { if (_codingVm != null) _codingVm.SelectedDefect = selected; });
+            _codingSessionHost.SelectDefect);
 
         if (selection.SelectedEvent is not null)
             UpdateInlineDefectDetail(selection.SelectedEvent);

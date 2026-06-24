@@ -14,11 +14,18 @@ public interface ICodingSessionHost
     OverlayGeometry? CurrentOverlay { get; }
     ObservableCollection<CodingEvent>? EventCollection { get; }
     IEnumerable<CodingEvent> Events { get; }
+    CodingEvent? SelectedDefect { get; }
+    string? VideoPath { get; }
+    TimeSpan? CurrentVideoTime { get; }
     string SelectedCode { get; }
     string SelectedCodeDescription { get; }
     void SetCurrentVideoTime(TimeSpan videoTime);
+    void SelectDefect(CodingEvent? codingEvent);
+    void ClearSelectedDefect();
     bool ExecuteMoveNext();
     bool ExecuteMovePrevious();
+    bool ExecuteAcceptDefect();
+    bool ExecuteEditDefect();
 }
 
 public sealed class CodingSessionHost : ICodingSessionHost
@@ -57,6 +64,12 @@ public sealed class CodingSessionHost : ICodingSessionHost
 
     public string SelectedCodeDescription => ViewModel?.SelectedCodeDescription ?? string.Empty;
 
+    public CodingEvent? SelectedDefect => ViewModel?.SelectedDefect;
+
+    public string? VideoPath => ViewModel?.VideoPath;
+
+    public TimeSpan? CurrentVideoTime => ViewModel?.CurrentVideoTime;
+
     public void SetCurrentVideoTime(TimeSpan videoTime)
     {
         var viewModel = ViewModel;
@@ -65,6 +78,18 @@ public sealed class CodingSessionHost : ICodingSessionHost
 
         viewModel.CurrentVideoTime = videoTime;
     }
+
+    public void SelectDefect(CodingEvent? codingEvent)
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null)
+            return;
+
+        viewModel.SelectedDefect = codingEvent;
+    }
+
+    public void ClearSelectedDefect()
+        => SelectDefect(null);
 
     public bool ExecuteMoveNext()
     {
@@ -83,6 +108,26 @@ public sealed class CodingSessionHost : ICodingSessionHost
             return false;
 
         viewModel.MovePreviousCommand.Execute(null);
+        return true;
+    }
+
+    public bool ExecuteAcceptDefect()
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null)
+            return false;
+
+        viewModel.AcceptDefectCommand.Execute(null);
+        return true;
+    }
+
+    public bool ExecuteEditDefect()
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null)
+            return false;
+
+        viewModel.EditDefectCommand.Execute(null);
         return true;
     }
 }

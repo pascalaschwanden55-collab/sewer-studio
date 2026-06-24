@@ -11,8 +11,8 @@ public partial class PlayerWindow
     private void CodingAcceptDefect_Click(object sender, RoutedEventArgs e)
     {
         var acceptedDefect = CodingInlineDefectDecisionWorkflow.Accept(
-            () => _codingVm?.SelectedDefect,
-            () => _codingVm?.AcceptDefectCommand.Execute(null),
+            () => _codingSessionHost.SelectedDefect,
+            () => { _codingSessionHost.ExecuteAcceptDefect(); },
             codingEvent => PersistSingleEventAsTrainingSample(codingEvent)
                 .SafeFireAndForget("TrainingSaveAcceptInline"));
 
@@ -26,14 +26,14 @@ public partial class PlayerWindow
 
     private void CodingEditDefect_Click(object sender, RoutedEventArgs e)
     {
-        if (_codingVm == null)
+        if (!_codingSessionHost.HasViewModel)
             return;
 
-        var ev = _codingVm.SelectedDefect ?? LstCodingEvents.SelectedItem as CodingEvent;
+        var ev = _codingSessionHost.SelectedDefect ?? LstCodingEvents.SelectedItem as CodingEvent;
         if (ev == null)
             return;
 
-        _codingVm.SelectedDefect = ev;
+        _codingSessionHost.SelectDefect(ev);
         PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause));
         SuspendCodingOverlayInput();
 
@@ -45,8 +45,8 @@ public partial class PlayerWindow
                     entry,
                     entry.MeterStart,
                     entry.Zeit,
-                    _codingVm.VideoPath,
-                    _codingVm.CurrentVideoTime,
+                    _codingSessionHost.VideoPath,
+                    _codingSessionHost.CurrentVideoTime,
                     this,
                     CreateVsaCodeExplorerLiveSnapshotProvider());
 
@@ -55,7 +55,7 @@ public partial class PlayerWindow
                 var completed = CodingInlineDefectDecisionWorkflow.CompleteEdit(
                     ev,
                     _codingSessionService,
-                    () => _codingVm.EditDefectCommand.Execute(null),
+                    () => { _codingSessionHost.ExecuteEditDefect(); },
                     codingEvent => PersistSingleEventAsTrainingSample(codingEvent)
                         .SafeFireAndForget("TrainingSaveEditInline"));
 
@@ -75,16 +75,16 @@ public partial class PlayerWindow
     private void CodingRejectDefect_Click(object sender, RoutedEventArgs e)
     {
         var rejectResult = CodingInlineDefectDecisionWorkflow.Reject(
-            _codingVm?.SelectedDefect,
+            _codingSessionHost.SelectedDefect,
             LstCodingEvents.SelectedItem as CodingEvent,
             _codingSessionService,
-            _codingVm?.Events);
+            _codingSessionHost.EventCollection);
 
-        if (!rejectResult.Rejected || _codingVm == null)
+        if (!rejectResult.Rejected)
             return;
 
         if (rejectResult.ShouldClearSelectedDefect)
-            _codingVm.SelectedDefect = null;
+            _codingSessionHost.ClearSelectedDefect();
         HideInlineDefectDetail();
         RefreshCodingEventsList();
         FadeOutAiOverlayAfterAction();
