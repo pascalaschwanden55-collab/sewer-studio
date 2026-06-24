@@ -139,14 +139,20 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_stops_ai_analysis_before_snapshot_after_rohrende()
     {
         var coding = ReadCodingPartials();
+        var preflightWorkflow = ReadUiFile("Ai", "CodingAnalysisPreflightWorkflow.cs");
+        var singleModelWorkflow = ReadUiFile("Ai", "CodingSingleModelAnalysisWorkflow.cs");
         var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
 
-        var stopIndex = runBody.IndexOf("IsCodingAfterTerminalBoundary", StringComparison.Ordinal);
-        var captureIndex = runBody.IndexOf("await CaptureSnapshotAsync(analysisCts.Token)", StringComparison.Ordinal);
+        var preflightIndex = runBody.IndexOf("CodingAnalysisPreflightWorkflow.Execute", StringComparison.Ordinal);
+        var singleModelIndex = runBody.IndexOf("CodingSingleModelAnalysisWorkflow.ExecuteAsync", StringComparison.Ordinal);
+        var stopIndex = preflightWorkflow.IndexOf("actions.IsAfterTerminalBoundary(framePosition)", StringComparison.Ordinal);
+        var captureIndex = singleModelWorkflow.IndexOf("actions.CaptureSnapshotAsync", StringComparison.Ordinal);
 
-        Assert.True(stopIndex >= 0, "RunCodingAnalysisAsync muss nach BCE/BDC stoppen.");
-        Assert.True(captureIndex >= 0, "RunCodingAnalysisAsync muss weiterhin Frames mit Analyse-Cancellation capturen koennen.");
-        Assert.True(stopIndex < captureIndex, "Stop-Pruefung muss vor Snapshot/SAM laufen.");
+        Assert.True(preflightIndex >= 0, "RunCodingAnalysisAsync muss zuerst den Preflight ausfuehren.");
+        Assert.True(singleModelIndex >= 0, "RunCodingAnalysisAsync muss weiterhin Single-Model-Frames capturen koennen.");
+        Assert.True(preflightIndex < singleModelIndex, "Stop-Pruefung muss vor Snapshot/SAM laufen.");
+        Assert.True(stopIndex >= 0, "Preflight muss nach BCE/BDC stoppen.");
+        Assert.True(captureIndex >= 0, "Single-Model-Workflow muss Frames mit Analyse-Cancellation capturen koennen.");
         Assert.Contains("CodingDedupPolicy.ShouldStopAnalysisAfterTerminalCode", coding);
     }
 
@@ -323,7 +329,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var osdService = ReadUiFile("Ai", "CodingOsdMeterService.cs");
-        var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
+        var singleModelWorkflow = ReadUiFile("Ai", "CodingSingleModelAnalysisWorkflow.cs");
         var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
         var readerBody = ExtractMethodBody(coding, "private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync");
         var helperBody = ExtractMethodBody(coding, "private async Task<double?> TryReadOsdMeterFromFrameBytesAsync");
@@ -337,7 +343,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.True(osdReadIndex < classifierIndex, "OSD-Meter muss vor Klassifikator/Boundary-Logik vorliegen.");
         Assert.Contains("frameOsdMeter", multiModelBody);
         Assert.Contains("frameOsdMeter", multiModelBody[addIndex..]);
-        Assert.Contains("result = result with { MeterReading = frameOsdMeter }", runBody);
+        Assert.Contains("actions.TryReadAnalyzedFrameOsdMeterAsync", singleModelWorkflow);
+        Assert.Contains("result with { MeterReading = frameOsdMeter }", singleModelWorkflow);
         Assert.Contains("TryReadOsdMeterFromFrameBytesAsync", readerBody);
         Assert.Contains("CodingOsdMeterService", helperBody);
         Assert.Contains("CodingOsdMeterReader.BuildOsdSearchImage", osdService);

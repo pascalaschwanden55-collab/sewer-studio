@@ -63,44 +63,36 @@ public partial class PlayerWindow
                 return;
             }
 
-            SetCodingAiState(activityText, PlayerStatusColors.Warning,
-                "Schritt 1 von 3: Snapshot", pulse: true);
-
-            var pngBytes = await CaptureSnapshotAsync(analysisCts.Token);
-            if (pngBytes == null || pngBytes.Length == 0)
-            {
-                SetCodingAiState("Frame nicht extrahierbar", PlayerStatusColors.Error,
-                    $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName)}");
-                return;
-            }
-
-            _detectionConfirmationBuffer.StoreAnalyzedFrame(pngBytes, captureTimestampSec);
-            var frameOsdMeter = await TryReadAnalyzedFrameOsdMeterAsync(
-                pngBytes,
-                captureTimestampSec,
-                analysisCts.Token);
-
-            SetCodingAiState(activityText, PlayerStatusColors.Warning,
-                $"Schritt 2 von 3: Inferenz ({LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName)})",
-                pulse: true);
-
-            LiveDetection result;
-            if (_codingAiController.EnhancedVision != null)
-            {
-                var b64 = Convert.ToBase64String(pngBytes);
-                var importContext = GatherImportContext();
-                var enhanced = await _codingAiController.EnhancedVision.AnalyzeAsync(
-                    b64, importContext, analysisCts.Token);
-                result = LiveDetectionMapper.FromEnhancedAnalysis(enhanced, captureTimestampSec);
-            }
-            else
-            {
-                result = await _codingAiController.LiveDetection!.AnalyzeFrameAsync(
-                    pngBytes, captureTimestampSec, analysisCts.Token);
-            }
-
-            result = result with { MeterReading = frameOsdMeter };
-            ShowCodingAiResults(result);
+            await CodingSingleModelAnalysisWorkflow.ExecuteAsync(
+                new CodingSingleModelAnalysisWorkflowRequest(
+                    activityText,
+                    _codingAiController.ModelName,
+                    captureTimestampSec,
+                    _codingAiController.EnhancedVision != null,
+                    analysisCts.Token),
+                new CodingSingleModelAnalysisWorkflowActions(
+                    SetCodingAiState: SetCodingAiState,
+                    CaptureSnapshotAsync: CaptureSnapshotAsync,
+                    StoreAnalyzedFrame: (frameBytes, timestamp) => _detectionConfirmationBuffer.StoreAnalyzedFrame(
+                        frameBytes,
+                        timestamp),
+                    TryReadAnalyzedFrameOsdMeterAsync: TryReadAnalyzedFrameOsdMeterAsync,
+                    AnalyzeEnhancedVisionAsync: async (frameBytes, timestamp, cancellationToken) =>
+                    {
+                        var b64 = Convert.ToBase64String(frameBytes);
+                        var importContext = GatherImportContext();
+                        var enhanced = await _codingAiController.EnhancedVision!.AnalyzeAsync(
+                            b64,
+                            importContext,
+                            cancellationToken);
+                        return LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestamp);
+                    },
+                    AnalyzeLiveDetectionAsync: (frameBytes, timestamp, cancellationToken) =>
+                        _codingAiController.LiveDetection!.AnalyzeFrameAsync(
+                            frameBytes,
+                            timestamp,
+                            cancellationToken),
+                    ShowCodingAiResults: ShowCodingAiResults));
         }
         catch (OperationCanceledException)
         {
