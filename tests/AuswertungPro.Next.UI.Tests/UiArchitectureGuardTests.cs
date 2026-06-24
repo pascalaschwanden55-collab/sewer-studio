@@ -382,10 +382,12 @@ public sealed class UiArchitectureGuardTests
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsPolicy.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsControls.cs");
         var refreshPolicyPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsRefreshPolicy.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventsRefreshWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Coding-Statistik-Berechnung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Coding-Statistik-Anzeige muss ausserhalb der PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(refreshPolicyPath), "Coding-Statistik-Refresh-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "Coding-Eventlisten-Refresh soll Sortierung und Statistik ausserhalb der PlayerWindow-Partials koordinieren.");
 
         var events = File.ReadAllText(eventsPath);
         var coding = File.ReadAllText(codingPath);
@@ -393,9 +395,11 @@ public sealed class UiArchitectureGuardTests
         var policy = File.ReadAllText(policyPath);
         var controls = File.ReadAllText(controlsPath);
         var refreshPolicy = File.ReadAllText(refreshPolicyPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
-        Assert.Contains("CodingStatisticsPolicy.Build", events);
-        Assert.Contains("_codingStatisticsControls.Apply(summary)", events);
+        Assert.Contains("CodingEventsRefreshWorkflow.RefreshStatistics", events);
+        Assert.DoesNotContain("CodingStatisticsPolicy.Build", events);
+        Assert.DoesNotContain("_codingStatisticsControls.Apply(summary)", events);
         Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", navigation);
         Assert.DoesNotContain("Average(e => e.AiContext!.Confidence)", events);
         Assert.DoesNotContain("nameof(CodingSessionViewModel.StatAutoAccepted) or", coding + navigation);
@@ -406,6 +410,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public sealed class CodingStatisticsControls", controls);
         Assert.Contains("_totalCount.Text", controls);
         Assert.Contains("public static bool ShouldRefresh", refreshPolicy);
+        Assert.Contains("CodingStatisticsPolicy.Build", workflow);
+        Assert.Contains("statisticsControls.Apply(summary)", workflow);
     }
 
     [Fact]
@@ -2509,22 +2515,28 @@ public sealed class UiArchitectureGuardTests
         var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingEventDisplayOrderPolicy.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingEventsListControls.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventsRefreshWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Codier-Ereignis-Sortierung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Codier-Ereignislisten-Rebind muss ausserhalb der PlayerWindow-Partials gekapselt sein.");
+        Assert.True(File.Exists(workflowPath), "Codier-Ereignislisten-Refresh soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var events = File.ReadAllText(eventsPath);
         var policy = File.ReadAllText(policyPath);
         var controls = File.ReadAllText(controlsPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
-        Assert.Contains("CodingEventDisplayOrderPolicy.Order", events);
-        Assert.Contains("_codingEventsListControls.ApplyOrderedEvents", events);
+        Assert.Contains("CodingEventsRefreshWorkflow.RefreshListAndStatistics", events);
+        Assert.DoesNotContain("CodingEventDisplayOrderPolicy.Order", events);
+        Assert.DoesNotContain("_codingEventsListControls.ApplyOrderedEvents", events);
         Assert.DoesNotContain(".OrderBy(e => e.MeterAtCapture)", events);
         Assert.DoesNotContain("LstCodingEvents.ItemsSource", events);
         Assert.DoesNotContain("_codingVm.Events.Clear()", events);
         Assert.Contains("public static IReadOnlyList<CodingEvent> Order", policy);
         Assert.Contains("public sealed class CodingEventsListControls", controls);
         Assert.Contains("_eventsList.ItemsSource", controls);
+        Assert.Contains("CodingEventDisplayOrderPolicy.Order", workflow);
+        Assert.Contains("listControls.ApplyOrderedEvents", workflow);
     }
 
     [Fact]

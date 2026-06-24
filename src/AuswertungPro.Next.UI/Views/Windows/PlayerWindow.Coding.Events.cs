@@ -96,23 +96,21 @@ public partial class PlayerWindow
 
     private void RefreshCodingEventsList()
     {
-        if (_codingVm == null) return;
-
-        var sorted = CodingEventDisplayOrderPolicy.Order(_codingVm.Events);
-        _codingEventsListControls.ApplyOrderedEvents(_codingVm.Events, sorted);
+        if (!CodingEventsRefreshWorkflow.RefreshListAndStatistics(
+                _codingVm?.Events,
+                _codingEventsListControls,
+                _codingStatisticsControls,
+                CodingSessionViewModel.GetDefectStatus))
+            return;
 
         Dispatcher.InvokeAsync(ColorizeCodingEventListItems, System.Windows.Threading.DispatcherPriority.Loaded);
-        UpdateCodingStatistics();
     }
 
     private void UpdateCodingStatistics()
     {
-        if (_codingVm == null) return;
-
-        var summary = CodingStatisticsPolicy.Build(
-            _codingVm.Events,
+        CodingEventsRefreshWorkflow.RefreshStatistics(
+            _codingVm?.Events,
+            _codingStatisticsControls,
             CodingSessionViewModel.GetDefectStatus);
-
-        _codingStatisticsControls.Apply(summary);
     }
 }
