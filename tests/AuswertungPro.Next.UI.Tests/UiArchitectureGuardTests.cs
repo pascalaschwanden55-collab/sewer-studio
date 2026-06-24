@@ -1097,6 +1097,7 @@ public sealed class UiArchitectureGuardTests
         var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeFactory.cs");
         var startupWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupWorkflow.cs");
         var runtimeStartWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeStartWorkflow.cs");
+        var stopUiWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStopUiWorkflow.cs");
         var toggleControlsPath = Path.Combine(windowsRoot, "LiveDetectionToggleControls.cs");
         var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var disposableLifecyclePath = Path.Combine(uiRoot, "Player", "DisposableReferenceLifecycle.cs");
@@ -1106,6 +1107,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(factoryPath), "LiveDetection-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(startupWorkflowPath), "LiveDetection-Startup-Entscheidungen sollen ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(runtimeStartWorkflowPath), "LiveDetection-Runtime-Startreihenfolge soll ausserhalb von PlayerWindow orchestriert werden.");
+        Assert.True(File.Exists(stopUiWorkflowPath), "LiveDetection-Stop-UI-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(toggleControlsPath), "LiveDetection-Toggle-State soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
         Assert.True(File.Exists(liveControllerPath), "LiveDetection-Runtime-Zustand soll im LiveDetectionController liegen.");
         Assert.True(File.Exists(disposableLifecyclePath), "Disposable-Referenz-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -1116,6 +1118,7 @@ public sealed class UiArchitectureGuardTests
         var factory = File.ReadAllText(factoryPath);
         var startupWorkflow = File.Exists(startupWorkflowPath) ? File.ReadAllText(startupWorkflowPath) : "";
         var runtimeStartWorkflow = File.Exists(runtimeStartWorkflowPath) ? File.ReadAllText(runtimeStartWorkflowPath) : "";
+        var stopUiWorkflow = File.Exists(stopUiWorkflowPath) ? File.ReadAllText(stopUiWorkflowPath) : "";
         var toggleControls = File.Exists(toggleControlsPath) ? File.ReadAllText(toggleControlsPath) : "";
         var liveController = File.Exists(liveControllerPath) ? File.ReadAllText(liveControllerPath) : "";
         var disposableLifecycle = File.Exists(disposableLifecyclePath) ? File.ReadAllText(disposableLifecyclePath) : "";
@@ -1174,6 +1177,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("new LiveDetectionService", factory);
         Assert.Contains("VisionModelSelectionPolicy.Select", factory);
         Assert.Contains("private void StopLiveDetection", stop);
+        Assert.Contains("LiveDetectionStopUiWorkflow.Execute", stop);
+        Assert.Contains("public static class LiveDetectionStopUiWorkflow", stopUiWorkflow);
         Assert.Contains("LiveDetectionStatusControls.ShowStoppedDetectionStatus", stop);
         Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", stop);
         Assert.DoesNotContain("AiStatusBadge.Visibility", stop);
@@ -2616,16 +2621,21 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var helperPath = Path.Combine(uiRoot, "Player", "PlayerLiveDetectionStopPlayback.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStopUiWorkflow.cs");
         var stopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
 
         Assert.True(File.Exists(helperPath), "LiveDetection-Stop-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "LiveDetection-Stop-Pause soll im Stop-UI-Workflow verdrahtet werden.");
 
         var helper = File.ReadAllText(helperPath);
+        var workflow = File.ReadAllText(workflowPath);
         var stop = File.ReadAllText(stopPath);
 
         Assert.Contains("public static class PlayerLiveDetectionStopPlayback", helper);
         Assert.Contains("PauseIfRunning", helper);
-        Assert.Contains("PlayerLiveDetectionStopPlayback.PauseIfRunning", stop);
+        Assert.Contains("PlayerLiveDetectionStopPlayback.PauseIfRunning", workflow);
+        Assert.Contains("LiveDetectionStopUiWorkflow.Execute", stop);
+        Assert.DoesNotContain("PlayerLiveDetectionStopPlayback.PauseIfRunning", stop);
         Assert.DoesNotContain("_player.SetPause(true)", stop);
         Assert.DoesNotContain("_player.SetPause(false)", stop);
     }

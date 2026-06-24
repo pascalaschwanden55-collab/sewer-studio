@@ -16,13 +16,6 @@ public sealed record LiveDetectionControllerStartActions(
     Func<DispatcherTimer> CreateTimer,
     Action RunFirstDetection);
 
-public sealed record LiveDetectionControllerStopActions(
-    Action SetStoppedStatus,
-    Action ClearOverlay,
-    Action ShowStoppedDetectionStatus,
-    Action PausePlaybackIfRunning,
-    Action StartHideStatusTimer);
-
 public sealed class LiveDetectionController
 {
     private OllamaClient? _client;
@@ -101,10 +94,8 @@ public sealed class LiveDetectionController
             : (frame, timestamp, cancellation) => service.AnalyzeFrameAsync(frame, timestamp, cancellation);
     }
 
-    public void Stop(bool updateUi, LiveDetectionControllerStopActions actions)
+    public void Stop()
     {
-        ArgumentNullException.ThrowIfNull(actions);
-
         _timer = PlayerWindowTimerStopper.StopAndClear(_timer);
         _cancellation = CancellationTokenSourceLifecycle.CancelDisposeAndClear(_cancellation);
         _isDetecting = false;
@@ -113,15 +104,6 @@ public sealed class LiveDetectionController
         _client = DisposableReferenceLifecycle.DisposeAndClear(_client);
         _modelName = string.Empty;
         _currentFindings.Clear();
-
-        if (!updateUi)
-            return;
-
-        actions.SetStoppedStatus();
-        actions.ClearOverlay();
-        actions.ShowStoppedDetectionStatus();
-        actions.PausePlaybackIfRunning();
-        actions.StartHideStatusTimer();
     }
 
     private void StoreRuntime(LiveDetectionRuntime runtime)

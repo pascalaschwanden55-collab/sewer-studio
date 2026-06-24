@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -7,37 +8,30 @@ public partial class PlayerWindow
 {
     private void StopLiveDetection()
     {
-        var updateUi = !_closing && !_playbackDisposed;
+        _liveDetectionController.Stop();
 
-        _liveDetectionController.Stop(
-            updateUi,
-            new LiveDetectionControllerStopActions(
+        LiveDetectionStopUiWorkflow.Execute(
+            new LiveDetectionStopUiWorkflowRequest(
+                ShouldUpdateUi: !_closing && !_playbackDisposed,
+                HideOverlay: !_isManualMarkMode,
+                TotalEvents: _codingVm?.Events?.Count ?? 0,
+                HasPlayer: _player is not null,
+                IsPlaybackDisposed: _playbackDisposed,
+                IsPlayerPlaying: _player?.IsPlaying == true),
+            new LiveDetectionStopUiWorkflowActions(
                 SetStoppedStatus: () => SetYoloStatus("Gestoppt", PlayerStatusColors.Muted),
-                ClearOverlay: () => DetectionOverlayCleaner.ClearCanvas(
+                ClearOverlay: hideOverlay => DetectionOverlayCleaner.ClearCanvas(
                     DetectionCanvas,
                     DetectionOverlayGrid,
-                    hideOverlay: !_isManualMarkMode),
-                ShowStoppedDetectionStatus: ShowStoppedDetectionStatus,
-                PausePlaybackIfRunning: PauseLiveDetectionPlaybackIfRunning,
+                    hideOverlay),
+                ShowStoppedDetectionStatus: totalEvents => LiveDetectionStatusControls.ShowStoppedDetectionStatus(
+                    AiStatusBadge,
+                    FindingSummaryPanel,
+                    LiveDetectionStatusText,
+                    totalEvents),
+                SetPause: pause => _player!.SetPause(pause),
                 StartHideStatusTimer: StartLiveDetectionHideStatusTimer));
     }
-
-    private void ShowStoppedDetectionStatus()
-    {
-        var totalEvents = _codingVm?.Events?.Count ?? 0;
-        LiveDetectionStatusControls.ShowStoppedDetectionStatus(
-            AiStatusBadge,
-            FindingSummaryPanel,
-            LiveDetectionStatusText,
-            totalEvents);
-    }
-
-    private void PauseLiveDetectionPlaybackIfRunning()
-        => PlayerLiveDetectionStopPlayback.PauseIfRunning(
-            _player != null,
-            _playbackDisposed,
-            _player?.IsPlaying == true,
-            pause => _player!.SetPause(pause));
 
     private void StartLiveDetectionHideStatusTimer()
     {

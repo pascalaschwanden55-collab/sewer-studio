@@ -56,7 +56,7 @@ public sealed class LiveDetectionControllerTests
                 isDetecting = controller.IsDetecting;
                 hasCancellation = controller.DetectionCancellation is not null;
                 timerRunning = controller.IsDetectionTimerRunning;
-                controller.Stop(updateUi: false, StopActions(calls));
+                controller.Stop();
             }
             catch (Exception ex)
             {
@@ -76,10 +76,9 @@ public sealed class LiveDetectionControllerTests
     }
 
     [Fact]
-    public void Stop_clears_detection_state_stops_timer_and_runs_ui_cleanup_when_allowed()
+    public void Stop_clears_detection_state_and_stops_timer()
     {
         Exception? threadError = null;
-        var calls = new List<string>();
         var isDetecting = true;
         var isInFlight = true;
         var hasCancellation = true;
@@ -107,7 +106,7 @@ public sealed class LiveDetectionControllerTests
                     MeterReading: null,
                     Error: null));
 
-                controller.Stop(updateUi: true, StopActions(calls));
+                controller.Stop();
 
                 isDetecting = controller.IsDetecting;
                 isInFlight = controller.IsDetectionInFlight;
@@ -132,7 +131,6 @@ public sealed class LiveDetectionControllerTests
         Assert.False(timerRunning);
         Assert.Equal(string.Empty, modelName);
         Assert.Equal(0, findingCount);
-        Assert.Equal(["status", "overlay", "panel", "pause", "hide"], calls);
     }
 
     [Fact]
@@ -162,7 +160,7 @@ public sealed class LiveDetectionControllerTests
                         RunFirstDetection: () => { }));
 
                 hasAnalyzerAfterRuntime = controller.CreateAnalyzeFrameAsync() is not null;
-                controller.Stop(updateUi: false, StopActions(new List<string>()));
+                controller.Stop();
             }
             catch (Exception ex)
             {
@@ -177,12 +175,4 @@ public sealed class LiveDetectionControllerTests
         Assert.False(hasAnalyzerBeforeRuntime);
         Assert.True(hasAnalyzerAfterRuntime);
     }
-
-    private static LiveDetectionControllerStopActions StopActions(List<string> calls)
-        => new(
-            SetStoppedStatus: () => calls.Add("status"),
-            ClearOverlay: () => calls.Add("overlay"),
-            ShowStoppedDetectionStatus: () => calls.Add("panel"),
-            PausePlaybackIfRunning: () => calls.Add("pause"),
-            StartHideStatusTimer: () => calls.Add("hide"));
 }
