@@ -16,24 +16,14 @@ public partial class PlayerWindow
             CodingLiveAiTimer_Tick,
             () => !_closing && _player is not null);
 
-        if (BtnCodingLiveAi.IsChecked == true)
-        {
-            _codingLiveAiTimers.Start();
-
-            var status = CodingLiveAiButtonDisplayPolicy.BuildStatus(
-                isActive: true,
-                LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName));
-            SetCodingAiState(status.StatusText, PlayerStatusColors.Success, status.DetailText);
-        }
-        else
-        {
-            _codingLiveAiTimers.Stop(resetButton: true);
-
-            var status = CodingLiveAiButtonDisplayPolicy.BuildStatus(
-                isActive: false,
-                LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName));
-            SetCodingAiState(status.StatusText, PlayerStatusColors.Success, status.DetailText);
-        }
+        CodingLiveAiToggleWorkflow.Execute(
+            new CodingLiveAiToggleWorkflowRequest(
+                BtnCodingLiveAi.IsChecked == true,
+                _codingAiController.ModelName),
+            new CodingLiveAiToggleWorkflowActions(
+                StartTimers: _codingLiveAiTimers.Start,
+                StopTimers: resetButton => _codingLiveAiTimers.Stop(resetButton),
+                SetCodingAiState: (status, color, detail) => SetCodingAiState(status, color, detail)));
     }
 
     private void CodingLiveAiTimer_Tick(object? sender, EventArgs e)

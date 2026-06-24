@@ -2519,19 +2519,26 @@ public sealed class UiArchitectureGuardTests
         var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Live.cs");
         var confirmationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Confirmation.cs");
         var resumeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationResumeWorkflow.cs");
+        var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiToggleWorkflow.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
 
         Assert.True(File.Exists(resumeWorkflowPath), "Confirmation-Resume-Statusentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(toggleWorkflowPath), "Live-AI-Toggle-Statusentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var live = File.ReadAllText(livePath);
         var confirmation = File.ReadAllText(confirmationPath);
         var resumeWorkflow = File.ReadAllText(resumeWorkflowPath);
+        var toggleWorkflow = File.ReadAllText(toggleWorkflowPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", live);
+        Assert.Contains("CodingLiveAiToggleWorkflow.Execute", live);
+        Assert.DoesNotContain("CodingLiveAiButtonDisplayPolicy.BuildStatus", live);
         Assert.Contains("CodingConfirmationResumeWorkflow.Apply", confirmation);
         Assert.DoesNotContain("CodingLiveAiButtonDisplayPolicy.BuildStatus", confirmation);
         Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", resumeWorkflow);
+        Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", toggleWorkflow);
+        Assert.Contains("actions.StartTimers()", toggleWorkflow);
+        Assert.Contains("actions.StopTimers(true)", toggleWorkflow);
         Assert.DoesNotContain("Automatische KI-Analyse aktiv", live);
         Assert.DoesNotContain("Automatische KI-Analyse aktiv", confirmation);
         Assert.DoesNotContain("Automatische KI-Analyse aktiv", resumeWorkflow);
@@ -2768,12 +2775,14 @@ public sealed class UiArchitectureGuardTests
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingLiveAiTimerController.cs");
         var timerStopperPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerStopper.cs");
         var exitTeardownWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeExitTeardownWorkflow.cs");
+        var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiToggleWorkflow.cs");
 
         Assert.True(File.Exists(codingExitPath), "Coding-Exit-Cleanup soll in einem eigenen Partial liegen.");
         Assert.True(File.Exists(playbackLifecyclePath), "Playback-Cleanup soll in einem eigenen Lifecycle-Partial liegen.");
         Assert.True(File.Exists(controllerPath), "Live-AI-Timer-Wiring muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(timerStopperPath), "Playback-Timer-Shutdown soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(exitTeardownWorkflowPath), "Coding-Exit-Teardown-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(toggleWorkflowPath), "Live-AI-Toggle-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var live = File.ReadAllText(livePath);
@@ -2786,10 +2795,14 @@ public sealed class UiArchitectureGuardTests
         var controller = File.ReadAllText(controllerPath);
         var timerStopper = File.Exists(timerStopperPath) ? File.ReadAllText(timerStopperPath) : "";
         var exitTeardownWorkflow = File.Exists(exitTeardownWorkflowPath) ? File.ReadAllText(exitTeardownWorkflowPath) : "";
+        var toggleWorkflow = File.Exists(toggleWorkflowPath) ? File.ReadAllText(toggleWorkflowPath) : "";
 
         Assert.Contains("CodingLiveAiTimerController", state);
-        Assert.Contains("_codingLiveAiTimers.Start()", live);
-        Assert.Contains("_codingLiveAiTimers.Stop(resetButton: true)", live);
+        Assert.Contains("CodingLiveAiToggleWorkflow.Execute", live);
+        Assert.Contains("StartTimers: _codingLiveAiTimers.Start", live);
+        Assert.Contains("StopTimers: resetButton => _codingLiveAiTimers.Stop(resetButton)", live);
+        Assert.Contains("actions.StartTimers()", toggleWorkflow);
+        Assert.Contains("actions.StopTimers(true)", toggleWorkflow);
         Assert.DoesNotContain("_codingLiveAiTimers?.Stop(resetButton: true)", lifecycle);
         Assert.DoesNotContain("_codingLiveAiTimers?.Stop(resetButton: true)", codingExit);
         Assert.Contains("StopCodingLiveAiTimers: resetButton => _codingLiveAiTimers!.Stop(resetButton)", codingExit);
