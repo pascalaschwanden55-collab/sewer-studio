@@ -1527,6 +1527,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_event_list_right_click_selection_uses_helper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var detailPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.cs");
+        var helperPath = Path.Combine(uiRoot, "Ai", "CodingEventListItemSelectionHelper.cs");
+
+        Assert.True(File.Exists(helperPath), "Eventlisten-Rechtsklick-Auswahl soll ausserhalb der PlayerWindow-Partials liegen.");
+
+        var detail = File.ReadAllText(detailPath);
+        var helper = File.Exists(helperPath) ? File.ReadAllText(helperPath) : "";
+
+        Assert.Contains("CodingEventListItemSelectionHelper.SelectContainingListBoxItem", detail);
+        Assert.DoesNotContain("while (dep != null && dep is not ListBoxItem)", detail);
+        Assert.DoesNotContain("VisualTreeHelper.GetParent(dep)", detail);
+        Assert.Contains("public static bool SelectContainingListBoxItem", helper);
+        Assert.Contains("VisualTreeHelper.GetParent", helper);
+        Assert.Contains("LogicalTreeHelper.GetParent", helper);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_event_list_item_coloring_lives_in_list_items_partial()
     {
         var root = FindRepositoryRoot();

@@ -1,10 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
-
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -43,20 +41,6 @@ public partial class PlayerWindow
 
     private void CodingEvents_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
-        var dep = e.OriginalSource as DependencyObject;
-        while (dep != null && dep is not ListBoxItem)
-        {
-            // Run/Inline-Elemente sind kein Visual — LogicalTreeHelper als Fallback
-            dep = dep is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D
-                ? VisualTreeHelper.GetParent(dep)
-                : LogicalTreeHelper.GetParent(dep);
-        }
-
-        if (dep is ListBoxItem item)
-        {
-            item.IsSelected = true;
-            item.Focus();
-        }
+        CodingEventListItemSelectionHelper.SelectContainingListBoxItem(e.OriginalSource as DependencyObject);
     }
-
 }
