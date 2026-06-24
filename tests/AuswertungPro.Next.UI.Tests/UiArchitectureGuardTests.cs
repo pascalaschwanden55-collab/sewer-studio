@@ -199,6 +199,30 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_detection_confirmation_buffer_owns_pending_detection_state()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var bufferPath = Path.Combine(uiRoot, "Ai", "DetectionConfirmationBuffer.cs");
+
+        Assert.True(File.Exists(bufferPath), "Geteilter Detection-Pending-Zustand soll in einem eigenen Buffer liegen.");
+
+        var playerWindowText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
+        var buffer = File.ReadAllText(bufferPath);
+
+        Assert.Contains("private readonly DetectionConfirmationBuffer _detectionConfirmationBuffer", playerWindowText);
+        Assert.DoesNotContain("_detectionPendingFindings", playerWindowText);
+        Assert.DoesNotContain("_detectionPendingFrameBytes", playerWindowText);
+        Assert.DoesNotContain("_detectionPendingTimestampSec", playerWindowText);
+        Assert.Contains("public void StoreFindings", buffer);
+        Assert.Contains("public void StoreAnalyzedFrame", buffer);
+        Assert.Contains("public void Clear", buffer);
+    }
+
+    [Fact]
     public void PlayerWindow_service_provider_access_lives_behind_dependencies()
     {
         var root = FindRepositoryRoot();

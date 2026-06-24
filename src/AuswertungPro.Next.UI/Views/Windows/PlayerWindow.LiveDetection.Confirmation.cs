@@ -19,9 +19,9 @@ public partial class PlayerWindow
                 pause => _player.SetPause(pause));
 
         // Zur Fundstelle springen (Timestamp aus dem analysierten Frame)
-        if (_detectionPendingTimestampSec.HasValue && _player != null)
+        if (_detectionConfirmationBuffer.TimestampSeconds.HasValue && _player != null)
         {
-            long targetMs = (long)(_detectionPendingTimestampSec.Value * 1000);
+            long targetMs = (long)(_detectionConfirmationBuffer.TimestampSeconds.Value * 1000);
             _player.Time = targetMs;
         }
 
@@ -34,9 +34,7 @@ public partial class PlayerWindow
 
     private void ResumeDetection()
     {
-        _detectionPendingFindings = null;
-        _detectionPendingFrameBytes = null;
-        _detectionPendingTimestampSec = null;
+        _detectionConfirmationBuffer.Clear();
         LiveDetectionStatusControls.HideDetectionConfirmation(DetectionConfirmationPanel);
 
         // Video automatisch weiterlaufen lassen nach Entscheidung

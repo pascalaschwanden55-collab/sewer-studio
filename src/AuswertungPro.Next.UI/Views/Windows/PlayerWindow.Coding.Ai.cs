@@ -65,8 +65,7 @@ public partial class PlayerWindow
                 return;
             }
 
-            _detectionPendingFrameBytes = pngBytes;
-            _detectionPendingTimestampSec = captureTimestampSec;
+            _detectionConfirmationBuffer.StoreAnalyzedFrame(pngBytes, captureTimestampSec);
             var frameOsdMeter = await TryReadAnalyzedFrameOsdMeterAsync(
                 pngBytes,
                 captureTimestampSec,

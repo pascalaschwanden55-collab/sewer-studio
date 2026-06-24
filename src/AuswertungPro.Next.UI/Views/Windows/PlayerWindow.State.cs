@@ -7,6 +7,7 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
 using LibVLCSharp.Shared;
@@ -46,9 +47,7 @@ public partial class PlayerWindow
     private OverlayToolType _markToolType = OverlayToolType.None;
     private double _lastDetectionTimestamp;
     private readonly List<LiveFrameFinding> _currentFindings = new();
-    private List<LiveFrameFinding>? _detectionPendingFindings;
-    private byte[]? _detectionPendingFrameBytes;
-    private double? _detectionPendingTimestampSec;
+    private readonly DetectionConfirmationBuffer _detectionConfirmationBuffer = new();
     private string _liveDetectionModelName = string.Empty;
 
     // Protocol integration state.

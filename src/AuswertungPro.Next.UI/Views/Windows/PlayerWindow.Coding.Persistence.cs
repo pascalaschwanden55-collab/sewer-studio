@@ -18,7 +18,7 @@ public partial class PlayerWindow
     private async System.Threading.Tasks.Task PersistSingleEventAsTrainingSample(CodingEvent ev)
         => await CodingTrainingSamples.PersistSingleEventAsync(
             ev,
-            CreateCodingTrainingSamplePersistenceRequest(_detectionPendingFrameBytes));
+            CreateCodingTrainingSamplePersistenceRequest(_detectionConfirmationBuffer.FrameBytes));
 
     private void PersistCodingEventsAsTrainingSamples()
     {
@@ -27,7 +27,7 @@ public partial class PlayerWindow
         CodingTrainingSamples
             .PersistEventsAsync(
                 _codingVm.Events,
-                CreateCodingTrainingSamplePersistenceRequest(_detectionPendingFrameBytes))
+                CreateCodingTrainingSamplePersistenceRequest(_detectionConfirmationBuffer.FrameBytes))
             .SafeFireAndForget("TrainingSave");
     }
 

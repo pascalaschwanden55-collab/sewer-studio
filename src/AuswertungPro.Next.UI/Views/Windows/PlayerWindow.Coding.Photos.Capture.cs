@@ -19,7 +19,7 @@ public partial class PlayerWindow
     private byte[]? TryExtractAnalyzedFrameBytes()
     {
         var sec = CodingAnalyzedFrameTimestampPolicy.Resolve(
-            _detectionPendingTimestampSec,
+            _detectionConfirmationBuffer.TimestampSeconds,
             _codingFrameReadiness.FirstCleanFrameSeconds);
         return TryExtractFrameAtSeconds(sec);
     }

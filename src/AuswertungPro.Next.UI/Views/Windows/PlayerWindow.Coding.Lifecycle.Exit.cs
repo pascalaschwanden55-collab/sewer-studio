@@ -27,7 +27,7 @@ public partial class PlayerWindow
             if (!CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode(_codingVm.Events))
             {
                 var endTime = TimeSpan.FromMilliseconds(_player?.Length ?? 0);
-                EnsureRohrendeExists(_codingVm.EndMeter, endTime, _detectionPendingFrameBytes);
+                EnsureRohrendeExists(_codingVm.EndMeter, endTime, _detectionConfirmationBuffer.FrameBytes);
             }
         }
 
@@ -47,9 +47,7 @@ public partial class PlayerWindow
         CodingModeChromeControls.HideConfirmationPanels(CodingConfirmationPanel, DetectionConfirmationPanel);
         _codingPendingConfirmEvent = null;
         _codingPendingGateResult = null;
-        _detectionPendingFindings = null;
-        _detectionPendingFrameBytes = null;
-        _detectionPendingTimestampSec = null;
+        _detectionConfirmationBuffer.Clear();
         DetectionOverlayCleaner.ClearCanvas(DetectionCanvas, DetectionOverlayGrid, hideOverlay: !_isDetecting);
 
         CodingModeChromeControls.HideCodingSurface(

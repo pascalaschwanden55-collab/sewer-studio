@@ -13,7 +13,8 @@ public partial class PlayerWindow
 
     private async Task HandleDetectionAcceptAsync()
     {
-        if (_detectionPendingFindings == null || _detectionPendingFindings.Count == 0)
+        var pendingFindings = _detectionConfirmationBuffer.Findings;
+        if (pendingFindings.Count == 0)
         {
             ResumeDetection();
             return;
@@ -21,12 +22,12 @@ public partial class PlayerWindow
 
         try
         {
-            var timestampSec = _detectionPendingTimestampSec ?? (_player.Time / 1000.0);
+            var timestampSec = _detectionConfirmationBuffer.TimestampSeconds ?? (_player.Time / 1000.0);
             var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
             var result = await LiveDetectionConfirmationTrainingWorkflow.SaveAcceptedAsync(
-                _detectionPendingFindings,
+                pendingFindings,
                 timestampSec,
-                _detectionPendingFrameBytes,
+                _detectionConfirmationBuffer.FrameBytes,
                 CaptureCurrentFrameAsync,
                 annotationWriter);
 
@@ -51,7 +52,8 @@ public partial class PlayerWindow
 
     private async Task HandleDetectionCorrectAsync()
     {
-        if (_detectionPendingFindings == null || _detectionPendingFindings.Count == 0)
+        var pendingFindings = _detectionConfirmationBuffer.Findings;
+        if (pendingFindings.Count == 0)
         {
             ResumeDetection();
             return;
@@ -77,13 +79,13 @@ public partial class PlayerWindow
                 return;
             }
 
-            var timestampSecForFrame = _detectionPendingTimestampSec ?? timestampSec;
+            var timestampSecForFrame = _detectionConfirmationBuffer.TimestampSeconds ?? timestampSec;
             var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
             var result = await LiveDetectionConfirmationTrainingWorkflow.SaveCorrectedAsync(
-                _detectionPendingFindings,
+                pendingFindings,
                 selectedEntry,
                 timestampSecForFrame,
-                _detectionPendingFrameBytes,
+                _detectionConfirmationBuffer.FrameBytes,
                 CaptureCurrentFrameAsync,
                 annotationWriter);
 

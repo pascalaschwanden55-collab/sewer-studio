@@ -175,7 +175,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         Assert.DoesNotContain("PlayerBoundaryPhotoPolicy.GetRequiredSnapshotTime(entry.Code", captureBody);
         Assert.DoesNotContain("SeekToRequiredPhotoTime", captureBody);
-        Assert.Contains("_detectionPendingFrameBytes", persistBody);
+        Assert.Contains("_detectionConfirmationBuffer.FrameBytes", persistBody);
         Assert.DoesNotContain("CaptureFrameBytesAtRequiredPhotoTimeAsync", persistBody);
         Assert.DoesNotContain("Rohranfang-Foto nach Datenblendung nicht verfuegbar", persistBody);
     }
@@ -186,10 +186,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
 
-        Assert.Contains("_detectionPendingFrameBytes = pngBytes", multiModelBody);
-        Assert.Contains("_detectionPendingTimestampSec = captureTimestampSec", multiModelBody);
+        Assert.Contains("_detectionConfirmationBuffer.StoreAnalyzedFrame(pngBytes, captureTimestampSec)", multiModelBody);
         Assert.True(
-            multiModelBody.IndexOf("_detectionPendingFrameBytes = pngBytes", StringComparison.Ordinal)
+            multiModelBody.IndexOf("_detectionConfirmationBuffer.StoreAnalyzedFrame(pngBytes, captureTimestampSec)", StringComparison.Ordinal)
             < multiModelBody.IndexOf("TryHandleBoundaryClassifierResult", StringComparison.Ordinal),
             "Der Gold-Snapshot muss den analysierten Frame bekommen, bevor ein BCD/BCE-Event entstehen kann.");
     }
@@ -213,8 +212,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var boundaryBody = ExtractMethodBody(coding, "private bool TryHandleBoundaryClassifierResult");
 
-        Assert.Contains("EnsureRohranfangExists(meter, videoTime, _detectionPendingFrameBytes, ref anyAdded)", boundaryBody);
-        Assert.Contains("EnsureRohrendeExists(_codingVm.EndMeter, videoTime, _detectionPendingFrameBytes)", boundaryBody);
+        Assert.Contains("EnsureRohranfangExists(meter, videoTime, _detectionConfirmationBuffer.FrameBytes, ref anyAdded)", boundaryBody);
+        Assert.Contains("EnsureRohrendeExists(_codingVm.EndMeter, videoTime, _detectionConfirmationBuffer.FrameBytes)", boundaryBody);
     }
 
     [Fact]
@@ -248,7 +247,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var exitBody = ExtractMethodBody(coding, "private void ExitCodingMode");
 
-        Assert.Contains("EnsureRohrendeExists(_codingVm.EndMeter, endTime, _detectionPendingFrameBytes)", exitBody);
+        Assert.Contains("EnsureRohrendeExists(_codingVm.EndMeter, endTime, _detectionConfirmationBuffer.FrameBytes)", exitBody);
     }
 
     [Fact]

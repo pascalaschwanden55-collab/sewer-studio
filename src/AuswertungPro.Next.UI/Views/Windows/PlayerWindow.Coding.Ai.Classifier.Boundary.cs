@@ -47,13 +47,13 @@ public partial class PlayerWindow
 
         if (boundaryCode == "BCD")
         {
-            EnsureRohranfangExists(meter, videoTime, _detectionPendingFrameBytes, ref anyAdded);
+            EnsureRohranfangExists(meter, videoTime, _detectionConfirmationBuffer.FrameBytes, ref anyAdded);
         }
         else
         {
             // VSA-Pflicht: bei Rohrende duerfen keine offenen Streckenschaeden zurueckbleiben.
             CloseTrackedStreckenschaeden(meter);
-            EnsureRohrendeExists(_codingVm.EndMeter, videoTime, _detectionPendingFrameBytes);
+            EnsureRohrendeExists(_codingVm.EndMeter, videoTime, _detectionConfirmationBuffer.FrameBytes);
             ClearDetectionOverlays();
             Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
         }

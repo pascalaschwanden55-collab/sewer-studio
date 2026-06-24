@@ -1,7 +1,7 @@
 # Design: PlayerWindow schrittweise entflechten — Pilot DamageMarkerController
 
 - **Datum:** 2026-06-22
-- **Fortschreibung 2026-06-24:** Die Spec bleibt massgeblich. Aktueller Stand: `DamageMarkerController`, `QuickScanController` und Schritt 3 `CodingOverlayRenderController` sind umgesetzt; danach kamen `CodingUiUpdateWorkflow`, `LiveDetectionRuntimeStartWorkflow` und mehrere UI-Adapter. Aktuelle Vermessung: `PlayerWindow*.cs` = 95 Dateien / 5100 Zeilen, `PlayerWindow.xaml` = 822 Zeilen, zusammen 5922 Zeilen. Die alte Angabe "33 Dateien / ~7.500 Zeilen" ist historisch.
+- **Fortschreibung 2026-06-24:** Die Spec bleibt massgeblich. Aktueller Stand: `DamageMarkerController`, `QuickScanController`, Schritt 3 `CodingOverlayRenderController` und `DetectionConfirmationBuffer` sind umgesetzt; dazu kamen `CodingUiUpdateWorkflow`, `LiveDetectionRuntimeStartWorkflow` und mehrere UI-Adapter. Aktuelle Vermessung: `PlayerWindow*.cs` = 95 Dateien / 5096 Zeilen, `PlayerWindow.xaml` = 822 Zeilen, zusammen 5918 Zeilen. Die alte Angabe "33 Dateien / ~7.500 Zeilen" ist historisch.
 - **Aktualisierte Reihenfolge 2026-06-24:** 1) Overlay-Abstraktion / `CodingOverlayRenderController`, 2) `ConfirmationBuffer` fuer `_detectionPending*`, 3) `LiveDetectionController`, 4) `CodingAiController` in zwei Stufen. Damit wird die alte Reihenfolge "CodingAi vor LiveDetection" ueberschrieben, weil der geteilte Puffer vor den grossen Controllern als eigenes Objekt herausgezogen wird.
 - **Status:** Design freigegeben (Pilot-Zuschnitt: schlank & direkt)
 - **Scope-Entscheidung:** Pilot zuerst — diese Spec beschreibt EINEN Pilot-Schnitt im Detail, der Rest ist nur skizziert.

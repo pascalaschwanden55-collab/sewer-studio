@@ -27,7 +27,7 @@ public partial class PlayerWindow
                 hasLiveDetectionService: _liveDetectionService is not null,
                 hasDetectionCancellation: _detectionCts is not null,
                 isPlayerPlaying: player?.IsPlaying == true,
-                hasPendingFindings: _detectionPendingFindings != null))
+                hasPendingFindings: _detectionConfirmationBuffer.HasFindings))
             return;
 
         _isDetectionInFlight = true;
@@ -74,9 +74,10 @@ public partial class PlayerWindow
                 var significantFindings = LiveDetectionConfirmationPolicy.SelectSignificantFindings(result.Findings);
                 if (significantFindings.Count > 0)
                 {
-                    _detectionPendingFindings = significantFindings;
-                    _detectionPendingFrameBytes = snapshot;
-                    _detectionPendingTimestampSec = result.TimestampSeconds;
+                    _detectionConfirmationBuffer.StoreFindings(
+                        significantFindings,
+                        snapshot,
+                        result.TimestampSeconds);
                     ShowDetectionConfirmation(significantFindings);
                     SetLiveDetectionBadge("Befund erkannt", PlayerStatusColors.Warning,
                         $"{LiveDetectionDisplayPolicy.CompactModelName(_liveDetectionModelName)} | Warte auf Bestaetigung");

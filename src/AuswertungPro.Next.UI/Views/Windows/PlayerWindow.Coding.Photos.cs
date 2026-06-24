@@ -12,7 +12,7 @@ public partial class PlayerWindow
 {
     private string? AttachAnalyzedFramePhoto(ProtocolEntry entry)
     {
-        var frameBytes = TryExtractAnalyzedFrameBytes() ?? _detectionPendingFrameBytes;
+        var frameBytes = TryExtractAnalyzedFrameBytes() ?? _detectionConfirmationBuffer.FrameBytes;
 
         var path = CodingAiFramePhotoService.AttachAnalyzedFramePhoto(
             entry,
