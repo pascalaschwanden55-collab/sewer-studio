@@ -21,29 +21,26 @@ public partial class PlayerWindow
 
         try
         {
-            var frameBytes = _detectionPendingFrameBytes;
-            if (frameBytes == null || frameBytes.Length == 0)
-            {
-                frameBytes = await CaptureCurrentFrameAsync();
-                if (frameBytes == null) { ResumeDetection(); return; }
-            }
-
             var timestampSec = _detectionPendingTimestampSec ?? (_player.Time / 1000.0);
             var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
+            var result = await LiveDetectionConfirmationTrainingWorkflow.SaveAcceptedAsync(
+                _detectionPendingFindings,
+                timestampSec,
+                _detectionPendingFrameBytes,
+                CaptureCurrentFrameAsync,
+                annotationWriter);
 
-            foreach (var finding in _detectionPendingFindings)
+            if (!result.Saved)
             {
-                await annotationWriter.SaveAcceptedAsync(
-                    frameBytes,
-                    finding,
-                    TimeSpan.FromSeconds(timestampSec));
+                ResumeDetection();
+                return;
             }
 
-            ShowOsdMeterStatus($"âœ“ {_detectionPendingFindings.Count} Befund(e) gespeichert", resetAfterDelay: true);
+            ShowOsdMeterStatus($"\u2713 {result.SavedCount} Befund(e) gespeichert", resetAfterDelay: true);
         }
         catch (Exception ex)
         {
-            ShowOsdMeterStatus($"âœ— Fehler: {ex.Message}", resetAfterDelay: false);
+            ShowOsdMeterStatus($"\u2717 Fehler: {ex.Message}", resetAfterDelay: false);
         }
 
         ResumeDetection();
@@ -80,27 +77,27 @@ public partial class PlayerWindow
                 return;
             }
 
-            var frameBytes = _detectionPendingFrameBytes;
-            if (frameBytes == null || frameBytes.Length == 0)
-            {
-                frameBytes = await CaptureCurrentFrameAsync();
-                if (frameBytes == null) { ResumeDetection(); return; }
-            }
-
-            var primary = _detectionPendingFindings[0];
             var timestampSecForFrame = _detectionPendingTimestampSec ?? timestampSec;
             var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
-            await annotationWriter.SaveCorrectedAsync(
-                frameBytes,
-                primary,
+            var result = await LiveDetectionConfirmationTrainingWorkflow.SaveCorrectedAsync(
+                _detectionPendingFindings,
                 selectedEntry,
-                TimeSpan.FromSeconds(timestampSecForFrame));
+                timestampSecForFrame,
+                _detectionPendingFrameBytes,
+                CaptureCurrentFrameAsync,
+                annotationWriter);
 
-            ShowOsdMeterStatus($"âœ“ Training: {selectedEntry.Code} (korrigiert)", resetAfterDelay: true);
+            if (!result.Saved)
+            {
+                ResumeDetection();
+                return;
+            }
+
+            ShowOsdMeterStatus($"\u2713 Training: {result.Code} (korrigiert)", resetAfterDelay: true);
         }
         catch (Exception ex)
         {
-            ShowOsdMeterStatus($"âœ— Fehler: {ex.Message}", resetAfterDelay: false);
+            ShowOsdMeterStatus($"\u2717 Fehler: {ex.Message}", resetAfterDelay: false);
         }
 
         ResumeDetection();
