@@ -5849,12 +5849,14 @@ public sealed class UiArchitectureGuardTests
         var accessorsPath = Path.Combine(uiRoot, "Ai", "CodingTimelineMarkerAccessors.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingTimelineControls.cs");
         var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingTimelineCommandWorkflow.cs");
+        var initializationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingTimelineInitializationWorkflow.cs");
         var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(timelinePath), "Coding-Timeline-Wiring soll in einem eigenen Lifecycle-Partial liegen.");
         Assert.True(File.Exists(accessorsPath), "Timeline-Marker-Regeln muessen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(controlsPath), "Timeline-Control-Konfiguration soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(commandWorkflowPath), "Timeline-Command-Entscheidungen sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(initializationWorkflowPath), "Timeline-Initialisierungs-Gate soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var playerCoding = File.ReadAllText(playerCodingPath);
@@ -5862,6 +5864,7 @@ public sealed class UiArchitectureGuardTests
         var accessors = File.ReadAllText(accessorsPath);
         var controls = File.ReadAllText(controlsPath);
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
+        var initializationWorkflow = File.Exists(initializationWorkflowPath) ? File.ReadAllText(initializationWorkflowPath) : "";
         var enterWorkflow = File.ReadAllText(enterWorkflowPath);
 
         Assert.Contains("InitializeCodingTimeline: InitializeCodingTimeline", playerCoding);
@@ -5869,8 +5872,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("PipeTimeline.MeterAccessor = CodingTimelineMarkerAccessors.Meter", playerCoding);
         Assert.Contains("private void InitializeCodingTimeline", timeline);
         Assert.Contains("CodingTimelineControls.Configure", timeline);
+        Assert.Contains("CodingTimelineInitializationWorkflow.Execute", timeline);
         Assert.Contains("CodingTimelineCommandWorkflow.NavigateToMeter", timeline);
         Assert.Contains("CodingTimelineCommandWorkflow.MarkerClicked", timeline);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel)", timeline);
+        Assert.Contains("throw new InvalidOperationException", initializationWorkflow);
+        Assert.Contains("actions.ConfigureTimeline()", initializationWorkflow);
         Assert.Contains("actions.MoveToMeter(request.Meter)", commandWorkflow);
         Assert.Contains("actions.JumpToDefect(selectedEvent)", commandWorkflow);
         Assert.Contains("_codingSessionHost", timeline);
