@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
@@ -14,34 +13,25 @@ public partial class PlayerWindow
     private async Task HandleDetectionAcceptAsync()
     {
         var pendingFindings = _detectionConfirmationBuffer.Findings;
-        if (pendingFindings.Count == 0)
-        {
-            ResumeDetection();
-            return;
-        }
-
-        try
-        {
-            var timestampSec = _detectionConfirmationBuffer.TimestampSeconds ?? _playerTimelineHost.CurrentSecondsOrZero;
-            var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
-            var result = await LiveDetectionConfirmationTrainingWorkflow.SaveAcceptedAsync(
-                pendingFindings,
-                timestampSec,
-                _detectionConfirmationBuffer.FrameBytes,
-                CaptureCurrentFrameAsync,
-                annotationWriter);
-
-            LiveDetectionConfirmationTrainingResultWorkflow.ExecuteAccepted(
-                result,
-                ConfirmationTrainingResultActions());
-            return;
-        }
-        catch (Exception ex)
-        {
-            ShowOsdMeterStatus($"\u2717 Fehler: {ex.Message}", resetAfterDelay: false);
-        }
-
-        ResumeDetection();
+        await LiveDetectionConfirmationAcceptCommandWorkflow.ExecuteAsync(
+            new LiveDetectionConfirmationAcceptCommandRequest(pendingFindings.Count > 0),
+            new LiveDetectionConfirmationAcceptCommandActions(
+                SaveAcceptedAsync: async () =>
+                {
+                    var timestampSec = _detectionConfirmationBuffer.TimestampSeconds ?? _playerTimelineHost.CurrentSecondsOrZero;
+                    var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
+                    return await LiveDetectionConfirmationTrainingWorkflow.SaveAcceptedAsync(
+                        pendingFindings,
+                        timestampSec,
+                        _detectionConfirmationBuffer.FrameBytes,
+                        CaptureCurrentFrameAsync,
+                        annotationWriter);
+                },
+                HandleAcceptedResult: result => LiveDetectionConfirmationTrainingResultWorkflow.ExecuteAccepted(
+                    result,
+                    ConfirmationTrainingResultActions()),
+                ShowOsdMeterStatus: ShowOsdMeterStatus,
+                ResumeDetection: ResumeDetection));
     }
 
     private void DetectionCorrect_Click(object sender, RoutedEventArgs e)

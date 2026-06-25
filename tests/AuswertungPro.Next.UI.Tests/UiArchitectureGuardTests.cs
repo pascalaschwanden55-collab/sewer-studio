@@ -3995,6 +3995,7 @@ public sealed class UiArchitectureGuardTests
         var annotationWriterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingAnnotationWriter.cs");
         var trainingWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationTrainingWorkflow.cs");
         var trainingResultWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationTrainingResultWorkflow.cs");
+        var acceptCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationAcceptCommandWorkflow.cs");
 
         Assert.True(File.Exists(actionsPath), "LiveDetection-Bestaetigungsaktionen sollen aus dem Anzeige-Partial heraus.");
         Assert.True(File.Exists(trainingPath), "LiveDetection-Trainingsuebernahme soll aus den simplen Bestaetigungsaktionen heraus.");
@@ -4006,6 +4007,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(annotationWriterPath), "Detection-Training-Annotationen sollen ausserhalb der PlayerWindow-Partials geschrieben werden.");
         Assert.True(File.Exists(trainingWorkflowPath), "Detection-Confirmation-Training-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(trainingResultWorkflowPath), "Detection-Confirmation-Training-Ergebnisbehandlung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(acceptCommandWorkflowPath), "Detection-Accept-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var confirmation = File.ReadAllText(confirmationPath);
         var actions = File.ReadAllText(actionsPath);
@@ -4019,6 +4021,8 @@ public sealed class UiArchitectureGuardTests
         var annotationWriter = File.ReadAllText(annotationWriterPath);
         var trainingWorkflow = File.Exists(trainingWorkflowPath) ? File.ReadAllText(trainingWorkflowPath) : "";
         var trainingResultWorkflow = File.Exists(trainingResultWorkflowPath) ? File.ReadAllText(trainingResultWorkflowPath) : "";
+        var acceptCommandWorkflow = File.Exists(acceptCommandWorkflowPath) ? File.ReadAllText(acceptCommandWorkflowPath) : "";
+        var acceptBody = ExtractMethodBody(training, "private async Task HandleDetectionAcceptAsync");
 
         Assert.Contains("private void ShowDetectionConfirmation", confirmation);
         Assert.Contains("private void ResumeDetection", confirmation);
@@ -4048,6 +4052,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains(".SafeFireAndForget(\"DetectionCorrect\")", training);
         Assert.Contains("private async Task HandleDetectionAcceptAsync", training);
         Assert.Contains("private async Task HandleDetectionCorrectAsync", training);
+        Assert.Contains("LiveDetectionConfirmationAcceptCommandWorkflow.ExecuteAsync", acceptBody);
+        Assert.DoesNotContain("if (pendingFindings.Count == 0)", acceptBody);
+        Assert.DoesNotContain("try", acceptBody);
+        Assert.DoesNotContain("catch (Exception ex)", acceptBody);
         Assert.Contains("LiveDetectionCorrectionCodeSelectionServiceFactory.Create", training);
         Assert.DoesNotContain("CodingExplorerEntryFactory.CreateSeed", training);
         Assert.DoesNotContain("VsaCodeExplorerDialogServiceFactory.Create", training);
@@ -4056,6 +4064,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveDetectionConfirmationTrainingWorkflow.SaveCorrectedAsync", training);
         Assert.Contains("LiveDetectionConfirmationTrainingResultWorkflow.ExecuteAccepted", training);
         Assert.Contains("LiveDetectionConfirmationTrainingResultWorkflow.ExecuteCorrected", training);
+        Assert.Contains("var trainingResult = await actions.SaveAcceptedAsync()", acceptCommandWorkflow);
+        Assert.Contains("actions.HandleAcceptedResult(trainingResult)", acceptCommandWorkflow);
+        Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2717 Fehler: {ex.Message}\", false)", acceptCommandWorkflow);
+        Assert.Contains("actions.ResumeDetection()", acceptCommandWorkflow);
         Assert.DoesNotContain("if (!result.Saved)", training);
         Assert.DoesNotContain("result.SavedCount", training);
         Assert.DoesNotContain("result.Code", training);
