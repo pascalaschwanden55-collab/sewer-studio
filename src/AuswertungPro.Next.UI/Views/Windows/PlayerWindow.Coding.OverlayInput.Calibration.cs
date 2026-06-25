@@ -28,10 +28,10 @@ public partial class PlayerWindow
 
     private void ApplyCodingCalibration(NormalizedPoint start, NormalizedPoint end)
     {
-        if (_codingOverlayService == null) return;
+        if (!_codingOverlayToolHost.HasOverlayService) return;
         var p1 = CodingNormToPixel(start);
         var p2 = CodingNormToPixel(end);
-        int dn = _codingOverlayService.Calibration?.NominalDiameterMm ?? 300;
+        int dn = _codingOverlayToolHost.NominalDiameterMm ?? 300;
         var result = CodingManualCalibrationPolicy.Build(start, end, p1, p2, dn);
         CodingManualCalibrationWorkflow.Apply(
             new CodingManualCalibrationWorkflowRequest(
@@ -41,7 +41,7 @@ public partial class PlayerWindow
             new CodingManualCalibrationWorkflowActions(
                 ShowInvalidHint: text => CodingCalibrationControls.ShowHint(TxtCodingCalibHint, text),
                 ClearCalibrationStart: () => _codingCalibStart = null,
-                SetOverlayCalibration: calibration => _codingOverlayService.SetCalibration(calibration),
+                SetOverlayCalibration: calibration => { _codingOverlayToolHost.SetCalibration(calibration); },
                 ApplySchemaCalibration: calibration => _codingSchemaManager.Active?.ApplyCalibration(calibration),
                 ApplyManualResult: manualResult => CodingCalibrationControls.ApplyManualResult(
                     TxtCodingCalibStatus,

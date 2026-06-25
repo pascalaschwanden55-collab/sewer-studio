@@ -38,7 +38,7 @@ public partial class PlayerWindow
                 _codingSessionHost.Events,
                 _codingAiController.QualityGate,
                 _codingOsdMeterController.LastResolvedMeterIsOsd,
-                _codingOverlayService?.Calibration,
+                _codingOverlayToolHost.Calibration,
                 CodeSelectionCatalog),
             new CodingMultiModelFindingEventWorkflowActions(
                 ResolveFindingCodeForCoding,

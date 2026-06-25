@@ -21,7 +21,7 @@ public partial class PlayerWindow
         try
         {
             var box = LiveDetectionGeometryMapper.BBoxFromOverlay(overlay);
-            var calibration = _codingOverlayService?.Calibration;
+            var calibration = _codingOverlayToolHost.Calibration;
             int dn = calibration?.NominalDiameterMm ?? 0;
 
             var result = await boxSegmentation.SegmentBoxAsync(

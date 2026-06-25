@@ -26,7 +26,7 @@ public partial class PlayerWindow
     {
         return CodingFindingProximityPolicy.IsTooFarAhead(
             finding,
-            _codingOverlayService?.Calibration,
+            _codingOverlayToolHost.Calibration,
             _codingVideoAspect);
     }
 
@@ -36,7 +36,7 @@ public partial class PlayerWindow
             return Array.Empty<SegmentedFinding>();
 
         var proximityCalibration = CodingPipeProximityCalibrationPolicy.Resolve(
-            _codingOverlayService?.Calibration);
+            _codingOverlayToolHost.Calibration);
 
         return SegmentedFindingBuilder.Build(
             mmResult.SamResponse,

@@ -40,7 +40,7 @@ public partial class PlayerWindow
                 start.FrameBytes!,
                 captureTimestampSec,
                 start.FrameOsdMeter,
-                _codingOverlayService?.Calibration?.NominalDiameterMm,
+                _codingOverlayToolHost.NominalDiameterMm,
                 endMeter,
                 analysisCts.Token),
             new CodingMultiModelInferenceWorkflowActions(
@@ -48,7 +48,7 @@ public partial class PlayerWindow
                 AnalyzeFrameAsync: (frameBytes, classifierInput, cancellationToken) => multiModel.AnalyzeFrameAsync(
                     frameBytes,
                     classifierInput.NominalDiameterMm,
-                    _codingOverlayService?.Calibration,
+                    _codingOverlayToolHost.Calibration,
                     cancellationToken,
                     classifierInput.CurrentMeter,
                     classifierInput.ReachLength),

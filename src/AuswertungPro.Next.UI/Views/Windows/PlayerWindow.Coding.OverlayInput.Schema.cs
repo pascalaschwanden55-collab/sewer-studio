@@ -38,7 +38,7 @@ public partial class PlayerWindow
         {
             var schema = CreateCodingSchemaOverlay();
             if (schema == null) return true;
-            _codingSchemaManager.Activate(schema, _codingOverlayService?.Calibration);
+            _codingSchemaManager.Activate(schema, _codingOverlayToolHost.Calibration);
             _codingSchemaManager.Place(norm);
             UpdateCodingSchemaOverlay(enableCreateEvent: true);
             return true;

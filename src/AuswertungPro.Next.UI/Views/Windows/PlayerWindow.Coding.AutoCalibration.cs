@@ -15,13 +15,13 @@ public partial class PlayerWindow
     {
         await CodingAutoCalibrationWorkflow.ExecuteAsync(
             new CodingAutoCalibrationWorkflowRequest(
-                IsAlreadyCalibrated: _codingOverlayService?.IsCalibrated == true,
+                IsAlreadyCalibrated: _codingOverlayToolHost.IsCalibrated,
                 Fields: _haltungRecord?.Fields),
             new CodingAutoCalibrationWorkflowActions(
                 CaptureFrameAsync: CaptureCurrentFrameAsync,
                 TryAutoCalibrate: (frameBytes, nominalDn) =>
                     CodingAutoCalibrationFrameService.TryAutoCalibrate(frameBytes, nominalDn),
-                ApplyCalibration: calibration => _codingOverlayService?.SetCalibration(calibration),
+                ApplyCalibration: calibration => { _codingOverlayToolHost.SetCalibration(calibration); },
                 SetCodingAiState: (status, color, detail) => SetCodingAiState(status, color, detail),
                 TraceApplied: message => PlayerTrace.WriteLine(message),
                 TraceError: message => PlayerTrace.WriteLine($"[AutoCalib] Fehlgeschlagen: {message}")));

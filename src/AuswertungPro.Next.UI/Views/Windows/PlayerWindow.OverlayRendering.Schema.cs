@@ -7,7 +7,7 @@ public partial class PlayerWindow
     private void RenderReferenceDn()
     {
         _codingOverlayRenderController.RenderReferenceDn(
-            _codingOverlayService?.Calibration,
+            _codingOverlayToolHost.Calibration,
             _showReferenceDn);
     }
 }

@@ -12,6 +12,6 @@ public partial class PlayerWindow
 
         _codingOverlayRenderController.RenderAiOverlays(
             _codingSessionHost.Events,
-            _codingOverlayService?.Calibration);
+            _codingOverlayToolHost.Calibration);
     }
 }

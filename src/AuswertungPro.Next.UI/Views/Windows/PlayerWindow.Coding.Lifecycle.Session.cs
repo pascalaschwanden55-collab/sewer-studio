@@ -23,7 +23,7 @@ public partial class PlayerWindow
 
         var dnCalibration = CodingDnCalibrationPolicy.Build(_haltungRecord.Fields);
         if (dnCalibration.Calibration != null)
-            _codingOverlayService.SetCalibration(dnCalibration.Calibration);
+            _codingOverlayToolHost.SetCalibration(dnCalibration.Calibration);
         CodingSessionHeaderControls.ApplyCalibration(
             TxtCodingCalibDn,
             TxtCodingCalibStatus,

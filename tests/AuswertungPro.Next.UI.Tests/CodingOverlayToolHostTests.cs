@@ -27,6 +27,44 @@ public sealed class CodingOverlayToolHostTests
         Assert.Equal(1, service.CancelDrawCalls);
     }
 
+    [Fact]
+    public void Calibration_state_is_read_from_current_overlay_service()
+    {
+        var calibration = new PipeCalibration
+        {
+            NominalDiameterMm = 400,
+            NormalizedDiameter = 0.5,
+            Source = CalibrationSource.Auto
+        };
+        var service = new RecordingOverlayToolService();
+        service.SetCalibration(calibration);
+        var host = CreateHost(() => service);
+
+        Assert.Same(calibration, Get<PipeCalibration?>(host, "Calibration"));
+        Assert.Equal(400, Get<int?>(host, "NominalDiameterMm"));
+        Assert.True(Get<bool>(host, "IsCalibrated"));
+    }
+
+    [Fact]
+    public void SetCalibration_returns_false_without_service_and_forwards_when_available()
+    {
+        var calibration = new PipeCalibration
+        {
+            NominalDiameterMm = 300,
+            NormalizedDiameter = 0.4,
+            Source = CalibrationSource.Manual
+        };
+        var nullHost = CreateHost(() => null);
+
+        Assert.False(Invoke<bool>(nullHost, "SetCalibration", calibration));
+
+        var service = new RecordingOverlayToolService();
+        var host = CreateHost(() => service);
+
+        Assert.True(Invoke<bool>(host, "SetCalibration", calibration));
+        Assert.Same(calibration, service.Calibration);
+    }
+
     private static object CreateHost(Func<IOverlayToolService?> resolveOverlayService)
     {
         var hostType = typeof(PlayerKeyboardActionController).Assembly
@@ -43,6 +81,11 @@ public sealed class CodingOverlayToolHostTests
         => (T)target.GetType()
             .GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public)!
             .GetValue(target)!;
+
+    private static T Invoke<T>(object target, string methodName, params object?[] args)
+        => (T)target.GetType()
+            .GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public)!
+            .Invoke(target, args)!;
 
     private sealed class RecordingOverlayToolService : IOverlayToolService
     {

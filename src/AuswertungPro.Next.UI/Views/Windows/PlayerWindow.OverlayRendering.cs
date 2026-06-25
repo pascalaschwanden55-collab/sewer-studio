@@ -11,6 +11,6 @@ public partial class PlayerWindow
             overlay,
             isPreview,
             labelAnchor,
-            _codingOverlayService?.Calibration);
+            _codingOverlayToolHost.Calibration);
     }
 }
