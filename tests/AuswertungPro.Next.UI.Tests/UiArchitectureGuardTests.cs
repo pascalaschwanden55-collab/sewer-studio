@@ -117,6 +117,7 @@ public sealed class UiArchitectureGuardTests
         var dragPlaybackPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragPlayback.cs");
         var dragWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragWorkflow.cs");
         var activationWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowActivationWorkflow.cs");
+        var loadedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowLoadedWorkflow.cs");
         var headerControlsPath = Path.Combine(uiRoot, "Player", "PlayerWindowHeaderControls.cs");
         var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
 
@@ -125,6 +126,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(dragPlaybackPath), "PositionSlider-Drag-Pause-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dragWorkflowPath), "PositionSlider-Drag-Reihenfolge muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(activationWorkflowPath), "Fenster-Aktivierungs-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(loadedWorkflowPath), "Fenster-Loaded-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(headerControlsPath), "Player-Header-Control-Zuweisungen sollen ausserhalb des Konstruktors liegen.");
         Assert.True(File.Exists(closedWorkflowPath), "Closed-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -134,6 +136,7 @@ public sealed class UiArchitectureGuardTests
         var dragPlayback = File.Exists(dragPlaybackPath) ? File.ReadAllText(dragPlaybackPath) : "";
         var dragWorkflow = File.Exists(dragWorkflowPath) ? File.ReadAllText(dragWorkflowPath) : "";
         var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
+        var loadedWorkflow = File.Exists(loadedWorkflowPath) ? File.ReadAllText(loadedWorkflowPath) : "";
         var headerControls = File.Exists(headerControlsPath) ? File.ReadAllText(headerControlsPath) : "";
         var closedWorkflow = File.Exists(closedWorkflowPath) ? File.ReadAllText(closedWorkflowPath) : "";
 
@@ -151,13 +154,18 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void PlayerWindow_Closed", wiring);
         Assert.Contains("PlayerWindowActivationWorkflow.Deactivate", wiring);
         Assert.Contains("PlayerWindowActivationWorkflow.Activate", wiring);
+        Assert.Contains("PlayerWindowLoadedWorkflow.Execute", wiring);
         Assert.DoesNotContain("if (_codingOverlaySuspendDepth > 0)", wiring);
         Assert.DoesNotContain("if (!_deactivatedByExternalWindow)", wiring);
+        Assert.DoesNotContain("if (!string.IsNullOrWhiteSpace(_initialOverlayText))", wiring);
         Assert.Contains("PlayerWindowClosedWorkflow.Execute", wiring);
         Assert.Contains("public static class PlayerWindowClosedWorkflow", closedWorkflow);
         Assert.Contains("request.CodingOverlaySuspendDepth", activationWorkflow);
         Assert.Contains("actions.HideCodingOverlayForExternalWindow()", activationWorkflow);
         Assert.Contains("actions.RestoreCodingOverlayAfterExternalWindow()", activationWorkflow);
+        Assert.Contains("request.InitialOverlayText", loadedWorkflow);
+        Assert.Contains("actions.ScheduleLoadedViewportUpdate()", loadedWorkflow);
+        Assert.Contains("actions.ShowOverlay", loadedWorkflow);
         Assert.Contains("actions.StopCodingOsdTimer()", closedWorkflow);
         Assert.Contains("actions.StopLiveDetection()", closedWorkflow);
         Assert.DoesNotContain("Codier-Modus sauber", wiring);

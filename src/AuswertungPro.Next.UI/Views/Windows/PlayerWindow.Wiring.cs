@@ -77,23 +77,27 @@ public partial class PlayerWindow
             RestoreCodingOverlayAfterExternalWindow);
 
     private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
-    {
-        Play(_videoPath);
-        UpdateCodingOverlayViewport();
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(UpdateCodingOverlayViewport));
-        if (!string.IsNullOrWhiteSpace(_initialOverlayText))
-            ShowOverlay(_initialOverlayText!, TimeSpan.FromSeconds(6));
-
-        _damageMarkerController.Build();
-
-        Focusable = true;
-        Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
-        {
-            Activate();
-            Focus();
-            Keyboard.Focus(this);
-        }));
-    }
+        => PlayerWindowLoadedWorkflow.Execute(
+            new PlayerWindowLoadedWorkflowRequest(
+                _initialOverlayText,
+                TimeSpan.FromSeconds(6)),
+            new PlayerWindowLoadedWorkflowActions(
+                Play: () => Play(_videoPath),
+                UpdateCodingOverlayViewport,
+                ScheduleLoadedViewportUpdate: () => Dispatcher.BeginInvoke(
+                    DispatcherPriority.Loaded,
+                    new Action(UpdateCodingOverlayViewport)),
+                ShowOverlay,
+                BuildDamageMarkerTimeline: () => _damageMarkerController.Build(),
+                EnableFocusable: () => Focusable = true,
+                ScheduleFocusWindow: () => Dispatcher.BeginInvoke(
+                    DispatcherPriority.Input,
+                    new Action(() =>
+                    {
+                        Activate();
+                        Focus();
+                        Keyboard.Focus(this);
+                    }))));
 
     private void PlayerWindow_Closed(object? sender, EventArgs e)
     {
