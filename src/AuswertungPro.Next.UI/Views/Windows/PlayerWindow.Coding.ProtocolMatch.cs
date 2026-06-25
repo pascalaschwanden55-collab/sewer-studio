@@ -33,22 +33,22 @@ public partial class PlayerWindow
                 SyncVideoToCodingMeter: SyncVideoToCodingMeter));
     }
 
-    private void RunCodingProtocolMatch_Click(object sender, RoutedEventArgs e)
-    {
-        RunCodingProtocolMatch();
-    }
+    private void RunCodingProtocolMatch_Click(object sender, RoutedEventArgs e) => RunCodingProtocolMatch();
 
     private void RunCodingProtocolMatch()
     {
-        if (!_codingSessionHost.HasViewModel) return;
-
-        _lastCodingMatch = CodingProtocolMatchRunner.Run(
-            _codingImportEvents,
-            _codingSessionHost.Events,
-            _codingProtocolMatchBuckets);
-        UpdateCodingProtocolMatchSummary(_lastCodingMatch);
-        RefreshCodingEventsList();
-        Dispatcher.InvokeAsync(ApplyCodingProtocolMatchListHighlights, DispatcherPriority.Loaded);
+        CodingProtocolMatchCommandWorkflow.Execute(
+            new CodingProtocolMatchCommandRequest(_codingSessionHost.HasViewModel),
+            new CodingProtocolMatchCommandActions(
+                RunMatch: () => CodingProtocolMatchRunner.Run(
+                    _codingImportEvents,
+                    _codingSessionHost.Events,
+                    _codingProtocolMatchBuckets),
+                StoreMatch: routing => _lastCodingMatch = routing,
+                UpdateSummary: UpdateCodingProtocolMatchSummary,
+                RefreshEvents: RefreshCodingEventsList,
+                ScheduleHighlights: () =>
+                    Dispatcher.InvokeAsync(ApplyCodingProtocolMatchListHighlights, DispatcherPriority.Loaded)));
     }
 
     private void UpdateCodingProtocolMatchSummary(CodingMatchRouting? routing)

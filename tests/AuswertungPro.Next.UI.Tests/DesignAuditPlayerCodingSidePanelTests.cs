@@ -451,18 +451,25 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_runs_coding_protocol_match_from_import_and_ki_events()
     {
         var coding = ReadCodingPartials();
+        var workflow = ReadUiFile("Ai", "CodingProtocolMatchCommandWorkflow.cs");
         var runBody = ExtractMethodBody(coding, "private void RunCodingProtocolMatch()");
 
         Assert.Contains("using AuswertungPro.Next.Application.Ai.Evaluation;", coding);
         Assert.Contains("private CodingMatchRouting? _lastCodingMatch", coding);
         Assert.Contains("private readonly Dictionary<Guid, CodingProtocolMatchBucket>", coding);
+        Assert.Contains("CodingProtocolMatchCommandWorkflow.Execute", runBody);
         Assert.Contains("CodingProtocolMatchRunner.Run", runBody);
         Assert.DoesNotContain("CodingProtocolMatchService.Match", runBody);
         Assert.DoesNotContain("_codingImportEvents.Select(ev => ev.Entry).ToList()", runBody);
         Assert.DoesNotContain("_codingVm.Events.Select(ev => ev.Entry).ToList()", runBody);
         Assert.DoesNotContain("CodingProtocolMatchBucketBuilder.Rebuild", runBody);
-        Assert.Contains("UpdateCodingProtocolMatchSummary(_lastCodingMatch)", runBody);
-        Assert.Contains("RefreshCodingEventsList()", runBody);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", runBody);
+        Assert.Contains("if (!request.HasCodingViewModel)", workflow);
+        Assert.Contains("actions.RunMatch()", workflow);
+        Assert.Contains("actions.StoreMatch(routing)", workflow);
+        Assert.Contains("actions.UpdateSummary(routing)", workflow);
+        Assert.Contains("actions.RefreshEvents()", workflow);
+        Assert.Contains("actions.ScheduleHighlights()", workflow);
         Assert.Contains("CodingProtocolMatchHighlightControls.Apply", coding);
         Assert.Contains(
             "CodingProtocolMatchDisplayPolicy.BadgeText",

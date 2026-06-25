@@ -3522,20 +3522,27 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var protocolMatchPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
         var importSeekWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingImportEventSeekCommandWorkflow.cs");
+        var matchCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchCommandWorkflow.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchSummaryControls.cs");
 
         Assert.True(File.Exists(importSeekWorkflowPath), "Import-Event-Seek-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(matchCommandWorkflowPath), "Protocol-Match-Ausfuehrungsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Protocol-Match-Summary-Control-Zuweisung soll ausserhalb des PlayerWindow-Partials liegen.");
 
         var protocolMatch = File.ReadAllText(protocolMatchPath);
         var importSeekWorkflow = File.Exists(importSeekWorkflowPath) ? File.ReadAllText(importSeekWorkflowPath) : "";
+        var matchCommandWorkflow = File.Exists(matchCommandWorkflowPath) ? File.ReadAllText(matchCommandWorkflowPath) : "";
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
         var seekBody = ExtractMethodBody(protocolMatch, "private void SeekToImportEvent(object? selectedItem)");
+        var runBody = ExtractMethodBody(protocolMatch, "private void RunCodingProtocolMatch()");
 
         Assert.Contains("CodingImportEventSeekCommandWorkflow.Execute", seekBody);
+        Assert.Contains("CodingProtocolMatchCommandWorkflow.Execute", runBody);
         Assert.Contains("CodingProtocolMatchSummaryControls.Apply", protocolMatch);
         Assert.Contains("_codingSessionHost", protocolMatch);
         Assert.DoesNotContain("_codingVm", protocolMatch);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", protocolMatch);
+        Assert.DoesNotContain("_lastCodingMatch = CodingProtocolMatchRunner.Run", protocolMatch);
         Assert.DoesNotContain("CodingEventSeekPolicy.TryGetSeekMilliseconds", protocolMatch);
         Assert.DoesNotContain("importEvent.MeterAtCapture > 0", protocolMatch);
         Assert.DoesNotContain("_codingSessionRuntimeOwner.Service.MoveToMeter(importEvent.MeterAtCapture)", protocolMatch);
@@ -3544,6 +3551,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.MoveToMeter(importEvent.MeterAtCapture)", importSeekWorkflow);
         Assert.Contains("actions.MarkNavigationPending()", importSeekWorkflow);
         Assert.Contains("actions.SyncVideoToCodingMeter()", importSeekWorkflow);
+        Assert.Contains("if (!request.HasCodingViewModel)", matchCommandWorkflow);
+        Assert.Contains("var routing = actions.RunMatch()", matchCommandWorkflow);
+        Assert.Contains("actions.StoreMatch(routing)", matchCommandWorkflow);
+        Assert.Contains("actions.UpdateSummary(routing)", matchCommandWorkflow);
+        Assert.Contains("actions.RefreshEvents()", matchCommandWorkflow);
+        Assert.Contains("actions.ScheduleHighlights()", matchCommandWorkflow);
         Assert.DoesNotContain("TxtCodingProtocolMatchSummary.Text", protocolMatch);
         Assert.DoesNotContain("BtnAcceptGreenCodingMatches.IsEnabled", protocolMatch);
         Assert.Contains("CodingProtocolMatchSummaryFormatter.Format", controls);
