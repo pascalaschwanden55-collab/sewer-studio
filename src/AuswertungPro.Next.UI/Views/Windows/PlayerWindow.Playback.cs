@@ -49,10 +49,11 @@ public partial class PlayerWindow
             _playerPlaybackControlHost.SetPause);
 
     private void EnsurePlaying()
-    {
-        if (_playerPlaybackControlHost.ShouldStartPlayback)
-            Play(_videoPath);
-    }
+        => PlayerPlaybackStartWorkflow.EnsurePlaying(
+            new PlayerPlaybackEnsurePlayingRequest(
+                _playerPlaybackControlHost.ShouldStartPlayback,
+                _videoPath),
+            new PlayerPlaybackEnsurePlayingActions(Play));
 
     private void ChangeSpeed(float delta)
     {
@@ -69,11 +70,12 @@ public partial class PlayerWindow
             UpdateUi);
 
     private void Play(string path)
-    {
-        _playerPlaybackControlHost.PlayPath(path);
-        _timer.Start();
-        UpdateRateLabel();
-    }
+        => PlayerPlaybackStartWorkflow.Play(
+            new PlayerPlaybackStartRequest(path),
+            new PlayerPlaybackStartActions(
+                _playerPlaybackControlHost.PlayPath,
+                _timer.Start,
+                UpdateRateLabel));
 
     private void UpdateUi()
         => PlayerUiUpdateWorkflow.Execute(
