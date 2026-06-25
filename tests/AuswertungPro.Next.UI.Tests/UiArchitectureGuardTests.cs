@@ -6930,11 +6930,14 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var viewportPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Viewport.cs");
+        var redrawWorkflowPath = Path.Combine(uiRoot, "Player", "CodingCanvasRedrawWorkflow.cs");
 
         Assert.True(File.Exists(viewportPath), "Overlay-Viewport-Mapping soll aus dem allgemeinen OverlayInput-Partial heraus.");
+        Assert.True(File.Exists(redrawWorkflowPath), "Canvas-Redraw-Reihenfolge soll ausserhalb von PlayerWindow orchestriert werden.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var viewport = File.ReadAllText(viewportPath);
+        var redrawWorkflow = File.ReadAllText(redrawWorkflowPath);
 
         Assert.DoesNotContain("private Rect GetCodingContentRect", overlayInput);
         Assert.DoesNotContain("private NormalizedPoint CodingPixelToNorm", overlayInput);
@@ -6946,6 +6949,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_codingSessionHost", viewport);
         Assert.DoesNotContain("_codingVm", viewport);
         Assert.Contains("private void RedrawCodingCanvas", viewport);
+        Assert.Contains("CodingCanvasRedrawWorkflow.Execute", viewport);
+        Assert.DoesNotContain("if (_codingSchemaManager.IsActive)", viewport);
+        Assert.DoesNotContain("else if (includeManualOverlay", viewport);
+        Assert.Contains("actions.RenderActiveSchema()", redrawWorkflow);
+        Assert.Contains("actions.RenderManualOverlay()", redrawWorkflow);
     }
 
     [Fact]

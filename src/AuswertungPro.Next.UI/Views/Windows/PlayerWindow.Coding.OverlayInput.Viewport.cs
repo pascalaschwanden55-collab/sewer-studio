@@ -39,16 +39,18 @@ public partial class PlayerWindow
 
     private void RedrawCodingCanvas(bool includeManualOverlay)
     {
-        UpdateCodingOverlayViewport();
-        ClearTransientCodingCanvas(clearManualOverlay: true);
-        RenderAiOverlays();
-        RenderReferenceDn();
-
-        if (_codingSchemaManager.IsActive)
-            RenderActiveCodingSchema();
-        else if (includeManualOverlay && _codingSessionHost.CurrentOverlay != null)
-            RenderOverlayGeometry(_codingSessionHost.CurrentOverlay, isPreview: false);
-
-        UpdateToolBadge();
+        CodingCanvasRedrawWorkflow.Execute(
+            new CodingCanvasRedrawWorkflowRequest(
+                includeManualOverlay,
+                _codingSchemaManager.IsActive,
+                _codingSessionHost.CurrentOverlay != null),
+            new CodingCanvasRedrawWorkflowActions(
+                UpdateViewport: UpdateCodingOverlayViewport,
+                ClearTransientCanvas: ClearTransientCodingCanvas,
+                RenderAiOverlays: RenderAiOverlays,
+                RenderReferenceDn: RenderReferenceDn,
+                RenderActiveSchema: RenderActiveCodingSchema,
+                RenderManualOverlay: () => RenderOverlayGeometry(_codingSessionHost.CurrentOverlay!, isPreview: false),
+                UpdateToolBadge: UpdateToolBadge));
     }
 }
