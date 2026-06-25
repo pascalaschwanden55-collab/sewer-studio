@@ -12,52 +12,39 @@ public partial class PlayerWindow
     {
         snapshotPath = string.Empty;
         var playerWindow = _lastOpened;
-        if (playerWindow is null || playerWindow._closing || playerWindow._playbackDisposed)
-            return false;
-        var currentTime = playerWindow._playerTimelineHost.CurrentTime;
-        if (!playerWindow._playerPlaybackControlHost.IsPlaying && (!currentTime.HasValue || currentTime.Value <= TimeSpan.Zero))
-            return false;
+        var result = PlayerSnapshotWorkflow.TryTakeSnapshot(
+            new PlayerSnapshotRequest(
+                HasPlayerWindow: playerWindow is not null,
+                IsClosing: playerWindow?._closing == true,
+                IsPlaybackDisposed: playerWindow?._playbackDisposed == true,
+                IsPlaying: playerWindow?._playerPlaybackControlHost.IsPlaying == true,
+                CurrentTime: playerWindow?._playerTimelineHost.CurrentTime),
+            new PlayerSnapshotActions(
+                Capture: () =>
+                {
+                    var target = PlayerSnapshotPathPolicy.Create();
+                    var captured = PlayerSnapshotFileCaptureServiceFactory.Create()
+                        .TryCapture(target, path => playerWindow!.TakeSnapshotSafe(path), out var capturedPath);
+                    return new PlayerSnapshotCaptureResult(captured, capturedPath);
+                }));
 
-        try
-        {
-            var target = PlayerSnapshotPathPolicy.Create();
-            return PlayerSnapshotFileCaptureServiceFactory.Create()
-                .TryCapture(target, path => playerWindow.TakeSnapshotSafe(path), out snapshotPath);
-        }
-        catch
-        {
-            return false;
-        }
+        snapshotPath = result.SnapshotPath;
+        return result.Captured;
     }
 
     private bool TakeSnapshotSafe(string filePath, uint width = 0, uint height = 0)
-    {
-        if (_closing || _playbackDisposed)
-            return false;
-
-        var wasPlaying = false;
-        try
-        {
-            wasPlaying = PlayerSnapshotPauseStarter.PauseIfPlaying(
-                _playerPlaybackControlHost.IsPlaying,
-                _playerPlaybackControlHost.SetPause);
-            if (_closing || _playbackDisposed)
-                return false;
-
-            _playerMarqueeOverlayHost.Disable();
-            return _playerSnapshotCaptureHost.TakeSnapshot(filePath, width, height);
-        }
-        catch
-        {
-            return false;
-        }
-        finally
-        {
-            PlayerSnapshotPauseRestorer.ResumeIfNeeded(
-                wasPlaying,
-                _closing,
-                _playbackDisposed,
-                _playerPlaybackControlHost.SetPause);
-        }
-    }
+        => PlayerSnapshotWorkflow.TakeSnapshotSafe(
+            new PlayerSnapshotSafeRequest(_closing, _playbackDisposed),
+            new PlayerSnapshotSafeActions(
+                PauseIfPlaying: () => PlayerSnapshotPauseStarter.PauseIfPlaying(
+                    _playerPlaybackControlHost.IsPlaying,
+                    _playerPlaybackControlHost.SetPause),
+                IsPlaybackUnavailable: () => _closing || _playbackDisposed,
+                DisableMarqueeOverlay: _playerMarqueeOverlayHost.Disable,
+                TakeSnapshot: () => _playerSnapshotCaptureHost.TakeSnapshot(filePath, width, height),
+                ResumeIfNeeded: wasPlaying => PlayerSnapshotPauseRestorer.ResumeIfNeeded(
+                    wasPlaying,
+                    _closing,
+                    _playbackDisposed,
+                    _playerPlaybackControlHost.SetPause))).Captured;
 }

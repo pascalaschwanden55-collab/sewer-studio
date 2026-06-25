@@ -2346,12 +2346,14 @@ public sealed class UiArchitectureGuardTests
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotPathPolicy.cs");
         var captureServicePath = Path.Combine(uiRoot, "Player", "PlayerSnapshotFileCaptureService.cs");
         var pauseStarterPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotPauseStarter.cs");
+        var snapshotWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotWorkflow.cs");
         var snapshotHostPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotCaptureHost.cs");
         var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
 
         Assert.True(File.Exists(policyPath), "Temp-Pfad fuer Player-Snapshots muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(captureServicePath), "Snapshot-Datei-Capture muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pauseStarterPath), "Snapshot-Pause-Start muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(snapshotWorkflowPath), "Snapshot-Verfuegbarkeit und Capture-Reihenfolge sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(snapshotHostPath), "Direkter VLC-Snapshot-Capture soll ueber einen Host laufen.");
         Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
 
@@ -2361,9 +2363,12 @@ public sealed class UiArchitectureGuardTests
         var policy = File.ReadAllText(policyPath);
         var captureService = File.ReadAllText(captureServicePath);
         var pauseStarter = File.Exists(pauseStarterPath) ? File.ReadAllText(pauseStarterPath) : "";
+        var snapshotWorkflow = File.Exists(snapshotWorkflowPath) ? File.ReadAllText(snapshotWorkflowPath) : "";
         var snapshotHost = File.Exists(snapshotHostPath) ? File.ReadAllText(snapshotHostPath) : "";
         var mediaHostFactory = File.Exists(mediaHostFactoryPath) ? File.ReadAllText(mediaHostFactoryPath) : "";
 
+        Assert.Contains("PlayerSnapshotWorkflow.TryTakeSnapshot", snapshot);
+        Assert.Contains("PlayerSnapshotWorkflow.TakeSnapshotSafe", snapshot);
         Assert.Contains("PlayerSnapshotPathPolicy.Create", snapshot);
         Assert.Contains("PlayerSnapshotFileCaptureServiceFactory.Create", snapshot);
         Assert.Contains("_playerSnapshotCaptureHost.TakeSnapshot", snapshot);
@@ -2383,6 +2388,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_player.SetPause(true)", snapshot);
         Assert.DoesNotContain("PlayerSnapshotPauseDelay.WaitAfterPause", snapshot);
         Assert.Contains("PlayerSnapshotPauseDelay.WaitAfterPause", pauseStarter);
+        Assert.Contains("request.CurrentTime", snapshotWorkflow);
+        Assert.Contains("actions.Capture()", snapshotWorkflow);
+        Assert.Contains("actions.DisableMarqueeOverlay()", snapshotWorkflow);
         Assert.Contains("public static PlayerSnapshotTarget Build", policy);
         Assert.Contains("public static PlayerSnapshotTarget Create", policy);
     }
@@ -2454,22 +2462,29 @@ public sealed class UiArchitectureGuardTests
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var snapshotPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Snapshot.cs");
         var pauseRestorerPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotPauseRestorer.cs");
+        var snapshotWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotWorkflow.cs");
 
         Assert.True(File.Exists(snapshotPath), "Playback-Snapshot-Erzeugung soll aus dem allgemeinen Playback-Partial heraus.");
         Assert.True(File.Exists(pauseRestorerPath), "Snapshot-Pause-Resume muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(snapshotWorkflowPath), "Snapshot-Workflow muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var playback = File.ReadAllText(playbackPath);
         var snapshot = File.ReadAllText(snapshotPath);
         var pauseRestorer = File.Exists(pauseRestorerPath) ? File.ReadAllText(pauseRestorerPath) : "";
+        var snapshotWorkflow = File.Exists(snapshotWorkflowPath) ? File.ReadAllText(snapshotWorkflowPath) : "";
 
         Assert.DoesNotContain("public static bool TryTakeSnapshot", playback);
         Assert.DoesNotContain("private bool TakeSnapshotSafe", playback);
         Assert.Contains("public static bool TryTakeSnapshot", snapshot);
         Assert.Contains("private bool TakeSnapshotSafe", snapshot);
+        Assert.Contains("PlayerSnapshotWorkflow.TryTakeSnapshot", snapshot);
+        Assert.Contains("PlayerSnapshotWorkflow.TakeSnapshotSafe", snapshot);
         Assert.Contains("PlayerSnapshotPauseRestorer.ResumeIfNeeded", snapshot);
         Assert.DoesNotContain("_player.SetPause(false)", snapshot);
         Assert.DoesNotContain("AuswertungPro.Next.Application.Common.BestEffort.Try", snapshot);
         Assert.DoesNotContain("VLC: Pause aufheben", snapshot);
+        Assert.Contains("try", snapshotWorkflow);
+        Assert.Contains("finally", snapshotWorkflow);
         Assert.Contains("public static void ResumeIfNeeded", pauseRestorer);
         Assert.Contains("AuswertungPro.Next.Application.Common.BestEffort.Try", pauseRestorer);
     }
@@ -2485,12 +2500,14 @@ public sealed class UiArchitectureGuardTests
         var statePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.State.cs");
         var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayPolicy.cs");
+        var displayWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerOverlayDisplayWorkflow.cs");
         var disablerPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayDisabler.cs");
         var hostPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayHost.cs");
         var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
 
         Assert.True(File.Exists(overlayPath), "Playback-Marquee-Overlay-Wiring soll in einem eigenen Playback-Partial liegen.");
         Assert.True(File.Exists(policyPath), "VLC-Marquee-Anzeigeparameter muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(displayWorkflowPath), "Overlay-Anzeige-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(disablerPath), "VLC-Marquee-Deaktivieren muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(hostPath), "Direkte VLC-Marquee-Zugriffe sollen ueber einen Host laufen.");
         Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
@@ -2501,6 +2518,7 @@ public sealed class UiArchitectureGuardTests
         var state = File.ReadAllText(statePath);
         var windowRoot = File.ReadAllText(windowRootPath);
         var policy = File.ReadAllText(policyPath);
+        var displayWorkflow = File.Exists(displayWorkflowPath) ? File.ReadAllText(displayWorkflowPath) : "";
         var disabler = File.Exists(disablerPath) ? File.ReadAllText(disablerPath) : "";
         var host = File.Exists(hostPath) ? File.ReadAllText(hostPath) : "";
         var mediaHostFactory = File.Exists(mediaHostFactoryPath) ? File.ReadAllText(mediaHostFactoryPath) : "";
@@ -2509,7 +2527,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("public static bool TryShowOverlayOnLast", playback);
         Assert.Contains("private void ShowOverlay", overlay);
         Assert.Contains("public static bool TryShowOverlayOnLast", overlay);
-        Assert.Contains("PlayerMarqueeOverlayPolicy.BuildShow", overlay);
+        Assert.Contains("PlayerOverlayDisplayWorkflow.Show", overlay);
+        Assert.DoesNotContain("PlayerMarqueeOverlayPolicy.BuildShow", overlay);
+        Assert.Contains("PlayerMarqueeOverlayPolicy.BuildShow", displayWorkflow);
+        Assert.Contains("actions.ScheduleDisable", displayWorkflow);
         Assert.Contains("_playerMarqueeOverlayHost.Show", overlay);
         Assert.Contains("_playerMarqueeOverlayHost.Disable", overlay);
         Assert.Contains("_playerMarqueeOverlayHost.Disable", snapshot);

@@ -14,24 +14,17 @@ public partial class PlayerWindow
     }
 
     private void ShowOverlay(string text, TimeSpan duration)
-    {
-        if (_playbackDisposed)
-            return;
-
-        try
-        {
-            var marquee = PlayerMarqueeOverlayPolicy.BuildShow(text);
-            _playerMarqueeOverlayHost.Show(marquee);
-
-            var t = PlayerWindowTimerFactory.CreateOneShotTimer(duration, () =>
-            {
-                _playerMarqueeOverlayHost.Disable();
-            });
-            t.Start();
-        }
-        catch
-        {
-            // ignore overlay errors
-        }
-    }
+        => PlayerOverlayDisplayWorkflow.Show(
+            new PlayerOverlayDisplayWorkflowRequest(
+                _playbackDisposed,
+                text,
+                duration),
+            new PlayerOverlayDisplayWorkflowActions(
+                ShowMarquee: _playerMarqueeOverlayHost.Show,
+                ScheduleDisable: (disableAfter, disable) =>
+                {
+                    var timer = PlayerWindowTimerFactory.CreateOneShotTimer(disableAfter, disable);
+                    timer.Start();
+                },
+                DisableMarquee: _playerMarqueeOverlayHost.Disable));
 }
