@@ -50,7 +50,7 @@ public partial class PlayerWindow
                         framePosition.CurrentMeter,
                         framePosition.VideoTime),
                     ClearDetectionOverlays: ClearDetectionOverlays,
-                    ClearSamMasks: () => Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas),
+                    ClearSamMasks: () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
                     SetCodingAiState: (status, color, detail) => SetCodingAiState(status, color, detail)));
 
             var captureTimestampSec = preflight.CaptureTimestampSeconds;

@@ -59,7 +59,7 @@ public partial class PlayerWindow
                     new CodingMultiModelAnalysisResultWorkflowRequest(result, activityText),
                     new CodingMultiModelAnalysisResultWorkflowActions(
                         SetCodingAiState,
-                        () => Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas),
+                        () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
                         BuildCodingSegmentedFindings,
                         ShowMultiModelResults,
                         (findings, imageWidth, imageHeight, yoloMaxConfidence) => AddMultiModelFindingsAsEvents(

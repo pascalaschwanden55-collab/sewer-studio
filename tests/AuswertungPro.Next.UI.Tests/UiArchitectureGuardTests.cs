@@ -4002,18 +4002,23 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
         var segmentationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingSamMaskOverlayController.cs");
 
         Assert.True(File.Exists(segmentationPath), "SAM-Segmentierung und Maskenrendering sollen aus dem Marking-Orchestrator heraus.");
+        Assert.True(File.Exists(controllerPath), "SAM-Maskenrendering soll ueber einen Player-Controller laufen.");
 
         var marking = File.ReadAllText(markingPath);
         var segmentation = File.ReadAllText(segmentationPath);
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
 
         Assert.DoesNotContain("private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync", marking);
         Assert.DoesNotContain("private void ShowMarkSamMask", marking);
         Assert.Contains("private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync", segmentation);
         Assert.Contains("private void ShowMarkSamMask", segmentation);
         Assert.Contains("CodingMarkBoxQuantificationOverlayPolicy.Apply", segmentation);
-        Assert.Contains("Ai.Pipeline.SamMaskRenderer.RenderMasks", segmentation);
+        Assert.Contains("CodingSamMaskOverlayController.RenderMasks", segmentation);
+        Assert.DoesNotContain("Ai.Pipeline.SamMaskRenderer.RenderMasks", segmentation);
+        Assert.Contains("SamMaskRenderer.RenderMasks", controller);
         Assert.Contains("BendMarkerRenderer.Show", segmentation);
     }
 
@@ -4473,15 +4478,20 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
         var renderingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Rendering.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingSamMaskOverlayController.cs");
 
         Assert.True(File.Exists(renderingPath), "Multi-Model-Maskenanzeige soll aus dem allgemeinen Coding.Ai-Partial heraus.");
+        Assert.True(File.Exists(controllerPath), "SAM-Maskenrendering soll ausserhalb von PlayerWindow verdrahtet werden.");
 
         var ai = File.ReadAllText(aiPath);
         var rendering = File.ReadAllText(renderingPath);
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
 
         Assert.DoesNotContain("private void ShowMultiModelResults", ai);
         Assert.Contains("private void ShowMultiModelResults", rendering);
-        Assert.Contains("SamMaskRenderer.RenderCandidates", rendering);
+        Assert.Contains("CodingSamMaskOverlayController.RenderCandidates", rendering);
+        Assert.DoesNotContain("SamMaskRenderer.RenderCandidates", rendering);
+        Assert.Contains("SamMaskRenderer.RenderCandidates", controller);
         Assert.Contains("RenderReferenceDn", rendering);
     }
 

@@ -33,7 +33,7 @@ public partial class PlayerWindow
                 LookupVsaLabel,
                 message => PlayerTrace.WriteLine(message),
                 ClearDetectionOverlays,
-                () => Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas),
+                () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
                 (code, label) => CodingFindingsListControls.ShowPossibleBoundary(
                     CodingFindingsList,
                     code,

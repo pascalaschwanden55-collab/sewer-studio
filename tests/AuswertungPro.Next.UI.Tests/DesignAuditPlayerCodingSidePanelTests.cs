@@ -54,7 +54,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("CodingMultiModelAnalysisResultWorkflow.Execute", coding);
         Assert.Contains("CodingMultiModelFindingSummary.Build(segmented, result)", resultWorkflow);
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleCodingFindings", summary);
-        Assert.Contains("SamMaskRenderer.RenderCandidates", coding);
+        Assert.Contains("CodingSamMaskOverlayController.RenderCandidates", coding);
         Assert.Contains("findingSummary.VisibleCodierbar", resultWorkflow);
         Assert.DoesNotContain("AddMultiModelFindingsAsEvents(\r\n                    segmented.Where(s => s.Proximity.IsCodierbar).ToList()", coding);
     }

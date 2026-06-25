@@ -31,7 +31,7 @@ public partial class PlayerWindow
                 LookupVsaLabel,
                 ResolveFindingCodeForCoding,
                 ClearDetectionOverlays,
-                () => Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas),
+                () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
                 (finding, resolvedCode) => CodingFindingsListControls.ShowResolvedFinding(
                     CodingFindingsList,
                     finding,

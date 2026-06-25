@@ -45,7 +45,7 @@ public partial class PlayerWindow
             bool saved = await SaveMarkAsTrainingAsync(overlay, timestampSec, clockPos, frameBytes);
 
             // Nach dem Dialog alle transienten Markierungsartefakte entfernen.
-            Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+            CodingSamMaskOverlayController.Clear(CodingOverlayCanvas);
             BendMarkerRenderer.Clear(CodingOverlayCanvas);
             _codingSessionHost.ClearCurrentOverlay();
             RedrawCodingCanvas(includeManualOverlay: false);

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -11,7 +12,7 @@ public partial class PlayerWindow
     /// </summary>
     private void ShowMultiModelResults(SingleFrameResult mmResult, IReadOnlyList<SegmentedFinding> segmented)
     {
-        Ai.Pipeline.SamMaskRenderer.ClearMasks(CodingOverlayCanvas);
+        CodingSamMaskOverlayController.Clear(CodingOverlayCanvas);
 
         if (mmResult.SamResponse != null)
         {
@@ -22,17 +23,13 @@ public partial class PlayerWindow
             if (candidates.Count > 0)
             {
                 var maskContent = GetCodingContentRect();
-                Ai.Pipeline.SamMaskRenderer.RenderCandidates(
+                CodingSamMaskOverlayController.RenderCandidates(
                     CodingOverlayCanvas,
                     candidates,
                     mmResult.SamResponse.ImageWidth,
                     mmResult.SamResponse.ImageHeight,
-                    maskContent.Width,
-                    maskContent.Height,
-                    logger: _dependencies.LoggerFactory?.CreateLogger("SamMaskRenderer"),
-                    options: Ai.Pipeline.SamMaskRenderer.WinCanStyleOptions,
-                    offsetX: maskContent.X,
-                    offsetY: maskContent.Y);
+                    maskContent,
+                    logger: _dependencies.LoggerFactory?.CreateLogger(nameof(CodingSamMaskOverlayController)));
             }
         }
 

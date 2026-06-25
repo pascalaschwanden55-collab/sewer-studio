@@ -58,16 +58,11 @@ public partial class PlayerWindow
             var samResp = new Infrastructure.Ai.Pipeline.SamResponse(
                 new[] { result.Mask }, result.ImageWidth, result.ImageHeight, 0);
             // In das echte Video-Rechteck rendern, nicht in Letterbox-Raender.
-            Ai.Pipeline.SamMaskRenderer.RenderMasks(
+            CodingSamMaskOverlayController.RenderMasks(
                 CodingOverlayCanvas,
                 samResp,
                 new[] { result.Quant },
-                rect.Width,
-                rect.Height,
-                logger: null,
-                options: null,
-                offsetX: rect.X,
-                offsetY: rect.Y);
+                rect);
         }
         catch (Exception ex)
         {
