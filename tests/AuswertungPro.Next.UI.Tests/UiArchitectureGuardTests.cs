@@ -4968,6 +4968,34 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_overlay_input_drawing_state_access_is_routed_through_host()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var hostPath = Path.Combine(uiRoot, "Player", "CodingOverlayToolHost.cs");
+
+        var host = File.ReadAllText(hostPath);
+        Assert.Contains("bool IsDrawing", host);
+        Assert.Contains("bool IsMultiPointTool", host);
+        Assert.Contains("int DrawPointCount", host);
+
+        var overlayInputFiles = new[]
+        {
+            "PlayerWindow.Coding.OverlayInput.cs",
+            "PlayerWindow.Coding.OverlayInput.Standard.cs",
+            "PlayerWindow.Coding.OverlayInput.MultiPoint.cs"
+        };
+
+        foreach (var fileName in overlayInputFiles)
+        {
+            var text = File.ReadAllText(Path.Combine(windowsRoot, fileName));
+            Assert.Contains("_codingOverlayToolHost", text);
+            Assert.DoesNotContain("_codingOverlayService", text);
+        }
+    }
+
+    [Fact]
     public void PlayerWindow_coding_lifecycle_lives_in_lifecycle_partial()
     {
         var root = FindRepositoryRoot();

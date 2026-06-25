@@ -8,10 +8,10 @@ public partial class PlayerWindow
 {
     private void HandleCodingMultiPointMouseDown(NormalizedPoint norm)
     {
-        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel)
+        if (!_codingOverlayToolHost.HasOverlayService || !_codingSessionHost.HasViewModel)
             return;
 
-        if (_codingOverlayService.DrawPointCount == 0)
+        if (_codingOverlayToolHost.DrawPointCount == 0)
         {
             _codingSessionHost.ClearCurrentOverlay();
             CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false);
@@ -39,10 +39,10 @@ public partial class PlayerWindow
 
     private bool TryHandleCodingMultiPointMouseMove(NormalizedPoint norm)
     {
-        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel)
+        if (!_codingOverlayToolHost.HasOverlayService || !_codingSessionHost.HasViewModel)
             return false;
 
-        if (!_codingOverlayService.IsMultiPointTool || _codingOverlayService.DrawPointCount <= 0)
+        if (!_codingOverlayToolHost.IsMultiPointTool || _codingOverlayToolHost.DrawPointCount <= 0)
             return false;
 
         _codingSessionHost.UpdateMultiPointOverlayPreview(norm);

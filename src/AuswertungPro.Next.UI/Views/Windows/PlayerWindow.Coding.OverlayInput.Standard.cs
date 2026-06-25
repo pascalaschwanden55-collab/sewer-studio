@@ -25,10 +25,10 @@ public partial class PlayerWindow
 
     private bool TryHandleCodingStandardMouseMove(NormalizedPoint norm)
     {
-        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel)
+        if (!_codingOverlayToolHost.HasOverlayService || !_codingSessionHost.HasViewModel)
             return false;
 
-        if (!_codingOverlayService.IsDrawing)
+        if (!_codingOverlayToolHost.IsDrawing)
             return false;
 
         _codingSessionHost.UpdateOverlayDraw(norm);
@@ -46,10 +46,10 @@ public partial class PlayerWindow
 
     private bool TryHandleCodingStandardMouseUp(NormalizedPoint norm)
     {
-        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel)
+        if (!_codingOverlayToolHost.HasOverlayService || !_codingSessionHost.HasViewModel)
             return false;
 
-        if (!_codingOverlayService.IsDrawing)
+        if (!_codingOverlayToolHost.IsDrawing)
             return false;
 
         _codingSessionHost.CompleteOverlayDraw(norm);

@@ -9,6 +9,9 @@ public interface ICodingOverlayToolHost
     OverlayToolType ActiveTool { get; }
     LevelMode ActiveLevelMode { get; }
     bool PipeBendSnapEnabled { get; }
+    bool IsDrawing { get; }
+    bool IsMultiPointTool { get; }
+    int DrawPointCount { get; }
     PipeCalibration? Calibration { get; }
     int? NominalDiameterMm { get; }
     bool IsCalibrated { get; }
@@ -35,6 +38,12 @@ public sealed class CodingOverlayToolHost : ICodingOverlayToolHost
     public LevelMode ActiveLevelMode => _resolveOverlayService()?.ActiveLevelMode ?? LevelMode.Deposit;
 
     public bool PipeBendSnapEnabled => _resolveOverlayService()?.PipeBendSnapEnabled == true;
+
+    public bool IsDrawing => _resolveOverlayService()?.IsDrawing == true;
+
+    public bool IsMultiPointTool => _resolveOverlayService()?.IsMultiPointTool == true;
+
+    public int DrawPointCount => _resolveOverlayService()?.DrawPointCount ?? 0;
 
     public PipeCalibration? Calibration => _resolveOverlayService()?.Calibration;
 

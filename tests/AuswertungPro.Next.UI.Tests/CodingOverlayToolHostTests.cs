@@ -98,6 +98,28 @@ public sealed class CodingOverlayToolHostTests
         Assert.Equal(LevelMode.Obstacle, service.ActiveLevelMode);
     }
 
+    [Fact]
+    public void Drawing_state_is_read_from_current_overlay_service()
+    {
+        var nullHost = CreateHost(() => null);
+
+        Assert.False(Get<bool>(nullHost, "IsDrawing"));
+        Assert.False(Get<bool>(nullHost, "IsMultiPointTool"));
+        Assert.Equal(0, Get<int>(nullHost, "DrawPointCount"));
+
+        var service = new RecordingOverlayToolService
+        {
+            IsDrawing = true,
+            IsMultiPointTool = true,
+            DrawPointCount = 2
+        };
+        var host = CreateHost(() => service);
+
+        Assert.True(Get<bool>(host, "IsDrawing"));
+        Assert.True(Get<bool>(host, "IsMultiPointTool"));
+        Assert.Equal(2, Get<int>(host, "DrawPointCount"));
+    }
+
     private static object CreateHost(Func<IOverlayToolService?> resolveOverlayService)
     {
         var hostType = typeof(PlayerKeyboardActionController).Assembly
@@ -128,10 +150,10 @@ public sealed class CodingOverlayToolHostTests
         public bool PipeBendSnapEnabled { get; set; }
         public PipeCalibration? Calibration { get; private set; }
         public bool IsCalibrated => Calibration?.IsCalibrated == true;
-        public bool IsDrawing => false;
-        public bool IsMultiPointTool => false;
+        public bool IsDrawing { get; set; }
+        public bool IsMultiPointTool { get; set; }
         public int RequiredPointCount => 0;
-        public int DrawPointCount => 0;
+        public int DrawPointCount { get; set; }
         public IReadOnlyList<NormalizedPoint> DrawPoints => [];
         public NormalizedPoint? DrawStartPoint => null;
         public NormalizedPoint? DrawCurrentPoint => null;

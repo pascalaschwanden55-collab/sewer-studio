@@ -24,7 +24,7 @@ public partial class PlayerWindow
             return;
         }
 
-        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel) return;
+        if (!_codingOverlayToolHost.HasOverlayService || !_codingSessionHost.HasViewModel) return;
         var pos = e.GetPosition(CodingOverlayCanvas);
         var norm = CodingPixelToNorm(pos);
 
@@ -36,7 +36,7 @@ public partial class PlayerWindow
         if (TryHandleCodingSchemaMouseDown(norm))
             return;
 
-        if (_codingOverlayService.IsMultiPointTool)
+        if (_codingOverlayToolHost.IsMultiPointTool)
         {
             HandleCodingMultiPointMouseDown(norm);
             return; // Kein CaptureMouse bei Multi-Punkt
@@ -54,7 +54,7 @@ public partial class PlayerWindow
             return;
         }
 
-        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel) return;
+        if (!_codingOverlayToolHost.HasOverlayService || !_codingSessionHost.HasViewModel) return;
         var pos = e.GetPosition(CodingOverlayCanvas);
         var norm = CodingPixelToNorm(pos);
 
@@ -80,7 +80,7 @@ public partial class PlayerWindow
             return;
         }
 
-        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel) return;
+        if (!_codingOverlayToolHost.HasOverlayService || !_codingSessionHost.HasViewModel) return;
         var pos = e.GetPosition(CodingOverlayCanvas);
         var norm = CodingPixelToNorm(pos);
 
