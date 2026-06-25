@@ -5048,6 +5048,39 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_osd_reads_player_timeline_through_host()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var hostPath = Path.Combine(uiRoot, "Player", "PlayerTimelineHost.cs");
+        var osdPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.cs");
+        var readingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Reading.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
+
+        Assert.True(File.Exists(hostPath), "Player-Zeit/Dauer soll ueber einen PlayerTimelineHost gelesen werden.");
+
+        var host = File.ReadAllText(hostPath);
+        var osd = File.ReadAllText(osdPath);
+        var reading = File.ReadAllText(readingPath);
+        var state = File.ReadAllText(statePath);
+        var windowRoot = File.ReadAllText(windowRootPath);
+
+        Assert.Contains("public sealed class PlayerTimelineHost", host);
+        Assert.Contains("double? CurrentSeconds", host);
+        Assert.Contains("double? DurationSeconds", host);
+        Assert.Contains("private readonly PlayerTimelineHost _playerTimelineHost", state);
+        Assert.Contains("new PlayerTimelineHost", windowRoot);
+        Assert.Contains("_playerTimelineHost", osd);
+        Assert.Contains("_playerTimelineHost", reading);
+        Assert.DoesNotContain("_player.", osd);
+        Assert.DoesNotContain("_player?.", osd);
+        Assert.DoesNotContain("_player.", reading);
+        Assert.DoesNotContain("_player?.", reading);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_lifecycle_lives_in_lifecycle_partial()
     {
         var root = FindRepositoryRoot();

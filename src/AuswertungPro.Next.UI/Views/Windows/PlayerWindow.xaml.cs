@@ -86,6 +86,11 @@ public partial class PlayerWindow : Window
             Speed4Button,
             Speed8Button);
 
+        _playerTimelineHost = new PlayerTimelineHost(
+            readTimeMilliseconds: () => _player.Time,
+            readLengthMilliseconds: () => _player.Length,
+            seekMilliseconds: milliseconds => _player.Time = milliseconds);
+
         _markToolControls = new PlayerMarkToolControls(
             MarkToolPopup,
             CodingMarkToolPopup,

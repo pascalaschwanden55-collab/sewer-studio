@@ -21,24 +21,20 @@ public partial class PlayerWindow
 
     private double ResolveCodingMeterForFrame(double? frameTimestampSeconds, double? sameFrameOsdMeter = null)
     {
-        var durationSeconds = _player != null ? _player.Length / 1000.0 : (double?)null;
-        var currentPlayerSeconds = _player != null ? _player.Time / 1000.0 : (double?)null;
         return _codingOsdMeterController.ResolveMeter(new CodingOsdMeterResolveRequest(
             FrameTimestampSeconds: frameTimestampSeconds,
             SameFrameOsdMeter: sameFrameOsdMeter,
-            CurrentPlayerSeconds: currentPlayerSeconds,
-            DurationSeconds: durationSeconds,
+            CurrentPlayerSeconds: _playerTimelineHost.CurrentSeconds,
+            DurationSeconds: _playerTimelineHost.DurationSeconds,
             EndMeter: _codingSessionHost.EndMeter,
             CurrentMeter: _codingSessionHost.CurrentMeter));
     }
 
     private double? GetMeterFromVideoPosition()
     {
-        var currentPlayerSeconds = _player != null ? _player.Time / 1000.0 : (double?)null;
-        var durationSeconds = _player != null ? _player.Length / 1000.0 : (double?)null;
         return _codingOsdMeterController.EstimateFromVideo(
-            currentPlayerSeconds,
-            durationSeconds,
+            _playerTimelineHost.CurrentSeconds,
+            _playerTimelineHost.DurationSeconds,
             _codingSessionHost.EndMeter);
     }
 
