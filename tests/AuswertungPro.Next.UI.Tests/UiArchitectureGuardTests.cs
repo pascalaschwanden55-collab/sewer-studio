@@ -1007,15 +1007,18 @@ public sealed class UiArchitectureGuardTests
         var controlsPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Controls.cs");
         var commandRunnerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackCommandRunner.cs");
         var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerUiUpdateWorkflow.cs");
+        var sliderValueChangedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderValueChangedWorkflow.cs");
 
         Assert.True(File.Exists(controlsPath), "Playback-Button- und Slider-Wiring soll in ein eigenes Partial.");
         Assert.True(File.Exists(commandRunnerPath), "Playback-Button-Kommandos sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(uiUpdateWorkflowPath), "Playback-UI-Update-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(sliderValueChangedWorkflowPath), "PositionSlider-ValueChanged-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var playback = File.ReadAllText(playbackPath);
         var controls = File.ReadAllText(controlsPath);
         var commandRunner = File.Exists(commandRunnerPath) ? File.ReadAllText(commandRunnerPath) : "";
         var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
+        var sliderValueChangedWorkflow = File.Exists(sliderValueChangedWorkflowPath) ? File.ReadAllText(sliderValueChangedWorkflowPath) : "";
 
         Assert.DoesNotContain("private void Play_Click", playback);
         Assert.DoesNotContain("private void PositionSlider_ValueChanged", playback);
@@ -1041,6 +1044,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerSliderSeekController.SeekToSlider", controls);
         Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", controls);
         Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", controls);
+        Assert.Contains("PlayerPositionSliderValueChangedWorkflow.Execute", controls);
+        Assert.DoesNotContain("if (_isDragging)", controls);
         Assert.DoesNotContain("PlayerPlaybackState.ResolveSliderSeekTarget", controls);
         Assert.Contains("_speedControls.Update", controls);
         Assert.Contains("public static class PlayerPlaybackCommandRunner", commandRunner);
@@ -1050,6 +1055,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("request.IsDragging", uiUpdateWorkflow);
         Assert.Contains("actions.ApplyPlaybackState", uiUpdateWorkflow);
         Assert.Contains("actions.UpdateCodingCurrentCode", uiUpdateWorkflow);
+        Assert.Contains("request.IsDragging", sliderValueChangedWorkflow);
+        Assert.Contains("actions.UpdateSeekPreview()", sliderValueChangedWorkflow);
     }
 
     [Fact]

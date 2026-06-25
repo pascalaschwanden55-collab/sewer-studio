@@ -35,10 +35,9 @@ public partial class PlayerWindow
     private void Speed8_Click(object sender, RoutedEventArgs e) => SetSpeed(8.0f);
 
     private void PositionSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (_isDragging)
-            UpdateSeekPreview();
-    }
+        => PlayerPositionSliderValueChangedWorkflow.Execute(
+            new PlayerPositionSliderValueChangedWorkflowRequest(_isDragging),
+            new PlayerPositionSliderValueChangedWorkflowActions(UpdateSeekPreview));
 
     private void SeekToSlider()
     {
