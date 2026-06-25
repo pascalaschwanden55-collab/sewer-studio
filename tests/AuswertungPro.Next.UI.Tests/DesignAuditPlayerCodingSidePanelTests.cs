@@ -325,13 +325,16 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
         var multiModelBody = ExtractMethodBody(coding, "private void AddMultiModelFindingsAsEvents");
+        var multiModelCommandWorkflow = ReadUiFile("Ai", "CodingMultiModelFindingEventCommandWorkflow.cs");
         var qwenBody = ExtractMethodBody(coding, "private void AddAiFindingsAsEvents");
         var qwenCommandWorkflow = ReadUiFile("Ai", "CodingLiveFindingEventCommandWorkflow.cs");
         var boundaryBody = ExtractMethodBody(coding, "private bool TryHandleBoundaryClassifierResult");
 
         Assert.Contains("CodingAnalysisPreflightWorkflow.Execute", runBody);
         Assert.Contains("ResolveCodingMeterForFrame(timestamp)", runBody);
-        Assert.Contains("ResolveCodingMeterForFrame(captureTimestampSec", multiModelBody);
+        Assert.Contains("ResolveMeterForFrame: (timestamp, osdMeter)", multiModelBody);
+        Assert.Contains("request.CaptureTimestampSeconds", multiModelCommandWorkflow);
+        Assert.Contains("request.FrameOsdMeter", multiModelCommandWorkflow);
         Assert.Contains("ResolveMeterForFrame: (timestamp, osdMeter)", qwenBody);
         Assert.Contains("request.Result.TimestampSeconds", qwenCommandWorkflow);
         Assert.Contains("request.Result.MeterReading", qwenCommandWorkflow);

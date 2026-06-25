@@ -1938,28 +1938,37 @@ public sealed class UiArchitectureGuardTests
         var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
         var multiModelPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.MultiModel.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelFindingEventWorkflow.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelFindingEventCommandWorkflow.cs");
         var addDecisionPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelFindingAddDecisionPolicy.cs");
 
         Assert.True(File.Exists(multiModelPath), "Multi-Model-Event-Erzeugung soll aus dem allgemeinen AiEvents-Partial heraus.");
         Assert.True(File.Exists(workflowPath), "Multi-Model-Event-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(commandWorkflowPath), "Multi-Model-Event-Befehl soll die Fenster-Guards ausserhalb der PlayerWindow-Partials koordinieren.");
         Assert.True(File.Exists(addDecisionPath), "Multi-Model-Add-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var aiEvents = File.ReadAllText(aiEventsPath);
         var multiModel = File.ReadAllText(multiModelPath);
         var workflow = File.ReadAllText(workflowPath);
+        var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
         var addDecision = File.ReadAllText(addDecisionPath);
 
         Assert.Contains("_codingSessionHost", aiEvents);
         Assert.DoesNotContain("_codingVm", aiEvents);
         Assert.DoesNotContain("private void AddMultiModelFindingsAsEvents", aiEvents);
         Assert.Contains("private void AddMultiModelFindingsAsEvents", multiModel);
+        Assert.Contains("CodingMultiModelFindingEventCommandWorkflow.Execute", multiModel);
         Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", multiModel);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel || codingSessionService == null) return", multiModel);
+        Assert.DoesNotContain("double meter = ResolveCodingMeterForFrame", multiModel);
         Assert.DoesNotContain("CodingSegmentedFindingFrameMapper.Build", multiModel);
         Assert.DoesNotContain("CodingMultiModelQualityGatePolicy.Evaluate", multiModel);
         Assert.DoesNotContain("CodingMultiModelFindingAddDecisionPolicy.Decide", multiModel);
         Assert.DoesNotContain("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", multiModel);
         Assert.DoesNotContain("CodingOneTimeCodeDuplicatePolicy.AlreadyExists", multiModel);
         Assert.DoesNotContain("CodingFindingCoveragePolicy.FindCoveringEvent", multiModel);
+        Assert.Contains("actions.ResolveMeterForFrame", commandWorkflow);
+        Assert.Contains("actions.ApplyStretchTracking", commandWorkflow);
+        Assert.Contains("actions.ExecuteFindingWorkflow", commandWorkflow);
         Assert.Contains("public static class CodingMultiModelFindingEventWorkflow", workflow);
         Assert.Contains("CodingSegmentedFindingFrameMapper.Build", workflow);
         Assert.Contains("CodingMultiModelQualityGatePolicy.Evaluate", workflow);
