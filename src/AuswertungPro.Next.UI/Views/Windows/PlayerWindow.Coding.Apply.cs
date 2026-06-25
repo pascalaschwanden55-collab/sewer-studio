@@ -32,21 +32,19 @@ public partial class PlayerWindow
 
     private bool ConfirmUnappliedCodingChangesOnClose()
     {
-        if (!HasUnappliedCodingChanges())
-            return true;
+        var result = CodingUnappliedChangesCloseWorkflow.Execute(
+            new CodingUnappliedChangesCloseWorkflowRequest(
+                IsCodingMode: _isCodingMode,
+                HasCodingViewModel: _codingSessionHost.HasViewModel,
+                Events: _codingSessionHost.Events,
+                BaselineSignature: _codingBaselineSignature),
+            new CodingUnappliedChangesCloseWorkflowActions(
+                BuildSignature: CodingEventsSignatureBuilder.Build,
+                ConfirmWithSuspendedOverlay: () => RunWithSuspendedCodingOverlayInput(() =>
+                    CodingApplyDialogServiceFactory.Create()
+                        .ConfirmUnappliedChangesOnClose(() => ApplyCodingChanges(showOverlay: false)))));
 
-        return RunWithSuspendedCodingOverlayInput(() =>
-            CodingApplyDialogServiceFactory.Create()
-                .ConfirmUnappliedChangesOnClose(() => ApplyCodingChanges(showOverlay: false)));
-    }
-
-    private bool HasUnappliedCodingChanges()
-    {
-        if (!_isCodingMode || !_codingSessionHost.HasViewModel)
-            return false;
-
-        var current = CodingEventsSignatureBuilder.Build(_codingSessionHost.Events);
-        return !string.Equals(current, _codingBaselineSignature, StringComparison.Ordinal);
+        return result.ShouldClose;
     }
 
     private void MarkProjectDirtyForCoding()

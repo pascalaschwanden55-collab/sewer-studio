@@ -20,50 +20,38 @@ public partial class PlayerWindow
 
     private async Task HandleMarkDrawingCompleteAsync()
     {
-        try
-        {
-            var overlay = _codingSessionHost.CurrentOverlay;
-            if (overlay == null)
-                return;
+        await LiveDetectionManualMarkCompletionCommandWorkflow.ExecuteAsync<Infrastructure.Ai.Pipeline.BoxSegmentationResult>(
+            new LiveDetectionManualMarkCompletionCommandActions<Infrastructure.Ai.Pipeline.BoxSegmentationResult>(
+                GetCurrentOverlay: () => _codingSessionHost.CurrentOverlay,
+                GetTimestampSeconds: () => _playerTimelineHost.CurrentSecondsOrZero,
+                CaptureCurrentFrameAsync: CaptureCurrentFrameAsync,
+                EstimateClockPosition: LiveDetectionGeometryMapper.EstimateClockFromOverlayCenter,
+                SegmentMarkAsync: TrySegmentMarkBoxAsync,
+                GetSegmentClockPosition: result => result.Quant.ClockPosition,
+                ShowSegment: (result, overlay) => ShowMarkSamMask(result, overlay),
+                DelayAfterSegmentAsync: LiveDetectionManualMarkCompletionCommandWorkflow.DelayAfterSegmentPreviewAsync,
+                SaveTrainingAsync: SaveMarkAsTrainingAsync,
+                CompleteManualMark: CompleteManualMark,
+                TraceError: message => PlayerTrace.WriteLine($"[PlayerWindow] HandleMarkDrawingComplete error: {message}")));
+    }
 
-            var timestampSec = _playerTimelineHost.CurrentSecondsOrZero;
-            var frameBytes = await CaptureCurrentFrameAsync();
-
-            string? clockPos = LiveDetectionGeometryMapper.EstimateClockFromOverlayCenter(overlay);
-
-            var samResult = await TrySegmentMarkBoxAsync(overlay, frameBytes);
-            if (!string.IsNullOrEmpty(samResult?.Quant.ClockPosition))
-                clockPos = samResult!.Quant.ClockPosition;
-
-            if (samResult != null)
-            {
-                ShowMarkSamMask(samResult, overlay);
-                // SAM-Maske kurz sichtbar lassen, bevor der Code-Dialog oeffnet.
-                await Task.Delay(3000);
-            }
-
-            bool saved = await SaveMarkAsTrainingAsync(overlay, timestampSec, clockPos, frameBytes);
-
-            LiveDetectionManualMarkCompletionWorkflow.Execute(
-                new LiveDetectionManualMarkCompletionWorkflowRequest(
-                    saved,
-                    _isCodingMode,
-                    _markToolType),
-                new LiveDetectionManualMarkCompletionWorkflowActions(
-                    ClearSamMasks: () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
-                    ClearBendMarker: () => CodingBendMarkerOverlayController.Clear(CodingOverlayCanvas),
-                    ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
-                    RedrawCodingCanvasWithoutManualOverlay: () => RedrawCodingCanvas(includeManualOverlay: false),
-                    DeactivateMarkTool: DeactivateMarkTool,
-                    SetActiveTool: tool => _codingOverlayToolHost.SetActiveTool(tool),
-                    ApplyCrossCursor: () => CodingOverlayInputControls.ApplyCanvasCursor(
-                        CodingOverlayCanvas,
-                        useCrossCursor: true)));
-        }
-        catch (Exception ex)
-        {
-            PlayerTrace.WriteLine($"[PlayerWindow] HandleMarkDrawingComplete error: {ex.Message}");
-        }
+    private void CompleteManualMark(bool saved)
+    {
+        LiveDetectionManualMarkCompletionWorkflow.Execute(
+            new LiveDetectionManualMarkCompletionWorkflowRequest(
+                saved,
+                _isCodingMode,
+                _markToolType),
+            new LiveDetectionManualMarkCompletionWorkflowActions(
+                ClearSamMasks: () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
+                ClearBendMarker: () => CodingBendMarkerOverlayController.Clear(CodingOverlayCanvas),
+                ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
+                RedrawCodingCanvasWithoutManualOverlay: () => RedrawCodingCanvas(includeManualOverlay: false),
+                DeactivateMarkTool: DeactivateMarkTool,
+                SetActiveTool: tool => _codingOverlayToolHost.SetActiveTool(tool),
+                ApplyCrossCursor: () => CodingOverlayInputControls.ApplyCanvasCursor(
+                    CodingOverlayCanvas,
+                    useCrossCursor: true)));
     }
 
     private void ShowOsdMeterStatus(string message, bool resetAfterDelay)
