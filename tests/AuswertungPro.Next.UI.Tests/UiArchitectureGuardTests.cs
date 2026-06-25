@@ -1451,15 +1451,20 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var liveDetectionPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.cs");
         var overlayPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Overlay.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionOverlayController.cs");
 
         Assert.True(File.Exists(overlayPath), "LiveDetection-Overlay-Rendering soll in ein eigenes Overlay-Partial.");
+        Assert.True(File.Exists(controllerPath), "LiveDetection-Overlay-Rendering soll ueber einen Player-Controller laufen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var overlay = File.ReadAllText(overlayPath);
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
 
         Assert.DoesNotContain("private void RenderDetectionOverlay", liveDetection);
         Assert.Contains("private void RenderDetectionOverlay", overlay);
-        Assert.Contains("LiveDetectionOverlayRenderer.Render", overlay);
+        Assert.Contains("LiveDetectionOverlayController.Render", overlay);
+        Assert.DoesNotContain("LiveDetectionOverlayRenderer.Render", overlay);
+        Assert.Contains("LiveDetectionOverlayRenderer.Render", controller);
         Assert.Contains("OnFindingClicked", overlay);
     }
 
