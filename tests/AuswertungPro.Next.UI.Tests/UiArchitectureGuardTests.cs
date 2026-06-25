@@ -6132,22 +6132,34 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var multiPointPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.MultiPoint.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiPointOverlayDrawWorkflow.cs");
 
         Assert.True(File.Exists(multiPointPath), "Multi-Point-OverlayInput soll aus dem allgemeinen Mouseflow heraus.");
+        Assert.True(File.Exists(workflowPath), "Multi-Point-Overlay-Zeichenablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var multiPoint = File.ReadAllText(multiPointPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.DoesNotContain("OnCanvasMultiPointClick", overlayInput);
         Assert.DoesNotContain("OnCanvasMultiPointMove", overlayInput);
         Assert.Contains("private void HandleCodingMultiPointMouseDown", multiPoint);
         Assert.Contains("private bool TryHandleCodingMultiPointMouseMove", multiPoint);
+        Assert.Contains("CodingMultiPointOverlayDrawWorkflow.MouseDown", multiPoint);
+        Assert.Contains("CodingMultiPointOverlayDrawWorkflow.MouseMove", multiPoint);
         Assert.Contains("_codingSessionHost", multiPoint);
         Assert.DoesNotContain("_codingVm", multiPoint);
         Assert.DoesNotContain("OnCanvasMultiPointClick", multiPoint);
         Assert.DoesNotContain("OnCanvasMultiPointMove", multiPoint);
         Assert.Contains("AddMultiPointOverlayPoint", multiPoint);
         Assert.Contains("UpdateMultiPointOverlayPreview", multiPoint);
+        Assert.DoesNotContain("if (!_codingOverlayToolHost.HasOverlayService", multiPoint);
+        Assert.DoesNotContain("if (_codingOverlayToolHost.DrawPointCount == 0)", multiPoint);
+        Assert.DoesNotContain("if (BtnCodingLiveAi.IsChecked == true", multiPoint);
+        Assert.Contains("actions.AddMultiPointOverlayPoint()", workflow);
+        Assert.Contains("actions.RenderPreviewOverlay()", workflow);
+        Assert.Contains("actions.RenderFinalOverlay()", workflow);
+        Assert.Contains("actions.AnalyzeWithOverlayHint()", workflow);
     }
 
     [Fact]
