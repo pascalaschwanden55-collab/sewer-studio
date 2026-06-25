@@ -77,6 +77,10 @@ public partial class PlayerWindow : Window
                 _player.Play(media);
             });
 
+        _playerMarqueeOverlayHost = new PlayerMarqueeOverlayHost(
+            setMarqueeInt: (option, value) => _player.SetMarqueeInt(option, value),
+            setMarqueeString: (option, value) => _player.SetMarqueeString(option, value));
+
         _damageMarkerController = new DamageMarkerController(
             DamageMarkerCanvas,
             PositionSlider,

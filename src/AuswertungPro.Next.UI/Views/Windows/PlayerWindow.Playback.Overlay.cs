@@ -1,6 +1,5 @@
 using System;
 using AuswertungPro.Next.UI.Player;
-using LibVLCSharp.Shared;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -22,17 +21,11 @@ public partial class PlayerWindow
         try
         {
             var marquee = PlayerMarqueeOverlayPolicy.BuildShow(text);
-            _player.SetMarqueeInt(VideoMarqueeOption.Enable, marquee.Enable);
-            _player.SetMarqueeInt(VideoMarqueeOption.X, marquee.X);
-            _player.SetMarqueeInt(VideoMarqueeOption.Y, marquee.Y);
-            _player.SetMarqueeInt(VideoMarqueeOption.Size, marquee.Size);
-            _player.SetMarqueeInt(VideoMarqueeOption.Color, marquee.Color);
-            _player.SetMarqueeInt(VideoMarqueeOption.Opacity, marquee.Opacity);
-            _player.SetMarqueeString(VideoMarqueeOption.Text, marquee.Text);
+            _playerMarqueeOverlayHost.Show(marquee);
 
             var t = PlayerWindowTimerFactory.CreateOneShotTimer(duration, () =>
             {
-                PlayerMarqueeOverlayDisabler.Disable((option, value) => _player.SetMarqueeInt(option, value));
+                _playerMarqueeOverlayHost.Disable();
             });
             t.Start();
         }

@@ -2370,26 +2370,39 @@ public sealed class UiArchitectureGuardTests
         var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.cs");
         var snapshotPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Snapshot.cs");
         var overlayPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Overlay.cs");
+        var statePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.State.cs");
+        var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayPolicy.cs");
         var disablerPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayDisabler.cs");
+        var hostPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayHost.cs");
 
         Assert.True(File.Exists(overlayPath), "Playback-Marquee-Overlay-Wiring soll in einem eigenen Playback-Partial liegen.");
         Assert.True(File.Exists(policyPath), "VLC-Marquee-Anzeigeparameter muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(disablerPath), "VLC-Marquee-Deaktivieren muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(hostPath), "Direkte VLC-Marquee-Zugriffe sollen ueber einen Host laufen.");
 
         var playback = File.ReadAllText(playbackPath);
         var snapshot = File.ReadAllText(snapshotPath);
         var overlay = File.ReadAllText(overlayPath);
+        var state = File.ReadAllText(statePath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var policy = File.ReadAllText(policyPath);
         var disabler = File.Exists(disablerPath) ? File.ReadAllText(disablerPath) : "";
+        var host = File.Exists(hostPath) ? File.ReadAllText(hostPath) : "";
 
         Assert.DoesNotContain("private void ShowOverlay", playback);
         Assert.DoesNotContain("public static bool TryShowOverlayOnLast", playback);
         Assert.Contains("private void ShowOverlay", overlay);
         Assert.Contains("public static bool TryShowOverlayOnLast", overlay);
         Assert.Contains("PlayerMarqueeOverlayPolicy.BuildShow", overlay);
-        Assert.Contains("PlayerMarqueeOverlayDisabler.Disable", overlay);
-        Assert.Contains("PlayerMarqueeOverlayDisabler.Disable", snapshot);
+        Assert.Contains("_playerMarqueeOverlayHost.Show", overlay);
+        Assert.Contains("_playerMarqueeOverlayHost.Disable", overlay);
+        Assert.Contains("_playerMarqueeOverlayHost.Disable", snapshot);
+        Assert.Contains("private readonly PlayerMarqueeOverlayHost _playerMarqueeOverlayHost", state);
+        Assert.Contains("new PlayerMarqueeOverlayHost", windowRoot);
+        Assert.Contains("PlayerMarqueeOverlayDisabler.Disable", host);
+        Assert.DoesNotContain("_player.SetMarquee", overlay + snapshot);
+        Assert.DoesNotContain("VideoMarqueeOption", overlay + snapshot);
         Assert.DoesNotContain("PlayerMarqueeOverlayPolicy.DisabledEnable", overlay);
         Assert.DoesNotContain("PlayerMarqueeOverlayPolicy.DisabledEnable", snapshot);
         Assert.DoesNotContain("VLC: Marquee deaktivieren", overlay + snapshot);

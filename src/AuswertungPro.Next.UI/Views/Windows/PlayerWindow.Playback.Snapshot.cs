@@ -44,7 +44,7 @@ public partial class PlayerWindow
             if (_closing || _playbackDisposed)
                 return false;
 
-            PlayerMarqueeOverlayDisabler.Disable((option, value) => _player.SetMarqueeInt(option, value));
+            _playerMarqueeOverlayHost.Disable();
             return _player.TakeSnapshot(0, filePath, width, height);
         }
         catch
