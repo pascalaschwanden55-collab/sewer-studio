@@ -8,6 +8,8 @@ public sealed class PlayerPlaybackControlHost
     private readonly Action _stop;
     private readonly Func<float> _readRate;
     private readonly Func<float, int> _setRate;
+    private readonly Func<bool> _shouldStartPlayback;
+    private readonly Action<string> _playPath;
 
     public PlayerPlaybackControlHost(
         Func<bool> readIsPlaying,
@@ -15,7 +17,9 @@ public sealed class PlayerPlaybackControlHost
         Action play,
         Action stop,
         Func<float> readRate,
-        Func<float, int> setRate)
+        Func<float, int> setRate,
+        Func<bool> shouldStartPlayback,
+        Action<string> playPath)
     {
         ArgumentNullException.ThrowIfNull(readIsPlaying);
         ArgumentNullException.ThrowIfNull(setPause);
@@ -23,6 +27,8 @@ public sealed class PlayerPlaybackControlHost
         ArgumentNullException.ThrowIfNull(stop);
         ArgumentNullException.ThrowIfNull(readRate);
         ArgumentNullException.ThrowIfNull(setRate);
+        ArgumentNullException.ThrowIfNull(shouldStartPlayback);
+        ArgumentNullException.ThrowIfNull(playPath);
 
         _readIsPlaying = readIsPlaying;
         _setPause = setPause;
@@ -30,11 +36,15 @@ public sealed class PlayerPlaybackControlHost
         _stop = stop;
         _readRate = readRate;
         _setRate = setRate;
+        _shouldStartPlayback = shouldStartPlayback;
+        _playPath = playPath;
     }
 
     public bool IsPlaying => _readIsPlaying();
 
     public float Rate => _readRate();
+
+    public bool ShouldStartPlayback => _shouldStartPlayback();
 
     public void SetPause(bool pause)
         => _setPause(pause);
@@ -47,4 +57,7 @@ public sealed class PlayerPlaybackControlHost
 
     public int SetRate(float rate)
         => _setRate(rate);
+
+    public void PlayPath(string path)
+        => _playPath(path);
 }

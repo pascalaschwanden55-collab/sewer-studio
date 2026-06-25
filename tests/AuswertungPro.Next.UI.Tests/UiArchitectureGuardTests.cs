@@ -1091,6 +1091,23 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_playback_start_uses_control_host()
+    {
+        var root = FindRepositoryRoot();
+        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
+
+        Assert.True(File.Exists(playbackPath), "Playback-Start soll im Playback-Partial bleiben, aber ueber den Host laufen.");
+
+        var playback = File.ReadAllText(playbackPath);
+
+        Assert.Contains("_playerPlaybackControlHost", playback);
+        Assert.DoesNotContain("_player.State", playback);
+        Assert.DoesNotContain("_player.Play(media)", playback);
+        Assert.DoesNotContain("new Media(", playback);
+    }
+
+    [Fact]
     public void Playback_position_fallback_uses_timeline_host()
     {
         var root = FindRepositoryRoot();

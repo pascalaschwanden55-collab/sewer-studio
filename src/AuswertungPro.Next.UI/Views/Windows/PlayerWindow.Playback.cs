@@ -7,7 +7,6 @@ using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Player;
-using LibVLCSharp.Shared;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -51,8 +50,7 @@ public partial class PlayerWindow
 
     private void EnsurePlaying()
     {
-        var state = _player.State;
-        if (state == VLCState.Stopped || state == VLCState.Ended)
+        if (_playerPlaybackControlHost.ShouldStartPlayback)
             Play(_videoPath);
     }
 
@@ -72,8 +70,7 @@ public partial class PlayerWindow
 
     private void Play(string path)
     {
-        using var media = new Media(_libVlc, path, FromType.FromPath);
-        _player.Play(media);
+        _playerPlaybackControlHost.PlayPath(path);
         _timer.Start();
         UpdateRateLabel();
     }

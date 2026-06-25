@@ -65,7 +65,17 @@ public partial class PlayerWindow : Window
             play: () => _player.Play(),
             stop: () => _player.Stop(),
             readRate: () => _player.Rate,
-            setRate: _player.SetRate);
+            setRate: _player.SetRate,
+            shouldStartPlayback: () =>
+            {
+                var state = _player.State;
+                return state == VLCState.Stopped || state == VLCState.Ended;
+            },
+            playPath: path =>
+            {
+                using var media = new Media(_libVlc, path, FromType.FromPath);
+                _player.Play(media);
+            });
 
         _damageMarkerController = new DamageMarkerController(
             DamageMarkerCanvas,
