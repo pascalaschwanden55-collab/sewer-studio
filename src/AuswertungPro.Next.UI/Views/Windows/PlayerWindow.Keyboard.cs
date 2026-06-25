@@ -30,20 +30,19 @@ public partial class PlayerWindow
     }
 
     private void CancelCodingOverlayShortcut()
-    {
-        _codingOverlayToolHost.CancelDraw();
-        _codingSchemaManager.Cancel();
-        if (CodingOverlayCanvas.IsMouseCaptured)
-            CodingOverlayCanvas.ReleaseMouseCapture();
-        if (_codingSessionHost.HasViewModel)
-        {
-            _codingSessionHost.ClearCurrentOverlay();
-            CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false);
-            UpdateCodingOverlayInfo(null);
-        }
-        if (CodingOverlayPopup.IsOpen)
-            RedrawCodingCanvas(includeManualOverlay: false);
-    }
+        => PlayerCancelCodingOverlayShortcutWorkflow.Execute(
+            new PlayerCancelCodingOverlayShortcutWorkflowRequest(
+                CodingOverlayCanvas.IsMouseCaptured,
+                _codingSessionHost.HasViewModel,
+                CodingOverlayPopup.IsOpen),
+            new PlayerCancelCodingOverlayShortcutWorkflowActions(
+                CancelDraw: () => _codingOverlayToolHost.CancelDraw(),
+                CancelSchema: _codingSchemaManager.Cancel,
+                ReleaseMouseCapture: CodingOverlayCanvas.ReleaseMouseCapture,
+                ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
+                DisableCreateEvent: () => CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false),
+                ClearOverlayInfo: () => UpdateCodingOverlayInfo(null),
+                RedrawCodingCanvasWithoutManualOverlay: () => RedrawCodingCanvas(includeManualOverlay: false)));
 
     private void ToggleDetectionShortcut()
     {

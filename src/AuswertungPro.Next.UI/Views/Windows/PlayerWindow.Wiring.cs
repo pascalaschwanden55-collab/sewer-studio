@@ -10,18 +10,25 @@ public partial class PlayerWindow
 {
     private DispatcherTimer CreateUpdateTimer()
         => PlayerWindowTimerFactory.CreateUpdateTimer(() =>
-        {
-            if (_closing || _playbackDisposed) return;
-            UpdateUi();
-        });
+            PlayerWindowTimerTickWorkflow.ExecuteUpdate(
+                new PlayerWindowTimerTickWorkflowRequest(
+                    _closing,
+                    _playbackDisposed,
+                    _isDragging),
+                new PlayerWindowTimerTickWorkflowActions(
+                    UpdateUi,
+                    ScrubSeekToSlider)));
 
     private DispatcherTimer CreateScrubTimer()
         => PlayerWindowTimerFactory.CreateScrubTimer(() =>
-        {
-            if (_closing || _playbackDisposed) return;
-            if (_isDragging)
-                ScrubSeekToSlider();
-        });
+            PlayerWindowTimerTickWorkflow.ExecuteScrub(
+                new PlayerWindowTimerTickWorkflowRequest(
+                    _closing,
+                    _playbackDisposed,
+                    _isDragging),
+                new PlayerWindowTimerTickWorkflowActions(
+                    UpdateUi,
+                    ScrubSeekToSlider)));
 
     private void WireWindowLifecycleEvents()
     {
