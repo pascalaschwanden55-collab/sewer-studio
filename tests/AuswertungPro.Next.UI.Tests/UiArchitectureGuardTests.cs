@@ -4767,30 +4767,41 @@ public sealed class UiArchitectureGuardTests
         var exitPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
         var liveStopPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
         var cleanerPath = Path.Combine(uiRoot, "Player", "DetectionOverlayCleaner.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "DetectionOverlayCleanupController.cs");
 
         Assert.True(File.Exists(cleanerPath), "Detection-Overlay-Cleanup muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controllerPath), "Detection-Overlay-Cleanup soll ueber einen Player-Controller laufen.");
 
         var lifecycle = File.ReadAllText(lifecyclePath);
         var aiEvents = File.ReadAllText(aiEventsPath);
         var exit = File.ReadAllText(exitPath);
         var liveStop = File.ReadAllText(liveStopPath);
         var cleaner = File.Exists(cleanerPath) ? File.ReadAllText(cleanerPath) : "";
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
 
-        Assert.Contains("DetectionOverlayCleaner.ClearAll", lifecycle);
-        Assert.Contains("DetectionOverlayCleaner.ClearVisuals", lifecycle);
+        Assert.Contains("DetectionOverlayCleanupController.ClearAll", lifecycle);
+        Assert.Contains("DetectionOverlayCleanupController.ClearVisuals", lifecycle);
+        Assert.DoesNotContain("DetectionOverlayCleaner.", lifecycle);
         Assert.DoesNotContain("DetectionCanvas.Children.Clear()", lifecycle);
-        Assert.Contains("DetectionOverlayCleaner.ClearFindingsAndCanvas", aiEvents);
-        Assert.Contains("DetectionOverlayCleaner.ClearFindings", aiEvents);
-        Assert.Contains("DetectionOverlayCleaner.ClearVisuals", aiEvents);
+        Assert.Contains("DetectionOverlayCleanupController.ClearFindingsAndCanvas", aiEvents);
+        Assert.Contains("DetectionOverlayCleanupController.ClearFindings", aiEvents);
+        Assert.Contains("DetectionOverlayCleanupController.ClearVisuals", aiEvents);
+        Assert.DoesNotContain("DetectionOverlayCleaner.", aiEvents);
         Assert.DoesNotContain("DetectionCanvas.Children.Clear()", aiEvents);
         Assert.DoesNotContain("CodingFindingsList.ItemsSource = null", aiEvents);
-        Assert.Contains("DetectionOverlayCleaner.ClearCanvas", exit);
+        Assert.Contains("DetectionOverlayCleanupController.ClearCanvas", exit);
+        Assert.DoesNotContain("DetectionOverlayCleaner.", exit);
         Assert.DoesNotContain("DetectionCanvas.Children.Clear()", exit);
-        Assert.Contains("DetectionOverlayCleaner.ClearCanvas", liveStop);
+        Assert.Contains("DetectionOverlayCleanupController.ClearCanvas", liveStop);
+        Assert.DoesNotContain("DetectionOverlayCleaner.", liveStop);
         Assert.DoesNotContain("DetectionCanvas.Children.Clear()", liveStop);
         Assert.Contains("public static void ClearAll", cleaner);
         Assert.Contains("public static void ClearVisuals", cleaner);
         Assert.Contains("public static void ClearFindingsAndCanvas", cleaner);
+        Assert.Contains("DetectionOverlayCleaner.ClearAll", controller);
+        Assert.Contains("DetectionOverlayCleaner.ClearVisuals", controller);
+        Assert.Contains("DetectionOverlayCleaner.ClearFindingsAndCanvas", controller);
+        Assert.Contains("DetectionOverlayCleaner.ClearCanvas", controller);
         Assert.Contains("public static void ClearFindings", cleaner);
         Assert.Contains("public static void ClearCanvas", cleaner);
     }

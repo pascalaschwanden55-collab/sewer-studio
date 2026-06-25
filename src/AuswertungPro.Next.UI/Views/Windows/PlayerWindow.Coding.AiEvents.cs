@@ -33,9 +33,9 @@ public partial class PlayerWindow
                 _playerTimelineHost.CurrentSecondsOrZero),
             new CodingAiResultWorkflowActions(
                 (status, color, detail) => SetCodingAiState(status, color, detail),
-                () => DetectionOverlayCleaner.ClearFindings(CodingFindingsList),
-                () => DetectionOverlayCleaner.ClearFindingsAndCanvas(DetectionCanvas, CodingFindingsList),
-                () => DetectionOverlayCleaner.ClearVisuals(DetectionCanvas, DetectionOverlayGrid),
+                () => DetectionOverlayCleanupController.ClearFindings(CodingFindingsList),
+                () => DetectionOverlayCleanupController.ClearFindingsAndCanvas(DetectionCanvas, CodingFindingsList),
+                () => DetectionOverlayCleanupController.ClearVisuals(DetectionCanvas, DetectionOverlayGrid),
                 UpdateFrameReadiness,
                 IsFrameReady,
                 pending => _codingFrameReadinessController.StorePendingWarmupResult(pending),

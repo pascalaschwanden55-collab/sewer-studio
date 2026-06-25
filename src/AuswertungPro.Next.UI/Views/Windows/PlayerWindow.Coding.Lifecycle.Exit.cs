@@ -56,7 +56,7 @@ public partial class PlayerWindow
                     _codingPendingGateResult = null;
                 },
                 ClearDetectionConfirmationBuffer: _detectionConfirmationBuffer.Clear,
-                ClearDetectionOverlay: hideOverlay => DetectionOverlayCleaner.ClearCanvas(
+                ClearDetectionOverlay: hideOverlay => DetectionOverlayCleanupController.ClearCanvas(
                     DetectionCanvas,
                     DetectionOverlayGrid,
                     hideOverlay),

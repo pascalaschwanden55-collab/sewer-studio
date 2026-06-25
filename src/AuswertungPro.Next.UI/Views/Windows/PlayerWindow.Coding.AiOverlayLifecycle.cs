@@ -15,7 +15,7 @@ public partial class PlayerWindow
     /// <summary>Detection-Overlays aufraeumen (Boxen, Labels, Findings-Liste).</summary>
     private void ClearDetectionOverlays()
     {
-        DetectionOverlayCleaner.ClearAll(DetectionCanvas, DetectionOverlayGrid, CodingFindingsList);
+        DetectionOverlayCleanupController.ClearAll(DetectionCanvas, DetectionOverlayGrid, CodingFindingsList);
     }
 
     // Analyse-Boxen kurz zeigen, dann nach 3s automatisch ausblenden, damit der Frame nicht
@@ -31,7 +31,7 @@ public partial class PlayerWindow
                 TimeSpan.FromSeconds(3),
                 () =>
             {
-                DetectionOverlayCleaner.ClearVisuals(DetectionCanvas, DetectionOverlayGrid);
+                DetectionOverlayCleanupController.ClearVisuals(DetectionCanvas, DetectionOverlayGrid);
             });
         }
         _detectionAutoHideTimer.Stop();
