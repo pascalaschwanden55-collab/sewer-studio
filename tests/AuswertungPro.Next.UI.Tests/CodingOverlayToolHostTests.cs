@@ -65,6 +65,39 @@ public sealed class CodingOverlayToolHostTests
         Assert.Same(calibration, service.Calibration);
     }
 
+    [Fact]
+    public void Tool_state_is_read_from_current_overlay_service()
+    {
+        var service = new RecordingOverlayToolService
+        {
+            ActiveTool = OverlayToolType.Level,
+            ActiveLevelMode = LevelMode.Water,
+            PipeBendSnapEnabled = true
+        };
+        var host = CreateHost(() => service);
+
+        Assert.Equal(OverlayToolType.Level, Get<OverlayToolType>(host, "ActiveTool"));
+        Assert.Equal(LevelMode.Water, Get<LevelMode>(host, "ActiveLevelMode"));
+        Assert.True(Get<bool>(host, "PipeBendSnapEnabled"));
+    }
+
+    [Fact]
+    public void SetActiveTool_and_level_mode_forward_when_service_available()
+    {
+        var nullHost = CreateHost(() => null);
+
+        Assert.False(Invoke<bool>(nullHost, "SetActiveTool", OverlayToolType.Rectangle));
+        Assert.False(Invoke<bool>(nullHost, "SetActiveLevelMode", LevelMode.Obstacle));
+
+        var service = new RecordingOverlayToolService();
+        var host = CreateHost(() => service);
+
+        Assert.True(Invoke<bool>(host, "SetActiveTool", OverlayToolType.Rectangle));
+        Assert.True(Invoke<bool>(host, "SetActiveLevelMode", LevelMode.Obstacle));
+        Assert.Equal(OverlayToolType.Rectangle, service.ActiveTool);
+        Assert.Equal(LevelMode.Obstacle, service.ActiveLevelMode);
+    }
+
     private static object CreateHost(Func<IOverlayToolService?> resolveOverlayService)
     {
         var hostType = typeof(PlayerKeyboardActionController).Assembly

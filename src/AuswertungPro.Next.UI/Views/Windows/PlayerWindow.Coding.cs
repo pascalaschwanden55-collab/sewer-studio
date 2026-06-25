@@ -34,12 +34,12 @@ public partial class PlayerWindow
     /// <summary>Werkzeug-Badge oben links auf Canvas anzeigen.</summary>
     private void UpdateToolBadge()
     {
-        if (_codingOverlayService == null) return;
+        if (!_codingOverlayToolHost.HasOverlayService) return;
 
         var toolText = CodingToolBadgeTextPolicy.BuildText(
-            _codingOverlayService.ActiveTool,
+            _codingOverlayToolHost.ActiveTool,
             _codingSchemaType,
-            _codingOverlayService.ActiveLevelMode);
+            _codingOverlayToolHost.ActiveLevelMode);
 
         CodingToolBadgeRenderer.Update(CodingOverlayCanvas, toolText);
     }

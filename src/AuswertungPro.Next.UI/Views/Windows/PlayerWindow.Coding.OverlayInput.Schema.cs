@@ -10,17 +10,17 @@ public partial class PlayerWindow
 {
     private bool IsCodingSchemaToolSelected()
         => _codingSchemaType.HasValue
-           && _codingOverlayService?.ActiveTool is OverlayToolType.PipeBend or OverlayToolType.Level;
+           && _codingOverlayToolHost.ActiveTool is OverlayToolType.PipeBend or OverlayToolType.Level;
 
     private SchemaOverlayBase? CreateCodingSchemaOverlay()
     {
-        if (_codingOverlayService == null)
+        if (!_codingOverlayToolHost.HasOverlayService)
             return null;
 
         return CodingSchemaOverlayBuilder.Create(
             _codingSchemaType,
-            _codingOverlayService.PipeBendSnapEnabled,
-            _codingOverlayService.ActiveLevelMode);
+            _codingOverlayToolHost.PipeBendSnapEnabled,
+            _codingOverlayToolHost.ActiveLevelMode);
     }
 
     private string GetDefaultCodingSchemaHandleId()

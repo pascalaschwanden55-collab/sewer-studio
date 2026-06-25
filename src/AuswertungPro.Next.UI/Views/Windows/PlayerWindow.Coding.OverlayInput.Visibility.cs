@@ -11,7 +11,7 @@ public partial class PlayerWindow
             return;
 
         _codingSchemaManager.EndDrag();
-        _codingOverlayService?.CancelDraw();
+        _codingOverlayToolHost.CancelDraw();
         _codingOverlayWasOpenBeforeSuspend = CodingOverlayPopup.IsOpen;
         // Das Popup ist ein eigenes transparentes Top-Level-HWND und liegt grafisch
         // UEBER eigenen Dialogen (Loeschen-Bestaetigung, VsaCodeExplorer). IsHitTestVisible=false

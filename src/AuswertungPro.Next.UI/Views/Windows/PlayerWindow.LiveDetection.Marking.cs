@@ -57,8 +57,7 @@ public partial class PlayerWindow
             }
             else
             {
-                if (_codingOverlayService != null)
-                    _codingOverlayService.ActiveTool = _markToolType;
+                _codingOverlayToolHost.SetActiveTool(_markToolType);
                 CodingOverlayInputControls.ApplyCanvasCursor(CodingOverlayCanvas, useCrossCursor: true);
             }
         }

@@ -31,7 +31,7 @@ public partial class PlayerWindow
         if (TryStartCodingCalibration(norm))
             return;
 
-        if (_codingOverlayService.ActiveTool == OverlayToolType.None) return;
+        if (_codingOverlayToolHost.ActiveTool == OverlayToolType.None) return;
 
         if (TryHandleCodingSchemaMouseDown(norm))
             return;

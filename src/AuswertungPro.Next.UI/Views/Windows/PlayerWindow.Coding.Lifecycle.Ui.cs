@@ -27,11 +27,11 @@ public partial class PlayerWindow
     private void ActivateDefaultCodingTool()
     {
         CodingModeDefaultToolWorkflow.Execute(
-            new CodingModeDefaultToolWorkflowRequest(_codingOverlayService is not null),
+            new CodingModeDefaultToolWorkflowRequest(_codingOverlayToolHost.HasOverlayService),
             new CodingModeDefaultToolWorkflowActions(
                 SetMarkToolType: tool => _markToolType = tool,
                 SetToolLabels: _markToolControls.SetToolLabels,
-                SetOverlayActiveTool: tool => _codingOverlayService!.ActiveTool = tool));
+                SetOverlayActiveTool: tool => { _codingOverlayToolHost.SetActiveTool(tool); }));
     }
 
     private void ShowCodingModeUi()

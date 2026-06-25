@@ -22,7 +22,7 @@ public partial class PlayerWindow
         SchemaType? schemaType = null,
         LevelMode? levelMode = null)
     {
-        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel) return;
+        if (!_codingOverlayToolHost.HasOverlayService || !_codingSessionHost.HasViewModel) return;
         _codingIsCalibrating = false;
         _codingCalibStart = null;
 
@@ -40,9 +40,9 @@ public partial class PlayerWindow
 
         _activeCodingToolName = selection.ActiveToolName;
         if (selection.LevelModeToApply.HasValue)
-            _codingOverlayService.ActiveLevelMode = selection.LevelModeToApply.Value;
+            _codingOverlayToolHost.SetActiveLevelMode(selection.LevelModeToApply.Value);
 
-        _codingOverlayService.ActiveTool = selection.ActiveTool;
+        _codingOverlayToolHost.SetActiveTool(selection.ActiveTool);
         _codingSchemaType = selection.ActiveSchemaType;
         _codingSchemaManager.Cancel();
 
@@ -78,7 +78,7 @@ public partial class PlayerWindow
 
     private void UpdateCodingOverlayCursor()
     {
-        var activeTool = _codingOverlayService?.ActiveTool ?? OverlayToolType.None;
+        var activeTool = _codingOverlayToolHost.ActiveTool;
         CodingOverlayInputControls.ApplyCanvasCursor(
             CodingOverlayCanvas,
             CodingOverlayCursorPolicy.ShouldUseCrossCursor(

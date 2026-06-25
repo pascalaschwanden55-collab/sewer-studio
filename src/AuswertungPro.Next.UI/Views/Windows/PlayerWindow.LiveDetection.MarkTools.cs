@@ -48,7 +48,7 @@ public partial class PlayerWindow
             // Zeichen-Tools: CodingOverlayPopup aktivieren
             _isManualMarkMode = false;
             EnsureMarkOverlayReady();
-            _codingOverlayService!.ActiveTool = tool;
+            _codingOverlayToolHost.SetActiveTool(tool);
 
             // Offene Zeichnung verwerfen
             _codingSessionHost.ClearCurrentOverlay();
@@ -86,9 +86,8 @@ public partial class PlayerWindow
         if (!_isCodingMode)
         {
             _codingSchemaManager.Cancel();
-            _codingOverlayService?.CancelDraw();
-            if (_codingOverlayService != null)
-                _codingOverlayService.ActiveTool = OverlayToolType.None;
+            _codingOverlayToolHost.CancelDraw();
+            _codingOverlayToolHost.SetActiveTool(OverlayToolType.None);
             _markToolControls.DeactivateCodingOverlay();
         }
     }

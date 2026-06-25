@@ -9,12 +9,12 @@ public partial class PlayerWindow
 {
     private void CodingCalibrate_Click(object sender, RoutedEventArgs e)
     {
-        if (_codingOverlayService == null || !_codingSessionHost.HasViewModel) return;
+        if (!_codingOverlayToolHost.HasOverlayService || !_codingSessionHost.HasViewModel) return;
         ToolsDropdownPopup.IsOpen = false;
         var state = CodingCalibrationTogglePolicy.Build(_codingIsCalibrating);
         _codingIsCalibrating = state.IsCalibrating;
         _codingCalibStart = null;
-        _codingOverlayService.ActiveTool = state.ActiveTool;
+        _codingOverlayToolHost.SetActiveTool(state.ActiveTool);
         _activeCodingToolName = state.ActiveToolName;
         CodingOverlayInputControls.ApplyActiveToolSelection(TxtActiveToolLabel, BtnCodingCreateEvent, state.ToolLabel);
 
