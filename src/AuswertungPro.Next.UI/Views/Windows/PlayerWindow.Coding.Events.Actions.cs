@@ -11,29 +11,15 @@ public partial class PlayerWindow
 {
     private void CodingEvents_DoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
-
-        PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause);
-
-        var entry = codingEvent.Entry;
-        var edited = RunWithSuspendedCodingOverlayInput(() =>
-            CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
-                .TryEdit(
-                    entry,
-                    entry.MeterStart,
-                    entry.Zeit,
-                    _videoPath,
-                    _playerTimelineHost.CurrentTimeOrZero,
-                    this,
-                    CreateVsaCodeExplorerLiveSnapshotProvider()));
-
-        if (edited)
-        {
-            CodingEventListActionWorkflow.CompleteEdit(
-                codingEvent,
-                _codingSessionRuntimeOwner.Service,
-                RefreshCodingEventsList);
-        }
+        CodingEventEditCommandWorkflow.Execute(
+            new CodingEventEditCommandRequest(LstCodingEvents.SelectedItem as CodingEvent),
+            new CodingEventEditCommandActions(
+                PausePlayback: () => PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause),
+                TryEdit: TryEditCodingEvent,
+                CompleteEdit: codingEvent => CodingEventListActionWorkflow.CompleteEdit(
+                    codingEvent,
+                    _codingSessionRuntimeOwner.Service,
+                    RefreshCodingEventsList)));
     }
 
     private void CodingEventEdit_Click(object sender, RoutedEventArgs e)
@@ -93,5 +79,20 @@ public partial class PlayerWindow
             _codingSessionHost.ClearSelectedDefect();
         HideInlineDefectDetail();
         RefreshCodingEventsList();
+    }
+
+    private bool TryEditCodingEvent(CodingEvent codingEvent)
+    {
+        var entry = codingEvent.Entry;
+        return RunWithSuspendedCodingOverlayInput(() =>
+            CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
+                .TryEdit(
+                    entry,
+                    entry.MeterStart,
+                    entry.Zeit,
+                    _videoPath,
+                    _playerTimelineHost.CurrentTimeOrZero,
+                    this,
+                    CreateVsaCodeExplorerLiveSnapshotProvider()));
     }
 }
