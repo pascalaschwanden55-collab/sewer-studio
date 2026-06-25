@@ -1323,6 +1323,7 @@ public sealed class UiArchitectureGuardTests
         var pulsePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Status.Pulse.cs");
         var errorWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionErrorWorkflow.cs");
         var snapshotWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionSnapshotWorkflow.cs");
+        var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRunCommandWorkflow.cs");
         var controlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
         var pulseControlsPath = Path.Combine(windowsRoot, "LiveDetectionPulseControls.cs");
 
@@ -1330,6 +1331,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(pulsePath), "Coding-AI-Pulsanimation soll aus dem Status-Orchestrator heraus.");
         Assert.True(File.Exists(errorWorkflowPath), "LiveDetection-Fehlerentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(snapshotWorkflowPath), "LiveDetection-Snapshot-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(runCommandWorkflowPath), "LiveDetection-Run-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "LiveDetection-Status-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pulseControlsPath), "Coding-AI-Pulsanimation soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
@@ -1338,6 +1340,7 @@ public sealed class UiArchitectureGuardTests
         var pulse = File.ReadAllText(pulsePath);
         var errorWorkflow = File.ReadAllText(errorWorkflowPath);
         var snapshotWorkflow = File.ReadAllText(snapshotWorkflowPath);
+        var runCommandWorkflow = File.Exists(runCommandWorkflowPath) ? File.ReadAllText(runCommandWorkflowPath) : "";
         var controls = File.ReadAllText(controlsPath);
         var pulseControls = File.Exists(pulseControlsPath) ? File.ReadAllText(pulseControlsPath) : "";
 
@@ -1359,8 +1362,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveDetectionStatusControls.ShowCodingAiState", status);
         Assert.Contains("LiveDetectionStatusControls.ShowDetectionStatus", status);
         Assert.Contains("LiveDetectionStatusControls.ShowDetectionError", liveDetection);
-        Assert.Contains("LiveDetectionErrorWorkflow.Execute", liveDetection);
-        Assert.Contains("LiveDetectionSnapshotWorkflow.Handle", liveDetection);
+        Assert.Contains("LiveDetectionErrorWorkflow.Execute", runCommandWorkflow);
+        Assert.Contains("LiveDetectionSnapshotWorkflow.Handle", runCommandWorkflow);
         Assert.DoesNotContain("| Bereit", liveDetection);
         Assert.Contains("| Bereit", snapshotWorkflow);
         Assert.DoesNotContain("msg.Length > 200", liveDetection);
@@ -2657,11 +2660,13 @@ public sealed class UiArchitectureGuardTests
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceTransfer.cs");
         var resetterPath = Path.Combine(uiRoot, "Ai", "CodingSessionEventResetter.cs");
         var matchResetterPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchStateResetter.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceInitializationWorkflow.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceControls.cs");
 
         Assert.True(File.Exists(policyPath), "Import-Referenz-Transfer muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(resetterPath), "Session-Event-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(matchResetterPath), "Protocol-Match-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "Import-Referenz-Initialisierung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(controlsPath), "Import-Referenz-Zaehler sollen ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
         var import = File.ReadAllText(importPath);
@@ -2669,13 +2674,17 @@ public sealed class UiArchitectureGuardTests
         var policy = File.ReadAllText(policyPath);
         var resetter = File.Exists(resetterPath) ? File.ReadAllText(resetterPath) : "";
         var matchResetter = File.Exists(matchResetterPath) ? File.ReadAllText(matchResetterPath) : "";
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
 
+        Assert.Contains("CodingImportReferenceInitializationWorkflow.Execute", coding);
         Assert.Contains("CodingImportReferenceTransfer.MoveExistingEventsToImportReference", coding);
         Assert.Contains("CodingSessionEventResetter.ClearActiveSessionEvents", coding);
         Assert.Contains("CodingProtocolMatchStateResetter.Reset", coding);
         Assert.Contains("_codingSessionHost", coding);
         Assert.DoesNotContain("_codingVm", coding);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel)", coding);
+        Assert.DoesNotContain("if (eventCollection is null)", coding);
         Assert.Contains("CodingImportReferenceControls.SetCount", import);
         Assert.Contains("CodingImportReferenceControls.SetCount", coding);
         Assert.DoesNotContain("RunImportDefectCount.Text", import + coding);
@@ -2687,6 +2696,15 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static int MoveExistingEventsToImportReference", policy);
         Assert.Contains("public static int ClearActiveSessionEvents", resetter);
         Assert.Contains("public static CodingMatchRouting? Reset", matchResetter);
+        Assert.Contains("actions.ResetProtocolMatchState()", workflow);
+        Assert.Contains("actions.UpdateProtocolMatchSummary(matchRouting)", workflow);
+        Assert.Contains("actions.MoveExistingEventsToImportReference()", workflow);
+        Assert.Contains("actions.SetImportCount(importEventCount)", workflow);
+        Assert.Contains("actions.ClearActiveSessionEvents()", workflow);
+        Assert.Contains("actions.SetCodingCount(0)", workflow);
+        Assert.Contains("actions.BuildBaselineSignature()", workflow);
+        Assert.Contains("actions.SetBaselineSignature(baselineSignature)", workflow);
+        Assert.Contains("actions.ResetStretchTracker()", workflow);
         Assert.Contains("public static void SetCount", controls);
     }
 
@@ -3968,16 +3986,19 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var liveDetectionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionResultWorkflow.cs");
+        var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRunCommandWorkflow.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationPolicy.cs");
 
         Assert.True(File.Exists(workflowPath), "LiveDetection-Ergebnisentscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(runCommandWorkflowPath), "LiveDetection-Run-Orchestrierung soll das Ergebnisworkflow aufrufen.");
         Assert.True(File.Exists(policyPath), "LiveDetection-Bestaetigungsschwelle muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var workflow = File.ReadAllText(workflowPath);
+        var runCommandWorkflow = File.Exists(runCommandWorkflowPath) ? File.ReadAllText(runCommandWorkflowPath) : "";
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("LiveDetectionResultWorkflow.Execute", liveDetection);
+        Assert.Contains("LiveDetectionResultWorkflow.Execute", runCommandWorkflow);
         Assert.DoesNotContain("LiveDetectionConfirmationPolicy.SelectSignificantFindings", liveDetection);
         Assert.Contains("LiveDetectionConfirmationPolicy.SelectSignificantFindings", workflow);
         Assert.DoesNotContain("Severity >= 2", liveDetection);
@@ -4147,11 +4168,13 @@ public sealed class UiArchitectureGuardTests
         var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTimerPolicy.cs");
         var dispatchWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTimerDispatchWorkflow.cs");
+        var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRunCommandWorkflow.cs");
         var tickStartWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTickStartWorkflow.cs");
         var inferenceWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionInferenceWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "LiveDetection-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dispatchWorkflowPath), "LiveDetection-Timer-Dispatch muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(runCommandWorkflowPath), "LiveDetection-Tick-Orchestrierung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(liveControllerPath), "LiveDetection-Timer-Gate soll vom LiveDetectionController aufgerufen werden.");
         Assert.True(File.Exists(tickStartWorkflowPath), "LiveDetection-Tick-Start-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(inferenceWorkflowPath), "LiveDetection-Inferenz-Gate soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -4160,6 +4183,7 @@ public sealed class UiArchitectureGuardTests
         var liveController = File.ReadAllText(liveControllerPath);
         var policy = File.ReadAllText(policyPath);
         var dispatchWorkflow = File.ReadAllText(dispatchWorkflowPath);
+        var runCommandWorkflow = File.Exists(runCommandWorkflowPath) ? File.ReadAllText(runCommandWorkflowPath) : "";
         var tickStartWorkflow = File.ReadAllText(tickStartWorkflowPath);
         var inferenceWorkflow = File.ReadAllText(inferenceWorkflowPath);
 
@@ -4168,9 +4192,15 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveDetectionTimerDispatchWorkflow.Execute", liveDetection);
         Assert.Contains("SafeFireAndForget", liveDetection);
         Assert.Contains("private async Task RunDetectionAsync", liveDetection);
+        Assert.Contains("LiveDetectionRunCommandWorkflow.ExecuteAsync", liveDetection);
         Assert.Contains("_liveDetectionController.ShouldRunTick", liveDetection);
-        Assert.Contains("LiveDetectionTickStartWorkflow.Start", liveDetection);
-        Assert.Contains("LiveDetectionInferenceWorkflow.ExecuteAsync", liveDetection);
+        Assert.DoesNotContain("LiveDetectionTickStartWorkflow.Start", liveDetection);
+        Assert.DoesNotContain("LiveDetectionSnapshotWorkflow.Handle", liveDetection);
+        Assert.DoesNotContain("LiveDetectionInferenceWorkflow.ExecuteAsync", liveDetection);
+        Assert.DoesNotContain("LiveDetectionResultWorkflow.Execute", liveDetection);
+        Assert.DoesNotContain("LiveDetectionErrorWorkflow.Execute", liveDetection);
+        Assert.DoesNotContain("catch (Exception ex)", liveDetection);
+        Assert.DoesNotContain("finally", liveDetection);
         Assert.Contains("_liveDetectionController.CreateAnalyzeFrameAsync()", liveDetection);
         Assert.DoesNotContain("| Snapshot", liveDetection);
         Assert.DoesNotContain("| Inferenz", liveDetection);
@@ -4178,6 +4208,11 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain(".AnalyzeFrameAsync(", liveDetection);
         Assert.Contains("| Snapshot", tickStartWorkflow);
         Assert.Contains("| Inferenz", inferenceWorkflow);
+        Assert.Contains("LiveDetectionTickStartWorkflow.Start", runCommandWorkflow);
+        Assert.Contains("LiveDetectionSnapshotWorkflow.Handle", runCommandWorkflow);
+        Assert.Contains("LiveDetectionInferenceWorkflow.ExecuteAsync", runCommandWorkflow);
+        Assert.Contains("LiveDetectionResultWorkflow.Execute", runCommandWorkflow);
+        Assert.Contains("LiveDetectionErrorWorkflow.Execute", runCommandWorkflow);
         Assert.Contains("request.IsClosing", dispatchWorkflow);
         Assert.Contains("request.IsPlaybackDisposed", dispatchWorkflow);
         Assert.Contains("\"DetectionTimer\"", dispatchWorkflow);

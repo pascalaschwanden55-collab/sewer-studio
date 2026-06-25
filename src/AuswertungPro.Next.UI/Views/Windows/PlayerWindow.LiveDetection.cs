@@ -21,100 +21,35 @@ public partial class PlayerWindow
 
     private async Task RunDetectionAsync()
     {
-        var tickStart = LiveDetectionTickStartWorkflow.Start(
-            new LiveDetectionTickStartWorkflowRequest(
-                _liveDetectionController.ShouldRunTick(
+        await LiveDetectionRunCommandWorkflow.ExecuteAsync(
+            new LiveDetectionRunCommandActions(
+                ShouldRunTick: () => _liveDetectionController.ShouldRunTick(
                     isClosing: _closing,
                     hasPlayer: !_playbackDisposed,
                     isPlayerPlaying: !_playbackDisposed && _playerPlaybackControlHost.IsPlaying,
                     hasPendingFindings: _detectionConfirmationBuffer.HasFindings),
-                _liveDetectionController.ModelName),
-            new LiveDetectionTickStartWorkflowActions(
-                _liveDetectionController.BeginDetection,
-                SetLiveDetectionBadge));
-        if (!tickStart.Started)
-            return;
-
-        try
-        {
-            var snapshotResult = LiveDetectionSnapshotWorkflow.Handle(
-                new LiveDetectionSnapshotWorkflowRequest(
-                    await CaptureCurrentFrameAsync(),
-                    _closing,
-                    _playbackDisposed,
-                    _liveDetectionController.ModelName),
-                new LiveDetectionSnapshotWorkflowActions(
-                    _liveDetectionController.EndDetection,
-                    SetLiveDetectionBadge));
-            if (!snapshotResult.HasSnapshot)
-                return;
-
-            var snapshot = snapshotResult.Snapshot!;
-
-            var cancellation = _liveDetectionController.DetectionCancellation;
-            var analyzeFrameAsync = _liveDetectionController.CreateAnalyzeFrameAsync();
-            var inference = await LiveDetectionInferenceWorkflow.ExecuteAsync(
-                new LiveDetectionInferenceWorkflowRequest(
-                    snapshot,
-                    _playerTimelineHost.CurrentSecondsOrZero,
-                    _closing,
-                    _playbackDisposed,
-                    _liveDetectionController.ModelName,
-                    cancellation?.Token),
-                new LiveDetectionInferenceWorkflowActions(
-                    analyzeFrameAsync,
-                    SetLiveDetectionBadge));
-            if (!inference.HasResult)
-                return;
-
-            var result = inference.Result!;
-
-            Dispatcher.Invoke(() =>
-            {
-                LiveDetectionResultWorkflow.Execute(
-                    new LiveDetectionResultWorkflowRequest(
-                        result,
-                        snapshot,
-                        _closing,
-                        _playbackDisposed,
-                        _liveDetectionController.IsDetecting,
-                        _liveDetectionController.ModelName),
-                    new LiveDetectionResultWorkflowActions(
-                        _liveDetectionController.ApplyDetectionResult,
-                        RenderDetectionOverlay,
-                        UpdateDetectionStatus,
-                        SetLiveDetectionBadge,
-                        (findings, frameBytes, timestamp) => _detectionConfirmationBuffer.StoreFindings(
-                            findings,
-                            frameBytes,
-                            timestamp),
-                        ShowDetectionConfirmation));
-            });
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            if (_closing || _playbackDisposed)
-                return;
-
-            Dispatcher.Invoke(() =>
-            {
-                LiveDetectionErrorWorkflow.Execute(
-                    new LiveDetectionErrorWorkflowRequest(
-                        ex,
-                        _closing,
-                        _playbackDisposed,
-                        _liveDetectionController.ModelName),
-                    new LiveDetectionErrorWorkflowActions(
-                        message => LiveDetectionStatusControls.ShowDetectionError(
-                            LiveDetectionStatusText,
-                            message),
-                        SetLiveDetectionBadge));
-            });
-        }
-        finally
-        {
-            _liveDetectionController.EndDetection();
-        }
+                GetModelName: () => _liveDetectionController.ModelName,
+                BeginDetection: _liveDetectionController.BeginDetection,
+                EndDetection: _liveDetectionController.EndDetection,
+                CaptureCurrentFrameAsync: CaptureCurrentFrameAsync,
+                GetTimestampSeconds: () => _playerTimelineHost.CurrentSecondsOrZero,
+                GetDetectionCancellationToken: () => _liveDetectionController.DetectionCancellation?.Token,
+                CreateAnalyzeFrameAsync: () => _liveDetectionController.CreateAnalyzeFrameAsync(),
+                IsClosing: () => _closing,
+                IsPlaybackDisposed: () => _playbackDisposed,
+                IsDetecting: () => _liveDetectionController.IsDetecting,
+                InvokeOnUi: action => Dispatcher.Invoke(action),
+                ApplyDetectionResult: _liveDetectionController.ApplyDetectionResult,
+                RenderDetectionOverlay: RenderDetectionOverlay,
+                UpdateDetectionStatus: UpdateDetectionStatus,
+                SetLiveDetectionBadge: SetLiveDetectionBadge,
+                StoreFindings: (findings, frameBytes, timestamp) => _detectionConfirmationBuffer.StoreFindings(
+                    findings,
+                    frameBytes,
+                    timestamp),
+                ShowDetectionConfirmation: ShowDetectionConfirmation,
+                ShowDetectionError: message => LiveDetectionStatusControls.ShowDetectionError(
+                    LiveDetectionStatusText,
+                    message)));
     }
 }
