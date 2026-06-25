@@ -1,4 +1,5 @@
 using LibVLCSharp.Shared;
+using LibVLCSharp.WPF;
 
 namespace AuswertungPro.Next.UI.Player;
 
@@ -20,6 +21,13 @@ public sealed class PlayerMediaRuntime
     public MediaPlayer MediaPlayer => _mediaPlayer;
 
     public PlayerMediaHosts Hosts { get; }
+
+    public void AttachVideoView(VideoView videoView)
+        => PlayerVideoViewMediaAttachment.Attach(videoView, _mediaPlayer);
+
+    public void DetachVideoView(VideoView? videoView)
+        => PlayerPlaybackResourceCleaner.DetachVideoView(
+            () => PlayerVideoViewMediaAttachment.Detach(videoView));
 
     public void DisposeMediaPlayer(Action<string> trace)
         => PlayerPlaybackResourceCleaner.DisposeMediaPlayer(_mediaPlayer, trace);

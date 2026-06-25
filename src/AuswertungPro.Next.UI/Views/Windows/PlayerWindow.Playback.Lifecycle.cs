@@ -23,8 +23,7 @@ public partial class PlayerWindow
                 CancelCodingAnalysis: _codingAiRuntimeOwner.Controller.CancelAnalysisIfPresent,
                 StopLiveDetection: StopLiveDetection,
                 StopPipelineHealthMonitor: StopPipelineHealthMonitor,
-                DetachVideoView: () => PlayerPlaybackResourceCleaner.DetachVideoView(
-                    () => { if (VideoView != null) VideoView.MediaPlayer = null; }),
+                DetachVideoView: () => _playerMediaRuntime.DetachVideoView(VideoView),
                 StopPlayer: () => PlayerPlaybackResourceCleaner.StopPlayer(_playerPlaybackControlHost.Stop),
                 Cleanup: Cleanup,
                 LogCleanupError: ex => PlayerTrace.WriteLine($"[PlayerWindow] OnClosing error: {ex.Message}")));
@@ -38,8 +37,7 @@ public partial class PlayerWindow
             new PlayerWindowCleanupWorkflowActions(
                 MarkPlaybackDisposed: () => _playbackDisposed = true,
                 StopPlayerTimers: StopPlayerTimers,
-                DetachVideoView: () => PlayerPlaybackResourceCleaner.DetachVideoView(
-                    () => { if (VideoView != null) VideoView.MediaPlayer = null; }),
+                DetachVideoView: () => _playerMediaRuntime.DetachVideoView(VideoView),
                 DisposeMediaPlayer: () => _playerMediaRuntime.DisposeMediaPlayer(
                     message => PlayerTrace.WriteLine(message)),
                 DisposeLibVlc: () => _playerMediaRuntime.DisposeLibVlc(

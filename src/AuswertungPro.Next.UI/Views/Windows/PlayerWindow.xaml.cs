@@ -43,7 +43,7 @@ public partial class PlayerWindow : Window
         PlayerWindowHeaderControls.ApplyVideoInfo(this, VideoNameText, VideoPathText, videoInfo);
 
         _playerMediaRuntime = PlayerMediaRuntimeFactory.Create(_options);
-        VideoView.MediaPlayer = _playerMediaRuntime.MediaPlayer;
+        _playerMediaRuntime.AttachVideoView(VideoView);
 
         var playerMediaHosts = _playerMediaRuntime.Hosts;
         _playerTimelineHost = playerMediaHosts.TimelineHost;

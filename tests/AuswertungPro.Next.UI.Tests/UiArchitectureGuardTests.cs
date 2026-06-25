@@ -3081,17 +3081,23 @@ public sealed class UiArchitectureGuardTests
         var cleanerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackResourceCleaner.cs");
         var closingWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosingWorkflow.cs");
         var cleanupWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowCleanupWorkflow.cs");
+        var runtimePath = Path.Combine(uiRoot, "Player", "PlayerMediaRuntime.cs");
+        var attachmentPath = Path.Combine(uiRoot, "Player", "PlayerVideoViewMediaAttachment.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Playback-Closing/Cleanup soll aus dem allgemeinen Playback-Partial heraus.");
         Assert.True(File.Exists(cleanerPath), "Playback-Resource-Cleanup soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(closingWorkflowPath), "Playback-Closing-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(cleanupWorkflowPath), "Playback-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(runtimePath), "Media-Runtime soll VideoView-Attach/Detach kapseln.");
+        Assert.True(File.Exists(attachmentPath), "Direkte VideoView.MediaPlayer-Zuweisung soll ausserhalb von PlayerWindow liegen.");
 
         var playback = File.ReadAllText(playbackPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var cleaner = File.Exists(cleanerPath) ? File.ReadAllText(cleanerPath) : "";
         var closingWorkflow = File.Exists(closingWorkflowPath) ? File.ReadAllText(closingWorkflowPath) : "";
         var cleanupWorkflow = File.Exists(cleanupWorkflowPath) ? File.ReadAllText(cleanupWorkflowPath) : "";
+        var runtime = File.Exists(runtimePath) ? File.ReadAllText(runtimePath) : "";
+        var attachment = File.Exists(attachmentPath) ? File.ReadAllText(attachmentPath) : "";
 
         Assert.DoesNotContain("private void OnClosing", playback);
         Assert.DoesNotContain("private void Cleanup", playback);
@@ -3102,15 +3108,21 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerWindowClosingWorkflow.Execute", lifecycle);
         Assert.Contains("PlayerWindowCleanupWorkflow.Execute", lifecycle);
         Assert.Contains("ConfirmUnappliedCodingChangesOnClose", lifecycle);
-        Assert.Contains("PlayerPlaybackResourceCleaner.DetachVideoView", lifecycle);
+        Assert.Contains("_playerMediaRuntime.DetachVideoView", lifecycle);
         Assert.Contains("PlayerPlaybackResourceCleaner.StopPlayer", lifecycle);
         Assert.Contains("_playerMediaRuntime.DisposeMediaPlayer", lifecycle);
         Assert.Contains("_playerMediaRuntime.DisposeLibVlc", lifecycle);
+        Assert.DoesNotContain("PlayerPlaybackResourceCleaner.DetachVideoView", lifecycle);
         Assert.DoesNotContain("PlayerPlaybackResourceCleaner.DisposeMediaPlayer", lifecycle);
         Assert.DoesNotContain("PlayerPlaybackResourceCleaner.DisposeLibVlc", lifecycle);
+        Assert.DoesNotContain("VideoView.MediaPlayer", lifecycle);
         Assert.DoesNotContain("AuswertungPro.Next.Application.Common.BestEffort.Try", lifecycle);
         Assert.DoesNotContain("_player.Dispose()", lifecycle);
         Assert.DoesNotContain("_libVlc.Dispose()", lifecycle);
+        Assert.Contains("AttachVideoView", runtime);
+        Assert.Contains("DetachVideoView", runtime);
+        Assert.Contains("PlayerPlaybackResourceCleaner.DetachVideoView", runtime);
+        Assert.Contains("videoView.MediaPlayer", attachment);
         Assert.Contains("public static class PlayerWindowClosingWorkflow", closingWorkflow);
         Assert.Contains("ConfirmCanClose", closingWorkflow);
         Assert.Contains("LogCleanupError", closingWorkflow);
@@ -5461,6 +5473,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("PlayerMediaRuntimeFactory.Create(_options)", windowRoot);
         Assert.Contains("_playerMediaRuntime.Hosts", windowRoot);
+        Assert.Contains("_playerMediaRuntime.AttachVideoView(VideoView)", windowRoot);
         Assert.Contains("TimelineHost", windowRoot);
         Assert.Contains("PlaybackControlHost", windowRoot);
         Assert.Contains("MarqueeOverlayHost", windowRoot);
@@ -5472,6 +5485,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_player.", windowRoot);
         Assert.DoesNotContain("_libVlc", windowRoot);
         Assert.DoesNotContain("new MediaPlayer", windowRoot);
+        Assert.DoesNotContain("VideoView.MediaPlayer", windowRoot);
         Assert.Contains("public sealed record PlayerMediaHosts", factory);
         Assert.Contains("public static PlayerMediaHosts Create", factory);
         Assert.Contains("new PlayerTimelineHost", factory);
