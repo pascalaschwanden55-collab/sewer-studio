@@ -24,7 +24,7 @@ public partial class PlayerWindow
         PlayerManualMarkPlayback.PauseForManualMarking(pause => _player.SetPause(pause));
 
         var clockPosition = LiveDetectionGeometryMapper.ClickToClockPosition(clickPoint, canvasSize);
-        var timestampSec = _player.Time / 1000.0;
+        var timestampSec = _playerTimelineHost.CurrentSecondsOrZero;
 
         OpenCodeCatalogForMark(clockPosition, timestampSec, null);
         e.Handled = true;

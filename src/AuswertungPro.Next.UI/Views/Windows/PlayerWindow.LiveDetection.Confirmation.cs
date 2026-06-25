@@ -19,10 +19,10 @@ public partial class PlayerWindow
                 pause => _player.SetPause(pause));
 
         // Zur Fundstelle springen (Timestamp aus dem analysierten Frame)
-        if (_detectionConfirmationBuffer.TimestampSeconds.HasValue && _player != null)
+        if (_detectionConfirmationBuffer.TimestampSeconds.HasValue)
         {
             long targetMs = (long)(_detectionConfirmationBuffer.TimestampSeconds.Value * 1000);
-            _player.Time = targetMs;
+            _playerTimelineHost.SeekMilliseconds(targetMs);
         }
 
         LiveDetectionStatusControls.ShowDetectionConfirmation(

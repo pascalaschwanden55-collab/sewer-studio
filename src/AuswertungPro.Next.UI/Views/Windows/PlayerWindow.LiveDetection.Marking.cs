@@ -26,7 +26,7 @@ public partial class PlayerWindow
             if (overlay == null)
                 return;
 
-            var timestampSec = _player.Time / 1000.0;
+            var timestampSec = _playerTimelineHost.CurrentSecondsOrZero;
             var frameBytes = await CaptureCurrentFrameAsync();
 
             string? clockPos = LiveDetectionGeometryMapper.EstimateClockFromOverlayCenter(overlay);

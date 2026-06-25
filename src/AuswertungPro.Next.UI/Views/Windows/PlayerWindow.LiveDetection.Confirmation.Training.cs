@@ -22,7 +22,7 @@ public partial class PlayerWindow
 
         try
         {
-            var timestampSec = _detectionConfirmationBuffer.TimestampSeconds ?? (_player.Time / 1000.0);
+            var timestampSec = _detectionConfirmationBuffer.TimestampSeconds ?? _playerTimelineHost.CurrentSecondsOrZero;
             var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
             var result = await LiveDetectionConfirmationTrainingWorkflow.SaveAcceptedAsync(
                 pendingFindings,
@@ -61,7 +61,7 @@ public partial class PlayerWindow
 
         try
         {
-            var timestampSec = _player.Time / 1000.0;
+            var timestampSec = _playerTimelineHost.CurrentSecondsOrZero;
 
             // VsaCodeExplorer oeffnen fuer Korrektur - Meter aus OSD/Video
             var autoMeter2 = _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition();
