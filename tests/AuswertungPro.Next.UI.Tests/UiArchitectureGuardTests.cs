@@ -115,12 +115,14 @@ public sealed class UiArchitectureGuardTests
         var wiringPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs");
         var sliderPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs");
         var dragPlaybackPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragPlayback.cs");
+        var dragWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragWorkflow.cs");
         var headerControlsPath = Path.Combine(uiRoot, "Player", "PlayerWindowHeaderControls.cs");
         var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
 
         Assert.True(File.Exists(wiringPath), "Fenster-, Slider- und Viewport-Wiring soll aus dem Konstruktor heraus.");
         Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
         Assert.True(File.Exists(dragPlaybackPath), "PositionSlider-Drag-Pause-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dragWorkflowPath), "PositionSlider-Drag-Reihenfolge muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(headerControlsPath), "Player-Header-Control-Zuweisungen sollen ausserhalb des Konstruktors liegen.");
         Assert.True(File.Exists(closedWorkflowPath), "Closed-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -128,6 +130,7 @@ public sealed class UiArchitectureGuardTests
         var wiring = File.ReadAllText(wiringPath);
         var slider = File.ReadAllText(sliderPath);
         var dragPlayback = File.Exists(dragPlaybackPath) ? File.ReadAllText(dragPlaybackPath) : "";
+        var dragWorkflow = File.Exists(dragWorkflowPath) ? File.ReadAllText(dragWorkflowPath) : "";
         var headerControls = File.Exists(headerControlsPath) ? File.ReadAllText(headerControlsPath) : "";
         var closedWorkflow = File.Exists(closedWorkflowPath) ? File.ReadAllText(closedWorkflowPath) : "";
 
@@ -155,11 +158,18 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PositionSlider.AddHandler", slider);
         Assert.Contains("private void PositionSlider_DragStarted", slider);
         Assert.Contains("private void PositionSlider_LostMouseCapture", slider);
-        Assert.Contains("PlayerPositionSliderDragPlayback.Start", slider);
-        Assert.Contains("PlayerPositionSliderDragPlayback.Complete", slider);
+        Assert.Contains("PlayerPositionSliderDragWorkflow.Start", slider);
+        Assert.Contains("PlayerPositionSliderDragWorkflow.Complete", slider);
+        Assert.Contains("PlayerPositionSliderDragWorkflow.PreviewMouseUp", slider);
+        Assert.Contains("PlayerPositionSliderDragWorkflow.LostMouseCapture", slider);
+        Assert.DoesNotContain("if (!_isDragging)", slider);
+        Assert.DoesNotContain("_isDragging = false", slider);
+        Assert.Contains("PlayerPositionSliderDragPlayback.Start", dragWorkflow);
+        Assert.Contains("PlayerPositionSliderDragPlayback.Complete", dragWorkflow);
         Assert.DoesNotContain("_player.SetPause(true)", slider);
         Assert.DoesNotContain("_player.SetPause(false)", slider);
         Assert.Contains("public static class PlayerPositionSliderDragPlayback", dragPlayback);
+        Assert.Contains("public static class PlayerPositionSliderDragWorkflow", dragWorkflow);
         Assert.Contains("private void WireWindowSurfaceEvents", wiring);
     }
 

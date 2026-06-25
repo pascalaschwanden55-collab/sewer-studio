@@ -15,40 +15,33 @@ public partial class PlayerWindow
     }
 
     private void PositionSlider_DragStarted(object sender, DragStartedEventArgs e)
-    {
-        _wasPlayingBeforeDrag = PlayerPositionSliderDragPlayback.Start(
-            _playerPlaybackControlHost.IsPlaying,
-            _playerPlaybackControlHost.SetPause);
-        _isDragging = true;
-        ScrubSeekToSlider();
-    }
+        => PlayerPositionSliderDragWorkflow.Start(
+            new PlayerPositionSliderDragStartRequest(_playerPlaybackControlHost.IsPlaying),
+            CreatePositionSliderDragActions());
 
     private void PositionSlider_DragCompleted(object sender, DragCompletedEventArgs e)
-    {
-        _scrubTimer.Stop();
-        SeekToSlider();
-        _isDragging = false;
-        PlayerPositionSliderDragPlayback.Complete(
-            _wasPlayingBeforeDrag,
-            _playerPlaybackControlHost.SetPause);
-    }
+        => PlayerPositionSliderDragWorkflow.Complete(
+            new PlayerPositionSliderDragCompleteRequest(_wasPlayingBeforeDrag),
+            CreatePositionSliderDragActions());
 
     private void PositionSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (!_isDragging)
-            SeekToSlider();
-    }
+        => PlayerPositionSliderDragWorkflow.PreviewMouseUp(
+            new PlayerPositionSliderDragPreviewMouseUpRequest(_isDragging),
+            CreatePositionSliderDragActions());
 
     private void PositionSlider_LostMouseCapture(object sender, MouseEventArgs e)
-    {
-        if (!_isDragging)
-            return;
+        => PlayerPositionSliderDragWorkflow.LostMouseCapture(
+            new PlayerPositionSliderDragLostCaptureRequest(
+                _isDragging,
+                _wasPlayingBeforeDrag),
+            CreatePositionSliderDragActions());
 
-        _scrubTimer.Stop();
-        SeekToSlider();
-        _isDragging = false;
-        PlayerPositionSliderDragPlayback.Complete(
-            _wasPlayingBeforeDrag,
-            _playerPlaybackControlHost.SetPause);
-    }
+    private PlayerPositionSliderDragWorkflowActions CreatePositionSliderDragActions()
+        => new(
+            SetWasPlayingBeforeDrag: value => _wasPlayingBeforeDrag = value,
+            SetDragging: value => _isDragging = value,
+            SetPause: _playerPlaybackControlHost.SetPause,
+            StopScrubTimer: _scrubTimer.Stop,
+            SeekToSlider,
+            ScrubSeekToSlider);
 }
