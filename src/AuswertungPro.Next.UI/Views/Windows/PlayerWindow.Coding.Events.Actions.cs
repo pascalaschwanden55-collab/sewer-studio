@@ -30,9 +30,9 @@ public partial class PlayerWindow
 
     private void CodingEventSeek_Click(object sender, RoutedEventArgs e)
     {
-        if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
-        if (CodingEventSeekPolicy.TryGetSeekMilliseconds(codingEvent, out var milliseconds))
-            _playerTimelineHost.SeekMilliseconds(milliseconds);
+        CodingEventSeekCommandWorkflow.Execute(
+            new CodingEventSeekCommandRequest(LstCodingEvents.SelectedItem as CodingEvent),
+            new CodingEventSeekCommandActions(_playerTimelineHost.SeekMilliseconds));
     }
 
     private void CodingEventCloseStretch_Click(object sender, RoutedEventArgs e)

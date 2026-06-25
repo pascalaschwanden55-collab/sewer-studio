@@ -2762,6 +2762,7 @@ public sealed class UiArchitectureGuardTests
         var deleteApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteApplier.cs");
         var editApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventEditApplier.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventListActionWorkflow.cs");
+        var seekCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventSeekCommandWorkflow.cs");
         var editCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventEditCommandWorkflow.cs");
         var deleteCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteCommandWorkflow.cs");
         var closeStretchCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventCloseStretchCommandWorkflow.cs");
@@ -2772,6 +2773,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(deleteApplierPath), "Coding-Event-Loeschanwendung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(editApplierPath), "Coding-Event-Bearbeitungsanwendung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Coding-Event-Listenaktionen sollen die Apply/Delete-Nachbearbeitung ausserhalb der PlayerWindow-Partials kapseln.");
+        Assert.True(File.Exists(seekCommandWorkflowPath), "Coding-Event-Seek-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(editCommandWorkflowPath), "Coding-Event-Edit-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(deleteCommandWorkflowPath), "Coding-Event-Delete-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(closeStretchCommandWorkflowPath), "Coding-Event-Streckenschaden-Schliessen soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
@@ -2783,6 +2785,7 @@ public sealed class UiArchitectureGuardTests
         var deleteApplier = File.ReadAllText(deleteApplierPath);
         var editApplier = File.ReadAllText(editApplierPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
+        var seekCommandWorkflow = File.Exists(seekCommandWorkflowPath) ? File.ReadAllText(seekCommandWorkflowPath) : "";
         var editCommandWorkflow = File.Exists(editCommandWorkflowPath) ? File.ReadAllText(editCommandWorkflowPath) : "";
         var deleteCommandWorkflow = File.Exists(deleteCommandWorkflowPath) ? File.ReadAllText(deleteCommandWorkflowPath) : "";
         var closeStretchCommandWorkflow = File.Exists(closeStretchCommandWorkflowPath) ? File.ReadAllText(closeStretchCommandWorkflowPath) : "";
@@ -2798,6 +2801,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void CodingEventCloseStretch_Click", actions);
         Assert.Contains("private void CodingEventDelete_Click", actions);
         Assert.Contains("CodingEventActionDialogServiceFactory.Create", actions);
+        Assert.Contains("CodingEventSeekCommandWorkflow.Execute", actions);
         Assert.Contains("CodingEventEditCommandWorkflow.Execute", actions);
         Assert.Contains("CodingEventDeleteCommandWorkflow.Execute", actions);
         Assert.Contains("CodingEventCloseStretchCommandWorkflow.Execute", actions);
@@ -2817,6 +2821,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("DialogHost.Current", actions);
         Assert.DoesNotContain("Der aktuelle Meterstand", actions);
         Assert.DoesNotContain("Ereignis '", actions);
+        Assert.DoesNotContain("CodingEventSeekPolicy.TryGetSeekMilliseconds", actions);
+        Assert.Contains("CodingEventSeekPolicy.TryGetSeekMilliseconds", seekCommandWorkflow);
+        Assert.Contains("actions.SeekMilliseconds(milliseconds)", seekCommandWorkflow);
         Assert.Contains("actions.PausePlayback()", editCommandWorkflow);
         Assert.Contains("actions.TryEdit(selectedEvent)", editCommandWorkflow);
         Assert.Contains("actions.CompleteEdit(selectedEvent)", editCommandWorkflow);
