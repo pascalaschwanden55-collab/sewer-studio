@@ -61,24 +61,20 @@ public partial class PlayerWindow
     }
 
     private void PlayerWindow_Deactivated(object? sender, EventArgs e)
-    {
-        // Overlay-Popup schliessen, wenn ein fremdes Fenster den Fokus bekommt.
-        // Eigene Child-Dialoge verwenden SuspendCodingOverlayInput/ResumeCodingOverlayInput direkt.
-        if (_codingOverlaySuspendDepth > 0)
-            return;
-
-        _deactivatedByExternalWindow = true;
-        HideCodingOverlayForExternalWindow();
-    }
+        => PlayerWindowActivationWorkflow.Deactivate(
+            new PlayerWindowDeactivationRequest(_codingOverlaySuspendDepth),
+            CreateWindowActivationActions());
 
     private void PlayerWindow_Activated(object? sender, EventArgs e)
-    {
-        if (!_deactivatedByExternalWindow)
-            return;
+        => PlayerWindowActivationWorkflow.Activate(
+            new PlayerWindowActivationRequest(_deactivatedByExternalWindow),
+            CreateWindowActivationActions());
 
-        _deactivatedByExternalWindow = false;
-        RestoreCodingOverlayAfterExternalWindow();
-    }
+    private PlayerWindowActivationWorkflowActions CreateWindowActivationActions()
+        => new(
+            SetDeactivatedByExternalWindow: value => _deactivatedByExternalWindow = value,
+            HideCodingOverlayForExternalWindow,
+            RestoreCodingOverlayAfterExternalWindow);
 
     private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
     {

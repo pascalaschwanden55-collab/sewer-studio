@@ -9,13 +9,15 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class PlayerWindow
 {
     private void DetectionTimer_Tick(object? sender, EventArgs e)
-    {
-        if (_closing || _playbackDisposed) return;
-
-        RunDetectionAsync().SafeFireAndForget(
-            "DetectionTimer",
-            ex => PlayerTrace.WriteLine($"[PlayerWindow] DetectionTimer_Tick Fehler: {ex.Message}"));
-    }
+        => LiveDetectionTimerDispatchWorkflow.Execute(
+            new LiveDetectionTimerDispatchWorkflowRequest(
+                _closing,
+                _playbackDisposed),
+            new LiveDetectionTimerDispatchWorkflowActions(
+                RunDetectionAsync,
+                Dispatch: (runDetectionAsync, operationName, onError) =>
+                    runDetectionAsync().SafeFireAndForget(operationName, onError),
+                LogError: message => PlayerTrace.WriteLine(message)));
 
     private async Task RunDetectionAsync()
     {

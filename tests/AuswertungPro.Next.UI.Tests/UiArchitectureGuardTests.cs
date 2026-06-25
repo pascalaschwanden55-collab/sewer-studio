@@ -116,6 +116,7 @@ public sealed class UiArchitectureGuardTests
         var sliderPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs");
         var dragPlaybackPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragPlayback.cs");
         var dragWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragWorkflow.cs");
+        var activationWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowActivationWorkflow.cs");
         var headerControlsPath = Path.Combine(uiRoot, "Player", "PlayerWindowHeaderControls.cs");
         var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
 
@@ -123,6 +124,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
         Assert.True(File.Exists(dragPlaybackPath), "PositionSlider-Drag-Pause-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dragWorkflowPath), "PositionSlider-Drag-Reihenfolge muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(activationWorkflowPath), "Fenster-Aktivierungs-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(headerControlsPath), "Player-Header-Control-Zuweisungen sollen ausserhalb des Konstruktors liegen.");
         Assert.True(File.Exists(closedWorkflowPath), "Closed-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -131,6 +133,7 @@ public sealed class UiArchitectureGuardTests
         var slider = File.ReadAllText(sliderPath);
         var dragPlayback = File.Exists(dragPlaybackPath) ? File.ReadAllText(dragPlaybackPath) : "";
         var dragWorkflow = File.Exists(dragWorkflowPath) ? File.ReadAllText(dragWorkflowPath) : "";
+        var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
         var headerControls = File.Exists(headerControlsPath) ? File.ReadAllText(headerControlsPath) : "";
         var closedWorkflow = File.Exists(closedWorkflowPath) ? File.ReadAllText(closedWorkflowPath) : "";
 
@@ -146,8 +149,15 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("Deactivated += (_, _)", windowRoot);
         Assert.Contains("private void WireWindowLifecycleEvents", wiring);
         Assert.Contains("private void PlayerWindow_Closed", wiring);
+        Assert.Contains("PlayerWindowActivationWorkflow.Deactivate", wiring);
+        Assert.Contains("PlayerWindowActivationWorkflow.Activate", wiring);
+        Assert.DoesNotContain("if (_codingOverlaySuspendDepth > 0)", wiring);
+        Assert.DoesNotContain("if (!_deactivatedByExternalWindow)", wiring);
         Assert.Contains("PlayerWindowClosedWorkflow.Execute", wiring);
         Assert.Contains("public static class PlayerWindowClosedWorkflow", closedWorkflow);
+        Assert.Contains("request.CodingOverlaySuspendDepth", activationWorkflow);
+        Assert.Contains("actions.HideCodingOverlayForExternalWindow()", activationWorkflow);
+        Assert.Contains("actions.RestoreCodingOverlayAfterExternalWindow()", activationWorkflow);
         Assert.Contains("actions.StopCodingOsdTimer()", closedWorkflow);
         Assert.Contains("actions.StopLiveDetection()", closedWorkflow);
         Assert.DoesNotContain("Codier-Modus sauber", wiring);
@@ -3817,10 +3827,12 @@ public sealed class UiArchitectureGuardTests
         var liveDetectionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.cs");
         var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTimerPolicy.cs");
+        var dispatchWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTimerDispatchWorkflow.cs");
         var tickStartWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTickStartWorkflow.cs");
         var inferenceWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionInferenceWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "LiveDetection-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dispatchWorkflowPath), "LiveDetection-Timer-Dispatch muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(liveControllerPath), "LiveDetection-Timer-Gate soll vom LiveDetectionController aufgerufen werden.");
         Assert.True(File.Exists(tickStartWorkflowPath), "LiveDetection-Tick-Start-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(inferenceWorkflowPath), "LiveDetection-Inferenz-Gate soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -3828,13 +3840,14 @@ public sealed class UiArchitectureGuardTests
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var liveController = File.ReadAllText(liveControllerPath);
         var policy = File.ReadAllText(policyPath);
+        var dispatchWorkflow = File.ReadAllText(dispatchWorkflowPath);
         var tickStartWorkflow = File.ReadAllText(tickStartWorkflowPath);
         var inferenceWorkflow = File.ReadAllText(inferenceWorkflowPath);
 
         Assert.DoesNotContain("private async void DetectionTimer_Tick", liveDetection);
         Assert.Contains("private void DetectionTimer_Tick", liveDetection);
+        Assert.Contains("LiveDetectionTimerDispatchWorkflow.Execute", liveDetection);
         Assert.Contains("SafeFireAndForget", liveDetection);
-        Assert.Contains("\"DetectionTimer\"", liveDetection);
         Assert.Contains("private async Task RunDetectionAsync", liveDetection);
         Assert.Contains("_liveDetectionController.ShouldRunTick", liveDetection);
         Assert.Contains("LiveDetectionTickStartWorkflow.Start", liveDetection);
@@ -3846,6 +3859,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain(".AnalyzeFrameAsync(", liveDetection);
         Assert.Contains("| Snapshot", tickStartWorkflow);
         Assert.Contains("| Inferenz", inferenceWorkflow);
+        Assert.Contains("request.IsClosing", dispatchWorkflow);
+        Assert.Contains("request.IsPlaybackDisposed", dispatchWorkflow);
+        Assert.Contains("\"DetectionTimer\"", dispatchWorkflow);
+        Assert.Contains("actions.Dispatch", dispatchWorkflow);
         Assert.Contains("LiveDetectionTimerPolicy.ShouldRunTick", liveController);
         Assert.Contains("CreateAnalyzeFrameAsync", liveController);
         Assert.DoesNotContain("_isDetectionInFlight || _liveDetectionService is null || _detectionCts is null", liveDetection);
