@@ -1,46 +1,53 @@
 using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
     private void SetLiveDetectionBadge(string status, Color dotColor, string? stage = null)
-    {
-        if (!Dispatcher.CheckAccess())
-        {
-            Dispatcher.Invoke(() => SetLiveDetectionBadge(status, dotColor, stage));
-            return;
-        }
-
-        LiveDetectionStatusControls.ShowLiveDetectionBadge(AiStatusBadge, AiStatusText, AiStatusDot, status, dotColor, stage);
-    }
+        => RunStatusUi(() => LiveDetectionStatusControls.ShowLiveDetectionBadge(
+            AiStatusBadge,
+            AiStatusText,
+            AiStatusDot,
+            status,
+            dotColor,
+            stage));
 
     private void SetYoloStatus(string text, Color dotColor, string? model = null)
-    {
-        if (!Dispatcher.CheckAccess())
-        {
-            Dispatcher.Invoke(() => SetYoloStatus(text, dotColor, model));
-            return;
-        }
-
-        LiveDetectionStatusControls.ShowYoloStatus(YoloStatusBar, TxtYoloStatus, YoloDot, TxtYoloModel, text, dotColor, model);
-    }
+        => RunStatusUi(() => LiveDetectionStatusControls.ShowYoloStatus(
+            YoloStatusBar,
+            TxtYoloStatus,
+            YoloDot,
+            TxtYoloModel,
+            text,
+            dotColor,
+            model));
 
     private void SetCodingAiState(string status, Color dotColor, string? stage = null, bool pulse = false)
-    {
-        if (!Dispatcher.CheckAccess())
+        => RunStatusUi(() =>
         {
-            Dispatcher.Invoke(() => SetCodingAiState(status, dotColor, stage, pulse));
-            return;
-        }
+            LiveDetectionStatusControls.ShowCodingAiState(
+                TxtCodingAiStatus,
+                TxtCodingAiStage,
+                CodingAiDot,
+                status,
+                dotColor,
+                stage);
+            if (pulse)
+                StartCodingAiPulse();
+            else
+                StopCodingAiPulse();
+        });
 
-        LiveDetectionStatusControls.ShowCodingAiState(TxtCodingAiStatus, TxtCodingAiStage, CodingAiDot, status, dotColor, stage);
-        if (pulse)
-            StartCodingAiPulse();
-        else
-            StopCodingAiPulse();
-    }
+    private void RunStatusUi(Action apply)
+        => PlayerUiDispatchWorkflow.Execute(
+            new PlayerUiDispatchWorkflowRequest(
+                HasDispatcherAccess: Dispatcher.CheckAccess()),
+            new PlayerUiDispatchWorkflowActions(
+                Apply: apply,
+                DispatchToUi: action => Dispatcher.Invoke(action)));
 
     private void UpdateDetectionStatus(LiveDetection result)
     {

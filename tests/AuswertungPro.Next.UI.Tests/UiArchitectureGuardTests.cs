@@ -1358,6 +1358,7 @@ public sealed class UiArchitectureGuardTests
         var snapshotWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionSnapshotWorkflow.cs");
         var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRunCommandWorkflow.cs");
         var pulseWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionPulseWorkflow.cs");
+        var uiDispatchWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerUiDispatchWorkflow.cs");
         var controlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
         var pulseControlsPath = Path.Combine(windowsRoot, "LiveDetectionPulseControls.cs");
 
@@ -1367,6 +1368,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(snapshotWorkflowPath), "LiveDetection-Snapshot-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(runCommandWorkflowPath), "LiveDetection-Run-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pulseWorkflowPath), "Coding-AI-Puls-Start/Stop-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(uiDispatchWorkflowPath), "Status-UI-Thread-Dispatch soll ausserhalb der PlayerWindow-Partials entschieden werden.");
         Assert.True(File.Exists(controlsPath), "LiveDetection-Status-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pulseControlsPath), "Coding-AI-Pulsanimation soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
@@ -1377,6 +1379,7 @@ public sealed class UiArchitectureGuardTests
         var snapshotWorkflow = File.ReadAllText(snapshotWorkflowPath);
         var runCommandWorkflow = File.Exists(runCommandWorkflowPath) ? File.ReadAllText(runCommandWorkflowPath) : "";
         var pulseWorkflow = File.Exists(pulseWorkflowPath) ? File.ReadAllText(pulseWorkflowPath) : "";
+        var uiDispatchWorkflow = File.Exists(uiDispatchWorkflowPath) ? File.ReadAllText(uiDispatchWorkflowPath) : "";
         var controls = File.ReadAllText(controlsPath);
         var pulseControls = File.Exists(pulseControlsPath) ? File.ReadAllText(pulseControlsPath) : "";
 
@@ -1401,7 +1404,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.StartPulse()", pulseWorkflow);
         Assert.Contains("actions.ClearRunning()", pulseWorkflow);
         Assert.Contains("actions.StopPulse()", pulseWorkflow);
-        Assert.Contains("Dispatcher.Invoke", status);
+        Assert.Contains("PlayerUiDispatchWorkflow.Execute", status);
+        Assert.Contains("HasDispatcherAccess: Dispatcher.CheckAccess()", status);
+        Assert.Contains("DispatchToUi: action => Dispatcher.Invoke(action)", status);
+        Assert.DoesNotContain("if (!Dispatcher.CheckAccess())", status);
+        Assert.DoesNotContain("Dispatcher.Invoke(() => Set", status);
+        Assert.Contains("actions.DispatchToUi(actions.Apply)", uiDispatchWorkflow);
+        Assert.Contains("actions.Apply()", uiDispatchWorkflow);
         Assert.Contains("LiveDetectionStatusControls.ShowLiveDetectionBadge", status);
         Assert.Contains("LiveDetectionStatusControls.ShowYoloStatus", status);
         Assert.Contains("LiveDetectionStatusControls.ShowCodingAiState", status);
