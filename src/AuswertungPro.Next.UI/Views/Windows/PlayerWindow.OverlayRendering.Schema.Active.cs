@@ -1,4 +1,4 @@
-using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -6,22 +6,14 @@ public partial class PlayerWindow
 {
     private void RenderActiveCodingSchema()
     {
-        if (!_codingSchemaManager.IsActive || _codingSchemaManager.Active == null)
-            return;
-
-        var overlay = BuildCodingSchemaGeometry();
-
-        switch (_codingSchemaManager.Active)
-        {
-            case PipeBendSchema bend:
-                _codingOverlayRenderController.RenderActiveSchema(bend, overlay);
-                break;
-            case FillLevelSchema fill:
-                _codingOverlayRenderController.RenderActiveSchema(fill, overlay);
-                break;
-            case IntrusionSchema intrusion:
-                _codingOverlayRenderController.RenderActiveSchema(intrusion, overlay);
-                break;
-        }
+        CodingActiveSchemaRenderWorkflow.Execute(
+            new CodingActiveSchemaRenderRequest(
+                _codingSchemaManager.IsActive,
+                _codingSchemaManager.Active),
+            new CodingActiveSchemaRenderActions(
+                BuildOverlay: BuildCodingSchemaGeometry,
+                RenderPipeBend: (bend, overlay) => _codingOverlayRenderController.RenderActiveSchema(bend, overlay),
+                RenderFillLevel: (fill, overlay) => _codingOverlayRenderController.RenderActiveSchema(fill, overlay),
+                RenderIntrusion: (intrusion, overlay) => _codingOverlayRenderController.RenderActiveSchema(intrusion, overlay)));
     }
 }
