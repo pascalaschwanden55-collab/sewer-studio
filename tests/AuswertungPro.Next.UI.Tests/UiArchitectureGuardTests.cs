@@ -5168,6 +5168,35 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void Player_timeline_overlay_controllers_seek_through_timeline_host()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var playerRoot = Path.Combine(uiRoot, "Player");
+        var windowRoot = File.ReadAllText(Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs"));
+        var paths = new[]
+        {
+            Path.Combine(playerRoot, "DamageMarkerController.cs"),
+            Path.Combine(playerRoot, "QuickScanController.cs")
+        };
+
+        Assert.Contains("_playerTimelineHost = new PlayerTimelineHost", windowRoot);
+        Assert.Contains("_playerTimelineHost,", windowRoot);
+
+        foreach (var path in paths)
+        {
+            Assert.True(File.Exists(path), $"{Path.GetFileName(path)} muss existieren.");
+
+            var text = File.ReadAllText(path);
+            Assert.Contains("PlayerTimelineHost", text);
+            Assert.DoesNotContain("_player.Time", text);
+            Assert.DoesNotContain("_player.Length", text);
+            Assert.DoesNotContain("_player?.Time", text);
+            Assert.DoesNotContain("_player?.Length", text);
+        }
+    }
+
+    [Fact]
     public void PlayerWindow_coding_lifecycle_lives_in_lifecycle_partial()
     {
         var root = FindRepositoryRoot();

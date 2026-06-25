@@ -25,6 +25,7 @@ public sealed class QuickScanController
     private readonly ToggleButton _quickScanButton;
     private readonly TextBlock _quickScanStatusText;
     private readonly MediaPlayer _player;
+    private readonly PlayerTimelineHost _timelineHost;
     private readonly string _videoPath;
     private readonly Action _ensurePlaying;
     private readonly Action _updateUi;
@@ -39,6 +40,7 @@ public sealed class QuickScanController
         ToggleButton quickScanButton,
         TextBlock quickScanStatusText,
         MediaPlayer player,
+        PlayerTimelineHost timelineHost,
         string videoPath,
         Action ensurePlaying,
         Action updateUi,
@@ -48,6 +50,7 @@ public sealed class QuickScanController
         _quickScanButton = quickScanButton ?? throw new ArgumentNullException(nameof(quickScanButton));
         _quickScanStatusText = quickScanStatusText ?? throw new ArgumentNullException(nameof(quickScanStatusText));
         _player = player ?? throw new ArgumentNullException(nameof(player));
+        _timelineHost = timelineHost ?? throw new ArgumentNullException(nameof(timelineHost));
         _videoPath = videoPath ?? throw new ArgumentNullException(nameof(videoPath));
         _ensurePlaying = ensurePlaying ?? throw new ArgumentNullException(nameof(ensurePlaying));
         _updateUi = updateUi ?? throw new ArgumentNullException(nameof(updateUi));
@@ -180,12 +183,12 @@ public sealed class QuickScanController
         {
             _ensurePlaying();
             _player.SetPause(true);
-            var length = _player.Length;
+            var length = _timelineHost.LengthMilliseconds ?? 0;
             if (length > 0)
             {
                 var targetMs = (long)(timestampSec * 1000);
                 if (targetMs > length) targetMs = length;
-                _player.Time = targetMs;
+                _timelineHost.SeekMilliseconds(targetMs);
             }
             _updateUi();
         };

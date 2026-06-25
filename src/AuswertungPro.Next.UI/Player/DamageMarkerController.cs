@@ -16,6 +16,7 @@ public sealed class DamageMarkerController
     private readonly Slider _positionSlider;
     private readonly PlayerDamageOverlayData? _damageOverlay;
     private readonly MediaPlayer _player;
+    private readonly PlayerTimelineHost _timelineHost;
     private readonly Action _ensurePlaying;
     private readonly Action _updateUi;
     private readonly Func<(double offsetX, double trackWidth)> _getSliderTrackBounds;
@@ -26,6 +27,7 @@ public sealed class DamageMarkerController
         Slider positionSlider,
         PlayerDamageOverlayData? damageOverlay,
         MediaPlayer player,
+        PlayerTimelineHost timelineHost,
         Action ensurePlaying,
         Action updateUi,
         Func<(double offsetX, double trackWidth)> getSliderTrackBounds)
@@ -34,6 +36,7 @@ public sealed class DamageMarkerController
         _positionSlider = positionSlider ?? throw new ArgumentNullException(nameof(positionSlider));
         _damageOverlay = damageOverlay;
         _player = player ?? throw new ArgumentNullException(nameof(player));
+        _timelineHost = timelineHost ?? throw new ArgumentNullException(nameof(timelineHost));
         _ensurePlaying = ensurePlaying ?? throw new ArgumentNullException(nameof(ensurePlaying));
         _updateUi = updateUi ?? throw new ArgumentNullException(nameof(updateUi));
         _getSliderTrackBounds = getSliderTrackBounds ?? throw new ArgumentNullException(nameof(getSliderTrackBounds));
@@ -206,9 +209,9 @@ public sealed class DamageMarkerController
         var ratio = Math.Clamp(meter / _damageOverlay.PipeLengthMeters, 0.0, 1.0);
         _positionSlider.Value = ratio * _positionSlider.Maximum;
 
-        var length = _player.Length;
+        var length = _timelineHost.LengthMilliseconds ?? 0;
         if (length > 0)
-            _player.Time = (long)(ratio * length);
+            _timelineHost.SeekMilliseconds((long)(ratio * length));
         else
             _player.Position = (float)ratio;
 

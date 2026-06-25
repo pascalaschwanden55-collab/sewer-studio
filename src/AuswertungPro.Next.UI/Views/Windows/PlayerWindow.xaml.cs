@@ -53,11 +53,17 @@ public partial class PlayerWindow : Window
         };
         VideoView.MediaPlayer = _player;
 
+        _playerTimelineHost = new PlayerTimelineHost(
+            readTimeMilliseconds: () => _player.Time,
+            readLengthMilliseconds: () => _player.Length,
+            seekMilliseconds: milliseconds => _player.Time = milliseconds);
+
         _damageMarkerController = new DamageMarkerController(
             DamageMarkerCanvas,
             PositionSlider,
             _damageOverlay,
             _player,
+            _playerTimelineHost,
             EnsurePlaying,
             UpdateUi,
             () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas));
@@ -67,6 +73,7 @@ public partial class PlayerWindow : Window
             QuickScanButton,
             QuickScanStatusText,
             _player,
+            _playerTimelineHost,
             _videoPath,
             EnsurePlaying,
             UpdateUi,
@@ -85,11 +92,6 @@ public partial class PlayerWindow : Window
             Speed2Button,
             Speed4Button,
             Speed8Button);
-
-        _playerTimelineHost = new PlayerTimelineHost(
-            readTimeMilliseconds: () => _player.Time,
-            readLengthMilliseconds: () => _player.Length,
-            seekMilliseconds: milliseconds => _player.Time = milliseconds);
 
         _markToolControls = new PlayerMarkToolControls(
             MarkToolPopup,
