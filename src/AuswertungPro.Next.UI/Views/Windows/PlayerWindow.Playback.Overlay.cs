@@ -7,10 +7,11 @@ public partial class PlayerWindow
 {
     public static bool TryShowOverlayOnLast(string text, TimeSpan duration)
     {
-        if (_lastOpened is null)
-            return false;
-        _lastOpened.ShowOverlay(text, duration);
-        return true;
+        return PlayerLastOverlayDisplayWorkflow.Show(
+            new PlayerLastOverlayDisplayWorkflowRequest(_lastOpened is not null),
+            new PlayerLastOverlayDisplayWorkflowActions(
+                ShowOverlay: () => _lastOpened!.ShowOverlay(text, duration)))
+            .Handled;
     }
 
     private void ShowOverlay(string text, TimeSpan duration)

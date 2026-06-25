@@ -2752,6 +2752,7 @@ public sealed class UiArchitectureGuardTests
         var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayPolicy.cs");
         var displayWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerOverlayDisplayWorkflow.cs");
+        var lastOverlayWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerLastOverlayDisplayWorkflow.cs");
         var disablerPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayDisabler.cs");
         var hostPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayHost.cs");
         var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
@@ -2759,6 +2760,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(overlayPath), "Playback-Marquee-Overlay-Wiring soll in einem eigenen Playback-Partial liegen.");
         Assert.True(File.Exists(policyPath), "VLC-Marquee-Anzeigeparameter muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(displayWorkflowPath), "Overlay-Anzeige-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(lastOverlayWorkflowPath), "Last-PlayerWindow-Overlay-Gate soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(disablerPath), "VLC-Marquee-Deaktivieren muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(hostPath), "Direkte VLC-Marquee-Zugriffe sollen ueber einen Host laufen.");
         Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
@@ -2770,6 +2772,7 @@ public sealed class UiArchitectureGuardTests
         var windowRoot = File.ReadAllText(windowRootPath);
         var policy = File.ReadAllText(policyPath);
         var displayWorkflow = File.Exists(displayWorkflowPath) ? File.ReadAllText(displayWorkflowPath) : "";
+        var lastOverlayWorkflow = File.Exists(lastOverlayWorkflowPath) ? File.ReadAllText(lastOverlayWorkflowPath) : "";
         var disabler = File.Exists(disablerPath) ? File.ReadAllText(disablerPath) : "";
         var host = File.Exists(hostPath) ? File.ReadAllText(hostPath) : "";
         var mediaHostFactory = File.Exists(mediaHostFactoryPath) ? File.ReadAllText(mediaHostFactoryPath) : "";
@@ -2779,9 +2782,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void ShowOverlay", overlay);
         Assert.Contains("public static bool TryShowOverlayOnLast", overlay);
         Assert.Contains("PlayerOverlayDisplayWorkflow.Show", overlay);
+        Assert.Contains("PlayerLastOverlayDisplayWorkflow.Show", overlay);
+        Assert.DoesNotContain("if (_lastOpened is null)", overlay);
         Assert.DoesNotContain("PlayerMarqueeOverlayPolicy.BuildShow", overlay);
         Assert.Contains("PlayerMarqueeOverlayPolicy.BuildShow", displayWorkflow);
         Assert.Contains("actions.ScheduleDisable", displayWorkflow);
+        Assert.Contains("if (!request.HasLastWindow)", lastOverlayWorkflow);
+        Assert.Contains("actions.ShowOverlay()", lastOverlayWorkflow);
         Assert.Contains("_playerMarqueeOverlayHost.Show", overlay);
         Assert.Contains("_playerMarqueeOverlayHost.Disable", overlay);
         Assert.Contains("_playerMarqueeOverlayHost.Disable", snapshot);
