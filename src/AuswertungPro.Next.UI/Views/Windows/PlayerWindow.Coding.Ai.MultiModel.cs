@@ -8,10 +8,15 @@ public partial class PlayerWindow
 {
     private async Task RunCodingMultiModelAnalysisAsync(string activityText, double captureTimestampSec)
     {
-        var multiModel = _codingAiRuntimeOwner.Controller.MultiModel;
-        var analysisCts = _codingAiRuntimeOwner.Controller.AnalysisCancellation;
-        if (multiModel == null || analysisCts == null)
+        var runtimeGate = CodingMultiModelRuntimeGateWorkflow.Execute(
+            new CodingMultiModelRuntimeGateWorkflowRequest<Infrastructure.Ai.Pipeline.SingleFrameMultiModelService>(
+                _codingAiRuntimeOwner.Controller.MultiModel,
+                _codingAiRuntimeOwner.Controller.AnalysisCancellation));
+        if (!runtimeGate.Ready)
             return;
+
+        var multiModel = runtimeGate.MultiModel!;
+        var analysisCts = runtimeGate.AnalysisCancellation!;
 
         var start = await CodingMultiModelAnalysisStartWorkflow.ExecuteAsync(
             new CodingMultiModelAnalysisStartWorkflowRequest(
