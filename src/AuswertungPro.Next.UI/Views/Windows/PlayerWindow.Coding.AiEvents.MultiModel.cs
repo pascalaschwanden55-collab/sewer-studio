@@ -36,7 +36,7 @@ public partial class PlayerWindow
                 yoloMaxConfidence,
                 codingSessionService,
                 _codingSessionHost.Events,
-                _codingAiController.QualityGate,
+                _codingAiRuntimeOwner.Controller.QualityGate,
                 _codingOsdMeterController.LastResolvedMeterIsOsd,
                 _codingOverlayToolHost.Calibration,
                 CodeSelectionCatalog),

@@ -48,7 +48,7 @@ public partial class PlayerWindow
     {
         var result = await CodingOsdMeterSnapshotWorkflow.ExecuteAsync(
             new CodingOsdMeterSnapshotWorkflowRequest(
-                HasLiveDetection: _codingAiController.LiveDetection != null,
+                HasLiveDetection: _codingAiRuntimeOwner.Controller.LiveDetection != null,
                 PlayerTimeMilliseconds: _player?.Time),
             new CodingOsdMeterSnapshotWorkflowActions(
                 CaptureSnapshotAsync: () => CodingSnapshotCaptureFactory.CapturePngAsync(path => TakeSnapshotSafe(path)),

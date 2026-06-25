@@ -106,7 +106,7 @@ public partial class PlayerWindow
                 ExitCodingMode: () => _isCodingMode = false,
                 StopCodingOsdTimer: StopCodingOsdTimer,
                 DisposeCodingOsdMeterService: DisposeCodingOsdMeterService,
-                DisposeCodingAnalysisCancellation: _codingAiController.DisposeAnalysisCancellation,
+                DisposeCodingAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation,
                 StopCodingAiPulse: StopCodingAiPulse,
                 CancelQuickScan: _quickScanController.Cancel,
                 StopLiveDetection: StopLiveDetection,

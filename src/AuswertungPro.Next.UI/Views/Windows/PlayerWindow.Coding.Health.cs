@@ -13,7 +13,7 @@ public partial class PlayerWindow
         {
             var platformConfig = PlayerAiSettingsLoader.LoadPlatformSettings();
             var runtime = CodingAiRuntimeFactory.Create(platformConfig, CodeCatalog, _dependencies.PipelineConfig);
-            _codingAiController.ApplyRuntime(runtime);
+            _codingAiRuntimeOwner.Controller.ApplyRuntime(runtime);
             var config = runtime.RuntimeSettings;
             if (!config.Enabled)
             {
@@ -25,26 +25,26 @@ public partial class PlayerWindow
             if (runtime.MultiModelAvailable && runtime.VisionClient is not null)
             {
                 var healthMonitor = CodingAiRuntimeFactory.CreateHealthMonitor(
-                    _codingAiController.VisionClient!,
-                    aiEnabled: () => _codingAiController.AiEnabled,
-                    qwenAvailable: () => _codingAiController.QwenAvailable);
-                _codingAiController.StartHealthMonitor(healthMonitor, OnPipelineHealthChanged);
+                    _codingAiRuntimeOwner.Controller.VisionClient!,
+                    aiEnabled: () => _codingAiRuntimeOwner.Controller.AiEnabled,
+                    qwenAvailable: () => _codingAiRuntimeOwner.Controller.QwenAvailable);
+                _codingAiRuntimeOwner.Controller.StartHealthMonitor(healthMonitor, OnPipelineHealthChanged);
 
-                var initial = await _codingAiController.RefreshHealthOnceAsync();
+                var initial = await _codingAiRuntimeOwner.Controller.RefreshHealthOnceAsync();
                 ApplyPipelineHealth(initial);
             }
             else if (!string.IsNullOrWhiteSpace(runtime.MultiModelError))
             {
-                _codingAiController.SetUseMultiModel(false);
+                _codingAiRuntimeOwner.Controller.SetUseMultiModel(false);
                 SetCodingAiState("Künstliche Intelligenz bereit (Qwen)", PlayerStatusColors.Success,
                     $"Monitor-Fehler: {runtime.MultiModelError}");
             }
-            SetYoloStatus("Bereit", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName));
+            SetYoloStatus("Bereit", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(_codingAiRuntimeOwner.Controller.ModelName));
         }
         catch (Exception ex)
         {
             SetCodingAiState($"Fehler: {ex.Message}", PlayerStatusColors.Error,
-                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName)}");
+                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiRuntimeOwner.Controller.ModelName)}");
             CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, false);
         }
     }

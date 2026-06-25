@@ -4617,16 +4617,16 @@ public sealed class UiArchitectureGuardTests
         var helper = File.Exists(helperPath) ? File.ReadAllText(helperPath) : "";
         var playerWindowText = ai + exit + wiring + playback;
 
-        Assert.Contains("_codingAiController.TryBeginAnalysis()", ai);
-        Assert.Contains("DisposeAnalysisCancellation: _codingAiController.DisposeAnalysisCancellation", exit);
+        Assert.Contains("_codingAiRuntimeOwner.Controller.TryBeginAnalysis()", ai);
+        Assert.Contains("DisposeAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation", exit);
         Assert.Contains("actions.DisposeAnalysisCancellation()", exitTeardownWorkflow);
-        Assert.Contains("DisposeCodingAnalysisCancellation: _codingAiController.DisposeAnalysisCancellation", wiring);
+        Assert.Contains("DisposeCodingAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation", wiring);
         Assert.Contains("actions.DisposeCodingAnalysisCancellation()", closedWorkflow);
         Assert.Contains("CancelLiveDetection: _liveDetectionController.CancelDetectionIfPresent", playback);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_cancellation)", liveController);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_cancellation)", liveController);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear(_cancellation)", liveController);
-        Assert.Contains("CancelCodingAnalysis: _codingAiController.CancelAnalysisIfPresent", playback);
+        Assert.Contains("CancelCodingAnalysis: _codingAiRuntimeOwner.Controller.CancelAnalysisIfPresent", playback);
         Assert.Contains("actions.CancelLiveDetection()", closingWorkflow);
         Assert.Contains("actions.CancelCodingAnalysis()", closingWorkflow);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_analysisCancellation)", codingAiController);
@@ -5019,6 +5019,31 @@ public sealed class UiArchitectureGuardTests
         {
             var text = File.ReadAllText(path);
             Assert.DoesNotContain("_codingOverlayService", text);
+        }
+    }
+
+    [Fact]
+    public void PlayerWindow_coding_ai_controller_is_owned_by_runtime_owner()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var ownerPath = Path.Combine(uiRoot, "Player", "CodingAiControllerOwner.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+
+        Assert.True(File.Exists(ownerPath), "CodingAiController-Besitz soll in einem eigenen Player-Owner liegen.");
+
+        var owner = File.ReadAllText(ownerPath);
+        var state = File.ReadAllText(statePath);
+
+        Assert.Contains("public sealed class CodingAiControllerOwner", owner);
+        Assert.Contains("public CodingAiController Controller", owner);
+        Assert.Contains("private readonly CodingAiControllerOwner _codingAiRuntimeOwner", state);
+
+        foreach (var path in Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs"))
+        {
+            var text = File.ReadAllText(path);
+            Assert.DoesNotContain("_codingAiController", text);
         }
     }
 

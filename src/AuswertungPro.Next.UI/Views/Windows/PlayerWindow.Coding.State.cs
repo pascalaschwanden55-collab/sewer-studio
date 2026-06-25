@@ -33,7 +33,7 @@ public partial class PlayerWindow
 
     private bool _codingAiPulseRunning;
     private readonly StreckenschadenTracker _streckenTracker = new();
-    private readonly CodingAiController _codingAiController = new();
+    private readonly CodingAiControllerOwner _codingAiRuntimeOwner = new();
     private readonly CodingFrameReadinessController _codingFrameReadinessController = new();
     private CodingLiveAiTimerController? _codingLiveAiTimers;
     private readonly CodingOsdMeterController _codingOsdMeterController = new();

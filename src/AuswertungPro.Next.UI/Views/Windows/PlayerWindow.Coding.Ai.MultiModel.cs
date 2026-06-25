@@ -8,8 +8,8 @@ public partial class PlayerWindow
 {
     private async Task RunCodingMultiModelAnalysisAsync(string activityText, double captureTimestampSec)
     {
-        var multiModel = _codingAiController.MultiModel;
-        var analysisCts = _codingAiController.AnalysisCancellation;
+        var multiModel = _codingAiRuntimeOwner.Controller.MultiModel;
+        var analysisCts = _codingAiRuntimeOwner.Controller.AnalysisCancellation;
         if (multiModel == null || analysisCts == null)
             return;
 

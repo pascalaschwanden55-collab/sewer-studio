@@ -24,18 +24,18 @@ public partial class PlayerWindow
         string? keywordHint = null,
         string? codeHint = null)
     {
-        if (!_codingAiController.TryBeginAnalysis())
+        if (!_codingAiRuntimeOwner.Controller.TryBeginAnalysis())
             return;
 
-        var analysisCts = _codingAiController.AnalysisCancellation!;
+        var analysisCts = _codingAiRuntimeOwner.Controller.AnalysisCancellation!;
 
         try
         {
             var preflight = CodingAnalysisPreflightWorkflow.Execute(
                 new CodingAnalysisPreflightWorkflowRequest(
                     disableAnalyzeButton,
-                    _codingAiController.UseMultiModel,
-                    _codingAiController.MultiModel != null),
+                    _codingAiRuntimeOwner.Controller.UseMultiModel,
+                    _codingAiRuntimeOwner.Controller.MultiModel != null),
                 new CodingAnalysisPreflightWorkflowActions(
                     SetAnalyzeButtonEnabled: enabled => CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, enabled),
                     ResolveFramePosition: () =>
@@ -66,9 +66,9 @@ public partial class PlayerWindow
             await CodingSingleModelAnalysisWorkflow.ExecuteAsync(
                 new CodingSingleModelAnalysisWorkflowRequest(
                     activityText,
-                    _codingAiController.ModelName,
+                    _codingAiRuntimeOwner.Controller.ModelName,
                     captureTimestampSec,
-                    _codingAiController.EnhancedVision != null,
+                    _codingAiRuntimeOwner.Controller.EnhancedVision != null,
                     analysisCts.Token),
                 new CodingSingleModelAnalysisWorkflowActions(
                     SetCodingAiState: SetCodingAiState,
@@ -81,14 +81,14 @@ public partial class PlayerWindow
                     {
                         var b64 = Convert.ToBase64String(frameBytes);
                         var importContext = GatherImportContext();
-                        var enhanced = await _codingAiController.EnhancedVision!.AnalyzeAsync(
+                        var enhanced = await _codingAiRuntimeOwner.Controller.EnhancedVision!.AnalyzeAsync(
                             b64,
                             importContext,
                             cancellationToken);
                         return LiveDetectionMapper.FromEnhancedAnalysis(enhanced, timestamp);
                     },
                     AnalyzeLiveDetectionAsync: (frameBytes, timestamp, cancellationToken) =>
-                        _codingAiController.LiveDetection!.AnalyzeFrameAsync(
+                        _codingAiRuntimeOwner.Controller.LiveDetection!.AnalyzeFrameAsync(
                             frameBytes,
                             timestamp,
                             cancellationToken),
@@ -100,11 +100,11 @@ public partial class PlayerWindow
         catch (Exception ex)
         {
             SetCodingAiState($"Fehler: {ex.Message}", PlayerStatusColors.Error,
-                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiController.ModelName)}");
+                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiRuntimeOwner.Controller.ModelName)}");
         }
         finally
         {
-            _codingAiController.EndAnalysis();
+            _codingAiRuntimeOwner.Controller.EndAnalysis();
             if (disableAnalyzeButton)
                 CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, true);
         }

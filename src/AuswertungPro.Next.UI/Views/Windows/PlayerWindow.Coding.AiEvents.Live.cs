@@ -30,7 +30,7 @@ public partial class PlayerWindow
                 videoTime,
                 codingSessionService,
                 _codingSessionHost.Events,
-                _codingAiController.QualityGate),
+                _codingAiRuntimeOwner.Controller.QualityGate),
             new CodingLiveFindingEventWorkflowActions(
                 IsFindingTooFarAhead,
                 LookupVsaLabel,

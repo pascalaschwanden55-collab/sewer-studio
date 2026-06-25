@@ -19,7 +19,7 @@ public partial class PlayerWindow
         CodingLiveAiToggleWorkflow.Execute(
             new CodingLiveAiToggleWorkflowRequest(
                 BtnCodingLiveAi.IsChecked == true,
-                _codingAiController.ModelName),
+                _codingAiRuntimeOwner.Controller.ModelName),
             new CodingLiveAiToggleWorkflowActions(
                 StartTimers: _codingLiveAiTimers.Start,
                 StopTimers: resetButton => _codingLiveAiTimers.Stop(resetButton),
@@ -35,7 +35,7 @@ public partial class PlayerWindow
             new CodingLiveAiTimerTickWorkflowRequest(
                 IsClosing: _closing,
                 HasPlayer: _player is not null,
-                HasLiveDetection: _codingAiController.LiveDetection is not null,
+                HasLiveDetection: _codingAiRuntimeOwner.Controller.LiveDetection is not null,
                 SessionState: _codingSessionRuntimeOwner.Service?.ActiveSession?.State,
                 IsPlayerPlaying: _player?.IsPlaying == true),
             new CodingLiveAiTimerTickWorkflowActions(

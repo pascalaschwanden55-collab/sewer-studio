@@ -17,21 +17,21 @@ public partial class PlayerWindow
         {
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                if (!_closing && _isCodingMode && _codingAiController.HasHealthMonitor)
+                if (!_closing && _isCodingMode && _codingAiRuntimeOwner.Controller.HasHealthMonitor)
                     ApplyPipelineHealth(status);
             }));
             return;
         }
 
-        if (_isCodingMode && _codingAiController.HasHealthMonitor)
+        if (_isCodingMode && _codingAiRuntimeOwner.Controller.HasHealthMonitor)
             ApplyPipelineHealth(status);
     }
 
     private void ApplyPipelineHealth(PipelineHealthStatus status)
     {
-        _codingAiController.SetUseMultiModel(status.MultiModelActive);
+        _codingAiRuntimeOwner.Controller.SetUseMultiModel(status.MultiModelActive);
         if (status.MultiModelActive)
-            _codingAiController.EnsureMultiModel(CodingAiRuntimeFactory.CreateMultiModelService);
+            _codingAiRuntimeOwner.Controller.EnsureMultiModel(CodingAiRuntimeFactory.CreateMultiModelService);
 
         var uiState = PipelineHealthUiStateFactory.Create(status);
         SetCodingAiState(uiState.Summary, uiState.Color, uiState.Detail);
@@ -53,7 +53,7 @@ public partial class PlayerWindow
 
     private void StopPipelineHealthMonitor()
     {
-        _codingAiController
+        _codingAiRuntimeOwner.Controller
             .StopHealthMonitor()
             ?.SafeFireAndForget("PipelineHealthMonitorStop");
     }
