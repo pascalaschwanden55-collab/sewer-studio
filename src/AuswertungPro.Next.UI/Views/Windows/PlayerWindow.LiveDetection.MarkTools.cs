@@ -1,6 +1,6 @@
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.UI.Player;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -31,32 +31,22 @@ public partial class PlayerWindow
 
     private void ActivateMarkTool(OverlayToolType tool, string label)
     {
-        _markToolControls.BeginActivation(label);
-        _markToolType = tool;
-        PlayerManualMarkPlayback.PauseForManualMarking(_playerPlaybackControlHost.SetPause);
-        _codingSchemaManager.Cancel();
-        _codingSchemaType = null;
-
-        if (tool == OverlayToolType.Point)
-        {
-            // Bestehende Punkt-Logik: DetectionCanvas aktivieren
-            _isManualMarkMode = true;
-            _markToolControls.ActivatePointTool();
-        }
-        else
-        {
-            // Zeichen-Tools: CodingOverlayPopup aktivieren
-            _isManualMarkMode = false;
-            EnsureMarkOverlayReady();
-            _codingOverlayToolHost.SetActiveTool(tool);
-
-            // Offene Zeichnung verwerfen
-            _codingSessionHost.ClearCurrentOverlay();
-
-            _markToolControls.OpenCodingOverlay();
-            UpdateCodingOverlayViewport();
-            _markToolControls.EnableCodingOverlayInput();
-        }
+        LiveDetectionManualMarkActivationWorkflow.Execute(
+            new LiveDetectionManualMarkActivationWorkflowRequest(tool, label),
+            new LiveDetectionManualMarkActivationWorkflowActions(
+                BeginActivation: _markToolControls.BeginActivation,
+                SetMarkToolType: selectedTool => _markToolType = selectedTool,
+                SetPause: _playerPlaybackControlHost.SetPause,
+                CancelSchema: _codingSchemaManager.Cancel,
+                ClearSchemaType: () => _codingSchemaType = null,
+                SetManualMarkMode: enabled => _isManualMarkMode = enabled,
+                ActivatePointTool: _markToolControls.ActivatePointTool,
+                EnsureOverlayReady: EnsureMarkOverlayReady,
+                SetActiveTool: selectedTool => _codingOverlayToolHost.SetActiveTool(selectedTool),
+                ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
+                OpenCodingOverlay: _markToolControls.OpenCodingOverlay,
+                UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
+                EnableCodingOverlayInput: _markToolControls.EnableCodingOverlayInput));
     }
 
     /// <summary>

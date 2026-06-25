@@ -4120,14 +4120,17 @@ public sealed class UiArchitectureGuardTests
         var markToolsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.MarkTools.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var controlsPath = Path.Combine(uiRoot, "Player", "PlayerMarkToolControls.cs");
+        var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkActivationWorkflow.cs");
 
         Assert.True(File.Exists(markToolsPath), "Markierwerkzeug-Wiring soll aus dem grossen Marking-Partial heraus.");
         Assert.True(File.Exists(controlsPath), "Markierwerkzeug-UI-Zustand soll in einem Player-Controller gekapselt sein.");
+        Assert.True(File.Exists(activationWorkflowPath), "Markierwerkzeug-Aktivierungsentscheidung soll ausserhalb von PlayerWindow liegen.");
 
         var marking = File.ReadAllText(markingPath);
         var markTools = File.ReadAllText(markToolsPath);
         var state = File.ReadAllText(statePath);
         var controls = File.ReadAllText(controlsPath);
+        var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
 
         Assert.DoesNotContain("private void ActivateMarkTool", marking);
         Assert.DoesNotContain("private void EnsureMarkOverlayReady", marking);
@@ -4147,6 +4150,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingOverlayService != null && _codingVm != null", markTools);
         Assert.DoesNotContain("_codingVm", markTools);
         Assert.Contains("private void ActivateMarkTool", markTools);
+        Assert.Contains("LiveDetectionManualMarkActivationWorkflow.Execute", markTools);
+        Assert.DoesNotContain("if (tool == OverlayToolType.Point)", markTools);
         Assert.Contains("private void EnsureMarkOverlayReady", markTools);
         Assert.Contains("private void DeactivateMarkTool", markTools);
         Assert.Contains("private OverlayToolType _markToolType", state);
@@ -4154,6 +4159,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_markToolControls.ActivatePointTool", markTools);
         Assert.Contains("_markToolControls.OpenCodingOverlay", markTools);
         Assert.Contains("_markToolControls.DeactivateDetectionSide", markTools);
+        Assert.Contains("OverlayToolType.Point", activationWorkflow);
+        Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", activationWorkflow);
         Assert.Contains("CodingSessionStateFactory.Create", markTools);
         Assert.DoesNotContain("CodingSessionServiceFactory.Create", markTools);
         Assert.DoesNotContain("new OverlayToolService", markTools);
@@ -4171,19 +4178,23 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var helperPath = Path.Combine(uiRoot, "Player", "PlayerManualMarkPlayback.cs");
+        var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkActivationWorkflow.cs");
         var markToolsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.MarkTools.cs");
         var markCatalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
 
         Assert.True(File.Exists(helperPath), "Manuelle Markier-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(activationWorkflowPath), "Manuelle Markier-Pause soll im Aktivierungsworkflow orchestriert werden.");
 
         var helper = File.ReadAllText(helperPath);
+        var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
         var markTools = File.ReadAllText(markToolsPath);
         var markCatalog = File.ReadAllText(markCatalogPath);
 
         Assert.Contains("public static class PlayerManualMarkPlayback", helper);
         Assert.Contains("PauseForManualMarking", helper);
-        Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", markTools);
+        Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", activationWorkflow);
         Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", markCatalog);
+        Assert.DoesNotContain("PlayerManualMarkPlayback.PauseForManualMarking", markTools);
         Assert.DoesNotContain("_player.SetPause(true)", markTools);
         Assert.DoesNotContain("_player.SetPause(false)", markTools);
         Assert.DoesNotContain("_player.SetPause(true)", markCatalog);
