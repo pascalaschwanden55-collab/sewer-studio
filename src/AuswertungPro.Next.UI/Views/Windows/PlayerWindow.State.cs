@@ -29,6 +29,7 @@ public partial class PlayerWindow
     private readonly PlayerTimelineHost _playerTimelineHost;
     private readonly PlayerPlaybackControlHost _playerPlaybackControlHost;
     private readonly PlayerMarqueeOverlayHost _playerMarqueeOverlayHost;
+    private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost;
     private readonly PlayerMarkToolControls _markToolControls;
     private readonly DamageMarkerController _damageMarkerController;
     private readonly QuickScanController _quickScanController;

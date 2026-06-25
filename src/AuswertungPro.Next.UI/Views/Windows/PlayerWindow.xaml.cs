@@ -81,6 +81,9 @@ public partial class PlayerWindow : Window
             setMarqueeInt: (option, value) => _player.SetMarqueeInt(option, value),
             setMarqueeString: (option, value) => _player.SetMarqueeString(option, value));
 
+        _playerSnapshotCaptureHost = new PlayerSnapshotCaptureHost(
+            takeSnapshot: (path, width, height) => _player.TakeSnapshot(0, path, width, height));
+
         _damageMarkerController = new DamageMarkerController(
             DamageMarkerCanvas,
             PositionSlider,

@@ -2245,22 +2245,34 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var snapshotPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Snapshot.cs");
+        var statePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.State.cs");
+        var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotPathPolicy.cs");
         var captureServicePath = Path.Combine(uiRoot, "Player", "PlayerSnapshotFileCaptureService.cs");
         var pauseStarterPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotPauseStarter.cs");
+        var snapshotHostPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotCaptureHost.cs");
 
         Assert.True(File.Exists(policyPath), "Temp-Pfad fuer Player-Snapshots muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(captureServicePath), "Snapshot-Datei-Capture muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pauseStarterPath), "Snapshot-Pause-Start muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(snapshotHostPath), "Direkter VLC-Snapshot-Capture soll ueber einen Host laufen.");
 
         var snapshot = File.ReadAllText(snapshotPath);
+        var state = File.ReadAllText(statePath);
+        var windowRoot = File.ReadAllText(windowRootPath);
         var policy = File.ReadAllText(policyPath);
         var captureService = File.ReadAllText(captureServicePath);
         var pauseStarter = File.Exists(pauseStarterPath) ? File.ReadAllText(pauseStarterPath) : "";
+        var snapshotHost = File.Exists(snapshotHostPath) ? File.ReadAllText(snapshotHostPath) : "";
 
         Assert.Contains("PlayerSnapshotPathPolicy.Create", snapshot);
         Assert.Contains("PlayerSnapshotFileCaptureServiceFactory.Create", snapshot);
+        Assert.Contains("_playerSnapshotCaptureHost.TakeSnapshot", snapshot);
+        Assert.Contains("private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost", state);
+        Assert.Contains("new PlayerSnapshotCaptureHost", windowRoot);
+        Assert.Contains("public sealed class PlayerSnapshotCaptureHost", snapshotHost);
         Assert.DoesNotContain("new PlayerSnapshotFileCaptureService", snapshot);
+        Assert.DoesNotContain("_player.TakeSnapshot", snapshot);
         Assert.DoesNotContain("SewerStudio_Snapshots", snapshot);
         Assert.DoesNotContain("snap_{DateTime.Now", snapshot);
         Assert.DoesNotContain("Path.GetTempPath()", snapshot);

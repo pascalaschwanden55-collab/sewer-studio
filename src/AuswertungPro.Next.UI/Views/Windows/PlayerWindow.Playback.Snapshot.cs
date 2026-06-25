@@ -45,7 +45,7 @@ public partial class PlayerWindow
                 return false;
 
             _playerMarqueeOverlayHost.Disable();
-            return _player.TakeSnapshot(0, filePath, width, height);
+            return _playerSnapshotCaptureHost.TakeSnapshot(filePath, width, height);
         }
         catch
         {
