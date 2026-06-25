@@ -30,7 +30,7 @@ public partial class PlayerWindow
                 _codingAiRuntimeOwner.Controller.ModelName,
                 _codingSessionHost.HasViewModel,
                 CodingOverlayPopup.IsOpen,
-                _player.Time / 1000.0),
+                _playerTimelineHost.CurrentSecondsOrZero),
             new CodingAiResultWorkflowActions(
                 (status, color, detail) => SetCodingAiState(status, color, detail),
                 () => DetectionOverlayCleaner.ClearFindings(CodingFindingsList),

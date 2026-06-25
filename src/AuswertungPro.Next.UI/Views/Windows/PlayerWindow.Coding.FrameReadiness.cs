@@ -29,7 +29,7 @@ public partial class PlayerWindow
     /// </summary>
     private void UpdateFrameReadiness(LiveDetection result)
     {
-        var fallbackTimestamp = _player != null ? _player.Time / 1000.0 : 0.0;
+        var fallbackTimestamp = _playerTimelineHost.CurrentSecondsOrZero;
         _codingFrameReadinessController.Update(result, fallbackTimestamp);
     }
 }

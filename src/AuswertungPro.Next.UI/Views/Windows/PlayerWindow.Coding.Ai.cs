@@ -40,7 +40,7 @@ public partial class PlayerWindow
                     SetAnalyzeButtonEnabled: enabled => CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, enabled),
                     ResolveFramePosition: () =>
                     {
-                        var timestamp = _player.Time / 1000.0;
+                        var timestamp = _playerTimelineHost.CurrentSecondsOrZero;
                         return new CodingAnalysisFramePosition(
                             timestamp,
                             ResolveCodingMeterForFrame(timestamp),

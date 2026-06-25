@@ -40,7 +40,7 @@ public partial class PlayerWindow
             if (codeHint != null && _codingSessionHost.HasViewModel && _codingSessionRuntimeOwner.Service != null)
             {
                 var meter = _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter;
-                var videoTime = _codingSessionHost.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
+                var videoTime = _codingSessionHost.CurrentVideoTime ?? _playerTimelineHost.CurrentTimeOrZero;
                 var label = LookupVsaLabel(codeHint) ?? keyword;
 
                 var draft = CodingEingabemarkerEventFactory.CreateAccepted(

@@ -18,7 +18,7 @@ public partial class PlayerWindow
         if (!_codingSessionHost.HasViewModel || codingSessionService == null) return;
 
         double meter = ResolveCodingMeterForFrame(result.TimestampSeconds, result.MeterReading);
-        var videoTime = _codingSessionHost.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
+        var videoTime = _codingSessionHost.CurrentVideoTime ?? _playerTimelineHost.CurrentTimeOrZero;
 
         // BCD wird NICHT mehr automatisch erzeugt - nur durch Eingabemarker oder Qwen-Erkennung.
         // EnsureRohranfangExists(meter, videoTime, ref anyAdded);

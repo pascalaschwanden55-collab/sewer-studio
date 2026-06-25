@@ -43,9 +43,7 @@ public partial class PlayerWindow
         var viewEvents = _codingSessionHost.EventCollection;
         if (viewEvents is null) return;
 
-        var fallbackEndTime = _player != null
-            ? TimeSpan.FromMilliseconds(_player.Time)
-            : videoTime;
+        var fallbackEndTime = _playerTimelineHost.CurrentTimeOrZero;
 
         CodingBoundaryEventWorkflow.EnsureEnd(
             new CodingBoundaryEndEventWorkflowRequest(

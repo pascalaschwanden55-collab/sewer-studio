@@ -66,7 +66,7 @@ public partial class PlayerWindow
     {
         var actions = _streckenTracker.CloseAll(endMeter);
         if (actions.Count == 0) return;
-        var videoTime = _player != null ? TimeSpan.FromMilliseconds(_player.Time) : TimeSpan.Zero;
+        var videoTime = _playerTimelineHost.CurrentTimeOrZero;
         if (TryApplyStreckenschadenActions(actions, videoTime))
             RefreshCodingEventsList();
     }

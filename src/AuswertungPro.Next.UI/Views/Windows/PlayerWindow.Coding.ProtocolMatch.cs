@@ -23,8 +23,8 @@ public partial class PlayerWindow
 
     private void SeekToImportEvent(CodingEvent importEvent)
     {
-        if (_player != null && CodingEventSeekPolicy.TryGetSeekMilliseconds(importEvent, out var milliseconds))
-            _player.Time = milliseconds;
+        if (CodingEventSeekPolicy.TryGetSeekMilliseconds(importEvent, out var milliseconds))
+            _playerTimelineHost.SeekMilliseconds(milliseconds);
         else if (_codingSessionRuntimeOwner.Service != null && importEvent.MeterAtCapture > 0)
         {
             _codingSessionRuntimeOwner.Service.MoveToMeter(importEvent.MeterAtCapture);

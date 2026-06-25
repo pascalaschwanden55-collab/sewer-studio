@@ -5081,6 +5081,40 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_event_and_ai_partials_read_player_timeline_through_host()
+    {
+        var root = FindRepositoryRoot();
+        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var paths = new[]
+        {
+            "PlayerWindow.Coding.Ai.cs",
+            "PlayerWindow.Coding.AiEvents.cs",
+            "PlayerWindow.Coding.AiEvents.Live.cs",
+            "PlayerWindow.Coding.AiEvents.MultiModel.cs",
+            "PlayerWindow.Coding.Ai.Streckenschaden.cs",
+            "PlayerWindow.Coding.Boundaries.cs",
+            "PlayerWindow.Coding.Eingabemarker.Submission.cs",
+            "PlayerWindow.Coding.Events.cs",
+            "PlayerWindow.Coding.Events.Actions.cs",
+            "PlayerWindow.Coding.FrameReadiness.cs",
+            "PlayerWindow.Coding.ProtocolMatch.cs"
+        };
+
+        foreach (var fileName in paths)
+        {
+            var path = Path.Combine(windowsRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} muss als PlayerWindow-Partial existieren.");
+
+            var text = File.ReadAllText(path);
+            Assert.Contains("_playerTimelineHost", text);
+            Assert.DoesNotContain("_player.Time", text);
+            Assert.DoesNotContain("_player.Length", text);
+            Assert.DoesNotContain("_player?.Time", text);
+            Assert.DoesNotContain("_player?.Length", text);
+        }
+    }
+
+    [Fact]
     public void PlayerWindow_coding_lifecycle_lives_in_lifecycle_partial()
     {
         var root = FindRepositoryRoot();

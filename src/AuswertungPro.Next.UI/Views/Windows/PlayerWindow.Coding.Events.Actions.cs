@@ -26,7 +26,7 @@ public partial class PlayerWindow
                     entry.MeterStart,
                     entry.Zeit,
                     _videoPath,
-                    TimeSpan.FromMilliseconds(_player.Time),
+                    _playerTimelineHost.CurrentTimeOrZero,
                     this,
                     CreateVsaCodeExplorerLiveSnapshotProvider());
         }
@@ -53,8 +53,8 @@ public partial class PlayerWindow
     private void CodingEventSeek_Click(object sender, RoutedEventArgs e)
     {
         if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
-        if (_player != null && CodingEventSeekPolicy.TryGetSeekMilliseconds(codingEvent, out var milliseconds))
-            _player.Time = milliseconds;
+        if (CodingEventSeekPolicy.TryGetSeekMilliseconds(codingEvent, out var milliseconds))
+            _playerTimelineHost.SeekMilliseconds(milliseconds);
     }
 
     private void CodingEventCloseStretch_Click(object sender, RoutedEventArgs e)
@@ -66,7 +66,7 @@ public partial class PlayerWindow
             startEvent,
             _codingSessionRuntimeOwner.Service,
             _codingSessionHost.CurrentMeter,
-            _player != null ? TimeSpan.FromMilliseconds(_player.Time) : TimeSpan.Zero);
+            _playerTimelineHost.CurrentTimeOrZero);
 
         if (!closeAction.Applied)
             return;

@@ -28,6 +28,13 @@ public sealed class PlayerTimelineHost
 
     public double? DurationSeconds => LengthMilliseconds / 1000.0;
 
+    public TimeSpan CurrentTimeOrZero => TimeSpan.FromMilliseconds(CurrentMillisecondsOrZero());
+
+    public double CurrentSecondsOrZero => CurrentMillisecondsOrZero() / 1000.0;
+
     public void SeekMilliseconds(long milliseconds)
         => _seekMilliseconds(milliseconds);
+
+    private double CurrentMillisecondsOrZero()
+        => Math.Max(0, TimeMilliseconds ?? 0);
 }

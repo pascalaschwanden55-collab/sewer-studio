@@ -32,6 +32,34 @@ public sealed class PlayerTimelineHostTests
         Assert.Null(host.DurationSeconds);
     }
 
+    [Theory]
+    [InlineData(null, 0)]
+    [InlineData(-250L, 0)]
+    [InlineData(12_500L, 12_500)]
+    public void Host_exposes_non_negative_current_time_fallback(long? currentMilliseconds, double expectedMilliseconds)
+    {
+        var host = new PlayerTimelineHost(
+            readTimeMilliseconds: () => currentMilliseconds,
+            readLengthMilliseconds: () => 90_000,
+            seekMilliseconds: _ => { });
+
+        Assert.Equal(TimeSpan.FromMilliseconds(expectedMilliseconds), host.CurrentTimeOrZero);
+    }
+
+    [Theory]
+    [InlineData(null, 0)]
+    [InlineData(-1000L, 0)]
+    [InlineData(12_500L, 12.5)]
+    public void Host_exposes_non_negative_current_seconds_fallback(long? currentMilliseconds, double expectedSeconds)
+    {
+        var host = new PlayerTimelineHost(
+            readTimeMilliseconds: () => currentMilliseconds,
+            readLengthMilliseconds: () => 90_000,
+            seekMilliseconds: _ => { });
+
+        Assert.Equal(expectedSeconds, host.CurrentSecondsOrZero);
+    }
+
     [Fact]
     public void Seek_forwards_to_underlying_player()
     {

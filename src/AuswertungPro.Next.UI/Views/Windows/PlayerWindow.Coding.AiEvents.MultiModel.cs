@@ -17,7 +17,7 @@ public partial class PlayerWindow
         if (!_codingSessionHost.HasViewModel || codingSessionService == null) return;
 
         double meter = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);
-        var videoTime = _codingSessionHost.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
+        var videoTime = _codingSessionHost.CurrentVideoTime ?? _playerTimelineHost.CurrentTimeOrZero;
 
         // Streckenschaden-Befunde (laengs > 1 m) laufen NICHT als Punkt-Events, sondern ueber den
         // automatischen Tracker. Laeuft bei jedem Tick (auch leer) -> ermoeglicht Auto-Schliessen.

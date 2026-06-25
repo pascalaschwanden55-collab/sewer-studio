@@ -24,14 +24,14 @@ public partial class PlayerWindow
 
         try
         {
-            var videoZeit = TimeSpan.FromMilliseconds(Math.Max(0, _player.Time));
+            var videoZeit = _playerTimelineHost.CurrentTimeOrZero;
 
             var osdMeter = await CodingReadOsdMeterAsync();
             var meterValue = CodingCurrentMeterResolver.ResolveManualEntry(
                 osdMeter,
                 _codingOsdMeterController.LastMeter,
-                _player.Time,
-                _player.Length,
+                _playerTimelineHost.TimeMilliseconds ?? 0,
+                _playerTimelineHost.LengthMilliseconds ?? 0,
                 _codingSessionHost.EndMeter,
                 _codingSessionHost.CurrentMeter);
 
@@ -66,7 +66,7 @@ public partial class PlayerWindow
     {
         if (!_codingSessionHost.HasViewModel) return;
 
-        var videoTime = TimeSpan.FromMilliseconds(_player.Time);
+        var videoTime = _playerTimelineHost.CurrentTimeOrZero;
         _codingSessionHost.SetCurrentVideoTime(videoTime);
         var createdEvent = CodingSelectedCodeEventWorkflow.Create(
             _codingSessionHost.SelectedCode,
