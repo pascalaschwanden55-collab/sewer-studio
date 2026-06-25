@@ -12,19 +12,18 @@ public partial class PlayerWindow
 {
     private string? AttachAnalyzedFramePhoto(ProtocolEntry entry)
     {
-        var frameBytes = TryExtractAnalyzedFrameBytes() ?? _detectionConfirmationBuffer.FrameBytes;
-
-        var path = CodingAiFramePhotoService.AttachAnalyzedFramePhoto(
+        var result = CodingAnalyzedFramePhotoAttachmentWorkflow.Execute(
             entry,
-            frameBytes,
-            _videoPath);
-        if (!string.IsNullOrWhiteSpace(path))
-            return path;
+            new CodingAnalyzedFramePhotoAttachmentActions(
+                GetPreferredFrameBytes: TryExtractAnalyzedFrameBytes,
+                GetBufferedFrameBytes: () => _detectionConfirmationBuffer.FrameBytes,
+                AttachAnalyzedFramePhoto: frameBytes => CodingAiFramePhotoService.AttachAnalyzedFramePhoto(
+                    entry,
+                    frameBytes,
+                    _videoPath),
+                CaptureSnapshot: () => CodingCaptureSnapshot(entry)));
 
-        var fallback = CodingCaptureSnapshot(entry);
-        CodingProtocolEntryPhotoPathAppender.AddDistinctNonBlank(entry, fallback);
-
-        return fallback;
+        return result.PhotoPath;
     }
 
     private string? AttachBoundaryAnalyzedFramePhoto(ProtocolEntry entry, byte[]? analyzedFrameBytes)
