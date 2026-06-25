@@ -870,6 +870,7 @@ public sealed class UiArchitectureGuardTests
         var closeApplierPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamageCloseApplier.cs");
         var dialogServicePath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamageDialogService.cs");
         var dialogServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamageDialogServiceFactory.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOpenStretchDamagePromptCommandWorkflow.cs");
 
         Assert.True(File.Exists(closePromptPath), "Dialog fuer offene Streckenschaeden soll aus dem Boundary-Partial heraus.");
         Assert.True(File.Exists(policyPath), "Dialogtext fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -877,6 +878,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(closeApplierPath), "Schliessanwendung fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServicePath), "Dialogentscheidung fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServiceFactoryPath), "DialogHost-Verdrahtung fuer offene Streckenschaeden muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(commandWorkflowPath), "Offene-Streckenschaden-Dialogfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var boundaries = File.ReadAllText(boundariesPath);
         var closePrompt = File.ReadAllText(closePromptPath);
@@ -885,14 +887,20 @@ public sealed class UiArchitectureGuardTests
         var closeApplier = File.ReadAllText(closeApplierPath);
         var dialogService = File.ReadAllText(dialogServicePath);
         var dialogServiceFactory = File.ReadAllText(dialogServiceFactoryPath);
+        var commandWorkflow = File.ReadAllText(commandWorkflowPath);
 
         Assert.DoesNotContain("private bool CloseOpenStreckenschaeden", boundaries);
         Assert.Contains("private bool CloseOpenStreckenschaeden", closePrompt);
+        Assert.Contains("CodingOpenStretchDamagePromptCommandWorkflow.Execute", closePrompt);
         Assert.Contains("CodingOpenStretchDamageDialogServiceFactory.Create", closePrompt);
         Assert.Contains("CodingOpenStretchDamagePolicy.FindOpen", closePrompt);
         Assert.Contains("CodingOpenStretchDamageCloseApplier.Apply", closePrompt);
         Assert.Contains("_codingSessionHost", closePrompt);
         Assert.DoesNotContain("_codingVm", closePrompt);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return true", closePrompt);
+        Assert.DoesNotContain("if (offene.Count == 0) return true", closePrompt);
+        Assert.DoesNotContain("if (decision == CodingOpenStretchDamageDialogDecision.Close)", closePrompt);
+        Assert.DoesNotContain("if (decision == CodingOpenStretchDamageDialogDecision.Cancel)", closePrompt);
         Assert.DoesNotContain("CodingOpenStretchDamagePolicy.ResolveCloseMeter", closePrompt);
         Assert.DoesNotContain("_codingSessionService?.UpdateEvent", closePrompt);
         Assert.DoesNotContain("DialogHost.Current", closePrompt);
@@ -909,6 +917,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingOpenStretchDamageDialogDecision", dialogService);
         Assert.Contains("DialogHost.Current", dialogServiceFactory);
         Assert.Contains("ConfirmCancel", dialogServiceFactory);
+        Assert.Contains("actions.FindOpen", commandWorkflow);
+        Assert.Contains("actions.ConfirmClose", commandWorkflow);
+        Assert.Contains("actions.ApplyClose", commandWorkflow);
+        Assert.Contains("actions.RefreshEvents()", commandWorkflow);
     }
 
     [Fact]
@@ -5166,11 +5178,14 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var renderingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Rendering.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingSegmentedFindingVisibility.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelResultsRenderWorkflow.cs");
 
         var rendering = File.ReadAllText(renderingPath);
         var policy = File.ReadAllText(policyPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates", rendering);
+        Assert.Contains("actions.BuildVisibleMaskRenderCandidates(request.Segmented)", workflow);
         Assert.DoesNotContain("new Ai.Pipeline.SamMaskRenderer.MaskRenderCandidate", rendering);
         Assert.Contains("public static IReadOnlyList<SamMaskRenderer.MaskRenderCandidate> BuildVisibleMaskRenderCandidates", policy);
     }
@@ -5184,20 +5199,31 @@ public sealed class UiArchitectureGuardTests
         var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
         var renderingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Rendering.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingSamMaskOverlayController.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelResultsRenderWorkflow.cs");
 
         Assert.True(File.Exists(renderingPath), "Multi-Model-Maskenanzeige soll aus dem allgemeinen Coding.Ai-Partial heraus.");
         Assert.True(File.Exists(controllerPath), "SAM-Maskenrendering soll ausserhalb von PlayerWindow verdrahtet werden.");
+        Assert.True(File.Exists(workflowPath), "Multi-Model-Render-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var ai = File.ReadAllText(aiPath);
         var rendering = File.ReadAllText(renderingPath);
         var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
+        var workflow = File.ReadAllText(workflowPath);
 
         Assert.DoesNotContain("private void ShowMultiModelResults", ai);
         Assert.Contains("private void ShowMultiModelResults", rendering);
+        Assert.Contains("CodingMultiModelResultsRenderWorkflow.Execute", rendering);
         Assert.Contains("CodingSamMaskOverlayController.RenderCandidates", rendering);
+        Assert.DoesNotContain("if (mmResult.SamResponse != null)", rendering);
+        Assert.DoesNotContain("var candidates = CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates", rendering);
+        Assert.DoesNotContain("_codingVideoAspect = (double)srAsp.ImageWidth / srAsp.ImageHeight", rendering);
         Assert.DoesNotContain("SamMaskRenderer.RenderCandidates", rendering);
         Assert.Contains("SamMaskRenderer.RenderCandidates", controller);
         Assert.Contains("RenderReferenceDn", rendering);
+        Assert.Contains("actions.ClearMasks()", workflow);
+        Assert.Contains("actions.SetVideoAspect", workflow);
+        Assert.Contains("actions.RenderCandidates", workflow);
+        Assert.Contains("actions.ShowReferenceDn()", workflow);
     }
 
     [Fact]

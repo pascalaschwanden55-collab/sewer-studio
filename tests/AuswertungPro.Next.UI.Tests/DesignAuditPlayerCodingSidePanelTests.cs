@@ -65,10 +65,12 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var summary = ReadUiFile("Ai", "CodingMultiModelFindingSummary.cs");
         var resultWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisResultWorkflow.cs");
+        var renderWorkflow = ReadUiFile("Ai", "CodingMultiModelResultsRenderWorkflow.cs");
         var showBody = ExtractMethodBody(coding, "private void ShowMultiModelResults");
 
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates", coding);
-        Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates(segmented)", showBody);
+        Assert.Contains("CodingMultiModelResultsRenderWorkflow.Execute", showBody);
+        Assert.Contains("actions.BuildVisibleMaskRenderCandidates(request.Segmented)", renderWorkflow);
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleCodingFindings(segmented)", summary);
         Assert.Contains("AddMultiModelFindingsAsEvents(", coding);
         Assert.Contains("findingSummary.VisibleCodierbar", resultWorkflow);

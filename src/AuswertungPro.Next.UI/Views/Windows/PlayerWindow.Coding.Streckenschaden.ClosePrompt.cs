@@ -11,26 +11,22 @@ public partial class PlayerWindow
     /// </summary>
     private bool CloseOpenStreckenschaeden(double currentMeter)
     {
-        if (!_codingSessionHost.HasViewModel) return true;
+        var result = CodingOpenStretchDamagePromptCommandWorkflow.Execute(
+            new CodingOpenStretchDamagePromptCommandRequest(
+                HasCodingViewModel: _codingSessionHost.HasViewModel,
+                Events: _codingSessionHost.Events,
+                CurrentMeter: currentMeter),
+            new CodingOpenStretchDamagePromptCommandActions(
+                FindOpen: CodingOpenStretchDamagePolicy.FindOpen,
+                ConfirmClose: (openEvents, closeMeter) => RunWithSuspendedCodingOverlayInput(() =>
+                    CodingOpenStretchDamageDialogServiceFactory.Create()
+                        .ConfirmClose(openEvents, closeMeter)),
+                ApplyClose: (openEvents, closeMeter) => CodingOpenStretchDamageCloseApplier.Apply(
+                    openEvents,
+                    closeMeter,
+                    _codingSessionRuntimeOwner.Service),
+                RefreshEvents: RefreshCodingEventsList));
 
-        var offene = CodingOpenStretchDamagePolicy.FindOpen(_codingSessionHost.Events);
-
-        if (offene.Count == 0) return true;
-
-        var decision = RunWithSuspendedCodingOverlayInput(() =>
-            CodingOpenStretchDamageDialogServiceFactory.Create()
-                .ConfirmClose(offene, currentMeter));
-
-        if (decision == CodingOpenStretchDamageDialogDecision.Close)
-        {
-            if (CodingOpenStretchDamageCloseApplier.Apply(offene, currentMeter, _codingSessionRuntimeOwner.Service))
-                RefreshCodingEventsList();
-            return true;
-        }
-
-        if (decision == CodingOpenStretchDamageDialogDecision.Cancel)
-            return false;
-
-        return true;
+        return result.ShouldContinue;
     }
 }

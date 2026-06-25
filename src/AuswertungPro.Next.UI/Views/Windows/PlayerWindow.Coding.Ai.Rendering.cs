@@ -12,33 +12,27 @@ public partial class PlayerWindow
     /// </summary>
     private void ShowMultiModelResults(SingleFrameResult mmResult, IReadOnlyList<SegmentedFinding> segmented)
     {
-        CodingSamMaskOverlayController.Clear(CodingOverlayCanvas);
-
-        if (mmResult.SamResponse != null)
-        {
-            if (mmResult.SamResponse is { ImageWidth: > 0, ImageHeight: > 0 } srAsp)
-                _codingVideoAspect = (double)srAsp.ImageWidth / srAsp.ImageHeight;
-
-            var candidates = CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates(segmented);
-            if (candidates.Count > 0)
-            {
-                var maskContent = GetCodingContentRect();
-                CodingSamMaskOverlayController.RenderCandidates(
-                    CodingOverlayCanvas,
-                    candidates,
-                    mmResult.SamResponse.ImageWidth,
-                    mmResult.SamResponse.ImageHeight,
-                    maskContent,
-                    logger: _dependencies.LoggerFactory?.CreateLogger(nameof(CodingSamMaskOverlayController)));
-            }
-        }
-
-        double iw = mmResult.SamResponse?.ImageWidth ?? 0;
-        double ih = mmResult.SamResponse?.ImageHeight ?? 0;
-        if (iw > 0 && ih > 0)
-            _codingVideoAspect = iw / ih;
-
-        _showReferenceDn = true;
-        RenderReferenceDn();
+        CodingMultiModelResultsRenderWorkflow.Execute(
+            new CodingMultiModelResultsRenderRequest(mmResult, segmented),
+            new CodingMultiModelResultsRenderActions(
+                ClearMasks: () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
+                SetVideoAspect: aspect => _codingVideoAspect = aspect,
+                BuildVisibleMaskRenderCandidates: CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates,
+                RenderCandidates: (candidates, samResponse) =>
+                {
+                    var maskContent = GetCodingContentRect();
+                    CodingSamMaskOverlayController.RenderCandidates(
+                        CodingOverlayCanvas,
+                        candidates,
+                        samResponse.ImageWidth,
+                        samResponse.ImageHeight,
+                        maskContent,
+                        logger: _dependencies.LoggerFactory?.CreateLogger(nameof(CodingSamMaskOverlayController)));
+                },
+                ShowReferenceDn: () =>
+                {
+                    _showReferenceDn = true;
+                    RenderReferenceDn();
+                }));
     }
 }
