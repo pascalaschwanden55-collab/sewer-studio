@@ -58,16 +58,16 @@ public partial class PlayerWindow
                 _codingSessionHost.CurrentMeter);
 
     private void SyncVideoToCodingMeter()
-    {
-        if (!_codingSessionHost.HasViewModel) return;
-        CodingVideoNavigationController.SyncVideoToCodingMeter(
-            _codingSessionHost.CurrentMeter,
-            _codingSessionHost.EndMeter,
-            _playerTimelineHost.LengthMilliseconds ?? 0,
-            _playerTimelineHost.SeekMilliseconds,
-            () => _playerTimelineHost.TimeMilliseconds ?? 0,
-            _codingSessionHost.SetCurrentVideoTime);
-    }
+        => CodingVideoSyncCommandWorkflow.Execute(
+            new CodingVideoSyncCommandRequest(_codingSessionHost.HasViewModel),
+            new CodingVideoSyncCommandActions(
+                SyncVideoToCodingMeter: () => CodingVideoNavigationController.SyncVideoToCodingMeter(
+                    _codingSessionHost.CurrentMeter,
+                    _codingSessionHost.EndMeter,
+                    _playerTimelineHost.LengthMilliseconds ?? 0,
+                    _playerTimelineHost.SeekMilliseconds,
+                    () => _playerTimelineHost.TimeMilliseconds ?? 0,
+                    _codingSessionHost.SetCurrentVideoTime)));
 
     private void CodingNext_Click(object sender, RoutedEventArgs e)
         => MoveCodingByCommandAsync(

@@ -5885,6 +5885,7 @@ public sealed class UiArchitectureGuardTests
         var navigationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Navigation.cs");
         var controllerPath = Path.Combine(uiRoot, "Ai", "CodingVideoNavigationController.cs");
         var moveCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMoveByCommandWorkflow.cs");
+        var videoSyncWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingVideoSyncCommandWorkflow.cs");
         var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingUiUpdateWorkflow.cs");
         var sessionHostPath = Path.Combine(uiRoot, "Player", "CodingSessionHost.cs");
         var sessionOwnerPath = Path.Combine(uiRoot, "Player", "CodingSessionViewModelOwner.cs");
@@ -5894,6 +5895,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(navigationPath), "Coding-Navigation soll nicht im grossen Coding-Partial liegen.");
         Assert.True(File.Exists(controllerPath), "Coding-Video-Navigationsregeln sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(moveCommandWorkflowPath), "Coding-Move-Command-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(videoSyncWorkflowPath), "Coding-Video-Sync-Gate soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(uiUpdateWorkflowPath), "Coding-UI-Update-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(sessionHostPath), "_codingVm-Zugriffe sollen ueber einen schmalen CodingSessionHost laufen.");
         Assert.True(File.Exists(sessionOwnerPath), "CodingSessionViewModel-Besitz soll in einem eigenen Player-Owner liegen.");
@@ -5903,6 +5905,7 @@ public sealed class UiArchitectureGuardTests
         var navigation = File.ReadAllText(navigationPath);
         var controller = File.ReadAllText(controllerPath);
         var moveCommandWorkflow = File.Exists(moveCommandWorkflowPath) ? File.ReadAllText(moveCommandWorkflowPath) : "";
+        var videoSyncWorkflow = File.Exists(videoSyncWorkflowPath) ? File.ReadAllText(videoSyncWorkflowPath) : "";
         var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
         var sessionHost = File.Exists(sessionHostPath) ? File.ReadAllText(sessionHostPath) : "";
         var sessionOwner = File.Exists(sessionOwnerPath) ? File.ReadAllText(sessionOwnerPath) : "";
@@ -5927,6 +5930,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("if (propertyName is nameof(CodingSessionViewModel.CurrentMeter) && _codingNavPending)", navigation);
         Assert.Contains("CodingVideoNavigationController.ResolveDisplayMeter", navigation);
         Assert.Contains("CodingVideoNavigationController.SyncVideoToCodingMeter", navigation);
+        Assert.Contains("CodingVideoSyncCommandWorkflow.Execute", navigation);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return;\n        CodingVideoNavigationController.SyncVideoToCodingMeter", navigation);
         Assert.Contains("CodingVideoNavigationController.PrepareMoveByCommand", navigation);
         Assert.DoesNotContain("CodingCurrentMeterResolver.Resolve", navigation);
         Assert.DoesNotContain("CodingVideoSyncPolicy.TryResolveTargetTimeMs", navigation);
@@ -5939,6 +5944,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.PrepareMoveByCommand()", moveCommandWorkflow);
         Assert.Contains("await actions.ReadOsdMeterAsync()", moveCommandWorkflow);
         Assert.Contains("actions.TraceError", moveCommandWorkflow);
+        Assert.Contains("if (!request.HasCodingViewModel)", videoSyncWorkflow);
+        Assert.Contains("actions.SyncVideoToCodingMeter()", videoSyncWorkflow);
         Assert.Contains("public static class CodingUiUpdateWorkflow", uiUpdateWorkflow);
         Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", uiUpdateWorkflow);
         Assert.Contains("public interface ICodingSessionHost", sessionHost);
