@@ -44,15 +44,16 @@ public partial class PlayerWindow
                 SeekToImportEvent,
                 () => TryTakeSnapshot(out var snapshotPath) ? snapshotPath : null)
             .ConfirmAsync(importEvent);
-        if (!result.Accepted)
-            return false;
-
-        var badge = result.Badge;
-        CodingOsdBadgeControls.Show(OsdMeterBadge, TxtOsdMeter, badge.Text);
-        var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(
-            badge.AutoHideDelay,
-            () => CodingOsdBadgeControls.Hide(OsdMeterBadge));
-        resetTimer.Start();
-        return true;
+        return CodingImportTrainingResultWorkflow.Execute(
+            result,
+            new CodingImportTrainingResultActions(
+                ShowBadge: text => CodingOsdBadgeControls.Show(OsdMeterBadge, TxtOsdMeter, text),
+                ScheduleHideBadge: delay =>
+                {
+                    var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(
+                        delay,
+                        () => CodingOsdBadgeControls.Hide(OsdMeterBadge));
+                    resetTimer.Start();
+                })).Accepted;
     }
 }

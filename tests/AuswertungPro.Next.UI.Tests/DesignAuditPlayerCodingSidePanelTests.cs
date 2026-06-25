@@ -485,6 +485,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coreBody = ExtractMethodBody(coding, "private async Task<bool> ConfirmImportAsTrainingAsync");
         var acceptGreenCommandWorkflow = ReadUiFile("Ai", "CodingAcceptGreenMatchesCommandWorkflow.cs");
         var importConfirmCommandWorkflow = ReadUiFile("Ai", "CodingImportConfirmCommandWorkflow.cs");
+        var importTrainingResultWorkflow = ReadUiFile("Ai", "CodingImportTrainingResultWorkflow.cs");
         var workflow = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowService.cs");
         var workflowFactory = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
@@ -506,6 +507,12 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.DoesNotContain("_codingImportEvents.FirstOrDefault", greenBody);
         Assert.DoesNotContain("foreach (var importEvent", greenBody);
         Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", coreBody);
+        Assert.Contains("CodingImportTrainingResultWorkflow.Execute", coreBody);
+        Assert.DoesNotContain("if (!result.Accepted)", coreBody);
+        Assert.DoesNotContain("var badge = result.Badge", coreBody);
+        Assert.Contains("if (!importResult.Accepted)", importTrainingResultWorkflow);
+        Assert.Contains("actions.ShowBadge(badge.Text)", importTrainingResultWorkflow);
+        Assert.Contains("actions.ScheduleHideBadge(badge.AutoHideDelay)", importTrainingResultWorkflow);
         Assert.DoesNotContain("TeacherAnnotationStore.AppendAsync(annotation)", coreBody);
         Assert.Contains("await _seekAndWait(importEvent)", workflow);
         Assert.Contains("await _appendAnnotation(annotation)", workflow);
