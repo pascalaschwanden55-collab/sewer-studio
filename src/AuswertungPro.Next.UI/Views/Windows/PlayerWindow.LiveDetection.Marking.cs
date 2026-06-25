@@ -44,22 +44,21 @@ public partial class PlayerWindow
 
             bool saved = await SaveMarkAsTrainingAsync(overlay, timestampSec, clockPos, frameBytes);
 
-            // Nach dem Dialog alle transienten Markierungsartefakte entfernen.
-            CodingSamMaskOverlayController.Clear(CodingOverlayCanvas);
-            CodingBendMarkerOverlayController.Clear(CodingOverlayCanvas);
-            _codingSessionHost.ClearCurrentOverlay();
-            RedrawCodingCanvas(includeManualOverlay: false);
-
-            // Im Codiermodus Werkzeug aktiv lassen, damit mehrere Markierungen nacheinander moeglich sind.
-            if (saved && !_isCodingMode)
-            {
-                DeactivateMarkTool();
-            }
-            else
-            {
-                _codingOverlayToolHost.SetActiveTool(_markToolType);
-                CodingOverlayInputControls.ApplyCanvasCursor(CodingOverlayCanvas, useCrossCursor: true);
-            }
+            LiveDetectionManualMarkCompletionWorkflow.Execute(
+                new LiveDetectionManualMarkCompletionWorkflowRequest(
+                    saved,
+                    _isCodingMode,
+                    _markToolType),
+                new LiveDetectionManualMarkCompletionWorkflowActions(
+                    ClearSamMasks: () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
+                    ClearBendMarker: () => CodingBendMarkerOverlayController.Clear(CodingOverlayCanvas),
+                    ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
+                    RedrawCodingCanvasWithoutManualOverlay: () => RedrawCodingCanvas(includeManualOverlay: false),
+                    DeactivateMarkTool: DeactivateMarkTool,
+                    SetActiveTool: tool => _codingOverlayToolHost.SetActiveTool(tool),
+                    ApplyCrossCursor: () => CodingOverlayInputControls.ApplyCanvasCursor(
+                        CodingOverlayCanvas,
+                        useCrossCursor: true)));
         }
         catch (Exception ex)
         {

@@ -4035,6 +4035,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_manual_mark_completion_decision_lives_in_workflow()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var markingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkCompletionWorkflow.cs");
+
+        Assert.True(File.Exists(workflowPath), "Manual-Mark-Abschlussentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+
+        var marking = File.ReadAllText(markingPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
+
+        Assert.Contains("LiveDetectionManualMarkCompletionWorkflow.Execute", marking);
+        Assert.DoesNotContain("if (saved && !_isCodingMode)", marking);
+        Assert.DoesNotContain("_codingOverlayToolHost.SetActiveTool(_markToolType);", marking);
+        Assert.Contains("ClearSamMasks", workflow);
+        Assert.Contains("ClearBendMarker", workflow);
+        Assert.Contains("DeactivateMarkTool", workflow);
+        Assert.Contains("SetActiveTool", workflow);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_mark_training_save_lives_in_training_partial()
     {
         var root = FindRepositoryRoot();
