@@ -2184,20 +2184,26 @@ public sealed class UiArchitectureGuardTests
         var deleteApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteApplier.cs");
         var editApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventEditApplier.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectDecisionWorkflow.cs");
+        var acceptCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectAcceptCommandWorkflow.cs");
         var editCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectEditCommandWorkflow.cs");
+        var rejectCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineDefectRejectCommandWorkflow.cs");
 
         Assert.True(File.Exists(actionsPath), "Inline-Defekt-Aktionshandler sollen aus dem allgemeinen EventDetails-Partial heraus.");
         Assert.True(File.Exists(deleteApplierPath), "Inline-Defekt-Ablehnen muss die gemeinsame Coding-Event-Loeschanwendung nutzen.");
         Assert.True(File.Exists(editApplierPath), "Inline-Defekt-Bearbeiten muss die gemeinsame Coding-Event-Edit-Anwendung nutzen.");
         Assert.True(File.Exists(workflowPath), "Inline-Defekt-Entscheidungen sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(acceptCommandWorkflowPath), "Inline-Defekt-Accept-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(editCommandWorkflowPath), "Inline-Defekt-Edit-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(rejectCommandWorkflowPath), "Inline-Defekt-Reject-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var detail = File.ReadAllText(detailPath);
         var actions = File.ReadAllText(actionsPath);
         var deleteApplier = File.ReadAllText(deleteApplierPath);
         var editApplier = File.ReadAllText(editApplierPath);
         var workflow = File.ReadAllText(workflowPath);
+        var acceptCommandWorkflow = File.Exists(acceptCommandWorkflowPath) ? File.ReadAllText(acceptCommandWorkflowPath) : "";
         var editCommandWorkflow = File.Exists(editCommandWorkflowPath) ? File.ReadAllText(editCommandWorkflowPath) : "";
+        var rejectCommandWorkflow = File.Exists(rejectCommandWorkflowPath) ? File.ReadAllText(rejectCommandWorkflowPath) : "";
 
         Assert.DoesNotContain("private void CodingAcceptDefect_Click", detail);
         Assert.DoesNotContain("private void CodingEditDefect_Click", detail);
@@ -2205,10 +2211,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void CodingAcceptDefect_Click", actions);
         Assert.Contains("private void CodingEditDefect_Click", actions);
         Assert.Contains("private void CodingRejectDefect_Click", actions);
+        Assert.Contains("CodingInlineDefectAcceptCommandWorkflow.Execute", actions);
         Assert.Contains("CodingInlineDefectEditCommandWorkflow.Execute", actions);
-        Assert.Contains("CodingInlineDefectDecisionWorkflow.Accept", actions);
+        Assert.Contains("CodingInlineDefectRejectCommandWorkflow.Execute", actions);
         Assert.Contains("CodingInlineDefectDecisionWorkflow.CompleteEdit", actions);
-        Assert.Contains("CodingInlineDefectDecisionWorkflow.Reject", actions);
         Assert.Contains("_codingSessionHost", actions);
         Assert.DoesNotContain("_codingVm", actions);
         Assert.DoesNotContain("CodingEventEditApplier.Apply", actions);
@@ -2217,12 +2223,18 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("ev.MeterAtCapture = entry.MeterStart", actions);
         Assert.DoesNotContain("_codingSessionService?.RemoveEvent", actions);
         Assert.DoesNotContain("_codingVm.Events.Remove", actions);
+        Assert.Contains("actions.AcceptDefect()", acceptCommandWorkflow);
+        Assert.Contains("actions.UpdateInlineDefectDetail(acceptedDefect)", acceptCommandWorkflow);
+        Assert.Contains("actions.FadeOutAiOverlayAfterAction()", acceptCommandWorkflow);
         Assert.Contains("actions.SelectDefect(selected)", editCommandWorkflow);
         Assert.Contains("actions.PausePlayback()", editCommandWorkflow);
         Assert.Contains("actions.TryEdit(selected)", editCommandWorkflow);
         Assert.Contains("actions.CompleteEdit(selected)", editCommandWorkflow);
         Assert.Contains("actions.RefreshEvents()", editCommandWorkflow);
         Assert.Contains("actions.UpdateInlineDefectDetail(selected)", editCommandWorkflow);
+        Assert.Contains("actions.RejectDefect()", rejectCommandWorkflow);
+        Assert.Contains("actions.HideInlineDefectDetail()", rejectCommandWorkflow);
+        Assert.Contains("actions.FadeOutAiOverlayAfterAction()", rejectCommandWorkflow);
         Assert.Contains("CodingEventEditApplier.Apply", workflow);
         Assert.Contains("CodingEventDeleteApplier.Apply", workflow);
         Assert.Contains("codingSessionService?.UpdateEvent", editApplier);
@@ -2634,6 +2646,7 @@ public sealed class UiArchitectureGuardTests
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingProtocolRevisionUpdater.cs");
         var updateBuilderPath = Path.Combine(uiRoot, "Ai", "CodingApplyProtocolUpdateBuilder.cs");
         var emptyGuardPath = Path.Combine(uiRoot, "Ai", "CodingApplyEmptyProtocolGuard.cs");
+        var applyWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingApplyChangesWorkflow.cs");
         var closePolicyPath = Path.Combine(uiRoot, "Ai", "CodingUnappliedChangesClosePolicy.cs");
         var dialogServicePath = Path.Combine(uiRoot, "Ai", "CodingApplyDialogService.cs");
         var dialogServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingApplyDialogServiceFactory.cs");
@@ -2641,6 +2654,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(policyPath), "Protokoll-Revision-Update muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(updateBuilderPath), "Protokoll-Dokumentvorbereitung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(emptyGuardPath), "Leere-Codierung-Schutzlogik muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(applyWorkflowPath), "ApplyCodingChanges-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(closePolicyPath), "Schliessen-Entscheidung fuer unuebernommene Codierungen muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServicePath), "Apply-Dialogtexte und DialogHost-Zugriff muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServiceFactoryPath), "Apply-DialogHost-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -2649,13 +2663,15 @@ public sealed class UiArchitectureGuardTests
         var policy = File.ReadAllText(policyPath);
         var updateBuilder = File.ReadAllText(updateBuilderPath);
         var emptyGuard = File.ReadAllText(emptyGuardPath);
+        var applyWorkflow = File.Exists(applyWorkflowPath) ? File.ReadAllText(applyWorkflowPath) : "";
         var closePolicy = File.ReadAllText(closePolicyPath);
         var dialogService = File.ReadAllText(dialogServicePath);
         var dialogServiceFactory = File.ReadAllText(dialogServiceFactoryPath);
 
-        Assert.Contains("CodingApplyProtocolUpdateBuilder.Create", apply);
-        Assert.Contains("CodingProtocolRevisionUpdater.ApplyCodingEvents", apply);
-        Assert.Contains("CodingApplyEmptyProtocolGuard.Build", apply);
+        Assert.Contains("CodingApplyProtocolUpdateBuilder.Create", applyWorkflow);
+        Assert.Contains("CodingApplyChangesWorkflow.Execute", apply);
+        Assert.DoesNotContain("CodingProtocolRevisionUpdater.ApplyCodingEvents", apply);
+        Assert.DoesNotContain("CodingApplyEmptyProtocolGuard.Build", apply);
         Assert.Contains("CodingApplyDialogServiceFactory.Create", apply);
         Assert.Contains("_codingSessionHost", apply);
         Assert.Contains("ConfirmEmptyProtocol", apply);
@@ -2667,6 +2683,11 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingVm.Events.Count(", apply);
         Assert.DoesNotContain("DialogHost.Current", apply);
         Assert.DoesNotContain("CodingUnappliedChangesClosePolicy.ShouldClose", apply);
+        Assert.Contains("CodingProtocolRevisionUpdater.ApplyCodingEvents", applyWorkflow);
+        Assert.Contains("CodingApplyEmptyProtocolGuard.Build", applyWorkflow);
+        Assert.Contains("actions.AssignProtocol(update.Document)", applyWorkflow);
+        Assert.Contains("actions.SyncCodingToPrimaryDamages(update.Document)", applyWorkflow);
+        Assert.Contains("actions.SetBaselineSignature", applyWorkflow);
         Assert.DoesNotContain(".GroupBy(e => e.EntryId)", apply);
         Assert.DoesNotContain("aktiveBefunde", apply);
         Assert.DoesNotContain("bestehende(n) Befund", apply);

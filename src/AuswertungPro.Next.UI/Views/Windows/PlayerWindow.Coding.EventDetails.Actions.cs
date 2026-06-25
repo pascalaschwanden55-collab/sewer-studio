@@ -10,18 +10,16 @@ public partial class PlayerWindow
 {
     private void CodingAcceptDefect_Click(object sender, RoutedEventArgs e)
     {
-        var acceptedDefect = CodingInlineDefectDecisionWorkflow.Accept(
-            () => _codingSessionHost.SelectedDefect,
-            () => { _codingSessionHost.ExecuteAcceptDefect(); },
-            codingEvent => PersistSingleEventAsTrainingSample(codingEvent)
-                .SafeFireAndForget("TrainingSaveAcceptInline"));
-
-        if (acceptedDefect != null)
-        {
-            UpdateInlineDefectDetail(acceptedDefect);
-            RefreshCodingEventsList();
-            FadeOutAiOverlayAfterAction();
-        }
+        CodingInlineDefectAcceptCommandWorkflow.Execute(
+            new CodingInlineDefectAcceptCommandActions(
+                AcceptDefect: () => CodingInlineDefectDecisionWorkflow.Accept(
+                    () => _codingSessionHost.SelectedDefect,
+                    () => { _codingSessionHost.ExecuteAcceptDefect(); },
+                    codingEvent => PersistSingleEventAsTrainingSample(codingEvent)
+                        .SafeFireAndForget("TrainingSaveAcceptInline")),
+                UpdateInlineDefectDetail: UpdateInlineDefectDetail,
+                RefreshEvents: RefreshCodingEventsList,
+                FadeOutAiOverlayAfterAction: FadeOutAiOverlayAfterAction));
     }
 
     private void CodingEditDefect_Click(object sender, RoutedEventArgs e)
@@ -67,19 +65,16 @@ public partial class PlayerWindow
 
     private void CodingRejectDefect_Click(object sender, RoutedEventArgs e)
     {
-        var rejectResult = CodingInlineDefectDecisionWorkflow.Reject(
-            _codingSessionHost.SelectedDefect,
-            LstCodingEvents.SelectedItem as CodingEvent,
-            _codingSessionRuntimeOwner.Service,
-            _codingSessionHost.EventCollection);
-
-        if (!rejectResult.Rejected)
-            return;
-
-        if (rejectResult.ShouldClearSelectedDefect)
-            _codingSessionHost.ClearSelectedDefect();
-        HideInlineDefectDetail();
-        RefreshCodingEventsList();
-        FadeOutAiOverlayAfterAction();
+        CodingInlineDefectRejectCommandWorkflow.Execute(
+            new CodingInlineDefectRejectCommandActions(
+                RejectDefect: () => CodingInlineDefectDecisionWorkflow.Reject(
+                    _codingSessionHost.SelectedDefect,
+                    LstCodingEvents.SelectedItem as CodingEvent,
+                    _codingSessionRuntimeOwner.Service,
+                    _codingSessionHost.EventCollection),
+                ClearSelectedDefect: _codingSessionHost.ClearSelectedDefect,
+                HideInlineDefectDetail: HideInlineDefectDetail,
+                RefreshEvents: RefreshCodingEventsList,
+                FadeOutAiOverlayAfterAction: FadeOutAiOverlayAfterAction));
     }
 }

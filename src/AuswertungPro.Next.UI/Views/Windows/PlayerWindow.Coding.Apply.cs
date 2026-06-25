@@ -11,39 +11,23 @@ public partial class PlayerWindow
 
     private bool ApplyCodingChanges(bool showOverlay)
     {
-        if (!_codingSessionHost.HasViewModel || _haltungRecord == null) return false;
+        var result = CodingApplyChangesWorkflow.Execute(
+            new CodingApplyChangesWorkflowRequest(
+                _codingSessionHost.HasViewModel,
+                _haltungRecord,
+                _codingSessionHost.EventCollection,
+                showOverlay),
+            new CodingApplyChangesWorkflowActions(
+                ConfirmEmptyProtocol: guard => CodingApplyDialogServiceFactory.Create().ConfirmEmptyProtocol(guard),
+                AssignProtocol: document => _haltungRecord!.Protocol = document,
+                MarkProjectDirty: MarkProjectDirtyForCoding,
+                SyncCodingToPrimaryDamages: SyncCodingToPrimaryDamages,
+                PersistCodingEventsAsTrainingSamples: PersistCodingEventsAsTrainingSamples,
+                SetBaselineSignature: signature => _codingBaselineSignature = signature,
+                SaveProjectAfterCoding: SaveProjectAfterCoding,
+                ShowOverlay: ShowOverlay));
 
-        var events = _codingSessionHost.EventCollection;
-        if (events is null) return false;
-
-        var update = CodingApplyProtocolUpdateBuilder.Create(_haltungRecord, events);
-        var emptyGuard = CodingApplyEmptyProtocolGuard.Build(update.EventEntryCount, update.CurrentRevision.Entries);
-        if (!CodingApplyDialogServiceFactory.Create().ConfirmEmptyProtocol(emptyGuard))
-            return false;
-
-        CodingProtocolRevisionUpdater.ApplyCodingEvents(update.CurrentRevision, update.Events);
-
-        _haltungRecord.Protocol = update.Document;
-        MarkProjectDirtyForCoding();
-
-        SyncCodingToPrimaryDamages(update.Document);
-        MarkProjectDirtyForCoding();
-
-        PersistCodingEventsAsTrainingSamples();
-
-        _codingBaselineSignature = CodingEventsSignatureBuilder.Build(events);
-
-        SaveProjectAfterCoding();
-
-        if (showOverlay)
-        {
-            var message = events.Count == 0
-                ? "Prim\u00e4re Sch\u00e4den geleert"
-                : $"{events.Count} Ereignisse in Prim\u00e4re Sch\u00e4den \u00fcbernommen";
-            ShowOverlay(message, TimeSpan.FromSeconds(4));
-        }
-
-        return true;
+        return result.Applied;
     }
 
     private bool ConfirmUnappliedCodingChangesOnClose()
