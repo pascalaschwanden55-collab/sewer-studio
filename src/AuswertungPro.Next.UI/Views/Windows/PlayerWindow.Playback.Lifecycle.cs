@@ -25,7 +25,7 @@ public partial class PlayerWindow
                 StopPipelineHealthMonitor: StopPipelineHealthMonitor,
                 DetachVideoView: () => PlayerPlaybackResourceCleaner.DetachVideoView(
                     () => { if (VideoView != null) VideoView.MediaPlayer = null; }),
-                StopPlayer: () => PlayerPlaybackResourceCleaner.StopPlayer(() => _player.Stop()),
+                StopPlayer: () => PlayerPlaybackResourceCleaner.StopPlayer(_playerPlaybackControlHost.Stop),
                 Cleanup: Cleanup,
                 LogCleanupError: ex => PlayerTrace.WriteLine($"[PlayerWindow] OnClosing error: {ex.Message}")));
         e.Cancel = result.CancelClose;

@@ -8,18 +8,18 @@ public partial class PlayerWindow
     private void Play_Click(object sender, RoutedEventArgs e)
         => PlayerPlaybackCommandRunner.Play(
             EnsurePlaying,
-            pause => _player.SetPause(pause),
+            _playerPlaybackControlHost.SetPause,
             UpdateRateLabel,
             ClearDetectionOverlays);
 
     private void Pause_Click(object sender, RoutedEventArgs e)
         => PlayerPlaybackCommandRunner.Pause(
-            pause => _player.SetPause(pause),
+            _playerPlaybackControlHost.SetPause,
             UpdateRateLabel);
 
     private void Stop_Click(object sender, RoutedEventArgs e)
         => PlayerPlaybackCommandRunner.Stop(
-            () => _player.Stop(),
+            _playerPlaybackControlHost.Stop,
             UpdateRateLabel);
 
     private void Speed05_Click(object sender, RoutedEventArgs e) => SetSpeed(0.5f);

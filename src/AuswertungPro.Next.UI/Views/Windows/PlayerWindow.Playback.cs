@@ -46,8 +46,8 @@ public partial class PlayerWindow
     private void TogglePlayPause()
         => PlayerPlaybackCommandRunner.TogglePlayPause(
             EnsurePlaying,
-            () => _player.IsPlaying,
-            pause => _player.SetPause(pause));
+            () => _playerPlaybackControlHost.IsPlaying,
+            _playerPlaybackControlHost.SetPause);
 
     private void EnsurePlaying()
     {

@@ -16,9 +16,9 @@ public partial class PlayerWindow
         {
             CancelCodingOverlay = CancelCodingOverlayShortcut,
             TogglePlayPause = TogglePlayPause,
-            Stop = () => PlayerKeyboardPlaybackCommandRunner.Stop(_player.Stop),
-            Pause = () => PlayerKeyboardPlaybackCommandRunner.Pause(pause => _player.SetPause(pause)),
-            Resume = () => PlayerKeyboardPlaybackCommandRunner.Resume(EnsurePlaying, pause => _player.SetPause(pause)),
+            Stop = () => PlayerKeyboardPlaybackCommandRunner.Stop(_playerPlaybackControlHost.Stop),
+            Pause = () => PlayerKeyboardPlaybackCommandRunner.Pause(_playerPlaybackControlHost.SetPause),
+            Resume = () => PlayerKeyboardPlaybackCommandRunner.Resume(EnsurePlaying, _playerPlaybackControlHost.SetPause),
             ChangeSpeed = ChangeSpeed,
             JumpSeconds = JumpSeconds,
             ToggleDetection = ToggleDetectionShortcut,

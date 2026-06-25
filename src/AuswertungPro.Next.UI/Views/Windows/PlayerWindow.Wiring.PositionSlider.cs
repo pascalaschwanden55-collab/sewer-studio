@@ -17,8 +17,8 @@ public partial class PlayerWindow
     private void PositionSlider_DragStarted(object sender, DragStartedEventArgs e)
     {
         _wasPlayingBeforeDrag = PlayerPositionSliderDragPlayback.Start(
-            _player.IsPlaying,
-            pause => _player.SetPause(pause));
+            _playerPlaybackControlHost.IsPlaying,
+            _playerPlaybackControlHost.SetPause);
         _isDragging = true;
         ScrubSeekToSlider();
     }
@@ -30,7 +30,7 @@ public partial class PlayerWindow
         _isDragging = false;
         PlayerPositionSliderDragPlayback.Complete(
             _wasPlayingBeforeDrag,
-            pause => _player.SetPause(pause));
+            _playerPlaybackControlHost.SetPause);
     }
 
     private void PositionSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -49,6 +49,6 @@ public partial class PlayerWindow
         _isDragging = false;
         PlayerPositionSliderDragPlayback.Complete(
             _wasPlayingBeforeDrag,
-            pause => _player.SetPause(pause));
+            _playerPlaybackControlHost.SetPause);
     }
 }

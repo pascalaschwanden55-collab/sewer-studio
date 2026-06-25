@@ -61,7 +61,8 @@ public partial class PlayerWindow : Window
         _playerPlaybackControlHost = new PlayerPlaybackControlHost(
             readIsPlaying: () => _player.IsPlaying,
             setPause: pause => _player.SetPause(pause),
-            play: () => _player.Play());
+            play: () => _player.Play(),
+            stop: () => _player.Stop());
 
         _damageMarkerController = new DamageMarkerController(
             DamageMarkerCanvas,
