@@ -75,6 +75,21 @@ public sealed class CodingEingabemarkerPopupControlsTests
         });
     }
 
+    [Fact]
+    public void ResolveSelectedText_returns_combo_box_item_text_only()
+    {
+        RunOnStaThread(() =>
+        {
+            var resolve = FindMethod("ResolveSelectedText", typeof(object));
+            Assert.NotNull(resolve);
+
+            Assert.Equal("BAA", resolve.Invoke(null, [new ComboBoxItem { Content = "BAA" }]));
+            Assert.Null(resolve.Invoke(null, [new ComboBoxItem { Content = "" }]));
+            Assert.Null(resolve.Invoke(null, ["BAA"]));
+            Assert.Null(resolve.Invoke(null, [null]));
+        });
+    }
+
     private static MethodInfo? FindMethod(string name, params Type[] parameterTypes)
         => typeof(PlayerStatusColors).Assembly
             .GetType("AuswertungPro.Next.UI.Views.Windows.CodingEingabemarkerPopupControls")

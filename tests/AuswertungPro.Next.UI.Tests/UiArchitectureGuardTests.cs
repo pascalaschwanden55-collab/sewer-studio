@@ -7393,13 +7393,16 @@ public sealed class UiArchitectureGuardTests
         var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
         var inputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Input.cs");
         var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
+        var inputWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerInputWorkflow.cs");
 
         Assert.True(File.Exists(inputPath), "Eingabemarker-Eingabe-Wiring muss in einer eigenen PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(popupControlsPath), "Eingabemarker-Popup-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
+        Assert.True(File.Exists(inputWorkflowPath), "Eingabemarker-Key- und Auswahlentscheidungen sollen ausserhalb von PlayerWindow laufen.");
 
         var marker = File.ReadAllText(markerPath);
         var input = File.ReadAllText(inputPath);
         var popupControls = File.Exists(popupControlsPath) ? File.ReadAllText(popupControlsPath) : "";
+        var inputWorkflow = File.Exists(inputWorkflowPath) ? File.ReadAllText(inputWorkflowPath) : "";
 
         Assert.DoesNotContain("private void CmbEingabemarker_KeyDown", marker);
         Assert.DoesNotContain("private void CmbEingabemarker_SelectionChanged", marker);
@@ -7408,6 +7411,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingEingabemarkerPopupControls.Hide", marker);
         Assert.Contains("CodingEingabemarkerPopupControls.IsVisible", input);
         Assert.Contains("CodingEingabemarkerPopupControls.ApplyQuickSelection", input);
+        Assert.Contains("CodingEingabemarkerPopupControls.ResolveSelectedText", input);
+        Assert.Contains("CodingEingabemarkerKeyInputWorkflow.Execute", input);
+        Assert.Contains("CodingEingabemarkerSelectionInputWorkflow.Execute", input);
+        Assert.DoesNotContain("if (e.Key == Key.Escape)", input);
+        Assert.DoesNotContain("if (e.Key != Key.Enter)", input);
+        Assert.DoesNotContain("CmbEingabemarker.SelectedItem is ComboBoxItem", input);
         Assert.DoesNotContain("EingabemarkerPopup.Visibility = Visibility.Visible", marker);
         Assert.DoesNotContain("EingabemarkerPopup.Visibility = Visibility.Collapsed", marker);
         Assert.DoesNotContain("TxtEingabemarker.Text = \"\"", marker);
@@ -7422,6 +7431,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static void Hide", popupControls);
         Assert.Contains("public static bool IsVisible", popupControls);
         Assert.Contains("public static void ApplyQuickSelection", popupControls);
+        Assert.Contains("public static string? ResolveSelectedText", popupControls);
+        Assert.Contains("request.IsEscape", inputWorkflow);
+        Assert.Contains("request.IsEnter", inputWorkflow);
+        Assert.Contains("request.IsPopupVisible", inputWorkflow);
+        Assert.Contains("string.IsNullOrEmpty(request.SelectedText)", inputWorkflow);
     }
 
     [Fact]

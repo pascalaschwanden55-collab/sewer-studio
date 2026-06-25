@@ -41,4 +41,11 @@ public static class CodingEingabemarkerPopupControls
 
         return popup.Visibility == Visibility.Visible;
     }
+
+    public static string? ResolveSelectedText(object? selectedItem)
+    {
+        return selectedItem is ComboBoxItem { Content: string text } && !string.IsNullOrEmpty(text)
+            ? text
+            : null;
+    }
 }

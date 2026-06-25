@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -9,25 +10,27 @@ public partial class PlayerWindow
 {
     private void CmbEingabemarker_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape)
-        {
-            CancelEingabemarker();
-            ClearDetectionOverlays();
-            return;
-        }
-
-        if (e.Key != Key.Enter) return;
-        SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker");
+        CodingEingabemarkerKeyInputWorkflow.Execute(
+            new CodingEingabemarkerKeyInputWorkflowRequest(
+                IsEscape: e.Key == Key.Escape,
+                IsEnter: e.Key == Key.Enter),
+            new CodingEingabemarkerKeyInputWorkflowActions(
+                CancelMarker: CancelEingabemarker,
+                ClearDetectionOverlays: ClearDetectionOverlays,
+                Submit: () => SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker")));
     }
 
     private void CmbEingabemarker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!CodingEingabemarkerPopupControls.IsVisible(EingabemarkerPopup)) return;
-        if (CmbEingabemarker.SelectedItem is ComboBoxItem item && item.Content is string text && !string.IsNullOrEmpty(text))
-        {
-            CodingEingabemarkerPopupControls.ApplyQuickSelection(TxtEingabemarker, text);
-            SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker");
-        }
+        CodingEingabemarkerSelectionInputWorkflow.Execute(
+            new CodingEingabemarkerSelectionInputWorkflowRequest(
+                IsPopupVisible: CodingEingabemarkerPopupControls.IsVisible(EingabemarkerPopup),
+                SelectedText: CodingEingabemarkerPopupControls.ResolveSelectedText(CmbEingabemarker.SelectedItem)),
+            new CodingEingabemarkerSelectionInputWorkflowActions(
+                ApplyQuickSelection: text => CodingEingabemarkerPopupControls.ApplyQuickSelection(
+                    TxtEingabemarker,
+                    text),
+                Submit: () => SubmitEingabemarker().SafeFireAndForget("SubmitEingabemarker")));
     }
 
     private static string? ResolveEingabemarkerCodeHint(string? keyword)
