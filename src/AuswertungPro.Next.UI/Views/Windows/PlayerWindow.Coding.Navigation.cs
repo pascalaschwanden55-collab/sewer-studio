@@ -90,9 +90,10 @@ public partial class PlayerWindow
         Action<ICodingSessionHost> executeMoveCommand,
         string traceName)
     {
-        try
-        {
-            if (!CodingVideoNavigationController.PrepareMoveByCommand(
+        await CodingMoveByCommandWorkflow.ExecuteAsync(
+            new CodingMoveByCommandRequest(traceName),
+            new CodingMoveByCommandActions(
+                PrepareMoveByCommand: () => CodingVideoNavigationController.PrepareMoveByCommand(
                     _codingSessionHost.HasViewModel ? _codingSessionHost : null,
                     executeMoveCommand,
                     () => _codingNavPending = true,
@@ -100,14 +101,8 @@ public partial class PlayerWindow
                     () =>
                     {
                         _codingOsdMeterController.ResetRecentMeter();
-                    }))
-                return;
-
-            await CodingReadOsdMeterAsync();
-        }
-        catch (Exception ex)
-        {
-            PlayerTrace.WriteLine($"[PlayerWindow] {traceName} error: {ex.Message}");
-        }
+                    }),
+                ReadOsdMeterAsync: CodingReadOsdMeterAsync,
+                TraceError: message => PlayerTrace.WriteLine(message)));
     }
 }

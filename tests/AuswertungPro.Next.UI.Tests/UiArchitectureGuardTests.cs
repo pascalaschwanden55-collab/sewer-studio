@@ -5701,6 +5701,7 @@ public sealed class UiArchitectureGuardTests
         var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
         var navigationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Navigation.cs");
         var controllerPath = Path.Combine(uiRoot, "Ai", "CodingVideoNavigationController.cs");
+        var moveCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMoveByCommandWorkflow.cs");
         var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingUiUpdateWorkflow.cs");
         var sessionHostPath = Path.Combine(uiRoot, "Player", "CodingSessionHost.cs");
         var sessionOwnerPath = Path.Combine(uiRoot, "Player", "CodingSessionViewModelOwner.cs");
@@ -5709,6 +5710,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.True(File.Exists(navigationPath), "Coding-Navigation soll nicht im grossen Coding-Partial liegen.");
         Assert.True(File.Exists(controllerPath), "Coding-Video-Navigationsregeln sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(moveCommandWorkflowPath), "Coding-Move-Command-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(uiUpdateWorkflowPath), "Coding-UI-Update-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(sessionHostPath), "_codingVm-Zugriffe sollen ueber einen schmalen CodingSessionHost laufen.");
         Assert.True(File.Exists(sessionOwnerPath), "CodingSessionViewModel-Besitz soll in einem eigenen Player-Owner liegen.");
@@ -5717,6 +5719,7 @@ public sealed class UiArchitectureGuardTests
         var coding = File.ReadAllText(codingPath);
         var navigation = File.ReadAllText(navigationPath);
         var controller = File.ReadAllText(controllerPath);
+        var moveCommandWorkflow = File.Exists(moveCommandWorkflowPath) ? File.ReadAllText(moveCommandWorkflowPath) : "";
         var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
         var sessionHost = File.Exists(sessionHostPath) ? File.ReadAllText(sessionHostPath) : "";
         var sessionOwner = File.Exists(sessionOwnerPath) ? File.ReadAllText(sessionOwnerPath) : "";
@@ -5733,8 +5736,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains(".SafeFireAndForget(\"CodingNext\")", navigation);
         Assert.Contains(".SafeFireAndForget(\"CodingPrevious\")", navigation);
         Assert.Contains("private async Task MoveCodingByCommandAsync", navigation);
+        Assert.Contains("CodingMoveByCommandWorkflow.ExecuteAsync", navigation);
         Assert.Contains("CodingUiUpdateWorkflow.Apply", navigation);
         Assert.Contains("new CodingUiUpdateActions", navigation);
+        Assert.DoesNotContain("catch (Exception", navigation);
         Assert.DoesNotContain("CodingStatisticsRefreshPolicy.ShouldRefresh", navigation);
         Assert.DoesNotContain("if (propertyName is nameof(CodingSessionViewModel.CurrentMeter) && _codingNavPending)", navigation);
         Assert.Contains("CodingVideoNavigationController.ResolveDisplayMeter", navigation);
@@ -5748,6 +5753,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingCurrentMeterResolver.Resolve", controller);
         Assert.Contains("CodingVideoSyncPolicy.TryResolveTargetTimeMs", controller);
         Assert.Contains("PrepareMoveByCommand", controller);
+        Assert.Contains("actions.PrepareMoveByCommand()", moveCommandWorkflow);
+        Assert.Contains("await actions.ReadOsdMeterAsync()", moveCommandWorkflow);
+        Assert.Contains("actions.TraceError", moveCommandWorkflow);
         Assert.Contains("public static class CodingUiUpdateWorkflow", uiUpdateWorkflow);
         Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", uiUpdateWorkflow);
         Assert.Contains("public interface ICodingSessionHost", sessionHost);
