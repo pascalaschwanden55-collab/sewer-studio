@@ -3559,11 +3559,13 @@ public sealed class UiArchitectureGuardTests
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOsdBadgeControls.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterStateWorkflow.cs");
         var readWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterReadWorkflow.cs");
+        var statusWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionOsdMeterStatusWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "OSD-Badge-Textformat muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "OSD-Badge-Control-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
         Assert.True(File.Exists(workflowPath), "OSD-Meter-Akzeptanz und Badge-State sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(readWorkflowPath), "OSD-Read-Ablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(statusWorkflowPath), "LiveDetection-OSD-Status-Reset soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var osd = File.ReadAllText(osdPath);
         var osdReading = File.ReadAllText(osdReadingPath);
@@ -3576,16 +3578,20 @@ public sealed class UiArchitectureGuardTests
         var controls = File.ReadAllText(controlsPath);
         var workflow = File.ReadAllText(workflowPath);
         var readWorkflow = File.ReadAllText(readWorkflowPath);
+        var statusWorkflow = File.Exists(statusWorkflowPath) ? File.ReadAllText(statusWorkflowPath) : "";
         var osdText = osd + osdReading + marking + lifecycleUi + lifecycleExit + protocolTraining;
 
         Assert.Contains("CodingOsdMeterReadWorkflow.ExecuteAsync", osdReading);
         Assert.DoesNotContain("CodingOsdMeterStateWorkflow.FromReadResult", osdReading);
         Assert.Contains("CodingOsdMeterStateWorkflow.FromReadResult", readWorkflow);
         Assert.Contains("CodingOsdMeterStateWorkflow.FromDetectionResult", aiEvents);
+        Assert.Contains("LiveDetectionOsdMeterStatusWorkflow.Show", marking);
         Assert.Contains("CodingOsdBadgeControls.Show", osdText);
         Assert.Contains("CodingOsdBadgeControls.ShowInitial", lifecycleUi);
         Assert.Contains("CodingOsdBadgeControls.ShowMeter", marking);
         Assert.Contains("CodingOsdBadgeControls.Hide", osdText);
+        Assert.DoesNotContain("if (_codingOsdMeterController.LastMeter.HasValue)", marking);
+        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromSeconds(3)", marking);
         Assert.DoesNotContain("OsdMeterBadge.Visibility", osdText);
         Assert.DoesNotContain("TxtOsdMeter.Text", osdText);
         Assert.DoesNotContain("CodingOsdBadgeDisplayPolicy.BuildMeterText", osdText);
@@ -3596,6 +3602,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static class CodingOsdBadgeControls", controls);
         Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", controls);
         Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", workflow);
+        Assert.Contains("TimeSpan.FromSeconds(3)", statusWorkflow);
+        Assert.Contains("actions.GetLastMeter()", statusWorkflow);
+        Assert.Contains("actions.ShowMeter(lastMeter.Value)", statusWorkflow);
     }
 
     [Fact]
@@ -6096,18 +6105,26 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var visibilityPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Visibility.cs");
+        var visibilityWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputVisibilityWorkflow.cs");
 
         Assert.True(File.Exists(visibilityPath), "Overlay-Suspend/Restore soll aus dem allgemeinen OverlayInput-Partial heraus.");
+        Assert.True(File.Exists(visibilityWorkflowPath), "Overlay-Suspend/Restore-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var visibility = File.ReadAllText(visibilityPath);
+        var visibilityWorkflow = File.Exists(visibilityWorkflowPath) ? File.ReadAllText(visibilityWorkflowPath) : "";
 
         Assert.DoesNotContain("private void SuspendCodingOverlayInput", overlayInput);
         Assert.DoesNotContain("private void ResumeCodingOverlayInput", overlayInput);
         Assert.DoesNotContain("private void HideCodingOverlayForExternalWindow", overlayInput);
         Assert.DoesNotContain("private void RestoreCodingOverlayAfterExternalWindow", overlayInput);
         Assert.Contains("private void SuspendCodingOverlayInput", visibility);
-        Assert.Contains("_codingOverlaySuspendDepth++", visibility);
+        Assert.Contains("CodingOverlayInputVisibilityWorkflow.Suspend", visibility);
+        Assert.Contains("CodingOverlayInputVisibilityWorkflow.Resume", visibility);
+        Assert.Contains("CodingOverlayInputVisibilityWorkflow.HideForExternalWindow", visibility);
+        Assert.Contains("CodingOverlayInputVisibilityWorkflow.RestoreAfterExternalWindow", visibility);
+        Assert.DoesNotContain("_codingOverlaySuspendDepth++", visibility);
+        Assert.DoesNotContain("if (_codingOverlaySuspendDepth > 1)", visibility);
         Assert.Contains("CodingOverlayInputControls.SuspendCanvas", visibility);
         Assert.Contains("CodingOverlayInputControls.ResumeCanvas", visibility);
         Assert.Contains("_codingSessionHost", visibility);
@@ -6118,6 +6135,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible = true", visibility);
         Assert.Contains("CodingOverlayPopup.IsOpen = false", visibility);
         Assert.Contains("private void RestoreCodingOverlayAfterExternalWindow", visibility);
+        Assert.Contains("request.SuspendDepth", visibilityWorkflow);
+        Assert.Contains("actions.SuspendCanvas()", visibilityWorkflow);
+        Assert.Contains("actions.ResumeCanvas()", visibilityWorkflow);
+        Assert.Contains("actions.RedrawCanvas(request.HasCurrentOverlay)", visibilityWorkflow);
     }
 
     [Fact]

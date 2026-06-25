@@ -67,19 +67,18 @@ public partial class PlayerWindow
     }
 
     private void ShowOsdMeterStatus(string message, bool resetAfterDelay)
-    {
-        CodingOsdBadgeControls.Show(OsdMeterBadge, TxtOsdMeter, message);
-
-        if (!resetAfterDelay)
-            return;
-
-        var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromSeconds(3), () =>
-        {
-            if (_codingOsdMeterController.LastMeter.HasValue)
-                CodingOsdBadgeControls.ShowMeter(OsdMeterBadge, TxtOsdMeter, _codingOsdMeterController.LastMeter.Value);
-            else
-                CodingOsdBadgeControls.Hide(OsdMeterBadge);
-        });
-        resetTimer.Start();
-    }
+        => LiveDetectionOsdMeterStatusWorkflow.Show(
+            new LiveDetectionOsdMeterStatusWorkflowRequest(
+                Message: message,
+                ResetAfterDelay: resetAfterDelay),
+            new LiveDetectionOsdMeterStatusWorkflowActions(
+                ShowMessage: text => CodingOsdBadgeControls.Show(OsdMeterBadge, TxtOsdMeter, text),
+                ScheduleReset: (delay, reset) =>
+                {
+                    var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(delay, reset);
+                    resetTimer.Start();
+                },
+                GetLastMeter: () => _codingOsdMeterController.LastMeter,
+                ShowMeter: meter => CodingOsdBadgeControls.ShowMeter(OsdMeterBadge, TxtOsdMeter, meter),
+                HideBadge: () => CodingOsdBadgeControls.Hide(OsdMeterBadge)));
 }

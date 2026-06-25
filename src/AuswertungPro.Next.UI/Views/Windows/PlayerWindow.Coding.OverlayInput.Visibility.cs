@@ -6,62 +6,57 @@ public partial class PlayerWindow
 {
     private void SuspendCodingOverlayInput()
     {
-        _codingOverlaySuspendDepth++;
-        if (_codingOverlaySuspendDepth > 1)
-            return;
-
-        _codingSchemaManager.EndDrag();
-        _codingOverlayToolHost.CancelDraw();
-        _codingOverlayWasOpenBeforeSuspend = CodingOverlayPopup.IsOpen;
-        // Das Popup ist ein eigenes transparentes Top-Level-HWND und liegt grafisch
-        // UEBER eigenen Dialogen (Loeschen-Bestaetigung, VsaCodeExplorer). IsHitTestVisible=false
-        // nimmt nur die Maus weg, der #01000000-Schleier + Kreise bleiben sichtbar und stoeren.
-        // Canvas-Inhalt zusaetzlich ausblenden (NICHT Popup.IsOpen togglen -> kein HWND-Flicker,
-        // depth-gezaehlt reentrant-sicher, kein Doppel-Redraw). Resume macht es wieder sichtbar.
-        CodingOverlayInputControls.SuspendCanvas(CodingOverlayCanvas);
+        CodingOverlayInputVisibilityWorkflow.Suspend(
+            new CodingOverlayInputSuspendRequest(
+                SuspendDepth: _codingOverlaySuspendDepth,
+                IsPopupOpen: CodingOverlayPopup.IsOpen),
+            new CodingOverlayInputSuspendActions(
+                SetSuspendDepth: depth => _codingOverlaySuspendDepth = depth,
+                EndDrag: _codingSchemaManager.EndDrag,
+                CancelDraw: () => _codingOverlayToolHost.CancelDraw(),
+                RememberOpenBeforeSuspend: isOpen => _codingOverlayWasOpenBeforeSuspend = isOpen,
+                SuspendCanvas: () => CodingOverlayInputControls.SuspendCanvas(CodingOverlayCanvas)));
     }
 
     private void ResumeCodingOverlayInput()
     {
-        if (_codingOverlaySuspendDepth <= 0)
-            return;
-
-        _codingOverlaySuspendDepth--;
-        if (_codingOverlaySuspendDepth > 0)
-            return;
-
-        // Canvas-Inhalt wieder einblenden (Gegenstueck zum Ausblenden in SuspendCodingOverlayInput).
-        CodingOverlayInputControls.ResumeCanvas(CodingOverlayCanvas);
-
-        if (_codingOverlayWasOpenBeforeSuspend)
-        {
-            CodingOverlayPopup.IsOpen = true;
-            UpdateCodingOverlayViewport();
-            RedrawCodingCanvas(includeManualOverlay: _codingSessionHost.CurrentOverlay != null);
-        }
-
-        UpdateCodingOverlayCursor();
-        _codingOverlayWasOpenBeforeSuspend = false;
+        CodingOverlayInputVisibilityWorkflow.Resume(
+            new CodingOverlayInputResumeRequest(
+                SuspendDepth: _codingOverlaySuspendDepth,
+                WasOpenBeforeSuspend: _codingOverlayWasOpenBeforeSuspend,
+                HasCurrentOverlay: _codingSessionHost.CurrentOverlay != null),
+            new CodingOverlayInputResumeActions(
+                SetSuspendDepth: depth => _codingOverlaySuspendDepth = depth,
+                ResumeCanvas: () => CodingOverlayInputControls.ResumeCanvas(CodingOverlayCanvas),
+                OpenPopup: () => CodingOverlayPopup.IsOpen = true,
+                UpdateViewport: UpdateCodingOverlayViewport,
+                RedrawCanvas: includeManualOverlay => RedrawCodingCanvas(includeManualOverlay),
+                UpdateCursor: UpdateCodingOverlayCursor,
+                RememberOpenBeforeSuspend: isOpen => _codingOverlayWasOpenBeforeSuspend = isOpen));
     }
 
     private void HideCodingOverlayForExternalWindow()
     {
-        _codingOverlayWasOpenBeforeExternalHide = CodingOverlayPopup.IsOpen;
-        SuspendCodingOverlayInput();
-        if (_codingOverlayWasOpenBeforeExternalHide)
-            CodingOverlayPopup.IsOpen = false;
+        CodingOverlayInputVisibilityWorkflow.HideForExternalWindow(
+            new CodingOverlayInputExternalWindowRequest(
+                IsPopupOpen: CodingOverlayPopup.IsOpen),
+            new CodingOverlayInputExternalWindowHideActions(
+                RememberOpenBeforeExternalHide: isOpen => _codingOverlayWasOpenBeforeExternalHide = isOpen,
+                Suspend: SuspendCodingOverlayInput,
+                ClosePopup: () => CodingOverlayPopup.IsOpen = false));
     }
 
     private void RestoreCodingOverlayAfterExternalWindow()
     {
-        ResumeCodingOverlayInput();
-        if (_codingOverlayWasOpenBeforeExternalHide)
-        {
-            CodingOverlayPopup.IsOpen = true;
-            UpdateCodingOverlayViewport();
-            RedrawCodingCanvas(includeManualOverlay: _codingSessionHost.CurrentOverlay != null);
-        }
-
-        _codingOverlayWasOpenBeforeExternalHide = false;
+        CodingOverlayInputVisibilityWorkflow.RestoreAfterExternalWindow(
+            new CodingOverlayInputExternalWindowRestoreRequest(
+                WasOpenBeforeExternalHide: _codingOverlayWasOpenBeforeExternalHide,
+                HasCurrentOverlay: _codingSessionHost.CurrentOverlay != null),
+            new CodingOverlayInputExternalWindowRestoreActions(
+                Resume: ResumeCodingOverlayInput,
+                OpenPopup: () => CodingOverlayPopup.IsOpen = true,
+                UpdateViewport: UpdateCodingOverlayViewport,
+                RedrawCanvas: includeManualOverlay => RedrawCodingCanvas(includeManualOverlay),
+                RememberOpenBeforeExternalHide: isOpen => _codingOverlayWasOpenBeforeExternalHide = isOpen));
     }
 }
