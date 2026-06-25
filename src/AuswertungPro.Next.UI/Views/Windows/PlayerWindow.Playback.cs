@@ -76,19 +76,16 @@ public partial class PlayerWindow
     }
 
     private void UpdateUi()
-    {
-        if (_isDragging)
-            return;
-
-        _positionControls.ApplyPlaybackState(
-            _playerTimelineHost.TimeMilliseconds ?? 0,
-            _playerTimelineHost.LengthMilliseconds ?? 0);
-        UpdateRateLabel();
-
-        // Im Codier-Modus: Echtzeit-Code am Zeitstempel aktualisieren
-        if (_isCodingMode)
-            UpdateCodingCurrentCode();
-    }
+        => PlayerUiUpdateWorkflow.Execute(
+            new PlayerUiUpdateWorkflowRequest(
+                _isDragging,
+                _isCodingMode,
+                _playerTimelineHost.TimeMilliseconds ?? 0,
+                _playerTimelineHost.LengthMilliseconds ?? 0),
+            new PlayerUiUpdateWorkflowActions(
+                _positionControls.ApplyPlaybackState,
+                UpdateRateLabel,
+                UpdateCodingCurrentCode));
 
     private void EnsureVisibleOnScreen()
     {

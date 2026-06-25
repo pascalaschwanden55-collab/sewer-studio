@@ -996,18 +996,24 @@ public sealed class UiArchitectureGuardTests
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var controlsPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Controls.cs");
         var commandRunnerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackCommandRunner.cs");
+        var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerUiUpdateWorkflow.cs");
 
         Assert.True(File.Exists(controlsPath), "Playback-Button- und Slider-Wiring soll in ein eigenes Partial.");
         Assert.True(File.Exists(commandRunnerPath), "Playback-Button-Kommandos sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(uiUpdateWorkflowPath), "Playback-UI-Update-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var playback = File.ReadAllText(playbackPath);
         var controls = File.ReadAllText(controlsPath);
         var commandRunner = File.Exists(commandRunnerPath) ? File.ReadAllText(commandRunnerPath) : "";
+        var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
 
         Assert.DoesNotContain("private void Play_Click", playback);
         Assert.DoesNotContain("private void PositionSlider_ValueChanged", playback);
         Assert.DoesNotContain("private void SetSpeed", playback);
         Assert.DoesNotContain("private void UpdateSpeedButtons", playback);
+        Assert.Contains("PlayerUiUpdateWorkflow.Execute", playback);
+        Assert.DoesNotContain("if (_isDragging)", playback);
+        Assert.DoesNotContain("if (_isCodingMode)", playback);
         Assert.Contains("private void Play_Click", controls);
         Assert.Contains("PlayerPlaybackCommandRunner.Play", controls);
         Assert.Contains("PlayerPlaybackCommandRunner.Pause", controls);
@@ -1031,6 +1037,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static void Play", commandRunner);
         Assert.Contains("public static void Pause", commandRunner);
         Assert.Contains("public static void Stop", commandRunner);
+        Assert.Contains("request.IsDragging", uiUpdateWorkflow);
+        Assert.Contains("actions.ApplyPlaybackState", uiUpdateWorkflow);
+        Assert.Contains("actions.UpdateCodingCurrentCode", uiUpdateWorkflow);
     }
 
     [Fact]
