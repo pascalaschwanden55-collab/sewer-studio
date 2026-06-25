@@ -18,8 +18,6 @@ public sealed class PlayerMediaRuntime
         Hosts = hosts ?? throw new ArgumentNullException(nameof(hosts));
     }
 
-    public MediaPlayer MediaPlayer => _mediaPlayer;
-
     public PlayerMediaHosts Hosts { get; }
 
     public void AttachVideoView(VideoView videoView)

@@ -5496,6 +5496,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public sealed class PlayerMediaRuntime", runtime);
         Assert.Contains("PlayerPlaybackResourceCleaner.DisposeMediaPlayer", runtime);
         Assert.Contains("PlayerPlaybackResourceCleaner.DisposeLibVlc", runtime);
+        Assert.DoesNotContain("public MediaPlayer", runtime);
     }
 
     [Fact]
