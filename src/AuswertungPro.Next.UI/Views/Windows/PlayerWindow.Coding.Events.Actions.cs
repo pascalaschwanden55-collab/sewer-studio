@@ -14,13 +14,10 @@ public partial class PlayerWindow
         if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
 
         PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause);
-        SuspendCodingOverlayInput();
 
         var entry = codingEvent.Entry;
-        bool edited;
-        try
-        {
-            edited = CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
+        var edited = RunWithSuspendedCodingOverlayInput(() =>
+            CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
                 .TryEdit(
                     entry,
                     entry.MeterStart,
@@ -28,12 +25,7 @@ public partial class PlayerWindow
                     _videoPath,
                     _playerTimelineHost.CurrentTimeOrZero,
                     this,
-                    CreateVsaCodeExplorerLiveSnapshotProvider());
-        }
-        finally
-        {
-            ResumeCodingOverlayInput();
-        }
+                    CreateVsaCodeExplorerLiveSnapshotProvider()));
 
         if (edited)
         {
@@ -86,16 +78,8 @@ public partial class PlayerWindow
     private void CodingEventDelete_Click(object sender, RoutedEventArgs e)
     {
         if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
-        SuspendCodingOverlayInput();
-        bool confirm;
-        try
-        {
-            confirm = CodingEventActionDialogServiceFactory.Create().ConfirmDelete(codingEvent.Entry.Code);
-        }
-        finally
-        {
-            ResumeCodingOverlayInput();
-        }
+        var confirm = RunWithSuspendedCodingOverlayInput(() =>
+            CodingEventActionDialogServiceFactory.Create().ConfirmDelete(codingEvent.Entry.Code));
         if (!confirm) return;
 
         var deleteResult = CodingEventListActionWorkflow.Delete(

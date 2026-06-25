@@ -20,9 +20,8 @@ public partial class PlayerWindow
         if (!_codingSessionHost.HasViewModel) return;
 
         PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause);
-        SuspendCodingOverlayInput();
 
-        try
+        await RunWithSuspendedCodingOverlayInputAsync(async () =>
         {
             var videoZeit = _playerTimelineHost.CurrentTimeOrZero;
 
@@ -55,11 +54,7 @@ public partial class PlayerWindow
                         SelectCreatedEvent: true,
                         ClearSelectedCode: false));
             }
-        }
-        finally
-        {
-            ResumeCodingOverlayInput();
-        }
+        });
     }
 
     private void CodingCreateEvent_Click(object sender, RoutedEventArgs e)

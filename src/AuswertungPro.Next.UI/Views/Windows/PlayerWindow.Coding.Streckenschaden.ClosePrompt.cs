@@ -17,17 +17,9 @@ public partial class PlayerWindow
 
         if (offene.Count == 0) return true;
 
-        SuspendCodingOverlayInput();
-        CodingOpenStretchDamageDialogDecision decision;
-        try
-        {
-            decision = CodingOpenStretchDamageDialogServiceFactory.Create()
-                .ConfirmClose(offene, currentMeter);
-        }
-        finally
-        {
-            ResumeCodingOverlayInput();
-        }
+        var decision = RunWithSuspendedCodingOverlayInput(() =>
+            CodingOpenStretchDamageDialogServiceFactory.Create()
+                .ConfirmClose(offene, currentMeter));
 
         if (decision == CodingOpenStretchDamageDialogDecision.Close)
         {

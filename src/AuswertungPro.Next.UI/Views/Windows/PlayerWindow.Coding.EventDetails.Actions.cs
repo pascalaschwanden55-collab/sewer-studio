@@ -35,9 +35,8 @@ public partial class PlayerWindow
 
         _codingSessionHost.SelectDefect(ev);
         PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause);
-        SuspendCodingOverlayInput();
 
-        try
+        RunWithSuspendedCodingOverlayInput(() =>
         {
             var entry = ev.Entry;
             var edited = CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
@@ -65,11 +64,7 @@ public partial class PlayerWindow
                     UpdateInlineDefectDetail(ev);
                 }
             }
-        }
-        finally
-        {
-            ResumeCodingOverlayInput();
-        }
+        });
     }
 
     private void CodingRejectDefect_Click(object sender, RoutedEventArgs e)

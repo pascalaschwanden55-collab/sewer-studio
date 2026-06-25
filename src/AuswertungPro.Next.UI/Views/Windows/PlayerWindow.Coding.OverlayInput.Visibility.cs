@@ -4,6 +4,31 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
+    private T RunWithSuspendedCodingOverlayInput<T>(Func<T> callback)
+        => CodingOverlayInputInteractionWorkflow.Run(
+            new CodingOverlayInputInteractionWorkflowActions(
+                SuspendCodingOverlayInput,
+                ResumeCodingOverlayInput),
+            callback);
+
+    private void RunWithSuspendedCodingOverlayInput(Action callback)
+        => CodingOverlayInputInteractionWorkflow.Run(
+            new CodingOverlayInputInteractionWorkflowActions(
+                SuspendCodingOverlayInput,
+                ResumeCodingOverlayInput),
+            () =>
+            {
+                callback();
+                return true;
+            });
+
+    private Task RunWithSuspendedCodingOverlayInputAsync(Func<Task> callback)
+        => CodingOverlayInputInteractionWorkflow.RunAsync(
+            new CodingOverlayInputInteractionWorkflowActions(
+                SuspendCodingOverlayInput,
+                ResumeCodingOverlayInput),
+            callback);
+
     private void SuspendCodingOverlayInput()
     {
         CodingOverlayInputVisibilityWorkflow.Suspend(

@@ -6070,6 +6070,36 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_overlay_input_mouseflow_uses_workflow()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputMouseWorkflow.cs");
+
+        Assert.True(File.Exists(workflowPath), "Allgemeiner OverlayInput-Mouseflow soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
+
+        Assert.Contains("CodingOverlayInputMouseWorkflow.MouseDown", overlayInput);
+        Assert.Contains("CodingOverlayInputMouseWorkflow.MouseMove", overlayInput);
+        Assert.Contains("CodingOverlayInputMouseWorkflow.MouseUp", overlayInput);
+        Assert.DoesNotContain("if (_eingabemarkerPhase", overlayInput);
+        Assert.DoesNotContain("if (!_codingOverlayToolHost.HasOverlayService", overlayInput);
+        Assert.DoesNotContain("if (TryStartCodingCalibration", overlayInput);
+        Assert.DoesNotContain("if (_codingOverlayToolHost.ActiveTool", overlayInput);
+        Assert.DoesNotContain("if (TryHandleCodingSchemaMouseDown", overlayInput);
+        Assert.DoesNotContain("if (_codingOverlayToolHost.IsMultiPointTool", overlayInput);
+        Assert.Contains("request.EingabemarkerState", workflow);
+        Assert.Contains("actions.TryStartCalibration()", workflow);
+        Assert.Contains("actions.TryHandleSchemaMouseDown()", workflow);
+        Assert.Contains("actions.HandleMultiPointMouseDown()", workflow);
+        Assert.Contains("actions.HandleStandardMouseDown()", workflow);
+    }
+
+    [Fact]
     public void PlayerWindow_standard_overlay_input_lives_in_standard_partial()
     {
         var root = FindRepositoryRoot();
@@ -6121,13 +6151,21 @@ public sealed class UiArchitectureGuardTests
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var visibilityPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Visibility.cs");
         var visibilityWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputVisibilityWorkflow.cs");
+        var interactionWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputInteractionWorkflow.cs");
 
         Assert.True(File.Exists(visibilityPath), "Overlay-Suspend/Restore soll aus dem allgemeinen OverlayInput-Partial heraus.");
         Assert.True(File.Exists(visibilityWorkflowPath), "Overlay-Suspend/Restore-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(interactionWorkflowPath), "Suspendierte Dialog-/Edit-Interaktionen sollen ihre Resume-Garantie ausserhalb der PlayerWindow-Partials orchestrieren.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var visibility = File.ReadAllText(visibilityPath);
         var visibilityWorkflow = File.Exists(visibilityWorkflowPath) ? File.ReadAllText(visibilityWorkflowPath) : "";
+        var interactionWorkflow = File.Exists(interactionWorkflowPath) ? File.ReadAllText(interactionWorkflowPath) : "";
+        var codingPartialsWithoutVisibility = string.Join(
+            Environment.NewLine,
+            Directory.GetFiles(windowsRoot, "PlayerWindow.Coding*.cs")
+                .Where(path => !string.Equals(path, visibilityPath, StringComparison.OrdinalIgnoreCase))
+                .Select(File.ReadAllText));
 
         Assert.DoesNotContain("private void SuspendCodingOverlayInput", overlayInput);
         Assert.DoesNotContain("private void ResumeCodingOverlayInput", overlayInput);
@@ -6150,10 +6188,17 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible = true", visibility);
         Assert.Contains("CodingOverlayPopup.IsOpen = false", visibility);
         Assert.Contains("private void RestoreCodingOverlayAfterExternalWindow", visibility);
+        Assert.Contains("CodingOverlayInputInteractionWorkflow.Run", visibility);
+        Assert.Contains("CodingOverlayInputInteractionWorkflow.RunAsync", visibility);
+        Assert.DoesNotContain("SuspendCodingOverlayInput();", codingPartialsWithoutVisibility);
+        Assert.DoesNotContain("ResumeCodingOverlayInput();", codingPartialsWithoutVisibility);
         Assert.Contains("request.SuspendDepth", visibilityWorkflow);
         Assert.Contains("actions.SuspendCanvas()", visibilityWorkflow);
         Assert.Contains("actions.ResumeCanvas()", visibilityWorkflow);
         Assert.Contains("actions.RedrawCanvas(request.HasCurrentOverlay)", visibilityWorkflow);
+        Assert.Contains("actions.Suspend()", interactionWorkflow);
+        Assert.Contains("finally", interactionWorkflow);
+        Assert.Contains("actions.Resume()", interactionWorkflow);
     }
 
     [Fact]

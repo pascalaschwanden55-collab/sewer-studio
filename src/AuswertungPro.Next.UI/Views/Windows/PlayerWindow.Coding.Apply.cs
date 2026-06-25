@@ -51,19 +51,9 @@ public partial class PlayerWindow
         if (!HasUnappliedCodingChanges())
             return true;
 
-        SuspendCodingOverlayInput();
-        bool shouldClose;
-        try
-        {
-            shouldClose = CodingApplyDialogServiceFactory.Create()
-                .ConfirmUnappliedChangesOnClose(() => ApplyCodingChanges(showOverlay: false));
-        }
-        finally
-        {
-            ResumeCodingOverlayInput();
-        }
-
-        return shouldClose;
+        return RunWithSuspendedCodingOverlayInput(() =>
+            CodingApplyDialogServiceFactory.Create()
+                .ConfirmUnappliedChangesOnClose(() => ApplyCodingChanges(showOverlay: false)));
     }
 
     private bool HasUnappliedCodingChanges()
