@@ -1683,11 +1683,15 @@ public sealed class UiArchitectureGuardTests
         var statusControlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
         var analyzeButtonControlsPath = Path.Combine(uiRoot, "Ai", "CodingAnalyzeButtonControls.cs");
         var codingAiControllerPath = Path.Combine(uiRoot, "Player", "CodingAiController.cs");
+        var healthChangeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingPipelineHealthChangeWorkflow.cs");
+        var healthApplyWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingPipelineHealthApplyWorkflow.cs");
 
         Assert.True(File.Exists(monitoringPath), "Pipeline-Health-Monitoring soll aus dem Initialisierungs-Partial heraus.");
         Assert.True(File.Exists(statusControlsPath), "Pipeline-Health-Detail-Zuweisung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(analyzeButtonControlsPath), "Coding-Analyse-Button-Zustand soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(codingAiControllerPath), "Pipeline-Health-Monitor-Zustand soll im CodingAiController liegen.");
+        Assert.True(File.Exists(healthChangeWorkflowPath), "Pipeline-Health-Event-Gate soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(healthApplyWorkflowPath), "Pipeline-Health-Anwendung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var health = File.ReadAllText(healthPath);
@@ -1695,6 +1699,8 @@ public sealed class UiArchitectureGuardTests
         var statusControls = File.ReadAllText(statusControlsPath);
         var analyzeButtonControls = File.Exists(analyzeButtonControlsPath) ? File.ReadAllText(analyzeButtonControlsPath) : "";
         var codingAiController = File.ReadAllText(codingAiControllerPath);
+        var healthChangeWorkflow = File.ReadAllText(healthChangeWorkflowPath);
+        var healthApplyWorkflow = File.ReadAllText(healthApplyWorkflowPath);
 
         Assert.Contains("private async Task InitCodingAi", health);
         Assert.DoesNotContain("private void OnPipelineHealthChanged", health);
@@ -1705,7 +1711,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void ApplyPipelineHealth", monitoring);
         Assert.Contains("private void UpdatePipelineHealthDetails", monitoring);
         Assert.Contains("private void StopPipelineHealthMonitor", monitoring);
-        Assert.Contains("PipelineHealthUiStateFactory.Create", monitoring);
+        Assert.Contains("CodingPipelineHealthChangeWorkflow.Execute", monitoring);
+        Assert.Contains("CodingPipelineHealthApplyWorkflow.Execute", monitoring);
+        Assert.DoesNotContain("PipelineHealthUiStateFactory.Create", monitoring);
+        Assert.DoesNotContain("if (_closing", monitoring);
+        Assert.Contains("actions.DispatchToUi", healthChangeWorkflow);
+        Assert.Contains("PipelineHealthUiStateFactory.Create", healthApplyWorkflow);
         Assert.Contains("LiveDetectionStatusControls.ShowPipelineHealthDetails", monitoring);
         Assert.Contains("CodingAnalyzeButtonControls.SetEnabled", ai);
         Assert.Contains("CodingAnalyzeButtonControls.SetEnabled", health);

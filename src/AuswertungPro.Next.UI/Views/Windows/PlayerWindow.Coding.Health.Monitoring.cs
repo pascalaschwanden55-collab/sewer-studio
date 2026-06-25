@@ -10,33 +10,28 @@ public partial class PlayerWindow
 {
     private void OnPipelineHealthChanged(object? sender, PipelineHealthStatus status)
     {
-        if (_closing || Dispatcher.HasShutdownStarted)
-            return;
-
-        if (!Dispatcher.CheckAccess())
-        {
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                if (!_closing && _isCodingMode && _codingAiRuntimeOwner.Controller.HasHealthMonitor)
-                    ApplyPipelineHealth(status);
-            }));
-            return;
-        }
-
-        if (_isCodingMode && _codingAiRuntimeOwner.Controller.HasHealthMonitor)
-            ApplyPipelineHealth(status);
+        CodingPipelineHealthChangeWorkflow.Execute(
+            new CodingPipelineHealthChangeWorkflowRequest(
+                _closing,
+                Dispatcher.HasShutdownStarted,
+                Dispatcher.CheckAccess()),
+            new CodingPipelineHealthChangeWorkflowActions(
+                ShouldApply: () => !_closing && _isCodingMode && _codingAiRuntimeOwner.Controller.HasHealthMonitor,
+                DispatchToUi: action => Dispatcher.BeginInvoke(action),
+                ApplyPipelineHealth: () => ApplyPipelineHealth(status)));
     }
 
     private void ApplyPipelineHealth(PipelineHealthStatus status)
     {
-        _codingAiRuntimeOwner.Controller.SetUseMultiModel(status.MultiModelActive);
-        if (status.MultiModelActive)
-            _codingAiRuntimeOwner.Controller.EnsureMultiModel(CodingAiRuntimeFactory.CreateMultiModelService);
-
-        var uiState = PipelineHealthUiStateFactory.Create(status);
-        SetCodingAiState(uiState.Summary, uiState.Color, uiState.Detail);
-        CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, uiState.AnalysisEnabled);
-        UpdatePipelineHealthDetails(uiState.Details);
+        CodingPipelineHealthApplyWorkflow.Execute(
+            new CodingPipelineHealthApplyWorkflowRequest(status),
+            new CodingPipelineHealthApplyWorkflowActions(
+                SetUseMultiModel: _codingAiRuntimeOwner.Controller.SetUseMultiModel,
+                EnsureMultiModel: () => _codingAiRuntimeOwner.Controller.EnsureMultiModel(
+                    CodingAiRuntimeFactory.CreateMultiModelService),
+                SetCodingAiState: (summary, color, detail) => SetCodingAiState(summary, color, detail),
+                SetAnalyzeButtonEnabled: enabled => CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, enabled),
+                UpdatePipelineHealthDetails: UpdatePipelineHealthDetails));
     }
 
     private void UpdatePipelineHealthDetails(PipelineHealthDetailsUiState details)
