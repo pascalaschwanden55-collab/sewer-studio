@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
@@ -14,59 +13,55 @@ public partial class PlayerWindow
     private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync(
         OverlayGeometry overlay, byte[]? frameBytes)
     {
+        void TraceMarkSam(string message)
+            => PlayerTrace.WriteLine(message);
+
         var boxSegmentation = _codingAiRuntimeOwner.Controller.BoxSegmentation;
-        if (boxSegmentation == null || frameBytes == null || frameBytes.Length == 0
-            || overlay.Points.Count < 2)
-            return null;
-        try
-        {
-            var box = LiveDetectionGeometryMapper.BBoxFromOverlay(overlay);
-            var calibration = _codingOverlayToolHost.Calibration;
-            int dn = calibration?.NominalDiameterMm ?? 0;
+        var result = await LiveDetectionMarkBoxSegmentationWorkflow.ExecuteAsync(
+            new LiveDetectionMarkBoxSegmentationRequest(
+                HasBoxSegmentation: boxSegmentation is not null,
+                FrameBytes: frameBytes,
+                OverlayPointCount: overlay.Points.Count),
+            new LiveDetectionMarkBoxSegmentationActions(
+                BuildBox: () => LiveDetectionGeometryMapper.BBoxFromOverlay(overlay),
+                GetCalibration: () => _codingOverlayToolHost.Calibration,
+                SegmentBoxAsync: (actualFrameBytes, box, dn, calibration) => boxSegmentation!.SegmentBoxAsync(
+                    actualFrameBytes,
+                    box,
+                    dn,
+                    calibration,
+                    System.Threading.CancellationToken.None),
+                ApplyQuantification: quantification => CodingMarkBoxQuantificationOverlayPolicy.Apply(
+                    overlay,
+                    quantification),
+                TraceError: TraceMarkSam));
 
-            var result = await boxSegmentation.SegmentBoxAsync(
-                frameBytes, box, dn, calibration, System.Threading.CancellationToken.None);
-            if (result == null)
-                return null;
-
-            CodingMarkBoxQuantificationOverlayPolicy.Apply(overlay, result.Quant);
-
-            return result;
-        }
-        catch (Exception ex)
-        {
-            PlayerTrace.WriteLine($"[Mark-SAM] Segmentierung uebersprungen: {ex.Message}");
-            return null;
-        }
+        return result.Segmentation;
     }
 
     private void ShowMarkSamMask(Infrastructure.Ai.Pipeline.BoxSegmentationResult result, OverlayGeometry? overlay)
     {
-        try
-        {
-            var rect = GetCodingContentRect();
-            if (rect.Width <= 0 || rect.Height <= 0)
-                return;
+        void TraceMarkSam(string message)
+            => PlayerTrace.WriteLine(message);
 
-            // Bei Boegen keine SAM-Maske zeigen; ein Marker am Fluchtpunkt ist stabiler.
-            if (result.IsBend && LiveDetectionGeometryMapper.BoxContainsVanishingPoint(overlay, result.VanishX, result.VanishY))
-            {
-                CodingBendMarkerOverlayController.Show(CodingOverlayCanvas, result.VanishX, result.VanishY, rect);
-                return;
-            }
-
-            var samResp = new Infrastructure.Ai.Pipeline.SamResponse(
-                new[] { result.Mask }, result.ImageWidth, result.ImageHeight, 0);
-            // In das echte Video-Rechteck rendern, nicht in Letterbox-Raender.
-            CodingSamMaskOverlayController.RenderMasks(
-                CodingOverlayCanvas,
-                samResp,
-                new[] { result.Quant },
-                rect);
-        }
-        catch (Exception ex)
-        {
-            PlayerTrace.WriteLine($"[Mark-SAM] Masken-Render uebersprungen: {ex.Message}");
-        }
+        LiveDetectionMarkSamMaskRenderWorkflow.Execute(
+            new LiveDetectionMarkSamMaskRenderRequest(result),
+            new LiveDetectionMarkSamMaskRenderActions(
+                GetContentRect: GetCodingContentRect,
+                ContainsVanishingPoint: segmentation => LiveDetectionGeometryMapper.BoxContainsVanishingPoint(
+                    overlay,
+                    segmentation.VanishX,
+                    segmentation.VanishY),
+                ShowBendMarker: (x, y, rect) => CodingBendMarkerOverlayController.Show(
+                    CodingOverlayCanvas,
+                    x,
+                    y,
+                    rect),
+                RenderMasks: (samResponse, quantifications, rect) => CodingSamMaskOverlayController.RenderMasks(
+                    CodingOverlayCanvas,
+                    samResponse,
+                    quantifications,
+                    rect),
+                TraceError: TraceMarkSam));
     }
 }

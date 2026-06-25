@@ -78,14 +78,16 @@ public partial class PlayerWindow
 
     private void RefreshCodingEventsList()
     {
-        if (!CodingEventsRefreshWorkflow.RefreshListAndStatistics(
-                _codingSessionHost.EventCollection,
-                _codingEventsListControls,
-                _codingStatisticsControls,
-                CodingSessionViewModel.GetDefectStatus))
-            return;
-
-        Dispatcher.InvokeAsync(ColorizeCodingEventListItems, System.Windows.Threading.DispatcherPriority.Loaded);
+        CodingEventsListRefreshCommandWorkflow.Execute(
+            new CodingEventsListRefreshCommandActions(
+                RefreshListAndStatistics: () => CodingEventsRefreshWorkflow.RefreshListAndStatistics(
+                    _codingSessionHost.EventCollection,
+                    _codingEventsListControls,
+                    _codingStatisticsControls,
+                    CodingSessionViewModel.GetDefectStatus),
+                ScheduleColorize: () => Dispatcher.InvokeAsync(
+                    ColorizeCodingEventListItems,
+                    System.Windows.Threading.DispatcherPriority.Loaded)));
     }
 
     private void UpdateCodingStatistics()

@@ -496,12 +496,14 @@ public sealed class UiArchitectureGuardTests
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsControls.cs");
         var refreshPolicyPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsRefreshPolicy.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventsRefreshWorkflow.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventsListRefreshCommandWorkflow.cs");
         var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingUiUpdateWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Coding-Statistik-Berechnung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Coding-Statistik-Anzeige muss ausserhalb der PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(refreshPolicyPath), "Coding-Statistik-Refresh-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Coding-Eventlisten-Refresh soll Sortierung und Statistik ausserhalb der PlayerWindow-Partials koordinieren.");
+        Assert.True(File.Exists(commandWorkflowPath), "Coding-Eventlisten-Refresh-Befehl soll die Colorize-Reihenfolge ausserhalb der PlayerWindow-Partials koordinieren.");
         Assert.True(File.Exists(uiUpdateWorkflowPath), "Coding-UI-Refresh-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var events = File.ReadAllText(eventsPath);
@@ -511,6 +513,7 @@ public sealed class UiArchitectureGuardTests
         var controls = File.ReadAllText(controlsPath);
         var refreshPolicy = File.ReadAllText(refreshPolicyPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
+        var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
         var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
 
         Assert.Contains("CodingEventsRefreshWorkflow.RefreshStatistics", events);
@@ -524,12 +527,16 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("int autoAccepted = 0", events);
         Assert.DoesNotContain("RunCodingDefectCount.Text", events);
         Assert.DoesNotContain("TxtCodingStatAutoAccepted.Text", events);
+        Assert.Contains("CodingEventsListRefreshCommandWorkflow.Execute", events);
+        Assert.DoesNotContain("if (!CodingEventsRefreshWorkflow.RefreshListAndStatistics", events);
         Assert.Contains("public static CodingStatisticsSummary Build", policy);
         Assert.Contains("public sealed class CodingStatisticsControls", controls);
         Assert.Contains("_totalCount.Text", controls);
         Assert.Contains("public static bool ShouldRefresh", refreshPolicy);
         Assert.Contains("CodingStatisticsPolicy.Build", workflow);
         Assert.Contains("statisticsControls.Apply(summary)", workflow);
+        Assert.Contains("actions.RefreshListAndStatistics()", commandWorkflow);
+        Assert.Contains("actions.ScheduleColorize()", commandWorkflow);
     }
 
     [Fact]
@@ -3559,19 +3566,24 @@ public sealed class UiArchitectureGuardTests
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingEventDisplayOrderPolicy.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingEventsListControls.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventsRefreshWorkflow.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventsListRefreshCommandWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Codier-Ereignis-Sortierung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Codier-Ereignislisten-Rebind muss ausserhalb der PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(workflowPath), "Codier-Ereignislisten-Refresh soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(commandWorkflowPath), "Codier-Ereignislisten-Refresh-Befehl soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var events = File.ReadAllText(eventsPath);
         var policy = File.ReadAllText(policyPath);
         var controls = File.ReadAllText(controlsPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
+        var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
 
         Assert.Contains("CodingEventsRefreshWorkflow.RefreshListAndStatistics", events);
+        Assert.Contains("CodingEventsListRefreshCommandWorkflow.Execute", events);
         Assert.DoesNotContain("CodingEventDisplayOrderPolicy.Order", events);
         Assert.DoesNotContain("_codingEventsListControls.ApplyOrderedEvents", events);
+        Assert.DoesNotContain("if (!CodingEventsRefreshWorkflow.RefreshListAndStatistics", events);
         Assert.DoesNotContain(".OrderBy(e => e.MeterAtCapture)", events);
         Assert.DoesNotContain("LstCodingEvents.ItemsSource", events);
         Assert.DoesNotContain("_codingVm.Events.Clear()", events);
@@ -3580,6 +3592,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_eventsList.ItemsSource", controls);
         Assert.Contains("CodingEventDisplayOrderPolicy.Order", workflow);
         Assert.Contains("listControls.ApplyOrderedEvents", workflow);
+        Assert.Contains("actions.ScheduleColorize()", commandWorkflow);
     }
 
     [Fact]
@@ -4547,23 +4560,37 @@ public sealed class UiArchitectureGuardTests
         var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
         var segmentationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingSamMaskOverlayController.cs");
+        var segmentWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkBoxSegmentationWorkflow.cs");
+        var renderWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkSamMaskRenderWorkflow.cs");
 
         Assert.True(File.Exists(segmentationPath), "SAM-Segmentierung und Maskenrendering sollen aus dem Marking-Orchestrator heraus.");
         Assert.True(File.Exists(controllerPath), "SAM-Maskenrendering soll ueber einen Player-Controller laufen.");
+        Assert.True(File.Exists(segmentWorkflowPath), "SAM-Segmentierungsentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(renderWorkflowPath), "SAM-Masken-Renderentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var marking = File.ReadAllText(markingPath);
         var segmentation = File.ReadAllText(segmentationPath);
         var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
+        var segmentWorkflow = File.Exists(segmentWorkflowPath) ? File.ReadAllText(segmentWorkflowPath) : "";
+        var renderWorkflow = File.Exists(renderWorkflowPath) ? File.ReadAllText(renderWorkflowPath) : "";
 
         Assert.DoesNotContain("private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync", marking);
         Assert.DoesNotContain("private void ShowMarkSamMask", marking);
         Assert.Contains("private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync", segmentation);
         Assert.Contains("private void ShowMarkSamMask", segmentation);
+        Assert.Contains("LiveDetectionMarkBoxSegmentationWorkflow.ExecuteAsync", segmentation);
+        Assert.Contains("LiveDetectionMarkSamMaskRenderWorkflow.Execute", segmentation);
         Assert.Contains("CodingMarkBoxQuantificationOverlayPolicy.Apply", segmentation);
         Assert.Contains("CodingSamMaskOverlayController.RenderMasks", segmentation);
+        Assert.DoesNotContain("var result = await boxSegmentation.SegmentBoxAsync", segmentation);
+        Assert.DoesNotContain("new Infrastructure.Ai.Pipeline.SamResponse", segmentation);
         Assert.DoesNotContain("Ai.Pipeline.SamMaskRenderer.RenderMasks", segmentation);
         Assert.Contains("SamMaskRenderer.RenderMasks", controller);
         Assert.Contains("CodingBendMarkerOverlayController.Show", segmentation);
+        Assert.Contains("actions.SegmentBoxAsync", segmentWorkflow);
+        Assert.Contains("actions.ApplyQuantification", segmentWorkflow);
+        Assert.Contains("actions.RenderMasks", renderWorkflow);
+        Assert.Contains("BendMarkerShown", renderWorkflow);
     }
 
     [Fact]
