@@ -38,49 +38,51 @@ public partial class PlayerWindow
             ResetCanvasCursor: () => CodingOverlayInputControls.ResetCanvasCursor(CodingOverlayCanvas));
 
     private void EingabemarkerCanvas_MouseDown(Point canvasPos)
-    {
-        if (_eingabemarkerPhase != EingabemarkerPhase.Drawing) return;
-
-        _eingabemarkerDragStart = canvasPos;
-        CodingOverlayCanvas.CaptureMouse();
-
-        _eingabemarkerPreviewRect = CodingEingabemarkerPreviewRenderer.Create(
-            CodingOverlayCanvas,
-            canvasPos);
-    }
+        => CodingEingabemarkerCanvasInputWorkflow.MouseDown(
+            new CodingEingabemarkerCanvasMouseDownRequest(
+                IsDrawing: _eingabemarkerPhase == EingabemarkerPhase.Drawing,
+                CanvasPosition: canvasPos),
+            new CodingEingabemarkerCanvasMouseDownActions(
+                StoreDragStart: point => _eingabemarkerDragStart = point,
+                CaptureMouse: () => CodingOverlayCanvas.CaptureMouse(),
+                CreatePreview: point => _eingabemarkerPreviewRect = CodingEingabemarkerPreviewRenderer.Create(
+                    CodingOverlayCanvas,
+                    point)));
 
     private void EingabemarkerCanvas_MouseMove(Point canvasPos)
-    {
-        if (_eingabemarkerPhase != EingabemarkerPhase.Drawing || _eingabemarkerPreviewRect == null) return;
-
-        var previewRect = CodingEingabemarkerGeometryPolicy.BuildPreviewRect(
-            _eingabemarkerDragStart,
-            canvasPos);
-
-        CodingEingabemarkerPreviewRenderer.Update(_eingabemarkerPreviewRect, previewRect);
-    }
+        => CodingEingabemarkerCanvasInputWorkflow.MouseMove(
+            new CodingEingabemarkerCanvasMouseMoveRequest(
+                IsDrawing: _eingabemarkerPhase == EingabemarkerPhase.Drawing,
+                HasPreview: _eingabemarkerPreviewRect != null,
+                DragStart: _eingabemarkerDragStart,
+                CanvasPosition: canvasPos),
+            new CodingEingabemarkerCanvasMouseMoveActions(
+                UpdatePreview: previewRect => CodingEingabemarkerPreviewRenderer.Update(
+                    _eingabemarkerPreviewRect!,
+                    previewRect)));
 
     private void EingabemarkerCanvas_MouseUp(Point canvasPos)
-    {
-        if (_eingabemarkerPhase != EingabemarkerPhase.Drawing) return;
-        CodingOverlayCanvas.ReleaseMouseCapture();
-
-        var normalizedRect = CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection(
-            _eingabemarkerDragStart,
-            canvasPos,
-            new Size(CodingOverlayCanvas.ActualWidth, CodingOverlayCanvas.ActualHeight));
-        if (normalizedRect is null) { CancelEingabemarker(); return; }
-
-        _eingabemarkerRectNorm = normalizedRect.Value;
-        _eingabemarkerPhase = EingabemarkerPhase.Input;
-        CodingOverlayInputControls.DisableDrawingCanvas(CodingOverlayCanvas);
-
-        CodingEingabemarkerPopupControls.ShowInput(EingabemarkerPopup, TxtEingabemarker, CmbEingabemarker);
-        Dispatcher.BeginInvoke(new Action(() => TxtEingabemarker.Focus()),
-            System.Windows.Threading.DispatcherPriority.Input);
-
-        SetCodingAiState("Beschreibung eingeben oder Stichwort wählen, dann Enter",
-            PlayerStatusColors.Info, "z.B. \"Beule unten\", \"Riss bei 3 Uhr\", \"Anschluss offen\"");
-    }
+        => CodingEingabemarkerCanvasInputWorkflow.MouseUp(
+            new CodingEingabemarkerCanvasMouseUpRequest(
+                IsDrawing: _eingabemarkerPhase == EingabemarkerPhase.Drawing,
+                DragStart: _eingabemarkerDragStart,
+                CanvasPosition: canvasPos,
+                CanvasSize: new Size(CodingOverlayCanvas.ActualWidth, CodingOverlayCanvas.ActualHeight)),
+            new CodingEingabemarkerCanvasMouseUpActions(
+                ReleaseMouseCapture: CodingOverlayCanvas.ReleaseMouseCapture,
+                CancelMarker: CancelEingabemarker,
+                StoreNormalizedSelection: rect => _eingabemarkerRectNorm = rect,
+                SetInputPhase: () => _eingabemarkerPhase = EingabemarkerPhase.Input,
+                DisableDrawingCanvas: () => CodingOverlayInputControls.DisableDrawingCanvas(CodingOverlayCanvas),
+                ShowInputPopup: () => CodingEingabemarkerPopupControls.ShowInput(
+                    EingabemarkerPopup,
+                    TxtEingabemarker,
+                    CmbEingabemarker),
+                FocusInput: () => Dispatcher.BeginInvoke(new Action(() => TxtEingabemarker.Focus()),
+                    System.Windows.Threading.DispatcherPriority.Input),
+                ShowInputStatus: () => SetCodingAiState(
+                    "Beschreibung eingeben oder Stichwort wählen, dann Enter",
+                    PlayerStatusColors.Info,
+                    "z.B. \"Beule unten\", \"Riss bei 3 Uhr\", \"Anschluss offen\"")));
 
 }

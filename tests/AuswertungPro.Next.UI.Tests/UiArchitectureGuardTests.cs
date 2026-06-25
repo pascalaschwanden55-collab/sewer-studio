@@ -7383,17 +7383,22 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerGeometryPolicy.cs");
+        var canvasWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerCanvasInputWorkflow.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerPreviewRenderer.cs");
 
         Assert.True(File.Exists(policyPath), "Eingabemarker-Rechteckgeometrie muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(canvasWorkflowPath), "Eingabemarker-Canvas-Entscheidungen sollen die Geometrie-Policy ausserhalb von PlayerWindow verwenden.");
         Assert.True(File.Exists(rendererPath), "Eingabemarker-Preview-Rendering muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var marker = File.ReadAllText(markerPath);
         var policy = File.ReadAllText(policyPath);
+        var canvasWorkflow = File.ReadAllText(canvasWorkflowPath);
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildPreviewRect", marker);
-        Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection", marker);
+        Assert.DoesNotContain("CodingEingabemarkerGeometryPolicy.BuildPreviewRect", marker);
+        Assert.DoesNotContain("CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection", marker);
+        Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildPreviewRect", canvasWorkflow);
+        Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection", canvasWorkflow);
         Assert.Contains("CodingEingabemarkerPreviewRenderer.Create", marker);
         Assert.Contains("CodingEingabemarkerPreviewRenderer.Update", marker);
         Assert.Contains("CodingEingabemarkerPreviewRenderer.Clear", marker);
@@ -7419,19 +7424,28 @@ public sealed class UiArchitectureGuardTests
         var inputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Input.cs");
         var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
         var inputWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerInputWorkflow.cs");
+        var canvasWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerCanvasInputWorkflow.cs");
 
         Assert.True(File.Exists(inputPath), "Eingabemarker-Eingabe-Wiring muss in einer eigenen PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(popupControlsPath), "Eingabemarker-Popup-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
         Assert.True(File.Exists(inputWorkflowPath), "Eingabemarker-Key- und Auswahlentscheidungen sollen ausserhalb von PlayerWindow laufen.");
+        Assert.True(File.Exists(canvasWorkflowPath), "Eingabemarker-Mausentscheidungen sollen ausserhalb von PlayerWindow laufen.");
 
         var marker = File.ReadAllText(markerPath);
         var input = File.ReadAllText(inputPath);
         var popupControls = File.Exists(popupControlsPath) ? File.ReadAllText(popupControlsPath) : "";
         var inputWorkflow = File.Exists(inputWorkflowPath) ? File.ReadAllText(inputWorkflowPath) : "";
+        var canvasWorkflow = File.Exists(canvasWorkflowPath) ? File.ReadAllText(canvasWorkflowPath) : "";
 
         Assert.DoesNotContain("private void CmbEingabemarker_KeyDown", marker);
         Assert.DoesNotContain("private void CmbEingabemarker_SelectionChanged", marker);
         Assert.DoesNotContain("private static string? ResolveEingabemarkerCodeHint", marker);
+        Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseDown", marker);
+        Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseMove", marker);
+        Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseUp", marker);
+        Assert.DoesNotContain("if (_eingabemarkerPhase != EingabemarkerPhase.Drawing)", marker);
+        Assert.DoesNotContain("_eingabemarkerPreviewRect == null", marker);
+        Assert.DoesNotContain("if (normalizedRect is null)", marker);
         Assert.Contains("CodingEingabemarkerPopupControls.ShowInput", marker);
         Assert.Contains("CodingEingabemarkerPopupControls.Hide", marker);
         Assert.Contains("CodingEingabemarkerPopupControls.IsVisible", input);
@@ -7461,6 +7475,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("request.IsEnter", inputWorkflow);
         Assert.Contains("request.IsPopupVisible", inputWorkflow);
         Assert.Contains("string.IsNullOrEmpty(request.SelectedText)", inputWorkflow);
+        Assert.Contains("request.IsDrawing", canvasWorkflow);
+        Assert.Contains("request.HasPreview", canvasWorkflow);
+        Assert.Contains("BuildNormalizedSelection", canvasWorkflow);
+        Assert.Contains("actions.CancelMarker()", canvasWorkflow);
+        Assert.Contains("actions.SetInputPhase()", canvasWorkflow);
     }
 
     [Fact]
