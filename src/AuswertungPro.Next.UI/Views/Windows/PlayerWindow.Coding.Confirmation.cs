@@ -38,12 +38,14 @@ public partial class PlayerWindow
 
     private void ConfirmAccept_Click(object sender, RoutedEventArgs e)
     {
-        CodingConfirmationDecisionWorkflow.Accept(
-            _codingPendingConfirmEvent,
-            _codingPendingGateResult,
-            codingEvent => PersistSingleEventAsTrainingSample(codingEvent).SafeFireAndForget("TrainingSaveAccept"));
-
-        CloseConfirmationAndResume();
+        CodingConfirmationDecisionCommandWorkflow.Execute(
+            new CodingConfirmationDecisionCommandActions(
+                ApplyDecision: () => CodingConfirmationDecisionWorkflow.Accept(
+                    _codingPendingConfirmEvent,
+                    _codingPendingGateResult,
+                    codingEvent => PersistSingleEventAsTrainingSample(codingEvent).SafeFireAndForget("TrainingSaveAccept")),
+                CloseConfirmationPanel: CloseConfirmationPanel,
+                ResumeAfterConfirmation: ResumeAfterConfirmation));
     }
 
     private void ConfirmEdit_Click(object sender, RoutedEventArgs e)
@@ -60,21 +62,17 @@ public partial class PlayerWindow
 
     private void ConfirmReject_Click(object sender, RoutedEventArgs e)
     {
-        CodingConfirmationDecisionWorkflow.Reject(
-            _codingPendingConfirmEvent,
-            _codingPendingGateResult,
-            _codingSessionRuntimeOwner.Service,
-            _codingSessionHost.EventCollection,
-            codingEvent => PersistSingleEventAsTrainingSample(codingEvent).SafeFireAndForget("TrainingSaveReject"),
-            RefreshCodingEventsList);
-
-        CloseConfirmationAndResume();
-    }
-
-    private void CloseConfirmationAndResume()
-    {
-        CloseConfirmationPanel();
-        ResumeAfterConfirmation();
+        CodingConfirmationDecisionCommandWorkflow.Execute(
+            new CodingConfirmationDecisionCommandActions(
+                ApplyDecision: () => CodingConfirmationDecisionWorkflow.Reject(
+                    _codingPendingConfirmEvent,
+                    _codingPendingGateResult,
+                    _codingSessionRuntimeOwner.Service,
+                    _codingSessionHost.EventCollection,
+                    codingEvent => PersistSingleEventAsTrainingSample(codingEvent).SafeFireAndForget("TrainingSaveReject"),
+                    RefreshCodingEventsList),
+                CloseConfirmationPanel: CloseConfirmationPanel,
+                ResumeAfterConfirmation: ResumeAfterConfirmation));
     }
 
     private void CloseConfirmationPanel()

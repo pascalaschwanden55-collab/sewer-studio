@@ -1,19 +1,23 @@
+using AuswertungPro.Next.UI.Ai;
+
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
     private void StartCodingAiPulse()
     {
-        if (_codingAiPulseRunning)
-            return;
-
-        _codingAiPulseRunning = true;
-        LiveDetectionPulseControls.Start(CodingAiPulseRing);
+        LiveDetectionPulseWorkflow.Start(
+            new LiveDetectionPulseStartRequest(_codingAiPulseRunning),
+            new LiveDetectionPulseStartActions(
+                SetRunning: () => _codingAiPulseRunning = true,
+                StartPulse: () => LiveDetectionPulseControls.Start(CodingAiPulseRing)));
     }
 
     private void StopCodingAiPulse()
     {
-        _codingAiPulseRunning = false;
-        LiveDetectionPulseControls.Stop(CodingAiPulseRing);
+        LiveDetectionPulseWorkflow.Stop(
+            new LiveDetectionPulseStopActions(
+                ClearRunning: () => _codingAiPulseRunning = false,
+                StopPulse: () => LiveDetectionPulseControls.Stop(CodingAiPulseRing)));
     }
 }

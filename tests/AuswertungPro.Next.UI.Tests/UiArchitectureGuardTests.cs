@@ -1324,6 +1324,7 @@ public sealed class UiArchitectureGuardTests
         var errorWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionErrorWorkflow.cs");
         var snapshotWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionSnapshotWorkflow.cs");
         var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRunCommandWorkflow.cs");
+        var pulseWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionPulseWorkflow.cs");
         var controlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
         var pulseControlsPath = Path.Combine(windowsRoot, "LiveDetectionPulseControls.cs");
 
@@ -1332,6 +1333,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(errorWorkflowPath), "LiveDetection-Fehlerentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(snapshotWorkflowPath), "LiveDetection-Snapshot-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(runCommandWorkflowPath), "LiveDetection-Run-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(pulseWorkflowPath), "Coding-AI-Puls-Start/Stop-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "LiveDetection-Status-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pulseControlsPath), "Coding-AI-Pulsanimation soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
@@ -1341,6 +1343,7 @@ public sealed class UiArchitectureGuardTests
         var errorWorkflow = File.ReadAllText(errorWorkflowPath);
         var snapshotWorkflow = File.ReadAllText(snapshotWorkflowPath);
         var runCommandWorkflow = File.Exists(runCommandWorkflowPath) ? File.ReadAllText(runCommandWorkflowPath) : "";
+        var pulseWorkflow = File.Exists(pulseWorkflowPath) ? File.ReadAllText(pulseWorkflowPath) : "";
         var controls = File.ReadAllText(controlsPath);
         var pulseControls = File.Exists(pulseControlsPath) ? File.ReadAllText(pulseControlsPath) : "";
 
@@ -1356,6 +1359,15 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void StartCodingAiPulse", status);
         Assert.DoesNotContain("private void StopCodingAiPulse", status);
         Assert.Contains("private void UpdateDetectionStatus", status);
+        Assert.Contains("LiveDetectionPulseWorkflow.Start", pulse);
+        Assert.Contains("LiveDetectionPulseWorkflow.Stop", pulse);
+        Assert.DoesNotContain("if (_codingAiPulseRunning)", pulse);
+        Assert.DoesNotContain("_codingAiPulseRunning = true;", pulse);
+        Assert.Contains("if (request.IsRunning)", pulseWorkflow);
+        Assert.Contains("actions.SetRunning()", pulseWorkflow);
+        Assert.Contains("actions.StartPulse()", pulseWorkflow);
+        Assert.Contains("actions.ClearRunning()", pulseWorkflow);
+        Assert.Contains("actions.StopPulse()", pulseWorkflow);
         Assert.Contains("Dispatcher.Invoke", status);
         Assert.Contains("LiveDetectionStatusControls.ShowLiveDetectionBadge", status);
         Assert.Contains("LiveDetectionStatusControls.ShowYoloStatus", status);
@@ -3067,21 +3079,26 @@ public sealed class UiArchitectureGuardTests
         var confirmationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs");
         var deleteApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteApplier.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationDecisionWorkflow.cs");
+        var decisionCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationDecisionCommandWorkflow.cs");
         var editCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationEditCommandWorkflow.cs");
 
         Assert.True(File.Exists(deleteApplierPath), "Confirm-Reject muss die gemeinsame Coding-Event-Loeschanwendung nutzen.");
         Assert.True(File.Exists(workflowPath), "Confirm-Decision-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(decisionCommandWorkflowPath), "Confirm-Accept/Reject-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(editCommandWorkflowPath), "Confirm-Edit-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var confirmation = File.ReadAllText(confirmationPath);
         var deleteApplier = File.ReadAllText(deleteApplierPath);
         var workflow = File.ReadAllText(workflowPath);
+        var decisionCommandWorkflow = File.Exists(decisionCommandWorkflowPath) ? File.ReadAllText(decisionCommandWorkflowPath) : "";
         var editCommandWorkflow = File.Exists(editCommandWorkflowPath) ? File.ReadAllText(editCommandWorkflowPath) : "";
 
         Assert.Contains("CodingConfirmationDecisionWorkflow.Accept", confirmation);
         Assert.Contains("CodingConfirmationDecisionWorkflow.Edit", confirmation);
         Assert.Contains("CodingConfirmationDecisionWorkflow.Reject", confirmation);
+        Assert.Contains("CodingConfirmationDecisionCommandWorkflow.Execute", confirmation);
         Assert.Contains("CodingConfirmationEditCommandWorkflow.Execute", confirmation);
+        Assert.DoesNotContain("CloseConfirmationAndResume();", confirmation);
         Assert.DoesNotContain("if (selectedEvent != null)", confirmation);
         Assert.DoesNotContain("var selectedEvent = CodingConfirmationDecisionWorkflow.Edit", confirmation);
         Assert.DoesNotContain("CodingEventDecisionPolicy.ApplyAiConfirmationDecision", confirmation);
@@ -3090,6 +3107,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingVm", confirmation);
         Assert.DoesNotContain("_codingSessionService?.RemoveEvent", confirmation);
         Assert.DoesNotContain("_codingVm?.Events.Remove", confirmation);
+        Assert.Contains("actions.ApplyDecision()", decisionCommandWorkflow);
+        Assert.Contains("actions.CloseConfirmationPanel()", decisionCommandWorkflow);
+        Assert.Contains("actions.ResumeAfterConfirmation()", decisionCommandWorkflow);
         Assert.Contains("CodingEventDecisionPolicy.ApplyAiConfirmationDecision", workflow);
         Assert.Contains("CodingEventDeleteApplier.Apply", workflow);
         Assert.Contains("var selectedEvent = actions.EditConfirmation()", editCommandWorkflow);
