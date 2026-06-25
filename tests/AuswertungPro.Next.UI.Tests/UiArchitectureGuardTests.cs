@@ -6142,6 +6142,7 @@ public sealed class UiArchitectureGuardTests
         var showUiWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeShowUiWorkflow.cs");
         var backgroundServicesWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeBackgroundServicesWorkflow.cs");
         var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
+        var sessionStateCreationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSessionStateCreationWorkflow.cs");
         var sessionStartWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSessionStartWorkflow.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
@@ -6157,6 +6158,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(showUiWorkflowPath), "Coding-Mode-UI-Anzeige-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(backgroundServicesWorkflowPath), "Coding-Mode-Background-Services-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(sessionStateCreationWorkflowPath), "Coding-Session-State-Erzeugungsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(sessionStartWorkflowPath), "Coding-Session-Start-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var coding = File.ReadAllText(codingPath);
@@ -6173,6 +6175,7 @@ public sealed class UiArchitectureGuardTests
         var showUiWorkflow = File.Exists(showUiWorkflowPath) ? File.ReadAllText(showUiWorkflowPath) : "";
         var backgroundServicesWorkflow = File.Exists(backgroundServicesWorkflowPath) ? File.ReadAllText(backgroundServicesWorkflowPath) : "";
         var enterWorkflow = File.Exists(enterWorkflowPath) ? File.ReadAllText(enterWorkflowPath) : "";
+        var sessionStateCreationWorkflow = File.Exists(sessionStateCreationWorkflowPath) ? File.ReadAllText(sessionStateCreationWorkflowPath) : "";
         var sessionStartWorkflow = File.Exists(sessionStartWorkflowPath) ? File.ReadAllText(sessionStartWorkflowPath) : "";
 
         Assert.DoesNotContain("private void EnterCodingMode", coding);
@@ -6191,12 +6194,20 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void CreateCodingSessionState", session);
         Assert.Contains("private bool TryStartCodingSession", session);
         Assert.Contains("_codingSessionHost", session);
+        Assert.Contains("CodingSessionStateCreationWorkflow.Execute", session);
+        Assert.DoesNotContain("var state = CodingSessionStateFactory.Create", session);
+        Assert.DoesNotContain("_codingSessionViewModelOwner.Set(state.ViewModel, observePropertyChanged: true)", session);
         Assert.DoesNotContain("HasRequiredState: _haltungRecord != null && _codingVm != null", session);
         Assert.DoesNotContain("EndMeter: _codingVm?.EndMeter ?? 0", session);
         Assert.DoesNotContain("_codingVm!.StartSessionCommand.Execute", session);
         Assert.DoesNotContain("_codingVm", session);
         Assert.Contains("CodingSessionStartWorkflow.Execute", session);
         Assert.DoesNotContain("catch (Exception ex)", session);
+        Assert.Contains("actions.SetSessionService(state.SessionService)", sessionStateCreationWorkflow);
+        Assert.Contains("actions.SetOverlayService(state.OverlayService)", sessionStateCreationWorkflow);
+        Assert.Contains("actions.CancelSchema()", sessionStateCreationWorkflow);
+        Assert.Contains("actions.ClearSchemaType()", sessionStateCreationWorkflow);
+        Assert.Contains("actions.SetViewModel(state.ViewModel, true)", sessionStateCreationWorkflow);
         Assert.Contains("actions.ExecuteStartSession()", sessionStartWorkflow);
         Assert.Contains("actions.HasActiveSession()", sessionStartWorkflow);
         Assert.Contains("actions.PauseSession()", sessionStartWorkflow);
@@ -7276,13 +7287,20 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var sessionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
         var factoryPath = Path.Combine(uiRoot, "Services", "CodingSessionStateFactory.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSessionStateCreationWorkflow.cs");
 
         Assert.True(File.Exists(factoryPath), "Codier-Session-State-Aufbau soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(workflowPath), "Codier-Session-State-Erzeugungsreihenfolge soll ausserhalb von PlayerWindow liegen.");
 
         var session = File.ReadAllText(sessionPath);
         var factory = File.ReadAllText(factoryPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.Contains("CodingSessionStateFactory.Create", session);
+        Assert.Contains("CodingSessionStateCreationWorkflow.Execute", session);
+        Assert.Contains("actions.SetSessionService(state.SessionService)", workflow);
+        Assert.Contains("actions.SetOverlayService(state.OverlayService)", workflow);
+        Assert.Contains("actions.SetViewModel(state.ViewModel, true)", workflow);
         Assert.DoesNotContain("new OverlayToolService", session);
         Assert.DoesNotContain("new CodingSessionViewModel", session);
         Assert.DoesNotContain("CodingFeedbackRecorder", session);

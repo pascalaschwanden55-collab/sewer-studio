@@ -8,12 +8,16 @@ public partial class PlayerWindow
 {
     private void CreateCodingSessionState()
     {
-        var state = CodingSessionStateFactory.Create(_videoPath, _dependencies.Settings);
-        _codingSessionRuntimeOwner.Set(state.SessionService);
-        _codingOverlayRuntimeOwner.Set(state.OverlayService);
-        _codingSchemaManager.Cancel();
-        _codingSchemaType = null;
-        _codingSessionViewModelOwner.Set(state.ViewModel, observePropertyChanged: true);
+        CodingSessionStateCreationWorkflow.Execute(
+            new CodingSessionStateCreationWorkflowActions(
+                CreateState: () => CodingSessionStateFactory.Create(_videoPath, _dependencies.Settings),
+                SetSessionService: _codingSessionRuntimeOwner.Set,
+                SetOverlayService: _codingOverlayRuntimeOwner.Set,
+                CancelSchema: _codingSchemaManager.Cancel,
+                ClearSchemaType: () => _codingSchemaType = null,
+                SetViewModel: (viewModel, observePropertyChanged) => _codingSessionViewModelOwner.Set(
+                    viewModel,
+                    observePropertyChanged)));
     }
 
     private void ApplyCodingDnCalibration()
