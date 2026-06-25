@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Threading;
 
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -24,33 +25,32 @@ public partial class PlayerWindow
     private DispatcherTimer? _detectionAutoHideTimer;
 
     private void ScheduleDetectionAutoHide()
-    {
-        if (_detectionAutoHideTimer == null)
-        {
-            _detectionAutoHideTimer = PlayerWindowTimerFactory.CreateOneShotTimer(
-                TimeSpan.FromSeconds(3),
-                () =>
-            {
-                DetectionOverlayCleanupController.ClearVisuals(DetectionCanvas, DetectionOverlayGrid);
-            });
-        }
-        _detectionAutoHideTimer.Stop();
-        _detectionAutoHideTimer.Start();
-    }
+        => CodingAiOverlayLifecycleWorkflow.ScheduleAutoHide(
+            new CodingAiOverlayAutoHideRequest(
+                HasTimer: _detectionAutoHideTimer is not null),
+            new CodingAiOverlayAutoHideActions(
+                CreateTimer: (delay, clear) =>
+                {
+                    _detectionAutoHideTimer = PlayerWindowTimerFactory.CreateOneShotTimer(delay, clear);
+                },
+                StopTimer: () => _detectionAutoHideTimer!.Stop(),
+                StartTimer: () => _detectionAutoHideTimer!.Start(),
+                ClearVisuals: () => DetectionOverlayCleanupController.ClearVisuals(
+                    DetectionCanvas,
+                    DetectionOverlayGrid)));
 
     /// <summary>
     /// Nach Accept/Reject/Edit: Overlay kurz in Statusfarbe anzeigen, dann ausblenden.
     /// So sieht der User die Bestaetigung, das Bild wird aber danach wieder frei.
     /// </summary>
     private void FadeOutAiOverlayAfterAction()
-    {
-        // Sofort neu rendern (zeigt gruen/rot je nach Decision)
-        RenderAiOverlays();
-        // Nach 800ms die KI-Overlays entfernen
-        var timer = PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromMilliseconds(800), () =>
-        {
-            CodingOverlayCleanupController.ClearAiOverlays(CodingOverlayCanvas);
-        });
-        timer.Start();
-    }
+        => CodingAiOverlayLifecycleWorkflow.FadeOutAfterAction(
+            new CodingAiOverlayFadeOutActions(
+                RenderAiOverlays: RenderAiOverlays,
+                ScheduleClear: (delay, clear) =>
+                {
+                    var timer = PlayerWindowTimerFactory.CreateOneShotTimer(delay, clear);
+                    timer.Start();
+                },
+                ClearAiOverlays: () => CodingOverlayCleanupController.ClearAiOverlays(CodingOverlayCanvas)));
 }
