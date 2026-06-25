@@ -1,4 +1,4 @@
-using AuswertungPro.Next.UI.Player;
+using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -8,10 +8,11 @@ public partial class PlayerWindow
 
     private void RenderAiOverlays()
     {
-        if (!_codingSessionHost.HasViewModel) return;
-
-        _codingOverlayRenderController.RenderAiOverlays(
-            _codingSessionHost.Events,
-            _codingOverlayToolHost.Calibration);
+        CodingAiOverlayRenderCommandWorkflow.Execute(
+            new CodingAiOverlayRenderCommandRequest(_codingSessionHost.HasViewModel),
+            new CodingAiOverlayRenderCommandActions(
+                RenderAiOverlays: () => _codingOverlayRenderController.RenderAiOverlays(
+                    _codingSessionHost.Events,
+                    _codingOverlayToolHost.Calibration)));
     }
 }
