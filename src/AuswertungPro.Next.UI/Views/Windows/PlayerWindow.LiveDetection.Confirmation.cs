@@ -10,35 +10,29 @@ public partial class PlayerWindow
 {
     private void ShowDetectionConfirmation(IReadOnlyList<LiveFrameFinding> findings)
     {
-        if (findings.Count == 0) return;
-
-        // Video pausieren und zur Fundstelle springen
-        if (!_playbackDisposed)
-            PlayerConfirmationPlayback.PauseLiveDetectionConfirmation(
+        LiveDetectionConfirmationDisplayWorkflow.Show(
+            new LiveDetectionConfirmationShowRequest(
+                findings,
+                _playbackDisposed,
                 _playerPlaybackControlHost.IsPlaying,
-                _playerPlaybackControlHost.SetPause);
-
-        // Zur Fundstelle springen (Timestamp aus dem analysierten Frame)
-        if (_detectionConfirmationBuffer.TimestampSeconds.HasValue)
-        {
-            long targetMs = (long)(_detectionConfirmationBuffer.TimestampSeconds.Value * 1000);
-            _playerTimelineHost.SeekMilliseconds(targetMs);
-        }
-
-        LiveDetectionStatusControls.ShowDetectionConfirmation(
-            DetectionConfirmationPanel,
-            TxtDetectionFinding,
-            TxtDetectionDetail,
-            findings);
+                _detectionConfirmationBuffer.TimestampSeconds),
+            new LiveDetectionConfirmationShowActions(
+                SetPause: _playerPlaybackControlHost.SetPause,
+                SeekMilliseconds: _playerTimelineHost.SeekMilliseconds,
+                ShowConfirmation: shownFindings => LiveDetectionStatusControls.ShowDetectionConfirmation(
+                    DetectionConfirmationPanel,
+                    TxtDetectionFinding,
+                    TxtDetectionDetail,
+                    shownFindings)));
     }
 
     private void ResumeDetection()
     {
-        _detectionConfirmationBuffer.Clear();
-        LiveDetectionStatusControls.HideDetectionConfirmation(DetectionConfirmationPanel);
-
-        // Video automatisch weiterlaufen lassen nach Entscheidung
-        if (!_playerPlaybackControlHost.IsPlaying)
-            _playerPlaybackControlHost.Play();
+        LiveDetectionConfirmationDisplayWorkflow.Resume(
+            new LiveDetectionConfirmationResumeRequest(_playerPlaybackControlHost.IsPlaying),
+            new LiveDetectionConfirmationResumeActions(
+                ClearBuffer: _detectionConfirmationBuffer.Clear,
+                HideConfirmation: () => LiveDetectionStatusControls.HideDetectionConfirmation(DetectionConfirmationPanel),
+                Play: _playerPlaybackControlHost.Play));
     }
 }

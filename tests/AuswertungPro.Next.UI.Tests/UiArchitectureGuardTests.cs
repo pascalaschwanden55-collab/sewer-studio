@@ -2873,14 +2873,17 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var helperPath = Path.Combine(uiRoot, "Player", "PlayerConfirmationPlayback.cs");
         var resumeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationResumeWorkflow.cs");
+        var displayWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationDisplayWorkflow.cs");
         var codingConfirmationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Confirmation.cs");
         var liveDetectionConfirmationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.cs");
 
         Assert.True(File.Exists(helperPath), "Confirmation-Playback-Regeln sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(resumeWorkflowPath), "Coding-Confirmation-Resume-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(displayWorkflowPath), "LiveDetection-Confirmation-Display-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var helper = File.ReadAllText(helperPath);
         var resumeWorkflow = File.ReadAllText(resumeWorkflowPath);
+        var displayWorkflow = File.Exists(displayWorkflowPath) ? File.ReadAllText(displayWorkflowPath) : "";
         var codingConfirmation = File.ReadAllText(codingConfirmationPath);
         var liveDetectionConfirmation = File.ReadAllText(liveDetectionConfirmationPath);
 
@@ -2896,7 +2899,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_player.SetPause(true)", codingConfirmation);
         Assert.DoesNotContain("_player.SetPause(false)", codingConfirmation);
 
-        Assert.Contains("PlayerConfirmationPlayback.PauseLiveDetectionConfirmation", liveDetectionConfirmation);
+        Assert.Contains("PlayerConfirmationPlayback.PauseLiveDetectionConfirmation", displayWorkflow);
+        Assert.DoesNotContain("PlayerConfirmationPlayback.PauseLiveDetectionConfirmation", liveDetectionConfirmation);
         Assert.DoesNotContain("_player.SetPause(true)", liveDetectionConfirmation);
         Assert.DoesNotContain("_player.SetPause(false)", liveDetectionConfirmation);
     }
