@@ -22,14 +22,16 @@ public partial class PlayerWindow
 
     private void PersistCodingEventsAsTrainingSamples()
     {
-        var events = _codingSessionHost.EventCollection;
-        if (!_codingSessionHost.HasViewModel || events is null || events.Count == 0) return;
-
-        CodingTrainingSamples
-            .PersistEventsAsync(
-                events,
-                CreateCodingTrainingSamplePersistenceRequest(_detectionConfirmationBuffer.FrameBytes))
-            .SafeFireAndForget("TrainingSave");
+        CodingTrainingBatchPersistenceWorkflow.Execute(
+            new CodingTrainingBatchPersistenceWorkflowRequest(
+                _codingSessionHost.HasViewModel,
+                _codingSessionHost.EventCollection),
+            new CodingTrainingBatchPersistenceWorkflowActions(
+                PersistEvents: events => CodingTrainingSamples
+                    .PersistEventsAsync(
+                        events,
+                        CreateCodingTrainingSamplePersistenceRequest(_detectionConfirmationBuffer.FrameBytes))
+                    .SafeFireAndForget("TrainingSave")));
     }
 
     private CodingTrainingSamplePersistenceRequest CreateCodingTrainingSamplePersistenceRequest(byte[]? preferredFrameBytes)
