@@ -1091,6 +1091,29 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void Playback_position_fallback_uses_timeline_host()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var playerRoot = Path.Combine(uiRoot, "Player");
+        var paths = new[]
+        {
+            Path.Combine(windowsRoot, "PlayerWindow.Playback.Controls.cs"),
+            Path.Combine(playerRoot, "DamageMarkerController.cs")
+        };
+
+        foreach (var path in paths)
+        {
+            Assert.True(File.Exists(path), $"{Path.GetFileName(path)} muss existieren.");
+
+            var text = File.ReadAllText(path);
+            Assert.Contains("SetPositionRatio", text);
+            Assert.DoesNotContain("_player.Position", text);
+        }
+    }
+
+    [Fact]
     public void PlayerWindow_overlay_input_mouseflow_keeps_only_direct_dependencies()
     {
         var root = FindRepositoryRoot();

@@ -5,19 +5,35 @@ public sealed class PlayerTimelineHost
     private readonly Func<long?> _readTimeMilliseconds;
     private readonly Func<long?> _readLengthMilliseconds;
     private readonly Action<long> _seekMilliseconds;
+    private readonly Action<float> _setPositionRatio;
 
     public PlayerTimelineHost(
         Func<long?> readTimeMilliseconds,
         Func<long?> readLengthMilliseconds,
         Action<long> seekMilliseconds)
+        : this(
+            readTimeMilliseconds,
+            readLengthMilliseconds,
+            seekMilliseconds,
+            _ => { })
+    {
+    }
+
+    public PlayerTimelineHost(
+        Func<long?> readTimeMilliseconds,
+        Func<long?> readLengthMilliseconds,
+        Action<long> seekMilliseconds,
+        Action<float> setPositionRatio)
     {
         ArgumentNullException.ThrowIfNull(readTimeMilliseconds);
         ArgumentNullException.ThrowIfNull(readLengthMilliseconds);
         ArgumentNullException.ThrowIfNull(seekMilliseconds);
+        ArgumentNullException.ThrowIfNull(setPositionRatio);
 
         _readTimeMilliseconds = readTimeMilliseconds;
         _readLengthMilliseconds = readLengthMilliseconds;
         _seekMilliseconds = seekMilliseconds;
+        _setPositionRatio = setPositionRatio;
     }
 
     public long? TimeMilliseconds => _readTimeMilliseconds();
@@ -41,6 +57,9 @@ public sealed class PlayerTimelineHost
 
     public void SeekMilliseconds(long milliseconds)
         => _seekMilliseconds(milliseconds);
+
+    public void SetPositionRatio(float ratio)
+        => _setPositionRatio(ratio);
 
     private double CurrentMillisecondsOrZero()
         => Math.Max(0, TimeMilliseconds ?? 0);

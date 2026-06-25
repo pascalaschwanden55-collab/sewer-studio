@@ -56,7 +56,8 @@ public partial class PlayerWindow : Window
         _playerTimelineHost = new PlayerTimelineHost(
             readTimeMilliseconds: () => _player.Time,
             readLengthMilliseconds: () => _player.Length,
-            seekMilliseconds: milliseconds => _player.Time = milliseconds);
+            seekMilliseconds: milliseconds => _player.Time = milliseconds,
+            setPositionRatio: position => _player.Position = position);
 
         _playerPlaybackControlHost = new PlayerPlaybackControlHost(
             readIsPlaying: () => _player.IsPlaying,

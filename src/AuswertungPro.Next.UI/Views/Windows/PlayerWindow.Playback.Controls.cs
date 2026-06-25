@@ -47,7 +47,7 @@ public partial class PlayerWindow
             PositionSlider.Maximum,
             _playerTimelineHost.LengthMilliseconds ?? 0,
             _playerTimelineHost.SeekMilliseconds,
-            position => _player.Position = position,
+            _playerTimelineHost.SetPositionRatio,
             UpdateUi);
     }
 
@@ -70,7 +70,7 @@ public partial class PlayerWindow
             PositionSlider.Maximum,
             _playerTimelineHost.LengthMilliseconds ?? 0,
             _playerTimelineHost.SeekMilliseconds,
-            position => _player.Position = position,
+            _playerTimelineHost.SetPositionRatio,
             _positionControls.ApplyScrubPreview);
     }
 

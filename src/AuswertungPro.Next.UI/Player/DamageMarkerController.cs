@@ -213,7 +213,7 @@ public sealed class DamageMarkerController
         if (length > 0)
             _timelineHost.SeekMilliseconds((long)(ratio * length));
         else
-            _player.Position = (float)ratio;
+            _timelineHost.SetPositionRatio((float)ratio);
 
         _updateUi();
     }

@@ -105,4 +105,19 @@ public sealed class PlayerTimelineHostTests
 
         Assert.Equal(42, seen);
     }
+
+    [Fact]
+    public void Set_position_ratio_forwards_to_underlying_player()
+    {
+        float? seen = null;
+        var host = new PlayerTimelineHost(
+            readTimeMilliseconds: () => 0,
+            readLengthMilliseconds: () => 100,
+            seekMilliseconds: _ => { },
+            setPositionRatio: value => seen = value);
+
+        host.SetPositionRatio(0.25f);
+
+        Assert.Equal(0.25f, seen);
+    }
 }
