@@ -9,28 +9,28 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private void ImportEvents_DoubleClick(object sender, MouseButtonEventArgs e)
-    {
-        if (LstImportEvents.SelectedItem is not CodingEvent importEvent) return;
-        SeekToImportEvent(importEvent);
-    }
+    private void ImportEvents_DoubleClick(object sender, MouseButtonEventArgs e) => SeekToImportEvent();
 
-    private void ImportSeek_Click(object sender, RoutedEventArgs e)
-    {
-        if (LstImportEvents.SelectedItem is not CodingEvent importEvent) return;
-        SeekToImportEvent(importEvent);
-    }
+    private void ImportSeek_Click(object sender, RoutedEventArgs e) => SeekToImportEvent();
+
+    private void SeekToImportEvent()
+        => SeekToImportEvent(LstImportEvents.SelectedItem);
 
     private void SeekToImportEvent(CodingEvent importEvent)
+        => SeekToImportEvent((object?)importEvent);
+
+    private void SeekToImportEvent(object? selectedItem)
     {
-        if (CodingEventSeekPolicy.TryGetSeekMilliseconds(importEvent, out var milliseconds))
-            _playerTimelineHost.SeekMilliseconds(milliseconds);
-        else if (_codingSessionRuntimeOwner.Service != null && importEvent.MeterAtCapture > 0)
-        {
-            _codingSessionRuntimeOwner.Service.MoveToMeter(importEvent.MeterAtCapture);
-            _codingNavPending = true;
-            SyncVideoToCodingMeter();
-        }
+        var codingSessionService = _codingSessionRuntimeOwner.Service;
+        CodingImportEventSeekCommandWorkflow.Execute(
+            new CodingImportEventSeekCommandRequest(
+                selectedItem,
+                HasCodingSessionService: codingSessionService is not null),
+            new CodingImportEventSeekCommandActions(
+                SeekMilliseconds: _playerTimelineHost.SeekMilliseconds,
+                MoveToMeter: meter => codingSessionService!.MoveToMeter(meter),
+                MarkNavigationPending: () => _codingNavPending = true,
+                SyncVideoToCodingMeter: SyncVideoToCodingMeter));
     }
 
     private void RunCodingProtocolMatch_Click(object sender, RoutedEventArgs e)

@@ -398,10 +398,12 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_import_seek_allows_zero_timestamp()
     {
         var coding = ReadCodingPartials();
-        var seekBody = ExtractMethodBody(coding, "private void SeekToImportEvent");
+        var workflow = ReadUiFile("Ai", "CodingImportEventSeekCommandWorkflow.cs");
+        var seekBody = ExtractMethodBody(coding, "private void SeekToImportEvent(object? selectedItem)");
 
-        Assert.Contains("CodingEventSeekPolicy.TryGetSeekMilliseconds(importEvent", seekBody);
-        Assert.DoesNotContain("importEvent.VideoTimestamp.TotalMilliseconds > 0", seekBody);
+        Assert.Contains("CodingImportEventSeekCommandWorkflow.Execute", seekBody);
+        Assert.Contains("CodingEventSeekPolicy.TryGetSeekMilliseconds(importEvent", workflow);
+        Assert.DoesNotContain("importEvent.VideoTimestamp.TotalMilliseconds > 0", workflow);
     }
 
     [Fact]

@@ -3521,16 +3521,29 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var protocolMatchPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
+        var importSeekWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingImportEventSeekCommandWorkflow.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchSummaryControls.cs");
 
+        Assert.True(File.Exists(importSeekWorkflowPath), "Import-Event-Seek-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Protocol-Match-Summary-Control-Zuweisung soll ausserhalb des PlayerWindow-Partials liegen.");
 
         var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var importSeekWorkflow = File.Exists(importSeekWorkflowPath) ? File.ReadAllText(importSeekWorkflowPath) : "";
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+        var seekBody = ExtractMethodBody(protocolMatch, "private void SeekToImportEvent(object? selectedItem)");
 
+        Assert.Contains("CodingImportEventSeekCommandWorkflow.Execute", seekBody);
         Assert.Contains("CodingProtocolMatchSummaryControls.Apply", protocolMatch);
         Assert.Contains("_codingSessionHost", protocolMatch);
         Assert.DoesNotContain("_codingVm", protocolMatch);
+        Assert.DoesNotContain("CodingEventSeekPolicy.TryGetSeekMilliseconds", protocolMatch);
+        Assert.DoesNotContain("importEvent.MeterAtCapture > 0", protocolMatch);
+        Assert.DoesNotContain("_codingSessionRuntimeOwner.Service.MoveToMeter(importEvent.MeterAtCapture)", protocolMatch);
+        Assert.Contains("CodingEventSeekPolicy.TryGetSeekMilliseconds(importEvent", importSeekWorkflow);
+        Assert.Contains("importEvent.MeterAtCapture <= 0", importSeekWorkflow);
+        Assert.Contains("actions.MoveToMeter(importEvent.MeterAtCapture)", importSeekWorkflow);
+        Assert.Contains("actions.MarkNavigationPending()", importSeekWorkflow);
+        Assert.Contains("actions.SyncVideoToCodingMeter()", importSeekWorkflow);
         Assert.DoesNotContain("TxtCodingProtocolMatchSummary.Text", protocolMatch);
         Assert.DoesNotContain("BtnAcceptGreenCodingMatches.IsEnabled", protocolMatch);
         Assert.Contains("CodingProtocolMatchSummaryFormatter.Format", controls);
