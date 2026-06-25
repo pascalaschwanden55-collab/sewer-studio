@@ -410,20 +410,25 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_manual_photo_aligns_event_time_to_current_frame_before_snapshot()
     {
         var coding = ReadCodingPartials();
+        var workflow = ReadUiFile("Ai", "CodingTakePhotoCommandWorkflow.cs");
         var photoBody = ExtractMethodBody(coding, "private void CodingTakePhotoForSelectedEvent");
 
-        var timeIndex = photoBody.IndexOf("GetCurrentPlayerTimestamp()", StringComparison.Ordinal);
-        var scopeIndex = photoBody.IndexOf("CodingEventPhotoTimestampScope.Apply", StringComparison.Ordinal);
-        var snapshotIndex = photoBody.IndexOf("CodingCaptureSnapshot(entry)", StringComparison.Ordinal);
+        var timeIndex = workflow.IndexOf("actions.GetCurrentPlayerTimestamp()", StringComparison.Ordinal);
+        var scopeIndex = workflow.IndexOf("actions.ApplyPhotoTimestamp", StringComparison.Ordinal);
+        var snapshotIndex = workflow.IndexOf("actions.CaptureSnapshot(entry)", StringComparison.Ordinal);
 
         Assert.True(timeIndex >= 0, "Manuelles Foto muss den aktuellen Player-Zeitpunkt lesen.");
         Assert.True(scopeIndex >= 0, "Befund- und Event-Zeit muessen vor dem Snapshot per Scope auf den Foto-Frame gesetzt werden.");
         Assert.True(snapshotIndex >= 0, "Manuelles Foto muss weiter den aktuellen Frame capturen.");
         Assert.True(scopeIndex < snapshotIndex, "Dateiname und Befund muessen den Foto-Zeitpunkt verwenden.");
-        Assert.Contains("photoTimestamp.RestoreOriginalTime()", photoBody);
-        Assert.DoesNotContain("entry.Zeit = photoTime.Value", photoBody);
-        Assert.DoesNotContain("codingEvent.VideoTimestamp = photoTime.Value", photoBody);
-        Assert.Contains("CodingEventPhotoApplier.Apply", photoBody);
+        Assert.Contains("CodingTakePhotoCommandWorkflow.Execute", coding);
+        Assert.Contains("GetCurrentPlayerTimestamp: GetCurrentPlayerTimestamp", coding);
+        Assert.Contains("CodingEventPhotoTimestampScope.Apply", coding);
+        Assert.Contains("CaptureSnapshot: CodingCaptureSnapshot", coding);
+        Assert.Contains("restoreOriginalTime()", workflow);
+        Assert.DoesNotContain("entry.Zeit = photoTime.Value", coding);
+        Assert.DoesNotContain("codingEvent.VideoTimestamp = photoTime.Value", coding);
+        Assert.Contains("CodingEventPhotoApplier.Apply", coding);
     }
 
     [Fact]

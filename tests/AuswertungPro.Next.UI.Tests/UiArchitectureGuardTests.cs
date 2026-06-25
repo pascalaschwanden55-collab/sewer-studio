@@ -4298,21 +4298,28 @@ public sealed class UiArchitectureGuardTests
         var applierPath = Path.Combine(uiRoot, "Ai", "CodingEventPhotoApplier.cs");
         var timestampScopePath = Path.Combine(uiRoot, "Ai", "CodingEventPhotoTimestampScope.cs");
         var pathAppenderPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEntryPhotoPathAppender.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingTakePhotoCommandWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Manuelle Foto-Slot-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(applierPath), "Manuelle Foto-Slot-Anwendung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(timestampScopePath), "Manuelle Foto-Zeitsetzung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pathAppenderPath), "FotoPath-Anhaengen muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(commandWorkflowPath), "Manueller Foto-Command soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var photos = File.ReadAllText(photosPath);
         var policy = File.ReadAllText(policyPath);
         var applier = File.ReadAllText(applierPath);
         var timestampScope = File.Exists(timestampScopePath) ? File.ReadAllText(timestampScopePath) : "";
         var pathAppender = File.Exists(pathAppenderPath) ? File.ReadAllText(pathAppenderPath) : "";
+        var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
 
+        Assert.Contains("CodingTakePhotoCommandWorkflow.Execute", photos);
         Assert.Contains("CodingEventPhotoApplier.Apply", photos);
         Assert.Contains("CodingEventPhotoTimestampScope.Apply", photos);
         Assert.Contains("CodingProtocolEntryPhotoPathAppender", photos);
+        Assert.DoesNotContain("LstCodingEvents.SelectedItem is not CodingEvent", photos);
+        Assert.DoesNotContain("if (fotoPath == null)", photos);
+        Assert.DoesNotContain("Foto konnte nicht aufgenommen werden", photos);
         Assert.DoesNotContain("CodingPhotoSlotPolicy.Apply", photos);
         Assert.DoesNotContain("_codingSessionService?.UpdateEvent", photos);
         Assert.DoesNotContain("codingEvent.VideoTimestamp = photoTime.Value", photos);
@@ -4325,6 +4332,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("codingSessionService?.UpdateEvent", applier);
         Assert.Contains("RestoreOriginalTime", timestampScope);
         Assert.Contains("AddDistinctNonBlank", pathAppender);
+        Assert.Contains("selectedItem is not CodingEvent codingEvent", commandWorkflow);
+        Assert.Contains("actions.CaptureSnapshot(entry)", commandWorkflow);
+        Assert.Contains("restoreOriginalTime()", commandWorkflow);
+        Assert.Contains("actions.RefreshCodingEventsList()", commandWorkflow);
     }
 
     [Fact]

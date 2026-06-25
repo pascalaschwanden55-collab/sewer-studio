@@ -36,25 +36,23 @@ public partial class PlayerWindow
     }
 
     private void CodingTakePhotoForSelectedEvent()
-    {
-        if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
-
-        var entry = codingEvent.Entry;
-        var photoTimestamp = CodingEventPhotoTimestampScope.Apply(codingEvent, GetCurrentPlayerTimestamp());
-
-        var fotoPath = CodingCaptureSnapshot(entry);
-        if (fotoPath == null)
-        {
-            photoTimestamp.RestoreOriginalTime();
-            ShowOverlay("Foto konnte nicht aufgenommen werden", TimeSpan.FromSeconds(3));
-            return;
-        }
-
-        var slotUpdate = CodingEventPhotoApplier.Apply(codingEvent, fotoPath, _codingSessionRuntimeOwner.Service);
-        ShowOverlay(slotUpdate.OverlayText, TimeSpan.FromSeconds(3));
-
-        RefreshCodingEventsList();
-    }
+        => CodingTakePhotoCommandWorkflow.Execute(
+            LstCodingEvents.SelectedItem,
+            new CodingTakePhotoCommandActions(
+                GetCurrentPlayerTimestamp: GetCurrentPlayerTimestamp,
+                ApplyPhotoTimestamp: (codingEvent, timestamp) =>
+                {
+                    var photoTimestamp = CodingEventPhotoTimestampScope.Apply(codingEvent, timestamp);
+                    return photoTimestamp.RestoreOriginalTime;
+                },
+                CaptureSnapshot: CodingCaptureSnapshot,
+                ApplyPhoto: (codingEvent, fotoPath) =>
+                    CodingEventPhotoApplier.Apply(
+                        codingEvent,
+                        fotoPath,
+                        _codingSessionRuntimeOwner.Service),
+                ShowOverlay: ShowOverlay,
+                RefreshCodingEventsList: RefreshCodingEventsList));
 
     private void CodingTakePhoto_Click(object sender, RoutedEventArgs e) => CodingTakePhotoForSelectedEvent();
 
