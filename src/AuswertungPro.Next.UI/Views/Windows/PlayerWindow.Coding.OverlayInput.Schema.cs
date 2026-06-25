@@ -124,13 +124,16 @@ public partial class PlayerWindow
 
     private void CodingCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
     {
-        // Mausrad: Winkel der PipeBend-Schablone aendern (5 Grad pro Schritt)
-        if (_codingSchemaManager.Active is PipeBendSchema bend && _codingSchemaManager.IsActive)
-        {
-            double delta = e.Delta > 0 ? 5 : -5;
-            bend.AdjustAngle(delta);
-            UpdateCodingSchemaOverlay(enableCreateEvent: true);
-            e.Handled = true;
-        }
+        var bend = _codingSchemaManager.Active as PipeBendSchema;
+
+        CodingSchemaOverlayMouseWheelWorkflow.Execute(
+            new CodingSchemaOverlayMouseWheelRequest(
+                bend != null,
+                _codingSchemaManager.IsActive,
+                e.Delta),
+            new CodingSchemaOverlayMouseWheelActions(
+                AdjustAngle: angleDelta => bend?.AdjustAngle(angleDelta),
+                UpdateOverlay: () => UpdateCodingSchemaOverlay(enableCreateEvent: true),
+                MarkHandled: () => { e.Handled = true; }));
     }
 }

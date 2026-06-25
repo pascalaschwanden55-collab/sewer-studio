@@ -6143,14 +6143,23 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayMouseWheelWorkflow.cs");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var schema = File.ReadAllText(schemaPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
+        Assert.True(File.Exists(workflowPath), "Schema-Mausrad-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.DoesNotContain("private void CodingCanvas_MouseWheel", overlayInput);
         Assert.Contains("private void CodingCanvas_MouseWheel", schema);
-        Assert.Contains("bend.AdjustAngle", schema);
+        Assert.Contains("CodingSchemaOverlayMouseWheelWorkflow.Execute", schema);
+        Assert.Contains("bend?.AdjustAngle(angleDelta)", schema);
         Assert.Contains("UpdateCodingSchemaOverlay(enableCreateEvent: true)", schema);
+        Assert.DoesNotContain("double delta = e.Delta > 0 ? 5 : -5", schema);
+        Assert.DoesNotContain("if (_codingSchemaManager.Active is PipeBendSchema", schema);
+        Assert.Contains("request.WheelDelta > 0 ? 5 : -5", workflow);
+        Assert.Contains("actions.AdjustAngle(angleDelta)", workflow);
+        Assert.Contains("actions.MarkHandled()", workflow);
     }
 
     [Fact]
