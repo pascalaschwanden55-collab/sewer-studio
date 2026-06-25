@@ -5449,6 +5449,7 @@ public sealed class UiArchitectureGuardTests
         var codingAiControllerPath = Path.Combine(uiRoot, "Player", "CodingAiController.cs");
         var closingWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosingWorkflow.cs");
         var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
+        var analysisCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAnalysisCommandWorkflow.cs");
         var exitTeardownWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeExitTeardownWorkflow.cs");
         var helperPath = Path.Combine(uiRoot, "Player", "CancellationTokenSourceLifecycle.cs");
 
@@ -5457,6 +5458,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(codingAiControllerPath), "Coding-AI-Analyse-CTS-Lifecycle soll im CodingAiController liegen.");
         Assert.True(File.Exists(closingWorkflowPath), "Closing-Cancel-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(closedWorkflowPath), "Closed-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(analysisCommandWorkflowPath), "Coding-Analyse-Begin/End-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(exitTeardownWorkflowPath), "Exit-Teardown-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
@@ -5467,11 +5469,14 @@ public sealed class UiArchitectureGuardTests
         var codingAiController = File.ReadAllText(codingAiControllerPath);
         var closingWorkflow = File.ReadAllText(closingWorkflowPath);
         var closedWorkflow = File.ReadAllText(closedWorkflowPath);
+        var analysisCommandWorkflow = File.ReadAllText(analysisCommandWorkflowPath);
         var exitTeardownWorkflow = File.Exists(exitTeardownWorkflowPath) ? File.ReadAllText(exitTeardownWorkflowPath) : "";
         var helper = File.Exists(helperPath) ? File.ReadAllText(helperPath) : "";
         var playerWindowText = ai + exit + wiring + playback;
 
-        Assert.Contains("_codingAiRuntimeOwner.Controller.TryBeginAnalysis()", ai);
+        Assert.Contains("TryBeginAnalysis: _codingAiRuntimeOwner.Controller.TryBeginAnalysis", ai);
+        Assert.Contains("actions.TryBeginAnalysis()", analysisCommandWorkflow);
+        Assert.Contains("actions.EndAnalysis()", analysisCommandWorkflow);
         Assert.Contains("DisposeAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation", exit);
         Assert.Contains("actions.DisposeAnalysisCancellation()", exitTeardownWorkflow);
         Assert.Contains("DisposeCodingAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation", wiring);
@@ -7348,17 +7353,28 @@ public sealed class UiArchitectureGuardTests
         var healthPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Health.cs");
         var monitoringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Health.Monitoring.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingAiRuntimeFactory.cs");
+        var initializationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiInitializationWorkflow.cs");
         var settingsLoaderPath = Path.Combine(uiRoot, "Ai", "PlayerAiSettingsLoader.cs");
 
         Assert.True(File.Exists(factoryPath), "Coding-AI-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(initializationWorkflowPath), "Coding-AI-Initialisierungsentscheidungen sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(settingsLoaderPath), "Player-AI-Settings-Erzeugung soll ausserhalb von PlayerWindow liegen.");
 
         var health = File.ReadAllText(healthPath);
         var monitoring = File.ReadAllText(monitoringPath);
         var factory = File.ReadAllText(factoryPath);
+        var initializationWorkflow = File.ReadAllText(initializationWorkflowPath);
         var settingsLoader = File.ReadAllText(settingsLoaderPath);
 
         Assert.Contains("PlayerAiSettingsLoader.LoadPlatformSettings", health);
+        Assert.Contains("CodingAiInitializationWorkflow.ExecuteAsync", health);
+        Assert.DoesNotContain("runtime.RuntimeSettings", health);
+        Assert.DoesNotContain("runtime.MultiModelAvailable", health);
+        Assert.DoesNotContain("runtime.MultiModelError", health);
+        Assert.DoesNotContain("catch (Exception", health);
+        Assert.Contains("runtime.RuntimeSettings", initializationWorkflow);
+        Assert.Contains("runtime.MultiModelAvailable", initializationWorkflow);
+        Assert.Contains("runtime.MultiModelError", initializationWorkflow);
         Assert.DoesNotContain("AppSettingsAiSettingsProvider", health);
         Assert.Contains("CodingAiRuntimeFactory.Create", health);
         Assert.DoesNotContain("new OllamaClient", health);

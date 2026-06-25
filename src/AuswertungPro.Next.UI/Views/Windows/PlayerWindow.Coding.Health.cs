@@ -1,5 +1,3 @@
-using System;
-using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -9,44 +7,27 @@ public partial class PlayerWindow
 {
     private async Task InitCodingAi()
     {
-        try
-        {
-            var platformConfig = PlayerAiSettingsLoader.LoadPlatformSettings();
-            var runtime = CodingAiRuntimeFactory.Create(platformConfig, CodeCatalog, _dependencies.PipelineConfig);
-            _codingAiRuntimeOwner.Controller.ApplyRuntime(runtime);
-            var config = runtime.RuntimeSettings;
-            if (!config.Enabled)
-            {
-                SetCodingAiState("Künstliche Intelligenz deaktiviert", PlayerStatusColors.Muted, "Modell: aus");
-                CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, false);
-                return;
-            }
-
-            if (runtime.MultiModelAvailable && runtime.VisionClient is not null)
-            {
-                var healthMonitor = CodingAiRuntimeFactory.CreateHealthMonitor(
-                    _codingAiRuntimeOwner.Controller.VisionClient!,
+        await CodingAiInitializationWorkflow.ExecuteAsync(
+            new CodingAiInitializationWorkflowActions(
+                CreateRuntime: () =>
+                {
+                    var platformConfig = PlayerAiSettingsLoader.LoadPlatformSettings();
+                    return CodingAiRuntimeFactory.Create(platformConfig, CodeCatalog, _dependencies.PipelineConfig);
+                },
+                ApplyRuntime: _codingAiRuntimeOwner.Controller.ApplyRuntime,
+                CreateHealthMonitor: runtime => CodingAiRuntimeFactory.CreateHealthMonitor(
+                    runtime.VisionClient!,
                     aiEnabled: () => _codingAiRuntimeOwner.Controller.AiEnabled,
-                    qwenAvailable: () => _codingAiRuntimeOwner.Controller.QwenAvailable);
-                _codingAiRuntimeOwner.Controller.StartHealthMonitor(healthMonitor, OnPipelineHealthChanged);
-
-                var initial = await _codingAiRuntimeOwner.Controller.RefreshHealthOnceAsync();
-                ApplyPipelineHealth(initial);
-            }
-            else if (!string.IsNullOrWhiteSpace(runtime.MultiModelError))
-            {
-                _codingAiRuntimeOwner.Controller.SetUseMultiModel(false);
-                SetCodingAiState("Künstliche Intelligenz bereit (Qwen)", PlayerStatusColors.Success,
-                    $"Monitor-Fehler: {runtime.MultiModelError}");
-            }
-            SetYoloStatus("Bereit", PlayerStatusColors.Success, LiveDetectionDisplayPolicy.CompactModelName(_codingAiRuntimeOwner.Controller.ModelName));
-        }
-        catch (Exception ex)
-        {
-            SetCodingAiState($"Fehler: {ex.Message}", PlayerStatusColors.Error,
-                $"Modell: {LiveDetectionDisplayPolicy.CompactModelName(_codingAiRuntimeOwner.Controller.ModelName)}");
-            CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, false);
-        }
+                    qwenAvailable: () => _codingAiRuntimeOwner.Controller.QwenAvailable),
+                StartHealthMonitor: monitor => _codingAiRuntimeOwner.Controller.StartHealthMonitor(
+                    monitor,
+                    OnPipelineHealthChanged),
+                RefreshHealthOnceAsync: () => _codingAiRuntimeOwner.Controller.RefreshHealthOnceAsync(),
+                ApplyPipelineHealth: ApplyPipelineHealth,
+                SetCodingAiState: (status, color, detail) => SetCodingAiState(status, color, detail),
+                SetAnalyzeButtonEnabled: enabled => CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, enabled),
+                SetUseMultiModel: _codingAiRuntimeOwner.Controller.SetUseMultiModel,
+                GetModelName: () => _codingAiRuntimeOwner.Controller.ModelName,
+                SetYoloStatus: (status, color, model) => SetYoloStatus(status, color, model)));
     }
-
 }
