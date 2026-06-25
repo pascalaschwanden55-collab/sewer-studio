@@ -6719,17 +6719,20 @@ public sealed class UiArchitectureGuardTests
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayInputWorkflow.cs");
+        var createWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayCreateWorkflow.cs");
         var updateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayUpdateWorkflow.cs");
         var clearWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayClearWorkflow.cs");
 
         Assert.True(File.Exists(schemaPath), "Schema-Overlay-Wiring soll aus dem allgemeinen OverlayInput-Partial heraus.");
         Assert.True(File.Exists(workflowPath), "Schema-Overlay-Mouseflow soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(createWorkflowPath), "Schema-Overlay-Erzeugungsgate soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(updateWorkflowPath), "Schema-Overlay-Update-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(clearWorkflowPath), "Schema-Overlay-Clear-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var schema = File.ReadAllText(schemaPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
+        var createWorkflow = File.Exists(createWorkflowPath) ? File.ReadAllText(createWorkflowPath) : "";
         var updateWorkflow = File.Exists(updateWorkflowPath) ? File.ReadAllText(updateWorkflowPath) : "";
         var clearWorkflow = File.Exists(clearWorkflowPath) ? File.ReadAllText(clearWorkflowPath) : "";
 
@@ -6746,6 +6749,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseDown", schema);
         Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseMove", schema);
         Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseUp", schema);
+        Assert.Contains("CodingSchemaOverlayCreateWorkflow.Execute", schema);
         Assert.Contains("CodingSchemaOverlayUpdateWorkflow.Execute", schema);
         Assert.Contains("CodingSchemaOverlayClearWorkflow.Execute", schema);
         Assert.Contains("CodingSchemaOverlayBuilder.Create", schema);
@@ -6753,10 +6757,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_codingSessionHost", schema);
         Assert.DoesNotContain("_codingVm", schema);
         Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", schema);
+        Assert.DoesNotContain("if (!_codingOverlayToolHost.HasOverlayService)", schema);
         Assert.DoesNotContain("if (!IsCodingSchemaToolSelected())", schema);
         Assert.DoesNotContain("if (!IsCodingSchemaToolSelected() || !_codingSchemaManager.IsActive)", schema);
         Assert.DoesNotContain("if (!IsCodingSchemaToolSelected() || !_codingSchemaManager.IsDragging)", schema);
         Assert.Contains("actions.CreateAndActivateSchema()", workflow);
+        Assert.Contains("if (!request.HasOverlayService)", createWorkflow);
+        Assert.Contains("actions.CreateSchema()", createWorkflow);
         Assert.Contains("actions.BeginDrag(handleId)", workflow);
         Assert.Contains("actions.UpdateDrag()", workflow);
         Assert.Contains("actions.ReleaseMouseCapture()", workflow);

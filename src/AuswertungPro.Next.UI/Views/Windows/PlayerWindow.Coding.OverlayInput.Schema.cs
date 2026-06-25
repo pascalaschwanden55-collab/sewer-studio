@@ -14,13 +14,14 @@ public partial class PlayerWindow
 
     private SchemaOverlayBase? CreateCodingSchemaOverlay()
     {
-        if (!_codingOverlayToolHost.HasOverlayService)
-            return null;
-
-        return CodingSchemaOverlayBuilder.Create(
-            _codingSchemaType,
-            _codingOverlayToolHost.PipeBendSnapEnabled,
-            _codingOverlayToolHost.ActiveLevelMode);
+        return CodingSchemaOverlayCreateWorkflow.Execute(
+            new CodingSchemaOverlayCreateRequest(_codingOverlayToolHost.HasOverlayService),
+            new CodingSchemaOverlayCreateActions(
+                CreateSchema: () => CodingSchemaOverlayBuilder.Create(
+                    _codingSchemaType,
+                    _codingOverlayToolHost.PipeBendSnapEnabled,
+                    _codingOverlayToolHost.ActiveLevelMode)))
+            .Schema;
     }
 
     private string GetDefaultCodingSchemaHandleId()
