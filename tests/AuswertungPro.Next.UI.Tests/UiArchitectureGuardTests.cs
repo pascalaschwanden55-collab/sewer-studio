@@ -3590,6 +3590,7 @@ public sealed class UiArchitectureGuardTests
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var keyboardPath = Path.Combine(windowsRoot, "PlayerWindow.Keyboard.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardActionController.cs");
+        var workflowPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardInputWorkflow.cs");
         var playbackRunnerPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardPlaybackCommandRunner.cs");
         var markToolShortcutWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerMarkToolShortcutWorkflow.cs");
         var detectionShortcutWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerDetectionShortcutWorkflow.cs");
@@ -3597,6 +3598,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.True(File.Exists(keyboardPath), "Keyboard-Wiring soll in einem eigenen PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(controllerPath), "Shortcut-Aktionsausfuehrung soll ausserhalb des PlayerWindow liegen.");
+        Assert.True(File.Exists(workflowPath), "Keyboard-Handled-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(playbackRunnerPath), "Keyboard-Playback-Kommandos sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(markToolShortcutWorkflowPath), "Markierwerkzeug-Shortcut-Entscheidung soll ausserhalb des PlayerWindow liegen.");
         Assert.True(File.Exists(detectionShortcutWorkflowPath), "Detection-Shortcut-Entscheidung soll ausserhalb des PlayerWindow liegen.");
@@ -3605,6 +3607,7 @@ public sealed class UiArchitectureGuardTests
         var playback = File.ReadAllText(playbackPath);
         var keyboard = File.ReadAllText(keyboardPath);
         var controller = File.ReadAllText(controllerPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var playbackRunner = File.Exists(playbackRunnerPath) ? File.ReadAllText(playbackRunnerPath) : "";
         var markToolShortcutWorkflow = File.Exists(markToolShortcutWorkflowPath) ? File.ReadAllText(markToolShortcutWorkflowPath) : "";
         var detectionShortcutWorkflow = File.Exists(detectionShortcutWorkflowPath) ? File.ReadAllText(detectionShortcutWorkflowPath) : "";
@@ -3612,7 +3615,10 @@ public sealed class UiArchitectureGuardTests
 
         Assert.DoesNotContain("PlayerWindow_PreviewKeyDown", playback);
         Assert.Contains("PlayerWindow_PreviewKeyDown", keyboard);
-        Assert.Contains("_keyboardActions.Execute(action)", keyboard);
+        Assert.Contains("PlayerKeyboardInputWorkflow.Execute", keyboard);
+        Assert.Contains("ExecuteAction: _keyboardActions.Execute", keyboard);
+        Assert.DoesNotContain("if (_keyboardActions.Execute(action))", keyboard);
+        Assert.Contains("actions.MarkHandled()", workflow);
         Assert.DoesNotContain("case PlayerKeyboardAction.", keyboard);
         Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Stop", keyboard);
         Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Pause", keyboard);

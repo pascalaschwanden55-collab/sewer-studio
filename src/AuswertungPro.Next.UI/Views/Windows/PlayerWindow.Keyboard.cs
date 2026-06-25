@@ -25,8 +25,11 @@ public partial class PlayerWindow
         });
 
         var action = PlayerKeyboardShortcutPolicy.Resolve(e.Key, _codingOverlayToolHost.HasOverlayService);
-        if (_keyboardActions.Execute(action))
-            e.Handled = true;
+        PlayerKeyboardInputWorkflow.Execute(
+            new PlayerKeyboardInputWorkflowRequest(action),
+            new PlayerKeyboardInputWorkflowActions(
+                ExecuteAction: _keyboardActions.Execute,
+                MarkHandled: () => { e.Handled = true; }));
     }
 
     private void CancelCodingOverlayShortcut()
