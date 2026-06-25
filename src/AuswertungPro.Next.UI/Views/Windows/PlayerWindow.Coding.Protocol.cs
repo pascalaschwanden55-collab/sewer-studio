@@ -12,13 +12,16 @@ public partial class PlayerWindow
 
     private void CodingOfferPdfExport(ProtocolDocument doc)
     {
-        if (_dependencies.ProtocolPdfExporter == null || _haltungRecord == null) return;
-
-        var exported = CodingProtocolPdfExportServiceFactory.Create(_dependencies.ProtocolPdfExporter)
-            .TryOfferPdfExport(_haltungRecord, doc, _dependencies.LastProjectPath);
-
-        if (exported)
-            ShowOverlay("PDF-Protokoll erstellt", TimeSpan.FromSeconds(4));
+        CodingProtocolPdfExportCommandWorkflow.Execute(
+            new CodingProtocolPdfExportCommandRequest(
+                _dependencies.ProtocolPdfExporter is not null,
+                _haltungRecord is not null,
+                doc),
+            new CodingProtocolPdfExportCommandActions(
+                OfferPdfExport: () => CodingProtocolPdfExportServiceFactory
+                    .Create(_dependencies.ProtocolPdfExporter!)
+                    .TryOfferPdfExport(_haltungRecord!, doc, _dependencies.LastProjectPath),
+                ShowOverlay: ShowOverlay));
     }
 
     // --- Coding: Existierende Protokoll-Eintraege laden ---
@@ -48,23 +51,22 @@ public partial class PlayerWindow
 
     private void ShowCodingProtocolPreview(ProtocolDocument doc)
     {
-        if (_haltungRecord == null || _dependencies.LegacyServiceProvider == null) return;
-
-        var opened = CodingProtocolPreviewWorkflowServiceFactory.Create().TryShow(
-            this,
-            _haltungRecord,
-            doc,
-            _dependencies.LegacyServiceProvider,
-            _videoPath,
-            _dependencies.LastProjectPath,
-            MarkProjectDirtyForCoding);
-        if (!opened) return;
-
-        // Nach Bearbeitung: Primaere Schaeden erneut synchronisieren.
-        if (_haltungRecord.Protocol != null)
-            SyncCodingToPrimaryDamages(_haltungRecord.Protocol);
-
-        // PDF anbieten.
-        CodingOfferPdfExport(_haltungRecord.Protocol ?? doc);
+        CodingProtocolPreviewCommandWorkflow.Execute(
+            new CodingProtocolPreviewCommandRequest(
+                _haltungRecord is not null,
+                _dependencies.LegacyServiceProvider is not null,
+                doc),
+            new CodingProtocolPreviewCommandActions(
+                ShowPreview: () => CodingProtocolPreviewWorkflowServiceFactory.Create().TryShow(
+                    this,
+                    _haltungRecord!,
+                    doc,
+                    _dependencies.LegacyServiceProvider!,
+                    _videoPath,
+                    _dependencies.LastProjectPath,
+                    MarkProjectDirtyForCoding),
+                GetCurrentProtocol: () => _haltungRecord?.Protocol,
+                SyncPrimaryDamages: SyncCodingToPrimaryDamages,
+                OfferPdfExport: CodingOfferPdfExport));
     }
 }

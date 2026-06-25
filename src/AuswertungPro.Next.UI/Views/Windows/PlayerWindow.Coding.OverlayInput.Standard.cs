@@ -8,83 +8,73 @@ public partial class PlayerWindow
 {
     private void HandleCodingStandardMouseDown(NormalizedPoint norm)
     {
-        if (!_codingSessionHost.HasViewModel)
-            return;
-
-        _codingSessionHost.ClearCurrentOverlay();
-        CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false);
-        UpdateCodingOverlayInfo(null);
-
-        _codingSessionHost.BeginOverlayDraw(norm);
-        CodingOverlayCanvas.CaptureMouse();
-        ClearTransientCodingCanvas(clearManualOverlay: true);
-        RenderAiOverlays();
-        RenderReferenceDn();
-        UpdateToolBadge();
+        CodingStandardOverlayDrawWorkflow.MouseDown(
+            new CodingStandardOverlayMouseDownRequest(_codingSessionHost.HasViewModel),
+            new CodingStandardOverlayMouseDownActions(
+                ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
+                SetCreateEventEnabled: enabled => CodingOverlayInputControls.SetCreateEventEnabled(
+                    BtnCodingCreateEvent,
+                    enabled),
+                UpdateOverlayInfoEmpty: () => UpdateCodingOverlayInfo(null),
+                BeginOverlayDraw: () => _codingSessionHost.BeginOverlayDraw(norm),
+                CaptureMouse: () => { CodingOverlayCanvas.CaptureMouse(); },
+                ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
+                RenderAiOverlays: RenderAiOverlays,
+                RenderReferenceDn: RenderReferenceDn,
+                UpdateToolBadge: UpdateToolBadge));
     }
 
     private bool TryHandleCodingStandardMouseMove(NormalizedPoint norm)
     {
-        if (!_codingOverlayToolHost.HasOverlayService || !_codingSessionHost.HasViewModel)
-            return false;
+        var result = CodingStandardOverlayDrawWorkflow.MouseMove(
+            new CodingStandardOverlayMouseMoveRequest(
+                _codingOverlayToolHost.HasOverlayService,
+                _codingSessionHost.HasViewModel,
+                _codingOverlayToolHost.IsDrawing),
+            new CodingStandardOverlayMouseMoveActions(
+                UpdateOverlayDraw: () => _codingSessionHost.UpdateOverlayDraw(norm),
+                HasCurrentOverlay: () => _codingSessionHost.CurrentOverlay != null,
+                ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
+                RenderAiOverlays: RenderAiOverlays,
+                RenderReferenceDn: RenderReferenceDn,
+                UpdateToolBadge: UpdateToolBadge,
+                RenderPreviewOverlay: () => RenderOverlayGeometry(
+                    _codingSessionHost.CurrentOverlay!,
+                    isPreview: true,
+                    labelAnchor: norm)));
 
-        if (!_codingOverlayToolHost.IsDrawing)
-            return false;
-
-        _codingSessionHost.UpdateOverlayDraw(norm);
-        var overlay = _codingSessionHost.CurrentOverlay;
-        if (overlay == null)
-            return true;
-
-        ClearTransientCodingCanvas(clearManualOverlay: true);
-        RenderAiOverlays();
-        RenderReferenceDn();
-        UpdateToolBadge();
-        RenderOverlayGeometry(overlay, isPreview: true, labelAnchor: norm);
-        return true;
+        return result.Handled;
     }
 
     private bool TryHandleCodingStandardMouseUp(NormalizedPoint norm)
     {
-        if (!_codingOverlayToolHost.HasOverlayService || !_codingSessionHost.HasViewModel)
-            return false;
+        var result = CodingStandardOverlayDrawWorkflow.MouseUp(
+            new CodingStandardOverlayMouseUpRequest(
+                _codingOverlayToolHost.HasOverlayService,
+                _codingSessionHost.HasViewModel,
+                _codingOverlayToolHost.IsDrawing,
+                _markToolType != OverlayToolType.None,
+                BtnCodingLiveAi.IsChecked == true),
+            new CodingStandardOverlayMouseUpActions(
+                CompleteOverlayDraw: () => _codingSessionHost.CompleteOverlayDraw(norm),
+                ReleaseMouseCapture: CodingOverlayCanvas.ReleaseMouseCapture,
+                ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
+                RenderAiOverlays: RenderAiOverlays,
+                RenderReferenceDn: RenderReferenceDn,
+                UpdateToolBadge: UpdateToolBadge,
+                HasCurrentOverlay: () => _codingSessionHost.CurrentOverlay != null,
+                RenderFinalOverlay: () => RenderOverlayGeometry(
+                    _codingSessionHost.CurrentOverlay!,
+                    isPreview: false),
+                HandleMarkDrawingComplete: HandleMarkDrawingComplete,
+                UpdateOverlayInfoEmpty: () => UpdateCodingOverlayInfo(null),
+                UpdateOverlayInfoCurrent: () => UpdateCodingOverlayInfo(_codingSessionHost.CurrentOverlay!),
+                SetCreateEventEnabled: enabled => CodingOverlayInputControls.SetCreateEventEnabled(
+                    BtnCodingCreateEvent,
+                    enabled),
+                AnalyzeWithOverlayHint: () => AnalyzeWithOverlayHintAsync(_codingSessionHost.CurrentOverlay!)
+                    .SafeFireAndForget("OverlayHint")));
 
-        if (!_codingOverlayToolHost.IsDrawing)
-            return false;
-
-        _codingSessionHost.CompleteOverlayDraw(norm);
-        CodingOverlayCanvas.ReleaseMouseCapture();
-
-        ClearTransientCodingCanvas(clearManualOverlay: true);
-        RenderAiOverlays();
-        RenderReferenceDn();
-        UpdateToolBadge();
-
-        var overlay = _codingSessionHost.CurrentOverlay;
-        if (overlay != null)
-        {
-            RenderOverlayGeometry(overlay, isPreview: false);
-
-            // Mark-Modus: direkt VsaCodeExplorer oeffnen + Training speichern
-            if (_markToolType != OverlayToolType.None)
-            {
-                HandleMarkDrawingComplete();
-                return true;
-            }
-
-            UpdateCodingOverlayInfo(overlay);
-            CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, true);
-
-            // Wenn Auto-KI aktiv: Overlay-Zeichnung -> KI analysiert markierte Stelle
-            if (BtnCodingLiveAi.IsChecked == true)
-                AnalyzeWithOverlayHintAsync(overlay).SafeFireAndForget("OverlayHint");
-        }
-        else
-        {
-            UpdateCodingOverlayInfo(null);
-            CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false);
-        }
-
-        return true;
+        return result.Handled;
     }
 }

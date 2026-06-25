@@ -595,6 +595,8 @@ public sealed class UiArchitectureGuardTests
         var saveDialogPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfSavePathDialog.cs");
         var dialogServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolDialogService.cs");
         var dialogFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolDialogServiceFactory.cs");
+        var pdfCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfExportCommandWorkflow.cs");
+        var previewCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewCommandWorkflow.cs");
         var previewWorkflowServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWorkflowService.cs");
         var previewWorkflowServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWorkflowServiceFactory.cs");
         var previewWindowServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWindowService.cs");
@@ -608,6 +610,8 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(saveDialogPath), "PDF-Speicherdialog soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServicePath), "Protokoll-Dialogtexte sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogFactoryPath), "Protokoll-DialogHost-Verdrahtung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(pdfCommandWorkflowPath), "PDF-Export-Command-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(previewCommandWorkflowPath), "Protokoll-Preview-Command-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(previewWorkflowServicePath), "Protokoll-Vorschauablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(previewWorkflowServiceFactoryPath), "Protokoll-Vorschauablauf soll ueber Factory verdrahtet werden.");
         Assert.True(File.Exists(previewWindowServicePath), "Protokoll-Vorschaufenster soll ausserhalb der PlayerWindow-Partials erzeugt werden.");
@@ -622,12 +626,17 @@ public sealed class UiArchitectureGuardTests
         var saveDialog = File.ReadAllText(saveDialogPath);
         var dialogService = File.ReadAllText(dialogServicePath);
         var dialogFactory = File.ReadAllText(dialogFactoryPath);
+        var pdfCommandWorkflow = File.Exists(pdfCommandWorkflowPath) ? File.ReadAllText(pdfCommandWorkflowPath) : "";
+        var previewCommandWorkflow = File.Exists(previewCommandWorkflowPath) ? File.ReadAllText(previewCommandWorkflowPath) : "";
         var previewWorkflowService = File.ReadAllText(previewWorkflowServicePath);
         var previewWorkflowServiceFactory = File.ReadAllText(previewWorkflowServiceFactoryPath);
         var previewWindowService = File.ReadAllText(previewWindowServicePath);
         var previewWindowServiceFactory = File.ReadAllText(previewWindowServiceFactoryPath);
 
-        Assert.Contains("CodingProtocolPdfExportServiceFactory.Create", protocol);
+        Assert.Contains("CodingProtocolPdfExportCommandWorkflow.Execute", protocol);
+        Assert.Contains("CodingProtocolPreviewCommandWorkflow.Execute", protocol);
+        Assert.DoesNotContain("if (_dependencies.ProtocolPdfExporter == null || _haltungRecord == null)", protocol);
+        Assert.DoesNotContain("if (_haltungRecord == null || _dependencies.LegacyServiceProvider == null)", protocol);
         Assert.DoesNotContain("CodingProtocolPdfExportPlanner.Build", protocol);
         Assert.DoesNotContain("CodingProtocolPdfSavePathDialogFactory.Create", protocol);
         Assert.DoesNotContain("CodingProtocolPdfFileServiceFactory.Create", protocol);
@@ -667,6 +676,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("ConfirmProtocolPreview", dialogService);
         Assert.Contains("ShowPdfExportFailed", dialogService);
         Assert.Contains("DialogHost.Current", dialogFactory);
+        Assert.Contains("actions.OfferPdfExport()", pdfCommandWorkflow);
+        Assert.Contains("actions.ShowOverlay", pdfCommandWorkflow);
+        Assert.Contains("actions.ShowPreview()", previewCommandWorkflow);
+        Assert.Contains("actions.SyncPrimaryDamages", previewCommandWorkflow);
+        Assert.Contains("actions.OfferPdfExport", previewCommandWorkflow);
         Assert.Contains("TryShow", previewWorkflowService);
         Assert.Contains("CodingProtocolDialogServiceFactory.Create", previewWorkflowServiceFactory);
         Assert.Contains("PlayerShellProjectServiceFactory.Create", previewWorkflowServiceFactory);
@@ -6174,11 +6188,14 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var standardPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Standard.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingStandardOverlayDrawWorkflow.cs");
 
         Assert.True(File.Exists(standardPath), "Standard-2-Punkt-OverlayInput soll aus dem allgemeinen Mouseflow heraus.");
+        Assert.True(File.Exists(workflowPath), "Standard-Overlay-Zeichenablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var standard = File.ReadAllText(standardPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.DoesNotContain("OnCanvasMouseDown(norm)", overlayInput);
         Assert.DoesNotContain("OnCanvasMouseMove(norm)", overlayInput);
@@ -6186,11 +6203,21 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void HandleCodingStandardMouseDown", standard);
         Assert.Contains("private bool TryHandleCodingStandardMouseMove", standard);
         Assert.Contains("private bool TryHandleCodingStandardMouseUp", standard);
+        Assert.Contains("CodingStandardOverlayDrawWorkflow.MouseDown", standard);
+        Assert.Contains("CodingStandardOverlayDrawWorkflow.MouseMove", standard);
+        Assert.Contains("CodingStandardOverlayDrawWorkflow.MouseUp", standard);
         Assert.Contains("HandleMarkDrawingComplete", standard);
         Assert.Contains("_codingSessionHost", standard);
         Assert.DoesNotContain("_codingVm", standard);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel)", standard);
+        Assert.DoesNotContain("if (!_codingOverlayToolHost.HasOverlayService", standard);
         Assert.DoesNotContain("_ = AnalyzeWithOverlayHintAsync", standard);
-        Assert.Contains("AnalyzeWithOverlayHintAsync(overlay).SafeFireAndForget(\"OverlayHint\")", standard);
+        Assert.Contains("AnalyzeWithOverlayHintAsync(_codingSessionHost.CurrentOverlay!)", standard);
+        Assert.Contains(".SafeFireAndForget(\"OverlayHint\")", standard);
+        Assert.Contains("actions.BeginOverlayDraw()", workflow);
+        Assert.Contains("actions.RenderPreviewOverlay()", workflow);
+        Assert.Contains("actions.RenderFinalOverlay()", workflow);
+        Assert.Contains("actions.HandleMarkDrawingComplete()", workflow);
     }
 
     [Fact]
