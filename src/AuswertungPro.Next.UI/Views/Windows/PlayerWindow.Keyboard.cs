@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Input;
-using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -62,9 +61,10 @@ public partial class PlayerWindow
 
     private void ToggleMarkToolShortcut()
     {
-        if (_markToolType != OverlayToolType.None)
-            DeactivateMarkTool();
-        else
-            MarkToolPopup.IsOpen = !MarkToolPopup.IsOpen;
+        PlayerMarkToolShortcutWorkflow.Execute(
+            new PlayerMarkToolShortcutWorkflowRequest(_markToolType),
+            new PlayerMarkToolShortcutWorkflowActions(
+                DeactivateMarkTool,
+                ToggleMarkToolPopup: () => _markToolControls.ToggleManualMarkPopup(isCodingMode: false)));
     }
 }

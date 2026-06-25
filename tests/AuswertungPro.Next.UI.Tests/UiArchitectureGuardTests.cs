@@ -3155,15 +3155,18 @@ public sealed class UiArchitectureGuardTests
         var keyboardPath = Path.Combine(windowsRoot, "PlayerWindow.Keyboard.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardActionController.cs");
         var playbackRunnerPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardPlaybackCommandRunner.cs");
+        var markToolShortcutWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerMarkToolShortcutWorkflow.cs");
 
         Assert.True(File.Exists(keyboardPath), "Keyboard-Wiring soll in einem eigenen PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(controllerPath), "Shortcut-Aktionsausfuehrung soll ausserhalb des PlayerWindow liegen.");
         Assert.True(File.Exists(playbackRunnerPath), "Keyboard-Playback-Kommandos sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(markToolShortcutWorkflowPath), "Markierwerkzeug-Shortcut-Entscheidung soll ausserhalb des PlayerWindow liegen.");
 
         var playback = File.ReadAllText(playbackPath);
         var keyboard = File.ReadAllText(keyboardPath);
         var controller = File.ReadAllText(controllerPath);
         var playbackRunner = File.Exists(playbackRunnerPath) ? File.ReadAllText(playbackRunnerPath) : "";
+        var markToolShortcutWorkflow = File.Exists(markToolShortcutWorkflowPath) ? File.ReadAllText(markToolShortcutWorkflowPath) : "";
 
         Assert.DoesNotContain("PlayerWindow_PreviewKeyDown", playback);
         Assert.Contains("PlayerWindow_PreviewKeyDown", keyboard);
@@ -3172,6 +3175,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Stop", keyboard);
         Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Pause", keyboard);
         Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Resume", keyboard);
+        Assert.Contains("PlayerMarkToolShortcutWorkflow.Execute", keyboard);
+        Assert.DoesNotContain("MarkToolPopup.IsOpen", keyboard);
         Assert.Contains("_codingSessionHost", keyboard);
         Assert.Contains("_codingOverlayToolHost", keyboard);
         Assert.DoesNotContain("_codingVm", keyboard);
@@ -3182,6 +3187,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public sealed class PlayerKeyboardActionController", controller);
         Assert.Contains("case PlayerKeyboardAction.ToggleDetection", controller);
         Assert.Contains("public static class PlayerKeyboardPlaybackCommandRunner", playbackRunner);
+        Assert.Contains("OverlayToolType.None", markToolShortcutWorkflow);
+        Assert.Contains("actions.DeactivateMarkTool()", markToolShortcutWorkflow);
+        Assert.Contains("actions.ToggleMarkToolPopup()", markToolShortcutWorkflow);
     }
 
     [Fact]
@@ -3645,6 +3653,7 @@ public sealed class UiArchitectureGuardTests
         var statusControlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
         var correctionSelectionPath = Path.Combine(uiRoot, "Ai", "LiveDetectionCorrectionCodeSelectionService.cs");
         var correctionSelectionFactoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionCorrectionCodeSelectionServiceFactory.cs");
+        var displayWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationDisplayWorkflow.cs");
         var frameExporterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingFrameExporter.cs");
         var exportPlannerPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingExportPlanner.cs");
         var annotationWriterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingAnnotationWriter.cs");
@@ -3654,6 +3663,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(trainingPath), "LiveDetection-Trainingsuebernahme soll aus den simplen Bestaetigungsaktionen heraus.");
         Assert.True(File.Exists(correctionSelectionPath), "LiveDetection-Korrektur-Codeauswahl soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(correctionSelectionFactoryPath), "LiveDetection-Korrektur-Codeauswahl soll ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(displayWorkflowPath), "LiveDetection-Bestaetigungsanzeige und Resume-Entscheidung sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(frameExporterPath), "Detection-Training-Frame-Export soll ausserhalb der PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(exportPlannerPath), "Detection-Training-Exportplanung soll ausserhalb der PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(annotationWriterPath), "Detection-Training-Annotationen sollen ausserhalb der PlayerWindow-Partials geschrieben werden.");
@@ -3665,6 +3675,7 @@ public sealed class UiArchitectureGuardTests
         var statusControls = File.ReadAllText(statusControlsPath);
         var correctionSelection = File.ReadAllText(correctionSelectionPath);
         var correctionSelectionFactory = File.ReadAllText(correctionSelectionFactoryPath);
+        var displayWorkflow = File.Exists(displayWorkflowPath) ? File.ReadAllText(displayWorkflowPath) : "";
         var frameExporter = File.ReadAllText(frameExporterPath);
         var exportPlanner = File.ReadAllText(exportPlannerPath);
         var annotationWriter = File.ReadAllText(annotationWriterPath);
@@ -3672,6 +3683,11 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("private void ShowDetectionConfirmation", confirmation);
         Assert.Contains("private void ResumeDetection", confirmation);
+        Assert.Contains("LiveDetectionConfirmationDisplayWorkflow.Show", confirmation);
+        Assert.Contains("LiveDetectionConfirmationDisplayWorkflow.Resume", confirmation);
+        Assert.DoesNotContain("PlayerConfirmationPlayback.PauseLiveDetectionConfirmation", confirmation);
+        Assert.DoesNotContain("if (_detectionConfirmationBuffer.TimestampSeconds.HasValue)", confirmation);
+        Assert.DoesNotContain("if (!_playerPlaybackControlHost.IsPlaying)", confirmation);
         Assert.Contains("LiveDetectionStatusControls.ShowDetectionConfirmation", confirmation);
         Assert.Contains("LiveDetectionStatusControls.HideDetectionConfirmation", confirmation);
         Assert.DoesNotContain("TxtDetectionFinding.Text", confirmation);
@@ -3701,6 +3717,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveDetectionConfirmationTrainingWorkflow.SaveCorrectedAsync", training);
         Assert.Contains("public static void ShowDetectionConfirmation", statusControls);
         Assert.Contains("public static void HideDetectionConfirmation", statusControls);
+        Assert.Contains("PlayerConfirmationPlayback.PauseLiveDetectionConfirmation", displayWorkflow);
+        Assert.Contains("SeekMilliseconds", displayWorkflow);
         Assert.DoesNotContain("foreach (var finding in _detectionPendingFindings)", training);
         Assert.DoesNotContain("annotationWriter.SaveAcceptedAsync", training);
         Assert.DoesNotContain("annotationWriter.SaveCorrectedAsync", training);
