@@ -197,12 +197,15 @@ public sealed class UiArchitectureGuardTests
         var windowRoot = File.ReadAllText(windowRootPath);
         var state = File.ReadAllText(statePath);
 
+        Assert.DoesNotContain("using LibVLCSharp.Shared", windowRoot);
+        Assert.DoesNotContain("using LibVLCSharp.Shared", state);
         Assert.DoesNotContain("private readonly LibVLC _libVlc", windowRoot);
+        Assert.DoesNotContain("private readonly LibVLC _libVlc", state);
+        Assert.DoesNotContain("private readonly MediaPlayer _player", state);
         Assert.DoesNotContain("private OllamaClient? _liveDetectionClient", windowRoot);
         Assert.DoesNotContain("private OllamaClient? _liveDetectionClient", state);
         Assert.DoesNotContain("private static PlayerWindow? _lastOpened", windowRoot);
-        Assert.Contains("private readonly LibVLC _libVlc", state);
-        Assert.Contains("private readonly MediaPlayer _player", state);
+        Assert.Contains("private readonly PlayerMediaRuntime _playerMediaRuntime", state);
         Assert.Contains("private readonly PlayerPositionControls _positionControls", state);
         Assert.Contains("private readonly PlayerSpeedControls _speedControls", state);
         Assert.Contains("private readonly PlayerMarkToolControls _markToolControls", state);
@@ -405,16 +408,25 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var factoryPath = Path.Combine(uiRoot, "Player", "PlayerLibVlcFactory.cs");
+        var runtimeFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaRuntimeFactory.cs");
 
         Assert.True(File.Exists(factoryPath), "LibVLC-Erzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(runtimeFactoryPath), "LibVLC/MediaPlayer-Runtime-Erzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var playerWindowText = string.Join(
             Environment.NewLine,
             Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
         var factory = File.ReadAllText(factoryPath);
+        var runtimeFactory = File.Exists(runtimeFactoryPath) ? File.ReadAllText(runtimeFactoryPath) : "";
 
         Assert.DoesNotContain("CreateLibVlc", playerWindowText);
-        Assert.Contains("PlayerLibVlcFactory.Create", playerWindowText);
+        Assert.DoesNotContain("PlayerLibVlcFactory.Create", playerWindowText);
+        Assert.DoesNotContain("new MediaPlayer", playerWindowText);
+        Assert.DoesNotContain("Core.Initialize", playerWindowText);
+        Assert.Contains("PlayerMediaRuntimeFactory.Create", playerWindowText);
+        Assert.Contains("PlayerLibVlcFactory.Create", runtimeFactory);
+        Assert.Contains("new MediaPlayer", runtimeFactory);
+        Assert.Contains("Core.Initialize", runtimeFactory);
         Assert.Contains("new LibVLC(args)", factory);
         Assert.Contains("new LibVLC()", factory);
     }
@@ -2272,7 +2284,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerSnapshotFileCaptureServiceFactory.Create", snapshot);
         Assert.Contains("_playerSnapshotCaptureHost.TakeSnapshot", snapshot);
         Assert.Contains("private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost", state);
-        Assert.Contains("PlayerMediaHostFactory.Create", windowRoot);
+        Assert.Contains("PlayerMediaRuntimeFactory.Create", windowRoot);
         Assert.Contains("new PlayerSnapshotCaptureHost", mediaHostFactory);
         Assert.Contains("public sealed class PlayerSnapshotCaptureHost", snapshotHost);
         Assert.DoesNotContain("new PlayerSnapshotFileCaptureService", snapshot);
@@ -2418,7 +2430,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_playerMarqueeOverlayHost.Disable", overlay);
         Assert.Contains("_playerMarqueeOverlayHost.Disable", snapshot);
         Assert.Contains("private readonly PlayerMarqueeOverlayHost _playerMarqueeOverlayHost", state);
-        Assert.Contains("PlayerMediaHostFactory.Create", windowRoot);
+        Assert.Contains("PlayerMediaRuntimeFactory.Create", windowRoot);
         Assert.Contains("new PlayerMarqueeOverlayHost", mediaHostFactory);
         Assert.Contains("PlayerMarqueeOverlayDisabler.Disable", host);
         Assert.DoesNotContain("_player.SetMarquee", overlay + snapshot);
@@ -3092,8 +3104,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("ConfirmUnappliedCodingChangesOnClose", lifecycle);
         Assert.Contains("PlayerPlaybackResourceCleaner.DetachVideoView", lifecycle);
         Assert.Contains("PlayerPlaybackResourceCleaner.StopPlayer", lifecycle);
-        Assert.Contains("PlayerPlaybackResourceCleaner.DisposeMediaPlayer", lifecycle);
-        Assert.Contains("PlayerPlaybackResourceCleaner.DisposeLibVlc", lifecycle);
+        Assert.Contains("_playerMediaRuntime.DisposeMediaPlayer", lifecycle);
+        Assert.Contains("_playerMediaRuntime.DisposeLibVlc", lifecycle);
+        Assert.DoesNotContain("PlayerPlaybackResourceCleaner.DisposeMediaPlayer", lifecycle);
+        Assert.DoesNotContain("PlayerPlaybackResourceCleaner.DisposeLibVlc", lifecycle);
         Assert.DoesNotContain("AuswertungPro.Next.Application.Common.BestEffort.Try", lifecycle);
         Assert.DoesNotContain("_player.Dispose()", lifecycle);
         Assert.DoesNotContain("_libVlc.Dispose()", lifecycle);
@@ -5244,7 +5258,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("double? CurrentSeconds", host);
         Assert.Contains("double? DurationSeconds", host);
         Assert.Contains("private readonly PlayerTimelineHost _playerTimelineHost", state);
-        Assert.Contains("PlayerMediaHostFactory.Create", windowRoot);
+        Assert.Contains("PlayerMediaRuntimeFactory.Create", windowRoot);
         Assert.Contains("new PlayerTimelineHost", mediaHostFactory);
         Assert.Contains("_playerTimelineHost", osd);
         Assert.Contains("_playerTimelineHost", reading);
@@ -5374,7 +5388,7 @@ public sealed class UiArchitectureGuardTests
         var mediaHostFactory = File.ReadAllText(mediaHostFactoryPath);
 
         Assert.Contains("private readonly PlayerPlaybackControlHost _playerPlaybackControlHost", state);
-        Assert.Contains("PlayerMediaHostFactory.Create", windowRoot);
+        Assert.Contains("PlayerMediaRuntimeFactory.Create", windowRoot);
         Assert.Contains("new PlayerPlaybackControlHost", mediaHostFactory);
         Assert.Contains("public sealed class PlayerPlaybackControlHost", host);
 
@@ -5406,7 +5420,7 @@ public sealed class UiArchitectureGuardTests
         };
 
         Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
-        Assert.Contains("PlayerMediaHostFactory.Create", windowRoot);
+        Assert.Contains("PlayerMediaRuntimeFactory.Create", windowRoot);
         Assert.Contains("_playerTimelineHost,", windowRoot);
         Assert.Contains("_playerPlaybackControlHost,", windowRoot);
 
@@ -5433,13 +5447,20 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
         var factoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
+        var runtimeFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaRuntimeFactory.cs");
+        var runtimePath = Path.Combine(uiRoot, "Player", "PlayerMediaRuntime.cs");
 
         Assert.True(File.Exists(factoryPath), "Timeline/Playback/Marquee/Snapshot-Hosts sollen in einer Factory verdrahtet werden.");
+        Assert.True(File.Exists(runtimeFactoryPath), "Media-Runtime-Erzeugung soll ausserhalb des PlayerWindow-Konstruktors liegen.");
+        Assert.True(File.Exists(runtimePath), "Media-Runtime und Hosts sollen in einem Runtime-Objekt gebuendelt werden.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var factory = File.Exists(factoryPath) ? File.ReadAllText(factoryPath) : "";
+        var runtimeFactory = File.Exists(runtimeFactoryPath) ? File.ReadAllText(runtimeFactoryPath) : "";
+        var runtime = File.Exists(runtimePath) ? File.ReadAllText(runtimePath) : "";
 
-        Assert.Contains("PlayerMediaHostFactory.Create(_libVlc, _player)", windowRoot);
+        Assert.Contains("PlayerMediaRuntimeFactory.Create(_options)", windowRoot);
+        Assert.Contains("_playerMediaRuntime.Hosts", windowRoot);
         Assert.Contains("TimelineHost", windowRoot);
         Assert.Contains("PlaybackControlHost", windowRoot);
         Assert.Contains("MarqueeOverlayHost", windowRoot);
@@ -5449,12 +5470,18 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("new PlayerMarqueeOverlayHost", windowRoot);
         Assert.DoesNotContain("new PlayerSnapshotCaptureHost", windowRoot);
         Assert.DoesNotContain("_player.", windowRoot);
+        Assert.DoesNotContain("_libVlc", windowRoot);
+        Assert.DoesNotContain("new MediaPlayer", windowRoot);
         Assert.Contains("public sealed record PlayerMediaHosts", factory);
         Assert.Contains("public static PlayerMediaHosts Create", factory);
         Assert.Contains("new PlayerTimelineHost", factory);
         Assert.Contains("new PlayerPlaybackControlHost", factory);
         Assert.Contains("new PlayerMarqueeOverlayHost", factory);
         Assert.Contains("new PlayerSnapshotCaptureHost", factory);
+        Assert.Contains("PlayerMediaHostFactory.Create", runtimeFactory);
+        Assert.Contains("public sealed class PlayerMediaRuntime", runtime);
+        Assert.Contains("PlayerPlaybackResourceCleaner.DisposeMediaPlayer", runtime);
+        Assert.Contains("PlayerPlaybackResourceCleaner.DisposeLibVlc", runtime);
     }
 
     [Fact]

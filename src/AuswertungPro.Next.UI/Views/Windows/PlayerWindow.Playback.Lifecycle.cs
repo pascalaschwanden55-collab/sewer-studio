@@ -40,11 +40,9 @@ public partial class PlayerWindow
                 StopPlayerTimers: StopPlayerTimers,
                 DetachVideoView: () => PlayerPlaybackResourceCleaner.DetachVideoView(
                     () => { if (VideoView != null) VideoView.MediaPlayer = null; }),
-                DisposeMediaPlayer: () => PlayerPlaybackResourceCleaner.DisposeMediaPlayer(
-                    _player,
+                DisposeMediaPlayer: () => _playerMediaRuntime.DisposeMediaPlayer(
                     message => PlayerTrace.WriteLine(message)),
-                DisposeLibVlc: () => PlayerPlaybackResourceCleaner.DisposeLibVlc(
-                    _libVlc,
+                DisposeLibVlc: () => _playerMediaRuntime.DisposeLibVlc(
                     message => PlayerTrace.WriteLine(message))));
     }
 

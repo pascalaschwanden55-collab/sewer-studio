@@ -5,16 +5,13 @@ using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
-using LibVLCSharp.Shared;
-using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
     // Core playback/window state.
-    private readonly LibVLC _libVlc;
-    private readonly MediaPlayer _player;
+    private readonly PlayerMediaRuntime _playerMediaRuntime;
     private readonly DispatcherTimer _timer;
     private bool _isDragging;
     private bool _wasPlayingBeforeDrag;

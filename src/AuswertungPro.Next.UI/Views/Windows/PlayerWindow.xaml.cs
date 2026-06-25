@@ -5,8 +5,6 @@ using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
-using LibVLCSharp.Shared;
-using MediaPlayer = LibVLCSharp.Shared.MediaPlayer;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -44,16 +42,10 @@ public partial class PlayerWindow : Window
 
         PlayerWindowHeaderControls.ApplyVideoInfo(this, VideoNameText, VideoPathText, videoInfo);
 
-        Core.Initialize();
+        _playerMediaRuntime = PlayerMediaRuntimeFactory.Create(_options);
+        VideoView.MediaPlayer = _playerMediaRuntime.MediaPlayer;
 
-        _libVlc = PlayerLibVlcFactory.Create(_options);
-        _player = new MediaPlayer(_libVlc)
-        {
-            EnableHardwareDecoding = _options.EnableHardwareDecoding
-        };
-        VideoView.MediaPlayer = _player;
-
-        var playerMediaHosts = PlayerMediaHostFactory.Create(_libVlc, _player);
+        var playerMediaHosts = _playerMediaRuntime.Hosts;
         _playerTimelineHost = playerMediaHosts.TimelineHost;
         _playerPlaybackControlHost = playerMediaHosts.PlaybackControlHost;
         _playerMarqueeOverlayHost = playerMediaHosts.MarqueeOverlayHost;
@@ -120,7 +112,7 @@ public partial class PlayerWindow : Window
         WireKeyboardEvents();
 
         // Erst ganz am Ende setzen: TryShowOverlayOnLast darf nie ein Fenster sehen,
-        // dessen Konstruktor fehlgeschlagen ist (_player/_libVlc waeren dann null).
+        // dessen Konstruktor fehlgeschlagen ist (Media-Runtime waere dann nicht bereit).
         _lastOpened = this;
     }
 
