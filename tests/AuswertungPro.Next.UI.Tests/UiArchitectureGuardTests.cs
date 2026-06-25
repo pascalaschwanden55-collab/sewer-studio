@@ -5458,6 +5458,38 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_live_detection_and_timers_read_playback_through_hosts()
+    {
+        var root = FindRepositoryRoot();
+        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var paths = new[]
+        {
+            "PlayerWindow.Coding.Ai.Live.cs",
+            "PlayerWindow.Coding.Osd.Timer.cs",
+            "PlayerWindow.LiveDetection.cs",
+            "PlayerWindow.LiveDetection.Confirmation.cs",
+            "PlayerWindow.LiveDetection.Lifecycle.Stop.cs",
+            "PlayerWindow.Playback.Overlay.cs",
+            "PlayerWindow.Wiring.cs"
+        };
+
+        foreach (var fileName in paths)
+        {
+            var path = Path.Combine(windowsRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} muss als PlayerWindow-Partial existieren.");
+
+            var text = File.ReadAllText(path);
+            Assert.DoesNotContain("_player is", text);
+            Assert.DoesNotContain("_player?", text);
+            Assert.DoesNotContain("_player!", text);
+            Assert.DoesNotContain("var player = _player", text);
+            Assert.DoesNotContain("_player.SetPause", text);
+            Assert.DoesNotContain("_player.IsPlaying", text);
+            Assert.DoesNotContain("_player.Time", text);
+        }
+    }
+
+    [Fact]
     public void PlayerWindow_coding_lifecycle_lives_in_lifecycle_partial()
     {
         var root = FindRepositoryRoot();

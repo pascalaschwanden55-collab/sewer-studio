@@ -15,7 +15,7 @@ public partial class PlayerWindow
 
     private void ShowOverlay(string text, TimeSpan duration)
     {
-        if (_player is null)
+        if (_playbackDisposed)
             return;
 
         try

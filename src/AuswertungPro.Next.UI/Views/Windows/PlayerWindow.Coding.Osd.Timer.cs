@@ -12,7 +12,7 @@ public partial class PlayerWindow
             PlayerWindowTimerFactory.CreateCodingOsdTimer,
             () => new CodingOsdTimerContext(
                 IsClosing: _closing,
-                HasPlayer: _player is not null,
+                HasPlayer: !_playbackDisposed,
                 IsCodingMode: _isCodingMode,
                 IsCodingAnalyzing: _codingAiRuntimeOwner.Controller.IsAnalyzing,
                 HasLiveDetection: _codingAiRuntimeOwner.Controller.LiveDetection is not null),

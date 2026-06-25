@@ -10,7 +10,7 @@ public partial class PlayerWindow
 {
     private void DetectionTimer_Tick(object? sender, EventArgs e)
     {
-        if (_closing || _player is null) return;
+        if (_closing || _playbackDisposed) return;
 
         RunDetectionAsync().SafeFireAndForget(
             "DetectionTimer",
@@ -19,13 +19,12 @@ public partial class PlayerWindow
 
     private async Task RunDetectionAsync()
     {
-        var player = _player;
         var tickStart = LiveDetectionTickStartWorkflow.Start(
             new LiveDetectionTickStartWorkflowRequest(
                 _liveDetectionController.ShouldRunTick(
                     isClosing: _closing,
-                    hasPlayer: player is not null,
-                    isPlayerPlaying: player?.IsPlaying == true,
+                    hasPlayer: !_playbackDisposed,
+                    isPlayerPlaying: !_playbackDisposed && _playerPlaybackControlHost.IsPlaying,
                     hasPendingFindings: _detectionConfirmationBuffer.HasFindings),
                 _liveDetectionController.ModelName),
             new LiveDetectionTickStartWorkflowActions(
@@ -55,7 +54,7 @@ public partial class PlayerWindow
             var inference = await LiveDetectionInferenceWorkflow.ExecuteAsync(
                 new LiveDetectionInferenceWorkflowRequest(
                     snapshot,
-                    player!.Time / 1000.0,
+                    _playerTimelineHost.CurrentSecondsOrZero,
                     _closing,
                     _playbackDisposed,
                     _liveDetectionController.ModelName,

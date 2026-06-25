@@ -13,7 +13,7 @@ public partial class PlayerWindow
         if (findings.Count == 0) return;
 
         // Video pausieren und zur Fundstelle springen
-        if (_player != null)
+        if (!_playbackDisposed)
             PlayerConfirmationPlayback.PauseLiveDetectionConfirmation(
                 _playerPlaybackControlHost.IsPlaying,
                 _playerPlaybackControlHost.SetPause);

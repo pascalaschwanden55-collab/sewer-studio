@@ -14,7 +14,7 @@ public partial class PlayerWindow
         _codingLiveAiTimers ??= new CodingLiveAiTimerController(
             BtnCodingLiveAi,
             CodingLiveAiTimer_Tick,
-            () => !_closing && _player is not null);
+            () => !_closing && !_playbackDisposed);
 
         CodingLiveAiToggleWorkflow.Execute(
             new CodingLiveAiToggleWorkflowRequest(
@@ -34,10 +34,10 @@ public partial class PlayerWindow
         await CodingLiveAiTimerTickWorkflow.ExecuteAsync(
             new CodingLiveAiTimerTickWorkflowRequest(
                 IsClosing: _closing,
-                HasPlayer: _player is not null,
+                HasPlayer: !_playbackDisposed,
                 HasLiveDetection: _codingAiRuntimeOwner.Controller.LiveDetection is not null,
                 SessionState: _codingSessionRuntimeOwner.Service?.ActiveSession?.State,
-                IsPlayerPlaying: _player?.IsPlaying == true),
+                IsPlayerPlaying: !_playbackDisposed && _playerPlaybackControlHost.IsPlaying),
             new CodingLiveAiTimerTickWorkflowActions(
                 RunAnalysisAsync: () => RunCodingAnalysisAsync("Automatische KI-Analyse: Analysiere..."),
                 TraceError: message => PlayerTrace.WriteLine($"[PlayerWindow] CodingLiveAiTimer_Tick error: {message}")));

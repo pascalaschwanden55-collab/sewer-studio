@@ -15,9 +15,9 @@ public partial class PlayerWindow
                 ShouldUpdateUi: !_closing && !_playbackDisposed,
                 HideOverlay: !_isManualMarkMode,
                 TotalEvents: _codingSessionHost.EventCollection?.Count ?? 0,
-                HasPlayer: _player is not null,
+                HasPlayer: !_playbackDisposed,
                 IsPlaybackDisposed: _playbackDisposed,
-                IsPlayerPlaying: _player?.IsPlaying == true),
+                IsPlayerPlaying: !_playbackDisposed && _playerPlaybackControlHost.IsPlaying),
             new LiveDetectionStopUiWorkflowActions(
                 SetStoppedStatus: () => SetYoloStatus("Gestoppt", PlayerStatusColors.Muted),
                 ClearOverlay: hideOverlay => DetectionOverlayCleaner.ClearCanvas(
@@ -29,7 +29,7 @@ public partial class PlayerWindow
                     FindingSummaryPanel,
                     LiveDetectionStatusText,
                     totalEvents),
-                SetPause: pause => _player!.SetPause(pause),
+                SetPause: _playerPlaybackControlHost.SetPause,
                 StartHideStatusTimer: StartLiveDetectionHideStatusTimer));
     }
 

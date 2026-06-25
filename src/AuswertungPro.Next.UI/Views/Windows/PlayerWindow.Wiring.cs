@@ -11,14 +11,14 @@ public partial class PlayerWindow
     private DispatcherTimer CreateUpdateTimer()
         => PlayerWindowTimerFactory.CreateUpdateTimer(() =>
         {
-            if (_closing || _player is null) return;
+            if (_closing || _playbackDisposed) return;
             UpdateUi();
         });
 
     private DispatcherTimer CreateScrubTimer()
         => PlayerWindowTimerFactory.CreateScrubTimer(() =>
         {
-            if (_closing || _player is null) return;
+            if (_closing || _playbackDisposed) return;
             if (_isDragging)
                 ScrubSeekToSlider();
         });
