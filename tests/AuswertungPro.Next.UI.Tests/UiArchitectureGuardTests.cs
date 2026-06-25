@@ -336,21 +336,28 @@ public sealed class UiArchitectureGuardTests
         var markingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
         var segmentationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Segmentation.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "BendMarkerRenderer.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingBendMarkerOverlayController.cs");
         var tagsPath = Path.Combine(uiRoot, "Player", "OverlayTags.cs");
 
         Assert.True(File.Exists(rendererPath), "BendMarkerRenderer muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controllerPath), "Bend-Marker-Aufrufe sollen ueber einen Controller laufen.");
 
         var marking = File.ReadAllText(markingPath);
         var segmentation = File.Exists(segmentationPath) ? File.ReadAllText(segmentationPath) : string.Empty;
         var renderer = File.ReadAllText(rendererPath);
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : string.Empty;
         var tags = File.ReadAllText(tagsPath);
         var playerMarkingText = marking + segmentation;
 
         Assert.Contains("public const string BendMarker = \"bend_marker\"", tags);
-        Assert.Contains("BendMarkerRenderer.Show", segmentation);
-        Assert.Contains("BendMarkerRenderer.Clear", marking);
+        Assert.Contains("CodingBendMarkerOverlayController.Show", segmentation);
+        Assert.Contains("CodingBendMarkerOverlayController.Clear", marking);
+        Assert.DoesNotContain("BendMarkerRenderer.Show", segmentation);
+        Assert.DoesNotContain("BendMarkerRenderer.Clear", marking);
         Assert.DoesNotContain("OverlayTags.BendMarker", playerMarkingText);
         Assert.DoesNotContain("\"bend_marker\"", playerMarkingText);
+        Assert.Contains("BendMarkerRenderer.Show", controller);
+        Assert.Contains("BendMarkerRenderer.Clear", controller);
         Assert.Contains("OverlayTags.BendMarker", renderer);
         Assert.Contains("Text = \"Bogen erkannt\"", renderer);
         Assert.Contains("canvas.Children.Add", renderer);
@@ -4019,7 +4026,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingSamMaskOverlayController.RenderMasks", segmentation);
         Assert.DoesNotContain("Ai.Pipeline.SamMaskRenderer.RenderMasks", segmentation);
         Assert.Contains("SamMaskRenderer.RenderMasks", controller);
-        Assert.Contains("BendMarkerRenderer.Show", segmentation);
+        Assert.Contains("CodingBendMarkerOverlayController.Show", segmentation);
     }
 
     [Fact]

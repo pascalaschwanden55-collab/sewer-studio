@@ -51,7 +51,7 @@ public partial class PlayerWindow
             // Bei Boegen keine SAM-Maske zeigen; ein Marker am Fluchtpunkt ist stabiler.
             if (result.IsBend && LiveDetectionGeometryMapper.BoxContainsVanishingPoint(overlay, result.VanishX, result.VanishY))
             {
-                BendMarkerRenderer.Show(CodingOverlayCanvas, result.VanishX, result.VanishY, rect);
+                CodingBendMarkerOverlayController.Show(CodingOverlayCanvas, result.VanishX, result.VanishY, rect);
                 return;
             }
 

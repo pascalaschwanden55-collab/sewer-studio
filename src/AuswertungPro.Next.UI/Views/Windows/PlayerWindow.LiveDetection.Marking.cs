@@ -46,7 +46,7 @@ public partial class PlayerWindow
 
             // Nach dem Dialog alle transienten Markierungsartefakte entfernen.
             CodingSamMaskOverlayController.Clear(CodingOverlayCanvas);
-            BendMarkerRenderer.Clear(CodingOverlayCanvas);
+            CodingBendMarkerOverlayController.Clear(CodingOverlayCanvas);
             _codingSessionHost.ClearCurrentOverlay();
             RedrawCodingCanvas(includeManualOverlay: false);
 
