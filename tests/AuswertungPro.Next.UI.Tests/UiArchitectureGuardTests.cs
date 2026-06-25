@@ -6498,6 +6498,7 @@ public sealed class UiArchitectureGuardTests
         var defaultToolWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeDefaultToolWorkflow.cs");
         var showUiWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeShowUiWorkflow.cs");
         var backgroundServicesWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeBackgroundServicesWorkflow.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeCommandWorkflow.cs");
         var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
         var exitCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeExitCommandWorkflow.cs");
         var sessionStateCreationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSessionStateCreationWorkflow.cs");
@@ -6515,6 +6516,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(defaultToolWorkflowPath), "Coding-Mode-Default-Tool-Aktivierung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(showUiWorkflowPath), "Coding-Mode-UI-Anzeige-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(backgroundServicesWorkflowPath), "Coding-Mode-Background-Services-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(commandWorkflowPath), "Coding-Mode-Click-Gate soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(exitCommandWorkflowPath), "Coding-Mode-Exit-Befehl soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(sessionStateCreationWorkflowPath), "Coding-Session-State-Erzeugungsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
@@ -6533,6 +6535,7 @@ public sealed class UiArchitectureGuardTests
         var defaultToolWorkflow = File.Exists(defaultToolWorkflowPath) ? File.ReadAllText(defaultToolWorkflowPath) : "";
         var showUiWorkflow = File.Exists(showUiWorkflowPath) ? File.ReadAllText(showUiWorkflowPath) : "";
         var backgroundServicesWorkflow = File.Exists(backgroundServicesWorkflowPath) ? File.ReadAllText(backgroundServicesWorkflowPath) : "";
+        var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
         var enterWorkflow = File.Exists(enterWorkflowPath) ? File.ReadAllText(enterWorkflowPath) : "";
         var exitCommandWorkflow = File.Exists(exitCommandWorkflowPath) ? File.ReadAllText(exitCommandWorkflowPath) : "";
         var sessionStateCreationWorkflow = File.Exists(sessionStateCreationWorkflowPath) ? File.ReadAllText(sessionStateCreationWorkflowPath) : "";
@@ -6544,6 +6547,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void LoadExistingProtocolEventsAsImport", coding);
         Assert.DoesNotContain("private void LoadExistingProtocolEventsAsImport", lifecycle);
         Assert.Contains("private void CodingMode_Click", lifecycle);
+        Assert.Contains("CodingModeCommandWorkflow.Execute", lifecycle);
+        Assert.DoesNotContain("if (_haltungRecord == null)", lifecycle);
+        Assert.Contains("actions.ShowMissingHaltung()", commandWorkflow);
+        Assert.Contains("actions.EnterCodingMode()", commandWorkflow);
         Assert.Contains("private void EnterCodingMode", lifecycle);
         Assert.Contains("CodingModeEnterWorkflow.Execute", lifecycle);
         Assert.DoesNotContain("if (_isCodingMode || _haltungRecord == null) return", lifecycle);

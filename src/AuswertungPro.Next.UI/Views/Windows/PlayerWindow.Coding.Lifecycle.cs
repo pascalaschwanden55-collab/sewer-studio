@@ -7,13 +7,11 @@ public partial class PlayerWindow
 {
     private void CodingMode_Click(object sender, RoutedEventArgs e)
     {
-        if (_haltungRecord == null)
-        {
-            CodingModeDialogServiceFactory.Create().ShowMissingHaltung();
-            return;
-        }
-
-        EnterCodingMode();
+        CodingModeCommandWorkflow.Execute(
+            new CodingModeCommandRequest(_haltungRecord is not null),
+            new CodingModeCommandActions(
+                ShowMissingHaltung: () => CodingModeDialogServiceFactory.Create().ShowMissingHaltung(),
+                EnterCodingMode: EnterCodingMode));
     }
 
     private void EnterCodingMode()
