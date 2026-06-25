@@ -2100,12 +2100,16 @@ public sealed class UiArchitectureGuardTests
 
         Assert.True(File.Exists(controlsPath), "Inline-Defekt-Detail-Control-Mapping soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(selectionWorkflowPath), "Inline-Defekt-Auswahlentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.Contains("CodingInlineDefectSelectionWorkflow.Apply", detail);
+        Assert.Contains("CodingInlineDefectSelectionWorkflow.Execute", detail);
+        Assert.Contains("new CodingInlineDefectSelectionActions", detail);
         Assert.Contains("_codingSessionHost", detail);
         Assert.Contains("CodingDefectStatusDisplayPolicy.BuildInlineDetail", detail);
         Assert.Contains("_codingInlineDefectDetailControls.Apply(state)", detail);
         Assert.Contains("_codingInlineDefectDetailControls.Hide()", detail);
+        Assert.Contains("actions.UpdateInlineDefectDetail(selectedEvent)", selectionWorkflow);
+        Assert.Contains("actions.HideInlineDefectDetail()", selectionWorkflow);
         Assert.DoesNotContain("_codingVm", detail);
+        Assert.DoesNotContain("if (selection.SelectedEvent is not null)", detail);
         Assert.DoesNotContain("LstCodingEvents.SelectedItem is CodingEvent", detail);
         Assert.DoesNotContain("_codingVm.SelectedDefect = ev", detail);
         Assert.DoesNotContain("_codingVm.SelectedDefect = null", detail);
@@ -2119,6 +2123,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("BtnInlineAccept.Visibility = state.CanAct", controls);
         Assert.Contains("ImgInlineEvidencePreview.Source = null", controls);
         Assert.Contains("public static CodingInlineDefectSelectionResult Apply", selectionWorkflow);
+        Assert.Contains("public static CodingInlineDefectSelectionWorkflowResult Execute", selectionWorkflow);
+        Assert.Contains("actions.UpdateInlineDefectDetail(selectedEvent)", selectionWorkflow);
+        Assert.Contains("actions.HideInlineDefectDetail()", selectionWorkflow);
     }
 
     [Fact]

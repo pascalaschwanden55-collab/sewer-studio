@@ -12,16 +12,12 @@ public partial class PlayerWindow
     // Defekt-Detail-Panel, Aktionsbuttons und Listenfaerbung.
 
     private void CodingEvents_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        var selection = CodingInlineDefectSelectionWorkflow.Apply(
+        => CodingInlineDefectSelectionWorkflow.Execute(
             LstCodingEvents.SelectedItem,
-            _codingSessionHost.SelectDefect);
-
-        if (selection.SelectedEvent is not null)
-            UpdateInlineDefectDetail(selection.SelectedEvent);
-        else
-            HideInlineDefectDetail();
-    }
+            new CodingInlineDefectSelectionActions(
+                SetSelectedDefect: _codingSessionHost.SelectDefect,
+                UpdateInlineDefectDetail: UpdateInlineDefectDetail,
+                HideInlineDefectDetail: HideInlineDefectDetail));
 
     /// <summary>Mittlere Spalte: kompakte Defekt-Details inline anzeigen.</summary>
     private void UpdateInlineDefectDetail(CodingEvent ev)

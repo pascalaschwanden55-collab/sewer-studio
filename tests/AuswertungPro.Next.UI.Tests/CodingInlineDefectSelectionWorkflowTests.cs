@@ -8,6 +8,35 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingInlineDefectSelectionWorkflowTests
 {
     [Fact]
+    public void Execute_selects_coding_event_and_updates_inline_detail()
+    {
+        var ev = new CodingEvent { Entry = new ProtocolEntry { Code = "BAB" } };
+        var calls = new List<string>();
+
+        var result = CodingInlineDefectSelectionWorkflow.Execute(
+            ev,
+            Actions(calls));
+
+        Assert.Equal(CodingInlineDefectSelectionOutcome.DetailShown, result.Outcome);
+        Assert.Same(ev, result.SelectedEvent);
+        Assert.Equal(["select:BAB", "detail:BAB"], calls);
+    }
+
+    [Fact]
+    public void Execute_clears_selection_and_hides_inline_detail_for_non_event_item()
+    {
+        var calls = new List<string>();
+
+        var result = CodingInlineDefectSelectionWorkflow.Execute(
+            selectedItem: "not an event",
+            Actions(calls));
+
+        Assert.Equal(CodingInlineDefectSelectionOutcome.DetailHidden, result.Outcome);
+        Assert.Null(result.SelectedEvent);
+        Assert.Equal(["select:<null>", "hide"], calls);
+    }
+
+    [Fact]
     public void Apply_selects_coding_event_and_reports_detail_event()
     {
         var ev = new CodingEvent { Entry = new ProtocolEntry { Code = "BAB" } };
@@ -75,4 +104,10 @@ public sealed class CodingInlineDefectSelectionWorkflowTests
         Assert.NotNull(result);
         return result.GetType().GetProperty("SelectedEvent")?.GetValue(result) as CodingEvent;
     }
+
+    private static CodingInlineDefectSelectionActions Actions(List<string> calls)
+        => new(
+            SetSelectedDefect: ev => calls.Add($"select:{ev?.Entry.Code ?? "<null>"}"),
+            UpdateInlineDefectDetail: ev => calls.Add($"detail:{ev.Entry.Code}"),
+            HideInlineDefectDetail: () => calls.Add("hide"));
 }
