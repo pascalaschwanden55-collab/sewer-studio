@@ -47,16 +47,16 @@ public partial class PlayerWindow
 
     private void ToggleDetectionShortcut()
     {
-        if (_isCodingMode)
-        {
-            BtnCodingLiveAi.IsChecked = !(BtnCodingLiveAi.IsChecked == true);
-            CodingLiveAi_Click(BtnCodingLiveAi, new RoutedEventArgs());
-        }
-        else
-        {
-            LiveDetectionButton.IsChecked = !(LiveDetectionButton.IsChecked == true);
-            LiveDetection_Click(LiveDetectionButton, new RoutedEventArgs());
-        }
+        PlayerDetectionShortcutWorkflow.Execute(
+            new PlayerDetectionShortcutWorkflowRequest(
+                _isCodingMode,
+                BtnCodingLiveAi.IsChecked == true,
+                LiveDetectionButton.IsChecked == true),
+            new PlayerDetectionShortcutWorkflowActions(
+                SetCodingLiveAiChecked: isChecked => BtnCodingLiveAi.IsChecked = isChecked,
+                InvokeCodingLiveAi: () => CodingLiveAi_Click(BtnCodingLiveAi, new RoutedEventArgs()),
+                SetLiveDetectionChecked: isChecked => LiveDetectionButton.IsChecked = isChecked,
+                InvokeLiveDetection: () => LiveDetection_Click(LiveDetectionButton, new RoutedEventArgs())));
     }
 
     private void ToggleMarkToolShortcut()
