@@ -32,20 +32,22 @@ public partial class PlayerWindow
 
     private IReadOnlyList<SegmentedFinding> BuildCodingSegmentedFindings(SingleFrameResult mmResult)
     {
-        if (mmResult.SamResponse == null)
-            return Array.Empty<SegmentedFinding>();
+        var result = CodingSegmentedFindingsBuildWorkflow.Execute(
+            new CodingSegmentedFindingsBuildRequest(
+                Result: mmResult,
+                Calibration: _codingOverlayToolHost.Calibration),
+            new CodingSegmentedFindingsBuildActions(
+                BuildSegmentedFindings: (samResponse, dinoDetections, quantifiedMasks, proximityCalibration) =>
+                    SegmentedFindingBuilder.Build(
+                        samResponse,
+                        dinoDetections,
+                        quantifiedMasks,
+                        proximityCalibration.VanishX,
+                        proximityCalibration.VanishY,
+                        proximityCalibration.PipeRadiusNorm,
+                        MetrierungProximityThresholds.Default)));
 
-        var proximityCalibration = CodingPipeProximityCalibrationPolicy.Resolve(
-            _codingOverlayToolHost.Calibration);
-
-        return SegmentedFindingBuilder.Build(
-            mmResult.SamResponse,
-            mmResult.DinoDetections,
-            mmResult.QuantifiedMasks,
-            proximityCalibration.VanishX,
-            proximityCalibration.VanishY,
-            proximityCalibration.PipeRadiusNorm,
-            MetrierungProximityThresholds.Default);
+        return result.Segmented;
     }
 
     private Task<byte[]?> CaptureSnapshotAsync(CancellationToken ct)

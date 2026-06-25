@@ -1830,12 +1830,14 @@ public sealed class UiArchitectureGuardTests
         var singleModelWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSingleModelAnalysisWorkflow.cs");
         var multiModelStartWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelAnalysisStartWorkflow.cs");
         var multiModelInferenceWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelInferenceWorkflow.cs");
+        var segmentedFindingsWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSegmentedFindingsBuildWorkflow.cs");
 
         Assert.True(File.Exists(helpersPath), "Gemeinsame Coding-AI-Helper sollen aus dem Orchestrator-Partial heraus.");
         Assert.True(File.Exists(preflightWorkflowPath), "Coding-AI-Preflight-Entscheidungen sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(singleModelWorkflowPath), "Coding-AI-Single-Model-Ablauf soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(multiModelStartWorkflowPath), "Coding-AI-Multi-Model-Startablauf soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(multiModelInferenceWorkflowPath), "Coding-AI-Multi-Model-Inferenzablauf soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(segmentedFindingsWorkflowPath), "SegmentedFinding-Build-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var multiModel = File.ReadAllText(multiModelPath);
@@ -1844,6 +1846,7 @@ public sealed class UiArchitectureGuardTests
         var singleModelWorkflow = File.ReadAllText(singleModelWorkflowPath);
         var multiModelStartWorkflow = File.ReadAllText(multiModelStartWorkflowPath);
         var multiModelInferenceWorkflow = File.ReadAllText(multiModelInferenceWorkflowPath);
+        var segmentedFindingsWorkflow = File.ReadAllText(segmentedFindingsWorkflowPath);
 
         Assert.DoesNotContain("private async void CodingAnalyzeFrame_Click", ai);
         Assert.Contains("private void CodingAnalyzeFrame_Click", ai);
@@ -1864,7 +1867,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private IReadOnlyList<SegmentedFinding> BuildCodingSegmentedFindings", helpers);
         Assert.Contains("private Task<byte[]?> CaptureSnapshotAsync", helpers);
         Assert.Contains("CodingTerminalBoundaryCandidateBuilder.Enumerate", helpers);
+        Assert.Contains("CodingSegmentedFindingsBuildWorkflow.Execute", helpers);
         Assert.Contains("SegmentedFindingBuilder.Build", helpers);
+        Assert.DoesNotContain("if (mmResult.SamResponse == null)", helpers);
+        Assert.Contains("if (samResponse == null)", segmentedFindingsWorkflow);
+        Assert.Contains("CodingPipeProximityCalibrationPolicy.Resolve", segmentedFindingsWorkflow);
+        Assert.Contains("actions.BuildSegmentedFindings", segmentedFindingsWorkflow);
         Assert.Contains("_codingSessionHost", helpers);
         Assert.DoesNotContain("_codingVm", helpers);
         Assert.Contains("actions.IsAfterTerminalBoundary(framePosition)", preflightWorkflow);
@@ -4350,18 +4358,28 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var boundariesPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingBoundaryEventCommandWorkflow.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingBoundaryEventWorkflow.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingBoundaryPresencePolicy.cs");
 
+        Assert.True(File.Exists(commandWorkflowPath), "Boundary-Event-Guards sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(workflowPath), "Boundary-Event-Erzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(policyPath), "Boundary-Praesenzlogik muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var boundaries = File.ReadAllText(boundariesPath);
+        var commandWorkflow = File.ReadAllText(commandWorkflowPath);
         var workflow = File.ReadAllText(workflowPath);
         var policy = File.ReadAllText(policyPath);
 
+        Assert.Contains("CodingBoundaryEventCommandWorkflow.EnsureStart", boundaries);
+        Assert.Contains("CodingBoundaryEventCommandWorkflow.EnsureEnd", boundaries);
         Assert.Contains("CodingBoundaryEventWorkflow.EnsureStart", boundaries);
         Assert.Contains("CodingBoundaryEventWorkflow.EnsureEnd", boundaries);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel || _codingSessionRuntimeOwner.Service == null) return", boundaries);
+        Assert.DoesNotContain("if (viewEvents is null) return", boundaries);
+        Assert.Contains("if (!request.HasCodingViewModel", commandWorkflow);
+        Assert.Contains("request.CodingSessionService == null", commandWorkflow);
+        Assert.Contains("request.ViewEvents == null", commandWorkflow);
         Assert.DoesNotContain("CodingBoundaryPresencePolicy.CountExisting", boundaries);
         Assert.DoesNotContain("CodingBoundaryPresencePolicy.ExistsInView", boundaries);
         Assert.Contains("CodingBoundaryPresencePolicy.CountExisting", workflow);
@@ -4379,18 +4397,25 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var boundariesPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingBoundaryEventCommandWorkflow.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingBoundaryEventWorkflow.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingBoundaryImportReferencePolicy.cs");
 
+        Assert.True(File.Exists(commandWorkflowPath), "Boundary-Event-Requestaufbau soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(workflowPath), "Boundary-Event-Erzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(policyPath), "Import-Referenzlogik fuer BCD/BCE muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var boundaries = File.ReadAllText(boundariesPath);
+        var commandWorkflow = File.ReadAllText(commandWorkflowPath);
         var workflow = File.ReadAllText(workflowPath);
         var policy = File.ReadAllText(policyPath);
 
+        Assert.Contains("CodingBoundaryEventCommandWorkflow.EnsureStart", boundaries);
+        Assert.Contains("CodingBoundaryEventCommandWorkflow.EnsureEnd", boundaries);
         Assert.Contains("CodingBoundaryEventWorkflow.EnsureStart", boundaries);
         Assert.Contains("CodingBoundaryEventWorkflow.EnsureEnd", boundaries);
+        Assert.Contains("new CodingBoundaryStartEventWorkflowRequest", commandWorkflow);
+        Assert.Contains("new CodingBoundaryEndEventWorkflowRequest", commandWorkflow);
         Assert.DoesNotContain("CodingBoundaryImportReferencePolicy.ResolveStart", boundaries);
         Assert.DoesNotContain("CodingBoundaryImportReferencePolicy.ResolveEnd", boundaries);
         Assert.Contains("CodingBoundaryImportReferencePolicy.ResolveStart", workflow);
@@ -5294,13 +5319,17 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Helpers.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingPipeProximityCalibrationPolicy.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSegmentedFindingsBuildWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Kalibrierableitung fuer SegmentedFinding-Proximity muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "SegmentedFinding-Build soll die Kalibrierableitung ausserhalb der PlayerWindow-Partials orchestrieren.");
 
         var ai = File.ReadAllText(aiPath);
         var policy = File.ReadAllText(policyPath);
+        var workflow = File.ReadAllText(workflowPath);
 
-        Assert.Contains("CodingPipeProximityCalibrationPolicy.Resolve", ai);
+        Assert.DoesNotContain("CodingPipeProximityCalibrationPolicy.Resolve", ai);
+        Assert.Contains("CodingPipeProximityCalibrationPolicy.Resolve", workflow);
         Assert.DoesNotContain("cal?.PipeCenter.X", ai);
         Assert.DoesNotContain("cal.NormalizedDiameter / 2.0", ai);
         Assert.Contains("public static CodingPipeProximityCalibration Resolve", policy);
