@@ -92,9 +92,12 @@ public partial class PlayerWindow
 
     private void UpdateCodingStatistics()
     {
-        CodingEventsRefreshWorkflow.RefreshStatistics(
-            _codingSessionHost.HasViewModel ? _codingSessionHost.Events : null,
-            _codingStatisticsControls,
-            CodingSessionViewModel.GetDefectStatus);
+        CodingStatisticsUpdateCommandWorkflow.Execute(
+            new CodingStatisticsUpdateCommandRequest(_codingSessionHost.HasViewModel),
+            new CodingStatisticsUpdateCommandActions(
+                RefreshStatistics: () => CodingEventsRefreshWorkflow.RefreshStatistics(
+                    _codingSessionHost.Events,
+                    _codingStatisticsControls,
+                    CodingSessionViewModel.GetDefectStatus)));
     }
 }

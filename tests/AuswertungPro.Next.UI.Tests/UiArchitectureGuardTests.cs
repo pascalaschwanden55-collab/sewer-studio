@@ -497,6 +497,7 @@ public sealed class UiArchitectureGuardTests
         var refreshPolicyPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsRefreshPolicy.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventsRefreshWorkflow.cs");
         var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventsListRefreshCommandWorkflow.cs");
+        var statisticsCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingStatisticsUpdateCommandWorkflow.cs");
         var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingUiUpdateWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Coding-Statistik-Berechnung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -504,6 +505,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(refreshPolicyPath), "Coding-Statistik-Refresh-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Coding-Eventlisten-Refresh soll Sortierung und Statistik ausserhalb der PlayerWindow-Partials koordinieren.");
         Assert.True(File.Exists(commandWorkflowPath), "Coding-Eventlisten-Refresh-Befehl soll die Colorize-Reihenfolge ausserhalb der PlayerWindow-Partials koordinieren.");
+        Assert.True(File.Exists(statisticsCommandWorkflowPath), "Coding-Statistik-Refresh-Gate soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(uiUpdateWorkflowPath), "Coding-UI-Refresh-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var events = File.ReadAllText(eventsPath);
@@ -514,9 +516,12 @@ public sealed class UiArchitectureGuardTests
         var refreshPolicy = File.ReadAllText(refreshPolicyPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
+        var statisticsCommandWorkflow = File.Exists(statisticsCommandWorkflowPath) ? File.ReadAllText(statisticsCommandWorkflowPath) : "";
         var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
 
+        Assert.Contains("CodingStatisticsUpdateCommandWorkflow.Execute", events);
         Assert.Contains("CodingEventsRefreshWorkflow.RefreshStatistics", events);
+        Assert.DoesNotContain("_codingSessionHost.HasViewModel ? _codingSessionHost.Events : null", events);
         Assert.DoesNotContain("CodingStatisticsPolicy.Build", events);
         Assert.DoesNotContain("_codingStatisticsControls.Apply(summary)", events);
         Assert.Contains("CodingUiUpdateWorkflow.Apply", navigation);
@@ -529,6 +534,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("TxtCodingStatAutoAccepted.Text", events);
         Assert.Contains("CodingEventsListRefreshCommandWorkflow.Execute", events);
         Assert.DoesNotContain("if (!CodingEventsRefreshWorkflow.RefreshListAndStatistics", events);
+        Assert.Contains("public static class CodingStatisticsUpdateCommandWorkflow", statisticsCommandWorkflow);
+        Assert.Contains("if (!request.HasCodingViewModel)", statisticsCommandWorkflow);
+        Assert.Contains("actions.RefreshStatistics()", statisticsCommandWorkflow);
         Assert.Contains("public static CodingStatisticsSummary Build", policy);
         Assert.Contains("public sealed class CodingStatisticsControls", controls);
         Assert.Contains("_totalCount.Text", controls);
