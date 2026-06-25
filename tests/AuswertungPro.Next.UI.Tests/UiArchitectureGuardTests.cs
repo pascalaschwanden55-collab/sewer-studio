@@ -6475,15 +6475,20 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var playerCodingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "CodingOverlayViewportSizePolicy.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayViewportController.cs");
 
         Assert.True(File.Exists(policyPath), "Overlay-Viewport-Groessenentscheidung muss ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(controllerPath), "Overlay-Viewport-Anwendung soll ausserhalb von PlayerWindow liegen.");
 
         var playerCoding = File.ReadAllText(playerCodingPath);
         var policy = File.ReadAllText(policyPath);
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
 
-        Assert.Contains("CodingOverlayViewportSizePolicy.Build", playerCoding);
+        Assert.Contains("CodingOverlayViewportController.Update", playerCoding);
+        Assert.DoesNotContain("CodingOverlayViewportSizePolicy.Build", playerCoding);
         Assert.DoesNotContain("double.IsNaN(w)", playerCoding);
         Assert.Contains("public static CodingOverlayViewportSizeUpdate Build", policy);
+        Assert.Contains("CodingOverlayViewportSizePolicy.Build", controller);
     }
 
     [Fact]

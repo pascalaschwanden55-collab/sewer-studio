@@ -13,21 +13,13 @@ public partial class PlayerWindow
     /// Wichtig fÃ¼r Popup-Overlay Ã¼ber VLC (HwndHost/Airspace).
     /// </summary>
     private void UpdateCodingOverlayViewport()
-    {
-        var update = CodingOverlayViewportSizePolicy.Build(
+        => CodingOverlayViewportController.Update(
             VideoView.ActualWidth,
             VideoView.ActualHeight,
             CodingOverlayCanvas.Width,
-            CodingOverlayCanvas.Height);
-
-        if (!update.IsValid)
-            return;
-
-        if (update.Width.HasValue)
-            CodingOverlayCanvas.Width = update.Width.Value;
-        if (update.Height.HasValue)
-            CodingOverlayCanvas.Height = update.Height.Value;
-    }
+            CodingOverlayCanvas.Height,
+            width => CodingOverlayCanvas.Width = width,
+            height => CodingOverlayCanvas.Height = height);
 
     // --- Coding Navigation ---
 

@@ -43,6 +43,38 @@ public sealed class CodingOverlayViewportMapperTests
     }
 
     [Fact]
+    public void UpdateViewport_applies_only_canvas_dimensions_that_need_resizing()
+    {
+        var calls = new List<string>();
+
+        CodingOverlayViewportController.Update(
+            videoWidth: 640,
+            videoHeight: 480,
+            canvasWidth: 600,
+            canvasHeight: 480.2,
+            setCanvasWidth: value => calls.Add($"width:{value}"),
+            setCanvasHeight: value => calls.Add($"height:{value}"));
+
+        Assert.Equal(["width:640"], calls);
+    }
+
+    [Fact]
+    public void UpdateViewport_ignores_invalid_video_dimensions()
+    {
+        var calls = new List<string>();
+
+        CodingOverlayViewportController.Update(
+            videoWidth: double.NaN,
+            videoHeight: 480,
+            canvasWidth: 600,
+            canvasHeight: 470,
+            setCanvasWidth: value => calls.Add($"width:{value}"),
+            setCanvasHeight: value => calls.Add($"height:{value}"));
+
+        Assert.Empty(calls);
+    }
+
+    [Fact]
     public void GetContentRect_uses_full_canvas_when_video_aspect_is_unknown()
     {
         var rect = CodingOverlayViewportMapper.GetContentRect(640, 480, 0);
