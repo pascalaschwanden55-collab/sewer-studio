@@ -15,7 +15,7 @@ public partial class PlayerWindow
         if (playerWindow is null || playerWindow._closing || playerWindow._playbackDisposed)
             return false;
         var currentTime = playerWindow._playerTimelineHost.CurrentTime;
-        if (playerWindow._player is null || !playerWindow._player.IsPlaying && (!currentTime.HasValue || currentTime.Value <= TimeSpan.Zero))
+        if (!playerWindow._playerPlaybackControlHost.IsPlaying && (!currentTime.HasValue || currentTime.Value <= TimeSpan.Zero))
             return false;
 
         try
@@ -39,8 +39,8 @@ public partial class PlayerWindow
         try
         {
             wasPlaying = PlayerSnapshotPauseStarter.PauseIfPlaying(
-                _player.IsPlaying,
-                _player.SetPause);
+                _playerPlaybackControlHost.IsPlaying,
+                _playerPlaybackControlHost.SetPause);
             if (_closing || _playbackDisposed)
                 return false;
 
@@ -57,7 +57,7 @@ public partial class PlayerWindow
                 wasPlaying,
                 _closing,
                 _playbackDisposed,
-                _player.SetPause);
+                _playerPlaybackControlHost.SetPause);
         }
     }
 }

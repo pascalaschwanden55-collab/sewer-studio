@@ -1114,6 +1114,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_snapshot_pause_uses_playback_control_host()
+    {
+        var root = FindRepositoryRoot();
+        var snapshotPath = Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Windows",
+            "PlayerWindow.Playback.Snapshot.cs");
+
+        Assert.True(File.Exists(snapshotPath), "Snapshot-Playback-Pause soll im Snapshot-Partial liegen.");
+
+        var snapshot = File.ReadAllText(snapshotPath);
+
+        Assert.Contains("_playerPlaybackControlHost", snapshot);
+        Assert.DoesNotContain("_player.IsPlaying", snapshot);
+        Assert.DoesNotContain("_player.SetPause", snapshot);
+    }
+
+    [Fact]
     public void PlayerWindow_overlay_input_mouseflow_keeps_only_direct_dependencies()
     {
         var root = FindRepositoryRoot();
