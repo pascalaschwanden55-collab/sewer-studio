@@ -964,25 +964,32 @@ public sealed class UiArchitectureGuardTests
         var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
         var importPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Import.cs");
         var mapperPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEventMapper.cs");
+        var importWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingExistingProtocolImportEventsWorkflow.cs");
         var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(importPath), "Import-Referenz-Laden soll in einem eigenen Lifecycle-Partial liegen.");
+        Assert.True(File.Exists(importWorkflowPath), "Import-Referenz-Mapping und Count-Update sollen ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var lifecycle = File.ReadAllText(lifecyclePath);
         var import = File.ReadAllText(importPath);
         var mapper = File.ReadAllText(mapperPath);
+        var importWorkflow = File.ReadAllText(importWorkflowPath);
         var enterWorkflow = File.ReadAllText(enterWorkflowPath);
 
         Assert.Contains("LoadExistingProtocolEventsAsImport: LoadExistingProtocolEventsAsImport", lifecycle);
         Assert.Contains("actions.LoadExistingProtocolEventsAsImport()", enterWorkflow);
         Assert.DoesNotContain("CodingProtocolEventMapper.BuildMissingImportEvents", lifecycle);
-        Assert.Contains("CodingProtocolEventMapper.BuildMissingImportEvents", import);
-        Assert.Contains("CodingProtocolEventCollectionAppender.Append", import);
+        Assert.Contains("CodingExistingProtocolImportEventsWorkflow.Execute", import);
+        Assert.DoesNotContain("CodingProtocolEventMapper.BuildMissingImportEvents", import);
+        Assert.DoesNotContain("CodingProtocolEventCollectionAppender.Append", import);
         Assert.DoesNotContain("_codingImportEvents.Add", import);
         Assert.DoesNotContain("new CodingEvent", import);
         Assert.DoesNotContain("!e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code)", import);
         Assert.Contains("public static IReadOnlyList<CodingEvent> BuildMissingImportEvents", mapper);
+        Assert.Contains("CodingProtocolEventMapper.BuildMissingImportEvents", importWorkflow);
+        Assert.Contains("CodingProtocolEventCollectionAppender.Append", importWorkflow);
+        Assert.Contains("actions.SetImportCount(totalCount)", importWorkflow);
     }
 
     [Fact]

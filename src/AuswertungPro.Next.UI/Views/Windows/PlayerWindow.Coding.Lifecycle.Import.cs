@@ -10,14 +10,13 @@ public partial class PlayerWindow
     /// </summary>
     private void LoadExistingProtocolEventsAsImport()
     {
-        if (_haltungRecord?.Protocol?.Current?.Entries == null) return;
-
-        CodingProtocolEventCollectionAppender.Append(
-            _codingImportEvents,
-            CodingProtocolEventMapper.BuildMissingImportEvents(
-                _haltungRecord.Protocol,
-                _codingImportEvents));
-
-        CodingImportReferenceControls.SetCount(RunImportDefectCount, _codingImportEvents.Count);
+        CodingExistingProtocolImportEventsWorkflow.Execute(
+            new CodingExistingProtocolImportEventsWorkflowRequest(
+                _haltungRecord?.Protocol,
+                _codingImportEvents),
+            new CodingExistingProtocolImportEventsWorkflowActions(
+                SetImportCount: count => CodingImportReferenceControls.SetCount(
+                    RunImportDefectCount,
+                    count)));
     }
 }
