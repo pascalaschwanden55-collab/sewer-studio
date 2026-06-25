@@ -22,36 +22,39 @@ public partial class PlayerWindow
         SchemaType? schemaType = null,
         LevelMode? levelMode = null)
     {
-        if (!_codingOverlayToolHost.HasOverlayService || !_codingSessionHost.HasViewModel) return;
-        _codingIsCalibrating = false;
-        _codingCalibStart = null;
-
-        ToolsDropdownPopup.IsOpen = false;
-
         var btnName = (activeBtn as FrameworkElement)?.Name ?? "";
         var label = (activeBtn as ContentControl)?.Content?.ToString() ?? tool.ToString();
-        var selection = CodingToolSelectionPolicy.Build(
-            _activeCodingToolName,
-            btnName,
-            label,
-            tool,
-            schemaType,
-            levelMode);
 
-        _activeCodingToolName = selection.ActiveToolName;
-        if (selection.LevelModeToApply.HasValue)
-            _codingOverlayToolHost.SetActiveLevelMode(selection.LevelModeToApply.Value);
-
-        _codingOverlayToolHost.SetActiveTool(selection.ActiveTool);
-        _codingSchemaType = selection.ActiveSchemaType;
-        _codingSchemaManager.Cancel();
-
-        CodingOverlayInputControls.ApplyActiveToolSelection(TxtActiveToolLabel, BtnCodingCreateEvent, selection.LabelText);
-
-        _codingSessionHost.ClearCurrentOverlay();
-        UpdateCodingOverlayInfo(null);
-        UpdateCodingOverlayCursor();
-        RedrawCodingCanvas(includeManualOverlay: false);
+        CodingToolSelectionWorkflow.Execute(
+            new CodingToolSelectionWorkflowRequest(
+                _codingOverlayToolHost.HasOverlayService,
+                _codingSessionHost.HasViewModel,
+                _activeCodingToolName,
+                btnName,
+                label,
+                tool,
+                schemaType,
+                levelMode),
+            new CodingToolSelectionWorkflowActions(
+                ResetCalibration: () =>
+                {
+                    _codingIsCalibrating = false;
+                    _codingCalibStart = null;
+                },
+                CloseToolsDropdown: () => { ToolsDropdownPopup.IsOpen = false; },
+                SetActiveToolName: activeToolName => _activeCodingToolName = activeToolName,
+                SetActiveLevelMode: mode => { _codingOverlayToolHost.SetActiveLevelMode(mode); },
+                SetActiveTool: activeTool => { _codingOverlayToolHost.SetActiveTool(activeTool); },
+                SetActiveSchemaType: activeSchemaType => _codingSchemaType = activeSchemaType,
+                CancelSchema: _codingSchemaManager.Cancel,
+                ApplyActiveToolSelection: labelText => CodingOverlayInputControls.ApplyActiveToolSelection(
+                    TxtActiveToolLabel,
+                    BtnCodingCreateEvent,
+                    labelText),
+                ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
+                ClearOverlayInfo: () => UpdateCodingOverlayInfo(null),
+                UpdateOverlayCursor: UpdateCodingOverlayCursor,
+                RedrawCodingCanvas: includeManualOverlay => RedrawCodingCanvas(includeManualOverlay)));
     }
 
     private void CodingScreenshot_Click(object sender, RoutedEventArgs e)
