@@ -5194,6 +5194,52 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_and_live_detection_pause_uses_playback_control_host()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var hostPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackControlHost.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
+        var paths = new[]
+        {
+            "PlayerWindow.Coding.Confirmation.cs",
+            "PlayerWindow.Coding.EventDetails.Actions.cs",
+            "PlayerWindow.Coding.Eingabemarker.cs",
+            "PlayerWindow.Coding.Events.cs",
+            "PlayerWindow.Coding.Events.Actions.cs",
+            "PlayerWindow.Coding.Lifecycle.Ui.cs",
+            "PlayerWindow.Coding.Navigation.cs",
+            "PlayerWindow.LiveDetection.Confirmation.cs",
+            "PlayerWindow.LiveDetection.Marking.Catalog.cs",
+            "PlayerWindow.LiveDetection.MarkTools.cs"
+        };
+
+        Assert.True(File.Exists(hostPath), "Pause/Resume-Zugriffe sollen ueber einen Playback-Control-Host laufen.");
+
+        var state = File.ReadAllText(statePath);
+        var windowRoot = File.ReadAllText(windowRootPath);
+        var host = File.ReadAllText(hostPath);
+
+        Assert.Contains("private readonly PlayerPlaybackControlHost _playerPlaybackControlHost", state);
+        Assert.Contains("new PlayerPlaybackControlHost", windowRoot);
+        Assert.Contains("public sealed class PlayerPlaybackControlHost", host);
+
+        foreach (var fileName in paths)
+        {
+            var path = Path.Combine(windowsRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} muss als PlayerWindow-Partial existieren.");
+
+            var text = File.ReadAllText(path);
+            Assert.Contains("_playerPlaybackControlHost", text);
+            Assert.DoesNotContain("_player.SetPause", text);
+            Assert.DoesNotContain("_player.IsPlaying", text);
+            Assert.DoesNotContain("_player.Play()", text);
+        }
+    }
+
+    [Fact]
     public void Player_timeline_overlay_controllers_seek_through_timeline_host()
     {
         var root = FindRepositoryRoot();

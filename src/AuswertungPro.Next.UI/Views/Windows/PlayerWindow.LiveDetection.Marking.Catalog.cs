@@ -21,7 +21,7 @@ public partial class PlayerWindow
         if (canvasSize.Width < 60 || canvasSize.Height < 60)
             return;
 
-        PlayerManualMarkPlayback.PauseForManualMarking(pause => _player.SetPause(pause));
+        PlayerManualMarkPlayback.PauseForManualMarking(_playerPlaybackControlHost.SetPause);
 
         var clockPosition = LiveDetectionGeometryMapper.ClickToClockPosition(clickPoint, canvasSize);
         var timestampSec = _playerTimelineHost.CurrentSecondsOrZero;
@@ -32,7 +32,7 @@ public partial class PlayerWindow
 
     private void OnFindingClicked(LiveFrameFinding finding, double timestampSec)
     {
-        PlayerManualMarkPlayback.PauseForManualMarking(pause => _player.SetPause(pause));
+        PlayerManualMarkPlayback.PauseForManualMarking(_playerPlaybackControlHost.SetPause);
         OpenCodeCatalogForMark(
             finding.PositionClock,
             timestampSec,

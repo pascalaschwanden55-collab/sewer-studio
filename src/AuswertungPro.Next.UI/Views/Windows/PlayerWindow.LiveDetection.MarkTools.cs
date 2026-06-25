@@ -33,7 +33,7 @@ public partial class PlayerWindow
     {
         _markToolControls.BeginActivation(label);
         _markToolType = tool;
-        PlayerManualMarkPlayback.PauseForManualMarking(pause => _player.SetPause(pause));
+        PlayerManualMarkPlayback.PauseForManualMarking(_playerPlaybackControlHost.SetPause);
         _codingSchemaManager.Cancel();
         _codingSchemaType = null;
 

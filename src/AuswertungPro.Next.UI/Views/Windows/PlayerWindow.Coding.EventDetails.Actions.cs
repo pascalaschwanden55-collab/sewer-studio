@@ -34,7 +34,7 @@ public partial class PlayerWindow
             return;
 
         _codingSessionHost.SelectDefect(ev);
-        PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause));
+        PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause);
         SuspendCodingOverlayInput();
 
         try

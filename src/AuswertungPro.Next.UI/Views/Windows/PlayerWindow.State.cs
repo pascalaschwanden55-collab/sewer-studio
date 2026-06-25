@@ -27,6 +27,7 @@ public partial class PlayerWindow
     private readonly PlayerPositionControls _positionControls;
     private readonly PlayerSpeedControls _speedControls;
     private readonly PlayerTimelineHost _playerTimelineHost;
+    private readonly PlayerPlaybackControlHost _playerPlaybackControlHost;
     private readonly PlayerMarkToolControls _markToolControls;
     private readonly DamageMarkerController _damageMarkerController;
     private readonly QuickScanController _quickScanController;

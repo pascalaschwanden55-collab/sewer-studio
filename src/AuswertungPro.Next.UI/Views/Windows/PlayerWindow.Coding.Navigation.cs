@@ -96,7 +96,7 @@ public partial class PlayerWindow
                     _codingSessionHost.HasViewModel ? _codingSessionHost : null,
                     executeMoveCommand,
                     () => _codingNavPending = true,
-                    () => PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause)),
+                    () => PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause),
                     () =>
                     {
                         _codingOsdMeterController.ResetRecentMeter();

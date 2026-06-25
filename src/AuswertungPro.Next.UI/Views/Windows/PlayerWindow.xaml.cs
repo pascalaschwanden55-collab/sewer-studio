@@ -58,6 +58,11 @@ public partial class PlayerWindow : Window
             readLengthMilliseconds: () => _player.Length,
             seekMilliseconds: milliseconds => _player.Time = milliseconds);
 
+        _playerPlaybackControlHost = new PlayerPlaybackControlHost(
+            readIsPlaying: () => _player.IsPlaying,
+            setPause: pause => _player.SetPause(pause),
+            play: () => _player.Play());
+
         _damageMarkerController = new DamageMarkerController(
             DamageMarkerCanvas,
             PositionSlider,

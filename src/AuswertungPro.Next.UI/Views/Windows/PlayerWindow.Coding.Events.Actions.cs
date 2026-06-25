@@ -13,7 +13,7 @@ public partial class PlayerWindow
     {
         if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
 
-        PlayerCodingPlayback.PauseForCodingInteraction(pause => _player.SetPause(pause));
+        PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause);
         SuspendCodingOverlayInput();
 
         var entry = codingEvent.Entry;

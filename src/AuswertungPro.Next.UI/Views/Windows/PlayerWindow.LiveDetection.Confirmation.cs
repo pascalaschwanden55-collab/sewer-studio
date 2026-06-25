@@ -15,8 +15,8 @@ public partial class PlayerWindow
         // Video pausieren und zur Fundstelle springen
         if (_player != null)
             PlayerConfirmationPlayback.PauseLiveDetectionConfirmation(
-                _player.IsPlaying,
-                pause => _player.SetPause(pause));
+                _playerPlaybackControlHost.IsPlaying,
+                _playerPlaybackControlHost.SetPause);
 
         // Zur Fundstelle springen (Timestamp aus dem analysierten Frame)
         if (_detectionConfirmationBuffer.TimestampSeconds.HasValue)
@@ -38,7 +38,7 @@ public partial class PlayerWindow
         LiveDetectionStatusControls.HideDetectionConfirmation(DetectionConfirmationPanel);
 
         // Video automatisch weiterlaufen lassen nach Entscheidung
-        if (_player != null && !_player.IsPlaying)
-            _player.Play();
+        if (!_playerPlaybackControlHost.IsPlaying)
+            _playerPlaybackControlHost.Play();
     }
 }

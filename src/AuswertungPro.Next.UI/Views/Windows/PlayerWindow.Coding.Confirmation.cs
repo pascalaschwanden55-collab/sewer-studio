@@ -24,7 +24,7 @@ public partial class PlayerWindow
 
     private void PauseAndAskConfirmation(CodingEvent codingEvent, QualityGateResult gateResult)
     {
-        PlayerConfirmationPlayback.PauseCodingConfirmation(pause => _player.SetPause(pause));
+        PlayerConfirmationPlayback.PauseCodingConfirmation(_playerPlaybackControlHost.SetPause);
         _codingSessionRuntimeOwner.Service?.SetWaitingForInput();
 
         _codingPendingConfirmEvent = codingEvent;
@@ -92,7 +92,7 @@ public partial class PlayerWindow
             _codingSessionRuntimeOwner.Service,
             BtnCodingLiveAi.IsChecked == true,
             _codingAiRuntimeOwner.Controller.ModelName,
-            pause => _player.SetPause(pause));
+            _playerPlaybackControlHost.SetPause);
 
         SetCodingAiState(result.Status.StatusText, PlayerStatusColors.Success, result.Status.DetailText);
     }
