@@ -17,17 +17,21 @@ public partial class PlayerWindow
 
     private void UpdateCodingUi(string? propertyName)
     {
-        if (!_codingSessionHost.HasViewModel) return;
-
-        var result = CodingUiUpdateWorkflow.Apply(
-            propertyName,
-            _codingNavPending,
-            new CodingUiUpdateActions(
-                ApplyMeterTimeline: () => CodingMeterTimelineControls.Apply(TxtCodingMeter, PipeTimeline, _codingSessionHost.CurrentMeter),
-                SyncVideoToCodingMeter: SyncVideoToCodingMeter,
-                UpdateOverlayInfo: () => UpdateCodingOverlayInfo(_codingSessionHost.CurrentOverlay),
-                UpdateCurrentCode: UpdateCodingCurrentCode,
-                UpdateStatistics: UpdateCodingStatistics));
+        var result = CodingUiUpdateCommandWorkflow.Execute(
+            new CodingUiUpdateCommandRequest(
+                _codingSessionHost.HasViewModel,
+                propertyName,
+                _codingNavPending),
+            new CodingUiUpdateCommandActions(
+                ApplyUiUpdate: (changedPropertyName, navigationPending) => CodingUiUpdateWorkflow.Apply(
+                    changedPropertyName,
+                    navigationPending,
+                    new CodingUiUpdateActions(
+                        ApplyMeterTimeline: () => CodingMeterTimelineControls.Apply(TxtCodingMeter, PipeTimeline, _codingSessionHost.CurrentMeter),
+                        SyncVideoToCodingMeter: SyncVideoToCodingMeter,
+                        UpdateOverlayInfo: () => UpdateCodingOverlayInfo(_codingSessionHost.CurrentOverlay),
+                        UpdateCurrentCode: UpdateCodingCurrentCode,
+                        UpdateStatistics: UpdateCodingStatistics))));
         _codingNavPending = result.NavigationPending;
     }
 
