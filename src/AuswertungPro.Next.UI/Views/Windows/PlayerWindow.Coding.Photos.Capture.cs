@@ -30,12 +30,7 @@ public partial class PlayerWindow
     }
 
     private TimeSpan? GetCurrentPlayerTimestamp()
-    {
-        if (_player == null || _player.Time < 0)
-            return null;
-
-        return TimeSpan.FromMilliseconds(_player.Time);
-    }
+        => _playerTimelineHost.CurrentTime;
 
     private string? CodingCaptureSnapshot(ProtocolEntry entry)
     {

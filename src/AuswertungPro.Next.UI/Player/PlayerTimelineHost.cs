@@ -28,7 +28,14 @@ public sealed class PlayerTimelineHost
 
     public double? DurationSeconds => LengthMilliseconds / 1000.0;
 
+    public TimeSpan? CurrentTime
+        => TimeMilliseconds is { } milliseconds && milliseconds >= 0
+            ? TimeSpan.FromMilliseconds(milliseconds)
+            : null;
+
     public TimeSpan CurrentTimeOrZero => TimeSpan.FromMilliseconds(CurrentMillisecondsOrZero());
+
+    public TimeSpan DurationTimeOrZero => TimeSpan.FromMilliseconds(DurationMillisecondsOrZero());
 
     public double CurrentSecondsOrZero => CurrentMillisecondsOrZero() / 1000.0;
 
@@ -37,4 +44,7 @@ public sealed class PlayerTimelineHost
 
     private double CurrentMillisecondsOrZero()
         => Math.Max(0, TimeMilliseconds ?? 0);
+
+    private double DurationMillisecondsOrZero()
+        => Math.Max(0, LengthMilliseconds ?? 0);
 }

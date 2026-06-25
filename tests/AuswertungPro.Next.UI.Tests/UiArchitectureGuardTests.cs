@@ -5115,6 +5115,32 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_remaining_coding_timeline_partials_read_player_timeline_through_host()
+    {
+        var root = FindRepositoryRoot();
+        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var paths = new[]
+        {
+            "PlayerWindow.Coding.Navigation.cs",
+            "PlayerWindow.Coding.Lifecycle.Exit.cs",
+            "PlayerWindow.Coding.Photos.Capture.cs"
+        };
+
+        foreach (var fileName in paths)
+        {
+            var path = Path.Combine(windowsRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} muss als PlayerWindow-Partial existieren.");
+
+            var text = File.ReadAllText(path);
+            Assert.Contains("_playerTimelineHost", text);
+            Assert.DoesNotContain("_player.Time", text);
+            Assert.DoesNotContain("_player.Length", text);
+            Assert.DoesNotContain("_player?.Time", text);
+            Assert.DoesNotContain("_player?.Length", text);
+        }
+    }
+
+    [Fact]
     public void PlayerWindow_coding_lifecycle_lives_in_lifecycle_partial()
     {
         var root = FindRepositoryRoot();

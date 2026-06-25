@@ -57,8 +57,8 @@ public partial class PlayerWindow
             ? 0
             : CodingVideoNavigationController.ResolveDisplayMeter(
                 _codingOsdMeterController.LastMeter,
-                _player.Time,
-                _player.Length,
+                _playerTimelineHost.TimeMilliseconds ?? 0,
+                _playerTimelineHost.LengthMilliseconds ?? 0,
                 _codingSessionHost.EndMeter,
                 _codingSessionHost.CurrentMeter);
 
@@ -68,9 +68,9 @@ public partial class PlayerWindow
         CodingVideoNavigationController.SyncVideoToCodingMeter(
             _codingSessionHost.CurrentMeter,
             _codingSessionHost.EndMeter,
-            _player.Length,
-            targetMs => _player.Time = targetMs,
-            () => _player.Time,
+            _playerTimelineHost.LengthMilliseconds ?? 0,
+            _playerTimelineHost.SeekMilliseconds,
+            () => _playerTimelineHost.TimeMilliseconds ?? 0,
             _codingSessionHost.SetCurrentVideoTime);
     }
 

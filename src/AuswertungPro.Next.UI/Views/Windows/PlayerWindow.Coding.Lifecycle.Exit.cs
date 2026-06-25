@@ -19,7 +19,7 @@ public partial class PlayerWindow
                 _codingSessionHost.EventCollection,
                 _codingOsdMeterController.LastMeter,
                 _codingSessionHost.EndMeter,
-                TimeSpan.FromMilliseconds(_player?.Length ?? 0),
+                _playerTimelineHost.DurationTimeOrZero,
                 _detectionConfirmationBuffer.FrameBytes),
             new CodingModeExitFinalizationWorkflowActions(
                 CloseTrackedStreckenschaeden,

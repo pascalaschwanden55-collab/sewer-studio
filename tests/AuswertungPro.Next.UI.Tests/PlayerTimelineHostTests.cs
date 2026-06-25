@@ -35,7 +35,7 @@ public sealed class PlayerTimelineHostTests
     [Theory]
     [InlineData(null, 0)]
     [InlineData(-250L, 0)]
-    [InlineData(12_500L, 12_500)]
+    [InlineData(12_500L, 12_500.0)]
     public void Host_exposes_non_negative_current_time_fallback(long? currentMilliseconds, double expectedMilliseconds)
     {
         var host = new PlayerTimelineHost(
@@ -58,6 +58,38 @@ public sealed class PlayerTimelineHostTests
             seekMilliseconds: _ => { });
 
         Assert.Equal(expectedSeconds, host.CurrentSecondsOrZero);
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(-1L, null)]
+    [InlineData(12_500L, 12_500.0)]
+    public void Host_exposes_current_time_only_when_available_and_non_negative(long? currentMilliseconds, double? expectedMilliseconds)
+    {
+        var host = new PlayerTimelineHost(
+            readTimeMilliseconds: () => currentMilliseconds,
+            readLengthMilliseconds: () => 90_000,
+            seekMilliseconds: _ => { });
+
+        var expected = expectedMilliseconds.HasValue
+            ? TimeSpan.FromMilliseconds(expectedMilliseconds.Value)
+            : (TimeSpan?)null;
+
+        Assert.Equal(expected, host.CurrentTime);
+    }
+
+    [Theory]
+    [InlineData(null, 0.0)]
+    [InlineData(-1L, 0.0)]
+    [InlineData(90_000L, 90_000.0)]
+    public void Host_exposes_non_negative_duration_time_fallback(long? lengthMilliseconds, double expectedMilliseconds)
+    {
+        var host = new PlayerTimelineHost(
+            readTimeMilliseconds: () => 12_500,
+            readLengthMilliseconds: () => lengthMilliseconds,
+            seekMilliseconds: _ => { });
+
+        Assert.Equal(TimeSpan.FromMilliseconds(expectedMilliseconds), host.DurationTimeOrZero);
     }
 
     [Fact]
