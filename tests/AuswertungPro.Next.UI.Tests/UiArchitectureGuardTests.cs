@@ -4922,12 +4922,14 @@ public sealed class UiArchitectureGuardTests
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingManualCalibrationWorkflow.cs");
         var previewPolicyPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationPreviewPolicy.cs");
         var togglePolicyPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationTogglePolicy.cs");
+        var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationToggleWorkflow.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationControls.cs");
 
         Assert.True(File.Exists(policyPath), "Manuelle Kalibrierungsberechnung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Manueller Kalibrierungsablauf muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(previewPolicyPath), "Manuelle Kalibrierungsvorschau muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(togglePolicyPath), "Manuelle Kalibrierungs-Toggle-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(toggleWorkflowPath), "Manuelle Kalibrierungs-Toggle-Reihenfolge muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Manuelle Kalibrierungs-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
@@ -4936,12 +4938,14 @@ public sealed class UiArchitectureGuardTests
         var workflow = File.ReadAllText(workflowPath);
         var previewPolicy = File.ReadAllText(previewPolicyPath);
         var togglePolicy = File.ReadAllText(togglePolicyPath);
+        var toggleWorkflow = File.Exists(toggleWorkflowPath) ? File.ReadAllText(toggleWorkflowPath) : "";
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
 
         Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
         Assert.Contains("CodingManualCalibrationWorkflow.Apply", calibration);
         Assert.Contains("CodingCalibrationPreviewPolicy.Build", calibration);
-        Assert.Contains("CodingCalibrationTogglePolicy.Build", calibration);
+        Assert.Contains("CodingCalibrationToggleWorkflow.Execute", calibration);
+        Assert.DoesNotContain("CodingCalibrationTogglePolicy.Build", calibration);
         Assert.Contains("CodingCalibrationControls.ApplyToggle", calibration);
         Assert.Contains("CodingCalibrationControls.ShowHint", calibration);
         Assert.Contains("CodingCalibrationControls.ApplyManualResult", calibration);
@@ -4964,6 +4968,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("request.IsCodingSchemaActive", workflow);
         Assert.Contains("public static CodingCalibrationPreviewState Build", previewPolicy);
         Assert.Contains("public static CodingCalibrationToggleState Build", togglePolicy);
+        Assert.Contains("CodingCalibrationTogglePolicy.Build", toggleWorkflow);
+        Assert.Contains("actions.CloseToolsDropdown()", toggleWorkflow);
+        Assert.Contains("actions.ApplyToggleControls(state)", toggleWorkflow);
         Assert.Contains("public static void ApplyToggle", controls);
         Assert.Contains("public static void ApplyManualResult", controls);
     }
@@ -5000,7 +5007,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingCalibrationPointerWorkflow.Finish", calibration);
         Assert.Contains("_codingSessionHost", calibration);
         Assert.DoesNotContain("_codingVm", calibration);
-        Assert.Contains("CodingCalibrationTogglePolicy.Build", calibration);
+        Assert.Contains("CodingCalibrationToggleWorkflow.Execute", calibration);
         Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
         Assert.Contains("CodingManualCalibrationWorkflow.Apply", calibration);
         Assert.DoesNotContain("if (!_codingIsCalibrating)", calibration);

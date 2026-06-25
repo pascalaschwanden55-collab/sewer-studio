@@ -9,21 +9,29 @@ public partial class PlayerWindow
 {
     private void CodingCalibrate_Click(object sender, RoutedEventArgs e)
     {
-        if (!_codingOverlayToolHost.HasOverlayService || !_codingSessionHost.HasViewModel) return;
-        ToolsDropdownPopup.IsOpen = false;
-        var state = CodingCalibrationTogglePolicy.Build(_codingIsCalibrating);
-        _codingIsCalibrating = state.IsCalibrating;
-        _codingCalibStart = null;
-        _codingOverlayToolHost.SetActiveTool(state.ActiveTool);
-        _activeCodingToolName = state.ActiveToolName;
-        CodingOverlayInputControls.ApplyActiveToolSelection(TxtActiveToolLabel, BtnCodingCreateEvent, state.ToolLabel);
-
-        _codingSessionHost.ClearCurrentOverlay();
-        UpdateCodingOverlayInfo(null);
-
-        CodingCalibrationControls.ApplyToggle(CodingCalibrationHint, TxtCodingCalibHint, state);
-        UpdateCodingOverlayCursor();
-        RedrawCodingCanvas(includeManualOverlay: false);
+        CodingCalibrationToggleWorkflow.Execute(
+            new CodingCalibrationToggleWorkflowRequest(
+                _codingOverlayToolHost.HasOverlayService,
+                _codingSessionHost.HasViewModel,
+                _codingIsCalibrating),
+            new CodingCalibrationToggleWorkflowActions(
+                CloseToolsDropdown: () => { ToolsDropdownPopup.IsOpen = false; },
+                SetCalibrationState: isCalibrating => _codingIsCalibrating = isCalibrating,
+                ClearCalibrationStart: () => _codingCalibStart = null,
+                SetActiveTool: activeTool => { _codingOverlayToolHost.SetActiveTool(activeTool); },
+                SetActiveToolName: activeToolName => _activeCodingToolName = activeToolName,
+                ApplyActiveToolSelection: label => CodingOverlayInputControls.ApplyActiveToolSelection(
+                    TxtActiveToolLabel,
+                    BtnCodingCreateEvent,
+                    label),
+                ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
+                ClearOverlayInfo: () => UpdateCodingOverlayInfo(null),
+                ApplyToggleControls: state => CodingCalibrationControls.ApplyToggle(
+                    CodingCalibrationHint,
+                    TxtCodingCalibHint,
+                    state),
+                UpdateOverlayCursor: UpdateCodingOverlayCursor,
+                RedrawCodingCanvas: includeManualOverlay => RedrawCodingCanvas(includeManualOverlay)));
     }
 
     private void ApplyCodingCalibration(NormalizedPoint start, NormalizedPoint end)
