@@ -91,11 +91,13 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var accessors = ReadUiFile("Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
         var coding = ReadCodingPartials();
         var previewService = ReadUiFile("Ai", "CodingInlineEvidencePreviewService.cs");
+        var previewWorkflow = ReadUiFile("Ai", "CodingInlineEvidencePreviewWorkflow.cs");
 
         Assert.Contains("x:Name=\"ImgInlineEvidencePreview\"", sidePanel);
         Assert.Contains("x:Name=\"TxtInlineEvidencePreviewStatus\"", sidePanel);
         Assert.Contains("ImgInlineEvidencePreview", accessors);
-        Assert.Contains("CodingInlineEvidencePreviewService.Build", coding);
+        Assert.Contains("CodingInlineEvidencePreviewWorkflow.Execute", coding);
+        Assert.Contains("CodingInlineEvidencePreviewService.Build", previewWorkflow);
         Assert.Contains("CodingDefectPreviewService.BuildPreviewImagePath", previewService);
     }
 

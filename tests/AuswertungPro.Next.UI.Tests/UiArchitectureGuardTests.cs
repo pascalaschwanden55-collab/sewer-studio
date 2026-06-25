@@ -757,13 +757,20 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var previewPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.Preview.cs");
         var servicePath = Path.Combine(uiRoot, "Ai", "CodingInlineEvidencePreviewService.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineEvidencePreviewWorkflow.cs");
 
         Assert.True(File.Exists(servicePath), "Inline-Beweisbild-Vorschau soll Datei- und Bitmap-Logik ausserhalb der PlayerWindow-Partials halten.");
+        Assert.True(File.Exists(workflowPath), "Inline-Beweisbild-Vorschau-Fehlerbehandlung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var preview = File.ReadAllText(previewPath);
         var service = File.ReadAllText(servicePath);
+        var workflow = File.ReadAllText(workflowPath);
 
-        Assert.Contains("CodingInlineEvidencePreviewService.Build", preview);
+        Assert.Contains("CodingInlineEvidencePreviewWorkflow.Execute", preview);
+        Assert.DoesNotContain("CodingInlineEvidencePreviewService.Build", preview);
+        Assert.DoesNotContain("catch (Exception", preview);
+        Assert.Contains("CodingInlineEvidencePreviewService.Build", workflow);
+        Assert.Contains("CodingInlineEvidencePreviewService.LoadFailed", workflow);
         Assert.DoesNotContain("File.Exists", preview);
         Assert.DoesNotContain("new BitmapImage", preview);
         Assert.Contains("File.Exists", service);
@@ -2162,20 +2169,27 @@ public sealed class UiArchitectureGuardTests
         var detailPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.cs");
         var previewPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.EventDetails.Preview.cs");
         var previewServicePath = Path.Combine(uiRoot, "Ai", "CodingInlineEvidencePreviewService.cs");
+        var previewWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingInlineEvidencePreviewWorkflow.cs");
 
         Assert.True(File.Exists(previewPath), "Inline-Defekt-Bildvorschau soll in einem eigenen EventDetails-Partial liegen.");
         Assert.True(File.Exists(previewServicePath), "Inline-Defekt-Bildvorschau soll Datei- und Bitmap-Logik auslagern.");
+        Assert.True(File.Exists(previewWorkflowPath), "Inline-Defekt-Bildvorschau-Fehlerbehandlung soll ausserhalb von PlayerWindow liegen.");
 
         var detail = File.ReadAllText(detailPath);
         var preview = File.ReadAllText(previewPath);
         var previewService = File.ReadAllText(previewServicePath);
+        var previewWorkflow = File.ReadAllText(previewWorkflowPath);
 
         Assert.Contains("UpdateInlineEvidencePreview(ev);", detail);
         Assert.DoesNotContain("private void UpdateInlineEvidencePreview", detail);
         Assert.DoesNotContain("CodingDefectPreviewService.BuildPreviewImagePath", detail);
         Assert.DoesNotContain("BitmapImage", detail);
         Assert.Contains("private void UpdateInlineEvidencePreview", preview);
-        Assert.Contains("CodingInlineEvidencePreviewService.Build", preview);
+        Assert.Contains("CodingInlineEvidencePreviewWorkflow.Execute", preview);
+        Assert.DoesNotContain("CodingInlineEvidencePreviewService.Build", preview);
+        Assert.DoesNotContain("catch (Exception", preview);
+        Assert.Contains("CodingInlineEvidencePreviewService.Build", previewWorkflow);
+        Assert.Contains("CodingInlineEvidencePreviewService.LoadFailed", previewWorkflow);
         Assert.Contains("_codingInlineDefectDetailControls.ApplyPreview", preview);
         Assert.DoesNotContain("ImgInlineEvidencePreview.Source = state.Source", preview);
         Assert.DoesNotContain("ImgInlineEvidencePreview.Visibility = state.ImageVisible", preview);
