@@ -33,8 +33,9 @@ public partial class PlayerWindow
 
     private async Task HandleImportConfirmAsync()
     {
-        if (LstImportEvents.SelectedItem is not CodingEvent importEvent) return;
-        await ConfirmImportAsTrainingAsync(importEvent);
+        await CodingImportConfirmCommandWorkflow.ExecuteAsync(
+            new CodingImportConfirmCommandRequest(LstImportEvents.SelectedItem),
+            new CodingImportConfirmCommandActions(ConfirmImportAsTrainingAsync));
     }
 
     private async Task<bool> ConfirmImportAsTrainingAsync(CodingEvent importEvent)

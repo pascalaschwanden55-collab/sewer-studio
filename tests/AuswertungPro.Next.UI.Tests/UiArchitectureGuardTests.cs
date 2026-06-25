@@ -3571,17 +3571,21 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var protocolMatchPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.cs");
         var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Training.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingImportConfirmCommandWorkflow.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingWorkflowService.cs");
         var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
         Assert.True(File.Exists(trainingPath), "ProtocolMatch-Trainingsuebernahme soll aus dem Match-Partial heraus.");
+        Assert.True(File.Exists(commandWorkflowPath), "Import-Confirm-Auswahlentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "ProtocolMatch-Trainingsworkflow soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowFactoryPath), "ProtocolMatch-Trainingsworkflow soll ueber Factory verdrahtet werden.");
 
         var protocolMatch = File.ReadAllText(protocolMatchPath);
         var training = File.ReadAllText(trainingPath);
+        var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
         var workflow = File.ReadAllText(workflowPath);
         var workflowFactory = File.ReadAllText(workflowFactoryPath);
+        var importConfirmBody = ExtractMethodBody(training, "private async Task HandleImportConfirmAsync");
 
         Assert.DoesNotContain("private async void CodingAcceptGreenMatches_Click", protocolMatch);
         Assert.DoesNotContain("private async void ImportConfirm_Click", protocolMatch);
@@ -3594,6 +3598,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains(".SafeFireAndForget(\"ImportConfirm\")", training);
         Assert.Contains("private async Task HandleCodingAcceptGreenMatchesAsync", training);
         Assert.Contains("private async Task HandleImportConfirmAsync", training);
+        Assert.Contains("CodingImportConfirmCommandWorkflow.ExecuteAsync", importConfirmBody);
+        Assert.DoesNotContain("LstImportEvents.SelectedItem is not CodingEvent", importConfirmBody);
+        Assert.Contains("request.SelectedItem is not CodingEvent", commandWorkflow);
+        Assert.Contains("actions.ConfirmImportAsTrainingAsync(importEvent)", commandWorkflow);
         Assert.Contains("private async Task<bool> ConfirmImportAsTrainingAsync", training);
         Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", training);
         Assert.Contains("_codingSessionHost", training);

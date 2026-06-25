@@ -483,10 +483,14 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var importConfirmBody = ExtractMethodBody(coding, "private async Task HandleImportConfirmAsync");
         var greenBody = ExtractMethodBody(coding, "private async Task HandleCodingAcceptGreenMatchesAsync");
         var coreBody = ExtractMethodBody(coding, "private async Task<bool> ConfirmImportAsTrainingAsync");
+        var importConfirmCommandWorkflow = ReadUiFile("Ai", "CodingImportConfirmCommandWorkflow.cs");
         var workflow = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowService.cs");
         var workflowFactory = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
-        Assert.Contains("await ConfirmImportAsTrainingAsync(importEvent)", importConfirmBody);
+        Assert.Contains("CodingImportConfirmCommandWorkflow.ExecuteAsync", importConfirmBody);
+        Assert.DoesNotContain("LstImportEvents.SelectedItem is not CodingEvent", importConfirmBody);
+        Assert.Contains("request.SelectedItem is not CodingEvent", importConfirmCommandWorkflow);
+        Assert.Contains("actions.ConfirmImportAsTrainingAsync(importEvent)", importConfirmCommandWorkflow);
         Assert.Contains("CodingProtocolGreenMatchTrainingRunner.AcceptGreenMatchesAsync", greenBody);
         Assert.DoesNotContain("_lastCodingMatch.Trainingskandidaten", greenBody);
         Assert.DoesNotContain("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", greenBody);
