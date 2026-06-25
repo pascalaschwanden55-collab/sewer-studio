@@ -1979,12 +1979,14 @@ public sealed class UiArchitectureGuardTests
         var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
         var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Live.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingEventWorkflow.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingEventCommandWorkflow.cs");
         var appenderPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingSessionAppender.cs");
         var confirmationTrackerPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingConfirmationTracker.cs");
         var addDecisionPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingAddDecisionPolicy.cs");
 
         Assert.True(File.Exists(livePath), "Live/Qwen-Event-Erzeugung soll aus dem allgemeinen AiEvents-Partial heraus.");
         Assert.True(File.Exists(workflowPath), "Live/Qwen-Event-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(commandWorkflowPath), "Live/Qwen-Event-Befehl soll die Fenster-Guards ausserhalb der PlayerWindow-Partials koordinieren.");
         Assert.True(File.Exists(appenderPath), "Live/Qwen-Event-Anwendung auf die Session soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(confirmationTrackerPath), "Live/Qwen-Bestaetigungsauswahl soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(addDecisionPath), "Live/Qwen-Add-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -1992,15 +1994,19 @@ public sealed class UiArchitectureGuardTests
         var aiEvents = File.ReadAllText(aiEventsPath);
         var live = File.ReadAllText(livePath);
         var workflow = File.ReadAllText(workflowPath);
+        var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
         var appender = File.ReadAllText(appenderPath);
         var confirmationTracker = File.ReadAllText(confirmationTrackerPath);
         var addDecision = File.ReadAllText(addDecisionPath);
 
         Assert.DoesNotContain("private void AddAiFindingsAsEvents", aiEvents);
         Assert.Contains("private void AddAiFindingsAsEvents", live);
+        Assert.Contains("CodingLiveFindingEventCommandWorkflow.Execute", live);
         Assert.Contains("CodingLiveFindingEventWorkflow.Execute", live);
         Assert.Contains("_codingSessionHost", live);
         Assert.DoesNotContain("_codingVm", live);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel || codingSessionService == null) return", live);
+        Assert.DoesNotContain("double meter = ResolveCodingMeterForFrame", live);
         Assert.DoesNotContain("CodingLiveFindingEventFactory.Create", live);
         Assert.DoesNotContain("CodingLiveFindingQualityGatePolicy.Evaluate", live);
         Assert.DoesNotContain("CodingLiveFindingSessionAppender.Append", live);
@@ -2014,6 +2020,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingOneTimeCodeDuplicatePolicy.AlreadyExists", live);
         Assert.DoesNotContain("CodingFindingCoveragePolicy.FindCoveringEvent", live);
         Assert.Contains("public static class CodingLiveFindingEventWorkflow", workflow);
+        Assert.Contains("actions.ResolveMeterForFrame", commandWorkflow);
+        Assert.Contains("actions.ExecuteFindingWorkflow", commandWorkflow);
         Assert.Contains("CodingLiveFindingEventFactory.Create", workflow);
         Assert.Contains("CodingLiveFindingQualityGatePolicy.Evaluate", workflow);
         Assert.Contains("CodingLiveFindingSessionAppender.Append", workflow);
@@ -6304,6 +6312,7 @@ public sealed class UiArchitectureGuardTests
         var showUiWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeShowUiWorkflow.cs");
         var backgroundServicesWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeBackgroundServicesWorkflow.cs");
         var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
+        var exitCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeExitCommandWorkflow.cs");
         var sessionStateCreationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSessionStateCreationWorkflow.cs");
         var sessionStartWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSessionStartWorkflow.cs");
 
@@ -6320,6 +6329,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(showUiWorkflowPath), "Coding-Mode-UI-Anzeige-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(backgroundServicesWorkflowPath), "Coding-Mode-Background-Services-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(exitCommandWorkflowPath), "Coding-Mode-Exit-Befehl soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(sessionStateCreationWorkflowPath), "Coding-Session-State-Erzeugungsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(sessionStartWorkflowPath), "Coding-Session-Start-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
@@ -6337,6 +6347,7 @@ public sealed class UiArchitectureGuardTests
         var showUiWorkflow = File.Exists(showUiWorkflowPath) ? File.ReadAllText(showUiWorkflowPath) : "";
         var backgroundServicesWorkflow = File.Exists(backgroundServicesWorkflowPath) ? File.ReadAllText(backgroundServicesWorkflowPath) : "";
         var enterWorkflow = File.Exists(enterWorkflowPath) ? File.ReadAllText(enterWorkflowPath) : "";
+        var exitCommandWorkflow = File.Exists(exitCommandWorkflowPath) ? File.ReadAllText(exitCommandWorkflowPath) : "";
         var sessionStateCreationWorkflow = File.Exists(sessionStateCreationWorkflowPath) ? File.ReadAllText(sessionStateCreationWorkflowPath) : "";
         var sessionStartWorkflow = File.Exists(sessionStartWorkflowPath) ? File.ReadAllText(sessionStartWorkflowPath) : "";
 
@@ -6352,7 +6363,14 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("if (request.IsCodingMode || !request.HasHaltungRecord)", enterWorkflow);
         Assert.Contains("private void LoadExistingProtocolEventsAsImport", import);
         Assert.Contains("private void ExitCodingMode", exit);
+        Assert.Contains("CodingModeExitCommandWorkflow.Execute", exit);
         Assert.Contains("private void CodingModeExit_Click", exit);
+        Assert.DoesNotContain("if (!_isCodingMode) return", exit);
+        Assert.DoesNotContain("_isCodingMode = false", exit);
+        Assert.DoesNotContain("_isCodingMode = true", exit);
+        Assert.Contains("actions.SetCodingMode(false)", exitCommandWorkflow);
+        Assert.Contains("actions.SetCodingMode(true)", exitCommandWorkflow);
+        Assert.Contains("actions.Teardown()", exitCommandWorkflow);
         Assert.Contains("private void CreateCodingSessionState", session);
         Assert.Contains("private bool TryStartCodingSession", session);
         Assert.Contains("_codingSessionHost", session);

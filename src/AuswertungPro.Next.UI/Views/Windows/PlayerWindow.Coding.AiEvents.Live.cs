@@ -15,37 +15,40 @@ public partial class PlayerWindow
     private void AddAiFindingsAsEvents(LiveDetection result, IReadOnlyList<LiveFrameFinding> validFindings)
     {
         var codingSessionService = _codingSessionRuntimeOwner.Service;
-        if (!_codingSessionHost.HasViewModel || codingSessionService == null) return;
-
-        double meter = ResolveCodingMeterForFrame(result.TimestampSeconds, result.MeterReading);
-        var videoTime = _codingSessionHost.CurrentVideoTime ?? _playerTimelineHost.CurrentTimeOrZero;
 
         // BCD wird NICHT mehr automatisch erzeugt - nur durch Eingabemarker oder Qwen-Erkennung.
         // EnsureRohranfangExists(meter, videoTime, ref anyAdded);
 
-        CodingLiveFindingEventWorkflow.Execute(
-            new CodingLiveFindingEventWorkflowRequest(
-                validFindings,
-                meter,
-                videoTime,
-                codingSessionService,
-                _codingSessionHost.Events,
-                _codingAiRuntimeOwner.Controller.QualityGate),
-            new CodingLiveFindingEventWorkflowActions(
-                IsFindingTooFarAhead,
-                LookupVsaLabel,
-                entry => AttachAnalyzedFramePhoto(entry),
-                message => PlayerTrace.WriteLine(message),
-                RefreshCodingEventsList,
-                RenderAiOverlays,
-                () => _codingSessionHost.CurrentOverlay != null,
-                () =>
-                {
-                    var overlay = _codingSessionHost.CurrentOverlay;
-                    if (overlay != null)
-                        RenderOverlayGeometry(overlay, isPreview: false);
-                },
-                UpdateToolBadge,
-                PauseAndAskConfirmation));
+        CodingLiveFindingEventCommandWorkflow.Execute(
+            new CodingLiveFindingEventCommandRequest(
+                HasCodingViewModel: _codingSessionHost.HasViewModel,
+                Result: result,
+                ValidFindings: validFindings,
+                CodingSessionService: codingSessionService,
+                ViewEvents: _codingSessionHost.Events,
+                QualityGate: _codingAiRuntimeOwner.Controller.QualityGate,
+                CurrentVideoTime: _codingSessionHost.CurrentVideoTime,
+                FallbackVideoTime: _playerTimelineHost.CurrentTimeOrZero),
+            new CodingLiveFindingEventCommandActions(
+                ResolveMeterForFrame: (timestamp, osdMeter) =>
+                    ResolveCodingMeterForFrame(timestamp, osdMeter),
+                ExecuteFindingWorkflow: request => CodingLiveFindingEventWorkflow.Execute(
+                    request,
+                    new CodingLiveFindingEventWorkflowActions(
+                        IsFindingTooFarAhead,
+                        LookupVsaLabel,
+                        entry => AttachAnalyzedFramePhoto(entry),
+                        message => PlayerTrace.WriteLine(message),
+                        RefreshCodingEventsList,
+                        RenderAiOverlays,
+                        () => _codingSessionHost.CurrentOverlay != null,
+                        () =>
+                        {
+                            var overlay = _codingSessionHost.CurrentOverlay;
+                            if (overlay != null)
+                                RenderOverlayGeometry(overlay, isPreview: false);
+                        },
+                        UpdateToolBadge,
+                        PauseAndAskConfirmation))));
     }
 }

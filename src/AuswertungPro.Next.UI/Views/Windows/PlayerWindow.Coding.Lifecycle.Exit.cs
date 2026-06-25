@@ -1,7 +1,4 @@
-using System;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -11,10 +8,16 @@ public partial class PlayerWindow
 {
     private void ExitCodingMode()
     {
-        if (!_isCodingMode) return;
-        _isCodingMode = false;
+        CodingModeExitCommandWorkflow.Execute(
+            new CodingModeExitCommandRequest(_isCodingMode),
+            new CodingModeExitCommandActions(
+                SetCodingMode: enabled => _isCodingMode = enabled,
+                FinalizeExit: FinalizeCodingModeExit,
+                Teardown: TeardownCodingModeExit));
+    }
 
-        var finalization = CodingModeExitFinalizationWorkflow.Execute(
+    private CodingModeExitFinalizationWorkflowResult FinalizeCodingModeExit()
+        => CodingModeExitFinalizationWorkflow.Execute(
             new CodingModeExitFinalizationWorkflowRequest(
                 _codingSessionHost.EventCollection,
                 _codingOsdMeterController.LastMeter,
@@ -25,13 +28,9 @@ public partial class PlayerWindow
                 CloseTrackedStreckenschaeden,
                 CloseOpenStreckenschaeden,
                 EnsureRohrendeExists));
-        if (!finalization.CanExit)
-        {
-            _isCodingMode = true;
-            return;
-        }
 
-        CodingModeExitTeardownWorkflow.Execute(
+    private void TeardownCodingModeExit()
+        => CodingModeExitTeardownWorkflow.Execute(
             new CodingModeExitTeardownWorkflowRequest(
                 HasCodingLiveAiTimers: _codingLiveAiTimers is not null,
                 HasCodingViewModel: _codingSessionHost.HasViewModel,
@@ -100,7 +99,6 @@ public partial class PlayerWindow
                     _codingOverlaySuspendDepth = 0;
                     _codingOverlayWasOpenBeforeSuspend = false;
                 }));
-    }
 
     private void CodingModeExit_Click(object sender, RoutedEventArgs e) => ExitCodingMode();
 }

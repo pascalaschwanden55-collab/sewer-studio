@@ -280,10 +280,12 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var workflow = ReadUiFile("Ai", "CodingModeExitFinalizationWorkflow.cs");
+        var commandWorkflow = ReadUiFile("Ai", "CodingModeExitCommandWorkflow.cs");
         var exitBody = ExtractMethodBody(coding, "private void ExitCodingMode");
 
-        Assert.Contains("CodingModeExitFinalizationWorkflow.Execute", exitBody);
-        Assert.Contains("_detectionConfirmationBuffer.FrameBytes", exitBody);
+        Assert.Contains("CodingModeExitCommandWorkflow.Execute", exitBody);
+        Assert.Contains("_detectionConfirmationBuffer.FrameBytes", coding);
+        Assert.Contains("actions.FinalizeExit()", commandWorkflow);
         Assert.Contains("request.AnalyzedFrameBytes", workflow);
         Assert.Contains("actions.EnsureRohrendeExists", workflow);
     }
@@ -324,12 +326,15 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
         var multiModelBody = ExtractMethodBody(coding, "private void AddMultiModelFindingsAsEvents");
         var qwenBody = ExtractMethodBody(coding, "private void AddAiFindingsAsEvents");
+        var qwenCommandWorkflow = ReadUiFile("Ai", "CodingLiveFindingEventCommandWorkflow.cs");
         var boundaryBody = ExtractMethodBody(coding, "private bool TryHandleBoundaryClassifierResult");
 
         Assert.Contains("CodingAnalysisPreflightWorkflow.Execute", runBody);
         Assert.Contains("ResolveCodingMeterForFrame(timestamp)", runBody);
         Assert.Contains("ResolveCodingMeterForFrame(captureTimestampSec", multiModelBody);
-        Assert.Contains("ResolveCodingMeterForFrame(result.TimestampSeconds, result.MeterReading", qwenBody);
+        Assert.Contains("ResolveMeterForFrame: (timestamp, osdMeter)", qwenBody);
+        Assert.Contains("request.Result.TimestampSeconds", qwenCommandWorkflow);
+        Assert.Contains("request.Result.MeterReading", qwenCommandWorkflow);
         Assert.Contains("ResolveCodingMeterForFrame(captureTimestampSec", boundaryBody);
 
         Assert.DoesNotContain("double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter", multiModelBody);
