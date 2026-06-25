@@ -341,19 +341,26 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var servicePath = Path.Combine(uiRoot, "Services", "WindowClipboardCaptureService.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingScreenshotCommandWorkflow.cs");
 
         Assert.True(File.Exists(servicePath), "Win32-Screenshot-Capture muss in einem UI-Service gekapselt bleiben.");
+        Assert.True(File.Exists(workflowPath), "Screenshot-Command-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var playerWindowText = string.Join(
             Environment.NewLine,
             Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
         var service = File.ReadAllText(servicePath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.DoesNotContain("DllImport", playerWindowText);
         Assert.DoesNotContain("BitBlt", playerWindowText);
         Assert.Contains("TryCopyWindowToClipboard", playerWindowText);
+        Assert.Contains("CodingScreenshotCommandWorkflow.Execute", playerWindowText);
+        Assert.DoesNotContain("if (WindowClipboardCaptureService.TryCopyWindowToClipboard", playerWindowText);
         Assert.Contains("BitBlt", service);
         Assert.Contains("Clipboard.SetImage", service);
+        Assert.Contains("if (!actions.CopyWindowToClipboard())", workflow);
+        Assert.Contains("actions.ShowToast(CopiedToastMessage)", workflow);
     }
 
     [Fact]

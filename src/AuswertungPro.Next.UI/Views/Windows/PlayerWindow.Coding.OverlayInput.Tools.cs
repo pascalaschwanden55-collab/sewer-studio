@@ -58,10 +58,10 @@ public partial class PlayerWindow
     }
 
     private void CodingScreenshot_Click(object sender, RoutedEventArgs e)
-    {
-        if (WindowClipboardCaptureService.TryCopyWindowToClipboard(this))
-            ShowCodingScreenshotToast("Fenster in Zwischenablage kopiert");
-    }
+        => CodingScreenshotCommandWorkflow.Execute(
+            new CodingScreenshotCommandActions(
+                CopyWindowToClipboard: () => WindowClipboardCaptureService.TryCopyWindowToClipboard(this),
+                ShowToast: ShowCodingScreenshotToast));
 
     private void ShowCodingScreenshotToast(string msg)
     {
