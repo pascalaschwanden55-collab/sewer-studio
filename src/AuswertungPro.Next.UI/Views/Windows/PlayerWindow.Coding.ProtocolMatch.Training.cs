@@ -14,18 +14,18 @@ public partial class PlayerWindow
 
     private async Task HandleCodingAcceptGreenMatchesAsync()
     {
-        if (!_codingSessionHost.HasViewModel) return;
-        if (_lastCodingMatch == null)
-            RunCodingProtocolMatch();
-        if (_lastCodingMatch == null)
-            return;
-
-        var overlay = await CodingProtocolGreenMatchTrainingRunner.AcceptGreenMatchesAsync(
-            _lastCodingMatch,
-            _codingImportEvents,
-            ConfirmImportAsTrainingAsync);
-        if (overlay.HasValue)
-            ShowOverlay(overlay.Value.Text, overlay.Value.Duration);
+        await CodingAcceptGreenMatchesCommandWorkflow.ExecuteAsync(
+            new CodingAcceptGreenMatchesCommandRequest(
+                _codingSessionHost.HasViewModel,
+                _lastCodingMatch),
+            new CodingAcceptGreenMatchesCommandActions(
+                RunProtocolMatch: RunCodingProtocolMatch,
+                GetCurrentRouting: () => _lastCodingMatch,
+                AcceptGreenMatchesAsync: routing => CodingProtocolGreenMatchTrainingRunner.AcceptGreenMatchesAsync(
+                    routing,
+                    _codingImportEvents,
+                    ConfirmImportAsTrainingAsync),
+                ShowOverlay: overlay => ShowOverlay(overlay.Text, overlay.Duration)));
     }
 
     private void ImportConfirm_Click(object sender, RoutedEventArgs e)

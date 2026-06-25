@@ -483,6 +483,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var importConfirmBody = ExtractMethodBody(coding, "private async Task HandleImportConfirmAsync");
         var greenBody = ExtractMethodBody(coding, "private async Task HandleCodingAcceptGreenMatchesAsync");
         var coreBody = ExtractMethodBody(coding, "private async Task<bool> ConfirmImportAsTrainingAsync");
+        var acceptGreenCommandWorkflow = ReadUiFile("Ai", "CodingAcceptGreenMatchesCommandWorkflow.cs");
         var importConfirmCommandWorkflow = ReadUiFile("Ai", "CodingImportConfirmCommandWorkflow.cs");
         var workflow = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowService.cs");
         var workflowFactory = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
@@ -491,7 +492,15 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.DoesNotContain("LstImportEvents.SelectedItem is not CodingEvent", importConfirmBody);
         Assert.Contains("request.SelectedItem is not CodingEvent", importConfirmCommandWorkflow);
         Assert.Contains("actions.ConfirmImportAsTrainingAsync(importEvent)", importConfirmCommandWorkflow);
+        Assert.Contains("CodingAcceptGreenMatchesCommandWorkflow.ExecuteAsync", greenBody);
         Assert.Contains("CodingProtocolGreenMatchTrainingRunner.AcceptGreenMatchesAsync", greenBody);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", greenBody);
+        Assert.DoesNotContain("if (_lastCodingMatch == null)", greenBody);
+        Assert.Contains("if (!request.HasCodingViewModel)", acceptGreenCommandWorkflow);
+        Assert.Contains("actions.RunProtocolMatch()", acceptGreenCommandWorkflow);
+        Assert.Contains("routing = actions.GetCurrentRouting()", acceptGreenCommandWorkflow);
+        Assert.Contains("actions.AcceptGreenMatchesAsync(routing)", acceptGreenCommandWorkflow);
+        Assert.Contains("actions.ShowOverlay(overlay.Value)", acceptGreenCommandWorkflow);
         Assert.DoesNotContain("_lastCodingMatch.Trainingskandidaten", greenBody);
         Assert.DoesNotContain("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", greenBody);
         Assert.DoesNotContain("_codingImportEvents.FirstOrDefault", greenBody);
