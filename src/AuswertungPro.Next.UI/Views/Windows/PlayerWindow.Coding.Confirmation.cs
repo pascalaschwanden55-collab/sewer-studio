@@ -48,16 +48,14 @@ public partial class PlayerWindow
 
     private void ConfirmEdit_Click(object sender, RoutedEventArgs e)
     {
-        var selectedEvent = CodingConfirmationDecisionWorkflow.Edit(
-            _codingPendingConfirmEvent,
-            _codingPendingGateResult);
-
-        CloseConfirmationPanel();
-
-        if (selectedEvent != null)
-            LstCodingEvents.SelectedItem = selectedEvent;
-
-        ResumeAfterConfirmation();
+        CodingConfirmationEditCommandWorkflow.Execute(
+            new CodingConfirmationEditCommandActions(
+                EditConfirmation: () => CodingConfirmationDecisionWorkflow.Edit(
+                    _codingPendingConfirmEvent,
+                    _codingPendingGateResult),
+                CloseConfirmationPanel: CloseConfirmationPanel,
+                SelectEvent: codingEvent => LstCodingEvents.SelectedItem = codingEvent,
+                ResumeAfterConfirmation: ResumeAfterConfirmation));
     }
 
     private void ConfirmReject_Click(object sender, RoutedEventArgs e)

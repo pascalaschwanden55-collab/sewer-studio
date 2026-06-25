@@ -3035,30 +3035,30 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
-    public void PlayerWindow_confirmation_reject_uses_delete_applier()
+    public void PlayerWindow_confirmation_actions_use_workflows_and_delete_applier()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var confirmationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs");
         var deleteApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteApplier.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationDecisionWorkflow.cs");
+        var editCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationEditCommandWorkflow.cs");
 
         Assert.True(File.Exists(deleteApplierPath), "Confirm-Reject muss die gemeinsame Coding-Event-Loeschanwendung nutzen.");
         Assert.True(File.Exists(workflowPath), "Confirm-Decision-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(editCommandWorkflowPath), "Confirm-Edit-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var confirmation = File.ReadAllText(confirmationPath);
         var deleteApplier = File.ReadAllText(deleteApplierPath);
         var workflow = File.ReadAllText(workflowPath);
+        var editCommandWorkflow = File.Exists(editCommandWorkflowPath) ? File.ReadAllText(editCommandWorkflowPath) : "";
 
         Assert.Contains("CodingConfirmationDecisionWorkflow.Accept", confirmation);
         Assert.Contains("CodingConfirmationDecisionWorkflow.Edit", confirmation);
         Assert.Contains("CodingConfirmationDecisionWorkflow.Reject", confirmation);
-        var editHandlerIndex = confirmation.IndexOf("private void ConfirmEdit_Click", StringComparison.Ordinal);
-        var editWorkflowIndex = confirmation.IndexOf("CodingConfirmationDecisionWorkflow.Edit", editHandlerIndex, StringComparison.Ordinal);
-        var editCloseIndex = confirmation.IndexOf("CloseConfirmationPanel();", editHandlerIndex, StringComparison.Ordinal);
-        Assert.True(
-            editWorkflowIndex >= 0 && editWorkflowIndex < editCloseIndex,
-            "ConfirmEdit muss den Pending-State entscheiden, bevor CloseConfirmationPanel ihn leert.");
+        Assert.Contains("CodingConfirmationEditCommandWorkflow.Execute", confirmation);
+        Assert.DoesNotContain("if (selectedEvent != null)", confirmation);
+        Assert.DoesNotContain("var selectedEvent = CodingConfirmationDecisionWorkflow.Edit", confirmation);
         Assert.DoesNotContain("CodingEventDecisionPolicy.ApplyAiConfirmationDecision", confirmation);
         Assert.DoesNotContain("CodingEventDeleteApplier.Apply", confirmation);
         Assert.Contains("_codingSessionHost", confirmation);
@@ -3067,6 +3067,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingVm?.Events.Remove", confirmation);
         Assert.Contains("CodingEventDecisionPolicy.ApplyAiConfirmationDecision", workflow);
         Assert.Contains("CodingEventDeleteApplier.Apply", workflow);
+        Assert.Contains("var selectedEvent = actions.EditConfirmation()", editCommandWorkflow);
+        Assert.Contains("actions.CloseConfirmationPanel()", editCommandWorkflow);
+        Assert.Contains("actions.SelectEvent(selectedEvent)", editCommandWorkflow);
+        Assert.Contains("actions.ResumeAfterConfirmation()", editCommandWorkflow);
         Assert.Contains("codingSessionService?.RemoveEvent", deleteApplier);
         Assert.Contains("codingEvents?.Remove", deleteApplier);
     }
@@ -5475,17 +5479,20 @@ public sealed class UiArchitectureGuardTests
         var timelinePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Timeline.cs");
         var accessorsPath = Path.Combine(uiRoot, "Ai", "CodingTimelineMarkerAccessors.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingTimelineControls.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingTimelineCommandWorkflow.cs");
         var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(timelinePath), "Coding-Timeline-Wiring soll in einem eigenen Lifecycle-Partial liegen.");
         Assert.True(File.Exists(accessorsPath), "Timeline-Marker-Regeln muessen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(controlsPath), "Timeline-Control-Konfiguration soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(commandWorkflowPath), "Timeline-Command-Entscheidungen sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var playerCoding = File.ReadAllText(playerCodingPath);
         var timeline = File.ReadAllText(timelinePath);
         var accessors = File.ReadAllText(accessorsPath);
         var controls = File.ReadAllText(controlsPath);
+        var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
         var enterWorkflow = File.ReadAllText(enterWorkflowPath);
 
         Assert.Contains("InitializeCodingTimeline: InitializeCodingTimeline", playerCoding);
@@ -5493,8 +5500,14 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("PipeTimeline.MeterAccessor = CodingTimelineMarkerAccessors.Meter", playerCoding);
         Assert.Contains("private void InitializeCodingTimeline", timeline);
         Assert.Contains("CodingTimelineControls.Configure", timeline);
+        Assert.Contains("CodingTimelineCommandWorkflow.NavigateToMeter", timeline);
+        Assert.Contains("CodingTimelineCommandWorkflow.MarkerClicked", timeline);
+        Assert.Contains("actions.MoveToMeter(request.Meter)", commandWorkflow);
+        Assert.Contains("actions.JumpToDefect(selectedEvent)", commandWorkflow);
         Assert.Contains("_codingSessionHost", timeline);
         Assert.DoesNotContain("_codingVm", timeline);
+        Assert.DoesNotContain("if (_codingSessionRuntimeOwner.Service != null && _codingSessionHost.IsRunningOrPaused)", timeline);
+        Assert.DoesNotContain("if (item is CodingEvent ce)", timeline);
         Assert.DoesNotContain("PipeTimeline.TotalLength =", timeline);
         Assert.DoesNotContain("PipeTimeline.MeterAccessor =", timeline);
         Assert.DoesNotContain("PipeTimeline.CodeAccessor =", timeline);

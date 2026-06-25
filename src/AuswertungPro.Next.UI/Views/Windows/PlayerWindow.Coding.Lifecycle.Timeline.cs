@@ -1,5 +1,4 @@
 using System;
-using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -13,20 +12,26 @@ public partial class PlayerWindow
 
         var navigateToMeterCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<double>(meter =>
         {
-            if (_codingSessionRuntimeOwner.Service != null && _codingSessionHost.IsRunningOrPaused)
-            {
-                _codingSessionRuntimeOwner.Service.MoveToMeter(meter);
-                _codingNavPending = true;
-                SyncVideoToCodingMeter();
-            }
+            CodingTimelineCommandWorkflow.NavigateToMeter(
+                new CodingTimelineNavigateRequest(
+                    _codingSessionRuntimeOwner.Service is not null,
+                    _codingSessionHost.IsRunningOrPaused,
+                    meter),
+                new CodingTimelineNavigateActions(
+                    MoveToMeter: value => _codingSessionRuntimeOwner.Service!.MoveToMeter(value),
+                    MarkNavigationPending: () => _codingNavPending = true,
+                    SyncVideoToCodingMeter: SyncVideoToCodingMeter));
         });
         var markerClickedCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<object>(item =>
         {
-            if (item is CodingEvent ce)
-            {
-                _codingSessionHost.ExecuteJumpToDefect(ce);
-                LstCodingEvents.SelectedItem = ce;
-            }
+            CodingTimelineCommandWorkflow.MarkerClicked(
+                item,
+                new CodingTimelineMarkerActions(
+                    JumpToDefect: selectedEvent =>
+                    {
+                        _codingSessionHost.ExecuteJumpToDefect(selectedEvent);
+                    },
+                    SelectEvent: selectedEvent => LstCodingEvents.SelectedItem = selectedEvent));
         });
 
         CodingTimelineControls.Configure(
