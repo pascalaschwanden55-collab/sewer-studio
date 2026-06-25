@@ -42,9 +42,10 @@ public partial class PlayerWindow
 
     private void SyncCodingToPrimaryDamages(ProtocolDocument doc)
     {
-        if (_haltungRecord == null) return;
-
-        CodingPrimaryDamageSynchronizerFactory.Create().Sync(_haltungRecord, doc);
+        CodingPrimaryDamageSyncCommandWorkflow.Execute(
+            new CodingPrimaryDamageSyncCommandRequest(_haltungRecord is not null),
+            new CodingPrimaryDamageSyncCommandActions(
+                SyncPrimaryDamages: () => CodingPrimaryDamageSynchronizerFactory.Create().Sync(_haltungRecord!, doc)));
     }
 
     // --- Coding: Protokoll-Vorschau (nachtraeglich bearbeitbar) ---

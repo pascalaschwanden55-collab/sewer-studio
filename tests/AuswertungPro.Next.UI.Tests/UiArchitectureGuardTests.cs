@@ -4143,20 +4143,27 @@ public sealed class UiArchitectureGuardTests
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageTextBuilder.cs");
         var synchronizerPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSynchronizer.cs");
         var synchronizerFactoryPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSynchronizerFactory.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingPrimaryDamageSyncCommandWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Primaere-Schaeden-Textbildung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(synchronizerPath), "Primaere-Schaeden-Feldschreiben muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(synchronizerFactoryPath), "Primaere-Schaeden-Feldschreiben muss ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(commandWorkflowPath), "Primaere-Schaeden-Sync-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var protocol = File.ReadAllText(protocolPath);
         var policy = File.ReadAllText(policyPath);
         var synchronizer = File.ReadAllText(synchronizerPath);
         var synchronizerFactory = File.ReadAllText(synchronizerFactoryPath);
+        var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
 
+        Assert.Contains("CodingPrimaryDamageSyncCommandWorkflow.Execute", protocol);
         Assert.Contains("CodingPrimaryDamageSynchronizerFactory.Create", protocol);
+        Assert.DoesNotContain("if (_haltungRecord == null) return", protocol);
         Assert.DoesNotContain("CodingPrimaryDamageTextBuilder.Build", protocol);
         Assert.DoesNotContain("SetFieldValue(\"Primaere_Schaeden\"", protocol);
         Assert.DoesNotContain("DataPageProtocolObservationMapper.BuildPrimaryDamageLines", protocol);
+        Assert.Contains("if (!request.HasHaltungRecord)", commandWorkflow);
+        Assert.Contains("actions.SyncPrimaryDamages()", commandWorkflow);
         Assert.Contains("public static string Build", policy);
         Assert.Contains("SetFieldValue(\"Primaere_Schaeden\"", synchronizer);
         Assert.Contains("CodingPrimaryDamageTextBuilder.Build", synchronizerFactory);
