@@ -5390,6 +5390,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("_playerTimelineHost = new PlayerTimelineHost", windowRoot);
         Assert.Contains("_playerTimelineHost,", windowRoot);
+        Assert.Contains("_playerPlaybackControlHost,", windowRoot);
 
         foreach (var path in paths)
         {
@@ -5397,6 +5398,9 @@ public sealed class UiArchitectureGuardTests
 
             var text = File.ReadAllText(path);
             Assert.Contains("PlayerTimelineHost", text);
+            Assert.Contains("PlayerPlaybackControlHost", text);
+            Assert.DoesNotContain("MediaPlayer", text);
+            Assert.DoesNotContain("_player.SetPause", text);
             Assert.DoesNotContain("_player.Time", text);
             Assert.DoesNotContain("_player.Length", text);
             Assert.DoesNotContain("_player?.Time", text);

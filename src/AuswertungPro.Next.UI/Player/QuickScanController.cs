@@ -15,7 +15,6 @@ using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Services;
 using Rectangle = System.Windows.Shapes.Rectangle;
-using MediaPlayer = LibVLCSharp.Shared.MediaPlayer; // disambig: sonst Konflikt mit System.Windows.Media.MediaPlayer
 
 namespace AuswertungPro.Next.UI.Player;
 
@@ -24,7 +23,7 @@ public sealed class QuickScanController
     private readonly Canvas _heatmapCanvas;
     private readonly ToggleButton _quickScanButton;
     private readonly TextBlock _quickScanStatusText;
-    private readonly MediaPlayer _player;
+    private readonly PlayerPlaybackControlHost _playbackControlHost;
     private readonly PlayerTimelineHost _timelineHost;
     private readonly string _videoPath;
     private readonly Action _ensurePlaying;
@@ -39,7 +38,7 @@ public sealed class QuickScanController
         Canvas heatmapCanvas,
         ToggleButton quickScanButton,
         TextBlock quickScanStatusText,
-        MediaPlayer player,
+        PlayerPlaybackControlHost playbackControlHost,
         PlayerTimelineHost timelineHost,
         string videoPath,
         Action ensurePlaying,
@@ -49,7 +48,7 @@ public sealed class QuickScanController
         _heatmapCanvas = heatmapCanvas ?? throw new ArgumentNullException(nameof(heatmapCanvas));
         _quickScanButton = quickScanButton ?? throw new ArgumentNullException(nameof(quickScanButton));
         _quickScanStatusText = quickScanStatusText ?? throw new ArgumentNullException(nameof(quickScanStatusText));
-        _player = player ?? throw new ArgumentNullException(nameof(player));
+        _playbackControlHost = playbackControlHost ?? throw new ArgumentNullException(nameof(playbackControlHost));
         _timelineHost = timelineHost ?? throw new ArgumentNullException(nameof(timelineHost));
         _videoPath = videoPath ?? throw new ArgumentNullException(nameof(videoPath));
         _ensurePlaying = ensurePlaying ?? throw new ArgumentNullException(nameof(ensurePlaying));
@@ -182,7 +181,7 @@ public sealed class QuickScanController
         rect.MouseLeftButtonDown += (_, _) =>
         {
             _ensurePlaying();
-            _player.SetPause(true);
+            _playbackControlHost.SetPause(true);
             var length = _timelineHost.LengthMilliseconds ?? 0;
             if (length > 0)
             {

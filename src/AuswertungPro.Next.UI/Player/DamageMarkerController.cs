@@ -4,9 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using LibVLCSharp.Shared;
 using Rectangle = System.Windows.Shapes.Rectangle;
-using MediaPlayer = LibVLCSharp.Shared.MediaPlayer; // disambig: sonst Konflikt mit System.Windows.Media.MediaPlayer
 
 namespace AuswertungPro.Next.UI.Player;
 
@@ -15,7 +13,7 @@ public sealed class DamageMarkerController
     private readonly Canvas _markerCanvas;
     private readonly Slider _positionSlider;
     private readonly PlayerDamageOverlayData? _damageOverlay;
-    private readonly MediaPlayer _player;
+    private readonly PlayerPlaybackControlHost _playbackControlHost;
     private readonly PlayerTimelineHost _timelineHost;
     private readonly Action _ensurePlaying;
     private readonly Action _updateUi;
@@ -26,7 +24,7 @@ public sealed class DamageMarkerController
         Canvas markerCanvas,
         Slider positionSlider,
         PlayerDamageOverlayData? damageOverlay,
-        MediaPlayer player,
+        PlayerPlaybackControlHost playbackControlHost,
         PlayerTimelineHost timelineHost,
         Action ensurePlaying,
         Action updateUi,
@@ -35,7 +33,7 @@ public sealed class DamageMarkerController
         _markerCanvas = markerCanvas ?? throw new ArgumentNullException(nameof(markerCanvas));
         _positionSlider = positionSlider ?? throw new ArgumentNullException(nameof(positionSlider));
         _damageOverlay = damageOverlay;
-        _player = player ?? throw new ArgumentNullException(nameof(player));
+        _playbackControlHost = playbackControlHost ?? throw new ArgumentNullException(nameof(playbackControlHost));
         _timelineHost = timelineHost ?? throw new ArgumentNullException(nameof(timelineHost));
         _ensurePlaying = ensurePlaying ?? throw new ArgumentNullException(nameof(ensurePlaying));
         _updateUi = updateUi ?? throw new ArgumentNullException(nameof(updateUi));
@@ -204,7 +202,7 @@ public sealed class DamageMarkerController
             return;
 
         _ensurePlaying();
-        _player.SetPause(true);
+        _playbackControlHost.SetPause(true);
 
         var ratio = Math.Clamp(meter / _damageOverlay.PipeLengthMeters, 0.0, 1.0);
         _positionSlider.Value = ratio * _positionSlider.Maximum;
