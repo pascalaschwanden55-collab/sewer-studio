@@ -59,27 +59,25 @@ public partial class PlayerWindow
 
     private void CodingCreateEvent_Click(object sender, RoutedEventArgs e)
     {
-        if (!_codingSessionHost.HasViewModel) return;
-
-        var videoTime = _playerTimelineHost.CurrentTimeOrZero;
-        _codingSessionHost.SetCurrentVideoTime(videoTime);
-        var createdEvent = CodingSelectedCodeEventWorkflow.Create(
-            _codingSessionHost.SelectedCode,
-            _codingSessionHost.SelectedCodeDescription,
-            _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter,
-            videoTime,
-            _codingSessionHost.CurrentOverlay,
-            _codingSessionRuntimeOwner.Service,
-            CodingCaptureSnapshot);
-        if (createdEvent == null)
-            return;
-
-        CodingEventCreationPostWorkflow.Apply(
-            createdEvent,
-            _codingEventCreationPostActions,
-            new CodingEventCreationPostOptions(
-                SelectCreatedEvent: false,
-                ClearSelectedCode: true));
+        CodingCreateSelectedCodeEventCommandWorkflow.Execute(
+            new CodingCreateSelectedCodeEventCommandRequest(_codingSessionHost.HasViewModel),
+            new CodingCreateSelectedCodeEventCommandActions(
+                GetCurrentVideoTime: () => _playerTimelineHost.CurrentTimeOrZero,
+                SetCurrentVideoTime: _codingSessionHost.SetCurrentVideoTime,
+                CreateEvent: videoTime => CodingSelectedCodeEventWorkflow.Create(
+                    _codingSessionHost.SelectedCode,
+                    _codingSessionHost.SelectedCodeDescription,
+                    _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter,
+                    videoTime,
+                    _codingSessionHost.CurrentOverlay,
+                    _codingSessionRuntimeOwner.Service,
+                    CodingCaptureSnapshot),
+                ApplyPostCreation: createdEvent => CodingEventCreationPostWorkflow.Apply(
+                    createdEvent,
+                    _codingEventCreationPostActions,
+                    new CodingEventCreationPostOptions(
+                        SelectCreatedEvent: false,
+                        ClearSelectedCode: true))));
     }
 
     private void RefreshCodingEventsList()

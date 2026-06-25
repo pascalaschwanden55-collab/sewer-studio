@@ -3763,6 +3763,7 @@ public sealed class UiArchitectureGuardTests
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingManualEventFactory.cs");
         var appenderPath = Path.Combine(uiRoot, "Ai", "CodingManualEventAppender.cs");
         var selectedCodeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSelectedCodeEventWorkflow.cs");
+        var createCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCreateSelectedCodeEventCommandWorkflow.cs");
         var postWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventCreationPostWorkflow.cs");
         var accessorsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
 
@@ -3770,16 +3771,22 @@ public sealed class UiArchitectureGuardTests
         var factory = File.ReadAllText(factoryPath);
         var appender = File.Exists(appenderPath) ? File.ReadAllText(appenderPath) : "";
         var selectedCodeWorkflow = File.Exists(selectedCodeWorkflowPath) ? File.ReadAllText(selectedCodeWorkflowPath) : "";
+        var createCommandWorkflow = File.Exists(createCommandWorkflowPath) ? File.ReadAllText(createCommandWorkflowPath) : "";
         var postWorkflow = File.Exists(postWorkflowPath) ? File.ReadAllText(postWorkflowPath) : "";
         var accessors = File.ReadAllText(accessorsPath);
+        var createEventBody = ExtractMethodBody(events, "private void CodingCreateEvent_Click");
 
         Assert.True(File.Exists(selectedCodeWorkflowPath), "Manueller Selected-Code-Event-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(createCommandWorkflowPath), "Manueller Create-Event-Button-Ablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(postWorkflowPath), "Nachbearbeitung manuell erzeugter Coding-Events soll ausserhalb der Events-Partial orchestriert werden.");
+        Assert.Contains("CodingCreateSelectedCodeEventCommandWorkflow.Execute", events);
         Assert.Contains("CodingSelectedCodeEventWorkflow.Create", events);
         Assert.Contains("CodingManualEventAppender.Apply", events);
         Assert.Contains("CodingEventCreationPostWorkflow.Apply", events);
         Assert.Contains("_codingSessionHost", events);
         Assert.DoesNotContain("_codingVm", events);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", createEventBody);
+        Assert.DoesNotContain("if (createdEvent == null)", createEventBody);
         Assert.DoesNotContain("_codingSchemaManager.Cancel()", events);
         Assert.DoesNotContain("_codingVm.CurrentOverlay = null", events);
         Assert.DoesNotContain("TxtCodingSelectedCode.Text = \"\"", events);
@@ -3790,6 +3797,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingManualEventFactory.CreateUnconfirmed", selectedCodeWorkflow);
         Assert.Contains("CodingProtocolEntryPhotoPathAppender.AddIfPresent", selectedCodeWorkflow);
         Assert.Contains("CodingManualEventAppender.Apply", selectedCodeWorkflow);
+        Assert.Contains("actions.GetCurrentVideoTime()", createCommandWorkflow);
+        Assert.Contains("actions.SetCurrentVideoTime(videoTime)", createCommandWorkflow);
+        Assert.Contains("actions.CreateEvent(videoTime)", createCommandWorkflow);
+        Assert.Contains("actions.ApplyPostCreation(createdEvent)", createCommandWorkflow);
         Assert.Contains("public static bool Apply", postWorkflow);
         Assert.Contains("new CodingEventCreationPostActions", accessors);
         Assert.Contains("_codingSessionHost", accessors);
@@ -7205,6 +7216,32 @@ public sealed class UiArchitectureGuardTests
         }
 
         throw new DirectoryNotFoundException("Repository-Root mit AuswertungPro.sln wurde nicht gefunden.");
+    }
+
+    private static string ExtractMethodBody(string source, string signature)
+    {
+        var signatureIndex = source.IndexOf(signature, StringComparison.Ordinal);
+        Assert.True(signatureIndex >= 0, $"Signatur nicht gefunden: {signature}");
+
+        var braceIndex = source.IndexOf('{', signatureIndex);
+        Assert.True(braceIndex >= 0, $"Methodenrumpf nicht gefunden: {signature}");
+
+        var depth = 0;
+        for (var i = braceIndex; i < source.Length; i++)
+        {
+            if (source[i] == '{')
+            {
+                depth++;
+            }
+            else if (source[i] == '}')
+            {
+                depth--;
+                if (depth == 0)
+                    return source[braceIndex..(i + 1)];
+            }
+        }
+
+        throw new InvalidOperationException($"Methodenrumpf nicht abgeschlossen: {signature}");
     }
 
     private static string Normalize(string path)
