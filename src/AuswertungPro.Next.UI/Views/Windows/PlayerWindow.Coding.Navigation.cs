@@ -36,20 +36,15 @@ public partial class PlayerWindow
     /// </summary>
     private void UpdateCodingCurrentCode()
     {
-        if (!_codingSessionHost.HasViewModel)
-        {
-            CodingCurrentCodeBadgeControls.Apply(
-                CodingCurrentCodeBadge,
-                TxtCodingCurrentCode,
-                CodingCurrentCodeBadgeState.Hidden);
-            return;
-        }
-
-        var state = CodingCurrentCodeBadgePolicy.Build(
-            _codingSessionHost.Events,
-            ResolveCurrentCodingDisplayMeter());
-
-        CodingCurrentCodeBadgeControls.Apply(CodingCurrentCodeBadge, TxtCodingCurrentCode, state);
+        CodingCurrentCodeUpdateWorkflow.Execute(
+            new CodingCurrentCodeUpdateRequest(_codingSessionHost.HasViewModel),
+            new CodingCurrentCodeUpdateActions(
+                GetEvents: () => _codingSessionHost.Events,
+                ResolveCurrentMeter: ResolveCurrentCodingDisplayMeter,
+                ApplyState: state => CodingCurrentCodeBadgeControls.Apply(
+                    CodingCurrentCodeBadge,
+                    TxtCodingCurrentCode,
+                    state)));
     }
 
     private double ResolveCurrentCodingDisplayMeter()

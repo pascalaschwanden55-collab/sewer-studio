@@ -7473,14 +7473,21 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var navigationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Navigation.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingCurrentCodeUpdateWorkflow.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingCurrentCodeBadgeControls.cs");
 
+        Assert.True(File.Exists(workflowPath), "Current-Code-Badge-Entscheidung soll ausserhalb der PlayerWindow-Partials laufen.");
         Assert.True(File.Exists(controlsPath), "Current-Code-Badge-Text und Visibility sollen ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
         var navigation = File.ReadAllText(navigationPath);
+        var workflow = File.ReadAllText(workflowPath);
         var controls = File.ReadAllText(controlsPath);
 
+        Assert.Contains("CodingCurrentCodeUpdateWorkflow.Execute", navigation);
         Assert.Contains("CodingCurrentCodeBadgeControls.Apply", navigation);
+        Assert.DoesNotContain("CodingCurrentCodeBadgePolicy.Build", navigation);
+        Assert.Contains("CodingCurrentCodeBadgePolicy.Build", workflow);
+        Assert.Contains("CodingCurrentCodeBadgeState.Hidden", workflow);
         Assert.DoesNotContain("TxtCodingCurrentCode.Text", navigation);
         Assert.DoesNotContain("CodingCurrentCodeBadge.Visibility", navigation);
         Assert.Contains("public static class CodingCurrentCodeBadgeControls", controls);
