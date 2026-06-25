@@ -68,17 +68,18 @@ public partial class PlayerWindow
 
     private void DeactivateMarkTool()
     {
-        _markToolType = OverlayToolType.None;
-        _isManualMarkMode = false;
-        _markToolControls.ResetToolLabel();
-        _markToolControls.DeactivateDetectionSide(_liveDetectionController.IsDetecting);
-
-        if (!_isCodingMode)
-        {
-            _codingSchemaManager.Cancel();
-            _codingOverlayToolHost.CancelDraw();
-            _codingOverlayToolHost.SetActiveTool(OverlayToolType.None);
-            _markToolControls.DeactivateCodingOverlay();
-        }
+        LiveDetectionManualMarkDeactivationWorkflow.Execute(
+            new LiveDetectionManualMarkDeactivationWorkflowRequest(
+                _isCodingMode,
+                _liveDetectionController.IsDetecting),
+            new LiveDetectionManualMarkDeactivationWorkflowActions(
+                SetMarkToolType: tool => _markToolType = tool,
+                SetManualMarkMode: enabled => _isManualMarkMode = enabled,
+                ResetToolLabel: _markToolControls.ResetToolLabel,
+                DeactivateDetectionSide: _markToolControls.DeactivateDetectionSide,
+                CancelSchema: _codingSchemaManager.Cancel,
+                CancelDraw: () => _codingOverlayToolHost.CancelDraw(),
+                SetActiveTool: tool => _codingOverlayToolHost.SetActiveTool(tool),
+                DeactivateCodingOverlay: _markToolControls.DeactivateCodingOverlay));
     }
 }

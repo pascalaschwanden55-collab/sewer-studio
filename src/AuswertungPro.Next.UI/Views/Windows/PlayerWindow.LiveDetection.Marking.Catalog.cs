@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Input;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -11,32 +10,29 @@ public partial class PlayerWindow
 {
     private void DetectionCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        // Eingabemarker nutzt CodingOverlayCanvas, nicht DetectionCanvas.
-        if (!_isManualMarkMode)
-            return;
+        var result = LiveDetectionMarkCatalogOpenWorkflow.ExecuteCanvasClick(
+            new LiveDetectionMarkCatalogCanvasClickRequest(
+                _isManualMarkMode,
+                e.GetPosition(DetectionCanvas),
+                new Size(DetectionCanvas.ActualWidth, DetectionCanvas.ActualHeight),
+                _playerTimelineHost.CurrentSecondsOrZero),
+            new LiveDetectionMarkCatalogOpenWorkflowActions(
+                SetPause: _playerPlaybackControlHost.SetPause,
+                OpenCodeCatalog: OpenCodeCatalogForMark));
 
-        var clickPoint = e.GetPosition(DetectionCanvas);
-        var canvasSize = new Size(DetectionCanvas.ActualWidth, DetectionCanvas.ActualHeight);
-
-        if (canvasSize.Width < 60 || canvasSize.Height < 60)
-            return;
-
-        PlayerManualMarkPlayback.PauseForManualMarking(_playerPlaybackControlHost.SetPause);
-
-        var clockPosition = LiveDetectionGeometryMapper.ClickToClockPosition(clickPoint, canvasSize);
-        var timestampSec = _playerTimelineHost.CurrentSecondsOrZero;
-
-        OpenCodeCatalogForMark(clockPosition, timestampSec, null);
-        e.Handled = true;
+        e.Handled = result.Handled;
     }
 
     private void OnFindingClicked(LiveFrameFinding finding, double timestampSec)
     {
-        PlayerManualMarkPlayback.PauseForManualMarking(_playerPlaybackControlHost.SetPause);
-        OpenCodeCatalogForMark(
-            finding.PositionClock,
-            timestampSec,
-            finding.VsaCodeHint);
+        LiveDetectionMarkCatalogOpenWorkflow.ExecuteFindingClick(
+            new LiveDetectionMarkCatalogFindingClickRequest(
+                finding.PositionClock,
+                timestampSec,
+                finding.VsaCodeHint),
+            new LiveDetectionMarkCatalogOpenWorkflowActions(
+                SetPause: _playerPlaybackControlHost.SetPause,
+                OpenCodeCatalog: OpenCodeCatalogForMark));
     }
 
     private void OpenCodeCatalogForMark(string? clockPosition, double timestampSec, string? suggestedCode)
