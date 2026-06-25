@@ -77,12 +77,12 @@ public partial class PlayerWindow
     private void SetSpeed(float rate)
         => PlayerPlaybackCommandRunner.SetSpeed(
             rate,
-            _player.SetRate,
+            _playerPlaybackControlHost.SetRate,
             clamped => PlayerPlaybackDialogServiceFactory.Create().ShowUnsupportedRate(clamped),
             UpdateRateLabel);
 
     private void UpdateRateLabel()
     {
-        _speedControls.Update(_player.Rate);
+        _speedControls.Update(_playerPlaybackControlHost.Rate);
     }
 }

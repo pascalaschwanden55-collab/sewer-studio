@@ -1068,6 +1068,29 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_playback_rate_uses_control_host()
+    {
+        var root = FindRepositoryRoot();
+        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var paths = new[]
+        {
+            "PlayerWindow.Playback.cs",
+            "PlayerWindow.Playback.Controls.cs"
+        };
+
+        foreach (var fileName in paths)
+        {
+            var path = Path.Combine(windowsRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} muss als PlayerWindow-Partial existieren.");
+
+            var text = File.ReadAllText(path);
+            Assert.Contains("_playerPlaybackControlHost", text);
+            Assert.DoesNotContain("_player.Rate", text);
+            Assert.DoesNotContain("_player.SetRate", text);
+        }
+    }
+
+    [Fact]
     public void PlayerWindow_overlay_input_mouseflow_keeps_only_direct_dependencies()
     {
         var root = FindRepositoryRoot();

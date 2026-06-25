@@ -11,7 +11,9 @@ public sealed class PlayerPlaybackControlHostTests
             readIsPlaying: () => true,
             setPause: _ => { },
             play: () => { },
-            stop: () => { });
+            stop: () => { },
+            readRate: () => 1.0f,
+            setRate: _ => 0);
 
         Assert.True(host.IsPlaying);
     }
@@ -26,7 +28,9 @@ public sealed class PlayerPlaybackControlHostTests
             readIsPlaying: () => false,
             setPause: pause => pauseSeen = pause,
             play: () => playCount++,
-            stop: () => stopCount++);
+            stop: () => stopCount++,
+            readRate: () => 1.0f,
+            setRate: _ => 0);
 
         host.SetPause(true);
         host.Play();
@@ -35,5 +39,28 @@ public sealed class PlayerPlaybackControlHostTests
         Assert.True(pauseSeen);
         Assert.Equal(1, playCount);
         Assert.Equal(1, stopCount);
+    }
+
+    [Fact]
+    public void Host_exposes_rate_and_forwards_rate_changes()
+    {
+        float? rateSeen = null;
+        var host = new PlayerPlaybackControlHost(
+            readIsPlaying: () => false,
+            setPause: _ => { },
+            play: () => { },
+            stop: () => { },
+            readRate: () => 1.5f,
+            setRate: rate =>
+            {
+                rateSeen = rate;
+                return 0;
+            });
+
+        var result = host.SetRate(2.0f);
+
+        Assert.Equal(1.5f, host.Rate);
+        Assert.Equal(0, result);
+        Assert.Equal(2.0f, rateSeen);
     }
 }

@@ -62,7 +62,9 @@ public partial class PlayerWindow : Window
             readIsPlaying: () => _player.IsPlaying,
             setPause: pause => _player.SetPause(pause),
             play: () => _player.Play(),
-            stop: () => _player.Stop());
+            stop: () => _player.Stop(),
+            readRate: () => _player.Rate,
+            setRate: _player.SetRate);
 
         _damageMarkerController = new DamageMarkerController(
             DamageMarkerCanvas,

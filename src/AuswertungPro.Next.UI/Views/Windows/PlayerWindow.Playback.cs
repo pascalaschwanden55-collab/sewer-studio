@@ -58,7 +58,7 @@ public partial class PlayerWindow
 
     private void ChangeSpeed(float delta)
     {
-        SetSpeed(AuswertungPro.Next.UI.Player.PlayerPlaybackState.ApplyRateDelta(_player.Rate, delta));
+        SetSpeed(AuswertungPro.Next.UI.Player.PlayerPlaybackState.ApplyRateDelta(_playerPlaybackControlHost.Rate, delta));
     }
 
     private void JumpSeconds(int seconds)
