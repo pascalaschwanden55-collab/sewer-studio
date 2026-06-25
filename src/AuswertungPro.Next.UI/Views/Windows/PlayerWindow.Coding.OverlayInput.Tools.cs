@@ -64,20 +64,23 @@ public partial class PlayerWindow
                 ShowToast: ShowCodingScreenshotToast));
 
     private void ShowCodingScreenshotToast(string msg)
-    {
-        try
-        {
-            LiveDetectionStatusControls.ShowStatusMessage(LiveDetectionStatusText, msg);
-            var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
-            t.Tick += (s, ev) =>
-            {
-                LiveDetectionStatusControls.HideDetectionStatus(LiveDetectionStatusText);
-                t.Stop();
-            };
-            t.Start();
-        }
-        catch { }
-    }
+        => CodingScreenshotToastWorkflow.Show(
+            new CodingScreenshotToastWorkflowRequest(msg),
+            new CodingScreenshotToastWorkflowActions(
+                ShowStatusMessage: message => LiveDetectionStatusControls.ShowStatusMessage(
+                    LiveDetectionStatusText,
+                    message),
+                ScheduleHideStatus: (delay, hide) =>
+                {
+                    var t = new System.Windows.Threading.DispatcherTimer { Interval = delay };
+                    t.Tick += (s, ev) =>
+                    {
+                        hide();
+                        t.Stop();
+                    };
+                    t.Start();
+                },
+                HideStatus: () => LiveDetectionStatusControls.HideDetectionStatus(LiveDetectionStatusText)));
 
     private void UpdateCodingOverlayCursor()
     {

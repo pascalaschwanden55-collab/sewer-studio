@@ -340,27 +340,38 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var toolsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Tools.cs");
         var servicePath = Path.Combine(uiRoot, "Services", "WindowClipboardCaptureService.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingScreenshotCommandWorkflow.cs");
+        var toastWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingScreenshotToastWorkflow.cs");
 
         Assert.True(File.Exists(servicePath), "Win32-Screenshot-Capture muss in einem UI-Service gekapselt bleiben.");
         Assert.True(File.Exists(workflowPath), "Screenshot-Command-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(toastWorkflowPath), "Screenshot-Toast-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var playerWindowText = string.Join(
             Environment.NewLine,
             Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
+        var tools = File.ReadAllText(toolsPath);
         var service = File.ReadAllText(servicePath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
+        var toastWorkflow = File.Exists(toastWorkflowPath) ? File.ReadAllText(toastWorkflowPath) : "";
 
         Assert.DoesNotContain("DllImport", playerWindowText);
         Assert.DoesNotContain("BitBlt", playerWindowText);
         Assert.Contains("TryCopyWindowToClipboard", playerWindowText);
         Assert.Contains("CodingScreenshotCommandWorkflow.Execute", playerWindowText);
+        Assert.Contains("CodingScreenshotToastWorkflow.Show", playerWindowText);
         Assert.DoesNotContain("if (WindowClipboardCaptureService.TryCopyWindowToClipboard", playerWindowText);
+        Assert.DoesNotContain("TimeSpan.FromSeconds(2.5)", tools);
+        Assert.DoesNotContain("catch { }", tools);
         Assert.Contains("BitBlt", service);
         Assert.Contains("Clipboard.SetImage", service);
         Assert.Contains("if (!actions.CopyWindowToClipboard())", workflow);
         Assert.Contains("actions.ShowToast(CopiedToastMessage)", workflow);
+        Assert.Contains("TimeSpan.FromSeconds(2.5)", toastWorkflow);
+        Assert.Contains("actions.ScheduleHideStatus(HideDelay, actions.HideStatus)", toastWorkflow);
+        Assert.Contains("catch", toastWorkflow);
     }
 
     [Fact]
