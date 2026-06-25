@@ -9,7 +9,7 @@ public partial class PlayerWindow
     private void CreateCodingSessionState()
     {
         var state = CodingSessionStateFactory.Create(_videoPath, _dependencies.Settings);
-        _codingSessionService = state.SessionService;
+        _codingSessionRuntimeOwner.Set(state.SessionService);
         _codingOverlayService = state.OverlayService;
         _codingSchemaManager.Cancel();
         _codingSchemaType = null;
@@ -34,14 +34,14 @@ public partial class PlayerWindow
     {
         return CodingSessionStartWorkflow.Execute(
             new CodingSessionStartWorkflowRequest(
-                HasRequiredState: _haltungRecord != null && _codingSessionHost.HasViewModel && _codingSessionService != null,
+                HasRequiredState: _haltungRecord != null && _codingSessionHost.HasViewModel && _codingSessionRuntimeOwner.Service != null,
                 EndMeter: _codingSessionHost.EndMeter),
             new CodingSessionStartWorkflowActions(
                 ExecuteStartSession: () => _codingSessionHost.ExecuteStartSession(_haltungRecord!),
-                HasActiveSession: () => _codingSessionService!.ActiveSession != null,
+                HasActiveSession: () => _codingSessionRuntimeOwner.Service!.ActiveSession != null,
                 ShowSessionStartFailed: message => CodingModeDialogServiceFactory.Create().ShowSessionStartFailed(message),
                 ExitCodingMode: ExitCodingMode,
-                PauseSession: () => _codingSessionService!.PauseSession(),
+                PauseSession: () => _codingSessionRuntimeOwner.Service!.PauseSession(),
                 SetRangeText: endMeter => CodingSessionHeaderControls.SetRangeText(TxtCodingRange, endMeter),
                 SetMeterText: meter => CodingMeterTimelineControls.SetText(TxtCodingMeter, meter)));
     }

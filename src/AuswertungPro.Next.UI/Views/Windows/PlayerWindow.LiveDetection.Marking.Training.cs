@@ -30,7 +30,7 @@ public partial class PlayerWindow
                 timestampSec,
                 clockPosition,
                 TxtCodingMeter?.Text,
-                _codingSessionHost.HasViewModel ? _codingSessionService : null,
+                _codingSessionHost.HasViewModel ? _codingSessionRuntimeOwner.Service : null,
                 preCapturedFrame,
                 CaptureCurrentFrameAsync,
                 (frameBytes, entry, markOverlay, clock, meter, videoTimestamp) =>

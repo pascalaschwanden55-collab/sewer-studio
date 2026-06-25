@@ -37,7 +37,7 @@ public partial class PlayerWindow
                 }
             }
 
-            if (codeHint != null && _codingSessionHost.HasViewModel && _codingSessionService != null)
+            if (codeHint != null && _codingSessionHost.HasViewModel && _codingSessionRuntimeOwner.Service != null)
             {
                 var meter = _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter;
                 var videoTime = _codingSessionHost.CurrentVideoTime ?? TimeSpan.FromMilliseconds(_player.Time);
@@ -53,7 +53,7 @@ public partial class PlayerWindow
                 var fotoPath = CodingCaptureSnapshot(draft.Entry);
                 CodingProtocolEntryPhotoPathAppender.AddIfPresent(draft.Entry, fotoPath);
 
-                var ev = CodingEingabemarkerEventAppender.Apply(draft, _codingSessionHost.CurrentOverlay, _codingSessionService);
+                var ev = CodingEingabemarkerEventAppender.Apply(draft, _codingSessionHost.CurrentOverlay, _codingSessionRuntimeOwner.Service);
                 RefreshCodingEventsList();
                 UpdateToolBadge();
                 PersistSingleEventAsTrainingSample(ev).SafeFireAndForget("TrainingSaveSingle");

@@ -13,7 +13,7 @@ public partial class PlayerWindow
         IReadOnlyList<SegmentedFinding> segmented, double imageWidth, double imageHeight,
         double? yoloMaxConfidence, double captureTimestampSec, double? frameOsdMeter)
     {
-        var codingSessionService = _codingSessionService;
+        var codingSessionService = _codingSessionRuntimeOwner.Service;
         if (!_codingSessionHost.HasViewModel || codingSessionService == null) return;
 
         double meter = ResolveCodingMeterForFrame(captureTimestampSec, frameOsdMeter);

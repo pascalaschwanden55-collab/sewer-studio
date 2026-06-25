@@ -20,7 +20,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class PlayerWindow
 {
     private bool _isCodingMode;
-    private ICodingSessionService? _codingSessionService;
+    private readonly CodingSessionServiceOwner _codingSessionRuntimeOwner = new();
     private IOverlayToolService? _codingOverlayService;
     private readonly SchemaOverlayManager _codingSchemaManager = new();
     private SchemaType? _codingSchemaType;
@@ -44,6 +44,7 @@ public partial class PlayerWindow
     private CodingConfirmationPanelControls _codingConfirmationPanelControls = null!;
     private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner;
     private readonly ICodingSessionHost _codingSessionHost;
+    private readonly ICodingOverlayToolHost _codingOverlayToolHost;
 
     private enum EingabemarkerPhase { Inactive, Drawing, Input, Analyzing }
     private EingabemarkerPhase _eingabemarkerPhase = EingabemarkerPhase.Inactive;

@@ -25,14 +25,14 @@ public partial class PlayerWindow
             ToggleMarkTool = ToggleMarkToolShortcut
         });
 
-        var action = PlayerKeyboardShortcutPolicy.Resolve(e.Key, _codingOverlayService != null);
+        var action = PlayerKeyboardShortcutPolicy.Resolve(e.Key, _codingOverlayToolHost.HasOverlayService);
         if (_keyboardActions.Execute(action))
             e.Handled = true;
     }
 
     private void CancelCodingOverlayShortcut()
     {
-        _codingOverlayService?.CancelDraw();
+        _codingOverlayToolHost.CancelDraw();
         _codingSchemaManager.Cancel();
         if (CodingOverlayCanvas.IsMouseCaptured)
             CodingOverlayCanvas.ReleaseMouseCapture();

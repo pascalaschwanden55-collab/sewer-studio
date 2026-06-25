@@ -39,7 +39,7 @@ public partial class PlayerWindow
         {
             CodingEventListActionWorkflow.CompleteEdit(
                 codingEvent,
-                _codingSessionService,
+                _codingSessionRuntimeOwner.Service,
                 RefreshCodingEventsList);
         }
     }
@@ -64,7 +64,7 @@ public partial class PlayerWindow
 
         var closeAction = CodingEventListActionWorkflow.CloseStretch(
             startEvent,
-            _codingSessionService,
+            _codingSessionRuntimeOwner.Service,
             _codingSessionHost.CurrentMeter,
             _player != null ? TimeSpan.FromMilliseconds(_player.Time) : TimeSpan.Zero);
 
@@ -100,7 +100,7 @@ public partial class PlayerWindow
 
         var deleteResult = CodingEventListActionWorkflow.Delete(
             codingEvent,
-            _codingSessionService,
+            _codingSessionRuntimeOwner.Service,
             _codingSessionHost.EventCollection,
             _codingSessionHost.SelectedDefect);
         if (!deleteResult.Deleted) return;

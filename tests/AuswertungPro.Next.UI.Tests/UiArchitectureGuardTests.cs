@@ -296,7 +296,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private readonly ObservableCollection<CodingEvent> _codingImportEvents", coding);
         Assert.Contains("private bool _isCodingMode", state);
         Assert.Contains("private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner", state);
+        Assert.Contains("private readonly CodingSessionServiceOwner _codingSessionRuntimeOwner", state);
         Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", state);
+        Assert.DoesNotContain("private ICodingSessionService? _codingSessionService", state);
         Assert.Contains("private enum EingabemarkerPhase", state);
         Assert.Contains("private readonly ObservableCollection<CodingEvent> _codingImportEvents", state);
     }
@@ -2963,7 +2965,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Pause", keyboard);
         Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Resume", keyboard);
         Assert.Contains("_codingSessionHost", keyboard);
+        Assert.Contains("_codingOverlayToolHost", keyboard);
         Assert.DoesNotContain("_codingVm", keyboard);
+        Assert.DoesNotContain("_codingOverlayService", keyboard);
         Assert.DoesNotContain("_player.Stop()", keyboard);
         Assert.DoesNotContain("_player.SetPause(true)", keyboard);
         Assert.DoesNotContain("_player.SetPause(false)", keyboard);
@@ -4844,6 +4848,26 @@ public sealed class UiArchitectureGuardTests
         {
             var text = File.ReadAllText(path);
             Assert.DoesNotContain("_codingVm", text);
+        }
+    }
+
+    [Fact]
+    public void PlayerWindow_coding_session_service_is_owned_by_runtime_owner()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var ownerPath = Path.Combine(uiRoot, "Player", "CodingSessionServiceOwner.cs");
+
+        Assert.True(File.Exists(ownerPath), "CodingSessionService-Besitz soll in einem eigenen Player-Owner liegen.");
+
+        var owner = File.ReadAllText(ownerPath);
+        Assert.Contains("public sealed class CodingSessionServiceOwner", owner);
+
+        foreach (var path in Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs"))
+        {
+            var text = File.ReadAllText(path);
+            Assert.DoesNotContain("_codingSessionService", text);
         }
     }
 

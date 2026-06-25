@@ -102,6 +102,7 @@ public partial class PlayerWindow : Window
             new DelegateOverlayCoordinateMapper(CodingNormToPixel));
         _codingSessionViewModelOwner = new CodingSessionViewModelOwner(CodingVm_PropertyChanged);
         _codingSessionHost = new CodingSessionHost(() => _codingSessionViewModelOwner.ViewModel);
+        _codingOverlayToolHost = new CodingOverlayToolHost(() => _codingOverlayService);
 
         _timer = CreateUpdateTimer();
         _scrubTimer = CreateScrubTimer();

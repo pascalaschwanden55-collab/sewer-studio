@@ -46,7 +46,7 @@ public partial class PlayerWindow
 
             if (entry is not null)
             {
-                var createdEvent = CodingManualEventAppender.Apply(entry, _codingSessionHost.CurrentOverlay, _codingSessionService!);
+                var createdEvent = CodingManualEventAppender.Apply(entry, _codingSessionHost.CurrentOverlay, _codingSessionRuntimeOwner.Service!);
 
                 CodingEventCreationPostWorkflow.Apply(
                     createdEvent,
@@ -74,7 +74,7 @@ public partial class PlayerWindow
             _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter,
             videoTime,
             _codingSessionHost.CurrentOverlay,
-            _codingSessionService,
+            _codingSessionRuntimeOwner.Service,
             CodingCaptureSnapshot);
         if (createdEvent == null)
             return;

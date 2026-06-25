@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -43,7 +43,7 @@ public partial class PlayerWindow
                 _codingFrameReadinessController.SelectReadyResult,
                 CodingOsdMeterStateWorkflow.FromDetectionResult,
                 ApplyCodingOsdMeterState,
-                meter => _codingSessionService?.MoveToMeter(meter),
+                meter => _codingSessionRuntimeOwner.Service?.MoveToMeter(meter),
                 ResolveCodingMeterForFrame,
                 FilterValidFindings,
                 findings => CodingFindingsListControls.ShowFindings(CodingFindingsList, findings),

@@ -25,9 +25,9 @@ public partial class PlayerWindow
     {
         if (_player != null && CodingEventSeekPolicy.TryGetSeekMilliseconds(importEvent, out var milliseconds))
             _player.Time = milliseconds;
-        else if (_codingSessionService != null && importEvent.MeterAtCapture > 0)
+        else if (_codingSessionRuntimeOwner.Service != null && importEvent.MeterAtCapture > 0)
         {
-            _codingSessionService.MoveToMeter(importEvent.MeterAtCapture);
+            _codingSessionRuntimeOwner.Service.MoveToMeter(importEvent.MeterAtCapture);
             _codingNavPending = true;
             SyncVideoToCodingMeter();
         }

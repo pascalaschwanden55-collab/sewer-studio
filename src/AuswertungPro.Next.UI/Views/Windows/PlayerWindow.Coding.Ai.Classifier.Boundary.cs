@@ -15,7 +15,7 @@ public partial class PlayerWindow
         if (!CodingBoundaryClassifierResultWorkflow.CanHandle(mmResult))
             return false;
 
-        if (!_codingSessionHost.HasViewModel || _codingSessionService == null)
+        if (!_codingSessionHost.HasViewModel || _codingSessionRuntimeOwner.Service == null)
             return false;
 
         var videoTime = _codingSessionHost.CurrentVideoTime ?? TimeSpan.FromSeconds(captureTimestampSec);

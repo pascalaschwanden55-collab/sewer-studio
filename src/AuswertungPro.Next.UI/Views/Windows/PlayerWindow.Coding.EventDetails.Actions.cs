@@ -54,7 +54,7 @@ public partial class PlayerWindow
             {
                 var completed = CodingInlineDefectDecisionWorkflow.CompleteEdit(
                     ev,
-                    _codingSessionService,
+                    _codingSessionRuntimeOwner.Service,
                     () => { _codingSessionHost.ExecuteEditDefect(); },
                     codingEvent => PersistSingleEventAsTrainingSample(codingEvent)
                         .SafeFireAndForget("TrainingSaveEditInline"));
@@ -77,7 +77,7 @@ public partial class PlayerWindow
         var rejectResult = CodingInlineDefectDecisionWorkflow.Reject(
             _codingSessionHost.SelectedDefect,
             LstCodingEvents.SelectedItem as CodingEvent,
-            _codingSessionService,
+            _codingSessionRuntimeOwner.Service,
             _codingSessionHost.EventCollection);
 
         if (!rejectResult.Rejected)

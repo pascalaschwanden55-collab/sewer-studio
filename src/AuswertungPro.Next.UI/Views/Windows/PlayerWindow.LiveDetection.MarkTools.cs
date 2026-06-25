@@ -69,9 +69,9 @@ public partial class PlayerWindow
         var state = CodingSessionStateFactory.Create(
             _videoPath,
             _dependencies.Settings,
-            _codingSessionService,
+            _codingSessionRuntimeOwner.Service,
             _codingOverlayService);
-        _codingSessionService = state.SessionService;
+        _codingSessionRuntimeOwner.Set(state.SessionService);
         _codingOverlayService = state.OverlayService;
         _codingSessionViewModelOwner.Set(state.ViewModel, observePropertyChanged: false);
     }

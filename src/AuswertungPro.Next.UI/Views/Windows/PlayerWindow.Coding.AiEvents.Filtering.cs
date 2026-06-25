@@ -20,7 +20,7 @@ public partial class PlayerWindow
             raw,
             currentMeter,
             ResolveFindingCodeForCoding,
-            _codingSessionService?.ActiveSession?.Events,
+            _codingSessionRuntimeOwner.Service?.ActiveSession?.Events,
             _codingSessionHost.Events,
             message => PlayerTrace.WriteLine(message));
     }
@@ -42,7 +42,7 @@ public partial class PlayerWindow
         return CodingKnownFindingPolicy.IsKnown(
             finding,
             meter,
-            _codingSessionService?.ActiveSession?.Events,
+            _codingSessionRuntimeOwner.Service?.ActiveSession?.Events,
             _codingSessionHost.Events);
     }
 }

@@ -12,7 +12,7 @@ public partial class PlayerWindow
         double captureTimestampSec,
         double? frameOsdMeter)
     {
-        var codingSessionService = _codingSessionService;
+        var codingSessionService = _codingSessionRuntimeOwner.Service;
         var viewEvents = _codingSessionHost.EventCollection;
         if (viewEvents == null || codingSessionService == null)
             return false;

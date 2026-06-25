@@ -36,7 +36,7 @@ public partial class PlayerWindow
                 IsClosing: _closing,
                 HasPlayer: _player is not null,
                 HasLiveDetection: _codingAiController.LiveDetection is not null,
-                SessionState: _codingSessionService?.ActiveSession?.State,
+                SessionState: _codingSessionRuntimeOwner.Service?.ActiveSession?.State,
                 IsPlayerPlaying: _player?.IsPlaying == true),
             new CodingLiveAiTimerTickWorkflowActions(
                 RunAnalysisAsync: () => RunCodingAnalysisAsync("Automatische KI-Analyse: Analysiere..."),

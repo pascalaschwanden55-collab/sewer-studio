@@ -31,7 +31,7 @@ public partial class PlayerWindow
 
         if (decision == CodingOpenStretchDamageDialogDecision.Close)
         {
-            if (CodingOpenStretchDamageCloseApplier.Apply(offene, currentMeter, _codingSessionService))
+            if (CodingOpenStretchDamageCloseApplier.Apply(offene, currentMeter, _codingSessionRuntimeOwner.Service))
                 RefreshCodingEventsList();
             return true;
         }

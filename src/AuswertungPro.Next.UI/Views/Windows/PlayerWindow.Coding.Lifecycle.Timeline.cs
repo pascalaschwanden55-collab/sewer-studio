@@ -13,9 +13,9 @@ public partial class PlayerWindow
 
         var navigateToMeterCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<double>(meter =>
         {
-            if (_codingSessionService != null && _codingSessionHost.IsRunningOrPaused)
+            if (_codingSessionRuntimeOwner.Service != null && _codingSessionHost.IsRunningOrPaused)
             {
-                _codingSessionService.MoveToMeter(meter);
+                _codingSessionRuntimeOwner.Service.MoveToMeter(meter);
                 _codingNavPending = true;
                 SyncVideoToCodingMeter();
             }

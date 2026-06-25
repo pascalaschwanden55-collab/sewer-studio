@@ -12,7 +12,7 @@ public partial class PlayerWindow
 
     private CodingTrainingSamplePersistenceCoordinator CodingTrainingSamples
         => _codingTrainingSamples ??= CodingTrainingSamplePersistenceCoordinator.CreateDefault(
-            () => _codingSessionService,
+            () => _codingSessionRuntimeOwner.Service,
             _dependencies.Settings);
 
     private async System.Threading.Tasks.Task PersistSingleEventAsTrainingSample(CodingEvent ev)

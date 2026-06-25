@@ -25,7 +25,7 @@ public partial class PlayerWindow
     private void PauseAndAskConfirmation(CodingEvent codingEvent, QualityGateResult gateResult)
     {
         PlayerConfirmationPlayback.PauseCodingConfirmation(pause => _player.SetPause(pause));
-        _codingSessionService?.SetWaitingForInput();
+        _codingSessionRuntimeOwner.Service?.SetWaitingForInput();
 
         _codingPendingConfirmEvent = codingEvent;
         _codingPendingGateResult = gateResult;
@@ -65,7 +65,7 @@ public partial class PlayerWindow
         CodingConfirmationDecisionWorkflow.Reject(
             _codingPendingConfirmEvent,
             _codingPendingGateResult,
-            _codingSessionService,
+            _codingSessionRuntimeOwner.Service,
             _codingSessionHost.EventCollection,
             codingEvent => PersistSingleEventAsTrainingSample(codingEvent).SafeFireAndForget("TrainingSaveReject"),
             RefreshCodingEventsList);
@@ -89,7 +89,7 @@ public partial class PlayerWindow
     private void ResumeAfterConfirmation()
     {
         var result = CodingConfirmationResumeWorkflow.Apply(
-            _codingSessionService,
+            _codingSessionRuntimeOwner.Service,
             BtnCodingLiveAi.IsChecked == true,
             _codingAiController.ModelName,
             pause => _player.SetPause(pause));

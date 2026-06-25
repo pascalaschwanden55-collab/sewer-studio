@@ -22,7 +22,7 @@ public partial class PlayerWindow
         CodingImportReferenceControls.SetCount(RunImportDefectCount, _codingImportEvents.Count);
 
         // CompleteSession soll nur neue KI-Events enthalten.
-        CodingSessionEventResetter.ClearActiveSessionEvents(_codingSessionService);
+        CodingSessionEventResetter.ClearActiveSessionEvents(_codingSessionRuntimeOwner.Service);
 
         LstCodingEvents.ItemsSource = eventCollection;
         CodingImportReferenceControls.SetCount(RunCodingDefectCount, 0);

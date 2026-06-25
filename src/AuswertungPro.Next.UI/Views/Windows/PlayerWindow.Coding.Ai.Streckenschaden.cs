@@ -20,7 +20,7 @@ public partial class PlayerWindow
     private HashSet<SegmentedFinding> ApplyStreckenschadenTracking(
         IReadOnlyList<SegmentedFinding> segmented, double meter, TimeSpan videoTime)
     {
-        var codingSessionService = _codingSessionService;
+        var codingSessionService = _codingSessionRuntimeOwner.Service;
         if (codingSessionService == null || !_codingSessionHost.HasViewModel)
             return [];
 
@@ -43,7 +43,7 @@ public partial class PlayerWindow
         IReadOnlyList<StreckenschadenTracker.SegmentAction> actions,
         TimeSpan videoTime)
     {
-        var codingSessionService = _codingSessionService;
+        var codingSessionService = _codingSessionRuntimeOwner.Service;
         var codingEvents = _codingSessionHost.EventCollection;
         if (codingSessionService == null || codingEvents == null || actions.Count == 0)
             return false;

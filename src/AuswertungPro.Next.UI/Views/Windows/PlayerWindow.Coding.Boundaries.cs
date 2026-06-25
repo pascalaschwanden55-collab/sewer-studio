@@ -13,7 +13,7 @@ public partial class PlayerWindow
     /// </summary>
     private void EnsureRohranfangExists(double currentMeter, TimeSpan currentVideoTime, byte[]? analyzedFrameBytes, ref bool anyAdded)
     {
-        if (!_codingSessionHost.HasViewModel || _codingSessionService == null) return;
+        if (!_codingSessionHost.HasViewModel || _codingSessionRuntimeOwner.Service == null) return;
 
         var viewEvents = _codingSessionHost.EventCollection;
         if (viewEvents is null) return;
@@ -22,9 +22,9 @@ public partial class PlayerWindow
             new CodingBoundaryStartEventWorkflowRequest(
                 currentMeter,
                 viewEvents,
-                _codingSessionService.ActiveSession?.Events ?? [],
+                _codingSessionRuntimeOwner.Service.ActiveSession?.Events ?? [],
                 _codingImportEvents,
-                _codingSessionService,
+                _codingSessionRuntimeOwner.Service,
                 _codingFrameReadinessController.FirstCleanFrameSeconds,
                 analyzedFrameBytes),
             BoundaryEventWorkflowActions());
@@ -38,7 +38,7 @@ public partial class PlayerWindow
     /// </summary>
     private void EnsureRohrendeExists(double meterEnd, TimeSpan videoTime, byte[]? analyzedFrameBytes = null)
     {
-        if (!_codingSessionHost.HasViewModel || _codingSessionService == null) return;
+        if (!_codingSessionHost.HasViewModel || _codingSessionRuntimeOwner.Service == null) return;
 
         var viewEvents = _codingSessionHost.EventCollection;
         if (viewEvents is null) return;
@@ -51,7 +51,7 @@ public partial class PlayerWindow
             new CodingBoundaryEndEventWorkflowRequest(
                 viewEvents,
                 _codingImportEvents,
-                _codingSessionService,
+                _codingSessionRuntimeOwner.Service,
                 _codingOsdMeterController.LastMeter,
                 meterEnd,
                 _codingSessionHost.EndMeter,

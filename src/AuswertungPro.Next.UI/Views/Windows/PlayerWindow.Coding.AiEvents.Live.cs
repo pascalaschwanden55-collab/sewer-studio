@@ -14,7 +14,7 @@ public partial class PlayerWindow
     /// </summary>
     private void AddAiFindingsAsEvents(LiveDetection result, IReadOnlyList<LiveFrameFinding> validFindings)
     {
-        var codingSessionService = _codingSessionService;
+        var codingSessionService = _codingSessionRuntimeOwner.Service;
         if (!_codingSessionHost.HasViewModel || codingSessionService == null) return;
 
         double meter = ResolveCodingMeterForFrame(result.TimestampSeconds, result.MeterReading);

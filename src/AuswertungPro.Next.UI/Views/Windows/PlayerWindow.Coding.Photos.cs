@@ -50,7 +50,7 @@ public partial class PlayerWindow
             return;
         }
 
-        var slotUpdate = CodingEventPhotoApplier.Apply(codingEvent, fotoPath, _codingSessionService);
+        var slotUpdate = CodingEventPhotoApplier.Apply(codingEvent, fotoPath, _codingSessionRuntimeOwner.Service);
         ShowOverlay(slotUpdate.OverlayText, TimeSpan.FromSeconds(3));
 
         RefreshCodingEventsList();
