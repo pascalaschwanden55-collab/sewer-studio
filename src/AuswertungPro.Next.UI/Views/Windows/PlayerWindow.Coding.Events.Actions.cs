@@ -24,8 +24,10 @@ public partial class PlayerWindow
 
     private void CodingEventEdit_Click(object sender, RoutedEventArgs e)
     {
-        if (LstCodingEvents.SelectedItem is CodingEvent)
-            CodingEvents_DoubleClick(sender, null!);
+        CodingEventEditButtonCommandWorkflow.Execute(
+            new CodingEventEditButtonCommandRequest(LstCodingEvents.SelectedItem),
+            new CodingEventEditButtonCommandActions(
+                EditSelectedEvent: _ => CodingEvents_DoubleClick(sender, null!)));
     }
 
     private void CodingEventSeek_Click(object sender, RoutedEventArgs e)

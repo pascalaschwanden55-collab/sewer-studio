@@ -2805,6 +2805,7 @@ public sealed class UiArchitectureGuardTests
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventListActionWorkflow.cs");
         var seekCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventSeekCommandWorkflow.cs");
         var editCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventEditCommandWorkflow.cs");
+        var editButtonCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventEditButtonCommandWorkflow.cs");
         var deleteCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteCommandWorkflow.cs");
         var closeStretchCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventCloseStretchCommandWorkflow.cs");
 
@@ -2816,6 +2817,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(workflowPath), "Coding-Event-Listenaktionen sollen die Apply/Delete-Nachbearbeitung ausserhalb der PlayerWindow-Partials kapseln.");
         Assert.True(File.Exists(seekCommandWorkflowPath), "Coding-Event-Seek-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(editCommandWorkflowPath), "Coding-Event-Edit-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(editButtonCommandWorkflowPath), "Coding-Event-Edit-Button-Auswahlguard soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(deleteCommandWorkflowPath), "Coding-Event-Delete-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(closeStretchCommandWorkflowPath), "Coding-Event-Streckenschaden-Schliessen soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
@@ -2828,8 +2830,10 @@ public sealed class UiArchitectureGuardTests
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var seekCommandWorkflow = File.Exists(seekCommandWorkflowPath) ? File.ReadAllText(seekCommandWorkflowPath) : "";
         var editCommandWorkflow = File.Exists(editCommandWorkflowPath) ? File.ReadAllText(editCommandWorkflowPath) : "";
+        var editButtonCommandWorkflow = File.Exists(editButtonCommandWorkflowPath) ? File.ReadAllText(editButtonCommandWorkflowPath) : "";
         var deleteCommandWorkflow = File.Exists(deleteCommandWorkflowPath) ? File.ReadAllText(deleteCommandWorkflowPath) : "";
         var closeStretchCommandWorkflow = File.Exists(closeStretchCommandWorkflowPath) ? File.ReadAllText(closeStretchCommandWorkflowPath) : "";
+        var editButtonBody = ExtractMethodBody(actions, "private void CodingEventEdit_Click");
 
         Assert.DoesNotContain("private void CodingEvents_DoubleClick", events);
         Assert.DoesNotContain("private void CodingEventEdit_Click", events);
@@ -2844,8 +2848,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingEventActionDialogServiceFactory.Create", actions);
         Assert.Contains("CodingEventSeekCommandWorkflow.Execute", actions);
         Assert.Contains("CodingEventEditCommandWorkflow.Execute", actions);
+        Assert.Contains("CodingEventEditButtonCommandWorkflow.Execute", actions);
         Assert.Contains("CodingEventDeleteCommandWorkflow.Execute", actions);
         Assert.Contains("CodingEventCloseStretchCommandWorkflow.Execute", actions);
+        Assert.DoesNotContain("LstCodingEvents.SelectedItem is CodingEvent", editButtonBody);
         Assert.Contains("CodingEventListActionWorkflow.CompleteEdit", actions);
         Assert.Contains("CodingEventListActionWorkflow.CloseStretch", actions);
         Assert.Contains("CodingEventListActionWorkflow.Delete", actions);
@@ -2868,6 +2874,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.PausePlayback()", editCommandWorkflow);
         Assert.Contains("actions.TryEdit(selectedEvent)", editCommandWorkflow);
         Assert.Contains("actions.CompleteEdit(selectedEvent)", editCommandWorkflow);
+        Assert.Contains("request.SelectedItem is not CodingEvent", editButtonCommandWorkflow);
+        Assert.Contains("actions.EditSelectedEvent(selectedEvent)", editButtonCommandWorkflow);
         Assert.Contains("actions.ConfirmDelete(selectedEvent.Entry.Code)", deleteCommandWorkflow);
         Assert.Contains("actions.Delete(selectedEvent)", deleteCommandWorkflow);
         Assert.Contains("actions.HideInlineDefectDetail()", deleteCommandWorkflow);
