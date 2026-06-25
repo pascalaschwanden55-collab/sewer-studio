@@ -3957,6 +3957,7 @@ public sealed class UiArchitectureGuardTests
         var exportPlannerPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingExportPlanner.cs");
         var annotationWriterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingAnnotationWriter.cs");
         var trainingWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationTrainingWorkflow.cs");
+        var trainingResultWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationTrainingResultWorkflow.cs");
 
         Assert.True(File.Exists(actionsPath), "LiveDetection-Bestaetigungsaktionen sollen aus dem Anzeige-Partial heraus.");
         Assert.True(File.Exists(trainingPath), "LiveDetection-Trainingsuebernahme soll aus den simplen Bestaetigungsaktionen heraus.");
@@ -3967,6 +3968,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(exportPlannerPath), "Detection-Training-Exportplanung soll ausserhalb der PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(annotationWriterPath), "Detection-Training-Annotationen sollen ausserhalb der PlayerWindow-Partials geschrieben werden.");
         Assert.True(File.Exists(trainingWorkflowPath), "Detection-Confirmation-Training-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(trainingResultWorkflowPath), "Detection-Confirmation-Training-Ergebnisbehandlung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var confirmation = File.ReadAllText(confirmationPath);
         var actions = File.ReadAllText(actionsPath);
@@ -3979,6 +3981,7 @@ public sealed class UiArchitectureGuardTests
         var exportPlanner = File.ReadAllText(exportPlannerPath);
         var annotationWriter = File.ReadAllText(annotationWriterPath);
         var trainingWorkflow = File.Exists(trainingWorkflowPath) ? File.ReadAllText(trainingWorkflowPath) : "";
+        var trainingResultWorkflow = File.Exists(trainingResultWorkflowPath) ? File.ReadAllText(trainingResultWorkflowPath) : "";
 
         Assert.Contains("private void ShowDetectionConfirmation", confirmation);
         Assert.Contains("private void ResumeDetection", confirmation);
@@ -4014,6 +4017,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveDetectionTrainingAnnotationWriter.CreateDefault", training);
         Assert.Contains("LiveDetectionConfirmationTrainingWorkflow.SaveAcceptedAsync", training);
         Assert.Contains("LiveDetectionConfirmationTrainingWorkflow.SaveCorrectedAsync", training);
+        Assert.Contains("LiveDetectionConfirmationTrainingResultWorkflow.ExecuteAccepted", training);
+        Assert.Contains("LiveDetectionConfirmationTrainingResultWorkflow.ExecuteCorrected", training);
+        Assert.DoesNotContain("if (!result.Saved)", training);
+        Assert.DoesNotContain("result.SavedCount", training);
+        Assert.DoesNotContain("result.Code", training);
         Assert.Contains("public static void ShowDetectionConfirmation", statusControls);
         Assert.Contains("public static void HideDetectionConfirmation", statusControls);
         Assert.Contains("PlayerConfirmationPlayback.PauseLiveDetectionConfirmation", displayWorkflow);
@@ -4047,6 +4055,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("TeacherAnnotationStore.AppendAsync", annotationWriter);
         Assert.Contains("saveAcceptedAsync", trainingWorkflow);
         Assert.Contains("saveCorrectedAsync", trainingWorkflow);
+        Assert.Contains("if (!trainingResult.Saved)", trainingResultWorkflow);
+        Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2713 {trainingResult.SavedCount} Befund(e) gespeichert\", true)", trainingResultWorkflow);
+        Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2713 Training: {trainingResult.Code} (korrigiert)\", true)", trainingResultWorkflow);
+        Assert.Contains("actions.ResumeDetection()", trainingResultWorkflow);
     }
 
     [Fact]

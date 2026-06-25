@@ -31,13 +31,10 @@ public partial class PlayerWindow
                 CaptureCurrentFrameAsync,
                 annotationWriter);
 
-            if (!result.Saved)
-            {
-                ResumeDetection();
-                return;
-            }
-
-            ShowOsdMeterStatus($"\u2713 {result.SavedCount} Befund(e) gespeichert", resetAfterDelay: true);
+            LiveDetectionConfirmationTrainingResultWorkflow.ExecuteAccepted(
+                result,
+                ConfirmationTrainingResultActions());
+            return;
         }
         catch (Exception ex)
         {
@@ -89,13 +86,10 @@ public partial class PlayerWindow
                 CaptureCurrentFrameAsync,
                 annotationWriter);
 
-            if (!result.Saved)
-            {
-                ResumeDetection();
-                return;
-            }
-
-            ShowOsdMeterStatus($"\u2713 Training: {result.Code} (korrigiert)", resetAfterDelay: true);
+            LiveDetectionConfirmationTrainingResultWorkflow.ExecuteCorrected(
+                result,
+                ConfirmationTrainingResultActions());
+            return;
         }
         catch (Exception ex)
         {
@@ -104,4 +98,9 @@ public partial class PlayerWindow
 
         ResumeDetection();
     }
+
+    private LiveDetectionConfirmationTrainingResultActions ConfirmationTrainingResultActions()
+        => new(
+            ShowOsdMeterStatus: ShowOsdMeterStatus,
+            ResumeDetection: ResumeDetection);
 }
