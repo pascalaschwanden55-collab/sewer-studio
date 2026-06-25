@@ -25,16 +25,12 @@ public partial class PlayerWindow
 
     /// <summary>Werkzeug-Badge oben links auf Canvas anzeigen.</summary>
     private void UpdateToolBadge()
-    {
-        if (!_codingOverlayToolHost.HasOverlayService) return;
-
-        var toolText = CodingToolBadgeTextPolicy.BuildText(
+        => CodingToolBadgeController.Update(
+            CodingOverlayCanvas,
+            _codingOverlayToolHost.HasOverlayService,
             _codingOverlayToolHost.ActiveTool,
             _codingSchemaType,
             _codingOverlayToolHost.ActiveLevelMode);
-
-        CodingToolBadgeRenderer.Update(CodingOverlayCanvas, toolText);
-    }
 
     private async Task AnalyzeWithOverlayHintAsync(OverlayGeometry overlay)
     {
