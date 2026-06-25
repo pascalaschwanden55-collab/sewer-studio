@@ -4976,11 +4976,14 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var calibrationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Calibration.cs");
+        var pointerWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationPointerWorkflow.cs");
 
         Assert.True(File.Exists(calibrationPath), "Manuelle Kalibrierungs-Verdrahtung soll aus dem allgemeinen OverlayInput-Partial heraus.");
+        Assert.True(File.Exists(pointerWorkflowPath), "Manueller Kalibrierungs-Pointerflow soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var calibration = File.ReadAllText(calibrationPath);
+        var pointerWorkflow = File.Exists(pointerWorkflowPath) ? File.ReadAllText(pointerWorkflowPath) : "";
 
         Assert.DoesNotContain("private void CodingCalibrate_Click", overlayInput);
         Assert.DoesNotContain("private void ApplyCodingCalibration", overlayInput);
@@ -4992,11 +4995,19 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private bool TryStartCodingCalibration", calibration);
         Assert.Contains("private bool TryPreviewCodingCalibration", calibration);
         Assert.Contains("private bool TryFinishCodingCalibration", calibration);
+        Assert.Contains("CodingCalibrationPointerWorkflow.Start", calibration);
+        Assert.Contains("CodingCalibrationPointerWorkflow.Preview", calibration);
+        Assert.Contains("CodingCalibrationPointerWorkflow.Finish", calibration);
         Assert.Contains("_codingSessionHost", calibration);
         Assert.DoesNotContain("_codingVm", calibration);
         Assert.Contains("CodingCalibrationTogglePolicy.Build", calibration);
         Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
         Assert.Contains("CodingManualCalibrationWorkflow.Apply", calibration);
+        Assert.DoesNotContain("if (!_codingIsCalibrating)", calibration);
+        Assert.DoesNotContain("if (!_codingIsCalibrating || _codingCalibStart == null)", calibration);
+        Assert.Contains("actions.SetCalibrationStart()", pointerWorkflow);
+        Assert.Contains("actions.RenderPreview()", pointerWorkflow);
+        Assert.Contains("actions.ApplyCalibration()", pointerWorkflow);
     }
 
     [Fact]

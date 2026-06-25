@@ -60,41 +60,51 @@ public partial class PlayerWindow
 
     private bool TryStartCodingCalibration(NormalizedPoint norm)
     {
-        if (!_codingIsCalibrating)
-            return false;
-
-        _codingCalibStart = norm;
-        CodingOverlayCanvas.CaptureMouse();
-        ClearTransientCodingCanvas(clearManualOverlay: true);
-        RenderAiOverlays();
-        RenderReferenceDn();
-        return true;
+        return CodingCalibrationPointerWorkflow.Start(
+            new CodingCalibrationPointerStartRequest(_codingIsCalibrating),
+            new CodingCalibrationPointerStartActions(
+                SetCalibrationStart: () => _codingCalibStart = norm,
+                CaptureMouse: () => { CodingOverlayCanvas.CaptureMouse(); },
+                ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
+                RenderAiOverlays: RenderAiOverlays,
+                RenderReferenceDn: RenderReferenceDn))
+            .Handled;
     }
 
     private bool TryPreviewCodingCalibration(NormalizedPoint norm)
     {
-        if (!_codingIsCalibrating || _codingCalibStart == null)
-            return false;
+        var calibrationStart = _codingCalibStart;
 
-        ClearTransientCodingCanvas(clearManualOverlay: true);
-        RenderAiOverlays();
-        RenderReferenceDn();
-
-        var p1 = CodingNormToPixel(_codingCalibStart);
-        var p2 = CodingNormToPixel(norm);
-        var preview = CodingCalibrationPreviewPolicy.Build(p1, p2);
-        _codingPreviewLine = CodingCalibrationPreviewLineRenderer.Render(CodingOverlayCanvas, preview);
-        CodingCalibrationControls.ApplyPreview(TxtCodingCalibHint, preview);
-        return true;
+        return CodingCalibrationPointerWorkflow.Preview(
+            new CodingCalibrationPointerPreviewRequest(
+                _codingIsCalibrating,
+                calibrationStart != null),
+            new CodingCalibrationPointerPreviewActions(
+                ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
+                RenderAiOverlays: RenderAiOverlays,
+                RenderReferenceDn: RenderReferenceDn,
+                RenderPreview: () =>
+                {
+                    var p1 = CodingNormToPixel(calibrationStart!);
+                    var p2 = CodingNormToPixel(norm);
+                    var preview = CodingCalibrationPreviewPolicy.Build(p1, p2);
+                    _codingPreviewLine = CodingCalibrationPreviewLineRenderer.Render(CodingOverlayCanvas, preview);
+                    CodingCalibrationControls.ApplyPreview(TxtCodingCalibHint, preview);
+                }))
+            .Handled;
     }
 
     private bool TryFinishCodingCalibration(NormalizedPoint norm)
     {
-        if (!_codingIsCalibrating || _codingCalibStart == null)
-            return false;
+        var calibrationStart = _codingCalibStart;
 
-        CodingOverlayCanvas.ReleaseMouseCapture();
-        ApplyCodingCalibration(_codingCalibStart, norm);
-        return true;
+        return CodingCalibrationPointerWorkflow.Finish(
+            new CodingCalibrationPointerFinishRequest(
+                _codingIsCalibrating,
+                calibrationStart != null),
+            new CodingCalibrationPointerFinishActions(
+                ReleaseMouseCapture: CodingOverlayCanvas.ReleaseMouseCapture,
+                ApplyCalibration: () => ApplyCodingCalibration(calibrationStart!, norm)))
+            .Handled;
     }
 }
