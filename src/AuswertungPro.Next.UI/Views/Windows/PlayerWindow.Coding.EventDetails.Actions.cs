@@ -26,20 +26,25 @@ public partial class PlayerWindow
 
     private void CodingEditDefect_Click(object sender, RoutedEventArgs e)
     {
-        if (!_codingSessionHost.HasViewModel)
-            return;
+        CodingInlineDefectEditCommandWorkflow.Execute(
+            new CodingInlineDefectEditCommandRequest(
+                _codingSessionHost.HasViewModel,
+                _codingSessionHost.SelectedDefect,
+                LstCodingEvents.SelectedItem as CodingEvent),
+            new CodingInlineDefectEditCommandActions(
+                SelectDefect: _codingSessionHost.SelectDefect,
+                PausePlayback: () => PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause),
+                TryEdit: TryEditInlineDefect,
+                CompleteEdit: CompleteInlineDefectEdit,
+                RefreshEvents: RefreshCodingEventsList,
+                UpdateInlineDefectDetail: UpdateInlineDefectDetail));
+    }
 
-        var ev = _codingSessionHost.SelectedDefect ?? LstCodingEvents.SelectedItem as CodingEvent;
-        if (ev == null)
-            return;
-
-        _codingSessionHost.SelectDefect(ev);
-        PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause);
-
-        RunWithSuspendedCodingOverlayInput(() =>
-        {
-            var entry = ev.Entry;
-            var edited = CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
+    private bool TryEditInlineDefect(CodingEvent codingEvent)
+    {
+        var entry = codingEvent.Entry;
+        return RunWithSuspendedCodingOverlayInput(() =>
+            CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
                 .TryEdit(
                     entry,
                     entry.MeterStart,
@@ -47,24 +52,17 @@ public partial class PlayerWindow
                     _codingSessionHost.VideoPath,
                     _codingSessionHost.CurrentVideoTime,
                     this,
-                    CreateVsaCodeExplorerLiveSnapshotProvider());
+                    CreateVsaCodeExplorerLiveSnapshotProvider()));
+    }
 
-            if (edited)
-            {
-                var completed = CodingInlineDefectDecisionWorkflow.CompleteEdit(
-                    ev,
-                    _codingSessionRuntimeOwner.Service,
-                    () => { _codingSessionHost.ExecuteEditDefect(); },
-                    codingEvent => PersistSingleEventAsTrainingSample(codingEvent)
-                        .SafeFireAndForget("TrainingSaveEditInline"));
-
-                if (completed)
-                {
-                    RefreshCodingEventsList();
-                    UpdateInlineDefectDetail(ev);
-                }
-            }
-        });
+    private bool CompleteInlineDefectEdit(CodingEvent codingEvent)
+    {
+        return CodingInlineDefectDecisionWorkflow.CompleteEdit(
+            codingEvent,
+            _codingSessionRuntimeOwner.Service,
+            () => { _codingSessionHost.ExecuteEditDefect(); },
+            editedEvent => PersistSingleEventAsTrainingSample(editedEvent)
+                .SafeFireAndForget("TrainingSaveEditInline"));
     }
 
     private void CodingRejectDefect_Click(object sender, RoutedEventArgs e)

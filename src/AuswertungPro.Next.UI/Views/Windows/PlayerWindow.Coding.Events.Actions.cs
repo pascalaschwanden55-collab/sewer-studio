@@ -37,48 +37,37 @@ public partial class PlayerWindow
 
     private void CodingEventCloseStretch_Click(object sender, RoutedEventArgs e)
     {
-        if (LstCodingEvents.SelectedItem is not CodingEvent startEvent) return;
-        if (!_codingSessionHost.HasViewModel) return;
-
-        var closeAction = CodingEventListActionWorkflow.CloseStretch(
-            startEvent,
-            _codingSessionRuntimeOwner.Service,
-            _codingSessionHost.CurrentMeter,
-            _playerTimelineHost.CurrentTimeOrZero);
-
-        if (!closeAction.Applied)
-            return;
-
-        if (closeAction.RequiresLaterMeterPrompt)
-        {
-            CodingEventActionDialogServiceFactory.Create().ShowStretchCloseRequiresLaterMeter();
-            return;
-        }
-
-        if (closeAction.ShouldRefreshEvents)
-            RefreshCodingEventsList();
-
-        SetCodingAiState(closeAction.StatusText, PlayerStatusColors.Success, "");
+        CodingEventCloseStretchCommandWorkflow.Execute(
+            new CodingEventCloseStretchCommandRequest(
+                LstCodingEvents.SelectedItem as CodingEvent,
+                _codingSessionHost.HasViewModel),
+            new CodingEventCloseStretchCommandActions(
+                CloseStretch: startEvent => CodingEventListActionWorkflow.CloseStretch(
+                    startEvent,
+                    _codingSessionRuntimeOwner.Service,
+                    _codingSessionHost.CurrentMeter,
+                    _playerTimelineHost.CurrentTimeOrZero),
+                ShowRequiresLaterMeterPrompt: () =>
+                    CodingEventActionDialogServiceFactory.Create().ShowStretchCloseRequiresLaterMeter(),
+                RefreshEvents: RefreshCodingEventsList,
+                ShowSuccessStatus: status => SetCodingAiState(status, PlayerStatusColors.Success, "")));
     }
 
     private void CodingEventDelete_Click(object sender, RoutedEventArgs e)
     {
-        if (LstCodingEvents.SelectedItem is not CodingEvent codingEvent) return;
-        var confirm = RunWithSuspendedCodingOverlayInput(() =>
-            CodingEventActionDialogServiceFactory.Create().ConfirmDelete(codingEvent.Entry.Code));
-        if (!confirm) return;
-
-        var deleteResult = CodingEventListActionWorkflow.Delete(
-            codingEvent,
-            _codingSessionRuntimeOwner.Service,
-            _codingSessionHost.EventCollection,
-            _codingSessionHost.SelectedDefect);
-        if (!deleteResult.Deleted) return;
-
-        if (deleteResult.ShouldClearSelectedDefect)
-            _codingSessionHost.ClearSelectedDefect();
-        HideInlineDefectDetail();
-        RefreshCodingEventsList();
+        CodingEventDeleteCommandWorkflow.Execute(
+            new CodingEventDeleteCommandRequest(LstCodingEvents.SelectedItem as CodingEvent),
+            new CodingEventDeleteCommandActions(
+                ConfirmDelete: code => RunWithSuspendedCodingOverlayInput(() =>
+                    CodingEventActionDialogServiceFactory.Create().ConfirmDelete(code)),
+                Delete: codingEvent => CodingEventListActionWorkflow.Delete(
+                    codingEvent,
+                    _codingSessionRuntimeOwner.Service,
+                    _codingSessionHost.EventCollection,
+                    _codingSessionHost.SelectedDefect),
+                ClearSelectedDefect: _codingSessionHost.ClearSelectedDefect,
+                HideInlineDefectDetail: HideInlineDefectDetail,
+                RefreshEvents: RefreshCodingEventsList));
     }
 
     private bool TryEditCodingEvent(CodingEvent codingEvent)
