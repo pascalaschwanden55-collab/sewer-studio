@@ -4498,6 +4498,7 @@ public sealed class UiArchitectureGuardTests
         var appenderPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkEventAppender.cs");
         var frameExporterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingFrameExporter.cs");
         var annotationWriterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingAnnotationWriter.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingCommandWorkflow.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingWorkflow.cs");
         var resultWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingResultWorkflow.cs");
 
@@ -4505,6 +4506,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(appenderPath), "Manual-Mark-Session-Anlage soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(frameExporterPath), "Manual-Mark-Training soll den bestehenden FrameExporter fuer Tempframe-I/O nutzen.");
         Assert.True(File.Exists(annotationWriterPath), "Manual-Mark-Training soll den bestehenden AnnotationWriter nutzen.");
+        Assert.True(File.Exists(commandWorkflowPath), "Manual-Mark-Training-Befehl soll Auswahl, Speichern, Ergebnis und Fehler ausserhalb der PlayerWindow-Partials orchestrieren.");
         Assert.True(File.Exists(workflowPath), "Manual-Mark-Training-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(resultWorkflowPath), "Manual-Mark-Training-Ergebnisbehandlung soll ausserhalb der PlayerWindow-Partials liegen.");
 
@@ -4513,21 +4515,29 @@ public sealed class UiArchitectureGuardTests
         var appender = File.Exists(appenderPath) ? File.ReadAllText(appenderPath) : "";
         var frameExporter = File.ReadAllText(frameExporterPath);
         var annotationWriter = File.ReadAllText(annotationWriterPath);
+        var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var resultWorkflow = File.Exists(resultWorkflowPath) ? File.ReadAllText(resultWorkflowPath) : "";
 
         Assert.DoesNotContain("private async Task<bool> SaveMarkAsTrainingAsync", marking);
         Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", marking);
         Assert.Contains("private async Task<bool> SaveMarkAsTrainingAsync", training);
+        Assert.Contains("LiveDetectionManualMarkTrainingCommandWorkflow.ExecuteAsync", training);
         Assert.Contains("LiveDetectionManualMarkTrainingWorkflow.SaveAsync", training);
         Assert.Contains("LiveDetectionManualMarkTrainingResultWorkflow.Execute", training);
         Assert.Contains("_codingSessionHost", training);
         Assert.DoesNotContain("_codingVm", training);
+        Assert.DoesNotContain("if (selectedEntry == null)", training);
+        Assert.DoesNotContain("catch (Exception ex)", training);
         Assert.DoesNotContain("if (!result.Saved)", training);
         Assert.DoesNotContain("result.Code", training);
         Assert.DoesNotContain("LiveDetectionManualMarkEventAppender.Apply", training);
         Assert.DoesNotContain("CodingProtocolEntryPhotoPathAppender.AddIfPresent", training);
         Assert.DoesNotContain("_codingSessionService.AddEvent(manualEntry", training);
+        Assert.Contains("actions.SelectEntry()", commandWorkflow);
+        Assert.Contains("actions.SaveTrainingAsync(selectedEntry)", commandWorkflow);
+        Assert.Contains("actions.HandleTrainingResult(trainingResult)", commandWorkflow);
+        Assert.Contains("actions.ShowOsdMeterStatus", commandWorkflow);
         Assert.Contains("CodingExplorerEntryFactory.CreateManualFromSelected", appender);
         Assert.Contains("LiveDetectionTrainingAnnotationWriter.CreateDefault", training);
         Assert.DoesNotContain("new LiveDetectionTrainingFrameExporter", training);
@@ -4782,23 +4792,34 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingDnCalibrationPolicy.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingDnCalibrationApplyWorkflow.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingSessionHeaderControls.cs");
 
         Assert.True(File.Exists(policyPath), "DN-/Kalibrierungsinitialisierung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "DN-/Kalibrierungs-Anwendungsreihenfolge muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "DN-/Range-Anzeigetexte sollen ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
         var coding = File.ReadAllText(codingPath);
         var policy = File.ReadAllText(policyPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var controls = File.ReadAllText(controlsPath);
 
         Assert.Contains("CodingDnCalibrationPolicy.Build", coding);
+        Assert.Contains("CodingDnCalibrationApplyWorkflow.Execute", coding);
         Assert.Contains("CodingSessionHeaderControls.ApplyCalibration", coding);
         Assert.Contains("CodingSessionHeaderControls.SetRangeText", coding);
+        Assert.DoesNotContain("if (_haltungRecord == null || !_codingOverlayRuntimeOwner.HasService)", coding);
+        Assert.DoesNotContain("var dnCalibration = CodingDnCalibrationPolicy.Build", coding);
+        Assert.DoesNotContain("if (dnCalibration.Calibration != null)", coding);
         Assert.DoesNotContain("_haltungRecord.Fields.TryGetValue(\"DN_mm\"", coding);
         Assert.DoesNotContain("int.TryParse(dnStr", coding);
         Assert.DoesNotContain("TxtCodingCalibDn.Text", coding);
         Assert.DoesNotContain("TxtCodingCalibStatus.Text", coding);
         Assert.DoesNotContain("TxtCodingRange.Text", coding);
+        Assert.Contains("if (!request.HasHaltungRecord || !request.HasOverlayService)", workflow);
+        Assert.Contains("actions.BuildCalibration()", workflow);
+        Assert.Contains("actions.SetCalibration(dnCalibration.Calibration)", workflow);
+        Assert.Contains("actions.ApplyCalibrationControls(dnCalibration)", workflow);
         Assert.Contains("public static CodingDnCalibrationState Build", policy);
         Assert.Contains("new PipeCalibration", policy);
         Assert.Contains("public static class CodingSessionHeaderControls", controls);

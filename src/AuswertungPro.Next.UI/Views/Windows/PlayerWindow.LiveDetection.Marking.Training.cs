@@ -10,47 +10,43 @@ public partial class PlayerWindow
     /// <summary>Rueckgabe: true wenn gespeichert, false wenn abgebrochen.</summary>
     private async Task<bool> SaveMarkAsTrainingAsync(OverlayGeometry overlay, double timestampSec, string? clockPosition, byte[]? preCapturedFrame = null)
     {
-        try
-        {
-            var autoMeter = _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition();
-            var selectedEntry = CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
-                .SelectSeed(
+        var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
+        var result = await LiveDetectionManualMarkTrainingCommandWorkflow.ExecuteAsync(
+            new LiveDetectionManualMarkTrainingCommandActions(
+                SelectEntry: () =>
+                {
+                    var autoMeter = _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition();
+                    return CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
+                        .SelectSeed(
+                            overlay,
+                            autoMeter,
+                            TimeSpan.FromSeconds(timestampSec),
+                            _videoPath,
+                            this);
+                },
+                SaveTrainingAsync: selectedEntry => LiveDetectionManualMarkTrainingWorkflow.SaveAsync(
+                    selectedEntry,
                     overlay,
-                    autoMeter,
-                    TimeSpan.FromSeconds(timestampSec),
-                    _videoPath,
-                    this);
-            if (selectedEntry == null)
-                return false;
-
-            var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
-            var result = await LiveDetectionManualMarkTrainingWorkflow.SaveAsync(
-                selectedEntry,
-                overlay,
-                timestampSec,
-                clockPosition,
-                TxtCodingMeter?.Text,
-                _codingSessionHost.HasViewModel ? _codingSessionRuntimeOwner.Service : null,
-                preCapturedFrame,
-                CaptureCurrentFrameAsync,
-                (frameBytes, entry, markOverlay, clock, meter, videoTimestamp) =>
-                    annotationWriter.SaveManualMarkAsync(
-                        frameBytes,
-                        entry,
-                        markOverlay,
-                        clock,
-                        meter,
-                        videoTimestamp),
-                RefreshCodingEventsList);
-            return LiveDetectionManualMarkTrainingResultWorkflow.Execute(
-                result,
-                new LiveDetectionManualMarkTrainingResultActions(
-                    ShowOsdMeterStatus: ShowOsdMeterStatus)).ReturnValue;
-        }
-        catch (Exception ex)
-        {
-            ShowOsdMeterStatus($"\u2717 Fehler: {ex.Message}", resetAfterDelay: false);
-            return false;
-        }
+                    timestampSec,
+                    clockPosition,
+                    TxtCodingMeter?.Text,
+                    _codingSessionHost.HasViewModel ? _codingSessionRuntimeOwner.Service : null,
+                    preCapturedFrame,
+                    CaptureCurrentFrameAsync,
+                    (frameBytes, entry, markOverlay, clock, meter, videoTimestamp) =>
+                        annotationWriter.SaveManualMarkAsync(
+                            frameBytes,
+                            entry,
+                            markOverlay,
+                            clock,
+                            meter,
+                            videoTimestamp),
+                    RefreshCodingEventsList),
+                HandleTrainingResult: trainingResult => LiveDetectionManualMarkTrainingResultWorkflow.Execute(
+                    trainingResult,
+                    new LiveDetectionManualMarkTrainingResultActions(
+                        ShowOsdMeterStatus: ShowOsdMeterStatus)),
+                ShowOsdMeterStatus: ShowOsdMeterStatus));
+        return result.ReturnValue;
     }
 }

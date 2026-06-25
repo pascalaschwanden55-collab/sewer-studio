@@ -22,16 +22,17 @@ public partial class PlayerWindow
 
     private void ApplyCodingDnCalibration()
     {
-        if (_haltungRecord == null || !_codingOverlayRuntimeOwner.HasService)
-            return;
-
-        var dnCalibration = CodingDnCalibrationPolicy.Build(_haltungRecord.Fields);
-        if (dnCalibration.Calibration != null)
-            _codingOverlayToolHost.SetCalibration(dnCalibration.Calibration);
-        CodingSessionHeaderControls.ApplyCalibration(
-            TxtCodingCalibDn,
-            TxtCodingCalibStatus,
-            dnCalibration);
+        CodingDnCalibrationApplyWorkflow.Execute(
+            new CodingDnCalibrationApplyWorkflowRequest(
+                HasHaltungRecord: _haltungRecord != null,
+                HasOverlayService: _codingOverlayRuntimeOwner.HasService),
+            new CodingDnCalibrationApplyWorkflowActions(
+                BuildCalibration: () => CodingDnCalibrationPolicy.Build(_haltungRecord!.Fields),
+                SetCalibration: calibration => _codingOverlayToolHost.SetCalibration(calibration),
+                ApplyCalibrationControls: dnCalibration => CodingSessionHeaderControls.ApplyCalibration(
+                    TxtCodingCalibDn,
+                    TxtCodingCalibStatus,
+                    dnCalibration)));
     }
 
     private bool TryStartCodingSession()
