@@ -1015,6 +1015,32 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_playback_timeline_reads_through_timeline_host()
+    {
+        var root = FindRepositoryRoot();
+        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var paths = new[]
+        {
+            "PlayerWindow.Playback.cs",
+            "PlayerWindow.Playback.Controls.cs",
+            "PlayerWindow.Playback.Snapshot.cs"
+        };
+
+        foreach (var fileName in paths)
+        {
+            var path = Path.Combine(windowsRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} muss als PlayerWindow-Partial existieren.");
+
+            var text = File.ReadAllText(path);
+            Assert.Contains("_playerTimelineHost", text);
+            Assert.DoesNotContain("_player.Time", text);
+            Assert.DoesNotContain("_player.Length", text);
+            Assert.DoesNotContain("_player?.Time", text);
+            Assert.DoesNotContain("_player?.Length", text);
+        }
+    }
+
+    [Fact]
     public void PlayerWindow_overlay_input_mouseflow_keeps_only_direct_dependencies()
     {
         var root = FindRepositoryRoot();

@@ -45,8 +45,8 @@ public partial class PlayerWindow
         PlayerSliderSeekController.SeekToSlider(
             PositionSlider.Value,
             PositionSlider.Maximum,
-            _player.Length,
-            targetMs => _player.Time = targetMs,
+            _playerTimelineHost.LengthMilliseconds ?? 0,
+            _playerTimelineHost.SeekMilliseconds,
             position => _player.Position = position,
             UpdateUi);
     }
@@ -56,7 +56,7 @@ public partial class PlayerWindow
         PlayerSliderSeekController.UpdateSeekPreview(
             PositionSlider.Value,
             PositionSlider.Maximum,
-            _player.Length,
+            _playerTimelineHost.LengthMilliseconds ?? 0,
             _isDragging,
             _scrubTimer.IsEnabled,
             _positionControls.ApplySeekPreview,
@@ -68,8 +68,8 @@ public partial class PlayerWindow
         PlayerSliderSeekController.ScrubSeekToSlider(
             PositionSlider.Value,
             PositionSlider.Maximum,
-            _player.Length,
-            targetMs => _player.Time = targetMs,
+            _playerTimelineHost.LengthMilliseconds ?? 0,
+            _playerTimelineHost.SeekMilliseconds,
             position => _player.Position = position,
             _positionControls.ApplyScrubPreview);
     }

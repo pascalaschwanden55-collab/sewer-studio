@@ -1,3 +1,4 @@
+using System;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -13,7 +14,8 @@ public partial class PlayerWindow
         var playerWindow = _lastOpened;
         if (playerWindow is null || playerWindow._closing || playerWindow._playbackDisposed)
             return false;
-        if (playerWindow._player is null || !playerWindow._player.IsPlaying && playerWindow._player.Time <= 0)
+        var currentTime = playerWindow._playerTimelineHost.CurrentTime;
+        if (playerWindow._player is null || !playerWindow._player.IsPlaying && (!currentTime.HasValue || currentTime.Value <= TimeSpan.Zero))
             return false;
 
         try

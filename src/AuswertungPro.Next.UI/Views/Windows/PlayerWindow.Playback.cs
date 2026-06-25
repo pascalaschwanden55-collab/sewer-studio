@@ -31,13 +31,15 @@ public partial class PlayerWindow
     }
 
     private bool TryGetCurrentTimeInternal(out TimeSpan time)
-        => PlayerPlaybackGateway.TryGetCurrentTime(() => _player.Time, out time);
+        => PlayerPlaybackGateway.TryGetCurrentTime(
+            () => _playerTimelineHost.TimeMilliseconds ?? 0,
+            out time);
 
     private bool TrySeekToInternal(TimeSpan time)
         => PlayerPlaybackGateway.TrySeekTo(
             time,
-            () => _player.Length,
-            targetMs => _player.Time = targetMs,
+            () => _playerTimelineHost.LengthMilliseconds ?? 0,
+            _playerTimelineHost.SeekMilliseconds,
             EnsurePlaying,
             UpdateUi);
 
@@ -61,10 +63,10 @@ public partial class PlayerWindow
 
     private void JumpSeconds(int seconds)
         => PlayerPlaybackCommandRunner.JumpSeconds(
-            _player.Time,
-            _player.Length,
+            _playerTimelineHost.TimeMilliseconds ?? 0,
+            _playerTimelineHost.LengthMilliseconds ?? 0,
             seconds,
-            targetMs => _player.Time = targetMs,
+            _playerTimelineHost.SeekMilliseconds,
             ClearDetectionOverlays,
             UpdateUi);
 
@@ -81,7 +83,9 @@ public partial class PlayerWindow
         if (_isDragging)
             return;
 
-        _positionControls.ApplyPlaybackState(_player.Time, _player.Length);
+        _positionControls.ApplyPlaybackState(
+            _playerTimelineHost.TimeMilliseconds ?? 0,
+            _playerTimelineHost.LengthMilliseconds ?? 0);
         UpdateRateLabel();
 
         // Im Codier-Modus: Echtzeit-Code am Zeitstempel aktualisieren
