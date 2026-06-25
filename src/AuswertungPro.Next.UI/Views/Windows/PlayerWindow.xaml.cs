@@ -53,36 +53,11 @@ public partial class PlayerWindow : Window
         };
         VideoView.MediaPlayer = _player;
 
-        _playerTimelineHost = new PlayerTimelineHost(
-            readTimeMilliseconds: () => _player.Time,
-            readLengthMilliseconds: () => _player.Length,
-            seekMilliseconds: milliseconds => _player.Time = milliseconds,
-            setPositionRatio: position => _player.Position = position);
-
-        _playerPlaybackControlHost = new PlayerPlaybackControlHost(
-            readIsPlaying: () => _player.IsPlaying,
-            setPause: pause => _player.SetPause(pause),
-            play: () => _player.Play(),
-            stop: () => _player.Stop(),
-            readRate: () => _player.Rate,
-            setRate: _player.SetRate,
-            shouldStartPlayback: () =>
-            {
-                var state = _player.State;
-                return state == VLCState.Stopped || state == VLCState.Ended;
-            },
-            playPath: path =>
-            {
-                using var media = new Media(_libVlc, path, FromType.FromPath);
-                _player.Play(media);
-            });
-
-        _playerMarqueeOverlayHost = new PlayerMarqueeOverlayHost(
-            setMarqueeInt: (option, value) => _player.SetMarqueeInt(option, value),
-            setMarqueeString: (option, value) => _player.SetMarqueeString(option, value));
-
-        _playerSnapshotCaptureHost = new PlayerSnapshotCaptureHost(
-            takeSnapshot: (path, width, height) => _player.TakeSnapshot(0, path, width, height));
+        var playerMediaHosts = PlayerMediaHostFactory.Create(_libVlc, _player);
+        _playerTimelineHost = playerMediaHosts.TimelineHost;
+        _playerPlaybackControlHost = playerMediaHosts.PlaybackControlHost;
+        _playerMarqueeOverlayHost = playerMediaHosts.MarqueeOverlayHost;
+        _playerSnapshotCaptureHost = playerMediaHosts.SnapshotCaptureHost;
 
         _damageMarkerController = new DamageMarkerController(
             DamageMarkerCanvas,

@@ -2251,11 +2251,13 @@ public sealed class UiArchitectureGuardTests
         var captureServicePath = Path.Combine(uiRoot, "Player", "PlayerSnapshotFileCaptureService.cs");
         var pauseStarterPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotPauseStarter.cs");
         var snapshotHostPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotCaptureHost.cs");
+        var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
 
         Assert.True(File.Exists(policyPath), "Temp-Pfad fuer Player-Snapshots muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(captureServicePath), "Snapshot-Datei-Capture muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pauseStarterPath), "Snapshot-Pause-Start muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(snapshotHostPath), "Direkter VLC-Snapshot-Capture soll ueber einen Host laufen.");
+        Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
 
         var snapshot = File.ReadAllText(snapshotPath);
         var state = File.ReadAllText(statePath);
@@ -2264,12 +2266,14 @@ public sealed class UiArchitectureGuardTests
         var captureService = File.ReadAllText(captureServicePath);
         var pauseStarter = File.Exists(pauseStarterPath) ? File.ReadAllText(pauseStarterPath) : "";
         var snapshotHost = File.Exists(snapshotHostPath) ? File.ReadAllText(snapshotHostPath) : "";
+        var mediaHostFactory = File.Exists(mediaHostFactoryPath) ? File.ReadAllText(mediaHostFactoryPath) : "";
 
         Assert.Contains("PlayerSnapshotPathPolicy.Create", snapshot);
         Assert.Contains("PlayerSnapshotFileCaptureServiceFactory.Create", snapshot);
         Assert.Contains("_playerSnapshotCaptureHost.TakeSnapshot", snapshot);
         Assert.Contains("private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost", state);
-        Assert.Contains("new PlayerSnapshotCaptureHost", windowRoot);
+        Assert.Contains("PlayerMediaHostFactory.Create", windowRoot);
+        Assert.Contains("new PlayerSnapshotCaptureHost", mediaHostFactory);
         Assert.Contains("public sealed class PlayerSnapshotCaptureHost", snapshotHost);
         Assert.DoesNotContain("new PlayerSnapshotFileCaptureService", snapshot);
         Assert.DoesNotContain("_player.TakeSnapshot", snapshot);
@@ -2387,11 +2391,13 @@ public sealed class UiArchitectureGuardTests
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayPolicy.cs");
         var disablerPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayDisabler.cs");
         var hostPath = Path.Combine(uiRoot, "Player", "PlayerMarqueeOverlayHost.cs");
+        var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
 
         Assert.True(File.Exists(overlayPath), "Playback-Marquee-Overlay-Wiring soll in einem eigenen Playback-Partial liegen.");
         Assert.True(File.Exists(policyPath), "VLC-Marquee-Anzeigeparameter muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(disablerPath), "VLC-Marquee-Deaktivieren muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(hostPath), "Direkte VLC-Marquee-Zugriffe sollen ueber einen Host laufen.");
+        Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
 
         var playback = File.ReadAllText(playbackPath);
         var snapshot = File.ReadAllText(snapshotPath);
@@ -2401,6 +2407,7 @@ public sealed class UiArchitectureGuardTests
         var policy = File.ReadAllText(policyPath);
         var disabler = File.Exists(disablerPath) ? File.ReadAllText(disablerPath) : "";
         var host = File.Exists(hostPath) ? File.ReadAllText(hostPath) : "";
+        var mediaHostFactory = File.Exists(mediaHostFactoryPath) ? File.ReadAllText(mediaHostFactoryPath) : "";
 
         Assert.DoesNotContain("private void ShowOverlay", playback);
         Assert.DoesNotContain("public static bool TryShowOverlayOnLast", playback);
@@ -2411,7 +2418,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_playerMarqueeOverlayHost.Disable", overlay);
         Assert.Contains("_playerMarqueeOverlayHost.Disable", snapshot);
         Assert.Contains("private readonly PlayerMarqueeOverlayHost _playerMarqueeOverlayHost", state);
-        Assert.Contains("new PlayerMarqueeOverlayHost", windowRoot);
+        Assert.Contains("PlayerMediaHostFactory.Create", windowRoot);
+        Assert.Contains("new PlayerMarqueeOverlayHost", mediaHostFactory);
         Assert.Contains("PlayerMarqueeOverlayDisabler.Disable", host);
         Assert.DoesNotContain("_player.SetMarquee", overlay + snapshot);
         Assert.DoesNotContain("VideoMarqueeOption", overlay + snapshot);
@@ -5220,20 +5228,24 @@ public sealed class UiArchitectureGuardTests
         var readingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Reading.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
+        var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
 
         Assert.True(File.Exists(hostPath), "Player-Zeit/Dauer soll ueber einen PlayerTimelineHost gelesen werden.");
+        Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
 
         var host = File.ReadAllText(hostPath);
         var osd = File.ReadAllText(osdPath);
         var reading = File.ReadAllText(readingPath);
         var state = File.ReadAllText(statePath);
         var windowRoot = File.ReadAllText(windowRootPath);
+        var mediaHostFactory = File.ReadAllText(mediaHostFactoryPath);
 
         Assert.Contains("public sealed class PlayerTimelineHost", host);
         Assert.Contains("double? CurrentSeconds", host);
         Assert.Contains("double? DurationSeconds", host);
         Assert.Contains("private readonly PlayerTimelineHost _playerTimelineHost", state);
-        Assert.Contains("new PlayerTimelineHost", windowRoot);
+        Assert.Contains("PlayerMediaHostFactory.Create", windowRoot);
+        Assert.Contains("new PlayerTimelineHost", mediaHostFactory);
         Assert.Contains("_playerTimelineHost", osd);
         Assert.Contains("_playerTimelineHost", reading);
         Assert.DoesNotContain("_player.", osd);
@@ -5336,6 +5348,7 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var hostPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackControlHost.cs");
+        var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var paths = new[]
@@ -5353,13 +5366,16 @@ public sealed class UiArchitectureGuardTests
         };
 
         Assert.True(File.Exists(hostPath), "Pause/Resume-Zugriffe sollen ueber einen Playback-Control-Host laufen.");
+        Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
 
         var state = File.ReadAllText(statePath);
         var windowRoot = File.ReadAllText(windowRootPath);
         var host = File.ReadAllText(hostPath);
+        var mediaHostFactory = File.ReadAllText(mediaHostFactoryPath);
 
         Assert.Contains("private readonly PlayerPlaybackControlHost _playerPlaybackControlHost", state);
-        Assert.Contains("new PlayerPlaybackControlHost", windowRoot);
+        Assert.Contains("PlayerMediaHostFactory.Create", windowRoot);
+        Assert.Contains("new PlayerPlaybackControlHost", mediaHostFactory);
         Assert.Contains("public sealed class PlayerPlaybackControlHost", host);
 
         foreach (var fileName in paths)
@@ -5382,13 +5398,15 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var playerRoot = Path.Combine(uiRoot, "Player");
         var windowRoot = File.ReadAllText(Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs"));
+        var mediaHostFactoryPath = Path.Combine(playerRoot, "PlayerMediaHostFactory.cs");
         var paths = new[]
         {
             Path.Combine(playerRoot, "DamageMarkerController.cs"),
             Path.Combine(playerRoot, "QuickScanController.cs")
         };
 
-        Assert.Contains("_playerTimelineHost = new PlayerTimelineHost", windowRoot);
+        Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
+        Assert.Contains("PlayerMediaHostFactory.Create", windowRoot);
         Assert.Contains("_playerTimelineHost,", windowRoot);
         Assert.Contains("_playerPlaybackControlHost,", windowRoot);
 
@@ -5406,6 +5424,37 @@ public sealed class UiArchitectureGuardTests
             Assert.DoesNotContain("_player?.Time", text);
             Assert.DoesNotContain("_player?.Length", text);
         }
+    }
+
+    [Fact]
+    public void PlayerWindow_media_host_wiring_lives_in_factory()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
+        var factoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
+
+        Assert.True(File.Exists(factoryPath), "Timeline/Playback/Marquee/Snapshot-Hosts sollen in einer Factory verdrahtet werden.");
+
+        var windowRoot = File.ReadAllText(windowRootPath);
+        var factory = File.Exists(factoryPath) ? File.ReadAllText(factoryPath) : "";
+
+        Assert.Contains("PlayerMediaHostFactory.Create(_libVlc, _player)", windowRoot);
+        Assert.Contains("TimelineHost", windowRoot);
+        Assert.Contains("PlaybackControlHost", windowRoot);
+        Assert.Contains("MarqueeOverlayHost", windowRoot);
+        Assert.Contains("SnapshotCaptureHost", windowRoot);
+        Assert.DoesNotContain("new PlayerTimelineHost", windowRoot);
+        Assert.DoesNotContain("new PlayerPlaybackControlHost", windowRoot);
+        Assert.DoesNotContain("new PlayerMarqueeOverlayHost", windowRoot);
+        Assert.DoesNotContain("new PlayerSnapshotCaptureHost", windowRoot);
+        Assert.DoesNotContain("_player.", windowRoot);
+        Assert.Contains("public sealed record PlayerMediaHosts", factory);
+        Assert.Contains("public static PlayerMediaHosts Create", factory);
+        Assert.Contains("new PlayerTimelineHost", factory);
+        Assert.Contains("new PlayerPlaybackControlHost", factory);
+        Assert.Contains("new PlayerMarqueeOverlayHost", factory);
+        Assert.Contains("new PlayerSnapshotCaptureHost", factory);
     }
 
     [Fact]
