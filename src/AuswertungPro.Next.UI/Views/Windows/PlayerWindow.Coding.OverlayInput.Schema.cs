@@ -84,20 +84,28 @@ public partial class PlayerWindow
 
     private void UpdateCodingSchemaOverlay(bool enableCreateEvent)
     {
-        if (!_codingSessionHost.HasViewModel) return;
+        OverlayGeometry? overlay = null;
 
-        var overlay = BuildCodingSchemaGeometry();
-        _codingSessionHost.SetCurrentOverlay(overlay);
-        UpdateCodingOverlayInfo(overlay);
-        CodingOverlayInputControls.SetCreateEventEnabled(
-            BtnCodingCreateEvent,
-            enableCreateEvent && overlay != null);
-
-        ClearTransientCodingCanvas(clearManualOverlay: true);
-        RenderAiOverlays();
-        RenderReferenceDn();
-        UpdateToolBadge();
-        RenderActiveCodingSchema();
+        CodingSchemaOverlayUpdateWorkflow.Execute(
+            new CodingSchemaOverlayUpdateRequest(
+                _codingSessionHost.HasViewModel,
+                enableCreateEvent),
+            new CodingSchemaOverlayUpdateActions(
+                BuildSetAndReportOverlay: () =>
+                {
+                    overlay = BuildCodingSchemaGeometry();
+                    _codingSessionHost.SetCurrentOverlay(overlay);
+                    return overlay != null;
+                },
+                UpdateOverlayInfo: () => UpdateCodingOverlayInfo(overlay),
+                SetCreateEventEnabled: enabled => CodingOverlayInputControls.SetCreateEventEnabled(
+                    BtnCodingCreateEvent,
+                    enabled),
+                ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
+                RenderAiOverlays: RenderAiOverlays,
+                RenderReferenceDn: RenderReferenceDn,
+                UpdateToolBadge: UpdateToolBadge,
+                RenderActiveCodingSchema: RenderActiveCodingSchema));
     }
 
     private void ClearCodingSchemaOverlay(bool redraw)
