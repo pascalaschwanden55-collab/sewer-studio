@@ -35,9 +35,11 @@ public partial class PlayerWindow
         if (start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready)
             return;
 
-        var endMeter = _codingSessionHost.HasViewModel
-            ? _codingSessionHost.EndMeter
-            : (double?)null;
+        var endMeter = CodingEndMeterResolveWorkflow.Execute(
+            new CodingEndMeterResolveRequest(_codingSessionHost.HasViewModel),
+            new CodingEndMeterResolveActions(
+                ResolveEndMeter: () => _codingSessionHost.EndMeter))
+            .EndMeter;
 
         await CodingMultiModelInferenceWorkflow.ExecuteAsync(
             new CodingMultiModelInferenceWorkflowRequest(
