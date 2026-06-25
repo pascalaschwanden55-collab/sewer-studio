@@ -87,7 +87,7 @@ public partial class PlayerWindow
                 {
                     _codingSessionViewModelOwner.Clear();
                     _codingSessionRuntimeOwner.Clear();
-                    _codingOverlayService = null;
+                    _codingOverlayRuntimeOwner.Clear();
                 },
                 ClearCodingCalibrationState: () =>
                 {

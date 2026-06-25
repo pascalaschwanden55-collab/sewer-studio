@@ -21,7 +21,7 @@ public partial class PlayerWindow
 {
     private bool _isCodingMode;
     private readonly CodingSessionServiceOwner _codingSessionRuntimeOwner = new();
-    private IOverlayToolService? _codingOverlayService;
+    private readonly CodingOverlayServiceOwner _codingOverlayRuntimeOwner = new();
     private readonly SchemaOverlayManager _codingSchemaManager = new();
     private SchemaType? _codingSchemaType;
 

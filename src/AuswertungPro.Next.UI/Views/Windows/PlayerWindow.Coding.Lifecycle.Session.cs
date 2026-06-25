@@ -10,7 +10,7 @@ public partial class PlayerWindow
     {
         var state = CodingSessionStateFactory.Create(_videoPath, _dependencies.Settings);
         _codingSessionRuntimeOwner.Set(state.SessionService);
-        _codingOverlayService = state.OverlayService;
+        _codingOverlayRuntimeOwner.Set(state.OverlayService);
         _codingSchemaManager.Cancel();
         _codingSchemaType = null;
         _codingSessionViewModelOwner.Set(state.ViewModel, observePropertyChanged: true);
@@ -18,7 +18,7 @@ public partial class PlayerWindow
 
     private void ApplyCodingDnCalibration()
     {
-        if (_haltungRecord == null || _codingOverlayService == null)
+        if (_haltungRecord == null || !_codingOverlayRuntimeOwner.HasService)
             return;
 
         var dnCalibration = CodingDnCalibrationPolicy.Build(_haltungRecord.Fields);

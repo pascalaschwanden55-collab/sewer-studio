@@ -4996,6 +4996,33 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_overlay_service_is_owned_by_runtime_owner()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var ownerPath = Path.Combine(uiRoot, "Player", "CodingOverlayServiceOwner.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
+
+        Assert.True(File.Exists(ownerPath), "OverlayService-Besitz soll in einem eigenen Player-Owner liegen.");
+
+        var owner = File.ReadAllText(ownerPath);
+        var state = File.ReadAllText(statePath);
+        var windowRoot = File.ReadAllText(windowRootPath);
+
+        Assert.Contains("public sealed class CodingOverlayServiceOwner", owner);
+        Assert.Contains("private readonly CodingOverlayServiceOwner _codingOverlayRuntimeOwner", state);
+        Assert.Contains("new CodingOverlayToolHost(() => _codingOverlayRuntimeOwner.Service)", windowRoot);
+
+        foreach (var path in Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs"))
+        {
+            var text = File.ReadAllText(path);
+            Assert.DoesNotContain("_codingOverlayService", text);
+        }
+    }
+
+    [Fact]
     public void PlayerWindow_coding_lifecycle_lives_in_lifecycle_partial()
     {
         var root = FindRepositoryRoot();

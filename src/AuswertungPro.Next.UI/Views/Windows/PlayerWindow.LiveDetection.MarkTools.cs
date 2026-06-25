@@ -64,15 +64,15 @@ public partial class PlayerWindow
     /// </summary>
     private void EnsureMarkOverlayReady()
     {
-        if (_codingOverlayService != null && _codingSessionHost.HasViewModel) return;
+        if (_codingOverlayRuntimeOwner.HasService && _codingSessionHost.HasViewModel) return;
 
         var state = CodingSessionStateFactory.Create(
             _videoPath,
             _dependencies.Settings,
             _codingSessionRuntimeOwner.Service,
-            _codingOverlayService);
+            _codingOverlayRuntimeOwner.Service);
         _codingSessionRuntimeOwner.Set(state.SessionService);
-        _codingOverlayService = state.OverlayService;
+        _codingOverlayRuntimeOwner.Set(state.OverlayService);
         _codingSessionViewModelOwner.Set(state.ViewModel, observePropertyChanged: false);
     }
 
