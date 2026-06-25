@@ -3997,6 +3997,7 @@ public sealed class UiArchitectureGuardTests
         var trainingResultWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationTrainingResultWorkflow.cs");
         var acceptCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationAcceptCommandWorkflow.cs");
         var correctCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationCorrectCommandWorkflow.cs");
+        var skipCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationSkipCommandWorkflow.cs");
 
         Assert.True(File.Exists(actionsPath), "LiveDetection-Bestaetigungsaktionen sollen aus dem Anzeige-Partial heraus.");
         Assert.True(File.Exists(trainingPath), "LiveDetection-Trainingsuebernahme soll aus den simplen Bestaetigungsaktionen heraus.");
@@ -4010,6 +4011,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(trainingResultWorkflowPath), "Detection-Confirmation-Training-Ergebnisbehandlung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(acceptCommandWorkflowPath), "Detection-Accept-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(correctCommandWorkflowPath), "Detection-Correct-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(skipCommandWorkflowPath), "Detection-Skip-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var confirmation = File.ReadAllText(confirmationPath);
         var actions = File.ReadAllText(actionsPath);
@@ -4025,8 +4027,10 @@ public sealed class UiArchitectureGuardTests
         var trainingResultWorkflow = File.Exists(trainingResultWorkflowPath) ? File.ReadAllText(trainingResultWorkflowPath) : "";
         var acceptCommandWorkflow = File.Exists(acceptCommandWorkflowPath) ? File.ReadAllText(acceptCommandWorkflowPath) : "";
         var correctCommandWorkflow = File.Exists(correctCommandWorkflowPath) ? File.ReadAllText(correctCommandWorkflowPath) : "";
+        var skipCommandWorkflow = File.Exists(skipCommandWorkflowPath) ? File.ReadAllText(skipCommandWorkflowPath) : "";
         var acceptBody = ExtractMethodBody(training, "private async Task HandleDetectionAcceptAsync");
         var correctBody = ExtractMethodBody(training, "private async Task HandleDetectionCorrectAsync");
+        var skipBody = ExtractMethodBody(actions, "private void DetectionSkip_Click");
 
         Assert.Contains("private void ShowDetectionConfirmation", confirmation);
         Assert.Contains("private void ResumeDetection", confirmation);
@@ -4047,6 +4051,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private async void DetectionAccept_Click", actions);
         Assert.DoesNotContain("private async void DetectionCorrect_Click", actions);
         Assert.Contains("private void DetectionSkip_Click", actions);
+        Assert.Contains("LiveDetectionConfirmationSkipCommandWorkflow.Execute", skipBody);
+        Assert.DoesNotContain("ResumeDetection();", skipBody);
         Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", actions);
         Assert.DoesNotContain("private async void DetectionAccept_Click", training);
         Assert.DoesNotContain("private async void DetectionCorrect_Click", training);
@@ -4082,6 +4088,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.HandleCorrectedResult(trainingResult)", correctCommandWorkflow);
         Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2717 Fehler: {ex.Message}\", false)", correctCommandWorkflow);
         Assert.Contains("actions.ResumeDetection()", correctCommandWorkflow);
+        Assert.Contains("actions.ResumeDetection()", skipCommandWorkflow);
         Assert.DoesNotContain("if (!result.Saved)", training);
         Assert.DoesNotContain("result.SavedCount", training);
         Assert.DoesNotContain("result.Code", training);
