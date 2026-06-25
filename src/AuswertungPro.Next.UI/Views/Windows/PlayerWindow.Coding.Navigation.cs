@@ -52,14 +52,16 @@ public partial class PlayerWindow
     }
 
     private double ResolveCurrentCodingDisplayMeter()
-        => !_codingSessionHost.HasViewModel
-            ? 0
-            : CodingVideoNavigationController.ResolveDisplayMeter(
-                _codingOsdMeterController.LastMeter,
-                _playerTimelineHost.TimeMilliseconds ?? 0,
-                _playerTimelineHost.LengthMilliseconds ?? 0,
-                _codingSessionHost.EndMeter,
-                _codingSessionHost.CurrentMeter);
+        => CodingDisplayMeterResolveWorkflow.Execute(
+            new CodingDisplayMeterResolveRequest(_codingSessionHost.HasViewModel),
+            new CodingDisplayMeterResolveActions(
+                ResolveDisplayMeter: () => CodingVideoNavigationController.ResolveDisplayMeter(
+                    _codingOsdMeterController.LastMeter,
+                    _playerTimelineHost.TimeMilliseconds ?? 0,
+                    _playerTimelineHost.LengthMilliseconds ?? 0,
+                    _codingSessionHost.EndMeter,
+                    _codingSessionHost.CurrentMeter)))
+            .DisplayMeter;
 
     private void SyncVideoToCodingMeter()
         => CodingVideoSyncCommandWorkflow.Execute(
