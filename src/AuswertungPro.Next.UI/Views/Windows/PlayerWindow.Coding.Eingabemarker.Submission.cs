@@ -11,73 +11,69 @@ public partial class PlayerWindow
 {
     private async Task SubmitEingabemarker()
     {
-        var keyword = TxtEingabemarker.Text?.Trim() ?? "";
-        if (string.IsNullOrEmpty(keyword)) return;
-
-        CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup);
-        _eingabemarkerPhase = EingabemarkerPhase.Analyzing;
-
-        var codeHint = ResolveEingabemarkerCodeHint(keyword);
-
-        try
-        {
-            if (_codingSessionHost.HasViewModel && codeHint != null)
-            {
-                var checkMeter = _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter;
-                var existingDup = CodingEingabemarkerDuplicatePolicy.FindDuplicate(
-                    _codingSessionHost.Events,
-                    codeHint,
-                    checkMeter);
-                if (existingDup != null)
+        await CodingEingabemarkerSubmissionWorkflow.ExecuteAsync(
+            new CodingEingabemarkerSubmissionWorkflowRequest(
+                TxtEingabemarker.Text,
+                _codingSessionHost.HasViewModel,
+                _codingSessionRuntimeOwner.Service != null),
+            new CodingEingabemarkerSubmissionWorkflowActions(
+                HideInput: () => CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup),
+                SetAnalyzingPhase: () => _eingabemarkerPhase = EingabemarkerPhase.Analyzing,
+                ResolveCodeHint: ResolveEingabemarkerCodeHint,
+                FindDuplicate: codeHint =>
                 {
-                    SetCodingAiState(
-                        $"{codeHint} bereits vorhanden bei {existingDup.MeterAtCapture:F2}m - Duplikat",
-                        PlayerStatusColors.Warning, "");
-                    return;
-                }
-            }
-
-            if (codeHint != null && _codingSessionHost.HasViewModel && _codingSessionRuntimeOwner.Service != null)
-            {
-                var meter = _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter;
-                var videoTime = _codingSessionHost.CurrentVideoTime ?? _playerTimelineHost.CurrentTimeOrZero;
-                var label = LookupVsaLabel(codeHint) ?? keyword;
-
-                var draft = CodingEingabemarkerEventFactory.CreateAccepted(
-                    codeHint,
-                    label,
-                    keyword,
-                    meter,
-                    videoTime);
-
-                var fotoPath = CodingCaptureSnapshot(draft.Entry);
-                CodingProtocolEntryPhotoPathAppender.AddIfPresent(draft.Entry, fotoPath);
-
-                var ev = CodingEingabemarkerEventAppender.Apply(draft, _codingSessionHost.CurrentOverlay, _codingSessionRuntimeOwner.Service);
-                RefreshCodingEventsList();
-                UpdateToolBadge();
-                PersistSingleEventAsTrainingSample(ev).SafeFireAndForget("TrainingSaveSingle");
-                SetCodingAiState($"{codeHint} {label} bei {meter:F2}m eingetragen",
-                    PlayerStatusColors.Success, "");
-            }
-            else
-            {
-                SetCodingAiState($"KI analysiert: \"{keyword}\" ...",
-                    PlayerStatusColors.Warning, "Qwen analysiert");
-                await RunCodingAnalysisAsync(
+                    var checkMeter = _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter;
+                    var duplicate = CodingEingabemarkerDuplicatePolicy.FindDuplicate(
+                        _codingSessionHost.Events,
+                        codeHint,
+                        checkMeter);
+                    return duplicate == null
+                        ? null
+                        : new CodingEingabemarkerDuplicateMatch(duplicate.MeterAtCapture);
+                },
+                ShowDuplicateStatus: (codeHint, meter) => SetCodingAiState(
+                    $"{codeHint} bereits vorhanden bei {meter:F2}m - Duplikat",
+                    PlayerStatusColors.Warning,
+                    ""),
+                AddDirectEvent: AddDirectEingabemarkerEvent,
+                ShowAiFallbackStatus: keyword => SetCodingAiState(
+                    $"KI analysiert: \"{keyword}\" ...",
+                    PlayerStatusColors.Warning,
+                    "Qwen analysiert"),
+                RunAiFallbackAsync: keyword => RunCodingAnalysisAsync(
                     $"Eingabemarker: {keyword}",
                     disableAnalyzeButton: true,
                     keywordHint: keyword,
-                    codeHint: null);
-            }
-        }
-        catch (Exception ex)
-        {
-            SetCodingAiState($"Fehler: {ex.Message}", PlayerStatusColors.Error, "");
-        }
-        finally
-        {
-            CancelEingabemarker();
-        }
+                    codeHint: null),
+                ShowErrorStatus: message => SetCodingAiState($"Fehler: {message}", PlayerStatusColors.Error, ""),
+                CancelMarker: CancelEingabemarker));
+    }
+
+    private void AddDirectEingabemarkerEvent(string codeHint, string keyword)
+    {
+        var meter = _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter;
+        var videoTime = _codingSessionHost.CurrentVideoTime ?? _playerTimelineHost.CurrentTimeOrZero;
+        var label = LookupVsaLabel(codeHint) ?? keyword;
+
+        var draft = CodingEingabemarkerEventFactory.CreateAccepted(
+            codeHint,
+            label,
+            keyword,
+            meter,
+            videoTime);
+
+        var fotoPath = CodingCaptureSnapshot(draft.Entry);
+        CodingProtocolEntryPhotoPathAppender.AddIfPresent(draft.Entry, fotoPath);
+
+        var ev = CodingEingabemarkerEventAppender.Apply(
+            draft,
+            _codingSessionHost.CurrentOverlay,
+            _codingSessionRuntimeOwner.Service!);
+        RefreshCodingEventsList();
+        UpdateToolBadge();
+        PersistSingleEventAsTrainingSample(ev).SafeFireAndForget("TrainingSaveSingle");
+        SetCodingAiState($"{codeHint} {label} bei {meter:F2}m eingetragen",
+            PlayerStatusColors.Success,
+            "");
     }
 }

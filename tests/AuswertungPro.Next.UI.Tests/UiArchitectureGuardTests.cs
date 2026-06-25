@@ -2752,6 +2752,7 @@ public sealed class UiArchitectureGuardTests
         var deleteApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteApplier.cs");
         var editApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventEditApplier.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventListActionWorkflow.cs");
+        var editCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventEditCommandWorkflow.cs");
 
         Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionshandler sollen aus dem allgemeinen Events-Partial heraus.");
         Assert.True(File.Exists(dialogServicePath), "Coding-Event-Aktionsdialoge muessen ausserhalb der PlayerWindow-Partials liegen.");
@@ -2759,6 +2760,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(deleteApplierPath), "Coding-Event-Loeschanwendung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(editApplierPath), "Coding-Event-Bearbeitungsanwendung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Coding-Event-Listenaktionen sollen die Apply/Delete-Nachbearbeitung ausserhalb der PlayerWindow-Partials kapseln.");
+        Assert.True(File.Exists(editCommandWorkflowPath), "Coding-Event-Edit-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var events = File.ReadAllText(eventsPath);
         var actions = File.ReadAllText(actionsPath);
@@ -2767,6 +2769,7 @@ public sealed class UiArchitectureGuardTests
         var deleteApplier = File.ReadAllText(deleteApplierPath);
         var editApplier = File.ReadAllText(editApplierPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
+        var editCommandWorkflow = File.Exists(editCommandWorkflowPath) ? File.ReadAllText(editCommandWorkflowPath) : "";
 
         Assert.DoesNotContain("private void CodingEvents_DoubleClick", events);
         Assert.DoesNotContain("private void CodingEventEdit_Click", events);
@@ -2779,6 +2782,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void CodingEventCloseStretch_Click", actions);
         Assert.Contains("private void CodingEventDelete_Click", actions);
         Assert.Contains("CodingEventActionDialogServiceFactory.Create", actions);
+        Assert.Contains("CodingEventEditCommandWorkflow.Execute", actions);
         Assert.Contains("CodingEventListActionWorkflow.CompleteEdit", actions);
         Assert.Contains("CodingEventListActionWorkflow.CloseStretch", actions);
         Assert.Contains("CodingEventListActionWorkflow.Delete", actions);
@@ -2795,6 +2799,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("DialogHost.Current", actions);
         Assert.DoesNotContain("Der aktuelle Meterstand", actions);
         Assert.DoesNotContain("Ereignis '", actions);
+        Assert.Contains("actions.PausePlayback()", editCommandWorkflow);
+        Assert.Contains("actions.TryEdit(selectedEvent)", editCommandWorkflow);
+        Assert.Contains("actions.CompleteEdit(selectedEvent)", editCommandWorkflow);
         Assert.Contains("CodingEventEditApplier.Apply", workflow);
         Assert.Contains("CodingStretchDamageManualCloseApplier.Apply", workflow);
         Assert.Contains("CodingEventDeleteApplier.Apply", workflow);
@@ -6780,16 +6787,20 @@ public sealed class UiArchitectureGuardTests
         var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
         var submissionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Submission.cs");
         var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
+        var submissionWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerSubmissionWorkflow.cs");
 
         Assert.True(File.Exists(submissionPath), "Eingabemarker-Submission muss in einer eigenen PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(popupControlsPath), "Eingabemarker-Popup-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
+        Assert.True(File.Exists(submissionWorkflowPath), "Eingabemarker-Submission-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var marker = File.ReadAllText(markerPath);
         var submission = File.ReadAllText(submissionPath);
+        var submissionWorkflow = File.Exists(submissionWorkflowPath) ? File.ReadAllText(submissionWorkflowPath) : "";
 
         Assert.DoesNotContain("private async Task SubmitEingabemarker", marker);
         Assert.DoesNotContain("CodingEingabemarkerDuplicatePolicy.FindDuplicate", marker);
         Assert.Contains("private async Task SubmitEingabemarker", submission);
+        Assert.Contains("CodingEingabemarkerSubmissionWorkflow.ExecuteAsync", submission);
         Assert.Contains("CodingEingabemarkerDuplicatePolicy.FindDuplicate", submission);
         Assert.Contains("CodingEingabemarkerEventAppender.Apply", submission);
         Assert.Contains("_codingSessionHost", submission);
@@ -6798,6 +6809,16 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingEingabemarkerPopupControls.Hide", submission);
         Assert.DoesNotContain("EingabemarkerPopup.Visibility = Visibility.Collapsed", submission);
         Assert.Contains("RunCodingAnalysisAsync", submission);
+        Assert.DoesNotContain("if (string.IsNullOrEmpty(keyword))", submission);
+        Assert.DoesNotContain("if (_codingSessionHost.HasViewModel && codeHint != null)", submission);
+        Assert.DoesNotContain("if (codeHint != null && _codingSessionHost.HasViewModel", submission);
+        Assert.DoesNotContain("catch (Exception ex)", submission);
+        Assert.Contains("request.RawKeyword", submissionWorkflow);
+        Assert.Contains("actions.ShowDuplicateStatus", submissionWorkflow);
+        Assert.Contains("actions.AddDirectEvent", submissionWorkflow);
+        Assert.Contains("actions.RunAiFallbackAsync", submissionWorkflow);
+        Assert.Contains("finally", submissionWorkflow);
+        Assert.Contains("actions.CancelMarker()", submissionWorkflow);
     }
 
     [Fact]
