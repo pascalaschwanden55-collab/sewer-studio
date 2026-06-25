@@ -11,7 +11,7 @@ public partial class PlayerWindow
     /// Automatische Streckenschaden-Verfolgung (VSA 2.1.2). Laeuft bei JEDEM Analyse-Tick,
     /// auch mit leerer Streckenschaden-Liste - sonst koennte der Tracker offene Strecken nie
     /// automatisch schliessen. Die Fachregel liegt in Application (StreckenschadenTracker +
-    /// StreckenschadenActionMapper); hier wird nur gefiltert, der Tracker gefuettert und der Applier aufgerufen.
+    /// StreckenschadenActionMapper); hier wird nur der Command-Workflow mit Fenster-Delegates verdrahtet.
     ///
     /// Streckenschaden-Befunde (Code mit IsStreckenschadenCode) werden NICHT als Punkt-Events
     /// gefuehrt - die hier "verbrauchten" Segmente werden zurueckgegeben, damit der normale
@@ -20,23 +20,22 @@ public partial class PlayerWindow
     private HashSet<SegmentedFinding> ApplyStreckenschadenTracking(
         IReadOnlyList<SegmentedFinding> segmented, double meter, TimeSpan videoTime)
     {
-        var codingSessionService = _codingSessionRuntimeOwner.Service;
-        if (codingSessionService == null || !_codingSessionHost.HasViewModel)
-            return [];
-
-        // 1) Codierbare Streckenschaden-Befunde sammeln und Code aufloesen (gleicher Resolver wie Loop).
-        var trackingInput = CodingStreckenschadenObservationBuilder.Build(
-            segmented,
-            meter,
-            ResolveFindingCodeForCoding);
-
-        // 2) Tracker fuettern (auch mit leerer Liste -> ermoeglicht Auto-Schliessen nach Toleranzdistanz).
-        var actions = _streckenTracker.Update(trackingInput.Observations, meter);
-
-        // 3) Aktionen in konkrete Anweisungen uebersetzen und ausfuehren.
-        if (TryApplyStreckenschadenActions(actions, videoTime))
-            RefreshCodingEventsList();
-        return trackingInput.ConsumedSegments;
+        var result = CodingStreckenschadenTrackingCommandWorkflow.ApplyTracking(
+            new CodingStreckenschadenTrackingCommandRequest(
+                Segmented: segmented,
+                Meter: meter,
+                VideoTime: videoTime,
+                HasCodingSessionService: _codingSessionRuntimeOwner.Service is not null,
+                HasCodingViewModel: _codingSessionHost.HasViewModel),
+            new CodingStreckenschadenTrackingCommandActions(
+                BuildObservations: (items, currentMeter) => CodingStreckenschadenObservationBuilder.Build(
+                    items,
+                    currentMeter,
+                    ResolveFindingCodeForCoding),
+                UpdateTracker: _streckenTracker.Update,
+                ApplyActions: TryApplyStreckenschadenActions,
+                RefreshEvents: RefreshCodingEventsList));
+        return result.ConsumedSegments;
     }
 
     private bool TryApplyStreckenschadenActions(
@@ -64,10 +63,13 @@ public partial class PlayerWindow
     /// </summary>
     private void CloseTrackedStreckenschaeden(double endMeter)
     {
-        var actions = _streckenTracker.CloseAll(endMeter);
-        if (actions.Count == 0) return;
-        var videoTime = _playerTimelineHost.CurrentTimeOrZero;
-        if (TryApplyStreckenschadenActions(actions, videoTime))
-            RefreshCodingEventsList();
+        CodingStreckenschadenTrackingCommandWorkflow.CloseTracked(
+            new CodingStreckenschadenCloseTrackedCommandRequest(
+                EndMeter: endMeter,
+                VideoTime: _playerTimelineHost.CurrentTimeOrZero),
+            new CodingStreckenschadenCloseTrackedCommandActions(
+                CloseAll: _streckenTracker.CloseAll,
+                ApplyActions: TryApplyStreckenschadenActions,
+                RefreshEvents: RefreshCodingEventsList));
     }
 }

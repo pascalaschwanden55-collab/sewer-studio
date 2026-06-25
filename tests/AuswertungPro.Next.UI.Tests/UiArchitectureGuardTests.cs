@@ -5058,18 +5058,34 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
         var streckenPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Streckenschaden.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenTrackingCommandWorkflow.cs");
 
         Assert.True(File.Exists(streckenPath), "Streckenschaden-Tracking soll aus dem allgemeinen AI-Partial heraus.");
+        Assert.True(File.Exists(workflowPath), "Streckenschaden-Tracking-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var ai = File.ReadAllText(aiPath);
         var strecken = File.ReadAllText(streckenPath);
+        var workflow = File.ReadAllText(workflowPath);
 
         Assert.DoesNotContain("private HashSet<SegmentedFinding> ApplyStreckenschadenTracking", ai);
         Assert.DoesNotContain("private void ApplyStreckenschadenActions", ai);
         Assert.DoesNotContain("private void CloseTrackedStreckenschaeden", ai);
         Assert.Contains("private HashSet<SegmentedFinding> ApplyStreckenschadenTracking", strecken);
+        Assert.Contains("CodingStreckenschadenTrackingCommandWorkflow.ApplyTracking", strecken);
+        Assert.Contains("CodingStreckenschadenTrackingCommandWorkflow.CloseTracked", strecken);
+        Assert.DoesNotContain("if (codingSessionService == null || !_codingSessionHost.HasViewModel)", strecken);
+        Assert.DoesNotContain("var trackingInput = CodingStreckenschadenObservationBuilder.Build", strecken);
+        Assert.DoesNotContain("var actions = _streckenTracker.CloseAll", strecken);
+        Assert.DoesNotContain("if (TryApplyStreckenschadenActions(actions, videoTime))", strecken);
+        Assert.DoesNotContain("if (actions.Count == 0) return", strecken);
         Assert.Contains("CodingStreckenschadenObservationBuilder.Build", strecken);
         Assert.Contains("CodingStreckenschadenActionApplier.Apply", strecken);
+        Assert.Contains("if (!request.HasCodingSessionService || !request.HasCodingViewModel)", workflow);
+        Assert.Contains("actions.BuildObservations", workflow);
+        Assert.Contains("actions.UpdateTracker", workflow);
+        Assert.Contains("actions.ApplyActions", workflow);
+        Assert.Contains("actions.RefreshEvents()", workflow);
+        Assert.Contains("actions.CloseAll", workflow);
     }
 
     [Fact]
