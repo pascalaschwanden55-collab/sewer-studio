@@ -1046,12 +1046,14 @@ public sealed class UiArchitectureGuardTests
         var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerUiUpdateWorkflow.cs");
         var sliderValueChangedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderValueChangedWorkflow.cs");
         var playbackStartWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackStartWorkflow.cs");
+        var lastOpenedPlaybackWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerLastOpenedPlaybackWorkflow.cs");
 
         Assert.True(File.Exists(controlsPath), "Playback-Button- und Slider-Wiring soll in ein eigenes Partial.");
         Assert.True(File.Exists(commandRunnerPath), "Playback-Button-Kommandos sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(uiUpdateWorkflowPath), "Playback-UI-Update-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(sliderValueChangedWorkflowPath), "PositionSlider-ValueChanged-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(playbackStartWorkflowPath), "Playback-Start-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(lastOpenedPlaybackWorkflowPath), "Last-opened-Playback-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var playback = File.ReadAllText(playbackPath);
         var controls = File.ReadAllText(controlsPath);
@@ -1059,6 +1061,7 @@ public sealed class UiArchitectureGuardTests
         var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
         var sliderValueChangedWorkflow = File.Exists(sliderValueChangedWorkflowPath) ? File.ReadAllText(sliderValueChangedWorkflowPath) : "";
         var playbackStartWorkflow = File.Exists(playbackStartWorkflowPath) ? File.ReadAllText(playbackStartWorkflowPath) : "";
+        var lastOpenedPlaybackWorkflow = File.Exists(lastOpenedPlaybackWorkflowPath) ? File.ReadAllText(lastOpenedPlaybackWorkflowPath) : "";
 
         Assert.DoesNotContain("private void Play_Click", playback);
         Assert.DoesNotContain("private void PositionSlider_ValueChanged", playback);
@@ -1067,9 +1070,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerUiUpdateWorkflow.Execute", playback);
         Assert.Contains("PlayerPlaybackStartWorkflow.EnsurePlaying", playback);
         Assert.Contains("PlayerPlaybackStartWorkflow.Play", playback);
+        Assert.Contains("PlayerLastOpenedPlaybackWorkflow.TryGetCurrentTime", playback);
+        Assert.Contains("PlayerLastOpenedPlaybackWorkflow.TrySeekTo", playback);
         Assert.DoesNotContain("if (_isDragging)", playback);
         Assert.DoesNotContain("if (_isCodingMode)", playback);
         Assert.DoesNotContain("if (_playerPlaybackControlHost.ShouldStartPlayback)", playback);
+        Assert.DoesNotContain("if (_lastOpened is null)", playback);
         Assert.Contains("private void Play_Click", controls);
         Assert.Contains("PlayerPlaybackCommandRunner.Play", controls);
         Assert.Contains("PlayerPlaybackCommandRunner.Pause", controls);
@@ -1103,6 +1109,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("request.ShouldStartPlayback", playbackStartWorkflow);
         Assert.Contains("actions.Play(request.VideoPath)", playbackStartWorkflow);
         Assert.Contains("actions.PlayPath(request.VideoPath)", playbackStartWorkflow);
+        Assert.Contains("request.HasWindow", lastOpenedPlaybackWorkflow);
+        Assert.Contains("actions.TryGetCurrentTime()", lastOpenedPlaybackWorkflow);
+        Assert.Contains("actions.TrySeekTo(request.Time)", lastOpenedPlaybackWorkflow);
     }
 
     [Fact]
@@ -1352,6 +1361,7 @@ public sealed class UiArchitectureGuardTests
         var startupWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupWorkflow.cs");
         var runtimeStartWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeStartWorkflow.cs");
         var stopUiWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStopUiWorkflow.cs");
+        var hideStatusTimerWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionHideStatusTimerWorkflow.cs");
         var toggleControlsPath = Path.Combine(windowsRoot, "LiveDetectionToggleControls.cs");
         var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var disposableLifecyclePath = Path.Combine(uiRoot, "Player", "DisposableReferenceLifecycle.cs");
@@ -1362,6 +1372,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(startupWorkflowPath), "LiveDetection-Startup-Entscheidungen sollen ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(runtimeStartWorkflowPath), "LiveDetection-Runtime-Startreihenfolge soll ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(stopUiWorkflowPath), "LiveDetection-Stop-UI-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(hideStatusTimerWorkflowPath), "LiveDetection-Stop-Status-Hide-Timer soll ausserhalb der PlayerWindow-Partials entschieden werden.");
         Assert.True(File.Exists(toggleControlsPath), "LiveDetection-Toggle-State soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
         Assert.True(File.Exists(liveControllerPath), "LiveDetection-Runtime-Zustand soll im LiveDetectionController liegen.");
         Assert.True(File.Exists(disposableLifecyclePath), "Disposable-Referenz-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -1373,6 +1384,7 @@ public sealed class UiArchitectureGuardTests
         var startupWorkflow = File.Exists(startupWorkflowPath) ? File.ReadAllText(startupWorkflowPath) : "";
         var runtimeStartWorkflow = File.Exists(runtimeStartWorkflowPath) ? File.ReadAllText(runtimeStartWorkflowPath) : "";
         var stopUiWorkflow = File.Exists(stopUiWorkflowPath) ? File.ReadAllText(stopUiWorkflowPath) : "";
+        var hideStatusTimerWorkflow = File.Exists(hideStatusTimerWorkflowPath) ? File.ReadAllText(hideStatusTimerWorkflowPath) : "";
         var toggleControls = File.Exists(toggleControlsPath) ? File.ReadAllText(toggleControlsPath) : "";
         var liveController = File.Exists(liveControllerPath) ? File.ReadAllText(liveControllerPath) : "";
         var disposableLifecycle = File.Exists(disposableLifecyclePath) ? File.ReadAllText(disposableLifecyclePath) : "";
@@ -1432,11 +1444,17 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("VisionModelSelectionPolicy.Select", factory);
         Assert.Contains("private void StopLiveDetection", stop);
         Assert.Contains("LiveDetectionStopUiWorkflow.Execute", stop);
+        Assert.Contains("LiveDetectionHideStatusTimerWorkflow.Schedule", stop);
         Assert.Contains("_codingSessionHost", stop);
         Assert.DoesNotContain("_codingVm", stop);
         Assert.Contains("public static class LiveDetectionStopUiWorkflow", stopUiWorkflow);
+        Assert.Contains("public static class LiveDetectionHideStatusTimerWorkflow", hideStatusTimerWorkflow);
+        Assert.Contains("TimeSpan.FromSeconds(5)", hideStatusTimerWorkflow);
+        Assert.Contains("actions.HideDetectionStatus()", hideStatusTimerWorkflow);
         Assert.Contains("LiveDetectionStatusControls.ShowStoppedDetectionStatus", stop);
         Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", stop);
+        Assert.DoesNotContain("if (!_liveDetectionController.IsDetecting)", stop);
+        Assert.DoesNotContain("TimeSpan.FromSeconds(5)", stop);
         Assert.DoesNotContain("AiStatusBadge.Visibility", stop);
         Assert.DoesNotContain("FindingSummaryPanel.Visibility", stop);
         Assert.DoesNotContain("LiveDetectionStatusText.Text", stop);

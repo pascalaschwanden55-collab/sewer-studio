@@ -14,19 +14,30 @@ public partial class PlayerWindow
 {
     public static bool TryGetCurrentTime(out TimeSpan time)
     {
-        time = default;
-        if (_lastOpened is null)
-            return false;
+        var playerWindow = _lastOpened;
+        var result = PlayerLastOpenedPlaybackWorkflow.TryGetCurrentTime(
+            new PlayerLastOpenedCurrentTimeRequest(playerWindow is not null),
+            new PlayerLastOpenedCurrentTimeActions(
+                () =>
+                {
+                    var success = playerWindow!.TryGetCurrentTimeInternal(out var currentTime);
+                    return new PlayerLastOpenedCurrentTimeActionResult(success, currentTime);
+                }));
 
-        return _lastOpened.TryGetCurrentTimeInternal(out time);
+        time = result.Time;
+        return result.Success;
     }
 
     public static bool TrySeekTo(TimeSpan time)
     {
-        if (_lastOpened is null)
-            return false;
-
-        return _lastOpened.TrySeekToInternal(time);
+        var playerWindow = _lastOpened;
+        return PlayerLastOpenedPlaybackWorkflow.TrySeekTo(
+                new PlayerLastOpenedSeekRequest(
+                    playerWindow is not null,
+                    time),
+                new PlayerLastOpenedSeekActions(
+                    requestedTime => playerWindow!.TrySeekToInternal(requestedTime)))
+            .Success;
     }
 
     private bool TryGetCurrentTimeInternal(out TimeSpan time)

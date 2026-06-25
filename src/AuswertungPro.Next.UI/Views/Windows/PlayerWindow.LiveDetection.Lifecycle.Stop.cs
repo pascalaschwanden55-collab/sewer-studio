@@ -34,12 +34,13 @@ public partial class PlayerWindow
     }
 
     private void StartLiveDetectionHideStatusTimer()
-    {
-        var hideTimer = PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromSeconds(5), () =>
-        {
-            if (!_liveDetectionController.IsDetecting)
-                LiveDetectionStatusControls.HideDetectionStatus(LiveDetectionStatusText);
-        });
-        hideTimer.Start();
-    }
+        => LiveDetectionHideStatusTimerWorkflow.Schedule(
+            new LiveDetectionHideStatusTimerWorkflowActions(
+                Schedule: (delay, action) =>
+                {
+                    var hideTimer = PlayerWindowTimerFactory.CreateOneShotTimer(delay, action);
+                    hideTimer.Start();
+                },
+                IsDetecting: () => _liveDetectionController.IsDetecting,
+                HideDetectionStatus: () => LiveDetectionStatusControls.HideDetectionStatus(LiveDetectionStatusText)));
 }
