@@ -54,16 +54,21 @@ public partial class PlayerWindow
     /// </summary>
     private void EnsureMarkOverlayReady()
     {
-        if (_codingOverlayRuntimeOwner.HasService && _codingSessionHost.HasViewModel) return;
-
-        var state = CodingSessionStateFactory.Create(
-            _videoPath,
-            _dependencies.Settings,
-            _codingSessionRuntimeOwner.Service,
-            _codingOverlayRuntimeOwner.Service);
-        _codingSessionRuntimeOwner.Set(state.SessionService);
-        _codingOverlayRuntimeOwner.Set(state.OverlayService);
-        _codingSessionViewModelOwner.Set(state.ViewModel, observePropertyChanged: false);
+        LiveDetectionMarkOverlayReadyWorkflow.Execute(
+            new LiveDetectionMarkOverlayReadyRequest(
+                _codingOverlayRuntimeOwner.HasService,
+                _codingSessionHost.HasViewModel),
+            new LiveDetectionMarkOverlayReadyActions(
+                CreateState: () => CodingSessionStateFactory.Create(
+                    _videoPath,
+                    _dependencies.Settings,
+                    _codingSessionRuntimeOwner.Service,
+                    _codingOverlayRuntimeOwner.Service),
+                SetSessionService: _codingSessionRuntimeOwner.Set,
+                SetOverlayService: _codingOverlayRuntimeOwner.Set,
+                SetViewModel: viewModel => _codingSessionViewModelOwner.Set(
+                    viewModel,
+                    observePropertyChanged: false)));
     }
 
     private void DeactivateMarkTool()

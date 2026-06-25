@@ -4560,16 +4560,19 @@ public sealed class UiArchitectureGuardTests
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var controlsPath = Path.Combine(uiRoot, "Player", "PlayerMarkToolControls.cs");
         var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkActivationWorkflow.cs");
+        var overlayReadyWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkOverlayReadyWorkflow.cs");
 
         Assert.True(File.Exists(markToolsPath), "Markierwerkzeug-Wiring soll aus dem grossen Marking-Partial heraus.");
         Assert.True(File.Exists(controlsPath), "Markierwerkzeug-UI-Zustand soll in einem Player-Controller gekapselt sein.");
         Assert.True(File.Exists(activationWorkflowPath), "Markierwerkzeug-Aktivierungsentscheidung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(overlayReadyWorkflowPath), "Markier-Overlay-Bereitstellung soll ausserhalb von PlayerWindow entschieden werden.");
 
         var marking = File.ReadAllText(markingPath);
         var markTools = File.ReadAllText(markToolsPath);
         var state = File.ReadAllText(statePath);
         var controls = File.ReadAllText(controlsPath);
         var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
+        var overlayReadyWorkflow = File.Exists(overlayReadyWorkflowPath) ? File.ReadAllText(overlayReadyWorkflowPath) : "";
 
         Assert.DoesNotContain("private void ActivateMarkTool", marking);
         Assert.DoesNotContain("private void EnsureMarkOverlayReady", marking);
@@ -4592,6 +4595,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveDetectionManualMarkActivationWorkflow.Execute", markTools);
         Assert.DoesNotContain("if (tool == OverlayToolType.Point)", markTools);
         Assert.Contains("private void EnsureMarkOverlayReady", markTools);
+        Assert.Contains("LiveDetectionMarkOverlayReadyWorkflow.Execute", markTools);
+        Assert.DoesNotContain("if (_codingOverlayRuntimeOwner.HasService && _codingSessionHost.HasViewModel) return;", markTools);
         Assert.Contains("private void DeactivateMarkTool", markTools);
         Assert.Contains("private OverlayToolType _markToolType", state);
         Assert.Contains("_markToolControls.BeginActivation", markTools);
@@ -4601,6 +4606,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("OverlayToolType.Point", activationWorkflow);
         Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", activationWorkflow);
         Assert.Contains("CodingSessionStateFactory.Create", markTools);
+        Assert.Contains("if (request.HasOverlayService && request.HasViewModel)", overlayReadyWorkflow);
+        Assert.Contains("actions.CreateState()", overlayReadyWorkflow);
+        Assert.Contains("actions.SetSessionService(state.SessionService)", overlayReadyWorkflow);
+        Assert.Contains("actions.SetOverlayService(state.OverlayService)", overlayReadyWorkflow);
+        Assert.Contains("actions.SetViewModel(state.ViewModel)", overlayReadyWorkflow);
         Assert.DoesNotContain("CodingSessionServiceFactory.Create", markTools);
         Assert.DoesNotContain("new OverlayToolService", markTools);
         Assert.DoesNotContain("new ViewModels.Windows.CodingSessionViewModel", markTools);
