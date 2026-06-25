@@ -1396,6 +1396,7 @@ public sealed class UiArchitectureGuardTests
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.cs");
         var stopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeFactory.cs");
+        var clickWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionClickWorkflow.cs");
         var startupWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupWorkflow.cs");
         var runtimeStartWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeStartWorkflow.cs");
         var stopUiWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStopUiWorkflow.cs");
@@ -1407,6 +1408,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(lifecyclePath), "LiveDetection-Start/Stop-Wiring soll in ein eigenes Lifecycle-Partial.");
         Assert.True(File.Exists(stopPath), "LiveDetection-Stop/Cleanup soll aus dem Start-Lifecycle-Partial heraus.");
         Assert.True(File.Exists(factoryPath), "LiveDetection-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(clickWorkflowPath), "LiveDetection-Klick-Start/Stop-Entscheidung soll ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(startupWorkflowPath), "LiveDetection-Startup-Entscheidungen sollen ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(runtimeStartWorkflowPath), "LiveDetection-Runtime-Startreihenfolge soll ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(stopUiWorkflowPath), "LiveDetection-Stop-UI-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -1419,6 +1421,7 @@ public sealed class UiArchitectureGuardTests
         var lifecycle = File.ReadAllText(lifecyclePath);
         var stop = File.ReadAllText(stopPath);
         var factory = File.ReadAllText(factoryPath);
+        var clickWorkflow = File.Exists(clickWorkflowPath) ? File.ReadAllText(clickWorkflowPath) : "";
         var startupWorkflow = File.Exists(startupWorkflowPath) ? File.ReadAllText(startupWorkflowPath) : "";
         var runtimeStartWorkflow = File.Exists(runtimeStartWorkflowPath) ? File.ReadAllText(runtimeStartWorkflowPath) : "";
         var stopUiWorkflow = File.Exists(stopUiWorkflowPath) ? File.ReadAllText(stopUiWorkflowPath) : "";
@@ -1437,6 +1440,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void LiveDetection_Click", lifecycle);
         Assert.Contains(".SafeFireAndForget(\"LiveDetectionClick\")", lifecycle);
         Assert.Contains("private async Task HandleLiveDetectionClickAsync", lifecycle);
+        Assert.Contains("LiveDetectionClickWorkflow.ExecuteAsync", lifecycle);
+        Assert.DoesNotContain("if (_liveDetectionController.IsDetecting)", lifecycle);
         Assert.Contains("private async Task StartLiveDetectionAsync", lifecycle);
         Assert.DoesNotContain("private void StopLiveDetection", lifecycle);
         Assert.Contains("LiveDetectionStartupWorkflow.StartAsync", lifecycle);
@@ -1459,6 +1464,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("\"KI aktiv\"", lifecycle);
         Assert.DoesNotContain("\"Aktiv\"", lifecycle);
         Assert.DoesNotContain("LiveDetectionDisplayPolicy.CompactModelName", lifecycle);
+        Assert.Contains("actions.StopLiveDetection()", clickWorkflow);
+        Assert.Contains("actions.UncheckToggle()", clickWorkflow);
+        Assert.Contains("actions.StartLiveDetectionAsync()", clickWorkflow);
         Assert.Contains("public static class LiveDetectionStartupWorkflow", startupWorkflow);
         Assert.Contains("ShowRuntimeSettingsLoadFailed", startupWorkflow);
         Assert.Contains("ShowDisabled", startupWorkflow);

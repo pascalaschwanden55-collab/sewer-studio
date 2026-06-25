@@ -13,16 +13,12 @@ public partial class PlayerWindow
         => HandleLiveDetectionClickAsync().SafeFireAndForget("LiveDetectionClick");
 
     private async Task HandleLiveDetectionClickAsync()
-    {
-        if (_liveDetectionController.IsDetecting)
-        {
-            StopLiveDetection();
-            LiveDetectionToggleControls.Uncheck(LiveDetectionButton);
-            return;
-        }
-
-        await StartLiveDetectionAsync();
-    }
+        => await LiveDetectionClickWorkflow.ExecuteAsync(
+            new LiveDetectionClickWorkflowRequest(_liveDetectionController.IsDetecting),
+            new LiveDetectionClickWorkflowActions(
+                StopLiveDetection: StopLiveDetection,
+                UncheckToggle: () => LiveDetectionToggleControls.Uncheck(LiveDetectionButton),
+                StartLiveDetectionAsync: StartLiveDetectionAsync));
 
     private async Task StartLiveDetectionAsync()
     {
