@@ -240,8 +240,10 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var boundaryBody = ExtractMethodBody(coding, "private bool TryHandleBoundaryClassifierResult");
+        var boundaryCommandWorkflow = ReadUiFile("Ai", "CodingBoundaryClassifierCommandWorkflow.cs");
 
         Assert.Contains("_detectionConfirmationBuffer.FrameBytes", boundaryBody);
+        Assert.Contains("request.AnalyzedFrameBytes", boundaryCommandWorkflow);
         Assert.Contains("EnsureRohranfangExists(startMeter, startTime, frameBytes, ref anyAdded)", boundaryBody);
         Assert.Contains("EnsureRohrendeExists(meterEnd, endTime, frameBytes)", boundaryBody);
     }
@@ -331,6 +333,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var qwenBody = ExtractMethodBody(coding, "private void AddAiFindingsAsEvents");
         var qwenCommandWorkflow = ReadUiFile("Ai", "CodingLiveFindingEventCommandWorkflow.cs");
         var boundaryBody = ExtractMethodBody(coding, "private bool TryHandleBoundaryClassifierResult");
+        var boundaryCommandWorkflow = ReadUiFile("Ai", "CodingBoundaryClassifierCommandWorkflow.cs");
 
         Assert.Contains("CodingAnalysisPreflightWorkflow.Execute", runBody);
         Assert.Contains("ResolveCodingMeterForFrame(timestamp)", runBody);
@@ -340,7 +343,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("ResolveMeterForFrame: (timestamp, osdMeter)", qwenBody);
         Assert.Contains("request.Result.TimestampSeconds", qwenCommandWorkflow);
         Assert.Contains("request.Result.MeterReading", qwenCommandWorkflow);
-        Assert.Contains("ResolveCodingMeterForFrame(captureTimestampSec", boundaryBody);
+        Assert.Contains("ResolveMeterForFrame: (timestamp, osdMeter)", boundaryBody);
+        Assert.Contains("request.CaptureTimestampSeconds", boundaryCommandWorkflow);
+        Assert.Contains("request.FrameOsdMeter", boundaryCommandWorkflow);
 
         Assert.DoesNotContain("double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter", multiModelBody);
         Assert.DoesNotContain("double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter", qwenBody);
