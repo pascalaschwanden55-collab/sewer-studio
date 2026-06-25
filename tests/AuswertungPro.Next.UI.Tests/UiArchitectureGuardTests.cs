@@ -873,21 +873,27 @@ public sealed class UiArchitectureGuardTests
         var protocolPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Protocol.cs");
         var mapperPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEventMapper.cs");
         var appenderPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEventCollectionAppender.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingExistingProtocolEntriesWorkflow.cs");
 
         Assert.True(File.Exists(mapperPath), "ProtocolEntry-zu-CodingEvent-Mapping muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(appenderPath), "Eintragen gemappter Protokoll-Events muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "Laden existierender Protokoll-Events soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var protocol = File.ReadAllText(protocolPath);
         var mapper = File.ReadAllText(mapperPath);
         var appender = File.Exists(appenderPath) ? File.ReadAllText(appenderPath) : "";
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
-        Assert.Contains("CodingProtocolEventMapper.BuildExistingEvents", protocol);
-        Assert.Contains("CodingProtocolEventCollectionAppender.Append", protocol);
+        Assert.Contains("CodingExistingProtocolEntriesWorkflow.Execute", protocol);
+        Assert.DoesNotContain("CodingProtocolEventMapper.BuildExistingEvents", protocol);
+        Assert.DoesNotContain("CodingProtocolEventCollectionAppender.Append", protocol);
         Assert.Contains("_codingSessionHost", protocol);
         Assert.DoesNotContain("_codingVm", protocol);
         Assert.DoesNotContain("_codingVm.Events.Add", protocol);
         Assert.DoesNotContain("new CodingEvent", protocol);
         Assert.DoesNotContain("OrderBy(e => e.MeterStart ?? 0)", protocol);
+        Assert.Contains("CodingProtocolEventMapper.BuildExistingEvents", workflow);
+        Assert.Contains("CodingProtocolEventCollectionAppender.Append", workflow);
         Assert.Contains("public static IReadOnlyList<CodingEvent> BuildExistingEvents", mapper);
         Assert.Contains("target.Add", appender);
     }
@@ -6796,17 +6802,27 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputControls.cs");
+        var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerToggleWorkflow.cs");
 
         Assert.True(File.Exists(controlsPath), "Eingabemarker-Canvas-Zustand soll ueber den OverlayInput-Control-Adapter laufen.");
+        Assert.True(File.Exists(toggleWorkflowPath), "Eingabemarker-Toggle-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var marker = File.ReadAllText(markerPath);
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+        var toggleWorkflow = File.Exists(toggleWorkflowPath) ? File.ReadAllText(toggleWorkflowPath) : "";
 
+        Assert.Contains("CodingEingabemarkerToggleWorkflow.Execute", marker);
+        Assert.DoesNotContain("if (BtnEingabemarker.IsChecked == true)", marker);
         Assert.Contains("CodingOverlayInputControls.EnableDrawingCanvas", marker);
         Assert.Contains("CodingOverlayInputControls.DisableDrawingCanvas", marker);
         Assert.Contains("CodingOverlayInputControls.ResetCanvasCursor", marker);
         Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible =", marker);
         Assert.DoesNotContain("CodingOverlayCanvas.Cursor =", marker);
+        Assert.Contains("request.IsChecked", toggleWorkflow);
+        Assert.Contains("actions.PauseForCodingInteraction()", toggleWorkflow);
+        Assert.Contains("actions.SetDrawingPhase()", toggleWorkflow);
+        Assert.Contains("actions.SetInactivePhase()", toggleWorkflow);
+        Assert.Contains("actions.ResetCanvasCursor()", toggleWorkflow);
         Assert.Contains("public static void EnableDrawingCanvas", controls);
         Assert.Contains("public static void DisableDrawingCanvas", controls);
         Assert.Contains("public static void ResetCanvasCursor", controls);

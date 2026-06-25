@@ -1,8 +1,6 @@
 using System;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Helpers;
-
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -10,34 +8,34 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class PlayerWindow
 {
     private void Eingabemarker_Click(object sender, RoutedEventArgs e)
-    {
-        if (BtnEingabemarker.IsChecked == true)
-        {
-            PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause);
-            _eingabemarkerPhase = EingabemarkerPhase.Drawing;
-            EnsureMarkOverlayReady();
-            CodingOverlayPopup.IsOpen = true;
-            UpdateCodingOverlayViewport();
-            CodingOverlayInputControls.EnableDrawingCanvas(CodingOverlayCanvas);
-            SetCodingAiState("Eingabemarker: Rechteck um die Beobachtung ziehen",
-                PlayerStatusColors.Info, "Klicken + Ziehen = Bereich markieren");
-        }
-        else
-        {
-            CancelEingabemarker();
-        }
-    }
+        => CodingEingabemarkerToggleWorkflow.Execute(
+            new CodingEingabemarkerToggleWorkflowRequest(BtnEingabemarker.IsChecked == true),
+            CreateEingabemarkerToggleActions());
 
     private void CancelEingabemarker()
-    {
-        _eingabemarkerPhase = EingabemarkerPhase.Inactive;
-        BtnEingabemarker.IsChecked = false;
-        CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup);
-        _eingabemarkerPreviewRect = CodingEingabemarkerPreviewRenderer.Clear(
-            CodingOverlayCanvas,
-            _eingabemarkerPreviewRect);
-        CodingOverlayInputControls.ResetCanvasCursor(CodingOverlayCanvas);
-    }
+        => CodingEingabemarkerToggleWorkflow.Execute(
+            new CodingEingabemarkerToggleWorkflowRequest(IsChecked: false),
+            CreateEingabemarkerToggleActions());
+
+    private CodingEingabemarkerToggleWorkflowActions CreateEingabemarkerToggleActions()
+        => new(
+            PauseForCodingInteraction: () => PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause),
+            SetDrawingPhase: () => _eingabemarkerPhase = EingabemarkerPhase.Drawing,
+            EnsureMarkOverlayReady: EnsureMarkOverlayReady,
+            OpenCodingOverlayPopup: () => CodingOverlayPopup.IsOpen = true,
+            UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
+            EnableDrawingCanvas: () => CodingOverlayInputControls.EnableDrawingCanvas(CodingOverlayCanvas),
+            ShowDrawingStatus: () => SetCodingAiState(
+                "Eingabemarker: Rechteck um die Beobachtung ziehen",
+                PlayerStatusColors.Info,
+                "Klicken + Ziehen = Bereich markieren"),
+            SetInactivePhase: () => _eingabemarkerPhase = EingabemarkerPhase.Inactive,
+            UncheckButton: () => BtnEingabemarker.IsChecked = false,
+            HideInputPopup: () => CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup),
+            ClearPreview: () => _eingabemarkerPreviewRect = CodingEingabemarkerPreviewRenderer.Clear(
+                CodingOverlayCanvas,
+                _eingabemarkerPreviewRect),
+            ResetCanvasCursor: () => CodingOverlayInputControls.ResetCanvasCursor(CodingOverlayCanvas));
 
     private void EingabemarkerCanvas_MouseDown(Point canvasPos)
     {
