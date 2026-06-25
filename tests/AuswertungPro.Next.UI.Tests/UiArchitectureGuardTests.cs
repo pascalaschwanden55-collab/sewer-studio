@@ -6083,11 +6083,14 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayInputWorkflow.cs");
 
         Assert.True(File.Exists(schemaPath), "Schema-Overlay-Wiring soll aus dem allgemeinen OverlayInput-Partial heraus.");
+        Assert.True(File.Exists(workflowPath), "Schema-Overlay-Mouseflow soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var schema = File.ReadAllText(schemaPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.DoesNotContain("private bool IsCodingSchemaToolSelected", overlayInput);
         Assert.DoesNotContain("private SchemaOverlayBase? CreateCodingSchemaOverlay", overlayInput);
@@ -6099,10 +6102,20 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private bool TryHandleCodingSchemaMouseDown", schema);
         Assert.Contains("private bool TryHandleCodingSchemaMouseMove", schema);
         Assert.Contains("private bool TryHandleCodingSchemaMouseUp", schema);
+        Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseDown", schema);
+        Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseMove", schema);
+        Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseUp", schema);
         Assert.Contains("CodingSchemaOverlayBuilder.Create", schema);
         Assert.Contains("CodingSchemaOverlayBuilder.BuildGeometry", schema);
         Assert.Contains("_codingSessionHost", schema);
         Assert.DoesNotContain("_codingVm", schema);
+        Assert.DoesNotContain("if (!IsCodingSchemaToolSelected())", schema);
+        Assert.DoesNotContain("if (!IsCodingSchemaToolSelected() || !_codingSchemaManager.IsActive)", schema);
+        Assert.DoesNotContain("if (!IsCodingSchemaToolSelected() || !_codingSchemaManager.IsDragging)", schema);
+        Assert.Contains("actions.CreateAndActivateSchema()", workflow);
+        Assert.Contains("actions.BeginDrag(handleId)", workflow);
+        Assert.Contains("actions.UpdateDrag()", workflow);
+        Assert.Contains("actions.ReleaseMouseCapture()", workflow);
         Assert.Contains("private void UpdateCodingSchemaOverlay", schema);
     }
 
