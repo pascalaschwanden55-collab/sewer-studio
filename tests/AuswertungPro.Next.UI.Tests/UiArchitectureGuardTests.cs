@@ -4418,12 +4418,14 @@ public sealed class UiArchitectureGuardTests
         var frameExporterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingFrameExporter.cs");
         var annotationWriterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingAnnotationWriter.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingWorkflow.cs");
+        var resultWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingResultWorkflow.cs");
 
         Assert.True(File.Exists(trainingPath), "Manual-Mark-Training-Speicherung soll aus dem grossen Marking-Partial heraus.");
         Assert.True(File.Exists(appenderPath), "Manual-Mark-Session-Anlage soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(frameExporterPath), "Manual-Mark-Training soll den bestehenden FrameExporter fuer Tempframe-I/O nutzen.");
         Assert.True(File.Exists(annotationWriterPath), "Manual-Mark-Training soll den bestehenden AnnotationWriter nutzen.");
         Assert.True(File.Exists(workflowPath), "Manual-Mark-Training-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(resultWorkflowPath), "Manual-Mark-Training-Ergebnisbehandlung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var marking = File.ReadAllText(markingPath);
         var training = File.ReadAllText(trainingPath);
@@ -4431,13 +4433,17 @@ public sealed class UiArchitectureGuardTests
         var frameExporter = File.ReadAllText(frameExporterPath);
         var annotationWriter = File.ReadAllText(annotationWriterPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
+        var resultWorkflow = File.Exists(resultWorkflowPath) ? File.ReadAllText(resultWorkflowPath) : "";
 
         Assert.DoesNotContain("private async Task<bool> SaveMarkAsTrainingAsync", marking);
         Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", marking);
         Assert.Contains("private async Task<bool> SaveMarkAsTrainingAsync", training);
         Assert.Contains("LiveDetectionManualMarkTrainingWorkflow.SaveAsync", training);
+        Assert.Contains("LiveDetectionManualMarkTrainingResultWorkflow.Execute", training);
         Assert.Contains("_codingSessionHost", training);
         Assert.DoesNotContain("_codingVm", training);
+        Assert.DoesNotContain("if (!result.Saved)", training);
+        Assert.DoesNotContain("result.Code", training);
         Assert.DoesNotContain("LiveDetectionManualMarkEventAppender.Apply", training);
         Assert.DoesNotContain("CodingProtocolEntryPhotoPathAppender.AddIfPresent", training);
         Assert.DoesNotContain("_codingSessionService.AddEvent(manualEntry", training);
@@ -4458,6 +4464,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("BestEffort.Try", frameExporter);
         Assert.Contains("SaveManualMarkAsync", annotationWriter);
         Assert.Contains("LiveDetectionTeacherAnnotationFactory.CreateManualMark", annotationWriter);
+        Assert.Contains("if (!trainingResult.Saved)", resultWorkflow);
+        Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2713 {trainingResult.Code} gespeichert\", true)", resultWorkflow);
     }
 
     [Fact]

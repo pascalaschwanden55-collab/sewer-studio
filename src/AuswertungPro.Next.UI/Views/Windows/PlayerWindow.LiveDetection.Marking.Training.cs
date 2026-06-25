@@ -42,11 +42,10 @@ public partial class PlayerWindow
                         meter,
                         videoTimestamp),
                 RefreshCodingEventsList);
-            if (!result.Saved)
-                return false;
-
-            ShowOsdMeterStatus($"\u2713 {result.Code} gespeichert", resetAfterDelay: true);
-            return true;
+            return LiveDetectionManualMarkTrainingResultWorkflow.Execute(
+                result,
+                new LiveDetectionManualMarkTrainingResultActions(
+                    ShowOsdMeterStatus: ShowOsdMeterStatus)).ReturnValue;
         }
         catch (Exception ex)
         {
