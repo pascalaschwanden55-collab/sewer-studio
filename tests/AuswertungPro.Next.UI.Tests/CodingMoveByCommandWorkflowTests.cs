@@ -5,12 +5,29 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingMoveByCommandWorkflowTests
 {
     [Fact]
+    public async Task ExecuteAsync_skips_prepare_and_osd_read_when_coding_view_model_is_missing()
+    {
+        var calls = new List<string>();
+
+        var result = await CodingMoveByCommandWorkflow.ExecuteAsync(
+            new CodingMoveByCommandRequest(
+                HasCodingViewModel: false,
+                TraceName: "CodingNext_Click"),
+            Actions(calls));
+
+        Assert.Equal(CodingMoveByCommandOutcome.Skipped, result.Outcome);
+        Assert.Empty(calls);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_skips_osd_read_when_prepare_returns_false()
     {
         var calls = new List<string>();
 
         var result = await CodingMoveByCommandWorkflow.ExecuteAsync(
-            new CodingMoveByCommandRequest("CodingNext_Click"),
+            new CodingMoveByCommandRequest(
+                HasCodingViewModel: true,
+                TraceName: "CodingNext_Click"),
             Actions(
                 calls,
                 prepareMoveByCommand: () =>
@@ -29,7 +46,9 @@ public sealed class CodingMoveByCommandWorkflowTests
         var calls = new List<string>();
 
         var result = await CodingMoveByCommandWorkflow.ExecuteAsync(
-            new CodingMoveByCommandRequest("CodingNext_Click"),
+            new CodingMoveByCommandRequest(
+                HasCodingViewModel: true,
+                TraceName: "CodingNext_Click"),
             Actions(calls));
 
         Assert.Equal(CodingMoveByCommandOutcome.Moved, result.Outcome);
@@ -42,7 +61,9 @@ public sealed class CodingMoveByCommandWorkflowTests
         var calls = new List<string>();
 
         var result = await CodingMoveByCommandWorkflow.ExecuteAsync(
-            new CodingMoveByCommandRequest("CodingPrevious_Click"),
+            new CodingMoveByCommandRequest(
+                HasCodingViewModel: true,
+                TraceName: "CodingPrevious_Click"),
             Actions(
                 calls,
                 prepareMoveByCommand: () =>

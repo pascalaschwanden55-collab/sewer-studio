@@ -5946,6 +5946,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingVideoSyncCommandWorkflow.Execute", navigation);
         Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return;\n        CodingVideoNavigationController.SyncVideoToCodingMeter", navigation);
         Assert.Contains("CodingVideoNavigationController.PrepareMoveByCommand", navigation);
+        Assert.DoesNotContain("_codingSessionHost.HasViewModel ? _codingSessionHost : null", navigation);
         Assert.DoesNotContain("CodingCurrentMeterResolver.Resolve", navigation);
         Assert.DoesNotContain("CodingVideoSyncPolicy.TryResolveTargetTimeMs", navigation);
         Assert.DoesNotContain("_codingVm", navigation);
@@ -5954,6 +5955,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingCurrentMeterResolver.Resolve", controller);
         Assert.Contains("CodingVideoSyncPolicy.TryResolveTargetTimeMs", controller);
         Assert.Contains("PrepareMoveByCommand", controller);
+        Assert.Contains("if (!request.HasCodingViewModel)", moveCommandWorkflow);
         Assert.Contains("actions.PrepareMoveByCommand()", moveCommandWorkflow);
         Assert.Contains("await actions.ReadOsdMeterAsync()", moveCommandWorkflow);
         Assert.Contains("actions.TraceError", moveCommandWorkflow);

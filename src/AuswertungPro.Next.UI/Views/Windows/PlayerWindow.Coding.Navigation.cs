@@ -92,10 +92,12 @@ public partial class PlayerWindow
         string traceName)
     {
         await CodingMoveByCommandWorkflow.ExecuteAsync(
-            new CodingMoveByCommandRequest(traceName),
+            new CodingMoveByCommandRequest(
+                _codingSessionHost.HasViewModel,
+                traceName),
             new CodingMoveByCommandActions(
                 PrepareMoveByCommand: () => CodingVideoNavigationController.PrepareMoveByCommand(
-                    _codingSessionHost.HasViewModel ? _codingSessionHost : null,
+                    _codingSessionHost,
                     executeMoveCommand,
                     () => _codingNavPending = true,
                     () => PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause),

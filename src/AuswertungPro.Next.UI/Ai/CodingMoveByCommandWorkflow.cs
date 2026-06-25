@@ -8,6 +8,7 @@ public enum CodingMoveByCommandOutcome
 }
 
 public sealed record CodingMoveByCommandRequest(
+    bool HasCodingViewModel,
     string TraceName);
 
 public sealed record CodingMoveByCommandActions(
@@ -26,6 +27,9 @@ public static class CodingMoveByCommandWorkflow
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(actions);
+
+        if (!request.HasCodingViewModel)
+            return Result(CodingMoveByCommandOutcome.Skipped);
 
         try
         {
