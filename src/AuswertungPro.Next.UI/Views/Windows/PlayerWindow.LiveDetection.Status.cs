@@ -1,5 +1,6 @@
 using System.Windows.Media;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -26,20 +27,18 @@ public partial class PlayerWindow
             model));
 
     private void SetCodingAiState(string status, Color dotColor, string? stage = null, bool pulse = false)
-        => RunStatusUi(() =>
-        {
-            LiveDetectionStatusControls.ShowCodingAiState(
-                TxtCodingAiStatus,
-                TxtCodingAiStage,
-                CodingAiDot,
-                status,
-                dotColor,
-                stage);
-            if (pulse)
-                StartCodingAiPulse();
-            else
-                StopCodingAiPulse();
-        });
+        => RunStatusUi(() => LiveDetectionCodingAiStateWorkflow.Execute(
+            new LiveDetectionCodingAiStateWorkflowRequest(pulse),
+            new LiveDetectionCodingAiStateWorkflowActions(
+                ShowCodingAiState: () => LiveDetectionStatusControls.ShowCodingAiState(
+                    TxtCodingAiStatus,
+                    TxtCodingAiStage,
+                    CodingAiDot,
+                    status,
+                    dotColor,
+                    stage),
+                StartPulse: StartCodingAiPulse,
+                StopPulse: StopCodingAiPulse)));
 
     private void RunStatusUi(Action apply)
         => PlayerUiDispatchWorkflow.Execute(
