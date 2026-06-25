@@ -253,6 +253,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
         var structuralBody = ExtractMethodBody(coding, "private bool TryHandleStructuralClassifierResult");
         var resultWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisResultWorkflow.cs");
+        var structuralCommandWorkflow = ReadUiFile("Ai", "CodingStructuralClassifierCommandWorkflow.cs");
         var structuralWorkflow = ReadUiFile("Ai", "CodingStructuralClassifierResultWorkflow.cs");
 
         var boundaryIndex = multiModelBody.IndexOf("TryHandleBoundaryClassifierResult", StringComparison.Ordinal);
@@ -263,7 +264,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.True(structuralIndex > boundaryIndex, "BCA/BCC darf BCD/BCE nicht ueberholen.");
         Assert.True(resultWorkflowIndex > structuralIndex, "BCA/BCC muss vor dem YOLO/DINO-No-Detection-Abbruch behandelt werden.");
         Assert.Contains("!result.IsRelevant || !result.HasDetections", resultWorkflow);
-        Assert.Contains("CodingStructuralClassifierResultWorkflow.Execute", structuralBody);
+        Assert.Contains("CodingStructuralClassifierCommandWorkflow.Execute", structuralBody);
+        Assert.Contains("actions.ExecuteResultWorkflow", structuralCommandWorkflow);
         Assert.Contains("CodingClassifierDisplayPolicy.IsStructuralClassifierCode(code)", structuralWorkflow);
         Assert.Contains("CodingStructuralClassifierEventFactory.Create", structuralWorkflow);
         Assert.Contains("CodingStructuralClassifierEventAppender.Apply", structuralWorkflow);
