@@ -3934,6 +3934,7 @@ public sealed class UiArchitectureGuardTests
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingManualEventFactory.cs");
         var appenderPath = Path.Combine(uiRoot, "Ai", "CodingManualEventAppender.cs");
         var selectedCodeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSelectedCodeEventWorkflow.cs");
+        var selectCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSelectCodeCommandWorkflow.cs");
         var createCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCreateSelectedCodeEventCommandWorkflow.cs");
         var postWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventCreationPostWorkflow.cs");
         var accessorsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
@@ -3942,20 +3943,27 @@ public sealed class UiArchitectureGuardTests
         var factory = File.ReadAllText(factoryPath);
         var appender = File.Exists(appenderPath) ? File.ReadAllText(appenderPath) : "";
         var selectedCodeWorkflow = File.Exists(selectedCodeWorkflowPath) ? File.ReadAllText(selectedCodeWorkflowPath) : "";
+        var selectCommandWorkflow = File.Exists(selectCommandWorkflowPath) ? File.ReadAllText(selectCommandWorkflowPath) : "";
         var createCommandWorkflow = File.Exists(createCommandWorkflowPath) ? File.ReadAllText(createCommandWorkflowPath) : "";
         var postWorkflow = File.Exists(postWorkflowPath) ? File.ReadAllText(postWorkflowPath) : "";
         var accessors = File.ReadAllText(accessorsPath);
+        var selectCodeBody = ExtractMethodBody(events, "private async Task HandleCodingSelectCodeAsync");
         var createEventBody = ExtractMethodBody(events, "private void CodingCreateEvent_Click");
 
         Assert.True(File.Exists(selectedCodeWorkflowPath), "Manueller Selected-Code-Event-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(selectCommandWorkflowPath), "Manueller Select-Code-Button-Ablauf soll ausserhalb der Events-Partial orchestriert werden.");
         Assert.True(File.Exists(createCommandWorkflowPath), "Manueller Create-Event-Button-Ablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(postWorkflowPath), "Nachbearbeitung manuell erzeugter Coding-Events soll ausserhalb der Events-Partial orchestriert werden.");
+        Assert.Contains("CodingSelectCodeCommandWorkflow.ExecuteAsync", events);
         Assert.Contains("CodingCreateSelectedCodeEventCommandWorkflow.Execute", events);
         Assert.Contains("CodingSelectedCodeEventWorkflow.Create", events);
         Assert.Contains("CodingManualEventAppender.Apply", events);
         Assert.Contains("CodingEventCreationPostWorkflow.Apply", events);
         Assert.Contains("_codingSessionHost", events);
         Assert.DoesNotContain("_codingVm", events);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", selectCodeBody);
+        Assert.DoesNotContain("var osdMeter = await CodingReadOsdMeterAsync()", selectCodeBody);
+        Assert.DoesNotContain("if (entry is not null)", selectCodeBody);
         Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", createEventBody);
         Assert.DoesNotContain("if (createdEvent == null)", createEventBody);
         Assert.DoesNotContain("_codingSchemaManager.Cancel()", events);
@@ -3968,6 +3976,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingManualEventFactory.CreateUnconfirmed", selectedCodeWorkflow);
         Assert.Contains("CodingProtocolEntryPhotoPathAppender.AddIfPresent", selectedCodeWorkflow);
         Assert.Contains("CodingManualEventAppender.Apply", selectedCodeWorkflow);
+        Assert.Contains("actions.PauseForCodingInteraction()", selectCommandWorkflow);
+        Assert.Contains("actions.RunWithSuspendedOverlayInputAsync", selectCommandWorkflow);
+        Assert.Contains("actions.ReadOsdMeterAsync()", selectCommandWorkflow);
+        Assert.Contains("actions.ResolveManualEntryMeter(osdMeter)", selectCommandWorkflow);
+        Assert.Contains("actions.CreateManualEntry(", selectCommandWorkflow);
+        Assert.Contains("actions.ApplyPostCreation(createdEvent)", selectCommandWorkflow);
         Assert.Contains("actions.GetCurrentVideoTime()", createCommandWorkflow);
         Assert.Contains("actions.SetCurrentVideoTime(videoTime)", createCommandWorkflow);
         Assert.Contains("actions.CreateEvent(videoTime)", createCommandWorkflow);

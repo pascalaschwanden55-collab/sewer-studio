@@ -17,44 +17,40 @@ public partial class PlayerWindow
 
     private async Task HandleCodingSelectCodeAsync()
     {
-        if (!_codingSessionHost.HasViewModel) return;
-
-        PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause);
-
-        await RunWithSuspendedCodingOverlayInputAsync(async () =>
-        {
-            var videoZeit = _playerTimelineHost.CurrentTimeOrZero;
-
-            var osdMeter = await CodingReadOsdMeterAsync();
-            var meterValue = CodingCurrentMeterResolver.ResolveManualEntry(
-                osdMeter,
-                _codingOsdMeterController.LastMeter,
-                _playerTimelineHost.TimeMilliseconds ?? 0,
-                _playerTimelineHost.LengthMilliseconds ?? 0,
-                _codingSessionHost.EndMeter,
-                _codingSessionHost.CurrentMeter);
-
-            var entry = CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
-                .CreateManualEntry(
+        await CodingSelectCodeCommandWorkflow.ExecuteAsync(
+            new CodingSelectCodeCommandRequest(_codingSessionHost.HasViewModel),
+            new CodingSelectCodeCommandActions(
+                PauseForCodingInteraction: () => PlayerCodingPlayback.PauseForCodingInteraction(
+                    _playerPlaybackControlHost.SetPause),
+                RunWithSuspendedOverlayInputAsync: RunWithSuspendedCodingOverlayInputAsync,
+                GetCurrentVideoTime: () => _playerTimelineHost.CurrentTimeOrZero,
+                ReadOsdMeterAsync: CodingReadOsdMeterAsync,
+                ResolveManualEntryMeter: osdMeter => CodingCurrentMeterResolver.ResolveManualEntry(
+                    osdMeter,
+                    _codingOsdMeterController.LastMeter,
+                    _playerTimelineHost.TimeMilliseconds ?? 0,
+                    _playerTimelineHost.LengthMilliseconds ?? 0,
+                    _codingSessionHost.EndMeter,
+                    _codingSessionHost.CurrentMeter),
+                CreateManualEntry: (videoTime, meterValue) => CodingCodeExplorerWorkflowServiceFactory
+                    .Create(CreateVsaCodeExplorerViewModel)
+                    .CreateManualEntry(
+                        _codingSessionHost.CurrentOverlay,
+                        meterValue,
+                        videoTime,
+                        _videoPath,
+                        this,
+                        CreateVsaCodeExplorerLiveSnapshotProvider()),
+                AppendManualEvent: entry => CodingManualEventAppender.Apply(
+                    entry,
                     _codingSessionHost.CurrentOverlay,
-                    meterValue,
-                    videoZeit,
-                    _videoPath,
-                    this,
-                    CreateVsaCodeExplorerLiveSnapshotProvider());
-
-            if (entry is not null)
-            {
-                var createdEvent = CodingManualEventAppender.Apply(entry, _codingSessionHost.CurrentOverlay, _codingSessionRuntimeOwner.Service!);
-
-                CodingEventCreationPostWorkflow.Apply(
+                    _codingSessionRuntimeOwner.Service!),
+                ApplyPostCreation: createdEvent => CodingEventCreationPostWorkflow.Apply(
                     createdEvent,
                     _codingEventCreationPostActions,
                     new CodingEventCreationPostOptions(
                         SelectCreatedEvent: true,
-                        ClearSelectedCode: false));
-            }
-        });
+                        ClearSelectedCode: false))));
     }
 
     private void CodingCreateEvent_Click(object sender, RoutedEventArgs e)
