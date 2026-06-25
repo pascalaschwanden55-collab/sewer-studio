@@ -49,7 +49,7 @@ public partial class PlayerWindow
         // Nach 800ms die KI-Overlays entfernen
         var timer = PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromMilliseconds(800), () =>
         {
-            CodingOverlayCanvasCleaner.ClearAiOverlays(CodingOverlayCanvas);
+            CodingOverlayCleanupController.ClearAiOverlays(CodingOverlayCanvas);
         });
         timer.Start();
     }

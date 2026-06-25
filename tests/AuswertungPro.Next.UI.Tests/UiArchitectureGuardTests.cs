@@ -4736,22 +4736,30 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
         var viewportPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Viewport.cs");
+        var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiOverlayLifecycle.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupPolicy.cs");
         var cleanerPath = Path.Combine(uiRoot, "Player", "CodingOverlayCanvasCleaner.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupController.cs");
         var surfacePath = Path.Combine(uiRoot, "Player", "IOverlaySurface.cs");
 
         Assert.True(File.Exists(policyPath), "Transient-Overlay-Cleanup muss den zentralen Tag-Vertrag verwenden.");
         Assert.True(File.Exists(cleanerPath), "Transient-Overlay-Cleanup der Canvas-Elemente muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controllerPath), "Coding-Overlay-Cleanup soll ueber einen Player-Controller laufen.");
         Assert.True(File.Exists(surfacePath), "Transient-Overlay-Cleanup soll ueber die Overlay-Surface laufen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var viewport = File.ReadAllText(viewportPath);
+        var lifecycle = File.ReadAllText(lifecyclePath);
         var policy = File.ReadAllText(policyPath);
         var cleaner = File.ReadAllText(cleanerPath);
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
         var surface = File.ReadAllText(surfacePath);
 
         Assert.Contains("_codingOverlayRenderController.ClearTransient", viewport);
         Assert.DoesNotContain("CodingOverlayCanvasCleaner.ClearTransient", overlayInput + viewport);
+        Assert.Contains("CodingOverlayCleanupController.ClearAiOverlays", lifecycle);
+        Assert.DoesNotContain("CodingOverlayCanvasCleaner.ClearAiOverlays", lifecycle);
+        Assert.Contains("CodingOverlayCanvasCleaner.ClearAiOverlays", controller);
         Assert.Contains("CodingOverlayCanvasCleaner.ClearTransient", surface);
         Assert.DoesNotContain("CodingOverlayCleanupPolicy.ShouldRemoveTransientTag(el.Tag", overlayInput + viewport);
         Assert.DoesNotContain(".OfType<FrameworkElement>()", overlayInput + viewport);
