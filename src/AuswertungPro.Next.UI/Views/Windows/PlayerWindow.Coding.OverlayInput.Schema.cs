@@ -110,12 +110,16 @@ public partial class PlayerWindow
 
     private void ClearCodingSchemaOverlay(bool redraw)
     {
-        _codingSchemaManager.Cancel();
-        _codingSessionHost.ClearCurrentOverlay();
-        CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false);
-        UpdateCodingOverlayInfo(null);
-        if (redraw)
-            RedrawCodingCanvas(includeManualOverlay: false);
+        CodingSchemaOverlayClearWorkflow.Execute(
+            new CodingSchemaOverlayClearRequest(redraw),
+            new CodingSchemaOverlayClearActions(
+                CancelSchema: _codingSchemaManager.Cancel,
+                ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
+                SetCreateEventEnabled: enabled => CodingOverlayInputControls.SetCreateEventEnabled(
+                    BtnCodingCreateEvent,
+                    enabled),
+                ClearOverlayInfo: () => UpdateCodingOverlayInfo(null),
+                RedrawCodingCanvas: includeManualOverlay => RedrawCodingCanvas(includeManualOverlay)));
     }
 
     private void CodingCanvas_MouseWheel(object sender, MouseWheelEventArgs e)

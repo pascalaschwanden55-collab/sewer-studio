@@ -6085,15 +6085,18 @@ public sealed class UiArchitectureGuardTests
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayInputWorkflow.cs");
         var updateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayUpdateWorkflow.cs");
+        var clearWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayClearWorkflow.cs");
 
         Assert.True(File.Exists(schemaPath), "Schema-Overlay-Wiring soll aus dem allgemeinen OverlayInput-Partial heraus.");
         Assert.True(File.Exists(workflowPath), "Schema-Overlay-Mouseflow soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(updateWorkflowPath), "Schema-Overlay-Update-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(clearWorkflowPath), "Schema-Overlay-Clear-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var schema = File.ReadAllText(schemaPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var updateWorkflow = File.Exists(updateWorkflowPath) ? File.ReadAllText(updateWorkflowPath) : "";
+        var clearWorkflow = File.Exists(clearWorkflowPath) ? File.ReadAllText(clearWorkflowPath) : "";
 
         Assert.DoesNotContain("private bool IsCodingSchemaToolSelected", overlayInput);
         Assert.DoesNotContain("private SchemaOverlayBase? CreateCodingSchemaOverlay", overlayInput);
@@ -6109,6 +6112,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseMove", schema);
         Assert.Contains("CodingSchemaOverlayInputWorkflow.MouseUp", schema);
         Assert.Contains("CodingSchemaOverlayUpdateWorkflow.Execute", schema);
+        Assert.Contains("CodingSchemaOverlayClearWorkflow.Execute", schema);
         Assert.Contains("CodingSchemaOverlayBuilder.Create", schema);
         Assert.Contains("CodingSchemaOverlayBuilder.BuildGeometry", schema);
         Assert.Contains("_codingSessionHost", schema);
@@ -6124,6 +6128,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.BuildSetAndReportOverlay()", updateWorkflow);
         Assert.Contains("actions.SetCreateEventEnabled(request.EnableCreateEvent && hasOverlay)", updateWorkflow);
         Assert.Contains("actions.RenderActiveCodingSchema()", updateWorkflow);
+        Assert.Contains("actions.CancelSchema()", clearWorkflow);
+        Assert.Contains("actions.ClearCurrentOverlay()", clearWorkflow);
+        Assert.Contains("actions.SetCreateEventEnabled(false)", clearWorkflow);
+        Assert.Contains("actions.ClearOverlayInfo()", clearWorkflow);
         Assert.Contains("private void UpdateCodingSchemaOverlay", schema);
     }
 
