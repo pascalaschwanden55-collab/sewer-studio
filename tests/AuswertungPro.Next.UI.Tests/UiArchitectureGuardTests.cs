@@ -4767,7 +4767,8 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("CodingPhotoViewerCommandWorkflow.Execute", photos);
         Assert.Contains("CodingPhotoViewerDisplayWorkflow.Show", photos);
-        Assert.Contains("CodingPhotoViewerWorkflowServiceFactory.Create", photos);
+        Assert.DoesNotContain("CodingPhotoViewerWorkflowServiceFactory.Create", photos);
+        Assert.DoesNotContain("new CodingPhotoViewerDisplayWorkflowActions", photos);
         Assert.DoesNotContain("CodingPhotoViewerWorkflowServiceFactory.Create().Show", photos);
         Assert.DoesNotContain("LstCodingEvents.SelectedItem is not CodingEvent", photoBody);
         Assert.DoesNotContain("FotoPaths.Count == 0", photoBody);
@@ -4789,6 +4790,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("codingEvent.Entry.FotoPaths.Count == 0", commandWorkflow);
         Assert.Contains("actions.ShowNoPhotosOverlay()", commandWorkflow);
         Assert.Contains("actions.ShowViewer(codingEvent)", commandWorkflow);
+        Assert.Contains("CodingPhotoViewerWorkflowServiceFactory.Create", displayWorkflow);
+        Assert.Contains("new CodingPhotoViewerDisplayWorkflowActions", displayWorkflow);
         Assert.Contains("service.Show(owner, codingEvent, lastProjectPath)", displayWorkflow);
         Assert.Contains("CodingProjectFolderResolver.ResolveOrEmpty", viewerWorkflowFactory);
         Assert.Contains("CodingPhotoViewerWindowServiceFactory.Create", viewerWorkflowFactory);
@@ -4818,7 +4821,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void CodingEventShowPhotos_Click", viewer);
         Assert.Contains("CodingPhotoViewerCommandWorkflow.Execute", viewer);
         Assert.Contains("CodingPhotoViewerDisplayWorkflow.Show", viewer);
-        Assert.Contains("CodingPhotoViewerWorkflowServiceFactory.Create", viewer);
+        Assert.DoesNotContain("CodingPhotoViewerWorkflowServiceFactory.Create", viewer);
+        Assert.DoesNotContain("new CodingPhotoViewerDisplayWorkflowActions", viewer);
         Assert.DoesNotContain("CodingPhotoViewerWorkflowServiceFactory.Create().Show", viewer);
         Assert.DoesNotContain("LstCodingEvents.SelectedItem is not CodingEvent", viewer);
         Assert.DoesNotContain("FotoPaths.Count == 0", viewer);

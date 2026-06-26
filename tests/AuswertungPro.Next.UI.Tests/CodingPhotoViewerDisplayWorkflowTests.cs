@@ -1,3 +1,4 @@
+using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
@@ -6,6 +7,25 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class CodingPhotoViewerDisplayWorkflowTests
 {
+    [Fact]
+    public void Show_offers_default_viewer_service_wiring()
+    {
+        var overload = typeof(CodingPhotoViewerDisplayWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingPhotoViewerDisplayWorkflow.Show) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual(
+                    [
+                        typeof(Window),
+                        typeof(CodingEvent),
+                        typeof(string),
+                    ]));
+
+        Assert.NotNull(overload);
+    }
+
     [Fact]
     public void Show_creates_viewer_service_and_delegates_request()
     {

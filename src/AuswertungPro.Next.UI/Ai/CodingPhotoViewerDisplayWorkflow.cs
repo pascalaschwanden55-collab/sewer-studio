@@ -11,6 +11,17 @@ public static class CodingPhotoViewerDisplayWorkflow
     public static void Show(
         Window owner,
         CodingEvent codingEvent,
+        string? lastProjectPath)
+        => Show(
+            owner,
+            codingEvent,
+            lastProjectPath,
+            new CodingPhotoViewerDisplayWorkflowActions(
+                CreateService: CodingPhotoViewerWorkflowServiceFactory.Create));
+
+    public static void Show(
+        Window owner,
+        CodingEvent codingEvent,
         string? lastProjectPath,
         CodingPhotoViewerDisplayWorkflowActions actions)
     {
