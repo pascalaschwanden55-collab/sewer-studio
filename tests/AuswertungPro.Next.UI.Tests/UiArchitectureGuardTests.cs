@@ -3567,13 +3567,21 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var confirmationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs");
+        var statePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationPanelControls.cs");
+        var ownerPath = Path.Combine(uiRoot, "Player", "CodingConfirmationPanelControlsOwner.cs");
 
         Assert.True(File.Exists(controlsPath), "Coding-Bestaetigungspanel-Anzeige soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(ownerPath), "Coding-Bestaetigungspanel-Besitz soll nicht als nullable Rohfeld im PlayerWindow liegen.");
 
         var confirmation = File.ReadAllText(confirmationPath);
+        var state = File.ReadAllText(statePath);
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+        var owner = File.Exists(ownerPath) ? File.ReadAllText(ownerPath) : "";
 
+        Assert.DoesNotContain("private CodingConfirmationPanelControls _codingConfirmationPanelControls", state);
+        Assert.Contains("private readonly CodingConfirmationPanelControlsOwner _codingConfirmationPanelControls = new();", state);
+        Assert.Contains("_codingConfirmationPanelControls.Initialize", confirmation);
         Assert.Contains("_codingConfirmationPanelControls.Apply", confirmation);
         Assert.Contains("_codingConfirmationPanelControls.Hide()", confirmation);
         Assert.DoesNotContain("ConfirmAmpel.Fill", confirmation);
@@ -3586,6 +3594,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public sealed class CodingConfirmationPanelControls", controls);
         Assert.Contains("ConfirmAmpel.Fill", controls);
         Assert.Contains("CodingConfirmationPanel.Visibility = Visibility.Visible", controls);
+        Assert.Contains("public sealed class CodingConfirmationPanelControlsOwner", owner);
+        Assert.Contains("public void Initialize", owner);
+        Assert.Contains("public Color Apply", owner);
+        Assert.Contains("public void Hide", owner);
     }
 
     [Fact]

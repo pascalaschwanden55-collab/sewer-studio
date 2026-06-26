@@ -36,7 +36,7 @@ public partial class PlayerWindow
     private readonly CodingLiveAiTimerControllerOwner _codingLiveAiTimerOwner = new();
     private readonly CodingOsdMeterController _codingOsdMeterController = new();
     private readonly CodingSidePanelControllerSet _codingSidePanelControllers = new();
-    private CodingConfirmationPanelControls _codingConfirmationPanelControls = null!;
+    private readonly CodingConfirmationPanelControlsOwner _codingConfirmationPanelControls = new();
     private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner;
     private readonly ICodingSessionHost _codingSessionHost;
     private readonly ICodingOverlayToolHost _codingOverlayToolHost;
