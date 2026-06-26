@@ -11,8 +11,8 @@ public partial class PlayerWindow
             new CodingAiInitializationWorkflowActions(
                 CreateRuntime: () => CodingAiRuntimeCreationWorkflow.Create(CodeCatalog, _dependencies.PipelineConfig),
                 ApplyRuntime: _codingAiRuntimeOwner.Controller.ApplyRuntime,
-                CreateHealthMonitor: runtime => CodingAiRuntimeFactory.CreateHealthMonitor(
-                    runtime.VisionClient!,
+                CreateHealthMonitor: runtime => CodingAiHealthMonitorCreationWorkflow.Create(
+                    runtime,
                     aiEnabled: () => _codingAiRuntimeOwner.Controller.AiEnabled,
                     qwenAvailable: () => _codingAiRuntimeOwner.Controller.QwenAvailable),
                 StartHealthMonitor: monitor => _codingAiRuntimeOwner.Controller.StartHealthMonitor(

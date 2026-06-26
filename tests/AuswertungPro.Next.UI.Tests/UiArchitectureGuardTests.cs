@@ -7994,11 +7994,13 @@ public sealed class UiArchitectureGuardTests
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingAiRuntimeFactory.cs");
         var initializationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiInitializationWorkflow.cs");
         var creationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiRuntimeCreationWorkflow.cs");
+        var healthMonitorCreationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiHealthMonitorCreationWorkflow.cs");
         var settingsLoaderPath = Path.Combine(uiRoot, "Ai", "PlayerAiSettingsLoader.cs");
 
         Assert.True(File.Exists(factoryPath), "Coding-AI-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(initializationWorkflowPath), "Coding-AI-Initialisierungsentscheidungen sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(creationWorkflowPath), "Coding-AI-Runtime-Verdrahtung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(healthMonitorCreationWorkflowPath), "Coding-AI-Health-Monitor-Verdrahtung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(settingsLoaderPath), "Player-AI-Settings-Erzeugung soll ausserhalb von PlayerWindow liegen.");
 
         var health = File.ReadAllText(healthPath);
@@ -8006,6 +8008,7 @@ public sealed class UiArchitectureGuardTests
         var factory = File.ReadAllText(factoryPath);
         var initializationWorkflow = File.ReadAllText(initializationWorkflowPath);
         var creationWorkflow = File.Exists(creationWorkflowPath) ? File.ReadAllText(creationWorkflowPath) : string.Empty;
+        var healthMonitorCreationWorkflow = File.Exists(healthMonitorCreationWorkflowPath) ? File.ReadAllText(healthMonitorCreationWorkflowPath) : string.Empty;
         var settingsLoader = File.ReadAllText(settingsLoaderPath);
 
         Assert.DoesNotContain("PlayerAiSettingsLoader.LoadPlatformSettings", health);
@@ -8022,6 +8025,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingAiRuntimeFactory.Create(", health);
         Assert.Contains("PlayerAiSettingsLoader.LoadPlatformSettings", creationWorkflow);
         Assert.Contains("CodingAiRuntimeFactory.Create(", creationWorkflow);
+        Assert.DoesNotContain("CodingAiRuntimeFactory.CreateHealthMonitor", health);
+        Assert.Contains("CodingAiHealthMonitorCreationWorkflow.Create", health);
+        Assert.Contains("CodingAiRuntimeFactory.CreateHealthMonitor", healthMonitorCreationWorkflow);
         Assert.DoesNotContain("new OllamaClient", health);
         Assert.DoesNotContain("new LiveDetectionService", health);
         Assert.DoesNotContain("new EnhancedVisionAnalysisService", health);
