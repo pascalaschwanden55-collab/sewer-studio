@@ -5283,6 +5283,7 @@ public sealed class UiArchitectureGuardTests
         var pathAppenderPath = Path.Combine(uiRoot, "Ai", "CodingProtocolEntryPhotoPathAppender.cs");
         var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingTakePhotoCommandWorkflow.cs");
         var attachmentWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAnalyzedFramePhotoAttachmentWorkflow.cs");
+        var framePhotoAttacherPath = Path.Combine(uiRoot, "Ai", "CodingAnalyzedFramePhotoAttacher.cs");
 
         Assert.True(File.Exists(policyPath), "Manuelle Foto-Slot-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(applierPath), "Manuelle Foto-Slot-Anwendung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -5290,6 +5291,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(pathAppenderPath), "FotoPath-Anhaengen muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(commandWorkflowPath), "Manueller Foto-Command soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(attachmentWorkflowPath), "Analysierter Frame vs. Snapshot-Fallback soll ausserhalb von PlayerWindow orchestriert werden.");
+        Assert.True(File.Exists(framePhotoAttacherPath), "Konkreter KI-Frame-Foto-Service soll hinter einem kleinen Adapter liegen.");
 
         var photos = File.ReadAllText(photosPath);
         var policy = File.ReadAllText(policyPath);
@@ -5298,11 +5300,14 @@ public sealed class UiArchitectureGuardTests
         var pathAppender = File.Exists(pathAppenderPath) ? File.ReadAllText(pathAppenderPath) : "";
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
         var attachmentWorkflow = File.Exists(attachmentWorkflowPath) ? File.ReadAllText(attachmentWorkflowPath) : "";
+        var framePhotoAttacher = File.Exists(framePhotoAttacherPath) ? File.ReadAllText(framePhotoAttacherPath) : "";
 
         Assert.Contains("CodingTakePhotoCommandWorkflow.Execute", photos);
         Assert.Contains("CodingEventPhotoApplier.Apply", photos);
         Assert.Contains("CodingEventPhotoTimestampScope.Apply", photos);
         Assert.Contains("CodingAnalyzedFramePhotoAttachmentWorkflow.Execute", photos);
+        Assert.Contains("CodingAnalyzedFramePhotoAttacher.Attach", photos);
+        Assert.DoesNotContain("CodingAiFramePhotoService.AttachAnalyzedFramePhoto", photos);
         Assert.DoesNotContain("TryExtractAnalyzedFrameBytes() ?? _detectionConfirmationBuffer.FrameBytes", photos);
         Assert.DoesNotContain("if (!string.IsNullOrWhiteSpace(path))", photos);
         Assert.DoesNotContain("var fallback = CodingCaptureSnapshot(entry)", photos);
@@ -5329,6 +5334,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.GetPreferredFrameBytes() ?? actions.GetBufferedFrameBytes()", attachmentWorkflow);
         Assert.Contains("actions.AttachAnalyzedFramePhoto(frameBytes)", attachmentWorkflow);
         Assert.Contains("CodingProtocolEntryPhotoPathAppender.AddDistinctNonBlank", attachmentWorkflow);
+        Assert.Contains("CodingAiFramePhotoService.AttachAnalyzedFramePhoto", framePhotoAttacher);
     }
 
     [Fact]

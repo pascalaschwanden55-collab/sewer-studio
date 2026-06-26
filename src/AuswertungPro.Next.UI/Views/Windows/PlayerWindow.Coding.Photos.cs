@@ -16,7 +16,7 @@ public partial class PlayerWindow
             new CodingAnalyzedFramePhotoAttachmentActions(
                 GetPreferredFrameBytes: TryExtractAnalyzedFrameBytes,
                 GetBufferedFrameBytes: () => _detectionConfirmationBuffer.FrameBytes,
-                AttachAnalyzedFramePhoto: frameBytes => CodingAiFramePhotoService.AttachAnalyzedFramePhoto(
+                AttachAnalyzedFramePhoto: frameBytes => CodingAnalyzedFramePhotoAttacher.Attach(
                     entry,
                     frameBytes,
                     _videoPath),
@@ -27,7 +27,7 @@ public partial class PlayerWindow
 
     private string? AttachBoundaryAnalyzedFramePhoto(ProtocolEntry entry, byte[]? analyzedFrameBytes)
     {
-        return CodingAiFramePhotoService.AttachAnalyzedFramePhoto(
+        return CodingAnalyzedFramePhotoAttacher.Attach(
             entry,
             analyzedFrameBytes,
             _videoPath);
