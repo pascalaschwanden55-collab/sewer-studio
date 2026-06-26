@@ -138,7 +138,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             .Resolve(Directory.GetCurrentDirectory(), _sp.Settings.ProjectsRootDirectory)
             .ToList();
 
-        // 4. Fallback-Speicherorte + jeweils direkte Unterordner scannen
+        // 4. Fallback-Speicherorte: den Ordner selbst UND seine direkten Unterordner scannen
         var projektBases = new List<string> { @"D:\Projekt", @"C:\Projekt" };
         if (!string.IsNullOrWhiteSpace(_sp.Settings.ProjectsRootDirectory))
             projektBases.Insert(0, _sp.Settings.ProjectsRootDirectory!);
@@ -147,6 +147,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         {
             if (!Directory.Exists(projektDir))
                 continue;
+            rootDirs.Add(projektDir);
             try
             {
                 foreach (var subDir in Directory.GetDirectories(projektDir))
