@@ -1,6 +1,5 @@
 using System.Windows.Controls;
 using System.Windows.Documents;
-using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -13,27 +12,26 @@ public sealed class CodingSidePanelControllerSetTests
         RunOnStaThread(() =>
         {
             var set = new CodingSidePanelControllerSet();
-            var eventsList = new CodingEventsListControls(new ListBox());
-            var statistics = new CodingStatisticsControls(
-                new Run(),
-                new Run(),
-                new TextBlock(),
-                new TextBlock(),
-                new TextBlock(),
-                new TextBlock());
-            var inlineDetail = new CodingInlineDefectDetailControls(
-                new TextBlock(),
-                new TextBlock(),
-                new TextBlock(),
-                new TextBlock(),
-                new TextBlock(),
-                new Image(),
-                new TextBlock(),
-                new Button(),
-                new Button(),
-                new Border(),
-                new ColumnDefinition());
-            var postActions = new CodingEventCreationPostActions(
+            var controls = new CodingSidePanelControllerControls(
+                CodingEvents: new ListBox(),
+                CodingDefectCount: new Run(),
+                CodingOpenCount: new Run(),
+                CodingStatAutoAccepted: new TextBlock(),
+                CodingStatPending: new TextBlock(),
+                CodingStatReviewRequired: new TextBlock(),
+                CodingStatAvgConfidence: new TextBlock(),
+                InlineDetailCode: new TextBlock(),
+                InlineDetailDescription: new TextBlock(),
+                InlineDetailDistance: new TextBlock(),
+                InlineDetailConfidence: new TextBlock(),
+                InlineDetailStatus: new TextBlock(),
+                InlineEvidencePreview: new Image(),
+                InlineEvidencePreviewStatus: new TextBlock(),
+                InlineAccept: new Button(),
+                InlineReject: new Button(),
+                DefectDetailInline: new Border(),
+                DefectDetailColumn: new ColumnDefinition());
+            var actions = new CodingSidePanelControllerActions(
                 RefreshEvents: () => { },
                 SelectCreatedEvent: _ => { },
                 CancelSchema: () => { },
@@ -44,13 +42,13 @@ public sealed class CodingSidePanelControllerSetTests
                 DisableCreateEvent: () => { },
                 ClearOverlayInfo: () => { });
 
-            set.Initialize(eventsList, statistics, inlineDetail, postActions);
+            set.Initialize(controls, actions);
 
             Assert.True(set.IsInitialized);
-            Assert.Same(eventsList, set.EventsList);
-            Assert.Same(statistics, set.Statistics);
-            Assert.Same(inlineDetail, set.InlineDefectDetail);
-            Assert.Same(postActions, set.EventCreationPostActions);
+            Assert.NotNull(set.EventsList);
+            Assert.NotNull(set.Statistics);
+            Assert.NotNull(set.InlineDefectDetail);
+            Assert.NotNull(set.EventCreationPostActions);
         });
     }
 

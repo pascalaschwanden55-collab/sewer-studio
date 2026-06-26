@@ -1,6 +1,7 @@
 using System.Windows.Controls;
 using System.Windows.Documents;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -67,27 +68,26 @@ public partial class PlayerWindow
     private void InitializeCodingSidePanelControllers()
     {
         _codingSidePanelControllers.Initialize(
-            new CodingEventsListControls(LstCodingEvents),
-            new CodingStatisticsControls(
-                RunCodingDefectCount,
-                RunCodingOpenCount,
-                TxtCodingStatAutoAccepted,
-                TxtCodingStatPending,
-                TxtCodingStatReviewRequired,
-                TxtCodingStatAvgConfidence),
-            new CodingInlineDefectDetailControls(
-                TxtInlineDetailCode,
-                TxtInlineDetailDesc,
-                TxtInlineDetailDistance,
-                TxtInlineDetailConfidence,
-                TxtInlineDetailStatus,
-                ImgInlineEvidencePreview,
-                TxtInlineEvidencePreviewStatus,
-                BtnInlineAccept,
-                BtnInlineReject,
-                CodingDefectDetailInline,
-                ColDefectDetail),
-            new CodingEventCreationPostActions(
+            new CodingSidePanelControllerControls(
+                CodingEvents: LstCodingEvents,
+                CodingDefectCount: RunCodingDefectCount,
+                CodingOpenCount: RunCodingOpenCount,
+                CodingStatAutoAccepted: TxtCodingStatAutoAccepted,
+                CodingStatPending: TxtCodingStatPending,
+                CodingStatReviewRequired: TxtCodingStatReviewRequired,
+                CodingStatAvgConfidence: TxtCodingStatAvgConfidence,
+                InlineDetailCode: TxtInlineDetailCode,
+                InlineDetailDescription: TxtInlineDetailDesc,
+                InlineDetailDistance: TxtInlineDetailDistance,
+                InlineDetailConfidence: TxtInlineDetailConfidence,
+                InlineDetailStatus: TxtInlineDetailStatus,
+                InlineEvidencePreview: ImgInlineEvidencePreview,
+                InlineEvidencePreviewStatus: TxtInlineEvidencePreviewStatus,
+                InlineAccept: BtnInlineAccept,
+                InlineReject: BtnInlineReject,
+                DefectDetailInline: CodingDefectDetailInline,
+                DefectDetailColumn: ColDefectDetail),
+            new CodingSidePanelControllerActions(
                 RefreshEvents: RefreshCodingEventsList,
                 SelectCreatedEvent: ev => LstCodingEvents.SelectedItem = ev,
                 CancelSchema: () => _codingSchemaManager.Cancel(),

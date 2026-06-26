@@ -4432,6 +4432,7 @@ public sealed class UiArchitectureGuardTests
         var createCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCreateSelectedCodeEventCommandWorkflow.cs");
         var postWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventCreationPostWorkflow.cs");
         var accessorsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
+        var sidePanelControllerSetPath = Path.Combine(uiRoot, "Player", "CodingSidePanelControllerSet.cs");
 
         var events = File.ReadAllText(eventsPath);
         var factory = File.ReadAllText(factoryPath);
@@ -4442,6 +4443,7 @@ public sealed class UiArchitectureGuardTests
         var createCommandWorkflow = File.Exists(createCommandWorkflowPath) ? File.ReadAllText(createCommandWorkflowPath) : "";
         var postWorkflow = File.Exists(postWorkflowPath) ? File.ReadAllText(postWorkflowPath) : "";
         var accessors = File.ReadAllText(accessorsPath);
+        var sidePanelControllerSet = File.Exists(sidePanelControllerSetPath) ? File.ReadAllText(sidePanelControllerSetPath) : "";
         var selectCodeBody = ExtractMethodBody(events, "private async Task HandleCodingSelectCodeAsync");
         var createEventBody = ExtractMethodBody(events, "private void CodingCreateEvent_Click");
 
@@ -4486,7 +4488,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.CreateEvent(videoTime)", createCommandWorkflow);
         Assert.Contains("actions.ApplyPostCreation(createdEvent)", createCommandWorkflow);
         Assert.Contains("public static bool Apply", postWorkflow);
-        Assert.Contains("new CodingEventCreationPostActions", accessors);
+        Assert.DoesNotContain("new CodingEventsListControls", accessors);
+        Assert.DoesNotContain("new CodingStatisticsControls", accessors);
+        Assert.DoesNotContain("new CodingInlineDefectDetailControls", accessors);
+        Assert.DoesNotContain("new CodingEventCreationPostActions", accessors);
+        Assert.Contains("new CodingEventCreationPostActions", sidePanelControllerSet);
         Assert.Contains("_codingSessionHost", accessors);
         Assert.DoesNotContain("_codingVm", accessors);
         Assert.Contains("CodingManualEventFactory.CreateUnconfirmedContext", appender);

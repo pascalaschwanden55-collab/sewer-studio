@@ -1,6 +1,40 @@
+using System.Windows.Controls;
+using System.Windows.Documents;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Player;
+
+public sealed record CodingSidePanelControllerControls(
+    ListBox CodingEvents,
+    Run CodingDefectCount,
+    Run CodingOpenCount,
+    TextBlock CodingStatAutoAccepted,
+    TextBlock CodingStatPending,
+    TextBlock CodingStatReviewRequired,
+    TextBlock CodingStatAvgConfidence,
+    TextBlock InlineDetailCode,
+    TextBlock InlineDetailDescription,
+    TextBlock InlineDetailDistance,
+    TextBlock InlineDetailConfidence,
+    TextBlock InlineDetailStatus,
+    Image InlineEvidencePreview,
+    TextBlock InlineEvidencePreviewStatus,
+    Button InlineAccept,
+    Button InlineReject,
+    Border DefectDetailInline,
+    ColumnDefinition DefectDetailColumn);
+
+public sealed record CodingSidePanelControllerActions(
+    Action RefreshEvents,
+    Action<CodingEvent> SelectCreatedEvent,
+    Action CancelSchema,
+    Action ClearCurrentOverlay,
+    Action ClearSelectedCode,
+    Action RedrawCanvas,
+    Action ClearSelectedCodeText,
+    Action DisableCreateEvent,
+    Action ClearOverlayInfo);
 
 public sealed class CodingSidePanelControllerSet
 {
@@ -17,6 +51,44 @@ public sealed class CodingSidePanelControllerSet
         Statistics is not null &&
         InlineDefectDetail is not null &&
         EventCreationPostActions is not null;
+
+    public void Initialize(CodingSidePanelControllerControls controls, CodingSidePanelControllerActions actions)
+    {
+        ArgumentNullException.ThrowIfNull(controls);
+        ArgumentNullException.ThrowIfNull(actions);
+
+        Initialize(
+            new CodingEventsListControls(controls.CodingEvents),
+            new CodingStatisticsControls(
+                controls.CodingDefectCount,
+                controls.CodingOpenCount,
+                controls.CodingStatAutoAccepted,
+                controls.CodingStatPending,
+                controls.CodingStatReviewRequired,
+                controls.CodingStatAvgConfidence),
+            new CodingInlineDefectDetailControls(
+                controls.InlineDetailCode,
+                controls.InlineDetailDescription,
+                controls.InlineDetailDistance,
+                controls.InlineDetailConfidence,
+                controls.InlineDetailStatus,
+                controls.InlineEvidencePreview,
+                controls.InlineEvidencePreviewStatus,
+                controls.InlineAccept,
+                controls.InlineReject,
+                controls.DefectDetailInline,
+                controls.DefectDetailColumn),
+            new CodingEventCreationPostActions(
+                actions.RefreshEvents,
+                actions.SelectCreatedEvent,
+                actions.CancelSchema,
+                actions.ClearCurrentOverlay,
+                actions.ClearSelectedCode,
+                actions.RedrawCanvas,
+                actions.ClearSelectedCodeText,
+                actions.DisableCreateEvent,
+                actions.ClearOverlayInfo));
+    }
 
     public void Initialize(
         CodingEventsListControls eventsList,
