@@ -5146,17 +5146,20 @@ public sealed class UiArchitectureGuardTests
         var catalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogWorkflowService.cs");
         var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogWorkflowServiceFactory.cs");
+        var displayWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogDisplayWorkflow.cs");
         var openWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogOpenWorkflow.cs");
 
         Assert.True(File.Exists(catalogPath), "LiveDetection-Markkatalog-Wiring soll aus dem grossen Marking-Partial heraus.");
         Assert.True(File.Exists(workflowPath), "LiveDetection-Markkatalog-Workflow soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowFactoryPath), "LiveDetection-Markkatalog-Workflow soll ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(displayWorkflowPath), "LiveDetection-Markkatalog-Serviceaufruf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(openWorkflowPath), "LiveDetection-Markkatalog-Oeffnen soll ausserhalb von PlayerWindow entschieden werden.");
 
         var marking = File.ReadAllText(markingPath);
         var catalog = File.ReadAllText(catalogPath);
         var workflow = File.ReadAllText(workflowPath);
         var workflowFactory = File.ReadAllText(workflowFactoryPath);
+        var displayWorkflow = File.Exists(displayWorkflowPath) ? File.ReadAllText(displayWorkflowPath) : "";
         var openWorkflow = File.Exists(openWorkflowPath) ? File.ReadAllText(openWorkflowPath) : "";
 
         Assert.DoesNotContain("private void DetectionCanvas_MouseLeftButtonDown", marking);
@@ -5165,13 +5168,16 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void DetectionCanvas_MouseLeftButtonDown", catalog);
         Assert.Contains("private void OnFindingClicked", catalog);
         Assert.Contains("private void OpenCodeCatalogForMark", catalog);
-        Assert.Contains("LiveDetectionMarkCatalogWorkflowServiceFactory.Create", catalog);
+        Assert.Contains("LiveDetectionMarkCatalogDisplayWorkflow.TryOpen", catalog);
+        Assert.DoesNotContain("LiveDetectionMarkCatalogWorkflowServiceFactory.Create", catalog);
         Assert.Contains("LiveDetectionMarkCatalogOpenWorkflow.ExecuteCanvasClick", catalog);
         Assert.Contains("LiveDetectionMarkCatalogOpenWorkflow.ExecuteFindingClick", catalog);
         Assert.DoesNotContain("LiveDetectionGeometryMapper.ClickToClockPosition", catalog);
         Assert.DoesNotContain("CodingExplorerEntryFactory.CreateSeed", catalog);
         Assert.Contains("LiveDetectionGeometryMapper.ClickToClockPosition", openWorkflow);
         Assert.Contains("CodingExplorerEntryFactory.CreateSeed", workflow);
+        Assert.Contains("LiveDetectionMarkCatalogWorkflowServiceFactory.Create", displayWorkflow);
+        Assert.Contains("service.TryOpen(", displayWorkflow);
         Assert.Contains("VsaCodeExplorerDialogServiceFactory.Create", workflowFactory);
         Assert.Contains("LiveDetectionDialogServiceFactory.Create", workflowFactory);
     }

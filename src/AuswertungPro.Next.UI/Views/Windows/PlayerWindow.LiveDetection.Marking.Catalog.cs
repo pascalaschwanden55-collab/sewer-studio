@@ -37,17 +37,18 @@ public partial class PlayerWindow
 
     private void OpenCodeCatalogForMark(string? clockPosition, double timestampSec, string? suggestedCode)
     {
-        LiveDetectionMarkCatalogWorkflowServiceFactory.Create(
-                hasCodeCatalog: () => _dependencies.HasCodeCatalog,
-                createViewModel: CreateVsaCodeExplorerViewModel,
-                onEntryCreated: entry => _onEntryCreated?.Invoke(entry),
-                showOverlay: message => ShowOverlay(message, TimeSpan.FromSeconds(4)))
-            .TryOpen(
+        LiveDetectionMarkCatalogDisplayWorkflow.TryOpen(
+            new LiveDetectionMarkCatalogDisplayRequest(
                 clockPosition,
                 timestampSec,
                 suggestedCode,
                 _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition(),
                 _videoPath,
-                this);
+                this),
+            new LiveDetectionMarkCatalogDisplayActions(
+                HasCodeCatalog: () => _dependencies.HasCodeCatalog,
+                CreateViewModel: CreateVsaCodeExplorerViewModel,
+                OnEntryCreated: entry => _onEntryCreated?.Invoke(entry),
+                ShowOverlay: message => ShowOverlay(message, TimeSpan.FromSeconds(4))));
     }
 }
