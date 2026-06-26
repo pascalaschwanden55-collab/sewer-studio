@@ -16,9 +16,16 @@ public sealed partial class ProjectPageViewModel : ObservableObject
     public Project Project => _shell.Project;
     public IRelayCommand SaveCommand => _shell.SaveCommand;
 
-    public IRelayCommand NewCommand { get; }
-    public IRelayCommand OpenCommand { get; }
     public IRelayCommand SaveAsCommand { get; }
+    public IRelayCommand AnlegenCommand { get; }
+
+    [ObservableProperty] private string _draftName = string.Empty;
+
+    /// <summary>True im Draft-Modus (neues, noch nicht angelegtes Projekt).</summary>
+    public bool IsDraft => _shell.CurrentMode == ShellMode.Draft;
+
+    /// <summary>True wenn kein Draft-Modus (für Sichtbarkeits-Binding ohne Inverter).</summary>
+    public bool IsNotDraft => !IsDraft;
 
     // --- Sanieren/Eigentuemer Dropdown-Logik ---
     public ObservableCollection<string> SanierenOptions { get; }
@@ -68,18 +75,34 @@ public sealed partial class ProjectPageViewModel : ObservableObject
         AddEigentuemerOptionCommand = new RelayCommand<object?>(AddEigentuemerOption);
         RemoveEigentuemerOptionCommand = new RelayCommand<object?>(RemoveEigentuemerOption);
 
-        NewCommand = _shell.NewProjectCommand;
-        OpenCommand = _shell.OpenProjectCommand;
         SaveAsCommand = _shell.SaveAsProjectCommand;
+        AnlegenCommand = new RelayCommand(
+            () => _shell.CreateProjectFromDraft(),
+            () => !string.IsNullOrWhiteSpace(DraftName));
+
+        DraftName = Project.Name ?? string.Empty;
 
         _shell.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(ShellViewModel.Project))
             {
                 OnPropertyChanged(nameof(Project));
+                DraftName = Project.Name ?? string.Empty;
                 SyncDropdownsFromProject();
             }
+            else if (e.PropertyName == nameof(ShellViewModel.CurrentMode))
+            {
+                OnPropertyChanged(nameof(IsDraft));
+                OnPropertyChanged(nameof(IsNotDraft));
+            }
         };
+    }
+
+    /// <summary>Schreibt den eingetippten Namen ins Projekt und aktualisiert den Anlegen-Button.</summary>
+    partial void OnDraftNameChanged(string value)
+    {
+        Project.Name = value;
+        (AnlegenCommand as RelayCommand)?.NotifyCanExecuteChanged();
     }
 
     private void SyncDropdownsFromProject()
