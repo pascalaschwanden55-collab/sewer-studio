@@ -149,6 +149,27 @@ public sealed class CodingOverlayInputControlsTests
         });
     }
 
+    [Fact]
+    public void Mouse_capture_methods_delegate_to_canvas_without_changing_visual_state()
+    {
+        RunOnStaThread(() =>
+        {
+            var canvas = new Canvas
+            {
+                IsHitTestVisible = true,
+                Visibility = Visibility.Visible,
+                Cursor = Cursors.Cross
+            };
+
+            CodingOverlayInputControls.CaptureCanvasMouse(canvas);
+            CodingOverlayInputControls.ReleaseCanvasMouse(canvas);
+
+            Assert.True(canvas.IsHitTestVisible);
+            Assert.Equal(Visibility.Visible, canvas.Visibility);
+            Assert.Same(Cursors.Cross, canvas.Cursor);
+        });
+    }
+
     private static void RunOnStaThread(Action action)
     {
         Exception? exception = null;

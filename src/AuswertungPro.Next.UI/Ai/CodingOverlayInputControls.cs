@@ -63,6 +63,20 @@ public static class CodingOverlayInputControls
         overlayCanvas.Cursor = Cursors.Arrow;
     }
 
+    public static void CaptureCanvasMouse(Canvas overlayCanvas)
+    {
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+
+        overlayCanvas.CaptureMouse();
+    }
+
+    public static void ReleaseCanvasMouse(Canvas overlayCanvas)
+    {
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+
+        overlayCanvas.ReleaseMouseCapture();
+    }
+
     public static void ResetCanvasCursor(Canvas overlayCanvas)
     {
         ArgumentNullException.ThrowIfNull(overlayCanvas);

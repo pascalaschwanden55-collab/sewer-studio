@@ -17,7 +17,7 @@ public partial class PlayerWindow
                     enabled),
                 UpdateOverlayInfoEmpty: () => UpdateCodingOverlayInfo(null),
                 BeginOverlayDraw: () => _codingSessionHost.BeginOverlayDraw(norm),
-                CaptureMouse: () => { CodingOverlayCanvas.CaptureMouse(); },
+                CaptureMouse: () => CodingOverlayInputControls.CaptureCanvasMouse(CodingOverlayCanvas),
                 ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
                 RenderAiOverlays: RenderAiOverlays,
                 RenderReferenceDn: RenderReferenceDn,
@@ -57,7 +57,7 @@ public partial class PlayerWindow
                 BtnCodingLiveAi.IsChecked == true),
             new CodingStandardOverlayMouseUpActions(
                 CompleteOverlayDraw: () => _codingSessionHost.CompleteOverlayDraw(norm),
-                ReleaseMouseCapture: CodingOverlayCanvas.ReleaseMouseCapture,
+                ReleaseMouseCapture: () => CodingOverlayInputControls.ReleaseCanvasMouse(CodingOverlayCanvas),
                 ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
                 RenderAiOverlays: RenderAiOverlays,
                 RenderReferenceDn: RenderReferenceDn,

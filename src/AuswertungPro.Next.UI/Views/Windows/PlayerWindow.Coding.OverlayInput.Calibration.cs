@@ -72,7 +72,7 @@ public partial class PlayerWindow
             new CodingCalibrationPointerStartRequest(_codingCalibrationState.IsCalibrating),
             new CodingCalibrationPointerStartActions(
                 SetCalibrationStart: () => _codingCalibrationState.SetStart(norm),
-                CaptureMouse: () => { CodingOverlayCanvas.CaptureMouse(); },
+                CaptureMouse: () => CodingOverlayInputControls.CaptureCanvasMouse(CodingOverlayCanvas),
                 ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
                 RenderAiOverlays: RenderAiOverlays,
                 RenderReferenceDn: RenderReferenceDn))
@@ -110,7 +110,7 @@ public partial class PlayerWindow
                 _codingCalibrationState.IsCalibrating,
                 calibrationStart != null),
             new CodingCalibrationPointerFinishActions(
-                ReleaseMouseCapture: CodingOverlayCanvas.ReleaseMouseCapture,
+                ReleaseMouseCapture: () => CodingOverlayInputControls.ReleaseCanvasMouse(CodingOverlayCanvas),
                 ApplyCalibration: () => ApplyCodingCalibration(calibrationStart!, norm)))
             .Handled;
     }

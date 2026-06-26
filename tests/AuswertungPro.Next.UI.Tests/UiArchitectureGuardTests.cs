@@ -7825,6 +7825,7 @@ public sealed class UiArchitectureGuardTests
             "PlayerWindow.Coding.OverlayInput.Schema.cs",
             "PlayerWindow.Coding.OverlayInput.Calibration.cs",
             "PlayerWindow.Coding.OverlayInput.MultiPoint.cs",
+            "PlayerWindow.Coding.Eingabemarker.cs",
             "PlayerWindow.Keyboard.cs"
         };
 
@@ -7837,11 +7838,17 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("CodingOverlayInputControls.ApplyActiveToolSelection", joinedPartials);
         Assert.Contains("CodingOverlayInputControls.SetCreateEventEnabled", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.CaptureCanvasMouse", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.ReleaseCanvasMouse", joinedPartials);
         Assert.DoesNotContain("TxtActiveToolLabel.Text =", joinedPartials);
         Assert.DoesNotContain("BtnCodingCreateEvent.IsEnabled =", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.CaptureMouse", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.ReleaseMouseCapture", joinedPartials);
         Assert.Contains("public static class CodingOverlayInputControls", controls);
         Assert.Contains("public static void ApplyActiveToolSelection", controls);
         Assert.Contains("public static void SetCreateEventEnabled", controls);
+        Assert.Contains("public static void CaptureCanvasMouse", controls);
+        Assert.Contains("public static void ReleaseCanvasMouse", controls);
     }
 
     [Fact]

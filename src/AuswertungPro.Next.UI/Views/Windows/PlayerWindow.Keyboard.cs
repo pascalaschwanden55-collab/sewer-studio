@@ -39,7 +39,7 @@ public partial class PlayerWindow
             new PlayerCancelCodingOverlayShortcutWorkflowActions(
                 CancelDraw: () => _codingOverlayToolHost.CancelDraw(),
                 CancelSchema: _codingSchemaManager.Cancel,
-                ReleaseMouseCapture: CodingOverlayCanvas.ReleaseMouseCapture,
+                ReleaseMouseCapture: () => CodingOverlayInputControls.ReleaseCanvasMouse(CodingOverlayCanvas),
                 ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
                 DisableCreateEvent: () => CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false),
                 ClearOverlayInfo: () => UpdateCodingOverlayInfo(null),

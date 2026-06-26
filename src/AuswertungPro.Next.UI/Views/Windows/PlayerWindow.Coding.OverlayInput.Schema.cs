@@ -49,7 +49,7 @@ public partial class PlayerWindow
                 ResolveHandleId: () => _codingSchemaManager.HitTest(norm, 0.035) ?? GetDefaultCodingSchemaHandleId(),
                 BeginDrag: _codingSchemaManager.BeginDrag,
                 UpdateDrag: () => _codingSchemaManager.UpdateDrag(norm),
-                CaptureMouse: () => { CodingOverlayCanvas.CaptureMouse(); },
+                CaptureMouse: () => CodingOverlayInputControls.CaptureCanvasMouse(CodingOverlayCanvas),
                 UpdateOverlay: () => UpdateCodingSchemaOverlay(enableCreateEvent: true)));
 
         return result.Handled;
@@ -77,7 +77,7 @@ public partial class PlayerWindow
             new CodingSchemaOverlayMouseUpActions(
                 UpdateDrag: () => _codingSchemaManager.UpdateDrag(norm),
                 EndDrag: _codingSchemaManager.EndDrag,
-                ReleaseMouseCapture: CodingOverlayCanvas.ReleaseMouseCapture,
+                ReleaseMouseCapture: () => CodingOverlayInputControls.ReleaseCanvasMouse(CodingOverlayCanvas),
                 UpdateOverlay: () => UpdateCodingSchemaOverlay(enableCreateEvent: true)))
             .Handled;
     }

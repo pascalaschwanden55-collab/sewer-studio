@@ -46,7 +46,7 @@ public partial class PlayerWindow
                 CanvasPosition: canvasPos),
             new CodingEingabemarkerCanvasMouseDownActions(
                 StoreDragStart: _eingabemarkerState.StoreDragStart,
-                CaptureMouse: () => CodingOverlayCanvas.CaptureMouse(),
+                CaptureMouse: () => CodingOverlayInputControls.CaptureCanvasMouse(CodingOverlayCanvas),
                 CreatePreview: point => _eingabemarkerState.SetPreview(CodingEingabemarkerPreviewRenderer.Create(
                     CodingOverlayCanvas,
                     point))));
@@ -71,7 +71,7 @@ public partial class PlayerWindow
                 CanvasPosition: canvasPos,
                 CanvasSize: new Size(CodingOverlayCanvas.ActualWidth, CodingOverlayCanvas.ActualHeight)),
             new CodingEingabemarkerCanvasMouseUpActions(
-                ReleaseMouseCapture: CodingOverlayCanvas.ReleaseMouseCapture,
+                ReleaseMouseCapture: () => CodingOverlayInputControls.ReleaseCanvasMouse(CodingOverlayCanvas),
                 CancelMarker: CancelEingabemarker,
                 StoreNormalizedSelection: _eingabemarkerState.StoreNormalizedSelection,
                 SetInputPhase: _eingabemarkerState.SetInputPhase,
