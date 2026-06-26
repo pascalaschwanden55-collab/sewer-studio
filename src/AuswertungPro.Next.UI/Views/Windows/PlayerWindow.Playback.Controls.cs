@@ -77,7 +77,10 @@ public partial class PlayerWindow
         => PlayerPlaybackCommandRunner.SetSpeed(
             rate,
             _playerPlaybackControlHost.SetRate,
-            clamped => PlayerPlaybackDialogServiceFactory.Create().ShowUnsupportedRate(clamped),
+            clamped => PlayerPlaybackDialogWorkflow.ShowUnsupportedRate(
+                clamped,
+                new PlayerPlaybackDialogWorkflowActions(
+                    CreateDialogService: PlayerPlaybackDialogServiceFactory.Create)),
             UpdateRateLabel);
 
     private void UpdateRateLabel()

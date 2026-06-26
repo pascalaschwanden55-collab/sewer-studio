@@ -1054,12 +1054,14 @@ public sealed class UiArchitectureGuardTests
         var speedControlsPath = Path.Combine(uiRoot, "Player", "PlayerSpeedControls.cs");
         var dialogServicePath = Path.Combine(uiRoot, "Player", "PlayerPlaybackDialogService.cs");
         var dialogServiceFactoryPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackDialogServiceFactory.cs");
+        var dialogWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackDialogWorkflow.cs");
 
         Assert.True(File.Exists(gatewayPath), "Try-Playback-Zugriffe sollen ausserhalb des PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(startWorkflowPath), "Playback-Start-Entscheidung und Start-Reihenfolge sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(sliderSeekControllerPath), "Slider-Seek-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServicePath), "Playback-Dialogtexte sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServiceFactoryPath), "Playback-DialogHost-Verdrahtung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dialogWorkflowPath), "Playback-Dialogaufrufe sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var playback = File.ReadAllText(playbackPath) + File.ReadAllText(controlsPath);
         var policy = File.ReadAllText(policyPath);
@@ -1070,6 +1072,7 @@ public sealed class UiArchitectureGuardTests
         var speedControls = File.ReadAllText(speedControlsPath);
         var dialogService = File.ReadAllText(dialogServicePath);
         var dialogServiceFactory = File.ReadAllText(dialogServiceFactoryPath);
+        var dialogWorkflow = File.Exists(dialogWorkflowPath) ? File.ReadAllText(dialogWorkflowPath) : "";
 
         Assert.Contains("PlayerPlaybackGateway.TryGetCurrentTime", playback);
         Assert.Contains("PlayerPlaybackGateway.TrySeekTo", playback);
@@ -1080,6 +1083,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerSliderSeekController.SeekToSlider", playback);
         Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", playback);
         Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", playback);
+        Assert.Contains("PlayerPlaybackDialogWorkflow.ShowUnsupportedRate", playback);
         Assert.Contains("_positionControls.ApplyPlaybackState", playback);
         Assert.Contains("_speedControls.Update", playback);
         Assert.DoesNotContain("_player.SetPause(_player.IsPlaying)", playback);
@@ -1103,6 +1107,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_player.Time = (long)(targetPos * length);", playback);
         Assert.DoesNotContain("DialogHost.Current", playback);
         Assert.DoesNotContain("nicht unterst", playback);
+        Assert.DoesNotContain(".ShowUnsupportedRate(clamped)", playback);
         Assert.DoesNotContain("if (_playerPlaybackControlHost.ShouldStartPlayback)", playback);
         Assert.Contains("request.ShouldStartPlayback", startWorkflow);
         Assert.Contains("actions.PlayPath", startWorkflow);
@@ -1126,6 +1131,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public sealed class PlayerPlaybackDialogService", dialogService);
         Assert.Contains("ShowUnsupportedRate", dialogService);
         Assert.Contains("SetRate(", dialogService);
+        Assert.Contains("service.ShowUnsupportedRate(rate)", dialogWorkflow);
         Assert.Contains("DialogHost.Current", dialogServiceFactory);
     }
 
