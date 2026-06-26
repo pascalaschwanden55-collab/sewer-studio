@@ -24,6 +24,13 @@ public partial class PlayerWindow : Window
         // wirft der Konstruktor spaeter, bliebe sonst ein halb-konstruiertes Fenster zurueck.
         var videoInfo = PlayerVideoPathGuard.Validate(videoPath);
 
+        var codingSessionRuntime = CodingSessionRuntimeFactory.Create(
+            CodingVm_PropertyChanged,
+            () => _codingOverlayRuntimeOwner.Service);
+        _codingSessionViewModelOwner = codingSessionRuntime.ViewModelOwner;
+        _codingSessionHost = codingSessionRuntime.SessionHost;
+        _codingOverlayToolHost = codingSessionRuntime.OverlayToolHost;
+
         InitializeComponent();
         WireCodingSidePanelEvents();
         InitializeCodingSidePanelControllers();
@@ -92,9 +99,6 @@ public partial class PlayerWindow : Window
         _speedControls = controllerSet.SpeedControls;
         _markToolControls = controllerSet.MarkToolControls;
         _codingOverlayRenderController = controllerSet.CodingOverlayRenderController;
-        _codingSessionViewModelOwner = new CodingSessionViewModelOwner(CodingVm_PropertyChanged);
-        _codingSessionHost = new CodingSessionHost(() => _codingSessionViewModelOwner.ViewModel);
-        _codingOverlayToolHost = new CodingOverlayToolHost(() => _codingOverlayRuntimeOwner.Service);
 
         var playerTimers = CreatePlayerTimers();
         _timer = playerTimers.UpdateTimer;

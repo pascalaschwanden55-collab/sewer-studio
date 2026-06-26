@@ -6441,6 +6441,7 @@ public sealed class UiArchitectureGuardTests
         var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingUiUpdateWorkflow.cs");
         var sessionHostPath = Path.Combine(uiRoot, "Player", "CodingSessionHost.cs");
         var sessionOwnerPath = Path.Combine(uiRoot, "Player", "CodingSessionViewModelOwner.cs");
+        var sessionRuntimeFactoryPath = Path.Combine(uiRoot, "Player", "CodingSessionRuntimeFactory.cs");
         var navigationStatePath = Path.Combine(uiRoot, "Player", "CodingNavigationPendingState.cs");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
@@ -6453,6 +6454,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(uiUpdateWorkflowPath), "Coding-UI-Update-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(sessionHostPath), "_codingVm-Zugriffe sollen ueber einen schmalen CodingSessionHost laufen.");
         Assert.True(File.Exists(sessionOwnerPath), "CodingSessionViewModel-Besitz soll in einem eigenen Player-Owner liegen.");
+        Assert.True(File.Exists(sessionRuntimeFactoryPath), "Coding-Session-Host-Verdrahtung soll ausserhalb des PlayerWindow-Konstruktors liegen.");
         Assert.True(File.Exists(navigationStatePath), "Coding-Navigation-Pending-Zustand soll nicht als bool im PlayerWindow liegen.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
@@ -6465,6 +6467,7 @@ public sealed class UiArchitectureGuardTests
         var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
         var sessionHost = File.Exists(sessionHostPath) ? File.ReadAllText(sessionHostPath) : "";
         var sessionOwner = File.Exists(sessionOwnerPath) ? File.ReadAllText(sessionOwnerPath) : "";
+        var sessionRuntimeFactory = File.Exists(sessionRuntimeFactoryPath) ? File.ReadAllText(sessionRuntimeFactoryPath) : "";
         var navigationState = File.Exists(navigationStatePath) ? File.ReadAllText(navigationStatePath) : "";
         var state = File.ReadAllText(statePath);
 
@@ -6518,12 +6521,16 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public sealed class CodingSessionHost", sessionHost);
         Assert.DoesNotContain("public sealed class CodingSessionViewModelOwner", sessionHost);
         Assert.Contains("public sealed class CodingSessionViewModelOwner", sessionOwner);
+        Assert.Contains("public static class CodingSessionRuntimeFactory", sessionRuntimeFactory);
+        Assert.Contains("new CodingSessionViewModelOwner(propertyChangedHandler)", sessionRuntimeFactory);
+        Assert.Contains("new CodingSessionHost(() => viewModelOwner.ViewModel)", sessionRuntimeFactory);
         Assert.Contains("public sealed class CodingNavigationPendingState", navigationState);
         Assert.Contains("public bool IsPending", navigationState);
         Assert.Contains("public void MarkPending", navigationState);
         Assert.Contains("private readonly ICodingSessionHost _codingSessionHost", state);
-        Assert.Contains("new CodingSessionViewModelOwner(CodingVm_PropertyChanged)", windowRoot);
-        Assert.Contains("new CodingSessionHost(() => _codingSessionViewModelOwner.ViewModel)", windowRoot);
+        Assert.Contains("CodingSessionRuntimeFactory.Create", windowRoot);
+        Assert.DoesNotContain("new CodingSessionViewModelOwner", windowRoot);
+        Assert.DoesNotContain("new CodingSessionHost", windowRoot);
         Assert.DoesNotContain("_codingVm", windowRoot + state);
         foreach (var path in Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs"))
         {
@@ -6683,18 +6690,23 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var ownerPath = Path.Combine(uiRoot, "Player", "CodingOverlayServiceOwner.cs");
+        var sessionRuntimeFactoryPath = Path.Combine(uiRoot, "Player", "CodingSessionRuntimeFactory.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
 
         Assert.True(File.Exists(ownerPath), "OverlayService-Besitz soll in einem eigenen Player-Owner liegen.");
+        Assert.True(File.Exists(sessionRuntimeFactoryPath), "Coding-OverlayToolHost-Verdrahtung soll ausserhalb des PlayerWindow-Konstruktors liegen.");
 
         var owner = File.ReadAllText(ownerPath);
+        var sessionRuntimeFactory = File.Exists(sessionRuntimeFactoryPath) ? File.ReadAllText(sessionRuntimeFactoryPath) : "";
         var state = File.ReadAllText(statePath);
         var windowRoot = File.ReadAllText(windowRootPath);
 
         Assert.Contains("public sealed class CodingOverlayServiceOwner", owner);
         Assert.Contains("private readonly CodingOverlayServiceOwner _codingOverlayRuntimeOwner", state);
-        Assert.Contains("new CodingOverlayToolHost(() => _codingOverlayRuntimeOwner.Service)", windowRoot);
+        Assert.Contains("new CodingOverlayToolHost(resolveOverlayService)", sessionRuntimeFactory);
+        Assert.Contains("CodingSessionRuntimeFactory.Create", windowRoot);
+        Assert.DoesNotContain("new CodingOverlayToolHost", windowRoot);
 
         foreach (var path in Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs"))
         {
