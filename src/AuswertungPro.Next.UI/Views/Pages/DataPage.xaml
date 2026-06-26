@@ -419,7 +419,7 @@
                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="40,30">
                     <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="40"
                                Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                    <TextBlock Text="DataGrid ist in separatem Fenster geöffnet"
+                    <TextBlock Text="Die Ansicht ist in einem separaten Fenster geöffnet"
                                Foreground="{DynamicResource TextBrush}" FontSize="16" FontWeight="SemiBold"
                                HorizontalAlignment="Center" Margin="0,0,0,8"/>
                     <TextBlock Text="Ziehen Sie das Fenster auf einen anderen Monitor für Multi-Monitor-Betrieb."

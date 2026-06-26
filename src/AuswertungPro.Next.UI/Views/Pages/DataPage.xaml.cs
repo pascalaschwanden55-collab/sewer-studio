@@ -1163,6 +1163,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     // --- Abdocken / Andocken ---
     private FloatingGridWindow? _floatingGridWindow;
+    // Merkt sich, welche Ansicht (Tabelle ODER Haltungsansicht) gerade abgedockt ist,
+    // damit sie beim Andocken an die richtige Stelle zurueckkommt.
+    private UIElement? _undockedView;
 
     private void UndockGrid_Click(object sender, RoutedEventArgs e)
     {
@@ -1187,13 +1190,15 @@ public partial class DataPage : System.Windows.Controls.UserControl
             // Guard-Flag setzen damit der Unloaded-Handler nicht interferiert
             _isUndocking = true;
 
-            // Haltungsansicht ist an die eingebettete Tabelle gebunden: beim Abdocken zuerst
-            // auf die Tabellensicht zurueck, dann den Umschalter sperren.
-            if (HaltungsansichtToggle.IsChecked == true)
-                HaltungsansichtToggle.IsChecked = false; // loest HaltungsansichtToggle_Changed -> Tabelle sichtbar
+            // Die aktuell gezeigte Ansicht abdocken: Haltungsansicht wenn der Umschalter
+            // an ist, sonst die Tabelle. Umschalter sperren, solange abgedockt.
+            var active = HaltungsansichtToggle.IsChecked == true
+                ? (UIElement)HaltungsansichtView
+                : Grid;
+            _undockedView = active;
             HaltungsansichtToggle.IsEnabled = false;
 
-            // FloatingGridWindow erstellen (VOR dem Entfernen des DataGrids!)
+            // FloatingGridWindow erstellen (VOR dem Entfernen der Ansicht!)
             _floatingGridWindow = new FloatingGridWindow();
             _floatingGridWindow.DockBackRequested += DockGridBack;
             _floatingGridWindow.Closed += FloatingGridWindow_Closed;
@@ -1201,10 +1206,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
             // DataContext auf FloatingWindow setzen (damit Bindings funktionieren)
             _floatingGridWindow.DataContext = DataContext;
 
-            // DataGrid aus dem visuellen Baum entfernen und ins Floating-Fenster verschieben
-            GridHost.Children.Remove(Grid);
-            _floatingGridWindow.SetGridContent(Grid);
-            Grid.Visibility = Visibility.Visible;
+            // Aktive Ansicht aus dem visuellen Baum entfernen und ins Floating-Fenster verschieben
+            GridHost.Children.Remove(active);
+            _floatingGridWindow.SetGridContent(active);
+            active.Visibility = Visibility.Visible;
 
             // Platzhalter anzeigen
             UndockedPlaceholder.Visibility = Visibility.Visible;
@@ -1229,10 +1234,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
             System.Diagnostics.Debug.WriteLine($"Undock error: {ex}");
             Dialogs.Warn($"Fehler beim Abdocken:\n{ex.Message}", "Abdocken");
 
-            // DataGrid zuruecksetzen falls es entfernt wurde
-            if (!GridHost.Children.Contains(Grid))
-                GridHost.Children.Add(Grid);
-            Grid.Visibility = Visibility.Visible;
+            // Abgedockte Ansicht zuruecksetzen falls sie schon entfernt wurde
+            if (_undockedView is not null)
+            {
+                if (!GridHost.Children.Contains(_undockedView))
+                    GridHost.Children.Add(_undockedView);
+                _undockedView.Visibility = Visibility.Visible;
+                _undockedView = null;
+            }
             UndockedPlaceholder.Visibility = Visibility.Collapsed;
             UndockButton.IsEnabled = true;
             HaltungsansichtToggle.IsEnabled = true; // bei fehlgeschlagenem Abdocken Umschalter wieder freigeben
@@ -1264,24 +1273,31 @@ public partial class DataPage : System.Windows.Controls.UserControl
             settings.IsGridFloating = false;
         }
 
-        // DataGrid aus dem Floating-Fenster entfernen
-        var grid = _floatingGridWindow.RemoveGridContent();
+        // Ansicht aus dem Floating-Fenster entfernen
+        var view = _floatingGridWindow.RemoveGridContent();
         _floatingGridWindow.DockBackRequested -= DockGridBack;
         _floatingGridWindow.Closed -= FloatingGridWindow_Closed;
         _floatingGridWindow.Close();
         _floatingGridWindow = null;
 
-        // DataGrid zurueck in den GridHost setzen
-        if (grid is DataGrid dg)
-        {
-            GridHost.Children.Add(dg);
-            dg.Visibility = Visibility.Visible;
-        }
+        RestoreUndockedView(view);
 
         // Platzhalter ausblenden
         UndockedPlaceholder.Visibility = Visibility.Collapsed;
         UndockButton.IsEnabled = true;
         HaltungsansichtToggle.IsEnabled = true;
+    }
+
+    // Holt die abgedockte Ansicht (Tabelle ODER Haltungsansicht) zurueck in den GridHost.
+    private void RestoreUndockedView(UIElement? view)
+    {
+        var element = view ?? _undockedView;
+        if (element is null)
+            return;
+        if (!GridHost.Children.Contains(element))
+            GridHost.Children.Add(element);
+        element.Visibility = Visibility.Visible;
+        _undockedView = null;
     }
 
     private void FloatingGridWindow_Closed(object? sender, EventArgs e)
@@ -1297,15 +1313,11 @@ public partial class DataPage : System.Windows.Controls.UserControl
             settings.IsGridFloating = false;
         }
 
-        var grid = _floatingGridWindow.RemoveGridContent();
+        var view = _floatingGridWindow.RemoveGridContent();
         _floatingGridWindow.DockBackRequested -= DockGridBack;
         _floatingGridWindow = null;
 
-        if (grid is DataGrid dg)
-        {
-            GridHost.Children.Add(dg);
-            dg.Visibility = Visibility.Visible;
-        }
+        RestoreUndockedView(view);
 
         UndockedPlaceholder.Visibility = Visibility.Collapsed;
         UndockButton.IsEnabled = true;
