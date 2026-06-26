@@ -137,6 +137,7 @@ public sealed class UiArchitectureGuardTests
         var activationWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowActivationWorkflow.cs");
         var loadedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowLoadedWorkflow.cs");
         var headerControlsPath = Path.Combine(uiRoot, "Player", "PlayerWindowHeaderControls.cs");
+        var stateControlsPath = Path.Combine(uiRoot, "Player", "PlayerWindowStateControls.cs");
         var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
         var controllerSetFactoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowControllerSetFactory.cs");
 
@@ -156,6 +157,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(activationWorkflowPath), "Fenster-Aktivierungs-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(loadedWorkflowPath), "Fenster-Loaded-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(headerControlsPath), "Player-Header-Control-Zuweisungen sollen ausserhalb des Konstruktors liegen.");
+        Assert.True(File.Exists(stateControlsPath), "WindowStateManager-Zugriff soll ausserhalb des PlayerWindow-Konstruktors liegen.");
         Assert.True(File.Exists(closedWorkflowPath), "Closed-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controllerSetFactoryPath), "PlayerWindow-Controller-Konstruktion soll ausserhalb des Konstruktors gebuendelt werden.");
 
@@ -177,6 +179,7 @@ public sealed class UiArchitectureGuardTests
         var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
         var loadedWorkflow = File.Exists(loadedWorkflowPath) ? File.ReadAllText(loadedWorkflowPath) : "";
         var headerControls = File.Exists(headerControlsPath) ? File.ReadAllText(headerControlsPath) : "";
+        var stateControls = File.Exists(stateControlsPath) ? File.ReadAllText(stateControlsPath) : "";
         var closedWorkflow = File.Exists(closedWorkflowPath) ? File.ReadAllText(closedWorkflowPath) : "";
         var controllerSetFactory = File.Exists(controllerSetFactoryPath) ? File.ReadAllText(controllerSetFactoryPath) : "";
 
@@ -197,6 +200,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("WirePositionSliderEvents();", windowRoot);
         Assert.Contains("WireWindowSurfaceEvents();", windowRoot);
         Assert.Contains("PlayerWindowHeaderControls.ApplyVideoInfo", windowRoot);
+        Assert.Contains("PlayerWindowStateControls.Track(this)", windowRoot);
+        Assert.DoesNotContain("WindowStateManager.Track(this)", windowRoot);
+        Assert.Contains("WindowStateManager.Track", stateControls);
         Assert.DoesNotContain("VideoNameText.Text", windowRoot);
         Assert.DoesNotContain("VideoPathText.Text", windowRoot);
         Assert.Contains("public static void ApplyVideoInfo", headerControls);

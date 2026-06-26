@@ -4,7 +4,6 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -35,7 +34,7 @@ public partial class PlayerWindow : Window
         WireCodingSidePanelEvents();
         InitializeCodingSidePanelControllers();
         InitializeCodingConfirmationPanelControls();
-        WindowStateManager.Track(this);
+        PlayerWindowStateControls.Track(this);
 
         _videoPath = videoInfo.VideoPath;
         _damageOverlay = damageOverlay;
