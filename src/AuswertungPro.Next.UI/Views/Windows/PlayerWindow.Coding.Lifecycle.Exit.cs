@@ -49,11 +49,7 @@ public partial class PlayerWindow
                 HideConfirmationPanels: () => CodingModeChromeControls.HideConfirmationPanels(
                     CodingConfirmationPanel,
                     DetectionConfirmationPanel),
-                ClearPendingConfirmation: () =>
-                {
-                    _codingPendingConfirmEvent = null;
-                    _codingPendingGateResult = null;
-                },
+                ClearPendingConfirmation: _codingPendingConfirmationState.Clear,
                 ClearDetectionConfirmationBuffer: _detectionConfirmationBuffer.Clear,
                 ClearDetectionOverlay: hideOverlay => DetectionOverlayCleanupController.ClearCanvas(
                     DetectionCanvas,

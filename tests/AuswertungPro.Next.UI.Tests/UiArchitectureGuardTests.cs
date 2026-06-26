@@ -7174,6 +7174,30 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_pending_confirmation_lives_in_state_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var pendingStatePath = Path.Combine(uiRoot, "Player", "CodingPendingConfirmationStateController.cs");
+
+        Assert.True(File.Exists(pendingStatePath), "Coding-Pending-Confirmation soll nicht mehr als zwei Rohfelder im PlayerWindow liegen.");
+
+        var state = File.ReadAllText(statePath);
+        var pendingState = File.Exists(pendingStatePath) ? File.ReadAllText(pendingStatePath) : "";
+
+        Assert.DoesNotContain("private CodingEvent? _codingPendingConfirmEvent;", state);
+        Assert.DoesNotContain("private QualityGateResult? _codingPendingGateResult;", state);
+        Assert.Contains("private readonly CodingPendingConfirmationStateController _codingPendingConfirmationState = new();", state);
+        Assert.Contains("public sealed class CodingPendingConfirmationStateController", pendingState);
+        Assert.Contains("public CodingEvent? CodingEvent", pendingState);
+        Assert.Contains("public QualityGateResult? GateResult", pendingState);
+        Assert.Contains("public void Store", pendingState);
+        Assert.Contains("public void Clear", pendingState);
+    }
+
+    [Fact]
     public void PlayerWindow_schema_overlay_wiring_lives_in_schema_partial()
     {
         var root = FindRepositoryRoot();

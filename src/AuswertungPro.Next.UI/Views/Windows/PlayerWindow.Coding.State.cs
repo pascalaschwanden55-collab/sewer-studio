@@ -56,8 +56,7 @@ public partial class PlayerWindow
     private CodingMatchRouting? _lastCodingMatch;
     private readonly Dictionary<Guid, CodingProtocolMatchBucket> _codingProtocolMatchBuckets = new();
 
-    private CodingEvent? _codingPendingConfirmEvent;
-    private QualityGateResult? _codingPendingGateResult;
+    private readonly CodingPendingConfirmationStateController _codingPendingConfirmationState = new();
 
     private readonly CodingBaselineSignatureStateController _codingBaselineSignatureState = new();
 }

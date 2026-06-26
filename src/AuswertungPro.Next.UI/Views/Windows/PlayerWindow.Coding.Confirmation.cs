@@ -32,11 +32,7 @@ public partial class PlayerWindow
                 _codingSessionRuntimeOwner.Service),
             new CodingConfirmationPauseWorkflowActions(
                 SetPause: _playerPlaybackControlHost.SetPause,
-                StorePendingConfirmation: (pendingEvent, pendingGate) =>
-                {
-                    _codingPendingConfirmEvent = pendingEvent;
-                    _codingPendingGateResult = pendingGate;
-                },
+                StorePendingConfirmation: _codingPendingConfirmationState.Store,
                 ApplyConfirmationPanel: _codingConfirmationPanelControls.Apply,
                 ShowStatus: (status, color, detail) => SetCodingAiState(status, color, detail)));
     }
@@ -46,8 +42,8 @@ public partial class PlayerWindow
         CodingConfirmationDecisionCommandWorkflow.Execute(
             new CodingConfirmationDecisionCommandActions(
                 ApplyDecision: () => CodingConfirmationDecisionWorkflow.Accept(
-                    _codingPendingConfirmEvent,
-                    _codingPendingGateResult,
+                    _codingPendingConfirmationState.CodingEvent,
+                    _codingPendingConfirmationState.GateResult,
                     codingEvent => PersistSingleEventAsTrainingSample(codingEvent).SafeFireAndForget("TrainingSaveAccept")),
                 CloseConfirmationPanel: CloseConfirmationPanel,
                 ResumeAfterConfirmation: ResumeAfterConfirmation));
@@ -58,8 +54,8 @@ public partial class PlayerWindow
         CodingConfirmationEditCommandWorkflow.Execute(
             new CodingConfirmationEditCommandActions(
                 EditConfirmation: () => CodingConfirmationDecisionWorkflow.Edit(
-                    _codingPendingConfirmEvent,
-                    _codingPendingGateResult),
+                    _codingPendingConfirmationState.CodingEvent,
+                    _codingPendingConfirmationState.GateResult),
                 CloseConfirmationPanel: CloseConfirmationPanel,
                 SelectEvent: codingEvent => LstCodingEvents.SelectedItem = codingEvent,
                 ResumeAfterConfirmation: ResumeAfterConfirmation));
@@ -70,8 +66,8 @@ public partial class PlayerWindow
         CodingConfirmationDecisionCommandWorkflow.Execute(
             new CodingConfirmationDecisionCommandActions(
                 ApplyDecision: () => CodingConfirmationDecisionWorkflow.Reject(
-                    _codingPendingConfirmEvent,
-                    _codingPendingGateResult,
+                    _codingPendingConfirmationState.CodingEvent,
+                    _codingPendingConfirmationState.GateResult,
                     _codingSessionRuntimeOwner.Service,
                     _codingSessionHost.EventCollection,
                     codingEvent => PersistSingleEventAsTrainingSample(codingEvent).SafeFireAndForget("TrainingSaveReject"),
@@ -83,8 +79,7 @@ public partial class PlayerWindow
     private void CloseConfirmationPanel()
     {
         _codingConfirmationPanelControls.Hide();
-        _codingPendingConfirmEvent = null;
-        _codingPendingGateResult = null;
+        _codingPendingConfirmationState.Clear();
     }
 
     private void ResumeAfterConfirmation()
