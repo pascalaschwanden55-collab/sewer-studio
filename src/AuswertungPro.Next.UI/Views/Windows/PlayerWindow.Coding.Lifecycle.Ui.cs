@@ -1,7 +1,5 @@
-using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
@@ -47,9 +45,9 @@ public partial class PlayerWindow
                     GetCodingSidePanelWidth()),
                 UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
                 UpdateCodingOverlayCursor: UpdateCodingOverlayCursor,
-                ScheduleLoadedViewportUpdate: () => Dispatcher.BeginInvoke(
-                    DispatcherPriority.Loaded,
-                    new Action(UpdateCodingOverlayViewport))));
+                ScheduleLoadedViewportUpdate: () => PlayerDispatcherScheduler.ScheduleLoaded(
+                    Dispatcher,
+                    UpdateCodingOverlayViewport)));
     }
 
     private void StartCodingModeBackgroundServices()

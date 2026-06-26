@@ -7226,6 +7226,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.UpdateCodingOverlayViewport()", showUiWorkflow);
         Assert.Contains("actions.UpdateCodingOverlayCursor()", showUiWorkflow);
         Assert.Contains("actions.ScheduleLoadedViewportUpdate()", showUiWorkflow);
+        Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", ui);
+        Assert.DoesNotContain("Dispatcher.BeginInvoke", ui);
+        Assert.DoesNotContain("new Action(UpdateCodingOverlayViewport)", ui);
         Assert.DoesNotContain("UpdateCodingOverlayCursor();", ui);
         Assert.Contains("CodingModeDefaultToolWorkflow.Execute", ui);
         Assert.Contains("CodingModeBackgroundServicesWorkflow.Execute", ui);
