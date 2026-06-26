@@ -305,7 +305,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private bool _isDragging", state);
         Assert.DoesNotContain("private bool _wasPlayingBeforeDrag", state);
         Assert.DoesNotContain("private DateTime _lastScrubSeek", state);
-        Assert.Contains("PlayerPositionSliderStateController _positionSliderStateController", state);
+        Assert.DoesNotContain("private readonly PlayerPositionSliderStateController _positionSliderStateController = new();", state);
+        Assert.Contains("private PlayerPositionSliderStateController _positionSliderStateController => _playerControllers.PositionSliderStateController", state);
         Assert.Contains("_positionSliderStateController.IsDragging", slider);
         Assert.Contains("_positionSliderStateController.WasPlayingBeforeDrag", slider);
         Assert.Contains("_positionSliderStateController.CreateDragActions", slider);

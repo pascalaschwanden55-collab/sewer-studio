@@ -10,7 +10,6 @@ public partial class PlayerWindow
     private readonly PlayerMediaHosts _playerMediaHosts;
     private readonly PlayerWindowPlaybackContext _playbackContext;
     private readonly PlayerWindowControllerSet _playerControllers;
-    private readonly PlayerPositionSliderStateController _positionSliderStateController = new();
     private readonly PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner = new();
     private readonly PlayerWindowTimerController _playerTimerController;
 
@@ -34,6 +33,8 @@ public partial class PlayerWindow
     private PlayerSnapshotCaptureHost _playerSnapshotCaptureHost => _playerMediaHosts.SnapshotCaptureHost;
 
     private PlayerPositionControls _positionControls => _playerControllers.PositionControls;
+
+    private PlayerPositionSliderStateController _positionSliderStateController => _playerControllers.PositionSliderStateController;
 
     private PlayerSpeedControls _speedControls => _playerControllers.SpeedControls;
 

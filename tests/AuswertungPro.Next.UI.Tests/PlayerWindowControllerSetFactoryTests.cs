@@ -72,6 +72,10 @@ public sealed class PlayerWindowControllerSetFactoryTests
             Assert.NotNull(set.CodingOverlayRenderController);
             Assert.Contains(
                 typeof(PlayerWindowControllerSet).GetProperties(),
+                property => property.Name == "PositionSliderStateController"
+                    && property.PropertyType == typeof(PlayerPositionSliderStateController));
+            Assert.Contains(
+                typeof(PlayerWindowControllerSet).GetProperties(),
                 property => property.Name == "LiveDetectionController"
                     && property.PropertyType == typeof(LiveDetectionController));
         });
