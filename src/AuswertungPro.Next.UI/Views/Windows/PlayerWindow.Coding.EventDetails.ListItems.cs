@@ -9,18 +9,23 @@ public partial class PlayerWindow
     /// <summary>Zone-Dots und Konfidenz-Texte in der Event-ListBox einfaerben.</summary>
     private void ColorizeCodingEventListItems()
     {
-        for (int i = 0; i < LstCodingEvents.Items.Count; i++)
-        {
-            if (LstCodingEvents.ItemContainerGenerator.ContainerFromIndex(i) is not ListBoxItem container) continue;
-            if (LstCodingEvents.Items[i] is not CodingEvent ev) continue;
+        CodingEventListItemColorizeWorkflow.Execute(
+            new CodingEventListItemColorizeWorkflowRequest(LstCodingEvents.Items.Count),
+            new CodingEventListItemColorizeWorkflowActions(
+                TryApplyItem: index =>
+                {
+                    if (LstCodingEvents.ItemContainerGenerator.ContainerFromIndex(index) is not ListBoxItem container)
+                        return false;
+                    if (LstCodingEvents.Items[index] is not CodingEvent ev)
+                        return false;
 
-            var zoneDot = FindCodingChild<System.Windows.Shapes.Ellipse>(container, "ZoneDot");
-            var confText = FindCodingChild<TextBlock>(container, "TxtConfidence");
-            var statusIcon = FindCodingChild<TextBlock>(container, "TxtStatusIcon");
+                    var zoneDot = FindCodingChild<System.Windows.Shapes.Ellipse>(container, "ZoneDot");
+                    var confText = FindCodingChild<TextBlock>(container, "TxtConfidence");
+                    var statusIcon = FindCodingChild<TextBlock>(container, "TxtStatusIcon");
 
-            CodingEventListItemControls.Apply(zoneDot, confText, statusIcon, ev);
-        }
-
-        ApplyCodingProtocolMatchListHighlights();
+                    CodingEventListItemControls.Apply(zoneDot, confText, statusIcon, ev);
+                    return true;
+                },
+                RefreshHighlights: ApplyCodingProtocolMatchListHighlights));
     }
 }

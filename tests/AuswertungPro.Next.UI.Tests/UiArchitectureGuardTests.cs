@@ -2367,19 +2367,26 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var detailPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.cs");
         var listItemsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.ListItems.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventListItemColorizeWorkflow.cs");
 
         Assert.True(File.Exists(listItemsPath), "Event-ListBox-Einfaerbung soll aus dem Inline-Detail-Partial heraus.");
+        Assert.True(File.Exists(workflowPath), "Event-ListBox-Einfaerbungsreihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var detail = File.ReadAllText(detailPath);
         var listItems = File.ReadAllText(listItemsPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.DoesNotContain("private void ColorizeCodingEventListItems", detail);
         Assert.DoesNotContain("\"ZoneDot\"", detail);
         Assert.DoesNotContain("\"TxtConfidence\"", detail);
         Assert.Contains("private void ColorizeCodingEventListItems", listItems);
+        Assert.Contains("CodingEventListItemColorizeWorkflow.Execute", listItems);
+        Assert.DoesNotContain("for (int i = 0; i < LstCodingEvents.Items.Count; i++)", listItems);
         Assert.Contains("\"ZoneDot\"", listItems);
         Assert.Contains("\"TxtConfidence\"", listItems);
-        Assert.Contains("ApplyCodingProtocolMatchListHighlights();", listItems);
+        Assert.Contains("RefreshHighlights: ApplyCodingProtocolMatchListHighlights", listItems);
+        Assert.Contains("actions.TryApplyItem(i)", workflow);
+        Assert.Contains("actions.RefreshHighlights()", workflow);
     }
 
     [Fact]
