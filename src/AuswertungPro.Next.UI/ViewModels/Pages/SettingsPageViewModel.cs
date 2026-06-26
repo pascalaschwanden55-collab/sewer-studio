@@ -15,6 +15,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty] private bool _enableDiagnostics;
     [ObservableProperty] private string? _pdfToTextPath;
     [ObservableProperty] private string? _projectPath;
+    [ObservableProperty] private string? _projectsRootDirectory;
     [ObservableProperty] private string? _videoFolder;
     [ObservableProperty] private AutoSaveMode _dataAutoSaveMode;
     [ObservableProperty] private bool _enableRestorePoints;
@@ -73,6 +74,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
     public IRelayCommand BrowsePdfToTextCommand { get; }
     public IRelayCommand BrowseProjectPathCommand { get; }
+    public IRelayCommand BrowseProjectsRootCommand { get; }
     public IRelayCommand BrowseVideoFolderCommand { get; }
     public IRelayCommand OpenDataFolderCommand { get; }
     public IRelayCommand OpenLogsFolderCommand { get; }
@@ -89,6 +91,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         EnableDiagnostics = _sp.Settings.EnableDiagnostics;
         PdfToTextPath = _sp.Settings.PdfToTextPath;
         ProjectPath = _sp.Settings.LastProjectPath;
+        ProjectsRootDirectory = _sp.Settings.ProjectsRootDirectory;
         VideoFolder = _sp.Settings.LastVideoSourceFolder ?? _sp.Settings.LastVideoFolder;
         DataAutoSaveMode = _sp.Settings.DataAutoSaveMode.Normalize();
         EnableRestorePoints = _sp.Settings.EnableRestorePoints;
@@ -109,6 +112,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
         BrowsePdfToTextCommand = new RelayCommand(BrowsePdfToText);
         BrowseProjectPathCommand = new RelayCommand(BrowseProjectPath);
+        BrowseProjectsRootCommand = new RelayCommand(BrowseProjectsRoot);
         BrowseVideoFolderCommand = new RelayCommand(BrowseVideoFolder);
         OpenDataFolderCommand = new RelayCommand(OpenDataFolder);
         OpenLogsFolderCommand = new RelayCommand(OpenLogsFolder);
@@ -213,11 +217,22 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         VideoFolder = p;
     }
 
+    private void BrowseProjectsRoot()
+    {
+        // Ordner-Auswahl fuer das Basisverzeichnis neuer Projekte
+        var p = _sp.Dialogs.SelectFolder("Projekte-Verzeichnis waehlen", ProjectsRootDirectory);
+        if (p is null) return;
+        ProjectsRootDirectory = p;
+    }
+
     private void Save()
     {
         _sp.Settings.EnableDiagnostics = EnableDiagnostics;
         _sp.Settings.PdfToTextPath = PdfToTextPath;
         _sp.Settings.LastProjectPath = NormalizeProjectPath(ProjectPath);
+        _sp.Settings.ProjectsRootDirectory = string.IsNullOrWhiteSpace(ProjectsRootDirectory)
+            ? null
+            : ProjectsRootDirectory.Trim();
         _sp.Settings.LastVideoSourceFolder = VideoFolder;
         _sp.Settings.LastVideoFolder = VideoFolder; // legacy compatibility
         _sp.Settings.DataAutoSaveMode = DataAutoSaveMode.Normalize();

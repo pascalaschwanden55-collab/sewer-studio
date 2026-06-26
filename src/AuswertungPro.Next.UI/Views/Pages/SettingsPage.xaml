@@ -72,6 +72,12 @@
             <Button Content="..." Command="{Binding BrowseProjectPathCommand}" Margin="8,0,0,0" Width="44"/>
         </DockPanel>
 
+        <TextBlock Text="Projekte-Verzeichnis (neue Projekte)" Margin="0,14,0,6" Foreground="{DynamicResource MutedBrush}"/>
+        <DockPanel>
+            <TextBox Text="{Binding ProjectsRootDirectory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="400" />
+            <Button Content="..." Command="{Binding BrowseProjectsRootCommand}" Margin="8,0,0,0" Width="44"/>
+        </DockPanel>
+
         <TextBlock Text="Video-Ordner (Haltungen)" Margin="0,14,0,6" Foreground="{DynamicResource MutedBrush}"/>
         <DockPanel>
             <TextBox Text="{Binding VideoFolder}" MinWidth="400" />
