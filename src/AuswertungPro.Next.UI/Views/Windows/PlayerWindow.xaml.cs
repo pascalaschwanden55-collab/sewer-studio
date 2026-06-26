@@ -38,10 +38,11 @@ public partial class PlayerWindow : Window
 
         _playbackContext = PlayerWindowPlaybackContext.From(videoInfo, initialOverlayText, damageOverlay);
         var normalizedOptions = PlayerWindowOptions.Normalize(options);
-        _dependencies = PlayerWindowDependencies.From(serviceProvider);
-        _haltungId = haltungId;
-        _onEntryCreated = onEntryCreated;
-        _haltungRecord = haltungRecord;
+        _protocolContext = PlayerWindowProtocolContext.From(
+            serviceProvider,
+            haltungId,
+            onEntryCreated,
+            haltungRecord);
 
         PlayerWindowHeaderControls.ApplyVideoInfo(this, VideoNameText, VideoPathText, videoInfo);
 

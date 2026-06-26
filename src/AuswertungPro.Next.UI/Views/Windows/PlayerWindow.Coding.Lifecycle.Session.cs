@@ -10,7 +10,7 @@ public partial class PlayerWindow
         CodingSessionStateCreationWorkflow.Execute(
             new CodingSessionStateCreationRequest(
                 _playbackContext.VideoPath,
-                _dependencies.Settings),
+                _protocolContext.Dependencies.Settings),
             new CodingSessionStateCreationApplyActions(
                 SetSessionService: _codingSessionRuntimeOwner.Set,
                 SetOverlayService: _codingOverlayRuntimeOwner.Set,
@@ -25,10 +25,10 @@ public partial class PlayerWindow
     {
         CodingDnCalibrationApplyWorkflow.Execute(
             new CodingDnCalibrationApplyWorkflowRequest(
-                HasHaltungRecord: _haltungRecord != null,
+                HasHaltungRecord: _protocolContext.HasHaltungRecord,
                 HasOverlayService: _codingOverlayRuntimeOwner.HasService),
             new CodingDnCalibrationApplyWorkflowActions(
-                BuildCalibration: () => CodingDnCalibrationPolicy.Build(_haltungRecord!.Fields),
+                BuildCalibration: () => CodingDnCalibrationPolicy.Build(_protocolContext.HaltungRecord!.Fields),
                 SetCalibration: calibration => _codingOverlayToolHost.SetCalibration(calibration),
                 ApplyCalibrationControls: dnCalibration => CodingSessionHeaderControls.ApplyCalibration(
                     TxtCodingCalibDn,
@@ -40,10 +40,10 @@ public partial class PlayerWindow
     {
         return CodingSessionStartWorkflow.Execute(
             new CodingSessionStartWorkflowRequest(
-                HasRequiredState: _haltungRecord != null && _codingSessionHost.HasViewModel && _codingSessionRuntimeOwner.Service != null,
+                HasRequiredState: _protocolContext.HasHaltungRecord && _codingSessionHost.HasViewModel && _codingSessionRuntimeOwner.Service != null,
                 EndMeter: _codingSessionHost.EndMeter),
             new CodingSessionStartWorkflowActions(
-                ExecuteStartSession: () => _codingSessionHost.ExecuteStartSession(_haltungRecord!),
+                ExecuteStartSession: () => _codingSessionHost.ExecuteStartSession(_protocolContext.HaltungRecord!),
                 HasActiveSession: () => _codingSessionRuntimeOwner.Service!.ActiveSession != null,
                 ShowSessionStartFailed: CodingModeDialogWorkflow.ShowSessionStartFailed,
                 ExitCodingMode: ExitCodingMode,

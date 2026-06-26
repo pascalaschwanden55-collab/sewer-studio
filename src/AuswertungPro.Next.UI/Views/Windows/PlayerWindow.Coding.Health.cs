@@ -9,7 +9,7 @@ public partial class PlayerWindow
     {
         await CodingAiInitializationWorkflow.ExecuteAsync(
             new CodingAiInitializationWorkflowActions(
-                CreateRuntime: () => CodingAiRuntimeCreationWorkflow.Create(CodeCatalog, _dependencies.PipelineConfig),
+                CreateRuntime: () => CodingAiRuntimeCreationWorkflow.Create(CodeCatalog, _protocolContext.Dependencies.PipelineConfig),
                 ApplyRuntime: _codingAiRuntimeOwner.Controller.ApplyRuntime,
                 CreateHealthMonitor: runtime => CodingAiHealthMonitorCreationWorkflow.Create(
                     runtime,

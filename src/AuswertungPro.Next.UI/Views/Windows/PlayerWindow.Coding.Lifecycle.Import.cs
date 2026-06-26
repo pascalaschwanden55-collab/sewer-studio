@@ -12,7 +12,7 @@ public partial class PlayerWindow
     {
         CodingExistingProtocolImportEventsWorkflow.Execute(
             new CodingExistingProtocolImportEventsWorkflowRequest(
-                _haltungRecord?.Protocol,
+                _protocolContext.HaltungRecord?.Protocol,
                 _codingImportReferenceEvents.Events),
             new CodingExistingProtocolImportEventsWorkflowActions(
                 SetImportCount: count => CodingImportReferenceControls.SetCount(

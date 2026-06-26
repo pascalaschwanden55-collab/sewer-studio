@@ -14,16 +14,16 @@ public partial class PlayerWindow
     {
         CodingProtocolPdfExportCommandWorkflow.Execute(
             new CodingProtocolPdfExportCommandRequest(
-                _dependencies.ProtocolPdfExporter is not null,
-                _haltungRecord is not null,
+                _protocolContext.Dependencies.ProtocolPdfExporter is not null,
+                _protocolContext.HasHaltungRecord,
                 doc),
             new CodingProtocolPdfExportCommandActions(
                 OfferPdfExport: () => CodingProtocolPdfExportDisplayWorkflow.Offer(
                     new CodingProtocolPdfExportDisplayRequest(
-                        _haltungRecord!,
+                        _protocolContext.HaltungRecord!,
                         doc,
-                        _dependencies.LastProjectPath,
-                        _dependencies.ProtocolPdfExporter!)),
+                        _protocolContext.Dependencies.LastProjectPath,
+                        _protocolContext.Dependencies.ProtocolPdfExporter!)),
                 ShowOverlay: ShowOverlay));
     }
 
@@ -37,7 +37,7 @@ public partial class PlayerWindow
         CodingExistingProtocolEntriesWorkflow.Execute(
             new CodingExistingProtocolEntriesWorkflowRequest(
                 _codingSessionHost.HasViewModel,
-                _haltungRecord,
+                _protocolContext.HaltungRecord,
                 _codingSessionHost.EventCollection));
     }
 
@@ -46,10 +46,10 @@ public partial class PlayerWindow
     private void SyncCodingToPrimaryDamages(ProtocolDocument doc)
     {
         CodingPrimaryDamageSyncCommandWorkflow.Execute(
-            new CodingPrimaryDamageSyncCommandRequest(_haltungRecord is not null),
+            new CodingPrimaryDamageSyncCommandRequest(_protocolContext.HasHaltungRecord),
             new CodingPrimaryDamageSyncCommandActions(
                 SyncPrimaryDamages: () => CodingPrimaryDamageSyncWorkflow.Sync(
-                    _haltungRecord!,
+                    _protocolContext.HaltungRecord!,
                     doc)));
     }
 
@@ -59,19 +59,19 @@ public partial class PlayerWindow
     {
         CodingProtocolPreviewCommandWorkflow.Execute(
             new CodingProtocolPreviewCommandRequest(
-                _haltungRecord is not null,
-                _dependencies.LegacyServiceProvider is not null,
+                _protocolContext.HasHaltungRecord,
+                _protocolContext.Dependencies.LegacyServiceProvider is not null,
                 doc),
             new CodingProtocolPreviewCommandActions(
                 ShowPreview: () => CodingProtocolPreviewDisplayWorkflow.TryShow(
                     this,
-                    _haltungRecord!,
+                    _protocolContext.HaltungRecord!,
                     doc,
-                    _dependencies.LegacyServiceProvider!,
+                    _protocolContext.Dependencies.LegacyServiceProvider!,
                     _playbackContext.VideoPath,
-                    _dependencies.LastProjectPath,
+                    _protocolContext.Dependencies.LastProjectPath,
                     MarkProjectDirtyForCoding),
-                GetCurrentProtocol: () => _haltungRecord?.Protocol,
+                GetCurrentProtocol: () => _protocolContext.HaltungRecord?.Protocol,
                 SyncPrimaryDamages: SyncCodingToPrimaryDamages,
                 OfferPdfExport: CodingOfferPdfExport));
     }

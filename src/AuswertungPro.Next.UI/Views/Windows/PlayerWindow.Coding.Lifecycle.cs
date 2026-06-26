@@ -8,7 +8,7 @@ public partial class PlayerWindow
     private void CodingMode_Click(object sender, RoutedEventArgs e)
     {
         CodingModeCommandWorkflow.Execute(
-            new CodingModeCommandRequest(_haltungRecord is not null),
+            new CodingModeCommandRequest(_protocolContext.HasHaltungRecord),
             new CodingModeCommandActions(
                 ShowMissingHaltung: CodingModeDialogWorkflow.ShowMissingHaltung,
                 EnterCodingMode: EnterCodingMode));
@@ -19,14 +19,14 @@ public partial class PlayerWindow
         CodingModeEnterWorkflow.Execute(
             new CodingModeEnterWorkflowRequest(
                 _codingModeState.IsCodingMode,
-                _haltungRecord is not null),
+                _protocolContext.HasHaltungRecord),
             new CodingModeEnterWorkflowActions(
                 SetCodingMode: _codingModeState.Set,
                 ResetFrameReadiness: ResetFrameReadiness,
                 PrepareCodingModePlayback: PrepareCodingModePlayback,
                 CreateCodingSessionState: CreateCodingSessionState,
                 ApplyCodingDnCalibration: ApplyCodingDnCalibration,
-                EnsureHaltungslaenge: () => EnsureHaltungslaenge(_haltungRecord!),
+                EnsureHaltungslaenge: () => EnsureHaltungslaenge(_protocolContext.HaltungRecord!),
                 TryStartCodingSession: TryStartCodingSession,
                 InitializeCodingImportReferences: InitializeCodingImportReferences,
                 ActivateDefaultCodingTool: ActivateDefaultCodingTool,

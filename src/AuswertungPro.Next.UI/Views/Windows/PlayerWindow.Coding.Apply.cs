@@ -14,12 +14,12 @@ public partial class PlayerWindow
         var result = CodingApplyChangesWorkflow.Execute(
             new CodingApplyChangesWorkflowRequest(
                 _codingSessionHost.HasViewModel,
-                _haltungRecord,
+                _protocolContext.HaltungRecord,
                 _codingSessionHost.EventCollection,
                 showOverlay),
             new CodingApplyChangesWorkflowActions(
                 ConfirmEmptyProtocol: CodingApplyEmptyProtocolDialogWorkflow.Execute,
-                AssignProtocol: document => _haltungRecord!.Protocol = document,
+                AssignProtocol: document => _protocolContext.HaltungRecord!.Protocol = document,
                 MarkProjectDirty: MarkProjectDirtyForCoding,
                 SyncCodingToPrimaryDamages: SyncCodingToPrimaryDamages,
                 PersistCodingEventsAsTrainingSamples: PersistCodingEventsAsTrainingSamples,
@@ -49,7 +49,7 @@ public partial class PlayerWindow
 
     private void MarkProjectDirtyForCoding()
     {
-        CodingProjectPersistenceWorkflow.MarkProjectDirty(_haltungRecord);
+        CodingProjectPersistenceWorkflow.MarkProjectDirty(_protocolContext.HaltungRecord);
     }
 
     private void SaveProjectAfterCoding()

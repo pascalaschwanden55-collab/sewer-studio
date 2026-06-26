@@ -352,11 +352,13 @@ public sealed class UiArchitectureGuardTests
         var lastOpenedOwnerPath = Path.Combine(uiRoot, "Player", "PlayerLastOpenedWindowOwner.cs");
         var shutdownStateControllerPath = Path.Combine(uiRoot, "Player", "PlayerWindowShutdownStateController.cs");
         var playbackContextPath = Path.Combine(uiRoot, "Player", "PlayerWindowPlaybackContext.cs");
+        var protocolContextPath = Path.Combine(uiRoot, "Player", "PlayerWindowProtocolContext.cs");
 
         Assert.True(File.Exists(statePath), "PlayerWindow-Feldzustand soll aus dem Konstruktor-Partial heraus.");
         Assert.True(File.Exists(lastOpenedOwnerPath), "LastOpened-Fensterzustand soll in einem Owner gekapselt werden.");
         Assert.True(File.Exists(shutdownStateControllerPath), "PlayerWindow-Shutdown-Zustand soll in einem eigenen Controller liegen.");
         Assert.True(File.Exists(playbackContextPath), "PlayerWindow-Playback-Eingaben sollen in einem Kontext gebuendelt werden.");
+        Assert.True(File.Exists(protocolContextPath), "PlayerWindow-Protokoll-Eingaben sollen in einem Kontext gebuendelt werden.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var state = File.ReadAllText(statePath);
@@ -366,6 +368,7 @@ public sealed class UiArchitectureGuardTests
         var lastOpenedOwner = File.Exists(lastOpenedOwnerPath) ? File.ReadAllText(lastOpenedOwnerPath) : "";
         var shutdownStateController = File.Exists(shutdownStateControllerPath) ? File.ReadAllText(shutdownStateControllerPath) : "";
         var playbackContext = File.Exists(playbackContextPath) ? File.ReadAllText(playbackContextPath) : "";
+        var protocolContext = File.Exists(protocolContextPath) ? File.ReadAllText(protocolContextPath) : "";
 
         Assert.DoesNotContain("using LibVLCSharp.Shared", windowRoot);
         Assert.DoesNotContain("using LibVLCSharp.Shared", state);
@@ -383,6 +386,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_initialOverlayText", playerWindowPartials);
         Assert.DoesNotContain("_damageOverlay", playerWindowPartials);
         Assert.DoesNotContain("_options", playerWindowPartials);
+        Assert.DoesNotContain("_dependencies", playerWindowPartials);
+        Assert.DoesNotContain("_haltungId", playerWindowPartials);
+        Assert.DoesNotContain("_onEntryCreated", playerWindowPartials);
+        Assert.DoesNotContain("_haltungRecord", playerWindowPartials);
         Assert.Contains("private readonly PlayerMediaRuntime _playerMediaRuntime", state);
         Assert.Contains("private readonly PlayerPositionControls _positionControls", state);
         Assert.Contains("private readonly PlayerSpeedControls _speedControls", state);
@@ -391,12 +398,14 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private readonly QuickScanController _quickScanController", state);
         Assert.Contains("private readonly LiveDetectionController _liveDetectionController = new();", state);
         Assert.Contains("private readonly PlayerWindowPlaybackContext _playbackContext", state);
+        Assert.Contains("private readonly PlayerWindowProtocolContext _protocolContext", state);
         Assert.Contains("private readonly PlayerWindowShutdownStateController _shutdownState = new();", state);
         Assert.Contains("PlayerLastOpenedWindowOwner<PlayerWindow>", state);
         Assert.Contains("LastOpenedWindow.Set(this)", windowRoot);
         Assert.Contains("public sealed class PlayerLastOpenedWindowOwner", lastOpenedOwner);
         Assert.Contains("public sealed class PlayerWindowShutdownStateController", shutdownStateController);
         Assert.Contains("public sealed record PlayerWindowPlaybackContext", playbackContext);
+        Assert.Contains("public sealed class PlayerWindowProtocolContext", protocolContext);
     }
 
     [Fact]
@@ -430,8 +439,10 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var dependenciesPath = Path.Combine(uiRoot, "Player", "PlayerWindowDependencies.cs");
+        var protocolContextPath = Path.Combine(uiRoot, "Player", "PlayerWindowProtocolContext.cs");
 
         Assert.True(File.Exists(dependenciesPath), "PlayerWindow-Partials sollen nicht direkt am konkreten ServiceProvider haengen.");
+        Assert.True(File.Exists(protocolContextPath), "PlayerWindow-Protokolldaten sollen in einem Kontext gebuendelt sein.");
 
         var offenders = Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs")
             .Where(path => !path.EndsWith("PlayerWindow.xaml.cs", StringComparison.OrdinalIgnoreCase))
@@ -452,15 +463,17 @@ public sealed class UiArchitectureGuardTests
         var state = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.State.cs"));
         var windowRoot = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"));
         var dependencies = File.ReadAllText(dependenciesPath);
+        var protocolContext = File.ReadAllText(protocolContextPath);
 
         Assert.True(
             offenders.Length == 0,
             "_serviceProvider darf nur im Konstruktor/State als Legacy-Bruecke stehen. Partials nutzen PlayerWindowDependencies:\n"
             + string.Join("\n", offenders));
-        Assert.Contains("private readonly PlayerWindowDependencies _dependencies", state);
+        Assert.Contains("private readonly PlayerWindowProtocolContext _protocolContext", state);
         Assert.DoesNotContain("private readonly ServiceProvider? _serviceProvider", state);
         Assert.DoesNotContain("_serviceProvider = serviceProvider", windowRoot);
-        Assert.Contains("_dependencies = PlayerWindowDependencies.From(serviceProvider)", windowRoot);
+        Assert.Contains("_protocolContext = PlayerWindowProtocolContext.From(", windowRoot);
+        Assert.Contains("PlayerWindowDependencies.From(serviceProvider)", protocolContext);
         Assert.Contains("public ServiceProvider? LegacyServiceProvider", dependencies);
         Assert.Contains("public string? LastProjectPath", dependencies);
     }
@@ -1048,7 +1061,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("new CodingProjectPersistenceWorkflowActions", apply);
         Assert.Contains("CodingProjectPersistenceWorkflow.MarkProjectDirty", apply);
         Assert.Contains("CodingProjectPersistenceWorkflow.TrySaveProjectIfReady", apply);
-        Assert.Contains("CodingProjectPersistenceWorkflow.MarkProjectDirty(_haltungRecord)", apply);
+        Assert.Contains("CodingProjectPersistenceWorkflow.MarkProjectDirty(_protocolContext.HaltungRecord)", apply);
         Assert.Contains("CodingProjectPersistenceWorkflow.TrySaveProjectIfReady()", apply);
         Assert.Contains("CodingProjectPersistenceServiceFactory.Create", codingProjectPersistenceWorkflow);
         Assert.Contains("new CodingProjectPersistenceWorkflowActions", codingProjectPersistenceWorkflow);
@@ -5911,7 +5924,7 @@ public sealed class UiArchitectureGuardTests
         var ensureWorkflow = File.Exists(ensureWorkflowPath) ? File.ReadAllText(ensureWorkflowPath) : "";
         var enterWorkflow = File.ReadAllText(enterWorkflowPath);
 
-        Assert.Contains("EnsureHaltungslaenge: () => EnsureHaltungslaenge(_haltungRecord!)", lifecycle);
+        Assert.Contains("EnsureHaltungslaenge: () => EnsureHaltungslaenge(_protocolContext.HaltungRecord!)", lifecycle);
         Assert.Contains("actions.EnsureHaltungslaenge()", enterWorkflow);
         Assert.DoesNotContain("private void EnsureHaltungslaenge", persistence);
         Assert.DoesNotContain("Microsoft.VisualBasic.Interaction.InputBox", persistence);

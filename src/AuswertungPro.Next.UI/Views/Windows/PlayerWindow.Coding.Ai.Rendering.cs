@@ -27,7 +27,7 @@ public partial class PlayerWindow
                         samResponse.ImageWidth,
                         samResponse.ImageHeight,
                         maskContent,
-                        logger: _dependencies.LoggerFactory?.CreateLogger(nameof(CodingSamMaskOverlayController)));
+                        logger: _protocolContext.Dependencies.LoggerFactory?.CreateLogger(nameof(CodingSamMaskOverlayController)));
                 },
                 ShowReferenceDn: () =>
                 {

@@ -1,6 +1,3 @@
-using System;
-using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -29,10 +26,7 @@ public partial class PlayerWindow
     private readonly DetectionConfirmationBuffer _detectionConfirmationBuffer = new();
 
     // Protocol integration state.
-    private readonly PlayerWindowDependencies _dependencies;
-    private readonly string? _haltungId;
-    private readonly Action<ProtocolEntry>? _onEntryCreated;
-    private readonly HaltungRecord? _haltungRecord;
+    private readonly PlayerWindowProtocolContext _protocolContext;
 
     // Shutdown guards.
     private readonly PlayerWindowShutdownStateController _shutdownState = new();

@@ -16,7 +16,7 @@ public partial class PlayerWindow
         await CodingAutoCalibrationWorkflow.ExecuteAsync(
             new CodingAutoCalibrationWorkflowRequest(
                 IsAlreadyCalibrated: _codingOverlayToolHost.IsCalibrated,
-                Fields: _haltungRecord?.Fields),
+                Fields: _protocolContext.HaltungRecord?.Fields),
             new CodingAutoCalibrationWorkflowActions(
                 CaptureFrameAsync: CaptureCurrentFrameAsync,
                 TryAutoCalibrate: (frameBytes, nominalDn) =>

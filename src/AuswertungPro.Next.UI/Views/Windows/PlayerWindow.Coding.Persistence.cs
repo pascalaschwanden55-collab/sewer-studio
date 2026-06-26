@@ -13,7 +13,7 @@ public partial class PlayerWindow
     private CodingTrainingSamplePersistenceCoordinator CodingTrainingSamples
         => _codingTrainingSamples ??= CodingTrainingSamplePersistenceCoordinator.CreateDefault(
             () => _codingSessionRuntimeOwner.Service,
-            _dependencies.Settings);
+            _protocolContext.Dependencies.Settings);
 
     private async System.Threading.Tasks.Task PersistSingleEventAsTrainingSample(CodingEvent ev)
         => await CodingTrainingSamples.PersistSingleEventAsync(
@@ -37,7 +37,7 @@ public partial class PlayerWindow
     private CodingTrainingSamplePersistenceRequest CreateCodingTrainingSamplePersistenceRequest(byte[]? preferredFrameBytes)
         => CodingTrainingSamplePersistenceRequest.FromPlayerContext(
             _codingSessionHost.HaltungName ?? "unknown",
-            _haltungRecord?.GetFieldValue("Datum_Jahr"),
+            _protocolContext.HaltungRecord?.GetFieldValue("Datum_Jahr"),
             PlayerUserNameProvider.Current(),
             PlayerClock.UtcNow(),
             preferredFrameBytes,
