@@ -1,18 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Windows;
-using AuswertungPro.Next.Application.Ai;
-using AuswertungPro.Next.Application.Ai.Evaluation;
-using AuswertungPro.Next.Application.Ai.QualityGate;
-using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Infrastructure.Ai;
-using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
-using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
-using AuswertungPro.Next.Infrastructure.Ai.Shared;
-using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 

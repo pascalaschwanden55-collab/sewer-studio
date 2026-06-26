@@ -373,6 +373,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private readonly CodingSidePanelControllerSet _codingSidePanelControllers = new();", state);
         Assert.Contains("public sealed class CodingSidePanelControllerSet", sidePanelControllerSet);
         Assert.Contains("public void Initialize", sidePanelControllerSet);
+        Assert.DoesNotContain("using AuswertungPro.Next.Application", state);
+        Assert.DoesNotContain("using AuswertungPro.Next.Domain", state);
+        Assert.DoesNotContain("using AuswertungPro.Next.Infrastructure", state);
+        Assert.DoesNotContain("using AuswertungPro.Next.UI.Ai", state);
+        Assert.Contains("using AuswertungPro.Next.UI.Player;", state);
     }
 
     [Fact]
