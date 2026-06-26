@@ -42,7 +42,7 @@ public partial class PlayerWindow
                 StopCodingAiPulse: StopCodingAiPulse,
                 StopPipelineHealthMonitor: StopPipelineHealthMonitor,
                 DisposeAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation,
-                ClearImportReferenceEvents: () => CodingImportReferenceStateResetter.ClearEvents(_codingImportEvents),
+                ClearImportReferenceEvents: () => CodingImportReferenceStateResetter.ClearEvents(_codingImportReferenceEvents.Events),
                 ResetProtocolMatchState: () =>
                 {
                     _codingProtocolMatchState.Reset();

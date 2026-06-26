@@ -16,8 +16,8 @@ public partial class PlayerWindow
                 UpdateProtocolMatchSummary: UpdateCodingProtocolMatchSummary,
                 MoveExistingEventsToImportReference: () => CodingImportReferenceTransfer.MoveExistingEventsToImportReference(
                     eventCollection!,
-                    _codingImportEvents),
-                SetImportItemsSource: () => LstImportEvents.ItemsSource = _codingImportEvents,
+                    _codingImportReferenceEvents.Events),
+                SetImportItemsSource: () => LstImportEvents.ItemsSource = _codingImportReferenceEvents.Events,
                 SetImportCount: count => CodingImportReferenceControls.SetCount(RunImportDefectCount, count),
                 ClearActiveSessionEvents: () => CodingSessionEventResetter.ClearActiveSessionEvents(_codingSessionRuntimeOwner.Service),
                 SetCodingItemsSource: () => LstCodingEvents.ItemsSource = eventCollection,

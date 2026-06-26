@@ -41,7 +41,7 @@ public partial class PlayerWindow
             new CodingProtocolMatchCommandRequest(_codingSessionHost.HasViewModel),
             new CodingProtocolMatchCommandActions(
                 RunMatch: () => CodingProtocolMatchRunner.Run(
-                    _codingImportEvents,
+                    _codingImportReferenceEvents.Events,
                     _codingSessionHost.Events,
                     _codingProtocolMatchState.Buckets),
                 StoreMatch: _codingProtocolMatchState.Store,

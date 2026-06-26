@@ -34,7 +34,7 @@ public partial class PlayerWindow
     /// </summary>
     private string? ResolveFindingCodeForCoding(LiveFrameFinding finding, double currentMeter)
     {
-        return CodingFindingCodeResolver.Resolve(finding, currentMeter, _codingImportEvents);
+        return CodingFindingCodeResolver.Resolve(finding, currentMeter, _codingImportReferenceEvents.Events);
     }
 
     private bool IsFindingAlreadyKnown(LiveFrameFinding finding, double meter)

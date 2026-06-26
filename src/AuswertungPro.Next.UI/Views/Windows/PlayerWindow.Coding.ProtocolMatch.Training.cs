@@ -22,7 +22,7 @@ public partial class PlayerWindow
                 GetCurrentRouting: () => _codingProtocolMatchState.LastMatch,
                 AcceptGreenMatchesAsync: routing => CodingProtocolGreenMatchTrainingRunner.AcceptGreenMatchesAsync(
                     routing,
-                    _codingImportEvents,
+                    _codingImportReferenceEvents.Events,
                     ConfirmImportAsTrainingAsync),
                 ShowOverlay: overlay => ShowOverlay(overlay.Text, overlay.Duration)));
     }

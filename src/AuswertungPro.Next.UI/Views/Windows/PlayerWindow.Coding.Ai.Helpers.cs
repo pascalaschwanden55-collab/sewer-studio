@@ -17,7 +17,7 @@ public partial class PlayerWindow
             CodingTerminalBoundaryCandidateBuilder.Enumerate(
                 _codingSessionRuntimeOwner.Service?.ActiveSession?.Events,
                 _codingSessionHost.Events,
-                _codingImportEvents),
+                _codingImportReferenceEvents.Events),
             currentMeter,
             currentVideoTime);
     }

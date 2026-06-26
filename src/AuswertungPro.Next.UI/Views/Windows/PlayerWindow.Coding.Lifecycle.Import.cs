@@ -13,7 +13,7 @@ public partial class PlayerWindow
         CodingExistingProtocolImportEventsWorkflow.Execute(
             new CodingExistingProtocolImportEventsWorkflowRequest(
                 _haltungRecord?.Protocol,
-                _codingImportEvents),
+                _codingImportReferenceEvents.Events),
             new CodingExistingProtocolImportEventsWorkflowActions(
                 SetImportCount: count => CodingImportReferenceControls.SetCount(
                     RunImportDefectCount,

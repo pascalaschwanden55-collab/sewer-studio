@@ -19,7 +19,7 @@ public partial class PlayerWindow
                 HasCodingViewModel: _codingSessionHost.HasViewModel,
                 ViewEvents: _codingSessionHost.EventCollection,
                 SessionEvents: _codingSessionRuntimeOwner.Service?.ActiveSession?.Events ?? [],
-                ImportEvents: _codingImportEvents,
+                ImportEvents: _codingImportReferenceEvents.Events,
                 CodingSessionService: _codingSessionRuntimeOwner.Service,
                 FirstCleanFrameSeconds: _codingFrameReadinessController.FirstCleanFrameSeconds,
                 AnalyzedFrameBytes: analyzedFrameBytes),
@@ -41,7 +41,7 @@ public partial class PlayerWindow
             new CodingBoundaryEndCommandRequest(
                 HasCodingViewModel: _codingSessionHost.HasViewModel,
                 ViewEvents: _codingSessionHost.EventCollection,
-                ImportEvents: _codingImportEvents,
+                ImportEvents: _codingImportReferenceEvents.Events,
                 CodingSessionService: _codingSessionRuntimeOwner.Service,
                 OsdMeter: _codingOsdMeterController.LastMeter,
                 FallbackEndMeter: meterEnd,

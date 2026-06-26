@@ -20,7 +20,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class PlayerWindow
 {
     private IReadOnlyList<(string Code, string Description, double Meter)>? GatherImportContext()
-        => CodingImportContextBuilder.Build(_codingImportEvents);
+        => CodingImportContextBuilder.Build(_codingImportReferenceEvents.Events);
 
     private void ShowCodingAiResults(LiveDetection result)
     {

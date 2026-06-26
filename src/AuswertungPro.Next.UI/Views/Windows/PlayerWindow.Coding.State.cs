@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Threading;
 using System.Windows;
 using AuswertungPro.Next.Application.Ai;
@@ -48,7 +47,7 @@ public partial class PlayerWindow
 
     private readonly CodingEingabemarkerStateController _eingabemarkerState = new();
 
-    private readonly ObservableCollection<CodingEvent> _codingImportEvents = new();
+    private readonly CodingImportReferenceEventsOwner _codingImportReferenceEvents = new();
     private readonly CodingProtocolMatchStateController _codingProtocolMatchState = new();
 
     private readonly CodingPendingConfirmationStateController _codingPendingConfirmationState = new();

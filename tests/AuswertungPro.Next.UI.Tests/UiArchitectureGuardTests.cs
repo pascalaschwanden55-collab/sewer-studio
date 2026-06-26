@@ -333,13 +333,16 @@ public sealed class UiArchitectureGuardTests
         var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var codingModeStatePath = Path.Combine(uiRoot, "Player", "CodingModeStateController.cs");
+        var importEventsOwnerPath = Path.Combine(uiRoot, "Player", "CodingImportReferenceEventsOwner.cs");
 
         Assert.True(File.Exists(statePath), "Coding-Feldzustand soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(codingModeStatePath), "Coding-Modus-Zustand soll nicht mehr als Rohfeld im PlayerWindow liegen.");
+        Assert.True(File.Exists(importEventsOwnerPath), "Coding-Import-Referenz-Events sollen nicht mehr als rohe Collection im PlayerWindow liegen.");
 
         var coding = File.ReadAllText(codingPath);
         var state = File.ReadAllText(statePath);
         var codingModeState = File.Exists(codingModeStatePath) ? File.ReadAllText(codingModeStatePath) : "";
+        var importEventsOwner = File.Exists(importEventsOwnerPath) ? File.ReadAllText(importEventsOwnerPath) : "";
 
         Assert.DoesNotContain("private bool _isCodingMode", coding);
         Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", coding);
@@ -356,7 +359,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private ICodingSessionService? _codingSessionService", state);
         Assert.DoesNotContain("private enum EingabemarkerPhase", state);
         Assert.Contains("private readonly CodingEingabemarkerStateController _eingabemarkerState = new();", state);
-        Assert.Contains("private readonly ObservableCollection<CodingEvent> _codingImportEvents", state);
+        Assert.DoesNotContain("private readonly ObservableCollection<CodingEvent> _codingImportEvents", state);
+        Assert.Contains("private readonly CodingImportReferenceEventsOwner _codingImportReferenceEvents = new();", state);
+        Assert.Contains("public sealed class CodingImportReferenceEventsOwner", importEventsOwner);
+        Assert.Contains("public ObservableCollection<CodingEvent> Events", importEventsOwner);
     }
 
     [Fact]
