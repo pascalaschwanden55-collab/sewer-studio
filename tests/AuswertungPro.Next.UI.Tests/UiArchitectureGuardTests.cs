@@ -7065,13 +7065,16 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var viewportPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Viewport.cs");
+        var refreshWorkflowPath = Path.Combine(uiRoot, "Player", "CodingOverlayViewportRefreshWorkflow.cs");
         var redrawWorkflowPath = Path.Combine(uiRoot, "Player", "CodingCanvasRedrawWorkflow.cs");
 
         Assert.True(File.Exists(viewportPath), "Overlay-Viewport-Mapping soll aus dem allgemeinen OverlayInput-Partial heraus.");
+        Assert.True(File.Exists(refreshWorkflowPath), "Overlay-Viewport-Refresh-Entscheidung soll ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(redrawWorkflowPath), "Canvas-Redraw-Reihenfolge soll ausserhalb von PlayerWindow orchestriert werden.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var viewport = File.ReadAllText(viewportPath);
+        var refreshWorkflow = File.Exists(refreshWorkflowPath) ? File.ReadAllText(refreshWorkflowPath) : "";
         var redrawWorkflow = File.ReadAllText(redrawWorkflowPath);
 
         Assert.DoesNotContain("private Rect GetCodingContentRect", overlayInput);
@@ -7080,6 +7083,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void RedrawCodingCanvas", overlayInput);
         Assert.Contains("private Rect GetCodingContentRect", viewport);
         Assert.Contains("CodingOverlayViewportMapper.GetContentRect", viewport);
+        Assert.Contains("CodingOverlayViewportRefreshWorkflow.Execute", viewport);
+        Assert.DoesNotContain("if (CodingOverlayCanvas.ActualWidth <= 0 || CodingOverlayCanvas.ActualHeight <= 0)", viewport);
+        Assert.Contains("if (request.ActualWidth <= 0 || request.ActualHeight <= 0)", refreshWorkflow);
+        Assert.Contains("actions.UpdateViewport()", refreshWorkflow);
         Assert.Contains("_codingOverlayRenderController.ClearTransient", viewport);
         Assert.Contains("_codingSessionHost", viewport);
         Assert.DoesNotContain("_codingVm", viewport);

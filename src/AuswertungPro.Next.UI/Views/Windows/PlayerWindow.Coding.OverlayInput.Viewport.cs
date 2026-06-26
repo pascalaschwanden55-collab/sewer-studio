@@ -20,8 +20,13 @@ public partial class PlayerWindow
 
     private NormalizedPoint CodingPixelToNorm(Point pixel)
     {
-        if (CodingOverlayCanvas.ActualWidth <= 0 || CodingOverlayCanvas.ActualHeight <= 0)
-            UpdateCodingOverlayViewport();
+        CodingOverlayViewportRefreshWorkflow.Execute(
+            new CodingOverlayViewportRefreshRequest(
+                CodingOverlayCanvas.ActualWidth,
+                CodingOverlayCanvas.ActualHeight),
+            new CodingOverlayViewportRefreshActions(
+                UpdateViewport: UpdateCodingOverlayViewport));
+
         var r = GetCodingContentRect();
         return CodingOverlayViewportMapper.PixelToNorm(pixel, r);
     }
