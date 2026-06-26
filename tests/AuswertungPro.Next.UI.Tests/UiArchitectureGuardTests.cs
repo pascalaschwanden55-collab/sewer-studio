@@ -7339,11 +7339,13 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayInputWorkflow.cs");
         var createWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayCreateWorkflow.cs");
         var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayActivationWorkflow.cs");
         var updateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayUpdateWorkflow.cs");
         var clearWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayClearWorkflow.cs");
+        var ownerPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayManagerOwner.cs");
 
         Assert.True(File.Exists(schemaPath), "Schema-Overlay-Wiring soll aus dem allgemeinen OverlayInput-Partial heraus.");
         Assert.True(File.Exists(workflowPath), "Schema-Overlay-Mouseflow soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
@@ -7351,14 +7353,17 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(activationWorkflowPath), "Schema-Overlay-Aktivierungsgate soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(updateWorkflowPath), "Schema-Overlay-Update-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(clearWorkflowPath), "Schema-Overlay-Clear-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(ownerPath), "SchemaOverlayManager-Besitz soll nicht direkt im PlayerWindow liegen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var schema = File.ReadAllText(schemaPath);
+        var state = File.ReadAllText(statePath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var createWorkflow = File.Exists(createWorkflowPath) ? File.ReadAllText(createWorkflowPath) : "";
         var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
         var updateWorkflow = File.Exists(updateWorkflowPath) ? File.ReadAllText(updateWorkflowPath) : "";
         var clearWorkflow = File.Exists(clearWorkflowPath) ? File.ReadAllText(clearWorkflowPath) : "";
+        var owner = File.Exists(ownerPath) ? File.ReadAllText(ownerPath) : "";
 
         Assert.DoesNotContain("private bool IsCodingSchemaToolSelected", overlayInput);
         Assert.DoesNotContain("private SchemaOverlayBase? CreateCodingSchemaOverlay", overlayInput);
@@ -7366,6 +7371,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void ClearCodingSchemaOverlay", overlayInput);
         Assert.DoesNotContain("_codingSchemaManager.BeginDrag", overlayInput);
         Assert.DoesNotContain("_codingSchemaManager.EndDrag", overlayInput);
+        Assert.DoesNotContain("private readonly SchemaOverlayManager _codingSchemaManager = new();", state);
+        Assert.Contains("private readonly CodingSchemaOverlayManagerOwner _codingSchemaManager = new();", state);
         Assert.Contains("private bool IsCodingSchemaToolSelected", schema);
         Assert.Contains("private bool TryHandleCodingSchemaMouseDown", schema);
         Assert.Contains("private bool TryHandleCodingSchemaMouseMove", schema);
@@ -7403,6 +7410,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.SetCreateEventEnabled(false)", clearWorkflow);
         Assert.Contains("actions.ClearOverlayInfo()", clearWorkflow);
         Assert.Contains("private void UpdateCodingSchemaOverlay", schema);
+        Assert.Contains("public sealed class CodingSchemaOverlayManagerOwner", owner);
+        Assert.Contains("public SchemaOverlayBase? Active", owner);
+        Assert.Contains("public bool IsActive", owner);
+        Assert.Contains("public bool IsDragging", owner);
+        Assert.Contains("public void Activate", owner);
+        Assert.Contains("public void Cancel", owner);
     }
 
     [Fact]
