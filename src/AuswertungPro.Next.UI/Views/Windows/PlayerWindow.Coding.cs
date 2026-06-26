@@ -29,7 +29,7 @@ public partial class PlayerWindow
             CodingOverlayCanvas,
             _codingOverlayToolHost.HasOverlayService,
             _codingOverlayToolHost.ActiveTool,
-            _codingSchemaType,
+            _codingSchemaTypeState.ActiveSchemaType,
             _codingOverlayToolHost.ActiveLevelMode);
 
     private async Task AnalyzeWithOverlayHintAsync(OverlayGeometry overlay)

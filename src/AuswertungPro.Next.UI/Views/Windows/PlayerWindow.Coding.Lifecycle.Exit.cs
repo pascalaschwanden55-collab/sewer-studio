@@ -80,7 +80,7 @@ public partial class PlayerWindow
                     BtnCodingLiveAi,
                     TxtCodingAiStage),
                 CancelCodingSchema: _codingSchemaManager.Cancel,
-                ClearCodingSchemaType: () => _codingSchemaType = null,
+                ClearCodingSchemaType: _codingSchemaTypeState.Clear,
                 DetachCodingViewModelPropertyChanged: _codingSessionViewModelOwner.DetachPropertyChanged,
                 ClearCodingSessionReferences: () =>
                 {

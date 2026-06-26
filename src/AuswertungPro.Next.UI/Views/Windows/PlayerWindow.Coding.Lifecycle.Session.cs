@@ -15,7 +15,7 @@ public partial class PlayerWindow
                 SetSessionService: _codingSessionRuntimeOwner.Set,
                 SetOverlayService: _codingOverlayRuntimeOwner.Set,
                 CancelSchema: _codingSchemaManager.Cancel,
-                ClearSchemaType: () => _codingSchemaType = null,
+                ClearSchemaType: _codingSchemaTypeState.Clear,
                 SetViewModel: (viewModel, observePropertyChanged) => _codingSessionViewModelOwner.Set(
                     viewModel,
                     observePropertyChanged)));

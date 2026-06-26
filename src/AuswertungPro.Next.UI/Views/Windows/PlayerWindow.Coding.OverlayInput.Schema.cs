@@ -9,7 +9,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class PlayerWindow
 {
     private bool IsCodingSchemaToolSelected()
-        => _codingSchemaType.HasValue
+        => _codingSchemaTypeState.ActiveSchemaType.HasValue
            && _codingOverlayToolHost.ActiveTool is OverlayToolType.PipeBend or OverlayToolType.Level;
 
     private SchemaOverlayBase? CreateCodingSchemaOverlay()
@@ -18,14 +18,14 @@ public partial class PlayerWindow
             new CodingSchemaOverlayCreateRequest(_codingOverlayToolHost.HasOverlayService),
             new CodingSchemaOverlayCreateActions(
                 CreateSchema: () => CodingSchemaOverlayBuilder.Create(
-                    _codingSchemaType,
+                    _codingSchemaTypeState.ActiveSchemaType,
                     _codingOverlayToolHost.PipeBendSnapEnabled,
                     _codingOverlayToolHost.ActiveLevelMode)))
             .Schema;
     }
 
     private string GetDefaultCodingSchemaHandleId()
-        => CodingSchemaOverlayBuilder.GetDefaultHandleId(_codingSchemaType);
+        => CodingSchemaOverlayBuilder.GetDefaultHandleId(_codingSchemaTypeState.ActiveSchemaType);
 
     private OverlayGeometry? BuildCodingSchemaGeometry()
         => CodingSchemaOverlayBuilder.BuildGeometry(_codingSchemaManager.Active);

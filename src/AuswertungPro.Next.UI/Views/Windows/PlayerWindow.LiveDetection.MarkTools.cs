@@ -37,7 +37,7 @@ public partial class PlayerWindow
                 SetMarkToolType: _liveDetectionController.SetMarkToolType,
                 SetPause: _playerPlaybackControlHost.SetPause,
                 CancelSchema: _codingSchemaManager.Cancel,
-                ClearSchemaType: () => _codingSchemaType = null,
+                ClearSchemaType: _codingSchemaTypeState.Clear,
                 SetManualMarkMode: _liveDetectionController.SetManualMarkMode,
                 ActivatePointTool: _markToolControls.ActivatePointTool,
                 EnsureOverlayReady: EnsureMarkOverlayReady,

@@ -7131,6 +7131,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_schema_type_state_lives_in_state_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var schemaStatePath = Path.Combine(uiRoot, "Player", "CodingSchemaTypeStateController.cs");
+
+        Assert.True(File.Exists(schemaStatePath), "Aktiver Schema-Typ soll nicht mehr als Rohfeld im PlayerWindow liegen.");
+
+        var state = File.ReadAllText(statePath);
+        var schemaState = File.Exists(schemaStatePath) ? File.ReadAllText(schemaStatePath) : "";
+
+        Assert.DoesNotContain("private SchemaType? _codingSchemaType;", state);
+        Assert.Contains("private readonly CodingSchemaTypeStateController _codingSchemaTypeState = new();", state);
+        Assert.Contains("public sealed class CodingSchemaTypeStateController", schemaState);
+        Assert.Contains("public SchemaType? ActiveSchemaType", schemaState);
+        Assert.Contains("public void Set", schemaState);
+        Assert.Contains("public void Clear", schemaState);
+    }
+
+    [Fact]
     public void PlayerWindow_schema_overlay_wiring_lives_in_schema_partial()
     {
         var root = FindRepositoryRoot();

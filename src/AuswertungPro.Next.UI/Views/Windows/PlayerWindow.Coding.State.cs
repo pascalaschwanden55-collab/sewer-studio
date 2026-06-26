@@ -23,7 +23,7 @@ public partial class PlayerWindow
     private readonly CodingSessionServiceOwner _codingSessionRuntimeOwner = new();
     private readonly CodingOverlayServiceOwner _codingOverlayRuntimeOwner = new();
     private readonly SchemaOverlayManager _codingSchemaManager = new();
-    private SchemaType? _codingSchemaType;
+    private readonly CodingSchemaTypeStateController _codingSchemaTypeState = new();
 
     private readonly CodingCalibrationStateController _codingCalibrationState = new();
     private readonly CodingOverlayInputVisibilityStateController _codingOverlayInputVisibilityState = new();

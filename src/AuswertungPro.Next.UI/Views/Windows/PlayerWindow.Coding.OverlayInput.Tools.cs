@@ -39,7 +39,7 @@ public partial class PlayerWindow
                 SetActiveToolName: _codingActiveToolNameState.Set,
                 SetActiveLevelMode: mode => { _codingOverlayToolHost.SetActiveLevelMode(mode); },
                 SetActiveTool: activeTool => { _codingOverlayToolHost.SetActiveTool(activeTool); },
-                SetActiveSchemaType: activeSchemaType => _codingSchemaType = activeSchemaType,
+                SetActiveSchemaType: _codingSchemaTypeState.Set,
                 CancelSchema: _codingSchemaManager.Cancel,
                 ApplyActiveToolSelection: labelText => CodingOverlayInputControls.ApplyActiveToolSelection(
                     TxtActiveToolLabel,
