@@ -947,7 +947,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private bool CloseOpenStreckenschaeden", closePrompt);
         Assert.Contains("CodingOpenStretchDamagePromptCommandWorkflow.Execute", closePrompt);
         Assert.Contains("CodingOpenStretchDamageDialogWorkflow.ConfirmClose", closePrompt);
-        Assert.Contains("CodingOpenStretchDamageDialogServiceFactory.Create", closePrompt);
+        Assert.DoesNotContain("CodingOpenStretchDamageDialogServiceFactory.Create", closePrompt);
+        Assert.DoesNotContain("new CodingOpenStretchDamageDialogWorkflowActions", closePrompt);
         Assert.Contains("CodingOpenStretchDamagePolicy.FindOpen", closePrompt);
         Assert.Contains("CodingOpenStretchDamageCloseApplier.Apply", closePrompt);
         Assert.Contains("_codingSessionHost", closePrompt);
@@ -973,6 +974,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingOpenStretchDamageDialogDecision", dialogService);
         Assert.Contains("DialogHost.Current", dialogServiceFactory);
         Assert.Contains("ConfirmCancel", dialogServiceFactory);
+        Assert.Contains("CodingOpenStretchDamageDialogServiceFactory.Create", dialogWorkflow);
+        Assert.Contains("new CodingOpenStretchDamageDialogWorkflowActions", dialogWorkflow);
         Assert.Contains("actions.RunWithSuspendedOverlay", dialogWorkflow);
         Assert.Contains("service.ConfirmClose(openEvents, closeMeter)", dialogWorkflow);
         Assert.Contains("actions.FindOpen", commandWorkflow);

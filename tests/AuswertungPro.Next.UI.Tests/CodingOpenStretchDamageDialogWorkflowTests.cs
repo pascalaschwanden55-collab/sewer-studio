@@ -8,6 +8,25 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingOpenStretchDamageDialogWorkflowTests
 {
     [Fact]
+    public void ConfirmClose_offers_default_dialog_service_wiring()
+    {
+        var overload = typeof(CodingOpenStretchDamageDialogWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingOpenStretchDamageDialogWorkflow.ConfirmClose) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual(
+                    [
+                        typeof(IReadOnlyList<CodingEvent>),
+                        typeof(double),
+                        typeof(Func<Func<CodingOpenStretchDamageDialogDecision>, CodingOpenStretchDamageDialogDecision>),
+                    ]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
     public void ConfirmClose_runs_dialog_inside_suspended_overlay_scope()
     {
         var calls = new List<string>();

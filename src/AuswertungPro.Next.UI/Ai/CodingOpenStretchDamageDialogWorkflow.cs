@@ -11,6 +11,17 @@ public static class CodingOpenStretchDamageDialogWorkflow
     public static CodingOpenStretchDamageDialogDecision ConfirmClose(
         IReadOnlyList<CodingEvent> openEvents,
         double closeMeter,
+        Func<Func<CodingOpenStretchDamageDialogDecision>, CodingOpenStretchDamageDialogDecision> runWithSuspendedOverlay)
+        => ConfirmClose(
+            openEvents,
+            closeMeter,
+            new CodingOpenStretchDamageDialogWorkflowActions(
+                RunWithSuspendedOverlay: runWithSuspendedOverlay,
+                CreateDialogService: CodingOpenStretchDamageDialogServiceFactory.Create));
+
+    public static CodingOpenStretchDamageDialogDecision ConfirmClose(
+        IReadOnlyList<CodingEvent> openEvents,
+        double closeMeter,
         CodingOpenStretchDamageDialogWorkflowActions actions)
     {
         ArgumentNullException.ThrowIfNull(openEvents);

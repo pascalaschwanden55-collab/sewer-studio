@@ -21,9 +21,7 @@ public partial class PlayerWindow
                 ConfirmClose: (openEvents, closeMeter) => CodingOpenStretchDamageDialogWorkflow.ConfirmClose(
                     openEvents,
                     closeMeter,
-                    new CodingOpenStretchDamageDialogWorkflowActions(
-                        RunWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback),
-                        CreateDialogService: CodingOpenStretchDamageDialogServiceFactory.Create)),
+                    runWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback)),
                 ApplyClose: (openEvents, closeMeter) => CodingOpenStretchDamageCloseApplier.Apply(
                     openEvents,
                     closeMeter,
