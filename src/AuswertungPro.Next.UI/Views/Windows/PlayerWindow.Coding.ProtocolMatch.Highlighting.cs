@@ -14,22 +14,26 @@ public partial class PlayerWindow
 
     private void ApplyCodingProtocolMatchListHighlights(ListBox listBox)
     {
-        for (var i = 0; i < listBox.Items.Count; i++)
-        {
-            if (listBox.ItemContainerGenerator.ContainerFromIndex(i) is not ListBoxItem container)
-                continue;
+        CodingProtocolMatchListHighlightWorkflow.Execute(
+            new CodingProtocolMatchListHighlightWorkflowRequest(listBox.Items.Count),
+            new CodingProtocolMatchListHighlightWorkflowActions(
+                HighlightItem: index =>
+                {
+                    if (listBox.ItemContainerGenerator.ContainerFromIndex(index) is not ListBoxItem container)
+                        return CodingProtocolMatchListHighlightItemOutcome.Skipped;
 
-            if (listBox.Items[i] is not CodingEvent ev
-                || !_codingProtocolMatchBuckets.TryGetValue(ev.Entry.EntryId, out var bucket))
-            {
-                var emptyBadge = FindCodingChild<Border>(container, "CodingMatchBadge");
-                CodingProtocolMatchHighlightControls.Clear(container, emptyBadge);
-                continue;
-            }
+                    if (listBox.Items[index] is not CodingEvent ev
+                        || !_codingProtocolMatchBuckets.TryGetValue(ev.Entry.EntryId, out var bucket))
+                    {
+                        var emptyBadge = FindCodingChild<Border>(container, "CodingMatchBadge");
+                        CodingProtocolMatchHighlightControls.Clear(container, emptyBadge);
+                        return CodingProtocolMatchListHighlightItemOutcome.Cleared;
+                    }
 
-            var badge = FindCodingChild<Border>(container, "CodingMatchBadge");
-            var badgeText = FindCodingChild<TextBlock>(container, "TxtCodingMatchBadge");
-            CodingProtocolMatchHighlightControls.Apply(container, badge, badgeText, bucket);
-        }
+                    var badge = FindCodingChild<Border>(container, "CodingMatchBadge");
+                    var badgeText = FindCodingChild<TextBlock>(container, "TxtCodingMatchBadge");
+                    CodingProtocolMatchHighlightControls.Apply(container, badge, badgeText, bucket);
+                    return CodingProtocolMatchListHighlightItemOutcome.Highlighted;
+                }));
     }
 }

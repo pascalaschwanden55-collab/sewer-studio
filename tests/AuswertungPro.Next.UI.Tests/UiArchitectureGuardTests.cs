@@ -3929,20 +3929,26 @@ public sealed class UiArchitectureGuardTests
         var protocolMatchPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.cs");
         var highlightingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Highlighting.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchHighlightControls.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchListHighlightWorkflow.cs");
 
         Assert.True(File.Exists(highlightingPath), "ProtocolMatch-Listenhighlighting soll aus dem Match-Partial heraus.");
         Assert.True(File.Exists(controlsPath), "ProtocolMatch-Listenhighlighting-Control-Zuweisung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "ProtocolMatch-Listenhighlighting-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var protocolMatch = File.ReadAllText(protocolMatchPath);
         var highlighting = File.ReadAllText(highlightingPath);
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.DoesNotContain("private void ApplyCodingProtocolMatchListHighlights()", protocolMatch);
         Assert.DoesNotContain("private void ApplyCodingProtocolMatchListHighlights(ListBox listBox)", protocolMatch);
         Assert.Contains("private void ApplyCodingProtocolMatchListHighlights()", highlighting);
         Assert.Contains("private void ApplyCodingProtocolMatchListHighlights(ListBox listBox)", highlighting);
+        Assert.Contains("CodingProtocolMatchListHighlightWorkflow.Execute", highlighting);
+        Assert.DoesNotContain("for (var i = 0; i < listBox.Items.Count; i++)", highlighting);
         Assert.Contains("CodingProtocolMatchHighlightControls.Clear", highlighting);
         Assert.Contains("CodingProtocolMatchHighlightControls.Apply", highlighting);
+        Assert.Contains("actions.HighlightItem(i)", workflow);
         Assert.DoesNotContain("CodingProtocolMatchDisplayPolicy.BackgroundColor", highlighting);
         Assert.DoesNotContain("CodingProtocolMatchDisplayPolicy.BadgeText", highlighting);
         Assert.DoesNotContain("badge.Visibility = Visibility.Visible", highlighting);
