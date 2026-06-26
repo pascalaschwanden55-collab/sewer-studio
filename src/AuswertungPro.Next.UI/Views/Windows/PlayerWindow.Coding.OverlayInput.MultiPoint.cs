@@ -13,7 +13,7 @@ public partial class PlayerWindow
                 _codingOverlayToolHost.HasOverlayService,
                 _codingSessionHost.HasViewModel,
                 _codingOverlayToolHost.DrawPointCount,
-                BtnCodingLiveAi.IsChecked == true),
+                PlayerToggleButtonControls.IsChecked(BtnCodingLiveAi)),
             new CodingMultiPointOverlayMouseDownActions(
                 ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
                 SetCreateEventEnabled: enabled => CodingOverlayInputControls.SetCreateEventEnabled(

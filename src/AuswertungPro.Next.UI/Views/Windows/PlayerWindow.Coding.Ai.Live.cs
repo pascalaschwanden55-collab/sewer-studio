@@ -18,7 +18,7 @@ public partial class PlayerWindow
 
         CodingLiveAiToggleWorkflow.Execute(
             new CodingLiveAiToggleWorkflowRequest(
-                BtnCodingLiveAi.IsChecked == true,
+                PlayerToggleButtonControls.IsChecked(BtnCodingLiveAi),
                 _codingAiRuntimeOwner.Controller.ModelName),
             new CodingLiveAiToggleWorkflowActions(
                 StartTimers: timers.Start,

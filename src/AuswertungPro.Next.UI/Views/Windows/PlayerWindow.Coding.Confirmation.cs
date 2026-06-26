@@ -87,7 +87,7 @@ public partial class PlayerWindow
     {
         var result = CodingConfirmationResumeWorkflow.Apply(
             _codingSessionRuntimeOwner.Service,
-            BtnCodingLiveAi.IsChecked == true,
+            PlayerToggleButtonControls.IsChecked(BtnCodingLiveAi),
             _codingAiRuntimeOwner.Controller.ModelName,
             _playerPlaybackControlHost.SetPause);
 

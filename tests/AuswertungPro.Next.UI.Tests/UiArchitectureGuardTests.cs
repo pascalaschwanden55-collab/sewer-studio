@@ -4202,6 +4202,40 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_toggle_button_state_uses_controls()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var controlsPath = Path.Combine(windowsRoot, "PlayerToggleButtonControls.cs");
+        var relevantPartials = new[]
+        {
+            "PlayerWindow.Coding.Ai.Live.cs",
+            "PlayerWindow.Coding.Confirmation.cs",
+            "PlayerWindow.Coding.Eingabemarker.cs",
+            "PlayerWindow.Coding.OverlayInput.MultiPoint.cs",
+            "PlayerWindow.Coding.OverlayInput.Standard.cs",
+            "PlayerWindow.Keyboard.cs"
+        };
+
+        Assert.True(File.Exists(controlsPath), "ToggleButton-Zustand soll ausserhalb der PlayerWindow-Partials gekapselt sein.");
+
+        var joinedPartials = string.Join(
+            Environment.NewLine,
+            relevantPartials.Select(file => File.ReadAllText(Path.Combine(windowsRoot, file))));
+        var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+
+        Assert.Contains("PlayerToggleButtonControls.IsChecked", joinedPartials);
+        Assert.Contains("PlayerToggleButtonControls.Uncheck", joinedPartials);
+        Assert.DoesNotContain("BtnCodingLiveAi.IsChecked == true", joinedPartials);
+        Assert.DoesNotContain("BtnEingabemarker.IsChecked == true", joinedPartials);
+        Assert.DoesNotContain("BtnEingabemarker.IsChecked = false", joinedPartials);
+        Assert.DoesNotContain("LiveDetectionButton.IsChecked == true", joinedPartials);
+        Assert.Contains("public static bool IsChecked", controls);
+        Assert.Contains("public static void Uncheck", controls);
+    }
+
+    [Fact]
     public void PlayerWindow_import_confirmation_badge_uses_display_policy()
     {
         var root = FindRepositoryRoot();

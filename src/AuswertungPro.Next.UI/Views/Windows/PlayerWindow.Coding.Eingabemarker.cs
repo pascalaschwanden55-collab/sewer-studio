@@ -8,7 +8,7 @@ public partial class PlayerWindow
 {
     private void Eingabemarker_Click(object sender, RoutedEventArgs e)
         => CodingEingabemarkerToggleWorkflow.Execute(
-            new CodingEingabemarkerToggleWorkflowRequest(BtnEingabemarker.IsChecked == true),
+            new CodingEingabemarkerToggleWorkflowRequest(PlayerToggleButtonControls.IsChecked(BtnEingabemarker)),
             CreateEingabemarkerToggleActions());
 
     private void CancelEingabemarker()
@@ -29,7 +29,7 @@ public partial class PlayerWindow
                 PlayerStatusColors.Info,
                 "Klicken + Ziehen = Bereich markieren"),
             SetInactivePhase: _eingabemarkerState.SetInactivePhase,
-            UncheckButton: () => BtnEingabemarker.IsChecked = false,
+            UncheckButton: () => PlayerToggleButtonControls.Uncheck(BtnEingabemarker),
             HideInputPopup: () => CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup),
             ClearPreview: () =>
             {

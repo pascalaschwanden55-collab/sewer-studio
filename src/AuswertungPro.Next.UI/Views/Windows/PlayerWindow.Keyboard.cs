@@ -50,8 +50,8 @@ public partial class PlayerWindow
         PlayerDetectionShortcutWorkflow.Execute(
             new PlayerDetectionShortcutWorkflowRequest(
                 _codingModeState.IsCodingMode,
-                BtnCodingLiveAi.IsChecked == true,
-                LiveDetectionButton.IsChecked == true),
+                PlayerToggleButtonControls.IsChecked(BtnCodingLiveAi),
+                PlayerToggleButtonControls.IsChecked(LiveDetectionButton)),
             PlayerDetectionShortcutControls.CreateActions(
                 BtnCodingLiveAi,
                 LiveDetectionButton,

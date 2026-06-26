@@ -54,7 +54,7 @@ public partial class PlayerWindow
                 _codingSessionHost.HasViewModel,
                 _codingOverlayToolHost.IsDrawing,
                 _liveDetectionController.MarkToolType != OverlayToolType.None,
-                BtnCodingLiveAi.IsChecked == true),
+                PlayerToggleButtonControls.IsChecked(BtnCodingLiveAi)),
             new CodingStandardOverlayMouseUpActions(
                 CompleteOverlayDraw: () => _codingSessionHost.CompleteOverlayDraw(norm),
                 ReleaseMouseCapture: () => CodingOverlayInputControls.ReleaseCanvasMouse(CodingOverlayCanvas),
