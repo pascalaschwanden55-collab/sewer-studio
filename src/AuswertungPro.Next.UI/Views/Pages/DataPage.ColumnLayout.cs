@@ -352,7 +352,11 @@ public partial class DataPage
 
     private void SaveLayoutToSettings()
     {
-        if (_isRestoringLayout || Grid.Columns.Count == 0)
+        // Beim Entladen der Seite (Unloaded-Handler) kann der DataContext bereits
+        // null sein. Dann gibt es nichts zu speichern — kein Zugriff auf Vm/Services
+        // erzwingen (wuerde sonst werfen).
+        if (_isRestoringLayout || Grid.Columns.Count == 0
+            || DataContext is not AuswertungPro.Next.UI.ViewModels.Pages.DataPageViewModel)
             return;
 
         var sp = Services;
