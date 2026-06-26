@@ -44,16 +44,21 @@ public partial class PlayerWindow
     {
         var codingSessionService = _codingSessionRuntimeOwner.Service;
         var codingEvents = _codingSessionHost.EventCollection;
-        if (codingSessionService == null || codingEvents == null || actions.Count == 0)
-            return false;
 
-        return CodingStreckenschadenActionApplier.Apply(
-            actions,
-            codingEvents,
-            codingSessionService,
-            videoTime,
-            LookupVsaLabel,
-            entry => AttachAnalyzedFramePhoto(entry));
+        return CodingStreckenschadenActionApplyCommandWorkflow.Execute(
+            new CodingStreckenschadenActionApplyCommandRequest(
+                HasCodingSessionService: codingSessionService is not null,
+                HasCodingEvents: codingEvents is not null,
+                HasActions: actions.Count > 0),
+            new CodingStreckenschadenActionApplyCommandActions(
+                ApplyActions: () => CodingStreckenschadenActionApplier.Apply(
+                    actions,
+                    codingEvents!,
+                    codingSessionService!,
+                    videoTime,
+                    LookupVsaLabel,
+                    entry => AttachAnalyzedFramePhoto(entry))))
+            .Changed;
     }
 
     /// <summary>
