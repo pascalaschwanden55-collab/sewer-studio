@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Windows.Threading;
 
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
@@ -21,17 +20,11 @@ public partial class PlayerWindow
     // Analyse-Boxen kurz zeigen, dann nach 3s automatisch ausblenden, damit der Frame nicht
     // zugekleistert wird. WICHTIG: nur die visuellen Boxen entfernen - die Befundliste (KI-BEFUNDE)
     // bleibt stehen (deshalb NICHT ClearDetectionOverlays, das wuerde die Liste mitnehmen).
-    private DispatcherTimer? _detectionAutoHideTimer;
-
     private void ScheduleDetectionAutoHide()
         => CodingAiOverlayLifecycleWorkflow.ScheduleAutoHide(
-            new CodingAiOverlayAutoHideRequest(
-                HasTimer: _detectionAutoHideTimer is not null),
-            new CodingAiOverlayAutoHideHostActions(
-                SetTimer: timer => _detectionAutoHideTimer = timer,
-                StopTimer: () => _detectionAutoHideTimer!.Stop(),
-                StartTimer: () => _detectionAutoHideTimer!.Start(),
-                ClearVisuals: () => DetectionOverlayCleanupController.ClearVisuals(
+            _codingAiOverlayAutoHideTimerOwner.CreateRequest(),
+            _codingAiOverlayAutoHideTimerOwner.CreateActions(
+                () => DetectionOverlayCleanupController.ClearVisuals(
                     DetectionCanvas,
                     DetectionOverlayGrid)));
 

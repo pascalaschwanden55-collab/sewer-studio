@@ -16,6 +16,7 @@ public partial class PlayerWindow
     private readonly CodingActiveToolNameStateController _codingActiveToolNameState = new();
 
     private readonly LiveDetectionPulseStateController _codingAiPulseStateController = new();
+    private readonly CodingAiOverlayAutoHideTimerOwner _codingAiOverlayAutoHideTimerOwner = new();
     private readonly CodingStreckenschadenTrackerOwner _streckenschadenTracker = new();
     private readonly CodingAiControllerOwner _codingAiRuntimeOwner = new();
     private readonly CodingFrameReadinessController _codingFrameReadinessController = new();

@@ -6377,12 +6377,14 @@ public sealed class UiArchitectureGuardTests
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupController.cs");
         var surfacePath = Path.Combine(uiRoot, "Player", "IOverlaySurface.cs");
         var lifecycleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiOverlayLifecycleWorkflow.cs");
+        var autoHideTimerOwnerPath = Path.Combine(uiRoot, "Player", "CodingAiOverlayAutoHideTimerOwner.cs");
 
         Assert.True(File.Exists(policyPath), "Transient-Overlay-Cleanup muss den zentralen Tag-Vertrag verwenden.");
         Assert.True(File.Exists(cleanerPath), "Transient-Overlay-Cleanup der Canvas-Elemente muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controllerPath), "Coding-Overlay-Cleanup soll ueber einen Player-Controller laufen.");
         Assert.True(File.Exists(surfacePath), "Transient-Overlay-Cleanup soll ueber die Overlay-Surface laufen.");
         Assert.True(File.Exists(lifecycleWorkflowPath), "AI-Overlay-Auto-Hide/Fade-Out-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(autoHideTimerOwnerPath), "AI-Overlay-Auto-Hide-Timerbesitz soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var viewport = File.ReadAllText(viewportPath);
@@ -6392,15 +6394,21 @@ public sealed class UiArchitectureGuardTests
         var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
         var surface = File.ReadAllText(surfacePath);
         var lifecycleWorkflow = File.Exists(lifecycleWorkflowPath) ? File.ReadAllText(lifecycleWorkflowPath) : "";
+        var autoHideTimerOwner = File.Exists(autoHideTimerOwnerPath) ? File.ReadAllText(autoHideTimerOwnerPath) : "";
 
         Assert.Contains("_codingOverlayRenderController.ClearTransient", viewport);
         Assert.DoesNotContain("CodingOverlayCanvasCleaner.ClearTransient", overlayInput + viewport);
         Assert.Contains("CodingAiOverlayLifecycleWorkflow.ScheduleAutoHide", lifecycle);
         Assert.Contains("CodingAiOverlayLifecycleWorkflow.FadeOutAfterAction", lifecycle);
+        Assert.Contains("_codingAiOverlayAutoHideTimerOwner.CreateRequest()", lifecycle);
+        Assert.Contains("_codingAiOverlayAutoHideTimerOwner.CreateActions", lifecycle);
+        Assert.DoesNotContain("_detectionAutoHideTimer", lifecycle);
+        Assert.DoesNotContain("DispatcherTimer?", lifecycle);
         Assert.Contains("CodingOverlayCleanupController.ClearAiOverlays", lifecycle);
         Assert.DoesNotContain("CodingOverlayCanvasCleaner.ClearAiOverlays", lifecycle);
         Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", lifecycle);
         Assert.DoesNotContain("TimeSpan.FromMilliseconds(800)", lifecycle);
+        Assert.Contains("DispatcherTimer?", autoHideTimerOwner);
         Assert.Contains("CodingOverlayCanvasCleaner.ClearAiOverlays", controller);
         Assert.Contains("CodingOverlayCanvasCleaner.ClearTransient", surface);
         Assert.Contains("TimeSpan.FromMilliseconds(800)", lifecycleWorkflow);
