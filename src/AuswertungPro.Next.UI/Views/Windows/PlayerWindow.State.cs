@@ -10,7 +10,6 @@ public partial class PlayerWindow
     private readonly PlayerMediaHosts _playerMediaHosts;
     private readonly PlayerWindowPlaybackContext _playbackContext;
     private readonly PlayerWindowControllerSet _playerControllers;
-    private readonly PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner = new();
     private readonly PlayerWindowTimerController _playerTimerController;
 
     // Live detection state.
@@ -35,6 +34,8 @@ public partial class PlayerWindow
     private PlayerPositionControls _positionControls => _playerControllers.PositionControls;
 
     private PlayerPositionSliderStateController _positionSliderStateController => _playerControllers.PositionSliderStateController;
+
+    private PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner => _playerControllers.KeyboardActionControllerOwner;
 
     private PlayerSpeedControls _speedControls => _playerControllers.SpeedControls;
 

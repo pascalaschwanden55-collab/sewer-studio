@@ -11,6 +11,7 @@ public sealed record PlayerWindowControllerSet(
     QuickScanController QuickScanController,
     PlayerPositionControls PositionControls,
     PlayerPositionSliderStateController PositionSliderStateController,
+    PlayerKeyboardActionControllerOwner KeyboardActionControllerOwner,
     PlayerSpeedControls SpeedControls,
     PlayerMarkToolControls MarkToolControls,
     CodingOverlayRenderController CodingOverlayRenderController,
@@ -85,6 +86,7 @@ public static class PlayerWindowControllerSetFactory
                 controls.CurrentTimeText,
                 controls.DurationText),
             new PlayerPositionSliderStateController(),
+            new PlayerKeyboardActionControllerOwner(),
             new PlayerSpeedControls(
                 controls.RateText,
                 controls.Speed05Button,

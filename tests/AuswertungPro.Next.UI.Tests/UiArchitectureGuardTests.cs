@@ -4262,7 +4262,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerKeyboardInputWorkflow.Execute", keyboard);
         Assert.Contains("ExecuteAction: keyboardActions.Execute", keyboard);
         Assert.DoesNotContain("private PlayerKeyboardActionController? _keyboardActions", keyboard);
-        Assert.Contains("private readonly PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner = new();", state);
+        Assert.DoesNotContain("private readonly PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner = new();", state);
+        Assert.Contains("private PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner => _playerControllers.KeyboardActionControllerOwner", state);
         Assert.Contains("public sealed class PlayerKeyboardActionControllerOwner", owner);
         Assert.Contains("PlayerKeyboardActionControllerFactory.Create", owner);
         Assert.DoesNotContain("PlayerKeyboardActionControllerFactory.Create", keyboard);
