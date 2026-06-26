@@ -46,7 +46,7 @@ public partial class PlayerWindow
                     _codingSessionRuntimeOwner.Service!),
                 ApplyPostCreation: createdEvent => CodingEventCreationPostWorkflow.Apply(
                     createdEvent,
-                    _codingEventCreationPostActions,
+                    _codingSidePanelControllers.EventCreationPostActions,
                     new CodingEventCreationPostOptions(
                         SelectCreatedEvent: true,
                         ClearSelectedCode: false))));
@@ -69,7 +69,7 @@ public partial class PlayerWindow
                     CodingCaptureSnapshot),
                 ApplyPostCreation: createdEvent => CodingEventCreationPostWorkflow.Apply(
                     createdEvent,
-                    _codingEventCreationPostActions,
+                    _codingSidePanelControllers.EventCreationPostActions,
                     new CodingEventCreationPostOptions(
                         SelectCreatedEvent: false,
                         ClearSelectedCode: true))));
@@ -81,8 +81,8 @@ public partial class PlayerWindow
             new CodingEventsListRefreshCommandActions(
                 RefreshListAndStatistics: () => CodingEventsRefreshWorkflow.RefreshListAndStatistics(
                     _codingSessionHost.EventCollection,
-                    _codingEventsListControls,
-                    _codingStatisticsControls,
+                    _codingSidePanelControllers.EventsList,
+                    _codingSidePanelControllers.Statistics,
                     CodingSessionViewModel.GetDefectStatus),
                 ScheduleColorize: () => Dispatcher.InvokeAsync(
                     ColorizeCodingEventListItems,
@@ -96,7 +96,7 @@ public partial class PlayerWindow
             new CodingStatisticsUpdateCommandActions(
                 RefreshStatistics: () => CodingEventsRefreshWorkflow.RefreshStatistics(
                     _codingSessionHost.Events,
-                    _codingStatisticsControls,
+                    _codingSidePanelControllers.Statistics,
                     CodingSessionViewModel.GetDefectStatus)));
     }
 }

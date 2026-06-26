@@ -334,15 +334,18 @@ public sealed class UiArchitectureGuardTests
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var codingModeStatePath = Path.Combine(uiRoot, "Player", "CodingModeStateController.cs");
         var importEventsOwnerPath = Path.Combine(uiRoot, "Player", "CodingImportReferenceEventsOwner.cs");
+        var sidePanelControllerSetPath = Path.Combine(uiRoot, "Player", "CodingSidePanelControllerSet.cs");
 
         Assert.True(File.Exists(statePath), "Coding-Feldzustand soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(codingModeStatePath), "Coding-Modus-Zustand soll nicht mehr als Rohfeld im PlayerWindow liegen.");
         Assert.True(File.Exists(importEventsOwnerPath), "Coding-Import-Referenz-Events sollen nicht mehr als rohe Collection im PlayerWindow liegen.");
+        Assert.True(File.Exists(sidePanelControllerSetPath), "Coding-SidePanel-Control-Wrapper sollen nicht mehr als einzelne Rohfelder im PlayerWindow liegen.");
 
         var coding = File.ReadAllText(codingPath);
         var state = File.ReadAllText(statePath);
         var codingModeState = File.Exists(codingModeStatePath) ? File.ReadAllText(codingModeStatePath) : "";
         var importEventsOwner = File.Exists(importEventsOwnerPath) ? File.ReadAllText(importEventsOwnerPath) : "";
+        var sidePanelControllerSet = File.Exists(sidePanelControllerSetPath) ? File.ReadAllText(sidePanelControllerSetPath) : "";
 
         Assert.DoesNotContain("private bool _isCodingMode", coding);
         Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", coding);
@@ -363,6 +366,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private readonly CodingImportReferenceEventsOwner _codingImportReferenceEvents = new();", state);
         Assert.Contains("public sealed class CodingImportReferenceEventsOwner", importEventsOwner);
         Assert.Contains("public ObservableCollection<CodingEvent> Events", importEventsOwner);
+        Assert.DoesNotContain("private CodingEventsListControls _codingEventsListControls", state);
+        Assert.DoesNotContain("private CodingStatisticsControls _codingStatisticsControls", state);
+        Assert.DoesNotContain("private CodingInlineDefectDetailControls _codingInlineDefectDetailControls", state);
+        Assert.DoesNotContain("private CodingEventCreationPostActions _codingEventCreationPostActions", state);
+        Assert.Contains("private readonly CodingSidePanelControllerSet _codingSidePanelControllers = new();", state);
+        Assert.Contains("public sealed class CodingSidePanelControllerSet", sidePanelControllerSet);
+        Assert.Contains("public void Initialize", sidePanelControllerSet);
     }
 
     [Fact]
@@ -2451,8 +2461,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("new CodingInlineDefectSelectionActions", detail);
         Assert.Contains("_codingSessionHost", detail);
         Assert.Contains("CodingDefectStatusDisplayPolicy.BuildInlineDetail", detail);
-        Assert.Contains("_codingInlineDefectDetailControls.Apply(state)", detail);
-        Assert.Contains("_codingInlineDefectDetailControls.Hide()", detail);
+        Assert.Contains("_codingSidePanelControllers.InlineDefectDetail.Apply(state)", detail);
+        Assert.Contains("_codingSidePanelControllers.InlineDefectDetail.Hide()", detail);
         Assert.Contains("actions.UpdateInlineDefectDetail(selectedEvent)", selectionWorkflow);
         Assert.Contains("actions.HideInlineDefectDetail()", selectionWorkflow);
         Assert.DoesNotContain("_codingVm", detail);
@@ -2504,7 +2514,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("catch (Exception", preview);
         Assert.Contains("CodingInlineEvidencePreviewService.Build", previewWorkflow);
         Assert.Contains("CodingInlineEvidencePreviewService.LoadFailed", previewWorkflow);
-        Assert.Contains("_codingInlineDefectDetailControls.ApplyPreview", preview);
+        Assert.Contains("_codingSidePanelControllers.InlineDefectDetail.ApplyPreview", preview);
         Assert.DoesNotContain("ImgInlineEvidencePreview.Source = state.Source", preview);
         Assert.DoesNotContain("ImgInlineEvidencePreview.Visibility = state.ImageVisible", preview);
         Assert.DoesNotContain("TxtInlineEvidencePreviewStatus.Text = state.StatusText", preview);

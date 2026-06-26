@@ -23,7 +23,7 @@ public partial class PlayerWindow
     private void UpdateInlineDefectDetail(CodingEvent ev)
     {
         var state = CodingDefectStatusDisplayPolicy.BuildInlineDetail(ev);
-        _codingInlineDefectDetailControls.Apply(state);
+        _codingSidePanelControllers.InlineDefectDetail.Apply(state);
         UpdateInlineEvidencePreview(ev);
     }
 
@@ -32,7 +32,7 @@ public partial class PlayerWindow
 
     private void HideInlineDefectDetail()
     {
-        _codingInlineDefectDetailControls.Hide();
+        _codingSidePanelControllers.InlineDefectDetail.Hide();
     }
 
     private void CodingEvents_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)

@@ -66,35 +66,36 @@ public partial class PlayerWindow
 
     private void InitializeCodingSidePanelControllers()
     {
-        _codingEventsListControls = new CodingEventsListControls(LstCodingEvents);
-        _codingStatisticsControls = new CodingStatisticsControls(
-            RunCodingDefectCount,
-            RunCodingOpenCount,
-            TxtCodingStatAutoAccepted,
-            TxtCodingStatPending,
-            TxtCodingStatReviewRequired,
-            TxtCodingStatAvgConfidence);
-        _codingInlineDefectDetailControls = new CodingInlineDefectDetailControls(
-            TxtInlineDetailCode,
-            TxtInlineDetailDesc,
-            TxtInlineDetailDistance,
-            TxtInlineDetailConfidence,
-            TxtInlineDetailStatus,
-            ImgInlineEvidencePreview,
-            TxtInlineEvidencePreviewStatus,
-            BtnInlineAccept,
-            BtnInlineReject,
-            CodingDefectDetailInline,
-            ColDefectDetail);
-        _codingEventCreationPostActions = new CodingEventCreationPostActions(
-            RefreshEvents: RefreshCodingEventsList,
-            SelectCreatedEvent: ev => LstCodingEvents.SelectedItem = ev,
-            CancelSchema: () => _codingSchemaManager.Cancel(),
-            ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
-            ClearSelectedCode: _codingSessionHost.ClearSelectedCode,
-            RedrawCanvas: () => RedrawCodingCanvas(includeManualOverlay: false),
-            ClearSelectedCodeText: () => CodingSelectedCodeControls.Clear(TxtCodingSelectedCode),
-            DisableCreateEvent: () => CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false),
-            ClearOverlayInfo: () => UpdateCodingOverlayInfo(null));
+        _codingSidePanelControllers.Initialize(
+            new CodingEventsListControls(LstCodingEvents),
+            new CodingStatisticsControls(
+                RunCodingDefectCount,
+                RunCodingOpenCount,
+                TxtCodingStatAutoAccepted,
+                TxtCodingStatPending,
+                TxtCodingStatReviewRequired,
+                TxtCodingStatAvgConfidence),
+            new CodingInlineDefectDetailControls(
+                TxtInlineDetailCode,
+                TxtInlineDetailDesc,
+                TxtInlineDetailDistance,
+                TxtInlineDetailConfidence,
+                TxtInlineDetailStatus,
+                ImgInlineEvidencePreview,
+                TxtInlineEvidencePreviewStatus,
+                BtnInlineAccept,
+                BtnInlineReject,
+                CodingDefectDetailInline,
+                ColDefectDetail),
+            new CodingEventCreationPostActions(
+                RefreshEvents: RefreshCodingEventsList,
+                SelectCreatedEvent: ev => LstCodingEvents.SelectedItem = ev,
+                CancelSchema: () => _codingSchemaManager.Cancel(),
+                ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
+                ClearSelectedCode: _codingSessionHost.ClearSelectedCode,
+                RedrawCanvas: () => RedrawCodingCanvas(includeManualOverlay: false),
+                ClearSelectedCodeText: () => CodingSelectedCodeControls.Clear(TxtCodingSelectedCode),
+                DisableCreateEvent: () => CodingOverlayInputControls.SetCreateEventEnabled(BtnCodingCreateEvent, false),
+                ClearOverlayInfo: () => UpdateCodingOverlayInfo(null)));
     }
 }

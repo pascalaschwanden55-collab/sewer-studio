@@ -17,6 +17,6 @@ public partial class PlayerWindow
 
     private void ApplyInlineEvidencePreviewState(CodingInlineEvidencePreviewState state)
     {
-        _codingInlineDefectDetailControls.ApplyPreview(state);
+        _codingSidePanelControllers.InlineDefectDetail.ApplyPreview(state);
     }
 }
