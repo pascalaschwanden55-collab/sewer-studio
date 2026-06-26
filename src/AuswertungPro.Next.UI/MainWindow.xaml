@@ -134,34 +134,6 @@
                                          DataContext="{Binding Monitor}"
                                          Margin="12,4,12,12"/>
 
-                <!-- KI Neural Sphere -->
-                <Border DockPanel.Dock="Bottom" Margin="12,4,12,4" HorizontalAlignment="Center">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsAiIndicatorVisible}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <StackPanel>
-                        <ctrl:NeuralSphereControl IsActive="{Binding IsAiWorking}"
-                            StatusText="{Binding AiDisplayStatusLabel}" Width="160" Height="160"/>
-                        <TextBlock Text="{Binding AiIndicatorTitle}" FontSize="10" FontWeight="Bold"
-                            HorizontalAlignment="Center" Margin="0,2,0,0"
-                            Foreground="{DynamicResource AccentBrush}"/>
-                        <TextBlock Text="{Binding AiDisplayLoadedModels}" FontSize="10" FontWeight="SemiBold"
-                            HorizontalAlignment="Center" Margin="0,1,0,0"
-                            Foreground="{DynamicResource AccentBrush}"
-                            TextTrimming="CharacterEllipsis" MaxWidth="150"/>
-                        <TextBlock Text="{Binding AiDisplayStatusLabel}" FontSize="10"
-                            HorizontalAlignment="Center" Margin="0,1,0,0"
-                            Foreground="{DynamicResource MutedBrush}"
-                            TextTrimming="CharacterEllipsis" MaxWidth="150"/>
-                    </StackPanel>
-                </Border>
 
                 <ListBox ItemsSource="{Binding NavItems}" SelectedItem="{Binding SelectedNavItem}"
                          BorderThickness="0" Background="Transparent" Margin="8,4,8,8">
