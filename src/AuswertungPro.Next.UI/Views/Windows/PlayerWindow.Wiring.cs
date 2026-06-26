@@ -51,7 +51,7 @@ public partial class PlayerWindow
 
     private void PlayerWindow_EnsureVisibleOnLoaded(object sender, RoutedEventArgs e)
     {
-        EnsureVisibleOnScreen();
+        PlayerBoundsControls.EnsureVisibleOnScreen(this);
     }
 
     private void PlayerWindow_Deactivated(object? sender, EventArgs e)

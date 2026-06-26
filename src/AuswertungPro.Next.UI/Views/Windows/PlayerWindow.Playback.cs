@@ -100,17 +100,5 @@ public partial class PlayerWindow
                 UpdateRateLabel,
                 UpdateCodingCurrentCode));
 
-    private void EnsureVisibleOnScreen()
-    {
-        var bounds = PlayerWindowBoundsPolicy.ClampToWorkArea(
-            new Rect(Left, Top, Width, Height),
-            SystemParameters.WorkArea);
-
-        Left = bounds.Left;
-        Top = bounds.Top;
-        Width = bounds.Width;
-        Height = bounds.Height;
-    }
-
     // Quick-Scan
 }

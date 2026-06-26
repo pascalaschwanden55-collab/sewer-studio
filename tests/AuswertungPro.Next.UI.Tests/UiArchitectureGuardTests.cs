@@ -2535,17 +2535,36 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.cs");
+        var wiringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Wiring.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "PlayerWindowBoundsPolicy.cs");
+        var controlsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerBoundsControls.cs");
 
         Assert.True(File.Exists(policyPath), "Fenster-Grenzlogik muss ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(controlsPath), "Fenster-Bounds-Anwendung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var playback = File.ReadAllText(playbackPath);
+        var wiring = File.ReadAllText(wiringPath);
         var policy = File.ReadAllText(policyPath);
+        var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+        var playerWindowPartials = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs")
+                .Select(File.ReadAllText));
 
-        Assert.Contains("PlayerWindowBoundsPolicy.ClampToWorkArea", playback);
+        Assert.Contains("PlayerBoundsControls.EnsureVisibleOnScreen(this)", wiring);
+        Assert.DoesNotContain("private void EnsureVisibleOnScreen", playback);
+        Assert.DoesNotContain("SystemParameters.WorkArea", playerWindowPartials);
+        Assert.DoesNotContain("new Rect(Left, Top, Width, Height)", playerWindowPartials);
+        Assert.DoesNotContain("Left = bounds.Left", playerWindowPartials);
+        Assert.DoesNotContain("Top = bounds.Top", playerWindowPartials);
+        Assert.DoesNotContain("Width = bounds.Width", playerWindowPartials);
+        Assert.DoesNotContain("Height = bounds.Height", playerWindowPartials);
         Assert.DoesNotContain("if (Left + Width > area.Right)", playback);
         Assert.Contains("public static Rect ClampToWorkArea", policy);
+        Assert.Contains("PlayerWindowBoundsPolicy.ClampToWorkArea", controls);
+        Assert.Contains("public static void ApplyBounds", controls);
     }
 
     [Fact]
