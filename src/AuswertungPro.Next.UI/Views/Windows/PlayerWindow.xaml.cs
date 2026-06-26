@@ -51,55 +51,47 @@ public partial class PlayerWindow : Window
         _playerMarqueeOverlayHost = playerMediaHosts.MarqueeOverlayHost;
         _playerSnapshotCaptureHost = playerMediaHosts.SnapshotCaptureHost;
 
-        _damageMarkerController = new DamageMarkerController(
-            DamageMarkerCanvas,
-            PositionSlider,
-            _damageOverlay,
-            _playerPlaybackControlHost,
-            _playerTimelineHost,
-            EnsurePlaying,
-            UpdateUi,
-            () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas));
+        var controllerSet = PlayerWindowControllerSetFactory.Create(
+            new PlayerWindowControllerSetControls(
+                DamageMarkerCanvas: DamageMarkerCanvas,
+                PositionSlider: PositionSlider,
+                HeatmapCanvas: HeatmapCanvas,
+                QuickScanButton: QuickScanButton,
+                QuickScanStatusText: QuickScanStatusText,
+                CurrentTimeText: CurrentTimeText,
+                DurationText: DurationText,
+                RateText: RateText,
+                Speed05Button: Speed05Button,
+                Speed1Button: Speed1Button,
+                Speed15Button: Speed15Button,
+                Speed2Button: Speed2Button,
+                Speed4Button: Speed4Button,
+                Speed8Button: Speed8Button,
+                MarkToolPopup: MarkToolPopup,
+                CodingMarkToolPopup: CodingMarkToolPopup,
+                ToolsDropdownPopup: ToolsDropdownPopup,
+                MarkToolName: TxtMarkToolName,
+                ActiveToolLabel: TxtActiveToolLabel,
+                DetectionOverlayGrid: DetectionOverlayGrid,
+                DetectionCanvas: DetectionCanvas,
+                CodingOverlayPopup: CodingOverlayPopup,
+                CodingOverlayCanvas: CodingOverlayCanvas),
+            new PlayerWindowControllerSetDependencies(
+                DamageOverlay: _damageOverlay,
+                PlaybackControlHost: _playerPlaybackControlHost,
+                TimelineHost: _playerTimelineHost,
+                VideoPath: _videoPath,
+                EnsurePlaying: EnsurePlaying,
+                UpdateUi: UpdateUi,
+                ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
+                MapCodingOverlayPoint: CodingNormToPixel));
 
-        _quickScanController = new QuickScanController(
-            HeatmapCanvas,
-            QuickScanButton,
-            QuickScanStatusText,
-            _playerPlaybackControlHost,
-            _playerTimelineHost,
-            _videoPath,
-            EnsurePlaying,
-            UpdateUi,
-            () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas));
-
-        _positionControls = new PlayerPositionControls(
-            PositionSlider,
-            CurrentTimeText,
-            DurationText);
-
-        _speedControls = new PlayerSpeedControls(
-            RateText,
-            Speed05Button,
-            Speed1Button,
-            Speed15Button,
-            Speed2Button,
-            Speed4Button,
-            Speed8Button);
-
-        _markToolControls = new PlayerMarkToolControls(
-            MarkToolPopup,
-            CodingMarkToolPopup,
-            ToolsDropdownPopup,
-            TxtMarkToolName,
-            TxtActiveToolLabel,
-            DetectionOverlayGrid,
-            DetectionCanvas,
-            CodingOverlayPopup,
-            CodingOverlayCanvas);
-
-        _codingOverlayRenderController = new CodingOverlayRenderController(
-            new CanvasOverlaySurface(CodingOverlayCanvas),
-            new DelegateOverlayCoordinateMapper(CodingNormToPixel));
+        _damageMarkerController = controllerSet.DamageMarkerController;
+        _quickScanController = controllerSet.QuickScanController;
+        _positionControls = controllerSet.PositionControls;
+        _speedControls = controllerSet.SpeedControls;
+        _markToolControls = controllerSet.MarkToolControls;
+        _codingOverlayRenderController = controllerSet.CodingOverlayRenderController;
         _codingSessionViewModelOwner = new CodingSessionViewModelOwner(CodingVm_PropertyChanged);
         _codingSessionHost = new CodingSessionHost(() => _codingSessionViewModelOwner.ViewModel);
         _codingOverlayToolHost = new CodingOverlayToolHost(() => _codingOverlayRuntimeOwner.Service);

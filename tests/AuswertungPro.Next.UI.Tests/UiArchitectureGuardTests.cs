@@ -46,8 +46,10 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var controllerPath = Path.Combine(uiRoot, "Player", "DamageMarkerController.cs");
+        var controllerSetFactoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowControllerSetFactory.cs");
 
         Assert.True(File.Exists(controllerPath), "DamageMarkerController muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controllerSetFactoryPath), "PlayerWindow-Controller-Konstruktion soll ausserhalb des Konstruktors gebuendelt werden.");
 
         var windowText = string.Join(
             Environment.NewLine,
@@ -57,11 +59,13 @@ public sealed class UiArchitectureGuardTests
         var windowRoot = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"));
         var wiring = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs"));
         var controller = File.ReadAllText(controllerPath);
+        var controllerSetFactory = File.Exists(controllerSetFactoryPath) ? File.ReadAllText(controllerSetFactoryPath) : "";
 
         Assert.DoesNotContain("_damageMarkers", windowText);
         Assert.DoesNotContain("BuildDamageMarkers", windowText);
         Assert.DoesNotContain("RepositionDamageMarkers", windowText);
-        Assert.Contains("new DamageMarkerController", windowRoot);
+        Assert.DoesNotContain("new DamageMarkerController", windowRoot);
+        Assert.Contains("new DamageMarkerController", controllerSetFactory);
         Assert.Contains("_damageMarkerController.Build()", wiring);
         Assert.Contains("_damageMarkerController.Reposition()", wiring);
         Assert.Contains("private readonly List<(DamageMarkerInfo Info", controller);
@@ -76,9 +80,11 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var controllerPath = Path.Combine(uiRoot, "Player", "QuickScanController.cs");
         var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
+        var controllerSetFactoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowControllerSetFactory.cs");
 
         Assert.True(File.Exists(controllerPath), "QuickScanController muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(closedWorkflowPath), "QuickScan-Cancel beim Closed-Cleanup soll im Closed-Workflow laufen.");
+        Assert.True(File.Exists(controllerSetFactoryPath), "PlayerWindow-Controller-Konstruktion soll ausserhalb des Konstruktors gebuendelt werden.");
 
         var windowText = string.Join(
             Environment.NewLine,
@@ -88,13 +94,15 @@ public sealed class UiArchitectureGuardTests
         var quickScanPartial = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.QuickScan.cs"));
         var controller = File.ReadAllText(controllerPath);
         var closedWorkflow = File.ReadAllText(closedWorkflowPath);
+        var controllerSetFactory = File.Exists(controllerSetFactoryPath) ? File.ReadAllText(controllerSetFactoryPath) : "";
 
         Assert.DoesNotContain("_heatmapRects", windowText);
         Assert.DoesNotContain("_isQuickScanning", windowText);
         Assert.DoesNotContain("_quickScanCts", windowText);
         Assert.DoesNotContain("AddHeatmapSegment", windowText);
         Assert.DoesNotContain("RepositionHeatmap", windowText);
-        Assert.Contains("new QuickScanController", windowRoot);
+        Assert.DoesNotContain("new QuickScanController", windowRoot);
+        Assert.Contains("new QuickScanController", controllerSetFactory);
         Assert.Contains("_quickScanController.Reposition()", wiring);
         Assert.Contains("CancelQuickScan: _quickScanController.Cancel", wiring);
         Assert.Contains("actions.CancelQuickScan()", closedWorkflow);
@@ -122,6 +130,7 @@ public sealed class UiArchitectureGuardTests
         var loadedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowLoadedWorkflow.cs");
         var headerControlsPath = Path.Combine(uiRoot, "Player", "PlayerWindowHeaderControls.cs");
         var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
+        var controllerSetFactoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowControllerSetFactory.cs");
 
         Assert.True(File.Exists(wiringPath), "Fenster-, Slider- und Viewport-Wiring soll aus dem Konstruktor heraus.");
         Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
@@ -132,6 +141,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(loadedWorkflowPath), "Fenster-Loaded-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(headerControlsPath), "Player-Header-Control-Zuweisungen sollen ausserhalb des Konstruktors liegen.");
         Assert.True(File.Exists(closedWorkflowPath), "Closed-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controllerSetFactoryPath), "PlayerWindow-Controller-Konstruktion soll ausserhalb des Konstruktors gebuendelt werden.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var wiring = File.ReadAllText(wiringPath);
@@ -144,7 +154,21 @@ public sealed class UiArchitectureGuardTests
         var loadedWorkflow = File.Exists(loadedWorkflowPath) ? File.ReadAllText(loadedWorkflowPath) : "";
         var headerControls = File.Exists(headerControlsPath) ? File.ReadAllText(headerControlsPath) : "";
         var closedWorkflow = File.Exists(closedWorkflowPath) ? File.ReadAllText(closedWorkflowPath) : "";
+        var controllerSetFactory = File.Exists(controllerSetFactoryPath) ? File.ReadAllText(controllerSetFactoryPath) : "";
 
+        Assert.Contains("PlayerWindowControllerSetFactory.Create", windowRoot);
+        Assert.DoesNotContain("new DamageMarkerController", windowRoot);
+        Assert.DoesNotContain("new QuickScanController", windowRoot);
+        Assert.DoesNotContain("new PlayerPositionControls", windowRoot);
+        Assert.DoesNotContain("new PlayerSpeedControls", windowRoot);
+        Assert.DoesNotContain("new PlayerMarkToolControls", windowRoot);
+        Assert.DoesNotContain("new CodingOverlayRenderController", windowRoot);
+        Assert.Contains("new DamageMarkerController", controllerSetFactory);
+        Assert.Contains("new QuickScanController", controllerSetFactory);
+        Assert.Contains("new PlayerPositionControls", controllerSetFactory);
+        Assert.Contains("new PlayerSpeedControls", controllerSetFactory);
+        Assert.Contains("new PlayerMarkToolControls", controllerSetFactory);
+        Assert.Contains("new CodingOverlayRenderController", controllerSetFactory);
         Assert.Contains("WireWindowLifecycleEvents();", windowRoot);
         Assert.Contains("WirePositionSliderEvents();", windowRoot);
         Assert.Contains("WireWindowSurfaceEvents();", windowRoot);
