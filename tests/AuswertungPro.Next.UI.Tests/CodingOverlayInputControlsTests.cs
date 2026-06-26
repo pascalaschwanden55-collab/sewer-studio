@@ -170,6 +170,30 @@ public sealed class CodingOverlayInputControlsTests
         });
     }
 
+    [Fact]
+    public void Canvas_metric_methods_read_and_update_canvas_surface_state()
+    {
+        RunOnStaThread(() =>
+        {
+            var sizedCanvas = new Canvas
+            {
+                Width = 120,
+                Height = 80
+            };
+
+            CodingOverlayInputControls.SetCanvasSize(sizedCanvas, 320, 180);
+
+            Assert.Equal(new Size(320, 180), CodingOverlayInputControls.GetCanvasSize(sizedCanvas));
+
+            var actualCanvas = new Canvas();
+            actualCanvas.Measure(new Size(640, 360));
+            actualCanvas.Arrange(new Rect(0, 0, 640, 360));
+
+            Assert.Equal(new Size(640, 360), CodingOverlayInputControls.GetCanvasActualSize(actualCanvas));
+            Assert.False(CodingOverlayInputControls.IsCanvasMouseCaptured(actualCanvas));
+        });
+    }
+
     private static void RunOnStaThread(Action action)
     {
         Exception? exception = null;

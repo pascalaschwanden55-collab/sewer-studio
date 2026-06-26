@@ -33,7 +33,7 @@ public partial class PlayerWindow
     private void CancelCodingOverlayShortcut()
         => PlayerCancelCodingOverlayShortcutWorkflow.Execute(
             new PlayerCancelCodingOverlayShortcutWorkflowRequest(
-                CodingOverlayCanvas.IsMouseCaptured,
+                CodingOverlayInputControls.IsCanvasMouseCaptured(CodingOverlayCanvas),
                 _codingSessionHost.HasViewModel,
                 CodingOverlayPopup.IsOpen),
             new PlayerCancelCodingOverlayShortcutWorkflowActions(

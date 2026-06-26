@@ -69,7 +69,7 @@ public partial class PlayerWindow
                 IsDrawing: _eingabemarkerState.IsDrawing,
                 DragStart: _eingabemarkerState.DragStart,
                 CanvasPosition: canvasPos,
-                CanvasSize: new Size(CodingOverlayCanvas.ActualWidth, CodingOverlayCanvas.ActualHeight)),
+                CanvasSize: CodingOverlayInputControls.GetCanvasActualSize(CodingOverlayCanvas)),
             new CodingEingabemarkerCanvasMouseUpActions(
                 ReleaseMouseCapture: () => CodingOverlayInputControls.ReleaseCanvasMouse(CodingOverlayCanvas),
                 CancelMarker: CancelEingabemarker,

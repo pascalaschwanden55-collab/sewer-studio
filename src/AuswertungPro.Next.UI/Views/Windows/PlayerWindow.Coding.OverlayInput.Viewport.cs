@@ -1,5 +1,6 @@
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -10,17 +11,23 @@ public partial class PlayerWindow
     // formattreu (Letterbox/Pillarbox). Overlays muessen in DIESES Rechteck gerechnet werden,
     // nicht in die volle Flaeche - sonst werden z.B. 4:3-Befunde in einer 16:9-Flaeche verzerrt.
     private Rect GetCodingContentRect()
-        => CodingOverlayViewportMapper.GetContentRect(
-            CodingOverlayCanvas.ActualWidth,
-            CodingOverlayCanvas.ActualHeight,
+    {
+        var canvasSize = CodingOverlayInputControls.GetCanvasActualSize(CodingOverlayCanvas);
+
+        return CodingOverlayViewportMapper.GetContentRect(
+            canvasSize.Width,
+            canvasSize.Height,
             _codingOverlayRenderState.VideoAspect);
+    }
 
     private NormalizedPoint CodingPixelToNorm(Point pixel)
     {
+        var canvasSize = CodingOverlayInputControls.GetCanvasActualSize(CodingOverlayCanvas);
+
         CodingOverlayViewportRefreshWorkflow.Execute(
             new CodingOverlayViewportRefreshRequest(
-                CodingOverlayCanvas.ActualWidth,
-                CodingOverlayCanvas.ActualHeight),
+                canvasSize.Width,
+                canvasSize.Height),
             new CodingOverlayViewportRefreshActions(
                 UpdateViewport: UpdateCodingOverlayViewport));
 

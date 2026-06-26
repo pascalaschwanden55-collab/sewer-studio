@@ -27,6 +27,35 @@ public static class CodingOverlayInputControls
         createEventButton.IsEnabled = isEnabled;
     }
 
+    public static Size GetCanvasSize(Canvas overlayCanvas)
+    {
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+
+        return new Size(overlayCanvas.Width, overlayCanvas.Height);
+    }
+
+    public static void SetCanvasSize(Canvas overlayCanvas, double width, double height)
+    {
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+
+        overlayCanvas.Width = width;
+        overlayCanvas.Height = height;
+    }
+
+    public static Size GetCanvasActualSize(Canvas overlayCanvas)
+    {
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+
+        return new Size(overlayCanvas.ActualWidth, overlayCanvas.ActualHeight);
+    }
+
+    public static bool IsCanvasMouseCaptured(Canvas overlayCanvas)
+    {
+        ArgumentNullException.ThrowIfNull(overlayCanvas);
+
+        return overlayCanvas.IsMouseCaptured;
+    }
+
     public static void SuspendCanvas(Canvas overlayCanvas)
     {
         ArgumentNullException.ThrowIfNull(overlayCanvas);

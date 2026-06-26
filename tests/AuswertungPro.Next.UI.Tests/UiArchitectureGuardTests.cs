@@ -7820,6 +7820,8 @@ public sealed class UiArchitectureGuardTests
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputControls.cs");
         var relevantPartials = new[]
         {
+            "PlayerWindow.Coding.cs",
+            "PlayerWindow.Coding.OverlayInput.Viewport.cs",
             "PlayerWindow.Coding.OverlayInput.Tools.cs",
             "PlayerWindow.Coding.OverlayInput.Standard.cs",
             "PlayerWindow.Coding.OverlayInput.Schema.cs",
@@ -7840,15 +7842,28 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingOverlayInputControls.SetCreateEventEnabled", joinedPartials);
         Assert.Contains("CodingOverlayInputControls.CaptureCanvasMouse", joinedPartials);
         Assert.Contains("CodingOverlayInputControls.ReleaseCanvasMouse", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.GetCanvasSize", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.SetCanvasSize", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.GetCanvasActualSize", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.IsCanvasMouseCaptured", joinedPartials);
         Assert.DoesNotContain("TxtActiveToolLabel.Text =", joinedPartials);
         Assert.DoesNotContain("BtnCodingCreateEvent.IsEnabled =", joinedPartials);
         Assert.DoesNotContain("CodingOverlayCanvas.CaptureMouse", joinedPartials);
         Assert.DoesNotContain("CodingOverlayCanvas.ReleaseMouseCapture", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.Width", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.Height", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.ActualWidth", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.ActualHeight", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.IsMouseCaptured", joinedPartials);
         Assert.Contains("public static class CodingOverlayInputControls", controls);
         Assert.Contains("public static void ApplyActiveToolSelection", controls);
         Assert.Contains("public static void SetCreateEventEnabled", controls);
         Assert.Contains("public static void CaptureCanvasMouse", controls);
         Assert.Contains("public static void ReleaseCanvasMouse", controls);
+        Assert.Contains("public static Size GetCanvasSize", controls);
+        Assert.Contains("public static void SetCanvasSize", controls);
+        Assert.Contains("public static Size GetCanvasActualSize", controls);
+        Assert.Contains("public static bool IsCanvasMouseCaptured", controls);
     }
 
     [Fact]
