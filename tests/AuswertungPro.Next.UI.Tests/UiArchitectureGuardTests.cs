@@ -3288,22 +3288,27 @@ public sealed class UiArchitectureGuardTests
         var factoryPath = Path.Combine(uiRoot, "Services", "VsaCodeExplorerDialogServiceFactory.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerWorkflowService.cs");
         var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerWorkflowServiceFactory.cs");
+        var serviceCreationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerServiceCreationWorkflow.cs");
 
         Assert.True(File.Exists(servicePath), "VSA-Code-Explorer-Dialoggrenze muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "VSA-Code-Explorer-Fenstererzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Coding-Code-Explorer-Workflow muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowFactoryPath), "Coding-Code-Explorer-Workflow muss ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(serviceCreationWorkflowPath), "Coding-Code-Explorer-Serviceerstellung soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var playerWindowText = string.Join(
             Environment.NewLine,
             Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
+        var codeExplorerDialog = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.Coding.CodeExplorer.Dialog.cs"));
         var service = File.ReadAllText(servicePath);
         var factory = File.ReadAllText(factoryPath);
         var workflow = File.ReadAllText(workflowPath);
         var workflowFactory = File.ReadAllText(workflowFactoryPath);
+        var serviceCreationWorkflow = File.Exists(serviceCreationWorkflowPath) ? File.ReadAllText(serviceCreationWorkflowPath) : "";
 
         Assert.DoesNotContain("VsaCodeExplorerDialogServiceFactory.Create", playerWindowText);
-        Assert.Contains("CodingCodeExplorerWorkflowServiceFactory.Create", playerWindowText);
+        Assert.DoesNotContain("CodingCodeExplorerWorkflowServiceFactory.Create", playerWindowText);
+        Assert.Contains("CodingCodeExplorerServiceCreationWorkflow.Create", codeExplorerDialog);
         Assert.Contains("CreateVsaCodeExplorerLiveSnapshotProvider", playerWindowText);
         Assert.DoesNotContain("new VsaCodeExplorerWindow", playerWindowText);
         Assert.DoesNotContain("new Views.Windows.VsaCodeExplorerWindow", playerWindowText);
@@ -3313,6 +3318,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveSnapshotProvider", factory);
         Assert.Contains("CodingExplorerEntryFactory.CreateSeed", workflow);
         Assert.Contains("VsaCodeExplorerDialogServiceFactory.Create", workflowFactory);
+        Assert.Contains("CodingCodeExplorerWorkflowServiceFactory.Create", serviceCreationWorkflow);
+        Assert.Contains("actions.CreateService(createViewModel)", serviceCreationWorkflow);
     }
 
     [Fact]
