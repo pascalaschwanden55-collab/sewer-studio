@@ -529,6 +529,7 @@ public sealed class UiArchitectureGuardTests
         var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var codingModeStatePath = Path.Combine(uiRoot, "Player", "CodingModeStateController.cs");
+        var codingAiStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingAiStateControllerSet.cs");
         var importEventsOwnerPath = Path.Combine(uiRoot, "Player", "CodingImportReferenceEventsOwner.cs");
         var overlayStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingOverlayStateControllerSet.cs");
         var sidePanelControllerSetPath = Path.Combine(uiRoot, "Player", "CodingSidePanelControllerSet.cs");
@@ -536,6 +537,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.True(File.Exists(statePath), "Coding-Feldzustand soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(codingModeStatePath), "Coding-Modus-Zustand soll nicht mehr als Rohfeld im PlayerWindow liegen.");
+        Assert.True(File.Exists(codingAiStateControllerSetPath), "Coding-AI-Zustandscontroller sollen nicht einzeln im PlayerWindow liegen.");
         Assert.True(File.Exists(importEventsOwnerPath), "Coding-Import-Referenz-Events sollen nicht mehr als rohe Collection im PlayerWindow liegen.");
         Assert.True(File.Exists(overlayStateControllerSetPath), "Coding-Overlay-Zustandscontroller sollen nicht einzeln im PlayerWindow liegen.");
         Assert.True(File.Exists(sidePanelControllerSetPath), "Coding-SidePanel-Control-Wrapper sollen nicht mehr als einzelne Rohfelder im PlayerWindow liegen.");
@@ -544,6 +546,7 @@ public sealed class UiArchitectureGuardTests
         var coding = File.ReadAllText(codingPath);
         var state = File.ReadAllText(statePath);
         var codingModeState = File.Exists(codingModeStatePath) ? File.ReadAllText(codingModeStatePath) : "";
+        var codingAiStateControllerSet = File.Exists(codingAiStateControllerSetPath) ? File.ReadAllText(codingAiStateControllerSetPath) : "";
         var importEventsOwner = File.Exists(importEventsOwnerPath) ? File.ReadAllText(importEventsOwnerPath) : "";
         var overlayStateControllerSet = File.Exists(overlayStateControllerSetPath) ? File.ReadAllText(overlayStateControllerSetPath) : "";
         var sidePanelControllerSet = File.Exists(sidePanelControllerSetPath) ? File.ReadAllText(sidePanelControllerSetPath) : "";
@@ -564,6 +567,18 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", state);
         Assert.DoesNotContain("private ICodingSessionService? _codingSessionService", state);
         Assert.DoesNotContain("private enum EingabemarkerPhase", state);
+        Assert.Contains("private readonly CodingAiStateControllerSet _codingAiStates = new();", state);
+        Assert.DoesNotContain("private readonly LiveDetectionPulseStateController _codingAiPulseStateController = new();", state);
+        Assert.DoesNotContain("private readonly CodingAiOverlayAutoHideTimerOwner _codingAiOverlayAutoHideTimerOwner = new();", state);
+        Assert.DoesNotContain("private readonly CodingAiControllerOwner _codingAiRuntimeOwner = new();", state);
+        Assert.DoesNotContain("private readonly CodingFrameReadinessController _codingFrameReadinessController = new();", state);
+        Assert.DoesNotContain("private readonly CodingLiveAiTimerControllerOwner _codingLiveAiTimerOwner = new();", state);
+        Assert.Contains("private LiveDetectionPulseStateController _codingAiPulseStateController => _codingAiStates.PulseState", state);
+        Assert.Contains("private CodingAiOverlayAutoHideTimerOwner _codingAiOverlayAutoHideTimerOwner => _codingAiStates.OverlayAutoHideTimerOwner", state);
+        Assert.Contains("private CodingAiControllerOwner _codingAiRuntimeOwner => _codingAiStates.RuntimeOwner", state);
+        Assert.Contains("private CodingFrameReadinessController _codingFrameReadinessController => _codingAiStates.FrameReadinessController", state);
+        Assert.Contains("private CodingLiveAiTimerControllerOwner _codingLiveAiTimerOwner => _codingAiStates.LiveTimerOwner", state);
+        Assert.Contains("public sealed class CodingAiStateControllerSet", codingAiStateControllerSet);
         Assert.Contains("private readonly CodingOverlayStateControllerSet _codingOverlayStates = new();", state);
         Assert.DoesNotContain("private readonly CodingCalibrationStateController _codingCalibrationState = new();", state);
         Assert.DoesNotContain("private readonly CodingOverlayInputVisibilityStateController _codingOverlayInputVisibilityState = new();", state);
@@ -1825,7 +1840,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveDetectionPulseWorkflow.Stop", pulse);
         Assert.DoesNotContain("_codingAiPulseRunning", pulse);
         Assert.DoesNotContain("private bool _codingAiPulseRunning", codingState);
-        Assert.Contains("LiveDetectionPulseStateController _codingAiPulseStateController", codingState);
+        Assert.Contains("private LiveDetectionPulseStateController _codingAiPulseStateController => _codingAiStates.PulseState", codingState);
         Assert.Contains("_codingAiPulseStateController.IsRunning", pulse);
         Assert.Contains("_codingAiPulseStateController.CreateStartActions", pulse);
         Assert.Contains("_codingAiPulseStateController.CreateStopActions", pulse);
@@ -4132,7 +4147,7 @@ public sealed class UiArchitectureGuardTests
         var toggleWorkflow = File.Exists(toggleWorkflowPath) ? File.ReadAllText(toggleWorkflowPath) : "";
 
         Assert.DoesNotContain("private CodingLiveAiTimerController? _codingLiveAiTimers", state);
-        Assert.Contains("private readonly CodingLiveAiTimerControllerOwner _codingLiveAiTimerOwner = new();", state);
+        Assert.Contains("private CodingLiveAiTimerControllerOwner _codingLiveAiTimerOwner => _codingAiStates.LiveTimerOwner", state);
         Assert.Contains("CodingLiveAiToggleWorkflow.Execute", live);
         Assert.Contains("_codingLiveAiTimerOwner.Ensure", live);
         Assert.Contains("StartTimers: timers.Start", live);
@@ -7155,7 +7170,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("public sealed class CodingAiControllerOwner", owner);
         Assert.Contains("public CodingAiController Controller", owner);
-        Assert.Contains("private readonly CodingAiControllerOwner _codingAiRuntimeOwner", state);
+        Assert.Contains("private CodingAiControllerOwner _codingAiRuntimeOwner => _codingAiStates.RuntimeOwner", state);
 
         foreach (var path in Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs"))
         {

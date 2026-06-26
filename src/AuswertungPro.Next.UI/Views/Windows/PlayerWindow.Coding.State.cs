@@ -12,12 +12,8 @@ public partial class PlayerWindow
 
     private readonly CodingOverlayStateControllerSet _codingOverlayStates = new();
 
-    private readonly LiveDetectionPulseStateController _codingAiPulseStateController = new();
-    private readonly CodingAiOverlayAutoHideTimerOwner _codingAiOverlayAutoHideTimerOwner = new();
+    private readonly CodingAiStateControllerSet _codingAiStates = new();
     private readonly CodingStreckenschadenTrackerOwner _streckenschadenTracker = new();
-    private readonly CodingAiControllerOwner _codingAiRuntimeOwner = new();
-    private readonly CodingFrameReadinessController _codingFrameReadinessController = new();
-    private readonly CodingLiveAiTimerControllerOwner _codingLiveAiTimerOwner = new();
     private readonly CodingOsdMeterController _codingOsdMeterController = new();
     private readonly CodingPhotoCaptureServicesOwner _codingPhotoCaptureServicesOwner = new();
     private readonly CodingTrainingSamplesOwner _codingTrainingSamplesOwner;
@@ -44,4 +40,14 @@ public partial class PlayerWindow
     private CodingOverlayRenderStateController _codingOverlayRenderState => _codingOverlayStates.RenderState;
 
     private CodingActiveToolNameStateController _codingActiveToolNameState => _codingOverlayStates.ActiveToolNameState;
+
+    private LiveDetectionPulseStateController _codingAiPulseStateController => _codingAiStates.PulseState;
+
+    private CodingAiOverlayAutoHideTimerOwner _codingAiOverlayAutoHideTimerOwner => _codingAiStates.OverlayAutoHideTimerOwner;
+
+    private CodingAiControllerOwner _codingAiRuntimeOwner => _codingAiStates.RuntimeOwner;
+
+    private CodingFrameReadinessController _codingFrameReadinessController => _codingAiStates.FrameReadinessController;
+
+    private CodingLiveAiTimerControllerOwner _codingLiveAiTimerOwner => _codingAiStates.LiveTimerOwner;
 }
