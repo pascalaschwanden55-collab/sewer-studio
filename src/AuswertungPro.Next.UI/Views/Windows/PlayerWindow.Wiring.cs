@@ -40,7 +40,7 @@ public partial class PlayerWindow
 
     private void WireKeyboardEvents()
     {
-        AddHandler(Keyboard.PreviewKeyDownEvent, new KeyEventHandler(PlayerWindow_PreviewKeyDown), true);
+        PlayerKeyboardEventBinder.Bind(this, PlayerWindow_PreviewKeyDown);
     }
 
     private void PlayerWindow_EnsureVisibleOnLoaded(object sender, RoutedEventArgs e)

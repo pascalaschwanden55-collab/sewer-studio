@@ -123,6 +123,7 @@ public sealed class UiArchitectureGuardTests
         var wiringPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs");
         var sliderPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs");
         var sliderEventBinderPath = Path.Combine(windowsRoot, "PlayerPositionSliderEventBinder.cs");
+        var keyboardEventBinderPath = Path.Combine(windowsRoot, "PlayerKeyboardEventBinder.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var dragPlaybackPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragPlayback.cs");
         var dragWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragWorkflow.cs");
@@ -136,6 +137,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(wiringPath), "Fenster-, Slider- und Viewport-Wiring soll aus dem Konstruktor heraus.");
         Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
         Assert.True(File.Exists(sliderEventBinderPath), "PositionSlider-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
+        Assert.True(File.Exists(keyboardEventBinderPath), "Keyboard-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(dragPlaybackPath), "PositionSlider-Drag-Pause-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dragWorkflowPath), "PositionSlider-Drag-Reihenfolge muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(sliderStateControllerPath), "PositionSlider-Drag-Zustand soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -149,6 +151,7 @@ public sealed class UiArchitectureGuardTests
         var wiring = File.ReadAllText(wiringPath);
         var slider = File.ReadAllText(sliderPath);
         var sliderEventBinder = File.Exists(sliderEventBinderPath) ? File.ReadAllText(sliderEventBinderPath) : "";
+        var keyboardEventBinder = File.Exists(keyboardEventBinderPath) ? File.ReadAllText(keyboardEventBinderPath) : "";
         var state = File.ReadAllText(statePath);
         var dragPlayback = File.Exists(dragPlaybackPath) ? File.ReadAllText(dragPlaybackPath) : "";
         var dragWorkflow = File.Exists(dragWorkflowPath) ? File.ReadAllText(dragWorkflowPath) : "";
@@ -183,6 +186,11 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("Closed += (_, __)", windowRoot);
         Assert.DoesNotContain("Deactivated += (_, _)", windowRoot);
         Assert.Contains("private void WireWindowLifecycleEvents", wiring);
+        Assert.Contains("private void WireKeyboardEvents", wiring);
+        Assert.Contains("PlayerKeyboardEventBinder.Bind", wiring);
+        Assert.DoesNotContain("AddHandler(Keyboard.PreviewKeyDownEvent", wiring);
+        Assert.DoesNotContain("new KeyEventHandler", wiring);
+        Assert.Contains(".AddHandler(Keyboard.PreviewKeyDownEvent", keyboardEventBinder);
         Assert.Contains("private void PlayerWindow_Closed", wiring);
         Assert.Contains("PlayerWindowActivationWorkflow.Deactivate", wiring);
         Assert.Contains("PlayerWindowActivationWorkflow.Activate", wiring);
