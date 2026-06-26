@@ -43,8 +43,7 @@ public sealed class CodingLiveFindingEventWorkflowTests
                 Trace: message => calls.Add("trace:" + message),
                 RefreshEvents: () => calls.Add("refresh"),
                 RenderAiOverlays: () => calls.Add("render-ai"),
-                HasCurrentOverlay: () => true,
-                RenderCurrentOverlay: () => calls.Add("render-current-overlay"),
+                TryRenderCurrentOverlay: () => calls.Add("render-current-overlay"),
                 UpdateToolBadge: () => calls.Add("badge"),
                 PauseAndAskConfirmation: (codingEvent, gate) =>
                 {
@@ -109,8 +108,7 @@ public sealed class CodingLiveFindingEventWorkflowTests
             Trace: _ => throw new InvalidOperationException("No trace should be written."),
             RefreshEvents: () => throw new InvalidOperationException("No refresh should run."),
             RenderAiOverlays: () => throw new InvalidOperationException("No AI overlay render should run."),
-            HasCurrentOverlay: () => throw new InvalidOperationException("No overlay state should be checked."),
-            RenderCurrentOverlay: () => throw new InvalidOperationException("No current overlay render should run."),
+            TryRenderCurrentOverlay: () => throw new InvalidOperationException("No current overlay render should run."),
             UpdateToolBadge: () => throw new InvalidOperationException("No badge update should run."),
             PauseAndAskConfirmation: (_, _) => throw new InvalidOperationException("No confirmation should run."));
 

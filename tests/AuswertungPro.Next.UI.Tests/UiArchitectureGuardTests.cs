@@ -2101,6 +2101,7 @@ public sealed class UiArchitectureGuardTests
         var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Live.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingEventWorkflow.cs");
         var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingEventCommandWorkflow.cs");
+        var overlayWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCurrentOverlayRenderWorkflow.cs");
         var appenderPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingSessionAppender.cs");
         var confirmationTrackerPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingConfirmationTracker.cs");
         var addDecisionPath = Path.Combine(uiRoot, "Ai", "CodingLiveFindingAddDecisionPolicy.cs");
@@ -2108,6 +2109,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(livePath), "Live/Qwen-Event-Erzeugung soll aus dem allgemeinen AiEvents-Partial heraus.");
         Assert.True(File.Exists(workflowPath), "Live/Qwen-Event-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(commandWorkflowPath), "Live/Qwen-Event-Befehl soll die Fenster-Guards ausserhalb der PlayerWindow-Partials koordinieren.");
+        Assert.True(File.Exists(overlayWorkflowPath), "CurrentOverlay-Render-Gate soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(appenderPath), "Live/Qwen-Event-Anwendung auf die Session soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(confirmationTrackerPath), "Live/Qwen-Bestaetigungsauswahl soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(addDecisionPath), "Live/Qwen-Add-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -2116,6 +2118,7 @@ public sealed class UiArchitectureGuardTests
         var live = File.ReadAllText(livePath);
         var workflow = File.ReadAllText(workflowPath);
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
+        var overlayWorkflow = File.Exists(overlayWorkflowPath) ? File.ReadAllText(overlayWorkflowPath) : "";
         var appender = File.ReadAllText(appenderPath);
         var confirmationTracker = File.ReadAllText(confirmationTrackerPath);
         var addDecision = File.ReadAllText(addDecisionPath);
@@ -2124,8 +2127,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void AddAiFindingsAsEvents", live);
         Assert.Contains("CodingLiveFindingEventCommandWorkflow.Execute", live);
         Assert.Contains("CodingLiveFindingEventWorkflow.Execute", live);
+        Assert.Contains("CodingCurrentOverlayRenderWorkflow.Execute", live);
         Assert.Contains("_codingSessionHost", live);
         Assert.DoesNotContain("_codingVm", live);
+        Assert.DoesNotContain("_codingSessionHost.CurrentOverlay != null", live);
+        Assert.DoesNotContain("if (overlay != null)", live);
         Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel || codingSessionService == null) return", live);
         Assert.DoesNotContain("double meter = ResolveCodingMeterForFrame", live);
         Assert.DoesNotContain("CodingLiveFindingEventFactory.Create", live);
@@ -2143,6 +2149,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static class CodingLiveFindingEventWorkflow", workflow);
         Assert.Contains("actions.ResolveMeterForFrame", commandWorkflow);
         Assert.Contains("actions.ExecuteFindingWorkflow", commandWorkflow);
+        Assert.Contains("request.CurrentOverlay is null", overlayWorkflow);
+        Assert.Contains("actions.RenderOverlay(request.CurrentOverlay)", overlayWorkflow);
         Assert.Contains("CodingLiveFindingEventFactory.Create", workflow);
         Assert.Contains("CodingLiveFindingQualityGatePolicy.Evaluate", workflow);
         Assert.Contains("CodingLiveFindingSessionAppender.Append", workflow);

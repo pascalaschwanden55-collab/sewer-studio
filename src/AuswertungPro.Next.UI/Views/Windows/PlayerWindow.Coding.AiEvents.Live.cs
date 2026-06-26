@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -41,13 +42,10 @@ public partial class PlayerWindow
                         message => PlayerTrace.WriteLine(message),
                         RefreshCodingEventsList,
                         RenderAiOverlays,
-                        () => _codingSessionHost.CurrentOverlay != null,
-                        () =>
-                        {
-                            var overlay = _codingSessionHost.CurrentOverlay;
-                            if (overlay != null)
-                                RenderOverlayGeometry(overlay, isPreview: false);
-                        },
+                        () => CodingCurrentOverlayRenderWorkflow.Execute(
+                            new CodingCurrentOverlayRenderWorkflowRequest(_codingSessionHost.CurrentOverlay),
+                            new CodingCurrentOverlayRenderWorkflowActions(
+                                (OverlayGeometry overlay) => RenderOverlayGeometry(overlay, isPreview: false))),
                         UpdateToolBadge,
                         PauseAndAskConfirmation))));
     }

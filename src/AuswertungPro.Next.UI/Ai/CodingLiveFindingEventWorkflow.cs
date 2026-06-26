@@ -21,8 +21,7 @@ public sealed record CodingLiveFindingEventWorkflowActions(
     Action<string> Trace,
     Action RefreshEvents,
     Action RenderAiOverlays,
-    Func<bool> HasCurrentOverlay,
-    Action RenderCurrentOverlay,
+    Action TryRenderCurrentOverlay,
     Action UpdateToolBadge,
     Action<CodingEvent, QualityGateResult> PauseAndAskConfirmation);
 
@@ -105,8 +104,7 @@ public static class CodingLiveFindingEventWorkflow
         {
             actions.RefreshEvents();
             actions.RenderAiOverlays();
-            if (actions.HasCurrentOverlay())
-                actions.RenderCurrentOverlay();
+            actions.TryRenderCurrentOverlay();
             actions.UpdateToolBadge();
         }
 
