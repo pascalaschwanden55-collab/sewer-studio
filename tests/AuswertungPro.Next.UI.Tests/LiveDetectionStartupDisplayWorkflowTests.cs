@@ -6,6 +6,15 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class LiveDetectionStartupDisplayWorkflowTests
 {
     [Fact]
+    public async Task StartAsync_default_wiring_rejects_missing_startup_actions()
+    {
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(
+            () => LiveDetectionStartupDisplayWorkflow.StartAsync(startupActions: null!));
+
+        Assert.Equal("startupActions", exception.ParamName);
+    }
+
+    [Fact]
     public async Task StartAsync_creates_dialog_service_and_delegates_startup_order()
     {
         var calls = new List<string>();

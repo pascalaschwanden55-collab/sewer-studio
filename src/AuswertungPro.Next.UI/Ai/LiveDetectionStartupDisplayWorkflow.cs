@@ -9,6 +9,16 @@ public sealed record LiveDetectionStartupDisplayActions(
 
 public static class LiveDetectionStartupDisplayWorkflow
 {
+    public static Task<bool> StartAsync(LiveDetectionStartupActions startupActions)
+    {
+        ArgumentNullException.ThrowIfNull(startupActions);
+
+        return StartAsync(
+            () => PlayerAiSettingsLoader.LoadRuntimeSettings(),
+            settings => LiveDetectionRuntimeFactory.CreateAsync(settings),
+            startupActions);
+    }
+
     public static Task<bool> StartAsync(
         Func<AiRuntimeSettings> loadSettings,
         Func<AiRuntimeSettings, Task<LiveDetectionRuntime>> createRuntimeAsync,

@@ -1571,9 +1571,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("ShowDisabled", lifecycle);
         Assert.DoesNotContain("ShowStartFailed", lifecycle);
         Assert.DoesNotContain("catch (Exception ex)", lifecycle);
-        Assert.Contains("PlayerAiSettingsLoader.LoadRuntimeSettings", lifecycle);
+        Assert.DoesNotContain("PlayerAiSettingsLoader.LoadRuntimeSettings", lifecycle);
         Assert.DoesNotContain("AppSettingsAiSettingsProvider", lifecycle);
-        Assert.Contains("LiveDetectionRuntimeFactory.CreateAsync", lifecycle);
+        Assert.DoesNotContain("LiveDetectionRuntimeFactory.CreateAsync", lifecycle);
         Assert.Contains("_liveDetectionController.StartRuntime", lifecycle);
         Assert.DoesNotContain("LiveDetectionRuntimeStartWorkflow.Start", lifecycle);
         Assert.DoesNotContain("new LiveDetectionRuntimeStartActions", lifecycle);
@@ -1588,6 +1588,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static class LiveDetectionStartupWorkflow", startupWorkflow);
         Assert.Contains("public static class LiveDetectionStartupDisplayWorkflow", startupDisplayWorkflow);
         Assert.Contains("LiveDetectionDialogServiceFactory.Create", startupDisplayWorkflow);
+        Assert.Contains("PlayerAiSettingsLoader.LoadRuntimeSettings", startupDisplayWorkflow);
+        Assert.Contains("LiveDetectionRuntimeFactory.CreateAsync", startupDisplayWorkflow);
         Assert.Contains("LiveDetectionStartupWorkflow.StartAsync", startupDisplayWorkflow);
         Assert.Contains("ShowRuntimeSettingsLoadFailed", startupWorkflow);
         Assert.Contains("ShowDisabled", startupWorkflow);
