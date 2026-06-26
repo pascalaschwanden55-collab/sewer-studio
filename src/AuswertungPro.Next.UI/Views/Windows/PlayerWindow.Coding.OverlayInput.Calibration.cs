@@ -13,11 +13,11 @@ public partial class PlayerWindow
             new CodingCalibrationToggleWorkflowRequest(
                 _codingOverlayToolHost.HasOverlayService,
                 _codingSessionHost.HasViewModel,
-                _codingIsCalibrating),
+                _codingCalibrationState.IsCalibrating),
             new CodingCalibrationToggleWorkflowActions(
                 CloseToolsDropdown: () => { ToolsDropdownPopup.IsOpen = false; },
-                SetCalibrationState: isCalibrating => _codingIsCalibrating = isCalibrating,
-                ClearCalibrationStart: () => _codingCalibStart = null,
+                SetCalibrationState: _codingCalibrationState.SetCalibrating,
+                ClearCalibrationStart: _codingCalibrationState.ClearStart,
                 SetActiveTool: activeTool => { _codingOverlayToolHost.SetActiveTool(activeTool); },
                 SetActiveToolName: activeToolName => _activeCodingToolName = activeToolName,
                 ApplyActiveToolSelection: label => CodingOverlayInputControls.ApplyActiveToolSelection(
@@ -53,18 +53,14 @@ public partial class PlayerWindow
                         _codingSchemaManager.IsActive),
                     new CodingManualCalibrationWorkflowActions(
                         ShowInvalidHint: text => CodingCalibrationControls.ShowHint(TxtCodingCalibHint, text),
-                        ClearCalibrationStart: () => _codingCalibStart = null,
+                        ClearCalibrationStart: _codingCalibrationState.ClearStart,
                         SetOverlayCalibration: calibration => { _codingOverlayToolHost.SetCalibration(calibration); },
                         ApplySchemaCalibration: calibration => _codingSchemaManager.Active?.ApplyCalibration(calibration),
                         ApplyManualResult: manualResult => CodingCalibrationControls.ApplyManualResult(
                             TxtCodingCalibStatus,
                             TxtCodingCalibHint,
                             manualResult),
-                        EndCalibrationMode: () =>
-                        {
-                            _codingIsCalibrating = false;
-                            _codingCalibStart = null;
-                        },
+                        EndCalibrationMode: _codingCalibrationState.Reset,
                         ClearActiveToolName: () => _activeCodingToolName = null,
                         HideHint: () => CodingCalibrationControls.HideHint(CodingCalibrationHint),
                         UpdateOverlayCursor: UpdateCodingOverlayCursor,
@@ -74,9 +70,9 @@ public partial class PlayerWindow
     private bool TryStartCodingCalibration(NormalizedPoint norm)
     {
         return CodingCalibrationPointerWorkflow.Start(
-            new CodingCalibrationPointerStartRequest(_codingIsCalibrating),
+            new CodingCalibrationPointerStartRequest(_codingCalibrationState.IsCalibrating),
             new CodingCalibrationPointerStartActions(
-                SetCalibrationStart: () => _codingCalibStart = norm,
+                SetCalibrationStart: () => _codingCalibrationState.SetStart(norm),
                 CaptureMouse: () => { CodingOverlayCanvas.CaptureMouse(); },
                 ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
                 RenderAiOverlays: RenderAiOverlays,
@@ -86,11 +82,11 @@ public partial class PlayerWindow
 
     private bool TryPreviewCodingCalibration(NormalizedPoint norm)
     {
-        var calibrationStart = _codingCalibStart;
+        var calibrationStart = _codingCalibrationState.Start;
 
         return CodingCalibrationPointerWorkflow.Preview(
             new CodingCalibrationPointerPreviewRequest(
-                _codingIsCalibrating,
+                _codingCalibrationState.IsCalibrating,
                 calibrationStart != null),
             new CodingCalibrationPointerPreviewActions(
                 ClearTransientCodingCanvas: () => ClearTransientCodingCanvas(clearManualOverlay: true),
@@ -101,7 +97,7 @@ public partial class PlayerWindow
                     var p1 = CodingNormToPixel(calibrationStart!);
                     var p2 = CodingNormToPixel(norm);
                     var preview = CodingCalibrationPreviewPolicy.Build(p1, p2);
-                    _codingPreviewLine = CodingCalibrationPreviewLineRenderer.Render(CodingOverlayCanvas, preview);
+                    CodingCalibrationPreviewLineRenderer.Render(CodingOverlayCanvas, preview);
                     CodingCalibrationControls.ApplyPreview(TxtCodingCalibHint, preview);
                 }))
             .Handled;
@@ -109,11 +105,11 @@ public partial class PlayerWindow
 
     private bool TryFinishCodingCalibration(NormalizedPoint norm)
     {
-        var calibrationStart = _codingCalibStart;
+        var calibrationStart = _codingCalibrationState.Start;
 
         return CodingCalibrationPointerWorkflow.Finish(
             new CodingCalibrationPointerFinishRequest(
-                _codingIsCalibrating,
+                _codingCalibrationState.IsCalibrating,
                 calibrationStart != null),
             new CodingCalibrationPointerFinishActions(
                 ReleaseMouseCapture: CodingOverlayCanvas.ReleaseMouseCapture,

@@ -7,17 +7,15 @@ public partial class PlayerWindow
     private void StartCodingAiPulse()
     {
         LiveDetectionPulseWorkflow.Start(
-            new LiveDetectionPulseStartRequest(_codingAiPulseRunning),
-            new LiveDetectionPulseStartActions(
-                SetRunning: () => _codingAiPulseRunning = true,
-                StartPulse: () => LiveDetectionPulseControls.Start(CodingAiPulseRing)));
+            new LiveDetectionPulseStartRequest(_codingAiPulseStateController.IsRunning),
+            _codingAiPulseStateController.CreateStartActions(
+                () => LiveDetectionPulseControls.Start(CodingAiPulseRing)));
     }
 
     private void StopCodingAiPulse()
     {
         LiveDetectionPulseWorkflow.Stop(
-            new LiveDetectionPulseStopActions(
-                ClearRunning: () => _codingAiPulseRunning = false,
-                StopPulse: () => LiveDetectionPulseControls.Stop(CodingAiPulseRing)));
+            _codingAiPulseStateController.CreateStopActions(
+                () => LiveDetectionPulseControls.Stop(CodingAiPulseRing)));
     }
 }

@@ -1453,10 +1453,12 @@ public sealed class UiArchitectureGuardTests
         var snapshotWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionSnapshotWorkflow.cs");
         var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRunCommandWorkflow.cs");
         var pulseWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionPulseWorkflow.cs");
+        var pulseStatePath = Path.Combine(uiRoot, "Player", "LiveDetectionPulseStateController.cs");
         var codingAiStateWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionCodingAiStateWorkflow.cs");
         var uiDispatchWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerUiDispatchWorkflow.cs");
         var controlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
         var pulseControlsPath = Path.Combine(windowsRoot, "LiveDetectionPulseControls.cs");
+        var codingStatePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
 
         Assert.True(File.Exists(statusPath), "LiveDetection-Status-UI soll in ein eigenes Partial.");
         Assert.True(File.Exists(pulsePath), "Coding-AI-Pulsanimation soll aus dem Status-Orchestrator heraus.");
@@ -1464,6 +1466,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(snapshotWorkflowPath), "LiveDetection-Snapshot-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(runCommandWorkflowPath), "LiveDetection-Run-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pulseWorkflowPath), "Coding-AI-Puls-Start/Stop-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(pulseStatePath), "Coding-AI-Puls-Running-State soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(codingAiStateWorkflowPath), "Coding-AI-Status/Puls-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(uiDispatchWorkflowPath), "Status-UI-Thread-Dispatch soll ausserhalb der PlayerWindow-Partials entschieden werden.");
         Assert.True(File.Exists(controlsPath), "LiveDetection-Status-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
@@ -1472,10 +1475,12 @@ public sealed class UiArchitectureGuardTests
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var status = File.ReadAllText(statusPath);
         var pulse = File.ReadAllText(pulsePath);
+        var codingState = File.ReadAllText(codingStatePath);
         var errorWorkflow = File.ReadAllText(errorWorkflowPath);
         var snapshotWorkflow = File.ReadAllText(snapshotWorkflowPath);
         var runCommandWorkflow = File.Exists(runCommandWorkflowPath) ? File.ReadAllText(runCommandWorkflowPath) : "";
         var pulseWorkflow = File.Exists(pulseWorkflowPath) ? File.ReadAllText(pulseWorkflowPath) : "";
+        var pulseState = File.Exists(pulseStatePath) ? File.ReadAllText(pulseStatePath) : "";
         var codingAiStateWorkflow = File.Exists(codingAiStateWorkflowPath) ? File.ReadAllText(codingAiStateWorkflowPath) : "";
         var uiDispatchWorkflow = File.Exists(uiDispatchWorkflowPath) ? File.ReadAllText(uiDispatchWorkflowPath) : "";
         var controls = File.ReadAllText(controlsPath);
@@ -1495,8 +1500,16 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void UpdateDetectionStatus", status);
         Assert.Contains("LiveDetectionPulseWorkflow.Start", pulse);
         Assert.Contains("LiveDetectionPulseWorkflow.Stop", pulse);
+        Assert.DoesNotContain("_codingAiPulseRunning", pulse);
+        Assert.DoesNotContain("private bool _codingAiPulseRunning", codingState);
+        Assert.Contains("LiveDetectionPulseStateController _codingAiPulseStateController", codingState);
+        Assert.Contains("_codingAiPulseStateController.IsRunning", pulse);
+        Assert.Contains("_codingAiPulseStateController.CreateStartActions", pulse);
+        Assert.Contains("_codingAiPulseStateController.CreateStopActions", pulse);
         Assert.DoesNotContain("if (_codingAiPulseRunning)", pulse);
         Assert.DoesNotContain("_codingAiPulseRunning = true;", pulse);
+        Assert.Contains("public sealed class LiveDetectionPulseStateController", pulseState);
+        Assert.Contains("public bool IsRunning", pulseState);
         Assert.Contains("if (request.IsRunning)", pulseWorkflow);
         Assert.Contains("actions.SetRunning()", pulseWorkflow);
         Assert.Contains("actions.StartPulse()", pulseWorkflow);
@@ -5790,6 +5803,8 @@ public sealed class UiArchitectureGuardTests
         var togglePolicyPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationTogglePolicy.cs");
         var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationToggleWorkflow.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationControls.cs");
+        var stateControllerPath = Path.Combine(uiRoot, "Player", "CodingCalibrationStateController.cs");
+        var playerStatePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.State.cs");
 
         Assert.True(File.Exists(policyPath), "Manuelle Kalibrierungsberechnung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Manueller Kalibrierungsablauf muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -5798,6 +5813,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(togglePolicyPath), "Manuelle Kalibrierungs-Toggle-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(toggleWorkflowPath), "Manuelle Kalibrierungs-Toggle-Reihenfolge muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Manuelle Kalibrierungs-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(stateControllerPath), "Manueller Kalibrierungszustand soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var calibration = File.ReadAllText(calibrationPath);
@@ -5808,6 +5824,8 @@ public sealed class UiArchitectureGuardTests
         var togglePolicy = File.ReadAllText(togglePolicyPath);
         var toggleWorkflow = File.Exists(toggleWorkflowPath) ? File.ReadAllText(toggleWorkflowPath) : "";
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+        var stateController = File.Exists(stateControllerPath) ? File.ReadAllText(stateControllerPath) : "";
+        var playerState = File.ReadAllText(playerStatePath);
 
         Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
         Assert.Contains("CodingManualCalibrationApplyWorkflow.Execute", calibration);
@@ -5820,6 +5838,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingCalibrationControls.ApplyManualResult", calibration);
         Assert.Contains("CodingCalibrationControls.ApplyPreview", calibration);
         Assert.Contains("CodingCalibrationControls.HideHint", calibration);
+        Assert.Contains("_codingCalibrationState", calibration);
+        Assert.Contains("_codingCalibrationState", playerState);
+        Assert.DoesNotContain("private bool _codingIsCalibrating", playerState);
+        Assert.DoesNotContain("private NormalizedPoint? _codingCalibStart", playerState);
+        Assert.DoesNotContain("_codingPreviewLine", playerState + calibration);
         Assert.DoesNotContain("double pixelDiameter = Math.Sqrt", overlayInput + calibration);
         Assert.DoesNotContain("Math.Sqrt(Math.Pow(p2.X - p1.X, 2)", overlayInput + calibration);
         Assert.DoesNotContain("_codingIsCalibrating = !_codingIsCalibrating", overlayInput + calibration);
@@ -5845,6 +5868,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.ApplyToggleControls(state)", toggleWorkflow);
         Assert.Contains("public static void ApplyToggle", controls);
         Assert.Contains("public static void ApplyManualResult", controls);
+        Assert.Contains("public sealed class CodingCalibrationStateController", stateController);
+        Assert.Contains("public bool IsCalibrating", stateController);
+        Assert.Contains("public NormalizedPoint? Start", stateController);
+        Assert.Contains("public void Reset", stateController);
     }
 
     [Fact]

@@ -88,11 +88,7 @@ public partial class PlayerWindow
                     _codingSessionRuntimeOwner.Clear();
                     _codingOverlayRuntimeOwner.Clear();
                 },
-                ClearCodingCalibrationState: () =>
-                {
-                    _codingIsCalibrating = false;
-                    _codingCalibStart = null;
-                },
+                ClearCodingCalibrationState: _codingCalibrationState.Reset,
                 ResetFrameReadiness: ResetFrameReadiness,
                 ResetCodingOverlaySuspendState: () =>
                 {

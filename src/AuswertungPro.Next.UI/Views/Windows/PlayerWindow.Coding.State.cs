@@ -25,13 +25,11 @@ public partial class PlayerWindow
     private readonly SchemaOverlayManager _codingSchemaManager = new();
     private SchemaType? _codingSchemaType;
 
-    private bool _codingIsCalibrating;
-    private NormalizedPoint? _codingCalibStart;
-    private System.Windows.Shapes.Line? _codingPreviewLine;
+    private readonly CodingCalibrationStateController _codingCalibrationState = new();
     private bool _deactivatedByExternalWindow;
     private bool _showReferenceDn;
 
-    private bool _codingAiPulseRunning;
+    private readonly LiveDetectionPulseStateController _codingAiPulseStateController = new();
     private readonly StreckenschadenTracker _streckenTracker = new();
     private readonly CodingAiControllerOwner _codingAiRuntimeOwner = new();
     private readonly CodingFrameReadinessController _codingFrameReadinessController = new();

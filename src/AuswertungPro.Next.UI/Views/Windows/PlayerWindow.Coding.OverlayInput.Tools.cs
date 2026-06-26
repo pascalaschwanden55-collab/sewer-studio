@@ -36,11 +36,7 @@ public partial class PlayerWindow
                 schemaType,
                 levelMode),
             new CodingToolSelectionWorkflowActions(
-                ResetCalibration: () =>
-                {
-                    _codingIsCalibrating = false;
-                    _codingCalibStart = null;
-                },
+                ResetCalibration: _codingCalibrationState.Reset,
                 CloseToolsDropdown: () => { ToolsDropdownPopup.IsOpen = false; },
                 SetActiveToolName: activeToolName => _activeCodingToolName = activeToolName,
                 SetActiveLevelMode: mode => { _codingOverlayToolHost.SetActiveLevelMode(mode); },
@@ -89,7 +85,7 @@ public partial class PlayerWindow
             CodingOverlayCanvas,
             CodingOverlayCursorPolicy.ShouldUseCrossCursor(
                 CodingOverlayPopup.IsOpen,
-                _codingIsCalibrating,
+                _codingCalibrationState.IsCalibrating,
                 activeTool));
     }
 }
