@@ -60,6 +60,38 @@ public sealed class PlayerDispatcherSchedulerTests
         });
     }
 
+    [Fact]
+    public void Invoke_dispatches_action_synchronously()
+    {
+        RunOnStaThread(() =>
+        {
+            var ran = false;
+
+            PlayerDispatcherScheduler.Invoke(
+                Dispatcher.CurrentDispatcher,
+                () => ran = true);
+
+            Assert.True(ran);
+        });
+    }
+
+    [Fact]
+    public void Invoke_throws_for_null_dispatcher()
+    {
+        Assert.Throws<ArgumentNullException>(() => PlayerDispatcherScheduler.Invoke(null!, () => { }));
+    }
+
+    [Fact]
+    public void Invoke_throws_for_null_action()
+    {
+        RunOnStaThread(() =>
+        {
+            Assert.Throws<ArgumentNullException>(() => PlayerDispatcherScheduler.Invoke(
+                Dispatcher.CurrentDispatcher,
+                null!));
+        });
+    }
+
     private static void RunOnStaThread(Action action)
     {
         Exception? exception = null;

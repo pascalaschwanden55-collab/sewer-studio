@@ -1649,6 +1649,10 @@ public sealed class UiArchitectureGuardTests
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var status = File.ReadAllText(statusPath);
+        var playerWindowPartials = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs")
+                .Select(File.ReadAllText));
         var pulse = File.ReadAllText(pulsePath);
         var codingState = File.ReadAllText(codingStatePath);
         var errorWorkflow = File.ReadAllText(errorWorkflowPath);
@@ -1698,9 +1702,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.StopPulse()", codingAiStateWorkflow);
         Assert.Contains("PlayerUiDispatchWorkflow.Execute", status);
         Assert.Contains("HasDispatcherAccess: Dispatcher.CheckAccess()", status);
-        Assert.Contains("DispatchToUi: action => Dispatcher.Invoke(action)", status);
+        Assert.Contains("InvokeOnUi: action => PlayerDispatcherScheduler.Invoke(Dispatcher, action)", liveDetection);
+        Assert.Contains("DispatchToUi: action => PlayerDispatcherScheduler.Invoke(Dispatcher, action)", status);
+        Assert.DoesNotContain("Dispatcher.Invoke(action)", playerWindowPartials);
         Assert.DoesNotContain("if (!Dispatcher.CheckAccess())", status);
         Assert.DoesNotContain("Dispatcher.Invoke(() => Set", status);
+        Assert.Contains("public static void Invoke", File.ReadAllText(Path.Combine(windowsRoot, "PlayerDispatcherScheduler.cs")));
         Assert.Contains("actions.DispatchToUi(actions.Apply)", uiDispatchWorkflow);
         Assert.Contains("actions.Apply()", uiDispatchWorkflow);
         Assert.Contains("LiveDetectionStatusControls.ShowLiveDetectionBadge", status);

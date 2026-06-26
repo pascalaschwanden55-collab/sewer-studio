@@ -38,7 +38,7 @@ public partial class PlayerWindow
                 IsClosing: () => _closing,
                 IsPlaybackDisposed: () => _playbackDisposed,
                 IsDetecting: () => _liveDetectionController.IsDetecting,
-                InvokeOnUi: action => Dispatcher.Invoke(action),
+                InvokeOnUi: action => PlayerDispatcherScheduler.Invoke(Dispatcher, action),
                 ApplyDetectionResult: _liveDetectionController.ApplyDetectionResult,
                 RenderDetectionOverlay: RenderDetectionOverlay,
                 UpdateDetectionStatus: UpdateDetectionStatus,

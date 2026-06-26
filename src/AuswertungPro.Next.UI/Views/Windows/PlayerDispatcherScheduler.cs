@@ -14,6 +14,14 @@ public static class PlayerDispatcherScheduler
     public static DispatcherOperation ScheduleNormal(Dispatcher dispatcher, Action action)
         => Schedule(dispatcher, DispatcherPriority.Normal, action);
 
+    public static void Invoke(Dispatcher dispatcher, Action action)
+    {
+        ArgumentNullException.ThrowIfNull(dispatcher);
+        ArgumentNullException.ThrowIfNull(action);
+
+        dispatcher.Invoke(action);
+    }
+
     private static DispatcherOperation Schedule(
         Dispatcher dispatcher,
         DispatcherPriority priority,

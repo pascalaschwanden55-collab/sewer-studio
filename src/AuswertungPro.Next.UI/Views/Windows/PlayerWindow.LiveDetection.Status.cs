@@ -46,7 +46,7 @@ public partial class PlayerWindow
                 HasDispatcherAccess: Dispatcher.CheckAccess()),
             new PlayerUiDispatchWorkflowActions(
                 Apply: apply,
-                DispatchToUi: action => Dispatcher.Invoke(action)));
+                DispatchToUi: action => PlayerDispatcherScheduler.Invoke(Dispatcher, action)));
 
     private void UpdateDetectionStatus(LiveDetection result)
     {
