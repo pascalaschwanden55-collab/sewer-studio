@@ -21,6 +21,7 @@ public partial class PlayerWindow
     private readonly CodingFrameReadinessController _codingFrameReadinessController = new();
     private readonly CodingLiveAiTimerControllerOwner _codingLiveAiTimerOwner = new();
     private readonly CodingOsdMeterController _codingOsdMeterController = new();
+    private readonly CodingPhotoCaptureServicesOwner _codingPhotoCaptureServicesOwner = new();
     private readonly CodingSidePanelControllerSet _codingSidePanelControllers = new();
     private readonly CodingConfirmationPanelControlsOwner _codingConfirmationPanelControls = new();
     private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner;

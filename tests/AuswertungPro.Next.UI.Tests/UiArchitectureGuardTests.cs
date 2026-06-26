@@ -2867,22 +2867,30 @@ public sealed class UiArchitectureGuardTests
         var capturePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Photos.Capture.cs");
         var captureServicePath = Path.Combine(uiRoot, "Ai", "CodingSnapshotFileCaptureService.cs");
         var captureServicesPath = Path.Combine(uiRoot, "Ai", "CodingPhotoCaptureServices.cs");
+        var captureServicesOwnerPath = Path.Combine(uiRoot, "Player", "CodingPhotoCaptureServicesOwner.cs");
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingSnapshotTargetPolicy.cs");
 
         Assert.True(File.Exists(policyPath), "Snapshot-Zielpfad fuer Coding-Fotos muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(captureServicePath), "Snapshot-Datei-Capture und Warten muss ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(captureServicesPath), "Snapshot-Service-Erzeugung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(captureServicesOwnerPath), "Snapshot-Service-Besitz soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var photos = File.ReadAllText(photosPath);
         var capture = File.Exists(capturePath) ? File.ReadAllText(capturePath) : string.Empty;
         var captureService = File.ReadAllText(captureServicePath);
         var captureServices = File.Exists(captureServicesPath) ? File.ReadAllText(captureServicesPath) : string.Empty;
+        var captureServicesOwner = File.Exists(captureServicesOwnerPath) ? File.ReadAllText(captureServicesOwnerPath) : string.Empty;
         var policy = File.ReadAllText(policyPath);
         var photoText = photos + capture;
 
         Assert.Contains("CodingSnapshotTargetPolicy.Build", photoText);
         Assert.DoesNotContain("CodingSnapshotFileCaptureServiceFactory.Create", capture);
         Assert.Contains("CodingSnapshotFileCaptureServiceFactory.Create", captureServices);
+        Assert.Contains("CodingPhotoCaptureServices", captureServicesOwner);
+        Assert.Contains("_codingPhotoCaptureServicesOwner.SnapshotFileCaptureService", capture);
+        Assert.DoesNotContain("new CodingPhotoCaptureServices()", capture);
+        Assert.DoesNotContain("private CodingPhotoCaptureServices? _codingPhotoCaptureServices", capture);
+        Assert.DoesNotContain("??= new CodingPhotoCaptureServices", capture);
         Assert.DoesNotContain("new CodingSnapshotFileCaptureService", capture);
         Assert.DoesNotContain("Path.GetDirectoryName(_videoPath)", photoText);
         Assert.DoesNotContain("DateTimeOffset.Now.ToString(\"HHmmss\")", photoText);
