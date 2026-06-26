@@ -16,10 +16,10 @@ public partial class PlayerWindow
         await CodingAcceptGreenMatchesCommandWorkflow.ExecuteAsync(
             new CodingAcceptGreenMatchesCommandRequest(
                 _codingSessionHost.HasViewModel,
-                _lastCodingMatch),
+                _codingProtocolMatchState.LastMatch),
             new CodingAcceptGreenMatchesCommandActions(
                 RunProtocolMatch: RunCodingProtocolMatch,
-                GetCurrentRouting: () => _lastCodingMatch,
+                GetCurrentRouting: () => _codingProtocolMatchState.LastMatch,
                 AcceptGreenMatchesAsync: routing => CodingProtocolGreenMatchTrainingRunner.AcceptGreenMatchesAsync(
                     routing,
                     _codingImportEvents,

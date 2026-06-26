@@ -18,10 +18,10 @@ public partial class PlayerWindow
     {
         CodingModeEnterWorkflow.Execute(
             new CodingModeEnterWorkflowRequest(
-                _isCodingMode,
+                _codingModeState.IsCodingMode,
                 _haltungRecord is not null),
             new CodingModeEnterWorkflowActions(
-                SetCodingMode: value => _isCodingMode = value,
+                SetCodingMode: _codingModeState.Set,
                 ResetFrameReadiness: ResetFrameReadiness,
                 PrepareCodingModePlayback: PrepareCodingModePlayback,
                 CreateCodingSessionState: CreateCodingSessionState,

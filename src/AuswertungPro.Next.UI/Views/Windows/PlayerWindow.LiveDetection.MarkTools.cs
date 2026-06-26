@@ -8,7 +8,7 @@ public partial class PlayerWindow
 {
     private void ManualMark_Click(object sender, RoutedEventArgs e)
     {
-        _markToolControls.ToggleManualMarkPopup(_isCodingMode);
+        _markToolControls.ToggleManualMarkPopup(_codingModeState.IsCodingMode);
     }
 
     private void ToolsDropdown_Click(object sender, RoutedEventArgs e)
@@ -73,7 +73,7 @@ public partial class PlayerWindow
     {
         LiveDetectionManualMarkDeactivationWorkflow.Execute(
             new LiveDetectionManualMarkDeactivationWorkflowRequest(
-                _isCodingMode,
+                _codingModeState.IsCodingMode,
                 _liveDetectionController.IsDetecting),
             new LiveDetectionManualMarkDeactivationWorkflowActions(
                 SetMarkToolType: _liveDetectionController.SetMarkToolType,

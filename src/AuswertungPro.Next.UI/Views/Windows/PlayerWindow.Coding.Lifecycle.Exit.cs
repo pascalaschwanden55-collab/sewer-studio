@@ -9,9 +9,9 @@ public partial class PlayerWindow
     private void ExitCodingMode()
     {
         CodingModeExitCommandWorkflow.Execute(
-            new CodingModeExitCommandRequest(_isCodingMode),
+            new CodingModeExitCommandRequest(_codingModeState.IsCodingMode),
             new CodingModeExitCommandActions(
-                SetCodingMode: enabled => _isCodingMode = enabled,
+                SetCodingMode: _codingModeState.Set,
                 FinalizeExit: FinalizeCodingModeExit,
                 Teardown: TeardownCodingModeExit));
     }
@@ -43,8 +43,11 @@ public partial class PlayerWindow
                 StopPipelineHealthMonitor: StopPipelineHealthMonitor,
                 DisposeAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation,
                 ClearImportReferenceEvents: () => CodingImportReferenceStateResetter.ClearEvents(_codingImportEvents),
-                ResetProtocolMatchState: () => _lastCodingMatch = CodingProtocolMatchStateResetter.Reset(_codingProtocolMatchBuckets),
-                UpdateProtocolMatchSummary: () => UpdateCodingProtocolMatchSummary(_lastCodingMatch),
+                ResetProtocolMatchState: () =>
+                {
+                    _codingProtocolMatchState.Reset();
+                },
+                UpdateProtocolMatchSummary: () => UpdateCodingProtocolMatchSummary(_codingProtocolMatchState.LastMatch),
                 ClearImportEventsListSource: () => LstImportEvents.ItemsSource = null,
                 HideConfirmationPanels: () => CodingModeChromeControls.HideConfirmationPanels(
                     CodingConfirmationPanel,

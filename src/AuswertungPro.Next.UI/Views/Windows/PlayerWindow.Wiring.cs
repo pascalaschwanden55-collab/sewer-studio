@@ -98,7 +98,7 @@ public partial class PlayerWindow
                 IsMainWindowMinimized: main?.WindowState == WindowState.Minimized),
             new PlayerWindowClosedWorkflowActions(
                 ClearLastOpened: () => _lastOpened = null,
-                ExitCodingMode: () => _isCodingMode = false,
+                ExitCodingMode: () => _codingModeState.Set(false),
                 StopCodingOsdTimer: StopCodingOsdTimer,
                 DisposeCodingOsdMeterService: DisposeCodingOsdMeterService,
                 DisposeCodingAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation,

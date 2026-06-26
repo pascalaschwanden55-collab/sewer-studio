@@ -34,7 +34,7 @@ public partial class PlayerWindow
     {
         var result = CodingUnappliedChangesCloseWorkflow.Execute(
             new CodingUnappliedChangesCloseWorkflowRequest(
-                IsCodingMode: _isCodingMode,
+                IsCodingMode: _codingModeState.IsCodingMode,
                 HasCodingViewModel: _codingSessionHost.HasViewModel,
                 Events: _codingSessionHost.Events,
                 BaselineSignature: _codingBaselineSignatureState.BaselineSignature),

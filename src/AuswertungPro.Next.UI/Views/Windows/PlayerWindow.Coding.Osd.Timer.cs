@@ -11,7 +11,7 @@ public partial class PlayerWindow
             () => new CodingOsdTimerContext(
                 IsClosing: _closing,
                 HasPlayer: !_playbackDisposed,
-                IsCodingMode: _isCodingMode,
+                IsCodingMode: _codingModeState.IsCodingMode,
                 IsCodingAnalyzing: _codingAiRuntimeOwner.Controller.IsAnalyzing,
                 HasLiveDetection: _codingAiRuntimeOwner.Controller.LiveDetection is not null),
             CodingReadOsdMeterAsync);

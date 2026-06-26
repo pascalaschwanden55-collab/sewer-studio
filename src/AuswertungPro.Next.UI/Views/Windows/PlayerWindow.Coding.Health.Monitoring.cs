@@ -16,7 +16,7 @@ public partial class PlayerWindow
                 Dispatcher.HasShutdownStarted,
                 Dispatcher.CheckAccess()),
             new CodingPipelineHealthChangeWorkflowActions(
-                ShouldApply: () => !_closing && _isCodingMode && _codingAiRuntimeOwner.Controller.HasHealthMonitor,
+                ShouldApply: () => !_closing && _codingModeState.IsCodingMode && _codingAiRuntimeOwner.Controller.HasHealthMonitor,
                 DispatchToUi: action => Dispatcher.BeginInvoke(action),
                 ApplyPipelineHealth: () => ApplyPipelineHealth(status)));
     }

@@ -332,17 +332,24 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var codingModeStatePath = Path.Combine(uiRoot, "Player", "CodingModeStateController.cs");
 
         Assert.True(File.Exists(statePath), "Coding-Feldzustand soll aus dem allgemeinen Coding-Partial heraus.");
+        Assert.True(File.Exists(codingModeStatePath), "Coding-Modus-Zustand soll nicht mehr als Rohfeld im PlayerWindow liegen.");
 
         var coding = File.ReadAllText(codingPath);
         var state = File.ReadAllText(statePath);
+        var codingModeState = File.Exists(codingModeStatePath) ? File.ReadAllText(codingModeStatePath) : "";
 
         Assert.DoesNotContain("private bool _isCodingMode", coding);
         Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", coding);
         Assert.DoesNotContain("private enum EingabemarkerPhase", coding);
         Assert.DoesNotContain("private readonly ObservableCollection<CodingEvent> _codingImportEvents", coding);
-        Assert.Contains("private bool _isCodingMode", state);
+        Assert.DoesNotContain("private bool _isCodingMode", state);
+        Assert.Contains("private readonly CodingModeStateController _codingModeState = new();", state);
+        Assert.Contains("public sealed class CodingModeStateController", codingModeState);
+        Assert.Contains("public bool IsCodingMode", codingModeState);
+        Assert.Contains("public void Set", codingModeState);
         Assert.Contains("private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner", state);
         Assert.Contains("private readonly CodingSessionServiceOwner _codingSessionRuntimeOwner", state);
         Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", state);
@@ -3023,7 +3030,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingImportReferenceInitializationWorkflow.Execute", coding);
         Assert.Contains("CodingImportReferenceTransfer.MoveExistingEventsToImportReference", coding);
         Assert.Contains("CodingSessionEventResetter.ClearActiveSessionEvents", coding);
-        Assert.Contains("CodingProtocolMatchStateResetter.Reset", coding);
+        Assert.Contains("_codingProtocolMatchState.Reset", coding);
         Assert.Contains("_codingSessionHost", coding);
         Assert.DoesNotContain("_codingVm", coding);
         Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel)", coding);
@@ -7023,7 +7030,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.CreateCodingSessionState()", enterWorkflow);
         Assert.Contains("actions.InitializeCodingImportReferences()", enterWorkflow);
         Assert.Contains("CodingImportReferenceStateResetter.ClearEvents", exit);
-        Assert.Contains("CodingProtocolMatchStateResetter.Reset", exit);
+        Assert.Contains("_codingProtocolMatchState.Reset", exit);
         Assert.DoesNotContain("_lastCodingMatch = null", exit);
         Assert.DoesNotContain("_codingProtocolMatchBuckets.Clear()", exit);
         Assert.DoesNotContain("_codingImportEvents.Clear()", exit);
@@ -7195,6 +7202,47 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public QualityGateResult? GateResult", pendingState);
         Assert.Contains("public void Store", pendingState);
         Assert.Contains("public void Clear", pendingState);
+    }
+
+    [Fact]
+    public void PlayerWindow_coding_protocol_match_state_lives_in_state_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var protocolMatchPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.cs");
+        var highlightPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Highlighting.cs");
+        var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Training.cs");
+        var exitPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var importReferencePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
+        var protocolStatePath = Path.Combine(uiRoot, "Player", "CodingProtocolMatchStateController.cs");
+
+        Assert.True(File.Exists(protocolStatePath), "Coding-Protocol-Match-State soll nicht mehr als Rohfelder im PlayerWindow liegen.");
+
+        var state = File.ReadAllText(statePath);
+        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var highlight = File.ReadAllText(highlightPath);
+        var training = File.ReadAllText(trainingPath);
+        var exit = File.ReadAllText(exitPath);
+        var importReference = File.ReadAllText(importReferencePath);
+        var protocolState = File.Exists(protocolStatePath) ? File.ReadAllText(protocolStatePath) : "";
+
+        Assert.DoesNotContain("private CodingMatchRouting? _lastCodingMatch;", state);
+        Assert.DoesNotContain("private readonly Dictionary<Guid, CodingProtocolMatchBucket> _codingProtocolMatchBuckets", state);
+        Assert.Contains("private readonly CodingProtocolMatchStateController _codingProtocolMatchState = new();", state);
+        Assert.Contains("_codingProtocolMatchState.Buckets", protocolMatch);
+        Assert.Contains("StoreMatch: _codingProtocolMatchState.Store", protocolMatch);
+        Assert.Contains("_codingProtocolMatchState.TryGetBucket", highlight);
+        Assert.Contains("_codingProtocolMatchState.LastMatch", training);
+        Assert.Contains("_codingProtocolMatchState.Reset", exit);
+        Assert.Contains("_codingProtocolMatchState.Reset", importReference);
+        Assert.Contains("public sealed class CodingProtocolMatchStateController", protocolState);
+        Assert.Contains("public CodingMatchRouting? LastMatch", protocolState);
+        Assert.Contains("public IDictionary<Guid, CodingProtocolMatchBucket> Buckets", protocolState);
+        Assert.Contains("public void Store", protocolState);
+        Assert.Contains("public CodingMatchRouting? Reset", protocolState);
+        Assert.Contains("public bool TryGetBucket", protocolState);
     }
 
     [Fact]

@@ -12,7 +12,7 @@ public partial class PlayerWindow
                 HasCodingViewModel: _codingSessionHost.HasViewModel,
                 HasEventCollection: eventCollection is not null),
             new CodingImportReferenceInitializationWorkflowActions(
-                ResetProtocolMatchState: () => _lastCodingMatch = CodingProtocolMatchStateResetter.Reset(_codingProtocolMatchBuckets),
+                ResetProtocolMatchState: _codingProtocolMatchState.Reset,
                 UpdateProtocolMatchSummary: UpdateCodingProtocolMatchSummary,
                 MoveExistingEventsToImportReference: () => CodingImportReferenceTransfer.MoveExistingEventsToImportReference(
                     eventCollection!,

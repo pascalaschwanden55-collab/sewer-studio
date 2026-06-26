@@ -23,7 +23,7 @@ public partial class PlayerWindow
                         return CodingProtocolMatchListHighlightItemOutcome.Skipped;
 
                     if (listBox.Items[index] is not CodingEvent ev
-                        || !_codingProtocolMatchBuckets.TryGetValue(ev.Entry.EntryId, out var bucket))
+                        || !_codingProtocolMatchState.TryGetBucket(ev.Entry.EntryId, out var bucket))
                     {
                         var emptyBadge = FindCodingChild<Border>(container, "CodingMatchBadge");
                         CodingProtocolMatchHighlightControls.Clear(container, emptyBadge);

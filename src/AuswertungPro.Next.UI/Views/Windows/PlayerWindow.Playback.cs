@@ -92,7 +92,7 @@ public partial class PlayerWindow
         => PlayerUiUpdateWorkflow.Execute(
             new PlayerUiUpdateWorkflowRequest(
                 _positionSliderStateController.IsDragging,
-                _isCodingMode,
+                _codingModeState.IsCodingMode,
                 _playerTimelineHost.TimeMilliseconds ?? 0,
                 _playerTimelineHost.LengthMilliseconds ?? 0),
             new PlayerUiUpdateWorkflowActions(

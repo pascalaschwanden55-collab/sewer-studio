@@ -43,8 +43,8 @@ public partial class PlayerWindow
                 RunMatch: () => CodingProtocolMatchRunner.Run(
                     _codingImportEvents,
                     _codingSessionHost.Events,
-                    _codingProtocolMatchBuckets),
-                StoreMatch: routing => _lastCodingMatch = routing,
+                    _codingProtocolMatchState.Buckets),
+                StoreMatch: _codingProtocolMatchState.Store,
                 UpdateSummary: UpdateCodingProtocolMatchSummary,
                 RefreshEvents: RefreshCodingEventsList,
                 ScheduleHighlights: () =>

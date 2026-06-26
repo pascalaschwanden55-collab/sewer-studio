@@ -51,7 +51,7 @@ public partial class PlayerWindow
     {
         PlayerDetectionShortcutWorkflow.Execute(
             new PlayerDetectionShortcutWorkflowRequest(
-                _isCodingMode,
+                _codingModeState.IsCodingMode,
                 BtnCodingLiveAi.IsChecked == true,
                 LiveDetectionButton.IsChecked == true),
             new PlayerDetectionShortcutWorkflowActions(

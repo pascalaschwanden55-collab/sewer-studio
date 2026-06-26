@@ -19,7 +19,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private bool _isCodingMode;
+    private readonly CodingModeStateController _codingModeState = new();
     private readonly CodingSessionServiceOwner _codingSessionRuntimeOwner = new();
     private readonly CodingOverlayServiceOwner _codingOverlayRuntimeOwner = new();
     private readonly SchemaOverlayManager _codingSchemaManager = new();
@@ -53,8 +53,7 @@ public partial class PlayerWindow
     private System.Windows.Shapes.Rectangle? _eingabemarkerPreviewRect;
 
     private readonly ObservableCollection<CodingEvent> _codingImportEvents = new();
-    private CodingMatchRouting? _lastCodingMatch;
-    private readonly Dictionary<Guid, CodingProtocolMatchBucket> _codingProtocolMatchBuckets = new();
+    private readonly CodingProtocolMatchStateController _codingProtocolMatchState = new();
 
     private readonly CodingPendingConfirmationStateController _codingPendingConfirmationState = new();
 
