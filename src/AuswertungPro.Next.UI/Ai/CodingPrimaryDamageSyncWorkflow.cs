@@ -10,6 +10,15 @@ public static class CodingPrimaryDamageSyncWorkflow
 {
     public static void Sync(
         HaltungRecord record,
+        ProtocolDocument document)
+        => Sync(
+            record,
+            document,
+            new CodingPrimaryDamageSyncWorkflowActions(
+                CreateSynchronizer: CodingPrimaryDamageSynchronizerFactory.Create));
+
+    public static void Sync(
+        HaltungRecord record,
         ProtocolDocument document,
         CodingPrimaryDamageSyncWorkflowActions actions)
     {

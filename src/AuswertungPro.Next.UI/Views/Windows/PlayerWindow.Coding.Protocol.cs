@@ -50,9 +50,7 @@ public partial class PlayerWindow
             new CodingPrimaryDamageSyncCommandActions(
                 SyncPrimaryDamages: () => CodingPrimaryDamageSyncWorkflow.Sync(
                     _haltungRecord!,
-                    doc,
-                    new CodingPrimaryDamageSyncWorkflowActions(
-                        CreateSynchronizer: CodingPrimaryDamageSynchronizerFactory.Create))));
+                    doc)));
     }
 
     // --- Coding: Protokoll-Vorschau (nachtraeglich bearbeitbar) ---

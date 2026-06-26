@@ -606,13 +606,14 @@ public sealed class UiArchitectureGuardTests
         var synchronizerFactory = File.ReadAllText(synchronizerFactoryPath);
         var syncWorkflow = File.Exists(syncWorkflowPath) ? File.ReadAllText(syncWorkflowPath) : "";
 
-        Assert.Contains("CodingPrimaryDamageSynchronizerFactory.Create", protocol);
+        Assert.DoesNotContain("CodingPrimaryDamageSynchronizerFactory.Create", protocol);
         Assert.Contains("CodingPrimaryDamageSyncWorkflow.Sync", protocol);
         Assert.DoesNotContain(".Sync(_haltungRecord!, doc)", protocol);
         Assert.DoesNotContain("CodingPrimaryDamageTextBuilder.Build", protocol);
         Assert.DoesNotContain("SetFieldValue(\"Primaere_Schaeden\"", protocol);
         Assert.Contains("DataPageProtocolObservationMapper.BuildPrimaryDamageLines", policy);
         Assert.Contains("CodingPrimaryDamageTextBuilder.Build", synchronizerFactory);
+        Assert.Contains("CodingPrimaryDamageSynchronizerFactory.Create", syncWorkflow);
         Assert.Contains("synchronizer.Sync(record, document)", syncWorkflow);
         Assert.Contains("SetFieldValue(\"Primaere_Schaeden\"", synchronizer);
         Assert.DoesNotContain("new HashSet<string>", protocol);
@@ -4375,7 +4376,7 @@ public sealed class UiArchitectureGuardTests
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
 
         Assert.Contains("CodingPrimaryDamageSyncCommandWorkflow.Execute", protocol);
-        Assert.Contains("CodingPrimaryDamageSynchronizerFactory.Create", protocol);
+        Assert.DoesNotContain("CodingPrimaryDamageSynchronizerFactory.Create", protocol);
         Assert.Contains("CodingPrimaryDamageSyncWorkflow.Sync", protocol);
         Assert.DoesNotContain(".Sync(_haltungRecord!, doc)", protocol);
         Assert.DoesNotContain("if (_haltungRecord == null) return", protocol);
@@ -4387,6 +4388,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static string Build", policy);
         Assert.Contains("SetFieldValue(\"Primaere_Schaeden\"", synchronizer);
         Assert.Contains("CodingPrimaryDamageTextBuilder.Build", synchronizerFactory);
+        Assert.Contains("CodingPrimaryDamageSynchronizerFactory.Create", syncWorkflow);
         Assert.Contains("synchronizer.Sync(record, document)", syncWorkflow);
     }
 

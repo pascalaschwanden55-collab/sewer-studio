@@ -7,6 +7,24 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingPrimaryDamageSyncWorkflowTests
 {
     [Fact]
+    public void Sync_offers_default_synchronizer_wiring()
+    {
+        var overload = typeof(CodingPrimaryDamageSyncWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingPrimaryDamageSyncWorkflow.Sync) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual(
+                    [
+                        typeof(HaltungRecord),
+                        typeof(ProtocolDocument),
+                    ]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
     public void Sync_creates_synchronizer_and_delegates_record_and_document()
     {
         var calls = new List<string>();
