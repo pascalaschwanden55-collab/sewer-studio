@@ -43,7 +43,7 @@ public partial class PlayerWindow
     private void RunStatusUi(Action apply)
         => PlayerUiDispatchWorkflow.Execute(
             new PlayerUiDispatchWorkflowRequest(
-                HasDispatcherAccess: Dispatcher.CheckAccess()),
+                HasDispatcherAccess: PlayerDispatcherScheduler.HasAccess(Dispatcher)),
             new PlayerUiDispatchWorkflowActions(
                 Apply: apply,
                 DispatchToUi: action => PlayerDispatcherScheduler.Invoke(Dispatcher, action)));

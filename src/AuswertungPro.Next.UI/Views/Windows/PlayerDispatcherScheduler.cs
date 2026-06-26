@@ -22,6 +22,20 @@ public static class PlayerDispatcherScheduler
         dispatcher.Invoke(action);
     }
 
+    public static bool HasAccess(Dispatcher dispatcher)
+    {
+        ArgumentNullException.ThrowIfNull(dispatcher);
+
+        return dispatcher.CheckAccess();
+    }
+
+    public static bool HasShutdownStarted(Dispatcher dispatcher)
+    {
+        ArgumentNullException.ThrowIfNull(dispatcher);
+
+        return dispatcher.HasShutdownStarted;
+    }
+
     private static DispatcherOperation Schedule(
         Dispatcher dispatcher,
         DispatcherPriority priority,

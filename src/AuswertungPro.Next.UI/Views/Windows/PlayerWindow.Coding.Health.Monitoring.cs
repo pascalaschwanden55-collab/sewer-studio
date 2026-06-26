@@ -12,8 +12,8 @@ public partial class PlayerWindow
         CodingPipelineHealthChangeWorkflow.Execute(
             new CodingPipelineHealthChangeWorkflowRequest(
                 _closing,
-                Dispatcher.HasShutdownStarted,
-                Dispatcher.CheckAccess()),
+                PlayerDispatcherScheduler.HasShutdownStarted(Dispatcher),
+                PlayerDispatcherScheduler.HasAccess(Dispatcher)),
             new CodingPipelineHealthChangeWorkflowActions(
                 ShouldApply: () => !_closing && _codingModeState.IsCodingMode && _codingAiRuntimeOwner.Controller.HasHealthMonitor,
                 DispatchToUi: action => PlayerDispatcherScheduler.ScheduleNormal(Dispatcher, action),

@@ -92,6 +92,36 @@ public sealed class PlayerDispatcherSchedulerTests
         });
     }
 
+    [Fact]
+    public void HasAccess_returns_dispatcher_access_state()
+    {
+        RunOnStaThread(() =>
+        {
+            Assert.True(PlayerDispatcherScheduler.HasAccess(Dispatcher.CurrentDispatcher));
+        });
+    }
+
+    [Fact]
+    public void HasAccess_throws_for_null_dispatcher()
+    {
+        Assert.Throws<ArgumentNullException>(() => PlayerDispatcherScheduler.HasAccess(null!));
+    }
+
+    [Fact]
+    public void HasShutdownStarted_returns_dispatcher_shutdown_state()
+    {
+        RunOnStaThread(() =>
+        {
+            Assert.False(PlayerDispatcherScheduler.HasShutdownStarted(Dispatcher.CurrentDispatcher));
+        });
+    }
+
+    [Fact]
+    public void HasShutdownStarted_throws_for_null_dispatcher()
+    {
+        Assert.Throws<ArgumentNullException>(() => PlayerDispatcherScheduler.HasShutdownStarted(null!));
+    }
+
     private static void RunOnStaThread(Action action)
     {
         Exception? exception = null;
