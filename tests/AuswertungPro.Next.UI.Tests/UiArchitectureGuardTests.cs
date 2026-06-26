@@ -440,6 +440,22 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_partials_do_not_import_ui_services_namespace()
+    {
+        var root = FindRepositoryRoot();
+        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+
+        var offenders = Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs")
+            .Where(path => File.ReadAllText(path).Contains("using AuswertungPro.Next.UI.Services;", StringComparison.Ordinal))
+            .Select(Path.GetFileName)
+            .ToArray();
+
+        Assert.True(
+            offenders.Length == 0,
+            "PlayerWindow-Partials sollen UI.Services nicht direkt importieren:\n" + string.Join("\n", offenders));
+    }
+
+    [Fact]
     public void PlayerWindow_coding_state_fields_live_in_coding_state_partial()
     {
         var root = FindRepositoryRoot();
