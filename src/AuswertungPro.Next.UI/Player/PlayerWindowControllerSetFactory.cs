@@ -12,7 +12,8 @@ public sealed record PlayerWindowControllerSet(
     PlayerPositionControls PositionControls,
     PlayerSpeedControls SpeedControls,
     PlayerMarkToolControls MarkToolControls,
-    CodingOverlayRenderController CodingOverlayRenderController);
+    CodingOverlayRenderController CodingOverlayRenderController,
+    LiveDetectionController LiveDetectionController);
 
 public sealed record PlayerWindowControllerSetControls(
     Canvas DamageMarkerCanvas,
@@ -102,6 +103,7 @@ public static class PlayerWindowControllerSetFactory
                 controls.CodingOverlayCanvas),
             new CodingOverlayRenderController(
                 new CanvasOverlaySurface(controls.CodingOverlayCanvas),
-                new DelegateOverlayCoordinateMapper(dependencies.MapCodingOverlayPoint)));
+                new DelegateOverlayCoordinateMapper(dependencies.MapCodingOverlayPoint)),
+            new LiveDetectionController());
     }
 }

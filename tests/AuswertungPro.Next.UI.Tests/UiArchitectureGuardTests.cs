@@ -405,13 +405,14 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private readonly DamageMarkerController _damageMarkerController", state);
         Assert.DoesNotContain("private readonly QuickScanController _quickScanController", state);
         Assert.DoesNotContain("private readonly CodingOverlayRenderController _codingOverlayRenderController", state);
+        Assert.DoesNotContain("private readonly LiveDetectionController _liveDetectionController = new();", state);
         Assert.Contains("private PlayerPositionControls _positionControls => _playerControllers.PositionControls", state);
         Assert.Contains("private PlayerSpeedControls _speedControls => _playerControllers.SpeedControls", state);
         Assert.Contains("private PlayerMarkToolControls _markToolControls => _playerControllers.MarkToolControls", state);
         Assert.Contains("private DamageMarkerController _damageMarkerController => _playerControllers.DamageMarkerController", state);
         Assert.Contains("private QuickScanController _quickScanController => _playerControllers.QuickScanController", state);
         Assert.Contains("private CodingOverlayRenderController _codingOverlayRenderController => _playerControllers.CodingOverlayRenderController", state);
-        Assert.Contains("private readonly LiveDetectionController _liveDetectionController = new();", state);
+        Assert.Contains("private LiveDetectionController _liveDetectionController => _playerControllers.LiveDetectionController", state);
         Assert.Contains("private readonly PlayerWindowPlaybackContext _playbackContext", state);
         Assert.Contains("private readonly PlayerWindowProtocolContext _protocolContext", state);
         Assert.Contains("private readonly PlayerWindowShutdownStateController _shutdownState = new();", state);

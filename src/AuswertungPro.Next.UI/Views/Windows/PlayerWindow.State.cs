@@ -15,7 +15,6 @@ public partial class PlayerWindow
     private readonly PlayerWindowTimerController _playerTimerController;
 
     // Live detection state.
-    private readonly LiveDetectionController _liveDetectionController = new();
     private readonly DetectionConfirmationBuffer _detectionConfirmationBuffer = new();
 
     // Protocol integration state.
@@ -45,4 +44,6 @@ public partial class PlayerWindow
     private QuickScanController _quickScanController => _playerControllers.QuickScanController;
 
     private CodingOverlayRenderController _codingOverlayRenderController => _playerControllers.CodingOverlayRenderController;
+
+    private LiveDetectionController _liveDetectionController => _playerControllers.LiveDetectionController;
 }
