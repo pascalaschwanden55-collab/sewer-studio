@@ -34,7 +34,7 @@ public partial class PlayerWindow
     private readonly StreckenschadenTracker _streckenTracker = new();
     private readonly CodingAiControllerOwner _codingAiRuntimeOwner = new();
     private readonly CodingFrameReadinessController _codingFrameReadinessController = new();
-    private CodingLiveAiTimerController? _codingLiveAiTimers;
+    private readonly CodingLiveAiTimerControllerOwner _codingLiveAiTimerOwner = new();
     private readonly CodingOsdMeterController _codingOsdMeterController = new();
     private CodingEventsListControls _codingEventsListControls = null!;
     private CodingStatisticsControls _codingStatisticsControls = null!;

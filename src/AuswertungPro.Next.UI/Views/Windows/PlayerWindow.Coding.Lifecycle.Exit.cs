@@ -32,13 +32,13 @@ public partial class PlayerWindow
     private void TeardownCodingModeExit()
         => CodingModeExitTeardownWorkflow.Execute(
             new CodingModeExitTeardownWorkflowRequest(
-                HasCodingLiveAiTimers: _codingLiveAiTimers is not null,
+                HasCodingLiveAiTimers: _codingLiveAiTimerOwner.HasController,
                 HasCodingViewModel: _codingSessionHost.HasViewModel,
                 IsLiveDetectionRunning: _liveDetectionController.IsDetecting),
             new CodingModeExitTeardownWorkflowActions(
                 StopCodingOsdTimer: StopCodingOsdTimer,
                 DisposeCodingOsdMeterService: DisposeCodingOsdMeterService,
-                StopCodingLiveAiTimers: resetButton => _codingLiveAiTimers!.Stop(resetButton),
+                StopCodingLiveAiTimers: _codingLiveAiTimerOwner.Stop,
                 StopCodingAiPulse: StopCodingAiPulse,
                 StopPipelineHealthMonitor: StopPipelineHealthMonitor,
                 DisposeAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation,
