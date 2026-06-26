@@ -4,7 +4,6 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -35,7 +34,6 @@ public partial class PlayerWindow
     private readonly DetectionConfirmationBuffer _detectionConfirmationBuffer = new();
 
     // Protocol integration state.
-    private readonly ServiceProvider? _serviceProvider;
     private readonly PlayerWindowDependencies _dependencies;
     private readonly string? _haltungId;
     private readonly Action<ProtocolEntry>? _onEntryCreated;

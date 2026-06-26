@@ -426,6 +426,8 @@ public sealed class UiArchitectureGuardTests
             "_serviceProvider darf nur im Konstruktor/State als Legacy-Bruecke stehen. Partials nutzen PlayerWindowDependencies:\n"
             + string.Join("\n", offenders));
         Assert.Contains("private readonly PlayerWindowDependencies _dependencies", state);
+        Assert.DoesNotContain("private readonly ServiceProvider? _serviceProvider", state);
+        Assert.DoesNotContain("_serviceProvider = serviceProvider", windowRoot);
         Assert.Contains("_dependencies = PlayerWindowDependencies.From(serviceProvider)", windowRoot);
         Assert.Contains("public ServiceProvider? LegacyServiceProvider", dependencies);
         Assert.Contains("public string? LastProjectPath", dependencies);
