@@ -15,15 +15,14 @@ public sealed class PlayerWindowProtocolContext
         Action<ProtocolEntry>? onEntryCreated,
         HaltungRecord? haltungRecord)
     {
-        Dependencies = dependencies ?? throw new ArgumentNullException(nameof(dependencies));
+        _dependencies = dependencies ?? throw new ArgumentNullException(nameof(dependencies));
         HaltungId = haltungId;
         _onEntryCreated = onEntryCreated;
         HaltungRecord = haltungRecord;
     }
 
+    private readonly PlayerWindowDependencies _dependencies;
     private readonly Action<ProtocolEntry>? _onEntryCreated;
-
-    public PlayerWindowDependencies Dependencies { get; }
 
     public string? HaltungId { get; }
 
@@ -31,23 +30,23 @@ public sealed class PlayerWindowProtocolContext
 
     public bool HasHaltungRecord => HaltungRecord is not null;
 
-    public ServiceProvider? LegacyServiceProvider => Dependencies.LegacyServiceProvider;
+    public ServiceProvider? LegacyServiceProvider => _dependencies.LegacyServiceProvider;
 
-    public AppSettings? Settings => Dependencies.Settings;
+    public AppSettings? Settings => _dependencies.Settings;
 
-    public ICodeCatalogProvider? CodeCatalog => Dependencies.CodeCatalog;
+    public ICodeCatalogProvider? CodeCatalog => _dependencies.CodeCatalog;
 
-    public IVsaCodeSelectionCatalog? CodeSelectionCatalog => Dependencies.CodeSelectionCatalog;
+    public IVsaCodeSelectionCatalog? CodeSelectionCatalog => _dependencies.CodeSelectionCatalog;
 
-    public PipelineConfig? PipelineConfig => Dependencies.PipelineConfig;
+    public PipelineConfig? PipelineConfig => _dependencies.PipelineConfig;
 
-    public ProtocolPdfExporter? ProtocolPdfExporter => Dependencies.ProtocolPdfExporter;
+    public ProtocolPdfExporter? ProtocolPdfExporter => _dependencies.ProtocolPdfExporter;
 
-    public ILoggerFactory? LoggerFactory => Dependencies.LoggerFactory;
+    public ILoggerFactory? LoggerFactory => _dependencies.LoggerFactory;
 
-    public string? LastProjectPath => Dependencies.LastProjectPath;
+    public string? LastProjectPath => _dependencies.LastProjectPath;
 
-    public bool HasCodeCatalog => Dependencies.HasCodeCatalog;
+    public bool HasCodeCatalog => _dependencies.HasCodeCatalog;
 
     public static PlayerWindowProtocolContext From(
         ServiceProvider? serviceProvider,

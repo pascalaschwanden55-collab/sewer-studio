@@ -476,6 +476,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private readonly ServiceProvider? _serviceProvider", state);
         Assert.DoesNotContain("_serviceProvider = serviceProvider", windowRoot);
         Assert.DoesNotContain("_protocolContext.Dependencies.", playerWindowPartials);
+        Assert.DoesNotContain("public PlayerWindowDependencies Dependencies", protocolContext);
         Assert.Contains("_protocolContext = PlayerWindowProtocolContext.From(", windowRoot);
         Assert.Contains("PlayerWindowDependencies.From(serviceProvider)", protocolContext);
         Assert.Contains("public AppSettings? Settings", protocolContext);

@@ -16,10 +16,17 @@ public sealed class PlayerWindowProtocolContextTests
             onEntryCreated: _ => { },
             haltungRecord: record);
 
-        Assert.NotNull(context.Dependencies);
         Assert.Equal("H-42", context.HaltungId);
         Assert.Same(record, context.HaltungRecord);
         Assert.True(context.HasHaltungRecord);
+    }
+
+    [Fact]
+    public void Dependencies_are_not_exposed_as_public_context_api()
+    {
+        var property = typeof(PlayerWindowProtocolContext).GetProperty("Dependencies");
+
+        Assert.Null(property);
     }
 
     [Fact]
