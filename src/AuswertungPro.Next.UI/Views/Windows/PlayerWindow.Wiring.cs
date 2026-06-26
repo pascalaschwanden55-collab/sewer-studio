@@ -83,7 +83,7 @@ public partial class PlayerWindow
                     UpdateCodingOverlayViewport),
                 ShowOverlay,
                 BuildDamageMarkerTimeline: () => _damageMarkerController.Build(),
-                EnableFocusable: () => Focusable = true,
+                EnableFocusable: () => PlayerChromeControls.EnableFocusable(this),
                 ScheduleFocusWindow: () => PlayerDispatcherScheduler.ScheduleInput(
                     Dispatcher,
                     () =>
@@ -100,7 +100,7 @@ public partial class PlayerWindow
                 IsLastOpenedWindow: ReferenceEquals(_lastOpened, this),
                 HasMainWindow: main is not null,
                 IsMainWindowCurrentWindow: ReferenceEquals(main, this),
-                IsMainWindowMinimized: main?.WindowState == WindowState.Minimized),
+                IsMainWindowMinimized: PlayerChromeControls.IsMinimized(main)),
             new PlayerWindowClosedWorkflowActions(
                 ClearLastOpened: () => _lastOpened = null,
                 ExitCodingMode: () => _codingModeState.Set(false),
@@ -112,7 +112,7 @@ public partial class PlayerWindow
                 StopLiveDetection: StopLiveDetection,
                 StopPipelineHealthMonitor: StopPipelineHealthMonitor,
                 Cleanup: Cleanup,
-                RestoreMainWindow: () => main!.WindowState = WindowState.Normal,
+                RestoreMainWindow: () => PlayerChromeControls.RestoreNormal(main!),
                 ActivateMainWindow: () => PlayerFocusControls.ActivateWindow(main!)));
     }
 }
