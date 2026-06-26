@@ -18,13 +18,12 @@ public partial class PlayerWindow
                 _haltungRecord is not null,
                 doc),
             new CodingProtocolPdfExportCommandActions(
-                OfferPdfExport: () => CodingProtocolPdfExportOfferWorkflow.Offer(
-                    _haltungRecord!,
-                    doc,
-                    _dependencies.LastProjectPath,
-                    new CodingProtocolPdfExportOfferWorkflowActions(
-                        CreateService: () => CodingProtocolPdfExportServiceFactory.Create(
-                            _dependencies.ProtocolPdfExporter!))),
+                OfferPdfExport: () => CodingProtocolPdfExportDisplayWorkflow.Offer(
+                    new CodingProtocolPdfExportDisplayRequest(
+                        _haltungRecord!,
+                        doc,
+                        _dependencies.LastProjectPath,
+                        _dependencies.ProtocolPdfExporter!)),
                 ShowOverlay: ShowOverlay));
     }
 

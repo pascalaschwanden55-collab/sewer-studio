@@ -636,6 +636,7 @@ public sealed class UiArchitectureGuardTests
         var dialogFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolDialogServiceFactory.cs");
         var pdfCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfExportCommandWorkflow.cs");
         var pdfOfferWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfExportOfferWorkflow.cs");
+        var pdfDisplayWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPdfExportDisplayWorkflow.cs");
         var previewCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewCommandWorkflow.cs");
         var previewDisplayWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewDisplayWorkflow.cs");
         var previewWorkflowServicePath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWorkflowService.cs");
@@ -653,6 +654,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(dialogFactoryPath), "Protokoll-DialogHost-Verdrahtung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pdfCommandWorkflowPath), "PDF-Export-Command-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(pdfOfferWorkflowPath), "PDF-Export-Serviceaufruf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(pdfDisplayWorkflowPath), "PDF-Export-Serviceverdrahtung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(previewCommandWorkflowPath), "Protokoll-Preview-Command-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(previewDisplayWorkflowPath), "Protokoll-Preview-Serviceaufruf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(previewWorkflowServicePath), "Protokoll-Vorschauablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
@@ -671,6 +673,7 @@ public sealed class UiArchitectureGuardTests
         var dialogFactory = File.ReadAllText(dialogFactoryPath);
         var pdfCommandWorkflow = File.Exists(pdfCommandWorkflowPath) ? File.ReadAllText(pdfCommandWorkflowPath) : "";
         var pdfOfferWorkflow = File.Exists(pdfOfferWorkflowPath) ? File.ReadAllText(pdfOfferWorkflowPath) : "";
+        var pdfDisplayWorkflow = File.Exists(pdfDisplayWorkflowPath) ? File.ReadAllText(pdfDisplayWorkflowPath) : "";
         var previewCommandWorkflow = File.Exists(previewCommandWorkflowPath) ? File.ReadAllText(previewCommandWorkflowPath) : "";
         var previewDisplayWorkflow = File.Exists(previewDisplayWorkflowPath) ? File.ReadAllText(previewDisplayWorkflowPath) : "";
         var previewWorkflowService = File.ReadAllText(previewWorkflowServicePath);
@@ -680,13 +683,14 @@ public sealed class UiArchitectureGuardTests
 
         Assert.Contains("CodingProtocolPdfExportCommandWorkflow.Execute", protocol);
         Assert.Contains("CodingProtocolPreviewCommandWorkflow.Execute", protocol);
-        Assert.Contains("CodingProtocolPdfExportOfferWorkflow.Offer", protocol);
+        Assert.Contains("CodingProtocolPdfExportDisplayWorkflow.Offer", protocol);
         Assert.Contains("CodingProtocolPreviewDisplayWorkflow.TryShow", protocol);
         Assert.DoesNotContain("if (_dependencies.ProtocolPdfExporter == null || _haltungRecord == null)", protocol);
         Assert.DoesNotContain("if (_haltungRecord == null || _dependencies.LegacyServiceProvider == null)", protocol);
         Assert.DoesNotContain(".TryOfferPdfExport(", protocol);
         Assert.DoesNotContain("CodingProtocolPreviewWorkflowServiceFactory.Create().TryShow", protocol);
         Assert.DoesNotContain("CodingProtocolPdfExportPlanner.Build", protocol);
+        Assert.DoesNotContain("CodingProtocolPdfExportServiceFactory.Create", protocol);
         Assert.DoesNotContain("CodingProtocolPdfSavePathDialogFactory.Create", protocol);
         Assert.DoesNotContain("CodingProtocolPdfFileServiceFactory.Create", protocol);
         Assert.DoesNotContain("CodingProjectFolderResolver.ResolveNullable", protocol);
@@ -728,6 +732,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.OfferPdfExport()", pdfCommandWorkflow);
         Assert.Contains("actions.ShowOverlay", pdfCommandWorkflow);
         Assert.Contains("service.TryOfferPdfExport(record, document, lastProjectPath)", pdfOfferWorkflow);
+        Assert.Contains("CodingProtocolPdfExportOfferWorkflow.Offer", pdfDisplayWorkflow);
+        Assert.Contains("CodingProtocolPdfExportServiceFactory.Create", pdfDisplayWorkflow);
         Assert.Contains("actions.ShowPreview()", previewCommandWorkflow);
         Assert.Contains("actions.SyncPrimaryDamages", previewCommandWorkflow);
         Assert.Contains("actions.OfferPdfExport", previewCommandWorkflow);
