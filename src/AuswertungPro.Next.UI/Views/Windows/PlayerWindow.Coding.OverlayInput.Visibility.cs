@@ -34,7 +34,7 @@ public partial class PlayerWindow
         CodingOverlayInputVisibilityWorkflow.Suspend(
             new CodingOverlayInputSuspendRequest(
                 SuspendDepth: _codingOverlayInputVisibilityState.SuspendDepth,
-                IsPopupOpen: CodingOverlayPopup.IsOpen),
+                IsPopupOpen: CodingOverlayInputControls.IsPopupOpen(CodingOverlayPopup)),
             new CodingOverlayInputSuspendActions(
                 SetSuspendDepth: _codingOverlayInputVisibilityState.SetSuspendDepth,
                 EndDrag: _codingSchemaManager.EndDrag,
@@ -53,7 +53,7 @@ public partial class PlayerWindow
             new CodingOverlayInputResumeActions(
                 SetSuspendDepth: _codingOverlayInputVisibilityState.SetSuspendDepth,
                 ResumeCanvas: () => CodingOverlayInputControls.ResumeCanvas(CodingOverlayCanvas),
-                OpenPopup: () => CodingOverlayPopup.IsOpen = true,
+                OpenPopup: () => CodingOverlayInputControls.OpenPopup(CodingOverlayPopup),
                 UpdateViewport: UpdateCodingOverlayViewport,
                 RedrawCanvas: includeManualOverlay => RedrawCodingCanvas(includeManualOverlay),
                 UpdateCursor: UpdateCodingOverlayCursor,
@@ -64,11 +64,11 @@ public partial class PlayerWindow
     {
         CodingOverlayInputVisibilityWorkflow.HideForExternalWindow(
             new CodingOverlayInputExternalWindowRequest(
-                IsPopupOpen: CodingOverlayPopup.IsOpen),
+                IsPopupOpen: CodingOverlayInputControls.IsPopupOpen(CodingOverlayPopup)),
             new CodingOverlayInputExternalWindowHideActions(
                 RememberOpenBeforeExternalHide: _codingOverlayInputVisibilityState.RememberOpenBeforeExternalHide,
                 Suspend: SuspendCodingOverlayInput,
-                ClosePopup: () => CodingOverlayPopup.IsOpen = false));
+                ClosePopup: () => CodingOverlayInputControls.ClosePopup(CodingOverlayPopup)));
     }
 
     private void RestoreCodingOverlayAfterExternalWindow()
@@ -79,7 +79,7 @@ public partial class PlayerWindow
                 HasCurrentOverlay: _codingSessionHost.CurrentOverlay != null),
             new CodingOverlayInputExternalWindowRestoreActions(
                 Resume: ResumeCodingOverlayInput,
-                OpenPopup: () => CodingOverlayPopup.IsOpen = true,
+                OpenPopup: () => CodingOverlayInputControls.OpenPopup(CodingOverlayPopup),
                 UpdateViewport: UpdateCodingOverlayViewport,
                 RedrawCanvas: includeManualOverlay => RedrawCodingCanvas(includeManualOverlay),
                 RememberOpenBeforeExternalHide: _codingOverlayInputVisibilityState.RememberOpenBeforeExternalHide));

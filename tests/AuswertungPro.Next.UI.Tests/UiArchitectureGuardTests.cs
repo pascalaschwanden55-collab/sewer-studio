@@ -7793,7 +7793,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingOverlayCanvas.Visibility = Visibility.Visible", visibility);
         Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible = false", visibility);
         Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible = true", visibility);
-        Assert.Contains("CodingOverlayPopup.IsOpen = false", visibility);
+        Assert.Contains("CodingOverlayInputControls.IsPopupOpen", visibility);
+        Assert.Contains("CodingOverlayInputControls.OpenPopup", visibility);
+        Assert.Contains("CodingOverlayInputControls.ClosePopup", visibility);
+        Assert.DoesNotContain("CodingOverlayPopup.IsOpen", visibility);
         Assert.Contains("private void RestoreCodingOverlayAfterExternalWindow", visibility);
         Assert.Contains("CodingOverlayInputInteractionWorkflow.Run", visibility);
         Assert.Contains("CodingOverlayInputInteractionWorkflow.RunAsync", visibility);
@@ -7821,7 +7824,9 @@ public sealed class UiArchitectureGuardTests
         var relevantPartials = new[]
         {
             "PlayerWindow.Coding.cs",
+            "PlayerWindow.Coding.AiEvents.cs",
             "PlayerWindow.Coding.OverlayInput.Viewport.cs",
+            "PlayerWindow.Coding.OverlayInput.Visibility.cs",
             "PlayerWindow.Coding.OverlayInput.Tools.cs",
             "PlayerWindow.Coding.OverlayInput.Standard.cs",
             "PlayerWindow.Coding.OverlayInput.Schema.cs",
@@ -7846,6 +7851,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingOverlayInputControls.SetCanvasSize", joinedPartials);
         Assert.Contains("CodingOverlayInputControls.GetCanvasActualSize", joinedPartials);
         Assert.Contains("CodingOverlayInputControls.IsCanvasMouseCaptured", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.IsPopupOpen", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.OpenPopup", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.ClosePopup", joinedPartials);
         Assert.DoesNotContain("TxtActiveToolLabel.Text =", joinedPartials);
         Assert.DoesNotContain("BtnCodingCreateEvent.IsEnabled =", joinedPartials);
         Assert.DoesNotContain("CodingOverlayCanvas.CaptureMouse", joinedPartials);
@@ -7855,6 +7863,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingOverlayCanvas.ActualWidth", joinedPartials);
         Assert.DoesNotContain("CodingOverlayCanvas.ActualHeight", joinedPartials);
         Assert.DoesNotContain("CodingOverlayCanvas.IsMouseCaptured", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayPopup.IsOpen", joinedPartials);
+        Assert.DoesNotContain("ToolsDropdownPopup.IsOpen", joinedPartials);
         Assert.Contains("public static class CodingOverlayInputControls", controls);
         Assert.Contains("public static void ApplyActiveToolSelection", controls);
         Assert.Contains("public static void SetCreateEventEnabled", controls);
@@ -7864,6 +7874,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static void SetCanvasSize", controls);
         Assert.Contains("public static Size GetCanvasActualSize", controls);
         Assert.Contains("public static bool IsCanvasMouseCaptured", controls);
+        Assert.Contains("public static bool IsPopupOpen", controls);
+        Assert.Contains("public static void OpenPopup", controls);
+        Assert.Contains("public static void ClosePopup", controls);
     }
 
     [Fact]

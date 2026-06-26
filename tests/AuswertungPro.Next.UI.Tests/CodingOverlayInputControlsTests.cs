@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using AuswertungPro.Next.UI.Ai;
 
@@ -191,6 +192,25 @@ public sealed class CodingOverlayInputControlsTests
 
             Assert.Equal(new Size(640, 360), CodingOverlayInputControls.GetCanvasActualSize(actualCanvas));
             Assert.False(CodingOverlayInputControls.IsCanvasMouseCaptured(actualCanvas));
+        });
+    }
+
+    [Fact]
+    public void Popup_methods_read_and_update_popup_state()
+    {
+        RunOnStaThread(() =>
+        {
+            var popup = new Popup { IsOpen = false };
+
+            Assert.False(CodingOverlayInputControls.IsPopupOpen(popup));
+
+            CodingOverlayInputControls.OpenPopup(popup);
+
+            Assert.True(CodingOverlayInputControls.IsPopupOpen(popup));
+
+            CodingOverlayInputControls.ClosePopup(popup);
+
+            Assert.False(CodingOverlayInputControls.IsPopupOpen(popup));
         });
     }
 

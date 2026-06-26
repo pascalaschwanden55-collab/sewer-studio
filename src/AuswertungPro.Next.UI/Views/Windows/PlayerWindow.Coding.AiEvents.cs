@@ -29,7 +29,7 @@ public partial class PlayerWindow
                 result,
                 _codingAiRuntimeOwner.Controller.ModelName,
                 _codingSessionHost.HasViewModel,
-                CodingOverlayPopup.IsOpen,
+                CodingOverlayInputControls.IsPopupOpen(CodingOverlayPopup),
                 _playerTimelineHost.CurrentSecondsOrZero),
             new CodingAiResultWorkflowActions(
                 (status, color, detail) => SetCodingAiState(status, color, detail),

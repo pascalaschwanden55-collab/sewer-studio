@@ -35,7 +35,7 @@ public partial class PlayerWindow
                 levelMode),
             new CodingToolSelectionWorkflowActions(
                 ResetCalibration: _codingCalibrationState.Reset,
-                CloseToolsDropdown: () => { ToolsDropdownPopup.IsOpen = false; },
+                CloseToolsDropdown: () => CodingOverlayInputControls.ClosePopup(ToolsDropdownPopup),
                 SetActiveToolName: _codingActiveToolNameState.Set,
                 SetActiveLevelMode: mode => { _codingOverlayToolHost.SetActiveLevelMode(mode); },
                 SetActiveTool: activeTool => { _codingOverlayToolHost.SetActiveTool(activeTool); },
@@ -82,7 +82,7 @@ public partial class PlayerWindow
         CodingOverlayInputControls.ApplyCanvasCursor(
             CodingOverlayCanvas,
             CodingOverlayCursorPolicy.ShouldUseCrossCursor(
-                CodingOverlayPopup.IsOpen,
+                CodingOverlayInputControls.IsPopupOpen(CodingOverlayPopup),
                 _codingCalibrationState.IsCalibrating,
                 activeTool));
     }

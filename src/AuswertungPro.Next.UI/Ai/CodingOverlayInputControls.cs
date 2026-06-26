@@ -56,6 +56,27 @@ public static class CodingOverlayInputControls
         return overlayCanvas.IsMouseCaptured;
     }
 
+    public static bool IsPopupOpen(Popup popup)
+    {
+        ArgumentNullException.ThrowIfNull(popup);
+
+        return popup.IsOpen;
+    }
+
+    public static void OpenPopup(Popup popup)
+    {
+        ArgumentNullException.ThrowIfNull(popup);
+
+        popup.IsOpen = true;
+    }
+
+    public static void ClosePopup(Popup popup)
+    {
+        ArgumentNullException.ThrowIfNull(popup);
+
+        popup.IsOpen = false;
+    }
+
     public static void SuspendCanvas(Canvas overlayCanvas)
     {
         ArgumentNullException.ThrowIfNull(overlayCanvas);

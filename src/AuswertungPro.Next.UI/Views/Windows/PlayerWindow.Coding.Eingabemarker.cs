@@ -21,7 +21,7 @@ public partial class PlayerWindow
             PauseForCodingInteraction: () => PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause),
             SetDrawingPhase: _eingabemarkerState.SetDrawingPhase,
             EnsureMarkOverlayReady: EnsureMarkOverlayReady,
-            OpenCodingOverlayPopup: () => CodingOverlayPopup.IsOpen = true,
+            OpenCodingOverlayPopup: () => CodingOverlayInputControls.OpenPopup(CodingOverlayPopup),
             UpdateCodingOverlayViewport: UpdateCodingOverlayViewport,
             EnableDrawingCanvas: () => CodingOverlayInputControls.EnableDrawingCanvas(CodingOverlayCanvas),
             ShowDrawingStatus: () => SetCodingAiState(

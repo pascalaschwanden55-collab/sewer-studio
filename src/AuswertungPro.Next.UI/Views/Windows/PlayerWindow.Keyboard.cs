@@ -35,7 +35,7 @@ public partial class PlayerWindow
             new PlayerCancelCodingOverlayShortcutWorkflowRequest(
                 CodingOverlayInputControls.IsCanvasMouseCaptured(CodingOverlayCanvas),
                 _codingSessionHost.HasViewModel,
-                CodingOverlayPopup.IsOpen),
+                CodingOverlayInputControls.IsPopupOpen(CodingOverlayPopup)),
             new PlayerCancelCodingOverlayShortcutWorkflowActions(
                 CancelDraw: () => _codingOverlayToolHost.CancelDraw(),
                 CancelSchema: _codingSchemaManager.Cancel,

@@ -14,7 +14,7 @@ public partial class PlayerWindow
                 _codingSessionHost.HasViewModel,
                 _codingCalibrationState.IsCalibrating),
             new CodingCalibrationToggleWorkflowActions(
-                CloseToolsDropdown: () => { ToolsDropdownPopup.IsOpen = false; },
+                CloseToolsDropdown: () => CodingOverlayInputControls.ClosePopup(ToolsDropdownPopup),
                 SetCalibrationState: _codingCalibrationState.SetCalibrating,
                 ClearCalibrationStart: _codingCalibrationState.ClearStart,
                 SetActiveTool: activeTool => { _codingOverlayToolHost.SetActiveTool(activeTool); },
