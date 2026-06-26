@@ -19,7 +19,7 @@ public partial class PlayerWindow
                 SetCalibrationState: _codingCalibrationState.SetCalibrating,
                 ClearCalibrationStart: _codingCalibrationState.ClearStart,
                 SetActiveTool: activeTool => { _codingOverlayToolHost.SetActiveTool(activeTool); },
-                SetActiveToolName: activeToolName => _activeCodingToolName = activeToolName,
+                SetActiveToolName: _codingActiveToolNameState.Set,
                 ApplyActiveToolSelection: label => CodingOverlayInputControls.ApplyActiveToolSelection(
                     TxtActiveToolLabel,
                     BtnCodingCreateEvent,
@@ -49,7 +49,7 @@ public partial class PlayerWindow
                 ApplyResult: result => CodingManualCalibrationWorkflow.Apply(
                     new CodingManualCalibrationWorkflowRequest(
                         result,
-                        _activeCodingToolName,
+                        _codingActiveToolNameState.ActiveToolName,
                         _codingSchemaManager.IsActive),
                     new CodingManualCalibrationWorkflowActions(
                         ShowInvalidHint: text => CodingCalibrationControls.ShowHint(TxtCodingCalibHint, text),
@@ -61,7 +61,7 @@ public partial class PlayerWindow
                             TxtCodingCalibHint,
                             manualResult),
                         EndCalibrationMode: _codingCalibrationState.Reset,
-                        ClearActiveToolName: () => _activeCodingToolName = null,
+                        ClearActiveToolName: _codingActiveToolNameState.Clear,
                         HideHint: () => CodingCalibrationControls.HideHint(CodingCalibrationHint),
                         UpdateOverlayCursor: UpdateCodingOverlayCursor,
                         EnableCodingSchemaOverlay: () => UpdateCodingSchemaOverlay(enableCreateEvent: true)))));

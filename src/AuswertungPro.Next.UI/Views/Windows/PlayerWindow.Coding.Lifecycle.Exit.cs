@@ -74,7 +74,7 @@ public partial class PlayerWindow
                     LiveDetectionButton,
                     LiveDetectionStatusText,
                     isDetecting),
-                ClearActiveCodingToolName: () => _activeCodingToolName = null,
+                ClearActiveCodingToolName: _codingActiveToolNameState.Clear,
                 ResetCodingIndicators: () => CodingModeChromeControls.ResetCodingIndicators(
                     TxtActiveToolLabel,
                     BtnCodingLiveAi,

@@ -11,8 +11,6 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private string? _activeCodingToolName;
-
     private void CodingToolRect_Click(object sender, RoutedEventArgs e)
         => ActivateMarkTool(OverlayToolType.Rectangle, "Markieren");
 
@@ -29,7 +27,7 @@ public partial class PlayerWindow
             new CodingToolSelectionWorkflowRequest(
                 _codingOverlayToolHost.HasOverlayService,
                 _codingSessionHost.HasViewModel,
-                _activeCodingToolName,
+                _codingActiveToolNameState.ActiveToolName,
                 btnName,
                 label,
                 tool,
@@ -38,7 +36,7 @@ public partial class PlayerWindow
             new CodingToolSelectionWorkflowActions(
                 ResetCalibration: _codingCalibrationState.Reset,
                 CloseToolsDropdown: () => { ToolsDropdownPopup.IsOpen = false; },
-                SetActiveToolName: activeToolName => _activeCodingToolName = activeToolName,
+                SetActiveToolName: _codingActiveToolNameState.Set,
                 SetActiveLevelMode: mode => { _codingOverlayToolHost.SetActiveLevelMode(mode); },
                 SetActiveTool: activeTool => { _codingOverlayToolHost.SetActiveTool(activeTool); },
                 SetActiveSchemaType: activeSchemaType => _codingSchemaType = activeSchemaType,
