@@ -32,12 +32,18 @@ public partial class PlayerWindow
 
     private void WireWindowSurfaceEvents()
     {
-        DamageMarkerCanvas.SizeChanged += (_, __) => _damageMarkerController.Reposition();
-        HeatmapCanvas.SizeChanged += (_, __) => _quickScanController.Reposition();
-        DetectionCanvas.MouseLeftButtonDown += DetectionCanvas_MouseLeftButtonDown;
-        VideoView.SizeChanged += (_, __) => UpdateCodingOverlayViewport();
-        SizeChanged += (_, __) => UpdateCodingOverlayViewport();
-        LocationChanged += (_, __) => UpdateCodingOverlayViewport();
+        PlayerSurfaceEventBinder.Bind(
+            DamageMarkerCanvas,
+            HeatmapCanvas,
+            DetectionCanvas,
+            VideoView,
+            this,
+            (_, __) => _damageMarkerController.Reposition(),
+            (_, __) => _quickScanController.Reposition(),
+            DetectionCanvas_MouseLeftButtonDown,
+            (_, __) => UpdateCodingOverlayViewport(),
+            (_, __) => UpdateCodingOverlayViewport(),
+            (_, __) => UpdateCodingOverlayViewport());
     }
 
     private void WireKeyboardEvents()
