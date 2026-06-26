@@ -16,6 +16,7 @@ public partial class PlayerWindow
     private readonly PlayerMarqueeOverlayHost _playerMarqueeOverlayHost;
     private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost;
     private readonly PlayerMarkToolControls _markToolControls;
+    private readonly PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner = new();
     private readonly DamageMarkerController _damageMarkerController;
     private readonly QuickScanController _quickScanController;
     private readonly CodingOverlayRenderController _codingOverlayRenderController;

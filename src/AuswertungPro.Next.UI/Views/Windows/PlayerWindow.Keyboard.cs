@@ -6,11 +6,9 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private PlayerKeyboardActionController? _keyboardActions;
-
     private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        _keyboardActions ??= PlayerKeyboardActionControllerFactory.Create(
+        var keyboardActions = _keyboardActionControllerOwner.Ensure(
             new PlayerKeyboardActionControllerFactoryActions(
                 CancelCodingOverlay: CancelCodingOverlayShortcut,
                 TogglePlayPause: TogglePlayPause,
@@ -26,7 +24,7 @@ public partial class PlayerWindow
         PlayerKeyboardInputWorkflow.Execute(
             new PlayerKeyboardInputWorkflowRequest(action),
             new PlayerKeyboardInputWorkflowActions(
-                ExecuteAction: _keyboardActions.Execute,
+                ExecuteAction: keyboardActions.Execute,
                 MarkHandled: () => { e.Handled = true; }));
     }
 

@@ -4204,7 +4204,9 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var keyboardPath = Path.Combine(windowsRoot, "PlayerWindow.Keyboard.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardActionController.cs");
+        var ownerPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardActionControllerOwner.cs");
         var workflowPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardInputWorkflow.cs");
         var playbackRunnerPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardPlaybackCommandRunner.cs");
         var factoryPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardActionControllerFactory.cs");
@@ -4215,6 +4217,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.True(File.Exists(keyboardPath), "Keyboard-Wiring soll in einem eigenen PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(controllerPath), "Shortcut-Aktionsausfuehrung soll ausserhalb des PlayerWindow liegen.");
+        Assert.True(File.Exists(ownerPath), "Keyboard-Controller-Cache soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Keyboard-Handled-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(playbackRunnerPath), "Keyboard-Playback-Kommandos sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "Keyboard-Controller-Bindings sollen ausserhalb des PlayerWindow-Partials gebaut werden.");
@@ -4225,7 +4228,9 @@ public sealed class UiArchitectureGuardTests
 
         var playback = File.ReadAllText(playbackPath);
         var keyboard = File.ReadAllText(keyboardPath);
+        var state = File.ReadAllText(statePath);
         var controller = File.ReadAllText(controllerPath);
+        var owner = File.Exists(ownerPath) ? File.ReadAllText(ownerPath) : "";
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var playbackRunner = File.Exists(playbackRunnerPath) ? File.ReadAllText(playbackRunnerPath) : "";
         var factory = File.Exists(factoryPath) ? File.ReadAllText(factoryPath) : "";
@@ -4237,8 +4242,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("PlayerWindow_PreviewKeyDown", playback);
         Assert.Contains("PlayerWindow_PreviewKeyDown", keyboard);
         Assert.Contains("PlayerKeyboardInputWorkflow.Execute", keyboard);
-        Assert.Contains("ExecuteAction: _keyboardActions.Execute", keyboard);
-        Assert.Contains("PlayerKeyboardActionControllerFactory.Create", keyboard);
+        Assert.Contains("ExecuteAction: keyboardActions.Execute", keyboard);
+        Assert.DoesNotContain("private PlayerKeyboardActionController? _keyboardActions", keyboard);
+        Assert.Contains("private readonly PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner = new();", state);
+        Assert.Contains("public sealed class PlayerKeyboardActionControllerOwner", owner);
+        Assert.Contains("PlayerKeyboardActionControllerFactory.Create", owner);
+        Assert.DoesNotContain("PlayerKeyboardActionControllerFactory.Create", keyboard);
         Assert.DoesNotContain("new PlayerKeyboardActionController(", keyboard);
         Assert.DoesNotContain("new PlayerKeyboardActionBindings", keyboard);
         Assert.DoesNotContain("if (_keyboardActions.Execute(action))", keyboard);
