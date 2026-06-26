@@ -13,6 +13,11 @@ public partial class PlayerWindow
             return TakeSnapshotSafe(snapPath) ? snapPath : null;
         };
 
+    private CodingCodeExplorerManualEntryWorkflowActions CreateCodingCodeExplorerManualEntryActions()
+        => new(
+            CreateService: () => CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel),
+            CreateLiveSnapshotProvider: CreateVsaCodeExplorerLiveSnapshotProvider);
+
     private CodingCodeExplorerEditWorkflowActions CreateCodingCodeExplorerEditActions()
         => new(
             CreateService: () => CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel),

@@ -32,15 +32,14 @@ public partial class PlayerWindow
                     _playerTimelineHost.LengthMilliseconds ?? 0,
                     _codingSessionHost.EndMeter,
                     _codingSessionHost.CurrentMeter),
-                CreateManualEntry: (videoTime, meterValue) => CodingCodeExplorerWorkflowServiceFactory
-                    .Create(CreateVsaCodeExplorerViewModel)
-                    .CreateManualEntry(
+                CreateManualEntry: (videoTime, meterValue) => CodingCodeExplorerManualEntryWorkflow.Execute(
+                    new CodingCodeExplorerManualEntryWorkflowRequest(
                         _codingSessionHost.CurrentOverlay,
                         meterValue,
                         videoTime,
                         _videoPath,
-                        this,
-                        CreateVsaCodeExplorerLiveSnapshotProvider()),
+                        this),
+                    CreateCodingCodeExplorerManualEntryActions()),
                 AppendManualEvent: entry => CodingManualEventAppender.Apply(
                     entry,
                     _codingSessionHost.CurrentOverlay,

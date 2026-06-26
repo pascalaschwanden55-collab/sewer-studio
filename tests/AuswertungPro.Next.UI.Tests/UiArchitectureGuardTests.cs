@@ -2608,7 +2608,7 @@ public sealed class UiArchitectureGuardTests
         var codeExplorerDialog = File.ReadAllText(codeExplorerDialogPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.Contains("CreateVsaCodeExplorerLiveSnapshotProvider", events);
+        Assert.DoesNotContain("CreateVsaCodeExplorerLiveSnapshotProvider", events);
         Assert.DoesNotContain("CreateVsaCodeExplorerLiveSnapshotProvider", detailActions);
         Assert.Contains("CreateLiveSnapshotProvider: CreateVsaCodeExplorerLiveSnapshotProvider", codeExplorerDialog);
         Assert.Contains("CodingLiveSnapshotPathPolicy.CreateTempPath", codeExplorerDialog);
@@ -4148,6 +4148,7 @@ public sealed class UiArchitectureGuardTests
         var appenderPath = Path.Combine(uiRoot, "Ai", "CodingManualEventAppender.cs");
         var selectedCodeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSelectedCodeEventWorkflow.cs");
         var selectCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSelectCodeCommandWorkflow.cs");
+        var manualEntryWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerManualEntryWorkflow.cs");
         var createCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCreateSelectedCodeEventCommandWorkflow.cs");
         var postWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventCreationPostWorkflow.cs");
         var accessorsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
@@ -4157,6 +4158,7 @@ public sealed class UiArchitectureGuardTests
         var appender = File.Exists(appenderPath) ? File.ReadAllText(appenderPath) : "";
         var selectedCodeWorkflow = File.Exists(selectedCodeWorkflowPath) ? File.ReadAllText(selectedCodeWorkflowPath) : "";
         var selectCommandWorkflow = File.Exists(selectCommandWorkflowPath) ? File.ReadAllText(selectCommandWorkflowPath) : "";
+        var manualEntryWorkflow = File.Exists(manualEntryWorkflowPath) ? File.ReadAllText(manualEntryWorkflowPath) : "";
         var createCommandWorkflow = File.Exists(createCommandWorkflowPath) ? File.ReadAllText(createCommandWorkflowPath) : "";
         var postWorkflow = File.Exists(postWorkflowPath) ? File.ReadAllText(postWorkflowPath) : "";
         var accessors = File.ReadAllText(accessorsPath);
@@ -4165,9 +4167,11 @@ public sealed class UiArchitectureGuardTests
 
         Assert.True(File.Exists(selectedCodeWorkflowPath), "Manueller Selected-Code-Event-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(selectCommandWorkflowPath), "Manueller Select-Code-Button-Ablauf soll ausserhalb der Events-Partial orchestriert werden.");
+        Assert.True(File.Exists(manualEntryWorkflowPath), "Manuelle Code-Explorer-Eintragserzeugung soll ausserhalb der Events-Partial orchestriert werden.");
         Assert.True(File.Exists(createCommandWorkflowPath), "Manueller Create-Event-Button-Ablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(postWorkflowPath), "Nachbearbeitung manuell erzeugter Coding-Events soll ausserhalb der Events-Partial orchestriert werden.");
         Assert.Contains("CodingSelectCodeCommandWorkflow.ExecuteAsync", events);
+        Assert.Contains("CodingCodeExplorerManualEntryWorkflow.Execute", events);
         Assert.Contains("CodingCreateSelectedCodeEventCommandWorkflow.Execute", events);
         Assert.Contains("CodingSelectedCodeEventWorkflow.Create", events);
         Assert.Contains("CodingManualEventAppender.Apply", events);
@@ -4183,9 +4187,11 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingVm.CurrentOverlay = null", events);
         Assert.DoesNotContain("TxtCodingSelectedCode.Text = \"\"", events);
         Assert.DoesNotContain("BtnCodingCreateEvent.IsEnabled = false", events);
+        Assert.DoesNotContain(".CreateManualEntry(", events);
         Assert.DoesNotContain("CodingManualEventFactory.CreateUnconfirmed", events);
         Assert.DoesNotContain("CodingManualEventFactory.CreateUnconfirmedContext", events);
         Assert.DoesNotContain("CodingProtocolEntryPhotoPathAppender", events);
+        Assert.Contains(".CreateManualEntry(", manualEntryWorkflow);
         Assert.Contains("CodingManualEventFactory.CreateUnconfirmed", selectedCodeWorkflow);
         Assert.Contains("CodingProtocolEntryPhotoPathAppender.AddIfPresent", selectedCodeWorkflow);
         Assert.Contains("CodingManualEventAppender.Apply", selectedCodeWorkflow);
