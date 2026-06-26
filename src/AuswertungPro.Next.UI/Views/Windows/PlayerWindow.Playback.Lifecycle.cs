@@ -8,10 +8,10 @@ public partial class PlayerWindow
     private void OnClosing(object? sender, CancelEventArgs e)
     {
         var result = PlayerWindowClosingWorkflow.Execute(
-            new PlayerWindowClosingWorkflowRequest(_closing),
+            new PlayerWindowClosingWorkflowRequest(_shutdownState.IsClosing),
             new PlayerWindowClosingWorkflowActions(
                 ConfirmCanClose: ConfirmUnappliedCodingChangesOnClose,
-                MarkClosing: () => _closing = true,
+                MarkClosing: _shutdownState.MarkClosing,
                 ClearLastOpened: () => PlayerLastOpenedClearWorkflow.Execute(
                     new PlayerLastOpenedClearRequest(LastOpenedWindow.IsCurrent(this)),
                     new PlayerLastOpenedClearActions(
@@ -32,9 +32,9 @@ public partial class PlayerWindow
     private void Cleanup()
     {
         PlayerWindowCleanupWorkflow.Execute(
-            new PlayerWindowCleanupWorkflowRequest(_playbackDisposed),
+            new PlayerWindowCleanupWorkflowRequest(_shutdownState.IsPlaybackDisposed),
             new PlayerWindowCleanupWorkflowActions(
-                MarkPlaybackDisposed: () => _playbackDisposed = true,
+                MarkPlaybackDisposed: _shutdownState.MarkPlaybackDisposed,
                 StopPlayerTimers: StopPlayerTimers,
                 DetachVideoView: () => _playerMediaRuntime.DetachVideoView(VideoView),
                 DisposeMediaPlayer: () => _playerMediaRuntime.DisposeMediaPlayer(

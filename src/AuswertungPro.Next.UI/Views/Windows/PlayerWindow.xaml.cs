@@ -100,8 +100,8 @@ public partial class PlayerWindow : Window
 
         _playerTimerController = PlayerWindowTimerController.Create(
             createRequest: () => new PlayerWindowTimerTickWorkflowRequest(
-                _closing,
-                _playbackDisposed,
+                _shutdownState.IsClosing,
+                _shutdownState.IsPlaybackDisposed,
                 _positionSliderStateController.IsDragging),
             actions: new PlayerWindowTimerTickWorkflowActions(
                 UpdateUi,

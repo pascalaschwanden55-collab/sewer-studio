@@ -11,8 +11,8 @@ public partial class PlayerWindow
     private void DetectionTimer_Tick(object? sender, EventArgs e)
         => LiveDetectionTimerDispatchWorkflow.Execute(
             new LiveDetectionTimerDispatchWorkflowRequest(
-                _closing,
-                _playbackDisposed),
+                _shutdownState.IsClosing,
+                _shutdownState.IsPlaybackDisposed),
             new LiveDetectionTimerDispatchWorkflowActions(
                 RunDetectionAsync,
                 Dispatch: (runDetectionAsync, operationName, onError) =>
@@ -24,9 +24,9 @@ public partial class PlayerWindow
         await LiveDetectionRunCommandWorkflow.ExecuteAsync(
             new LiveDetectionRunCommandActions(
                 ShouldRunTick: () => _liveDetectionController.ShouldRunTick(
-                    isClosing: _closing,
-                    hasPlayer: !_playbackDisposed,
-                    isPlayerPlaying: !_playbackDisposed && _playerPlaybackControlHost.IsPlaying,
+                    isClosing: _shutdownState.IsClosing,
+                    hasPlayer: !_shutdownState.IsPlaybackDisposed,
+                    isPlayerPlaying: !_shutdownState.IsPlaybackDisposed && _playerPlaybackControlHost.IsPlaying,
                     hasPendingFindings: _detectionConfirmationBuffer.HasFindings),
                 GetModelName: () => _liveDetectionController.ModelName,
                 BeginDetection: _liveDetectionController.BeginDetection,
@@ -35,8 +35,8 @@ public partial class PlayerWindow
                 GetTimestampSeconds: () => _playerTimelineHost.CurrentSecondsOrZero,
                 GetDetectionCancellationToken: () => _liveDetectionController.DetectionCancellation?.Token,
                 CreateAnalyzeFrameAsync: () => _liveDetectionController.CreateAnalyzeFrameAsync(),
-                IsClosing: () => _closing,
-                IsPlaybackDisposed: () => _playbackDisposed,
+                IsClosing: () => _shutdownState.IsClosing,
+                IsPlaybackDisposed: () => _shutdownState.IsPlaybackDisposed,
                 IsDetecting: () => _liveDetectionController.IsDetecting,
                 InvokeOnUi: action => PlayerDispatcherScheduler.Invoke(Dispatcher, action),
                 ApplyDetectionResult: _liveDetectionController.ApplyDetectionResult,

@@ -11,12 +11,12 @@ public partial class PlayerWindow
 
         LiveDetectionStopUiWorkflow.Execute(
             new LiveDetectionStopUiWorkflowRequest(
-                ShouldUpdateUi: !_closing && !_playbackDisposed,
+                ShouldUpdateUi: !_shutdownState.IsUnavailable,
                 HideOverlay: !_liveDetectionController.IsManualMarkMode,
                 TotalEvents: _codingSessionHost.EventCollection?.Count ?? 0,
-                HasPlayer: !_playbackDisposed,
-                IsPlaybackDisposed: _playbackDisposed,
-                IsPlayerPlaying: !_playbackDisposed && _playerPlaybackControlHost.IsPlaying),
+                HasPlayer: !_shutdownState.IsPlaybackDisposed,
+                IsPlaybackDisposed: _shutdownState.IsPlaybackDisposed,
+                IsPlayerPlaying: !_shutdownState.IsPlaybackDisposed && _playerPlaybackControlHost.IsPlaying),
             new LiveDetectionStopUiWorkflowActions(
                 SetStoppedStatus: () => SetYoloStatus("Gestoppt", PlayerStatusColors.Muted),
                 ClearOverlay: hideOverlay => DetectionOverlayCleanupController.ClearCanvas(

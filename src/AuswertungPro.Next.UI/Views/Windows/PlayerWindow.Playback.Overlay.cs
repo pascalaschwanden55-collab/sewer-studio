@@ -18,7 +18,7 @@ public partial class PlayerWindow
     private void ShowOverlay(string text, TimeSpan duration)
         => PlayerOverlayDisplayWorkflow.Show(
             new PlayerOverlayDisplayWorkflowRequest(
-                _playbackDisposed,
+                _shutdownState.IsPlaybackDisposed,
                 text,
                 duration),
             new PlayerOverlayDisplayHostActions(

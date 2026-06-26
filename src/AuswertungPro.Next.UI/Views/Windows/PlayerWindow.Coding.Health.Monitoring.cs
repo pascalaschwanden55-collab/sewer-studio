@@ -11,11 +11,11 @@ public partial class PlayerWindow
     {
         CodingPipelineHealthChangeWorkflow.Execute(
             new CodingPipelineHealthChangeWorkflowRequest(
-                _closing,
+                _shutdownState.IsClosing,
                 PlayerDispatcherScheduler.HasShutdownStarted(Dispatcher),
                 PlayerDispatcherScheduler.HasAccess(Dispatcher)),
             new CodingPipelineHealthChangeWorkflowActions(
-                ShouldApply: () => !_closing && _codingModeState.IsCodingMode && _codingAiRuntimeOwner.Controller.HasHealthMonitor,
+                ShouldApply: () => !_shutdownState.IsClosing && _codingModeState.IsCodingMode && _codingAiRuntimeOwner.Controller.HasHealthMonitor,
                 DispatchToUi: action => PlayerDispatcherScheduler.ScheduleNormal(Dispatcher, action),
                 ApplyPipelineHealth: () => ApplyPipelineHealth(status)));
     }

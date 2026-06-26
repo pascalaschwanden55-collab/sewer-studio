@@ -10,7 +10,7 @@ public partial class PlayerWindow
     {
         return await LiveDetectionFrameCaptureWorkflow.CaptureAsync(
             (path, width) => TakeSnapshotSafe(path, width),
-            () => _closing || _playbackDisposed,
+            () => _shutdownState.IsUnavailable,
             _liveDetectionController.DetectionCancellation?.Token ?? CancellationToken.None);
     }
 }

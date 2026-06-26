@@ -38,8 +38,7 @@ public partial class PlayerWindow
     private readonly HaltungRecord? _haltungRecord;
 
     // Shutdown guards.
-    private volatile bool _closing;
-    private bool _playbackDisposed;
+    private readonly PlayerWindowShutdownStateController _shutdownState = new();
 
     private static readonly PlayerLastOpenedWindowOwner<PlayerWindow> LastOpenedWindow = new();
 }

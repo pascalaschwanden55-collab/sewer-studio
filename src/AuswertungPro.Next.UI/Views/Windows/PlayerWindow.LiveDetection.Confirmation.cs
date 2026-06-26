@@ -13,7 +13,7 @@ public partial class PlayerWindow
         LiveDetectionConfirmationDisplayWorkflow.Show(
             new LiveDetectionConfirmationShowRequest(
                 findings,
-                _playbackDisposed,
+                _shutdownState.IsPlaybackDisposed,
                 _playerPlaybackControlHost.IsPlaying,
                 _detectionConfirmationBuffer.TimestampSeconds),
             new LiveDetectionConfirmationShowActions(

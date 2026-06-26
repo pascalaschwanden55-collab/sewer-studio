@@ -350,9 +350,11 @@ public sealed class UiArchitectureGuardTests
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var lastOpenedOwnerPath = Path.Combine(uiRoot, "Player", "PlayerLastOpenedWindowOwner.cs");
+        var shutdownStateControllerPath = Path.Combine(uiRoot, "Player", "PlayerWindowShutdownStateController.cs");
 
         Assert.True(File.Exists(statePath), "PlayerWindow-Feldzustand soll aus dem Konstruktor-Partial heraus.");
         Assert.True(File.Exists(lastOpenedOwnerPath), "LastOpened-Fensterzustand soll in einem Owner gekapselt werden.");
+        Assert.True(File.Exists(shutdownStateControllerPath), "PlayerWindow-Shutdown-Zustand soll in einem eigenen Controller liegen.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var state = File.ReadAllText(statePath);
@@ -360,6 +362,7 @@ public sealed class UiArchitectureGuardTests
             Environment.NewLine,
             Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
         var lastOpenedOwner = File.Exists(lastOpenedOwnerPath) ? File.ReadAllText(lastOpenedOwnerPath) : "";
+        var shutdownStateController = File.Exists(shutdownStateControllerPath) ? File.ReadAllText(shutdownStateControllerPath) : "";
 
         Assert.DoesNotContain("using LibVLCSharp.Shared", windowRoot);
         Assert.DoesNotContain("using LibVLCSharp.Shared", state);
@@ -371,6 +374,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private static PlayerWindow? _lastOpened", windowRoot);
         Assert.DoesNotContain("private static PlayerWindow? _lastOpened", state);
         Assert.DoesNotContain("_lastOpened", playerWindowPartials);
+        Assert.DoesNotContain("_closing", playerWindowPartials);
+        Assert.DoesNotContain("_playbackDisposed", playerWindowPartials);
         Assert.Contains("private readonly PlayerMediaRuntime _playerMediaRuntime", state);
         Assert.Contains("private readonly PlayerPositionControls _positionControls", state);
         Assert.Contains("private readonly PlayerSpeedControls _speedControls", state);
@@ -378,9 +383,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private readonly DamageMarkerController _damageMarkerController", state);
         Assert.Contains("private readonly QuickScanController _quickScanController", state);
         Assert.Contains("private readonly LiveDetectionController _liveDetectionController = new();", state);
+        Assert.Contains("private readonly PlayerWindowShutdownStateController _shutdownState = new();", state);
         Assert.Contains("PlayerLastOpenedWindowOwner<PlayerWindow>", state);
         Assert.Contains("LastOpenedWindow.Set(this)", windowRoot);
         Assert.Contains("public sealed class PlayerLastOpenedWindowOwner", lastOpenedOwner);
+        Assert.Contains("public sealed class PlayerWindowShutdownStateController", shutdownStateController);
     }
 
     [Fact]

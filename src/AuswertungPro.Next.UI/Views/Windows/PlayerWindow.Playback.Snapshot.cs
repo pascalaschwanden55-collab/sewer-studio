@@ -15,8 +15,8 @@ public partial class PlayerWindow
         var result = PlayerSnapshotWorkflow.TryTakeSnapshot(
             new PlayerSnapshotRequest(
                 HasPlayerWindow: playerWindow is not null,
-                IsClosing: playerWindow?._closing == true,
-                IsPlaybackDisposed: playerWindow?._playbackDisposed == true,
+                IsClosing: playerWindow?._shutdownState.IsClosing == true,
+                IsPlaybackDisposed: playerWindow?._shutdownState.IsPlaybackDisposed == true,
                 IsPlaying: playerWindow?._playerPlaybackControlHost.IsPlaying == true,
                 CurrentTime: playerWindow?._playerTimelineHost.CurrentTime),
             new PlayerSnapshotActions(
@@ -30,17 +30,17 @@ public partial class PlayerWindow
 
     private bool TakeSnapshotSafe(string filePath, uint width = 0, uint height = 0)
         => PlayerSnapshotWorkflow.TakeSnapshotSafe(
-            new PlayerSnapshotSafeRequest(_closing, _playbackDisposed),
+            new PlayerSnapshotSafeRequest(_shutdownState.IsClosing, _shutdownState.IsPlaybackDisposed),
             new PlayerSnapshotSafeActions(
                 PauseIfPlaying: () => PlayerSnapshotPauseStarter.PauseIfPlaying(
                     _playerPlaybackControlHost.IsPlaying,
                     _playerPlaybackControlHost.SetPause),
-                IsPlaybackUnavailable: () => _closing || _playbackDisposed,
+                IsPlaybackUnavailable: () => _shutdownState.IsUnavailable,
                 DisableMarqueeOverlay: _playerMarqueeOverlayHost.Disable,
                 TakeSnapshot: () => _playerSnapshotCaptureHost.TakeSnapshot(filePath, width, height),
                 ResumeIfNeeded: wasPlaying => PlayerSnapshotPauseRestorer.ResumeIfNeeded(
                     wasPlaying,
-                    _closing,
-                    _playbackDisposed,
+                    _shutdownState.IsClosing,
+                    _shutdownState.IsPlaybackDisposed,
                     _playerPlaybackControlHost.SetPause))).Captured;
 }
