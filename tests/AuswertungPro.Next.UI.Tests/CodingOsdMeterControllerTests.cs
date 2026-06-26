@@ -98,4 +98,43 @@ public sealed class CodingOsdMeterControllerTests
         Assert.True(started);
         Assert.True(stopped);
     }
+
+    [Fact]
+    public void StartTimer_builds_timer_context_from_state_callbacks()
+    {
+        Exception? threadError = null;
+        var started = false;
+        var stopped = false;
+
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var controller = new CodingOsdMeterController();
+
+                controller.StartTimer(
+                    () => false,
+                    () => true,
+                    () => true,
+                    () => false,
+                    () => true,
+                    () => Task.CompletedTask);
+
+                started = controller.Timer?.IsEnabled == true;
+                controller.StopTimer();
+                stopped = controller.Timer is null && !controller.IsReading;
+            }
+            catch (Exception ex)
+            {
+                threadError = ex;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+
+        Assert.Null(threadError);
+        Assert.True(started);
+        Assert.True(stopped);
+    }
 }

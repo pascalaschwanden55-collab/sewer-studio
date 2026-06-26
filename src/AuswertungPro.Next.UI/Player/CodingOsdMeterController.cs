@@ -120,6 +120,31 @@ public sealed class CodingOsdMeterController
         _timer.Start();
     }
 
+    public void StartTimer(
+        Func<bool> isClosing,
+        Func<bool> hasPlayer,
+        Func<bool> isCodingMode,
+        Func<bool> isCodingAnalyzing,
+        Func<bool> hasLiveDetection,
+        Func<Task> readAsync)
+    {
+        ArgumentNullException.ThrowIfNull(isClosing);
+        ArgumentNullException.ThrowIfNull(hasPlayer);
+        ArgumentNullException.ThrowIfNull(isCodingMode);
+        ArgumentNullException.ThrowIfNull(isCodingAnalyzing);
+        ArgumentNullException.ThrowIfNull(hasLiveDetection);
+        ArgumentNullException.ThrowIfNull(readAsync);
+
+        StartTimer(
+            () => new CodingOsdTimerContext(
+                IsClosing: isClosing(),
+                HasPlayer: hasPlayer(),
+                IsCodingMode: isCodingMode(),
+                IsCodingAnalyzing: isCodingAnalyzing(),
+                HasLiveDetection: hasLiveDetection()),
+            readAsync);
+    }
+
     public void StopTimer()
     {
         _timer = PlayerWindowTimerStopper.StopAndClear(_timer);
