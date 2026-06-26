@@ -18,9 +18,12 @@ public partial class PlayerWindow
                 CurrentMeter: currentMeter),
             new CodingOpenStretchDamagePromptCommandActions(
                 FindOpen: CodingOpenStretchDamagePolicy.FindOpen,
-                ConfirmClose: (openEvents, closeMeter) => RunWithSuspendedCodingOverlayInput(() =>
-                    CodingOpenStretchDamageDialogServiceFactory.Create()
-                        .ConfirmClose(openEvents, closeMeter)),
+                ConfirmClose: (openEvents, closeMeter) => CodingOpenStretchDamageDialogWorkflow.ConfirmClose(
+                    openEvents,
+                    closeMeter,
+                    new CodingOpenStretchDamageDialogWorkflowActions(
+                        RunWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback),
+                        CreateDialogService: CodingOpenStretchDamageDialogServiceFactory.Create)),
                 ApplyClose: (openEvents, closeMeter) => CodingOpenStretchDamageCloseApplier.Apply(
                     openEvents,
                     closeMeter,
