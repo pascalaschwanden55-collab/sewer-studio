@@ -1,3 +1,5 @@
+using AuswertungPro.Next.UI.Player;
+
 namespace AuswertungPro.Next.UI.Ai;
 
 public enum CodingImportTrainingResultOutcome
@@ -10,6 +12,10 @@ public sealed record CodingImportTrainingResultActions(
     Action<string> ShowBadge,
     Action<TimeSpan> ScheduleHideBadge);
 
+public sealed record CodingImportTrainingResultDisplayActions(
+    Action<string> ShowBadge,
+    Action HideBadge);
+
 public sealed record CodingImportTrainingResultWorkflowResult(
     CodingImportTrainingResultOutcome Outcome)
 {
@@ -18,6 +24,25 @@ public sealed record CodingImportTrainingResultWorkflowResult(
 
 public static class CodingImportTrainingResultWorkflow
 {
+    public static CodingImportTrainingResultWorkflowResult Execute(
+        CodingProtocolImportTrainingResult importResult,
+        CodingImportTrainingResultDisplayActions displayActions)
+    {
+        ArgumentNullException.ThrowIfNull(displayActions);
+
+        return Execute(
+            importResult,
+            new CodingImportTrainingResultActions(
+                ShowBadge: displayActions.ShowBadge,
+                ScheduleHideBadge: delay =>
+                {
+                    var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(
+                        delay,
+                        displayActions.HideBadge);
+                    resetTimer.Start();
+                }));
+    }
+
     public static CodingImportTrainingResultWorkflowResult Execute(
         CodingProtocolImportTrainingResult importResult,
         CodingImportTrainingResultActions actions)

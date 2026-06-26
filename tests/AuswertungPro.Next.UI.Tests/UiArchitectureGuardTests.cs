@@ -4081,9 +4081,13 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain(".ConfirmAsync(importEvent)", confirmCoreBody);
         Assert.Contains("service.ConfirmAsync(importEvent)", confirmWorkflow);
         Assert.Contains("CodingImportTrainingResultWorkflow.Execute", confirmCoreBody);
+        Assert.DoesNotContain("new CodingImportTrainingResultActions", confirmCoreBody);
+        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", confirmCoreBody);
         Assert.DoesNotContain("if (!result.Accepted)", confirmCoreBody);
         Assert.DoesNotContain("var badge = result.Badge", confirmCoreBody);
         Assert.Contains("if (!importResult.Accepted)", importTrainingResultWorkflow);
+        Assert.Contains("new CodingImportTrainingResultActions", importTrainingResultWorkflow);
+        Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", importTrainingResultWorkflow);
         Assert.Contains("actions.ShowBadge(badge.Text)", importTrainingResultWorkflow);
         Assert.Contains("actions.ScheduleHideBadge(badge.AutoHideDelay)", importTrainingResultWorkflow);
         Assert.Contains("_codingSessionHost", training);

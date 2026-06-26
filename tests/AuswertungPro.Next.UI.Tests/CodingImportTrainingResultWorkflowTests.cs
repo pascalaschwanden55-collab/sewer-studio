@@ -5,6 +5,24 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingImportTrainingResultWorkflowTests
 {
     [Fact]
+    public void Execute_offers_display_actions_overload()
+    {
+        var overload = typeof(CodingImportTrainingResultWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingImportTrainingResultWorkflow.Execute) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual(
+                    [
+                        typeof(CodingProtocolImportTrainingResult),
+                        typeof(CodingImportTrainingResultDisplayActions),
+                    ]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
     public void Execute_returns_rejected_without_badge_actions()
     {
         var result = CodingImportTrainingResultWorkflow.Execute(

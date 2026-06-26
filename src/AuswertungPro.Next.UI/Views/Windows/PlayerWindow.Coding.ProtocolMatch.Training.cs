@@ -3,7 +3,6 @@ using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
-using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -46,14 +45,8 @@ public partial class PlayerWindow
             () => TryTakeSnapshot(out var snapshotPath) ? snapshotPath : null);
         return CodingImportTrainingResultWorkflow.Execute(
             result,
-            new CodingImportTrainingResultActions(
+            new CodingImportTrainingResultDisplayActions(
                 ShowBadge: text => CodingOsdBadgeControls.Show(OsdMeterBadge, TxtOsdMeter, text),
-                ScheduleHideBadge: delay =>
-                {
-                    var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(
-                        delay,
-                        () => CodingOsdBadgeControls.Hide(OsdMeterBadge));
-                    resetTimer.Start();
-                })).Accepted;
+                HideBadge: () => CodingOsdBadgeControls.Hide(OsdMeterBadge))).Accepted;
     }
 }
