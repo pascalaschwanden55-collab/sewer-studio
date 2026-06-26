@@ -13,9 +13,9 @@ public partial class PlayerWindow
                 ConfirmCanClose: ConfirmUnappliedCodingChangesOnClose,
                 MarkClosing: () => _closing = true,
                 ClearLastOpened: () => PlayerLastOpenedClearWorkflow.Execute(
-                    new PlayerLastOpenedClearRequest(ReferenceEquals(_lastOpened, this)),
+                    new PlayerLastOpenedClearRequest(LastOpenedWindow.IsCurrent(this)),
                     new PlayerLastOpenedClearActions(
-                        ClearLastOpened: () => _lastOpened = null)),
+                        ClearLastOpened: LastOpenedWindow.Clear)),
                 StopPlayerTimers: StopPlayerTimers,
                 CancelQuickScan: _quickScanController.Cancel,
                 CancelLiveDetection: _liveDetectionController.CancelDetectionIfPresent,

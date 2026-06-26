@@ -349,11 +349,17 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
+        var lastOpenedOwnerPath = Path.Combine(uiRoot, "Player", "PlayerLastOpenedWindowOwner.cs");
 
         Assert.True(File.Exists(statePath), "PlayerWindow-Feldzustand soll aus dem Konstruktor-Partial heraus.");
+        Assert.True(File.Exists(lastOpenedOwnerPath), "LastOpened-Fensterzustand soll in einem Owner gekapselt werden.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var state = File.ReadAllText(statePath);
+        var playerWindowPartials = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
+        var lastOpenedOwner = File.Exists(lastOpenedOwnerPath) ? File.ReadAllText(lastOpenedOwnerPath) : "";
 
         Assert.DoesNotContain("using LibVLCSharp.Shared", windowRoot);
         Assert.DoesNotContain("using LibVLCSharp.Shared", state);
@@ -363,6 +369,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private OllamaClient? _liveDetectionClient", windowRoot);
         Assert.DoesNotContain("private OllamaClient? _liveDetectionClient", state);
         Assert.DoesNotContain("private static PlayerWindow? _lastOpened", windowRoot);
+        Assert.DoesNotContain("private static PlayerWindow? _lastOpened", state);
+        Assert.DoesNotContain("_lastOpened", playerWindowPartials);
         Assert.Contains("private readonly PlayerMediaRuntime _playerMediaRuntime", state);
         Assert.Contains("private readonly PlayerPositionControls _positionControls", state);
         Assert.Contains("private readonly PlayerSpeedControls _speedControls", state);
@@ -370,7 +378,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private readonly DamageMarkerController _damageMarkerController", state);
         Assert.Contains("private readonly QuickScanController _quickScanController", state);
         Assert.Contains("private readonly LiveDetectionController _liveDetectionController = new();", state);
-        Assert.Contains("private static PlayerWindow? _lastOpened", state);
+        Assert.Contains("PlayerLastOpenedWindowOwner<PlayerWindow>", state);
+        Assert.Contains("LastOpenedWindow.Set(this)", windowRoot);
+        Assert.Contains("public sealed class PlayerLastOpenedWindowOwner", lastOpenedOwner);
     }
 
     [Fact]

@@ -11,7 +11,7 @@ public partial class PlayerWindow
     public static bool TryTakeSnapshot(out string snapshotPath)
     {
         snapshotPath = string.Empty;
-        var playerWindow = _lastOpened;
+        var playerWindow = LastOpenedWindow.Current;
         var result = PlayerSnapshotWorkflow.TryTakeSnapshot(
             new PlayerSnapshotRequest(
                 HasPlayerWindow: playerWindow is not null,

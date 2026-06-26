@@ -43,5 +43,5 @@ public partial class PlayerWindow
     private volatile bool _closing;
     private bool _playbackDisposed;
 
-    private static PlayerWindow? _lastOpened;
+    private static readonly PlayerLastOpenedWindowOwner<PlayerWindow> LastOpenedWindow = new();
 }

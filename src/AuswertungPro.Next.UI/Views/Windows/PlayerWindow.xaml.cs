@@ -19,7 +19,7 @@ public partial class PlayerWindow : Window
         Action<ProtocolEntry>? onEntryCreated = null,
         HaltungRecord? haltungRecord = null)
     {
-        // Frueh pruefen, bevor irgendein Zustand (insb. _lastOpened) gesetzt wird:
+        // Frueh pruefen, bevor irgendein Zustand gesetzt wird:
         // wirft der Konstruktor spaeter, bliebe sonst ein halb-konstruiertes Fenster zurueck.
         var videoInfo = PlayerVideoPathGuard.Validate(videoPath);
 
@@ -108,7 +108,7 @@ public partial class PlayerWindow : Window
 
         // Erst ganz am Ende setzen: TryShowOverlayOnLast darf nie ein Fenster sehen,
         // dessen Konstruktor fehlgeschlagen ist (Media-Runtime waere dann nicht bereit).
-        _lastOpened = this;
+        LastOpenedWindow.Set(this);
     }
 
 

@@ -97,12 +97,12 @@ public partial class PlayerWindow
         var main = PlayerApplicationControls.CurrentMainWindow();
         PlayerWindowClosedWorkflow.Execute(
             new PlayerWindowClosedWorkflowRequest(
-                IsLastOpenedWindow: ReferenceEquals(_lastOpened, this),
+                IsLastOpenedWindow: LastOpenedWindow.IsCurrent(this),
                 HasMainWindow: main is not null,
                 IsMainWindowCurrentWindow: ReferenceEquals(main, this),
                 IsMainWindowMinimized: PlayerChromeControls.IsMinimized(main)),
             new PlayerWindowClosedWorkflowActions(
-                ClearLastOpened: () => _lastOpened = null,
+                ClearLastOpened: LastOpenedWindow.Clear,
                 ExitCodingMode: () => _codingModeState.Set(false),
                 StopCodingOsdTimer: StopCodingOsdTimer,
                 DisposeCodingOsdMeterService: DisposeCodingOsdMeterService,

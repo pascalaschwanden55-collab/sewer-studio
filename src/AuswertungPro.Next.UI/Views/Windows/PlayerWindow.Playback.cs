@@ -14,7 +14,7 @@ public partial class PlayerWindow
 {
     public static bool TryGetCurrentTime(out TimeSpan time)
     {
-        var playerWindow = _lastOpened;
+        var playerWindow = LastOpenedWindow.Current;
         var result = PlayerLastOpenedPlaybackWorkflow.TryGetCurrentTime(
             new PlayerLastOpenedCurrentTimeRequest(playerWindow is not null),
             new PlayerLastOpenedCurrentTimeActions(
@@ -30,7 +30,7 @@ public partial class PlayerWindow
 
     public static bool TrySeekTo(TimeSpan time)
     {
-        var playerWindow = _lastOpened;
+        var playerWindow = LastOpenedWindow.Current;
         return PlayerLastOpenedPlaybackWorkflow.TrySeekTo(
                 new PlayerLastOpenedSeekRequest(
                     playerWindow is not null,
