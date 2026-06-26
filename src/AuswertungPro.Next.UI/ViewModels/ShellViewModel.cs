@@ -357,12 +357,13 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             return false;
         }
 
+        // Projekte-Basisverzeichnis: gesetzten Wert nehmen, sonst automatisch den
+        // Standard D:\Projekt verwenden (KEIN Dialog) und merken. Aenderbar in den
+        // Einstellungen unter "Projekte-Verzeichnis".
         var baseDir = _sp.Settings.ProjectsRootDirectory;
         if (string.IsNullOrWhiteSpace(baseDir))
         {
-            baseDir = _sp.Dialogs.SelectFolder("Projekte-Verzeichnis waehlen", @"D:\Projekt");
-            if (string.IsNullOrWhiteSpace(baseDir))
-                return false;
+            baseDir = @"D:\Projekt";
             _sp.Settings.ProjectsRootDirectory = baseDir;
             _sp.Settings.Save();
         }
