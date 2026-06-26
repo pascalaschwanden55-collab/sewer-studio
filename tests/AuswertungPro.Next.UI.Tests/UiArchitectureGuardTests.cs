@@ -2042,6 +2042,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingPipelineHealthApplyWorkflow.Execute", monitoring);
         Assert.DoesNotContain("PipelineHealthUiStateFactory.Create", monitoring);
         Assert.DoesNotContain("if (_closing", monitoring);
+        Assert.Contains("PlayerDispatcherScheduler.ScheduleNormal", monitoring);
+        Assert.DoesNotContain("Dispatcher.BeginInvoke", monitoring);
         Assert.Contains("actions.DispatchToUi", healthChangeWorkflow);
         Assert.Contains("PipelineHealthUiStateFactory.Create", healthApplyWorkflow);
         Assert.Contains("LiveDetectionStatusControls.ShowPipelineHealthDetails", monitoring);

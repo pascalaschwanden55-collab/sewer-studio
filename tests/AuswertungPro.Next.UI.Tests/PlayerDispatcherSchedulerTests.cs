@@ -42,6 +42,24 @@ public sealed class PlayerDispatcherSchedulerTests
         });
     }
 
+    [Fact]
+    public void ScheduleNormal_dispatches_action_at_normal_priority()
+    {
+        RunOnStaThread(() =>
+        {
+            var ran = false;
+            var dispatcher = Dispatcher.CurrentDispatcher;
+
+            var operation = PlayerDispatcherScheduler.ScheduleNormal(
+                dispatcher,
+                () => ran = true);
+            dispatcher.Invoke(DispatcherPriority.ApplicationIdle, new Action(() => { }));
+
+            Assert.True(ran);
+            Assert.Equal(DispatcherPriority.Normal, operation.Priority);
+        });
+    }
+
     private static void RunOnStaThread(Action action)
     {
         Exception? exception = null;

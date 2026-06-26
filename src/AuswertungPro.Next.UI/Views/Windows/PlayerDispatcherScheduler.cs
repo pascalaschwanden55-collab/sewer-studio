@@ -11,6 +11,9 @@ public static class PlayerDispatcherScheduler
     public static DispatcherOperation ScheduleInput(Dispatcher dispatcher, Action action)
         => Schedule(dispatcher, DispatcherPriority.Input, action);
 
+    public static DispatcherOperation ScheduleNormal(Dispatcher dispatcher, Action action)
+        => Schedule(dispatcher, DispatcherPriority.Normal, action);
+
     private static DispatcherOperation Schedule(
         Dispatcher dispatcher,
         DispatcherPriority priority,

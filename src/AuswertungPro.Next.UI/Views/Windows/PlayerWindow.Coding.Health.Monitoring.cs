@@ -1,4 +1,3 @@
-using System;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
@@ -17,7 +16,7 @@ public partial class PlayerWindow
                 Dispatcher.CheckAccess()),
             new CodingPipelineHealthChangeWorkflowActions(
                 ShouldApply: () => !_closing && _codingModeState.IsCodingMode && _codingAiRuntimeOwner.Controller.HasHealthMonitor,
-                DispatchToUi: action => Dispatcher.BeginInvoke(action),
+                DispatchToUi: action => PlayerDispatcherScheduler.ScheduleNormal(Dispatcher, action),
                 ApplyPipelineHealth: () => ApplyPipelineHealth(status)));
     }
 
