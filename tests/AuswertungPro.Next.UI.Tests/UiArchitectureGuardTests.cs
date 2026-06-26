@@ -8030,9 +8030,11 @@ public sealed class UiArchitectureGuardTests
         var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var servicePath = Path.Combine(uiRoot, "Ai", "CodingModeDialogService.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingModeDialogServiceFactory.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingModeDialogWorkflow.cs");
 
         Assert.True(File.Exists(servicePath), "Coding-Modus-Dialogtexte muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "Coding-Modus-DialogHost-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "Coding-Modus-Dialogaufrufe sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var lifecycle = File.ReadAllText(lifecyclePath);
         var session = File.ReadAllText(sessionPath);
@@ -8040,14 +8042,21 @@ public sealed class UiArchitectureGuardTests
         var playerText = lifecycle + session + training;
         var service = File.ReadAllText(servicePath);
         var factory = File.ReadAllText(factoryPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.Contains("CodingModeDialogServiceFactory.Create", playerText);
+        Assert.Contains("CodingModeDialogWorkflow.ShowMissingHaltung", lifecycle);
+        Assert.Contains("CodingModeDialogWorkflow.ShowSessionStartFailed", session);
+        Assert.DoesNotContain(".ShowMissingHaltung()", playerText);
+        Assert.DoesNotContain(".ShowSessionStartFailed(message)", playerText);
         Assert.DoesNotContain("DialogHost.Current", playerText);
         Assert.DoesNotContain("Codier-Modus ben", playerText);
         Assert.DoesNotContain("Frame konnte nicht aufgenommen werden.", playerText);
         Assert.Contains("ShowMissingHaltung", service);
         Assert.Contains("ShowSessionStartFailed", service);
         Assert.Contains("ShowImportFrameCaptureFailed", service);
+        Assert.Contains("service.ShowMissingHaltung()", workflow);
+        Assert.Contains("service.ShowSessionStartFailed(message)", workflow);
         Assert.Contains("DialogHost.Current", factory);
     }
 
