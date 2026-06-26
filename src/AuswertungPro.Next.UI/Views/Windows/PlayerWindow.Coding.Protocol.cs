@@ -18,9 +18,13 @@ public partial class PlayerWindow
                 _haltungRecord is not null,
                 doc),
             new CodingProtocolPdfExportCommandActions(
-                OfferPdfExport: () => CodingProtocolPdfExportServiceFactory
-                    .Create(_dependencies.ProtocolPdfExporter!)
-                    .TryOfferPdfExport(_haltungRecord!, doc, _dependencies.LastProjectPath),
+                OfferPdfExport: () => CodingProtocolPdfExportOfferWorkflow.Offer(
+                    _haltungRecord!,
+                    doc,
+                    _dependencies.LastProjectPath,
+                    new CodingProtocolPdfExportOfferWorkflowActions(
+                        CreateService: () => CodingProtocolPdfExportServiceFactory.Create(
+                            _dependencies.ProtocolPdfExporter!))),
                 ShowOverlay: ShowOverlay));
     }
 
@@ -62,14 +66,16 @@ public partial class PlayerWindow
                 _dependencies.LegacyServiceProvider is not null,
                 doc),
             new CodingProtocolPreviewCommandActions(
-                ShowPreview: () => CodingProtocolPreviewWorkflowServiceFactory.Create().TryShow(
+                ShowPreview: () => CodingProtocolPreviewDisplayWorkflow.TryShow(
                     this,
                     _haltungRecord!,
                     doc,
                     _dependencies.LegacyServiceProvider!,
                     _videoPath,
                     _dependencies.LastProjectPath,
-                    MarkProjectDirtyForCoding),
+                    MarkProjectDirtyForCoding,
+                    new CodingProtocolPreviewDisplayWorkflowActions(
+                        CreateService: CodingProtocolPreviewWorkflowServiceFactory.Create)),
                 GetCurrentProtocol: () => _haltungRecord?.Protocol,
                 SyncPrimaryDamages: SyncCodingToPrimaryDamages,
                 OfferPdfExport: CodingOfferPdfExport));
