@@ -48,13 +48,14 @@ public partial class PlayerWindow
                 SelectCorrection: () =>
                 {
                     var autoMeter2 = _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition();
-                    return LiveDetectionCorrectionCodeSelectionServiceFactory.Create(
-                            CreateVsaCodeExplorerViewModel)
-                        .Select(
+                    return LiveDetectionCorrectionCodeSelectionWorkflow.Select(
+                        new LiveDetectionCorrectionCodeSelectionRequest(
                             autoMeter2,
                             timestampSec,
                             _videoPath,
-                            this);
+                            this),
+                        new LiveDetectionCorrectionCodeSelectionActions(
+                            CreateVsaCodeExplorerViewModel));
                 },
                 SaveCorrectedAsync: async selectedEntry =>
                 {

@@ -4398,6 +4398,7 @@ public sealed class UiArchitectureGuardTests
         var statusControlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
         var correctionSelectionPath = Path.Combine(uiRoot, "Ai", "LiveDetectionCorrectionCodeSelectionService.cs");
         var correctionSelectionFactoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionCorrectionCodeSelectionServiceFactory.cs");
+        var correctionSelectionWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionCorrectionCodeSelectionWorkflow.cs");
         var displayWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationDisplayWorkflow.cs");
         var frameExporterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingFrameExporter.cs");
         var exportPlannerPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingExportPlanner.cs");
@@ -4412,6 +4413,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(trainingPath), "LiveDetection-Trainingsuebernahme soll aus den simplen Bestaetigungsaktionen heraus.");
         Assert.True(File.Exists(correctionSelectionPath), "LiveDetection-Korrektur-Codeauswahl soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(correctionSelectionFactoryPath), "LiveDetection-Korrektur-Codeauswahl soll ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(correctionSelectionWorkflowPath), "LiveDetection-Korrektur-Codeauswahl-Serviceaufruf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(displayWorkflowPath), "LiveDetection-Bestaetigungsanzeige und Resume-Entscheidung sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(frameExporterPath), "Detection-Training-Frame-Export soll ausserhalb der PlayerWindow-Partials gekapselt sein.");
         Assert.True(File.Exists(exportPlannerPath), "Detection-Training-Exportplanung soll ausserhalb der PlayerWindow-Partials gekapselt sein.");
@@ -4428,6 +4430,7 @@ public sealed class UiArchitectureGuardTests
         var statusControls = File.ReadAllText(statusControlsPath);
         var correctionSelection = File.ReadAllText(correctionSelectionPath);
         var correctionSelectionFactory = File.ReadAllText(correctionSelectionFactoryPath);
+        var correctionSelectionWorkflow = File.Exists(correctionSelectionWorkflowPath) ? File.ReadAllText(correctionSelectionWorkflowPath) : "";
         var displayWorkflow = File.Exists(displayWorkflowPath) ? File.ReadAllText(displayWorkflowPath) : "";
         var frameExporter = File.ReadAllText(frameExporterPath);
         var exportPlanner = File.ReadAllText(exportPlannerPath);
@@ -4480,7 +4483,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("selectedEntry == null", correctBody);
         Assert.DoesNotContain("\n        try", correctBody);
         Assert.DoesNotContain("catch (Exception ex)", correctBody);
-        Assert.Contains("LiveDetectionCorrectionCodeSelectionServiceFactory.Create", training);
+        Assert.Contains("LiveDetectionCorrectionCodeSelectionWorkflow.Select", training);
+        Assert.DoesNotContain("LiveDetectionCorrectionCodeSelectionServiceFactory.Create", training);
         Assert.DoesNotContain("CodingExplorerEntryFactory.CreateSeed", training);
         Assert.DoesNotContain("VsaCodeExplorerDialogServiceFactory.Create", training);
         Assert.Contains("LiveDetectionTrainingAnnotationWriter.CreateDefault", training);
@@ -4510,6 +4514,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("annotationWriter.SaveCorrectedAsync", training);
         Assert.Contains("CodingExplorerEntryFactory.CreateSeed", correctionSelection);
         Assert.Contains("VsaCodeExplorerDialogServiceFactory.Create", correctionSelectionFactory);
+        Assert.Contains("LiveDetectionCorrectionCodeSelectionServiceFactory.Create", correctionSelectionWorkflow);
+        Assert.Contains("service.Select(", correctionSelectionWorkflow);
         Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", training);
         Assert.DoesNotContain("LiveDetectionTrainingFrameExporter", training);
         Assert.DoesNotContain("LiveDetectionTrainingExportPlanner.BuildAccepted", training);
