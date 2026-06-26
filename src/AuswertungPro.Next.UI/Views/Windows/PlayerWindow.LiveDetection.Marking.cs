@@ -1,7 +1,5 @@
-using System;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Input;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
@@ -59,13 +57,8 @@ public partial class PlayerWindow
             new LiveDetectionOsdMeterStatusWorkflowRequest(
                 Message: message,
                 ResetAfterDelay: resetAfterDelay),
-            new LiveDetectionOsdMeterStatusWorkflowActions(
+            new LiveDetectionOsdMeterStatusDisplayActions(
                 ShowMessage: text => CodingOsdBadgeControls.Show(OsdMeterBadge, TxtOsdMeter, text),
-                ScheduleReset: (delay, reset) =>
-                {
-                    var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(delay, reset);
-                    resetTimer.Start();
-                },
                 GetLastMeter: () => _codingOsdMeterController.LastMeter,
                 ShowMeter: meter => CodingOsdBadgeControls.ShowMeter(OsdMeterBadge, TxtOsdMeter, meter),
                 HideBadge: () => CodingOsdBadgeControls.Hide(OsdMeterBadge)));

@@ -4208,6 +4208,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingOsdBadgeControls.ShowMeter", marking);
         Assert.Contains("CodingOsdBadgeControls.Hide", osdText);
         Assert.DoesNotContain("if (_codingOsdMeterController.LastMeter.HasValue)", marking);
+        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", marking);
         Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromSeconds(3)", marking);
         Assert.DoesNotContain("OsdMeterBadge.Visibility", osdText);
         Assert.DoesNotContain("TxtOsdMeter.Text", osdText);
@@ -4220,6 +4221,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", controls);
         Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", workflow);
         Assert.Contains("TimeSpan.FromSeconds(3)", statusWorkflow);
+        Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", statusWorkflow);
         Assert.Contains("actions.GetLastMeter()", statusWorkflow);
         Assert.Contains("actions.ShowMeter(lastMeter.Value)", statusWorkflow);
     }

@@ -1,4 +1,5 @@
 using System;
+using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -19,6 +20,12 @@ public sealed record LiveDetectionOsdMeterStatusWorkflowActions(
     Action<double> ShowMeter,
     Action HideBadge);
 
+public sealed record LiveDetectionOsdMeterStatusDisplayActions(
+    Action<string> ShowMessage,
+    Func<double?> GetLastMeter,
+    Action<double> ShowMeter,
+    Action HideBadge);
+
 public sealed record LiveDetectionOsdMeterStatusWorkflowResult(
     LiveDetectionOsdMeterStatusWorkflowOutcome Outcome)
 {
@@ -27,6 +34,26 @@ public sealed record LiveDetectionOsdMeterStatusWorkflowResult(
 
 public static class LiveDetectionOsdMeterStatusWorkflow
 {
+    public static LiveDetectionOsdMeterStatusWorkflowResult Show(
+        LiveDetectionOsdMeterStatusWorkflowRequest request,
+        LiveDetectionOsdMeterStatusDisplayActions displayActions)
+    {
+        ArgumentNullException.ThrowIfNull(displayActions);
+
+        return Show(
+            request,
+            new LiveDetectionOsdMeterStatusWorkflowActions(
+                ShowMessage: displayActions.ShowMessage,
+                ScheduleReset: (delay, reset) =>
+                {
+                    var resetTimer = PlayerWindowTimerFactory.CreateOneShotTimer(delay, reset);
+                    resetTimer.Start();
+                },
+                GetLastMeter: displayActions.GetLastMeter,
+                ShowMeter: displayActions.ShowMeter,
+                HideBadge: displayActions.HideBadge));
+    }
+
     public static LiveDetectionOsdMeterStatusWorkflowResult Show(
         LiveDetectionOsdMeterStatusWorkflowRequest request,
         LiveDetectionOsdMeterStatusWorkflowActions actions)
