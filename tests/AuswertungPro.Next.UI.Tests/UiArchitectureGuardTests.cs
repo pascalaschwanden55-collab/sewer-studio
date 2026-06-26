@@ -696,6 +696,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("TxtCodingStatAutoAccepted.Text", events);
         Assert.Contains("CodingEventsListRefreshCommandWorkflow.Execute", events);
         Assert.DoesNotContain("if (!CodingEventsRefreshWorkflow.RefreshListAndStatistics", events);
+        Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", events);
+        Assert.DoesNotContain("Dispatcher.InvokeAsync", events);
+        Assert.DoesNotContain("System.Windows.Threading.DispatcherPriority.Loaded", events);
         Assert.Contains("public static class CodingStatisticsUpdateCommandWorkflow", statisticsCommandWorkflow);
         Assert.Contains("if (!request.HasCodingViewModel)", statisticsCommandWorkflow);
         Assert.Contains("actions.RefreshStatistics()", statisticsCommandWorkflow);

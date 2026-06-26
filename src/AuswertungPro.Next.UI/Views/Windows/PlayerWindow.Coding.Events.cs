@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
@@ -84,9 +83,9 @@ public partial class PlayerWindow
                     _codingSidePanelControllers.EventsList,
                     _codingSidePanelControllers.Statistics,
                     CodingSessionViewModel.GetDefectStatus),
-                ScheduleColorize: () => Dispatcher.InvokeAsync(
-                    ColorizeCodingEventListItems,
-                    System.Windows.Threading.DispatcherPriority.Loaded)));
+                ScheduleColorize: () => PlayerDispatcherScheduler.ScheduleLoaded(
+                    Dispatcher,
+                    ColorizeCodingEventListItems)));
     }
 
     private void UpdateCodingStatistics()
