@@ -3958,6 +3958,7 @@ public sealed class UiArchitectureGuardTests
         var controllerPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardActionController.cs");
         var workflowPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardInputWorkflow.cs");
         var playbackRunnerPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardPlaybackCommandRunner.cs");
+        var factoryPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardActionControllerFactory.cs");
         var markToolShortcutWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerMarkToolShortcutWorkflow.cs");
         var detectionShortcutWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerDetectionShortcutWorkflow.cs");
         var cancelOverlayShortcutWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerCancelCodingOverlayShortcutWorkflow.cs");
@@ -3966,6 +3967,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(controllerPath), "Shortcut-Aktionsausfuehrung soll ausserhalb des PlayerWindow liegen.");
         Assert.True(File.Exists(workflowPath), "Keyboard-Handled-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(playbackRunnerPath), "Keyboard-Playback-Kommandos sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(factoryPath), "Keyboard-Controller-Bindings sollen ausserhalb des PlayerWindow-Partials gebaut werden.");
         Assert.True(File.Exists(markToolShortcutWorkflowPath), "Markierwerkzeug-Shortcut-Entscheidung soll ausserhalb des PlayerWindow liegen.");
         Assert.True(File.Exists(detectionShortcutWorkflowPath), "Detection-Shortcut-Entscheidung soll ausserhalb des PlayerWindow liegen.");
         Assert.True(File.Exists(cancelOverlayShortcutWorkflowPath), "Overlay-Abbruch-Shortcut-Entscheidung soll ausserhalb des PlayerWindow liegen.");
@@ -3975,6 +3977,7 @@ public sealed class UiArchitectureGuardTests
         var controller = File.ReadAllText(controllerPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var playbackRunner = File.Exists(playbackRunnerPath) ? File.ReadAllText(playbackRunnerPath) : "";
+        var factory = File.Exists(factoryPath) ? File.ReadAllText(factoryPath) : "";
         var markToolShortcutWorkflow = File.Exists(markToolShortcutWorkflowPath) ? File.ReadAllText(markToolShortcutWorkflowPath) : "";
         var detectionShortcutWorkflow = File.Exists(detectionShortcutWorkflowPath) ? File.ReadAllText(detectionShortcutWorkflowPath) : "";
         var cancelOverlayShortcutWorkflow = File.Exists(cancelOverlayShortcutWorkflowPath) ? File.ReadAllText(cancelOverlayShortcutWorkflowPath) : "";
@@ -3983,12 +3986,18 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerWindow_PreviewKeyDown", keyboard);
         Assert.Contains("PlayerKeyboardInputWorkflow.Execute", keyboard);
         Assert.Contains("ExecuteAction: _keyboardActions.Execute", keyboard);
+        Assert.Contains("PlayerKeyboardActionControllerFactory.Create", keyboard);
+        Assert.DoesNotContain("new PlayerKeyboardActionController(", keyboard);
+        Assert.DoesNotContain("new PlayerKeyboardActionBindings", keyboard);
         Assert.DoesNotContain("if (_keyboardActions.Execute(action))", keyboard);
         Assert.Contains("actions.MarkHandled()", workflow);
         Assert.DoesNotContain("case PlayerKeyboardAction.", keyboard);
-        Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Stop", keyboard);
-        Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Pause", keyboard);
-        Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Resume", keyboard);
+        Assert.DoesNotContain("PlayerKeyboardPlaybackCommandRunner.Stop", keyboard);
+        Assert.DoesNotContain("PlayerKeyboardPlaybackCommandRunner.Pause", keyboard);
+        Assert.DoesNotContain("PlayerKeyboardPlaybackCommandRunner.Resume", keyboard);
+        Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Stop", factory);
+        Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Pause", factory);
+        Assert.Contains("PlayerKeyboardPlaybackCommandRunner.Resume", factory);
         Assert.Contains("PlayerMarkToolShortcutWorkflow.Execute", keyboard);
         Assert.DoesNotContain("MarkToolPopup.IsOpen", keyboard);
         Assert.Contains("PlayerDetectionShortcutWorkflow.Execute", keyboard);

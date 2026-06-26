@@ -11,18 +11,17 @@ public partial class PlayerWindow
 
     private void PlayerWindow_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        _keyboardActions ??= new PlayerKeyboardActionController(new PlayerKeyboardActionBindings
-        {
-            CancelCodingOverlay = CancelCodingOverlayShortcut,
-            TogglePlayPause = TogglePlayPause,
-            Stop = () => PlayerKeyboardPlaybackCommandRunner.Stop(_playerPlaybackControlHost.Stop),
-            Pause = () => PlayerKeyboardPlaybackCommandRunner.Pause(_playerPlaybackControlHost.SetPause),
-            Resume = () => PlayerKeyboardPlaybackCommandRunner.Resume(EnsurePlaying, _playerPlaybackControlHost.SetPause),
-            ChangeSpeed = ChangeSpeed,
-            JumpSeconds = JumpSeconds,
-            ToggleDetection = ToggleDetectionShortcut,
-            ToggleMarkTool = ToggleMarkToolShortcut
-        });
+        _keyboardActions ??= PlayerKeyboardActionControllerFactory.Create(
+            new PlayerKeyboardActionControllerFactoryActions(
+                CancelCodingOverlay: CancelCodingOverlayShortcut,
+                TogglePlayPause: TogglePlayPause,
+                StopPlayback: _playerPlaybackControlHost.Stop,
+                SetPause: _playerPlaybackControlHost.SetPause,
+                EnsurePlaying: EnsurePlaying,
+                ChangeSpeed: ChangeSpeed,
+                JumpSeconds: JumpSeconds,
+                ToggleDetection: ToggleDetectionShortcut,
+                ToggleMarkTool: ToggleMarkToolShortcut));
 
         var action = PlayerKeyboardShortcutPolicy.Resolve(e.Key, _codingOverlayToolHost.HasOverlayService);
         PlayerKeyboardInputWorkflow.Execute(
