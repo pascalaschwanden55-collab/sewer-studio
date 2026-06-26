@@ -531,6 +531,7 @@ public sealed class UiArchitectureGuardTests
         var codingModeStatePath = Path.Combine(uiRoot, "Player", "CodingModeStateController.cs");
         var codingAiStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingAiStateControllerSet.cs");
         var importEventsOwnerPath = Path.Combine(uiRoot, "Player", "CodingImportReferenceEventsOwner.cs");
+        var protocolStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingProtocolStateControllerSet.cs");
         var overlayStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingOverlayStateControllerSet.cs");
         var sidePanelControllerSetPath = Path.Combine(uiRoot, "Player", "CodingSidePanelControllerSet.cs");
         var sidePanelEventBinderPath = Path.Combine(windowsRoot, "PlayerCodingSidePanelEventBinder.cs");
@@ -539,6 +540,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(codingModeStatePath), "Coding-Modus-Zustand soll nicht mehr als Rohfeld im PlayerWindow liegen.");
         Assert.True(File.Exists(codingAiStateControllerSetPath), "Coding-AI-Zustandscontroller sollen nicht einzeln im PlayerWindow liegen.");
         Assert.True(File.Exists(importEventsOwnerPath), "Coding-Import-Referenz-Events sollen nicht mehr als rohe Collection im PlayerWindow liegen.");
+        Assert.True(File.Exists(protocolStateControllerSetPath), "Coding-Protocol/Navigations-Zustand soll nicht einzeln im PlayerWindow liegen.");
         Assert.True(File.Exists(overlayStateControllerSetPath), "Coding-Overlay-Zustandscontroller sollen nicht einzeln im PlayerWindow liegen.");
         Assert.True(File.Exists(sidePanelControllerSetPath), "Coding-SidePanel-Control-Wrapper sollen nicht mehr als einzelne Rohfelder im PlayerWindow liegen.");
         Assert.True(File.Exists(sidePanelEventBinderPath), "Coding-SidePanel-Event-Wiring soll ausserhalb des PlayerWindow-Partials liegen.");
@@ -548,6 +550,7 @@ public sealed class UiArchitectureGuardTests
         var codingModeState = File.Exists(codingModeStatePath) ? File.ReadAllText(codingModeStatePath) : "";
         var codingAiStateControllerSet = File.Exists(codingAiStateControllerSetPath) ? File.ReadAllText(codingAiStateControllerSetPath) : "";
         var importEventsOwner = File.Exists(importEventsOwnerPath) ? File.ReadAllText(importEventsOwnerPath) : "";
+        var protocolStateControllerSet = File.Exists(protocolStateControllerSetPath) ? File.ReadAllText(protocolStateControllerSetPath) : "";
         var overlayStateControllerSet = File.Exists(overlayStateControllerSetPath) ? File.ReadAllText(overlayStateControllerSetPath) : "";
         var sidePanelControllerSet = File.Exists(sidePanelControllerSetPath) ? File.ReadAllText(sidePanelControllerSetPath) : "";
         var accessors = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.CodingSidePanelAccessors.cs"));
@@ -591,7 +594,18 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public sealed class CodingOverlayStateControllerSet", overlayStateControllerSet);
         Assert.Contains("private readonly CodingEingabemarkerStateController _eingabemarkerState = new();", state);
         Assert.DoesNotContain("private readonly ObservableCollection<CodingEvent> _codingImportEvents", state);
-        Assert.Contains("private readonly CodingImportReferenceEventsOwner _codingImportReferenceEvents = new();", state);
+        Assert.Contains("private readonly CodingProtocolStateControllerSet _codingProtocolStates = new();", state);
+        Assert.DoesNotContain("private readonly CodingImportReferenceEventsOwner _codingImportReferenceEvents = new();", state);
+        Assert.DoesNotContain("private readonly CodingNavigationPendingState _codingNavigationPendingState = new();", state);
+        Assert.DoesNotContain("private readonly CodingProtocolMatchStateController _codingProtocolMatchState = new();", state);
+        Assert.DoesNotContain("private readonly CodingPendingConfirmationStateController _codingPendingConfirmationState = new();", state);
+        Assert.DoesNotContain("private readonly CodingBaselineSignatureStateController _codingBaselineSignatureState = new();", state);
+        Assert.Contains("private CodingImportReferenceEventsOwner _codingImportReferenceEvents => _codingProtocolStates.ImportReferenceEvents", state);
+        Assert.Contains("private CodingNavigationPendingState _codingNavigationPendingState => _codingProtocolStates.NavigationPendingState", state);
+        Assert.Contains("private CodingProtocolMatchStateController _codingProtocolMatchState => _codingProtocolStates.ProtocolMatchState", state);
+        Assert.Contains("private CodingPendingConfirmationStateController _codingPendingConfirmationState => _codingProtocolStates.PendingConfirmationState", state);
+        Assert.Contains("private CodingBaselineSignatureStateController _codingBaselineSignatureState => _codingProtocolStates.BaselineSignatureState", state);
+        Assert.Contains("public sealed class CodingProtocolStateControllerSet", protocolStateControllerSet);
         Assert.Contains("public sealed class CodingImportReferenceEventsOwner", importEventsOwner);
         Assert.Contains("public ObservableCollection<CodingEvent> Events", importEventsOwner);
         Assert.DoesNotContain("private CodingEventsListControls _codingEventsListControls", state);
@@ -6914,7 +6928,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private bool _codingNavPending", coding);
         Assert.DoesNotContain("private bool _codingNavPending", navigation);
         Assert.DoesNotContain("_codingNavPending", windowRoot + state + navigation);
-        Assert.Contains("_codingNavigationPendingState", state);
+        Assert.Contains("private CodingNavigationPendingState _codingNavigationPendingState => _codingProtocolStates.NavigationPendingState", state);
         Assert.DoesNotContain("private async void CodingNext_Click", navigation);
         Assert.DoesNotContain("private async void CodingPrevious_Click", navigation);
         Assert.Contains("private void CodingNext_Click", navigation);
@@ -7752,7 +7766,7 @@ public sealed class UiArchitectureGuardTests
         var baselineState = File.Exists(baselineStatePath) ? File.ReadAllText(baselineStatePath) : "";
 
         Assert.DoesNotContain("private string _codingBaselineSignature = string.Empty;", state);
-        Assert.Contains("private readonly CodingBaselineSignatureStateController _codingBaselineSignatureState = new();", state);
+        Assert.Contains("private CodingBaselineSignatureStateController _codingBaselineSignatureState => _codingProtocolStates.BaselineSignatureState", state);
         Assert.Contains("public sealed class CodingBaselineSignatureStateController", baselineState);
         Assert.Contains("public string BaselineSignature", baselineState);
         Assert.Contains("public void Set", baselineState);
@@ -7774,7 +7788,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.DoesNotContain("private CodingEvent? _codingPendingConfirmEvent;", state);
         Assert.DoesNotContain("private QualityGateResult? _codingPendingGateResult;", state);
-        Assert.Contains("private readonly CodingPendingConfirmationStateController _codingPendingConfirmationState = new();", state);
+        Assert.Contains("private CodingPendingConfirmationStateController _codingPendingConfirmationState => _codingProtocolStates.PendingConfirmationState", state);
         Assert.Contains("public sealed class CodingPendingConfirmationStateController", pendingState);
         Assert.Contains("public CodingEvent? CodingEvent", pendingState);
         Assert.Contains("public QualityGateResult? GateResult", pendingState);
@@ -7808,7 +7822,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.DoesNotContain("private CodingMatchRouting? _lastCodingMatch;", state);
         Assert.DoesNotContain("private readonly Dictionary<Guid, CodingProtocolMatchBucket> _codingProtocolMatchBuckets", state);
-        Assert.Contains("private readonly CodingProtocolMatchStateController _codingProtocolMatchState = new();", state);
+        Assert.Contains("private CodingProtocolMatchStateController _codingProtocolMatchState => _codingProtocolStates.ProtocolMatchState", state);
         Assert.Contains("_codingProtocolMatchState.Buckets", protocolMatch);
         Assert.Contains("StoreMatch: _codingProtocolMatchState.Store", protocolMatch);
         Assert.Contains("_codingProtocolMatchState.TryGetBucket", highlight);

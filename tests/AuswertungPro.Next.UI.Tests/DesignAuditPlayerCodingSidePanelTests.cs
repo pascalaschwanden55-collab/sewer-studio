@@ -485,7 +485,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var runBody = ExtractMethodBody(coding, "private void RunCodingProtocolMatch()");
 
         Assert.Contains("using AuswertungPro.Next.Application.Ai.Evaluation;", coding);
-        Assert.Contains("private readonly CodingProtocolMatchStateController _codingProtocolMatchState", coding);
+        Assert.Contains("private CodingProtocolMatchStateController _codingProtocolMatchState => _codingProtocolStates.ProtocolMatchState", coding);
         Assert.Contains("_codingProtocolMatchState.Buckets", runBody);
         Assert.Contains("StoreMatch: _codingProtocolMatchState.Store", runBody);
         Assert.Contains("CodingProtocolMatchCommandWorkflow.Execute", runBody);

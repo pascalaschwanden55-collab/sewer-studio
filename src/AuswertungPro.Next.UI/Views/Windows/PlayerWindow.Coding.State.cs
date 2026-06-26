@@ -22,16 +22,9 @@ public partial class PlayerWindow
     private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner;
     private readonly ICodingSessionHost _codingSessionHost;
     private readonly ICodingOverlayToolHost _codingOverlayToolHost;
-    private readonly CodingNavigationPendingState _codingNavigationPendingState = new();
+    private readonly CodingProtocolStateControllerSet _codingProtocolStates = new();
 
     private readonly CodingEingabemarkerStateController _eingabemarkerState = new();
-
-    private readonly CodingImportReferenceEventsOwner _codingImportReferenceEvents = new();
-    private readonly CodingProtocolMatchStateController _codingProtocolMatchState = new();
-
-    private readonly CodingPendingConfirmationStateController _codingPendingConfirmationState = new();
-
-    private readonly CodingBaselineSignatureStateController _codingBaselineSignatureState = new();
 
     private CodingCalibrationStateController _codingCalibrationState => _codingOverlayStates.CalibrationState;
 
@@ -50,4 +43,14 @@ public partial class PlayerWindow
     private CodingFrameReadinessController _codingFrameReadinessController => _codingAiStates.FrameReadinessController;
 
     private CodingLiveAiTimerControllerOwner _codingLiveAiTimerOwner => _codingAiStates.LiveTimerOwner;
+
+    private CodingImportReferenceEventsOwner _codingImportReferenceEvents => _codingProtocolStates.ImportReferenceEvents;
+
+    private CodingNavigationPendingState _codingNavigationPendingState => _codingProtocolStates.NavigationPendingState;
+
+    private CodingProtocolMatchStateController _codingProtocolMatchState => _codingProtocolStates.ProtocolMatchState;
+
+    private CodingPendingConfirmationStateController _codingPendingConfirmationState => _codingProtocolStates.PendingConfirmationState;
+
+    private CodingBaselineSignatureStateController _codingBaselineSignatureState => _codingProtocolStates.BaselineSignatureState;
 }
