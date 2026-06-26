@@ -32,7 +32,7 @@ public partial class PlayerWindow
                     items,
                     currentMeter,
                     ResolveFindingCodeForCoding),
-                UpdateTracker: _streckenTracker.Update,
+                UpdateTracker: _streckenschadenTracker.Update,
                 ApplyActions: TryApplyStreckenschadenActions,
                 RefreshEvents: RefreshCodingEventsList));
         return result.ConsumedSegments;
@@ -73,7 +73,7 @@ public partial class PlayerWindow
                 EndMeter: endMeter,
                 VideoTime: _playerTimelineHost.CurrentTimeOrZero),
             new CodingStreckenschadenCloseTrackedCommandActions(
-                CloseAll: _streckenTracker.CloseAll,
+                CloseAll: _streckenschadenTracker.CloseAll,
                 ApplyActions: TryApplyStreckenschadenActions,
                 RefreshEvents: RefreshCodingEventsList));
     }

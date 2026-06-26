@@ -5598,18 +5598,25 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
         var streckenPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Streckenschaden.cs");
+        var statePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenTrackingCommandWorkflow.cs");
+        var trackerOwnerPath = Path.Combine(uiRoot, "Player", "CodingStreckenschadenTrackerOwner.cs");
 
         Assert.True(File.Exists(streckenPath), "Streckenschaden-Tracking soll aus dem allgemeinen AI-Partial heraus.");
         Assert.True(File.Exists(workflowPath), "Streckenschaden-Tracking-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(trackerOwnerPath), "Streckenschaden-Tracker-Besitz soll nicht als Rohfeld im PlayerWindow liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var strecken = File.ReadAllText(streckenPath);
+        var state = File.ReadAllText(statePath);
         var workflow = File.ReadAllText(workflowPath);
+        var trackerOwner = File.Exists(trackerOwnerPath) ? File.ReadAllText(trackerOwnerPath) : "";
 
         Assert.DoesNotContain("private HashSet<SegmentedFinding> ApplyStreckenschadenTracking", ai);
         Assert.DoesNotContain("private void ApplyStreckenschadenActions", ai);
         Assert.DoesNotContain("private void CloseTrackedStreckenschaeden", ai);
+        Assert.DoesNotContain("private readonly StreckenschadenTracker _streckenTracker = new();", state);
+        Assert.Contains("private readonly CodingStreckenschadenTrackerOwner _streckenschadenTracker = new();", state);
         Assert.Contains("private HashSet<SegmentedFinding> ApplyStreckenschadenTracking", strecken);
         Assert.Contains("CodingStreckenschadenTrackingCommandWorkflow.ApplyTracking", strecken);
         Assert.Contains("CodingStreckenschadenTrackingCommandWorkflow.CloseTracked", strecken);
@@ -5619,6 +5626,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("if (TryApplyStreckenschadenActions(actions, videoTime))", strecken);
         Assert.DoesNotContain("if (actions.Count == 0) return", strecken);
         Assert.Contains("CodingStreckenschadenObservationBuilder.Build", strecken);
+        Assert.Contains("UpdateTracker: _streckenschadenTracker.Update", strecken);
+        Assert.Contains("CloseAll: _streckenschadenTracker.CloseAll", strecken);
         Assert.Contains("CodingStreckenschadenActionApplier.Apply", strecken);
         Assert.Contains("if (!request.HasCodingSessionService || !request.HasCodingViewModel)", workflow);
         Assert.Contains("actions.BuildObservations", workflow);
@@ -5626,6 +5635,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.ApplyActions", workflow);
         Assert.Contains("actions.RefreshEvents()", workflow);
         Assert.Contains("actions.CloseAll", workflow);
+        Assert.Contains("public sealed class CodingStreckenschadenTrackerOwner", trackerOwner);
+        Assert.Contains("public IReadOnlyList<StreckenschadenTracker.SegmentAction> Update", trackerOwner);
+        Assert.Contains("public IReadOnlyList<StreckenschadenTracker.SegmentAction> CloseAll", trackerOwner);
+        Assert.Contains("public void Reset", trackerOwner);
     }
 
     [Fact]
