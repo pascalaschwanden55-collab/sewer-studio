@@ -8,10 +8,12 @@ public partial class PlayerWindow
 {
     private void WirePositionSliderEvents()
     {
-        PositionSlider.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler(PositionSlider_DragStarted), true);
-        PositionSlider.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(PositionSlider_DragCompleted), true);
-        PositionSlider.PreviewMouseLeftButtonUp += PositionSlider_PreviewMouseLeftButtonUp;
-        PositionSlider.LostMouseCapture += PositionSlider_LostMouseCapture;
+        PlayerPositionSliderEventBinder.Bind(
+            PositionSlider,
+            PositionSlider_DragStarted,
+            PositionSlider_DragCompleted,
+            PositionSlider_PreviewMouseLeftButtonUp,
+            PositionSlider_LostMouseCapture);
     }
 
     private void PositionSlider_DragStarted(object sender, DragStartedEventArgs e)

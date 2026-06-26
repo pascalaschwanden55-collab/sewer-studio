@@ -122,6 +122,7 @@ public sealed class UiArchitectureGuardTests
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var wiringPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs");
         var sliderPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs");
+        var sliderEventBinderPath = Path.Combine(windowsRoot, "PlayerPositionSliderEventBinder.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var dragPlaybackPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragPlayback.cs");
         var dragWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragWorkflow.cs");
@@ -134,6 +135,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.True(File.Exists(wiringPath), "Fenster-, Slider- und Viewport-Wiring soll aus dem Konstruktor heraus.");
         Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
+        Assert.True(File.Exists(sliderEventBinderPath), "PositionSlider-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(dragPlaybackPath), "PositionSlider-Drag-Pause-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dragWorkflowPath), "PositionSlider-Drag-Reihenfolge muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(sliderStateControllerPath), "PositionSlider-Drag-Zustand soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -146,6 +148,7 @@ public sealed class UiArchitectureGuardTests
         var windowRoot = File.ReadAllText(windowRootPath);
         var wiring = File.ReadAllText(wiringPath);
         var slider = File.ReadAllText(sliderPath);
+        var sliderEventBinder = File.Exists(sliderEventBinderPath) ? File.ReadAllText(sliderEventBinderPath) : "";
         var state = File.ReadAllText(statePath);
         var dragPlayback = File.Exists(dragPlaybackPath) ? File.ReadAllText(dragPlaybackPath) : "";
         var dragWorkflow = File.Exists(dragWorkflowPath) ? File.ReadAllText(dragWorkflowPath) : "";
@@ -202,7 +205,12 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void WirePositionSliderEvents", wiring);
         Assert.DoesNotContain("PositionSlider.AddHandler", wiring);
         Assert.Contains("private void WirePositionSliderEvents", slider);
-        Assert.Contains("PositionSlider.AddHandler", slider);
+        Assert.Contains("PlayerPositionSliderEventBinder.Bind", slider);
+        Assert.DoesNotContain("PositionSlider.AddHandler", slider);
+        Assert.DoesNotContain("new DragStartedEventHandler", slider);
+        Assert.DoesNotContain("new DragCompletedEventHandler", slider);
+        Assert.Contains(".AddHandler(Thumb.DragStartedEvent", sliderEventBinder);
+        Assert.Contains(".AddHandler(Thumb.DragCompletedEvent", sliderEventBinder);
         Assert.Contains("private void PositionSlider_DragStarted", slider);
         Assert.Contains("private void PositionSlider_LostMouseCapture", slider);
         Assert.Contains("PlayerPositionSliderDragWorkflow.Start", slider);
