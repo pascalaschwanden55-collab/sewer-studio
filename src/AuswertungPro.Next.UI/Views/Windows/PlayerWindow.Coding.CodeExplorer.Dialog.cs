@@ -18,6 +18,10 @@ public partial class PlayerWindow
             CreateService: () => CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel),
             CreateLiveSnapshotProvider: CreateVsaCodeExplorerLiveSnapshotProvider);
 
+    private CodingCodeExplorerSeedSelectionWorkflowActions CreateCodingCodeExplorerSeedSelectionActions()
+        => new(
+            CreateService: () => CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel));
+
     private CodingCodeExplorerEditWorkflowActions CreateCodingCodeExplorerEditActions()
         => new(
             CreateService: () => CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel),

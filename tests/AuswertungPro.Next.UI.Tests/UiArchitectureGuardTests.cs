@@ -4866,6 +4866,7 @@ public sealed class UiArchitectureGuardTests
         var appenderPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkEventAppender.cs");
         var frameExporterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingFrameExporter.cs");
         var annotationWriterPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTrainingAnnotationWriter.cs");
+        var seedSelectionWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerSeedSelectionWorkflow.cs");
         var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingCommandWorkflow.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingWorkflow.cs");
         var resultWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingResultWorkflow.cs");
@@ -4874,6 +4875,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(appenderPath), "Manual-Mark-Session-Anlage soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(frameExporterPath), "Manual-Mark-Training soll den bestehenden FrameExporter fuer Tempframe-I/O nutzen.");
         Assert.True(File.Exists(annotationWriterPath), "Manual-Mark-Training soll den bestehenden AnnotationWriter nutzen.");
+        Assert.True(File.Exists(seedSelectionWorkflowPath), "Manual-Mark-Codeauswahl soll den Code-Explorer ausserhalb der PlayerWindow-Partials orchestrieren.");
         Assert.True(File.Exists(commandWorkflowPath), "Manual-Mark-Training-Befehl soll Auswahl, Speichern, Ergebnis und Fehler ausserhalb der PlayerWindow-Partials orchestrieren.");
         Assert.True(File.Exists(workflowPath), "Manual-Mark-Training-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(resultWorkflowPath), "Manual-Mark-Training-Ergebnisbehandlung soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -4883,6 +4885,7 @@ public sealed class UiArchitectureGuardTests
         var appender = File.Exists(appenderPath) ? File.ReadAllText(appenderPath) : "";
         var frameExporter = File.ReadAllText(frameExporterPath);
         var annotationWriter = File.ReadAllText(annotationWriterPath);
+        var seedSelectionWorkflow = File.Exists(seedSelectionWorkflowPath) ? File.ReadAllText(seedSelectionWorkflowPath) : "";
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var resultWorkflow = File.Exists(resultWorkflowPath) ? File.ReadAllText(resultWorkflowPath) : "";
@@ -4891,6 +4894,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", marking);
         Assert.Contains("private async Task<bool> SaveMarkAsTrainingAsync", training);
         Assert.Contains("LiveDetectionManualMarkTrainingCommandWorkflow.ExecuteAsync", training);
+        Assert.Contains("CodingCodeExplorerSeedSelectionWorkflow.Execute", training);
         Assert.Contains("LiveDetectionManualMarkTrainingWorkflow.SaveAsync", training);
         Assert.Contains("LiveDetectionManualMarkTrainingResultWorkflow.Execute", training);
         Assert.Contains("_codingSessionHost", training);
@@ -4901,7 +4905,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("result.Code", training);
         Assert.DoesNotContain("LiveDetectionManualMarkEventAppender.Apply", training);
         Assert.DoesNotContain("CodingProtocolEntryPhotoPathAppender.AddIfPresent", training);
+        Assert.DoesNotContain(".SelectSeed(", training);
+        Assert.DoesNotContain("CodingCodeExplorerWorkflowServiceFactory.Create", training);
         Assert.DoesNotContain("_codingSessionService.AddEvent(manualEntry", training);
+        Assert.Contains(".SelectSeed(", seedSelectionWorkflow);
         Assert.Contains("actions.SelectEntry()", commandWorkflow);
         Assert.Contains("actions.SaveTrainingAsync(selectedEntry)", commandWorkflow);
         Assert.Contains("actions.HandleTrainingResult(trainingResult)", commandWorkflow);

@@ -16,13 +16,14 @@ public partial class PlayerWindow
                 SelectEntry: () =>
                 {
                     var autoMeter = _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition();
-                    return CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
-                        .SelectSeed(
+                    return CodingCodeExplorerSeedSelectionWorkflow.Execute(
+                        new CodingCodeExplorerSeedSelectionWorkflowRequest(
                             overlay,
                             autoMeter,
                             TimeSpan.FromSeconds(timestampSec),
                             _videoPath,
-                            this);
+                            this),
+                        CreateCodingCodeExplorerSeedSelectionActions());
                 },
                 SaveTrainingAsync: selectedEntry => LiveDetectionManualMarkTrainingWorkflow.SaveAsync(
                     selectedEntry,
