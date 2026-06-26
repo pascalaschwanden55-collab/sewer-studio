@@ -32,6 +32,30 @@ public sealed class CodingLiveAiTimerControllerOwnerTests
     }
 
     [Fact]
+    public void Ensure_builds_timer_controller_from_ui_dependencies_once()
+    {
+        RunOnStaThread(() =>
+        {
+            var owner = new CodingLiveAiTimerControllerOwner();
+            var button = new ToggleButton();
+            var tickCalls = 0;
+
+            var first = owner.Ensure(
+                button,
+                (_, _) => tickCalls++,
+                () => true);
+            var second = owner.Ensure(
+                button,
+                (_, _) => tickCalls++,
+                () => true);
+
+            Assert.True(owner.HasController);
+            Assert.Same(first, second);
+            Assert.Same(first, owner.Controller);
+        });
+    }
+
+    [Fact]
     public void Stop_allows_missing_controller()
     {
         var owner = new CodingLiveAiTimerControllerOwner();

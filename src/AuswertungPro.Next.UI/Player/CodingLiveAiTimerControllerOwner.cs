@@ -1,3 +1,5 @@
+using System.Windows.Controls.Primitives;
+
 namespace AuswertungPro.Next.UI.Player;
 
 public sealed class CodingLiveAiTimerControllerOwner
@@ -11,6 +13,18 @@ public sealed class CodingLiveAiTimerControllerOwner
         ArgumentNullException.ThrowIfNull(createController);
 
         return Controller ??= createController();
+    }
+
+    public CodingLiveAiTimerController Ensure(
+        ToggleButton button,
+        EventHandler analysisTick,
+        Func<bool> canBlink)
+    {
+        ArgumentNullException.ThrowIfNull(button);
+        ArgumentNullException.ThrowIfNull(analysisTick);
+        ArgumentNullException.ThrowIfNull(canBlink);
+
+        return Ensure(() => new CodingLiveAiTimerController(button, analysisTick, canBlink));
     }
 
     public void Stop(bool resetButton)

@@ -1941,7 +1941,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void CodingLiveAiTimer_Tick", live);
         Assert.Contains(".SafeFireAndForget(\"CodingLiveAiTimer\")", live);
         Assert.Contains("private async Task HandleCodingLiveAiTimerTickAsync", live);
-        Assert.Contains("CodingLiveAiTimerController", live);
+        Assert.Contains("_codingLiveAiTimerOwner.Ensure", live);
+        Assert.DoesNotContain("new CodingLiveAiTimerController", live);
         Assert.Contains("CodingLiveAiTimerTickWorkflow.ExecuteAsync", live);
         Assert.DoesNotContain("CodingLiveAiTickPolicy.ShouldAnalyze", live);
         Assert.Contains("CodingLiveAiTickPolicy.ShouldAnalyze", tickWorkflow);
@@ -3868,9 +3869,11 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingLiveAiBlinkTimer", coding + state + lifecycle + codingExit + ai + live + playback + playbackLifecycle);
         Assert.DoesNotContain("_codingLiveAiBlinkState", coding + state + lifecycle + codingExit + ai + live + playback + playbackLifecycle);
         Assert.DoesNotContain("new DispatcherTimer { Interval = CodingLiveAiTimerSettings", live);
+        Assert.DoesNotContain("new CodingLiveAiTimerController", live);
         Assert.Contains("public sealed class CodingLiveAiTimerController", controller);
         Assert.Contains("public sealed class CodingLiveAiTimerControllerOwner", owner);
         Assert.Contains("public CodingLiveAiTimerController Ensure", owner);
+        Assert.Contains("new CodingLiveAiTimerController", owner);
         Assert.Contains("public bool HasController", owner);
         Assert.Contains("CodingLiveAiButtonDisplayPolicy.BlinkColor", controller);
         Assert.Contains("public static class PlayerWindowTimerStopper", timerStopper);

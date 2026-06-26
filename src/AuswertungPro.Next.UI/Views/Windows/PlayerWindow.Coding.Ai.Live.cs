@@ -11,11 +11,10 @@ public partial class PlayerWindow
 {
     private void CodingLiveAi_Click(object sender, RoutedEventArgs e)
     {
-        var timers = _codingLiveAiTimerOwner.Ensure(() =>
-            new CodingLiveAiTimerController(
-                BtnCodingLiveAi,
-                CodingLiveAiTimer_Tick,
-                () => !_closing && !_playbackDisposed));
+        var timers = _codingLiveAiTimerOwner.Ensure(
+            BtnCodingLiveAi,
+            CodingLiveAiTimer_Tick,
+            () => !_closing && !_playbackDisposed);
 
         CodingLiveAiToggleWorkflow.Execute(
             new CodingLiveAiToggleWorkflowRequest(
