@@ -7,14 +7,16 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private CodingFrameExtractionService? _codingFrameExtractionService;
-    private CodingSnapshotFileCaptureService? _codingSnapshotFileCaptureService;
+    private CodingPhotoCaptureServices? _codingPhotoCaptureServices;
 
-    private CodingFrameExtractionService CodingFrameExtractionService
-        => _codingFrameExtractionService ??= CodingFrameExtractionServiceFactory.Create();
+    private CodingPhotoCaptureServices CodingPhotoCaptureServices
+        => _codingPhotoCaptureServices ??= new CodingPhotoCaptureServices();
 
     private CodingSnapshotFileCaptureService CodingSnapshotFileCaptureService
-        => _codingSnapshotFileCaptureService ??= CodingSnapshotFileCaptureServiceFactory.Create();
+        => CodingPhotoCaptureServices.SnapshotFileCaptureService;
+
+    private CodingFrameExtractionService CodingFrameExtractionService
+        => CodingPhotoCaptureServices.FrameExtractionService;
 
     private byte[]? TryExtractAnalyzedFrameBytes()
     {
