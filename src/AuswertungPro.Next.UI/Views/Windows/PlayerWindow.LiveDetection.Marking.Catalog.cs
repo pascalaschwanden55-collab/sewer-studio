@@ -12,7 +12,7 @@ public partial class PlayerWindow
     {
         var result = LiveDetectionMarkCatalogOpenWorkflow.ExecuteCanvasClick(
             new LiveDetectionMarkCatalogCanvasClickRequest(
-                _isManualMarkMode,
+                _liveDetectionController.IsManualMarkMode,
                 e.GetPosition(DetectionCanvas),
                 new Size(DetectionCanvas.ActualWidth, DetectionCanvas.ActualHeight),
                 _playerTimelineHost.CurrentSecondsOrZero),

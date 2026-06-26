@@ -39,7 +39,7 @@ public partial class PlayerWindow
             new LiveDetectionManualMarkCompletionWorkflowRequest(
                 saved,
                 _isCodingMode,
-                _markToolType),
+                _liveDetectionController.MarkToolType),
             new LiveDetectionManualMarkCompletionWorkflowActions(
                 ClearSamMasks: () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
                 ClearBendMarker: () => CodingBendMarkerOverlayController.Clear(CodingOverlayCanvas),

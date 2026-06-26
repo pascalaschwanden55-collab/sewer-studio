@@ -34,8 +34,6 @@ public partial class PlayerWindow
 
     // Live detection state.
     private readonly LiveDetectionController _liveDetectionController = new();
-    private bool _isManualMarkMode;
-    private OverlayToolType _markToolType = OverlayToolType.None;
     private readonly DetectionConfirmationBuffer _detectionConfirmationBuffer = new();
 
     // Protocol integration state.

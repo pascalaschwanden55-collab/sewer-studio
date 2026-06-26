@@ -1,4 +1,5 @@
 using System.Threading;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
@@ -169,5 +170,35 @@ public sealed class LiveDetectionControllerTests
         Assert.Null(threadError);
         Assert.False(hasAnalyzerBeforeRuntime);
         Assert.True(hasAnalyzerAfterRuntime);
+    }
+
+    [Fact]
+    public void Manual_mark_state_defaults_to_inactive_and_can_be_updated()
+    {
+        var controller = new LiveDetectionController();
+        var controllerType = typeof(LiveDetectionController);
+        var isManualMarkMode = controllerType.GetProperty("IsManualMarkMode");
+        var markToolType = controllerType.GetProperty("MarkToolType");
+        var setManualMarkMode = controllerType.GetMethod("SetManualMarkMode", [typeof(bool)]);
+        var setMarkToolType = controllerType.GetMethod("SetMarkToolType", [typeof(OverlayToolType)]);
+
+        Assert.NotNull(isManualMarkMode);
+        Assert.NotNull(markToolType);
+        Assert.NotNull(setManualMarkMode);
+        Assert.NotNull(setMarkToolType);
+        Assert.False((bool)isManualMarkMode.GetValue(controller)!);
+        Assert.Equal(OverlayToolType.None, markToolType.GetValue(controller));
+
+        setMarkToolType.Invoke(controller, [OverlayToolType.Rectangle]);
+        setManualMarkMode.Invoke(controller, [true]);
+
+        Assert.True((bool)isManualMarkMode.GetValue(controller)!);
+        Assert.Equal(OverlayToolType.Rectangle, markToolType.GetValue(controller));
+
+        setMarkToolType.Invoke(controller, [OverlayToolType.None]);
+        setManualMarkMode.Invoke(controller, [false]);
+
+        Assert.False((bool)isManualMarkMode.GetValue(controller)!);
+        Assert.Equal(OverlayToolType.None, markToolType.GetValue(controller));
     }
 }

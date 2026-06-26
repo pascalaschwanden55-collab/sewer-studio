@@ -842,19 +842,22 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var wiringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Wiring.cs");
         var factoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerFactory.cs");
+        var timerSetFactoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerSetFactory.cs");
         var tickWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerTickWorkflow.cs");
 
         Assert.True(File.Exists(factoryPath), "PlayerWindow-Timer sollen ausserhalb des Wiring-Partials erzeugt werden.");
+        Assert.True(File.Exists(timerSetFactoryPath), "PlayerWindow-Timer-Set soll die konkrete TimerFactory ausserhalb des Wiring-Partials kapseln.");
         Assert.True(File.Exists(tickWorkflowPath), "PlayerWindow-Timer-Tick-Entscheidung soll ausserhalb des Wiring-Partials liegen.");
 
         var wiring = File.ReadAllText(wiringPath);
         var factory = File.ReadAllText(factoryPath);
+        var timerSetFactory = File.Exists(timerSetFactoryPath) ? File.ReadAllText(timerSetFactoryPath) : "";
         var tickWorkflow = File.Exists(tickWorkflowPath) ? File.ReadAllText(tickWorkflowPath) : "";
 
-        Assert.Contains("PlayerWindowTimerFactory.CreateUpdateTimer", wiring);
-        Assert.Contains("PlayerWindowTimerFactory.CreateScrubTimer", wiring);
-        Assert.Contains("PlayerWindowTimerTickWorkflow.ExecuteUpdate", wiring);
-        Assert.Contains("PlayerWindowTimerTickWorkflow.ExecuteScrub", wiring);
+        Assert.Contains("PlayerWindowTimerSetFactory.Create", wiring);
+        Assert.DoesNotContain("PlayerWindowTimerFactory.Create", wiring);
+        Assert.DoesNotContain("PlayerWindowTimerTickWorkflow.ExecuteUpdate", wiring);
+        Assert.DoesNotContain("PlayerWindowTimerTickWorkflow.ExecuteScrub", wiring);
         Assert.DoesNotContain("if (_closing || _playbackDisposed)", wiring);
         Assert.DoesNotContain("if (_isDragging)", wiring);
         Assert.DoesNotContain("TimeSpan.FromMilliseconds(250)", wiring);
@@ -867,6 +870,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CreateOneShotTimer", factory);
         Assert.Contains("TimeSpan.FromMilliseconds(250)", factory);
         Assert.Contains("TimeSpan.FromMilliseconds(60)", factory);
+        Assert.Contains("PlayerWindowTimerFactory.CreateUpdateTimer", timerSetFactory);
+        Assert.Contains("PlayerWindowTimerFactory.CreateScrubTimer", timerSetFactory);
+        Assert.Contains("PlayerWindowTimerTickWorkflow.ExecuteUpdate", timerSetFactory);
+        Assert.Contains("PlayerWindowTimerTickWorkflow.ExecuteScrub", timerSetFactory);
         Assert.Contains("request.IsClosing", tickWorkflow);
         Assert.Contains("request.IsPlaybackDisposed", tickWorkflow);
         Assert.Contains("request.IsDragging", tickWorkflow);
@@ -5127,6 +5134,7 @@ public sealed class UiArchitectureGuardTests
         var markToolsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.MarkTools.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var controlsPath = Path.Combine(uiRoot, "Player", "PlayerMarkToolControls.cs");
+        var liveDetectionControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkActivationWorkflow.cs");
         var overlayReadyWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkOverlayReadyWorkflow.cs");
 
@@ -5139,6 +5147,7 @@ public sealed class UiArchitectureGuardTests
         var markTools = File.ReadAllText(markToolsPath);
         var state = File.ReadAllText(statePath);
         var controls = File.ReadAllText(controlsPath);
+        var liveDetectionController = File.ReadAllText(liveDetectionControllerPath);
         var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
         var overlayReadyWorkflow = File.Exists(overlayReadyWorkflowPath) ? File.ReadAllText(overlayReadyWorkflowPath) : "";
 
@@ -5166,7 +5175,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("LiveDetectionMarkOverlayReadyWorkflow.Execute", markTools);
         Assert.DoesNotContain("if (_codingOverlayRuntimeOwner.HasService && _codingSessionHost.HasViewModel) return;", markTools);
         Assert.Contains("private void DeactivateMarkTool", markTools);
-        Assert.Contains("private OverlayToolType _markToolType", state);
+        Assert.DoesNotContain("private OverlayToolType _markToolType", state);
+        Assert.DoesNotContain("private bool _isManualMarkMode", state);
+        Assert.Contains("OverlayToolType MarkToolType", liveDetectionController);
+        Assert.Contains("bool IsManualMarkMode", liveDetectionController);
         Assert.Contains("_markToolControls.BeginActivation", markTools);
         Assert.Contains("_markToolControls.ActivatePointTool", markTools);
         Assert.Contains("_markToolControls.OpenCodingOverlay", markTools);

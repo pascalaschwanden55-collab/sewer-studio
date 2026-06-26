@@ -64,7 +64,7 @@ public partial class PlayerWindow
     private void ToggleMarkToolShortcut()
     {
         PlayerMarkToolShortcutWorkflow.Execute(
-            new PlayerMarkToolShortcutWorkflowRequest(_markToolType),
+            new PlayerMarkToolShortcutWorkflowRequest(_liveDetectionController.MarkToolType),
             new PlayerMarkToolShortcutWorkflowActions(
                 DeactivateMarkTool,
                 ToggleMarkToolPopup: () => _markToolControls.ToggleManualMarkPopup(isCodingMode: false)));

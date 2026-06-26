@@ -12,7 +12,7 @@ public partial class PlayerWindow
         LiveDetectionStopUiWorkflow.Execute(
             new LiveDetectionStopUiWorkflowRequest(
                 ShouldUpdateUi: !_closing && !_playbackDisposed,
-                HideOverlay: !_isManualMarkMode,
+                HideOverlay: !_liveDetectionController.IsManualMarkMode,
                 TotalEvents: _codingSessionHost.EventCollection?.Count ?? 0,
                 HasPlayer: !_playbackDisposed,
                 IsPlaybackDisposed: _playbackDisposed,

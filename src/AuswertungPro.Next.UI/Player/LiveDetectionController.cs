@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
 
@@ -26,12 +27,16 @@ public sealed class LiveDetectionController
     private bool _isDetectionInFlight;
     private readonly List<LiveFrameFinding> _currentFindings = new();
     private string _modelName = string.Empty;
+    private bool _isManualMarkMode;
+    private OverlayToolType _markToolType = OverlayToolType.None;
 
     public DispatcherTimer? DetectionTimer => _timer;
     public CancellationTokenSource? DetectionCancellation => _cancellation;
     public bool IsDetecting => _isDetecting;
     public bool IsDetectionInFlight => _isDetectionInFlight;
     public bool IsDetectionTimerRunning => _timer?.IsEnabled == true;
+    public bool IsManualMarkMode => _isManualMarkMode;
+    public OverlayToolType MarkToolType => _markToolType;
     public double LastDetectionTimestamp { get; private set; }
     public IReadOnlyList<LiveFrameFinding> CurrentFindings => _currentFindings;
     public string ModelName => _modelName;
@@ -73,6 +78,12 @@ public sealed class LiveDetectionController
 
     public void EndDetection()
         => _isDetectionInFlight = false;
+
+    public void SetManualMarkMode(bool enabled)
+        => _isManualMarkMode = enabled;
+
+    public void SetMarkToolType(OverlayToolType tool)
+        => _markToolType = tool;
 
     public void ApplyDetectionResult(LiveDetection result)
     {

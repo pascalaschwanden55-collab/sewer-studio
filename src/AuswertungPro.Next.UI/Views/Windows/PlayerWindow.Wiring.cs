@@ -8,27 +8,15 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private DispatcherTimer CreateUpdateTimer()
-        => PlayerWindowTimerFactory.CreateUpdateTimer(() =>
-            PlayerWindowTimerTickWorkflow.ExecuteUpdate(
-                new PlayerWindowTimerTickWorkflowRequest(
-                    _closing,
-                    _playbackDisposed,
-                    _isDragging),
-                new PlayerWindowTimerTickWorkflowActions(
-                    UpdateUi,
-                    ScrubSeekToSlider)));
-
-    private DispatcherTimer CreateScrubTimer()
-        => PlayerWindowTimerFactory.CreateScrubTimer(() =>
-            PlayerWindowTimerTickWorkflow.ExecuteScrub(
-                new PlayerWindowTimerTickWorkflowRequest(
-                    _closing,
-                    _playbackDisposed,
-                    _isDragging),
-                new PlayerWindowTimerTickWorkflowActions(
-                    UpdateUi,
-                    ScrubSeekToSlider)));
+    private PlayerWindowTimerSet CreatePlayerTimers()
+        => PlayerWindowTimerSetFactory.Create(
+            createRequest: () => new PlayerWindowTimerTickWorkflowRequest(
+                _closing,
+                _playbackDisposed,
+                _isDragging),
+            actions: new PlayerWindowTimerTickWorkflowActions(
+                UpdateUi,
+                ScrubSeekToSlider));
 
     private void WireWindowLifecycleEvents()
     {

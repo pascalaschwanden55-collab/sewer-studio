@@ -53,7 +53,7 @@ public partial class PlayerWindow
                 _codingOverlayToolHost.HasOverlayService,
                 _codingSessionHost.HasViewModel,
                 _codingOverlayToolHost.IsDrawing,
-                _markToolType != OverlayToolType.None,
+                _liveDetectionController.MarkToolType != OverlayToolType.None,
                 BtnCodingLiveAi.IsChecked == true),
             new CodingStandardOverlayMouseUpActions(
                 CompleteOverlayDraw: () => _codingSessionHost.CompleteOverlayDraw(norm),

@@ -29,7 +29,7 @@ public partial class PlayerWindow
         CodingModeDefaultToolWorkflow.Execute(
             new CodingModeDefaultToolWorkflowRequest(_codingOverlayToolHost.HasOverlayService),
             new CodingModeDefaultToolWorkflowActions(
-                SetMarkToolType: tool => _markToolType = tool,
+                SetMarkToolType: _liveDetectionController.SetMarkToolType,
                 SetToolLabels: _markToolControls.SetToolLabels,
                 SetOverlayActiveTool: tool => { _codingOverlayToolHost.SetActiveTool(tool); }));
     }

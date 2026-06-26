@@ -104,8 +104,9 @@ public partial class PlayerWindow : Window
         _codingSessionHost = new CodingSessionHost(() => _codingSessionViewModelOwner.ViewModel);
         _codingOverlayToolHost = new CodingOverlayToolHost(() => _codingOverlayRuntimeOwner.Service);
 
-        _timer = CreateUpdateTimer();
-        _scrubTimer = CreateScrubTimer();
+        var playerTimers = CreatePlayerTimers();
+        _timer = playerTimers.UpdateTimer;
+        _scrubTimer = playerTimers.ScrubTimer;
         WirePositionSliderEvents();
         WireWindowLifecycleEvents();
         WireWindowSurfaceEvents();
