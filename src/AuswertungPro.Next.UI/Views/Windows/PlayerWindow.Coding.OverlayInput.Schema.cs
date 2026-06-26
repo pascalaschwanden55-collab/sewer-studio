@@ -38,14 +38,13 @@ public partial class PlayerWindow
                 _codingSchemaManager.IsActive),
             new CodingSchemaOverlayMouseDownActions(
                 CreateAndActivateSchema: () =>
-                {
-                    var schema = CreateCodingSchemaOverlay();
-                    if (schema == null)
-                        return false;
-
-                    _codingSchemaManager.Activate(schema, _codingOverlayToolHost.Calibration);
-                    return true;
-                },
+                    CodingSchemaOverlayActivationWorkflow.Execute(
+                        new CodingSchemaOverlayActivationWorkflowRequest(CreateCodingSchemaOverlay()),
+                        new CodingSchemaOverlayActivationWorkflowActions(
+                            schema => _codingSchemaManager.Activate(
+                                schema,
+                                _codingOverlayToolHost.Calibration)))
+                    .Activated,
                 PlaceSchema: () => _codingSchemaManager.Place(norm),
                 ResolveHandleId: () => _codingSchemaManager.HitTest(norm, 0.035) ?? GetDefaultCodingSchemaHandleId(),
                 BeginDrag: _codingSchemaManager.BeginDrag,
