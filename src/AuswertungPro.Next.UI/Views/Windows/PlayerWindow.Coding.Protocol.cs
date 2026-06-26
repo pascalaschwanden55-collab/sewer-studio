@@ -14,7 +14,7 @@ public partial class PlayerWindow
     {
         CodingProtocolPdfExportCommandWorkflow.Execute(
             new CodingProtocolPdfExportCommandRequest(
-                _protocolContext.Dependencies.ProtocolPdfExporter is not null,
+                _protocolContext.ProtocolPdfExporter is not null,
                 _protocolContext.HasHaltungRecord,
                 doc),
             new CodingProtocolPdfExportCommandActions(
@@ -22,8 +22,8 @@ public partial class PlayerWindow
                     new CodingProtocolPdfExportDisplayRequest(
                         _protocolContext.HaltungRecord!,
                         doc,
-                        _protocolContext.Dependencies.LastProjectPath,
-                        _protocolContext.Dependencies.ProtocolPdfExporter!)),
+                        _protocolContext.LastProjectPath,
+                        _protocolContext.ProtocolPdfExporter!)),
                 ShowOverlay: ShowOverlay));
     }
 
@@ -60,16 +60,16 @@ public partial class PlayerWindow
         CodingProtocolPreviewCommandWorkflow.Execute(
             new CodingProtocolPreviewCommandRequest(
                 _protocolContext.HasHaltungRecord,
-                _protocolContext.Dependencies.LegacyServiceProvider is not null,
+                _protocolContext.LegacyServiceProvider is not null,
                 doc),
             new CodingProtocolPreviewCommandActions(
                 ShowPreview: () => CodingProtocolPreviewDisplayWorkflow.TryShow(
                     this,
                     _protocolContext.HaltungRecord!,
                     doc,
-                    _protocolContext.Dependencies.LegacyServiceProvider!,
+                    _protocolContext.LegacyServiceProvider!,
                     _playbackContext.VideoPath,
-                    _protocolContext.Dependencies.LastProjectPath,
+                    _protocolContext.LastProjectPath,
                     MarkProjectDirtyForCoding),
                 GetCurrentProtocol: () => _protocolContext.HaltungRecord?.Protocol,
                 SyncPrimaryDamages: SyncCodingToPrimaryDamages,

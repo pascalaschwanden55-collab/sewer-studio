@@ -17,6 +17,6 @@ public partial class PlayerWindow
                 ShowViewer: codingEvent => CodingPhotoViewerDisplayWorkflow.Show(
                     this,
                     codingEvent,
-                    _protocolContext.Dependencies.LastProjectPath)));
+                    _protocolContext.LastProjectPath)));
     }
 }

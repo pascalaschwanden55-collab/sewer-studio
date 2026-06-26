@@ -464,6 +464,9 @@ public sealed class UiArchitectureGuardTests
         var windowRoot = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.xaml.cs"));
         var dependencies = File.ReadAllText(dependenciesPath);
         var protocolContext = File.ReadAllText(protocolContextPath);
+        var playerWindowPartials = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
 
         Assert.True(
             offenders.Length == 0,
@@ -472,8 +475,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private readonly PlayerWindowProtocolContext _protocolContext", state);
         Assert.DoesNotContain("private readonly ServiceProvider? _serviceProvider", state);
         Assert.DoesNotContain("_serviceProvider = serviceProvider", windowRoot);
+        Assert.DoesNotContain("_protocolContext.Dependencies.", playerWindowPartials);
         Assert.Contains("_protocolContext = PlayerWindowProtocolContext.From(", windowRoot);
         Assert.Contains("PlayerWindowDependencies.From(serviceProvider)", protocolContext);
+        Assert.Contains("public AppSettings? Settings", protocolContext);
+        Assert.Contains("public string? LastProjectPath", protocolContext);
+        Assert.Contains("public bool HasCodeCatalog", protocolContext);
         Assert.Contains("public ServiceProvider? LegacyServiceProvider", dependencies);
         Assert.Contains("public string? LastProjectPath", dependencies);
     }

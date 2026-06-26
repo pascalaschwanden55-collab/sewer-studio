@@ -46,7 +46,7 @@ public partial class PlayerWindow
                 _playbackContext.VideoPath,
                 this),
             new LiveDetectionMarkCatalogDisplayActions(
-                HasCodeCatalog: () => _protocolContext.Dependencies.HasCodeCatalog,
+                HasCodeCatalog: () => _protocolContext.HasCodeCatalog,
                 CreateViewModel: CreateVsaCodeExplorerViewModel,
                 OnEntryCreated: _protocolContext.NotifyEntryCreated,
                 ShowOverlay: message => ShowOverlay(message, TimeSpan.FromSeconds(4))));

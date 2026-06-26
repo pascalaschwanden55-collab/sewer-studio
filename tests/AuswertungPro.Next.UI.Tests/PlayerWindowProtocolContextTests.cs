@@ -38,4 +38,24 @@ public sealed class PlayerWindowProtocolContextTests
         Assert.Same(entry, received);
         Assert.False(context.HasHaltungRecord);
     }
+
+    [Fact]
+    public void From_exposes_dependency_facade_for_player_partials()
+    {
+        var context = PlayerWindowProtocolContext.From(
+            serviceProvider: null,
+            haltungId: null,
+            onEntryCreated: null,
+            haltungRecord: null);
+
+        Assert.Null(context.Settings);
+        Assert.Null(context.CodeCatalog);
+        Assert.Null(context.CodeSelectionCatalog);
+        Assert.Null(context.PipelineConfig);
+        Assert.Null(context.ProtocolPdfExporter);
+        Assert.Null(context.LoggerFactory);
+        Assert.Null(context.LastProjectPath);
+        Assert.Null(context.LegacyServiceProvider);
+        Assert.False(context.HasCodeCatalog);
+    }
 }

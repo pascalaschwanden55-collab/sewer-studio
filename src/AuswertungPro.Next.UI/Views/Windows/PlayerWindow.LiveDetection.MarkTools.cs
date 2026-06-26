@@ -58,7 +58,7 @@ public partial class PlayerWindow
                 _codingOverlayRuntimeOwner.HasService,
                 _codingSessionHost.HasViewModel,
                 _playbackContext.VideoPath,
-                _protocolContext.Dependencies.Settings,
+                _protocolContext.Settings,
                 _codingSessionRuntimeOwner.Service,
                 _codingOverlayRuntimeOwner.Service),
             new LiveDetectionMarkOverlayReadyApplyActions(

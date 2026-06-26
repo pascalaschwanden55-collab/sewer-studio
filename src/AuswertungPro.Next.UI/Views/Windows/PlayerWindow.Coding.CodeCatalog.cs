@@ -8,10 +8,10 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 public partial class PlayerWindow
 {
     private AppProtocol.IVsaCodeSelectionCatalog? CodeSelectionCatalog
-        => _protocolContext.Dependencies.CodeSelectionCatalog;
+        => _protocolContext.CodeSelectionCatalog;
 
     private AppProtocol.ICodeCatalogProvider? CodeCatalog
-        => _protocolContext.Dependencies.CodeCatalog;
+        => _protocolContext.CodeCatalog;
 
     private VsaCodeExplorerViewModel CreateVsaCodeExplorerViewModel(
         ProtocolEntry entry,
