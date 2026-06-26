@@ -94,7 +94,7 @@ public partial class PlayerWindow
 
     private void PlayerWindow_Closed(object? sender, EventArgs e)
     {
-        var main = System.Windows.Application.Current?.MainWindow;
+        var main = PlayerApplicationControls.CurrentMainWindow();
         PlayerWindowClosedWorkflow.Execute(
             new PlayerWindowClosedWorkflowRequest(
                 IsLastOpenedWindow: ReferenceEquals(_lastOpened, this),

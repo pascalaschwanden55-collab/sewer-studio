@@ -126,6 +126,7 @@ public sealed class UiArchitectureGuardTests
         var dispatcherSchedulerPath = Path.Combine(windowsRoot, "PlayerDispatcherScheduler.cs");
         var focusControlsPath = Path.Combine(windowsRoot, "PlayerFocusControls.cs");
         var chromeControlsPath = Path.Combine(windowsRoot, "PlayerChromeControls.cs");
+        var applicationControlsPath = Path.Combine(windowsRoot, "PlayerApplicationControls.cs");
         var sliderPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs");
         var sliderEventBinderPath = Path.Combine(windowsRoot, "PlayerPositionSliderEventBinder.cs");
         var keyboardEventBinderPath = Path.Combine(windowsRoot, "PlayerKeyboardEventBinder.cs");
@@ -145,6 +146,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(dispatcherSchedulerPath), "Dispatcher-Scheduling soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(focusControlsPath), "Fenster-Focus- und Aktivierungsoberflaeche soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(chromeControlsPath), "Fenster-Chrome-Zustand soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
+        Assert.True(File.Exists(applicationControlsPath), "Application-MainWindow-Zugriff soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
         Assert.True(File.Exists(sliderEventBinderPath), "PositionSlider-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(keyboardEventBinderPath), "Keyboard-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
@@ -164,6 +166,7 @@ public sealed class UiArchitectureGuardTests
         var dispatcherScheduler = File.Exists(dispatcherSchedulerPath) ? File.ReadAllText(dispatcherSchedulerPath) : "";
         var focusControls = File.Exists(focusControlsPath) ? File.ReadAllText(focusControlsPath) : "";
         var chromeControls = File.Exists(chromeControlsPath) ? File.ReadAllText(chromeControlsPath) : "";
+        var applicationControls = File.Exists(applicationControlsPath) ? File.ReadAllText(applicationControlsPath) : "";
         var slider = File.ReadAllText(sliderPath);
         var sliderEventBinder = File.Exists(sliderEventBinderPath) ? File.ReadAllText(sliderEventBinderPath) : "";
         var keyboardEventBinder = File.Exists(keyboardEventBinderPath) ? File.ReadAllText(keyboardEventBinderPath) : "";
@@ -237,8 +240,11 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerChromeControls.EnableFocusable(this)", wiring);
         Assert.Contains("PlayerChromeControls.IsMinimized(main)", wiring);
         Assert.Contains("PlayerChromeControls.RestoreNormal(main!)", wiring);
+        Assert.Contains("PlayerApplicationControls.CurrentMainWindow()", wiring);
         Assert.DoesNotContain("Dispatcher.BeginInvoke", wiring);
         Assert.DoesNotContain("new Action(UpdateCodingOverlayViewport)", wiring);
+        Assert.DoesNotContain("System.Windows.Application.Current?.MainWindow", wiring);
+        Assert.DoesNotContain("Application.Current", wiring);
         Assert.DoesNotContain("Keyboard.Focus(this)", wiring);
         Assert.DoesNotContain("Focus();", wiring);
         Assert.DoesNotContain("Activate();", wiring);
@@ -254,6 +260,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static void EnableFocusable", chromeControls);
         Assert.Contains("public static bool IsMinimized", chromeControls);
         Assert.Contains("public static void RestoreNormal", chromeControls);
+        Assert.Contains("public static Window? CurrentMainWindow()", applicationControls);
+        Assert.Contains("Application.Current?.MainWindow", applicationControls);
         Assert.DoesNotContain("if (_codingOverlaySuspendDepth > 0)", wiring);
         Assert.DoesNotContain("if (!_deactivatedByExternalWindow)", wiring);
         Assert.DoesNotContain("if (!string.IsNullOrWhiteSpace(_initialOverlayText))", wiring);
