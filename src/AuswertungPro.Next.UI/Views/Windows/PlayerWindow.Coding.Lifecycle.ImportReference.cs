@@ -23,7 +23,7 @@ public partial class PlayerWindow
                 SetCodingItemsSource: () => LstCodingEvents.ItemsSource = eventCollection,
                 SetCodingCount: count => CodingImportReferenceControls.SetCount(RunCodingDefectCount, count),
                 BuildBaselineSignature: () => CodingEventsSignatureBuilder.Build(eventCollection!),
-                SetBaselineSignature: signature => _codingBaselineSignature = signature,
+                SetBaselineSignature: _codingBaselineSignatureState.Set,
                 ResetStretchTracker: _streckenTracker.Reset));
     }
 }

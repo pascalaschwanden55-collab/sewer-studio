@@ -7153,6 +7153,27 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_baseline_signature_lives_in_state_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var baselineStatePath = Path.Combine(uiRoot, "Player", "CodingBaselineSignatureStateController.cs");
+
+        Assert.True(File.Exists(baselineStatePath), "Coding-Baseline-Signatur soll nicht mehr als Rohfeld im PlayerWindow liegen.");
+
+        var state = File.ReadAllText(statePath);
+        var baselineState = File.Exists(baselineStatePath) ? File.ReadAllText(baselineStatePath) : "";
+
+        Assert.DoesNotContain("private string _codingBaselineSignature = string.Empty;", state);
+        Assert.Contains("private readonly CodingBaselineSignatureStateController _codingBaselineSignatureState = new();", state);
+        Assert.Contains("public sealed class CodingBaselineSignatureStateController", baselineState);
+        Assert.Contains("public string BaselineSignature", baselineState);
+        Assert.Contains("public void Set", baselineState);
+    }
+
+    [Fact]
     public void PlayerWindow_schema_overlay_wiring_lives_in_schema_partial()
     {
         var root = FindRepositoryRoot();

@@ -23,7 +23,7 @@ public partial class PlayerWindow
                 MarkProjectDirty: MarkProjectDirtyForCoding,
                 SyncCodingToPrimaryDamages: SyncCodingToPrimaryDamages,
                 PersistCodingEventsAsTrainingSamples: PersistCodingEventsAsTrainingSamples,
-                SetBaselineSignature: signature => _codingBaselineSignature = signature,
+                SetBaselineSignature: _codingBaselineSignatureState.Set,
                 SaveProjectAfterCoding: SaveProjectAfterCoding,
                 ShowOverlay: ShowOverlay));
 
@@ -37,7 +37,7 @@ public partial class PlayerWindow
                 IsCodingMode: _isCodingMode,
                 HasCodingViewModel: _codingSessionHost.HasViewModel,
                 Events: _codingSessionHost.Events,
-                BaselineSignature: _codingBaselineSignature),
+                BaselineSignature: _codingBaselineSignatureState.BaselineSignature),
             new CodingUnappliedChangesCloseWorkflowActions(
                 BuildSignature: CodingEventsSignatureBuilder.Build,
                 ConfirmWithSuspendedOverlay: () => CodingUnappliedChangesCloseDialogWorkflow.Execute(

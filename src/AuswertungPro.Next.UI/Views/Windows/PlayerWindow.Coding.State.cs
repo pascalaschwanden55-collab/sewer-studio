@@ -59,5 +59,5 @@ public partial class PlayerWindow
     private CodingEvent? _codingPendingConfirmEvent;
     private QualityGateResult? _codingPendingGateResult;
 
-    private string _codingBaselineSignature = string.Empty;
+    private readonly CodingBaselineSignatureStateController _codingBaselineSignatureState = new();
 }
