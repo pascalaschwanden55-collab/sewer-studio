@@ -123,6 +123,7 @@ public sealed class UiArchitectureGuardTests
         var wiringPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs");
         var lifecycleEventBinderPath = Path.Combine(windowsRoot, "PlayerLifecycleEventBinder.cs");
         var surfaceEventBinderPath = Path.Combine(windowsRoot, "PlayerSurfaceEventBinder.cs");
+        var dispatcherSchedulerPath = Path.Combine(windowsRoot, "PlayerDispatcherScheduler.cs");
         var sliderPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs");
         var sliderEventBinderPath = Path.Combine(windowsRoot, "PlayerPositionSliderEventBinder.cs");
         var keyboardEventBinderPath = Path.Combine(windowsRoot, "PlayerKeyboardEventBinder.cs");
@@ -139,6 +140,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(wiringPath), "Fenster-, Slider- und Viewport-Wiring soll aus dem Konstruktor heraus.");
         Assert.True(File.Exists(lifecycleEventBinderPath), "Fenster-Lifecycle-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(surfaceEventBinderPath), "Fenster-Surface-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
+        Assert.True(File.Exists(dispatcherSchedulerPath), "Dispatcher-Scheduling soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
         Assert.True(File.Exists(sliderEventBinderPath), "PositionSlider-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(keyboardEventBinderPath), "Keyboard-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
@@ -155,6 +157,7 @@ public sealed class UiArchitectureGuardTests
         var wiring = File.ReadAllText(wiringPath);
         var lifecycleEventBinder = File.Exists(lifecycleEventBinderPath) ? File.ReadAllText(lifecycleEventBinderPath) : "";
         var surfaceEventBinder = File.Exists(surfaceEventBinderPath) ? File.ReadAllText(surfaceEventBinderPath) : "";
+        var dispatcherScheduler = File.Exists(dispatcherSchedulerPath) ? File.ReadAllText(dispatcherSchedulerPath) : "";
         var slider = File.ReadAllText(sliderPath);
         var sliderEventBinder = File.Exists(sliderEventBinderPath) ? File.ReadAllText(sliderEventBinderPath) : "";
         var keyboardEventBinder = File.Exists(keyboardEventBinderPath) ? File.ReadAllText(keyboardEventBinderPath) : "";
@@ -220,6 +223,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerWindowActivationWorkflow.Deactivate", wiring);
         Assert.Contains("PlayerWindowActivationWorkflow.Activate", wiring);
         Assert.Contains("PlayerWindowLoadedWorkflow.Execute", wiring);
+        Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", wiring);
+        Assert.Contains("PlayerDispatcherScheduler.ScheduleInput", wiring);
+        Assert.DoesNotContain("Dispatcher.BeginInvoke", wiring);
+        Assert.DoesNotContain("new Action(UpdateCodingOverlayViewport)", wiring);
+        Assert.Contains("DispatcherPriority.Loaded", dispatcherScheduler);
+        Assert.Contains("DispatcherPriority.Input", dispatcherScheduler);
         Assert.DoesNotContain("if (_codingOverlaySuspendDepth > 0)", wiring);
         Assert.DoesNotContain("if (!_deactivatedByExternalWindow)", wiring);
         Assert.DoesNotContain("if (!string.IsNullOrWhiteSpace(_initialOverlayText))", wiring);

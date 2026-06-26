@@ -1,7 +1,6 @@
 using System;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Threading;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -80,20 +79,20 @@ public partial class PlayerWindow
             new PlayerWindowLoadedWorkflowActions(
                 Play: () => Play(_videoPath),
                 UpdateCodingOverlayViewport,
-                ScheduleLoadedViewportUpdate: () => Dispatcher.BeginInvoke(
-                    DispatcherPriority.Loaded,
-                    new Action(UpdateCodingOverlayViewport)),
+                ScheduleLoadedViewportUpdate: () => PlayerDispatcherScheduler.ScheduleLoaded(
+                    Dispatcher,
+                    UpdateCodingOverlayViewport),
                 ShowOverlay,
                 BuildDamageMarkerTimeline: () => _damageMarkerController.Build(),
                 EnableFocusable: () => Focusable = true,
-                ScheduleFocusWindow: () => Dispatcher.BeginInvoke(
-                    DispatcherPriority.Input,
-                    new Action(() =>
+                ScheduleFocusWindow: () => PlayerDispatcherScheduler.ScheduleInput(
+                    Dispatcher,
+                    () =>
                     {
                         Activate();
                         Focus();
                         Keyboard.Focus(this);
-                    }))));
+                    })));
 
     private void PlayerWindow_Closed(object? sender, EventArgs e)
     {
