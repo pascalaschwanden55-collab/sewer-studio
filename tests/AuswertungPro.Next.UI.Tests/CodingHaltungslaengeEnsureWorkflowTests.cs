@@ -6,6 +6,24 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingHaltungslaengeEnsureWorkflowTests
 {
     [Fact]
+    public void Ensure_offers_default_service_wiring()
+    {
+        var overload = typeof(CodingHaltungslaengeEnsureWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingHaltungslaengeEnsureWorkflow.Ensure) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual(
+                    [
+                        typeof(HaltungRecord),
+                        typeof(double?),
+                    ]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
     public void Ensure_creates_service_and_delegates_record_and_overlay_length()
     {
         var calls = new List<string>();

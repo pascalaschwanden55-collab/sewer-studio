@@ -9,6 +9,15 @@ public static class CodingHaltungslaengeEnsureWorkflow
 {
     public static void Ensure(
         HaltungRecord record,
+        double? overlayPipeLengthMeters)
+        => Ensure(
+            record,
+            overlayPipeLengthMeters,
+            new CodingHaltungslaengeEnsureWorkflowActions(
+                CreateService: CodingHaltungslaengeEnsureServiceFactory.Create));
+
+    public static void Ensure(
+        HaltungRecord record,
         double? overlayPipeLengthMeters,
         CodingHaltungslaengeEnsureWorkflowActions actions)
     {

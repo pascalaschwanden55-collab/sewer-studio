@@ -5412,7 +5412,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void EnsureHaltungslaenge", persistence);
         Assert.DoesNotContain("Microsoft.VisualBasic.Interaction.InputBox", persistence);
         Assert.Contains("private void EnsureHaltungslaenge", length);
-        Assert.Contains("CodingHaltungslaengeEnsureServiceFactory.Create", length);
+        Assert.DoesNotContain("CodingHaltungslaengeEnsureServiceFactory.Create", length);
+        Assert.DoesNotContain("new CodingHaltungslaengeEnsureWorkflowActions", length);
         Assert.Contains("CodingHaltungslaengeEnsureWorkflow.Ensure", length);
         Assert.DoesNotContain(".Ensure(record, _damageOverlay?.PipeLengthMeters)", length);
         Assert.DoesNotContain("CodingHaltungslaengeResolver.TryEnsureFromKnownSources", length);
@@ -5420,6 +5421,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("SetFieldValue(\"Haltungslaenge_m\"", length);
         Assert.Contains("CodingHaltungslaengeResolver.TryEnsureFromKnownSources", ensureServiceFactory);
         Assert.Contains("Microsoft.VisualBasic.Interaction.InputBox", ensureServiceFactory);
+        Assert.Contains("CodingHaltungslaengeEnsureServiceFactory.Create", ensureWorkflow);
+        Assert.Contains("new CodingHaltungslaengeEnsureWorkflowActions", ensureWorkflow);
         Assert.Contains("service.Ensure(record, overlayPipeLengthMeters)", ensureWorkflow);
         Assert.Contains("SetFieldValue", ensureService);
         Assert.Contains("\"Haltungslaenge_m\"", ensureService);
