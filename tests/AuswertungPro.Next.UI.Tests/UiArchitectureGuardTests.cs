@@ -7993,20 +7993,24 @@ public sealed class UiArchitectureGuardTests
         var monitoringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Health.Monitoring.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "CodingAiRuntimeFactory.cs");
         var initializationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiInitializationWorkflow.cs");
+        var creationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiRuntimeCreationWorkflow.cs");
         var settingsLoaderPath = Path.Combine(uiRoot, "Ai", "PlayerAiSettingsLoader.cs");
 
         Assert.True(File.Exists(factoryPath), "Coding-AI-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(initializationWorkflowPath), "Coding-AI-Initialisierungsentscheidungen sollen ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(creationWorkflowPath), "Coding-AI-Runtime-Verdrahtung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(settingsLoaderPath), "Player-AI-Settings-Erzeugung soll ausserhalb von PlayerWindow liegen.");
 
         var health = File.ReadAllText(healthPath);
         var monitoring = File.ReadAllText(monitoringPath);
         var factory = File.ReadAllText(factoryPath);
         var initializationWorkflow = File.ReadAllText(initializationWorkflowPath);
+        var creationWorkflow = File.Exists(creationWorkflowPath) ? File.ReadAllText(creationWorkflowPath) : string.Empty;
         var settingsLoader = File.ReadAllText(settingsLoaderPath);
 
-        Assert.Contains("PlayerAiSettingsLoader.LoadPlatformSettings", health);
+        Assert.DoesNotContain("PlayerAiSettingsLoader.LoadPlatformSettings", health);
         Assert.Contains("CodingAiInitializationWorkflow.ExecuteAsync", health);
+        Assert.Contains("CodingAiRuntimeCreationWorkflow.Create", health);
         Assert.DoesNotContain("runtime.RuntimeSettings", health);
         Assert.DoesNotContain("runtime.MultiModelAvailable", health);
         Assert.DoesNotContain("runtime.MultiModelError", health);
@@ -8015,7 +8019,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("runtime.MultiModelAvailable", initializationWorkflow);
         Assert.Contains("runtime.MultiModelError", initializationWorkflow);
         Assert.DoesNotContain("AppSettingsAiSettingsProvider", health);
-        Assert.Contains("CodingAiRuntimeFactory.Create", health);
+        Assert.DoesNotContain("CodingAiRuntimeFactory.Create(", health);
+        Assert.Contains("PlayerAiSettingsLoader.LoadPlatformSettings", creationWorkflow);
+        Assert.Contains("CodingAiRuntimeFactory.Create(", creationWorkflow);
         Assert.DoesNotContain("new OllamaClient", health);
         Assert.DoesNotContain("new LiveDetectionService", health);
         Assert.DoesNotContain("new EnhancedVisionAnalysisService", health);
