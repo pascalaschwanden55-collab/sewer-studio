@@ -1439,19 +1439,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
         btn.ContextMenu.IsOpen = true;
     }
 
-    private void ProtocolMenu_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is not DataPageViewModel vm)
-            return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Protokoll");
-            return;
-        }
-        vm.OpenProtocolCommand.Execute(record);
-    }
-
     private void RelinkMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
@@ -1542,34 +1529,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
         vm.SearchAndLinkMediaCommand.Execute(null);
-    }
-
-    private void SanierungKiMenu_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is not DataPageViewModel vm)
-            return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "KI Sanierung");
-            return;
-        }
-        vm.OptimizeSanierungKiCommand.Execute(record);
-    }
-
-    private void VideoAiPipelineMenu_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is not DataPageViewModel vm)
-            return;
-
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Videoanalyse KI");
-            return;
-        }
-
-        vm.OpenVideoAiPipelineCommand.Execute(record);
     }
 
     private void HydraulikMenu_Click(object sender, RoutedEventArgs e)

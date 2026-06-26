@@ -96,7 +96,6 @@ public sealed partial class DataPageViewModel : ObservableObject
     public IRelayCommand<HaltungRecord?> SuggestMeasuresCommand { get; }
     public IRelayCommand SuggestAllMeasuresCommand { get; }
     public IRelayCommand<HaltungRecord?> OptimizeSanierungKiCommand { get; }
-    public IRelayCommand ShowModelStatusCommand { get; }
     public IRelayCommand SearchAndLinkMediaCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenHydraulikCommand { get; }
     public IRelayCommand<HaltungRecord?> PrintHydraulikCommand { get; }
@@ -229,7 +228,6 @@ public sealed partial class DataPageViewModel : ObservableObject
         SuggestMeasuresCommand = new RelayCommand<HaltungRecord?>(SuggestMeasures, CanSuggestMeasures);
         SuggestAllMeasuresCommand = new RelayCommand(SuggestAllMeasures);
         OptimizeSanierungKiCommand = new RelayCommand<HaltungRecord?>(OpenSanierungOptimizationWindow, CanOpenCosts);
-        ShowModelStatusCommand = new RelayCommand(ShowModelStatus);
         SearchAndLinkMediaCommand = new RelayCommand(OpenMediaSearchWindow);
         OpenHydraulikCommand = new RelayCommand<HaltungRecord?>(OpenHydraulikPanel);
         PrintHydraulikCommand = new RelayCommand<HaltungRecord?>(PrintHydraulikPdf);
@@ -1132,26 +1130,6 @@ public sealed partial class DataPageViewModel : ObservableObject
         win.ShowDialog();
     }
 
-    private void ShowModelStatus()
-    {
-        var stats = _measureRecommendationService.GetStats();
-        var status = stats.TrainedModelAvailable ? "Aktiv" : "Noch nicht trainiert";
-        var trainedAt = stats.TrainedAtUtc is null
-            ? "-"
-            : stats.TrainedAtUtc.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture);
-        var modelSamples = stats.TrainedModelSamples?.ToString(CultureInfo.InvariantCulture) ?? "0";
-
-        var message =
-            $"Lernfaelle gesamt: {stats.TotalSamples}\n" +
-            $"Schadenscodes: {stats.DistinctDamageCodes}\n" +
-            $"Code-Signaturen: {stats.CodeSignatures}\n" +
-            $"KI-Modell: {status}\n" +
-            $"Modell-Faelle: {modelSamples}\n" +
-            $"Letztes Training: {trainedAt}\n" +
-            $"Modell-Datei:\n{stats.ModelPath}";
-
-        _sp.Dialogs.Info(message, "KI-Modell Status");
-    }
 
     private string? EnsureVideoPath(HaltungRecord record)
     {

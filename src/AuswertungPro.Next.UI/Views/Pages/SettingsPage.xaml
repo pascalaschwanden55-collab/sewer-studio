@@ -247,8 +247,7 @@
                     Zentrale Datenseite für alle Kanalsegmente (Haltungen). Bearbeitbares DataGrid mit Suche,
                     Zoom, Zeilenhöhe, Spaltenausrichtung und Multi-Monitor-Support (Abdocken auf zweiten Bildschirm).
                     Kontextmenü bietet Zugriff auf Protokolle, Videoanalyse, Sanierungsmaßnahmen und Kostenrechner.
-                    Toolbar-Dropdowns: KI-Tools (Protokoll, KI-Status, Videoanalyse, KI-Sanierung),
-                    Sanierungsmaßnahmen (Kostenrechner, Vorschlag aus Schadenscodes, Alle Maßnahmen vorschlagen)
+                    Toolbar-Dropdowns: Sanierungsmaßnahmen (Kostenrechner, Vorschlag aus Schadenscodes, Alle Maßnahmen vorschlagen)
                     und Medien suchen (automatische Video/PDF-Verknüpfung).
                 </TextBlock>
 
