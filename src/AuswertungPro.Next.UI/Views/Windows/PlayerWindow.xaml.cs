@@ -85,17 +85,9 @@ public partial class PlayerWindow : Window
                 VideoPath: _playbackContext.VideoPath,
                 EnsurePlaying: EnsurePlaying,
                 UpdateUi: UpdateUi,
+                ScrubSeekToSlider: ScrubSeekToSlider,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel));
-
-        _playerTimerController = PlayerWindowTimerController.Create(
-            createRequest: () => new PlayerWindowTimerTickWorkflowRequest(
-                _shutdownState.IsClosing,
-                _shutdownState.IsPlaybackDisposed,
-                _positionSliderStateController.IsDragging),
-            actions: new PlayerWindowTimerTickWorkflowActions(
-                UpdateUi,
-                ScrubSeekToSlider));
         WirePositionSliderEvents();
         WireWindowLifecycleEvents();
         WireWindowSurfaceEvents();

@@ -1141,11 +1141,13 @@ public sealed class UiArchitectureGuardTests
         var factoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerFactory.cs");
         var timerSetFactoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerSetFactory.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerController.cs");
+        var controllerSetFactoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowControllerSetFactory.cs");
         var tickWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerTickWorkflow.cs");
 
         Assert.True(File.Exists(factoryPath), "PlayerWindow-Timer sollen ausserhalb des Wiring-Partials erzeugt werden.");
         Assert.True(File.Exists(timerSetFactoryPath), "PlayerWindow-Timer-Set soll die konkrete TimerFactory ausserhalb des Wiring-Partials kapseln.");
         Assert.True(File.Exists(controllerPath), "PlayerWindow-Timerzustand soll ausserhalb der PlayerWindow-Partials gekapselt werden.");
+        Assert.True(File.Exists(controllerSetFactoryPath), "PlayerWindow-TimerController soll mit den anderen Player-Controllern gebuendelt werden.");
         Assert.True(File.Exists(tickWorkflowPath), "PlayerWindow-Timer-Tick-Entscheidung soll ausserhalb des Wiring-Partials liegen.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
@@ -1157,10 +1159,13 @@ public sealed class UiArchitectureGuardTests
         var factory = File.ReadAllText(factoryPath);
         var timerSetFactory = File.Exists(timerSetFactoryPath) ? File.ReadAllText(timerSetFactoryPath) : "";
         var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
+        var controllerSetFactory = File.Exists(controllerSetFactoryPath) ? File.ReadAllText(controllerSetFactoryPath) : "";
         var tickWorkflow = File.Exists(tickWorkflowPath) ? File.ReadAllText(tickWorkflowPath) : "";
 
-        Assert.Contains("PlayerWindowTimerController.Create", windowRoot);
-        Assert.Contains("private readonly PlayerWindowTimerController _playerTimerController", state);
+        Assert.DoesNotContain("PlayerWindowTimerController.Create", windowRoot);
+        Assert.Contains("PlayerWindowTimerController.Create", controllerSetFactory);
+        Assert.DoesNotContain("private readonly PlayerWindowTimerController _playerTimerController", state);
+        Assert.Contains("private PlayerWindowTimerController _playerTimerController => _playerControllers.TimerController", state);
         Assert.DoesNotContain("private readonly DispatcherTimer _timer", state);
         Assert.DoesNotContain("private readonly DispatcherTimer _scrubTimer", state);
         Assert.DoesNotContain("_scrubTimer", playerWindowPartials);

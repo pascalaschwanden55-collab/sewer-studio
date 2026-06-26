@@ -13,6 +13,7 @@ public sealed record PlayerWindowControllerSet(
     PlayerPositionSliderStateController PositionSliderStateController,
     PlayerKeyboardActionControllerOwner KeyboardActionControllerOwner,
     PlayerWindowShutdownStateController ShutdownStateController,
+    PlayerWindowTimerController TimerController,
     PlayerSpeedControls SpeedControls,
     PlayerMarkToolControls MarkToolControls,
     CodingOverlayRenderController CodingOverlayRenderController,
@@ -50,6 +51,7 @@ public sealed record PlayerWindowControllerSetDependencies(
     string VideoPath,
     Action EnsurePlaying,
     Action UpdateUi,
+    Action ScrubSeekToSlider,
     Func<(double offsetX, double trackWidth)> ResolveSliderTrackBounds,
     Func<NormalizedPoint, Point> MapCodingOverlayPoint);
 
@@ -61,6 +63,18 @@ public static class PlayerWindowControllerSetFactory
     {
         ArgumentNullException.ThrowIfNull(controls);
         ArgumentNullException.ThrowIfNull(dependencies);
+
+        var positionSliderStateController = new PlayerPositionSliderStateController();
+        var keyboardActionControllerOwner = new PlayerKeyboardActionControllerOwner();
+        var shutdownStateController = new PlayerWindowShutdownStateController();
+        var timerController = PlayerWindowTimerController.Create(
+            createRequest: () => new PlayerWindowTimerTickWorkflowRequest(
+                shutdownStateController.IsClosing,
+                shutdownStateController.IsPlaybackDisposed,
+                positionSliderStateController.IsDragging),
+            actions: new PlayerWindowTimerTickWorkflowActions(
+                dependencies.UpdateUi,
+                dependencies.ScrubSeekToSlider));
 
         return new PlayerWindowControllerSet(
             new DamageMarkerController(
@@ -86,9 +100,10 @@ public static class PlayerWindowControllerSetFactory
                 controls.PositionSlider,
                 controls.CurrentTimeText,
                 controls.DurationText),
-            new PlayerPositionSliderStateController(),
-            new PlayerKeyboardActionControllerOwner(),
-            new PlayerWindowShutdownStateController(),
+            positionSliderStateController,
+            keyboardActionControllerOwner,
+            shutdownStateController,
+            timerController,
             new PlayerSpeedControls(
                 controls.RateText,
                 controls.Speed05Button,

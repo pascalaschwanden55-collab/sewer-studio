@@ -59,6 +59,7 @@ public sealed class PlayerWindowControllerSetFactoryTests
                 VideoPath: "sample.mp4",
                 EnsurePlaying: () => { },
                 UpdateUi: () => { },
+                ScrubSeekToSlider: () => { },
                 ResolveSliderTrackBounds: () => (0, 100),
                 MapCodingOverlayPoint: _ => new Point(1, 2));
 
@@ -70,6 +71,10 @@ public sealed class PlayerWindowControllerSetFactoryTests
             Assert.NotNull(set.SpeedControls);
             Assert.NotNull(set.MarkToolControls);
             Assert.NotNull(set.CodingOverlayRenderController);
+            Assert.Contains(
+                typeof(PlayerWindowControllerSet).GetProperties(),
+                property => property.Name == "TimerController"
+                    && property.PropertyType == typeof(PlayerWindowTimerController));
             Assert.Contains(
                 typeof(PlayerWindowControllerSet).GetProperties(),
                 property => property.Name == "ShutdownStateController"
