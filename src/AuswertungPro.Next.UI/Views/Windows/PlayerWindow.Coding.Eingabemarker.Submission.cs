@@ -51,29 +51,23 @@ public partial class PlayerWindow
 
     private void AddDirectEingabemarkerEvent(string codeHint, string keyword)
     {
-        var meter = _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter;
-        var videoTime = _codingSessionHost.CurrentVideoTime ?? _playerTimelineHost.CurrentTimeOrZero;
-        var label = LookupVsaLabel(codeHint) ?? keyword;
-
-        var draft = CodingEingabemarkerEventFactory.CreateAccepted(
-            codeHint,
-            label,
-            keyword,
-            meter,
-            videoTime);
-
-        var fotoPath = CodingCaptureSnapshot(draft.Entry);
-        CodingProtocolEntryPhotoPathAppender.AddIfPresent(draft.Entry, fotoPath);
-
-        var ev = CodingEingabemarkerEventAppender.Apply(
-            draft,
-            _codingSessionHost.CurrentOverlay,
-            _codingSessionRuntimeOwner.Service!);
-        RefreshCodingEventsList();
-        UpdateToolBadge();
-        PersistSingleEventAsTrainingSample(ev).SafeFireAndForget("TrainingSaveSingle");
-        SetCodingAiState($"{codeHint} {label} bei {meter:F2}m eingetragen",
-            PlayerStatusColors.Success,
-            "");
+        CodingEingabemarkerDirectEventWorkflow.Execute(
+            new CodingEingabemarkerDirectEventWorkflowRequest(
+                codeHint,
+                keyword,
+                _codingSessionHost.CurrentOverlay,
+                _codingSessionRuntimeOwner.Service!),
+            new CodingEingabemarkerDirectEventWorkflowActions(
+                ResolveMeter: () => _codingOsdMeterController.LastMeter ?? _codingSessionHost.CurrentMeter,
+                ResolveVideoTime: () => _codingSessionHost.CurrentVideoTime ?? _playerTimelineHost.CurrentTimeOrZero,
+                LookupLabel: LookupVsaLabel,
+                CapturePhoto: CodingCaptureSnapshot,
+                RefreshEvents: RefreshCodingEventsList,
+                UpdateToolBadge: UpdateToolBadge,
+                PersistTraining: ev => PersistSingleEventAsTrainingSample(ev).SafeFireAndForget("TrainingSaveSingle"),
+                ShowSuccessStatus: (code, label, meter) => SetCodingAiState(
+                    $"{code} {label} bei {meter:F2}m eingetragen",
+                    PlayerStatusColors.Success,
+                    "")));
     }
 }

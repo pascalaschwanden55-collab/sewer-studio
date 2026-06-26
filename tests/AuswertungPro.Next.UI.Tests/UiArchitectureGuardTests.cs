@@ -7740,21 +7740,27 @@ public sealed class UiArchitectureGuardTests
         var submissionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Submission.cs");
         var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
         var submissionWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerSubmissionWorkflow.cs");
+        var directEventWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerDirectEventWorkflow.cs");
 
         Assert.True(File.Exists(submissionPath), "Eingabemarker-Submission muss in einer eigenen PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(popupControlsPath), "Eingabemarker-Popup-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
         Assert.True(File.Exists(submissionWorkflowPath), "Eingabemarker-Submission-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(directEventWorkflowPath), "Eingabemarker-Direkt-Event-Ablauf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var marker = File.ReadAllText(markerPath);
         var submission = File.ReadAllText(submissionPath);
         var submissionWorkflow = File.Exists(submissionWorkflowPath) ? File.ReadAllText(submissionWorkflowPath) : "";
+        var directEventWorkflow = File.Exists(directEventWorkflowPath) ? File.ReadAllText(directEventWorkflowPath) : "";
 
         Assert.DoesNotContain("private async Task SubmitEingabemarker", marker);
         Assert.DoesNotContain("CodingEingabemarkerDuplicatePolicy.FindDuplicate", marker);
         Assert.Contains("private async Task SubmitEingabemarker", submission);
         Assert.Contains("CodingEingabemarkerSubmissionWorkflow.ExecuteAsync", submission);
+        Assert.Contains("CodingEingabemarkerDirectEventWorkflow.Execute", submission);
         Assert.Contains("CodingEingabemarkerDuplicatePolicy.FindDuplicate", submission);
-        Assert.Contains("CodingEingabemarkerEventAppender.Apply", submission);
+        Assert.DoesNotContain("CodingEingabemarkerEventFactory.CreateAccepted", submission);
+        Assert.DoesNotContain("CodingProtocolEntryPhotoPathAppender.AddIfPresent", submission);
+        Assert.DoesNotContain("CodingEingabemarkerEventAppender.Apply", submission);
         Assert.Contains("_codingSessionHost", submission);
         Assert.DoesNotContain("_codingVm", submission);
         Assert.DoesNotContain("_codingSessionService.AddEvent(draft.Entry", submission);
@@ -7771,6 +7777,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.RunAiFallbackAsync", submissionWorkflow);
         Assert.Contains("finally", submissionWorkflow);
         Assert.Contains("actions.CancelMarker()", submissionWorkflow);
+        Assert.Contains("CodingEingabemarkerEventFactory.CreateAccepted", directEventWorkflow);
+        Assert.Contains("CodingProtocolEntryPhotoPathAppender.AddIfPresent", directEventWorkflow);
+        Assert.Contains("CodingEingabemarkerEventAppender.Apply", directEventWorkflow);
+        Assert.Contains("actions.PersistTraining(ev)", directEventWorkflow);
     }
 
     [Fact]
