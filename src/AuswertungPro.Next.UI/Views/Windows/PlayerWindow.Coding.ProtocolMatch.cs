@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai.Evaluation;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
@@ -48,7 +47,9 @@ public partial class PlayerWindow
                 UpdateSummary: UpdateCodingProtocolMatchSummary,
                 RefreshEvents: RefreshCodingEventsList,
                 ScheduleHighlights: () =>
-                    Dispatcher.InvokeAsync(ApplyCodingProtocolMatchListHighlights, DispatcherPriority.Loaded)));
+                    PlayerDispatcherScheduler.ScheduleLoaded(
+                        Dispatcher,
+                        ApplyCodingProtocolMatchListHighlights)));
     }
 
     private void UpdateCodingProtocolMatchSummary(CodingMatchRouting? routing)

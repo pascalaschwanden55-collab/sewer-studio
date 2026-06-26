@@ -4226,6 +4226,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingImportEventSeekCommandWorkflow.Execute", seekBody);
         Assert.Contains("CodingProtocolMatchCommandWorkflow.Execute", runBody);
         Assert.Contains("CodingProtocolMatchSummaryControls.Apply", protocolMatch);
+        Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", protocolMatch);
+        Assert.DoesNotContain("Dispatcher.InvokeAsync", protocolMatch);
         Assert.Contains("_codingSessionHost", protocolMatch);
         Assert.DoesNotContain("_codingVm", protocolMatch);
         Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", protocolMatch);
