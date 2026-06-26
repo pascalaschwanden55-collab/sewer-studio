@@ -121,6 +121,7 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var wiringPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs");
+        var lifecycleEventBinderPath = Path.Combine(windowsRoot, "PlayerLifecycleEventBinder.cs");
         var sliderPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs");
         var sliderEventBinderPath = Path.Combine(windowsRoot, "PlayerPositionSliderEventBinder.cs");
         var keyboardEventBinderPath = Path.Combine(windowsRoot, "PlayerKeyboardEventBinder.cs");
@@ -135,6 +136,7 @@ public sealed class UiArchitectureGuardTests
         var controllerSetFactoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowControllerSetFactory.cs");
 
         Assert.True(File.Exists(wiringPath), "Fenster-, Slider- und Viewport-Wiring soll aus dem Konstruktor heraus.");
+        Assert.True(File.Exists(lifecycleEventBinderPath), "Fenster-Lifecycle-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
         Assert.True(File.Exists(sliderEventBinderPath), "PositionSlider-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(keyboardEventBinderPath), "Keyboard-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
@@ -149,6 +151,7 @@ public sealed class UiArchitectureGuardTests
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var wiring = File.ReadAllText(wiringPath);
+        var lifecycleEventBinder = File.Exists(lifecycleEventBinderPath) ? File.ReadAllText(lifecycleEventBinderPath) : "";
         var slider = File.ReadAllText(sliderPath);
         var sliderEventBinder = File.Exists(sliderEventBinderPath) ? File.ReadAllText(sliderEventBinderPath) : "";
         var keyboardEventBinder = File.Exists(keyboardEventBinderPath) ? File.ReadAllText(keyboardEventBinderPath) : "";
@@ -186,6 +189,15 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("Closed += (_, __)", windowRoot);
         Assert.DoesNotContain("Deactivated += (_, _)", windowRoot);
         Assert.Contains("private void WireWindowLifecycleEvents", wiring);
+        Assert.Contains("PlayerLifecycleEventBinder.Bind", wiring);
+        Assert.DoesNotContain("Loaded += PlayerWindow_EnsureVisibleOnLoaded", wiring);
+        Assert.DoesNotContain("Deactivated += PlayerWindow_Deactivated", wiring);
+        Assert.DoesNotContain("Activated += PlayerWindow_Activated", wiring);
+        Assert.DoesNotContain("Closing += OnClosing", wiring);
+        Assert.DoesNotContain("Loaded += PlayerWindow_Loaded", wiring);
+        Assert.DoesNotContain("Closed += PlayerWindow_Closed", wiring);
+        Assert.Contains("window.Loaded += ensureVisibleOnLoaded", lifecycleEventBinder);
+        Assert.Contains("window.Closing += closing", lifecycleEventBinder);
         Assert.Contains("private void WireKeyboardEvents", wiring);
         Assert.Contains("PlayerKeyboardEventBinder.Bind", wiring);
         Assert.DoesNotContain("AddHandler(Keyboard.PreviewKeyDownEvent", wiring);

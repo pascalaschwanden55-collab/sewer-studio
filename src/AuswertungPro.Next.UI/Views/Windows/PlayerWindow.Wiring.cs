@@ -20,12 +20,14 @@ public partial class PlayerWindow
 
     private void WireWindowLifecycleEvents()
     {
-        Loaded += PlayerWindow_EnsureVisibleOnLoaded;
-        Deactivated += PlayerWindow_Deactivated;
-        Activated += PlayerWindow_Activated;
-        Closing += OnClosing;
-        Loaded += PlayerWindow_Loaded;
-        Closed += PlayerWindow_Closed;
+        PlayerLifecycleEventBinder.Bind(
+            this,
+            PlayerWindow_EnsureVisibleOnLoaded,
+            PlayerWindow_Deactivated,
+            PlayerWindow_Activated,
+            OnClosing,
+            PlayerWindow_Loaded,
+            PlayerWindow_Closed);
     }
 
     private void WireWindowSurfaceEvents()
