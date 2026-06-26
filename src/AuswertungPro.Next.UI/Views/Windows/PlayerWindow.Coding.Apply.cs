@@ -54,18 +54,13 @@ public partial class PlayerWindow
 
     private void MarkProjectDirtyForCoding()
     {
-        CodingProjectPersistenceWorkflow.MarkProjectDirty(
-            _haltungRecord,
-            new CodingProjectPersistenceWorkflowActions(
-                CreateService: CodingProjectPersistenceServiceFactory.Create));
+        CodingProjectPersistenceWorkflow.MarkProjectDirty(_haltungRecord);
     }
 
     private void SaveProjectAfterCoding()
     {
         // Nur speichern, wenn das Projekt bereits einen Pfad hat. Sonst wuerde TrySaveProject
         // mitten im Codieren oder beim Fensterschliessen einen Speichern-unter-Dialog oeffnen.
-        CodingProjectPersistenceWorkflow.TrySaveProjectIfReady(
-            new CodingProjectPersistenceWorkflowActions(
-                CreateService: CodingProjectPersistenceServiceFactory.Create));
+        CodingProjectPersistenceWorkflow.TrySaveProjectIfReady();
     }
 }

@@ -6,6 +6,32 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingProjectPersistenceWorkflowTests
 {
     [Fact]
+    public void MarkProjectDirty_offers_default_service_wiring()
+    {
+        var overload = typeof(CodingProjectPersistenceWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingProjectPersistenceWorkflow.MarkProjectDirty) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual([typeof(HaltungRecord)]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
+    public void TrySaveProjectIfReady_offers_default_service_wiring()
+    {
+        var overload = typeof(CodingProjectPersistenceWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingProjectPersistenceWorkflow.TrySaveProjectIfReady) &&
+                method.GetParameters().Length == 0);
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
     public void MarkProjectDirty_creates_service_and_marks_record()
     {
         var calls = new List<string>();

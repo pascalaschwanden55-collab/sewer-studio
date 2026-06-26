@@ -786,11 +786,14 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("PlayerShellProjectServiceFactory.Create", protocol);
         Assert.Contains("PlayerShellProjectServiceFactory.Create", previewWorkflowFactory);
         Assert.DoesNotContain("PlayerShellProjectServiceFactory.Create", apply);
-        Assert.Contains("CodingProjectPersistenceServiceFactory.Create", apply);
+        Assert.DoesNotContain("CodingProjectPersistenceServiceFactory.Create", apply);
+        Assert.DoesNotContain("new CodingProjectPersistenceWorkflowActions", apply);
         Assert.Contains("CodingProjectPersistenceWorkflow.MarkProjectDirty", apply);
         Assert.Contains("CodingProjectPersistenceWorkflow.TrySaveProjectIfReady", apply);
-        Assert.DoesNotContain(".MarkProjectDirty(_haltungRecord)", apply);
-        Assert.DoesNotContain(".TrySaveProjectIfReady()", apply);
+        Assert.Contains("CodingProjectPersistenceWorkflow.MarkProjectDirty(_haltungRecord)", apply);
+        Assert.Contains("CodingProjectPersistenceWorkflow.TrySaveProjectIfReady()", apply);
+        Assert.Contains("CodingProjectPersistenceServiceFactory.Create", codingProjectPersistenceWorkflow);
+        Assert.Contains("new CodingProjectPersistenceWorkflowActions", codingProjectPersistenceWorkflow);
         Assert.Contains("service.MarkProjectDirty(record)", codingProjectPersistenceWorkflow);
         Assert.Contains("service.TrySaveProjectIfReady()", codingProjectPersistenceWorkflow);
         Assert.Contains("PlayerShellProjectServiceFactory.Create", codingProjectPersistenceFactory);

@@ -7,6 +7,12 @@ public sealed record CodingProjectPersistenceWorkflowActions(
 
 public static class CodingProjectPersistenceWorkflow
 {
+    public static void MarkProjectDirty(HaltungRecord? record)
+        => MarkProjectDirty(
+            record,
+            new CodingProjectPersistenceWorkflowActions(
+                CreateService: CodingProjectPersistenceServiceFactory.Create));
+
     public static void MarkProjectDirty(
         HaltungRecord? record,
         CodingProjectPersistenceWorkflowActions actions)
@@ -15,6 +21,11 @@ public static class CodingProjectPersistenceWorkflow
 
         service.MarkProjectDirty(record);
     }
+
+    public static void TrySaveProjectIfReady()
+        => TrySaveProjectIfReady(
+            new CodingProjectPersistenceWorkflowActions(
+                CreateService: CodingProjectPersistenceServiceFactory.Create));
 
     public static void TrySaveProjectIfReady(
         CodingProjectPersistenceWorkflowActions actions)
