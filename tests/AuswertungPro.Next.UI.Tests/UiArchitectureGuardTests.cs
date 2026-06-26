@@ -183,7 +183,9 @@ public sealed class UiArchitectureGuardTests
         var closedWorkflow = File.Exists(closedWorkflowPath) ? File.ReadAllText(closedWorkflowPath) : "";
         var controllerSetFactory = File.Exists(controllerSetFactoryPath) ? File.ReadAllText(controllerSetFactoryPath) : "";
 
-        Assert.Contains("PlayerWindowControllerSetFactory.Create", windowRoot);
+        Assert.Contains("_playerControllers = PlayerWindowControllerSetFactory.Create", windowRoot);
+        Assert.DoesNotContain("var controllerSet = PlayerWindowControllerSetFactory.Create", windowRoot);
+        Assert.DoesNotContain("= controllerSet.", windowRoot);
         Assert.DoesNotContain("new DamageMarkerController", windowRoot);
         Assert.DoesNotContain("new QuickScanController", windowRoot);
         Assert.DoesNotContain("new PlayerPositionControls", windowRoot);
@@ -396,11 +398,19 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private readonly PlayerPlaybackControlHost _playerPlaybackControlHost", state);
         Assert.DoesNotContain("private readonly PlayerMarqueeOverlayHost _playerMarqueeOverlayHost", state);
         Assert.DoesNotContain("private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost", state);
-        Assert.Contains("private readonly PlayerPositionControls _positionControls", state);
-        Assert.Contains("private readonly PlayerSpeedControls _speedControls", state);
-        Assert.Contains("private readonly PlayerMarkToolControls _markToolControls", state);
-        Assert.Contains("private readonly DamageMarkerController _damageMarkerController", state);
-        Assert.Contains("private readonly QuickScanController _quickScanController", state);
+        Assert.Contains("private readonly PlayerWindowControllerSet _playerControllers", state);
+        Assert.DoesNotContain("private readonly PlayerPositionControls _positionControls", state);
+        Assert.DoesNotContain("private readonly PlayerSpeedControls _speedControls", state);
+        Assert.DoesNotContain("private readonly PlayerMarkToolControls _markToolControls", state);
+        Assert.DoesNotContain("private readonly DamageMarkerController _damageMarkerController", state);
+        Assert.DoesNotContain("private readonly QuickScanController _quickScanController", state);
+        Assert.DoesNotContain("private readonly CodingOverlayRenderController _codingOverlayRenderController", state);
+        Assert.Contains("private PlayerPositionControls _positionControls => _playerControllers.PositionControls", state);
+        Assert.Contains("private PlayerSpeedControls _speedControls => _playerControllers.SpeedControls", state);
+        Assert.Contains("private PlayerMarkToolControls _markToolControls => _playerControllers.MarkToolControls", state);
+        Assert.Contains("private DamageMarkerController _damageMarkerController => _playerControllers.DamageMarkerController", state);
+        Assert.Contains("private QuickScanController _quickScanController => _playerControllers.QuickScanController", state);
+        Assert.Contains("private CodingOverlayRenderController _codingOverlayRenderController => _playerControllers.CodingOverlayRenderController", state);
         Assert.Contains("private readonly LiveDetectionController _liveDetectionController = new();", state);
         Assert.Contains("private readonly PlayerWindowPlaybackContext _playbackContext", state);
         Assert.Contains("private readonly PlayerWindowProtocolContext _protocolContext", state);

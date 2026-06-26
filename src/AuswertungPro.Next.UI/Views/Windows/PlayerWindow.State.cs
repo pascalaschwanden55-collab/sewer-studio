@@ -9,14 +9,9 @@ public partial class PlayerWindow
     private readonly PlayerMediaRuntime _playerMediaRuntime;
     private readonly PlayerMediaHosts _playerMediaHosts;
     private readonly PlayerWindowPlaybackContext _playbackContext;
-    private readonly PlayerPositionControls _positionControls;
-    private readonly PlayerSpeedControls _speedControls;
+    private readonly PlayerWindowControllerSet _playerControllers;
     private readonly PlayerPositionSliderStateController _positionSliderStateController = new();
-    private readonly PlayerMarkToolControls _markToolControls;
     private readonly PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner = new();
-    private readonly DamageMarkerController _damageMarkerController;
-    private readonly QuickScanController _quickScanController;
-    private readonly CodingOverlayRenderController _codingOverlayRenderController;
     private readonly PlayerWindowTimerController _playerTimerController;
 
     // Live detection state.
@@ -38,4 +33,16 @@ public partial class PlayerWindow
     private PlayerMarqueeOverlayHost _playerMarqueeOverlayHost => _playerMediaHosts.MarqueeOverlayHost;
 
     private PlayerSnapshotCaptureHost _playerSnapshotCaptureHost => _playerMediaHosts.SnapshotCaptureHost;
+
+    private PlayerPositionControls _positionControls => _playerControllers.PositionControls;
+
+    private PlayerSpeedControls _speedControls => _playerControllers.SpeedControls;
+
+    private PlayerMarkToolControls _markToolControls => _playerControllers.MarkToolControls;
+
+    private DamageMarkerController _damageMarkerController => _playerControllers.DamageMarkerController;
+
+    private QuickScanController _quickScanController => _playerControllers.QuickScanController;
+
+    private CodingOverlayRenderController _codingOverlayRenderController => _playerControllers.CodingOverlayRenderController;
 }

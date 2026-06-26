@@ -53,7 +53,7 @@ public partial class PlayerWindow : Window
         _playerMediaRuntime.AttachVideoView(VideoView);
         _playerMediaHosts = _playerMediaRuntime.Hosts;
 
-        var controllerSet = PlayerWindowControllerSetFactory.Create(
+        _playerControllers = PlayerWindowControllerSetFactory.Create(
             new PlayerWindowControllerSetControls(
                 DamageMarkerCanvas: DamageMarkerCanvas,
                 PositionSlider: PositionSlider,
@@ -87,13 +87,6 @@ public partial class PlayerWindow : Window
                 UpdateUi: UpdateUi,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel));
-
-        _damageMarkerController = controllerSet.DamageMarkerController;
-        _quickScanController = controllerSet.QuickScanController;
-        _positionControls = controllerSet.PositionControls;
-        _speedControls = controllerSet.SpeedControls;
-        _markToolControls = controllerSet.MarkToolControls;
-        _codingOverlayRenderController = controllerSet.CodingOverlayRenderController;
 
         _playerTimerController = PlayerWindowTimerController.Create(
             createRequest: () => new PlayerWindowTimerTickWorkflowRequest(
