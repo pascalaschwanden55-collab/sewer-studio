@@ -22,10 +22,9 @@ public partial class PlayerWindow
 
     private async Task StartLiveDetectionAsync()
     {
-        await LiveDetectionStartupWorkflow.StartAsync(
+        await LiveDetectionStartupDisplayWorkflow.StartAsync(
             () => PlayerAiSettingsLoader.LoadRuntimeSettings(),
             settings => LiveDetectionRuntimeFactory.CreateAsync(settings),
-            LiveDetectionDialogServiceFactory.Create(),
             new LiveDetectionStartupActions(
                 UncheckToggle: () => LiveDetectionToggleControls.Uncheck(LiveDetectionButton),
                 StartRuntime: StartLiveDetectionRuntime));

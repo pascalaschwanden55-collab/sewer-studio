@@ -1512,6 +1512,7 @@ public sealed class UiArchitectureGuardTests
         var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeFactory.cs");
         var clickWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionClickWorkflow.cs");
         var startupWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupWorkflow.cs");
+        var startupDisplayWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupDisplayWorkflow.cs");
         var runtimeStartWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRuntimeStartWorkflow.cs");
         var stopUiWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStopUiWorkflow.cs");
         var hideStatusTimerWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionHideStatusTimerWorkflow.cs");
@@ -1524,6 +1525,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(factoryPath), "LiveDetection-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(clickWorkflowPath), "LiveDetection-Klick-Start/Stop-Entscheidung soll ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(startupWorkflowPath), "LiveDetection-Startup-Entscheidungen sollen ausserhalb von PlayerWindow orchestriert werden.");
+        Assert.True(File.Exists(startupDisplayWorkflowPath), "LiveDetection-Startup-Dialogverdrahtung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(runtimeStartWorkflowPath), "LiveDetection-Runtime-Startreihenfolge soll ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(stopUiWorkflowPath), "LiveDetection-Stop-UI-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(hideStatusTimerWorkflowPath), "LiveDetection-Stop-Status-Hide-Timer soll ausserhalb der PlayerWindow-Partials entschieden werden.");
@@ -1537,6 +1539,7 @@ public sealed class UiArchitectureGuardTests
         var factory = File.ReadAllText(factoryPath);
         var clickWorkflow = File.Exists(clickWorkflowPath) ? File.ReadAllText(clickWorkflowPath) : "";
         var startupWorkflow = File.Exists(startupWorkflowPath) ? File.ReadAllText(startupWorkflowPath) : "";
+        var startupDisplayWorkflow = File.Exists(startupDisplayWorkflowPath) ? File.ReadAllText(startupDisplayWorkflowPath) : "";
         var runtimeStartWorkflow = File.Exists(runtimeStartWorkflowPath) ? File.ReadAllText(runtimeStartWorkflowPath) : "";
         var stopUiWorkflow = File.Exists(stopUiWorkflowPath) ? File.ReadAllText(stopUiWorkflowPath) : "";
         var hideStatusTimerWorkflow = File.Exists(hideStatusTimerWorkflowPath) ? File.ReadAllText(hideStatusTimerWorkflowPath) : "";
@@ -1558,7 +1561,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("if (_liveDetectionController.IsDetecting)", lifecycle);
         Assert.Contains("private async Task StartLiveDetectionAsync", lifecycle);
         Assert.DoesNotContain("private void StopLiveDetection", lifecycle);
-        Assert.Contains("LiveDetectionStartupWorkflow.StartAsync", lifecycle);
+        Assert.Contains("LiveDetectionStartupDisplayWorkflow.StartAsync", lifecycle);
+        Assert.DoesNotContain("LiveDetectionStartupWorkflow.StartAsync", lifecycle);
         Assert.Contains("new LiveDetectionStartupActions", lifecycle);
         Assert.Contains("LiveDetectionToggleControls.Uncheck", lifecycle);
         Assert.DoesNotContain("LiveDetectionButton.IsChecked = false", playerWindowPartials);
@@ -1582,6 +1586,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.UncheckToggle()", clickWorkflow);
         Assert.Contains("actions.StartLiveDetectionAsync()", clickWorkflow);
         Assert.Contains("public static class LiveDetectionStartupWorkflow", startupWorkflow);
+        Assert.Contains("public static class LiveDetectionStartupDisplayWorkflow", startupDisplayWorkflow);
+        Assert.Contains("LiveDetectionDialogServiceFactory.Create", startupDisplayWorkflow);
+        Assert.Contains("LiveDetectionStartupWorkflow.StartAsync", startupDisplayWorkflow);
         Assert.Contains("ShowRuntimeSettingsLoadFailed", startupWorkflow);
         Assert.Contains("ShowDisabled", startupWorkflow);
         Assert.Contains("ShowStartFailed", startupWorkflow);
@@ -1642,17 +1649,20 @@ public sealed class UiArchitectureGuardTests
         var catalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
         var servicePath = Path.Combine(uiRoot, "Ai", "LiveDetectionDialogService.cs");
         var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionDialogServiceFactory.cs");
+        var startupDisplayWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupDisplayWorkflow.cs");
 
         Assert.True(File.Exists(servicePath), "LiveDetection-Dialogtexte muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "LiveDetection-DialogHost-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(startupDisplayWorkflowPath), "LiveDetection-Startup-Dialogverdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
 
         var lifecycle = File.ReadAllText(lifecyclePath);
         var catalog = File.ReadAllText(catalogPath);
         var playerText = lifecycle + catalog;
         var service = File.ReadAllText(servicePath);
         var factory = File.ReadAllText(factoryPath);
+        var startupDisplayWorkflow = File.ReadAllText(startupDisplayWorkflowPath);
 
-        Assert.Contains("LiveDetectionDialogServiceFactory.Create", playerText);
+        Assert.DoesNotContain("LiveDetectionDialogServiceFactory.Create", playerText);
         Assert.DoesNotContain("DialogHost.Current", playerText);
         Assert.DoesNotContain("KI-Konfiguration konnte nicht geladen werden.", playerText);
         Assert.DoesNotContain("KI ist deaktiviert.", playerText);
@@ -1663,6 +1673,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("ShowStartFailed", service);
         Assert.Contains("ShowCodeCatalogUnavailable", service);
         Assert.Contains("DialogHost.Current", factory);
+        Assert.Contains("LiveDetectionDialogServiceFactory.Create", startupDisplayWorkflow);
     }
 
     [Fact]
