@@ -72,9 +72,7 @@ public partial class PlayerWindow
                     _dependencies.LegacyServiceProvider!,
                     _videoPath,
                     _dependencies.LastProjectPath,
-                    MarkProjectDirtyForCoding,
-                    new CodingProtocolPreviewDisplayWorkflowActions(
-                        CreateService: CodingProtocolPreviewWorkflowServiceFactory.Create)),
+                    MarkProjectDirtyForCoding),
                 GetCurrentProtocol: () => _haltungRecord?.Protocol,
                 SyncPrimaryDamages: SyncCodingToPrimaryDamages,
                 OfferPdfExport: CodingOfferPdfExport));

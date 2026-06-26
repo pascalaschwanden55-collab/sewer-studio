@@ -17,6 +17,25 @@ public static class CodingProtocolPreviewDisplayWorkflow
         UiServiceProvider serviceProvider,
         string? videoPath,
         string? lastProjectPath,
+        Action markDirty)
+        => TryShow(
+            owner,
+            record,
+            document,
+            serviceProvider,
+            videoPath,
+            lastProjectPath,
+            markDirty,
+            new CodingProtocolPreviewDisplayWorkflowActions(
+                CreateService: CodingProtocolPreviewWorkflowServiceFactory.Create));
+
+    public static bool TryShow(
+        Window? owner,
+        HaltungRecord record,
+        ProtocolDocument document,
+        UiServiceProvider serviceProvider,
+        string? videoPath,
+        string? lastProjectPath,
         Action markDirty,
         CodingProtocolPreviewDisplayWorkflowActions actions)
     {

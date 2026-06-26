@@ -9,6 +9,29 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingProtocolPreviewDisplayWorkflowTests
 {
     [Fact]
+    public void TryShow_offers_default_preview_service_wiring()
+    {
+        var overload = typeof(CodingProtocolPreviewDisplayWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingProtocolPreviewDisplayWorkflow.TryShow) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual(
+                    [
+                        typeof(Window),
+                        typeof(HaltungRecord),
+                        typeof(ProtocolDocument),
+                        typeof(UiServiceProvider),
+                        typeof(string),
+                        typeof(string),
+                        typeof(Action),
+                    ]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
     public void TryShow_creates_preview_service_and_delegates_request()
     {
         var calls = new List<string>();

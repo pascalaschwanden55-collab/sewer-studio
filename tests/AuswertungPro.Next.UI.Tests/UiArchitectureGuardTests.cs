@@ -695,7 +695,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingProtocolPdfFileServiceFactory.Create", protocol);
         Assert.DoesNotContain("CodingProjectFolderResolver.ResolveNullable", protocol);
         Assert.DoesNotContain("CodingProtocolDialogServiceFactory.Create", protocol);
-        Assert.Contains("CodingProtocolPreviewWorkflowServiceFactory.Create", protocol);
+        Assert.DoesNotContain("CodingProtocolPreviewWorkflowServiceFactory.Create", protocol);
+        Assert.DoesNotContain("new CodingProtocolPreviewDisplayWorkflowActions", protocol);
         Assert.DoesNotContain("CodingProtocolPreviewWindowServiceFactory.Create", protocol);
         Assert.DoesNotContain("DialogHost.Current", protocol);
         Assert.DoesNotContain("PlayerShellProjectServiceFactory.Create", protocol);
@@ -737,6 +738,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.ShowPreview()", previewCommandWorkflow);
         Assert.Contains("actions.SyncPrimaryDamages", previewCommandWorkflow);
         Assert.Contains("actions.OfferPdfExport", previewCommandWorkflow);
+        Assert.Contains("CodingProtocolPreviewWorkflowServiceFactory.Create", previewDisplayWorkflow);
+        Assert.Contains("new CodingProtocolPreviewDisplayWorkflowActions", previewDisplayWorkflow);
         Assert.Contains("service.TryShow(owner, record, document, serviceProvider, videoPath, lastProjectPath, markDirty)", previewDisplayWorkflow);
         Assert.Contains("TryShow", previewWorkflowService);
         Assert.Contains("CodingProtocolDialogServiceFactory.Create", previewWorkflowServiceFactory);
