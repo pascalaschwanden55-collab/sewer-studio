@@ -16,7 +16,7 @@ public partial class PlayerWindow
             new CodingMultiModelResultsRenderRequest(mmResult, segmented),
             new CodingMultiModelResultsRenderActions(
                 ClearMasks: () => CodingSamMaskOverlayController.Clear(CodingOverlayCanvas),
-                SetVideoAspect: aspect => _codingVideoAspect = aspect,
+                SetVideoAspect: _codingOverlayRenderState.SetVideoAspect,
                 BuildVisibleMaskRenderCandidates: CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates,
                 RenderCandidates: (candidates, samResponse) =>
                 {
@@ -31,7 +31,7 @@ public partial class PlayerWindow
                 },
                 ShowReferenceDn: () =>
                 {
-                    _showReferenceDn = true;
+                    _codingOverlayRenderState.ShowReferenceDiameter();
                     RenderReferenceDn();
                 }));
     }

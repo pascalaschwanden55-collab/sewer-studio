@@ -27,7 +27,7 @@ public partial class PlayerWindow
         return CodingFindingProximityPolicy.IsTooFarAhead(
             finding,
             _codingOverlayToolHost.Calibration,
-            _codingVideoAspect);
+            _codingOverlayRenderState.VideoAspect);
     }
 
     private IReadOnlyList<SegmentedFinding> BuildCodingSegmentedFindings(SingleFrameResult mmResult)

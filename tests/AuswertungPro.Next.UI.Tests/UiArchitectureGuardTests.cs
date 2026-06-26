@@ -5646,27 +5646,40 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
         var renderingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Rendering.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingSamMaskOverlayController.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelResultsRenderWorkflow.cs");
+        var stateControllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayRenderStateController.cs");
 
         Assert.True(File.Exists(renderingPath), "Multi-Model-Maskenanzeige soll aus dem allgemeinen Coding.Ai-Partial heraus.");
         Assert.True(File.Exists(controllerPath), "SAM-Maskenrendering soll ausserhalb von PlayerWindow verdrahtet werden.");
         Assert.True(File.Exists(workflowPath), "Multi-Model-Render-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(stateControllerPath), "Overlay-Render-Zustand soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var ai = File.ReadAllText(aiPath);
         var rendering = File.ReadAllText(renderingPath);
+        var state = File.ReadAllText(statePath);
         var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
         var workflow = File.ReadAllText(workflowPath);
+        var stateController = File.Exists(stateControllerPath) ? File.ReadAllText(stateControllerPath) : "";
 
         Assert.DoesNotContain("private void ShowMultiModelResults", ai);
         Assert.Contains("private void ShowMultiModelResults", rendering);
         Assert.Contains("CodingMultiModelResultsRenderWorkflow.Execute", rendering);
         Assert.Contains("CodingSamMaskOverlayController.RenderCandidates", rendering);
+        Assert.Contains("_codingOverlayRenderState.SetVideoAspect", rendering);
+        Assert.Contains("_codingOverlayRenderState.ShowReferenceDiameter", rendering);
+        Assert.Contains("_codingOverlayRenderState", state);
         Assert.DoesNotContain("if (mmResult.SamResponse != null)", rendering);
         Assert.DoesNotContain("var candidates = CodingSegmentedFindingVisibility.BuildVisibleMaskRenderCandidates", rendering);
         Assert.DoesNotContain("_codingVideoAspect = (double)srAsp.ImageWidth / srAsp.ImageHeight", rendering);
+        Assert.DoesNotContain("_codingVideoAspect", rendering + state);
+        Assert.DoesNotContain("_showReferenceDn", rendering + state);
         Assert.DoesNotContain("SamMaskRenderer.RenderCandidates", rendering);
         Assert.Contains("SamMaskRenderer.RenderCandidates", controller);
+        Assert.Contains("public sealed class CodingOverlayRenderStateController", stateController);
+        Assert.Contains("public double VideoAspect", stateController);
+        Assert.Contains("public bool ShowReferenceDn", stateController);
         Assert.Contains("RenderReferenceDn", rendering);
         Assert.Contains("actions.ClearMasks()", workflow);
         Assert.Contains("actions.SetVideoAspect", workflow);
@@ -7592,19 +7605,28 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "ReferenceDnOverlayRenderer.cs");
+        var stateControllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayRenderStateController.cs");
 
         Assert.True(File.Exists(rendererPath), "Ref-DN-Canvas-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(stateControllerPath), "Ref-DN-Sichtbarkeit soll in einem kleinen Overlay-Render-State liegen.");
 
         var schema = File.ReadAllText(schemaPath);
+        var state = File.ReadAllText(statePath);
         var renderer = File.ReadAllText(rendererPath);
+        var stateController = File.Exists(stateControllerPath) ? File.ReadAllText(stateControllerPath) : "";
 
         Assert.Contains("_codingOverlayRenderController.RenderReferenceDn", schema);
+        Assert.Contains("_codingOverlayRenderState.ShowReferenceDn", schema);
+        Assert.Contains("_codingOverlayRenderState", state);
+        Assert.DoesNotContain("_showReferenceDn", schema + state);
         Assert.DoesNotContain("ReferenceDnGeometry.BuildCircleRect", schema);
         Assert.DoesNotContain("Ref: DN", schema);
         Assert.Contains("public static class ReferenceDnOverlayRenderer", renderer);
         Assert.Contains("ReferenceDnGeometry.BuildCircleRect", renderer);
         Assert.Contains("new System.Windows.Shapes.Ellipse", renderer);
+        Assert.Contains("public void ShowReferenceDiameter", stateController);
     }
 
     [Fact]

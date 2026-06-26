@@ -6,9 +6,6 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    // Breite/Hoehe des sichtbaren Videobildes (aus dem Analyse-Frame), 0 = unbekannt.
-    private double _codingVideoAspect;
-
     // Das tatsaechlich sichtbare Video-Rechteck im Overlay-Canvas: VLC zeigt das Video
     // formattreu (Letterbox/Pillarbox). Overlays muessen in DIESES Rechteck gerechnet werden,
     // nicht in die volle Flaeche - sonst werden z.B. 4:3-Befunde in einer 16:9-Flaeche verzerrt.
@@ -16,7 +13,7 @@ public partial class PlayerWindow
         => CodingOverlayViewportMapper.GetContentRect(
             CodingOverlayCanvas.ActualWidth,
             CodingOverlayCanvas.ActualHeight,
-            _codingVideoAspect);
+            _codingOverlayRenderState.VideoAspect);
 
     private NormalizedPoint CodingPixelToNorm(Point pixel)
     {

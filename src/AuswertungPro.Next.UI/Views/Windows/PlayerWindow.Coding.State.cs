@@ -27,7 +27,7 @@ public partial class PlayerWindow
 
     private readonly CodingCalibrationStateController _codingCalibrationState = new();
     private readonly CodingOverlayInputVisibilityStateController _codingOverlayInputVisibilityState = new();
-    private bool _showReferenceDn;
+    private readonly CodingOverlayRenderStateController _codingOverlayRenderState = new();
 
     private readonly LiveDetectionPulseStateController _codingAiPulseStateController = new();
     private readonly StreckenschadenTracker _streckenTracker = new();

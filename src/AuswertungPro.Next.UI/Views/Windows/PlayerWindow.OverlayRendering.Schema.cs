@@ -8,6 +8,6 @@ public partial class PlayerWindow
     {
         _codingOverlayRenderController.RenderReferenceDn(
             _codingOverlayToolHost.Calibration,
-            _showReferenceDn);
+            _codingOverlayRenderState.ShowReferenceDn);
     }
 }
