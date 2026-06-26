@@ -2,6 +2,7 @@ using System.Windows.Media;
 using System.Windows.Media.Effects;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Player;
 
@@ -56,6 +57,18 @@ public sealed class CodingOverlayRenderController
             showReferenceDn,
             _surface.Width,
             _surface.Height);
+
+    public CodingCalibrationPreviewState RenderCalibrationPreview(
+        NormalizedPoint start,
+        NormalizedPoint end)
+    {
+        var preview = CodingCalibrationPreviewPolicy.Build(
+            _mapper.ToPixel(start),
+            _mapper.ToPixel(end));
+
+        CodingCalibrationPreviewLineRenderer.Render(_surface.Canvas, preview);
+        return preview;
+    }
 
     public bool RenderActiveSchema(
         SchemaOverlayBase active,

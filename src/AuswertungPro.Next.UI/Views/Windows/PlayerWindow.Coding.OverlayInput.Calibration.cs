@@ -1,7 +1,6 @@
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -94,10 +93,9 @@ public partial class PlayerWindow
                 RenderReferenceDn: RenderReferenceDn,
                 RenderPreview: () =>
                 {
-                    var p1 = CodingNormToPixel(calibrationStart!);
-                    var p2 = CodingNormToPixel(norm);
-                    var preview = CodingCalibrationPreviewPolicy.Build(p1, p2);
-                    CodingCalibrationPreviewLineRenderer.Render(CodingOverlayCanvas, preview);
+                    var preview = _codingOverlayRenderController.RenderCalibrationPreview(
+                        calibrationStart!,
+                        norm);
                     CodingCalibrationControls.ApplyPreview(TxtCodingCalibHint, preview);
                 }))
             .Handled;

@@ -60,6 +60,29 @@ public sealed class CodingOverlayRenderControllerTests
         });
     }
 
+    [Fact]
+    public void RenderCalibrationPreview_maps_points_renders_line_and_returns_preview_state()
+    {
+        RunOnStaThread(() =>
+        {
+            var surface = new TestOverlaySurface(width: 200, height: 100);
+            var mapper = new TestOverlayCoordinateMapper(width: 200, height: 100);
+            var controller = new CodingOverlayRenderController(surface, mapper);
+
+            var preview = controller.RenderCalibrationPreview(
+                new NormalizedPoint(0.1, 0.2),
+                new NormalizedPoint(0.4, 0.6));
+
+            var line = Assert.IsType<Line>(Assert.Single(surface.Canvas.Children));
+            Assert.Equal(2, mapper.CallCount);
+            Assert.Equal(new Point(20, 20), preview.Start);
+            Assert.Equal(new Point(80, 60), preview.End);
+            Assert.Equal(OverlayTags.Preview, line.Tag);
+            Assert.Equal(preview.Start.X, line.X1);
+            Assert.Equal(preview.End.Y, line.Y2);
+        });
+    }
+
     private sealed class TestOverlaySurface : IOverlaySurface
     {
         public TestOverlaySurface(double width, double height)

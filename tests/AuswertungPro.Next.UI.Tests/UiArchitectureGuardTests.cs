@@ -6033,6 +6033,7 @@ public sealed class UiArchitectureGuardTests
         var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationToggleWorkflow.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationControls.cs");
         var stateControllerPath = Path.Combine(uiRoot, "Player", "CodingCalibrationStateController.cs");
+        var renderControllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayRenderController.cs");
         var playerStatePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.State.cs");
 
         Assert.True(File.Exists(policyPath), "Manuelle Kalibrierungsberechnung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -6043,6 +6044,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(toggleWorkflowPath), "Manuelle Kalibrierungs-Toggle-Reihenfolge muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Manuelle Kalibrierungs-Control-Zuweisungen sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(stateControllerPath), "Manueller Kalibrierungszustand soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(renderControllerPath), "Kalibrierungs-Preview-Rendering soll ueber den Overlay-RenderController laufen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var calibration = File.ReadAllText(calibrationPath);
@@ -6054,12 +6056,14 @@ public sealed class UiArchitectureGuardTests
         var toggleWorkflow = File.Exists(toggleWorkflowPath) ? File.ReadAllText(toggleWorkflowPath) : "";
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
         var stateController = File.Exists(stateControllerPath) ? File.ReadAllText(stateControllerPath) : "";
+        var renderController = File.Exists(renderControllerPath) ? File.ReadAllText(renderControllerPath) : "";
         var playerState = File.ReadAllText(playerStatePath);
 
         Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
         Assert.Contains("CodingManualCalibrationApplyWorkflow.Execute", calibration);
         Assert.Contains("CodingManualCalibrationWorkflow.Apply", calibration);
-        Assert.Contains("CodingCalibrationPreviewPolicy.Build", calibration);
+        Assert.DoesNotContain("CodingCalibrationPreviewPolicy.Build", calibration);
+        Assert.Contains("CodingCalibrationPreviewPolicy.Build", renderController);
         Assert.Contains("CodingCalibrationToggleWorkflow.Execute", calibration);
         Assert.DoesNotContain("CodingCalibrationTogglePolicy.Build", calibration);
         Assert.Contains("CodingCalibrationControls.ApplyToggle", calibration);
@@ -6154,14 +6158,19 @@ public sealed class UiArchitectureGuardTests
         var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
         var calibrationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Calibration.cs");
         var rendererPath = Path.Combine(uiRoot, "Player", "CodingCalibrationPreviewLineRenderer.cs");
+        var renderControllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayRenderController.cs");
 
         Assert.True(File.Exists(rendererPath), "Kalibrierungs-Vorschaulinie muss ausserhalb der PlayerWindow-Partials gerendert werden.");
+        Assert.True(File.Exists(renderControllerPath), "Kalibrierungs-Vorschaulinie muss ueber den Overlay-RenderController orchestriert werden.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var calibration = File.ReadAllText(calibrationPath);
         var renderer = File.ReadAllText(rendererPath);
+        var renderController = File.Exists(renderControllerPath) ? File.ReadAllText(renderControllerPath) : "";
 
-        Assert.Contains("CodingCalibrationPreviewLineRenderer.Render", calibration);
+        Assert.Contains("_codingOverlayRenderController.RenderCalibrationPreview", calibration);
+        Assert.DoesNotContain("CodingCalibrationPreviewLineRenderer.Render", calibration);
+        Assert.Contains("CodingCalibrationPreviewLineRenderer.Render", renderController);
         Assert.DoesNotContain("new System.Windows.Shapes.Line", overlayInput + calibration);
         Assert.DoesNotContain("StrokeDashArray = new DoubleCollection", overlayInput + calibration);
         Assert.DoesNotContain("Brushes.Magenta", overlayInput + calibration);
