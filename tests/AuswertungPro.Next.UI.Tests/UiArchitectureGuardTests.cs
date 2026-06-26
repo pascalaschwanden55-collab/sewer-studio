@@ -530,6 +530,7 @@ public sealed class UiArchitectureGuardTests
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var codingModeStatePath = Path.Combine(uiRoot, "Player", "CodingModeStateController.cs");
         var codingRuntimeStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingRuntimeStateControllerSet.cs");
+        var codingSchemaStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingSchemaStateControllerSet.cs");
         var codingAiStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingAiStateControllerSet.cs");
         var importEventsOwnerPath = Path.Combine(uiRoot, "Player", "CodingImportReferenceEventsOwner.cs");
         var protocolStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingProtocolStateControllerSet.cs");
@@ -540,6 +541,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(statePath), "Coding-Feldzustand soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(codingModeStatePath), "Coding-Modus-Zustand soll nicht mehr als Rohfeld im PlayerWindow liegen.");
         Assert.True(File.Exists(codingRuntimeStateControllerSetPath), "Coding-Runtime-Zustand soll nicht einzeln im PlayerWindow liegen.");
+        Assert.True(File.Exists(codingSchemaStateControllerSetPath), "Coding-Schema-Zustand soll nicht einzeln im PlayerWindow liegen.");
         Assert.True(File.Exists(codingAiStateControllerSetPath), "Coding-AI-Zustandscontroller sollen nicht einzeln im PlayerWindow liegen.");
         Assert.True(File.Exists(importEventsOwnerPath), "Coding-Import-Referenz-Events sollen nicht mehr als rohe Collection im PlayerWindow liegen.");
         Assert.True(File.Exists(protocolStateControllerSetPath), "Coding-Protocol/Navigations-Zustand soll nicht einzeln im PlayerWindow liegen.");
@@ -551,6 +553,7 @@ public sealed class UiArchitectureGuardTests
         var state = File.ReadAllText(statePath);
         var codingModeState = File.Exists(codingModeStatePath) ? File.ReadAllText(codingModeStatePath) : "";
         var codingRuntimeStateControllerSet = File.Exists(codingRuntimeStateControllerSetPath) ? File.ReadAllText(codingRuntimeStateControllerSetPath) : "";
+        var codingSchemaStateControllerSet = File.Exists(codingSchemaStateControllerSetPath) ? File.ReadAllText(codingSchemaStateControllerSetPath) : "";
         var codingAiStateControllerSet = File.Exists(codingAiStateControllerSetPath) ? File.ReadAllText(codingAiStateControllerSetPath) : "";
         var importEventsOwner = File.Exists(importEventsOwnerPath) ? File.ReadAllText(importEventsOwnerPath) : "";
         var protocolStateControllerSet = File.Exists(protocolStateControllerSetPath) ? File.ReadAllText(protocolStateControllerSetPath) : "";
@@ -578,6 +581,14 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public sealed class CodingModeStateController", codingModeState);
         Assert.Contains("public bool IsCodingMode", codingModeState);
         Assert.Contains("public void Set", codingModeState);
+        Assert.Contains("private readonly CodingSchemaStateControllerSet _codingSchemaStates = new();", state);
+        Assert.DoesNotContain("private readonly CodingSchemaOverlayManagerOwner _codingSchemaManager = new();", state);
+        Assert.DoesNotContain("private readonly CodingSchemaTypeStateController _codingSchemaTypeState = new();", state);
+        Assert.Contains("private CodingSchemaOverlayManagerOwner _codingSchemaManager => _codingSchemaStates.OverlayManagerOwner", state);
+        Assert.Contains("private CodingSchemaTypeStateController _codingSchemaTypeState => _codingSchemaStates.TypeState", state);
+        Assert.Contains("public sealed class CodingSchemaStateControllerSet", codingSchemaStateControllerSet);
+        Assert.Contains("public CodingSchemaOverlayManagerOwner OverlayManagerOwner", codingSchemaStateControllerSet);
+        Assert.Contains("public CodingSchemaTypeStateController TypeState", codingSchemaStateControllerSet);
         Assert.Contains("private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner", state);
         Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", state);
         Assert.DoesNotContain("private ICodingSessionService? _codingSessionService", state);
@@ -7749,14 +7760,19 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var schemaStatePath = Path.Combine(uiRoot, "Player", "CodingSchemaTypeStateController.cs");
+        var schemaStateSetPath = Path.Combine(uiRoot, "Player", "CodingSchemaStateControllerSet.cs");
 
         Assert.True(File.Exists(schemaStatePath), "Aktiver Schema-Typ soll nicht mehr als Rohfeld im PlayerWindow liegen.");
+        Assert.True(File.Exists(schemaStateSetPath), "Schema-Zustand soll gebuendelt im PlayerWindow liegen.");
 
         var state = File.ReadAllText(statePath);
         var schemaState = File.Exists(schemaStatePath) ? File.ReadAllText(schemaStatePath) : "";
+        var schemaStateSet = File.Exists(schemaStateSetPath) ? File.ReadAllText(schemaStateSetPath) : "";
 
         Assert.DoesNotContain("private SchemaType? _codingSchemaType;", state);
-        Assert.Contains("private readonly CodingSchemaTypeStateController _codingSchemaTypeState = new();", state);
+        Assert.DoesNotContain("private readonly CodingSchemaTypeStateController _codingSchemaTypeState = new();", state);
+        Assert.Contains("private CodingSchemaTypeStateController _codingSchemaTypeState => _codingSchemaStates.TypeState", state);
+        Assert.Contains("public CodingSchemaTypeStateController TypeState", schemaStateSet);
         Assert.Contains("public sealed class CodingSchemaTypeStateController", schemaState);
         Assert.Contains("public SchemaType? ActiveSchemaType", schemaState);
         Assert.Contains("public void Set", schemaState);
@@ -7890,7 +7906,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingSchemaManager.BeginDrag", overlayInput);
         Assert.DoesNotContain("_codingSchemaManager.EndDrag", overlayInput);
         Assert.DoesNotContain("private readonly SchemaOverlayManager _codingSchemaManager = new();", state);
-        Assert.Contains("private readonly CodingSchemaOverlayManagerOwner _codingSchemaManager = new();", state);
+        Assert.DoesNotContain("private readonly CodingSchemaOverlayManagerOwner _codingSchemaManager = new();", state);
+        Assert.Contains("private CodingSchemaOverlayManagerOwner _codingSchemaManager => _codingSchemaStates.OverlayManagerOwner", state);
         Assert.Contains("private bool IsCodingSchemaToolSelected", schema);
         Assert.Contains("private bool TryHandleCodingSchemaMouseDown", schema);
         Assert.Contains("private bool TryHandleCodingSchemaMouseMove", schema);
