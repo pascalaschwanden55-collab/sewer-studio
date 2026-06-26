@@ -4663,6 +4663,7 @@ public sealed class UiArchitectureGuardTests
         var policyPath = Path.Combine(uiRoot, "Ai", "CodingPhotoDisplayPathPolicy.cs");
         var loaderPath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerImageSourceLoader.cs");
         var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerCommandWorkflow.cs");
+        var displayWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerDisplayWorkflow.cs");
         var viewerWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerWorkflowService.cs");
         var viewerWorkflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerWorkflowServiceFactory.cs");
         var viewerServicePath = Path.Combine(uiRoot, "Ai", "CodingPhotoViewerWindowService.cs");
@@ -4671,6 +4672,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(policyPath), "Fotoanzeige-Pfadauswahl muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(loaderPath), "Fotoanzeige-Bildquellen sollen ausserhalb der PlayerWindow-Partials geladen werden.");
         Assert.True(File.Exists(commandWorkflowPath), "Fotoanzeige-Auswahlentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(displayWorkflowPath), "Fotoanzeige-Serviceaufruf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(viewerWorkflowPath), "Fotoanzeige-Workflow soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(viewerWorkflowFactoryPath), "Fotoanzeige-Workflow soll ueber Factory verdrahtet werden.");
         Assert.True(File.Exists(viewerServicePath), "Fotoanzeige-Fensteraufbau soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -4680,6 +4682,7 @@ public sealed class UiArchitectureGuardTests
         var policy = File.ReadAllText(policyPath);
         var loader = File.ReadAllText(loaderPath);
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
+        var displayWorkflow = File.Exists(displayWorkflowPath) ? File.ReadAllText(displayWorkflowPath) : "";
         var viewerWorkflow = File.ReadAllText(viewerWorkflowPath);
         var viewerWorkflowFactory = File.ReadAllText(viewerWorkflowFactoryPath);
         var viewerService = File.ReadAllText(viewerServicePath);
@@ -4687,7 +4690,9 @@ public sealed class UiArchitectureGuardTests
         var photoBody = ExtractMethodBody(photos, "private void CodingEventShowPhotos_Click");
 
         Assert.Contains("CodingPhotoViewerCommandWorkflow.Execute", photos);
+        Assert.Contains("CodingPhotoViewerDisplayWorkflow.Show", photos);
         Assert.Contains("CodingPhotoViewerWorkflowServiceFactory.Create", photos);
+        Assert.DoesNotContain("CodingPhotoViewerWorkflowServiceFactory.Create().Show", photos);
         Assert.DoesNotContain("LstCodingEvents.SelectedItem is not CodingEvent", photoBody);
         Assert.DoesNotContain("FotoPaths.Count == 0", photoBody);
         Assert.DoesNotContain("CodingPhotoViewerWindowServiceFactory.Create", photos);
@@ -4708,6 +4713,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("codingEvent.Entry.FotoPaths.Count == 0", commandWorkflow);
         Assert.Contains("actions.ShowNoPhotosOverlay()", commandWorkflow);
         Assert.Contains("actions.ShowViewer(codingEvent)", commandWorkflow);
+        Assert.Contains("service.Show(owner, codingEvent, lastProjectPath)", displayWorkflow);
         Assert.Contains("CodingProjectFolderResolver.ResolveOrEmpty", viewerWorkflowFactory);
         Assert.Contains("CodingPhotoViewerWindowServiceFactory.Create", viewerWorkflowFactory);
         Assert.Contains("Show", viewerWorkflow);
@@ -4735,7 +4741,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private void CodingEventShowPhotos_Click", photos);
         Assert.Contains("private void CodingEventShowPhotos_Click", viewer);
         Assert.Contains("CodingPhotoViewerCommandWorkflow.Execute", viewer);
+        Assert.Contains("CodingPhotoViewerDisplayWorkflow.Show", viewer);
         Assert.Contains("CodingPhotoViewerWorkflowServiceFactory.Create", viewer);
+        Assert.DoesNotContain("CodingPhotoViewerWorkflowServiceFactory.Create().Show", viewer);
         Assert.DoesNotContain("LstCodingEvents.SelectedItem is not CodingEvent", viewer);
         Assert.DoesNotContain("FotoPaths.Count == 0", viewer);
         Assert.DoesNotContain("new Window", viewer);

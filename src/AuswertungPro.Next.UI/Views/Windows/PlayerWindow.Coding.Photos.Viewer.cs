@@ -14,9 +14,11 @@ public partial class PlayerWindow
                 ShowNoPhotosOverlay: () => ShowOverlay(
                     "Keine Fotos vorhanden. Doppelklick zum Bearbeiten.",
                     TimeSpan.FromSeconds(3)),
-                ShowViewer: codingEvent => CodingPhotoViewerWorkflowServiceFactory.Create().Show(
+                ShowViewer: codingEvent => CodingPhotoViewerDisplayWorkflow.Show(
                     this,
                     codingEvent,
-                    _dependencies.LastProjectPath)));
+                    _dependencies.LastProjectPath,
+                    new CodingPhotoViewerDisplayWorkflowActions(
+                        CreateService: CodingPhotoViewerWorkflowServiceFactory.Create))));
     }
 }
