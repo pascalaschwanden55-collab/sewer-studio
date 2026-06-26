@@ -1,4 +1,3 @@
-using System;
 using System.Windows;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
@@ -81,8 +80,9 @@ public partial class PlayerWindow
                     EingabemarkerPopup,
                     TxtEingabemarker,
                     CmbEingabemarker),
-                FocusInput: () => Dispatcher.BeginInvoke(new Action(() => TxtEingabemarker.Focus()),
-                    System.Windows.Threading.DispatcherPriority.Input),
+                FocusInput: () => PlayerDispatcherScheduler.ScheduleInput(
+                    Dispatcher,
+                    () => TxtEingabemarker.Focus()),
                 ShowInputStatus: () => SetCodingAiState(
                     "Beschreibung eingeben oder Stichwort wählen, dann Enter",
                     PlayerStatusColors.Info,

@@ -8349,6 +8349,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseMove", marker);
         Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseUp", marker);
         Assert.DoesNotContain("if (_eingabemarkerPhase != EingabemarkerPhase.Drawing)", marker);
+        Assert.Contains("PlayerDispatcherScheduler.ScheduleInput", marker);
+        Assert.DoesNotContain("Dispatcher.BeginInvoke", marker);
+        Assert.DoesNotContain("new Action(() => TxtEingabemarker.Focus())", marker);
+        Assert.DoesNotContain("System.Windows.Threading.DispatcherPriority.Input", marker);
         Assert.DoesNotContain("_eingabemarkerPreviewRect == null", marker);
         Assert.DoesNotContain("if (normalizedRect is null)", marker);
         Assert.Contains("CodingEingabemarkerPopupControls.ShowInput", marker);
