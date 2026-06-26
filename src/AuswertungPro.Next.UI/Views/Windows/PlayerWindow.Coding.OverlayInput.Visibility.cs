@@ -33,13 +33,13 @@ public partial class PlayerWindow
     {
         CodingOverlayInputVisibilityWorkflow.Suspend(
             new CodingOverlayInputSuspendRequest(
-                SuspendDepth: _codingOverlaySuspendDepth,
+                SuspendDepth: _codingOverlayInputVisibilityState.SuspendDepth,
                 IsPopupOpen: CodingOverlayPopup.IsOpen),
             new CodingOverlayInputSuspendActions(
-                SetSuspendDepth: depth => _codingOverlaySuspendDepth = depth,
+                SetSuspendDepth: _codingOverlayInputVisibilityState.SetSuspendDepth,
                 EndDrag: _codingSchemaManager.EndDrag,
                 CancelDraw: () => _codingOverlayToolHost.CancelDraw(),
-                RememberOpenBeforeSuspend: isOpen => _codingOverlayWasOpenBeforeSuspend = isOpen,
+                RememberOpenBeforeSuspend: _codingOverlayInputVisibilityState.RememberOpenBeforeSuspend,
                 SuspendCanvas: () => CodingOverlayInputControls.SuspendCanvas(CodingOverlayCanvas)));
     }
 
@@ -47,17 +47,17 @@ public partial class PlayerWindow
     {
         CodingOverlayInputVisibilityWorkflow.Resume(
             new CodingOverlayInputResumeRequest(
-                SuspendDepth: _codingOverlaySuspendDepth,
-                WasOpenBeforeSuspend: _codingOverlayWasOpenBeforeSuspend,
+                SuspendDepth: _codingOverlayInputVisibilityState.SuspendDepth,
+                WasOpenBeforeSuspend: _codingOverlayInputVisibilityState.WasOpenBeforeSuspend,
                 HasCurrentOverlay: _codingSessionHost.CurrentOverlay != null),
             new CodingOverlayInputResumeActions(
-                SetSuspendDepth: depth => _codingOverlaySuspendDepth = depth,
+                SetSuspendDepth: _codingOverlayInputVisibilityState.SetSuspendDepth,
                 ResumeCanvas: () => CodingOverlayInputControls.ResumeCanvas(CodingOverlayCanvas),
                 OpenPopup: () => CodingOverlayPopup.IsOpen = true,
                 UpdateViewport: UpdateCodingOverlayViewport,
                 RedrawCanvas: includeManualOverlay => RedrawCodingCanvas(includeManualOverlay),
                 UpdateCursor: UpdateCodingOverlayCursor,
-                RememberOpenBeforeSuspend: isOpen => _codingOverlayWasOpenBeforeSuspend = isOpen));
+                RememberOpenBeforeSuspend: _codingOverlayInputVisibilityState.RememberOpenBeforeSuspend));
     }
 
     private void HideCodingOverlayForExternalWindow()
@@ -66,7 +66,7 @@ public partial class PlayerWindow
             new CodingOverlayInputExternalWindowRequest(
                 IsPopupOpen: CodingOverlayPopup.IsOpen),
             new CodingOverlayInputExternalWindowHideActions(
-                RememberOpenBeforeExternalHide: isOpen => _codingOverlayWasOpenBeforeExternalHide = isOpen,
+                RememberOpenBeforeExternalHide: _codingOverlayInputVisibilityState.RememberOpenBeforeExternalHide,
                 Suspend: SuspendCodingOverlayInput,
                 ClosePopup: () => CodingOverlayPopup.IsOpen = false));
     }
@@ -75,13 +75,13 @@ public partial class PlayerWindow
     {
         CodingOverlayInputVisibilityWorkflow.RestoreAfterExternalWindow(
             new CodingOverlayInputExternalWindowRestoreRequest(
-                WasOpenBeforeExternalHide: _codingOverlayWasOpenBeforeExternalHide,
+                WasOpenBeforeExternalHide: _codingOverlayInputVisibilityState.WasOpenBeforeExternalHide,
                 HasCurrentOverlay: _codingSessionHost.CurrentOverlay != null),
             new CodingOverlayInputExternalWindowRestoreActions(
                 Resume: ResumeCodingOverlayInput,
                 OpenPopup: () => CodingOverlayPopup.IsOpen = true,
                 UpdateViewport: UpdateCodingOverlayViewport,
                 RedrawCanvas: includeManualOverlay => RedrawCodingCanvas(includeManualOverlay),
-                RememberOpenBeforeExternalHide: isOpen => _codingOverlayWasOpenBeforeExternalHide = isOpen));
+                RememberOpenBeforeExternalHide: _codingOverlayInputVisibilityState.RememberOpenBeforeExternalHide));
     }
 }

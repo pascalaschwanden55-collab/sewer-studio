@@ -26,7 +26,7 @@ public partial class PlayerWindow
     private SchemaType? _codingSchemaType;
 
     private readonly CodingCalibrationStateController _codingCalibrationState = new();
-    private bool _deactivatedByExternalWindow;
+    private readonly CodingOverlayInputVisibilityStateController _codingOverlayInputVisibilityState = new();
     private bool _showReferenceDn;
 
     private readonly LiveDetectionPulseStateController _codingAiPulseStateController = new();
@@ -58,8 +58,5 @@ public partial class PlayerWindow
     private CodingEvent? _codingPendingConfirmEvent;
     private QualityGateResult? _codingPendingGateResult;
 
-    private int _codingOverlaySuspendDepth;
-    private bool _codingOverlayWasOpenBeforeSuspend;
-    private bool _codingOverlayWasOpenBeforeExternalHide;
     private string _codingBaselineSignature = string.Empty;
 }

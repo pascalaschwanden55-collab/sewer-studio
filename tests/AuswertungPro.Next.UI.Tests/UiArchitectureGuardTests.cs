@@ -7344,17 +7344,26 @@ public sealed class UiArchitectureGuardTests
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var visibilityPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Visibility.cs");
+        var playerStatePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var lifecycleExitPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var wiringPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs");
         var visibilityWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputVisibilityWorkflow.cs");
         var interactionWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputInteractionWorkflow.cs");
+        var stateControllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayInputVisibilityStateController.cs");
 
         Assert.True(File.Exists(visibilityPath), "Overlay-Suspend/Restore soll aus dem allgemeinen OverlayInput-Partial heraus.");
         Assert.True(File.Exists(visibilityWorkflowPath), "Overlay-Suspend/Restore-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(interactionWorkflowPath), "Suspendierte Dialog-/Edit-Interaktionen sollen ihre Resume-Garantie ausserhalb der PlayerWindow-Partials orchestrieren.");
+        Assert.True(File.Exists(stateControllerPath), "Overlay-Suspend-Zustand soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var overlayInput = File.ReadAllText(overlayInputPath);
         var visibility = File.ReadAllText(visibilityPath);
+        var playerState = File.ReadAllText(playerStatePath);
+        var lifecycleExit = File.ReadAllText(lifecycleExitPath);
+        var wiring = File.ReadAllText(wiringPath);
         var visibilityWorkflow = File.Exists(visibilityWorkflowPath) ? File.ReadAllText(visibilityWorkflowPath) : "";
         var interactionWorkflow = File.Exists(interactionWorkflowPath) ? File.ReadAllText(interactionWorkflowPath) : "";
+        var stateController = File.Exists(stateControllerPath) ? File.ReadAllText(stateControllerPath) : "";
         var codingPartialsWithoutVisibility = string.Join(
             Environment.NewLine,
             Directory.GetFiles(windowsRoot, "PlayerWindow.Coding*.cs")
@@ -7370,8 +7379,18 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingOverlayInputVisibilityWorkflow.Resume", visibility);
         Assert.Contains("CodingOverlayInputVisibilityWorkflow.HideForExternalWindow", visibility);
         Assert.Contains("CodingOverlayInputVisibilityWorkflow.RestoreAfterExternalWindow", visibility);
+        Assert.Contains("_codingOverlayInputVisibilityState", visibility);
+        Assert.Contains("_codingOverlayInputVisibilityState", playerState + lifecycleExit + wiring);
+        Assert.DoesNotContain("private int _codingOverlaySuspendDepth", playerState);
+        Assert.DoesNotContain("private bool _codingOverlayWasOpenBeforeSuspend", playerState);
+        Assert.DoesNotContain("private bool _codingOverlayWasOpenBeforeExternalHide", playerState);
+        Assert.DoesNotContain("private bool _deactivatedByExternalWindow", playerState);
         Assert.DoesNotContain("_codingOverlaySuspendDepth++", visibility);
         Assert.DoesNotContain("if (_codingOverlaySuspendDepth > 1)", visibility);
+        Assert.DoesNotContain("_codingOverlaySuspendDepth", visibility + lifecycleExit + wiring);
+        Assert.DoesNotContain("_codingOverlayWasOpenBeforeSuspend", visibility + lifecycleExit);
+        Assert.DoesNotContain("_codingOverlayWasOpenBeforeExternalHide", visibility);
+        Assert.DoesNotContain("_deactivatedByExternalWindow", wiring);
         Assert.Contains("CodingOverlayInputControls.SuspendCanvas", visibility);
         Assert.Contains("CodingOverlayInputControls.ResumeCanvas", visibility);
         Assert.Contains("_codingSessionHost", visibility);
@@ -7393,6 +7412,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.Suspend()", interactionWorkflow);
         Assert.Contains("finally", interactionWorkflow);
         Assert.Contains("actions.Resume()", interactionWorkflow);
+        Assert.Contains("public sealed class CodingOverlayInputVisibilityStateController", stateController);
+        Assert.Contains("public int SuspendDepth", stateController);
+        Assert.Contains("public void ResetSuspendState", stateController);
     }
 
     [Fact]

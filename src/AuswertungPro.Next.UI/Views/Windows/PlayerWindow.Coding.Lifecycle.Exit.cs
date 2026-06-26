@@ -90,11 +90,7 @@ public partial class PlayerWindow
                 },
                 ClearCodingCalibrationState: _codingCalibrationState.Reset,
                 ResetFrameReadiness: ResetFrameReadiness,
-                ResetCodingOverlaySuspendState: () =>
-                {
-                    _codingOverlaySuspendDepth = 0;
-                    _codingOverlayWasOpenBeforeSuspend = false;
-                }));
+                ResetCodingOverlaySuspendState: _codingOverlayInputVisibilityState.ResetSuspendState));
 
     private void CodingModeExit_Click(object sender, RoutedEventArgs e) => ExitCodingMode();
 }
