@@ -416,7 +416,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private LiveDetectionController _liveDetectionController => _playerControllers.LiveDetectionController", state);
         Assert.Contains("private readonly PlayerWindowPlaybackContext _playbackContext", state);
         Assert.Contains("private readonly PlayerWindowProtocolContext _protocolContext", state);
-        Assert.Contains("private readonly PlayerWindowShutdownStateController _shutdownState = new();", state);
+        Assert.DoesNotContain("private readonly PlayerWindowShutdownStateController _shutdownState = new();", state);
+        Assert.Contains("private PlayerWindowShutdownStateController _shutdownState => _playerControllers.ShutdownStateController", state);
         Assert.Contains("PlayerLastOpenedWindowOwner<PlayerWindow>", state);
         Assert.Contains("LastOpenedWindow.Set(this)", windowRoot);
         Assert.Contains("public sealed class PlayerLastOpenedWindowOwner", lastOpenedOwner);

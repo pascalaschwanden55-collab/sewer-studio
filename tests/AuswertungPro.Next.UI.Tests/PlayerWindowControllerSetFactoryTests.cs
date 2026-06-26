@@ -72,6 +72,10 @@ public sealed class PlayerWindowControllerSetFactoryTests
             Assert.NotNull(set.CodingOverlayRenderController);
             Assert.Contains(
                 typeof(PlayerWindowControllerSet).GetProperties(),
+                property => property.Name == "ShutdownStateController"
+                    && property.PropertyType == typeof(PlayerWindowShutdownStateController));
+            Assert.Contains(
+                typeof(PlayerWindowControllerSet).GetProperties(),
                 property => property.Name == "KeyboardActionControllerOwner"
                     && property.PropertyType == typeof(PlayerKeyboardActionControllerOwner));
             Assert.Contains(

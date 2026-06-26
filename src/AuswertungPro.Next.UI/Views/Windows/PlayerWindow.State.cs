@@ -18,9 +18,6 @@ public partial class PlayerWindow
     // Protocol integration state.
     private readonly PlayerWindowProtocolContext _protocolContext;
 
-    // Shutdown guards.
-    private readonly PlayerWindowShutdownStateController _shutdownState = new();
-
     private static readonly PlayerLastOpenedWindowOwner<PlayerWindow> LastOpenedWindow = new();
 
     private PlayerTimelineHost _playerTimelineHost => _playerMediaHosts.TimelineHost;
@@ -48,4 +45,6 @@ public partial class PlayerWindow
     private CodingOverlayRenderController _codingOverlayRenderController => _playerControllers.CodingOverlayRenderController;
 
     private LiveDetectionController _liveDetectionController => _playerControllers.LiveDetectionController;
+
+    private PlayerWindowShutdownStateController _shutdownState => _playerControllers.ShutdownStateController;
 }
