@@ -1,4 +1,3 @@
-using System;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -9,7 +8,6 @@ public partial class PlayerWindow
     private void StartCodingOsdTimer()
     {
         _codingOsdMeterController.StartTimer(
-            PlayerWindowTimerFactory.CreateCodingOsdTimer,
             () => new CodingOsdTimerContext(
                 IsClosing: _closing,
                 HasPlayer: !_playbackDisposed,

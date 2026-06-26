@@ -97,15 +97,13 @@ public sealed class CodingOsdMeterController
         => _isReading = false;
 
     public void StartTimer(
-        Func<EventHandler, DispatcherTimer> createTimer,
         Func<CodingOsdTimerContext> getContext,
         Func<Task> readAsync)
     {
-        ArgumentNullException.ThrowIfNull(createTimer);
         ArgumentNullException.ThrowIfNull(getContext);
         ArgumentNullException.ThrowIfNull(readAsync);
 
-        _timer = createTimer(async (_, _) =>
+        _timer = PlayerWindowTimerFactory.CreateCodingOsdTimer(async (_, _) =>
         {
             if (!TryBeginRead(getContext()))
                 return;

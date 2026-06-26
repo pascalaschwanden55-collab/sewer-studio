@@ -1,5 +1,4 @@
 using System.Threading;
-using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
@@ -41,11 +40,7 @@ public sealed class LiveDetectionControllerTests
                             calls.Add("status");
                         },
                         ShowWaitingForFrame: () => calls.Add("waiting"),
-                        CreateTimer: () =>
-                        {
-                            calls.Add("timer-create");
-                            return new DispatcherTimer();
-                        },
+                        TimerTick: (_, _) => { },
                         RunFirstDetection: () =>
                         {
                             Assert.True(controller.IsDetectionTimerRunning);
@@ -72,7 +67,7 @@ public sealed class LiveDetectionControllerTests
         Assert.True(isDetecting);
         Assert.True(hasCancellation);
         Assert.True(timerRunning);
-        Assert.Equal(["overlay", "status", "waiting", "timer-create", "run"], calls);
+        Assert.Equal(["overlay", "status", "waiting", "run"], calls);
     }
 
     [Fact]
@@ -97,7 +92,7 @@ public sealed class LiveDetectionControllerTests
                         ShowOverlay: () => { },
                         ApplyActiveStatus: _ => { },
                         ShowWaitingForFrame: () => { },
-                        CreateTimer: () => new DispatcherTimer(),
+                        TimerTick: (_, _) => { },
                         RunFirstDetection: () => { }));
                 controller.BeginDetection();
                 controller.ApplyDetectionResult(new LiveDetection(
@@ -156,7 +151,7 @@ public sealed class LiveDetectionControllerTests
                         ShowOverlay: () => { },
                         ApplyActiveStatus: _ => { },
                         ShowWaitingForFrame: () => { },
-                        CreateTimer: () => new DispatcherTimer(),
+                        TimerTick: (_, _) => { },
                         RunFirstDetection: () => { }));
 
                 hasAnalyzerAfterRuntime = controller.CreateAnalyzeFrameAsync() is not null;

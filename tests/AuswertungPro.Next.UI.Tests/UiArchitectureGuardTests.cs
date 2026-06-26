@@ -1626,7 +1626,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("new OllamaClient", lifecycle);
         Assert.DoesNotContain("new LiveDetectionService", lifecycle);
         Assert.DoesNotContain("new DispatcherTimer", lifecycle);
-        Assert.Contains("PlayerWindowTimerFactory.CreateLiveDetectionTimer", lifecycle);
+        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateLiveDetectionTimer", lifecycle);
+        Assert.Contains("PlayerWindowTimerFactory.CreateLiveDetectionTimer", liveController);
         Assert.Contains("LiveDetectionStatusControls.ShowWaitingForFrame", lifecycle);
         Assert.DoesNotContain("LiveDetectionStatusText.Text = \"Warte auf Frame...\"", lifecycle);
         Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Visible", lifecycle);
@@ -4262,8 +4263,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void StopCodingOsdTimer", timer);
         Assert.Contains("_codingOsdMeterController.StartTimer", timerBlock);
         Assert.Contains("new CodingOsdTimerContext", timerBlock);
-        Assert.Contains("PlayerWindowTimerFactory.CreateCodingOsdTimer", timerBlock);
+        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateCodingOsdTimer", timerBlock);
         Assert.DoesNotContain("new DispatcherTimer", timerBlock);
+        Assert.Contains("PlayerWindowTimerFactory.CreateCodingOsdTimer", osdController);
         Assert.Contains("CodingOsdTimerPolicy.ShouldReadMeter", osdController);
         Assert.DoesNotContain("!_isCodingMode || _codingOsdReading || _codingIsAnalyzing", timerBlock);
         Assert.DoesNotContain("_codingLiveDetection == null) return", timerBlock);

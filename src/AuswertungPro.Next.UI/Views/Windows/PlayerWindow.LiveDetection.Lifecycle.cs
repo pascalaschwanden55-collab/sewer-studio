@@ -35,7 +35,7 @@ public partial class PlayerWindow
                 ShowOverlay: () => LiveDetectionOverlayControls.Show(DetectionOverlayGrid),
                 ApplyActiveStatus: ApplyLiveDetectionRuntimeStartStatus,
                 ShowWaitingForFrame: () => LiveDetectionStatusControls.ShowWaitingForFrame(LiveDetectionStatusText),
-                CreateTimer: () => PlayerWindowTimerFactory.CreateLiveDetectionTimer(DetectionTimer_Tick),
+                TimerTick: DetectionTimer_Tick,
                 RunFirstDetection: () => RunDetectionAsync().SafeFireAndForget("LiveDetection")));
 
     private void ApplyLiveDetectionRuntimeStartStatus(LiveDetectionRuntimeStartStatus status)

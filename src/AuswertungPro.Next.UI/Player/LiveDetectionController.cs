@@ -13,7 +13,7 @@ public sealed record LiveDetectionControllerStartActions(
     Action ShowOverlay,
     Action<LiveDetectionRuntimeStartStatus> ApplyActiveStatus,
     Action ShowWaitingForFrame,
-    Func<DispatcherTimer> CreateTimer,
+    EventHandler TimerTick,
     Action RunFirstDetection);
 
 public sealed class LiveDetectionController
@@ -50,7 +50,7 @@ public sealed class LiveDetectionController
                 ShowOverlay: actions.ShowOverlay,
                 ApplyActiveStatus: actions.ApplyActiveStatus,
                 ShowWaitingForFrame: actions.ShowWaitingForFrame,
-                StartTimer: () => StartTimer(actions.CreateTimer),
+                StartTimer: () => StartTimer(actions.TimerTick),
                 RunFirstDetection: actions.RunFirstDetection));
     }
 
@@ -113,9 +113,9 @@ public sealed class LiveDetectionController
         _modelName = runtime.VisionModel;
     }
 
-    private void StartTimer(Func<DispatcherTimer> createTimer)
+    private void StartTimer(EventHandler timerTick)
     {
-        _timer = createTimer();
+        _timer = PlayerWindowTimerFactory.CreateLiveDetectionTimer(timerTick);
         _timer.Start();
     }
 }

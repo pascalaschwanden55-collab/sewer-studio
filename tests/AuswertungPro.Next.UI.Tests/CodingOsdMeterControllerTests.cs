@@ -1,5 +1,4 @@
 using System.Threading;
-using System.Windows.Threading;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -74,7 +73,6 @@ public sealed class CodingOsdMeterControllerTests
                 var controller = new CodingOsdMeterController();
 
                 controller.StartTimer(
-                    onTick => PlayerWindowTimerFactory.CreateCodingOsdTimer(onTick),
                     () => new CodingOsdTimerContext(
                         IsClosing: false,
                         HasPlayer: true,
