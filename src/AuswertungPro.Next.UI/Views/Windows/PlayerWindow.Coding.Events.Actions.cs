@@ -73,17 +73,11 @@ public partial class PlayerWindow
     }
 
     private bool TryEditCodingEvent(CodingEvent codingEvent)
-    {
-        var entry = codingEvent.Entry;
-        return RunWithSuspendedCodingOverlayInput(() =>
-            CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
-                .TryEdit(
-                    entry,
-                    entry.MeterStart,
-                    entry.Zeit,
-                    _videoPath,
-                    _playerTimelineHost.CurrentTimeOrZero,
-                    this,
-                    CreateVsaCodeExplorerLiveSnapshotProvider()));
-    }
+        => CodingCodeExplorerEditWorkflow.Execute(
+            new CodingCodeExplorerEditWorkflowRequest(
+                codingEvent,
+                _videoPath,
+                _playerTimelineHost.CurrentTimeOrZero,
+                this),
+            CreateCodingCodeExplorerEditActions());
 }

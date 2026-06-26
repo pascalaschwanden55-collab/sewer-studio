@@ -39,19 +39,13 @@ public partial class PlayerWindow
     }
 
     private bool TryEditInlineDefect(CodingEvent codingEvent)
-    {
-        var entry = codingEvent.Entry;
-        return RunWithSuspendedCodingOverlayInput(() =>
-            CodingCodeExplorerWorkflowServiceFactory.Create(CreateVsaCodeExplorerViewModel)
-                .TryEdit(
-                    entry,
-                    entry.MeterStart,
-                    entry.Zeit,
-                    _codingSessionHost.VideoPath,
-                    _codingSessionHost.CurrentVideoTime,
-                    this,
-                    CreateVsaCodeExplorerLiveSnapshotProvider()));
-    }
+        => CodingCodeExplorerEditWorkflow.Execute(
+            new CodingCodeExplorerEditWorkflowRequest(
+                codingEvent,
+                _codingSessionHost.VideoPath,
+                _codingSessionHost.CurrentVideoTime,
+                this),
+            CreateCodingCodeExplorerEditActions());
 
     private bool CompleteInlineDefectEdit(CodingEvent codingEvent)
     {
