@@ -7,6 +7,17 @@ public sealed record CodingProtocolImportTrainingConfirmationWorkflowActions(
 
 public static class CodingProtocolImportTrainingConfirmationWorkflow
 {
+    public static Task<CodingProtocolImportTrainingResult> ConfirmAsync(
+        CodingEvent importEvent,
+        Action<CodingEvent> seekToImportEvent,
+        Func<string?> captureSnapshot)
+        => ConfirmAsync(
+            importEvent,
+            seekToImportEvent,
+            captureSnapshot,
+            new CodingProtocolImportTrainingConfirmationWorkflowActions(
+                CreateService: CodingProtocolImportTrainingWorkflowServiceFactory.Create));
+
     public static async Task<CodingProtocolImportTrainingResult> ConfirmAsync(
         CodingEvent importEvent,
         Action<CodingEvent> seekToImportEvent,

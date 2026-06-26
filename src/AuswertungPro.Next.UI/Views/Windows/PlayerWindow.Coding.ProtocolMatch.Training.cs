@@ -43,9 +43,7 @@ public partial class PlayerWindow
         var result = await CodingProtocolImportTrainingConfirmationWorkflow.ConfirmAsync(
             importEvent,
             SeekToImportEvent,
-            () => TryTakeSnapshot(out var snapshotPath) ? snapshotPath : null,
-            new CodingProtocolImportTrainingConfirmationWorkflowActions(
-                CreateService: CodingProtocolImportTrainingWorkflowServiceFactory.Create));
+            () => TryTakeSnapshot(out var snapshotPath) ? snapshotPath : null);
         return CodingImportTrainingResultWorkflow.Execute(
             result,
             new CodingImportTrainingResultActions(

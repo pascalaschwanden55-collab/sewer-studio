@@ -512,6 +512,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var acceptGreenCommandWorkflow = ReadUiFile("Ai", "CodingAcceptGreenMatchesCommandWorkflow.cs");
         var importConfirmCommandWorkflow = ReadUiFile("Ai", "CodingImportConfirmCommandWorkflow.cs");
         var importTrainingResultWorkflow = ReadUiFile("Ai", "CodingImportTrainingResultWorkflow.cs");
+        var confirmationWorkflow = ReadUiFile("Ai", "CodingProtocolImportTrainingConfirmationWorkflow.cs");
         var workflow = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowService.cs");
         var workflowFactory = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
@@ -532,7 +533,10 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.DoesNotContain("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", greenBody);
         Assert.DoesNotContain("_codingImportEvents.FirstOrDefault", greenBody);
         Assert.DoesNotContain("foreach (var importEvent", greenBody);
-        Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", coreBody);
+        Assert.DoesNotContain("CodingProtocolImportTrainingWorkflowServiceFactory.Create", coreBody);
+        Assert.DoesNotContain("new CodingProtocolImportTrainingConfirmationWorkflowActions", coreBody);
+        Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", confirmationWorkflow);
+        Assert.Contains("new CodingProtocolImportTrainingConfirmationWorkflowActions", confirmationWorkflow);
         Assert.Contains("CodingImportTrainingResultWorkflow.Execute", coreBody);
         Assert.DoesNotContain("if (!result.Accepted)", coreBody);
         Assert.DoesNotContain("var badge = result.Badge", coreBody);

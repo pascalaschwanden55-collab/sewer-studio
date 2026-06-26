@@ -555,6 +555,7 @@ public sealed class UiArchitectureGuardTests
         var trainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var resolverPath = Path.Combine(uiRoot, "Ai", "CodingProtocolTrainingCandidateResolver.cs");
         var runnerPath = Path.Combine(uiRoot, "Ai", "CodingProtocolGreenMatchTrainingRunner.cs");
+        var confirmWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingConfirmationWorkflow.cs");
         var snapshotStorePath = Path.Combine(uiRoot, "Ai", "CodingProtocolTrainingSnapshotStore.cs");
         var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
@@ -566,6 +567,7 @@ public sealed class UiArchitectureGuardTests
         var training = File.ReadAllText(trainingPath);
         var resolver = File.ReadAllText(resolverPath);
         var runner = File.Exists(runnerPath) ? File.ReadAllText(runnerPath) : "";
+        var confirmWorkflow = File.Exists(confirmWorkflowPath) ? File.ReadAllText(confirmWorkflowPath) : "";
         var snapshotStore = File.ReadAllText(snapshotStorePath);
         var workflowFactory = File.ReadAllText(workflowFactoryPath);
 
@@ -573,7 +575,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", training);
         Assert.Contains("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", runner);
         Assert.Contains("public static async Task<CodingProtocolMatchOverlayState?> AcceptGreenMatchesAsync", runner);
-        Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", training);
+        Assert.DoesNotContain("CodingProtocolImportTrainingWorkflowServiceFactory.Create", training);
+        Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", confirmWorkflow);
         Assert.DoesNotContain("CodingProtocolTrainingSnapshotStoreFactory.Create", training);
         Assert.DoesNotContain("Guid.TryParse(pair.Gt.RefId", training);
         Assert.DoesNotContain("_codingImportEvents.FirstOrDefault(ev => ev.Entry.EntryId", training);
@@ -4063,7 +4066,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("request.SelectedItem is not CodingEvent", commandWorkflow);
         Assert.Contains("actions.ConfirmImportAsTrainingAsync(importEvent)", commandWorkflow);
         Assert.Contains("private async Task<bool> ConfirmImportAsTrainingAsync", training);
-        Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", training);
+        Assert.DoesNotContain("CodingProtocolImportTrainingWorkflowServiceFactory.Create", training);
+        Assert.DoesNotContain("new CodingProtocolImportTrainingConfirmationWorkflowActions", training);
+        Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", confirmWorkflow);
+        Assert.Contains("new CodingProtocolImportTrainingConfirmationWorkflowActions", confirmWorkflow);
         Assert.Contains("CodingProtocolImportTrainingConfirmationWorkflow.ConfirmAsync", training);
         Assert.DoesNotContain(".ConfirmAsync(importEvent)", confirmCoreBody);
         Assert.Contains("service.ConfirmAsync(importEvent)", confirmWorkflow);

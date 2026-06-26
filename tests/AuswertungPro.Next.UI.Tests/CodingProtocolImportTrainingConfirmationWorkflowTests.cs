@@ -8,6 +8,25 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingProtocolImportTrainingConfirmationWorkflowTests
 {
     [Fact]
+    public void ConfirmAsync_offers_default_training_service_wiring()
+    {
+        var overload = typeof(CodingProtocolImportTrainingConfirmationWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingProtocolImportTrainingConfirmationWorkflow.ConfirmAsync) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual(
+                    [
+                        typeof(CodingEvent),
+                        typeof(Action<CodingEvent>),
+                        typeof(Func<string>),
+                    ]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
     public async Task ConfirmAsync_creates_training_service_and_delegates_confirmation()
     {
         var calls = new List<string>();
