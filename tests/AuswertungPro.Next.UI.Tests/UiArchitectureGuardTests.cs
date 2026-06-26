@@ -8063,8 +8063,9 @@ public sealed class UiArchitectureGuardTests
         var factory = File.ReadAllText(factoryPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
-        Assert.Contains("CodingSessionStateFactory.Create", session);
+        Assert.DoesNotContain("CodingSessionStateFactory.Create", session);
         Assert.Contains("CodingSessionStateCreationWorkflow.Execute", session);
+        Assert.Contains("CodingSessionStateFactory.Create", workflow);
         Assert.Contains("actions.SetSessionService(state.SessionService)", workflow);
         Assert.Contains("actions.SetOverlayService(state.OverlayService)", workflow);
         Assert.Contains("actions.SetViewModel(state.ViewModel, true)", workflow);

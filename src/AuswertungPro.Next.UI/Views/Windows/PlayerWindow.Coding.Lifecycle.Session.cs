@@ -1,6 +1,5 @@
 using System;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -9,8 +8,10 @@ public partial class PlayerWindow
     private void CreateCodingSessionState()
     {
         CodingSessionStateCreationWorkflow.Execute(
-            new CodingSessionStateCreationWorkflowActions(
-                CreateState: () => CodingSessionStateFactory.Create(_videoPath, _dependencies.Settings),
+            new CodingSessionStateCreationRequest(
+                _videoPath,
+                _dependencies.Settings),
+            new CodingSessionStateCreationApplyActions(
                 SetSessionService: _codingSessionRuntimeOwner.Set,
                 SetOverlayService: _codingOverlayRuntimeOwner.Set,
                 CancelSchema: _codingSchemaManager.Cancel,
