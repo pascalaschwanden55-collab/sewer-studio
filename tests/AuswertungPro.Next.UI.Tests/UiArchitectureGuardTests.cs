@@ -1861,6 +1861,7 @@ public sealed class UiArchitectureGuardTests
         var helpersPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Helpers.cs");
         var preflightWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAnalysisPreflightWorkflow.cs");
         var singleModelWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSingleModelAnalysisWorkflow.cs");
+        var multiModelCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelAnalysisCommandWorkflow.cs");
         var multiModelRuntimeGateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelRuntimeGateWorkflow.cs");
         var multiModelStartWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelAnalysisStartWorkflow.cs");
         var multiModelInferenceWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelInferenceWorkflow.cs");
@@ -1870,6 +1871,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(helpersPath), "Gemeinsame Coding-AI-Helper sollen aus dem Orchestrator-Partial heraus.");
         Assert.True(File.Exists(preflightWorkflowPath), "Coding-AI-Preflight-Entscheidungen sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(singleModelWorkflowPath), "Coding-AI-Single-Model-Ablauf soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(multiModelCommandWorkflowPath), "Coding-AI-Multi-Model-Sequenz soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(multiModelRuntimeGateWorkflowPath), "Coding-AI-Multi-Model-Runtime-Gate soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(multiModelStartWorkflowPath), "Coding-AI-Multi-Model-Startablauf soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(multiModelInferenceWorkflowPath), "Coding-AI-Multi-Model-Inferenzablauf soll ausserhalb von PlayerWindow liegen.");
@@ -1881,6 +1883,7 @@ public sealed class UiArchitectureGuardTests
         var helpers = File.ReadAllText(helpersPath);
         var preflightWorkflow = File.ReadAllText(preflightWorkflowPath);
         var singleModelWorkflow = File.ReadAllText(singleModelWorkflowPath);
+        var multiModelCommandWorkflow = File.Exists(multiModelCommandWorkflowPath) ? File.ReadAllText(multiModelCommandWorkflowPath) : "";
         var multiModelRuntimeGateWorkflow = File.Exists(multiModelRuntimeGateWorkflowPath) ? File.ReadAllText(multiModelRuntimeGateWorkflowPath) : "";
         var multiModelStartWorkflow = File.ReadAllText(multiModelStartWorkflowPath);
         var multiModelInferenceWorkflow = File.ReadAllText(multiModelInferenceWorkflowPath);
@@ -1920,7 +1923,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.TryReadAnalyzedFrameOsdMeterAsync", singleModelWorkflow);
         Assert.Contains("result with { MeterReading = frameOsdMeter }", singleModelWorkflow);
         Assert.Contains("\"Frame nicht extrahierbar\"", singleModelWorkflow);
-        Assert.Contains("CodingMultiModelRuntimeGateWorkflow.Execute", multiModel);
+        Assert.Contains("CodingMultiModelAnalysisCommandWorkflow.ExecuteAsync", multiModel);
+        Assert.DoesNotContain("CodingMultiModelRuntimeGateWorkflow.Execute", multiModel);
+        Assert.Contains("CodingMultiModelRuntimeGateWorkflow.Execute", multiModelCommandWorkflow);
         Assert.DoesNotContain("if (multiModel == null || analysisCts == null)", multiModel);
         Assert.Contains("request.MultiModel is null", multiModelRuntimeGateWorkflow);
         Assert.Contains("request.AnalysisCancellation is null", multiModelRuntimeGateWorkflow);
@@ -2013,6 +2018,27 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("new CodingSnapshotCaptureService", reading);
         Assert.DoesNotContain("new CodingSnapshotCaptureService", helpers);
         Assert.Contains("new CodingSnapshotCaptureService", factory);
+    }
+
+    [Fact]
+    public void PlayerWindow_multi_model_analysis_sequence_lives_in_command_workflow()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var multiModelPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.MultiModel.cs");
+        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelAnalysisCommandWorkflow.cs");
+
+        Assert.True(File.Exists(commandWorkflowPath), "Multi-Model-Analyse-Sequenz muss ausserhalb der PlayerWindow-Partials orchestriert werden.");
+
+        var multiModel = File.ReadAllText(multiModelPath);
+        var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
+
+        Assert.Contains("CodingMultiModelAnalysisCommandWorkflow.ExecuteAsync", multiModel);
+        Assert.DoesNotContain("if (!runtimeGate.Ready)", multiModel);
+        Assert.DoesNotContain("if (start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready)", multiModel);
+        Assert.Contains("CodingMultiModelRuntimeGateWorkflow.Execute", commandWorkflow);
+        Assert.Contains("start.Outcome != CodingMultiModelAnalysisStartWorkflowOutcome.Ready", commandWorkflow);
+        Assert.Contains("actions.RunInferenceAsync", commandWorkflow);
     }
 
     [Fact]
