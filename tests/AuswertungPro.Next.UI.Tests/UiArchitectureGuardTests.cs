@@ -359,17 +359,21 @@ public sealed class UiArchitectureGuardTests
         var codingModeStatePath = Path.Combine(uiRoot, "Player", "CodingModeStateController.cs");
         var importEventsOwnerPath = Path.Combine(uiRoot, "Player", "CodingImportReferenceEventsOwner.cs");
         var sidePanelControllerSetPath = Path.Combine(uiRoot, "Player", "CodingSidePanelControllerSet.cs");
+        var sidePanelEventBinderPath = Path.Combine(windowsRoot, "PlayerCodingSidePanelEventBinder.cs");
 
         Assert.True(File.Exists(statePath), "Coding-Feldzustand soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(codingModeStatePath), "Coding-Modus-Zustand soll nicht mehr als Rohfeld im PlayerWindow liegen.");
         Assert.True(File.Exists(importEventsOwnerPath), "Coding-Import-Referenz-Events sollen nicht mehr als rohe Collection im PlayerWindow liegen.");
         Assert.True(File.Exists(sidePanelControllerSetPath), "Coding-SidePanel-Control-Wrapper sollen nicht mehr als einzelne Rohfelder im PlayerWindow liegen.");
+        Assert.True(File.Exists(sidePanelEventBinderPath), "Coding-SidePanel-Event-Wiring soll ausserhalb des PlayerWindow-Partials liegen.");
 
         var coding = File.ReadAllText(codingPath);
         var state = File.ReadAllText(statePath);
         var codingModeState = File.Exists(codingModeStatePath) ? File.ReadAllText(codingModeStatePath) : "";
         var importEventsOwner = File.Exists(importEventsOwnerPath) ? File.ReadAllText(importEventsOwnerPath) : "";
         var sidePanelControllerSet = File.Exists(sidePanelControllerSetPath) ? File.ReadAllText(sidePanelControllerSetPath) : "";
+        var accessors = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.CodingSidePanelAccessors.cs"));
+        var sidePanelEventBinder = File.Exists(sidePanelEventBinderPath) ? File.ReadAllText(sidePanelEventBinderPath) : "";
 
         Assert.DoesNotContain("private bool _isCodingMode", coding);
         Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", coding);
@@ -397,6 +401,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private readonly CodingSidePanelControllerSet _codingSidePanelControllers = new();", state);
         Assert.Contains("public sealed class CodingSidePanelControllerSet", sidePanelControllerSet);
         Assert.Contains("public void Initialize", sidePanelControllerSet);
+        Assert.Contains("PlayerCodingSidePanelEventBinder.Bind", accessors);
+        Assert.DoesNotContain("CodingSidePanelControl.CodingTakePhotoRequested +=", accessors);
+        Assert.DoesNotContain("CodingSidePanelControl.CodingProtocolMatchRequested +=", accessors);
+        Assert.Contains("sidePanel.CodingProtocolMatchRequested +=", sidePanelEventBinder);
         Assert.DoesNotContain("using AuswertungPro.Next.Application", state);
         Assert.DoesNotContain("using AuswertungPro.Next.Domain", state);
         Assert.DoesNotContain("using AuswertungPro.Next.Infrastructure", state);

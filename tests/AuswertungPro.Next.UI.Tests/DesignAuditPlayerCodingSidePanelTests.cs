@@ -458,6 +458,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var sidePanel = ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml");
         var sidePanelCode = ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml.cs");
         var accessors = ReadUiFile("Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
+        var eventBinder = ReadUiFile("Views", "Windows", "PlayerCodingSidePanelEventBinder.cs");
 
         Assert.Contains("x:Name=\"BtnRunCodingProtocolMatch\"", sidePanel);
         Assert.Contains("x:Name=\"TxtCodingProtocolMatchSummary\"", sidePanel);
@@ -469,8 +470,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("BtnRunCodingProtocolMatch", accessors);
         Assert.Contains("TxtCodingProtocolMatchSummary", accessors);
         Assert.Contains("BtnAcceptGreenCodingMatches", accessors);
-        Assert.Contains("CodingSidePanelControl.CodingProtocolMatchRequested += RunCodingProtocolMatch_Click", accessors);
-        Assert.Contains("CodingSidePanelControl.CodingAcceptGreenMatchesRequested += CodingAcceptGreenMatches_Click", accessors);
+        Assert.Contains("PlayerCodingSidePanelEventBinder.Bind", accessors);
+        Assert.Contains("sidePanel.CodingProtocolMatchRequested += handlers.CodingProtocolMatch", eventBinder);
+        Assert.Contains("sidePanel.CodingAcceptGreenMatchesRequested += handlers.CodingAcceptGreenMatches", eventBinder);
     }
 
     [Fact]

@@ -43,27 +43,28 @@ public partial class PlayerWindow
     private TextBlock TxtCodingStatAvgConfidence => CodingSidePanelControl.TxtCodingStatAvgConfidence;
 
     private void WireCodingSidePanelEvents()
-    {
-        CodingSidePanelControl.CodingTakePhotoRequested += CodingTakePhoto_Click;
-        CodingSidePanelControl.CodingEventsPreviewMouseRightButtonDownRequested += CodingEvents_PreviewMouseRightButtonDown;
-        CodingSidePanelControl.CodingEventsDoubleClickRequested += CodingEvents_DoubleClick;
-        CodingSidePanelControl.CodingEventsSelectionChangedRequested += CodingEvents_SelectionChanged;
-        CodingSidePanelControl.CodingEventEditRequested += CodingEventEdit_Click;
-        CodingSidePanelControl.CodingEventShowPhotosRequested += CodingEventShowPhotos_Click;
-        CodingSidePanelControl.CodingEventCloseStretchRequested += CodingEventCloseStretch_Click;
-        CodingSidePanelControl.CodingEventSeekRequested += CodingEventSeek_Click;
-        CodingSidePanelControl.CodingEventDeleteRequested += CodingEventDelete_Click;
-        CodingSidePanelControl.CodingAcceptDefectRequested += CodingAcceptDefect_Click;
-        CodingSidePanelControl.CodingEditDefectRequested += CodingEditDefect_Click;
-        CodingSidePanelControl.CodingRejectDefectRequested += CodingRejectDefect_Click;
-        CodingSidePanelControl.ImportEventsDoubleClickRequested += ImportEvents_DoubleClick;
-        CodingSidePanelControl.ImportConfirmRequested += ImportConfirm_Click;
-        CodingSidePanelControl.ImportSeekRequested += ImportSeek_Click;
-        CodingSidePanelControl.CodingSelectCodeRequested += CodingSelectCode_Click;
-        CodingSidePanelControl.CodingCreateEventRequested += CodingCreateEvent_Click;
-        CodingSidePanelControl.CodingProtocolMatchRequested += RunCodingProtocolMatch_Click;
-        CodingSidePanelControl.CodingAcceptGreenMatchesRequested += CodingAcceptGreenMatches_Click;
-    }
+        => PlayerCodingSidePanelEventBinder.Bind(
+            CodingSidePanelControl,
+            new PlayerCodingSidePanelEventHandlers(
+                CodingTakePhoto: CodingTakePhoto_Click,
+                CodingEventsPreviewMouseRightButtonDown: CodingEvents_PreviewMouseRightButtonDown,
+                CodingEventsDoubleClick: CodingEvents_DoubleClick,
+                CodingEventsSelectionChanged: CodingEvents_SelectionChanged,
+                CodingEventEdit: CodingEventEdit_Click,
+                CodingEventShowPhotos: CodingEventShowPhotos_Click,
+                CodingEventCloseStretch: CodingEventCloseStretch_Click,
+                CodingEventSeek: CodingEventSeek_Click,
+                CodingEventDelete: CodingEventDelete_Click,
+                CodingAcceptDefect: CodingAcceptDefect_Click,
+                CodingEditDefect: CodingEditDefect_Click,
+                CodingRejectDefect: CodingRejectDefect_Click,
+                ImportEventsDoubleClick: ImportEvents_DoubleClick,
+                ImportConfirm: ImportConfirm_Click,
+                ImportSeek: ImportSeek_Click,
+                CodingSelectCode: CodingSelectCode_Click,
+                CodingCreateEvent: CodingCreateEvent_Click,
+                CodingProtocolMatch: RunCodingProtocolMatch_Click,
+                CodingAcceptGreenMatches: CodingAcceptGreenMatches_Click));
 
     private void InitializeCodingSidePanelControllers()
     {
