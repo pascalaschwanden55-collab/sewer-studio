@@ -13,37 +13,50 @@
         <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewProjectCommand}"/>
     </Window.InputBindings>
     <DockPanel>
-        <Menu DockPanel.Dock="Top">
-            <Menu.Style>
-                <Style TargetType="Menu" BasedOn="{StaticResource {x:Type Menu}}">
+        <!-- Kopfzeile: Menue + Knopf "Projekt wechseln"; nur im Workspace sichtbar -->
+        <DockPanel DockPanel.Dock="Top">
+            <DockPanel.Style>
+                <Style TargetType="DockPanel">
                     <Setter Property="Visibility" Value="Visible"/>
                     <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsMenuVisible}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
                         <DataTrigger Binding="{Binding IsFocusMode}" Value="True">
                             <Setter Property="Visibility" Value="Collapsed"/>
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
-            </Menu.Style>
-            <MenuItem Header="_Datei">
-                <MenuItem Header="Neues Projekt" Command="{Binding NewProjectCommand}" InputGestureText="Strg+N"/>
-                <MenuItem Header="Projekt öffnen..." Command="{Binding OpenProjectCommand}" InputGestureText="Strg+O"/>
-                <MenuItem Header="Speichern" Command="{Binding SaveCommand}" InputGestureText="Strg+S"/>
-                <MenuItem Header="Speichern unter..." Command="{Binding SaveAsProjectCommand}"/>
-                <Separator/>
-                <MenuItem Header="Beenden" Click="Exit_Click"/>
-            </MenuItem>
-            <MenuItem Header="_Werkzeuge">
-                <MenuItem Header="Code-Katalog..." Click="OpenCodeCatalog_Click"/>
-                <MenuItem Header="KI starten" Click="StartAi_Click"/>
-                <Separator/>
-                <MenuItem Header="KI Videoanalyse – Training Center..." Click="OpenTrainingCenter_Click"/>
-                <MenuItem Header="Karte..." Click="OpenKarte_Click"/>
-            </MenuItem>
-            <MenuItem Header="_Ansicht">
-                <MenuItem Header="Fokusmodus (F11)" IsCheckable="True" IsChecked="{Binding IsFocusMode, Mode=TwoWay}" />
-            </MenuItem>
-
-        </Menu>
+            </DockPanel.Style>
+            <Button DockPanel.Dock="Right"
+                    Content="Projekt wechseln"
+                    Command="{Binding SwitchProjectCommand}"
+                    Margin="8,2,8,2" Padding="12,2"
+                    Style="{StaticResource SecondaryButton}"/>
+            <Menu>
+                <Menu.Style>
+                    <Style TargetType="Menu" BasedOn="{StaticResource {x:Type Menu}}"/>
+                </Menu.Style>
+                <MenuItem Header="_Datei">
+                    <MenuItem Header="Neues Projekt" Command="{Binding NewProjectCommand}" InputGestureText="Strg+N"/>
+                    <MenuItem Header="Projekt öffnen..." Command="{Binding OpenProjectCommand}" InputGestureText="Strg+O"/>
+                    <MenuItem Header="Speichern" Command="{Binding SaveCommand}" InputGestureText="Strg+S"/>
+                    <MenuItem Header="Speichern unter..." Command="{Binding SaveAsProjectCommand}"/>
+                    <Separator/>
+                    <MenuItem Header="Beenden" Click="Exit_Click"/>
+                </MenuItem>
+                <MenuItem Header="_Werkzeuge">
+                    <MenuItem Header="Code-Katalog..." Click="OpenCodeCatalog_Click"/>
+                    <MenuItem Header="KI starten" Click="StartAi_Click"/>
+                    <Separator/>
+                    <MenuItem Header="KI Videoanalyse – Training Center..." Click="OpenTrainingCenter_Click"/>
+                    <MenuItem Header="Karte..." Click="OpenKarte_Click"/>
+                </MenuItem>
+                <MenuItem Header="_Ansicht">
+                    <MenuItem Header="Fokusmodus (F11)" IsCheckable="True" IsChecked="{Binding IsFocusMode, Mode=TwoWay}" />
+                </MenuItem>
+            </Menu>
+        </DockPanel>
         <Border DockPanel.Dock="Bottom"
                 Height="24"
                 Padding="12,0"
@@ -66,6 +79,10 @@
                             <DataTrigger Binding="{Binding DataContext.IsFocusMode, ElementName=RootWindow}" Value="True">
                                 <Setter Property="Width" Value="0"/>
                             </DataTrigger>
+                            <!-- Sidebar ausblenden wenn nicht im Workspace -->
+                            <DataTrigger Binding="{Binding IsMenuVisible}" Value="False">
+                                <Setter Property="Width" Value="0"/>
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </ColumnDefinition.Style>
@@ -81,6 +98,10 @@
                     <Setter Property="Visibility" Value="Visible"/>
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding DataContext.IsFocusMode, ElementName=RootWindow}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                        <!-- Sidebar ausblenden wenn nicht im Workspace -->
+                        <DataTrigger Binding="{Binding IsMenuVisible}" Value="False">
                             <Setter Property="Visibility" Value="Collapsed"/>
                         </DataTrigger>
                     </Style.Triggers>
