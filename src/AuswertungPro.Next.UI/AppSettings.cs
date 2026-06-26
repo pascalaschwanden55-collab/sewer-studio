@@ -25,6 +25,10 @@ public sealed class AppSettings
     public string? PdfToTextPath { get; set; }
     public string? LastProjectPath { get; set; }
 
+    // Basisverzeichnis fuer neu angelegte Projekte. Leer = beim ersten Anlegen
+    // wird einmalig danach gefragt (Vorschlag D:\Projekt) und hier gespeichert.
+    public string? ProjectsRootDirectory { get; set; }
+
     // Alle jemals geoeffneten Projekte (max 20, neueste zuerst)
     public List<string> RecentProjectPaths { get; set; } = new();
 
