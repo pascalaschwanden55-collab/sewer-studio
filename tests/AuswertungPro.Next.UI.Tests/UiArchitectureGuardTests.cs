@@ -733,6 +733,7 @@ public sealed class UiArchitectureGuardTests
         var applyPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Apply.cs");
         var previewWorkflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolPreviewWorkflowServiceFactory.cs");
         var codingProjectPersistencePath = Path.Combine(uiRoot, "Ai", "CodingProjectPersistenceService.cs");
+        var codingProjectPersistenceWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProjectPersistenceWorkflow.cs");
         var codingProjectPersistenceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProjectPersistenceServiceFactory.cs");
         var servicePath = Path.Combine(uiRoot, "Player", "PlayerShellProjectService.cs");
         var factoryPath = Path.Combine(uiRoot, "Player", "PlayerShellProjectServiceFactory.cs");
@@ -741,12 +742,14 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(servicePath), "Shell-Projektzugriff soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "PlayerWindow soll Shell-Projektzugriff ueber eine Factory beziehen.");
         Assert.True(File.Exists(codingProjectPersistencePath), "Coding-Projektpersistenz soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(codingProjectPersistenceWorkflowPath), "Coding-Projektpersistenz-Aufrufe sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(codingProjectPersistenceFactoryPath), "Coding-Projektpersistenz soll ueber eine Factory verdrahtet werden.");
 
         var protocol = File.ReadAllText(protocolPath);
         var apply = File.ReadAllText(applyPath);
         var previewWorkflowFactory = File.ReadAllText(previewWorkflowFactoryPath);
         var codingProjectPersistence = File.ReadAllText(codingProjectPersistencePath);
+        var codingProjectPersistenceWorkflow = File.Exists(codingProjectPersistenceWorkflowPath) ? File.ReadAllText(codingProjectPersistenceWorkflowPath) : "";
         var codingProjectPersistenceFactory = File.ReadAllText(codingProjectPersistenceFactoryPath);
         var service = File.ReadAllText(servicePath);
         var factory = File.ReadAllText(factoryPath);
@@ -756,6 +759,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerShellProjectServiceFactory.Create", previewWorkflowFactory);
         Assert.DoesNotContain("PlayerShellProjectServiceFactory.Create", apply);
         Assert.Contains("CodingProjectPersistenceServiceFactory.Create", apply);
+        Assert.Contains("CodingProjectPersistenceWorkflow.MarkProjectDirty", apply);
+        Assert.Contains("CodingProjectPersistenceWorkflow.TrySaveProjectIfReady", apply);
+        Assert.DoesNotContain(".MarkProjectDirty(_haltungRecord)", apply);
+        Assert.DoesNotContain(".TrySaveProjectIfReady()", apply);
+        Assert.Contains("service.MarkProjectDirty(record)", codingProjectPersistenceWorkflow);
+        Assert.Contains("service.TrySaveProjectIfReady()", codingProjectPersistenceWorkflow);
         Assert.Contains("PlayerShellProjectServiceFactory.Create", codingProjectPersistenceFactory);
         Assert.Contains("PlayerClock.UtcNow", codingProjectPersistenceFactory);
         Assert.Contains("ModifiedAtUtc", codingProjectPersistence);
