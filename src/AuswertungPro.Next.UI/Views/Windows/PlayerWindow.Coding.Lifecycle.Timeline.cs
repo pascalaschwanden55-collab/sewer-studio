@@ -32,7 +32,7 @@ public partial class PlayerWindow
                                 {
                                     _codingSessionHost.ExecuteJumpToDefect(selectedEvent);
                                 },
-                                SelectEvent: selectedEvent => LstCodingEvents.SelectedItem = selectedEvent));
+                                SelectEvent: selectedEvent => _codingSidePanelControllers.EventsList.SelectEvent(selectedEvent)));
                     });
 
                     CodingTimelineControls.Configure(

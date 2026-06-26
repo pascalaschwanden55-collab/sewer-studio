@@ -46,6 +46,38 @@ public sealed class CodingEventsListControlsTests
         });
     }
 
+    [Fact]
+    public void SetItemsSource_updates_events_list_source()
+    {
+        RunOnStaThread(() =>
+        {
+            var events = new ObservableCollection<CodingEvent> { Event("FIRST") };
+            var listBox = new ListBox();
+            var controls = new CodingEventsListControls(listBox);
+
+            controls.SetItemsSource(events);
+
+            Assert.Same(events, listBox.ItemsSource);
+        });
+    }
+
+    [Fact]
+    public void SelectEvent_updates_selected_item()
+    {
+        RunOnStaThread(() =>
+        {
+            var first = Event("FIRST");
+            var second = Event("SECOND");
+            var events = new ObservableCollection<CodingEvent> { first, second };
+            var listBox = new ListBox { ItemsSource = events };
+            var controls = new CodingEventsListControls(listBox);
+
+            controls.SelectEvent(second);
+
+            Assert.Same(second, listBox.SelectedItem);
+        });
+    }
+
     private static CodingEvent Event(string code)
         => new()
         {

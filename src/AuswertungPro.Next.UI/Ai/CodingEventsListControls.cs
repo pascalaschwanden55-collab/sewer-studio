@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.ObjectModel;
 using System.Windows.Controls;
 using AuswertungPro.Next.Domain.Models;
@@ -28,5 +29,15 @@ public sealed class CodingEventsListControls
 
         if (selected != null)
             _eventsList.SelectedItem = selected;
+    }
+
+    public void SetItemsSource(IEnumerable? events)
+    {
+        _eventsList.ItemsSource = events;
+    }
+
+    public void SelectEvent(CodingEvent codingEvent)
+    {
+        _eventsList.SelectedItem = codingEvent;
     }
 }

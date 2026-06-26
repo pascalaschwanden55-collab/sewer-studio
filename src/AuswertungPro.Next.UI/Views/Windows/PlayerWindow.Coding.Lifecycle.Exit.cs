@@ -48,7 +48,7 @@ public partial class PlayerWindow
                     _codingProtocolMatchState.Reset();
                 },
                 UpdateProtocolMatchSummary: () => UpdateCodingProtocolMatchSummary(_codingProtocolMatchState.LastMatch),
-                ClearImportEventsListSource: () => LstImportEvents.ItemsSource = null,
+                ClearImportEventsListSource: () => CodingImportReferenceControls.ClearItemsSource(LstImportEvents),
                 HideConfirmationPanels: () => CodingModeChromeControls.HideConfirmationPanels(
                     CodingConfirmationPanel,
                     DetectionConfirmationPanel),

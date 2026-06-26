@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Threading;
+using System.Windows.Controls;
 using System.Windows.Documents;
+using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -19,6 +21,24 @@ public sealed class CodingImportReferenceControlsTests
             setCount.Invoke(null, [countRun, 12]);
 
             Assert.Equal("12", countRun.Text);
+        });
+    }
+
+    [Fact]
+    public void SetItemsSource_and_clear_update_import_events_list()
+    {
+        RunOnStaThread(() =>
+        {
+            var listBox = new ListBox();
+            var events = new[] { new CodingEvent() };
+
+            CodingImportReferenceControls.SetItemsSource(listBox, events);
+
+            Assert.Same(events, listBox.ItemsSource);
+
+            CodingImportReferenceControls.ClearItemsSource(listBox);
+
+            Assert.Null(listBox.ItemsSource);
         });
     }
 

@@ -58,7 +58,7 @@ public partial class PlayerWindow
                     _codingPendingConfirmationState.CodingEvent,
                     _codingPendingConfirmationState.GateResult),
                 CloseConfirmationPanel: CloseConfirmationPanel,
-                SelectEvent: codingEvent => LstCodingEvents.SelectedItem = codingEvent,
+                SelectEvent: codingEvent => _codingSidePanelControllers.EventsList.SelectEvent(codingEvent),
                 ResumeAfterConfirmation: ResumeAfterConfirmation));
     }
 

@@ -17,10 +17,12 @@ public partial class PlayerWindow
                 MoveExistingEventsToImportReference: () => CodingImportReferenceTransfer.MoveExistingEventsToImportReference(
                     eventCollection!,
                     _codingImportReferenceEvents.Events),
-                SetImportItemsSource: () => LstImportEvents.ItemsSource = _codingImportReferenceEvents.Events,
+                SetImportItemsSource: () => CodingImportReferenceControls.SetItemsSource(
+                    LstImportEvents,
+                    _codingImportReferenceEvents.Events),
                 SetImportCount: count => CodingImportReferenceControls.SetCount(RunImportDefectCount, count),
                 ClearActiveSessionEvents: () => CodingSessionEventResetter.ClearActiveSessionEvents(_codingSessionRuntimeOwner.Service),
-                SetCodingItemsSource: () => LstCodingEvents.ItemsSource = eventCollection,
+                SetCodingItemsSource: () => _codingSidePanelControllers.EventsList.SetItemsSource(eventCollection),
                 SetCodingCount: count => CodingImportReferenceControls.SetCount(RunCodingDefectCount, count),
                 BuildBaselineSignature: () => CodingEventsSignatureBuilder.Build(eventCollection!),
                 SetBaselineSignature: _codingBaselineSignatureState.Set,

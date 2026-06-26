@@ -90,7 +90,7 @@ public partial class PlayerWindow
                 DefectDetailColumn: ColDefectDetail),
             new CodingSidePanelControllerActions(
                 RefreshEvents: RefreshCodingEventsList,
-                SelectCreatedEvent: ev => LstCodingEvents.SelectedItem = ev,
+                SelectCreatedEvent: ev => _codingSidePanelControllers.EventsList.SelectEvent(ev),
                 CancelSchema: () => _codingSchemaManager.Cancel(),
                 ClearCurrentOverlay: _codingSessionHost.ClearCurrentOverlay,
                 ClearSelectedCode: _codingSessionHost.ClearSelectedCode,
