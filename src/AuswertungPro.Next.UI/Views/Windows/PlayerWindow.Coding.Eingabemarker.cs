@@ -82,7 +82,7 @@ public partial class PlayerWindow
                     CmbEingabemarker),
                 FocusInput: () => PlayerDispatcherScheduler.ScheduleInput(
                     Dispatcher,
-                    () => TxtEingabemarker.Focus()),
+                    () => PlayerFocusControls.FocusElement(TxtEingabemarker)),
                 ShowInputStatus: () => SetCodingAiState(
                     "Beschreibung eingeben oder Stichwort wählen, dann Enter",
                     PlayerStatusColors.Info,

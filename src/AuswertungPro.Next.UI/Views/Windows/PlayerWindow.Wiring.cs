@@ -1,6 +1,5 @@
 using System;
 using System.Windows;
-using System.Windows.Input;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -89,9 +88,8 @@ public partial class PlayerWindow
                     Dispatcher,
                     () =>
                     {
-                        Activate();
-                        Focus();
-                        Keyboard.Focus(this);
+                        PlayerFocusControls.ActivateWindow(this);
+                        PlayerFocusControls.FocusWindowKeyboard(this);
                     })));
 
     private void PlayerWindow_Closed(object? sender, EventArgs e)
@@ -115,6 +113,6 @@ public partial class PlayerWindow
                 StopPipelineHealthMonitor: StopPipelineHealthMonitor,
                 Cleanup: Cleanup,
                 RestoreMainWindow: () => main!.WindowState = WindowState.Normal,
-                ActivateMainWindow: () => main!.Activate()));
+                ActivateMainWindow: () => PlayerFocusControls.ActivateWindow(main!)));
     }
 }

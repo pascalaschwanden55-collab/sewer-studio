@@ -124,6 +124,7 @@ public sealed class UiArchitectureGuardTests
         var lifecycleEventBinderPath = Path.Combine(windowsRoot, "PlayerLifecycleEventBinder.cs");
         var surfaceEventBinderPath = Path.Combine(windowsRoot, "PlayerSurfaceEventBinder.cs");
         var dispatcherSchedulerPath = Path.Combine(windowsRoot, "PlayerDispatcherScheduler.cs");
+        var focusControlsPath = Path.Combine(windowsRoot, "PlayerFocusControls.cs");
         var sliderPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs");
         var sliderEventBinderPath = Path.Combine(windowsRoot, "PlayerPositionSliderEventBinder.cs");
         var keyboardEventBinderPath = Path.Combine(windowsRoot, "PlayerKeyboardEventBinder.cs");
@@ -141,6 +142,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(lifecycleEventBinderPath), "Fenster-Lifecycle-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(surfaceEventBinderPath), "Fenster-Surface-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(dispatcherSchedulerPath), "Dispatcher-Scheduling soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
+        Assert.True(File.Exists(focusControlsPath), "Fenster-Focus- und Aktivierungsoberflaeche soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
         Assert.True(File.Exists(sliderEventBinderPath), "PositionSlider-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
         Assert.True(File.Exists(keyboardEventBinderPath), "Keyboard-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
@@ -158,6 +160,7 @@ public sealed class UiArchitectureGuardTests
         var lifecycleEventBinder = File.Exists(lifecycleEventBinderPath) ? File.ReadAllText(lifecycleEventBinderPath) : "";
         var surfaceEventBinder = File.Exists(surfaceEventBinderPath) ? File.ReadAllText(surfaceEventBinderPath) : "";
         var dispatcherScheduler = File.Exists(dispatcherSchedulerPath) ? File.ReadAllText(dispatcherSchedulerPath) : "";
+        var focusControls = File.Exists(focusControlsPath) ? File.ReadAllText(focusControlsPath) : "";
         var slider = File.ReadAllText(sliderPath);
         var sliderEventBinder = File.Exists(sliderEventBinderPath) ? File.ReadAllText(sliderEventBinderPath) : "";
         var keyboardEventBinder = File.Exists(keyboardEventBinderPath) ? File.ReadAllText(keyboardEventBinderPath) : "";
@@ -225,10 +228,20 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerWindowLoadedWorkflow.Execute", wiring);
         Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", wiring);
         Assert.Contains("PlayerDispatcherScheduler.ScheduleInput", wiring);
+        Assert.Contains("PlayerFocusControls.ActivateWindow(this)", wiring);
+        Assert.Contains("PlayerFocusControls.FocusWindowKeyboard(this)", wiring);
+        Assert.Contains("PlayerFocusControls.ActivateWindow(main!)", wiring);
         Assert.DoesNotContain("Dispatcher.BeginInvoke", wiring);
         Assert.DoesNotContain("new Action(UpdateCodingOverlayViewport)", wiring);
+        Assert.DoesNotContain("Keyboard.Focus(this)", wiring);
+        Assert.DoesNotContain("Focus();", wiring);
+        Assert.DoesNotContain("Activate();", wiring);
+        Assert.DoesNotContain("main!.Activate()", wiring);
         Assert.Contains("DispatcherPriority.Loaded", dispatcherScheduler);
         Assert.Contains("DispatcherPriority.Input", dispatcherScheduler);
+        Assert.Contains("public static bool FocusElement", focusControls);
+        Assert.Contains("public static IInputElement? FocusWindowKeyboard", focusControls);
+        Assert.Contains("public static bool ActivateWindow", focusControls);
         Assert.DoesNotContain("if (_codingOverlaySuspendDepth > 0)", wiring);
         Assert.DoesNotContain("if (!_deactivatedByExternalWindow)", wiring);
         Assert.DoesNotContain("if (!string.IsNullOrWhiteSpace(_initialOverlayText))", wiring);
@@ -8456,17 +8469,20 @@ public sealed class UiArchitectureGuardTests
         var markerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.cs");
         var inputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Eingabemarker.Input.cs");
         var popupControlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingEingabemarkerPopupControls.cs");
+        var focusControlsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerFocusControls.cs");
         var inputWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerInputWorkflow.cs");
         var canvasWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEingabemarkerCanvasInputWorkflow.cs");
 
         Assert.True(File.Exists(inputPath), "Eingabemarker-Eingabe-Wiring muss in einer eigenen PlayerWindow-Partial liegen.");
         Assert.True(File.Exists(popupControlsPath), "Eingabemarker-Popup-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
+        Assert.True(File.Exists(focusControlsPath), "Eingabemarker-Focus soll ueber die Player-Focus-Controls laufen.");
         Assert.True(File.Exists(inputWorkflowPath), "Eingabemarker-Key- und Auswahlentscheidungen sollen ausserhalb von PlayerWindow laufen.");
         Assert.True(File.Exists(canvasWorkflowPath), "Eingabemarker-Mausentscheidungen sollen ausserhalb von PlayerWindow laufen.");
 
         var marker = File.ReadAllText(markerPath);
         var input = File.ReadAllText(inputPath);
         var popupControls = File.Exists(popupControlsPath) ? File.ReadAllText(popupControlsPath) : "";
+        var focusControls = File.Exists(focusControlsPath) ? File.ReadAllText(focusControlsPath) : "";
         var inputWorkflow = File.Exists(inputWorkflowPath) ? File.ReadAllText(inputWorkflowPath) : "";
         var canvasWorkflow = File.Exists(canvasWorkflowPath) ? File.ReadAllText(canvasWorkflowPath) : "";
 
@@ -8478,8 +8494,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseUp", marker);
         Assert.DoesNotContain("if (_eingabemarkerPhase != EingabemarkerPhase.Drawing)", marker);
         Assert.Contains("PlayerDispatcherScheduler.ScheduleInput", marker);
+        Assert.Contains("PlayerFocusControls.FocusElement", marker);
         Assert.DoesNotContain("Dispatcher.BeginInvoke", marker);
         Assert.DoesNotContain("new Action(() => TxtEingabemarker.Focus())", marker);
+        Assert.DoesNotContain("TxtEingabemarker.Focus()", marker);
         Assert.DoesNotContain("System.Windows.Threading.DispatcherPriority.Input", marker);
         Assert.DoesNotContain("_eingabemarkerPreviewRect == null", marker);
         Assert.DoesNotContain("if (normalizedRect is null)", marker);
@@ -8508,6 +8526,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static bool IsVisible", popupControls);
         Assert.Contains("public static void ApplyQuickSelection", popupControls);
         Assert.Contains("public static string? ResolveSelectedText", popupControls);
+        Assert.Contains("public static bool FocusElement", focusControls);
         Assert.Contains("request.IsEscape", inputWorkflow);
         Assert.Contains("request.IsEnter", inputWorkflow);
         Assert.Contains("request.IsPopupVisible", inputWorkflow);
