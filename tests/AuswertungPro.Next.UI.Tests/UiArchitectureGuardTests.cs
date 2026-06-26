@@ -2923,6 +2923,7 @@ public sealed class UiArchitectureGuardTests
         var emptyGuardPath = Path.Combine(uiRoot, "Ai", "CodingApplyEmptyProtocolGuard.cs");
         var applyWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingApplyChangesWorkflow.cs");
         var closeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingUnappliedChangesCloseWorkflow.cs");
+        var emptyDialogWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingApplyEmptyProtocolDialogWorkflow.cs");
         var closeDialogWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingUnappliedChangesCloseDialogWorkflow.cs");
         var closePolicyPath = Path.Combine(uiRoot, "Ai", "CodingUnappliedChangesClosePolicy.cs");
         var dialogServicePath = Path.Combine(uiRoot, "Ai", "CodingApplyDialogService.cs");
@@ -2933,6 +2934,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(emptyGuardPath), "Leere-Codierung-Schutzlogik muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(applyWorkflowPath), "ApplyCodingChanges-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(closeWorkflowPath), "Unuebernommene-Codierungen-Schliessen-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+        Assert.True(File.Exists(emptyDialogWorkflowPath), "Leere-Codierung-Dialog soll ausserhalb der PlayerWindow-Partials ausgefuehrt werden.");
         Assert.True(File.Exists(closeDialogWorkflowPath), "Unuebernommene-Codierungen-Schliessen-Dialog soll ausserhalb der PlayerWindow-Partials ausgefuehrt werden.");
         Assert.True(File.Exists(closePolicyPath), "Schliessen-Entscheidung fuer unuebernommene Codierungen muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dialogServicePath), "Apply-Dialogtexte und DialogHost-Zugriff muessen ausserhalb der PlayerWindow-Partials liegen.");
@@ -2944,6 +2946,7 @@ public sealed class UiArchitectureGuardTests
         var emptyGuard = File.ReadAllText(emptyGuardPath);
         var applyWorkflow = File.Exists(applyWorkflowPath) ? File.ReadAllText(applyWorkflowPath) : "";
         var closeWorkflow = File.Exists(closeWorkflowPath) ? File.ReadAllText(closeWorkflowPath) : "";
+        var emptyDialogWorkflow = File.Exists(emptyDialogWorkflowPath) ? File.ReadAllText(emptyDialogWorkflowPath) : "";
         var closeDialogWorkflow = File.Exists(closeDialogWorkflowPath) ? File.ReadAllText(closeDialogWorkflowPath) : "";
         var closePolicy = File.ReadAllText(closePolicyPath);
         var dialogService = File.ReadAllText(dialogServicePath);
@@ -2952,6 +2955,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingApplyProtocolUpdateBuilder.Create", applyWorkflow);
         Assert.Contains("CodingApplyChangesWorkflow.Execute", apply);
         Assert.Contains("CodingUnappliedChangesCloseWorkflow.Execute", apply);
+        Assert.Contains("CodingApplyEmptyProtocolDialogWorkflow.Execute", apply);
         Assert.Contains("CodingUnappliedChangesCloseDialogWorkflow.Execute", apply);
         Assert.DoesNotContain("CodingProtocolRevisionUpdater.ApplyCodingEvents", apply);
         Assert.DoesNotContain("CodingApplyEmptyProtocolGuard.Build", apply);
@@ -2959,6 +2963,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingApplyDialogServiceFactory.Create", apply);
         Assert.Contains("_codingSessionHost", apply);
         Assert.Contains("ConfirmEmptyProtocol", apply);
+        Assert.DoesNotContain(".ConfirmEmptyProtocol(", apply);
         Assert.DoesNotContain("ConfirmUnappliedChangesOnClose", apply);
         Assert.DoesNotContain("_codingVm", apply);
         Assert.DoesNotContain("new ProtocolDocument", apply);
@@ -2974,6 +2979,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.SetBaselineSignature", applyWorkflow);
         Assert.Contains("actions.BuildSignature(request.Events)", closeWorkflow);
         Assert.Contains("actions.ConfirmWithSuspendedOverlay()", closeWorkflow);
+        Assert.Contains("actions.CreateDialogService()", emptyDialogWorkflow);
+        Assert.Contains("ConfirmEmptyProtocol", emptyDialogWorkflow);
         Assert.Contains("actions.RunWithSuspendedOverlay", closeDialogWorkflow);
         Assert.Contains("actions.CreateDialogService()", closeDialogWorkflow);
         Assert.Contains("ConfirmUnappliedChangesOnClose", closeDialogWorkflow);

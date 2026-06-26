@@ -18,7 +18,10 @@ public partial class PlayerWindow
                 _codingSessionHost.EventCollection,
                 showOverlay),
             new CodingApplyChangesWorkflowActions(
-                ConfirmEmptyProtocol: guard => CodingApplyDialogServiceFactory.Create().ConfirmEmptyProtocol(guard),
+                ConfirmEmptyProtocol: guard => CodingApplyEmptyProtocolDialogWorkflow.Execute(
+                    guard,
+                    new CodingApplyEmptyProtocolDialogWorkflowActions(
+                        CreateDialogService: CodingApplyDialogServiceFactory.Create)),
                 AssignProtocol: document => _haltungRecord!.Protocol = document,
                 MarkProjectDirty: MarkProjectDirtyForCoding,
                 SyncCodingToPrimaryDamages: SyncCodingToPrimaryDamages,
