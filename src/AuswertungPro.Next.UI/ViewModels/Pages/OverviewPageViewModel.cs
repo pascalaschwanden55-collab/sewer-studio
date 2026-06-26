@@ -236,11 +236,12 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             {
                 _sp.Settings.LastProjectPath = null;
                 _sp.Settings.Save();
-                // Das aktive Projekt wurde soeben geloescht: ungespeicherte Aenderungen
-                // sind hinfaellig. Dirty-Flag zuruecksetzen, damit der Dirty-Guard in
-                // NewProject nicht anbietet, die geloeschte Datei wiederherzustellen.
+                // Das aktive Projekt wurde soeben geloescht: Dirty-Flag zuruecksetzen
+                // und zum Start-Bildschirm (Projektliste) navigieren. EnterLauncher()
+                // baut die OverviewPage neu auf; LoadAllProjects() danach waere toter Aufruf.
                 _shell.Project.Dirty = false;
-                _shell.StartNewProjectDraft();
+                _shell.EnterLauncher();
+                return;
             }
 
             LoadAllProjects();
