@@ -351,10 +351,12 @@ public sealed class UiArchitectureGuardTests
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var lastOpenedOwnerPath = Path.Combine(uiRoot, "Player", "PlayerLastOpenedWindowOwner.cs");
         var shutdownStateControllerPath = Path.Combine(uiRoot, "Player", "PlayerWindowShutdownStateController.cs");
+        var playbackContextPath = Path.Combine(uiRoot, "Player", "PlayerWindowPlaybackContext.cs");
 
         Assert.True(File.Exists(statePath), "PlayerWindow-Feldzustand soll aus dem Konstruktor-Partial heraus.");
         Assert.True(File.Exists(lastOpenedOwnerPath), "LastOpened-Fensterzustand soll in einem Owner gekapselt werden.");
         Assert.True(File.Exists(shutdownStateControllerPath), "PlayerWindow-Shutdown-Zustand soll in einem eigenen Controller liegen.");
+        Assert.True(File.Exists(playbackContextPath), "PlayerWindow-Playback-Eingaben sollen in einem Kontext gebuendelt werden.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var state = File.ReadAllText(statePath);
@@ -363,6 +365,7 @@ public sealed class UiArchitectureGuardTests
             Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
         var lastOpenedOwner = File.Exists(lastOpenedOwnerPath) ? File.ReadAllText(lastOpenedOwnerPath) : "";
         var shutdownStateController = File.Exists(shutdownStateControllerPath) ? File.ReadAllText(shutdownStateControllerPath) : "";
+        var playbackContext = File.Exists(playbackContextPath) ? File.ReadAllText(playbackContextPath) : "";
 
         Assert.DoesNotContain("using LibVLCSharp.Shared", windowRoot);
         Assert.DoesNotContain("using LibVLCSharp.Shared", state);
@@ -376,6 +379,10 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_lastOpened", playerWindowPartials);
         Assert.DoesNotContain("_closing", playerWindowPartials);
         Assert.DoesNotContain("_playbackDisposed", playerWindowPartials);
+        Assert.DoesNotContain("_videoPath", playerWindowPartials);
+        Assert.DoesNotContain("_initialOverlayText", playerWindowPartials);
+        Assert.DoesNotContain("_damageOverlay", playerWindowPartials);
+        Assert.DoesNotContain("_options", playerWindowPartials);
         Assert.Contains("private readonly PlayerMediaRuntime _playerMediaRuntime", state);
         Assert.Contains("private readonly PlayerPositionControls _positionControls", state);
         Assert.Contains("private readonly PlayerSpeedControls _speedControls", state);
@@ -383,11 +390,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private readonly DamageMarkerController _damageMarkerController", state);
         Assert.Contains("private readonly QuickScanController _quickScanController", state);
         Assert.Contains("private readonly LiveDetectionController _liveDetectionController = new();", state);
+        Assert.Contains("private readonly PlayerWindowPlaybackContext _playbackContext", state);
         Assert.Contains("private readonly PlayerWindowShutdownStateController _shutdownState = new();", state);
         Assert.Contains("PlayerLastOpenedWindowOwner<PlayerWindow>", state);
         Assert.Contains("LastOpenedWindow.Set(this)", windowRoot);
         Assert.Contains("public sealed class PlayerLastOpenedWindowOwner", lastOpenedOwner);
         Assert.Contains("public sealed class PlayerWindowShutdownStateController", shutdownStateController);
+        Assert.Contains("public sealed record PlayerWindowPlaybackContext", playbackContext);
     }
 
     [Fact]
@@ -7306,7 +7315,9 @@ public sealed class UiArchitectureGuardTests
         var runtimeFactory = File.Exists(runtimeFactoryPath) ? File.ReadAllText(runtimeFactoryPath) : "";
         var runtime = File.Exists(runtimePath) ? File.ReadAllText(runtimePath) : "";
 
-        Assert.Contains("PlayerMediaRuntimeFactory.Create(_options)", windowRoot);
+        Assert.Contains("var normalizedOptions = PlayerWindowOptions.Normalize(options)", windowRoot);
+        Assert.Contains("PlayerMediaRuntimeFactory.Create(normalizedOptions)", windowRoot);
+        Assert.DoesNotContain("_options", windowRoot);
         Assert.Contains("_playerMediaRuntime.Hosts", windowRoot);
         Assert.Contains("_playerMediaRuntime.AttachVideoView(VideoView)", windowRoot);
         Assert.Contains("TimelineHost", windowRoot);

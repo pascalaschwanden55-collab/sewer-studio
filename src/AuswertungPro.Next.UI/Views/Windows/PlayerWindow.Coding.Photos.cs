@@ -19,7 +19,7 @@ public partial class PlayerWindow
                 AttachAnalyzedFramePhoto: frameBytes => CodingAnalyzedFramePhotoAttacher.Attach(
                     entry,
                     frameBytes,
-                    _videoPath),
+                    _playbackContext.VideoPath),
                 CaptureSnapshot: () => CodingCaptureSnapshot(entry)));
 
         return result.PhotoPath;
@@ -30,7 +30,7 @@ public partial class PlayerWindow
         return CodingAnalyzedFramePhotoAttacher.Attach(
             entry,
             analyzedFrameBytes,
-            _videoPath);
+            _playbackContext.VideoPath);
     }
 
     private void CodingTakePhotoForSelectedEvent()

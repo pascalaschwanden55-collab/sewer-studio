@@ -36,7 +36,7 @@ public partial class PlayerWindow
                         _codingSessionHost.CurrentOverlay,
                         meterValue,
                         videoTime,
-                        _videoPath,
+                        _playbackContext.VideoPath,
                         this),
                     CreateCodingCodeExplorerManualEntryActions()),
                 AppendManualEvent: entry => CodingManualEventAppender.Apply(

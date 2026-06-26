@@ -36,18 +36,16 @@ public partial class PlayerWindow : Window
         InitializeCodingConfirmationPanelControls();
         PlayerWindowStateControls.Track(this);
 
-        _videoPath = videoInfo.VideoPath;
-        _damageOverlay = damageOverlay;
-        _options = PlayerWindowOptions.Normalize(options);
+        _playbackContext = PlayerWindowPlaybackContext.From(videoInfo, initialOverlayText, damageOverlay);
+        var normalizedOptions = PlayerWindowOptions.Normalize(options);
         _dependencies = PlayerWindowDependencies.From(serviceProvider);
         _haltungId = haltungId;
         _onEntryCreated = onEntryCreated;
         _haltungRecord = haltungRecord;
-        _initialOverlayText = initialOverlayText;
 
         PlayerWindowHeaderControls.ApplyVideoInfo(this, VideoNameText, VideoPathText, videoInfo);
 
-        _playerMediaRuntime = PlayerMediaRuntimeFactory.Create(_options);
+        _playerMediaRuntime = PlayerMediaRuntimeFactory.Create(normalizedOptions);
         _playerMediaRuntime.AttachVideoView(VideoView);
 
         var playerMediaHosts = _playerMediaRuntime.Hosts;
@@ -82,10 +80,10 @@ public partial class PlayerWindow : Window
                 CodingOverlayPopup: CodingOverlayPopup,
                 CodingOverlayCanvas: CodingOverlayCanvas),
             new PlayerWindowControllerSetDependencies(
-                DamageOverlay: _damageOverlay,
+                DamageOverlay: _playbackContext.DamageOverlay,
                 PlaybackControlHost: _playerPlaybackControlHost,
                 TimelineHost: _playerTimelineHost,
-                VideoPath: _videoPath,
+                VideoPath: _playbackContext.VideoPath,
                 EnsurePlaying: EnsurePlaying,
                 UpdateUi: UpdateUi,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),

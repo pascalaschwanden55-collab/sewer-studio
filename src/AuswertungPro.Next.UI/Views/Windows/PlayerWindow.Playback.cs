@@ -63,7 +63,7 @@ public partial class PlayerWindow
         => PlayerPlaybackStartWorkflow.EnsurePlaying(
             new PlayerPlaybackEnsurePlayingRequest(
                 _playerPlaybackControlHost.ShouldStartPlayback,
-                _videoPath),
+                _playbackContext.VideoPath),
             new PlayerPlaybackEnsurePlayingActions(Play));
 
     private void ChangeSpeed(float delta)

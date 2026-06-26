@@ -13,6 +13,6 @@ public partial class PlayerWindow
     {
         CodingHaltungslaengeEnsureWorkflow.Ensure(
             record,
-            _damageOverlay?.PipeLengthMeters);
+            _playbackContext.DamageOverlay?.PipeLengthMeters);
     }
 }

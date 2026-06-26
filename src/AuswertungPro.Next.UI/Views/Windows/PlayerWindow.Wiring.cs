@@ -63,10 +63,10 @@ public partial class PlayerWindow
     private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
         => PlayerWindowLoadedWorkflow.Execute(
             new PlayerWindowLoadedWorkflowRequest(
-                _initialOverlayText,
+                _playbackContext.InitialOverlayText,
                 TimeSpan.FromSeconds(6)),
             new PlayerWindowLoadedWorkflowActions(
-                Play: () => Play(_videoPath),
+                Play: () => Play(_playbackContext.VideoPath),
                 UpdateCodingOverlayViewport,
                 ScheduleLoadedViewportUpdate: () => PlayerDispatcherScheduler.ScheduleLoaded(
                     Dispatcher,

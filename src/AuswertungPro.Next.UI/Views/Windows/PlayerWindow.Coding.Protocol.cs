@@ -68,7 +68,7 @@ public partial class PlayerWindow
                     _haltungRecord!,
                     doc,
                     _dependencies.LegacyServiceProvider!,
-                    _videoPath,
+                    _playbackContext.VideoPath,
                     _dependencies.LastProjectPath,
                     MarkProjectDirtyForCoding),
                 GetCurrentProtocol: () => _haltungRecord?.Protocol,

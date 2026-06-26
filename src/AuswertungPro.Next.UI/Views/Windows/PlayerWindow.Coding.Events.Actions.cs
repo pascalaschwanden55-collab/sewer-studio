@@ -76,7 +76,7 @@ public partial class PlayerWindow
         => CodingCodeExplorerEditWorkflow.Execute(
             new CodingCodeExplorerEditWorkflowRequest(
                 codingEvent,
-                _videoPath,
+                _playbackContext.VideoPath,
                 _playerTimelineHost.CurrentTimeOrZero,
                 this),
             CreateCodingCodeExplorerEditActions());

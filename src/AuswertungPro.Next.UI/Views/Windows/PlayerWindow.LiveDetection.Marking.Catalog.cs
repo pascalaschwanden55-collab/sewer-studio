@@ -43,7 +43,7 @@ public partial class PlayerWindow
                 timestampSec,
                 suggestedCode,
                 _codingOsdMeterController.LastMeter ?? GetMeterFromVideoPosition(),
-                _videoPath,
+                _playbackContext.VideoPath,
                 this),
             new LiveDetectionMarkCatalogDisplayActions(
                 HasCodeCatalog: () => _dependencies.HasCodeCatalog,

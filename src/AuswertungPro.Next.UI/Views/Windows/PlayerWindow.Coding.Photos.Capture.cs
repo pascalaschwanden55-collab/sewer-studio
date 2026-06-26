@@ -23,7 +23,7 @@ public partial class PlayerWindow
 
     private byte[]? TryExtractFrameAtSeconds(double? sec)
     {
-        return CodingFrameExtractionService.TryExtractFrameAtSeconds(_videoPath, sec);
+        return CodingFrameExtractionService.TryExtractFrameAtSeconds(_playbackContext.VideoPath, sec);
     }
 
     private TimeSpan? GetCurrentPlayerTimestamp()
@@ -31,7 +31,7 @@ public partial class PlayerWindow
 
     private string? CodingCaptureSnapshot(ProtocolEntry entry)
     {
-        var target = CodingSnapshotTargetPolicy.Build(entry, _videoPath, PlayerClock.NowOffset());
+        var target = CodingSnapshotTargetPolicy.Build(entry, _playbackContext.VideoPath, PlayerClock.NowOffset());
         return CodingSnapshotFileCaptureService.CaptureSnapshot(target, path => TakeSnapshotSafe(path));
     }
 }

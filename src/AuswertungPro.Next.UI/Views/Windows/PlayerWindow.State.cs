@@ -10,10 +10,7 @@ public partial class PlayerWindow
 {
     // Core playback/window state.
     private readonly PlayerMediaRuntime _playerMediaRuntime;
-    private readonly string _videoPath;
-    private readonly PlayerWindowOptions _options;
-    private readonly string? _initialOverlayText;
-    private readonly PlayerDamageOverlayData? _damageOverlay;
+    private readonly PlayerWindowPlaybackContext _playbackContext;
     private readonly PlayerPositionControls _positionControls;
     private readonly PlayerSpeedControls _speedControls;
     private readonly PlayerTimelineHost _playerTimelineHost;

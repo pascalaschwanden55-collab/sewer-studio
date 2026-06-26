@@ -21,7 +21,7 @@ public partial class PlayerWindow
                             overlay,
                             autoMeter,
                             TimeSpan.FromSeconds(timestampSec),
-                            _videoPath,
+                            _playbackContext.VideoPath,
                             this),
                         CreateCodingCodeExplorerSeedSelectionActions());
                 },

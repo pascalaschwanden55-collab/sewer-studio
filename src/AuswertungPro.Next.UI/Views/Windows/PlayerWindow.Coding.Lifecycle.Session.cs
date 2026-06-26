@@ -9,7 +9,7 @@ public partial class PlayerWindow
     {
         CodingSessionStateCreationWorkflow.Execute(
             new CodingSessionStateCreationRequest(
-                _videoPath,
+                _playbackContext.VideoPath,
                 _dependencies.Settings),
             new CodingSessionStateCreationApplyActions(
                 SetSessionService: _codingSessionRuntimeOwner.Set,

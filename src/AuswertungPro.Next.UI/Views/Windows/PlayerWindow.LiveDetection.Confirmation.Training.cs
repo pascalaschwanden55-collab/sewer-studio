@@ -52,7 +52,7 @@ public partial class PlayerWindow
                         new LiveDetectionCorrectionCodeSelectionRequest(
                             autoMeter2,
                             timestampSec,
-                            _videoPath,
+                            _playbackContext.VideoPath,
                             this),
                         new LiveDetectionCorrectionCodeSelectionActions(
                             CreateVsaCodeExplorerViewModel));
