@@ -4,9 +4,7 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private readonly CodingModeStateController _codingModeState = new();
-    private readonly CodingSessionServiceOwner _codingSessionRuntimeOwner = new();
-    private readonly CodingOverlayServiceOwner _codingOverlayRuntimeOwner = new();
+    private readonly CodingRuntimeStateControllerSet _codingRuntimeStates = new();
     private readonly CodingSchemaOverlayManagerOwner _codingSchemaManager = new();
     private readonly CodingSchemaTypeStateController _codingSchemaTypeState = new();
 
@@ -25,6 +23,12 @@ public partial class PlayerWindow
     private readonly CodingProtocolStateControllerSet _codingProtocolStates = new();
 
     private readonly CodingEingabemarkerStateController _eingabemarkerState = new();
+
+    private CodingModeStateController _codingModeState => _codingRuntimeStates.ModeState;
+
+    private CodingSessionServiceOwner _codingSessionRuntimeOwner => _codingRuntimeStates.SessionRuntimeOwner;
+
+    private CodingOverlayServiceOwner _codingOverlayRuntimeOwner => _codingRuntimeStates.OverlayRuntimeOwner;
 
     private CodingCalibrationStateController _codingCalibrationState => _codingOverlayStates.CalibrationState;
 

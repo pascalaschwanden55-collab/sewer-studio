@@ -529,6 +529,7 @@ public sealed class UiArchitectureGuardTests
         var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var codingModeStatePath = Path.Combine(uiRoot, "Player", "CodingModeStateController.cs");
+        var codingRuntimeStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingRuntimeStateControllerSet.cs");
         var codingAiStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingAiStateControllerSet.cs");
         var importEventsOwnerPath = Path.Combine(uiRoot, "Player", "CodingImportReferenceEventsOwner.cs");
         var protocolStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingProtocolStateControllerSet.cs");
@@ -538,6 +539,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.True(File.Exists(statePath), "Coding-Feldzustand soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(codingModeStatePath), "Coding-Modus-Zustand soll nicht mehr als Rohfeld im PlayerWindow liegen.");
+        Assert.True(File.Exists(codingRuntimeStateControllerSetPath), "Coding-Runtime-Zustand soll nicht einzeln im PlayerWindow liegen.");
         Assert.True(File.Exists(codingAiStateControllerSetPath), "Coding-AI-Zustandscontroller sollen nicht einzeln im PlayerWindow liegen.");
         Assert.True(File.Exists(importEventsOwnerPath), "Coding-Import-Referenz-Events sollen nicht mehr als rohe Collection im PlayerWindow liegen.");
         Assert.True(File.Exists(protocolStateControllerSetPath), "Coding-Protocol/Navigations-Zustand soll nicht einzeln im PlayerWindow liegen.");
@@ -548,6 +550,7 @@ public sealed class UiArchitectureGuardTests
         var coding = File.ReadAllText(codingPath);
         var state = File.ReadAllText(statePath);
         var codingModeState = File.Exists(codingModeStatePath) ? File.ReadAllText(codingModeStatePath) : "";
+        var codingRuntimeStateControllerSet = File.Exists(codingRuntimeStateControllerSetPath) ? File.ReadAllText(codingRuntimeStateControllerSetPath) : "";
         var codingAiStateControllerSet = File.Exists(codingAiStateControllerSetPath) ? File.ReadAllText(codingAiStateControllerSetPath) : "";
         var importEventsOwner = File.Exists(importEventsOwnerPath) ? File.ReadAllText(importEventsOwnerPath) : "";
         var protocolStateControllerSet = File.Exists(protocolStateControllerSetPath) ? File.ReadAllText(protocolStateControllerSetPath) : "";
@@ -561,12 +564,21 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private enum EingabemarkerPhase", coding);
         Assert.DoesNotContain("private readonly ObservableCollection<CodingEvent> _codingImportEvents", coding);
         Assert.DoesNotContain("private bool _isCodingMode", state);
-        Assert.Contains("private readonly CodingModeStateController _codingModeState = new();", state);
+        Assert.Contains("private readonly CodingRuntimeStateControllerSet _codingRuntimeStates = new();", state);
+        Assert.DoesNotContain("private readonly CodingModeStateController _codingModeState = new();", state);
+        Assert.DoesNotContain("private readonly CodingSessionServiceOwner _codingSessionRuntimeOwner = new();", state);
+        Assert.DoesNotContain("private readonly CodingOverlayServiceOwner _codingOverlayRuntimeOwner = new();", state);
+        Assert.Contains("private CodingModeStateController _codingModeState => _codingRuntimeStates.ModeState", state);
+        Assert.Contains("private CodingSessionServiceOwner _codingSessionRuntimeOwner => _codingRuntimeStates.SessionRuntimeOwner", state);
+        Assert.Contains("private CodingOverlayServiceOwner _codingOverlayRuntimeOwner => _codingRuntimeStates.OverlayRuntimeOwner", state);
+        Assert.Contains("public sealed class CodingRuntimeStateControllerSet", codingRuntimeStateControllerSet);
+        Assert.Contains("public CodingModeStateController ModeState", codingRuntimeStateControllerSet);
+        Assert.Contains("public CodingSessionServiceOwner SessionRuntimeOwner", codingRuntimeStateControllerSet);
+        Assert.Contains("public CodingOverlayServiceOwner OverlayRuntimeOwner", codingRuntimeStateControllerSet);
         Assert.Contains("public sealed class CodingModeStateController", codingModeState);
         Assert.Contains("public bool IsCodingMode", codingModeState);
         Assert.Contains("public void Set", codingModeState);
         Assert.Contains("private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner", state);
-        Assert.Contains("private readonly CodingSessionServiceOwner _codingSessionRuntimeOwner", state);
         Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", state);
         Assert.DoesNotContain("private ICodingSessionService? _codingSessionService", state);
         Assert.DoesNotContain("private enum EingabemarkerPhase", state);
@@ -7156,7 +7168,7 @@ public sealed class UiArchitectureGuardTests
         var windowRoot = File.ReadAllText(windowRootPath);
 
         Assert.Contains("public sealed class CodingOverlayServiceOwner", owner);
-        Assert.Contains("private readonly CodingOverlayServiceOwner _codingOverlayRuntimeOwner", state);
+        Assert.Contains("private CodingOverlayServiceOwner _codingOverlayRuntimeOwner => _codingRuntimeStates.OverlayRuntimeOwner", state);
         Assert.Contains("new CodingOverlayToolHost(resolveOverlayService)", sessionRuntimeFactory);
         Assert.Contains("CodingSessionRuntimeFactory.Create", windowRoot);
         Assert.DoesNotContain("new CodingOverlayToolHost", windowRoot);
