@@ -8202,7 +8202,8 @@ public sealed class UiArchitectureGuardTests
         var factory = File.ReadAllText(factoryPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
-        Assert.Contains("CodingModeDialogServiceFactory.Create", playerText);
+        Assert.DoesNotContain("CodingModeDialogServiceFactory.Create", playerText);
+        Assert.DoesNotContain("new CodingModeDialogWorkflowActions", playerText);
         Assert.Contains("CodingModeDialogWorkflow.ShowMissingHaltung", lifecycle);
         Assert.Contains("CodingModeDialogWorkflow.ShowSessionStartFailed", session);
         Assert.DoesNotContain(".ShowMissingHaltung()", playerText);
@@ -8213,6 +8214,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("ShowMissingHaltung", service);
         Assert.Contains("ShowSessionStartFailed", service);
         Assert.Contains("ShowImportFrameCaptureFailed", service);
+        Assert.Contains("CodingModeDialogServiceFactory.Create", workflow);
+        Assert.Contains("new CodingModeDialogWorkflowActions", workflow);
         Assert.Contains("service.ShowMissingHaltung()", workflow);
         Assert.Contains("service.ShowSessionStartFailed(message)", workflow);
         Assert.Contains("DialogHost.Current", factory);

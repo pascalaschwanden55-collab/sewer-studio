@@ -5,12 +5,23 @@ public sealed record CodingModeDialogWorkflowActions(
 
 public static class CodingModeDialogWorkflow
 {
+    public static void ShowMissingHaltung()
+        => ShowMissingHaltung(
+            new CodingModeDialogWorkflowActions(
+                CreateDialogService: CodingModeDialogServiceFactory.Create));
+
     public static void ShowMissingHaltung(CodingModeDialogWorkflowActions actions)
     {
         var service = Create(actions);
 
         service.ShowMissingHaltung();
     }
+
+    public static void ShowSessionStartFailed(string message)
+        => ShowSessionStartFailed(
+            message,
+            new CodingModeDialogWorkflowActions(
+                CreateDialogService: CodingModeDialogServiceFactory.Create));
 
     public static void ShowSessionStartFailed(
         string message,

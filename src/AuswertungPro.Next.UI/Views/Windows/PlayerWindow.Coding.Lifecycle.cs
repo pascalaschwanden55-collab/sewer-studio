@@ -10,9 +10,7 @@ public partial class PlayerWindow
         CodingModeCommandWorkflow.Execute(
             new CodingModeCommandRequest(_haltungRecord is not null),
             new CodingModeCommandActions(
-                ShowMissingHaltung: () => CodingModeDialogWorkflow.ShowMissingHaltung(
-                    new CodingModeDialogWorkflowActions(
-                        CreateDialogService: CodingModeDialogServiceFactory.Create)),
+                ShowMissingHaltung: CodingModeDialogWorkflow.ShowMissingHaltung,
                 EnterCodingMode: EnterCodingMode));
     }
 

@@ -45,10 +45,7 @@ public partial class PlayerWindow
             new CodingSessionStartWorkflowActions(
                 ExecuteStartSession: () => _codingSessionHost.ExecuteStartSession(_haltungRecord!),
                 HasActiveSession: () => _codingSessionRuntimeOwner.Service!.ActiveSession != null,
-                ShowSessionStartFailed: message => CodingModeDialogWorkflow.ShowSessionStartFailed(
-                    message,
-                    new CodingModeDialogWorkflowActions(
-                        CreateDialogService: CodingModeDialogServiceFactory.Create)),
+                ShowSessionStartFailed: CodingModeDialogWorkflow.ShowSessionStartFailed,
                 ExitCodingMode: ExitCodingMode,
                 PauseSession: () => _codingSessionRuntimeOwner.Service!.PauseSession(),
                 SetRangeText: endMeter => CodingSessionHeaderControls.SetRangeText(TxtCodingRange, endMeter),
