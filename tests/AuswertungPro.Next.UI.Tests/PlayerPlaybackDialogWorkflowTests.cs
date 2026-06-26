@@ -5,6 +5,20 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerPlaybackDialogWorkflowTests
 {
     [Fact]
+    public void ShowUnsupportedRate_offers_default_dialog_service_wiring()
+    {
+        var overload = typeof(PlayerPlaybackDialogWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(PlayerPlaybackDialogWorkflow.ShowUnsupportedRate) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual([typeof(float)]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
     public void ShowUnsupportedRate_creates_service_and_shows_dialog()
     {
         var calls = new List<string>();

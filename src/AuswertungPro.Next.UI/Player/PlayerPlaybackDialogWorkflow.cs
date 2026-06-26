@@ -5,6 +5,12 @@ public sealed record PlayerPlaybackDialogWorkflowActions(
 
 public static class PlayerPlaybackDialogWorkflow
 {
+    public static void ShowUnsupportedRate(float rate)
+        => ShowUnsupportedRate(
+            rate,
+            new PlayerPlaybackDialogWorkflowActions(
+                CreateDialogService: PlayerPlaybackDialogServiceFactory.Create));
+
     public static void ShowUnsupportedRate(
         float rate,
         PlayerPlaybackDialogWorkflowActions actions)

@@ -1121,6 +1121,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", playback);
         Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", playback);
         Assert.Contains("PlayerPlaybackDialogWorkflow.ShowUnsupportedRate", playback);
+        Assert.DoesNotContain("PlayerPlaybackDialogServiceFactory.Create", playback);
+        Assert.DoesNotContain("new PlayerPlaybackDialogWorkflowActions", playback);
         Assert.Contains("_positionControls.ApplyPlaybackState", playback);
         Assert.Contains("_speedControls.Update", playback);
         Assert.DoesNotContain("_player.SetPause(_player.IsPlaying)", playback);
@@ -1168,6 +1170,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public sealed class PlayerPlaybackDialogService", dialogService);
         Assert.Contains("ShowUnsupportedRate", dialogService);
         Assert.Contains("SetRate(", dialogService);
+        Assert.Contains("PlayerPlaybackDialogServiceFactory.Create", dialogWorkflow);
+        Assert.Contains("new PlayerPlaybackDialogWorkflowActions", dialogWorkflow);
         Assert.Contains("service.ShowUnsupportedRate(rate)", dialogWorkflow);
         Assert.Contains("DialogHost.Current", dialogServiceFactory);
     }
