@@ -43,6 +43,9 @@ public partial class PlayerWindow : Window
             haltungId,
             onEntryCreated,
             haltungRecord);
+        _codingTrainingSamplesOwner = CodingTrainingSamplesOwner.CreateDefault(
+            () => _codingSessionRuntimeOwner.Service,
+            _protocolContext.Dependencies.Settings);
 
         PlayerWindowHeaderControls.ApplyVideoInfo(this, VideoNameText, VideoPathText, videoInfo);
 

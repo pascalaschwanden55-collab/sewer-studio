@@ -3170,17 +3170,27 @@ public sealed class UiArchitectureGuardTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var persistencePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Persistence.cs");
+        var codingStatePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.State.cs");
+        var ownerPath = Path.Combine(uiRoot, "Player", "CodingTrainingSamplesOwner.cs");
         var coordinatorPath = Path.Combine(uiRoot, "Ai", "CodingTrainingSamplePersistenceCoordinator.cs");
         var batchWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingTrainingBatchPersistenceWorkflow.cs");
 
+        Assert.True(File.Exists(ownerPath), "Training-Sample-Coordinator-Cache soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(coordinatorPath), "Training-Sample-Persistenz soll ausserhalb von PlayerWindow orchestriert werden.");
         Assert.True(File.Exists(batchWorkflowPath), "Training-Batch-Persistenz-Guard soll ausserhalb von PlayerWindow liegen.");
 
         var persistence = File.ReadAllText(persistencePath);
+        var codingState = File.ReadAllText(codingStatePath);
+        var owner = File.Exists(ownerPath) ? File.ReadAllText(ownerPath) : "";
         var coordinator = File.ReadAllText(coordinatorPath);
         var batchWorkflow = File.ReadAllText(batchWorkflowPath);
 
         Assert.Contains("CodingTrainingSamplePersistenceCoordinator", persistence);
+        Assert.DoesNotContain("private CodingTrainingSamplePersistenceCoordinator? _codingTrainingSamples", persistence);
+        Assert.DoesNotContain("CodingTrainingSamplePersistenceCoordinator.CreateDefault", persistence);
+        Assert.Contains("private readonly CodingTrainingSamplesOwner _codingTrainingSamplesOwner", codingState);
+        Assert.Contains("public sealed class CodingTrainingSamplesOwner", owner);
+        Assert.Contains("CodingTrainingSamplePersistenceCoordinator.CreateDefault", owner);
         Assert.Contains("CodingTrainingBatchPersistenceWorkflow.Execute", persistence);
         Assert.Contains("_codingSessionHost", persistence);
         Assert.DoesNotContain("_codingVm", persistence);

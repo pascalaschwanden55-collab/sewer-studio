@@ -8,12 +8,8 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private CodingTrainingSamplePersistenceCoordinator? _codingTrainingSamples;
-
     private CodingTrainingSamplePersistenceCoordinator CodingTrainingSamples
-        => _codingTrainingSamples ??= CodingTrainingSamplePersistenceCoordinator.CreateDefault(
-            () => _codingSessionRuntimeOwner.Service,
-            _protocolContext.Dependencies.Settings);
+        => _codingTrainingSamplesOwner.Coordinator;
 
     private async System.Threading.Tasks.Task PersistSingleEventAsTrainingSample(CodingEvent ev)
         => await CodingTrainingSamples.PersistSingleEventAsync(
