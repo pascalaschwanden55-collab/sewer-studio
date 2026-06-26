@@ -20,12 +20,7 @@ public partial class PlayerWindow
                 _playbackDisposed,
                 text,
                 duration),
-            new PlayerOverlayDisplayWorkflowActions(
+            new PlayerOverlayDisplayHostActions(
                 ShowMarquee: _playerMarqueeOverlayHost.Show,
-                ScheduleDisable: (disableAfter, disable) =>
-                {
-                    var timer = PlayerWindowTimerFactory.CreateOneShotTimer(disableAfter, disable);
-                    timer.Start();
-                },
                 DisableMarquee: _playerMarqueeOverlayHost.Disable));
 }

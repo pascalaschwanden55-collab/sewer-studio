@@ -19,6 +19,10 @@ public sealed record PlayerOverlayDisplayWorkflowActions(
     Action<TimeSpan, Action> ScheduleDisable,
     Action DisableMarquee);
 
+public sealed record PlayerOverlayDisplayHostActions(
+    Action<PlayerMarqueeOverlayState> ShowMarquee,
+    Action DisableMarquee);
+
 public sealed record PlayerOverlayDisplayWorkflowResult(
     PlayerOverlayDisplayWorkflowOutcome Outcome)
 {
@@ -27,6 +31,24 @@ public sealed record PlayerOverlayDisplayWorkflowResult(
 
 public static class PlayerOverlayDisplayWorkflow
 {
+    public static PlayerOverlayDisplayWorkflowResult Show(
+        PlayerOverlayDisplayWorkflowRequest request,
+        PlayerOverlayDisplayHostActions hostActions)
+    {
+        ArgumentNullException.ThrowIfNull(hostActions);
+
+        return Show(
+            request,
+            new PlayerOverlayDisplayWorkflowActions(
+                ShowMarquee: hostActions.ShowMarquee,
+                ScheduleDisable: (disableAfter, disable) =>
+                {
+                    var timer = PlayerWindowTimerFactory.CreateOneShotTimer(disableAfter, disable);
+                    timer.Start();
+                },
+                DisableMarquee: hostActions.DisableMarquee));
+    }
+
     public static PlayerOverlayDisplayWorkflowResult Show(
         PlayerOverlayDisplayWorkflowRequest request,
         PlayerOverlayDisplayWorkflowActions actions)

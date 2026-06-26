@@ -5,6 +5,24 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerOverlayDisplayWorkflowTests
 {
     [Fact]
+    public void Show_offers_host_actions_overload()
+    {
+        var overload = typeof(PlayerOverlayDisplayWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(PlayerOverlayDisplayWorkflow.Show) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual(
+                    [
+                        typeof(PlayerOverlayDisplayWorkflowRequest),
+                        typeof(PlayerOverlayDisplayHostActions),
+                    ]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
     public void Show_skips_when_playback_is_disposed()
     {
         var result = PlayerOverlayDisplayWorkflow.Show(

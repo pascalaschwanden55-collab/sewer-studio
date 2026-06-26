@@ -2924,8 +2924,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerLastOverlayDisplayWorkflow.Show", overlay);
         Assert.DoesNotContain("if (_lastOpened is null)", overlay);
         Assert.DoesNotContain("PlayerMarqueeOverlayPolicy.BuildShow", overlay);
+        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", overlay);
         Assert.Contains("PlayerMarqueeOverlayPolicy.BuildShow", displayWorkflow);
         Assert.Contains("actions.ScheduleDisable", displayWorkflow);
+        Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", displayWorkflow);
         Assert.Contains("if (!request.HasLastWindow)", lastOverlayWorkflow);
         Assert.Contains("actions.ShowOverlay()", lastOverlayWorkflow);
         Assert.Contains("_playerMarqueeOverlayHost.Show", overlay);
