@@ -6575,6 +6575,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingUiUpdateCommandWorkflow.Execute", navigation);
         Assert.Contains("CodingUiUpdateWorkflow.Apply", navigation);
         Assert.Contains("new CodingUiUpdateActions", navigation);
+        Assert.Contains("PlayerDispatcherScheduler.ScheduleNormal", navigation);
+        Assert.DoesNotContain("Dispatcher.InvokeAsync", navigation);
         Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return;", navigation);
         Assert.DoesNotContain("catch (Exception", navigation);
         Assert.DoesNotContain("CodingStatisticsRefreshPolicy.ShouldRefresh", navigation);

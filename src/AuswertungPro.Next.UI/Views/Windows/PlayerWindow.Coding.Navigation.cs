@@ -10,7 +10,9 @@ public partial class PlayerWindow
 {
     // Benannter Handler fuer sauberes Cleanup via -=
     private void CodingVm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        => Dispatcher.InvokeAsync(() => UpdateCodingUi(e.PropertyName));
+        => PlayerDispatcherScheduler.ScheduleNormal(
+            Dispatcher,
+            () => UpdateCodingUi(e.PropertyName));
 
     private void UpdateCodingUi(string? propertyName)
     {
