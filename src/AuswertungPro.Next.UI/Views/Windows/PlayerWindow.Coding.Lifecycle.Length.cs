@@ -11,6 +11,10 @@ public partial class PlayerWindow
     /// </summary>
     private void EnsureHaltungslaenge(HaltungRecord record)
     {
-        CodingHaltungslaengeEnsureServiceFactory.Create().Ensure(record, _damageOverlay?.PipeLengthMeters);
+        CodingHaltungslaengeEnsureWorkflow.Ensure(
+            record,
+            _damageOverlay?.PipeLengthMeters,
+            new CodingHaltungslaengeEnsureWorkflowActions(
+                CreateService: CodingHaltungslaengeEnsureServiceFactory.Create));
     }
 }

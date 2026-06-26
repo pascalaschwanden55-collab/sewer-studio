@@ -5265,11 +5265,13 @@ public sealed class UiArchitectureGuardTests
         var lengthPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Length.cs");
         var ensureServicePath = Path.Combine(uiRoot, "Ai", "CodingHaltungslaengeEnsureService.cs");
         var ensureServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingHaltungslaengeEnsureServiceFactory.cs");
+        var ensureWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingHaltungslaengeEnsureWorkflow.cs");
         var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(lengthPath), "Haltungslaenge-Fallback gehoert in eine Lifecycle-Length-Partial, nicht in Persistence.");
         Assert.True(File.Exists(ensureServicePath), "Haltungslaenge-Fallbacklogik gehoert ausserhalb der PlayerWindow-Partials.");
         Assert.True(File.Exists(ensureServiceFactoryPath), "Haltungslaenge-Eingabe soll ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(ensureWorkflowPath), "Haltungslaenge-Fallbackaufruf soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(enterWorkflowPath), "Coding-Mode-Enter-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
         var lifecycle = File.ReadAllText(lifecyclePath);
@@ -5277,6 +5279,7 @@ public sealed class UiArchitectureGuardTests
         var length = File.ReadAllText(lengthPath);
         var ensureService = File.ReadAllText(ensureServicePath);
         var ensureServiceFactory = File.ReadAllText(ensureServiceFactoryPath);
+        var ensureWorkflow = File.Exists(ensureWorkflowPath) ? File.ReadAllText(ensureWorkflowPath) : "";
         var enterWorkflow = File.ReadAllText(enterWorkflowPath);
 
         Assert.Contains("EnsureHaltungslaenge: () => EnsureHaltungslaenge(_haltungRecord!)", lifecycle);
@@ -5285,11 +5288,14 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("Microsoft.VisualBasic.Interaction.InputBox", persistence);
         Assert.Contains("private void EnsureHaltungslaenge", length);
         Assert.Contains("CodingHaltungslaengeEnsureServiceFactory.Create", length);
+        Assert.Contains("CodingHaltungslaengeEnsureWorkflow.Ensure", length);
+        Assert.DoesNotContain(".Ensure(record, _damageOverlay?.PipeLengthMeters)", length);
         Assert.DoesNotContain("CodingHaltungslaengeResolver.TryEnsureFromKnownSources", length);
         Assert.DoesNotContain("Microsoft.VisualBasic.Interaction.InputBox", length);
         Assert.DoesNotContain("SetFieldValue(\"Haltungslaenge_m\"", length);
         Assert.Contains("CodingHaltungslaengeResolver.TryEnsureFromKnownSources", ensureServiceFactory);
         Assert.Contains("Microsoft.VisualBasic.Interaction.InputBox", ensureServiceFactory);
+        Assert.Contains("service.Ensure(record, overlayPipeLengthMeters)", ensureWorkflow);
         Assert.Contains("SetFieldValue", ensureService);
         Assert.Contains("\"Haltungslaenge_m\"", ensureService);
     }
