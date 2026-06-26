@@ -49,10 +49,7 @@ public partial class PlayerWindow
                     _codingSessionRuntimeOwner.Service,
                     _codingSessionHost.CurrentMeter,
                     _playerTimelineHost.CurrentTimeOrZero),
-                ShowRequiresLaterMeterPrompt: () => CodingEventActionDialogWorkflow.ShowStretchCloseRequiresLaterMeter(
-                    new CodingEventActionDialogWorkflowActions(
-                        CreateDialogService: CodingEventActionDialogServiceFactory.Create,
-                        RunWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback))),
+                ShowRequiresLaterMeterPrompt: CodingEventActionDialogWorkflow.ShowStretchCloseRequiresLaterMeter,
                 RefreshEvents: RefreshCodingEventsList,
                 ShowSuccessStatus: status => SetCodingAiState(status, PlayerStatusColors.Success, "")));
     }
@@ -64,9 +61,7 @@ public partial class PlayerWindow
             new CodingEventDeleteCommandActions(
                 ConfirmDelete: code => CodingEventActionDialogWorkflow.ConfirmDelete(
                     code,
-                    new CodingEventActionDialogWorkflowActions(
-                        CreateDialogService: CodingEventActionDialogServiceFactory.Create,
-                        RunWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback))),
+                    runWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback)),
                 Delete: codingEvent => CodingEventListActionWorkflow.Delete(
                     codingEvent,
                     _codingSessionRuntimeOwner.Service,

@@ -5,6 +5,36 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingEventActionDialogWorkflowTests
 {
     [Fact]
+    public void ShowStretchCloseRequiresLaterMeter_offers_default_dialog_service_wiring()
+    {
+        var overload = typeof(CodingEventActionDialogWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingEventActionDialogWorkflow.ShowStretchCloseRequiresLaterMeter) &&
+                method.GetParameters().Length == 0);
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
+    public void ConfirmDelete_offers_default_dialog_service_wiring()
+    {
+        var overload = typeof(CodingEventActionDialogWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingEventActionDialogWorkflow.ConfirmDelete) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual(
+                    [
+                        typeof(string),
+                        typeof(Func<Func<bool>, bool>),
+                    ]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
     public void ShowStretchCloseRequiresLaterMeter_creates_service_and_shows_prompt()
     {
         var calls = new List<string>();

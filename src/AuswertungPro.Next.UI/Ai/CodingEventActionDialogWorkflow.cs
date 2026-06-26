@@ -6,6 +6,12 @@ public sealed record CodingEventActionDialogWorkflowActions(
 
 public static class CodingEventActionDialogWorkflow
 {
+    public static void ShowStretchCloseRequiresLaterMeter()
+        => ShowStretchCloseRequiresLaterMeter(
+            new CodingEventActionDialogWorkflowActions(
+                CreateDialogService: CodingEventActionDialogServiceFactory.Create,
+                RunWithSuspendedOverlay: callback => callback()));
+
     public static void ShowStretchCloseRequiresLaterMeter(
         CodingEventActionDialogWorkflowActions actions)
     {
@@ -13,6 +19,15 @@ public static class CodingEventActionDialogWorkflow
 
         service.ShowStretchCloseRequiresLaterMeter();
     }
+
+    public static bool ConfirmDelete(
+        string? code,
+        Func<Func<bool>, bool> runWithSuspendedOverlay)
+        => ConfirmDelete(
+            code,
+            new CodingEventActionDialogWorkflowActions(
+                CreateDialogService: CodingEventActionDialogServiceFactory.Create,
+                RunWithSuspendedOverlay: runWithSuspendedOverlay));
 
     public static bool ConfirmDelete(
         string? code,

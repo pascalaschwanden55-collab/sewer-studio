@@ -3217,7 +3217,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void CodingEventSeek_Click", actions);
         Assert.Contains("private void CodingEventCloseStretch_Click", actions);
         Assert.Contains("private void CodingEventDelete_Click", actions);
-        Assert.Contains("CodingEventActionDialogServiceFactory.Create", actions);
+        Assert.DoesNotContain("CodingEventActionDialogServiceFactory.Create", actions);
+        Assert.DoesNotContain("new CodingEventActionDialogWorkflowActions", actions);
         Assert.Contains("CodingEventActionDialogWorkflow.ShowStretchCloseRequiresLaterMeter", actions);
         Assert.Contains("CodingEventActionDialogWorkflow.ConfirmDelete", actions);
         Assert.Contains("CodingEventSeekCommandWorkflow.Execute", actions);
@@ -3263,6 +3264,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingEventEditApplier.Apply", workflow);
         Assert.Contains("CodingStretchDamageManualCloseApplier.Apply", workflow);
         Assert.Contains("CodingEventDeleteApplier.Apply", workflow);
+        Assert.Contains("CodingEventActionDialogServiceFactory.Create", dialogWorkflow);
+        Assert.Contains("new CodingEventActionDialogWorkflowActions", dialogWorkflow);
         Assert.Contains("service.ShowStretchCloseRequiresLaterMeter()", dialogWorkflow);
         Assert.Contains("service.ConfirmDelete(code)", dialogWorkflow);
         Assert.Contains("actions.RunWithSuspendedOverlay", dialogWorkflow);
