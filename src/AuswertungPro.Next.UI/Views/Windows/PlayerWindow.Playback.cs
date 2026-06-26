@@ -85,7 +85,7 @@ public partial class PlayerWindow
             new PlayerPlaybackStartRequest(path),
             new PlayerPlaybackStartActions(
                 _playerPlaybackControlHost.PlayPath,
-                _timer.Start,
+                _playerTimerController.StartUpdateTimer,
                 UpdateRateLabel));
 
     private void UpdateUi()

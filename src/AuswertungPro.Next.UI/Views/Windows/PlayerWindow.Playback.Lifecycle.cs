@@ -44,9 +44,7 @@ public partial class PlayerWindow
     }
 
     private void StopPlayerTimers()
-        => PlayerWindowTimerStopper.StopPlaybackTimers(
-            _timer,
-            _scrubTimer,
+        => _playerTimerController.StopPlaybackTimers(
             _liveDetectionController.DetectionTimer,
             _codingLiveAiTimerOwner.Controller,
             _codingOsdMeterController.Timer);

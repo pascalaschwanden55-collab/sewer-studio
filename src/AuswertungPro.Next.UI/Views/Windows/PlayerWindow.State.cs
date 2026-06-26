@@ -1,5 +1,4 @@
 using System;
-using System.Windows.Threading;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
@@ -11,8 +10,6 @@ public partial class PlayerWindow
 {
     // Core playback/window state.
     private readonly PlayerMediaRuntime _playerMediaRuntime;
-    private readonly DispatcherTimer _timer;
-    private readonly DispatcherTimer _scrubTimer;
     private readonly string _videoPath;
     private readonly PlayerWindowOptions _options;
     private readonly string? _initialOverlayText;
@@ -28,6 +25,7 @@ public partial class PlayerWindow
     private readonly DamageMarkerController _damageMarkerController;
     private readonly QuickScanController _quickScanController;
     private readonly CodingOverlayRenderController _codingOverlayRenderController;
+    private readonly PlayerWindowTimerController _playerTimerController;
 
     // Live detection state.
     private readonly LiveDetectionController _liveDetectionController = new();

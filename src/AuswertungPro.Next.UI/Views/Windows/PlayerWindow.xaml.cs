@@ -98,9 +98,14 @@ public partial class PlayerWindow : Window
         _markToolControls = controllerSet.MarkToolControls;
         _codingOverlayRenderController = controllerSet.CodingOverlayRenderController;
 
-        var playerTimers = CreatePlayerTimers();
-        _timer = playerTimers.UpdateTimer;
-        _scrubTimer = playerTimers.ScrubTimer;
+        _playerTimerController = PlayerWindowTimerController.Create(
+            createRequest: () => new PlayerWindowTimerTickWorkflowRequest(
+                _closing,
+                _playbackDisposed,
+                _positionSliderStateController.IsDragging),
+            actions: new PlayerWindowTimerTickWorkflowActions(
+                UpdateUi,
+                ScrubSeekToSlider));
         WirePositionSliderEvents();
         WireWindowLifecycleEvents();
         WireWindowSurfaceEvents();

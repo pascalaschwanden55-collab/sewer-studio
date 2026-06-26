@@ -1079,21 +1079,38 @@ public sealed class UiArchitectureGuardTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var wiringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Wiring.cs");
         var factoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerFactory.cs");
         var timerSetFactoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerSetFactory.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerController.cs");
         var tickWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerTickWorkflow.cs");
 
         Assert.True(File.Exists(factoryPath), "PlayerWindow-Timer sollen ausserhalb des Wiring-Partials erzeugt werden.");
         Assert.True(File.Exists(timerSetFactoryPath), "PlayerWindow-Timer-Set soll die konkrete TimerFactory ausserhalb des Wiring-Partials kapseln.");
+        Assert.True(File.Exists(controllerPath), "PlayerWindow-Timerzustand soll ausserhalb der PlayerWindow-Partials gekapselt werden.");
         Assert.True(File.Exists(tickWorkflowPath), "PlayerWindow-Timer-Tick-Entscheidung soll ausserhalb des Wiring-Partials liegen.");
 
+        var windowRoot = File.ReadAllText(windowRootPath);
+        var state = File.ReadAllText(statePath);
+        var playerWindowPartials = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
         var wiring = File.ReadAllText(wiringPath);
         var factory = File.ReadAllText(factoryPath);
         var timerSetFactory = File.Exists(timerSetFactoryPath) ? File.ReadAllText(timerSetFactoryPath) : "";
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
         var tickWorkflow = File.Exists(tickWorkflowPath) ? File.ReadAllText(tickWorkflowPath) : "";
 
-        Assert.Contains("PlayerWindowTimerSetFactory.Create", wiring);
+        Assert.Contains("PlayerWindowTimerController.Create", windowRoot);
+        Assert.Contains("private readonly PlayerWindowTimerController _playerTimerController", state);
+        Assert.DoesNotContain("private readonly DispatcherTimer _timer", state);
+        Assert.DoesNotContain("private readonly DispatcherTimer _scrubTimer", state);
+        Assert.DoesNotContain("_scrubTimer", playerWindowPartials);
+        Assert.DoesNotContain("_timer", playerWindowPartials);
+        Assert.DoesNotContain("PlayerWindowTimerSetFactory.Create", wiring);
         Assert.DoesNotContain("PlayerWindowTimerFactory.Create", wiring);
         Assert.DoesNotContain("PlayerWindowTimerTickWorkflow.ExecuteUpdate", wiring);
         Assert.DoesNotContain("PlayerWindowTimerTickWorkflow.ExecuteScrub", wiring);
@@ -1113,6 +1130,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerWindowTimerFactory.CreateScrubTimer", timerSetFactory);
         Assert.Contains("PlayerWindowTimerTickWorkflow.ExecuteUpdate", timerSetFactory);
         Assert.Contains("PlayerWindowTimerTickWorkflow.ExecuteScrub", timerSetFactory);
+        Assert.Contains("PlayerWindowTimerSetFactory.Create", controller);
+        Assert.Contains("PlayerWindowTimerStopper.StopPlaybackTimers", controller);
         Assert.Contains("request.IsClosing", tickWorkflow);
         Assert.Contains("request.IsPlaybackDisposed", tickWorkflow);
         Assert.Contains("request.IsDragging", tickWorkflow);
@@ -1129,9 +1148,11 @@ public sealed class UiArchitectureGuardTests
         var osdTimerPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Timer.cs");
         var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
         var osdControllerPath = Path.Combine(uiRoot, "Player", "CodingOsdMeterController.cs");
+        var timerControllerPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerController.cs");
         var stopperPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerStopper.cs");
 
         Assert.True(File.Exists(stopperPath), "PlayerWindow-Timer-Shutdown soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(timerControllerPath), "PlayerWindow-Timerzustand soll im PlayerWindowTimerController liegen.");
         Assert.True(File.Exists(liveControllerPath), "LiveDetection-Timerzustand soll im LiveDetectionController liegen.");
         Assert.True(File.Exists(osdControllerPath), "Coding-OSD-Timerzustand soll im CodingOsdMeterController liegen.");
 
@@ -1140,12 +1161,15 @@ public sealed class UiArchitectureGuardTests
         var osdTimer = File.ReadAllText(osdTimerPath);
         var liveController = File.ReadAllText(liveControllerPath);
         var osdController = File.ReadAllText(osdControllerPath);
+        var timerController = File.Exists(timerControllerPath) ? File.ReadAllText(timerControllerPath) : "";
         var stopper = File.Exists(stopperPath) ? File.ReadAllText(stopperPath) : "";
         var directTimerShutdownText = liveStop + osdTimer + liveController + osdController;
 
-        Assert.Contains("PlayerWindowTimerStopper.StopPlaybackTimers", playbackLifecycle);
+        Assert.Contains("_playerTimerController.StopPlaybackTimers", playbackLifecycle);
         Assert.Contains("_liveDetectionController.DetectionTimer", playbackLifecycle);
         Assert.Contains("_codingOsdMeterController.Timer", playbackLifecycle);
+        Assert.DoesNotContain("PlayerWindowTimerStopper.StopPlaybackTimers", playbackLifecycle);
+        Assert.Contains("PlayerWindowTimerStopper.StopPlaybackTimers", timerController);
         Assert.Contains("_timer = PlayerWindowTimerStopper.StopAndClear(_timer)", liveController);
         Assert.Contains("_timer = PlayerWindowTimerStopper.StopAndClear(_timer)", osdController);
         Assert.DoesNotContain("_detectionTimer?.Stop();", directTimerShutdownText);
@@ -3995,6 +4019,7 @@ public sealed class UiArchitectureGuardTests
         var playbackLifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Lifecycle.cs");
         var controllerPath = Path.Combine(uiRoot, "Player", "CodingLiveAiTimerController.cs");
         var ownerPath = Path.Combine(uiRoot, "Player", "CodingLiveAiTimerControllerOwner.cs");
+        var timerControllerPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerController.cs");
         var timerStopperPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerStopper.cs");
         var exitTeardownWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeExitTeardownWorkflow.cs");
         var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiToggleWorkflow.cs");
@@ -4003,6 +4028,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(playbackLifecyclePath), "Playback-Cleanup soll in einem eigenen Lifecycle-Partial liegen.");
         Assert.True(File.Exists(controllerPath), "Live-AI-Timer-Wiring muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(ownerPath), "Live-AI-Timer-Besitz soll nicht als nullable Rohfeld im PlayerWindow liegen.");
+        Assert.True(File.Exists(timerControllerPath), "Playback-Timerzustand soll im PlayerWindowTimerController liegen.");
         Assert.True(File.Exists(timerStopperPath), "Playback-Timer-Shutdown soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(exitTeardownWorkflowPath), "Coding-Exit-Teardown-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(toggleWorkflowPath), "Live-AI-Toggle-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -4017,6 +4043,7 @@ public sealed class UiArchitectureGuardTests
         var playbackLifecycle = File.ReadAllText(playbackLifecyclePath);
         var controller = File.ReadAllText(controllerPath);
         var owner = File.Exists(ownerPath) ? File.ReadAllText(ownerPath) : "";
+        var timerController = File.Exists(timerControllerPath) ? File.ReadAllText(timerControllerPath) : "";
         var timerStopper = File.Exists(timerStopperPath) ? File.ReadAllText(timerStopperPath) : "";
         var exitTeardownWorkflow = File.Exists(exitTeardownWorkflowPath) ? File.ReadAllText(exitTeardownWorkflowPath) : "";
         var toggleWorkflow = File.Exists(toggleWorkflowPath) ? File.ReadAllText(toggleWorkflowPath) : "";
@@ -4037,7 +4064,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_codingLiveAiTimers?.StopTimers()", playback);
         Assert.DoesNotContain("_codingLiveAiTimers?.StopTimers()", playbackLifecycle);
         Assert.Contains("_codingLiveAiTimerOwner.Controller", playbackLifecycle);
-        Assert.Contains("PlayerWindowTimerStopper.StopPlaybackTimers", playbackLifecycle);
+        Assert.Contains("_playerTimerController.StopPlaybackTimers", playbackLifecycle);
+        Assert.Contains("PlayerWindowTimerStopper.StopPlaybackTimers", timerController);
         Assert.DoesNotContain("_codingLiveAiBlinkTimer", coding + state + lifecycle + codingExit + ai + live + playback + playbackLifecycle);
         Assert.DoesNotContain("_codingLiveAiBlinkState", coding + state + lifecycle + codingExit + ai + live + playback + playbackLifecycle);
         Assert.DoesNotContain("new DispatcherTimer { Interval = CodingLiveAiTimerSettings", live);

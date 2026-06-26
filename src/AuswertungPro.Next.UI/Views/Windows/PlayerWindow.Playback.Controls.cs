@@ -57,9 +57,9 @@ public partial class PlayerWindow
             PositionSlider.Maximum,
             _playerTimelineHost.LengthMilliseconds ?? 0,
             _positionSliderStateController.IsDragging,
-            _scrubTimer.IsEnabled,
+            _playerTimerController.IsScrubTimerEnabled,
             _positionControls.ApplySeekPreview,
-            _scrubTimer.Start);
+            _playerTimerController.StartScrubTimer);
     }
 
     private void ScrubSeekToSlider()

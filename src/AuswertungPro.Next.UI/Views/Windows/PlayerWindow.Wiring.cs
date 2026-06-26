@@ -6,16 +6,6 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private PlayerWindowTimerSet CreatePlayerTimers()
-        => PlayerWindowTimerSetFactory.Create(
-            createRequest: () => new PlayerWindowTimerTickWorkflowRequest(
-                _closing,
-                _playbackDisposed,
-                _positionSliderStateController.IsDragging),
-            actions: new PlayerWindowTimerTickWorkflowActions(
-                UpdateUi,
-                ScrubSeekToSlider));
-
     private void WireWindowLifecycleEvents()
     {
         PlayerLifecycleEventBinder.Bind(

@@ -41,7 +41,7 @@ public partial class PlayerWindow
     private PlayerPositionSliderDragWorkflowActions CreatePositionSliderDragActions()
         => _positionSliderStateController.CreateDragActions(
             _playerPlaybackControlHost.SetPause,
-            _scrubTimer.Stop,
+            _playerTimerController.StopScrubTimer,
             SeekToSlider,
             ScrubSeekToSlider);
 }
