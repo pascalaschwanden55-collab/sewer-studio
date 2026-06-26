@@ -13,9 +13,6 @@ public partial class PlayerWindow
     // Core playback/window state.
     private readonly PlayerMediaRuntime _playerMediaRuntime;
     private readonly DispatcherTimer _timer;
-    private bool _isDragging;
-    private bool _wasPlayingBeforeDrag;
-    private DateTime _lastScrubSeek = DateTime.MinValue;
     private readonly DispatcherTimer _scrubTimer;
     private readonly string _videoPath;
     private readonly PlayerWindowOptions _options;
@@ -25,6 +22,7 @@ public partial class PlayerWindow
     private readonly PlayerSpeedControls _speedControls;
     private readonly PlayerTimelineHost _playerTimelineHost;
     private readonly PlayerPlaybackControlHost _playerPlaybackControlHost;
+    private readonly PlayerPositionSliderStateController _positionSliderStateController = new();
     private readonly PlayerMarqueeOverlayHost _playerMarqueeOverlayHost;
     private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost;
     private readonly PlayerMarkToolControls _markToolControls;

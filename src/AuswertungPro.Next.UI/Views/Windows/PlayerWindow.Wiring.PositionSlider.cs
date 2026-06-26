@@ -21,27 +21,25 @@ public partial class PlayerWindow
 
     private void PositionSlider_DragCompleted(object sender, DragCompletedEventArgs e)
         => PlayerPositionSliderDragWorkflow.Complete(
-            new PlayerPositionSliderDragCompleteRequest(_wasPlayingBeforeDrag),
+            new PlayerPositionSliderDragCompleteRequest(_positionSliderStateController.WasPlayingBeforeDrag),
             CreatePositionSliderDragActions());
 
     private void PositionSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         => PlayerPositionSliderDragWorkflow.PreviewMouseUp(
-            new PlayerPositionSliderDragPreviewMouseUpRequest(_isDragging),
+            new PlayerPositionSliderDragPreviewMouseUpRequest(_positionSliderStateController.IsDragging),
             CreatePositionSliderDragActions());
 
     private void PositionSlider_LostMouseCapture(object sender, MouseEventArgs e)
         => PlayerPositionSliderDragWorkflow.LostMouseCapture(
             new PlayerPositionSliderDragLostCaptureRequest(
-                _isDragging,
-                _wasPlayingBeforeDrag),
+                _positionSliderStateController.IsDragging,
+                _positionSliderStateController.WasPlayingBeforeDrag),
             CreatePositionSliderDragActions());
 
     private PlayerPositionSliderDragWorkflowActions CreatePositionSliderDragActions()
-        => new(
-            SetWasPlayingBeforeDrag: value => _wasPlayingBeforeDrag = value,
-            SetDragging: value => _isDragging = value,
-            SetPause: _playerPlaybackControlHost.SetPause,
-            StopScrubTimer: _scrubTimer.Stop,
+        => _positionSliderStateController.CreateDragActions(
+            _playerPlaybackControlHost.SetPause,
+            _scrubTimer.Stop,
             SeekToSlider,
             ScrubSeekToSlider);
 }

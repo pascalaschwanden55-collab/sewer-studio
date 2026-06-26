@@ -20,7 +20,7 @@ public partial class PlayerWindow
                                 meter),
                             new CodingTimelineNavigateActions(
                                 MoveToMeter: value => _codingSessionRuntimeOwner.Service!.MoveToMeter(value),
-                                MarkNavigationPending: () => _codingNavPending = true,
+                                MarkNavigationPending: _codingNavigationPendingState.MarkPending,
                                 SyncVideoToCodingMeter: SyncVideoToCodingMeter));
                     });
                     var markerClickedCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<object>(item =>

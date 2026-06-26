@@ -8,9 +8,6 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    // Flag: wird true wenn Meter-Navigation (Next/Previous) ausloest.
-    private bool _codingNavPending;
-
     // Benannter Handler fuer sauberes Cleanup via -=
     private void CodingVm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         => Dispatcher.InvokeAsync(() => UpdateCodingUi(e.PropertyName));
@@ -21,7 +18,7 @@ public partial class PlayerWindow
             new CodingUiUpdateCommandRequest(
                 _codingSessionHost.HasViewModel,
                 propertyName,
-                _codingNavPending),
+                _codingNavigationPendingState.IsPending),
             new CodingUiUpdateCommandActions(
                 ApplyUiUpdate: (changedPropertyName, navigationPending) => CodingUiUpdateWorkflow.Apply(
                     changedPropertyName,
@@ -32,7 +29,7 @@ public partial class PlayerWindow
                         UpdateOverlayInfo: () => UpdateCodingOverlayInfo(_codingSessionHost.CurrentOverlay),
                         UpdateCurrentCode: UpdateCodingCurrentCode,
                         UpdateStatistics: UpdateCodingStatistics))));
-        _codingNavPending = result.NavigationPending;
+        _codingNavigationPendingState.Set(result.NavigationPending);
     }
 
     /// <summary>
@@ -99,7 +96,7 @@ public partial class PlayerWindow
                 PrepareMoveByCommand: () => CodingVideoNavigationController.PrepareMoveByCommand(
                     _codingSessionHost,
                     executeMoveCommand,
-                    () => _codingNavPending = true,
+                    _codingNavigationPendingState.MarkPending,
                     () => PlayerCodingPlayback.PauseForCodingInteraction(_playerPlaybackControlHost.SetPause),
                     () =>
                     {

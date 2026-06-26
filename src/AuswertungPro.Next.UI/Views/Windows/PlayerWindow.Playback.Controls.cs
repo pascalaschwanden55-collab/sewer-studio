@@ -36,7 +36,7 @@ public partial class PlayerWindow
 
     private void PositionSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         => PlayerPositionSliderValueChangedWorkflow.Execute(
-            new PlayerPositionSliderValueChangedWorkflowRequest(_isDragging),
+            new PlayerPositionSliderValueChangedWorkflowRequest(_positionSliderStateController.IsDragging),
             new PlayerPositionSliderValueChangedWorkflowActions(UpdateSeekPreview));
 
     private void SeekToSlider()
@@ -56,7 +56,7 @@ public partial class PlayerWindow
             PositionSlider.Value,
             PositionSlider.Maximum,
             _playerTimelineHost.LengthMilliseconds ?? 0,
-            _isDragging,
+            _positionSliderStateController.IsDragging,
             _scrubTimer.IsEnabled,
             _positionControls.ApplySeekPreview,
             _scrubTimer.Start);

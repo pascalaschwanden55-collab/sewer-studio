@@ -29,7 +29,7 @@ public partial class PlayerWindow
             new CodingImportEventSeekCommandActions(
                 SeekMilliseconds: _playerTimelineHost.SeekMilliseconds,
                 MoveToMeter: meter => codingSessionService!.MoveToMeter(meter),
-                MarkNavigationPending: () => _codingNavPending = true,
+                MarkNavigationPending: _codingNavigationPendingState.MarkPending,
                 SyncVideoToCodingMeter: SyncVideoToCodingMeter));
     }
 

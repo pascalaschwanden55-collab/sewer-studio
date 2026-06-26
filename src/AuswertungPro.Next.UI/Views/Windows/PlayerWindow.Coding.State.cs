@@ -45,6 +45,7 @@ public partial class PlayerWindow
     private readonly CodingSessionViewModelOwner _codingSessionViewModelOwner;
     private readonly ICodingSessionHost _codingSessionHost;
     private readonly ICodingOverlayToolHost _codingOverlayToolHost;
+    private readonly CodingNavigationPendingState _codingNavigationPendingState = new();
 
     private enum EingabemarkerPhase { Inactive, Drawing, Input, Analyzing }
     private EingabemarkerPhase _eingabemarkerPhase = EingabemarkerPhase.Inactive;

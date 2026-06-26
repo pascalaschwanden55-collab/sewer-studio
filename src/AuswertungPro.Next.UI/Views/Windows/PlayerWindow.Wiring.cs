@@ -13,7 +13,7 @@ public partial class PlayerWindow
             createRequest: () => new PlayerWindowTimerTickWorkflowRequest(
                 _closing,
                 _playbackDisposed,
-                _isDragging),
+                _positionSliderStateController.IsDragging),
             actions: new PlayerWindowTimerTickWorkflowActions(
                 UpdateUi,
                 ScrubSeekToSlider));

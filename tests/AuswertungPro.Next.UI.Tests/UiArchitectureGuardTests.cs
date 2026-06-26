@@ -114,8 +114,10 @@ public sealed class UiArchitectureGuardTests
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var wiringPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.cs");
         var sliderPath = Path.Combine(windowsRoot, "PlayerWindow.Wiring.PositionSlider.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.State.cs");
         var dragPlaybackPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragPlayback.cs");
         var dragWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderDragWorkflow.cs");
+        var sliderStateControllerPath = Path.Combine(uiRoot, "Player", "PlayerPositionSliderStateController.cs");
         var activationWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowActivationWorkflow.cs");
         var loadedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowLoadedWorkflow.cs");
         var headerControlsPath = Path.Combine(uiRoot, "Player", "PlayerWindowHeaderControls.cs");
@@ -125,6 +127,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(sliderPath), "PositionSlider-Wiring soll in einem eigenen Wiring-Partial liegen.");
         Assert.True(File.Exists(dragPlaybackPath), "PositionSlider-Drag-Pause-Regel muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(dragWorkflowPath), "PositionSlider-Drag-Reihenfolge muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(sliderStateControllerPath), "PositionSlider-Drag-Zustand soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(activationWorkflowPath), "Fenster-Aktivierungs-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(loadedWorkflowPath), "Fenster-Loaded-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(headerControlsPath), "Player-Header-Control-Zuweisungen sollen ausserhalb des Konstruktors liegen.");
@@ -133,8 +136,10 @@ public sealed class UiArchitectureGuardTests
         var windowRoot = File.ReadAllText(windowRootPath);
         var wiring = File.ReadAllText(wiringPath);
         var slider = File.ReadAllText(sliderPath);
+        var state = File.ReadAllText(statePath);
         var dragPlayback = File.Exists(dragPlaybackPath) ? File.ReadAllText(dragPlaybackPath) : "";
         var dragWorkflow = File.Exists(dragWorkflowPath) ? File.ReadAllText(dragWorkflowPath) : "";
+        var sliderStateController = File.Exists(sliderStateControllerPath) ? File.ReadAllText(sliderStateControllerPath) : "";
         var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
         var loadedWorkflow = File.Exists(loadedWorkflowPath) ? File.ReadAllText(loadedWorkflowPath) : "";
         var headerControls = File.Exists(headerControlsPath) ? File.ReadAllText(headerControlsPath) : "";
@@ -182,12 +187,24 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerPositionSliderDragWorkflow.LostMouseCapture", slider);
         Assert.DoesNotContain("if (!_isDragging)", slider);
         Assert.DoesNotContain("_isDragging = false", slider);
+        Assert.DoesNotContain("private bool _isDragging", state);
+        Assert.DoesNotContain("private bool _wasPlayingBeforeDrag", state);
+        Assert.DoesNotContain("private DateTime _lastScrubSeek", state);
+        Assert.Contains("PlayerPositionSliderStateController _positionSliderStateController", state);
+        Assert.Contains("_positionSliderStateController.IsDragging", slider);
+        Assert.Contains("_positionSliderStateController.WasPlayingBeforeDrag", slider);
+        Assert.Contains("_positionSliderStateController.CreateDragActions", slider);
+        Assert.DoesNotContain("SetDragging: value => _isDragging = value", slider);
+        Assert.DoesNotContain("SetWasPlayingBeforeDrag: value => _wasPlayingBeforeDrag = value", slider);
         Assert.Contains("PlayerPositionSliderDragPlayback.Start", dragWorkflow);
         Assert.Contains("PlayerPositionSliderDragPlayback.Complete", dragWorkflow);
         Assert.DoesNotContain("_player.SetPause(true)", slider);
         Assert.DoesNotContain("_player.SetPause(false)", slider);
         Assert.Contains("public static class PlayerPositionSliderDragPlayback", dragPlayback);
         Assert.Contains("public static class PlayerPositionSliderDragWorkflow", dragWorkflow);
+        Assert.Contains("public sealed class PlayerPositionSliderStateController", sliderStateController);
+        Assert.Contains("public bool IsDragging", sliderStateController);
+        Assert.Contains("public bool WasPlayingBeforeDrag", sliderStateController);
         Assert.Contains("private void WireWindowSurfaceEvents", wiring);
     }
 
@@ -6256,6 +6273,7 @@ public sealed class UiArchitectureGuardTests
         var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingUiUpdateWorkflow.cs");
         var sessionHostPath = Path.Combine(uiRoot, "Player", "CodingSessionHost.cs");
         var sessionOwnerPath = Path.Combine(uiRoot, "Player", "CodingSessionViewModelOwner.cs");
+        var navigationStatePath = Path.Combine(uiRoot, "Player", "CodingNavigationPendingState.cs");
         var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
 
@@ -6267,6 +6285,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(uiUpdateWorkflowPath), "Coding-UI-Update-Entscheidungen sollen ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(sessionHostPath), "_codingVm-Zugriffe sollen ueber einen schmalen CodingSessionHost laufen.");
         Assert.True(File.Exists(sessionOwnerPath), "CodingSessionViewModel-Besitz soll in einem eigenen Player-Owner liegen.");
+        Assert.True(File.Exists(navigationStatePath), "Coding-Navigation-Pending-Zustand soll nicht als bool im PlayerWindow liegen.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var coding = File.ReadAllText(codingPath);
@@ -6278,12 +6297,16 @@ public sealed class UiArchitectureGuardTests
         var uiUpdateWorkflow = File.Exists(uiUpdateWorkflowPath) ? File.ReadAllText(uiUpdateWorkflowPath) : "";
         var sessionHost = File.Exists(sessionHostPath) ? File.ReadAllText(sessionHostPath) : "";
         var sessionOwner = File.Exists(sessionOwnerPath) ? File.ReadAllText(sessionOwnerPath) : "";
+        var navigationState = File.Exists(navigationStatePath) ? File.ReadAllText(navigationStatePath) : "";
         var state = File.ReadAllText(statePath);
 
         Assert.DoesNotContain("private async void CodingNext_Click", coding);
         Assert.DoesNotContain("private async void CodingPrevious_Click", coding);
         Assert.DoesNotContain("private void SyncVideoToCodingMeter", coding);
         Assert.DoesNotContain("private bool _codingNavPending", coding);
+        Assert.DoesNotContain("private bool _codingNavPending", navigation);
+        Assert.DoesNotContain("_codingNavPending", windowRoot + state + navigation);
+        Assert.Contains("_codingNavigationPendingState", state);
         Assert.DoesNotContain("private async void CodingNext_Click", navigation);
         Assert.DoesNotContain("private async void CodingPrevious_Click", navigation);
         Assert.Contains("private void CodingNext_Click", navigation);
@@ -6327,6 +6350,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public sealed class CodingSessionHost", sessionHost);
         Assert.DoesNotContain("public sealed class CodingSessionViewModelOwner", sessionHost);
         Assert.Contains("public sealed class CodingSessionViewModelOwner", sessionOwner);
+        Assert.Contains("public sealed class CodingNavigationPendingState", navigationState);
+        Assert.Contains("public bool IsPending", navigationState);
+        Assert.Contains("public void MarkPending", navigationState);
         Assert.Contains("private readonly ICodingSessionHost _codingSessionHost", state);
         Assert.Contains("new CodingSessionViewModelOwner(CodingVm_PropertyChanged)", windowRoot);
         Assert.Contains("new CodingSessionHost(() => _codingSessionViewModelOwner.ViewModel)", windowRoot);

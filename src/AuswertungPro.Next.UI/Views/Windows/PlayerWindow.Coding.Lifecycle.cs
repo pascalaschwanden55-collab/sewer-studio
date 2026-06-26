@@ -34,7 +34,7 @@ public partial class PlayerWindow
                 InitializeCodingTimeline: InitializeCodingTimeline,
                 StartCodingModeBackgroundServices: StartCodingModeBackgroundServices,
                 LoadExistingProtocolEventsAsImport: LoadExistingProtocolEventsAsImport,
-                SetCodingNavigationPending: value => _codingNavPending = value,
+                SetCodingNavigationPending: _codingNavigationPendingState.Set,
                 SyncVideoToCodingMeter: SyncVideoToCodingMeter));
     }
 
