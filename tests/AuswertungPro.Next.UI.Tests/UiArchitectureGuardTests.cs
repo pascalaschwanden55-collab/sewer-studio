@@ -3527,6 +3527,7 @@ public sealed class UiArchitectureGuardTests
         var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
         var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Lifecycle.cs");
         var cleanerPath = Path.Combine(uiRoot, "Player", "PlayerPlaybackResourceCleaner.cs");
+        var lastOpenedClearWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerLastOpenedClearWorkflow.cs");
         var closingWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosingWorkflow.cs");
         var cleanupWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowCleanupWorkflow.cs");
         var runtimePath = Path.Combine(uiRoot, "Player", "PlayerMediaRuntime.cs");
@@ -3534,6 +3535,7 @@ public sealed class UiArchitectureGuardTests
 
         Assert.True(File.Exists(lifecyclePath), "Playback-Closing/Cleanup soll aus dem allgemeinen Playback-Partial heraus.");
         Assert.True(File.Exists(cleanerPath), "Playback-Resource-Cleanup soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(lastOpenedClearWorkflowPath), "LastOpened-Clear-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(closingWorkflowPath), "Playback-Closing-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(cleanupWorkflowPath), "Playback-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(runtimePath), "Media-Runtime soll VideoView-Attach/Detach kapseln.");
@@ -3542,6 +3544,7 @@ public sealed class UiArchitectureGuardTests
         var playback = File.ReadAllText(playbackPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var cleaner = File.Exists(cleanerPath) ? File.ReadAllText(cleanerPath) : "";
+        var lastOpenedClearWorkflow = File.Exists(lastOpenedClearWorkflowPath) ? File.ReadAllText(lastOpenedClearWorkflowPath) : "";
         var closingWorkflow = File.Exists(closingWorkflowPath) ? File.ReadAllText(closingWorkflowPath) : "";
         var cleanupWorkflow = File.Exists(cleanupWorkflowPath) ? File.ReadAllText(cleanupWorkflowPath) : "";
         var runtime = File.Exists(runtimePath) ? File.ReadAllText(runtimePath) : "";
@@ -3555,6 +3558,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private void StopPlayerTimers", lifecycle);
         Assert.Contains("PlayerWindowClosingWorkflow.Execute", lifecycle);
         Assert.Contains("PlayerWindowCleanupWorkflow.Execute", lifecycle);
+        Assert.Contains("PlayerLastOpenedClearWorkflow.Execute", lifecycle);
+        Assert.DoesNotContain("if (ReferenceEquals(_lastOpened, this))", lifecycle);
         Assert.Contains("ConfirmUnappliedCodingChangesOnClose", lifecycle);
         Assert.Contains("_playerMediaRuntime.DetachVideoView", lifecycle);
         Assert.Contains("PlayerPlaybackResourceCleaner.StopPlayer", lifecycle);
@@ -3578,6 +3583,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("IsPlaybackDisposed", cleanupWorkflow);
         Assert.Contains("actions.MarkPlaybackDisposed()", cleanupWorkflow);
         Assert.Contains("public static class PlayerPlaybackResourceCleaner", cleaner);
+        Assert.Contains("if (!request.IsLastOpenedWindow)", lastOpenedClearWorkflow);
+        Assert.Contains("actions.ClearLastOpened()", lastOpenedClearWorkflow);
         Assert.Contains("AuswertungPro.Next.Application.Common.BestEffort.Try", cleaner);
     }
 
