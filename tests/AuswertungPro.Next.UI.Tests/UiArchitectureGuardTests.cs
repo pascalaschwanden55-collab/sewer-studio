@@ -530,12 +530,14 @@ public sealed class UiArchitectureGuardTests
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var codingModeStatePath = Path.Combine(uiRoot, "Player", "CodingModeStateController.cs");
         var importEventsOwnerPath = Path.Combine(uiRoot, "Player", "CodingImportReferenceEventsOwner.cs");
+        var overlayStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingOverlayStateControllerSet.cs");
         var sidePanelControllerSetPath = Path.Combine(uiRoot, "Player", "CodingSidePanelControllerSet.cs");
         var sidePanelEventBinderPath = Path.Combine(windowsRoot, "PlayerCodingSidePanelEventBinder.cs");
 
         Assert.True(File.Exists(statePath), "Coding-Feldzustand soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(codingModeStatePath), "Coding-Modus-Zustand soll nicht mehr als Rohfeld im PlayerWindow liegen.");
         Assert.True(File.Exists(importEventsOwnerPath), "Coding-Import-Referenz-Events sollen nicht mehr als rohe Collection im PlayerWindow liegen.");
+        Assert.True(File.Exists(overlayStateControllerSetPath), "Coding-Overlay-Zustandscontroller sollen nicht einzeln im PlayerWindow liegen.");
         Assert.True(File.Exists(sidePanelControllerSetPath), "Coding-SidePanel-Control-Wrapper sollen nicht mehr als einzelne Rohfelder im PlayerWindow liegen.");
         Assert.True(File.Exists(sidePanelEventBinderPath), "Coding-SidePanel-Event-Wiring soll ausserhalb des PlayerWindow-Partials liegen.");
 
@@ -543,6 +545,7 @@ public sealed class UiArchitectureGuardTests
         var state = File.ReadAllText(statePath);
         var codingModeState = File.Exists(codingModeStatePath) ? File.ReadAllText(codingModeStatePath) : "";
         var importEventsOwner = File.Exists(importEventsOwnerPath) ? File.ReadAllText(importEventsOwnerPath) : "";
+        var overlayStateControllerSet = File.Exists(overlayStateControllerSetPath) ? File.ReadAllText(overlayStateControllerSetPath) : "";
         var sidePanelControllerSet = File.Exists(sidePanelControllerSetPath) ? File.ReadAllText(sidePanelControllerSetPath) : "";
         var accessors = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.CodingSidePanelAccessors.cs"));
         var sidePanelEventBinder = File.Exists(sidePanelEventBinderPath) ? File.ReadAllText(sidePanelEventBinderPath) : "";
@@ -561,6 +564,16 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", state);
         Assert.DoesNotContain("private ICodingSessionService? _codingSessionService", state);
         Assert.DoesNotContain("private enum EingabemarkerPhase", state);
+        Assert.Contains("private readonly CodingOverlayStateControllerSet _codingOverlayStates = new();", state);
+        Assert.DoesNotContain("private readonly CodingCalibrationStateController _codingCalibrationState = new();", state);
+        Assert.DoesNotContain("private readonly CodingOverlayInputVisibilityStateController _codingOverlayInputVisibilityState = new();", state);
+        Assert.DoesNotContain("private readonly CodingOverlayRenderStateController _codingOverlayRenderState = new();", state);
+        Assert.DoesNotContain("private readonly CodingActiveToolNameStateController _codingActiveToolNameState = new();", state);
+        Assert.Contains("private CodingCalibrationStateController _codingCalibrationState => _codingOverlayStates.CalibrationState", state);
+        Assert.Contains("private CodingOverlayInputVisibilityStateController _codingOverlayInputVisibilityState => _codingOverlayStates.InputVisibilityState", state);
+        Assert.Contains("private CodingOverlayRenderStateController _codingOverlayRenderState => _codingOverlayStates.RenderState", state);
+        Assert.Contains("private CodingActiveToolNameStateController _codingActiveToolNameState => _codingOverlayStates.ActiveToolNameState", state);
+        Assert.Contains("public sealed class CodingOverlayStateControllerSet", overlayStateControllerSet);
         Assert.Contains("private readonly CodingEingabemarkerStateController _eingabemarkerState = new();", state);
         Assert.DoesNotContain("private readonly ObservableCollection<CodingEvent> _codingImportEvents", state);
         Assert.Contains("private readonly CodingImportReferenceEventsOwner _codingImportReferenceEvents = new();", state);

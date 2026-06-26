@@ -10,10 +10,7 @@ public partial class PlayerWindow
     private readonly CodingSchemaOverlayManagerOwner _codingSchemaManager = new();
     private readonly CodingSchemaTypeStateController _codingSchemaTypeState = new();
 
-    private readonly CodingCalibrationStateController _codingCalibrationState = new();
-    private readonly CodingOverlayInputVisibilityStateController _codingOverlayInputVisibilityState = new();
-    private readonly CodingOverlayRenderStateController _codingOverlayRenderState = new();
-    private readonly CodingActiveToolNameStateController _codingActiveToolNameState = new();
+    private readonly CodingOverlayStateControllerSet _codingOverlayStates = new();
 
     private readonly LiveDetectionPulseStateController _codingAiPulseStateController = new();
     private readonly CodingAiOverlayAutoHideTimerOwner _codingAiOverlayAutoHideTimerOwner = new();
@@ -39,4 +36,12 @@ public partial class PlayerWindow
     private readonly CodingPendingConfirmationStateController _codingPendingConfirmationState = new();
 
     private readonly CodingBaselineSignatureStateController _codingBaselineSignatureState = new();
+
+    private CodingCalibrationStateController _codingCalibrationState => _codingOverlayStates.CalibrationState;
+
+    private CodingOverlayInputVisibilityStateController _codingOverlayInputVisibilityState => _codingOverlayStates.InputVisibilityState;
+
+    private CodingOverlayRenderStateController _codingOverlayRenderState => _codingOverlayStates.RenderState;
+
+    private CodingActiveToolNameStateController _codingActiveToolNameState => _codingOverlayStates.ActiveToolNameState;
 }
