@@ -27,8 +27,7 @@ public partial class PlayerWindow
             new CodingPipelineHealthApplyWorkflowRequest(status),
             new CodingPipelineHealthApplyWorkflowActions(
                 SetUseMultiModel: _codingAiRuntimeOwner.Controller.SetUseMultiModel,
-                EnsureMultiModel: () => _codingAiRuntimeOwner.Controller.EnsureMultiModel(
-                    CodingAiRuntimeFactory.CreateMultiModelService),
+                EnsureMultiModel: () => CodingAiMultiModelEnsureWorkflow.Ensure(_codingAiRuntimeOwner.Controller),
                 SetCodingAiState: (summary, color, detail) => SetCodingAiState(summary, color, detail),
                 SetAnalyzeButtonEnabled: enabled => CodingAnalyzeButtonControls.SetEnabled(BtnCodingAnalyze, enabled),
                 UpdatePipelineHealthDetails: UpdatePipelineHealthDetails));

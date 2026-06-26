@@ -7995,12 +7995,14 @@ public sealed class UiArchitectureGuardTests
         var initializationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiInitializationWorkflow.cs");
         var creationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiRuntimeCreationWorkflow.cs");
         var healthMonitorCreationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiHealthMonitorCreationWorkflow.cs");
+        var multiModelEnsureWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiMultiModelEnsureWorkflow.cs");
         var settingsLoaderPath = Path.Combine(uiRoot, "Ai", "PlayerAiSettingsLoader.cs");
 
         Assert.True(File.Exists(factoryPath), "Coding-AI-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(initializationWorkflowPath), "Coding-AI-Initialisierungsentscheidungen sollen ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(creationWorkflowPath), "Coding-AI-Runtime-Verdrahtung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(healthMonitorCreationWorkflowPath), "Coding-AI-Health-Monitor-Verdrahtung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(multiModelEnsureWorkflowPath), "Coding-AI-MultiModel-Service-Erzeugung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(settingsLoaderPath), "Player-AI-Settings-Erzeugung soll ausserhalb von PlayerWindow liegen.");
 
         var health = File.ReadAllText(healthPath);
@@ -8009,6 +8011,7 @@ public sealed class UiArchitectureGuardTests
         var initializationWorkflow = File.ReadAllText(initializationWorkflowPath);
         var creationWorkflow = File.Exists(creationWorkflowPath) ? File.ReadAllText(creationWorkflowPath) : string.Empty;
         var healthMonitorCreationWorkflow = File.Exists(healthMonitorCreationWorkflowPath) ? File.ReadAllText(healthMonitorCreationWorkflowPath) : string.Empty;
+        var multiModelEnsureWorkflow = File.Exists(multiModelEnsureWorkflowPath) ? File.ReadAllText(multiModelEnsureWorkflowPath) : string.Empty;
         var settingsLoader = File.ReadAllText(settingsLoaderPath);
 
         Assert.DoesNotContain("PlayerAiSettingsLoader.LoadPlatformSettings", health);
@@ -8036,7 +8039,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("new SingleFrameMultiModelService", health);
         Assert.DoesNotContain("new MarkBoxSegmentationService", health);
         Assert.DoesNotContain("new SingleFrameMultiModelService", monitoring);
-        Assert.Contains("CodingAiRuntimeFactory.CreateMultiModelService", monitoring);
+        Assert.DoesNotContain("CodingAiRuntimeFactory.CreateMultiModelService", monitoring);
+        Assert.Contains("CodingAiMultiModelEnsureWorkflow.Ensure", monitoring);
+        Assert.Contains("CodingAiRuntimeFactory.CreateMultiModelService", multiModelEnsureWorkflow);
         Assert.Contains("new OllamaClient", factory);
         Assert.Contains("new VisionPipelineClient", factory);
         Assert.Contains("new AppSettingsAiSettingsProvider", settingsLoader);
