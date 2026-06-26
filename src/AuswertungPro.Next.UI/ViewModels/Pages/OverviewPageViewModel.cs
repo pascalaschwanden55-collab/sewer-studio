@@ -184,11 +184,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
     private void NewProject()
     {
-        _shell.NewProject();
-        LastProjectPath = _sp.Settings.LastProjectPath;
-        ProjectStatus = BuildProjectStatus();
-        LoadAllProjects();
-        _shell.NavigateTo("Projekt");
+        // Startet den Draft-Modus in der Shell (neues Projekt + Infoblatt).
+        _shell.StartNewProjectDraft();
     }
 
     private void OpenProject()
@@ -243,7 +240,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 // sind hinfaellig. Dirty-Flag zuruecksetzen, damit der Dirty-Guard in
                 // NewProject nicht anbietet, die geloeschte Datei wiederherzustellen.
                 _shell.Project.Dirty = false;
-                _shell.NewProject();
+                _shell.StartNewProjectDraft();
             }
 
             LoadAllProjects();

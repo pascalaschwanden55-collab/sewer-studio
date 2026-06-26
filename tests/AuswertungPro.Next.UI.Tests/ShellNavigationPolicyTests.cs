@@ -52,7 +52,6 @@ public sealed class ShellNavigationPolicyTests
     }
 
     [Theory]
-    [InlineData("Uebersicht")]
     [InlineData("Projekt")]
     [InlineData("Export")]
     [InlineData("Einstellungen")]

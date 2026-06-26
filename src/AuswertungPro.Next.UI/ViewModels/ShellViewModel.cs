@@ -1,14 +1,24 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
+using System;
 using System.IO;
 using System.Linq;
 using System.Windows.Data;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
 using AuswertungPro.Next.UI.Player;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.UI.ViewModels;
+
+/// <summary>Die drei Zustaende der Shell: Startbildschirm, Draft (neues Projekt) und Arbeitsbereich.</summary>
+public enum ShellMode
+{
+    Launcher,
+    Draft,
+    Workspace
+}
 
 public static class ShellNavigationPolicy
 {
@@ -16,7 +26,7 @@ public static class ShellNavigationPolicy
         => !CanOpenWithoutProject(title);
 
     public static bool CanOpenWithoutProject(string? title)
-        => title is "Uebersicht" or "Projekt" or "Export" or "Einstellungen";
+        => title is "Projekt" or "Export" or "Einstellungen";
 }
 
 public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPlayerShellProjectContext
@@ -41,6 +51,13 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     [ObservableProperty] private NavItem? _selectedNavItem;
     [ObservableProperty] private object? _currentPage;
 
+    [ObservableProperty] private ShellMode _currentMode = ShellMode.Launcher;
+
+    /// <summary>Menue/Nav/Shortcuts nur im Workspace sichtbar.</summary>
+    public bool IsMenuVisible => CurrentMode == ShellMode.Workspace;
+
+    partial void OnCurrentModeChanged(ShellMode value) => OnPropertyChanged(nameof(IsMenuVisible));
+
     public IRelayCommand SaveCommand { get; }
     public IRelayCommand NewProjectCommand { get; }
     public IRelayCommand OpenProjectCommand { get; }
@@ -48,6 +65,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     public IRelayCommand OpenPriceCatalogCommand { get; }
     public IRelayCommand OpenTemplateEditorCommand { get; }
     public IRelayCommand ToggleFocusModeCommand { get; }
+    public IRelayCommand SwitchProjectCommand { get; }
     [ObservableProperty] private bool _isProjectReady;
     [ObservableProperty] private bool _isFocusMode;
     [ObservableProperty] private bool _isAiWorking;
@@ -80,7 +98,6 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
         NavItems = new List<NavItem>
         {
-            new("\uE80F", "Uebersicht", () => new Pages.OverviewPageViewModel(this, _sp), canOpenWithoutProject: true),
             new("\uE8B7", "Projekt", () => new Pages.ProjectPageViewModel(this), canOpenWithoutProject: true),
             new("\uE8FD", "Haltungen", () => new Pages.DataPageViewModel(this, _sp)),
             new("\uE7F4", "Schaechte", () => new Pages.SchaechtePageViewModel(this, _sp)),
@@ -96,16 +113,16 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         };
         RefreshNavigationAvailability();
 
-        SaveCommand = new RelayCommand(SaveProject);
-        NewProjectCommand = new RelayCommand(NewProject);
+        SaveCommand = new RelayCommand(SaveProject, () => CurrentMode == ShellMode.Workspace);
+        NewProjectCommand = new RelayCommand(StartNewProjectDraft);
+        SwitchProjectCommand = new RelayCommand(SwitchProject);
         OpenProjectCommand = new RelayCommand(OpenProjectWithDialog);
         SaveAsProjectCommand = new RelayCommand(SaveProjectAs);
         OpenPriceCatalogCommand = new RelayCommand(OpenPriceCatalog);
         OpenTemplateEditorCommand = new RelayCommand(OpenTemplateEditor);
         ToggleFocusModeCommand = new RelayCommand(() => IsFocusMode = !IsFocusMode);
 
-        SelectedNavItem = NavItems[0];
-        SetCurrentPage(SelectedNavItem.CreatePage());
+        EnterLauncher();
         Monitor.Start();
 
         AiActivityTracker.ActiveChanged += OnAiActivityChanged;
@@ -289,34 +306,92 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             matrix.SelectHolding(holding);
     }
 
-    public void NewProject()
+    /// <summary>Zurueck zum Start-Bildschirm (Projektauswahl).</summary>
+    public void EnterLauncher()
+    {
+        _suppressLeaveGuard = true;
+        SelectedNavItem = null;
+        _suppressLeaveGuard = false;
+        _navItemBeforeChange = null;
+        CurrentMode = ShellMode.Launcher;
+        ResetProjectReady();
+        SetCurrentPage(new Pages.OverviewPageViewModel(this, _sp));
+    }
+
+    /// <summary>„Neues Projekt": leeres Projekt + Infoblatt im Draft-Modus.</summary>
+    public void StartNewProjectDraft()
     {
         if (!ConfirmDiscardUnsavedChanges())
             return;
 
-        var folder = _sp.Dialogs.SelectFolder("Projektordner waehlen");
-        if (string.IsNullOrWhiteSpace(folder))
+        ReplaceProject(new Project());
+        ResetProjectReady();
+        _suppressLeaveGuard = true;
+        SelectedNavItem = null;
+        _suppressLeaveGuard = false;
+        CurrentMode = ShellMode.Draft;
+        SetCurrentPage(new Pages.ProjectPageViewModel(this));
+    }
+
+    /// <summary>Wechselt in den Arbeitsbereich und navigiert auf die Landeseite.</summary>
+    public void EnterWorkspaceOn(string navTitle)
+    {
+        CurrentMode = ShellMode.Workspace;
+        NavigateTo(navTitle);
+    }
+
+    private void SwitchProject()
+    {
+        if (!ConfirmDiscardUnsavedChanges())
             return;
+        EnterLauncher();
+    }
 
-        var p = new Project();
-        var projectPath = Path.Combine(folder, "projekt.json");
+    /// <summary>Legt aus dem Draft-Infoblatt Projektordner + projekt.json an.</summary>
+    public bool CreateProjectFromDraft()
+    {
+        var name = Project.Name?.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            SetStatus("Bitte einen Projektnamen eingeben.");
+            return false;
+        }
 
-        EnsureProjectDirectory(projectPath);
-        var res = _sp.Projects.Save(p, projectPath);
+        var baseDir = _sp.Settings.ProjectsRootDirectory;
+        if (string.IsNullOrWhiteSpace(baseDir))
+        {
+            baseDir = _sp.Dialogs.SelectFolder("Projekte-Verzeichnis waehlen", @"D:\Projekt");
+            if (string.IsNullOrWhiteSpace(baseDir))
+                return false;
+            _sp.Settings.ProjectsRootDirectory = baseDir;
+            _sp.Settings.Save();
+        }
+
+        var plan = NewProjectFolderPlanner.Plan(baseDir, name, Directory.Exists);
+
+        try
+        {
+            Directory.CreateDirectory(plan.FolderPath);
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Projektordner konnte nicht angelegt werden: {ex.Message}");
+            return false;
+        }
+
+        var res = _sp.Projects.Save(Project, plan.ProjectFilePath);
         if (!res.Ok)
         {
             SetStatus($"Fehler: {res.ErrorMessage}");
-            return;
+            return false;
         }
 
-        _sp.Settings.LastProjectPath = projectPath;
+        _sp.Settings.AddRecentProject(plan.ProjectFilePath);
         _sp.Settings.Save();
-
-        ReplaceProject(p);
         MarkProjectReady();
-        SetStatus($"Neues Projekt: {Path.GetFileName(folder)}");
-
-        NavigateTo("Import");
+        SetStatus($"Neues Projekt: {name}");
+        EnterWorkspaceOn("Import");
+        return true;
     }
 
     /// <summary>
@@ -449,7 +524,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     }
 
     private void OpenProjectWithDialog()
-        => TryOpenProjectWithDialog();
+    {
+        if (TryOpenProjectWithDialog())
+            EnterWorkspaceOn("Haltungen");
+    }
 
     private void SaveProjectAs()
         => TrySaveProjectAs();
