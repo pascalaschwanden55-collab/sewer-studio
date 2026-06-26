@@ -1,5 +1,6 @@
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai;
+using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -21,6 +22,19 @@ public sealed record LiveDetectionMarkOverlayReadyActions(
     Action<IOverlayToolService> SetOverlayService,
     Action<CodingSessionViewModel> SetViewModel);
 
+public sealed record LiveDetectionMarkOverlayReadyStateRequest(
+    bool HasOverlayService,
+    bool HasViewModel,
+    string VideoPath,
+    AppSettings? Settings,
+    ICodingSessionService? ExistingSessionService,
+    IOverlayToolService? ExistingOverlayService);
+
+public sealed record LiveDetectionMarkOverlayReadyApplyActions(
+    Action<ICodingSessionService> SetSessionService,
+    Action<IOverlayToolService> SetOverlayService,
+    Action<CodingSessionViewModel> SetViewModel);
+
 public sealed record LiveDetectionMarkOverlayReadyResult(
     LiveDetectionMarkOverlayReadyOutcome Outcome)
 {
@@ -29,6 +43,28 @@ public sealed record LiveDetectionMarkOverlayReadyResult(
 
 public static class LiveDetectionMarkOverlayReadyWorkflow
 {
+    public static LiveDetectionMarkOverlayReadyResult Execute(
+        LiveDetectionMarkOverlayReadyStateRequest request,
+        LiveDetectionMarkOverlayReadyApplyActions actions)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(actions);
+
+        return Execute(
+            new LiveDetectionMarkOverlayReadyRequest(
+                request.HasOverlayService,
+                request.HasViewModel),
+            new LiveDetectionMarkOverlayReadyActions(
+                CreateState: () => CodingSessionStateFactory.Create(
+                    request.VideoPath,
+                    request.Settings,
+                    request.ExistingSessionService,
+                    request.ExistingOverlayService),
+                SetSessionService: actions.SetSessionService,
+                SetOverlayService: actions.SetOverlayService,
+                SetViewModel: actions.SetViewModel));
+    }
+
     public static LiveDetectionMarkOverlayReadyResult Execute(
         LiveDetectionMarkOverlayReadyRequest request,
         LiveDetectionMarkOverlayReadyActions actions)

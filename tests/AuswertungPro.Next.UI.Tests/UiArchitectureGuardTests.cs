@@ -5121,7 +5121,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_markToolControls.DeactivateDetectionSide", markTools);
         Assert.Contains("OverlayToolType.Point", activationWorkflow);
         Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", activationWorkflow);
-        Assert.Contains("CodingSessionStateFactory.Create", markTools);
+        Assert.DoesNotContain("CodingSessionStateFactory.Create", markTools);
+        Assert.Contains("CodingSessionStateFactory.Create", overlayReadyWorkflow);
         Assert.Contains("if (request.HasOverlayService && request.HasViewModel)", overlayReadyWorkflow);
         Assert.Contains("actions.CreateState()", overlayReadyWorkflow);
         Assert.Contains("actions.SetSessionService(state.SessionService)", overlayReadyWorkflow);

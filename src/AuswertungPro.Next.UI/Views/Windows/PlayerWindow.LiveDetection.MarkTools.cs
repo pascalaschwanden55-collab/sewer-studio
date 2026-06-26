@@ -1,7 +1,6 @@
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -55,15 +54,14 @@ public partial class PlayerWindow
     private void EnsureMarkOverlayReady()
     {
         LiveDetectionMarkOverlayReadyWorkflow.Execute(
-            new LiveDetectionMarkOverlayReadyRequest(
+            new LiveDetectionMarkOverlayReadyStateRequest(
                 _codingOverlayRuntimeOwner.HasService,
-                _codingSessionHost.HasViewModel),
-            new LiveDetectionMarkOverlayReadyActions(
-                CreateState: () => CodingSessionStateFactory.Create(
-                    _videoPath,
-                    _dependencies.Settings,
-                    _codingSessionRuntimeOwner.Service,
-                    _codingOverlayRuntimeOwner.Service),
+                _codingSessionHost.HasViewModel,
+                _videoPath,
+                _dependencies.Settings,
+                _codingSessionRuntimeOwner.Service,
+                _codingOverlayRuntimeOwner.Service),
+            new LiveDetectionMarkOverlayReadyApplyActions(
                 SetSessionService: _codingSessionRuntimeOwner.Set,
                 SetOverlayService: _codingOverlayRuntimeOwner.Set,
                 SetViewModel: viewModel => _codingSessionViewModelOwner.Set(
