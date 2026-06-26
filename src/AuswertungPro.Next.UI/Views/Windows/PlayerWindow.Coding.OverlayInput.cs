@@ -36,8 +36,8 @@ public partial class PlayerWindow
 
         CodingOverlayInputMouseWorkflow.MouseMove(
             new CodingOverlayInputMouseMoveRequest(
-                IsEingabemarkerDrawingWithPreview: _eingabemarkerPhase == EingabemarkerPhase.Drawing &&
-                    _eingabemarkerPreviewRect != null,
+                IsEingabemarkerDrawingWithPreview: _eingabemarkerState.IsDrawing &&
+                    _eingabemarkerState.HasPreview,
                 HasOverlayService: _codingOverlayToolHost.HasOverlayService,
                 HasViewModel: _codingSessionHost.HasViewModel),
             new CodingOverlayInputMouseMoveActions(
@@ -55,7 +55,7 @@ public partial class PlayerWindow
 
         CodingOverlayInputMouseWorkflow.MouseUp(
             new CodingOverlayInputMouseUpRequest(
-                IsEingabemarkerDrawing: _eingabemarkerPhase == EingabemarkerPhase.Drawing,
+                IsEingabemarkerDrawing: _eingabemarkerState.IsDrawing,
                 HasOverlayService: _codingOverlayToolHost.HasOverlayService,
                 HasViewModel: _codingSessionHost.HasViewModel),
             new CodingOverlayInputMouseUpActions(
@@ -67,10 +67,5 @@ public partial class PlayerWindow
     }
 
     private CodingOverlayInputEingabemarkerState CurrentCodingOverlayInputEingabemarkerState()
-        => _eingabemarkerPhase switch
-        {
-            EingabemarkerPhase.Drawing => CodingOverlayInputEingabemarkerState.Drawing,
-            EingabemarkerPhase.Input or EingabemarkerPhase.Analyzing => CodingOverlayInputEingabemarkerState.InputBlocked,
-            _ => CodingOverlayInputEingabemarkerState.Inactive
-        };
+        => _eingabemarkerState.OverlayInputState;
 }

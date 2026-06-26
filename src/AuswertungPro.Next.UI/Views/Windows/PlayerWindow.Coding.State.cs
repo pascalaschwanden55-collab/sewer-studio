@@ -46,11 +46,7 @@ public partial class PlayerWindow
     private readonly ICodingOverlayToolHost _codingOverlayToolHost;
     private readonly CodingNavigationPendingState _codingNavigationPendingState = new();
 
-    private enum EingabemarkerPhase { Inactive, Drawing, Input, Analyzing }
-    private EingabemarkerPhase _eingabemarkerPhase = EingabemarkerPhase.Inactive;
-    private Point _eingabemarkerDragStart;
-    private Rect _eingabemarkerRectNorm;
-    private System.Windows.Shapes.Rectangle? _eingabemarkerPreviewRect;
+    private readonly CodingEingabemarkerStateController _eingabemarkerState = new();
 
     private readonly ObservableCollection<CodingEvent> _codingImportEvents = new();
     private readonly CodingProtocolMatchStateController _codingProtocolMatchState = new();

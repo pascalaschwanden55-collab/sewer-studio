@@ -18,7 +18,7 @@ public partial class PlayerWindow
                 _codingSessionRuntimeOwner.Service != null),
             new CodingEingabemarkerSubmissionWorkflowActions(
                 HideInput: () => CodingEingabemarkerPopupControls.Hide(EingabemarkerPopup),
-                SetAnalyzingPhase: () => _eingabemarkerPhase = EingabemarkerPhase.Analyzing,
+                SetAnalyzingPhase: _eingabemarkerState.SetAnalyzingPhase,
                 ResolveCodeHint: ResolveEingabemarkerCodeHint,
                 FindDuplicate: codeHint =>
                 {

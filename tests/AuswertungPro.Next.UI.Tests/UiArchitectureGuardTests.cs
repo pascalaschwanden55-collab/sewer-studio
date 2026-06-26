@@ -354,8 +354,43 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private readonly CodingSessionServiceOwner _codingSessionRuntimeOwner", state);
         Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", state);
         Assert.DoesNotContain("private ICodingSessionService? _codingSessionService", state);
-        Assert.Contains("private enum EingabemarkerPhase", state);
+        Assert.DoesNotContain("private enum EingabemarkerPhase", state);
+        Assert.Contains("private readonly CodingEingabemarkerStateController _eingabemarkerState = new();", state);
         Assert.Contains("private readonly ObservableCollection<CodingEvent> _codingImportEvents", state);
+    }
+
+    [Fact]
+    public void PlayerWindow_eingabemarker_state_lives_in_state_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var markerPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Eingabemarker.cs");
+        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
+        var submissionPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Eingabemarker.Submission.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "CodingEingabemarkerStateController.cs");
+
+        Assert.True(File.Exists(controllerPath), "Eingabemarker-Zustand soll nicht mehr als Rohfelder im PlayerWindow liegen.");
+
+        var state = File.ReadAllText(statePath);
+        var marker = File.ReadAllText(markerPath);
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var submission = File.ReadAllText(submissionPath);
+        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
+
+        Assert.DoesNotContain("private enum EingabemarkerPhase", state);
+        Assert.DoesNotContain("_eingabemarkerPhase", state + marker + overlayInput + submission);
+        Assert.DoesNotContain("_eingabemarkerDragStart", state + marker + overlayInput + submission);
+        Assert.DoesNotContain("_eingabemarkerRectNorm", state + marker + overlayInput + submission);
+        Assert.DoesNotContain("_eingabemarkerPreviewRect", state + marker + overlayInput + submission);
+        Assert.Contains("private readonly CodingEingabemarkerStateController _eingabemarkerState = new();", state);
+        Assert.Contains("public sealed class CodingEingabemarkerStateController", controller);
+        Assert.Contains("public CodingEingabemarkerPhase Phase", controller);
+        Assert.Contains("public Point DragStart", controller);
+        Assert.Contains("public Rect NormalizedSelection", controller);
+        Assert.Contains("public System.Windows.Shapes.Rectangle? PreviewRect", controller);
+        Assert.Contains("public CodingOverlayInputEingabemarkerState OverlayInputState", controller);
     }
 
     [Fact]
