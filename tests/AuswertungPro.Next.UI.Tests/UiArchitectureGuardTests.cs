@@ -2672,6 +2672,7 @@ public sealed class UiArchitectureGuardTests
         var captureServicePath = Path.Combine(uiRoot, "Player", "PlayerSnapshotFileCaptureService.cs");
         var pauseStarterPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotPauseStarter.cs");
         var snapshotWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotWorkflow.cs");
+        var snapshotCaptureWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotCaptureWorkflow.cs");
         var snapshotHostPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotCaptureHost.cs");
         var mediaHostFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
 
@@ -2679,6 +2680,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(captureServicePath), "Snapshot-Datei-Capture muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(pauseStarterPath), "Snapshot-Pause-Start muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(snapshotWorkflowPath), "Snapshot-Verfuegbarkeit und Capture-Reihenfolge sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(snapshotCaptureWorkflowPath), "Snapshot-Pfad und Datei-Capture-Serviceaufruf sollen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(snapshotHostPath), "Direkter VLC-Snapshot-Capture soll ueber einen Host laufen.");
         Assert.True(File.Exists(mediaHostFactoryPath), "Player-Hosts sollen gebuendelt ausserhalb des PlayerWindow-Konstruktors verdrahtet werden.");
 
@@ -2689,13 +2691,18 @@ public sealed class UiArchitectureGuardTests
         var captureService = File.ReadAllText(captureServicePath);
         var pauseStarter = File.Exists(pauseStarterPath) ? File.ReadAllText(pauseStarterPath) : "";
         var snapshotWorkflow = File.Exists(snapshotWorkflowPath) ? File.ReadAllText(snapshotWorkflowPath) : "";
+        var snapshotCaptureWorkflow = File.Exists(snapshotCaptureWorkflowPath) ? File.ReadAllText(snapshotCaptureWorkflowPath) : "";
         var snapshotHost = File.Exists(snapshotHostPath) ? File.ReadAllText(snapshotHostPath) : "";
         var mediaHostFactory = File.Exists(mediaHostFactoryPath) ? File.ReadAllText(mediaHostFactoryPath) : "";
 
         Assert.Contains("PlayerSnapshotWorkflow.TryTakeSnapshot", snapshot);
         Assert.Contains("PlayerSnapshotWorkflow.TakeSnapshotSafe", snapshot);
-        Assert.Contains("PlayerSnapshotPathPolicy.Create", snapshot);
-        Assert.Contains("PlayerSnapshotFileCaptureServiceFactory.Create", snapshot);
+        Assert.Contains("PlayerSnapshotCaptureWorkflow.Capture", snapshot);
+        Assert.DoesNotContain("PlayerSnapshotPathPolicy.Create", snapshot);
+        Assert.DoesNotContain("PlayerSnapshotFileCaptureServiceFactory.Create", snapshot);
+        Assert.Contains("PlayerSnapshotPathPolicy.Create", snapshotCaptureWorkflow);
+        Assert.Contains("PlayerSnapshotFileCaptureServiceFactory.Create", snapshotCaptureWorkflow);
+        Assert.Contains("service.TryCapture(target, actions.TakeSnapshot, out var capturedPath)", snapshotCaptureWorkflow);
         Assert.Contains("_playerSnapshotCaptureHost.TakeSnapshot", snapshot);
         Assert.Contains("private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost", state);
         Assert.Contains("PlayerMediaRuntimeFactory.Create", windowRoot);

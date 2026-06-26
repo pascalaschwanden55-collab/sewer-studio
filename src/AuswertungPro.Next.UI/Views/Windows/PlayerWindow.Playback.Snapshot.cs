@@ -21,12 +21,8 @@ public partial class PlayerWindow
                 CurrentTime: playerWindow?._playerTimelineHost.CurrentTime),
             new PlayerSnapshotActions(
                 Capture: () =>
-                {
-                    var target = PlayerSnapshotPathPolicy.Create();
-                    var captured = PlayerSnapshotFileCaptureServiceFactory.Create()
-                        .TryCapture(target, path => playerWindow!.TakeSnapshotSafe(path), out var capturedPath);
-                    return new PlayerSnapshotCaptureResult(captured, capturedPath);
-                }));
+                    PlayerSnapshotCaptureWorkflow.Capture(
+                        path => playerWindow!.TakeSnapshotSafe(path))));
 
         snapshotPath = result.SnapshotPath;
         return result.Captured;
