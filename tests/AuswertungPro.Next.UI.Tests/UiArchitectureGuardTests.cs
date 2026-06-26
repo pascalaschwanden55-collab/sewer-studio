@@ -5913,10 +5913,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingAiOverlayLifecycleWorkflow.FadeOutAfterAction", lifecycle);
         Assert.Contains("CodingOverlayCleanupController.ClearAiOverlays", lifecycle);
         Assert.DoesNotContain("CodingOverlayCanvasCleaner.ClearAiOverlays", lifecycle);
+        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", lifecycle);
         Assert.DoesNotContain("TimeSpan.FromMilliseconds(800)", lifecycle);
         Assert.Contains("CodingOverlayCanvasCleaner.ClearAiOverlays", controller);
         Assert.Contains("CodingOverlayCanvasCleaner.ClearTransient", surface);
         Assert.Contains("TimeSpan.FromMilliseconds(800)", lifecycleWorkflow);
+        Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", lifecycleWorkflow);
         Assert.Contains("actions.ScheduleClear", lifecycleWorkflow);
         Assert.DoesNotContain("CodingOverlayCleanupPolicy.ShouldRemoveTransientTag(el.Tag", overlayInput + viewport);
         Assert.DoesNotContain(".OfType<FrameworkElement>()", overlayInput + viewport);
@@ -5955,8 +5957,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("DetectionOverlayCleanupController.ClearAll", lifecycle);
         Assert.Contains("DetectionOverlayCleanupController.ClearVisuals", lifecycle);
         Assert.Contains("CodingAiOverlayLifecycleWorkflow.ScheduleAutoHide", lifecycle);
+        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", lifecycle);
         Assert.DoesNotContain("TimeSpan.FromSeconds(3)", lifecycle);
         Assert.Contains("TimeSpan.FromSeconds(3)", lifecycleWorkflow);
+        Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", lifecycleWorkflow);
         Assert.Contains("actions.ClearVisuals", lifecycleWorkflow);
         Assert.DoesNotContain("DetectionOverlayCleaner.", lifecycle);
         Assert.DoesNotContain("DetectionCanvas.Children.Clear()", lifecycle);

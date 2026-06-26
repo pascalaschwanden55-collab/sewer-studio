@@ -1,4 +1,3 @@
-using System;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -28,11 +27,8 @@ public partial class PlayerWindow
         => CodingAiOverlayLifecycleWorkflow.ScheduleAutoHide(
             new CodingAiOverlayAutoHideRequest(
                 HasTimer: _detectionAutoHideTimer is not null),
-            new CodingAiOverlayAutoHideActions(
-                CreateTimer: (delay, clear) =>
-                {
-                    _detectionAutoHideTimer = PlayerWindowTimerFactory.CreateOneShotTimer(delay, clear);
-                },
+            new CodingAiOverlayAutoHideHostActions(
+                SetTimer: timer => _detectionAutoHideTimer = timer,
                 StopTimer: () => _detectionAutoHideTimer!.Stop(),
                 StartTimer: () => _detectionAutoHideTimer!.Start(),
                 ClearVisuals: () => DetectionOverlayCleanupController.ClearVisuals(
@@ -45,12 +41,7 @@ public partial class PlayerWindow
     /// </summary>
     private void FadeOutAiOverlayAfterAction()
         => CodingAiOverlayLifecycleWorkflow.FadeOutAfterAction(
-            new CodingAiOverlayFadeOutActions(
+            new CodingAiOverlayFadeOutHostActions(
                 RenderAiOverlays: RenderAiOverlays,
-                ScheduleClear: (delay, clear) =>
-                {
-                    var timer = PlayerWindowTimerFactory.CreateOneShotTimer(delay, clear);
-                    timer.Start();
-                },
                 ClearAiOverlays: () => CodingOverlayCleanupController.ClearAiOverlays(CodingOverlayCanvas)));
 }

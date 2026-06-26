@@ -5,6 +5,38 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingAiOverlayLifecycleWorkflowTests
 {
     [Fact]
+    public void ScheduleAutoHide_offers_host_actions_overload()
+    {
+        var overload = typeof(CodingAiOverlayLifecycleWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingAiOverlayLifecycleWorkflow.ScheduleAutoHide) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual(
+                    [
+                        typeof(CodingAiOverlayAutoHideRequest),
+                        typeof(CodingAiOverlayAutoHideHostActions),
+                    ]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
+    public void FadeOutAfterAction_offers_host_actions_overload()
+    {
+        var overload = typeof(CodingAiOverlayLifecycleWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingAiOverlayLifecycleWorkflow.FadeOutAfterAction) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual([typeof(CodingAiOverlayFadeOutHostActions)]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
     public void ScheduleAutoHide_creates_timer_when_missing_and_restarts_it()
     {
         var calls = new List<string>();
