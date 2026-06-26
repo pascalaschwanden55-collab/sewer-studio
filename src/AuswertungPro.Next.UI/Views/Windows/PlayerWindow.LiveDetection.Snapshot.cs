@@ -8,9 +8,9 @@ public partial class PlayerWindow
 {
     private async Task<byte[]?> CaptureCurrentFrameAsync()
     {
-        return await LiveDetectionFrameCaptureServiceFactory.Create((path, width) => TakeSnapshotSafe(path, width))
-            .CaptureAsync(
-                () => _closing || _playbackDisposed,
-                _liveDetectionController.DetectionCancellation?.Token ?? CancellationToken.None);
+        return await LiveDetectionFrameCaptureWorkflow.CaptureAsync(
+            (path, width) => TakeSnapshotSafe(path, width),
+            () => _closing || _playbackDisposed,
+            _liveDetectionController.DetectionCancellation?.Token ?? CancellationToken.None);
     }
 }
