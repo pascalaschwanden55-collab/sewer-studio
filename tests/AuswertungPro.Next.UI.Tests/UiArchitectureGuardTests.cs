@@ -526,6 +526,8 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("CodingScreenshotToastWorkflow.Show", playerWindowText);
         Assert.DoesNotContain("if (WindowClipboardCaptureService.TryCopyWindowToClipboard", playerWindowText);
         Assert.DoesNotContain("TimeSpan.FromSeconds(2.5)", tools);
+        Assert.DoesNotContain("new System.Windows.Threading.DispatcherTimer", tools);
+        Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", tools);
         Assert.DoesNotContain("catch { }", tools);
         Assert.Contains("BitBlt", service);
         Assert.Contains("Clipboard.SetImage", service);

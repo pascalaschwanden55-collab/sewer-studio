@@ -5,6 +5,7 @@ using System.Windows.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Player;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -64,16 +65,7 @@ public partial class PlayerWindow
                 ShowStatusMessage: message => LiveDetectionStatusControls.ShowStatusMessage(
                     LiveDetectionStatusText,
                     message),
-                ScheduleHideStatus: (delay, hide) =>
-                {
-                    var t = new System.Windows.Threading.DispatcherTimer { Interval = delay };
-                    t.Tick += (s, ev) =>
-                    {
-                        hide();
-                        t.Stop();
-                    };
-                    t.Start();
-                },
+                ScheduleHideStatus: (delay, hide) => PlayerWindowTimerFactory.CreateOneShotTimer(delay, hide).Start(),
                 HideStatus: () => LiveDetectionStatusControls.HideDetectionStatus(LiveDetectionStatusText)));
 
     private void UpdateCodingOverlayCursor()
