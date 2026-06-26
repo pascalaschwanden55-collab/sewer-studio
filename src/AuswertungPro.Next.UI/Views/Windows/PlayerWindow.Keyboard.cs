@@ -1,4 +1,3 @@
-using System.Windows;
 using System.Windows.Input;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
@@ -53,11 +52,11 @@ public partial class PlayerWindow
                 _codingModeState.IsCodingMode,
                 BtnCodingLiveAi.IsChecked == true,
                 LiveDetectionButton.IsChecked == true),
-            new PlayerDetectionShortcutWorkflowActions(
-                SetCodingLiveAiChecked: isChecked => BtnCodingLiveAi.IsChecked = isChecked,
-                InvokeCodingLiveAi: () => CodingLiveAi_Click(BtnCodingLiveAi, new RoutedEventArgs()),
-                SetLiveDetectionChecked: isChecked => LiveDetectionButton.IsChecked = isChecked,
-                InvokeLiveDetection: () => LiveDetection_Click(LiveDetectionButton, new RoutedEventArgs())));
+            PlayerDetectionShortcutControls.CreateActions(
+                BtnCodingLiveAi,
+                LiveDetectionButton,
+                CodingLiveAi_Click,
+                LiveDetection_Click));
     }
 
     private void ToggleMarkToolShortcut()

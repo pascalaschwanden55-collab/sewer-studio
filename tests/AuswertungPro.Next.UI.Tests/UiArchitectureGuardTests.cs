@@ -3964,6 +3964,7 @@ public sealed class UiArchitectureGuardTests
         var factoryPath = Path.Combine(uiRoot, "Player", "PlayerKeyboardActionControllerFactory.cs");
         var markToolShortcutWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerMarkToolShortcutWorkflow.cs");
         var detectionShortcutWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerDetectionShortcutWorkflow.cs");
+        var detectionShortcutControlsPath = Path.Combine(windowsRoot, "PlayerDetectionShortcutControls.cs");
         var cancelOverlayShortcutWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerCancelCodingOverlayShortcutWorkflow.cs");
 
         Assert.True(File.Exists(keyboardPath), "Keyboard-Wiring soll in einem eigenen PlayerWindow-Partial liegen.");
@@ -3973,6 +3974,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(factoryPath), "Keyboard-Controller-Bindings sollen ausserhalb des PlayerWindow-Partials gebaut werden.");
         Assert.True(File.Exists(markToolShortcutWorkflowPath), "Markierwerkzeug-Shortcut-Entscheidung soll ausserhalb des PlayerWindow liegen.");
         Assert.True(File.Exists(detectionShortcutWorkflowPath), "Detection-Shortcut-Entscheidung soll ausserhalb des PlayerWindow liegen.");
+        Assert.True(File.Exists(detectionShortcutControlsPath), "Detection-Shortcut-Control-Actions sollen ausserhalb des PlayerWindow gebaut werden.");
         Assert.True(File.Exists(cancelOverlayShortcutWorkflowPath), "Overlay-Abbruch-Shortcut-Entscheidung soll ausserhalb des PlayerWindow liegen.");
 
         var playback = File.ReadAllText(playbackPath);
@@ -3983,6 +3985,7 @@ public sealed class UiArchitectureGuardTests
         var factory = File.Exists(factoryPath) ? File.ReadAllText(factoryPath) : "";
         var markToolShortcutWorkflow = File.Exists(markToolShortcutWorkflowPath) ? File.ReadAllText(markToolShortcutWorkflowPath) : "";
         var detectionShortcutWorkflow = File.Exists(detectionShortcutWorkflowPath) ? File.ReadAllText(detectionShortcutWorkflowPath) : "";
+        var detectionShortcutControls = File.Exists(detectionShortcutControlsPath) ? File.ReadAllText(detectionShortcutControlsPath) : "";
         var cancelOverlayShortcutWorkflow = File.Exists(cancelOverlayShortcutWorkflowPath) ? File.ReadAllText(cancelOverlayShortcutWorkflowPath) : "";
 
         Assert.DoesNotContain("PlayerWindow_PreviewKeyDown", playback);
@@ -4004,6 +4007,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerMarkToolShortcutWorkflow.Execute", keyboard);
         Assert.DoesNotContain("MarkToolPopup.IsOpen", keyboard);
         Assert.Contains("PlayerDetectionShortcutWorkflow.Execute", keyboard);
+        Assert.Contains("PlayerDetectionShortcutControls.CreateActions", keyboard);
+        Assert.DoesNotContain("new RoutedEventArgs", keyboard);
+        Assert.DoesNotContain("=> BtnCodingLiveAi.IsChecked =", keyboard);
+        Assert.DoesNotContain("=> LiveDetectionButton.IsChecked =", keyboard);
         Assert.DoesNotContain("if (_isCodingMode)", keyboard);
         Assert.DoesNotContain("BtnCodingLiveAi.IsChecked = !", keyboard);
         Assert.DoesNotContain("LiveDetectionButton.IsChecked = !", keyboard);
@@ -4026,6 +4033,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("request.IsCodingMode", detectionShortcutWorkflow);
         Assert.Contains("actions.SetCodingLiveAiChecked", detectionShortcutWorkflow);
         Assert.Contains("actions.SetLiveDetectionChecked", detectionShortcutWorkflow);
+        Assert.Contains("new RoutedEventArgs", detectionShortcutControls);
+        Assert.Contains("codingLiveAiButton.IsChecked =", detectionShortcutControls);
+        Assert.Contains("liveDetectionButton.IsChecked =", detectionShortcutControls);
         Assert.Contains("request.IsMouseCaptured", cancelOverlayShortcutWorkflow);
         Assert.Contains("request.HasCodingViewModel", cancelOverlayShortcutWorkflow);
         Assert.Contains("request.IsCodingOverlayOpen", cancelOverlayShortcutWorkflow);
