@@ -391,6 +391,11 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("_onEntryCreated", playerWindowPartials);
         Assert.DoesNotContain("_haltungRecord", playerWindowPartials);
         Assert.Contains("private readonly PlayerMediaRuntime _playerMediaRuntime", state);
+        Assert.Contains("private readonly PlayerMediaHosts _playerMediaHosts", state);
+        Assert.DoesNotContain("private readonly PlayerTimelineHost _playerTimelineHost", state);
+        Assert.DoesNotContain("private readonly PlayerPlaybackControlHost _playerPlaybackControlHost", state);
+        Assert.DoesNotContain("private readonly PlayerMarqueeOverlayHost _playerMarqueeOverlayHost", state);
+        Assert.DoesNotContain("private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost", state);
         Assert.Contains("private readonly PlayerPositionControls _positionControls", state);
         Assert.Contains("private readonly PlayerSpeedControls _speedControls", state);
         Assert.Contains("private readonly PlayerMarkToolControls _markToolControls", state);
@@ -3123,7 +3128,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("PlayerSnapshotFileCaptureServiceFactory.Create", snapshotCaptureWorkflow);
         Assert.Contains("service.TryCapture(target, actions.TakeSnapshot, out var capturedPath)", snapshotCaptureWorkflow);
         Assert.Contains("_playerSnapshotCaptureHost.TakeSnapshot", snapshot);
-        Assert.Contains("private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost", state);
+        Assert.Contains("private PlayerSnapshotCaptureHost _playerSnapshotCaptureHost => _playerMediaHosts.SnapshotCaptureHost", state);
         Assert.Contains("PlayerMediaRuntimeFactory.Create", windowRoot);
         Assert.Contains("new PlayerSnapshotCaptureHost", mediaHostFactory);
         Assert.Contains("public sealed class PlayerSnapshotCaptureHost", snapshotHost);
@@ -3312,7 +3317,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("_playerMarqueeOverlayHost.Show", overlay);
         Assert.Contains("_playerMarqueeOverlayHost.Disable", overlay);
         Assert.Contains("_playerMarqueeOverlayHost.Disable", snapshot);
-        Assert.Contains("private readonly PlayerMarqueeOverlayHost _playerMarqueeOverlayHost", state);
+        Assert.Contains("private PlayerMarqueeOverlayHost _playerMarqueeOverlayHost => _playerMediaHosts.MarqueeOverlayHost", state);
         Assert.Contains("PlayerMediaRuntimeFactory.Create", windowRoot);
         Assert.Contains("new PlayerMarqueeOverlayHost", mediaHostFactory);
         Assert.Contains("PlayerMarqueeOverlayDisabler.Disable", host);
@@ -7153,7 +7158,7 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public sealed class PlayerTimelineHost", host);
         Assert.Contains("double? CurrentSeconds", host);
         Assert.Contains("double? DurationSeconds", host);
-        Assert.Contains("private readonly PlayerTimelineHost _playerTimelineHost", state);
+        Assert.Contains("private PlayerTimelineHost _playerTimelineHost => _playerMediaHosts.TimelineHost", state);
         Assert.Contains("PlayerMediaRuntimeFactory.Create", windowRoot);
         Assert.Contains("new PlayerTimelineHost", mediaHostFactory);
         Assert.Contains("_playerTimelineHost", osd);
@@ -7283,7 +7288,7 @@ public sealed class UiArchitectureGuardTests
         var host = File.ReadAllText(hostPath);
         var mediaHostFactory = File.ReadAllText(mediaHostFactoryPath);
 
-        Assert.Contains("private readonly PlayerPlaybackControlHost _playerPlaybackControlHost", state);
+        Assert.Contains("private PlayerPlaybackControlHost _playerPlaybackControlHost => _playerMediaHosts.PlaybackControlHost", state);
         Assert.Contains("PlayerMediaRuntimeFactory.Create", windowRoot);
         Assert.Contains("new PlayerPlaybackControlHost", mediaHostFactory);
         Assert.Contains("public sealed class PlayerPlaybackControlHost", host);
@@ -7358,12 +7363,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("var normalizedOptions = PlayerWindowOptions.Normalize(options)", windowRoot);
         Assert.Contains("PlayerMediaRuntimeFactory.Create(normalizedOptions)", windowRoot);
         Assert.DoesNotContain("_options", windowRoot);
-        Assert.Contains("_playerMediaRuntime.Hosts", windowRoot);
+        Assert.Contains("_playerMediaHosts = _playerMediaRuntime.Hosts", windowRoot);
         Assert.Contains("_playerMediaRuntime.AttachVideoView(VideoView)", windowRoot);
-        Assert.Contains("TimelineHost", windowRoot);
-        Assert.Contains("PlaybackControlHost", windowRoot);
-        Assert.Contains("MarqueeOverlayHost", windowRoot);
-        Assert.Contains("SnapshotCaptureHost", windowRoot);
+        Assert.DoesNotContain("var playerMediaHosts", windowRoot);
+        Assert.DoesNotContain("TimelineHost = playerMediaHosts", windowRoot);
+        Assert.DoesNotContain("PlaybackControlHost = playerMediaHosts", windowRoot);
+        Assert.DoesNotContain("MarqueeOverlayHost = playerMediaHosts", windowRoot);
+        Assert.DoesNotContain("SnapshotCaptureHost = playerMediaHosts", windowRoot);
         Assert.DoesNotContain("new PlayerTimelineHost", windowRoot);
         Assert.DoesNotContain("new PlayerPlaybackControlHost", windowRoot);
         Assert.DoesNotContain("new PlayerMarqueeOverlayHost", windowRoot);

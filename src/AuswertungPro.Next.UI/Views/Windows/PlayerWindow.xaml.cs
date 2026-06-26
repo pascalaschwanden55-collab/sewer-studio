@@ -51,12 +51,7 @@ public partial class PlayerWindow : Window
 
         _playerMediaRuntime = PlayerMediaRuntimeFactory.Create(normalizedOptions);
         _playerMediaRuntime.AttachVideoView(VideoView);
-
-        var playerMediaHosts = _playerMediaRuntime.Hosts;
-        _playerTimelineHost = playerMediaHosts.TimelineHost;
-        _playerPlaybackControlHost = playerMediaHosts.PlaybackControlHost;
-        _playerMarqueeOverlayHost = playerMediaHosts.MarqueeOverlayHost;
-        _playerSnapshotCaptureHost = playerMediaHosts.SnapshotCaptureHost;
+        _playerMediaHosts = _playerMediaRuntime.Hosts;
 
         var controllerSet = PlayerWindowControllerSetFactory.Create(
             new PlayerWindowControllerSetControls(

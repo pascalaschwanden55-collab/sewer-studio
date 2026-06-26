@@ -7,14 +7,11 @@ public partial class PlayerWindow
 {
     // Core playback/window state.
     private readonly PlayerMediaRuntime _playerMediaRuntime;
+    private readonly PlayerMediaHosts _playerMediaHosts;
     private readonly PlayerWindowPlaybackContext _playbackContext;
     private readonly PlayerPositionControls _positionControls;
     private readonly PlayerSpeedControls _speedControls;
-    private readonly PlayerTimelineHost _playerTimelineHost;
-    private readonly PlayerPlaybackControlHost _playerPlaybackControlHost;
     private readonly PlayerPositionSliderStateController _positionSliderStateController = new();
-    private readonly PlayerMarqueeOverlayHost _playerMarqueeOverlayHost;
-    private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost;
     private readonly PlayerMarkToolControls _markToolControls;
     private readonly PlayerKeyboardActionControllerOwner _keyboardActionControllerOwner = new();
     private readonly DamageMarkerController _damageMarkerController;
@@ -33,4 +30,12 @@ public partial class PlayerWindow
     private readonly PlayerWindowShutdownStateController _shutdownState = new();
 
     private static readonly PlayerLastOpenedWindowOwner<PlayerWindow> LastOpenedWindow = new();
+
+    private PlayerTimelineHost _playerTimelineHost => _playerMediaHosts.TimelineHost;
+
+    private PlayerPlaybackControlHost _playerPlaybackControlHost => _playerMediaHosts.PlaybackControlHost;
+
+    private PlayerMarqueeOverlayHost _playerMarqueeOverlayHost => _playerMediaHosts.MarqueeOverlayHost;
+
+    private PlayerSnapshotCaptureHost _playerSnapshotCaptureHost => _playerMediaHosts.SnapshotCaptureHost;
 }
