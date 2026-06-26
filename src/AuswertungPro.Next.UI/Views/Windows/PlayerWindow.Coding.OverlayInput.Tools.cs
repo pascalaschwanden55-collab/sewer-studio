@@ -6,7 +6,6 @@ using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
-using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -55,7 +54,7 @@ public partial class PlayerWindow
     private void CodingScreenshot_Click(object sender, RoutedEventArgs e)
         => CodingScreenshotCommandWorkflow.Execute(
             new CodingScreenshotCommandActions(
-                CopyWindowToClipboard: () => WindowClipboardCaptureService.TryCopyWindowToClipboard(this),
+                CopyWindowToClipboard: () => PlayerClipboardControls.TryCopyWindowToClipboard(this),
                 ShowToast: ShowCodingScreenshotToast));
 
     private void ShowCodingScreenshotToast(string msg)
