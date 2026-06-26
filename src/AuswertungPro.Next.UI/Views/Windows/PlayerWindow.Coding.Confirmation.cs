@@ -24,16 +24,21 @@ public partial class PlayerWindow
 
     private void PauseAndAskConfirmation(CodingEvent codingEvent, QualityGateResult gateResult)
     {
-        PlayerConfirmationPlayback.PauseCodingConfirmation(_playerPlaybackControlHost.SetPause);
-        _codingSessionRuntimeOwner.Service?.SetWaitingForInput();
-
-        _codingPendingConfirmEvent = codingEvent;
-        _codingPendingGateResult = gateResult;
-
-        var ampelColor = _codingConfirmationPanelControls.Apply(codingEvent, gateResult);
-
-        SetCodingAiState(TxtCodingAiStatus.Text, ampelColor,
-            CodingConfirmationDisplayPolicy.QualityGateStatusText(gateResult));
+        CodingConfirmationPauseWorkflow.Execute(
+            new CodingConfirmationPauseWorkflowRequest(
+                codingEvent,
+                gateResult,
+                TxtCodingAiStatus.Text,
+                _codingSessionRuntimeOwner.Service),
+            new CodingConfirmationPauseWorkflowActions(
+                SetPause: _playerPlaybackControlHost.SetPause,
+                StorePendingConfirmation: (pendingEvent, pendingGate) =>
+                {
+                    _codingPendingConfirmEvent = pendingEvent;
+                    _codingPendingGateResult = pendingGate;
+                },
+                ApplyConfirmationPanel: _codingConfirmationPanelControls.Apply,
+                ShowStatus: (status, color, detail) => SetCodingAiState(status, color, detail)));
     }
 
     private void ConfirmAccept_Click(object sender, RoutedEventArgs e)

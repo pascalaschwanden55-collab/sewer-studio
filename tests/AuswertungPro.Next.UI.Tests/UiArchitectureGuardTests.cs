@@ -3345,16 +3345,19 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var helperPath = Path.Combine(uiRoot, "Player", "PlayerConfirmationPlayback.cs");
+        var pauseWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationPauseWorkflow.cs");
         var resumeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationResumeWorkflow.cs");
         var displayWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationDisplayWorkflow.cs");
         var codingConfirmationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Confirmation.cs");
         var liveDetectionConfirmationPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Confirmation.cs");
 
         Assert.True(File.Exists(helperPath), "Confirmation-Playback-Regeln sollen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(pauseWorkflowPath), "Coding-Confirmation-Pause-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(resumeWorkflowPath), "Coding-Confirmation-Resume-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(displayWorkflowPath), "LiveDetection-Confirmation-Display-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var helper = File.ReadAllText(helperPath);
+        var pauseWorkflow = File.Exists(pauseWorkflowPath) ? File.ReadAllText(pauseWorkflowPath) : "";
         var resumeWorkflow = File.ReadAllText(resumeWorkflowPath);
         var displayWorkflow = File.Exists(displayWorkflowPath) ? File.ReadAllText(displayWorkflowPath) : "";
         var codingConfirmation = File.ReadAllText(codingConfirmationPath);
@@ -3365,10 +3368,16 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("ResumeCodingLiveAi", helper);
         Assert.Contains("PauseLiveDetectionConfirmation", helper);
 
-        Assert.Contains("PlayerConfirmationPlayback.PauseCodingConfirmation", codingConfirmation);
+        Assert.Contains("CodingConfirmationPauseWorkflow.Execute", codingConfirmation);
+        Assert.DoesNotContain("PlayerConfirmationPlayback.PauseCodingConfirmation", codingConfirmation);
+        Assert.Contains("PlayerConfirmationPlayback.PauseCodingConfirmation", pauseWorkflow);
+        Assert.Contains("request.CodingSessionService?.SetWaitingForInput()", pauseWorkflow);
+        Assert.Contains("actions.StorePendingConfirmation", pauseWorkflow);
+        Assert.Contains("actions.ApplyConfirmationPanel", pauseWorkflow);
         Assert.Contains("CodingConfirmationResumeWorkflow.Apply", codingConfirmation);
         Assert.DoesNotContain("PlayerConfirmationPlayback.ResumeCodingLiveAi", codingConfirmation);
         Assert.Contains("PlayerConfirmationPlayback.ResumeCodingLiveAi", resumeWorkflow);
+        Assert.DoesNotContain("CodingConfirmationDisplayPolicy.QualityGateStatusText", codingConfirmation);
         Assert.DoesNotContain("_player.SetPause(true)", codingConfirmation);
         Assert.DoesNotContain("_player.SetPause(false)", codingConfirmation);
 
