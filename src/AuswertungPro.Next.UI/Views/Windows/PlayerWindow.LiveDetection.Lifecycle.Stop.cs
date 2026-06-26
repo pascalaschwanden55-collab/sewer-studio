@@ -1,4 +1,3 @@
-using System;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -35,12 +34,7 @@ public partial class PlayerWindow
 
     private void StartLiveDetectionHideStatusTimer()
         => LiveDetectionHideStatusTimerWorkflow.Schedule(
-            new LiveDetectionHideStatusTimerWorkflowActions(
-                Schedule: (delay, action) =>
-                {
-                    var hideTimer = PlayerWindowTimerFactory.CreateOneShotTimer(delay, action);
-                    hideTimer.Start();
-                },
+            new LiveDetectionHideStatusTimerDisplayActions(
                 IsDetecting: () => _liveDetectionController.IsDetecting,
                 HideDetectionStatus: () => LiveDetectionStatusControls.HideDetectionStatus(LiveDetectionStatusText)));
 }

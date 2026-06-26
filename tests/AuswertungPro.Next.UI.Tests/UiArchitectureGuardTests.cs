@@ -1642,10 +1642,12 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("public static class LiveDetectionStopUiWorkflow", stopUiWorkflow);
         Assert.Contains("public static class LiveDetectionHideStatusTimerWorkflow", hideStatusTimerWorkflow);
         Assert.Contains("TimeSpan.FromSeconds(5)", hideStatusTimerWorkflow);
+        Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", hideStatusTimerWorkflow);
         Assert.Contains("actions.HideDetectionStatus()", hideStatusTimerWorkflow);
         Assert.Contains("LiveDetectionStatusControls.ShowStoppedDetectionStatus", stop);
         Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", stop);
         Assert.DoesNotContain("if (!_liveDetectionController.IsDetecting)", stop);
+        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", stop);
         Assert.DoesNotContain("TimeSpan.FromSeconds(5)", stop);
         Assert.DoesNotContain("AiStatusBadge.Visibility", stop);
         Assert.DoesNotContain("FindingSummaryPanel.Visibility", stop);
