@@ -40,9 +40,11 @@ public partial class PlayerWindow
                 BaselineSignature: _codingBaselineSignature),
             new CodingUnappliedChangesCloseWorkflowActions(
                 BuildSignature: CodingEventsSignatureBuilder.Build,
-                ConfirmWithSuspendedOverlay: () => RunWithSuspendedCodingOverlayInput(() =>
-                    CodingApplyDialogServiceFactory.Create()
-                        .ConfirmUnappliedChangesOnClose(() => ApplyCodingChanges(showOverlay: false)))));
+                ConfirmWithSuspendedOverlay: () => CodingUnappliedChangesCloseDialogWorkflow.Execute(
+                    new CodingUnappliedChangesCloseDialogWorkflowActions(
+                        RunWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback),
+                        CreateDialogService: CodingApplyDialogServiceFactory.Create,
+                        ApplyChanges: () => ApplyCodingChanges(showOverlay: false)))));
 
         return result.ShouldClose;
     }
