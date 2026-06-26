@@ -7,6 +7,15 @@ public sealed record CodingUnappliedChangesCloseDialogWorkflowActions(
 
 public static class CodingUnappliedChangesCloseDialogWorkflow
 {
+    public static bool Execute(
+        Func<Func<bool>, bool> runWithSuspendedOverlay,
+        Func<bool> applyChanges)
+        => Execute(
+            new CodingUnappliedChangesCloseDialogWorkflowActions(
+                RunWithSuspendedOverlay: runWithSuspendedOverlay,
+                CreateDialogService: CodingApplyDialogServiceFactory.Create,
+                ApplyChanges: applyChanges));
+
     public static bool Execute(CodingUnappliedChangesCloseDialogWorkflowActions actions)
     {
         ArgumentNullException.ThrowIfNull(actions);

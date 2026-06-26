@@ -3047,7 +3047,9 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingProtocolRevisionUpdater.ApplyCodingEvents", apply);
         Assert.DoesNotContain("CodingApplyEmptyProtocolGuard.Build", apply);
         Assert.DoesNotContain("HasUnappliedCodingChanges", apply);
-        Assert.Contains("CodingApplyDialogServiceFactory.Create", apply);
+        Assert.DoesNotContain("CodingApplyDialogServiceFactory.Create", apply);
+        Assert.DoesNotContain("new CodingApplyEmptyProtocolDialogWorkflowActions", apply);
+        Assert.DoesNotContain("new CodingUnappliedChangesCloseDialogWorkflowActions", apply);
         Assert.Contains("_codingSessionHost", apply);
         Assert.Contains("ConfirmEmptyProtocol", apply);
         Assert.DoesNotContain(".ConfirmEmptyProtocol(", apply);
@@ -3066,9 +3068,13 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.SetBaselineSignature", applyWorkflow);
         Assert.Contains("actions.BuildSignature(request.Events)", closeWorkflow);
         Assert.Contains("actions.ConfirmWithSuspendedOverlay()", closeWorkflow);
+        Assert.Contains("CodingApplyDialogServiceFactory.Create", emptyDialogWorkflow);
+        Assert.Contains("new CodingApplyEmptyProtocolDialogWorkflowActions", emptyDialogWorkflow);
         Assert.Contains("actions.CreateDialogService()", emptyDialogWorkflow);
         Assert.Contains("ConfirmEmptyProtocol", emptyDialogWorkflow);
         Assert.Contains("actions.RunWithSuspendedOverlay", closeDialogWorkflow);
+        Assert.Contains("CodingApplyDialogServiceFactory.Create", closeDialogWorkflow);
+        Assert.Contains("new CodingUnappliedChangesCloseDialogWorkflowActions", closeDialogWorkflow);
         Assert.Contains("actions.CreateDialogService()", closeDialogWorkflow);
         Assert.Contains("ConfirmUnappliedChangesOnClose", closeDialogWorkflow);
         Assert.DoesNotContain(".GroupBy(e => e.EntryId)", apply);

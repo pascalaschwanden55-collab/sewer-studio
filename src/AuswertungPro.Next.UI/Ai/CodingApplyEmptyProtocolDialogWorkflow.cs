@@ -5,6 +5,12 @@ public sealed record CodingApplyEmptyProtocolDialogWorkflowActions(
 
 public static class CodingApplyEmptyProtocolDialogWorkflow
 {
+    public static bool Execute(CodingApplyEmptyProtocolGuardResult guard)
+        => Execute(
+            guard,
+            new CodingApplyEmptyProtocolDialogWorkflowActions(
+                CreateDialogService: CodingApplyDialogServiceFactory.Create));
+
     public static bool Execute(
         CodingApplyEmptyProtocolGuardResult guard,
         CodingApplyEmptyProtocolDialogWorkflowActions actions)

@@ -6,6 +6,20 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingApplyEmptyProtocolDialogWorkflowTests
 {
     [Fact]
+    public void Execute_offers_default_dialog_service_wiring()
+    {
+        var overload = typeof(CodingApplyEmptyProtocolDialogWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingApplyEmptyProtocolDialogWorkflow.Execute) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual([typeof(CodingApplyEmptyProtocolGuardResult)]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
     public void Execute_creates_dialog_service_and_delegates_empty_protocol_confirmation()
     {
         var calls = new List<string>();

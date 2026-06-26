@@ -6,6 +6,24 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingUnappliedChangesCloseDialogWorkflowTests
 {
     [Fact]
+    public void Execute_offers_default_dialog_service_wiring()
+    {
+        var overload = typeof(CodingUnappliedChangesCloseDialogWorkflow)
+            .GetMethods()
+            .SingleOrDefault(method =>
+                method.Name == nameof(CodingUnappliedChangesCloseDialogWorkflow.Execute) &&
+                method.GetParameters()
+                    .Select(parameter => parameter.ParameterType)
+                    .SequenceEqual(
+                    [
+                        typeof(Func<Func<bool>, bool>),
+                        typeof(Func<bool>),
+                    ]));
+
+        Assert.NotNull(overload);
+    }
+
+    [Fact]
     public void Execute_runs_unapplied_close_dialog_inside_suspended_overlay_scope()
     {
         var calls = new List<string>();

@@ -18,10 +18,7 @@ public partial class PlayerWindow
                 _codingSessionHost.EventCollection,
                 showOverlay),
             new CodingApplyChangesWorkflowActions(
-                ConfirmEmptyProtocol: guard => CodingApplyEmptyProtocolDialogWorkflow.Execute(
-                    guard,
-                    new CodingApplyEmptyProtocolDialogWorkflowActions(
-                        CreateDialogService: CodingApplyDialogServiceFactory.Create)),
+                ConfirmEmptyProtocol: CodingApplyEmptyProtocolDialogWorkflow.Execute,
                 AssignProtocol: document => _haltungRecord!.Protocol = document,
                 MarkProjectDirty: MarkProjectDirtyForCoding,
                 SyncCodingToPrimaryDamages: SyncCodingToPrimaryDamages,
@@ -44,10 +41,8 @@ public partial class PlayerWindow
             new CodingUnappliedChangesCloseWorkflowActions(
                 BuildSignature: CodingEventsSignatureBuilder.Build,
                 ConfirmWithSuspendedOverlay: () => CodingUnappliedChangesCloseDialogWorkflow.Execute(
-                    new CodingUnappliedChangesCloseDialogWorkflowActions(
-                        RunWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback),
-                        CreateDialogService: CodingApplyDialogServiceFactory.Create,
-                        ApplyChanges: () => ApplyCodingChanges(showOverlay: false)))));
+                    runWithSuspendedOverlay: callback => RunWithSuspendedCodingOverlayInput(callback),
+                    applyChanges: () => ApplyCodingChanges(showOverlay: false))));
 
         return result.ShouldClose;
     }
