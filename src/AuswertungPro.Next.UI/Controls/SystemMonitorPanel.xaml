@@ -27,27 +27,27 @@
 
         <Style x:Key="MetricPercentText" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Consolas"/>
-            <Setter Property="FontSize" Value="19"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="TextAlignment" Value="Right"/>
-            <Setter Property="MinWidth" Value="44"/>
+            <Setter Property="MinWidth" Value="36"/>
             <Setter Property="HorizontalAlignment" Value="Right"/>
         </Style>
 
         <Style x:Key="MetricCard" TargetType="Border">
-            <Setter Property="Padding" Value="9,8"/>
-            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
         </Style>
 
         <Style x:Key="MetricTrack" TargetType="Border">
-            <Setter Property="Height" Value="7"/>
-            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Height" Value="5"/>
+            <Setter Property="CornerRadius" Value="3"/>
             <Setter Property="Background" Value="{DynamicResource BorderLightBrush}"/>
-            <Setter Property="Margin" Value="0,7,0,6"/>
+            <Setter Property="Margin" Value="0,4,0,3"/>
             <Setter Property="ClipToBounds" Value="True"/>
         </Style>
     </UserControl.Resources>
@@ -90,9 +90,9 @@
             </Grid>
         </Expander.Header>
 
-        <Border Margin="0,8,0,0"
-                Padding="8"
-                CornerRadius="10"
+        <Border Margin="0,5,0,0"
+                Padding="6"
+                CornerRadius="8"
                 BorderThickness="1"
                 BorderBrush="{DynamicResource BorderBrush}"
                 Background="{DynamicResource HeaderBrush}"
