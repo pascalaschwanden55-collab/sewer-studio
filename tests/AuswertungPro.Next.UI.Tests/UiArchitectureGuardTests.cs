@@ -3951,6 +3951,7 @@ public sealed class UiArchitectureGuardTests
         var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Training.cs");
         var acceptGreenCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAcceptGreenMatchesCommandWorkflow.cs");
         var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingImportConfirmCommandWorkflow.cs");
+        var confirmWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingConfirmationWorkflow.cs");
         var importTrainingResultWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingImportTrainingResultWorkflow.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingWorkflowService.cs");
         var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
@@ -3958,6 +3959,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(trainingPath), "ProtocolMatch-Trainingsuebernahme soll aus dem Match-Partial heraus.");
         Assert.True(File.Exists(acceptGreenCommandWorkflowPath), "Green-Match-Accept-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(commandWorkflowPath), "Import-Confirm-Auswahlentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(confirmWorkflowPath), "Import-Confirm-Serviceaufruf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(importTrainingResultWorkflowPath), "Import-Training-Ergebnisbehandlung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "ProtocolMatch-Trainingsworkflow soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowFactoryPath), "ProtocolMatch-Trainingsworkflow soll ueber Factory verdrahtet werden.");
@@ -3966,6 +3968,7 @@ public sealed class UiArchitectureGuardTests
         var training = File.ReadAllText(trainingPath);
         var acceptGreenCommandWorkflow = File.Exists(acceptGreenCommandWorkflowPath) ? File.ReadAllText(acceptGreenCommandWorkflowPath) : "";
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
+        var confirmWorkflow = File.Exists(confirmWorkflowPath) ? File.ReadAllText(confirmWorkflowPath) : "";
         var importTrainingResultWorkflow = File.Exists(importTrainingResultWorkflowPath) ? File.ReadAllText(importTrainingResultWorkflowPath) : "";
         var workflow = File.ReadAllText(workflowPath);
         var workflowFactory = File.ReadAllText(workflowFactoryPath);
@@ -3998,6 +4001,9 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("actions.ConfirmImportAsTrainingAsync(importEvent)", commandWorkflow);
         Assert.Contains("private async Task<bool> ConfirmImportAsTrainingAsync", training);
         Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", training);
+        Assert.Contains("CodingProtocolImportTrainingConfirmationWorkflow.ConfirmAsync", training);
+        Assert.DoesNotContain(".ConfirmAsync(importEvent)", confirmCoreBody);
+        Assert.Contains("service.ConfirmAsync(importEvent)", confirmWorkflow);
         Assert.Contains("CodingImportTrainingResultWorkflow.Execute", confirmCoreBody);
         Assert.DoesNotContain("if (!result.Accepted)", confirmCoreBody);
         Assert.DoesNotContain("var badge = result.Badge", confirmCoreBody);

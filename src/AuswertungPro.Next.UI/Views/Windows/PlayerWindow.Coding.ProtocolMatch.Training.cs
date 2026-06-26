@@ -40,10 +40,12 @@ public partial class PlayerWindow
 
     private async Task<bool> ConfirmImportAsTrainingAsync(CodingEvent importEvent)
     {
-        var result = await CodingProtocolImportTrainingWorkflowServiceFactory.Create(
-                SeekToImportEvent,
-                () => TryTakeSnapshot(out var snapshotPath) ? snapshotPath : null)
-            .ConfirmAsync(importEvent);
+        var result = await CodingProtocolImportTrainingConfirmationWorkflow.ConfirmAsync(
+            importEvent,
+            SeekToImportEvent,
+            () => TryTakeSnapshot(out var snapshotPath) ? snapshotPath : null,
+            new CodingProtocolImportTrainingConfirmationWorkflowActions(
+                CreateService: CodingProtocolImportTrainingWorkflowServiceFactory.Create));
         return CodingImportTrainingResultWorkflow.Execute(
             result,
             new CodingImportTrainingResultActions(
