@@ -30,7 +30,7 @@
     <Color x:Key="ColorSuccess">#FF16A34A</Color>
     <Color x:Key="ColorDanger">#FFDC2626</Color>
     <Color x:Key="ColorWarning">#FFF59E0B</Color>
-    <Color x:Key="ColorInfo">#FF2563EB</Color>
+    <Color x:Key="ColorInfo">#FF0EA5E9</Color>
 
     <!-- ── SOLID BRUSHES ── -->
     <SolidColorBrush x:Key="BgLightBrush" Color="{StaticResource ColorBgLight}"/>
@@ -54,6 +54,22 @@
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ColorDanger}"/>
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}"/>
     <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource ColorInfo}"/>
+
+    <!-- ── DESIGNSTUDIE: Zweit-Akzent (Teal), Severity-Skala, Akzent-Verlauf ── -->
+    <Color x:Key="ColorSecondaryAccent">#FF0891B2</Color>
+    <Color x:Key="ColorSecondaryAccentHover">#FF0E7490</Color>
+    <SolidColorBrush x:Key="SecondaryAccentBrush" Color="{StaticResource ColorSecondaryAccent}"/>
+    <SolidColorBrush x:Key="SecondaryAccentHoverBrush" Color="{StaticResource ColorSecondaryAccentHover}"/>
+    <SolidColorBrush x:Key="SecondaryAccentSubtleBrush" Color="#FFCFFAFE"/>
+    <SolidColorBrush x:Key="Severity1Brush" Color="#FF16A34A"/>
+    <SolidColorBrush x:Key="Severity2Brush" Color="#FF65A30D"/>
+    <SolidColorBrush x:Key="Severity3Brush" Color="#FFF59E0B"/>
+    <SolidColorBrush x:Key="Severity4Brush" Color="#FFEA580C"/>
+    <SolidColorBrush x:Key="Severity5Brush" Color="#FFDC2626"/>
+    <LinearGradientBrush x:Key="AccentBarBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#FF2563EB" Offset="0"/>
+        <GradientStop Color="#FF0891B2" Offset="1"/>
+    </LinearGradientBrush>
 
     <!-- ── GRADIENT BRUSHES ── -->
     <LinearGradientBrush x:Key="BgBrush" StartPoint="0,0" EndPoint="1,1">
@@ -151,7 +167,11 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="6"
                             Padding="{TemplateBinding Padding}"
+                            RenderTransformOrigin="0.5,0.5"
                             SnapsToDevicePixels="True">
+                        <Border.RenderTransform>
+                            <ScaleTransform x:Name="MainScale"/>
+                        </Border.RenderTransform>
                         <ContentPresenter HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         RecognizesAccessKey="True"/>
@@ -164,6 +184,22 @@
                                     <SolidColorBrush Color="{StaticResource ColorAccent}" Opacity="0.04"/>
                                 </Setter.Value>
                             </Setter>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="MainScale" Storyboard.TargetProperty="ScaleX" To="1.03" Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="MainScale" Storyboard.TargetProperty="ScaleY" To="1.03" Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="MainScale" Storyboard.TargetProperty="ScaleX" To="1.0" Duration="0:0:0.12"/>
+                                        <DoubleAnimation Storyboard.TargetName="MainScale" Storyboard.TargetProperty="ScaleY" To="1.0" Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="MainBorder" Property="Background">
@@ -276,13 +312,11 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border Name="bd"
+                            Background="{StaticResource AccentBarBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="5"
                             Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True">
-                        <Border.Background>
-                            <SolidColorBrush Color="{StaticResource ColorAccent}"/>
-                        </Border.Background>
                         <ContentPresenter HorizontalAlignment="Center"
                                           VerticalAlignment="Center"
                                           RecognizesAccessKey="True"/>
@@ -428,8 +462,8 @@
         <Setter Property="Cursor" Value="Hand"/>
         <Style.Triggers>
             <Trigger Property="IsChecked" Value="True">
-                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource SecondaryAccentBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource SecondaryAccentSubtleBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             </Trigger>
         </Style.Triggers>

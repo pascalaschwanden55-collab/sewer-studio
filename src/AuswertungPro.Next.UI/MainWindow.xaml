@@ -232,7 +232,7 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <Border x:Name="AccentStrip" Grid.Column="0"
-                                                    Background="{DynamicResource AccentBrush}"
+                                                    Background="{DynamicResource AccentBarBrush}"
                                                     CornerRadius="1.5" Margin="0,6" Opacity="0"/>
                                             <Border x:Name="bd" Grid.Column="1" Background="Transparent"
                                                     CornerRadius="6" Padding="2"
