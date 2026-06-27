@@ -44,7 +44,7 @@ public sealed class SystemMonitorProcessSafetyTests
     }
 
     [Fact]
-    public void PerformanceMonitorUsesDetailedModernPanelAndAvoidsOldCrowdedTitle()
+    public void PerformanceMonitorUsesCompactModernPanelAndAvoidsRemovedSensorStatusCard()
     {
         var mainWindowXaml = File.ReadAllText(FindRepoFile("src", "AuswertungPro.Next.UI", "MainWindow.xaml"));
         var panelXaml = File.ReadAllText(FindRepoFile("src", "AuswertungPro.Next.UI", "Controls", "SystemMonitorPanel.xaml"));
@@ -57,7 +57,8 @@ public sealed class SystemMonitorProcessSafetyTests
         Assert.Contains("Text=\"RAM Arbeitsspeicher\"", panelXaml);
         Assert.Contains("Text=\"GPU Grafikprozessor\"", panelXaml);
         Assert.Contains("Text=\"VRAM Videospeicher\"", panelXaml);
-        Assert.Contains("Text=\"Sensorstatus\"", panelXaml);
+        Assert.DoesNotContain("Text=\"Sensorstatus\"", panelXaml);
+        Assert.DoesNotContain("CpuTempStatusText", panelXaml);
         Assert.DoesNotContain("Text=\"LEISTUNGSMONITOR\"", mainWindowXaml);
         Assert.DoesNotContain("Text=\"LEISTUNGSMONITOR\"", panelXaml);
     }

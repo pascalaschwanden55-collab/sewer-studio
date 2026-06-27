@@ -30,17 +30,22 @@ public sealed class AiStartupUiTests
     }
 
     [Fact]
-    public void MainWindow_ai_sidebar_shows_started_runtime_status_not_only_active_work()
+    public void Shell_tracks_ai_runtime_status_without_sidebar_neural_sphere()
     {
         var xaml = ReadUiFile("MainWindow.xaml");
-        var sidebar = ExtractSection(xaml, "<!-- KI Neural Sphere -->", "<ListBox ItemsSource=");
+        var shell = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "ShellViewModel.cs"));
 
-        Assert.Contains("IsAiIndicatorVisible", sidebar);
-        Assert.Contains("AiIndicatorTitle", sidebar);
-        Assert.Contains("AiDisplayLoadedModels", sidebar);
-        Assert.Contains("AiDisplayStatusLabel", sidebar);
-        Assert.Contains("IsActive=\"{Binding IsAiWorking}\"", sidebar);
-        Assert.DoesNotContain("Binding=\"{Binding IsAiWorking}\" Value=\"True\"", sidebar);
+        Assert.Contains("AiRuntimeStatusTracker.Changed += ApplyAiRuntimeStatus", shell);
+        Assert.Contains("AiRuntimeStatusTracker.Changed -= ApplyAiRuntimeStatus", shell);
+        Assert.Contains("public bool IsAiIndicatorVisible => IsAiWorking || IsAiRuntimeVisible;", shell);
+        Assert.Contains("public string AiDisplayLoadedModels => IsAiWorking ? AiLoadedModels : AiRuntimeLoadedModels;", shell);
+        Assert.DoesNotContain("<!-- KI Neural Sphere -->", xaml);
+        Assert.DoesNotContain("<ctrl:NeuralSphereControl", xaml);
     }
 
     private static string ReadUiFile(params string[] relativeParts)
