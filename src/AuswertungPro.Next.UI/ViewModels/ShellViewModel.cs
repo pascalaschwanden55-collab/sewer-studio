@@ -328,7 +328,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         if (!ConfirmDiscardUnsavedChanges())
             return;
 
-        ReplaceProject(new Project());
+        ReplaceProject(new Project { Name = string.Empty });
         ResetProjectReady();
         _suppressLeaveGuard = true;
         SelectedNavItem = null;

@@ -18,6 +18,7 @@ public sealed class ProjektEroeffnungProjectPageGuardTests
         var vm = Vm();
         Assert.Contains("DraftName", vm);
         Assert.Contains("AnlegenCommand", vm);
+        Assert.Contains("AbbrechenCommand", vm);
         Assert.Contains("CreateProjectFromDraft", vm);
         Assert.Contains("public bool IsDraft", vm);
     }
@@ -30,5 +31,9 @@ public sealed class ProjektEroeffnungProjectPageGuardTests
         Assert.DoesNotContain("Content=\"Öffnen\"", xaml);
         Assert.Contains("Content=\"Projekt anlegen\"", xaml);
         Assert.Contains("AnlegenCommand", xaml);
+        Assert.Contains("Content=\"Abbrechen\"", xaml);
+        Assert.Contains("AbbrechenCommand", xaml);
+        Assert.Contains("Content=\"Projekt speichern\" Command=\"{Binding SaveCommand}\"", xaml);
+        Assert.Contains("Visibility=\"{Binding IsNotDraft, Converter={StaticResource BoolToVis}}\"", xaml);
     }
 }

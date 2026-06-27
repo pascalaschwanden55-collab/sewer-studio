@@ -18,6 +18,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject
 
     public IRelayCommand SaveAsCommand { get; }
     public IRelayCommand AnlegenCommand { get; }
+    public IRelayCommand AbbrechenCommand { get; }
 
     [ObservableProperty] private string _draftName = string.Empty;
 
@@ -79,6 +80,7 @@ public sealed partial class ProjectPageViewModel : ObservableObject
         AnlegenCommand = new RelayCommand(
             () => _shell.CreateProjectFromDraft(),
             () => !string.IsNullOrWhiteSpace(DraftName));
+        AbbrechenCommand = new RelayCommand(_shell.EnterLauncher);
 
         DraftName = Project.Name ?? string.Empty;
 
