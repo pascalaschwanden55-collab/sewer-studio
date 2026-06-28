@@ -1240,54 +1240,13 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
 
     /// <summary>
     /// Erzeugt den "Primaere_Schaeden" Text aus den Protokoll-Eintraegen.
-    /// Format: "0.00m CODE Beschreibung\n..."
-    /// Streckenschaden-Marker (A01, B02) werden zum echten VSA-Code aufgeloest.
+    /// Delegation: Logik liegt jetzt in Common.PrimaryDamagesTextBuilder.
     /// </summary>
     private static void BuildPrimaryDamagesText(HaltungRecord record, List<ProtocolEntry> entries)
     {
-        if (entries.Count == 0)
-            return;
-
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var lines = new List<string>();
-        foreach (var entry in entries)
-        {
-            var rawCode = (entry.Code ?? "").Trim().ToUpperInvariant();
-            var desc = entry.Beschreibung?.Trim();
-            if (string.IsNullOrWhiteSpace(desc) && string.IsNullOrWhiteSpace(rawCode))
-                continue;
-
-            // Streckenschaden-Marker zum echten VSA-Code aufloesen
-            var code = ResolveEffectiveCode(rawCode, desc, out var resolvedDesc);
-
-            // Deduplicate by effective code + meter position
-            if (code.Length > 0)
-            {
-                var meterKey = entry.MeterStart.HasValue ? entry.MeterStart.Value.ToString("F2") : "";
-                var key = $"{code}|{meterKey}";
-                if (!seen.Add(key))
-                    continue;
-            }
-
-            var line = "";
-            if (entry.MeterStart.HasValue)
-                line = $"{entry.MeterStart.Value:0.00}m ";
-
-            if (!string.IsNullOrWhiteSpace(code) && !string.IsNullOrWhiteSpace(resolvedDesc))
-                line += $"{code} {resolvedDesc}";
-            else if (!string.IsNullOrWhiteSpace(code))
-                line += code;
-            else
-                line += resolvedDesc;
-
-            lines.Add(line.TrimEnd());
-        }
-
-        if (lines.Count == 0)
-            return;
-
-        var text = XtfPrimaryDamageFormatter.DeduplicateText(string.Join("\n", lines));
-        record.SetFieldValue("Primaere_Schaeden", text, FieldSource.Legacy, userEdited: false);
+        var text = Common.PrimaryDamagesTextBuilder.Build(entries, skipAePrefix: false);
+        if (text is not null)
+            record.SetFieldValue("Primaere_Schaeden", text, FieldSource.Legacy, userEdited: false);
     }
 
     private static void ApplyField(HaltungRecord record, string field, string? value)
