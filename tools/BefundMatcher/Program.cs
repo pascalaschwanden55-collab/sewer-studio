@@ -131,11 +131,32 @@ sealed record PilotReport(List<BefundMatchFinding> GroundTruth, List<BefundMatch
 
 static class ReportReader
 {
+    /// <summary>
+    /// Liest einen ClassifierPilot-Report aus einer Datei.
+    /// Delegiert an <see cref="ReadFromJson"/> nach dem Einlesen des Dateiinhalts.
+    /// </summary>
     public static PilotReport? Read(string file)
     {
         try
         {
-            using var doc = JsonDocument.Parse(File.ReadAllText(file));
+            return ReadFromJson(File.ReadAllText(file));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Parst einen ClassifierPilot-Report aus einem JSON-String.
+    /// Bildet ground_truth/detections/vergleich auf <see cref="BefundMatchFinding"/>-Listen ab,
+    /// ohne eine Datei zu benoetigen.
+    /// </summary>
+    public static PilotReport? ReadFromJson(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
             var gt = new List<BefundMatchFinding>();
