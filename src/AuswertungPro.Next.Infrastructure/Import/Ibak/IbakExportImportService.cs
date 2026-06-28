@@ -219,17 +219,13 @@ public sealed class IbakExportImportService : IIbakImportService
 
     private static void LinkHoldingPdf(HaltungRecord record, string holdingKey, Dictionary<string, List<string>> index)
     {
-        var matches = index.Keys
-            .Where(k => k.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-            .Where(k => k.Contains(holdingKey, StringComparison.OrdinalIgnoreCase))
-            .Select(k => ResolveFile(index, k))
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
+        // Gemeinsame PDF-Treffer-Suche via Common-Helfer
+        var matches = Common.PdfFileIndexHelper.ResolvePdfMatches(index, holdingKey);
 
         if (matches.Count == 0)
             return;
 
-        var first = matches[0]!;
+        var first = matches[0];
         record.SetFieldValue("PDF_Path", first, FieldSource.Legacy, userEdited: false);
         if (matches.Count > 1)
             record.SetFieldValue("PDF_All", string.Join(";", matches), FieldSource.Legacy, userEdited: false);

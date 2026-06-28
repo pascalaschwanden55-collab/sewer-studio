@@ -514,18 +514,13 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
 
     private static void LinkSectionPdf(HaltungRecord record, string sectionKey, Dictionary<string, List<string>> index)
     {
-        var key = sectionKey;
-        var matches = index.Keys
-            .Where(k => k.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-            .Where(k => k.Contains(sectionKey, StringComparison.OrdinalIgnoreCase))
-            .Select(k => ResolveFile(index, k))
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
+        // Gemeinsame PDF-Treffer-Suche via Common-Helfer
+        var matches = Common.PdfFileIndexHelper.ResolvePdfMatches(index, sectionKey);
 
         if (matches.Count == 0)
             return;
 
-        var first = matches[0]!;
+        var first = matches[0];
         record.SetFieldValue("PDF_Path", first, FieldSource.Legacy, userEdited: false);
         if (matches.Count > 1)
             record.SetFieldValue("PDF_All", string.Join(";", matches), FieldSource.Legacy, userEdited: false);
@@ -636,18 +631,13 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         if (string.IsNullOrWhiteSpace(nodeKey))
             return;
 
-        var matches = index.Keys
-            .Where(k => k.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-            .Where(k => k.Contains(nodeKey, StringComparison.OrdinalIgnoreCase))
-            .Select(k => ResolveFile(index, k))
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
+        // Gemeinsame PDF-Treffer-Suche via Common-Helfer
+        var matches = Common.PdfFileIndexHelper.ResolvePdfMatches(index, nodeKey);
 
         if (matches.Count == 0)
             return;
 
-        var first = matches[0]!;
-        SetSchachtField(record, "Link", first);
+        SetSchachtField(record, "Link", matches[0]);
     }
 
     private static Dictionary<string, string> BuildObsParameters(DbObservation obs)
