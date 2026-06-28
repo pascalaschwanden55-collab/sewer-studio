@@ -1234,38 +1234,9 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         "Schacht-ID"
     };
 
-    // Streckenschaden-Marker: A01, A02, B01, B02, ... (DIN EN 13508-2 Anfang/Ende Streckenschaden)
-    private static readonly Regex ContinuousDefectMarkerRegex = new(@"^[AB]\d{2}$", RegexOptions.Compiled);
-
-    // VSA-Code am Anfang der Beschreibung extrahieren (z.B. "BBCC (Harte Ablagerungen...)")
-    private static readonly Regex EmbeddedVsaCodeRegex = new(@"^([A-Z]{3,5})\b", RegexOptions.Compiled);
-
-    /// <summary>
-    /// Prueft ob der Code ein Streckenschaden-Marker (A01, B02 etc.) ist.
-    /// Falls ja, wird der echte VSA-Code aus der Beschreibung extrahiert.
-    /// </summary>
+    // Delegation: Logik liegt jetzt in Common.ContinuousDefectCodeResolver
     private static string ResolveEffectiveCode(string code, string? description, out string? resolvedDescription)
-    {
-        resolvedDescription = description;
-        if (!ContinuousDefectMarkerRegex.IsMatch(code) || string.IsNullOrWhiteSpace(description))
-            return code;
-
-        var match = EmbeddedVsaCodeRegex.Match(description.Trim());
-        if (match.Success)
-        {
-            var vsaCode = match.Groups[1].Value;
-            // Beschreibung bereinigen: VSA-Code am Anfang entfernen
-            var rest = description.Trim().Substring(vsaCode.Length).TrimStart(' ', '(');
-            if (rest.EndsWith(")"))
-                rest = rest.Substring(0, rest.Length - 1);
-            resolvedDescription = rest.Trim();
-            if (string.IsNullOrWhiteSpace(resolvedDescription))
-                resolvedDescription = description;
-            return vsaCode;
-        }
-
-        return code;
-    }
+        => Common.ContinuousDefectCodeResolver.ResolveEffectiveCode(code, description, out resolvedDescription);
 
     /// <summary>
     /// Erzeugt den "Primaere_Schaeden" Text aus den Protokoll-Eintraegen.
