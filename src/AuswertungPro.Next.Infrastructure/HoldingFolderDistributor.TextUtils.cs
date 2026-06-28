@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -23,29 +23,10 @@ namespace AuswertungPro.Next.Infrastructure;
 public static partial class HoldingFolderDistributor
 {
 
-    private static string NormalizeText(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return text ?? string.Empty;
-
-        return text
-            .Replace('\u00A0', ' ')
-            .Replace('–', '-')
-            .Replace('—', '-')
-            .Replace('−', '-')
-            .Replace("\t", " ");
-    }
+    private static string NormalizeText(string text) => HoldingTextNormalizer.NormalizeText(text);
 
 
-    private static bool TryParseDateString(string value, out DateTime date)
-    {
-        return DateTime.TryParseExact(
-            value,
-            new[] { "dd.MM.yyyy", "dd.MM.yy", "dd/MM/yyyy", "dd/MM/yy", "dd-MM-yyyy", "dd-MM-yy", "yyyy-MM-dd" },
-            CultureInfo.InvariantCulture,
-            DateTimeStyles.None,
-            out date);
-    }
+    private static bool TryParseDateString(string value, out DateTime date) => HoldingTextNormalizer.TryParseDateString(value, out date);
 
 
     private static bool IsSuspiciousShaftPair(string shaftPair, string explicitPair)
@@ -67,14 +48,7 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static string? MergeMessage(string? a, string? b)
-    {
-        if (string.IsNullOrWhiteSpace(a))
-            return string.IsNullOrWhiteSpace(b) ? null : b;
-        if (string.IsNullOrWhiteSpace(b))
-            return a;
-        return $"{a}; {b}";
-    }
+    private static string? MergeMessage(string? a, string? b) => HoldingTextNormalizer.MergeMessage(a, b);
 
 
     private static string? TryExtractHaltungFromPdfPath(string? pdfPath)
@@ -108,16 +82,10 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static string BuildPageRange(IReadOnlyList<int> pages)
-    {
-        if (pages.Count == 0) return "";
-        var sorted = pages.Distinct().OrderBy(p => p).ToList();
-        return sorted.Count == 1 ? $"{sorted[0]}" : $"{sorted[0]}-{sorted[^1]}";
-    }
+    private static string BuildPageRange(IReadOnlyList<int> pages) => HoldingTextNormalizer.BuildPageRange(pages);
 
 
-    private static bool IsContentsPage(string text)
-        => text.Contains("Inhaltsverzeichnis", StringComparison.OrdinalIgnoreCase);
+    private static bool IsContentsPage(string text) => HoldingTextNormalizer.IsContentsPage(text);
 
 
     private static DateTime? TryFindInspectionDate(string text)
@@ -470,86 +438,20 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static string? NormalizeVideoFileName(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        var candidate = value.Trim().Trim('"', '\'');
-        candidate = candidate.TrimEnd('.', ',', ';', ':', ')', ']', '}', '>');
-        if (string.IsNullOrWhiteSpace(candidate))
-            return null;
-
-        candidate = candidate.Replace('\\', '/');
-        var fileName = Path.GetFileName(candidate).Trim();
-        if (string.IsNullOrWhiteSpace(fileName))
-            return null;
-
-        return fileName.Trim('"', '\'');
-    }
+    private static string? NormalizeVideoFileName(string? value) => HoldingTextNormalizer.NormalizeVideoFileName(value);
 
 
     private static string SanitizePathSegment(string value)
         => ProjectPathResolver.SanitizePathSegment(value);
 
 
-    private static string NormalizeHaltungId(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "UNKNOWN";
-
-        var text = NormalizeText(value).Trim();
-        // Extract pair pattern: XXXXX-XXXXX or XX.XXXX-XX.XXXX
-        var pairRx = new Regex(@"((?:\d{2,}\.\d{2,}|\d{4,})\s*[-]\s*(?:\d{2,}\.\d{2,}|\d{4,}))");
-        var m = pairRx.Match(text);
-        if (m.Success)
-        {
-            var normalized = m.Groups[1].Value.Replace(" ", "").Replace("/", "-");
-            // Ensure exactly one dash
-            normalized = Regex.Replace(normalized, @"\s*-+\s*", "-");
-            return normalized;
-        }
-
-        return text;
-    }
+    private static string NormalizeHaltungId(string? value) => HoldingIdNormalizer.NormalizeHaltungId(value);
 
 
-    private static string NormalizeKey(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return "";
-        var sb = new StringBuilder(value.Length);
-        foreach (var ch in value)
-        {
-            if (char.IsLetterOrDigit(ch))
-                sb.Append(char.ToLowerInvariant(ch));
-        }
-        return sb.ToString();
-    }
+    private static string NormalizeKey(string value) => HoldingTextNormalizer.NormalizeKey(value);
 
 
-    private static bool IsValidHaltungId(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return false;
-
-        var normalized = value.Trim();
-        var rx = new Regex(@"^(?:\d{2,}\.\d{2,}|\d{4,})\s*-\s*(?:\d{2,}\.\d{2,}|\d{4,})$");
-        if (!rx.IsMatch(normalized))
-            return false;
-
-        var parts = normalized.Split('-', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 2)
-            return false;
-
-        // Reject common OCR glue artifacts such as "04.201423022-215987" (date fragment + id).
-        foreach (var part in parts)
-        {
-            if (Regex.IsMatch(part, @"^\d{2}\.20\d{2}\d+$"))
-                return false;
-        }
-
-        return HoldingIdPlausibility.IsLikelyHoldingId(normalized);
-    }
+    private static bool IsValidHaltungId(string? value) => HoldingIdNormalizer.IsValidHaltungId(value);
 
     /// <summary>
     /// Prueft ob im Haltungsordner bereits ein Video mit gleicher Dateigroesse existiert.
