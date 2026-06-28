@@ -768,18 +768,14 @@ internal static class M150MdbImportHelper
     private static string? NullIfWhite(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    // Delegation: Logik liegt jetzt in Common.MaterialTextNormalizer.
+    // Null-Handling je Aufrufer: bei leerem Ergebnis Fallback auf raw.Trim() (M150-Verhalten,
+    // WinCan gibt dagegen null zurueck wenn nach Strip leer).
     private static string NormalizeMaterialValue(string raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
             return raw;
-
-        // Take only the first line – WinCan DB sometimes appends cleaning info
-        // like "Zement\nGereinigt    Ja" into the material field.
-        var t = raw.Split('\n')[0].Trim();
-        // Strip trailing non-material tokens (e.g. "Gereinigt Ja")
-        t = Regex.Replace(t, @"(?i)\s*(gereinigt|nicht\s*gereinigt|verschmutzt)\s*(ja|nein)?\s*$", "").Trim();
-
-        return string.IsNullOrWhiteSpace(t) ? raw.Trim() : t;
+        return MaterialTextNormalizer.Normalize(raw) ?? raw.Trim();
     }
 
     private static List<VsaFinding> ExtractFindingsFromHgNode(XElement hgNode)

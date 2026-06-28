@@ -1335,19 +1335,9 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         return null;
     }
 
+    // Delegation: Logik liegt jetzt in Common.MaterialTextNormalizer
     private static string? NormalizeMaterial(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        // Take only the first line – WinCan DB sometimes appends cleaning info
-        // like "Zement\nGereinigt    Ja" into the material field.
-        var t = raw.Split('\n')[0].Trim();
-        // Strip trailing non-material tokens (e.g. "Gereinigt Ja")
-        t = Regex.Replace(t, @"(?i)\s*(gereinigt|nicht\s*gereinigt|verschmutzt)\s*(ja|nein)?\s*$", "").Trim();
-
-        return string.IsNullOrWhiteSpace(t) ? null : t;
-    }
+        => Common.MaterialTextNormalizer.Normalize(raw);
 
     private static string? NormalizeUsage(string? raw)
     {
