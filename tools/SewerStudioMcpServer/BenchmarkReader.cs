@@ -164,6 +164,11 @@ public static class BenchmarkReader
                 continue;
 
             var cols = lines[i].Split(',');
+            // Originalverhalten: Zeilen mit weniger als 8 Spalten ueberspringen
+            // (Header: expected,total,exact_correct,main_correct,group_correct,null_responses,predicted_leer,exact_accuracy,...)
+            if (cols.Length < 8)
+                continue;
+
             var entry = BenchmarkParsers.ParseByCodeRow(cols);
             if (entry is not null)
                 result.Add(entry);
