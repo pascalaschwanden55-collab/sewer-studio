@@ -745,55 +745,13 @@ public sealed class LegacyPdfImportService
     }
 
     private static bool ShouldSkipUnknownChunk(Dictionary<string, string> fields, PdfChunk chunk)
-    {
-        // Ignore table/header/meta chunks with no usable inspection payload.
-        bool hasUsefulPayload =
-            !string.IsNullOrWhiteSpace(fields.GetValueOrDefault("Primaere_Schaeden")) ||
-            !string.IsNullOrWhiteSpace(fields.GetValueOrDefault("Inspektionsrichtung")) ||
-            !string.IsNullOrWhiteSpace(fields.GetValueOrDefault("Nutzungsart")) ||
-            !string.IsNullOrWhiteSpace(fields.GetValueOrDefault("DN_mm")) ||
-            !string.IsNullOrWhiteSpace(fields.GetValueOrDefault("Haltungslaenge_m"));
-
-        if (hasUsefulPayload)
-            return false;
-
-        var text = chunk.Text ?? "";
-        if (Regex.IsMatch(text, @"(?im)^\s*\d[\d\.]*\s*[-/]\s*\d[\d\.]*\s+\d{2}\.\d{2}\.\d{4}\b"))
-            return false;
-
-        return true;
-    }
+        => PdfPlaceholderClassifier.ShouldSkipUnknownChunk(fields, chunk);
 
     private static bool IsKnownPlaceholderKey(string key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-            return true;
-
-        if (key.StartsWith("UNBEKANNT_", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (IsHeaderPlaceholderKey(key))
-            return true;
-
-        return key.Equals("Datum :", StringComparison.OrdinalIgnoreCase)
-               || key.Equals("Datum", StringComparison.OrdinalIgnoreCase)
-               || key.Equals("Haltungsname :", StringComparison.OrdinalIgnoreCase)
-               || key.Equals("Haltungsname", StringComparison.OrdinalIgnoreCase);
-    }
+        => PdfPlaceholderClassifier.IsKnownPlaceholderKey(key);
 
     private static bool IsHeaderPlaceholderKey(string key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-            return false;
-
-        if (!Regex.IsMatch(key, @"(?i)^\s*(?:Haltungsname\s*:)?\s*Datum\s*:"))
-            return false;
-
-        return Regex.IsMatch(key, @"(?i)\bWetter\s*:") ||
-               Regex.IsMatch(key, @"(?i)\bOperator\s*:") ||
-               Regex.IsMatch(key, @"(?i)\bAuftrag\s*Nr\.?\s*:");
-    }
-
+        => PdfPlaceholderClassifier.IsHeaderPlaceholderKey(key);
     private static int CleanupCorruptPlaceholderRecords(Project project, ImportStats stats, ImportRunContext? ctx = null)
     {
         var placeholders = project.Data
@@ -936,40 +894,15 @@ public sealed class LegacyPdfImportService
                || HasMeaningfulText(r.GetFieldValue("Link"));
     }
 
-    private static bool HasMeaningfulText(string? value)
-    {
-        var v = NormalizeForFingerprint(value);
-        if (string.IsNullOrWhiteSpace(v))
-            return false;
 
-        return Regex.IsMatch(v, @"[\p{L}\p{N}]");
-    }
+    private static bool HasMeaningfulText(string? value)
+        => PdfPlaceholderClassifier.HasMeaningfulText(value);
 
     private static string? BuildRepairFingerprint(HaltungRecord r)
-    {
-        var damages = NormalizeForFingerprint(r.GetFieldValue("Primaere_Schaeden"));
-        if (string.IsNullOrWhiteSpace(damages))
-            return null;
-
-        var dir = NormalizeForFingerprint(r.GetFieldValue("Inspektionsrichtung"));
-        var use = NormalizeForFingerprint(r.GetFieldValue("Nutzungsart"));
-        var dn = NormalizeForFingerprint(r.GetFieldValue("DN_mm"));
-        var len = NormalizeForFingerprint(r.GetFieldValue("Haltungslaenge_m"));
-        var mat = NormalizeForFingerprint(r.GetFieldValue("Rohrmaterial"));
-
-        return $"{damages}|{dir}|{use}|{dn}|{len}|{mat}";
-    }
+        => PdfPlaceholderClassifier.BuildRepairFingerprint(r);
 
     private static string NormalizeForFingerprint(string? value)
-    {
-        var v = (value ?? "").Trim();
-        if (v.Length == 0)
-            return "";
-
-        v = Regex.Replace(v, @"\s+", " ");
-        return v;
-    }
-
+        => PdfPlaceholderClassifier.NormalizeForFingerprint(value);
     private static string AppendLine(string baseText, string line)
     {
         baseText ??= "";
