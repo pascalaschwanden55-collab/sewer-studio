@@ -282,35 +282,11 @@ public static class HoldingRenameService
         return count;
     }
 
-    // ── Pfad-Ersetzung ───────────────────────────────────────────────────
+    // ── Pfad-Ersetzung (delegiert an HoldingPathRewriter) ────────────────
 
     /// <summary>
-    /// Ersetzt das Haltungsname-Segment in einem Pfad.
-    /// Funktioniert mit Backslash, Forward-Slash, am Anfang und am Ende.
+    /// Delegiert an <see cref="HoldingPathRewriter.ReplaceHoldingInPath"/>.
     /// </summary>
     internal static string ReplaceHoldingInPath(string path, string oldSan, string newSan)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-            return path;
-
-        var result = path;
-
-        // Mitte: \OLD\ und /OLD/
-        result = result.Replace("\\" + oldSan + "\\", "\\" + newSan + "\\", StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("/" + oldSan + "/", "/" + newSan + "/", StringComparison.OrdinalIgnoreCase);
-
-        // Ende: \OLD oder /OLD (ohne Trailing-Separator)
-        if (result.EndsWith("\\" + oldSan, StringComparison.OrdinalIgnoreCase))
-            result = result[..^oldSan.Length] + newSan;
-        else if (result.EndsWith("/" + oldSan, StringComparison.OrdinalIgnoreCase))
-            result = result[..^oldSan.Length] + newSan;
-
-        // Anfang: OLD\ oder OLD/ (relative Pfade)
-        if (result.StartsWith(oldSan + "\\", StringComparison.OrdinalIgnoreCase))
-            result = newSan + result[oldSan.Length..];
-        else if (result.StartsWith(oldSan + "/", StringComparison.OrdinalIgnoreCase))
-            result = newSan + result[oldSan.Length..];
-
-        return result;
-    }
+        => HoldingPathRewriter.ReplaceHoldingInPath(path, oldSan, newSan);
 }
