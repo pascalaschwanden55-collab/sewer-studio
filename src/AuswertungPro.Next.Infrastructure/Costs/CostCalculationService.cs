@@ -270,32 +270,13 @@ public sealed class CostCalculationService
             });
         }
 
-        var subTotal = Math.Round(lines.Where(l => l.Amount.HasValue).Sum(l => l.Amount!.Value), 2);
-        var rabatt = Math.Round(subTotal * inputs.RabattPct / 100m, 2);
-        var afterRabatt = Math.Round(subTotal - rabatt, 2);
-        var skonto = Math.Round(afterRabatt * inputs.SkontoPct / 100m, 2);
-        var netExcl = Math.Round(afterRabatt - skonto, 2);
-        var mwst = Math.Round(netExcl * inputs.MwstPct / 100m, 2);
-        var total = Math.Round(netExcl + mwst, 2);
-
         return new CalculatedOffer
         {
             TemplateId = template.Id,
             Lines = lines,
             Warnings = warnings,
-            Totals = new OfferTotals
-            {
-                SubTotal = subTotal,
-                RabattPct = inputs.RabattPct,
-                Rabatt = rabatt,
-                SkontoPct = inputs.SkontoPct,
-                Skonto = skonto,
-                NetExclMwst = netExcl,
-                MwstPct = inputs.MwstPct,
-                Mwst = mwst,
-                TotalInclMwst = total,
-                Currency = catalog.Currency
-            }
+            Totals = LegacyOfferTotalsCalculator.BuildTotals(
+                lines, inputs.RabattPct, inputs.SkontoPct, inputs.MwstPct, catalog.Currency)
         };
     }
 
@@ -326,32 +307,13 @@ public sealed class CostCalculationService
             allLines.AddRange(offer.Lines);
         }
 
-        var subTotal = Math.Round(allLines.Where(l => l.Amount.HasValue).Sum(l => l.Amount!.Value), 2);
-        var rabatt = Math.Round(subTotal * rabattPct / 100m, 2);
-        var afterRabatt = Math.Round(subTotal - rabatt, 2);
-        var skonto = Math.Round(afterRabatt * skontoPct / 100m, 2);
-        var netExcl = Math.Round(afterRabatt - skonto, 2);
-        var mwst = Math.Round(netExcl * mwstPct / 100m, 2);
-        var total = Math.Round(netExcl + mwst, 2);
-
         return new CalculatedOffer
         {
             TemplateId = "combined",
             Lines = allLines,
             Warnings = warnings,
-            Totals = new OfferTotals
-            {
-                SubTotal = subTotal,
-                RabattPct = rabattPct,
-                Rabatt = rabatt,
-                SkontoPct = skontoPct,
-                Skonto = skonto,
-                NetExclMwst = netExcl,
-                MwstPct = mwstPct,
-                Mwst = mwst,
-                TotalInclMwst = total,
-                Currency = catalog.Currency
-            }
+            Totals = LegacyOfferTotalsCalculator.BuildTotals(
+                allLines, rabattPct, skontoPct, mwstPct, catalog.Currency)
         };
     }
 }
