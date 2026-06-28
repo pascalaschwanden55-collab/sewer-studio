@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -338,9 +338,6 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static readonly string[] ShaftLabelKeywords =
-        { "haltung", "schacht", "prüfgegenstand", "prufgegenstand", "pruefgegenstand", "prüfobj", "prufobj", "oberer", "unterer" };
-
     /// <summary>
     /// Loest eine Haltung ueber den Kataster auf: zuerst fokussiert (Zahlen auf Haltungs-/
     /// Schacht-Zeilen inkl. Nachbarzeilen wegen Spalten-Versatz von pdftotext), sonst die
@@ -402,74 +399,23 @@ public static partial class HoldingFolderDistributor
     /// Messwerte (mbar, DN, Datum, GPS) bleiben so weitgehend aussen vor.
     /// </summary>
     private static IReadOnlyList<string> GatherShaftCandidates(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return Array.Empty<string>();
-
-        var lines = text.Split('\n');
-        var labeled = new bool[lines.Length];
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var low = lines[i].ToLowerInvariant();
-            foreach (var l in ShaftLabelKeywords)
-                if (low.Contains(l, StringComparison.Ordinal)) { labeled[i] = true; break; }
-        }
-
-        var nums = new List<string>();
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var inWindow = labeled[i]
-                || (i > 0 && labeled[i - 1])
-                || (i < lines.Length - 1 && labeled[i + 1]);
-            if (inWindow)
-                AddNumberTokens(lines[i], nums);
-        }
-        return nums.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-    }
+        => HoldingDistribution.ShaftCandidateScanner.GatherShaftCandidates(text);
 
     /// <summary>Rueckfall: alle Zahl-Token der ganzen Seite (Eindeutigkeit schuetzt vor Fehltreffern).</summary>
     private static IReadOnlyList<string> GatherAllNumberCandidates(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return Array.Empty<string>();
-
-        var nums = new List<string>();
-        foreach (var line in text.Split('\n'))
-            AddNumberTokens(line, nums);
-        return nums.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-    }
+        => HoldingDistribution.ShaftCandidateScanner.GatherAllNumberCandidates(text);
 
     /// <summary>
-    /// Zieht moegliche Schachtnummern aus einer Zeile: gepunktete IDs (06.24341) und ganze
-    /// Zahlen mit 2-6 Stellen. Dezimal-Teile (70.51, 2.16.2) werden uebersprungen, ein kaputter
-    /// Trenner wie "844-.843" liefert aber beide Schaechte.
+    /// Zieht moegliche Schachtnummern aus einer Zeile: gepunktete IDs und ganze Zahlen mit 2-6 Stellen.
     /// </summary>
     private static void AddNumberTokens(string line, List<string> nums)
-    {
-        if (IsNoiseLine(line))
-            return;
-
-        foreach (Match mm in Regex.Matches(line, @"\b\d{2,}\.\d{2,}\b"))
-            nums.Add(mm.Value);
-        foreach (Match mm in Regex.Matches(line, @"(?<!\d[.,])\d{2,6}(?![.,]\d)"))
-            nums.Add(mm.Value);
-    }
+        => HoldingDistribution.ShaftCandidateScanner.AddNumberTokens(line, nums);
 
     /// <summary>
-    /// Zeilen, die typische Nicht-Schacht-Zahlen tragen (Telefon/Fax, Adresse, Messwerte,
-    /// Datum/Zeit, GPS, Software). Verhindert Fehltreffer wie "42-41" aus der Telefonnummer
-    /// "+41 (0)41 440 42 02" in der Fusszeile.
+    /// Zeilen mit typischen Nicht-Schacht-Zahlen (Telefon/Fax, Adresse, Messwerte, Datum/Zeit, GPS, Software).
     /// </summary>
     private static bool IsNoiseLine(string line)
-    {
-        var low = line.ToLowerInvariant();
-        return low.Contains("telefon") || low.Contains("fax") || low.Contains("www")
-            || low.Contains('@') || low.Contains("mbar") || low.Contains("gps")
-            || low.Contains("software") || low.Contains("sensortemp") || low.Contains('°')
-            || low.Contains("strasse") || low.Contains("+41") || low.Contains("(0)41")
-            || low.Contains("prufdruck") || low.Contains("prüfdruck")
-            || low.Contains("prufzeit") || low.Contains("prüfzeit") || low.Contains("beruhigung");
-    }
+        => HoldingDistribution.ShaftCandidateScanner.IsNoiseLine(line);
 
     /// <summary>
     /// Ermittelt die korrekte Haltungs-ID-Reihenfolge fuer zwei Schachtnummern.
@@ -1242,89 +1188,8 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    // Schacht-Wert: numerisch (81150, 42.046) ODER alphanumerisch (S42.123, KS-0815, A1-B2)
-    private static readonly Regex WinCanValueRegex = new(
-        @"[A-Za-z]{0,3}[\-]?\d{2,}(?:[.\-]\d{2,})?",
-        RegexOptions.Compiled);
+    // WinCan-Regex-Felder und Label-Wert-Extraktion nach ShaftCandidateScanner verschoben.
 
-    private static readonly Regex WinCanUpperLabelRegex = new(
-        @"\b(Schacht\s*oben|Knoten\s*oben|Oberer\s*(?:Punkt|Schacht)|Startschacht|Von" +
-        @"|Anfangsschacht|Start\s*Schacht|Schacht\s*(?:Nr\.?\s*)?(?:A|1|Start|Anfang)" +
-        @"|Pruefstrecke\s*von|Haltung\s*von|Leitung\s*von|Strecke\s*von" +
-        @"|Anfangspunkt|Startpunkt)\b[:\s]*",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static readonly Regex WinCanLowerLabelRegex = new(
-        @"\b(Schacht\s*unten|Knoten\s*unten|Unterer\s*(?:Punkt|Schacht)|Endschacht|Nach" +
-        @"|Zielschacht|End\s*Schacht|Schacht\s*(?:Nr\.?\s*)?(?:B|2|End|Ziel)" +
-        @"|Pruefstrecke\s*bis|Haltung\s*bis|Leitung\s*bis|Strecke\s*bis" +
-        @"|Endpunkt|Zielpunkt)\b[:\s]*",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-
-    private static string NormalizeLine(string s)
-    {
-        if (string.IsNullOrWhiteSpace(s)) return string.Empty;
-        s = s.Replace('\u00A0', ' ');
-        s = Regex.Replace(s, @"[ \t]+", " ");
-        return s.Trim();
-    }
-
-
-    private static string? TryGetValueAfterLabel(IReadOnlyList<string> lines, Regex labelRegex, Regex valueRegex)
-    {
-        for (int i = 0; i < lines.Count; i++)
-        {
-            var line = NormalizeLine(lines[i]);
-            if (line.Length == 0) continue;
-
-            // 1) Label + Wert in derselben Zeile
-            var m = labelRegex.Match(line);
-            if (m.Success)
-            {
-                var tail = NormalizeLine(line.Substring(m.Index + m.Length));
-                var v1 = valueRegex.Match(tail);
-                if (v1.Success) return v1.Value;
-
-                // 2) Wert steht in nächster Zeile
-                if (i + 1 < lines.Count)
-                {
-                    var next = NormalizeLine(lines[i + 1]);
-                    var v2 = valueRegex.Match(next);
-                    if (v2.Success) return v2.Value;
-                }
-
-                // 3) Manchmal noch eine Zeile weiter (PDF-Layout)
-                if (i + 2 < lines.Count)
-                {
-                    var next2 = NormalizeLine(lines[i + 2]);
-                    var v3 = valueRegex.Match(next2);
-                    if (v3.Success) return v3.Value;
-                }
-            }
-
-            // 4) “Zerhacktes” Label über Zeilengrenze
-            if (i + 1 < lines.Count)
-            {
-                var joined = NormalizeLine(line + " " + lines[i + 1]);
-                var mj = labelRegex.Match(joined);
-                if (mj.Success)
-                {
-                    var tail = NormalizeLine(joined.Substring(mj.Index + mj.Length));
-                    var vj = valueRegex.Match(tail);
-                    if (vj.Success) return vj.Value;
-
-                    if (i + 2 < lines.Count)
-                    {
-                        var vNext = valueRegex.Match(NormalizeLine(lines[i + 2]));
-                        if (vNext.Success) return vNext.Value;
-                    }
-                }
-            }
-        }
-
-        return null;
-    }
 
     /// <summary>
     /// Extracts haltung pair from "Haltungsinspektion" or "Haltungsbilder" header lines.
@@ -1337,15 +1202,7 @@ public static partial class HoldingFolderDistributor
     /// Both Fretz page 1 (Haltungsinspektion) and page 2 (Haltungsbilder) use this format.
     /// </summary>
     private static string? TryExtractFromHeader(string text)
-    {
-        var headerRx = new Regex(
-            @"Haltungs(?:\s*inspektion|bilder)\s*[-–—]\s*(?:\d{2}\.\d{2}\.\d{2,4}|\d{4}-\d{2}-\d{2})\s*[-–—]\s*((?:\d{2,}\.\d{2,}|\d{4,})\s*[-/]\s*(?:\d{2,}\.\d{2,}|\d{4,}))",
-            RegexOptions.IgnoreCase);
-        var m = headerRx.Match(text);
-        if (!m.Success) return null;
-        var haltung = NormalizeHaltungId(m.Groups[1].Value);
-        return IsValidHaltungId(haltung) ? haltung : null;
-    }
+        => HoldingDistribution.ShaftCandidateScanner.TryExtractFromHeader(text);
 
     /// <summary>
     /// Returns true if the first part of a haltung pair looks like a date fragment (MM.YYYY).
@@ -1358,200 +1215,17 @@ public static partial class HoldingFolderDistributor
     /// This prevents "09.2025-80638" from being treated as a valid haltung.
     /// </summary>
     private static bool LooksLikeDateFragment(string haltungId)
-    {
-        if (string.IsNullOrWhiteSpace(haltungId)) return false;
-        // Match patterns like "09.2025-XXXXX" where "09.2025" is actually a date fragment
-        var dateFragRx = new Regex(@"^(\d{2}\.\d{4})-");
-        var m = dateFragRx.Match(haltungId);
-        if (!m.Success) return false;
-        // Check if the first number looks like MM.YYYY (month 01-12, year 2000-2099)
-        var parts = m.Groups[1].Value.Split('.');
-        if (parts.Length == 2
-            && int.TryParse(parts[0], out var month) && month >= 1 && month <= 12
-            && int.TryParse(parts[1], out var year) && year >= 2000 && year <= 2099)
-            return true;
-        return false;
-    }
+        => HoldingDistribution.ShaftCandidateScanner.LooksLikeDateFragment(haltungId);
 
 
     private static string? TryExtractFromShafts(string text)
-    {
-        var lines = text.Replace("\r\n", "\n").Split('\n');
+        => HoldingDistribution.ShaftCandidateScanner.TryExtractFromShafts(text);
 
-        // Frueh-Erkennung: Volles Haltungspaar direkt nach "Oberer/Unterer Schacht" oder "Oberer/Unterer Punkt"
-        // Fretz-Stammdaten-Layout: "Oberer Schacht  42046-41412" → ganzes Paar extrahieren
-        var fullPairAfterSchacht = Regex.Match(text,
-            @"(?:Oberer|Unterer)\s*(?:Schacht|Punkt)[^\S\n]*(?<pair>(?:\d{2,}\.\d{2,}|\d{4,})\s*-\s*(?:\d{2,}\.\d{2,}|\d{4,}))",
-            RegexOptions.IgnoreCase);
-        if (fullPairAfterSchacht.Success)
-            return fullPairAfterSchacht.Groups["pair"].Value;
-
-        // WinCAN: robust Label->Value extraction (Schacht oben/unten, Start/End, Von/Nach, Oberer/Unterer Schacht)
-        var upper = TryGetValueAfterLabel(lines, WinCanUpperLabelRegex, WinCanValueRegex);
-        var lower = TryGetValueAfterLabel(lines, WinCanLowerLabelRegex, WinCanValueRegex);
-        if (!string.IsNullOrWhiteSpace(upper) && !string.IsNullOrWhiteSpace(lower))
-        {
-            if (!string.Equals(upper, lower, StringComparison.OrdinalIgnoreCase))
-                return $"{upper}-{lower}";
-        }
-
-        // Inline layouts without line breaks (common in some PdfPig extracts).
-        // [^\S\n]* statt \s* um Zeilenumbrueche nicht zu ueberqueren
-        var pairAfterLowerPoint = Regex.Match(
-            text,
-            @"Unterer\s*Punkt[^\S\n]*(?<pair>(?:\d{2,}\.\d{2,}|\d{4,})\s*-\s*(?:\d{2,}\.\d{2,}|\d{4,}))",
-            RegexOptions.IgnoreCase);
-        if (pairAfterLowerPoint.Success)
-            return pairAfterLowerPoint.Groups["pair"].Value;
-
-        var upperPointInline = Regex.Match(text, @"Oberer\s*Punkt[^\S\n]+(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
-        var lowerPointInline = Regex.Match(text, @"Unterer\s*Punkt[^\S\n]+(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
-        if (upperPointInline.Success && lowerPointInline.Success)
-        {
-            var up = upperPointInline.Groups["v"].Value;
-            var low = lowerPointInline.Groups["v"].Value;
-            if (!string.Equals(up, low, StringComparison.OrdinalIgnoreCase))
-                return $"{up}-{low}";
-        }
-
-        var upperSchachtInline = Regex.Match(text, @"Schacht\s*oben\s*[:\-]?[^\S\n]*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
-        var lowerSchachtInline = Regex.Match(text, @"Schacht\s*unten\s*[:\-]?[^\S\n]*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
-        if (upperSchachtInline.Success && lowerSchachtInline.Success)
-        {
-            var up = upperSchachtInline.Groups["v"].Value;
-            var low = lowerSchachtInline.Groups["v"].Value;
-            if (!string.Equals(up, low, StringComparison.OrdinalIgnoreCase))
-                return $"{up}-{low}";
-        }
-
-        // Dichtheitspruefung Format: "oberer Schacht: XXXXX" / "unterer Schacht: XXXXX"
-        // [^\S\n]* statt \s* um Zeilenumbrueche nicht zu ueberqueren
-        var upperObererSchacht = Regex.Match(text, @"oberer\s*Schacht\s*[:\-]?[^\S\n]*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
-        var lowerUntererSchacht = Regex.Match(text, @"unterer\s*Schacht\s*[:\-]?[^\S\n]*(?<v>\d{2,}\.\d{2,}|\d{4,})", RegexOptions.IgnoreCase);
-        if (upperObererSchacht.Success && lowerUntererSchacht.Success)
-        {
-            var up = upperObererSchacht.Groups["v"].Value;
-            var low = lowerUntererSchacht.Groups["v"].Value;
-            if (!string.Equals(up, low, StringComparison.OrdinalIgnoreCase))
-                return $"{up}-{low}";
-        }
-
-        string? oben = null;
-        string? unten = null;
-
-        // Schacht-Nummer: numerisch (81150, 42.046) oder alphanumerisch (S42.123, KS-0815)
-        var pointRx = new Regex(@"\b([A-Za-z]{0,3}[\-]?\d{2,}(?:[.\-]\d{2,})?)\b");
-        // Volles Paar auf derselben Zeile — Trennzeichen: - , – , ^ , -^ , → , ->
-        // KIT-Format: "40259 ^ 40260", "41412-^40859", "40260 -^ 40261"
-        var pairRx = new Regex(@"(?<a>[A-Za-z]{0,3}[\-]?\d{2,}(?:[.\-]\d{2,})?)\s*[-–\^]+[>\s]*(?<b>[A-Za-z]{0,3}[\-]?\d{2,}(?:[.\-]\d{2,})?)");
-
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var line = lines[i];
-            bool isObererPunkt = line.Contains("Oberer", StringComparison.OrdinalIgnoreCase) &&
-                line.Contains("Punkt", StringComparison.OrdinalIgnoreCase);
-            bool isUntererPunkt = line.Contains("Unterer", StringComparison.OrdinalIgnoreCase) &&
-                line.Contains("Punkt", StringComparison.OrdinalIgnoreCase);
-            bool isObererSchacht = line.Contains("Oberer", StringComparison.OrdinalIgnoreCase) &&
-                line.Contains("Schacht", StringComparison.OrdinalIgnoreCase);
-            bool isUntererSchacht = line.Contains("Unterer", StringComparison.OrdinalIgnoreCase) &&
-                line.Contains("Schacht", StringComparison.OrdinalIgnoreCase);
-
-            // KIT/Dichtheitspruefung: "Prüfstrecke von", "Haltung von/bis", "Leitung"
-            if (!isObererPunkt && !isObererSchacht)
-            {
-                isObererSchacht =
-                    Regex.IsMatch(line, @"\b(?:Pruefstrecke|Haltung|Leitung|Strecke|Abschnitt)\s*von\b", RegexOptions.IgnoreCase)
-                    || Regex.IsMatch(line, @"\b(?:Anfangsschacht|Startschacht|Anfangspunkt|Startpunkt)\b", RegexOptions.IgnoreCase);
-            }
-            if (!isUntererPunkt && !isUntererSchacht)
-            {
-                isUntererSchacht =
-                    Regex.IsMatch(line, @"\b(?:Pruefstrecke|Haltung|Leitung|Strecke|Abschnitt)\s*bis\b", RegexOptions.IgnoreCase)
-                    || Regex.IsMatch(line, @"\b(?:Endschacht|Zielschacht|Endpunkt|Zielpunkt)\b", RegexOptions.IgnoreCase);
-            }
-
-            bool isOberesLabel = isObererPunkt || isObererSchacht;
-            bool isUnteresLabel = isUntererPunkt || isUntererSchacht;
-
-            if (isOberesLabel || isUnteresLabel)
-            {
-                // Pruefe zuerst ob ein volles Paar auf der Zeile steht (z.B. "42046-41412")
-                var pairMatch = pairRx.Match(line);
-                if (pairMatch.Success)
-                    return $"{pairMatch.Groups["a"].Value}-{pairMatch.Groups["b"].Value}";
-            }
-
-            if (isOberesLabel)
-            {
-                var m = pointRx.Match(line);
-                if (m.Success)
-                    oben = m.Groups[1].Value;
-                else if (i + 1 < lines.Length)
-                {
-                    var nextM = pointRx.Match(lines[i + 1]);
-                    if (nextM.Success)
-                        oben = nextM.Groups[1].Value;
-                }
-            }
-
-            if (isUnteresLabel)
-            {
-                var m = pointRx.Match(line);
-                if (m.Success)
-                    unten = m.Groups[1].Value;
-                else if (i + 1 < lines.Length)
-                {
-                    var nextM = pointRx.Match(lines[i + 1]);
-                    if (nextM.Success)
-                        unten = nextM.Groups[1].Value;
-                }
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(oben) && !string.IsNullOrWhiteSpace(unten))
-        {
-            if (!string.Equals(oben, unten, StringComparison.OrdinalIgnoreCase))
-                return $"{oben}-{unten}";
-        }
-        
-        return null;
-    }
-
-    
     private static string? TryFindPoint(string[] lines, string label)
-    {
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var line = lines[i];
-            if (!line.Contains(label, StringComparison.OrdinalIgnoreCase) || !line.Contains("Punkt", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            var inline = Regex.Match(line, @"\b(\d{2,}\.\d{3,}|\d{5,})\b");
-            if (inline.Success)
-                return inline.Groups[1].Value.Trim();
-
-            var next = FindNextToken(lines, i + 1, @"\d{2,}\.\d{3,}|\d{5,}");
-            if (!string.IsNullOrWhiteSpace(next))
-                return next.Trim();
-        }
-        return null;
-    }
-
+        => HoldingDistribution.ShaftCandidateScanner.TryFindPoint(lines, label);
 
     private static string? FindNextToken(string[] lines, int startIndex, string pattern)
-    {
-        for (var i = startIndex; i < lines.Length; i++)
-        {
-            var line = lines[i];
-            if (string.IsNullOrWhiteSpace(line)) continue;
-            var m = Regex.Match(line, pattern);
-            if (m.Success)
-                return m.Value;
-            break;
-        }
-        return null;
-    }
+        => HoldingDistribution.ShaftCandidateScanner.FindNextToken(lines, startIndex, pattern);
 
 
     private static void WritePdfPages(string sourcePdfPath, IReadOnlyList<int> pages, string destPdfPath)
@@ -2012,74 +1686,16 @@ public static partial class HoldingFolderDistributor
 
 
     private static void AddPhotoLookupKeys(string? raw, List<string> keys)
-    {
-        foreach (var key in EnumeratePhotoLookupKeys(raw))
-        {
-            if (!keys.Contains(key, StringComparer.OrdinalIgnoreCase))
-                keys.Add(key);
-        }
-    }
-
+        => HoldingDistribution.PhotoTokenNormalizer.AddPhotoLookupKeys(raw, keys);
 
     private static IEnumerable<string> EnumeratePhotoLookupKeys(string? raw)
-    {
-        var fileName = NormalizeVideoFileName(raw);
-        if (string.IsNullOrWhiteSpace(fileName))
-            yield break;
-
-        var noExt = Path.GetFileNameWithoutExtension(fileName);
-        var ext = Path.GetExtension(fileName);
-        var hasImageExt = HasImageExtension(fileName);
-
-        if (hasImageExt)
-            yield return fileName;
-
-        if (!string.IsNullOrWhiteSpace(noExt))
-            yield return noExt;
-
-        var normalizedNoExt = NormalizePhotoToken(noExt);
-        if (string.IsNullOrWhiteSpace(normalizedNoExt))
-            yield break;
-
-        if (!string.Equals(normalizedNoExt, noExt, StringComparison.OrdinalIgnoreCase))
-            yield return normalizedNoExt;
-
-        if (hasImageExt && !string.IsNullOrWhiteSpace(ext))
-            yield return $"{normalizedNoExt}{ext}";
-    }
-
+        => HoldingDistribution.PhotoTokenNormalizer.EnumeratePhotoLookupKeys(raw);
 
     private static string TrimLeadingZerosValue(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return value;
-
-        var trimmed = value.TrimStart('0');
-        return string.IsNullOrEmpty(trimmed) ? "0" : trimmed;
-    }
-
+        => HoldingDistribution.PhotoTokenNormalizer.TrimLeadingZerosValue(value);
 
     private static string? NormalizePhotoToken(string? token)
-    {
-        if (string.IsNullOrWhiteSpace(token))
-            return null;
-
-        var m = Regex.Match(token, @"(?<a>\d{1,5})_(?<b>\d{1,5})_(?<c>\d{1,7})_(?<d>[A-Za-z])");
-        if (!m.Success)
-            return null;
-
-        static string TrimLeadingZeros(string value)
-        {
-            var trimmed = value.TrimStart('0');
-            return string.IsNullOrEmpty(trimmed) ? "0" : trimmed;
-        }
-
-        var a = TrimLeadingZeros(m.Groups["a"].Value);
-        var b = TrimLeadingZeros(m.Groups["b"].Value);
-        var c = TrimLeadingZeros(m.Groups["c"].Value);
-        var d = char.ToUpperInvariant(m.Groups["d"].Value[0]);
-        return $"{a}_{b}_{c}_{d}";
-    }
+        => HoldingDistribution.PhotoTokenNormalizer.NormalizePhotoToken(token);
 
 
     /// <summary>
