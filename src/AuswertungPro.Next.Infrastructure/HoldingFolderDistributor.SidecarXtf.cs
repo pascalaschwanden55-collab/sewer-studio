@@ -22,9 +22,8 @@ namespace AuswertungPro.Next.Infrastructure;
 // Teil derselben partial-Klasse - reine mechanische Auslagerung (kein Verhaltenswechsel).
 public static partial class HoldingFolderDistributor
 {
-    private static readonly Regex KinsTxtHeaderRegex = new(
-        @"^\s*(?<usage>\S+)\s+(?<from>[0-9.]+)\s*->\s*(?<to>[0-9.]+).*?@Datei=(?<video>[^\s]+)\s*$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+    private static readonly Regex KinsTxtHeaderRegex
+        = HoldingDistribution.KinsTxtHeaderParser.KinsTxtHeaderRegex;
 
     private static readonly Regex KinsTxtDateRegex = new(
         @"(?<d>\d{2}\.\d{2}\.\d{2,4})",
@@ -86,23 +85,7 @@ public static partial class HoldingFolderDistributor
 
 
     private static bool TryParseTxtHeader(string line, out string haltung, out string videoFile)
-    {
-        haltung = string.Empty;
-        videoFile = string.Empty;
-        var match = KinsTxtHeaderRegex.Match(line ?? string.Empty);
-        if (!match.Success)
-            return false;
-
-        var from = match.Groups["from"].Value.Trim();
-        var to = match.Groups["to"].Value.Trim();
-        var video = match.Groups["video"].Value.Trim();
-        if (string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(to))
-            return false;
-
-        haltung = $"{from}-{to}";
-        videoFile = video;
-        return true;
-    }
+        => HoldingDistribution.KinsTxtHeaderParser.TryParseTxtHeader(line, out haltung, out videoFile);
 
 
     private static DateTime? TryReadTxtDate(string txtPath)
