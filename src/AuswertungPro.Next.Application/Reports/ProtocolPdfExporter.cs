@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -854,16 +853,9 @@ public sealed class ProtocolPdfExporter
     private static string Shorten(string text, int max)
         => ProtocolZustandText.Shorten(text, max);
 
+    // Dünne Delegation zu ProtocolTextHelpers (verhaltensneutral extrahiert).
     private static string EscapeSvgText(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-            return string.Empty;
-        return text.Replace("&", "&amp;")
-            .Replace("<", "&lt;")
-            .Replace(">", "&gt;")
-            .Replace("\"", "&quot;")
-            .Replace("'", "&apos;");
-    }
+        => ProtocolTextHelpers.EscapeSvgText(text);
 
     private static List<PhotoItem> BuildPhotoItems(
         IReadOnlyList<ProtocolEntry> entries,
@@ -1472,57 +1464,18 @@ public sealed class ProtocolPdfExporter
     private static bool? ParseFlowDirection(string? text)
         => HoldingNodeParser.ParseFlowDirection(text);
 
-    /// <summary>Prüft ob ein Protokolleintrag einen Inspektions-Abbruch darstellt (BDC-Codes).</summary>
+    // Dünne Delegationen zu ProtocolTextHelpers (verhaltensneutral extrahiert).
+    /// <summary>Prueft ob ein Protokolleintrag einen Inspektions-Abbruch darstellt (BDC-Codes).</summary>
     private static bool IsAbortCode(ProtocolEntry entry)
-    {
-        var code = (entry.Code ?? "").Trim().ToUpperInvariant();
-        // BDC* = Abbruch der Inspektion (Hindernis, hoher Wasserstand, Versagen der Ausruestung, etc.)
-        return code.StartsWith("BDC", StringComparison.Ordinal);
-    }
+        => ProtocolTextHelpers.IsAbortCode(entry);
 
-    /// <summary>Prüft ob ein Protokolleintrag ein Seitenanschluss (lateral connection) ist.</summary>
+    /// <summary>Prueft ob ein Protokolleintrag ein Seitenanschluss (lateral connection) ist.</summary>
     private static bool IsLateralConnection(ProtocolEntry entry)
-    {
-        var code = (entry.Code ?? "").Trim().ToUpperInvariant();
-        // BAG* = Anschluss einragend, BAH* = Anschluss falsch/beschaedigt etc.
-        // BCA* = Bestandsaufnahme Anschluss (Formstueck, Sattelanschluss)
-        if (code.StartsWith("BAG", StringComparison.Ordinal) ||
-            code.StartsWith("BAH", StringComparison.Ordinal) ||
-            code.StartsWith("BCAA", StringComparison.Ordinal) ||
-            code.StartsWith("BCAB", StringComparison.Ordinal))
-            return true;
-
-        // Fallback: Beschreibung enthält "Anschluss" oder "Seiteneinlauf"
-        var desc = entry.Beschreibung ?? entry.CodeMeta?.Notes ?? "";
-        if (desc.Contains("Anschluss", StringComparison.OrdinalIgnoreCase) ||
-            desc.Contains("Seiteneinlauf", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        return false;
-    }
+        => ProtocolTextHelpers.IsLateralConnection(entry);
 
     /// <summary>Extrahiert die Uhrzeitposition (1-12) eines Protokolleintrags.</summary>
     private static int? ExtractClockHour(ProtocolEntry entry)
-    {
-        var parameters = entry.CodeMeta?.Parameters;
-        if (parameters is null || parameters.Count == 0)
-            return null;
-
-        // Prioritaet: vsa.uhr.von > ClockPos1
-        var raw = GetParam(parameters, "vsa.uhr.von")
-               ?? GetParam(parameters, "ClockPos1")
-               ?? GetParam(parameters, "Quantifizierung1");
-
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        // Versuche die Uhrzeit zu parsen (z.B. "3", "3 Uhr", "03:00", "9")
-        var cleaned = Regex.Match(raw.Trim(), @"(\d{1,2})");
-        if (cleaned.Success && int.TryParse(cleaned.Groups[1].Value, out var hour) && hour >= 1 && hour <= 12)
-            return hour;
-
-        return null;
-    }
+        => ProtocolTextHelpers.ExtractClockHour(entry);
 
     /// <summary>Klassifiziert einen Schaden nach Symbol-Kategorie anhand des VSA-Codes.</summary>
     private static string ClassifyDamageSymbol(ProtocolEntry entry)
@@ -1643,25 +1596,7 @@ public sealed class ProtocolPdfExporter
 
     /// <summary>Aus einem Datumsbereich (z.B. "05.11.2025 - 11.11.2025") nur das erste Datum extrahieren.</summary>
     private static string ExtractSingleDate(string dateText)
-    {
-        if (string.IsNullOrWhiteSpace(dateText))
-            return dateText;
-
-        // "05.11.2025 - 11.11.2025" → "05.11.2025"
-        var separators = new[] { " - ", " – ", " bis ", "–", "-" };
-        foreach (var sep in separators)
-        {
-            var idx = dateText.IndexOf(sep, StringComparison.OrdinalIgnoreCase);
-            if (idx > 4) // mindestens ein Datum davor (dd.MM oder aehnlich)
-            {
-                var candidate = dateText.Substring(0, idx).Trim();
-                if (candidate.Length >= 8) // plausibles Datum
-                    return candidate;
-            }
-        }
-
-        return dateText;
-    }
+        => ProtocolTextHelpers.ExtractSingleDate(dateText);
 
     private static string BuildAiSummary(List<ProtocolEntry> entries, ProtocolPdfExportOptions options)
     {
