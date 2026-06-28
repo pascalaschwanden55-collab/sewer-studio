@@ -127,7 +127,7 @@ foreach (var er in exportRoots)
 
     foreach (var (key, entry) in map)
     {
-        var normKey = NormalizeKey(key);
+        var normKey = OutEntryMerger.NormalizeKey(key);
         var newOut = new OutEntry(
             Material: entry.Material.Value,
             MaterialSource: entry.Material.Source.ToString(),
@@ -147,7 +147,7 @@ foreach (var er in exportRoots)
             merged[normKey] = newOut;
             continue;
         }
-        merged[normKey] = MergeOut(cur, newOut);
+        merged[normKey] = OutEntryMerger.MergeOut(cur, newOut);
     }
     perRootStats.Add((er, stats.TotalHoldings, stats.FromXtf, stats.FromPdf, stats.FromFdb));
 }
@@ -194,7 +194,7 @@ foreach (var hf in haltungsFolders)
     {
         var folderName = Path.GetFileName(dir);
         if (string.IsNullOrWhiteSpace(folderName)) continue;
-        var key = NormalizeKey(folderName);
+        var key = OutEntryMerger.NormalizeKey(folderName);
         if (string.IsNullOrWhiteSpace(key)) continue;
 
         // Neueste PDF gewinnt (Datums-Praefix sortiert lexikografisch absteigend
@@ -240,7 +240,7 @@ foreach (var hf in haltungsFolders)
         if (!merged.TryGetValue(key, out var cur))
             merged[key] = newOut;
         else
-            merged[key] = MergeOut(cur, newOut);
+            merged[key] = OutEntryMerger.MergeOut(cur, newOut);
     }
     Console.WriteLine(
         $"  Haltungen verarbeitet: {processed}, Material: {hfWithMaterial}, DN: {hfWithDn}, " +
@@ -335,77 +335,7 @@ static bool LooksLikeExportRoot(string dir)
     return false;
 }
 
-static string NormalizeKey(string raw)
-    => (raw ?? string.Empty).Replace(" ", "").Replace("/", "-").Replace("–", "-").Replace("—", "-");
-
 static string Pct(int n, int total) =>
     total == 0 ? "0" : (100.0 * n / total).ToString("F1", CultureInfo.InvariantCulture);
 
-// Bei Mehrfach-Treffern denselben Source-Prio-Vergleich anwenden, den der
-// Aggregator pro Export liefert. Der Source-Enum-Wert ist als String gespeichert,
-// wir mappen ihn auf einen numerischen Rang (kleiner = hoeher prio).
-static OutEntry MergeOut(OutEntry cur, OutEntry next)
-{
-    static int Rank(string? s) => s switch
-    {
-        "Xtf" => 1,
-        "Pdf" => 2,
-        "Fdb" => 3,
-        _      => 99,
-    };
-
-    string? mat = cur.Material;
-    string? matSrc = cur.MaterialSource;
-    if (!string.IsNullOrWhiteSpace(next.Material)
-        && (string.IsNullOrWhiteSpace(mat) || Rank(next.MaterialSource) < Rank(matSrc)))
-    {
-        mat = next.Material;
-        matSrc = next.MaterialSource;
-    }
-
-    int? dn = cur.DN_mm;
-    string? dnSrc = cur.DnSource;
-    if (next.DN_mm is > 0 && (dn is null or 0 || Rank(next.DnSource) < Rank(dnSrc)))
-    {
-        dn = next.DN_mm;
-        dnSrc = next.DnSource;
-    }
-
-    string? geo = cur.Geometrie;
-    string? geoSrc = cur.GeometrieSource;
-    if (!string.IsNullOrWhiteSpace(next.Geometrie)
-        && (string.IsNullOrWhiteSpace(geo) || Rank(next.GeometrieSource) < Rank(geoSrc)))
-    {
-        geo = next.Geometrie;
-        geoSrc = next.GeometrieSource;
-    }
-
-    return cur with
-    {
-        Material = mat,
-        MaterialSource = matSrc,
-        DN_mm = dn,
-        DnSource = dnSrc,
-        Geometrie = geo,
-        GeometrieSource = geoSrc,
-        Profilbreite_mm = cur.Profilbreite_mm ?? next.Profilbreite_mm,
-        Nutzungsart = cur.Nutzungsart ?? next.Nutzungsart,
-        Laenge_m = cur.Laenge_m ?? next.Laenge_m,
-        Strasse = cur.Strasse ?? next.Strasse,
-        Ort = cur.Ort ?? next.Ort,
-    };
-}
-
-internal sealed record OutEntry(
-    string? Material,
-    string? MaterialSource,
-    int? DN_mm,
-    string? DnSource,
-    int? Profilbreite_mm,
-    string? Geometrie,
-    string? GeometrieSource,
-    string? Nutzungsart,
-    double? Laenge_m,
-    string? Strasse,
-    string? Ort,
-    string ProvenanceRoot);
+// MergeOut, NormalizeKey und OutEntry sind nach OutEntryMerger.cs ausgelagert.
