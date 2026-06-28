@@ -306,7 +306,7 @@ public sealed class LegacyPdfImportService
         var fallbackHolding = IsLikelyHoldingId(parsed.Haltung)
             ? NormalizeHoldingId(parsed.Haltung!)
             : TryExtractHoldingIdFromFileName(pdfPath);
-        var fallbackDate = parsed.Date ?? TryExtractDateFromPath(pdfPath);
+        var fallbackDate = parsed.Date ?? PdfPathMetadataExtractor.TryExtractDateFromPath(pdfPath);
 
         if (!IsLikelyHoldingId(fallbackHolding))
         {
@@ -378,122 +378,19 @@ public sealed class LegacyPdfImportService
             stats.Uncertain++;
     }
 
+    /// <summary>Delegiert an <see cref="PdfPathMetadataExtractor.TryExtractHoldingIdFromFileName"/>.</summary>
     internal static string? TryExtractHoldingIdFromFileName(string pdfPath)
-    {
-        var name = Path.GetFileNameWithoutExtension(pdfPath) ?? "";
-        return TryExtractHoldingIdFromName(name);
-    }
+        => PdfPathMetadataExtractor.TryExtractHoldingIdFromFileName(pdfPath);
 
+    /// <summary>Delegiert an <see cref="PdfPathMetadataExtractor.TryExtractHoldingIdFromPath"/>.</summary>
     internal static string? TryExtractHoldingIdFromPath(string pdfPath)
-    {
-        var fromFileName = TryExtractHoldingIdFromFileName(pdfPath);
-        if (IsLikelyHoldingId(fromFileName))
-            return NormalizeHoldingId(fromFileName!);
-
-        var dir = Path.GetDirectoryName(pdfPath);
-        while (!string.IsNullOrWhiteSpace(dir))
-        {
-            var segment = Path.GetFileName(dir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            var fromSegment = TryExtractHoldingIdFromName(segment);
-            if (IsLikelyHoldingId(fromSegment))
-                return NormalizeHoldingId(fromSegment!);
-
-            var parent = Directory.GetParent(dir);
-            if (parent is null || string.Equals(parent.FullName, dir, StringComparison.OrdinalIgnoreCase))
-                break;
-            dir = parent.FullName;
-        }
-
-        return null;
-    }
-
-    private static string? TryExtractHoldingIdFromName(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return null;
-
-        var dashPair = Regex.Match(name, @"(?<!\d)(\d[\d\.]*-\d[\d\.]*)(?!\d)");
-        if (dashPair.Success)
-            return NormalizeHoldingId(dashPair.Groups[1].Value);
-
-        // e.g. 32953_1225 -> 32953-1225. Must run after dash-pair extraction
-        // so dated names like 20250630_29120-03.27666 keep the real holding id.
-        var underscorePair = Regex.Match(name, @"(?<!\d)(\d{3,})_(\d{3,})(?!\d)");
-        if (underscorePair.Success)
-            return $"{underscorePair.Groups[1].Value}-{underscorePair.Groups[2].Value}";
-
-        return null;
-    }
-
-    private static DateTime? TryExtractDateFromFileName(string pdfPath)
-    {
-        var name = Path.GetFileNameWithoutExtension(pdfPath) ?? "";
-        return TryExtractDateFromName(name);
-    }
-
-    private static DateTime? TryExtractDateFromPath(string pdfPath)
-    {
-        var fromFileName = TryExtractDateFromFileName(pdfPath);
-        if (fromFileName is not null)
-            return fromFileName;
-
-        var dir = Path.GetDirectoryName(pdfPath);
-        while (!string.IsNullOrWhiteSpace(dir))
-        {
-            var segment = Path.GetFileName(dir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            var fromSegment = TryExtractDateFromName(segment);
-            if (fromSegment is not null)
-                return fromSegment;
-
-            var parent = Directory.GetParent(dir);
-            if (parent is null || string.Equals(parent.FullName, dir, StringComparison.OrdinalIgnoreCase))
-                break;
-            dir = parent.FullName;
-        }
-
-        return null;
-    }
-
-    private static DateTime? TryExtractDateFromName(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return null;
-
-        var ymd = Regex.Match(name, @"(?<!\d)(\d{4})(\d{2})(\d{2})(?!\d)");
-        if (ymd.Success && DateTime.TryParseExact(ymd.Value, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateYmd))
-            return dateYmd;
-
-        var dmy = Regex.Match(name, @"(?<!\d)(\d{2})[._-](\d{2})[._-](\d{2,4})(?!\d)");
-        if (dmy.Success)
-        {
-            var candidate = $"{dmy.Groups[1].Value}.{dmy.Groups[2].Value}.{dmy.Groups[3].Value}";
-            var formats = new[] { "dd.MM.yyyy", "dd.MM.yy" };
-            if (DateTime.TryParseExact(candidate, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateDmy))
-                return dateDmy;
-        }
-
-        return null;
-    }
+        => PdfPathMetadataExtractor.TryExtractHoldingIdFromPath(pdfPath);
 
     private static void ApplyPathDateFallback(Dictionary<string, string> fields, string? key, string pdfPath)
     {
-        if (!IsLikelyHoldingId(key) || !string.IsNullOrWhiteSpace(fields.GetValueOrDefault("Datum_Jahr")))
-            return;
-
-        var pathDate = TryExtractDateFromPath(pdfPath);
-        if (pathDate is null)
-            return;
-
-        var pathHolding = TryExtractHoldingIdFromPath(pdfPath);
-        if (IsLikelyHoldingId(pathHolding)
-            && !string.Equals(NormalizeHoldingId(pathHolding!), NormalizeHoldingId(key!), StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        fields["Datum_Jahr"] = pathDate.Value.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+        if (key is null) return;
+        PdfPathMetadataExtractor.ApplyPathDateFallbackCore(fields, key, pdfPath);
     }
-
     private sealed record OcrImportFallback(IReadOnlyList<string> Pages, string? Message);
 
     private static OcrImportFallback TryExtractAllPagesWithOcr(string pdfPath)
