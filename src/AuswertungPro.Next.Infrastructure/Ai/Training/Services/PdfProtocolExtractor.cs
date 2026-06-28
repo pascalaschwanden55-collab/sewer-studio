@@ -142,12 +142,7 @@ public sealed class PdfProtocolExtractor
         @"\b(?:Schadensstufe|Schadenstufe|Schweregrad|Severity|Stufe|Klasse)\s*[:=]?\s*(?<severity>[1-5]|low|mid|mittel|high|hoch|niedrig|leicht|stark)\b|\bS(?<short>[1-5])\b",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    private static readonly string[] KnownTextAnchorWords =
-    {
-        "Leitung", "Video", "Foto", "Zustand", "Material",
-        "Schacht", "Kanal", "Haltung", "Inspektion", "Dimension",
-        "Profil", "Rohr", "Position", "Entf", "Strasse", "Wetter"
-    };
+    // KnownTextAnchorWords liegt jetzt in PdfFontEncodingDecoder
 
     // ── Öffentliche API ─────────────────────────────────────────────────────
 
@@ -431,97 +426,13 @@ public sealed class PdfProtocolExtractor
         return TryDecodeShiftedText(rawText);
     }
 
-    // ── Font-Encoding-Korrektur ──────────────────────────────────────────────
+    // ── Font-Encoding-Korrektur — delegiert an PdfFontEncodingDecoder ────────
 
-    /// <summary>
-    /// Erkennt PDFs mit verschobener Zeichencodierung (Custom Font Encoding)
-    /// und korrigiert den Text automatisch. Manche PDF-Generatoren
-    /// verwenden Schriften, bei denen alle Zeichen um einen festen Offset
-    /// verschoben sind. PdfPig kann diese nicht korrekt decodieren.
-    /// </summary>
     private static string TryDecodeShiftedText(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return text;
-
-        int existingMatches = CountWordMatches(text, KnownTextAnchorWords);
-        if (existingMatches >= 3)
-            return text;
-
-        int bestShift = 0;
-        int bestCount = existingMatches;
-
-        for (int shift = 1; shift <= 60; shift++)
-        {
-            var decoded = ShiftAllChars(text, shift);
-            int count = CountWordMatches(decoded, KnownTextAnchorWords);
-            if (count > bestCount)
-            {
-                bestCount = count;
-                bestShift = shift;
-            }
-        }
-
-        if (bestShift > 0 && bestCount >= 3)
-            return ShiftAllChars(text, bestShift);
-
-        return text;
-    }
+        => PdfFontEncodingDecoder.TryDecodeShiftedText(text);
 
     internal static bool LooksLikeUndecodableFontEncoding(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return false;
-
-        var chars = text.Where(ch => !char.IsWhiteSpace(ch)).ToList();
-        if (chars.Count < 80)
-            return false;
-
-        if (CountWordMatches(text, KnownTextAnchorWords) > 0)
-            return false;
-
-        var suspiciousChars = chars.Count(IsSuspiciousDecodedChar);
-        return suspiciousChars / (double)chars.Count >= 0.25;
-    }
-
-    private static bool IsSuspiciousDecodedChar(char ch)
-    {
-        if (char.IsControl(ch))
-            return true;
-
-        return char.GetUnicodeCategory(ch) switch
-        {
-            UnicodeCategory.Control => true,
-            UnicodeCategory.OtherNotAssigned => true,
-            UnicodeCategory.PrivateUse => true,
-            UnicodeCategory.Surrogate => true,
-            _ => false
-        };
-    }
-
-    private static int CountWordMatches(string text, string[] words)
-    {
-        int count = 0;
-        foreach (var word in words)
-        {
-            if (text.Contains(word, StringComparison.OrdinalIgnoreCase))
-                count++;
-        }
-        return count;
-    }
-
-    private static string ShiftAllChars(string text, int shift)
-    {
-        var sb = new System.Text.StringBuilder(text.Length);
-        foreach (var ch in text)
-        {
-            if (ch == '\r' || ch == '\n' || ch == '\t' || ch == ' ')
-                sb.Append(ch);
-            else
-                sb.Append((char)(ch + shift));
-        }
-        return sb.ToString();
-    }
+        => PdfFontEncodingDecoder.LooksLikeUndecodableFontEncoding(text);
 
     // ── Bild-Extraktion aus PDF ─────────────────────────────────────────────
 
