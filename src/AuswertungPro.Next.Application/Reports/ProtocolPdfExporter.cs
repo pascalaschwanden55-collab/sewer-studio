@@ -1610,42 +1610,14 @@ public sealed class ProtocolPdfExporter
 
     /// <summary>Klassifiziert einen Schaden nach Symbol-Kategorie anhand des VSA-Codes.</summary>
     private static string ClassifyDamageSymbol(ProtocolEntry entry)
-        => ResolveDamageSymbolCategory(entry.Code);
+        => DamageSymbolClassifier.ResolveDamageSymbolCategory(entry.Code);
 
+    // Dünne Delegationen zu DamageSymbolClassifier (verhaltensneutral extrahiert).
     internal static string ResolveDamageSymbolCategory(string? rawCode)
-    {
-        var code = (rawCode ?? "").Trim().ToUpperInvariant();
-        if (code.StartsWith("BAA", StringComparison.Ordinal)) return "deformation";  // Verformung
-        if (code.StartsWith("BAB", StringComparison.Ordinal)) return "crack";        // Riss
-        if (code.StartsWith("BAC", StringComparison.Ordinal)) return "break";        // Bruch / Einsturz
-        if (code.StartsWith("BAD", StringComparison.Ordinal)) return "leak";         // Undichtheit
-        if (code.StartsWith("BAE", StringComparison.Ordinal)) return "offset";       // Versatz
-        if (code.StartsWith("BAF", StringComparison.Ordinal)) return "surface";      // Oberflaechenschaden
-        if (code.StartsWith("BAH", StringComparison.Ordinal)) return "offset";       // Schadhafter Anschluss
-        if (code.StartsWith("BAI", StringComparison.Ordinal)) return "obstacle";     // Hindernis
-        if (code.StartsWith("BAJ", StringComparison.Ordinal)) return "offset";       // Verschobene Rohrverbindung
-        if (code.StartsWith("BAK", StringComparison.Ordinal)) return "infiltration"; // Infiltration
-        if (code.StartsWith("BAL", StringComparison.Ordinal)) return "exfiltration"; // Exfiltration
-        if (code.StartsWith("BBA", StringComparison.Ordinal)) return "roots";        // Wurzeln / Bewuchs
-        if (code.StartsWith("BBB", StringComparison.Ordinal)) return "incrustation"; // Anhaftende Stoffe / Inkrustation
-        if (code.StartsWith("BBC", StringComparison.Ordinal)) return "deposit";      // Ablagerung
-        return "default";
-    }
+        => DamageSymbolClassifier.ResolveDamageSymbolCategory(rawCode);
 
-    /// <summary>Gibt die harmonisierte Farbe fuer eine Schadens-Kategorie zurueck.</summary>
     private static string GetDamageSymbolColor(string category, string fallback = "#006E9C")
-    {
-        return category switch
-        {
-            "crack" or "break"                          => "#D64541", // Rot - strukturell kritisch
-            "deformation" or "offset" or "surface"      => "#E67E22", // Orange - Verformung / Oberflaeche
-            "leak" or "infiltration" or "exfiltration"   => "#2196F3", // Blau - Wasser
-            "roots"                                      => "#27AE60", // Gruen - biologisch
-            "incrustation" or "deposit"                  => "#8B6914", // Braun - Anhaftung / Ablagerung
-            "obstacle"                                   => "#6B7280", // Grau - Hindernis
-            _ => fallback
-        };
-    }
+        => DamageSymbolClassifier.GetDamageSymbolColor(category, fallback);
 
     /// <summary>Rendert ein schadenstypisches SVG-Symbol zentriert auf (cx, cy).</summary>
     private static void RenderDamageSymbol(StringBuilder sb, double cx, double cy, string category, string color, double s = 5)
