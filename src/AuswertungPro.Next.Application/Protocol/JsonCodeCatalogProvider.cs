@@ -270,39 +270,10 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
     }
 
     private static CodeDefinition CloneCode(CodeDefinition source)
-    {
-        return new CodeDefinition
-        {
-            Code = source.Code ?? string.Empty,
-            Title = source.Title ?? string.Empty,
-            CanonicalCode = source.CanonicalCode,
-            Source = source.Source,
-            IsObservedExtension = source.IsObservedExtension,
-            IsSelectable = source.IsSelectable,
-            StandardAnnotation = source.StandardAnnotation,
-            Group = source.Group ?? "Unbekannt",
-            Description = source.Description,
-            CategoryPath = (source.CategoryPath ?? new List<string>()).ToList(),
-            Parameters = (source.Parameters ?? new List<CodeParameter>()).Select(CloneParameter).ToList(),
-            Examples = (source.Examples ?? new List<string>()).ToList(),
-            RequiresRange = source.RequiresRange,
-            RangeThresholdM = source.RangeThresholdM,
-            RangeThresholdText = source.RangeThresholdText
-        };
-    }
+        => CodeDefinitionCloning.CloneCode(source);
 
     private static CodeParameter CloneParameter(CodeParameter source)
-    {
-        return new CodeParameter
-        {
-            Name = source.Name ?? string.Empty,
-            DataKey = string.IsNullOrWhiteSpace(source.DataKey) ? null : source.DataKey.Trim(),
-            Type = string.IsNullOrWhiteSpace(source.Type) ? "string" : source.Type.Trim(),
-            AllowedValues = source.AllowedValues?.ToList(),
-            Unit = string.IsNullOrWhiteSpace(source.Unit) ? null : source.Unit.Trim(),
-            Required = source.Required
-        };
-    }
+        => CodeDefinitionCloning.CloneParameter(source);
 
     private static string NormalizeCode(string? code)
     {

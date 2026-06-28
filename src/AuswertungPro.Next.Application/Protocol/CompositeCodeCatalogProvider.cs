@@ -140,33 +140,8 @@ public sealed class CompositeCodeCatalogProvider : ICodeCatalogProvider
         => (code ?? string.Empty).Trim().ToUpperInvariant();
 
     private static CodeDefinition CloneCode(CodeDefinition source)
-        => new()
-        {
-            Code = source.Code ?? string.Empty,
-            Title = source.Title ?? string.Empty,
-            CanonicalCode = source.CanonicalCode,
-            Source = source.Source,
-            IsObservedExtension = source.IsObservedExtension,
-            IsSelectable = source.IsSelectable,
-            StandardAnnotation = source.StandardAnnotation,
-            Group = source.Group ?? "Unbekannt",
-            Description = source.Description,
-            CategoryPath = (source.CategoryPath ?? new List<string>()).ToList(),
-            Parameters = (source.Parameters ?? new List<CodeParameter>()).Select(CloneParameter).ToList(),
-            Examples = (source.Examples ?? new List<string>()).ToList(),
-            RequiresRange = source.RequiresRange,
-            RangeThresholdM = source.RangeThresholdM,
-            RangeThresholdText = source.RangeThresholdText
-        };
+        => CodeDefinitionCloning.CloneCode(source);
 
     private static CodeParameter CloneParameter(CodeParameter source)
-        => new()
-        {
-            Name = source.Name ?? string.Empty,
-            DataKey = source.DataKey,
-            Type = source.Type ?? "string",
-            AllowedValues = source.AllowedValues?.ToList(),
-            Unit = source.Unit,
-            Required = source.Required
-        };
+        => CodeDefinitionCloning.CloneParameter(source);
 }
