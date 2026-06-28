@@ -483,17 +483,11 @@ public sealed class StageAExporter
 
     private static string ChooseSplit(TrainingSample sample, double validationRatio)
     {
-        if (validationRatio <= 0)
-            return "train";
-        if (validationRatio >= 1)
-            return "val";
-
+        // Schluessel: SampleId bevorzugt, Fallback auf Pfad
         var key = string.IsNullOrWhiteSpace(sample.SampleId)
             ? sample.FramePath
             : sample.SampleId;
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(key.ToUpperInvariant()));
-        var value = BitConverter.ToUInt32(hash, 0) / (double)uint.MaxValue;
-        return value < validationRatio ? "val" : "train";
+        return YoloDatasetNaming.ChooseSplit(key, validationRatio);
     }
 
     private static string BuildYoloLabelLine(int classId, TrainingSample sample)

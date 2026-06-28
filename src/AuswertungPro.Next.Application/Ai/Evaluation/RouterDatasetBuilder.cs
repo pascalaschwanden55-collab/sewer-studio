@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using AuswertungPro.Next.Application.Ai.Training;
 
 namespace AuswertungPro.Next.Application.Ai.Evaluation;
 
@@ -233,16 +234,7 @@ public static class RouterDatasetBuilder
     }
 
     private static string ChooseSplit(string path, double validationRatio)
-    {
-        if (validationRatio <= 0)
-            return "train";
-        if (validationRatio >= 1)
-            return "val";
-
-        var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(path.ToUpperInvariant()));
-        var value = BitConverter.ToUInt32(hash, 0) / (double)uint.MaxValue;
-        return value < validationRatio ? "val" : "train";
-    }
+        => YoloDatasetNaming.ChooseSplit(path, validationRatio);
 
     private static string? ExtractClassFromFileName(string path)
     {
