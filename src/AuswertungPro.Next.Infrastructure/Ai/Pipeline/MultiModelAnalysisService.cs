@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
@@ -998,40 +997,9 @@ public sealed class MultiModelAnalysisService
     }
 
     /// <summary>
-    /// Normalisiert Clock-Positionen auf ganzzahlige Stunden.
-    /// "3:00" → "3", "12" → "12", "Scheitel" → "12", "Sohle" → "6", "rechts" → "3", "links" → "9".
+    /// Normalisiert Clock-Positionen — delegiert an kanonische Implementierung in VsaCodeResolver.
     /// </summary>
-    private static string? NormalizeClockPosition(string? clock)
-    {
-        var normalized = NormalizeClock(clock);
-        if (string.IsNullOrWhiteSpace(normalized))
-            return null;
-        return normalized;
-    }
-
-    private static string? NormalizeClock(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim().ToLowerInvariant();
-        if (text.Contains("oben") || text.Contains("scheitel") || text.Contains("krone"))
-            return "12:00";
-        if (text.Contains("unten") || text.Contains("sohle"))
-            return "6:00";
-        if (text.Contains("rechts")) return "3:00";
-        if (text.Contains("links")) return "9:00";
-
-        var match = Regex.Match(raw, @"\b(1[0-2]|0?[1-9])\b");
-        if (match.Success
-            && int.TryParse(match.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var hour)
-            && hour >= 1
-            && hour <= 12)
-        {
-            return $"{hour}:00";
-        }
-
-        return raw.Trim();
-    }
+    private static string? NormalizeClockPosition(string? clock) =>
+        VsaCodeResolver.NormalizeClock(clock);
 
 }

@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using VsaCodeResolver = AuswertungPro.Next.Infrastructure.Ai.VsaCodeResolver;
@@ -183,7 +181,7 @@ internal sealed class TemporalFindingDeduplicator
             ?? (_options.NormalizeFallbackLabels
                 ? NormalizeFindingLabel(finding.Label.Trim())
                 : finding.Label.Trim());
-        var clock = _options.ClockInKey ? NormalizeClock(finding.PositionClock) : null;
+        var clock = _options.ClockInKey ? VsaCodeResolver.NormalizeClock(finding.PositionClock) : null;
         return string.IsNullOrWhiteSpace(clock) ? label : $"{label}|{clock}";
     }
 
@@ -217,30 +215,7 @@ internal sealed class TemporalFindingDeduplicator
         return lower;
     }
 
-    private static string? NormalizeClock(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim().ToLowerInvariant();
-        if (text.Contains("oben") || text.Contains("scheitel") || text.Contains("krone"))
-            return "12:00";
-        if (text.Contains("unten") || text.Contains("sohle"))
-            return "6:00";
-        if (text.Contains("rechts")) return "3:00";
-        if (text.Contains("links")) return "9:00";
-
-        var match = Regex.Match(raw, @"\b(1[0-2]|0?[1-9])\b");
-        if (match.Success
-            && int.TryParse(match.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var hour)
-            && hour >= 1
-            && hour <= 12)
-        {
-            return $"{hour}:00";
-        }
-
-        return raw.Trim();
-    }
+    // NormalizeClock-Duplikat entfernt — kanonische Implementierung: VsaCodeResolver.NormalizeClock
 
     private sealed class ActiveFindingState
     {
@@ -370,7 +345,7 @@ internal sealed class TemporalFindingDeduplicator
         }
 
         private string? NormalizeStoredClock(string? clock) =>
-            _normalizeOutputClock ? NormalizeClock(clock) : clock;
+            _normalizeOutputClock ? VsaCodeResolver.NormalizeClock(clock) : clock;
 
         private static string SeverityLabel(int severity) => severity >= 4 ? "high" : severity == 3 ? "mid" : "low";
 
