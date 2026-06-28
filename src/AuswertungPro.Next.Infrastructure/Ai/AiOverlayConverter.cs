@@ -323,32 +323,11 @@ public static class AiOverlayConverter
     }
 
     /// <summary>
-    /// Inverse Kreissegment-Formel: Prozent → hRatio (Naeherung via Newton).
+    /// Inverse Kreissegment-Formel: Prozent → hRatio.
+    /// Delegiert an PipeGeometryMath.InverseCircleSegmentPercent (Bisektions-Suche).
     /// </summary>
     private static double InverseCircleSegmentPercent(double percent)
-    {
-        percent = Math.Clamp(percent, 0, 100);
-        if (percent <= 0) return 0;
-        if (percent >= 100) return 1;
-
-        // Newton-Iteration
-        double h = percent / 100.0; // Startwert
-        for (int i = 0; i < 20; i++)
-        {
-            double current = OverlayToolService.CircleSegmentPercent(h);
-            double error = current - percent;
-            if (Math.Abs(error) < 0.01) break;
-
-            // Numerische Ableitung
-            double dh = 0.001;
-            double derivative = (OverlayToolService.CircleSegmentPercent(h + dh)
-                                - OverlayToolService.CircleSegmentPercent(h - dh)) / (2 * dh);
-            if (Math.Abs(derivative) < 1e-8) break;
-            h -= error / derivative;
-            h = Math.Clamp(h, 0, 1);
-        }
-        return h;
-    }
+        => PipeGeometryMath.InverseCircleSegmentPercent(percent);
 }
 
 // LiveFrameFinding ist in VideoFullAnalysisService.cs definiert (gleicher Namespace).
