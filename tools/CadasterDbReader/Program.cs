@@ -1493,58 +1493,7 @@ internal sealed class CadasterTopologyHolding
     public List<string> Warnings { get; set; } = [];
 }
 
-internal sealed class MediaLookup
-{
-    private readonly Dictionary<string, string> _byFileName = new(StringComparer.OrdinalIgnoreCase);
-
-    public MediaLookup(IEnumerable<string> paths)
-    {
-        foreach (var path in paths)
-        {
-            var name = Path.GetFileName(path);
-            if (!_byFileName.ContainsKey(name))
-                _byFileName[name] = path;
-        }
-    }
-
-    public string? Resolve(string? fileName, string? extension)
-    {
-        foreach (var candidate in CandidateNames(fileName, extension))
-        {
-            if (_byFileName.TryGetValue(candidate, out var path))
-                return path;
-        }
-        return null;
-    }
-
-    private static IEnumerable<string> CandidateNames(string? fileName, string? extension)
-    {
-        if (string.IsNullOrWhiteSpace(fileName))
-            yield break;
-
-        var cleanName = fileName.Trim();
-        yield return cleanName;
-        var baseName = Path.GetFileName(cleanName);
-        if (!string.Equals(baseName, cleanName, StringComparison.OrdinalIgnoreCase))
-            yield return baseName;
-
-        var ext = NormalizeExtension(extension);
-        if (!string.IsNullOrWhiteSpace(ext) && string.IsNullOrWhiteSpace(Path.GetExtension(cleanName)))
-        {
-            yield return cleanName + ext;
-            if (!string.Equals(baseName, cleanName, StringComparison.OrdinalIgnoreCase))
-                yield return baseName + ext;
-        }
-    }
-
-    private static string? NormalizeExtension(string? extension)
-    {
-        if (string.IsNullOrWhiteSpace(extension))
-            return null;
-        var ext = extension.Trim();
-        return ext.StartsWith('.') ? ext : "." + ext;
-    }
-}
+// MediaLookup wurde in MediaLookup.cs verschoben (kein IO, reine Lookup-Klasse).
 
 internal sealed class CadasterManifest
 {
