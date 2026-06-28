@@ -23,16 +23,11 @@ public sealed class IbakExportImportService : IIbakImportService
             .Concat(new[] { ".jpg", ".jpeg", ".png", ".bmp", ".pdf", ".txt" }),
         StringComparer.OrdinalIgnoreCase);
 
-    private static readonly Regex ObservationRegex = new(
-        @"^\s*(\d{2}:\d{2}:\d{2})\s+([\d.,]+)\s*m\s+([A-Z0-9]+)\s+(.*)$",
-        RegexOptions.Compiled);
+    // Regex-Felder: Delegation an IbakDatenTxtLineParser
+    private static readonly Regex ObservationRegex = IbakDatenTxtLineParser.ObservationRegex;
 
     // Zeilen ohne Zeitstempel (Header-Einträge wie AEC, AED, AEF)
-    private static readonly Regex HeaderLineRegex = new(
-        @"^\s+([\d.,]+)\s*m\s+([A-Z0-9]+)\s+(.*)$",
-        RegexOptions.Compiled);
-
-    private static readonly Regex RangeIndexRegex = new(@"\((\d+)\)", RegexOptions.Compiled);
+    private static readonly Regex HeaderLineRegex = IbakDatenTxtLineParser.HeaderLineRegex;
 
     public Result<ImportStats> ImportIbakExport(string exportRoot, Project project, ImportRunContext? ctx = null)
     {
@@ -641,60 +636,25 @@ public sealed class IbakExportImportService : IIbakImportService
         return null;
     }
 
+    // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser
     private static ProtocolEntry BuildEntry(string code, string desc, double? meter, string? mpeg, TimeSpan? time)
-    {
-        return new ProtocolEntry
-        {
-            Code = code,
-            Beschreibung = desc,
-            MeterStart = meter,
-            MeterEnd = meter,
-            Mpeg = mpeg,
-            Zeit = time,
-            Source = ProtocolEntrySource.Imported
-        };
-    }
+        => IbakDatenTxtLineParser.BuildEntry(code, desc, meter, mpeg, time);
 
+    // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser
     private static (bool isStart, bool isEnd, string index) ExtractRange(string desc)
-    {
-        var lower = desc.ToLowerInvariant();
-        var isStart = lower.Contains("anfang") || lower.Contains("beginn");
-        var isEnd = lower.Contains("ende");
-        var index = "0";
-        var m = RangeIndexRegex.Match(desc);
-        if (m.Success)
-            index = m.Groups[1].Value;
-        return (isStart, isEnd, index);
-    }
+        => IbakDatenTxtLineParser.ExtractRange(desc);
 
+    // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser
     private static double? ParseMeter(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-        var normalized = text.Replace(',', '.');
-        if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
-            return value;
-        return null;
-    }
+        => IbakDatenTxtLineParser.ParseMeter(text);
 
+    // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser
     private static TimeSpan? ParseTime(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-        if (TimeSpan.TryParseExact(text, @"hh\:mm\:ss", CultureInfo.InvariantCulture, out var ts))
-            return ts;
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out ts))
-            return ts;
-        return null;
-    }
+        => IbakDatenTxtLineParser.ParseTime(text);
 
+    // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser
     private static string StripIbakMeta(string text)
-    {
-        var idx = text.IndexOf("@!$ibak$!", StringComparison.OrdinalIgnoreCase);
-        if (idx >= 0)
-            return text[..idx].Trim();
-        return text.Trim();
-    }
+        => IbakDatenTxtLineParser.StripIbakMeta(text);
 
     private static Dictionary<string, List<string>> BuildFileIndex(string root)
     {
@@ -824,18 +784,9 @@ public sealed class IbakExportImportService : IIbakImportService
             record.SetFieldValue("Primaere_Schaeden", text, FieldSource.Legacy, userEdited: false);
     }
 
+    // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser
     private static string MapMaterial(string ibakMaterial)
-    {
-        var lower = ibakMaterial.ToLowerInvariant();
-        if (lower.Contains("polypropylen")) return "PP";
-        if (lower.Contains("polyvinylchlorid") || lower.Contains("pvc")) return "PVC";
-        if (lower.Contains("polyethylen") || lower.Contains("pe")) return "PE";
-        if (lower.Contains("beton") || lower.Contains("normalbeton")) return "Beton";
-        if (lower.Contains("steinzeug")) return "Steinzeug";
-        if (lower.Contains("guss")) return "Guss";
-        if (lower.Contains("gfk") || lower.Contains("glasfaser")) return "GFK";
-        return ibakMaterial; // Originalwert beibehalten
-    }
+        => IbakDatenTxtLineParser.MapMaterial(ibakMaterial);
 
     private sealed record IbakHolding(string Holding)
     {
