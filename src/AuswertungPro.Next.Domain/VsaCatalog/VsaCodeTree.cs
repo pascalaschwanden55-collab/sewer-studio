@@ -493,54 +493,9 @@ public static class VsaCodeTree
     }
 
     /// <summary>
-    /// Prueft ob ein VSA-Code typischerweise ein Streckenschaden ist (requiresRange laut Katalog).
-    /// Typisch fuer: Risse laengs (BABA/BABAB), Korrosion (BAFA), Wurzeln (BBA),
-    /// Anhaftende Stoffe (BBB), Ablagerungen Sohle (BBC), eindringender Boden (BBD) etc.
+    /// Prueft ob ein VSA-Code typischerweise ein Streckenschaden ist.
+    /// Delegiert an <see cref="StreckenschadenCodeClassifier"/>.
     /// </summary>
-    private static readonly HashSet<string> StreckenschadenCodes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        // BA: Bauliche Schaeden — laengs-Varianten
-        "BABA",   // Risse - laengs (Haarriss)
-        "BABAB",  // Oberflächenriss radial (laengs)
-        "BABAC",  // Komplexe Rissbildung (laengs)
-        "BABB",   // Risse - Riss (laengs)
-        "BABBA",  // Risse - Riss laengs
-        "BABBB",  // Risse - Riss radial (laengs)
-        "BABBC",  // Risse - Riss, komplexe Rissbildung (laengs)
-        "BABC",   // Risse - Bruch/Einsturz (laengs)
-        "BABCA",  // Bruch/Einsturz laengs
-        "BAFA",   // Oberflaechenschaden - Rauhigkeit
-        "BAFAE",  // Oberflaechenschaden - Rauhigkeit erhoehte
-        "BAFB",   // Oberflaechenschaden - Korrosion/Erosion
-        "BAFC",   // Oberflaechenschaden - Sichtbare Bewehrung
-        "BAFD",   // Oberflaechenschaden - Fehlstelle Beschichtung
-        "BAG",    // Verformung allgemein
-        "BAGA",   // Verformung - Deformation
-        // BB: Betriebliche Schaeden
-        "BBA",    // Wurzeln
-        "BBAA",   // Wurzeln - Pfahlwurzel
-        "BBAB",   // Wurzeln - feiner Einwuchs
-        "BBB",    // Anhaftende Stoffe
-        "BBBA",   // Anhaftende Stoffe - Inkrustation
-        "BBC",    // Ablagerungen Sohle
-        "BBCA",   // Ablagerungen Sohle - Sand
-        "BBCB",   // Ablagerungen Sohle - Kies
-        "BBCC",   // Ablagerungen Sohle - Hart
-        "BBD",    // Eindringen Boden
-        "BBDA",   // Eindringen Boden - Sand
-        "BBDB",   // Eindringen Boden - Humus
-    };
-
     public static bool IsStreckenschadenCode(string code)
-    {
-        if (string.IsNullOrWhiteSpace(code)) return false;
-        // Exakter Match
-        if (StreckenschadenCodes.Contains(code)) return true;
-        // Prefix-Match: z.B. "BABBA" matched wenn "BABB" ein Streckenschaden ist
-        for (int len = code.Length - 1; len >= 3; len--)
-        {
-            if (StreckenschadenCodes.Contains(code[..len])) return true;
-        }
-        return false;
-    }
+        => StreckenschadenCodeClassifier.IsStreckenschadenCode(code);
 }
