@@ -165,31 +165,7 @@ public sealed class IbakExportImportService : IIbakImportService
     }
 
     private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, ProtocolService protocolService)
-    {
-        if (record.Protocol is null)
-        {
-            record.Protocol = protocolService.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
-            return;
-        }
-
-        if (record.Protocol.Current.Entries.Count == 0 && record.Protocol.Original.Entries.Count == 0)
-        {
-            record.Protocol = protocolService.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
-            return;
-        }
-
-        // Audit I1: identischer Re-Import erzeugt keine neue Revision
-        if (Common.ProtocolContentFingerprint.HasSameContent(record.Protocol.Current, entries))
-            return;
-
-        record.Protocol.History.Add(record.Protocol.Current);
-        record.Protocol.Current = new ProtocolRevision
-        {
-            Comment = "Import (IBAK Daten.txt)",
-            CreatedAt = DateTimeOffset.UtcNow,
-            Entries = entries
-        };
-    }
+        => Common.ImportProtocolApplier.Apply(record, entries, protocolService, "Import (IBAK Daten.txt)");
 
     private static void UpdateFindings(HaltungRecord record, List<ProtocolEntry> entries)
     {

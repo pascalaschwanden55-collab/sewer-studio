@@ -491,31 +491,9 @@ public sealed class KinsImportService : IKinsImportService
 
     private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, ProtocolService protocolService, string comment)
     {
+        // KINS klont die Eintraege vor der Uebergabe (Schreibschutz gegenueber der Quellliste)
         var cloned = entries.Select(CloneEntry).ToList();
-
-        if (record.Protocol is null)
-        {
-            record.Protocol = protocolService.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? string.Empty, cloned, null);
-            return;
-        }
-
-        if (record.Protocol.Current.Entries.Count == 0 && record.Protocol.Original.Entries.Count == 0)
-        {
-            record.Protocol = protocolService.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? string.Empty, cloned, null);
-            return;
-        }
-
-        // Audit I1: identischer Re-Import erzeugt keine neue Revision
-        if (Common.ProtocolContentFingerprint.HasSameContent(record.Protocol.Current, cloned))
-            return;
-
-        record.Protocol.History.Add(record.Protocol.Current);
-        record.Protocol.Current = new ProtocolRevision
-        {
-            Comment = comment,
-            CreatedAt = DateTimeOffset.UtcNow,
-            Entries = cloned
-        };
+        Common.ImportProtocolApplier.Apply(record, cloned, protocolService, comment);
     }
 
     private static ProtocolEntry CloneEntry(ProtocolEntry e)
