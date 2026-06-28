@@ -7,14 +7,12 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Import.Common;
-using AuswertungPro.Next.Infrastructure.Media;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 internal static class M150MdbImportHelper
 {
     private static readonly Regex HoldingRx = new(@"(?<!\d)((?:\d{3,}|\d{1,3}(?:\.\d+)+)\s*[-/]\s*(?:\d{3,}|\d{1,3}(?:\.\d+)+))(?!\d)", RegexOptions.Compiled);
-    private static readonly Regex PointRx = new(@"^[A-Za-z0-9][A-Za-z0-9._-]*$", RegexOptions.Compiled);
     private static readonly Regex DateRx = new(@"(\d{2}[./-]\d{2}[./-]\d{2,4}|\d{4}-\d{2}-\d{2})", RegexOptions.Compiled);
     private static readonly Regex GuidFragmentRx = new(@"\{?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-", RegexOptions.Compiled);
 
@@ -405,60 +403,21 @@ internal static class M150MdbImportHelper
         return string.Empty;
     }
 
+    // Delegation: Logik liegt jetzt in M150ValueExtractor.
     private static string BuildHoldingFromWinCanSection(string startRaw, string endRaw, string dirRaw)
-    {
-        var start = ExtractPointId(startRaw);
-        var end = ExtractPointId(endRaw);
-        if (!IsPointId(start) || !IsPointId(end))
-            return string.Empty;
+        => M150ValueExtractor.BuildHoldingFromWinCanSection(startRaw, endRaw, dirRaw);
 
-        return ShouldReverseWinCanDirection(dirRaw)
-            ? NormalizeHolding($"{end}-{start}")
-            : NormalizeHolding($"{start}-{end}");
-    }
-
+    // Delegation: Logik liegt jetzt in M150ValueExtractor.
     private static string ExtractPointId(string? raw)
-    {
-        var value = (raw ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(value))
-            return string.Empty;
+        => M150ValueExtractor.ExtractPointId(raw);
 
-        if (IsPointId(value))
-            return value;
-
-        var m = Regex.Match(value, @"(\d{2,}(?:\.\d+)+|\d{3,})");
-        return m.Success ? m.Groups[1].Value : string.Empty;
-    }
-
+    // Delegation: Logik liegt jetzt in M150ValueExtractor.
     private static bool ShouldReverseWinCanDirection(string? raw)
-    {
-        var dir = (raw ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(dir))
-            return false;
+        => M150ValueExtractor.ShouldReverseWinCanDirection(raw);
 
-        return dir.Equals("U", StringComparison.OrdinalIgnoreCase)
-               || dir.Equals("UP", StringComparison.OrdinalIgnoreCase)
-               || dir.Equals("UPSTREAM", StringComparison.OrdinalIgnoreCase)
-               || dir.Equals("2", StringComparison.OrdinalIgnoreCase);
-    }
-
+    // Delegation: Logik liegt jetzt in M150ValueExtractor.
     private static string NormalizeWinCanDirection(string? raw)
-    {
-        var dir = (raw ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(dir))
-            return string.Empty;
-
-        if (ShouldReverseWinCanDirection(dir))
-            return "unten -> oben";
-
-        if (dir.Equals("D", StringComparison.OrdinalIgnoreCase)
-            || dir.Equals("DOWN", StringComparison.OrdinalIgnoreCase)
-            || dir.Equals("DOWNSTREAM", StringComparison.OrdinalIgnoreCase)
-            || dir.Equals("1", StringComparison.OrdinalIgnoreCase))
-            return "oben -> unten";
-
-        return NormalizeDirection(dir);
-    }
+        => M150ValueExtractor.NormalizeWinCanDirection(raw);
 
     private static List<ImportEntry> ExtractEntriesFromXml(XDocument doc)
     {
@@ -689,81 +648,29 @@ internal static class M150MdbImportHelper
         return m.Success ? NormalizeHolding(m.Groups[1].Value) : string.Empty;
     }
 
+    // Delegation: Logik liegt jetzt in M150ValueExtractor.
     private static bool IsHoldingId(string? value)
-        => !string.IsNullOrWhiteSpace(value) && HoldingRx.IsMatch(value.Trim());
+        => M150ValueExtractor.IsHoldingId(value);
 
+    // Delegation: Logik liegt jetzt in M150ValueExtractor.
     private static bool IsPointId(string? value)
-        => !string.IsNullOrWhiteSpace(value) && PointRx.IsMatch(value.Trim());
+        => M150ValueExtractor.IsPointId(value);
 
+    // Delegation: Logik liegt jetzt in M150ValueExtractor.
     private static string? TryNormalizeDate(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
+        => M150ValueExtractor.TryNormalizeDate(value);
 
-        var text = value.Trim();
-        var m = DateRx.Match(text);
-        if (m.Success)
-            text = m.Groups[1].Value;
-
-        var formats = new[] { "dd.MM.yyyy", "dd.MM.yy", "dd/MM/yyyy", "dd/MM/yy", "dd-MM-yyyy", "dd-MM-yy", "yyyy-MM-dd", "yyyyMMdd" };
-        if (DateTime.TryParseExact(text, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
-            return d.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
-
-        return null;
-    }
-
+    // Delegation: Logik liegt jetzt in M150ValueExtractor.
     private static string NormalizeDirection(string? value)
-    {
-        var v = (value ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(v))
-            return string.Empty;
+        => M150ValueExtractor.NormalizeDirection(value);
 
-        var lower = v.ToLowerInvariant();
-
-        // Spezifische Muster zuerst pruefen (z.B. "von unten nach oben")
-        if (lower.Contains("unten") && lower.Contains("oben") && lower.IndexOf("unten") < lower.IndexOf("oben"))
-            return "unten -> oben";
-        if (lower.Contains("oben") && lower.Contains("unten") && lower.IndexOf("oben") < lower.IndexOf("unten"))
-            return "oben -> unten";
-
-        // DWA-M 150 Codes
-        if (lower is "d" or "down" or "1")
-            return "oben -> unten";
-        if (lower is "u" or "up" or "2")
-            return "unten -> oben";
-
-        // Einfache Schluesselwoerter
-        if (lower.Contains("oben") || lower.StartsWith("von"))
-            return "oben -> unten";
-        if (lower.Contains("unten") || lower.StartsWith("nach"))
-            return "unten -> oben";
-
-        return v;
-    }
-
+    // Delegation: Logik liegt jetzt in M150ValueExtractor.
     private static bool LooksLikeVideoLink(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return false;
+        => M150ValueExtractor.LooksLikeVideoLink(value);
 
-        var v = value.Trim().Trim('"', '\'');
-        var ext = Path.GetExtension(v).ToLowerInvariant();
-        if (MediaFileTypes.HasVideoExtension(ext))
-            return true;
-
-        // Some exports omit extension but keep the classic time-stamped token pattern.
-        return Regex.IsMatch(v, @"^\d+_\d+_\d+_\d{8}_\d{6}$", RegexOptions.CultureInvariant);
-    }
-
+    // Delegation: Logik liegt jetzt in M150ValueExtractor.
     private static string NormalizeNumberText(string? value)
-    {
-        var v = (value ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(v))
-            return string.Empty;
-
-        var m = Regex.Match(v, @"-?\d+(?:[.,]\d+)?");
-        return m.Success ? m.Value.Replace(",", ".") : v;
-    }
+        => M150ValueExtractor.NormalizeNumberText(value);
 
     private static string? NullIfWhite(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -818,37 +725,13 @@ internal static class M150MdbImportHelper
         return XtfPrimaryDamageFormatter.FormatLines(findings);
     }
 
+    // Delegation: Logik liegt jetzt in M150ValueExtractor.
     private static string PickValue(Dictionary<string, string> map, IEnumerable<string> keyHints, Func<string, bool> validator)
-    {
-        foreach (var hint in keyHints)
-        {
-            foreach (var kv in map)
-            {
-                if (!kv.Key.Contains(hint, StringComparison.OrdinalIgnoreCase))
-                    continue;
+        => M150ValueExtractor.PickValue(map, keyHints, validator);
 
-                var raw = kv.Value?.Trim() ?? string.Empty;
-                if (validator(raw))
-                    return raw;
-            }
-        }
-
-        return string.Empty;
-    }
-
+    // Delegation: Logik liegt jetzt in M150ValueExtractor.
     private static string NormalizeKey(string? key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-            return string.Empty;
-
-        var sb = new StringBuilder(key.Length);
-        foreach (var ch in key)
-        {
-            if (char.IsLetterOrDigit(ch))
-                sb.Append(char.ToLowerInvariant(ch));
-        }
-        return sb.ToString();
-    }
+        => M150ValueExtractor.NormalizeKey(key);
 
     private static bool TryDumpMdbRows(string mdbPath, out List<Dictionary<string, string>> rows, out string? error)
     {
