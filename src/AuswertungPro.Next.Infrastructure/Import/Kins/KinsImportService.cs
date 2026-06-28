@@ -491,27 +491,11 @@ public sealed class KinsImportService : IKinsImportService
 
     private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, ProtocolService protocolService, string comment)
     {
-        // KINS klont die Eintraege vor der Uebergabe (Schreibschutz gegenueber der Quellliste)
-        var cloned = entries.Select(CloneEntry).ToList();
+        // KINS klont die Eintraege vor der Uebergabe (Schreibschutz gegenueber der Quellliste).
+        // KinsTextLineParser setzt niemals CodeMeta/Ai (bare ProtocolEntry), daher ist
+        // ProtocolEntryCloner.CloneLegacyProtocolEntry verhaltensgleich zum frueheren lokalen CloneEntry.
+        var cloned = entries.Select(ProtocolEntryCloner.CloneLegacyProtocolEntry).ToList();
         Common.ImportProtocolApplier.Apply(record, cloned, protocolService, comment);
-    }
-
-    private static ProtocolEntry CloneEntry(ProtocolEntry e)
-    {
-        return new ProtocolEntry
-        {
-            EntryId = e.EntryId,
-            Code = e.Code,
-            Beschreibung = e.Beschreibung,
-            MeterStart = e.MeterStart,
-            MeterEnd = e.MeterEnd,
-            IsStreckenschaden = e.IsStreckenschaden,
-            Mpeg = e.Mpeg,
-            Zeit = e.Zeit,
-            FotoPaths = new List<string>(e.FotoPaths),
-            Source = e.Source,
-            IsDeleted = e.IsDeleted
-        };
     }
 
 }
