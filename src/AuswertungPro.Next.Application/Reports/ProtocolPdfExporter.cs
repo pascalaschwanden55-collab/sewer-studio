@@ -1512,58 +1512,20 @@ public sealed class ProtocolPdfExporter
         return new HaltungsgrafikScale(lengthText, scaleText);
     }
 
+    // Skala/Tick-Mathematik liegt verhaltensneutral in HaltungsgrafikScaleCalculator (unit-getestet);
+    // hier nur duenne Delegation, die die Haltungsgrafik-Geometrie-Konstanten einsetzt.
     private static int? ComputeScaleRatio(double length, int? svgHeight = null)
     {
-        if (length <= 0)
-            return null;
-
         var effectiveHeight = svgHeight ?? HaltungsgrafikHeight;
         var plotHeight = effectiveHeight - HaltungsgrafikMarginTop - HaltungsgrafikMarginBottom - HaltungsgrafikHeaderHeight - HaltungsgrafikNodeZone;
-        var plotCm = plotHeight * 2.54 / 72.0;
-        if (plotCm <= 0.01)
-            return null;
-
-        var mPerCm = length / plotCm;
-        if (mPerCm <= 0)
-            return null;
-
-        return (int)Math.Round(mPerCm * 100.0, MidpointRounding.AwayFromZero);
+        return HaltungsgrafikScaleCalculator.ComputeScaleRatio(length, plotHeight);
     }
 
     private static List<double> BuildTicks(double length, double step)
-    {
-        var list = new List<double>();
-        if (length <= 0 || step <= 0)
-            return list;
-
-        var m = 0d;
-        while (m <= length + 1e-6)
-        {
-            list.Add(m);
-            m += step;
-        }
-
-        if (list.Count == 0 || Math.Abs(list[^1] - length) > 1e-6)
-            list.Add(length);
-
-        return list.Distinct().OrderBy(x => x).ToList();
-    }
+        => HaltungsgrafikScaleCalculator.BuildTicks(length, step);
 
     private static double ChooseTickStep(double length)
-    {
-        var candidates = new[] { 0.2, 0.5, 1d, 2d, 5d, 10d, 20d, 50d };
-        if (length <= 0)
-            return 1;
-
-        foreach (var step in candidates)
-        {
-            var count = length / step;
-            if (count >= 4 && count <= 8)
-                return step;
-        }
-
-        return candidates.Last();
-    }
+        => HaltungsgrafikScaleCalculator.ChooseTickStep(length);
 
     public static (string? Start, string? End) SplitHoldingNodes(string? holdingLabel)
     {
