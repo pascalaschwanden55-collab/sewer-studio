@@ -129,19 +129,7 @@ public sealed class PdfProtocolExtractor
         $@"@?(?<m>\d{{1,4}}[.,]\d{{1,3}})\s*m?\s+(?<code>{CodePattern})(?:\s+(?<char>[ABCD]))?\s+(?<text>[^\r\n]{{3,}})",
         RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase);
 
-    // Quantifizierung: "3mm", "15%", "5 cm"
-    private static readonly Regex QuantPattern = new(
-        @"(?<val>\d+(?:[.,]\d+)?)\s*(?<unit>mm|cm|%|Stück|Stueck)",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-    private static readonly Regex ClockPattern = new(
-        @"(?<!\d)(?<clock>1[0-2]|[1-9])\s*(?:Uhr|h)\b",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-    private static readonly Regex SeverityPattern = new(
-        @"\b(?:Schadensstufe|Schadenstufe|Schweregrad|Severity|Stufe|Klasse)\s*[:=]?\s*(?<severity>[1-5]|low|mid|mittel|high|hoch|niedrig|leicht|stark)\b|\bS(?<short>[1-5])\b",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
+    // QuantPattern, ClockPattern, SeverityPattern liegen jetzt in GroundTruthFieldParser
     // KnownTextAnchorWords liegt jetzt in PdfFontEncodingDecoder
 
     // ── Öffentliche API ─────────────────────────────────────────────────────
@@ -885,19 +873,10 @@ public sealed class PdfProtocolExtractor
         return fallback;
     }
 
-    // ── Hilfsmethoden ───────────────────────────────────────────────────────
+    // ── Hilfsmethoden — delegieren an GroundTruthFieldParser ─────────────────
 
     private static TimeSpan? ParseTimestamp(string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        var parts = raw.Split(':');
-        if (parts.Length != 3) return null;
-        if (int.TryParse(parts[0], out var h)
-            && int.TryParse(parts[1], out var min)
-            && int.TryParse(parts[2], out var sec))
-            return new TimeSpan(h, min, sec);
-        return null;
-    }
+        => GroundTruthFieldParser.ParseTimestamp(raw);
 
     private static GroundTruthEntry? BuildEntry(
         string meterStartRaw, string meterEndRaw,
@@ -970,84 +949,20 @@ public sealed class PdfProtocolExtractor
     }
 
     private static QuantificationDetail? TryParseQuantification(string text, string? clockPosition = null)
-    {
-        var m = QuantPattern.Match(text);
-        if (!m.Success) return null;
-
-        if (!double.TryParse(m.Groups["val"].Value.Replace(',', '.'),
-                NumberStyles.Float, CultureInfo.InvariantCulture, out var val))
-            return null;
-
-        var unit = m.Groups["unit"].Value.ToLowerInvariant() switch
-        {
-            "stueck" => "Stück",
-            var u    => u
-        };
-
-        var type = unit switch
-        {
-            "%"      => "Querschnittsverminderung",
-            "mm"     => "Spaltbreite",
-            "cm"     => "Spaltbreite",
-            "Stück"  => "Anzahl",
-            _        => "Unbekannt"
-        };
-
-        return new QuantificationDetail
-        {
-            Value = val,
-            Unit = unit,
-            Type = type,
-            ClockPosition = clockPosition
-        };
-    }
+        => GroundTruthFieldParser.TryParseQuantification(text, clockPosition);
 
     private static string? TryParseClockPosition(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-
-        var match = ClockPattern.Match(text);
-        return match.Success ? match.Groups["clock"].Value : null;
-    }
+        => GroundTruthFieldParser.TryParseClockPosition(text);
 
     private static string? TryParseSeverity(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-
-        var match = SeverityPattern.Match(text);
-        if (!match.Success)
-            return null;
-
-        var raw = match.Groups["severity"].Success
-            ? match.Groups["severity"].Value
-            : match.Groups["short"].Value;
-
-        return raw.Trim().ToLowerInvariant() switch
-        {
-            "niedrig" or "leicht" => "low",
-            "mittel" => "mid",
-            "hoch" or "stark" => "high",
-            _ => raw.Trim()
-        };
-    }
+        => GroundTruthFieldParser.TryParseSeverity(text);
 
     private static bool TryParseMeter(string raw, out double value)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) { value = 0; return false; }
-        return double.TryParse(raw.Replace(',', '.'), NumberStyles.Float,
-            CultureInfo.InvariantCulture, out value);
-    }
+        => GroundTruthFieldParser.TryParseMeter(raw, out value);
 
     private static string? NormalizeKnownVsaCode(string? code)
-    {
-        if (!VsaCodeValidator.IsKnownCode(code))
-            return null;
-
-        return code!.Trim().Replace(".", "").ToUpperInvariant();
-    }
+        => GroundTruthFieldParser.NormalizeKnownVsaCode(code);
 
     private static string Sig(GroundTruthEntry e)
-        => $"{e.VsaCode}|{e.MeterStart:F2}|{e.MeterEnd:F2}";
+        => GroundTruthFieldParser.Sig(e);
 }
