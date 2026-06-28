@@ -399,25 +399,11 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
 
     private static Dictionary<string, List<string>> BuildFileIndex(string root)
     {
-        var dict = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var dir in GetMediaRoots(root))
-        {
-            foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(dir, "*.*", recursive: true))
-            {
-                var ext = Path.GetExtension(file);
-                if (!MediaExtensions.Contains(ext))
-                    continue;
-
-                var name = Path.GetFileName(file);
-                if (!dict.TryGetValue(name, out var list))
-                {
-                    list = new List<string>();
-                    dict[name] = list;
-                }
-                list.Add(file);
-            }
-        }
-        return dict;
+        // IO und GetMediaRoots bleiben callerseitig; Kern-Logik liegt in MediaFileIndex.Build.
+        // WinCan scannt mehrere Sub-Roots (Video/, Picture/, …) statt root rekursiv.
+        var files = GetMediaRoots(root)
+            .SelectMany(dir => AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(dir, "*.*", recursive: true));
+        return Common.MediaFileIndex.Build(files, MediaExtensions);
     }
 
     private static IEnumerable<string> GetMediaRoots(string root)
@@ -443,15 +429,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
     }
 
     private static string? ResolveFile(Dictionary<string, List<string>> index, string fileName)
-    {
-        if (!index.TryGetValue(fileName, out var list) || list.Count == 0)
-            return null;
-
-        if (list.Count == 1)
-            return list[0];
-
-        return null;
-    }
+        => Common.MediaFileIndex.ResolveSingle(index, fileName);
 
     private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, ProtocolService protocolService)
         => Common.ImportProtocolApplier.Apply(record, entries, protocolService, "Import (WinCan DB)");

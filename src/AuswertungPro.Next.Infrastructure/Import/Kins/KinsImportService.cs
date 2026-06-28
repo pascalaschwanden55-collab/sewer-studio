@@ -375,9 +375,9 @@ public sealed class KinsImportService : IKinsImportService
 
     private static Dictionary<string, List<string>> BuildVideoIndex(string root)
     {
-        var index = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        // IO bleibt callerseitig; Kern-Logik liegt in MediaFileIndex.Build.
+        // KINS indiziert nur Videodateien (kein Foto/PDF).
         var extensions = new HashSet<string>(MediaFileTypes.VideoExtensions, StringComparer.OrdinalIgnoreCase);
-
         IEnumerable<string> files;
         try
         {
@@ -385,25 +385,9 @@ public sealed class KinsImportService : IKinsImportService
         }
         catch
         {
-            return index;
+            return new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         }
-
-        foreach (var file in files)
-        {
-            var ext = Path.GetExtension(file);
-            if (!extensions.Contains(ext))
-                continue;
-
-            var name = Path.GetFileName(file);
-            if (!index.TryGetValue(name, out var list))
-            {
-                list = new List<string>();
-                index[name] = list;
-            }
-            list.Add(file);
-        }
-
-        return index;
+        return Common.MediaFileIndex.Build(files, extensions);
     }
 
     private sealed record VideoResolveResult(string? Path, IReadOnlyList<string> Candidates)
@@ -415,11 +399,15 @@ public sealed class KinsImportService : IKinsImportService
     private static VideoResolveResult ResolveVideoPath(Dictionary<string, List<string>> index, string fileName)
     {
         var key = Path.GetFileName(fileName.Trim());
+        // Einzeltreffer-Fall via gemeinsamem Helfer; Mehrdeutigkeit (>1 Pfad) wird
+        // weiterhin im VideoResolveResult signalisiert, da KINS explizit zwischen
+        // "nicht gefunden" und "mehrere Kandidaten" unterscheidet.
+        var single = Common.MediaFileIndex.ResolveSingle(index, key);
+        if (single is not null)
+            return new VideoResolveResult(single, Array.Empty<string>());
+
         if (!index.TryGetValue(key, out var list) || list.Count == 0)
             return new VideoResolveResult(null, Array.Empty<string>());
-
-        if (list.Count == 1)
-            return new VideoResolveResult(list[0], Array.Empty<string>());
 
         return new VideoResolveResult(null, list);
     }

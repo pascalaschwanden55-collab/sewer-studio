@@ -630,32 +630,13 @@ public sealed class IbakExportImportService : IIbakImportService
 
     private static Dictionary<string, List<string>> BuildFileIndex(string root)
     {
-        var dict = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(root, "*.*", recursive: true))
-        {
-            var ext = Path.GetExtension(file);
-            if (!MediaExtensions.Contains(ext))
-                continue;
-
-            var name = Path.GetFileName(file);
-            if (!dict.TryGetValue(name, out var list))
-            {
-                list = new List<string>();
-                dict[name] = list;
-            }
-            list.Add(file);
-        }
-        return dict;
+        // IO bleibt callerseitig; Kern-Logik liegt in MediaFileIndex.Build.
+        var files = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(root, "*.*", recursive: true);
+        return Common.MediaFileIndex.Build(files, MediaExtensions);
     }
 
     private static string? ResolveFile(Dictionary<string, List<string>> index, string fileName)
-    {
-        if (!index.TryGetValue(fileName, out var list) || list.Count == 0)
-            return null;
-        if (list.Count == 1)
-            return list[0];
-        return null;
-    }
+        => Common.MediaFileIndex.ResolveSingle(index, fileName);
 
     private static string? FindDatenTxt(string root)
     {
