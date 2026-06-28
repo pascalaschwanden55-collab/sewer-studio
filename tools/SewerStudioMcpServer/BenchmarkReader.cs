@@ -140,23 +140,7 @@ public static class BenchmarkReader
     }
 
     private static BenchmarkWeakCode? ReadClassPair(string code, JsonElement value)
-    {
-        if (value.ValueKind != JsonValueKind.Array)
-            return null;
-
-        var arr = value.EnumerateArray().ToList();
-        if (arr.Count < 2
-            || arr[0].ValueKind != JsonValueKind.Number
-            || arr[1].ValueKind != JsonValueKind.Number
-            || !arr[0].TryGetInt32(out var correct)
-            || !arr[1].TryGetInt32(out var total))
-        {
-            return null;
-        }
-
-        var accuracy = total == 0 ? 0 : (double)correct / total;
-        return new BenchmarkWeakCode(code, correct, total, accuracy);
-    }
+        => BenchmarkParsers.ParseClassifierPair(code, value);
 
     // Liest die zum Qwen-JSON gehoerende *_by_code.csv (gleiches Praefix) und liefert die schwaechsten Codes.
     private static IReadOnlyList<BenchmarkWeakCode> ReadByCodeCsv(string jsonPath, int maxCodes)
@@ -180,19 +164,9 @@ public static class BenchmarkReader
                 continue;
 
             var cols = lines[i].Split(',');
-            if (cols.Length < 8)
-                continue;
-
-            var code = cols[0].Trim();
-            if (string.IsNullOrWhiteSpace(code)
-                || !int.TryParse(cols[1], out var total)
-                || !int.TryParse(cols[2], out var exactCorrect))
-            {
-                continue;
-            }
-
-            var accuracy = total == 0 ? 0 : (double)exactCorrect / total;
-            result.Add(new BenchmarkWeakCode(code, exactCorrect, total, accuracy));
+            var entry = BenchmarkParsers.ParseByCodeRow(cols);
+            if (entry is not null)
+                result.Add(entry);
         }
 
         return result
