@@ -213,23 +213,7 @@ public sealed class AppSettings
     }
 
     private static void MigrateLegacySettingsIfNeeded()
-    {
-        try
-        {
-            if (File.Exists(SettingsPath))
-                return;
-
-            if (!File.Exists(LegacySettingsPath))
-                return;
-
-            Directory.CreateDirectory(AppDataDir);
-            File.Copy(LegacySettingsPath, SettingsPath, overwrite: false);
-        }
-        catch
-        {
-            // ignore migration errors
-        }
-    }
+        => SettingsMigrator.MigrateLegacyIfNeeded(SettingsPath, LegacySettingsPath, AppDataDir);
 
     private static AppSettings NormalizeAfterLoad(AppSettings settings)
     {
