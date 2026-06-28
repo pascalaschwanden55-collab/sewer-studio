@@ -244,49 +244,7 @@ public sealed class AppSettings
     }
 
     private static void PersistSerializedState(string json, bool enableRestorePoints)
-    {
-        string? tempPath = null;
-
-        try
-        {
-            Directory.CreateDirectory(AppDataDir);
-            if (enableRestorePoints)
-            {
-                RestorePointService.TryCreate(
-                    sourceFilePath: SettingsPath,
-                    restoreRoot: RestorePointService.SettingsRestoreRoot,
-                    scopeName: "settings");
-            }
-
-            tempPath = Path.Combine(AppDataDir, $".{Path.GetFileName(SettingsPath)}.{Guid.NewGuid():N}.tmp");
-            File.WriteAllText(tempPath, json);
-
-            if (File.Exists(SettingsPath))
-            {
-                var backupPath = SettingsPath + ".bak";
-                try
-                {
-                    File.Replace(tempPath, SettingsPath, backupPath, ignoreMetadataErrors: true);
-                }
-                catch (Exception ex) when (ex is PlatformNotSupportedException || ex is IOException || ex is UnauthorizedAccessException)
-                {
-                    File.Copy(SettingsPath, backupPath, overwrite: true);
-                    File.Move(tempPath, SettingsPath, overwrite: true);
-                }
-            }
-            else
-            {
-                File.Move(tempPath, SettingsPath, overwrite: false);
-            }
-        }
-        finally
-        {
-            if (!string.IsNullOrWhiteSpace(tempPath) && File.Exists(tempPath))
-            {
-                try { File.Delete(tempPath); } catch { /* best effort cleanup */ }
-            }
-        }
-    }
+        => SettingsStore.Persist(json, SettingsPath, AppDataDir, enableRestorePoints);
 
     private static void TryQuarantineCorruptSettings(Exception ex)
     {
