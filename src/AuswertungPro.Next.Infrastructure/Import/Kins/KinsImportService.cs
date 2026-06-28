@@ -20,9 +20,6 @@ namespace AuswertungPro.Next.Infrastructure.Import.Kins;
 /// </summary>
 public sealed class KinsImportService : IKinsImportService
 {
-    private static readonly Regex ObservationLineRegex = new(
-        @"^\s*(?<meter>\d+(?:[.,]\d+)?)m\s+(?<text>.*?)(?:\s+@Pos=(?<pos>.*))?\s*$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private readonly IWinCanDbImportService _winCanImport;
     private readonly IIbakImportService _ibakImport;
@@ -368,108 +365,13 @@ public sealed class KinsImportService : IKinsImportService
         }
     }
 
+    /// <summary>Delegiert an <see cref="KinsTextLineParser.TryParseHeaderLine"/>.</summary>
     private static bool TryParseHeaderLine(string line, out KinsHoldingHeader header)
-    {
-        header = default;
-        if (string.IsNullOrWhiteSpace(line))
-            return false;
+        => KinsTextLineParser.TryParseHeaderLine(line, out header);
 
-        var marker = line.IndexOf("@Datei=", StringComparison.OrdinalIgnoreCase);
-        if (marker < 0)
-            return false;
-
-        var prefix = line[..marker].Trim();
-        var videoFile = line[(marker + "@Datei=".Length)..].Trim();
-        if (string.IsNullOrWhiteSpace(videoFile))
-            return false;
-
-        var arrowIndex = prefix.IndexOf("->", StringComparison.Ordinal);
-        if (arrowIndex < 0)
-            return false;
-
-        var left = prefix[..arrowIndex].Trim();
-        var right = prefix[(arrowIndex + 2)..].Trim();
-
-        var leftTokens = Tokenize(left);
-        if (leftTokens.Length < 2)
-            return false;
-
-        var rightTokens = Tokenize(right);
-        if (rightTokens.Length < 1)
-            return false;
-
-        var usage = leftTokens[0];
-        var from = leftTokens[1];
-        var to = rightTokens[0];
-
-        string material = string.Empty;
-        string? diameter = null;
-
-        if (rightTokens.Length > 1)
-        {
-            var tail = rightTokens.Skip(1).ToList();
-            if (tail.Count > 0 && int.TryParse(tail[^1], NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
-            {
-                diameter = tail[^1];
-                tail.RemoveAt(tail.Count - 1);
-            }
-
-            material = string.Join(" ", tail);
-        }
-
-        header = new KinsHoldingHeader(usage, from, to, material, diameter, videoFile);
-        return true;
-    }
-
+    /// <summary>Delegiert an <see cref="KinsTextLineParser.TryParseObservationLine"/>.</summary>
     private static bool TryParseObservationLine(string line, out ProtocolEntry entry)
-    {
-        entry = new ProtocolEntry
-        {
-            Source = ProtocolEntrySource.Imported
-        };
-
-        var match = ObservationLineRegex.Match(line ?? string.Empty);
-        if (!match.Success)
-            return false;
-
-        var meterText = match.Groups["meter"].Value.Trim().Replace(',', '.');
-        if (!double.TryParse(meterText, NumberStyles.Float, CultureInfo.InvariantCulture, out var meter))
-            return false;
-
-        var description = match.Groups["text"].Value.Trim();
-        var pos = match.Groups["pos"].Success ? match.Groups["pos"].Value.Trim() : string.Empty;
-
-        entry.Code = string.Empty;
-        entry.Beschreibung = description;
-        entry.MeterStart = meter;
-        entry.MeterEnd = meter;
-        entry.IsStreckenschaden = false;
-        entry.Mpeg = string.IsNullOrWhiteSpace(pos) ? null : pos;
-        entry.Zeit = ParseKinsTime(pos);
-
-        return true;
-    }
-
-    private static TimeSpan? ParseKinsTime(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-
-        var value = text.Trim();
-        var formats = new[] { @"h\:mm\:ss", @"hh\:mm\:ss", @"m\:ss", @"mm\:ss" };
-        if (TimeSpan.TryParseExact(value, formats, CultureInfo.InvariantCulture, out var ts))
-            return ts;
-
-        if (TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out ts))
-            return ts;
-
-        return null;
-    }
-
-    private static string[] Tokenize(string value)
-        => Regex.Split(value?.Trim() ?? string.Empty, @"\s+")
-            .Where(t => !string.IsNullOrWhiteSpace(t))
-            .ToArray();
+        => KinsTextLineParser.TryParseObservationLine(line, out entry);
 
     private static Dictionary<string, List<string>> BuildVideoIndex(string root)
     {
@@ -634,11 +536,4 @@ public sealed class KinsImportService : IKinsImportService
         };
     }
 
-    private readonly record struct KinsHoldingHeader(
-        string Usage,
-        string From,
-        string To,
-        string Material,
-        string? Diameter,
-        string VideoFile);
 }
