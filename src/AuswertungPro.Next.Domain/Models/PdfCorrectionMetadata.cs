@@ -127,63 +127,11 @@ public static class PdfCorrectionMetadata
     }
 
     private static bool NormalizeMap(Dictionary<string, string> map)
-    {
-        var changed = false;
-        var keys = map.Keys.ToList();
-
-        foreach (var key in keys)
-        {
-            if (!map.TryGetValue(key, out var targetRaw))
-                continue;
-
-            var target = NormalizeToken(targetRaw);
-            if (string.IsNullOrWhiteSpace(target))
-            {
-                map.Remove(key);
-                changed = true;
-                continue;
-            }
-
-            var resolved = ResolveValue(map, target);
-            if (string.IsNullOrWhiteSpace(resolved)
-                || string.Equals(key, resolved, StringComparison.OrdinalIgnoreCase))
-            {
-                map.Remove(key);
-                changed = true;
-                continue;
-            }
-
-            if (!string.Equals(target, resolved, StringComparison.OrdinalIgnoreCase))
-            {
-                map[key] = resolved;
-                changed = true;
-            }
-        }
-
-        return changed;
-    }
+        => RenameMapNormalizer.NormalizeMap(map);
 
     private static string ResolveValue(IReadOnlyDictionary<string, string> map, string value)
-    {
-        var current = NormalizeToken(value);
-        if (string.IsNullOrWhiteSpace(current))
-            return string.Empty;
-
-        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        while (map.TryGetValue(current, out var nextRaw))
-        {
-            var next = NormalizeToken(nextRaw);
-            if (string.IsNullOrWhiteSpace(next)
-                || string.Equals(current, next, StringComparison.OrdinalIgnoreCase)
-                || !visited.Add(current))
-                break;
-
-            current = next;
-        }
-
-        return current;
-    }
+        => RenameMapNormalizer.ResolveValue(map, value);
 
     private static string NormalizeToken(string? value)
-        => (value ?? string.Empty).Trim();
+        => RenameMapNormalizer.NormalizeToken(value);
 }
