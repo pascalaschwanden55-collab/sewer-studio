@@ -285,18 +285,9 @@ public sealed class LegacyXtfImportService
         }
     }
 
+    // Delegation: Logik liegt jetzt in Common.HoldingKeyNormalizer
     private static string NormalizeHoldingKey(string? value)
-    {
-        var v = (value ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(v))
-            return string.Empty;
-
-        v = Regex.Replace(v, @"\s+", string.Empty);
-        v = v.Replace('/', '-');
-        v = v.Replace('–', '-');
-        v = v.Replace('—', '-');
-        return v;
-    }
+        => Common.HoldingKeyNormalizer.Normalize(value);
 
     // ===================== SIA405 =====================
     private sealed class KanalData

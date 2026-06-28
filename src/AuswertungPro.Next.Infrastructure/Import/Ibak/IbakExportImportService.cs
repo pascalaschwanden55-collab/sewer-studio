@@ -786,23 +786,9 @@ public sealed class IbakExportImportService : IIbakImportService
         return preferred ?? candidates[0];
     }
 
+    // Delegation: Logik liegt jetzt in Common.HoldingKeyNormalizer (inkl. IBAK-Prefix-Strip)
     private static string NormalizeHoldingKey(string? value)
-    {
-        var v = (value ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(v))
-            return string.Empty;
-        v = Regex.Replace(v, @"\s+", string.Empty);
-        v = v.Replace('/', '-');
-        v = v.Replace('–', '-');
-        v = v.Replace('—', '-');
-        if (v.StartsWith("L__", StringComparison.OrdinalIgnoreCase))
-            v = v[3..];
-        else if (v.StartsWith("L_", StringComparison.OrdinalIgnoreCase))
-            v = v[2..];
-        else if (v.StartsWith("H__", StringComparison.OrdinalIgnoreCase))
-            v = v[3..];
-        return v;
-    }
+        => Common.HoldingKeyNormalizer.NormalizeIbak(value);
 
     /// <summary>
     /// Entfernt Knoten-Prefixe (z.B. "07.", "10.", "06.") aus beiden Teilen

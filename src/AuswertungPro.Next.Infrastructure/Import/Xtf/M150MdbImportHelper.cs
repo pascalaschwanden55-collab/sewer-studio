@@ -6,6 +6,7 @@ using System.Xml.Linq;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Infrastructure.Import.Common;
 using AuswertungPro.Next.Infrastructure.Media;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
@@ -674,15 +675,9 @@ internal static class M150MdbImportHelper
     private static string PickBest(IEnumerable<string?> values)
         => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim() ?? string.Empty;
 
+    // Delegation: Logik liegt jetzt in Common.HoldingKeyNormalizer
     private static string NormalizeHolding(string value)
-    {
-        var v = (value ?? "").Trim();
-        v = Regex.Replace(v, @"\s+", "");
-        v = v.Replace('/', '-');
-        v = v.Replace('–', '-');
-        v = v.Replace('—', '-');
-        return v;
-    }
+        => HoldingKeyNormalizer.Normalize(value);
 
     private static string TryExtractHoldingId(string? value)
     {
