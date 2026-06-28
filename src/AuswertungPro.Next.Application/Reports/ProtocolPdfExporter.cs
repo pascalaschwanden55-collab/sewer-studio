@@ -1465,34 +1465,12 @@ public sealed class ProtocolPdfExporter
     private static double ChooseTickStep(double length)
         => HaltungsgrafikScaleCalculator.ChooseTickStep(length);
 
+    // Dünne Delegationen zu HoldingNodeParser (verhaltensneutral extrahiert).
     public static (string? Start, string? End) SplitHoldingNodes(string? holdingLabel)
-    {
-        if (string.IsNullOrWhiteSpace(holdingLabel))
-            return (null, null);
-
-        var parts = holdingLabel
-            .Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        if (parts.Length == 1)
-            return (parts[0], null);
-        if (parts.Length >= 2)
-            return (parts[0], parts[1]);
-
-        return (null, null);
-    }
+        => HoldingNodeParser.SplitHoldingNodes(holdingLabel);
 
     private static bool? ParseFlowDirection(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-
-        if (text.Contains("gegen", StringComparison.OrdinalIgnoreCase))
-            return false;
-        if (text.Contains("in", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        return null;
-    }
+        => HoldingNodeParser.ParseFlowDirection(text);
 
     /// <summary>Prüft ob ein Protokolleintrag einen Inspektions-Abbruch darstellt (BDC-Codes).</summary>
     private static bool IsAbortCode(ProtocolEntry entry)
