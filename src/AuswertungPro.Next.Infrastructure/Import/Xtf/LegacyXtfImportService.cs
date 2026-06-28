@@ -514,31 +514,13 @@ public sealed class LegacyXtfImportService
         return records;
     }
 
+    // Delegation: Logik liegt jetzt in XtfValueNormalizer
     private static string NormalizeSiaMaterial(string material)
-    {
-        material ??= "";
-        if (string.IsNullOrWhiteSpace(material)) return "";
+        => XtfValueNormalizer.NormalizeSiaMaterial(material);
 
-        if (Regex.IsMatch(material, "Kunststoff_Hartpolyethylen", RegexOptions.IgnoreCase)) return "Kunststoff PE-HD";
-        if (Regex.IsMatch(material, "Kunststoff_Polyethylen", RegexOptions.IgnoreCase)) return "Kunststoff PE";
-        if (Regex.IsMatch(material, "Kunststoff_Polyvinylchlorid", RegexOptions.IgnoreCase)) return "Kunststoff PVC";
-        if (Regex.IsMatch(material, "Beton_Normalbeton", RegexOptions.IgnoreCase)) return "Beton";
-        if (Regex.IsMatch(material, "Beton_", RegexOptions.IgnoreCase)) return "Beton";
-        if (Regex.IsMatch(material, "Steinzeug", RegexOptions.IgnoreCase)) return "Steinzeug";
-
-        material = material.Replace("_", " ").Trim();
-        if (material.Length == 0) return "";
-        return char.ToUpperInvariant(material[0]) + material[1..];
-    }
-
+    // Delegation: Logik liegt jetzt in XtfValueNormalizer
     private static string NormalizeNutzungsart(string v)
-    {
-        v ??= "";
-        if (Regex.IsMatch(v, "(?i)Schmutzabwasser")) return "Schmutzwasser";
-        if (Regex.IsMatch(v, "(?i)Regenabwasser")) return "Regenwasser";
-        if (Regex.IsMatch(v, "(?i)Mischabwasser")) return "Mischabwasser";
-        return v.Trim();
-    }
+        => XtfValueNormalizer.NormalizeNutzungsart(v);
 
     // ===================== VSA_KEK =====================
     private sealed class Untersuchung
@@ -956,124 +938,35 @@ public sealed class LegacyXtfImportService
         }
     }
 
+    // Delegation: Logik liegt jetzt in FindingEntryMatcher
     private static VsaFinding? FindBestFindingForEntry(ProtocolEntry entry, IReadOnlyList<VsaFinding> findings)
-    {
-        if (findings.Count == 0)
-            return null;
+        => FindingEntryMatcher.FindBestFindingForEntry(entry, findings);
 
-        var entryMeter = entry.MeterStart ?? entry.MeterEnd;
-        var entryCode = NormalizeCode(entry.Code);
-        var scored = new List<(VsaFinding Finding, double Delta, int CodeRank, bool HasPhoto)>(findings.Count);
-
-        foreach (var finding in findings)
-        {
-            var findingMeter = GetFindingMeterStart(finding) ?? GetFindingMeterEnd(finding);
-            var delta = (entryMeter.HasValue && findingMeter.HasValue)
-                ? Math.Abs(findingMeter.Value - entryMeter.Value)
-                : double.MaxValue;
-            var codeRank = GetCodeSimilarityRank(entryCode, NormalizeCode(finding.KanalSchadencode));
-            var hasPhoto = !string.IsNullOrWhiteSpace(finding.FotoPath);
-            scored.Add((finding, delta, codeRank, hasPhoto));
-        }
-
-        if (entryMeter.HasValue && scored.Count > 0)
-        {
-            // Primär nach Distanz matchen; Codes dienen als Tiebreaker.
-            var byMeter = scored
-                .Where(s => s.Delta <= 0.15)
-                .OrderBy(s => s.Delta)
-                .ThenBy(s => s.CodeRank)
-                .ThenByDescending(s => s.HasPhoto)
-                .ToList();
-            if (byMeter.Count > 0)
-                return byMeter[0].Finding;
-
-            var byMeterLoose = scored
-                .Where(s => s.Delta <= 0.50 && s.CodeRank <= 1)
-                .OrderBy(s => s.Delta)
-                .ThenBy(s => s.CodeRank)
-                .ThenByDescending(s => s.HasPhoto)
-                .ToList();
-            if (byMeterLoose.Count > 0)
-                return byMeterLoose[0].Finding;
-        }
-
-        var byCode = scored
-            .Where(s => s.CodeRank == 0 || s.CodeRank == 1)
-            .OrderBy(s => s.CodeRank)
-            .ThenByDescending(s => s.HasPhoto)
-            .ThenBy(s => s.Delta)
-            .ToList();
-        if (byCode.Count > 0)
-            return byCode[0].Finding;
-
-        return scored
-            .OrderByDescending(s => s.HasPhoto)
-            .ThenBy(s => s.Delta)
-            .Select(s => s.Finding)
-            .FirstOrDefault();
-    }
-
+    // Delegation: Logik liegt jetzt in XtfValueNormalizer
     private static string NormalizeCode(string? code)
-    {
-        if (string.IsNullOrWhiteSpace(code))
-            return string.Empty;
-        return Regex.Replace(code.Trim().ToUpperInvariant(), @"[^A-Z0-9]", string.Empty);
-    }
+        => XtfValueNormalizer.NormalizeCode(code);
 
+    // Delegation: Logik liegt jetzt in XtfValueNormalizer
     private static int GetCodeSimilarityRank(string left, string right)
-    {
-        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
-            return 2;
-        if (string.Equals(left, right, StringComparison.OrdinalIgnoreCase))
-            return 0;
-        if (left.StartsWith(right, StringComparison.OrdinalIgnoreCase)
-            || right.StartsWith(left, StringComparison.OrdinalIgnoreCase))
-            return 1;
-        return 2;
-    }
+        => XtfValueNormalizer.GetCodeSimilarityRank(left, right);
 
+    // Delegation: Logik liegt jetzt in FindingEntryMatcher
     private static double? GetFindingMeterStart(VsaFinding finding)
-        => finding.MeterStart ?? finding.SchadenlageAnfang;
+        => FindingEntryMatcher.GetFindingMeterStart(finding);
 
+    // Delegation: Logik liegt jetzt in FindingEntryMatcher
     private static double? GetFindingMeterEnd(VsaFinding finding)
-        => finding.MeterEnd ?? finding.SchadenlageEnde;
+        => FindingEntryMatcher.GetFindingMeterEnd(finding);
 
+    // Delegation: Logik liegt jetzt in XtfValueNormalizer
     private static TimeSpan? ParseMpegTime(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
+        => XtfValueNormalizer.ParseMpegTime(raw);
 
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-            return parsed;
-
-        return TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed) ? parsed : null;
-    }
-
+    // Delegation: Logik liegt jetzt in XtfValueNormalizer
     private static bool TryParseDouble(string? s, out double value)
-    {
-        value = 0.0;
-        if (string.IsNullOrWhiteSpace(s))
-            return false;
-        s = s.Trim().Replace(",", ".");
-        if (double.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out value))
-            return true;
+        => XtfValueNormalizer.TryParseDouble(s, out value);
 
-        var match = Regex.Match(s, @"-?\d+(?:[.,]\d+)?");
-        if (!match.Success)
-            return false;
-
-        var number = match.Value.Replace(",", ".");
-        return double.TryParse(number, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out value);
-    }
-
+    // Delegation: Logik liegt jetzt in XtfValueNormalizer
     private static string NormalizeDate_yyyymmdd(string? yyyymmdd)
-    {
-        yyyymmdd ??= "";
-        var m = Regex.Match(yyyymmdd.Trim(), @"^(\d{4})(\d{2})(\d{2})$");
-        if (!m.Success) return yyyymmdd.Trim();
-        return $"{m.Groups[3].Value}.{m.Groups[2].Value}.{m.Groups[1].Value}";
-    }
+        => XtfValueNormalizer.NormalizeDate_yyyymmdd(yyyymmdd);
 }
