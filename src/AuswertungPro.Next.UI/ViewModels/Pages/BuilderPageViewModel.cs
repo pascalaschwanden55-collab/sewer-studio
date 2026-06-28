@@ -20,7 +20,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 {
-    private const string AllFilterLabel = "Alle";
+    private const string AllFilterLabel = BuilderPageRowFilter.AllFilterLabel;
     private const string UnknownOwnerLabel = "Unbekannt";
     private static readonly string[] DefaultExecutedByValues =
     [
@@ -743,42 +743,18 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
     private void ApplyFilters()
     {
-        IEnumerable<DruckcenterRowVm> query = _allRows;
-
-        query = ApplyComboFilter(query, SelectedOwnerFilter, row => row.Owner);
-        query = ApplyComboFilter(query, SelectedExecutedByFilter, row => row.ExecutedBy);
-        query = ApplyComboFilter(query, SelectedSanierenFilter, row => row.Sanieren);
-        query = ApplyComboFilter(query, SelectedMaterialFilter, row => row.Material);
-        query = ApplyComboFilter(query, SelectedStatusFilter, row => row.Status);
-        query = ApplyComboFilter(query, SelectedYearFilter, row => row.Year);
-
-        var search = (SearchText ?? "").Trim();
-        if (search.Length > 0)
-        {
-            query = query.Where(row =>
-                row.Holding.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                row.Owner.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                row.ExecutedBy.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                row.Street.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                row.Material.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                row.Status.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                row.Sanieren.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                row.Zustand.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                row.MeasuresPreview.Contains(search, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (OnlyWithCost)
-            query = query.Where(row => row.NetCost > 0m);
-
-        if (OnlyWithMeasures)
-            query = query.Where(row => row.HasMeasures);
-
-        var filtered = query
-            .OrderBy(r => string.IsNullOrWhiteSpace(r.ExecutedBy) ? 1 : 0)
-            .ThenBy(r => r.ExecutedBy, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(r => r.Owner, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(r => r.Holding, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var filtered = BuilderPageRowFilter.Apply(
+            _allRows,
+            new BuilderPageFilterCriteria(
+                SelectedOwnerFilter,
+                SelectedExecutedByFilter,
+                SelectedSanierenFilter,
+                SelectedMaterialFilter,
+                SelectedStatusFilter,
+                SelectedYearFilter,
+                SearchText,
+                OnlyWithCost,
+                OnlyWithMeasures));
 
         Rows.Clear();
         foreach (var row in filtered)
@@ -795,17 +771,6 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             return;
 
         ApplyFilters();
-    }
-
-    private static IEnumerable<DruckcenterRowVm> ApplyComboFilter(
-        IEnumerable<DruckcenterRowVm> query,
-        string selected,
-        Func<DruckcenterRowVm, string> selector)
-    {
-        if (string.IsNullOrWhiteSpace(selected) || selected.Equals(AllFilterLabel, StringComparison.OrdinalIgnoreCase))
-            return query;
-
-        return query.Where(row => string.Equals(selector(row), selected, StringComparison.OrdinalIgnoreCase));
     }
 
     private void UpdateStatistics(IReadOnlyList<DruckcenterRowVm> filtered)
