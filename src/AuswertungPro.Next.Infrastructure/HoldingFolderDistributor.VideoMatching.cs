@@ -213,12 +213,7 @@ public static partial class HoldingFolderDistributor
 
 
     private static string? GetSuffixFromFirstUnderscore(string fileName)
-    {
-        var idx = fileName.IndexOf('_');
-        if (idx < 0)
-            return null;
-        return fileName.Substring(idx);
-    }
+        => HoldingDistribution.HoldingKeyUtils.GetSuffixFromFirstUnderscore(fileName);
 
 
     private static AuswertungPro.Next.Domain.Models.HaltungRecord? FindRecordByHolding(
