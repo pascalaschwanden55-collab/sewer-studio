@@ -389,50 +389,21 @@ public static class VsaCodeTree
     // Hilfsfunktionen
     // ═══════════════════════════════════════════════════════════════
 
-    /// <summary>Ermittelt die effektive Q1-Regel fuer einen Code + Char1.</summary>
+    /// <summary>Ermittelt die effektive Q1-Regel fuer einen Code + Char1. Delegiert an <see cref="VsaCodeRuleResolver"/>.</summary>
     public static (QuantField? Q1, QuantField? Q2) GetQuantRule(string codeKey, string? c1Key)
-    {
-        if (!QuantRules.TryGetValue(codeKey, out var rule))
-            return (null, null);
+        => VsaCodeRuleResolver.GetQuantRule(codeKey, c1Key);
 
-        var q1 = rule.Q1;
-        if (q1 is { Pflicht: "V" } && rule.Q1PerChar1 is not null && c1Key is not null)
-        {
-            q1 = rule.Q1PerChar1.TryGetValue(c1Key, out var perChar) ? perChar : null;
-        }
-
-        return (q1, rule.Q2);
-    }
-
-    /// <summary>Ermittelt die Uhrzeiger-Regel fuer einen Code.</summary>
+    /// <summary>Ermittelt die Uhrzeiger-Regel fuer einen Code. Delegiert an <see cref="VsaCodeRuleResolver"/>.</summary>
     public static ClockRule GetClockRule(string codeKey)
-    {
-        return ClockRules.TryGetValue(codeKey, out var rule) ? rule : DefaultClockRule;
-    }
+        => VsaCodeRuleResolver.GetClockRule(codeKey);
 
-    /// <summary>Ermittelt die Char2-Optionen fuer einen Code + Char1.</summary>
+    /// <summary>Ermittelt die Char2-Optionen fuer einen Code + Char1. Delegiert an <see cref="VsaCodeRuleResolver"/>.</summary>
     public static Dictionary<string, string>? GetChar2Options(VsaCodeDef cd, string c1)
-    {
-        if (cd.Char2PerChar1 is not null)
-            return cd.Char2PerChar1.TryGetValue(c1, out var c2) ? c2 : null;
+        => VsaCodeRuleResolver.GetChar2Options(cd, c1);
 
-        if (cd.Char2 is not null)
-            return cd.Char2;
-
-        if (cd.Char1 is not null && cd.Char1.TryGetValue(c1, out var charDef) && charDef.Char2 is not null)
-            return charDef.Char2;
-
-        return null;
-    }
-
-    /// <summary>Prueft ob eine Char1×Char2 Kombination ungueltig ist.</summary>
+    /// <summary>Prueft ob eine Char1×Char2 Kombination ungueltig ist. Delegiert an <see cref="VsaCodeRuleResolver"/>.</summary>
     public static bool IsInvalidCombo(VsaCodeDef cd, string c1, string c2)
-    {
-        if (cd.AllValid) return false;
-        return cd.Invalid is not null
-            && cd.Invalid.TryGetValue(c1, out var set)
-            && set.Contains(c2);
-    }
+        => VsaCodeRuleResolver.IsInvalidCombo(cd, c1, c2);
 
     /// <summary>
     /// Baut die offizielle Bezeichnung fuer einen VSA-Code auf.
