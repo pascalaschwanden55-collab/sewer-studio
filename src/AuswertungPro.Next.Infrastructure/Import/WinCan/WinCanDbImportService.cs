@@ -458,59 +458,9 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
 
     private static void UpdateFindings(HaltungRecord record, List<ProtocolEntry> entries)
     {
-        var findings = new List<VsaFinding>(entries.Count);
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var entry in entries)
-        {
-            var rawCode = (entry.Code ?? "").Trim().ToUpperInvariant();
-            // Streckenschaden-Marker zum echten VSA-Code aufloesen
-            var effectiveCode = ResolveEffectiveCode(rawCode, entry.Beschreibung, out _);
-
-            var meterStart = entry.MeterStart;
-            var meterEnd = entry.MeterEnd;
-            var meterKey = meterStart.HasValue
-                ? meterStart.Value.ToString("F2", CultureInfo.InvariantCulture)
-                : meterEnd.HasValue
-                    ? meterEnd.Value.ToString("F2", CultureInfo.InvariantCulture)
-                    : string.Empty;
-            var dedupeKey = $"{effectiveCode}|{meterKey}";
-            if (!seen.Add(dedupeKey))
-                continue;
-
-            var finding = new VsaFinding
-            {
-                KanalSchadencode = effectiveCode,
-                Raw = entry.Beschreibung,
-                MeterStart = meterStart,
-                MeterEnd = meterEnd,
-                SchadenlageAnfang = meterStart,
-                SchadenlageEnde = meterEnd,
-                MPEG = entry.Mpeg,
-                FotoPath = entry.FotoPaths.Count > 0 ? entry.FotoPaths[0] : null
-            };
-
-            // Quantifizierung1 aus Beschreibung extrahieren (WinCan liefert kein Q1-Feld)
-            // Nur fuer Codes mit QuantRules: BAA, BAB, BAC, BAF, BBA, BDD
-            if (string.IsNullOrEmpty(finding.Quantifizierung1) && !string.IsNullOrEmpty(entry.Beschreibung))
-            {
-                var normCode = effectiveCode.Length >= 3 ? effectiveCode[..3].ToUpperInvariant() : "";
-                if (normCode is "BAA" or "BAB" or "BAC" or "BAF" or "BBA" or "BDD")
-                {
-                    finding.Quantifizierung1 = ExtractQuantValue(entry.Beschreibung);
-                }
-            }
-
-            findings.Add(finding);
-        }
-
         // DB3 gilt als Quelle der Wahrheit: vorhandene VsaFindings durch den aktuellen Importstand ersetzen.
-        record.VsaFindings = findings;
+        record.VsaFindings = WinCanFindingFactory.BuildFindings(entries);
     }
-
-    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
-    private static string? ExtractQuantValue(string beschreibung)
-        => WinCanValueNormalizer.ExtractQuantValue(beschreibung);
 
     private static void LinkSectionPdf(HaltungRecord record, string sectionKey, Dictionary<string, List<string>> index)
     {
@@ -1145,10 +1095,6 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         "Schacht ID",
         "Schacht-ID"
     };
-
-    // Delegation: Logik liegt jetzt in Common.ContinuousDefectCodeResolver
-    private static string ResolveEffectiveCode(string code, string? description, out string? resolvedDescription)
-        => Common.ContinuousDefectCodeResolver.ResolveEffectiveCode(code, description, out resolvedDescription);
 
     /// <summary>
     /// Erzeugt den "Primaere_Schaeden" Text aus den Protokoll-Eintraegen.
