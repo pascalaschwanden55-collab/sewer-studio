@@ -322,18 +322,12 @@ public sealed class FillLevelSchema : SchemaOverlayBase
             : sohle - FillRatio * PipeRadius * 2.0;
     }
 
-    /// <summary>Berechnet den Kreissegment-Anteil (%) fuer gegebene Fuellhoehe.</summary>
+    /// <summary>
+    /// Berechnet den Kreissegment-Anteil (%) fuer gegebene Fuellhoehe.
+    /// Delegiert an PipeGeometryMath.CircleSegmentPercent.
+    /// </summary>
     private static double CircleSegmentPercent(double hRatio)
-    {
-        // h = Fuellhoehe relativ zum Durchmesser (0..1)
-        // theta = 2 * arccos(1 - 2h)
-        // A_segment / A_circle = (theta - sin(theta)) / (2*pi)
-        double h = Math.Clamp(hRatio, 0, 1);
-        if (h <= 0) return 0;
-        if (h >= 1) return 100;
-        double theta = 2.0 * Math.Acos(1.0 - 2.0 * h);
-        return (theta - Math.Sin(theta)) / (2.0 * Math.PI) * 100.0;
-    }
+        => PipeGeometryMath.CircleSegmentPercent(hRatio);
 }
 
 // ═══════════════════════════════════════════════════════════════════
