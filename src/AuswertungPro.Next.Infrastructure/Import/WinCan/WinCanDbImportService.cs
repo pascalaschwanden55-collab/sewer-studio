@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Microsoft.Data.Sqlite;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
@@ -533,26 +532,9 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         record.VsaFindings = findings;
     }
 
-    /// <summary>
-    /// Extrahiert einen numerischen Quantifizierungswert aus dem WinCan-Beschreibungstext.
-    /// Sucht nach Prozent (%), Grad (°) oder Millimeter (mm) Angaben.
-    /// </summary>
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? ExtractQuantValue(string beschreibung)
-    {
-        // Prozent: "5%", "25 %", "10.5%"
-        var m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)\s*%");
-        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
-
-        // Grad: "15°", "45 °"
-        m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)°");
-        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
-
-        // Millimeter: "2mm", "0.5 mm"
-        m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)\s*mm");
-        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
-
-        return null;
-    }
+        => WinCanValueNormalizer.ExtractQuantValue(beschreibung);
 
     private static void LinkSectionPdf(HaltungRecord record, string sectionKey, Dictionary<string, List<string>> index)
     {
@@ -720,34 +702,17 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         dict[key] = text.Trim();
     }
 
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static bool IsImage(string? type)
-    {
-        if (string.IsNullOrWhiteSpace(type))
-            return false;
-        var t = type.Trim().ToUpperInvariant();
-        return t is "JPG" or "JPEG" or "PNG" or "BMP";
-    }
+        => WinCanValueNormalizer.IsImage(type);
 
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static bool IsVideo(string? type)
-    {
-        if (string.IsNullOrWhiteSpace(type))
-            return false;
-        var t = type.Trim().ToUpperInvariant();
-        return t is "MPG" or "MPEG" or "MP4" or "AVI" or "MOV";
-    }
+        => WinCanValueNormalizer.IsVideo(type);
 
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static TimeSpan? ParseTimeSpan(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-        var text = value.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"hh\:mm\:ss\.ff", @"hh\:mm\:ss\.fff", @"mm\:ss\.ff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-            return parsed;
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed))
-            return parsed;
-        return null;
-    }
+        => WinCanValueNormalizer.ParseTimeSpan(value);
 
     // Delegation: Logik liegt jetzt in Common.HoldingKeyNormalizer
     private static string NormalizeHoldingKey(string? value)
@@ -1132,28 +1097,9 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         return list;
     }
 
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static DateTime? ParseSqliteDate(object? raw)
-    {
-        if (raw is null)
-            return null;
-        var text = raw.ToString();
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-
-        var m = Regex.Match(text, @"Date\((\d+)\)");
-        if (m.Success && long.TryParse(m.Groups[1].Value, out var ms))
-            return DateTimeOffset.FromUnixTimeMilliseconds(ms).DateTime;
-
-        // Try explicit European date formats first to avoid DD/MM swap
-        var formats = new[] { "dd.MM.yyyy", "dd/MM/yyyy", "dd-MM-yyyy", "yyyy-MM-dd", "dd.MM.yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss" };
-        if (DateTime.TryParseExact(text, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dtExact))
-            return dtExact;
-
-        if (DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt))
-            return dt;
-
-        return null;
-    }
+        => WinCanValueNormalizer.ParseSqliteDate(raw);
 
     private sealed record DbSection(
         string Pk,
@@ -1306,103 +1252,29 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         record.SetFieldValue(field, value.Trim());
     }
 
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeNumber(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
+        => WinCanValueNormalizer.NormalizeNumber(raw);
 
-        var text = raw.Trim();
-        if (double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out var val) ||
-            double.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out val))
-        {
-            if (Math.Abs(val - Math.Round(val)) < 0.01)
-                return ((int)Math.Round(val)).ToString(CultureInfo.InvariantCulture);
-            return val.ToString("0.##", CultureInfo.InvariantCulture);
-        }
-
-        return text;
-    }
-
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeDate(string? yearText, string? rawDate)
-    {
-        if (!string.IsNullOrWhiteSpace(yearText))
-            return yearText.Trim();
-
-        var dt = ParseSqliteDate(rawDate);
-        if (dt.HasValue)
-            return dt.Value.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
-
-        return null;
-    }
+        => WinCanValueNormalizer.NormalizeDate(yearText, rawDate);
 
     // Delegation: Logik liegt jetzt in Common.MaterialTextNormalizer
     private static string? NormalizeMaterial(string? raw)
         => Common.MaterialTextNormalizer.Normalize(raw);
 
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeUsage(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
+        => WinCanValueNormalizer.NormalizeUsage(raw);
 
-        var t = raw.Trim();
-        var lower = t.ToLowerInvariant();
-
-        // Filter out non-usage values that sometimes end up in the Usage field
-        // (e.g. cleaning status, material info, yes/no flags)
-        if (lower is "gereinigt" or "nicht gereinigt" or "verschmutzt"
-            or "ja" or "nein" or "yes" or "no"
-            or "-" or "--" or "n/a" or "k.a.")
-            return null;
-
-        // Full-text matches (e.g. "Schmutzabwasser", "Regenwasser", "Mischabwasser")
-        if (lower.Contains("regen"))
-            return "Regenwasser";
-        if (lower.Contains("schmutz"))
-            return "Schmutzwasser";
-        if (lower.Contains("misch"))
-            return "Mischabwasser";
-
-        // DWA-M150 / ISYBAU / VSA codes
-        if (lower is "s" or "ks" or "sw") return "Schmutzwasser";
-        if (lower is "r" or "kr" or "rw") return "Regenwasser";
-        if (lower is "m" or "km" or "mw") return "Mischabwasser";
-
-        // Schweizer VSA-Codes (E=Entwaesserung, H=Hausentwaesserung,
-        // F=Fremdwasser, Z=Zufluss) und andere unbekannte Kurzformen
-        // sind keine Standard-Nutzungsarten - nicht uebernehmen.
-        if (t.Length <= 2)
-            return null;
-
-        return t;
-    }
-
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeInspectionDir(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
+        => WinCanValueNormalizer.NormalizeInspectionDir(raw);
 
-        var t = raw.Trim();
-        if (t == "1")
-            return "In Fliessrichtung";
-        if (t == "2")
-            return "Gegen Fliessrichtung";
-
-        return t;
-    }
-
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeAccessible(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var t = raw.Trim().ToLowerInvariant();
-        if (t is "1" or "true" or "ja" or "yes")
-            return "offen";
-        if (t is "0" or "false" or "nein" or "no")
-            return "abgeschlossen";
-
-        return raw.Trim();
-    }
+        => WinCanValueNormalizer.NormalizeAccessible(raw);
 
     private static double? SafeReadDouble(SqliteDataReader r, int col)
     {
