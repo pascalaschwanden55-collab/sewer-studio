@@ -33,49 +33,9 @@ public static partial class HoldingFolderDistributor
         @"Haltungs(?:\s*inspektion|bilder)\s*[-–—]\s*(\d{2}\.\d{2}\.\d{2,4}|\d{4}-\d{2}-\d{2})\s*[-–—]\s*((?:\d{2,}\.\d{2,}|\d{4,})\s*[-/]\s*(?:\d{2,}\.\d{2,}|\d{4,}))",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    private static readonly Regex PdfFilenamePairRegex = new(
-        @"(?:\d{2,}\.\d{2,}|\d{4,})\s*[-_]\s*(?:\d{2,}\.\d{2,}|\d{4,})",
-        RegexOptions.Compiled);
-
-    // Hotpath-Regex: TryFindInspectionDate / TryFindSchachtDate / TryExtractDateFromFormEntries
-
-
-    // Hotpath-Regex: TryFindInspectionDate / TryFindSchachtDate / TryExtractDateFromFormEntries
-    private static readonly Regex InspectionDateRx = new(
-        @"(\d{2}\.\d{2}\.\d{2,4}|\d{4}-\d{2}-\d{2})",
-        RegexOptions.Compiled);
-
     private static readonly Regex FormEntryDateRx = new(
         @"\b(?<d>" + SewerTextPatterns.GermanDateCore + @"|\d{4}[./-]\d{2}[./-]\d{2})\b",
         RegexOptions.Compiled);
-
-    private static readonly Regex LabeledDateRx = new(
-        @"Datum\s*[:\-]?\s*(?<date>" + SewerTextPatterns.GermanDateCore + ")",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-    private static readonly Regex GenericDateRx = new(
-        @"\b(?<date>" + SewerTextPatterns.GermanDateCore + @")\b",
-        RegexOptions.Compiled);
-
-    // Hotpath-Regex: TryFindHaltungId
-
-
-    // Hotpath-Regex: TryFindHaltungId
-    private static readonly Regex HaltungIdRx = new(
-        @"(?im)^.*Haltung.*[:\-\s]+(?<id>[\d\.\- ]{5,})",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-    private static readonly Regex GeneralPairRx = new(
-        @"((?:\d{2,}\.\d{2,}|\d{4,})\s*[-]\s*(?:\d{2,}\.\d{2,}|\d{4,}))(?=[^\d]|$)",
-        RegexOptions.Compiled);
-
-    private static readonly Regex GluedDatePairRx = new(
-        @"((?:\d{2,}\.\d{2,}|\d{4,})\s*-\s*(?:\d{2,}\.\d{2,}|\d{4,}?))(?=\d{2}\.\d{2}\.\d{2,4}|\d{4}-\d{2}-\d{2})",
-        RegexOptions.Compiled);
-
-    private static readonly Regex ConcatenatedIdRx = new(
-        @"(?:Haltungsname|Schacht\s*oben|Schacht\s*unten|Oberer\s*Punkt|Unterer\s*Punkt).{0,300}?(?<id>\d{10})(?!\d)",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
 
     private sealed record PageInfo(int PageNumber, string Text, string SourcePath);
