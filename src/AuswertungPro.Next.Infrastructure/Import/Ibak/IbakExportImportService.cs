@@ -790,24 +790,9 @@ public sealed class IbakExportImportService : IIbakImportService
     private static string NormalizeHoldingKey(string? value)
         => Common.HoldingKeyNormalizer.NormalizeIbak(value);
 
-    /// <summary>
-    /// Entfernt Knoten-Prefixe (z.B. "07.", "10.", "06.") aus beiden Teilen
-    /// eines Haltungsnamens, damit z.B. "07.1028055-10.1064892" zu "1028055-1064892" wird.
-    /// </summary>
-    private static readonly Regex NodePrefixRegex = new(@"^\d{1,2}\.", RegexOptions.Compiled);
-
+    // Delegation: Logik liegt jetzt in Common.NodePrefixStripper
     private static string StripNodePrefixes(string holdingKey)
-    {
-        var dashIdx = holdingKey.IndexOf('-');
-        if (dashIdx < 0)
-            return NodePrefixRegex.Replace(holdingKey, "");
-
-        var left = holdingKey[..dashIdx];
-        var right = holdingKey[(dashIdx + 1)..];
-        left = NodePrefixRegex.Replace(left, "");
-        right = NodePrefixRegex.Replace(right, "");
-        return $"{left}-{right}";
-    }
+        => Common.NodePrefixStripper.StripNodePrefixes(holdingKey);
 
     /// <summary>
     /// Extrahiert Stammdaten aus IBAK-Header-Einträgen (AEC, AED, AEF)
