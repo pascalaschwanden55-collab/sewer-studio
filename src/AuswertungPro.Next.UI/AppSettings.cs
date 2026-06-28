@@ -247,55 +247,7 @@ public sealed class AppSettings
         => SettingsStore.Persist(json, SettingsPath, AppDataDir, enableRestorePoints);
 
     private static void TryQuarantineCorruptSettings(Exception ex)
-    {
-        string? quarantinePath = null;
-
-        try
-        {
-            if (!File.Exists(SettingsPath))
-            {
-                TryAppendSettingsLog("Settings-Load meldete korrupte Daten, aber settings.json wurde nicht gefunden.", ex);
-                return;
-            }
-
-            Directory.CreateDirectory(AppDataDir);
-            var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff");
-            quarantinePath = Path.Combine(AppDataDir, $"settings.corrupt-{stamp}.json");
-
-            File.Move(SettingsPath, quarantinePath, overwrite: false);
-            TryAppendSettingsLog($"Korrupte settings.json wurde nach '{quarantinePath}' verschoben.", ex);
-        }
-        catch (Exception moveEx)
-        {
-            try
-            {
-                if (!File.Exists(SettingsPath))
-                    return;
-
-                quarantinePath ??= Path.Combine(AppDataDir, $"settings.corrupt-{DateTime.UtcNow:yyyyMMdd-HHmmssfff}.json");
-                File.Copy(SettingsPath, quarantinePath, overwrite: false);
-
-                try
-                {
-                    File.Delete(SettingsPath);
-                }
-                catch
-                {
-                    // best effort delete; if this fails, startup still continues with defaults
-                }
-
-                TryAppendSettingsLog(
-                    $"Korrupte settings.json wurde nach fehlgeschlagenem Move nach '{quarantinePath}' kopiert.",
-                    new AggregateException(ex, moveEx));
-            }
-            catch (Exception copyEx)
-            {
-                TryAppendSettingsLog(
-                    "Korrupte settings.json konnte nicht in Quarantaene verschoben werden. Es werden Standardwerte verwendet.",
-                    new AggregateException(ex, moveEx, copyEx));
-            }
-        }
-    }
+        => SettingsQuarantine.TryMoveToQuarantine(SettingsPath, AppDataDir, ex, TryAppendSettingsLog);
 
     private static void TryAppendSettingsLog(string message, Exception? ex = null)
     {
