@@ -899,111 +899,12 @@ static CadasterTopologyDocument BuildCadasterTopology(
     };
 }
 
+// Delegiert an CadasterHaltungResolver (reine Logik, kein IO).
 static List<CadasterTopologyHolding> ResolveCadasterHaltungen(
     Dictionary<string, List<CadasterStammdatenPair>> stammdatenByPair,
     List<CadasterRawTopologyPair> topologyRows,
     List<string> globalWarnings)
-{
-    var haltungen = new List<CadasterTopologyHolding>();
-    var stammdatenGroups = stammdatenByPair
-        .SelectMany(p => p.Value)
-        .GroupBy(p => UnorderedPairKey(p.StartObjName, p.EndObjName))
-        .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
-        .ToList();
-
-    if (stammdatenGroups.Count > 0)
-    {
-        foreach (var group in stammdatenGroups)
-        {
-            var matches = group.ToList();
-            var first = matches[0];
-            var warnings = new List<string>();
-            var directedPairs = matches
-                .Select(p => $"{CleanNodeId(p.StartObjName)}-{CleanNodeId(p.EndObjName)}")
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            var schachtOben = CleanNodeId(first.StartObjName);
-            var schachtUnten = CleanNodeId(first.EndObjName);
-            var fliessrichtungQuelle = "cadaster_pair_name";
-
-            if (directedPairs.Count > 1)
-            {
-                var ordered = matches
-                    .SelectMany(p => new[] { CleanNodeId(p.StartObjName), CleanNodeId(p.EndObjName) })
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
-                    .Take(2)
-                    .ToList();
-                schachtOben = ordered.ElementAtOrDefault(0) ?? schachtOben;
-                schachtUnten = ordered.ElementAtOrDefault(1) ?? schachtUnten;
-                fliessrichtungQuelle = "unsicher";
-                warnings.Add("Mehrere Stammdaten-Richtungen (cadaster) fuer dieselbe Haltung; strikt-Modus.");
-            }
-
-            if (matches.Count > 1 && directedPairs.Count == 1)
-                warnings.Add($"Mehrere Stammdaten-Zeilen fuer {schachtOben}-{schachtUnten}; erster Eintrag verwendet.");
-
-            if (string.IsNullOrWhiteSpace(schachtOben) || string.IsNullOrWhiteSpace(schachtUnten))
-            {
-                globalWarnings.Add($"Stammdaten {first.ObjName}: leerer Schachtname, uebersprungen.");
-                continue;
-            }
-
-            if (fliessrichtungQuelle == "unsicher")
-                globalWarnings.Add($"{schachtOben}-{schachtUnten}: Fliessrichtung unsicher, strikt-Modus.");
-
-            var ht = new CadasterTopologyHolding
-            {
-                HaltungPk = $"GISOBJECT:{first.Id}",
-                CanonicalFolderName = $"{schachtOben}-{schachtUnten}",
-                SchachtOben = schachtOben,
-                SchachtUnten = schachtUnten,
-                FliessrichtungQuelle = fliessrichtungQuelle,
-                LaengeM = first.LengthM,
-                AlternativeHaltungIds = BuildAlternativeHoldingIds(schachtOben, schachtUnten),
-                VideoDateinamenAusDb = [],
-                Inspektionen = [],
-                Warnings = warnings
-            };
-            ApplyTopologyConventions(ht);
-            haltungen.Add(ht);
-        }
-
-        return haltungen
-            .OrderBy(h => h.CanonicalFolderName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    foreach (var pairName in topologyRows
-                 .SelectMany(r => new[] { r.StartObjName, r.EndObjName })
-                 .Where(name => TrySplitHoldingPair(name, out _, out _))
-                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
-    {
-        TrySplitHoldingPair(pairName, out var schachtOben, out var schachtUnten);
-        var ht = new CadasterTopologyHolding
-        {
-            HaltungPk = $"GISOBJECT_FALLBACK:{StableId(pairName)}",
-            CanonicalFolderName = $"{schachtOben}-{schachtUnten}",
-            SchachtOben = schachtOben,
-            SchachtUnten = schachtUnten,
-            FliessrichtungQuelle = "cadaster_gis_pair_name",
-            LaengeM = null,
-            AlternativeHaltungIds = BuildAlternativeHoldingIds(schachtOben, schachtUnten),
-            VideoDateinamenAusDb = [],
-            Inspektionen = [],
-            Warnings = ["Keine Lt/Sc-Stammdatenzeile gefunden; aus GISOBJECT-Paarnamen abgeleitet."]
-        };
-        ApplyTopologyConventions(ht);
-        haltungen.Add(ht);
-    }
-
-    return haltungen
-        .OrderBy(h => h.CanonicalFolderName, StringComparer.OrdinalIgnoreCase)
-        .ToList();
-}
+    => CadasterHaltungResolver.Resolve(stammdatenByPair, topologyRows, globalWarnings);
 
 // Delegiert an CadasterTopologyConventions (reine Logik, kein IO).
 // Lokale Konvention: Schaechte mit "10.<ziffern>"-Praefix gehoeren immer
