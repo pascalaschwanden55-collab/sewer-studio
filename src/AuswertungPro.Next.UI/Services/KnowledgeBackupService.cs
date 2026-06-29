@@ -5,10 +5,12 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai.Backup;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
 using InfraKnowledgeBase = AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 using InfraTeacher = AuswertungPro.Next.Infrastructure.Ai.Teacher;
+using InfraBackup = AuswertungPro.Next.Infrastructure.Ai.Backup;
 
 namespace AuswertungPro.Next.UI.Services;
 
@@ -21,7 +23,7 @@ public static class KnowledgeBackupService
     public sealed record BackupResult(bool Success, string? Error, int FileCount, long SizeBytes);
 
     /// <summary>Aktuelle Manifest-Version. Wird beim Export geschrieben und beim Import geprueft.</summary>
-    private const int ManifestVersion = 2;
+    private const int ManifestVersion = BackupManifestVersionPolicy.CurrentVersion;
 
     // ── Export ────────────────────────────────────────────────────────
 
@@ -105,10 +107,11 @@ public static class KnowledgeBackupService
             {
                 using var ms = manifestEntry.Open();
                 var doc = await JsonDocument.ParseAsync(ms, cancellationToken: ct).ConfigureAwait(false);
-                if (doc.RootElement.TryGetProperty("Version", out var vProp) && vProp.GetInt32() > ManifestVersion)
+                if (doc.RootElement.TryGetProperty("Version", out var vProp)
+                    && !BackupManifestVersionPolicy.IsCompatible(vProp.GetInt32()))
                 {
                     return new BackupResult(false,
-                        $"Backup-Version {vProp.GetInt32()} ist neuer als die aktuelle Version {ManifestVersion}. Bitte aktualisieren Sie die Software.",
+                        BackupManifestVersionPolicy.FormatIncompatibleMessage(vProp.GetInt32()),
                         0, 0);
                 }
             }
@@ -246,30 +249,16 @@ public static class KnowledgeBackupService
 
     /// <summary>
     /// Loescht ein Backup-Verzeichnis nur wenn der Pfad valide ist und "backup" im Namen enthaelt.
-    /// Verhindert versehentliches Loeschen beliebiger Verzeichnisse.
+    /// Delegiert Sicherheitspruefung an SafePathGuard (Infrastructure-Schicht).
     /// </summary>
     private static void SafeDeleteBackupDir(string dirPath)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(dirPath))
-                return;
-
-            // Sicherheitspruefung: Pfad muss im Temp-Verzeichnis liegen und "backup" enthalten
-            var tempRoot = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            var normalizedDir = Path.GetFullPath(dirPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-            if (!normalizedDir.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase))
+            if (!InfraBackup.SafePathGuard.IsSafeToDelete(dirPath))
             {
                 System.Diagnostics.Debug.WriteLine(
-                    $"[KnowledgeBackup] Verzeichnis-Loeschung abgelehnt: Pfad liegt nicht im Temp-Verzeichnis: {dirPath}");
-                return;
-            }
-
-            if (!normalizedDir.Contains("backup", StringComparison.OrdinalIgnoreCase))
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    $"[KnowledgeBackup] Verzeichnis-Loeschung abgelehnt: Pfad enthaelt nicht 'backup': {dirPath}");
+                    $"[KnowledgeBackup] Verzeichnis-Loeschung abgelehnt: {dirPath}");
                 return;
             }
 
@@ -308,11 +297,10 @@ public static class KnowledgeBackupService
 
                 // Fall 1: FramePath ist absolut und zeigt auf fremden Rechner
                 // → pruefen ob die Datei lokal im frames/ Ordner liegt
-                var fileName = Path.GetFileName(s.FramePath);
-                var localPath = Path.Combine(localFramesDir, fileName);
-                if (File.Exists(localPath) && !string.Equals(s.FramePath, localPath, StringComparison.OrdinalIgnoreCase))
+                var remapped = FramePathRemapper.RemapFramePath(s.FramePath, localFramesDir, File.Exists);
+                if (remapped is not null)
                 {
-                    s.FramePath = localPath;
+                    s.FramePath = remapped;
                     changed = true;
                 }
 
@@ -321,11 +309,10 @@ public static class KnowledgeBackupService
                 {
                     for (var i = 0; i < s.AdditionalFramePaths.Count; i++)
                     {
-                        var afn = Path.GetFileName(s.AdditionalFramePaths[i]);
-                        var afLocal = Path.Combine(localFramesDir, afn);
-                        if (File.Exists(afLocal) && !string.Equals(s.AdditionalFramePaths[i], afLocal, StringComparison.OrdinalIgnoreCase))
+                        var afRemapped = FramePathRemapper.RemapFramePath(s.AdditionalFramePaths[i], localFramesDir, File.Exists);
+                        if (afRemapped is not null)
                         {
-                            s.AdditionalFramePaths[i] = afLocal;
+                            s.AdditionalFramePaths[i] = afRemapped;
                             changed = true;
                         }
                     }
@@ -399,13 +386,13 @@ public static class KnowledgeBackupService
 
             foreach (var a in annotations)
             {
-                var p1 = RemapPathToLocal(a.FullFramePath, localImagesDir);
+                var p1 = FramePathRemapper.RemapPathToLocal(a.FullFramePath, localImagesDir, File.Exists);
                 if (p1 is not null) { a.FullFramePath = p1; changed = true; }
 
-                var p2 = RemapPathToLocal(a.CroppedRegionPath, localImagesDir);
+                var p2 = FramePathRemapper.RemapPathToLocal(a.CroppedRegionPath, localImagesDir, File.Exists);
                 if (p2 is not null) { a.CroppedRegionPath = p2; changed = true; }
 
-                var p3 = RemapPathToLocal(a.YoloAnnotationPath, localLabelsDir);
+                var p3 = FramePathRemapper.RemapPathToLocal(a.YoloAnnotationPath, localLabelsDir, File.Exists);
                 if (p3 is not null) { a.YoloAnnotationPath = p3; changed = true; }
             }
 
@@ -421,34 +408,6 @@ public static class KnowledgeBackupService
         {
             System.Diagnostics.Debug.WriteLine($"[KnowledgeBackup] Teacher-Remap fehlgeschlagen: {ex.Message}");
         }
-    }
-
-    /// <summary>
-    /// Gibt den lokalen Pfad zurueck wenn die Datei im Zielordner existiert
-    /// und der aktuelle Pfad auf einen anderen Rechner zeigt. Sonst null.
-    /// Prueft auch Unterverzeichnisse (z.B. teacher_images/crops/).
-    /// </summary>
-    private static string? RemapPathToLocal(string? path, string localDir)
-    {
-        if (string.IsNullOrEmpty(path)) return null;
-
-        var fileName = Path.GetFileName(path);
-
-        // Direkter Pfad: localDir/filename
-        var localPath = Path.Combine(localDir, fileName);
-        if (File.Exists(localPath) && !string.Equals(path, localPath, StringComparison.OrdinalIgnoreCase))
-            return localPath;
-
-        // Unterverzeichnis beibehalten (z.B. crops/filename)
-        var parentDir = Path.GetFileName(Path.GetDirectoryName(path) ?? "");
-        if (!string.IsNullOrEmpty(parentDir) && !string.Equals(parentDir, Path.GetFileName(localDir), StringComparison.OrdinalIgnoreCase))
-        {
-            var subPath = Path.Combine(localDir, parentDir, fileName);
-            if (File.Exists(subPath) && !string.Equals(path, subPath, StringComparison.OrdinalIgnoreCase))
-                return subPath;
-        }
-
-        return null;
     }
 
     // ── Path helpers ─────────────────────────────────────────────────
@@ -580,55 +539,15 @@ public static class KnowledgeBackupService
 
     /// <summary>
     /// Mappt ZIP-Eintraege zurueck auf lokale Pfade.
-    /// Enthaelt Path-Traversal-Schutz gegen ../Angriffe.
+    /// Delegiert an KnowledgeBackupPathMapper (Application-Schicht).
     /// </summary>
     private static string? MapEntryToLocalPath(string entryName)
-    {
-        const string prefixKnowledge = "knowledge/";
-        const string prefixAp = "roaming_auswertungpro/";
-        const string prefixSs = "roaming_sewerstudio/";
-        const string prefixLocal = "local_sewerstudio/";
-
-        string? basePath = null;
-        string? relativePart = null;
-
-        if (entryName.StartsWith(prefixKnowledge))
-        {
-            basePath = InfraKnowledgeBase.KnowledgeBasePaths.GetRoot();
-            relativePart = entryName[prefixKnowledge.Length..];
-        }
-        else if (entryName.StartsWith(prefixAp))
-        {
-            basePath = RoamingAp;
-            relativePart = entryName[prefixAp.Length..];
-        }
-        else if (entryName.StartsWith(prefixSs))
-        {
-            basePath = RoamingSs;
-            relativePart = entryName[prefixSs.Length..];
-        }
-        else if (entryName.StartsWith(prefixLocal))
-        {
-            basePath = LocalSs;
-            relativePart = entryName[prefixLocal.Length..];
-        }
-
-        if (basePath is null || relativePart is null)
-            return null;
-
-        // Path-Traversal-Schutz: Aufgeloester Pfad muss innerhalb von basePath bleiben
-        var combined = Path.Combine(basePath, relativePart.Replace('/', Path.DirectorySeparatorChar));
-        var fullBase = Path.GetFullPath(basePath);
-        var fullResolved = Path.GetFullPath(combined);
-        if (!fullResolved.StartsWith(fullBase + Path.DirectorySeparatorChar)
-            && !string.Equals(fullResolved, fullBase, StringComparison.OrdinalIgnoreCase))
-        {
-            System.Diagnostics.Debug.WriteLine($"[KnowledgeBackup] Path-Traversal blockiert: {entryName} → {fullResolved}");
-            return null;
-        }
-
-        return fullResolved;
-    }
+        => KnowledgeBackupPathMapper.MapEntryToLocalPath(
+            entryName,
+            knowledgeRoot: InfraKnowledgeBase.KnowledgeBasePaths.GetRoot(),
+            roamingAp: RoamingAp,
+            roamingSs: RoamingSs,
+            localSs: LocalSs);
 
     /// <summary>Erzeugt einen relativen Pfad fuer den Rollback-Ordner.</summary>
     private static string GetRelativeBackupPath(string fullPath)
