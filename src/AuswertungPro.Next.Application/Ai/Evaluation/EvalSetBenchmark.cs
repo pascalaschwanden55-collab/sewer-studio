@@ -178,6 +178,23 @@ public sealed record YoloDetectThresholdSummary(
     double ConfidenceThreshold,
     YoloDetectBaselineSummary Summary);
 
+/// <summary>
+/// Gemeinsame CSV-Hilfsmethoden für alle Scorer in dieser Datei.
+/// Kein Escape von ";" – das übernimmt ProtocolPdfValueFormatting.EscapeCsv separat.
+/// </summary>
+internal static class EvalSetCsv
+{
+    internal static string Csv(string value)
+    {
+        if (value.IndexOfAny([',', '"', '\r', '\n']) < 0)
+            return value;
+
+        return "\"" + value.Replace("\"", "\"\"") + "\"";
+    }
+
+    internal static string Bool(bool value) => value ? "True" : "False";
+}
+
 public static class YoloDetectBaselineScorer
 {
     public static readonly IReadOnlyList<double> DefaultThresholds = [0.25, 0.5, 0.7, 0.85, 0.9];
@@ -442,18 +459,14 @@ public static class YoloDetectBaselineScorer
         return present.Count == 0 ? null : present.Max();
     }
 
-    private static string Bool(bool value) => value ? "True" : "False";
+    // Delegiert an gemeinsame Helferklasse EvalSetCsv
+    private static string Bool(bool value) => EvalSetCsv.Bool(value);
 
     private static string NullableDouble(double? value)
         => value.HasValue ? value.Value.ToString(CultureInfo.InvariantCulture) : "";
 
-    private static string Csv(string value)
-    {
-        if (value.IndexOfAny([',', '"', '\r', '\n']) < 0)
-            return value;
-
-        return "\"" + value.Replace("\"", "\"\"") + "\"";
-    }
+    // Delegiert an gemeinsame Helferklasse EvalSetCsv
+    private static string Csv(string value) => EvalSetCsv.Csv(value);
 }
 
 internal static class EvalSetClassifierClassMapper
@@ -899,18 +912,14 @@ public static class EvalSetBenchmarkScorer
     private static double Ratio(int part, int total)
         => total == 0 ? 0 : (double)part / total;
 
-    private static string Bool(bool value) => value ? "True" : "False";
+    // Delegiert an gemeinsame Helferklasse EvalSetCsv
+    private static string Bool(bool value) => EvalSetCsv.Bool(value);
 
     private static string DisplayPrediction(string? predicted)
         => string.IsNullOrWhiteSpace(predicted) ? "NULL" : predicted.Trim().ToUpperInvariant();
 
-    private static string Csv(string value)
-    {
-        if (value.IndexOfAny([',', '"', '\r', '\n']) < 0)
-            return value;
-
-        return "\"" + value.Replace("\"", "\"\"") + "\"";
-    }
+    // Delegiert an gemeinsame Helferklasse EvalSetCsv
+    private static string Csv(string value) => EvalSetCsv.Csv(value);
 }
 
 public static class EvalSetClassifierCoverageAnalyzer
