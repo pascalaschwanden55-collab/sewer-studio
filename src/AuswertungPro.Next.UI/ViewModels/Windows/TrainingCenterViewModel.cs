@@ -1704,7 +1704,13 @@ public partial class TrainingCenterViewModel : ObservableObject
             StatusText = selection.StatusText ?? "";
             return;
         }
-        SelectedCase = selection.Case;
+        if (selection.Case is null)
+        {
+            StatusText = "Keine Faelle mit Protokoll vorhanden. Bitte zuerst Ordner waehlen und scannen.";
+            return;
+        }
+        var selectedCase = selection.Case;
+        SelectedCase = selectedCase;
 
         _selfTrainingCts?.Cancel();
         _selfTrainingCts?.Dispose();
@@ -1718,9 +1724,9 @@ public partial class TrainingCenterViewModel : ObservableObject
             IsSelfTrainingRunning = true;
             ResetSelfTrainingVisuals(resetMatchRate: true);
             LogText = "";
-            StatusText = $"Selbsttraining: {SelectedCase.CaseId}...";
-            Log($"--- Selbsttraining starten: {SelectedCase.CaseId} ---");
-            Log($"  Protokoll: {SelectedCase.ProtocolPath}");
+            StatusText = $"Selbsttraining: {selectedCase.CaseId}...";
+            Log($"--- Selbsttraining starten: {selectedCase.CaseId} ---");
+            Log($"  Protokoll: {selectedCase.ProtocolPath}");
 
             // Services instanziieren (gleicher Pattern wie BatchImport)
             var cfg = new AppSettingsAiSettingsProvider()
@@ -1759,7 +1765,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             Log("Pipeline gestartet: OSD-Scan → Frame → KI-Analyse → Vergleich → Technik");
             var result = await _selfTrainingOrchestrator.RunAsync(
-                TrainingCenterRuntimeHelpers.ToTrainingCaseInput(SelectedCase),
+                TrainingCenterRuntimeHelpers.ToTrainingCaseInput(selectedCase),
                 progress,
                 ct);
 
