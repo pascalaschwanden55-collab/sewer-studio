@@ -1058,25 +1058,26 @@ public partial class TrainingCenterViewModel : ObservableObject
                     // ══════════════════════════════════════════════════════════════════
                     // SOFORT SPEICHERN — Crash-sicher pro Haltung
                     // ══════════════════════════════════════════════════════════════════
-                    await TrainingSamplesStore.MergeAndSaveAsync(newSamples);
+                    var persistence = await TrainingBatchImportSamplePersistenceController.SaveCandidatesAsync(
+                        newSamples,
+                        allSamples,
+                        TrainingSamplesStore.MergeAndSaveAsync);
 
                     // Kein KB-Index — Samples bleiben Kandidaten (Status: Neu)
-                    Log($"{newSamples.Count} Samples als Kandidaten gespeichert (Status: Neu). Freigabe ueber Review (Modul I) - KEIN Auto-Index.");
+                    Log(persistence.CandidateLogMessage);
 
                     // UI-Zaehler aktualisieren (Samples + Codes)
-                    allSamples.AddRange(newSamples);
-                    var distinctCodes = allSamples.Select(s => s.Code).Distinct().Count();
                     void UpdateCounters()
                     {
-                        KbSampleCount = allSamples.Count;
-                        KbCodesCovered = distinctCodes;
+                        KbSampleCount = persistence.SampleCount;
+                        KbCodesCovered = persistence.CodesCovered;
                     }
                     if (System.Windows.Application.Current?.Dispatcher is { } disp && !disp.CheckAccess())
                         disp.Invoke(UpdateCounters);
                     else
                         UpdateCounters();
 
-                    Log($"  Gespeichert | Gesamt: {allSamples.Count} Samples, {distinctCodes} Codes");
+                    Log(persistence.StoredLogMessage);
 
                     // Case-State periodisch sichern (alle 10 Haltungen),
                     // damit die UI nach einem Crash den Fortschritt korrekt anzeigt.
