@@ -915,12 +915,13 @@ public partial class TrainingCenterViewModel : ObservableObject
         using var _aiToken = AiTrack.Begin("Training Center");
         try
         {
-            IsBusy = true;
-            LogText = "";
-            ProgressValue = 0;
-            ProgressMax = 1;
-            ClearLivePreview();
-            ResetSelfTrainingVisuals(); // Ergebnis-Verlauf + Code-Verteilung + Match-Rate zuruecksetzen
+            TrainingBatchImportRunStartController.Apply(
+                value => IsBusy = value,
+                value => LogText = value,
+                value => ProgressValue = value,
+                value => ProgressMax = value,
+                ClearLivePreview,
+                () => ResetSelfTrainingVisuals());
 
             var scanWorkflow = await TrainingBatchImportScanWorkflowController.RunAsync(
                 _rootFolders.Count,

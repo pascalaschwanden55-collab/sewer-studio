@@ -43,6 +43,27 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_batch_import_startzustand_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+
+        Assert.Contains("TrainingBatchImportRunStartController.Apply(", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsBusy = true;", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("LogText = \"\";", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProgressValue = 0;", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProgressMax = 1;", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ClearLivePreview();", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ResetSelfTrainingVisuals();", batchImportSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_batch_import_auto_approve_bestaetigung_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
