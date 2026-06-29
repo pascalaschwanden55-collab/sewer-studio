@@ -133,6 +133,60 @@ public sealed class DataGridColumnLayoutControllerTests
         });
     }
 
+    [Fact]
+    public void Restore_applies_order_adjustment_while_layout_change_notifications_are_suppressed()
+    {
+        RunOnSta(() =>
+        {
+            var grid = new DataGrid();
+            var funktion = AddTextColumn(grid, "Funktion");
+            var schachtnummer = AddTextColumn(grid, "Schachtnummer");
+            var name = AddTextColumn(grid, "Name");
+            var notificationCount = 0;
+
+            var controller = new DataGridColumnLayoutController();
+            controller.LayoutChanged += (_, __) => notificationCount++;
+
+            var layout = new DataPageLayoutSettings
+            {
+                Columns =
+                [
+                    new DataPageColumnLayout { FieldName = "Funktion", DisplayIndex = 0 },
+                    new DataPageColumnLayout { FieldName = "Name", DisplayIndex = 1 },
+                    new DataPageColumnLayout { FieldName = "Schachtnummer", DisplayIndex = 2 }
+                ]
+            };
+
+            controller.Restore(
+                grid.Columns,
+                layout,
+                columns => DataGridColumnLayoutController.EnsureFieldBefore(columns, "Schachtnummer", "Funktion"));
+
+            Assert.True(schachtnummer.DisplayIndex < funktion.DisplayIndex);
+            Assert.Equal(2, name.DisplayIndex);
+            Assert.Equal(0, notificationCount);
+        });
+    }
+
+    [Fact]
+    public void Restore_tracks_column_changes_even_without_saved_layout()
+    {
+        RunOnSta(() =>
+        {
+            var grid = new DataGrid();
+            var column = AddTextColumn(grid, "Schachtnummer");
+            var notificationCount = 0;
+
+            var controller = new DataGridColumnLayoutController();
+            controller.LayoutChanged += (_, __) => notificationCount++;
+
+            controller.Restore(grid.Columns, layout: null);
+            column.Width = new DataGridLength(180, DataGridLengthUnitType.Pixel);
+
+            Assert.Equal(1, notificationCount);
+        });
+    }
+
     private static DataGridTextColumn AddTextColumn(DataGrid grid, string fieldName)
     {
         var column = new DataGridTextColumn

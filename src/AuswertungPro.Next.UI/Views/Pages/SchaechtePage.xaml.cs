@@ -66,11 +66,7 @@ public partial class SchaechtePage : UserControl
     private SchaechtePageViewModel? _vm;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
-    private readonly Dictionary<DataGridColumn, HorizontalAlignment> _columnHorizontalAlignments = new();
-    private readonly Dictionary<DataGridColumn, VerticalAlignment> _columnVerticalAlignments = new();
-    private readonly Dictionary<DataGridColumn, Style?> _baseCellStyles = new();
-    private readonly Dictionary<DataGridTextColumn, Style?> _baseTextElementStyles = new();
-    private readonly Dictionary<DataGridTextColumn, Style?> _baseTextEditingStyles = new();
+    private readonly DataGridColumnLayoutController _columnLayoutController = new();
     private bool _updatingAlignmentButtons;
     private bool _isRestoringLayout;
     private DataGridColumn? _activeColumn;
@@ -92,6 +88,7 @@ public partial class SchaechtePage : UserControl
             _layoutSaveDebounceTimer.Stop();
             SaveLayoutToSettings();
         };
+        _columnLayoutController.LayoutChanged += (_, __) => QueueLayoutSave();
 
         DataContextChanged += OnDataContextChanged;
         Grid.AddHandler(DataGridColumnHeader.ClickEvent, new RoutedEventHandler(Grid_ColumnHeaderClick), true);
@@ -169,11 +166,7 @@ public partial class SchaechtePage : UserControl
             return;
 
         Grid.Columns.Clear();
-        _columnHorizontalAlignments.Clear();
-        _columnVerticalAlignments.Clear();
-        _baseCellStyles.Clear();
-        _baseTextElementStyles.Clear();
-        _baseTextEditingStyles.Clear();
+        _columnLayoutController.Clear();
         _activeColumn = null;
 
         _isRestoringLayout = true;
@@ -233,10 +226,7 @@ public partial class SchaechtePage : UserControl
                 var defaultHorizontal = IsCostColumn(col)
                     ? HorizontalAlignment.Right
                     : HorizontalAlignment.Left;
-                _columnHorizontalAlignments[column] = defaultHorizontal;
-                _columnVerticalAlignments[column] = VerticalAlignment.Center;
                 ApplyColumnAlignment(column, defaultHorizontal, VerticalAlignment.Center);
-                AttachColumnLayoutChangeHandlers(column);
             }
         }
         finally
@@ -689,18 +679,12 @@ public partial class SchaechtePage : UserControl
 
     private HorizontalAlignment GetColumnHorizontalAlignment(DataGridColumn column)
     {
-        if (_columnHorizontalAlignments.TryGetValue(column, out var value))
-            return value;
-
-        return HorizontalAlignment.Left;
+        return _columnLayoutController.GetHorizontalAlignment(column);
     }
 
     private VerticalAlignment GetColumnVerticalAlignment(DataGridColumn column)
     {
-        if (_columnVerticalAlignments.TryGetValue(column, out var value))
-            return value;
-
-        return VerticalAlignment.Center;
+        return _columnLayoutController.GetVerticalAlignment(column);
     }
 
     private void TrySetCurrentCellForColumn(DataGridColumn column)
@@ -714,69 +698,7 @@ public partial class SchaechtePage : UserControl
 
     private void ApplyColumnAlignment(DataGridColumn column, HorizontalAlignment horizontalAlignment, VerticalAlignment verticalAlignment)
     {
-        _columnHorizontalAlignments[column] = horizontalAlignment;
-        _columnVerticalAlignments[column] = verticalAlignment;
-
-        ApplyCellAlignment(column, horizontalAlignment, verticalAlignment);
-
-        if (column is DataGridTextColumn textColumn)
-            ApplyTextColumnAlignment(textColumn, horizontalAlignment, verticalAlignment);
-
-        QueueLayoutSave();
-    }
-
-    private void ApplyCellAlignment(DataGridColumn column, HorizontalAlignment horizontalAlignment, VerticalAlignment verticalAlignment)
-    {
-        if (!_baseCellStyles.ContainsKey(column))
-            _baseCellStyles[column] = column.CellStyle;
-
-        var style = new Style(typeof(DataGridCell), _baseCellStyles[column]);
-        style.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, horizontalAlignment));
-        style.Setters.Add(new Setter(Control.VerticalContentAlignmentProperty, verticalAlignment));
-        column.CellStyle = style;
-    }
-
-    private void ApplyTextColumnAlignment(DataGridTextColumn column, HorizontalAlignment horizontalAlignment, VerticalAlignment verticalAlignment)
-    {
-        if (!_baseTextElementStyles.ContainsKey(column))
-            _baseTextElementStyles[column] = column.ElementStyle;
-
-        if (!_baseTextEditingStyles.ContainsKey(column))
-            _baseTextEditingStyles[column] = column.EditingElementStyle;
-
-        var textAlignment = ToTextAlignment(horizontalAlignment);
-
-        var elementStyle = new Style(typeof(TextBlock), _baseTextElementStyles[column]);
-        elementStyle.Setters.Add(new Setter(TextBlock.HorizontalAlignmentProperty, horizontalAlignment));
-        elementStyle.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, verticalAlignment));
-        elementStyle.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, textAlignment));
-        column.ElementStyle = elementStyle;
-
-        var editingStyle = new Style(typeof(TextBox), _baseTextEditingStyles[column]);
-        editingStyle.Setters.Add(new Setter(TextBox.TextAlignmentProperty, textAlignment));
-        editingStyle.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, horizontalAlignment));
-        editingStyle.Setters.Add(new Setter(TextBox.VerticalContentAlignmentProperty, ToTextBoxVerticalAlignment(verticalAlignment)));
-        column.EditingElementStyle = editingStyle;
-    }
-
-    private static TextAlignment ToTextAlignment(HorizontalAlignment alignment)
-    {
-        return alignment switch
-        {
-            HorizontalAlignment.Center => TextAlignment.Center,
-            HorizontalAlignment.Right => TextAlignment.Right,
-            _ => TextAlignment.Left
-        };
-    }
-
-    private static VerticalAlignment ToTextBoxVerticalAlignment(VerticalAlignment alignment)
-    {
-        return alignment switch
-        {
-            VerticalAlignment.Top => VerticalAlignment.Top,
-            VerticalAlignment.Bottom => VerticalAlignment.Bottom,
-            _ => VerticalAlignment.Center
-        };
+        _columnLayoutController.SetAlignment(column, horizontalAlignment, verticalAlignment);
     }
 
     private void UpdateAlignmentButtonsForCurrentColumn()
@@ -822,58 +744,14 @@ public partial class SchaechtePage : UserControl
     {
         var sp = Services;
         var layout = sp.Settings.SchaechtePageLayout;
-        if (layout is null)
-            return;
 
         _isRestoringLayout = true;
         try
         {
-            var byField = layout.Columns?
-                .Where(c => !string.IsNullOrWhiteSpace(c.FieldName))
-                .GroupBy(c => c.FieldName, StringComparer.Ordinal)
-                .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal)
-                ?? new Dictionary<string, DataPageColumnLayout>(StringComparer.Ordinal);
-
-            foreach (var col in Grid.Columns)
-            {
-                if (col.GetValue(FrameworkElement.TagProperty) is not string fieldName)
-                    continue;
-                if (!byField.TryGetValue(fieldName, out var state))
-                    continue;
-
-                if (state.WidthValue > 0 && Enum.TryParse<DataGridLengthUnitType>(state.WidthUnitType, out var widthType))
-                    col.Width = new DataGridLength(state.WidthValue, widthType);
-
-                var horizontal = ParseHorizontalAlignment(state.HorizontalAlignment);
-                var vertical = ParseVerticalAlignment(state.VerticalAlignment);
-                ApplyColumnAlignment(col, horizontal, vertical);
-            }
-
-            var orderedColumns = Grid.Columns
-                .Select(col =>
-                {
-                    var field = col.GetValue(FrameworkElement.TagProperty) as string;
-                    if (field is not null && byField.TryGetValue(field, out var state))
-                        return new { Column = col, Target = state.DisplayIndex, HasState = true };
-                    return new { Column = col, Target = col.DisplayIndex, HasState = false };
-                })
-                .OrderBy(x => x.HasState ? 0 : 1)
-                .ThenBy(x => x.Target)
-                .ToList();
-
-            for (var i = 0; i < orderedColumns.Count; i++)
-            {
-                try
-                {
-                    orderedColumns[i].Column.DisplayIndex = i;
-                }
-                catch
-                {
-                    // ignore invalid display index operations
-                }
-            }
-
-            EnsureSchachtnummerBeforeFunktion();
+            _columnLayoutController.Restore(
+                Grid.Columns,
+                layout,
+                columns => DataGridColumnLayoutController.EnsureFieldBefore(columns, "Schachtnummer", "Funktion"));
         }
         finally
         {
@@ -881,53 +759,9 @@ public partial class SchaechtePage : UserControl
         }
     }
 
-    private void EnsureSchachtnummerBeforeFunktion()
-    {
-        var schachtnummerColumn = FindColumnByName("Schachtnummer");
-        var funktionColumn = FindColumnByName("Funktion");
-        if (schachtnummerColumn is null || funktionColumn is null)
-            return;
-
-        if (schachtnummerColumn.DisplayIndex < funktionColumn.DisplayIndex)
-            return;
-
-        try
-        {
-            var target = funktionColumn.DisplayIndex;
-            schachtnummerColumn.DisplayIndex = target;
-            funktionColumn.DisplayIndex = target + 1;
-        }
-        catch
-        {
-            // ignore invalid display index operations
-        }
-    }
-
-    private DataGridColumn? FindColumnByName(string fieldName)
-    {
-        return Grid.Columns.FirstOrDefault(c =>
-            c.GetValue(FrameworkElement.TagProperty) is string tag &&
-            string.Equals(tag, fieldName, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private void AttachColumnLayoutChangeHandlers(DataGridColumn column)
-    {
-        DependencyPropertyDescriptor.FromProperty(DataGridColumn.WidthProperty, typeof(DataGridColumn))
-            ?.AddValueChanged(column, ColumnLayoutPropertyChanged);
-        DependencyPropertyDescriptor.FromProperty(DataGridColumn.DisplayIndexProperty, typeof(DataGridColumn))
-            ?.AddValueChanged(column, ColumnLayoutPropertyChanged);
-    }
-
-    private void ColumnLayoutPropertyChanged(object? sender, EventArgs e)
-    {
-        _ = sender;
-        _ = e;
-        QueueLayoutSave();
-    }
-
     private void QueueLayoutSave()
     {
-        if (_isRestoringLayout)
+        if (_isRestoringLayout || _columnLayoutController.IsRestoring)
             return;
 
         _layoutSaveDebounceTimer.Stop();
@@ -938,48 +772,16 @@ public partial class SchaechtePage : UserControl
     {
         // Beim Entladen der Seite (Unloaded-Handler) kann der DataContext bereits
         // null sein. Dann nichts speichern - kein Zugriff auf Vm/Services erzwingen.
-        if (_isRestoringLayout || Grid.Columns.Count == 0 || DataContext is not SchaechtePageViewModel)
+        if (_isRestoringLayout || _columnLayoutController.IsRestoring ||
+            Grid.Columns.Count == 0 || DataContext is not SchaechtePageViewModel)
             return;
 
         var sp = Services;
         var layout = sp.Settings.SchaechtePageLayout ?? new DataPageLayoutSettings();
-        layout.Columns = Grid.Columns
-            .Select(col =>
-            {
-                var fieldName = col.GetValue(FrameworkElement.TagProperty) as string ?? "";
-                var horizontal = GetColumnHorizontalAlignment(col).ToString();
-                var vertical = GetColumnVerticalAlignment(col).ToString();
-                return new DataPageColumnLayout
-                {
-                    FieldName = fieldName,
-                    DisplayIndex = col.DisplayIndex,
-                    WidthValue = col.Width.Value,
-                    WidthUnitType = col.Width.UnitType.ToString(),
-                    HorizontalAlignment = horizontal,
-                    VerticalAlignment = vertical
-                };
-            })
-            .Where(x => !string.IsNullOrWhiteSpace(x.FieldName))
-            .ToList();
+        layout.Columns = _columnLayoutController.Capture(Grid.Columns).Columns;
 
         sp.Settings.SchaechtePageLayout = layout;
         sp.Settings.Save();
-    }
-
-    private static HorizontalAlignment ParseHorizontalAlignment(string? value)
-    {
-        if (Enum.TryParse<HorizontalAlignment>(value, out var parsed))
-            return parsed;
-
-        return HorizontalAlignment.Left;
-    }
-
-    private static VerticalAlignment ParseVerticalAlignment(string? value)
-    {
-        if (Enum.TryParse<VerticalAlignment>(value, out var parsed))
-            return parsed;
-
-        return VerticalAlignment.Center;
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)

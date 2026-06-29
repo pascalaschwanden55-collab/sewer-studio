@@ -64,11 +64,11 @@ public sealed class DataGridColumnLayoutController
         NotifyLayoutChanged();
     }
 
-    public void Restore(IEnumerable<DataGridColumn> columns, DataPageLayoutSettings? layout)
+    public void Restore(
+        IEnumerable<DataGridColumn> columns,
+        DataPageLayoutSettings? layout,
+        Action<IReadOnlyList<DataGridColumn>>? adjustOrder = null)
     {
-        if (layout is null)
-            return;
-
         var columnList = columns.Cast<DataGridColumn>().ToList();
 
         _isRestoring = true;
@@ -76,6 +76,12 @@ public sealed class DataGridColumnLayoutController
         {
             foreach (var column in columnList)
                 AttachColumnLayoutChangeHandlers(column);
+
+            if (layout is null)
+            {
+                adjustOrder?.Invoke(columnList);
+                return;
+            }
 
             var byField = layout.Columns?
                 .Where(c => !string.IsNullOrWhiteSpace(c.FieldName))
@@ -124,6 +130,8 @@ public sealed class DataGridColumnLayoutController
                     // WPF can reject transient DisplayIndex moves while columns are being rebuilt.
                 }
             }
+
+            adjustOrder?.Invoke(columnList);
         }
         finally
         {
@@ -153,6 +161,32 @@ public sealed class DataGridColumnLayoutController
                 .Where(x => !string.IsNullOrWhiteSpace(x.FieldName))
                 .ToList()
         };
+    }
+
+    public static void EnsureFieldBefore(
+        IEnumerable<DataGridColumn> columns,
+        string fieldName,
+        string followingFieldName)
+    {
+        var columnList = columns.Cast<DataGridColumn>().ToList();
+        var first = FindColumnByFieldName(columnList, fieldName);
+        var following = FindColumnByFieldName(columnList, followingFieldName);
+        if (first is null || following is null)
+            return;
+
+        if (first.DisplayIndex < following.DisplayIndex)
+            return;
+
+        try
+        {
+            var target = following.DisplayIndex;
+            first.DisplayIndex = target;
+            following.DisplayIndex = target + 1;
+        }
+        catch
+        {
+            // WPF can reject transient DisplayIndex moves while columns are being rebuilt.
+        }
     }
 
     private void ApplyCellAlignment(
@@ -226,6 +260,13 @@ public sealed class DataGridColumnLayoutController
             return;
 
         LayoutChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static DataGridColumn? FindColumnByFieldName(IEnumerable<DataGridColumn> columns, string fieldName)
+    {
+        return columns.FirstOrDefault(column =>
+            column.GetValue(FrameworkElement.TagProperty) is string tag &&
+            string.Equals(tag, fieldName, StringComparison.OrdinalIgnoreCase));
     }
 
     private static TextAlignment ToTextAlignment(HorizontalAlignment alignment)
