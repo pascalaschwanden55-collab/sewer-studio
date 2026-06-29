@@ -92,10 +92,23 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var startControllerSource = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "SelfTrainingRunStartController.cs"));
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingRunPresentationBuilder.BuildStart(selectedCase)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingRunStartController.Apply(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingRunPresentationBuilder.BuildStart(trainingCase)", startControllerSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingRunPresentationBuilder.BuildStart(selectedCase)", selfTrainingSource, StringComparison.Ordinal);
         Assert.Contains("SelfTrainingRunPresentationBuilder.BuildPipelineStartedLog()", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsBusy = true;", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsSelfTrainingRunning = true;", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ResetSelfTrainingVisuals(resetMatchRate: true);", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("LogText = \"\";", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Selbsttraining: {selectedCase.CaseId}", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("--- Selbsttraining starten: {selectedCase.CaseId} ---", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Pipeline gestartet: OSD-Scan", selfTrainingSource, StringComparison.Ordinal);
