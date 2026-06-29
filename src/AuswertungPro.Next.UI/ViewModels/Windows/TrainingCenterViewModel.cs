@@ -312,13 +312,14 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         void Apply()
         {
-            LiveCaseInfo = caseInfo;
-            LiveCodeInfo = code;
-            LiveMeterInfo = meter;
-            CurrentComparisonText = $"{code} @ {meter}";
-            CurrentEntryCode = code;
-            if (framePath is not null)
-                SetLiveFrameThrottled(framePath);
+            var preview = TrainingLivePreviewPresenter.Build(caseInfo, code, meter, framePath);
+            LiveCaseInfo = preview.LiveCaseInfo;
+            LiveCodeInfo = preview.LiveCodeInfo;
+            LiveMeterInfo = preview.LiveMeterInfo;
+            CurrentComparisonText = preview.CurrentComparisonText;
+            CurrentEntryCode = preview.CurrentEntryCode;
+            if (preview.FramePath is not null)
+                SetLiveFrameThrottled(preview.FramePath);
             else if (string.IsNullOrEmpty(LiveFramePath))
                 LiveFramePath = ""; // Explizit leer setzen damit UI reagiert
         }
@@ -331,10 +332,13 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     private void ClearLivePreview()
     {
-        SetLiveFrameThrottled(null);
-        LiveCaseInfo = "";
-        LiveCodeInfo = "";
-        LiveMeterInfo = "";
+        var preview = TrainingLivePreviewPresenter.Clear();
+        SetLiveFrameThrottled(preview.FramePath);
+        LiveCaseInfo = preview.LiveCaseInfo;
+        LiveCodeInfo = preview.LiveCodeInfo;
+        LiveMeterInfo = preview.LiveMeterInfo;
+        CurrentComparisonText = preview.CurrentComparisonText;
+        CurrentEntryCode = preview.CurrentEntryCode;
     }
 
     private async Task RefreshKbStatusAsync()
@@ -884,12 +888,13 @@ public partial class TrainingCenterViewModel : ObservableObject
     [RelayCommand]
     private async Task BatchImportAndIndexAsync()
     {
-        if (IsBusy) return;
-        if (_rootFolders.Count == 0)
-        {
-            StatusText = "Bitte zuerst einen oder mehrere Ordner wählen.";
+        var runPreparation = TrainingBatchImportRunPreparationController.Prepare(
+            IsBusy,
+            _rootFolders.Count,
+            _genCts,
+            value => StatusText = value);
+        if (runPreparation.ShouldStop)
             return;
-        }
 
         // S8: Dieser Pfad setzt erkannte Samples automatisch auf Approved und indexiert sie
         // OHNE manuelle Pruefung direkt in die Knowledge Base (umgeht die Review-Politik des
@@ -903,14 +908,13 @@ public partial class TrainingCenterViewModel : ObservableObject
             "Batch-Import + KB (ungeprüft)");
         if (!bestaetigung)
         {
+            runPreparation.CancellationTokenSource?.Dispose();
             StatusText = "Batch-Import abgebrochen.";
             return;
         }
 
-        _genCts?.Cancel();
-        _genCts?.Dispose();
-        _genCts = new CancellationTokenSource();
-        var ct = _genCts.Token;
+        _genCts = runPreparation.CancellationTokenSource;
+        var ct = runPreparation.CancellationToken;
 
         using var _aiToken = AiTrack.Begin("Training Center");
         try
@@ -1185,8 +1189,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     [RelayCommand]
     private void CancelBatch()
     {
-        _genCts?.Cancel();
-        StatusText = "Abbruch angefordert...";
+        StatusText = TrainingBatchImportRunControlController.RequestCancel(_genCts);
     }
 
     [RelayCommand]

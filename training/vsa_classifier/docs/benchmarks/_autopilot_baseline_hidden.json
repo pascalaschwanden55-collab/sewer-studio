@@ -1,0 +1,63 @@
+{
+  "frames": 58,
+  "exact_correct": 23,
+  "exact_acc": 0.39655172413793105,
+  "findings_correct": 17,
+  "findings_total": 44,
+  "findings_acc": 0.38636363636363635,
+  "leer_correct": 6,
+  "leer_total": 14,
+  "leer_acc": 0.42857142857142855,
+  "per_class": {
+    "BDD": [
+      1,
+      6
+    ],
+    "BAJ": [
+      1,
+      1
+    ],
+    "LEER": [
+      6,
+      14
+    ],
+    "BCE": [
+      2,
+      10
+    ],
+    "BDA": [
+      6,
+      9
+    ],
+    "BCC": [
+      0,
+      2
+    ],
+    "BCA": [
+      0,
+      3
+    ],
+    "BAI": [
+      7,
+      7
+    ],
+    "BAF": [
+      0,
+      1
+    ],
+    "BAB": [
+      0,
+      1
+    ],
+    "BAA": [
+      0,
+      2
+    ],
+    "BBC": [
+      0,
+      2
+    ]
+  },
+  "weights": "C:\\KI_BRAIN\\yolo_cls_runs\\vsa_cls_v5_nocrop\\weights\\best.pt",
+  "eval_root": "C:\\Sewer-Studio_KI_4.4\\EvalVisibilityReview_20260525\\eval_unclean_or_hidden_eval_set"
+}
