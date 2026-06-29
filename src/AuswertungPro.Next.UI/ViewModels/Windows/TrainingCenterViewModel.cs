@@ -984,13 +984,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             var casesToProcess = casesWithProtocol;
 
             ProgressMax = casesToProcess.Count;
-            var totalNew = 0;
-            var errors = 0;
-            var lastError = "";
-            var emptyProtocols = 0;
-            var duplicateOnlyCases = 0;
-            var missingProtocols = 0;
-            var unreadableProtocols = 0;
+            var runSummary = new TrainingBatchImportRunSummary();
 
             for (var i = 0; i < casesToProcess.Count; i++)
             {
@@ -1018,21 +1012,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                     if (newSamples.Count == 0)
                     {
                         var skip = TrainingCenterSampleGenerationStatusFormatter.FormatBatchSkip(generation);
-                        switch (skip.Kind)
-                        {
-                            case TrainingCenterBatchSkipKind.DuplicateOnly:
-                                duplicateOnlyCases++;
-                                break;
-                            case TrainingCenterBatchSkipKind.MissingProtocol:
-                                missingProtocols++;
-                                break;
-                            case TrainingCenterBatchSkipKind.UnreadableProtocol:
-                                unreadableProtocols++;
-                                break;
-                            default:
-                                emptyProtocols++;
-                                break;
-                        }
+                        runSummary.RecordSkip(skip.Kind);
 
                         var skipReason = skip.ResultSummary;
                         Log(skip.LogMessage);
@@ -1083,7 +1063,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                             AddResult();
                     }
 
-                    totalNew += newSamples.Count;
+                    runSummary.AddNewSamples(newSamples.Count);
 
                     Log($"  -> {newSamples.Count} Samples (Status: Neu, Freigabe ueber Review):");
                     foreach (var s in newSamples)
@@ -1125,8 +1105,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    errors++;
-                    lastError = ex.Message;
+                    runSummary.RecordError(ex.Message);
                     Log($"  FEHLER: {ex.Message}");
                 }
             }
@@ -1137,21 +1116,14 @@ public partial class TrainingCenterViewModel : ObservableObject
             foreach (var s in allSamples)
                 Samples.Add(s);
 
-            if (totalNew == 0 && casesToProcess.Count > 0)
+            if (runSummary.BuildNoNewStatus(casesToProcess.Count) is { } noNewStatus)
             {
-                var diag = $"0 neue Samples aus {casesToProcess.Count} Faellen.";
-                if (errors > 0) diag += $" {errors} Fehler (letzter: {lastError}).";
-                if (emptyProtocols > 0) diag += $" {emptyProtocols} ohne Eintraege.";
-                if (duplicateOnlyCases > 0) diag += $" {duplicateOnlyCases} nur Duplikate.";
-                if (missingProtocols > 0) diag += $" {missingProtocols} fehlende Protokolle.";
-                if (unreadableProtocols > 0) diag += $" {unreadableProtocols} nicht lesbar.";
-                Log(diag);
-                StatusText = diag;
+                Log(noNewStatus);
+                StatusText = noNewStatus;
                 return;
             }
 
-            var finalStatus = $"Fertig! {totalNew} Kandidaten gespeichert (Status: Neu). Freigabe ueber Review (Modul I) — kein Auto-Index.";
-            if (errors > 0) finalStatus += $" {errors} Fehler.";
+            var finalStatus = runSummary.BuildCompletionStatus();
             Log(finalStatus);
             StatusText = finalStatus;
 
