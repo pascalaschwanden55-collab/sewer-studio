@@ -990,16 +990,21 @@ public partial class TrainingCenterViewModel : ObservableObject
                 try
                 {
                     // Preview-Frame extrahieren
-                    var previewFrame = await TrainingCenterRuntimeHelpers.ExtractPreviewFrameAsync(tc, cfg, ct);
-                    var processingPreview = TrainingBatchImportLivePreviewBuilder.BuildProcessing(tc.CaseId, previewFrame);
+                    var caseGeneration = await TrainingBatchImportCaseGenerationController.GenerateAsync(
+                        tc,
+                        existingSigs,
+                        (trainingCase, token) => TrainingCenterRuntimeHelpers.ExtractPreviewFrameAsync(trainingCase, cfg, token),
+                        (input, signatures, token) => generator.GenerateWithDiagnosticsAsync(input, signatures, framesDir: null, token),
+                        ct);
+                    var previewFrame = caseGeneration.PreviewFrame;
+                    var processingPreview = caseGeneration.ProcessingPreview;
                     UpdateLivePreview(
                         processingPreview.CaseInfo,
                         processingPreview.CodeInfo,
                         processingPreview.MeterInfo,
                         processingPreview.FramePath);
 
-                    var generation = await generator.GenerateWithDiagnosticsAsync(
-                        TrainingCenterRuntimeHelpers.ToTrainingCaseInput(tc), existingSigs, framesDir: null, ct);
+                    var generation = caseGeneration.Generation;
                     var newSamples = generation.Samples;
 
                     if (newSamples.Count == 0)
