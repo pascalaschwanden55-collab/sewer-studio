@@ -900,16 +900,12 @@ public partial class TrainingCenterViewModel : ObservableObject
         // OHNE manuelle Pruefung direkt in die Knowledge Base (umgeht die Review-Politik des
         // Selbsttrainings). Falsche Labels verschlechtern damit dauerhaft alle kuenftigen
         // KI-Vorschlaege. Darum einmalige, bewusste Bestaetigung pro Lauf verlangen.
-        var bestaetigung = DialogHost.Current.ConfirmWarn(
-            "Achtung: Der Batch-Import indexiert erkannte Samples OHNE manuelle Prüfung direkt in die Knowledge Base (Auto-Approve).\n\n" +
-            "Falsche Code-/Meter-Zuordnungen verschlechtern dauerhaft alle künftigen KI-Vorschläge. " +
-            "Für geprüftes Lernen stattdessen 'Selbsttraining' mit der Review-Queue nutzen.\n\n" +
-            "Trotzdem ungeprüft in die Knowledge Base lernen?",
-            "Batch-Import + KB (ungeprüft)");
-        if (!bestaetigung)
+        var confirmation = TrainingBatchImportAutoApproveConfirmationController.Confirm(
+            DialogHost.Current);
+        if (!confirmation.ShouldContinue)
         {
             runPreparation.CancellationTokenSource?.Dispose();
-            StatusText = "Batch-Import abgebrochen.";
+            StatusText = confirmation.StatusText ?? "";
             return;
         }
 
