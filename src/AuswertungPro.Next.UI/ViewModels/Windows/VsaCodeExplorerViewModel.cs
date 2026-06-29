@@ -81,6 +81,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     // Vorherige Auswahl (fuer Edit-Modus)
     private readonly ProtocolEntry? _existingEntry;
     private readonly IVsaCodeSelectionCatalog _catalog;
+    private readonly VsaCodePathResolver _codePathResolver;
 
     public VsaCodeExplorerViewModel(ProtocolEntry? existingEntry = null,
                                      double? presetMeter = null,
@@ -89,6 +90,9 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
     {
         _existingEntry = existingEntry;
         _catalog = catalog ?? EmptyVsaCodeSelectionCatalog.Instance;
+        _codePathResolver = new VsaCodePathResolver(
+            _catalog.Groups,
+            (cd, c1) => _catalog.GetChar2Options(cd, c1));
 
         if (presetMeter.HasValue)
             MeterStart = presetMeter.Value.ToString("F2", CultureInfo.InvariantCulture);
@@ -314,12 +318,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         {
             case 0: // Gruppen (Anordnung kommt aus dem Katalog = ISYBAU-Baum)
                 foreach (var (key, grp) in _catalog.Groups)
-                {
-                    CurrentTiles.Add(new TileItem
-                    {
-                        Key = key, Label = key, Description = grp.Label, GroupColor = grp.Color, Icon = grp.Icon
-                    });
-                }
+                    CurrentTiles.Add(ToTileItem(VsaTileDataFactory.ForGroup(key, grp)));
                 break;
 
             case 1: // Hauptcodes
@@ -328,17 +327,7 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                     foreach (var (key, cd) in group.Codes)
                     {
                         var (q1, _) = _catalog.GetQuantRule(key, null);
-                        var badge = q1 is not null ? q1.Einheit ?? "Q" : null;
-                        var badgeColor = q1 is { Pflicht: "P" } ? "#DC2626" : q1 is not null ? "#F59E0B" : null;
-
-                        CurrentTiles.Add(new TileItem
-                        {
-                            Key = key, Label = key, Description = cd.Label,
-                            IsFinal = cd.FinalCode is not null,
-                            IsSteuer = cd.IsSteuer,
-                            BadgeText = badge, BadgeColor = badgeColor,
-                            GroupColor = group.Color
-                        });
+                        CurrentTiles.Add(ToTileItem(VsaTileDataFactory.ForCode(key, cd, q1, group.Color)));
                     }
                 }
                 break;
@@ -348,21 +337,12 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                 var cd = GetCurrentVsaCodeDef();
                 if (cd?.Char1 is not null)
                 {
-                    var grpColor = CurrentGroupColor;
                     foreach (var (key, charDef) in cd.Char1)
                     {
                         var hasC2 = _catalog.GetChar2Options(cd, key) is not null;
-                        var prefix = cd.XPrefix ? "X" : "";
-                        var fullCode = $"{SelectedCodeKey}{prefix}{key}";
                         var (q1, _) = _catalog.GetQuantRule(SelectedCodeKey!, key);
-
-                        CurrentTiles.Add(new TileItem
-                        {
-                            Key = key, Label = fullCode, Description = charDef.Label,
-                            IsFinal = !hasC2,
-                            BadgeText = q1?.Einheit, BadgeColor = q1 is { Pflicht: "P" } ? "#DC2626" : q1 is not null ? "#F59E0B" : null,
-                            GroupColor = grpColor
-                        });
+                        CurrentTiles.Add(ToTileItem(VsaTileDataFactory.ForChar1(
+                            key, charDef, SelectedCodeKey!, cd.XPrefix, hasC2, q1, CurrentGroupColor)));
                     }
                 }
                 break;
@@ -376,17 +356,11 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
                     var c2Options = _catalog.GetChar2Options(cd, SelectedChar1Key);
                     if (c2Options is not null)
                     {
-                        var prefix = cd.XPrefix ? "X" : "";
                         foreach (var (key, label) in c2Options)
                         {
                             var invalid = _catalog.IsInvalidCombo(cd, SelectedChar1Key, key);
-                            var fullCode = $"{SelectedCodeKey}{prefix}{SelectedChar1Key}{key}";
-                            CurrentTiles.Add(new TileItem
-                            {
-                                Key = key, Label = fullCode, Description = label,
-                                IsFinal = true, IsInvalid = invalid,
-                                GroupColor = CurrentGroupColor
-                            });
+                            CurrentTiles.Add(ToTileItem(VsaTileDataFactory.ForChar2(
+                                key, label, SelectedCodeKey!, SelectedChar1Key, cd.XPrefix, invalid, CurrentGroupColor)));
                         }
                     }
                 }
@@ -516,58 +490,18 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         CanConfirm = errors.Count == 0;
     }
 
+    // Delegaten an VsaCodeEntryValidator (reine Logik, kein UI-Bezug)
     private static string? ValidateQuantField(string value, QuantField? rule)
-    {
-        if (rule is null) return null;
-
-        if (string.IsNullOrWhiteSpace(value))
-            return rule.Pflicht == "P" ? "Pflichtfeld" : null;
-
-        if (!TryParseDouble(value, out var num))
-            return "Ungueltige Zahl";
-
-        if (rule.Min.HasValue && num < rule.Min.Value)
-            return $">= {rule.Min.Value}";
-
-        if (rule.Max.HasValue && num > rule.Max.Value)
-            return $"<= {rule.Max.Value}";
-
-        return null;
-    }
+        => VsaCodeEntryValidator.ValidateQuantField(value, rule);
 
     private static bool TryParseDouble(string raw, out double value)
-    {
-        var normalized = raw.Trim().Replace(',', '.');
-        return double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
-    }
+        => VsaCodeEntryValidator.TryParseDouble(raw, out value);
 
     private static bool TryParseTime(string raw, out TimeSpan ts)
-    {
-        ts = default;
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out ts))
-            return true;
-        return TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out ts);
-    }
+        => VsaCodeEntryValidator.TryParseTime(raw, out ts);
 
     private static bool IsValidClock(string raw)
-    {
-        var text = raw.Trim();
-        return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) && v >= 0 && v <= 12;
-    }
-
-    private static string? NormalizeClockValue(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim();
-        if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) || v < 0 || v > 12)
-            return null;
-
-        return v.ToString("00", CultureInfo.InvariantCulture);
-    }
+        => VsaCodeEntryValidator.IsValidClock(raw);
 
     // =================================================================
     // ProtocolEntry bauen
@@ -581,203 +515,32 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         out string? c2Key,
         out int level,
         out string? finalCode)
-    {
-        groupKey = string.Empty;
-        codeKey = string.Empty;
-        c1Key = null;
-        c2Key = null;
-        level = 0;
-        finalCode = null;
-
-        var normalized = NormalizeCode(rawCode);
-        if (string.IsNullOrWhiteSpace(normalized))
-            return false;
-
-        foreach (var (grpKey, group) in _catalog.Groups)
-        {
-            foreach (var (candidateCodeKey, codeDef) in group.Codes)
-            {
-                if (!normalized.StartsWith(candidateCodeKey, StringComparison.Ordinal))
-                    continue;
-
-                var rest = normalized[candidateCodeKey.Length..];
-
-                // Endcode ohne Char1/Char2.
-                if (rest.Length == 0)
-                {
-                    groupKey = grpKey;
-                    codeKey = candidateCodeKey;
-                    level = 1;
-
-                    if (codeDef.FinalCode is not null || codeDef.Char1 is null)
-                        finalCode = codeDef.FinalCode ?? candidateCodeKey;
-                    else
-                        level = 2;
-
-                    return true;
-                }
-
-                if (codeDef.Char1 is null)
-                    continue;
-
-                if (codeDef.XPrefix && rest.StartsWith("X", StringComparison.Ordinal))
-                    rest = rest[1..];
-
-                if (rest.Length == 0)
-                {
-                    groupKey = grpKey;
-                    codeKey = candidateCodeKey;
-                    level = 2;
-                    return true;
-                }
-
-                var char1 = rest[0].ToString();
-                if (!codeDef.Char1.ContainsKey(char1))
-                    continue;
-
-                var c2Options = _catalog.GetChar2Options(codeDef, char1);
-                if (rest.Length == 1)
-                {
-                    groupKey = grpKey;
-                    codeKey = candidateCodeKey;
-                    c1Key = char1;
-                    level = c2Options is null ? 2 : 3;
-                    finalCode = c2Options is null ? BuildCode(candidateCodeKey, codeDef, char1, null) : null;
-                    return true;
-                }
-
-                if (rest.Length != 2 || c2Options is null)
-                    continue;
-
-                var char2 = rest[1].ToString();
-                if (!c2Options.ContainsKey(char2))
-                    continue;
-
-                groupKey = grpKey;
-                codeKey = candidateCodeKey;
-                c1Key = char1;
-                c2Key = char2;
-                level = 3;
-                finalCode = BuildCode(candidateCodeKey, codeDef, char1, char2);
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static string NormalizeCode(string? rawCode)
-    {
-        if (string.IsNullOrWhiteSpace(rawCode))
-            return string.Empty;
-
-        var chars = rawCode
-            .Trim()
-            .ToUpperInvariant()
-            .Where(char.IsLetterOrDigit)
-            .ToArray();
-
-        return new string(chars);
-    }
-
-    private static string BuildCode(string codeKey, VsaCodeDef codeDef, string? c1Key, string? c2Key)
-    {
-        if (c1Key is null)
-            return codeDef.FinalCode ?? codeKey;
-
-        var prefix = codeDef.XPrefix ? "X" : string.Empty;
-        return c2Key is null
-            ? $"{codeKey}{prefix}{c1Key}"
-            : $"{codeKey}{prefix}{c1Key}{c2Key}";
-    }
+        => _codePathResolver.TryResolveCodePath(rawCode, out groupKey, out codeKey, out c1Key, out c2Key, out level, out finalCode);
 
     public ProtocolEntry BuildProtocolEntry()
     {
-        var entry = _existingEntry ?? new ProtocolEntry();
-
-        entry.Code = FinalCode;
-        entry.Beschreibung = BuildBeschreibung();
-        entry.IsStreckenschaden = IsStreckenschaden;
-
-        if (TryParseDouble(MeterStart, out var ms)) entry.MeterStart = ms;
-        if (!string.IsNullOrWhiteSpace(MeterEnd) && TryParseDouble(MeterEnd, out var me))
-            entry.MeterEnd = me;
-        else
-            entry.MeterEnd = null;
-
-        if (!string.IsNullOrWhiteSpace(Zeit) && TryParseTime(Zeit, out var zeit))
-            entry.Zeit = zeit;
-
-        // CodeMeta
-        entry.CodeMeta ??= new ProtocolEntryCodeMeta();
-        entry.CodeMeta.Code = FinalCode;
-        entry.CodeMeta.UpdatedAt = DateTimeOffset.UtcNow;
-
-        var p = entry.CodeMeta.Parameters;
-        AddCatalogMetadata(p, GetCurrentVsaCodeDef());
-        SetOrRemove(p, "vsa.q1", Q1Value);
-        SetOrRemove(p, "vsa.q2", Q2Value);
-
-        var clockVon = NormalizeClockValue(ClockVon);
-        var clockBis = NormalizeClockValue(ClockBis);
-
-        if (ClockMode == "none")
+        // Delegiert an ProtocolEntryFromVsaSelectionBuilder (reine Logik, kein UI-Bezug)
+        var input = new VsaSelectionInput
         {
-            clockVon = null;
-            clockBis = null;
-        }
-        else if (ClockMode == "single")
-        {
-            // Einzelpunkt: Bis immer "00"
-            clockBis = string.IsNullOrWhiteSpace(clockVon) ? null : "00";
-        }
-        else if (ClockMode == "range")
-        {
-            // Bereich: Bis leer = Punktschaden, automatisch "00"
-            if (!string.IsNullOrWhiteSpace(clockVon) && string.IsNullOrWhiteSpace(clockBis))
-                clockBis = "00";
-        }
-
-        SetOrRemove(p, "vsa.uhr.von", clockVon);
-        SetOrRemove(p, "vsa.uhr.bis", clockBis);
-
-        // Zusatzfelder
-        SetOrRemove(p, "vsa.rohrverbindung", AnRohrverbindung ? "1" : null);
-        SetOrRemove(p, "vsa.strecke.typ", string.IsNullOrWhiteSpace(StreckenschadenTyp) ? null : StreckenschadenTyp);
-        SetOrRemove(p, "vsa.bemerkungen", string.IsNullOrWhiteSpace(Bemerkungen) ? null : Bemerkungen);
-
-        // Fotos
-        entry.FotoPaths.Clear();
-        foreach (var foto in FotoPaths)
-            entry.FotoPaths.Add(foto);
-
-        return entry;
-    }
-
-    private string BuildBeschreibung()
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrEmpty(FinalLabel)) parts.Add(FinalLabel);
-        if (!string.IsNullOrEmpty(FinalSublabel)) parts.Add(FinalSublabel);
-        return string.Join(" - ", parts);
-    }
-
-    private static void SetOrRemove(Dictionary<string, string> dict, string key, string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            dict.Remove(key);
-        else
-            dict[key] = value.Trim();
-    }
-
-    private static void AddCatalogMetadata(Dictionary<string, string> parameters, VsaCodeDef? codeDef)
-    {
-        if (codeDef is null)
-            return;
-
-        SetOrRemove(parameters, "catalog.source", codeDef.Source);
-        SetOrRemove(parameters, "catalog.canonicalCode", codeDef.CanonicalCode);
-        SetOrRemove(parameters, "catalog.standardAnnotation", codeDef.StandardAnnotation);
+            FinalCode = FinalCode,
+            FinalLabel = FinalLabel,
+            FinalSublabel = FinalSublabel,
+            IsStreckenschaden = IsStreckenschaden,
+            MeterStart = MeterStart,
+            MeterEnd = MeterEnd,
+            Zeit = Zeit,
+            Q1Value = Q1Value,
+            Q2Value = Q2Value,
+            ClockMode = ClockMode,
+            ClockVon = ClockVon,
+            ClockBis = ClockBis,
+            AnRohrverbindung = AnRohrverbindung,
+            StreckenschadenTyp = StreckenschadenTyp,
+            Bemerkungen = Bemerkungen,
+            FotoPaths = FotoPaths.ToList(),
+            CurrentVsaCodeDef = GetCurrentVsaCodeDef()
+        };
+        return ProtocolEntryFromVsaSelectionBuilder.Build(input, _existingEntry);
     }
 
     // =================================================================
@@ -798,12 +561,8 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         GroupTiles.Clear();
         foreach (var (key, grp) in _catalog.Groups)
         {
-            GroupTiles.Add(new TileItem
-            {
-                Key = key, Label = key, Description = grp.Label,
-                GroupColor = grp.Color, Icon = grp.Icon,
-                IsSelected = string.Equals(key, SelectedGroupKey, StringComparison.Ordinal)
-            });
+            GroupTiles.Add(ToTileItem(VsaTileDataFactory.ForGroup(
+                key, grp, isSelected: string.Equals(key, SelectedGroupKey, StringComparison.Ordinal))));
         }
     }
 
@@ -816,18 +575,9 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         foreach (var (key, cd) in group.Codes)
         {
             var (q1, _) = _catalog.GetQuantRule(key, null);
-            var badge = q1 is not null ? q1.Einheit ?? "Q" : null;
-            var badgeColor = q1 is { Pflicht: "P" } ? "#DC2626" : q1 is not null ? "#F59E0B" : null;
-
-            CodeTiles.Add(new TileItem
-            {
-                Key = key, Label = key, Description = cd.Label,
-                IsFinal = cd.FinalCode is not null,
-                IsSteuer = cd.IsSteuer,
-                BadgeText = badge, BadgeColor = badgeColor,
-                GroupColor = group.Color,
-                IsSelected = string.Equals(key, SelectedCodeKey, StringComparison.Ordinal)
-            });
+            CodeTiles.Add(ToTileItem(VsaTileDataFactory.ForCode(
+                key, cd, q1, group.Color,
+                isSelected: string.Equals(key, SelectedCodeKey, StringComparison.Ordinal))));
         }
     }
 
@@ -840,19 +590,10 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         foreach (var (key, charDef) in cd.Char1)
         {
             var hasC2 = _catalog.GetChar2Options(cd, key) is not null;
-            var prefix = cd.XPrefix ? "X" : "";
-            var fullCode = $"{SelectedCodeKey}{prefix}{key}";
             var (q1, _) = _catalog.GetQuantRule(SelectedCodeKey!, key);
-
-            Char1Tiles.Add(new TileItem
-            {
-                Key = key, Label = fullCode, Description = charDef.Label,
-                IsFinal = !hasC2,
-                BadgeText = q1?.Einheit,
-                BadgeColor = q1 is { Pflicht: "P" } ? "#DC2626" : q1 is not null ? "#F59E0B" : null,
-                GroupColor = CurrentGroupColor,
-                IsSelected = string.Equals(key, SelectedChar1Key, StringComparison.Ordinal)
-            });
+            Char1Tiles.Add(ToTileItem(VsaTileDataFactory.ForChar1(
+                key, charDef, SelectedCodeKey!, cd.XPrefix, hasC2, q1, CurrentGroupColor,
+                isSelected: string.Equals(key, SelectedChar1Key, StringComparison.Ordinal))));
         }
     }
 
@@ -865,18 +606,12 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         var c2Options = _catalog.GetChar2Options(cd, SelectedChar1Key);
         if (c2Options is null) return;
 
-        var prefix = cd.XPrefix ? "X" : "";
         foreach (var (key, label) in c2Options)
         {
             var invalid = _catalog.IsInvalidCombo(cd, SelectedChar1Key, key);
-            var fullCode = $"{SelectedCodeKey}{prefix}{SelectedChar1Key}{key}";
-            Char2Tiles.Add(new TileItem
-            {
-                Key = key, Label = fullCode, Description = label,
-                IsFinal = true, IsInvalid = invalid,
-                GroupColor = CurrentGroupColor,
-                IsSelected = string.Equals(key, SelectedChar2Key, StringComparison.Ordinal)
-            });
+            Char2Tiles.Add(ToTileItem(VsaTileDataFactory.ForChar2(
+                key, label, SelectedCodeKey!, SelectedChar1Key, cd.XPrefix, invalid, CurrentGroupColor,
+                isSelected: string.Equals(key, SelectedChar2Key, StringComparison.Ordinal))));
         }
     }
 
@@ -998,6 +733,22 @@ public sealed partial class VsaCodeExplorerViewModel : ObservableObject
         if (!_catalog.Groups.TryGetValue(SelectedGroupKey, out var grp)) return null;
         return grp.Codes.TryGetValue(SelectedCodeKey, out var cd) ? cd : null;
     }
+
+    /// <summary>Konvertiert VsaTileData (Application-Schicht) in das UI-interne TileItem.</summary>
+    private static TileItem ToTileItem(VsaTileData data) => new()
+    {
+        Key = data.Key,
+        Label = data.Label,
+        Description = data.Description,
+        BadgeText = data.BadgeText,
+        BadgeColor = data.BadgeColor,
+        IsInvalid = data.IsInvalid,
+        IsFinal = data.IsFinal,
+        IsSteuer = data.IsSteuer,
+        GroupColor = data.GroupColor,
+        Icon = data.Icon,
+        IsSelected = data.IsSelected
+    };
 
     /// <summary>Stufen-Labels fuer den Fortschrittsbalken.</summary>
     public static readonly string[] LevelLabels = { "Gruppe", "Hauptcode", "Char 1", "Char 2" };
