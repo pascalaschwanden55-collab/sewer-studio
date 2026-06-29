@@ -338,6 +338,27 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_review_queue_abschluss_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var approveSource = ExtractMethodBody(source, "public async Task ApproveReviewItemAsync(");
+        var rejectSource = ExtractMethodBody(source, "public async Task RejectReviewItemAsync(");
+
+        Assert.Contains("TrainingReviewQueueCompletionController.ApplyApproved(", approveSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingReviewQueueCompletionController.ApplyRejected(", rejectSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("queueService.Remove(item.Id);", approveSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("queueService.Remove(item.Id);", rejectSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ReviewQueue.Remove(item);", approveSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ReviewQueue.Remove(item);", rejectSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_kb_update_workflow_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(

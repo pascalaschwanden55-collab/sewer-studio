@@ -1295,11 +1295,10 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
         OnUi(() =>
         {
-            queueService.Remove(item.Id);
-            ReviewQueue.Remove(item);
-            ReviewQueueCount = ReviewQueue.Count;
-            ReviewStatusText = $"Approved: {item.SuggestedCode} | {ReviewQueueCount} verbleibend";
-            Log($"Review Approved: {item.Label} → {item.SuggestedCode}");
+            var completion = TrainingReviewQueueCompletionController.ApplyApproved(item, queueService, ReviewQueue);
+            ReviewQueueCount = completion.ReviewQueueCount;
+            ReviewStatusText = completion.StatusText;
+            Log(completion.LogText);
         });
     }
 
@@ -1345,11 +1344,10 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
         OnUi(() =>
         {
-            queueService.Remove(item.Id);
-            ReviewQueue.Remove(item);
-            ReviewQueueCount = ReviewQueue.Count;
-            ReviewStatusText = $"Rejected: {item.SuggestedCode} → {correctedCode} | {ReviewQueueCount} verbleibend";
-            Log($"Review Rejected: {item.Label} → {item.SuggestedCode} korrigiert zu {correctedCode}");
+            var completion = TrainingReviewQueueCompletionController.ApplyRejected(item, correctedCode, queueService, ReviewQueue);
+            ReviewQueueCount = completion.ReviewQueueCount;
+            ReviewStatusText = completion.StatusText;
+            Log(completion.LogText);
         });
     }
 
