@@ -23,7 +23,6 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
     private readonly string? _videoPathAbs;
     private readonly string? _projectFolderAbs;
     private readonly CatalogTreeNode _root = new("Root", "Root");
-    private readonly Dictionary<string, AppProtocol.CodeDefinition> _codeIndex;
     private readonly List<AppProtocol.CodeDefinition> _allCodes;
 
     public ObservableCollection<AppProtocol.CodeDefinition> FilteredCodes { get; } = new();
@@ -205,10 +204,6 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
         _projectFolderAbs = projectFolderAbs;
 
         _allCodes = _catalog.GetAll().OrderBy(c => c.Code, StringComparer.OrdinalIgnoreCase).ToList();
-        _codeIndex = _allCodes
-            .Where(c => !string.IsNullOrWhiteSpace(c.Code))
-            .GroupBy(c => c.Code.Trim(), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         BuildTree();
         InitializeColumns();
         ApplySearchFilter();

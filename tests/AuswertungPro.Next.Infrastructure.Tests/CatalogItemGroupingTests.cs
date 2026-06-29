@@ -62,4 +62,16 @@ public sealed class CatalogItemGroupingTests
         Assert.Contains("Qualitaetskontrolle", CatalogItemGrouping.GroupOrder);
         Assert.Contains("Sonstiges", CatalogItemGrouping.GroupOrder);
     }
+
+    // ── F3: unbekannte nicht-leere Gruppe hat denselben Rang wie leere Gruppe ─────────────
+
+    [Fact]
+    public void GetGroupOrder_UnbekanntNichtLeer_GleicherRangWieLeer()
+    {
+        // Alter Stand: unbekannte nicht-leere Gruppe -> GroupOrder.Length+1 (wie leere Gruppe)
+        var unbekanntVoll = CatalogItemGrouping.GetGroupOrder("IrgendwasUnbekanntes");
+        var leer = CatalogItemGrouping.GetGroupOrder(null);
+
+        Assert.Equal(leer, unbekanntVoll);
+    }
 }

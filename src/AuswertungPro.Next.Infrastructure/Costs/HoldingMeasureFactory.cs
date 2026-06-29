@@ -54,9 +54,27 @@ public static class HoldingMeasureFactory
             MeasureRuleService.EnforceEndManschetteRule(lines, defaults.Dn, out _);
         }
 
+        // --- Schritt 3b: Pflicht-Installationszeile erzwingen (analog zum VM-Pfad) ---
+        // Der alte MeasureBlockVm-Konstruktor + OnLineChanged erzwang die richtige
+        // Installationszeile (INSTALL_UV_ANLAGE bei GFK, INSTALL_HL_ANLAGE bei NADELFILZ).
+        var requiredInstallKey = MeasureRuleService.GetRequiredInstallationItemKey(measureId, template.Name);
+        if (requiredInstallKey is not null)
+        {
+            MeasureRuleService.EnforceInstallationRule(
+                lines, catalog, requiredInstallKey,
+                out var linesToRemove, out var lineToAdd, out _);
+            foreach (var l in linesToRemove)
+                lines.Remove(l);
+            if (lineToAdd is not null)
+                lines.Add(lineToAdd);
+        }
+
         // --- Schritt 4: Laenge auf alle m-Zeilen anwenden ---
-        if (defaults.LengthMeters.HasValue)
-            MeasurePricingEngine.ApplyLengthToLines(lines, defaults.LengthMeters.Value);
+        var roundedLength = defaults.LengthMeters.HasValue
+            ? Math.Round(defaults.LengthMeters.Value, 2)
+            : (decimal?)null;
+        if (roundedLength.HasValue)
+            MeasurePricingEngine.ApplyLengthToLines(lines, roundedLength.Value);
 
         // --- Schritt 5: Anschlussanzahl anwenden ---
         MeasurePricingEngine.ApplyConnectionsToLines(lines, defaults.Connections);
@@ -101,7 +119,7 @@ public static class HoldingMeasureFactory
             MeasureId = measureId,
             MeasureName = template.Name,
             Dn = defaults.Dn,
-            LengthMeters = defaults.LengthMeters,
+            LengthMeters = roundedLength,
             Lines = lines,
             Total = total
         };

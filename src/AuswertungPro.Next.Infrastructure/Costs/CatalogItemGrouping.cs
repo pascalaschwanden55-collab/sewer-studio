@@ -40,6 +40,7 @@ public static class CatalogItemGrouping
 
         var idx = Array.FindIndex(GroupOrder,
             g => string.Equals(g, group.Trim(), StringComparison.OrdinalIgnoreCase));
-        return idx >= 0 ? idx : GroupOrder.Length;
+        // Unbekannte nicht-leere Gruppe erhaelt denselben Rang wie leere Gruppe (nach allen bekannten)
+        return idx >= 0 ? idx : GroupOrder.Length + 1;
     }
 }

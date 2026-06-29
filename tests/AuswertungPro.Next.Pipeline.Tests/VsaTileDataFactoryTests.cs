@@ -147,4 +147,32 @@ public sealed class VsaTileDataFactoryTests
         var tile = VsaTileDataFactory.ForChar2("A", "label", "BAC", "A", true, false, "#DC2626");
         Assert.Equal("BACXAA", tile.Label);
     }
+
+    // ── F4: ForChar1 altes Verhalten – kein "Q"-Fallback bei fehlender Einheit ────────────
+
+    [Fact]
+    public void ForChar1_q1_ohne_einheit_gibt_kein_Q_badge()
+    {
+        // Alter Pfad: ForChar1 zeigte q1?.Einheit direkt (null bei fehlender Einheit),
+        // NICHT den "Q"-Fallback, den GetQuantBadge() liefert.
+        var charDef = new CharDef { Label = "laengs" };
+        var q1 = new QuantField { Pflicht = "O", Einheit = null };
+
+        var tile = VsaTileDataFactory.ForChar1("A", charDef, "BAB", false, hasC2: false, q1, "#DC2626");
+
+        Assert.Null(tile.BadgeText);   // kein "Q"-Fallback bei fehlender Einheit
+    }
+
+    [Fact]
+    public void ForChar1_q1_mit_einheit_zeigt_einheit_im_badge()
+    {
+        // Altes und neues Verhalten identisch wenn Einheit gesetzt: Einheit erscheint als Badge
+        var charDef = new CharDef { Label = "laengs" };
+        var q1 = new QuantField { Pflicht = "P", Einheit = "mm" };
+
+        var tile = VsaTileDataFactory.ForChar1("A", charDef, "BAB", false, hasC2: false, q1, "#DC2626");
+
+        Assert.Equal("mm", tile.BadgeText);
+        Assert.Equal(VsaTileDataFactory.PflichtColor, tile.BadgeColor);
+    }
 }

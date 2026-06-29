@@ -244,4 +244,96 @@ public sealed class HoldingMeasureFactoryTests
         Assert.Equal(3m, roboter.Qty);                       // 3 Stunden
         Assert.Equal(870m, roboter.Qty * roboter.UnitPrice); // 3h * 290.-
     }
+
+    // ── F1: EnforceInstallationRule wird im Build-Pfad aufgerufen ─────────────────────────
+
+    [Fact]
+    public void Build_GfkLiner_OhneInstallZeile_FuegtInstallUvAnlageHinzu()
+    {
+        // Liner-Template OHNE Installations-Zeile -> Build muss INSTALL_UV_ANLAGE hinzufuegen
+        var tpl = new MeasureTemplate
+        {
+            Id = "SCHLAUCHLINER_GFK",
+            Name = "GFK-Liner",
+            Lines = new List<MeasureLineTemplate>
+            {
+                new() { Group = "Hauptarbeit", ItemKey = "SCHLAUCHLINER_GFK", Enabled = true, DefaultQty = 1 },
+            }
+        };
+        var templates = new Dictionary<string, MeasureTemplate>(System.StringComparer.OrdinalIgnoreCase)
+            { [tpl.Id] = tpl };
+        var catalog = new Dictionary<string, CostCatalogItem>(System.StringComparer.OrdinalIgnoreCase)
+        {
+            ["SCHLAUCHLINER_GFK"] = new() { Key = "SCHLAUCHLINER_GFK", Unit = "m", Type = "Fixed", Price = 400m },
+            ["INSTALL_UV_ANLAGE"] = new() { Key = "INSTALL_UV_ANLAGE", Unit = "Stk", Type = "Fixed", Price = 500m },
+        };
+        var record = Record("H_GFK", "250", "30.00");
+
+        var cost = HoldingMeasureFactory.Build("H_GFK", record, "SCHLAUCHLINER_GFK", templates, catalog, 0.08m);
+
+        Assert.NotNull(cost);
+        var lines = cost!.Measures[0].Lines;
+        // Build muss die Pflicht-Installationszeile hinzugefuegt haben
+        var install = lines.FirstOrDefault(l => l.ItemKey == "INSTALL_UV_ANLAGE");
+        Assert.NotNull(install);
+        Assert.True(install!.Selected);
+        Assert.True(install.Qty >= 1m);
+    }
+
+    [Fact]
+    public void Build_NadelfilzLiner_MitFalscherInstallZeile_ErsetzDurchInstallHlAnlage()
+    {
+        // Nadelfilz-Template mit FALSCHER Installationszeile -> INSTALL_UV_ANLAGE muss durch
+        // INSTALL_HL_ANLAGE ersetzt werden (analog zum VM-Pfad)
+        var tpl = new MeasureTemplate
+        {
+            Id = "SCHLAUCHLINER_NADELFILZ",
+            Name = "Nadelfilz",
+            Lines = new List<MeasureLineTemplate>
+            {
+                new() { Group = "Installation", ItemKey = "INSTALL_UV_ANLAGE", Enabled = true, DefaultQty = 1 },
+                new() { Group = "Hauptarbeit",  ItemKey = "SCHLAUCHLINER_NADELFILZ", Enabled = true, DefaultQty = 1 },
+            }
+        };
+        var templates = new Dictionary<string, MeasureTemplate>(System.StringComparer.OrdinalIgnoreCase)
+            { [tpl.Id] = tpl };
+        var catalog = new Dictionary<string, CostCatalogItem>(System.StringComparer.OrdinalIgnoreCase)
+        {
+            ["SCHLAUCHLINER_NADELFILZ"] = new() { Key = "SCHLAUCHLINER_NADELFILZ", Unit = "m", Type = "Fixed", Price = 300m },
+            ["INSTALL_UV_ANLAGE"]       = new() { Key = "INSTALL_UV_ANLAGE",       Unit = "Stk", Type = "Fixed", Price = 500m },
+            ["INSTALL_HL_ANLAGE"]       = new() { Key = "INSTALL_HL_ANLAGE",       Unit = "Stk", Type = "Fixed", Price = 450m },
+        };
+        var record = Record("H_NF", "250", "20.00");
+
+        var cost = HoldingMeasureFactory.Build("H_NF", record, "SCHLAUCHLINER_NADELFILZ", templates, catalog, 0.08m);
+
+        Assert.NotNull(cost);
+        var lines = cost!.Measures[0].Lines;
+        // Falsche UV-Zeile muss entfernt worden sein
+        Assert.DoesNotContain(lines, l => l.ItemKey == "INSTALL_UV_ANLAGE");
+        // Richtige HL-Zeile muss vorhanden und aktiv sein
+        var hlInstall = lines.FirstOrDefault(l => l.ItemKey == "INSTALL_HL_ANLAGE");
+        Assert.NotNull(hlInstall);
+        Assert.True(hlInstall!.Selected);
+        Assert.True(hlInstall.Qty >= 1m);
+    }
+
+    // ── F2: Laengen-Rundung auf 2 Nachkommastellen ────────────────────────────────────────
+
+    [Fact]
+    public void Build_Laenge_MitDreiNachkommastellen_WirdAufZweiGerundet()
+    {
+        // Laenge 45.678m -> soll auf 45.68m gerundet werden (analog altem SetLengthFromImport("0.00"))
+        var (templates, catalog) = Setup();
+        var record = Record("H_Round", "250", "45.678");
+
+        var cost = HoldingMeasureFactory.Build("H_Round", record, "SCHLAUCHLINER_NADELFILZ", templates, catalog, 0.081m);
+
+        Assert.NotNull(cost);
+        // m-Zeilen sollen die gerundete Laenge erhalten
+        var liner = cost!.Measures[0].Lines.First(l => l.ItemKey == "SCHLAUCHLINER_NADELFILZ");
+        Assert.Equal(45.68m, liner.Qty);
+        // LengthMeters im MeasureCost ebenfalls gerundet
+        Assert.Equal(45.68m, cost.Measures[0].LengthMeters);
+    }
 }

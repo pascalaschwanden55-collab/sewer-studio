@@ -85,6 +85,7 @@ public static class VsaTileDataFactory
 
     /// <summary>
     /// Erstellt Kachel-Daten fuer eine Char1-Ebene.
+    /// Altes Verhalten (vor Refactoring): Badge-Text = q1?.Einheit (kein "Q"-Fallback).
     /// </summary>
     public static VsaTileData ForChar1(
         string key,
@@ -98,7 +99,10 @@ public static class VsaTileDataFactory
     {
         var prefix = xPrefix ? "X" : "";
         var fullCode = $"{codeKey}{prefix}{key}";
-        var (badgeText, badgeColor) = GetQuantBadge(q1);
+        // Char1 zeigt Einheit direkt (kein "Q"-Fallback wie GetQuantBadge) -- alter Pfad
+        var badgeText = q1?.Einheit;
+        var badgeColor = q1 is null ? null
+            : q1.Pflicht == "P" ? PflichtColor : QuantColor;
         return new VsaTileData
         {
             Key = key,
