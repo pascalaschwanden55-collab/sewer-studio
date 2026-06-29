@@ -936,7 +936,9 @@ public partial class SchaechtePage : UserControl
 
     private void SaveLayoutToSettings()
     {
-        if (_isRestoringLayout || Grid.Columns.Count == 0)
+        // Beim Entladen der Seite (Unloaded-Handler) kann der DataContext bereits
+        // null sein. Dann nichts speichern - kein Zugriff auf Vm/Services erzwingen.
+        if (_isRestoringLayout || Grid.Columns.Count == 0 || DataContext is not SchaechtePageViewModel)
             return;
 
         var sp = Services;

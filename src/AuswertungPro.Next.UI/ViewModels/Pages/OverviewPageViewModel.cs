@@ -133,28 +133,27 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         foreach (var recentPath in _sp.Settings.RecentProjectPaths)
             AddEntry(recentPath, string.Equals(recentPath, LastProjectPath, StringComparison.OrdinalIgnoreCase));
 
-        // 3. Standard-Scan-Ordner
-        var rootDirs = new List<string>
-        {
-            Path.Combine(Directory.GetCurrentDirectory(), "Rohdaten"),
-            Path.Combine(Directory.GetCurrentDirectory(), "Rohdaten", "Section_PDF")
-        };
+        // 3. Konfiguriertes Projekte-Verzeichnis + Standard-Scan-Ordner
+        var rootDirs = ProjectScanRoots
+            .Resolve(Directory.GetCurrentDirectory(), _sp.Settings.ProjectsRootDirectory)
+            .ToList();
 
-        // 4. D:\Projekt\ und D:\Haltungen\ (typische Speicherorte)
-        foreach (var drive in new[] { "D:\\", "C:\\" })
+        // 4. Fallback-Speicherorte: den Ordner selbst UND seine direkten Unterordner scannen
+        var projektBases = new List<string> { @"D:\Projekt", @"C:\Projekt" };
+        if (!string.IsNullOrWhiteSpace(_sp.Settings.ProjectsRootDirectory))
+            projektBases.Insert(0, _sp.Settings.ProjectsRootDirectory!);
+
+        foreach (var projektDir in projektBases)
         {
-            var projektDir = Path.Combine(drive, "Projekt");
-            if (Directory.Exists(projektDir))
+            if (!Directory.Exists(projektDir))
+                continue;
+            rootDirs.Add(projektDir);
+            try
             {
-                rootDirs.Add(projektDir);
-                // Auch Unterordner scannen (z.B. D:\Projekt\Zone 1.15\)
-                try
-                {
-                    foreach (var subDir in Directory.GetDirectories(projektDir))
-                        rootDirs.Add(subDir);
-                }
-                catch { /* Zugriff verweigert */ }
+                foreach (var subDir in Directory.GetDirectories(projektDir))
+                    rootDirs.Add(subDir);
             }
+            catch { /* Zugriff verweigert */ }
         }
 
         foreach (var dir in rootDirs)
@@ -184,11 +183,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
     private void NewProject()
     {
-        _shell.NewProject();
-        LastProjectPath = _sp.Settings.LastProjectPath;
-        ProjectStatus = BuildProjectStatus();
-        LoadAllProjects();
-        _shell.NavigateTo("Projekt");
+        // Startet den Draft-Modus in der Shell (neues Projekt + Infoblatt).
+        _shell.StartNewProjectDraft();
     }
 
     private void OpenProject()
@@ -198,7 +194,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjects();
-        _shell.NavigateTo("Projekt");
+        _shell.EnterWorkspaceOn("Haltungen");
     }
 
     private void OpenSelectedProject()
@@ -213,7 +209,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjects();
-        _shell.NavigateTo("Projekt");
+        _shell.EnterWorkspaceOn("Haltungen");
     }
 
     private void DeleteSelectedProject()
@@ -239,11 +235,12 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             {
                 _sp.Settings.LastProjectPath = null;
                 _sp.Settings.Save();
-                // Das aktive Projekt wurde soeben geloescht: ungespeicherte Aenderungen
-                // sind hinfaellig. Dirty-Flag zuruecksetzen, damit der Dirty-Guard in
-                // NewProject nicht anbietet, die geloeschte Datei wiederherzustellen.
+                // Das aktive Projekt wurde soeben geloescht: Dirty-Flag zuruecksetzen
+                // und zum Start-Bildschirm (Projektliste) navigieren. EnterLauncher()
+                // baut die OverviewPage neu auf; LoadAllProjects() danach waere toter Aufruf.
                 _shell.Project.Dirty = false;
-                _shell.NewProject();
+                _shell.EnterLauncher();
+                return;
             }
 
             LoadAllProjects();
@@ -263,7 +260,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjects();
-        _shell.NavigateTo("Projekt");
+        _shell.EnterWorkspaceOn("Haltungen");
     }
 
     partial void OnSelectedProjectEntryChanged(ProjectOverviewEntry? value)

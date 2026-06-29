@@ -142,53 +142,6 @@
 
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
 
-                    <Button x:Name="KiToolsDropdown" Click="DropdownButton_Click"
-                            Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
-                            ToolTip="KI-Funktionen: Protokoll, Status, Videoanalyse">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE99A;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="KI-Tools" VerticalAlignment="Center"/>
-                            <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="{DynamicResource MutedBrush}"/>
-                        </StackPanel>
-                        <Button.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Click="ProtocolMenu_Click" InputGestureText="Doppelklick">
-                                    <MenuItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE8FD;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Protokoll (KI)" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </MenuItem.Header>
-                                </MenuItem>
-                                <MenuItem Command="{Binding ShowModelStatusCommand}">
-                                    <MenuItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="KI-Status" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </MenuItem.Header>
-                                </MenuItem>
-                                <Separator/>
-                                <MenuItem Click="VideoAiPipelineMenu_Click">
-                                    <MenuItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE714;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Videoanalyse (KI Pipeline)" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </MenuItem.Header>
-                                </MenuItem>
-                                <MenuItem Click="SanierungKiMenu_Click">
-                                    <MenuItem.Header>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                            <TextBlock Text="Sanierungsmaßnahmen (KI)" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </MenuItem.Header>
-                                </MenuItem>
-                            </ContextMenu>
-                        </Button.ContextMenu>
-                    </Button>
-
                     <Button x:Name="MassnahmenDropdown" Click="DropdownButton_Click"
                             Style="{StaticResource ToolbarButton}" Margin="0,0,2,0"
                             ToolTip="Sanierungsmaßnahme für die gewählte Haltung bearbeiten">
@@ -466,7 +419,7 @@
                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="40,30">
                     <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="40"
                                Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                    <TextBlock Text="DataGrid ist in separatem Fenster geöffnet"
+                    <TextBlock Text="Die Ansicht ist in einem separaten Fenster geöffnet"
                                Foreground="{DynamicResource TextBrush}" FontSize="16" FontWeight="SemiBold"
                                HorizontalAlignment="Center" Margin="0,0,0,8"/>
                     <TextBlock Text="Ziehen Sie das Fenster auf einen anderen Monitor für Multi-Monitor-Betrieb."

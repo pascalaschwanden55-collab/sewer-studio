@@ -99,44 +99,6 @@
                 SnapsToDevicePixels="True">
 
             <StackPanel>
-                <Border CornerRadius="6"
-                        Padding="8,4"
-                        Margin="0,0,0,5"
-                        Background="{DynamicResource CardBrush}"
-                        BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="1">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <DockPanel LastChildFill="True">
-                            <Border Width="7"
-                                    Height="7"
-                                    CornerRadius="4"
-                                    Background="{DynamicResource SuccessBrush}"
-                                    Margin="0,0,6,0"
-                                    VerticalAlignment="Center"/>
-                            <TextBlock Text="Sensorstatus"
-                                       FontSize="10"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource AccentBrush}"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </DockPanel>
-
-                        <TextBlock Grid.Row="1"
-                                   Margin="0,5,0,0"
-                                   Text="{Binding CpuTempStatusText}"
-                                   FontSize="9.5"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"/>
-                    </Grid>
-                </Border>
-
                 <Border Style="{StaticResource MetricCard}">
                     <Grid>
                         <Grid.RowDefinitions>
