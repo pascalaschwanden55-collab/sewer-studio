@@ -922,31 +922,21 @@ public partial class TrainingCenterViewModel : ObservableObject
             ClearLivePreview();
             ResetSelfTrainingVisuals(); // Ergebnis-Verlauf + Code-Verteilung + Match-Rate zuruecksetzen
 
-            // 1. Scan aller Root-Ordner
-            Log($"Scanne {_rootFolders.Count} Ordner...");
-            StatusText = "Scanne Ordner...";
-            var scan = await TrainingBatchImportScanController.ScanAsync(
-                _rootFolders,
-                Directory.Exists,
-                async folder => (await _import.ScanAsync(folder).ConfigureAwait(false))
-                    .Select(TrainingCenterRuntimeHelpers.ToTrainingCase)
-                    .ToList(),
-                Log);
-            var found = scan.Found;
-            var casesWithProtocol = scan.CasesWithProtocol;
-
-            StatusText = TrainingBatchImportScanPresentationBuilder.BuildSummary(found.Count, casesWithProtocol.Count);
-
-            Cases.Clear();
-            foreach (var c in found)
-                Cases.Add(c);
-
-            if (casesWithProtocol.Count == 0)
-            {
-                Log("STOP: Keine Ordner mit Protokoll-Dateien gefunden.");
-                StatusText = "Keine Ordner mit Protokoll-Dateien gefunden.";
+            var scanWorkflow = await TrainingBatchImportScanWorkflowController.RunAsync(
+                _rootFolders.Count,
+                () => TrainingBatchImportScanController.ScanAsync(
+                    _rootFolders,
+                    Directory.Exists,
+                    async folder => (await _import.ScanAsync(folder).ConfigureAwait(false))
+                        .Select(TrainingCenterRuntimeHelpers.ToTrainingCase)
+                        .ToList(),
+                    Log),
+                Cases,
+                Log,
+                value => StatusText = value);
+            if (scanWorkflow.ShouldStop)
                 return;
-            }
+            var casesWithProtocol = scanWorkflow.CasesWithProtocol;
 
             // 2. Generate samples for all cases
             var cfg = new AppSettingsAiSettingsProvider()

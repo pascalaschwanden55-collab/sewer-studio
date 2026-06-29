@@ -99,6 +99,24 @@ public sealed class TrainingCenterBatchImportArchitectureTests
         Assert.DoesNotContain("Log(\"F", batchImportSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void TrainingCenterViewModel_delegiert_batch_import_scan_workflow_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+
+        Assert.Contains("TrainingBatchImportScanWorkflowController.RunAsync(", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Cases.Clear();", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("STOP: Keine Ordner mit Protokoll-Dateien gefunden.", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportScanPresentationBuilder.BuildSummary(found.Count, casesWithProtocol.Count)", batchImportSource, StringComparison.Ordinal);
+    }
+
     private static string FindRepoRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
