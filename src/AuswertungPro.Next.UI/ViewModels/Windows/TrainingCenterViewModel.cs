@@ -1057,28 +1057,10 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             var summary = await _kbDiagnostics.ReadSummaryAsync(12).ConfigureAwait(false);
 
-            Log($"KB-Stand: Samples={summary.SampleCount}, Embeddings={summary.EmbeddingCount}, Versionen={summary.VersionCount}");
-            if (summary.LatestVersionAtUtc is not null)
-            {
-                var latest = summary.LatestVersionAtUtc.Value.ToLocalTime();
-                var notes = string.IsNullOrWhiteSpace(summary.LatestVersionNotes)
-                    ? "-"
-                    : summary.LatestVersionNotes;
-                Log($"Letzte Version: {latest:yyyy-MM-dd HH:mm} ({summary.LatestVersionSampleCount} Samples) | Notiz: {notes}");
-            }
-
-            if (summary.TopCodes.Count > 0)
-            {
-                Log("Top-Codes:");
-                foreach (var c in summary.TopCodes)
-                    Log($"  {c.VsaCode}: {c.Count}");
-            }
-            else
-            {
-                Log("Top-Codes: keine Einträge vorhanden.");
-            }
-
-            StatusText = $"KB geprüft: {summary.SampleCount} Samples, {summary.EmbeddingCount} Embeddings, {summary.VersionCount} Versionen.";
+            var presentation = TrainingKnowledgeBaseCheckPresentationBuilder.Build(summary);
+            foreach (var line in presentation.LogLines)
+                Log(line);
+            StatusText = presentation.StatusText;
 
             await RefreshKbStatusAsync();
         }
