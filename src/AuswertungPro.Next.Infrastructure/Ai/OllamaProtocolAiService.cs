@@ -297,7 +297,7 @@ public sealed class OllamaProtocolAiService : IProtocolAiService
 
             var meterMid = (item.Sample.MeterStart + item.Sample.MeterEnd) / 2.0;
             var meterWeight = meter.HasValue
-                ? Math.Max(0.35, 1.0 - Math.Min(1.0, Math.Abs(meter.Value - meterMid) / 12.0))
+                ? KbMeterWeighting.Weight(meter.Value, meterMid)
                 : 1.0;
             var score = item.Score * meterWeight;
 

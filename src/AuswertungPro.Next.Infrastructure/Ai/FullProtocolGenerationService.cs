@@ -297,7 +297,7 @@ public sealed class FullProtocolGenerationService : IDisposable
             .Select(r =>
             {
                 var sampleMeter = (r.Sample.MeterStart + r.Sample.MeterEnd) / 2.0;
-                var meterWeight = Math.Max(0.35, 1.0 - Math.Min(1.0, Math.Abs(sampleMeter - meterCenter) / 12.0));
+                var meterWeight = KbMeterWeighting.Weight(meterCenter, sampleMeter);
                 return new KbExample(
                     Code: r.Sample.VsaCode,
                     Description: r.Sample.Beschreibung,
