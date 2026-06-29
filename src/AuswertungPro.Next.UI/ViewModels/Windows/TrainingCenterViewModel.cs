@@ -1580,9 +1580,10 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
-            IsSelfTrainingRunning = false;
-            _selfTrainingOrchestrator = null;
+            SelfTrainingRunFinalizerController.Apply(
+                value => IsBusy = value,
+                value => IsSelfTrainingRunning = value,
+                () => _selfTrainingOrchestrator = null);
         }
     }
 
