@@ -1706,9 +1706,13 @@ public partial class TrainingCenterViewModel : ObservableObject
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
 
             Log(SelfTrainingRunPresentationBuilder.BuildPipelineStartedLog());
-            var result = await selfTrainingSession.Orchestrator.RunAsync(
+            var result = await SelfTrainingRunExecutionController.RunAsync(
+                selfTrainingSession.Orchestrator,
                 TrainingCenterRuntimeHelpers.ToTrainingCaseInput(selectedCase),
                 progress,
+                SelfTrainingHistorySnapshotBuilder.Build,
+                SelfTrainingHistoryStore.AppendRunAsync,
+                () => DateTime.UtcNow,
                 ct);
 
             // Ergebnis loggen
@@ -1716,10 +1720,6 @@ public partial class TrainingCenterViewModel : ObservableObject
             foreach (var line in completionPresentation.LogLines)
                 Log(line);
             StatusText = completionPresentation.StatusText;
-
-            // Match-Rate-Verlauf persistieren (Counts → Prozente)
-            if (SelfTrainingHistorySnapshotBuilder.Build(result, DateTime.UtcNow) is { } snapshot)
-                await SelfTrainingHistoryStore.AppendRunAsync(snapshot);
 
             // Inkrementelles KB-Update fuer ExactMatch-Samples (B1)
             await SelfTrainingKbUpdateController.RunApprovedSamplesUpdateAsync(
