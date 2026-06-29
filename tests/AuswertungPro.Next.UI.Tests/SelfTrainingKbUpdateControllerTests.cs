@@ -85,6 +85,65 @@ public sealed class SelfTrainingKbUpdateControllerTests
             SelfTrainingKbUpdateController.BuildStartLogMessage(3));
     }
 
+    [Fact]
+    public async Task RunApprovedSamplesUpdateAsync_ueberspringt_io_wenn_keine_kb_aktualisierung_noetig_ist()
+    {
+        var loadCalled = false;
+
+        await SelfTrainingKbUpdateController.RunApprovedSamplesUpdateAsync(
+            Result(exactMatches: 0, samplesGenerated: 1),
+            () =>
+            {
+                loadCalled = true;
+                return Task.FromResult(new List<TrainingSample>());
+            },
+            _ => throw new InvalidOperationException("Merge darf nicht laufen."),
+            (_, _) => throw new InvalidOperationException("Index darf nicht laufen."),
+            _ => throw new InvalidOperationException("Log darf nicht laufen."),
+            CancellationToken.None);
+
+        Assert.False(loadCalled);
+    }
+
+    [Fact]
+    public async Task RunApprovedSamplesUpdateAsync_markiert_pending_indexiert_und_persistiert_zweimal()
+    {
+        var logs = new List<string>();
+        var mergeSnapshots = new List<Dictionary<string, KbIndexState>>();
+        List<TrainingSample>? indexedSamples = null;
+        var samples = new List<TrainingSample>
+        {
+            Sample("indexed", kbState: KbIndexState.None),
+            Sample("failed", kbState: KbIndexState.Error),
+            Sample("other-case", caseId: "H-002", kbState: KbIndexState.None),
+            Sample("new-status", status: TrainingSampleStatus.New, kbState: KbIndexState.None)
+        };
+
+        await SelfTrainingKbUpdateController.RunApprovedSamplesUpdateAsync(
+            Result(exactMatches: 2, samplesGenerated: 2, caseId: "H-001"),
+            () => Task.FromResult(samples),
+            toMerge =>
+            {
+                mergeSnapshots.Add(toMerge.ToDictionary(s => s.SampleId, s => s.KbIndexState));
+                return Task.CompletedTask;
+            },
+            (toIndex, _) =>
+            {
+                indexedSamples = toIndex.ToList();
+                return Task.FromResult(new KbIndexOutcome(new[] { "indexed" }, Array.Empty<string>()));
+            },
+            logs.Add,
+            CancellationToken.None);
+
+        Assert.Equal(new[] { "indexed", "failed" }, indexedSamples!.Select(s => s.SampleId));
+        Assert.Equal(new[] { "2 ExactMatch-Samples \u2014 starte KB-Update..." }, logs);
+        Assert.Equal(2, mergeSnapshots.Count);
+        Assert.Equal(KbIndexState.Pending, mergeSnapshots[0]["indexed"]);
+        Assert.Equal(KbIndexState.Pending, mergeSnapshots[0]["failed"]);
+        Assert.Equal(KbIndexState.Indexed, mergeSnapshots[1]["indexed"]);
+        Assert.Equal(KbIndexState.Error, mergeSnapshots[1]["failed"]);
+    }
+
     private static SelfTrainingResult Result(
         int exactMatches = 1,
         int samplesGenerated = 1,

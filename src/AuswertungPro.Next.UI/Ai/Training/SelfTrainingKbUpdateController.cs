@@ -52,4 +52,35 @@ public static class SelfTrainingKbUpdateController
 
     public static string BuildStartLogMessage(int sampleCount)
         => $"{sampleCount} ExactMatch-Samples \u2014 starte KB-Update...";
+
+    public static async Task RunApprovedSamplesUpdateAsync(
+        SelfTrainingResult result,
+        Func<Task<List<TrainingSample>>> loadSamplesAsync,
+        Func<IEnumerable<TrainingSample>, Task> mergeOrUpdateAsync,
+        Func<List<TrainingSample>, CancellationToken, Task<KbIndexOutcome>> indexAsync,
+        Action<string> log,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(loadSamplesAsync);
+        ArgumentNullException.ThrowIfNull(mergeOrUpdateAsync);
+        ArgumentNullException.ThrowIfNull(indexAsync);
+        ArgumentNullException.ThrowIfNull(log);
+
+        if (!ShouldRun(result))
+            return;
+
+        var allSamples = await loadSamplesAsync();
+        var newApproved = SelectApprovedSamplesForRun(allSamples, result);
+        if (newApproved.Count == 0)
+            return;
+
+        MarkPendingBeforeIndex(newApproved);
+        await mergeOrUpdateAsync(newApproved);
+
+        log(BuildStartLogMessage(newApproved.Count));
+        var outcome = await indexAsync(newApproved, ct);
+        ApplyOutcome(newApproved, outcome);
+        await mergeOrUpdateAsync(newApproved);
+    }
 }

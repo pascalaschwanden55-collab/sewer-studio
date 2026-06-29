@@ -1722,23 +1722,13 @@ public partial class TrainingCenterViewModel : ObservableObject
                 await SelfTrainingHistoryStore.AppendRunAsync(snapshot);
 
             // Inkrementelles KB-Update fuer ExactMatch-Samples (B1)
-            if (SelfTrainingKbUpdateController.ShouldRun(result))
-            {
-                var allSamples = await TrainingSamplesStore.LoadAsync();
-                var newApproved = SelfTrainingKbUpdateController.SelectApprovedSamplesForRun(allSamples, result);
-
-                if (newApproved.Count > 0)
-                {
-                    // Samples als Pending markieren VOR dem Index-Versuch
-                    SelfTrainingKbUpdateController.MarkPendingBeforeIndex(newApproved);
-                    await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
-
-                    Log(SelfTrainingKbUpdateController.BuildStartLogMessage(newApproved.Count));
-                    var stOutcome = await IncrementalKbUpdateWithReasonAsync(newApproved, ct);
-                    SelfTrainingKbUpdateController.ApplyOutcome(newApproved, stOutcome);
-                    await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
-                }
-            }
+            await SelfTrainingKbUpdateController.RunApprovedSamplesUpdateAsync(
+                result,
+                TrainingSamplesStore.LoadAsync,
+                TrainingSamplesStore.MergeOrUpdateAsync,
+                IncrementalKbUpdateWithReasonAsync,
+                Log,
+                ct);
 
             // Hinweis fuer Few-Shot-Export (B2)
             if (SelfTrainingRunPresentationBuilder.BuildFewShotExportHint(result) is { } fewShotHint)
