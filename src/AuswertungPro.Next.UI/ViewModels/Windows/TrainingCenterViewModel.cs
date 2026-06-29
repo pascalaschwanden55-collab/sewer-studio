@@ -1664,10 +1664,9 @@ public partial class TrainingCenterViewModel : ObservableObject
         var selectedCase = selection.Case;
         SelectedCase = selectedCase;
 
-        _selfTrainingCts?.Cancel();
-        _selfTrainingCts?.Dispose();
-        _selfTrainingCts = new CancellationTokenSource();
-        var ct = _selfTrainingCts.Token;
+        var runPreparation = SelfTrainingRunPreparationController.PrepareCancellation(_selfTrainingCts);
+        _selfTrainingCts = runPreparation.CancellationTokenSource;
+        var ct = runPreparation.CancellationToken;
 
         using var _aiToken = AiTrack.Begin("Selbsttraining");
         try
