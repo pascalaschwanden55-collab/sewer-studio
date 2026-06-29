@@ -544,34 +544,12 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         }
     }
 
-    private static readonly string[] CatalogGroupOrder =
-    {
-        "Installation", "Vorarbeiten", "Hauptarbeit",
-        "Qualitaetskontrolle", "Qualitaet",
-        "Sonstiges"
-    };
-
+    // Gruppen-Reihenfolge und -Ableitung werden von CatalogItemGrouping (Infrastructure.Costs) geliefert.
     private static int GetCatalogGroupOrder(string? group)
-    {
-        if (string.IsNullOrWhiteSpace(group)) return CatalogGroupOrder.Length + 1;
-        var idx = Array.FindIndex(CatalogGroupOrder, g => string.Equals(g, group.Trim(), StringComparison.OrdinalIgnoreCase));
-        return idx >= 0 ? idx : CatalogGroupOrder.Length;
-    }
+        => CatalogItemGrouping.GetGroupOrder(group);
 
     internal static string DeriveGroupFromKey(string key)
-    {
-        if (key.StartsWith("INSTALL", StringComparison.OrdinalIgnoreCase)) return "Installation";
-        if (key.StartsWith("VORARBEIT", StringComparison.OrdinalIgnoreCase)) return "Vorarbeiten";
-        if (key.StartsWith("QK_", StringComparison.OrdinalIgnoreCase)) return "Qualitaetskontrolle";
-        if (key.StartsWith("HAUPTARBEIT", StringComparison.OrdinalIgnoreCase)) return "Hauptarbeit";
-        // All Hauptarbeit items: Schlauchliner, LEM, Kurzliner, Manschette, Anschluss
-        if (key.StartsWith("SCHLAUCHLINER", StringComparison.OrdinalIgnoreCase)) return "Hauptarbeit";
-        if (key.StartsWith("LINERENDMANSCHETTE", StringComparison.OrdinalIgnoreCase)) return "Hauptarbeit";
-        if (key.StartsWith("KURZLINER", StringComparison.OrdinalIgnoreCase)) return "Hauptarbeit";
-        if (key.StartsWith("MANSCHETTE", StringComparison.OrdinalIgnoreCase)) return "Hauptarbeit";
-        if (key.StartsWith("ANSCHLUSS", StringComparison.OrdinalIgnoreCase)) return "Hauptarbeit";
-        return "Sonstiges";
-    }
+        => CatalogItemGrouping.DeriveGroupFromKey(key);
 
     private void RemoveMeasure(MeasureBlockVm? measure)
     {
@@ -718,39 +696,30 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
     private void InitializeFromHaltungRecord(HaltungRecord haltungRecord)
     {
-        // Set DN from import data
-        var dnValue = haltungRecord.GetFieldValue("DN_mm");
-        if (!string.IsNullOrWhiteSpace(dnValue) && int.TryParse(dnValue, out var dn))
+        // MeasureImportDefaultsResolver uebernimmt das kulturunabhaengige Parsen
+        // und die Anschlussanzahl-Schaetzung.
+        var defaults = MeasureImportDefaultsResolver.Resolve(haltungRecord);
+
+        if (defaults.Dn.HasValue)
         {
+            var dnText = defaults.Dn.Value.ToString();
             foreach (var measure in SelectedMeasures)
-            {
-                measure.SetDnFromImport(dn.ToString());
-            }
-            DefaultDn = dn.ToString();
+                measure.SetDnFromImport(dnText);
+            DefaultDn = dnText;
         }
 
-        // Set Length from import data
-        // Kulturunabhaengig parsen: "45.30" darf auf Komma-Locales nicht zu 4530 werden.
-        var lengthValue = haltungRecord.GetFieldValue("Haltungslaenge_m");
-        if (!string.IsNullOrWhiteSpace(lengthValue) && decimal.TryParse(
-                lengthValue.Trim().Replace(',', '.'),
-                NumberStyles.Float, CultureInfo.InvariantCulture, out var length))
+        if (defaults.LengthMeters.HasValue)
         {
+            var lengthText = defaults.LengthMeters.Value.ToString("0.00");
             foreach (var measure in SelectedMeasures)
-            {
-                measure.SetLengthFromImport(length.ToString("0.00"));
-            }
-            DefaultLength = length.ToString("0.00");
+                measure.SetLengthFromImport(lengthText);
+            DefaultLength = lengthText;
         }
 
-        // Set connection count from explicit field (PDF/manual) or derive from damage coding.
-        // "No detected connections" is treated as explicit 0 so connection lines are disabled consistently.
-        var connections = ConnectionCountEstimator.EstimateFromRecord(haltungRecord) ?? 0;
-        var connectionText = connections.ToString(CultureInfo.InvariantCulture);
+        // Anschlussanzahl: 0 ist explizit (deaktiviert Anschluss-Zeilen).
+        var connectionText = defaults.Connections.ToString(CultureInfo.InvariantCulture);
         foreach (var measure in SelectedMeasures)
-        {
             measure.SetConnectionsFromImport(connectionText);
-        }
         DefaultConnections = connectionText;
     }
 
@@ -850,9 +819,6 @@ public sealed record CatalogItemOption(string Key, string Group, string DisplayN
 
 public sealed partial class MeasureBlockVm : ObservableObject
 {
-    private const string InstallUvAnlageKey = "INSTALL_UV_ANLAGE";
-    private const string InstallHlAnlageKey = "INSTALL_HL_ANLAGE";
-
     private static readonly string[] GroupOrder =
     {
         "Installation",
@@ -870,11 +836,6 @@ public sealed partial class MeasureBlockVm : ObservableObject
     private bool _applyingPrices;
     private bool _enforcingInstallationRule;
     private bool _enforcingEndManschetteRule;
-
-    // Linerende-Manschette: Standard 2 Stk (Anfang + Ende), aber erst ab DN 200.
-    private const string LinerEndManschetteKey = "LINERENDMANSCHETTE_LEM";
-    private const int EndManschetteMinDn = 200;
-    private const decimal EndManschetteDefaultQty = 2m;
 
     public string MeasureId { get; }
     public string MeasureName { get; }
@@ -1367,18 +1328,21 @@ public sealed partial class MeasureBlockVm : ObservableObject
         if (!string.IsNullOrWhiteSpace(ConnectionsText))
             return;
 
-        var qty = Lines
-            .Where(IsConnectionLine)
-            .Where(l => l.Selected && l.Qty > 0)
-            .Select(l => l.Qty)
-            .DefaultIfEmpty(0m)
-            .Max();
+        // Snapshot der VM-Zeilen als Domain-Objekte fuer die Engine.
+        var snapshot = Lines.Select(l => new CostLine
+        {
+            ItemKey = l.ItemKey ?? "",
+            Text = l.Text ?? "",
+            Qty = l.Qty,
+            Selected = l.Selected
+        });
 
-        if (qty <= 0)
+        var qty = MeasurePricingEngine.TryReadConnectionsFromLines(snapshot);
+        if (qty is null)
             return;
 
         _suppressConnectionsUpdate = true;
-        ConnectionsText = qty.ToString(CultureInfo.InvariantCulture);
+        ConnectionsText = qty.Value.ToString(CultureInfo.InvariantCulture);
         _suppressConnectionsUpdate = false;
     }
 
@@ -1390,79 +1354,27 @@ public sealed partial class MeasureBlockVm : ObservableObject
         _applyingPrices = true;
         try
         {
+            // Snapshot der VM-Zeilen als Domain-Objekte uebergeben; Engine arbeitet stateless.
             var dn = ParseDn(DnText);
-            var length = ParseDecimal(LengthText);
-
-            foreach (var line in Lines)
+            var snapshot = Lines.Select(l => new CostLine
             {
-                if (line.IsPriceOverridden)
-                    continue;
+                ItemKey = l.ItemKey ?? "",
+                Text = l.Text ?? "",
+                Unit = l.Unit ?? "",
+                Qty = l.Qty,
+                IsPriceOverridden = l.IsPriceOverridden
+            }).ToList();
 
-                if (!_catalog.TryGetValue(line.ItemKey, out var item))
-                {
-                    if (!onlyQtyBased)
-                        line.SetSuggestedPrice(null, false);
-                    continue;
-                }
+            var results = MeasurePricingEngine.ComputePrices(snapshot, _catalog, dn, onlyQtyBased);
 
-                var hasQtyRules = item.DnPrices.Any(p => p.QtyFrom.HasValue || p.QtyTo.HasValue);
-                if (onlyQtyBased && !hasQtyRules)
-                    continue;
-
-                if (string.Equals(item.Type, "Fixed", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (!onlyQtyBased)
-                        line.SetSuggestedPrice(item.Price, item.Price.HasValue);
-                    continue;
-                }
-
-                if (!string.Equals(item.Type, "ByDN", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (dn is null)
-                {
-                    if (!onlyQtyBased)
-                        line.SetSuggestedPrice(null, false);
-                    continue;
-                }
-
-                var candidates = item.DnPrices
-                    .Where(x => dn >= x.DnFrom && dn <= x.DnTo)
-                    .ToList();
-                var usedNearestFallback = false;
-
-                if (candidates.Count == 0)
-                {
-                    // Fallback: use nearest DN bucket when exact DN is not configured.
-                    candidates = FindNearestDnCandidates(item.DnPrices, dn.Value);
-                    usedNearestFallback = candidates.Count > 0;
-                    if (candidates.Count == 0)
-                    {
-                        if (!onlyQtyBased)
-                            line.SetSuggestedPrice(null, false);
-                        continue;
-                    }
-                }
-
-                DnPrice? match = null;
-                if (hasQtyRules)
-                {
-                    var qty = line.Qty;
-                    match = candidates.FirstOrDefault(x => QtyMatches(x, qty));
-                    if (match is null)
-                        match = candidates.FirstOrDefault(x => !x.QtyFrom.HasValue && !x.QtyTo.HasValue);
-                    if (match is null)
-                        match = candidates[0];
-                }
-                else
-                {
-                    match = candidates[0];
-                }
-
-                line.SetSuggestedPrice(match?.Price, match is not null,
-                    usedNearestFallback && match is not null ? BuildNearestDnPriceHint(match) : "");
+            // Ergebnisse in die VM-Zeilen zurueckspiegeln (SetSuggestedPrice behaelt
+            // die re-entrancy-sichere Semantik bei: LineChanged ausloesen, aber _applyingPrices
+            // blockiert den Rueckruf in OnLineChanged).
+            for (var i = 0; i < Lines.Count && i < results.Count; i++)
+            {
+                if (results[i] is { } r)
+                    Lines[i].SetSuggestedPrice(r.HasPrice ? r.UnitPrice : null, r.HasPrice, r.PriceHint);
             }
-
         }
         finally
         {
@@ -1487,41 +1399,51 @@ public sealed partial class MeasureBlockVm : ObservableObject
         if (!_catalog.ContainsKey(requiredInstallKey))
             return;
 
-        var changed = false;
+        // Snapshot der VM-Zeilen fuer die Engine (Domain-Typen).
+        var snapshot = Lines.Select(l => new CostLine
+        {
+            ItemKey = l.ItemKey ?? "",
+            Group = l.Group ?? "",
+            Qty = l.Qty,
+            Selected = l.Selected
+        }).ToList();
+
+        MeasureRuleService.EnforceInstallationRule(
+            snapshot, _catalog, requiredInstallKey,
+            out var domainLinesToRemove, out var domainLineToAdd, out var changed);
+
+        if (!changed)
+            return;
+
         _enforcingInstallationRule = true;
         try
         {
-            var installationLines = Lines
-                .Where(IsInstallationLine)
+            // Zeilen entfernen: per ItemKey im VM finden.
+            var removeKeys = domainLinesToRemove.Select(l => l.ItemKey).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var toRemove = Lines
+                .Where(l => removeKeys.Contains(l.ItemKey ?? ""))
                 .ToList();
-
-            if (!installationLines.Any(l => IsItemKey(l, requiredInstallKey)))
+            foreach (var line in toRemove)
             {
-                AddLineFromCatalogKey(requiredInstallKey);
-                changed = true;
-                installationLines = Lines.Where(IsInstallationLine).ToList();
-            }
-
-            foreach (var line in installationLines)
-            {
-                if (IsItemKey(line, requiredInstallKey))
-                {
-                    if (!line.Selected)
-                    {
-                        line.Selected = true;
-                        changed = true;
-                    }
-                    if (line.Qty <= 0m)
-                    {
-                        line.SetSuggestedQty(1m);
-                        changed = true;
-                    }
-                    continue;
-                }
-
                 line.LineChanged -= OnLineChanged;
                 Lines.Remove(line);
-                changed = true;
+            }
+
+            // Zeile hinzufuegen: AddLineFromCatalogKey haelt Event-Subscriptions und Preise korrekt.
+            if (domainLineToAdd is not null &&
+                !Lines.Any(l => IsItemKey(l, domainLineToAdd.ItemKey)))
+            {
+                AddLineFromCatalogKey(domainLineToAdd.ItemKey);
+            }
+
+            // Pflicht-Zeile reaktivieren, falls sie deaktiviert war.
+            var requiredLine = Lines.FirstOrDefault(l => IsItemKey(l, requiredInstallKey));
+            if (requiredLine is not null)
+            {
+                if (!requiredLine.Selected)
+                    requiredLine.Selected = true;
+                if (requiredLine.Qty <= 0m)
+                    requiredLine.SetSuggestedQty(1m);
             }
         }
         finally
@@ -1529,8 +1451,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
             _enforcingInstallationRule = false;
         }
 
-        if (changed)
-            UpdateTotal();
+        UpdateTotal();
     }
 
     // Linerende-Manschette nur ab DN 200 automatisch (2 Stk = Anfang + Ende).
@@ -1541,45 +1462,39 @@ public sealed partial class MeasureBlockVm : ObservableObject
         if (_enforcingEndManschetteRule)
             return;
 
-        var lemLines = Lines.Where(l => IsItemKey(l, LinerEndManschetteKey)).ToList();
-        if (lemLines.Count == 0)
+        var dn = ParseDn(DnText);
+
+        // Snapshot fuer die Engine bauen.
+        var snapshot = Lines.Select(l => new CostLine
+        {
+            ItemKey = l.ItemKey ?? "",
+            Selected = l.Selected,
+            Qty = l.Qty,
+            IsQtyOverridden = l.IsQtyOverridden
+        }).ToList();
+
+        MeasureRuleService.EnforceEndManschetteRule(snapshot, dn, out var changed);
+        if (!changed)
             return;
 
-        var dn = ParseDn(DnText);
-        if (dn is null)
-            return; // DN unbekannt -> Regel nicht anwenden
-
-        var allowed = dn.Value >= EndManschetteMinDn;
-        var changed = false;
+        // Ergebnisse in die VM-Zeilen zurueckspiegeln.
         _enforcingEndManschetteRule = true;
         try
         {
-            foreach (var line in lemLines)
+            for (var i = 0; i < Lines.Count && i < snapshot.Count; i++)
             {
-                if (!allowed)
-                {
-                    // Unter DN 200: keine Endmanschette.
-                    if (line.Selected || line.Qty != 0m)
-                    {
-                        line.SetSuggestedQty(0m);
-                        line.IsQtyOverridden = false;
-                        line.Selected = false;
-                        changed = true;
-                    }
-                    continue;
-                }
+                var s = snapshot[i];
+                var vm = Lines[i];
 
-                // Ab DN 200: frisch deaktivierte Zeile reaktivieren und Standardmenge setzen.
-                if (!line.Selected && line.Qty == 0m)
-                {
-                    line.Selected = true;
-                    changed = true;
-                }
-                if (!line.IsQtyOverridden && line.Qty <= 0m)
-                {
-                    line.SetSuggestedQty(EndManschetteDefaultQty);
-                    changed = true;
-                }
+                if (vm.Selected != s.Selected)
+                    vm.Selected = s.Selected;
+
+                if (vm.IsQtyOverridden != s.IsQtyOverridden)
+                    vm.IsQtyOverridden = s.IsQtyOverridden;
+
+                // SetSuggestedQty verwenden, damit IsQtyOverridden nicht ungewollt gesetzt wird.
+                if (vm.Qty != s.Qty)
+                    vm.SetSuggestedQty(s.Qty);
             }
         }
         finally
@@ -1587,20 +1502,11 @@ public sealed partial class MeasureBlockVm : ObservableObject
             _enforcingEndManschetteRule = false;
         }
 
-        if (changed)
-            UpdateTotal();
+        UpdateTotal();
     }
 
     private string? GetRequiredInstallationItemKey()
-    {
-        var descriptor = $"{MeasureId} {MeasureName}";
-        if (descriptor.Contains("GFK", StringComparison.OrdinalIgnoreCase))
-            return InstallUvAnlageKey;
-        if (descriptor.Contains("NADELFILZ", StringComparison.OrdinalIgnoreCase))
-            return InstallHlAnlageKey;
-
-        return null;
-    }
+        => MeasureRuleService.GetRequiredInstallationItemKey(MeasureId, MeasureName);
 
     private static bool IsInstallationLine(CostLineVm? line)
         => CostCalculatorLogicService.IsInstallationLine(line?.Group, line?.ItemKey);

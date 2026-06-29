@@ -7,40 +7,43 @@ using AuswertungPro.Next.Domain.Models;
 namespace AuswertungPro.Next.Infrastructure.Costs;
 
 /// <summary>
+/// Ergebnis der Preis-Berechnung fuer eine einzelne Zeile.
+/// Ermoeglicht der VM, den genauen Preis-Status (HasPrice) in SetSuggestedPrice einzutragen.
+/// </summary>
+public readonly record struct LinePriceResult(
+    string ItemKey,
+    decimal UnitPrice,
+    bool HasPrice,
+    string PriceHint);
+
+/// <summary>
 /// Wendet Katalogpreise und Mengenregeln auf eine Liste von <see cref="CostLine"/>-Objekten an.
 /// Arbeitet ausschliesslich auf Domain-Typen (keine WPF-Abhaengigkeiten).
 /// </summary>
 public static class MeasurePricingEngine
 {
     /// <summary>
-    /// Wendet Katalogpreise auf alle Zeilen an.
-    /// Zeilen mit <see cref="CostLine.IsPriceOverridden"/> werden uebersprungen.
+    /// Berechnet Katalogpreise fuer alle Zeilen und gibt ein Ergebnis pro Zeile zurueck.
+    /// Zeilen mit <see cref="CostLine.IsPriceOverridden"/> oder ohne Aenderung erhalten null.
     /// </summary>
-    /// <param name="lines">Liste der Kostenpositionen (wird in-place veraendert).</param>
-    /// <param name="catalog">Aktiver Preiskatalog.</param>
-    /// <param name="dn">Aktueller Nennweiten-Wert (null = unbekannt).</param>
-    /// <param name="onlyQtyBased">
-    ///   true  = nur Preise aktualisieren, wenn der Katalogeintrag Mengenregeln (QtyFrom/QtyTo) hat.
-    ///   false = alle Preise aktualisieren.
-    /// </param>
-    public static void ApplyCatalogPrices(
+    public static IReadOnlyList<LinePriceResult?> ComputePrices(
         IList<CostLine> lines,
         IReadOnlyDictionary<string, CostCatalogItem> catalog,
         int? dn,
         bool onlyQtyBased)
     {
-        foreach (var line in lines)
+        var results = new LinePriceResult?[lines.Count];
+
+        for (var i = 0; i < lines.Count; i++)
         {
+            var line = lines[i];
             if (line.IsPriceOverridden)
                 continue;
 
             if (!catalog.TryGetValue(line.ItemKey, out var item))
             {
                 if (!onlyQtyBased)
-                {
-                    line.UnitPrice = 0m;
-                    line.PriceHint = "";
-                }
+                    results[i] = new LinePriceResult(line.ItemKey, 0m, HasPrice: false, "");
                 continue;
             }
 
@@ -52,10 +55,11 @@ public static class MeasurePricingEngine
             if (string.Equals(item.Type, "Fixed", StringComparison.OrdinalIgnoreCase))
             {
                 if (!onlyQtyBased)
-                {
-                    line.UnitPrice = item.Price ?? 0m;
-                    line.PriceHint = item.Price.HasValue ? "" : "";
-                }
+                    results[i] = new LinePriceResult(
+                        line.ItemKey,
+                        item.Price ?? 0m,
+                        HasPrice: item.Price.HasValue,
+                        "");
                 continue;
             }
 
@@ -66,10 +70,7 @@ public static class MeasurePricingEngine
             if (dn is null)
             {
                 if (!onlyQtyBased)
-                {
-                    line.UnitPrice = 0m;
-                    line.PriceHint = "";
-                }
+                    results[i] = new LinePriceResult(line.ItemKey, 0m, HasPrice: false, "");
                 continue;
             }
 
@@ -85,10 +86,7 @@ public static class MeasurePricingEngine
                 if (candidates.Count == 0)
                 {
                     if (!onlyQtyBased)
-                    {
-                        line.UnitPrice = 0m;
-                        line.PriceHint = "";
-                    }
+                        results[i] = new LinePriceResult(line.ItemKey, 0m, HasPrice: false, "");
                     continue;
                 }
             }
@@ -105,10 +103,37 @@ public static class MeasurePricingEngine
                 match = candidates[0];
             }
 
-            line.UnitPrice = match?.Price ?? 0m;
-            line.PriceHint = usedNearestFallback && match is not null
-                ? CostCalculatorLogicService.BuildNearestDnPriceHint(match)
-                : "";
+            results[i] = new LinePriceResult(
+                line.ItemKey,
+                match?.Price ?? 0m,
+                HasPrice: match is not null,
+                PriceHint: usedNearestFallback && match is not null
+                    ? CostCalculatorLogicService.BuildNearestDnPriceHint(match)
+                    : "");
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Wendet Katalogpreise auf alle Zeilen in-place an.
+    /// Zeilen mit <see cref="CostLine.IsPriceOverridden"/> werden uebersprungen.
+    /// Fuer die VM: ComputePrices verwenden, damit HasPrice erhalten bleibt.
+    /// </summary>
+    public static void ApplyCatalogPrices(
+        IList<CostLine> lines,
+        IReadOnlyDictionary<string, CostCatalogItem> catalog,
+        int? dn,
+        bool onlyQtyBased)
+    {
+        var results = ComputePrices(lines, catalog, dn, onlyQtyBased);
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (results[i] is { } r)
+            {
+                lines[i].UnitPrice = r.UnitPrice;
+                lines[i].PriceHint = r.PriceHint;
+            }
         }
     }
 
