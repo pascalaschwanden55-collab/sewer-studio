@@ -943,15 +943,12 @@ public partial class TrainingCenterViewModel : ObservableObject
             }
             var casesWithProtocol = found.Where(c => !string.IsNullOrEmpty(c.ProtocolPath)).ToList();
 
-            Log($"Gefunden: {found.Count} Ordner, {casesWithProtocol.Count} mit Protokoll");
+            var scanSummary = TrainingBatchImportScanPresentationBuilder.BuildSummary(found.Count, casesWithProtocol.Count);
+            Log(scanSummary);
             foreach (var c in found)
-            {
-                var hasVideo = !string.IsNullOrEmpty(c.VideoPath) ? "Video" : "kein Video";
-                var hasProto = !string.IsNullOrEmpty(c.ProtocolPath) ? Path.GetFileName(c.ProtocolPath) : "kein Protokoll";
-                Log($"  {c.CaseId}: {hasVideo}, {hasProto}");
-            }
+                Log(TrainingBatchImportScanPresentationBuilder.BuildCaseLine(c));
 
-            StatusText = $"Gefunden: {found.Count} Ordner, {casesWithProtocol.Count} mit Protokoll";
+            StatusText = scanSummary;
 
             Cases.Clear();
             foreach (var c in found)
