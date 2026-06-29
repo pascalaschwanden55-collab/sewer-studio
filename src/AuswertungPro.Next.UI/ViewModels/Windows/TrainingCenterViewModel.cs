@@ -836,44 +836,19 @@ public partial class TrainingCenterViewModel : ObservableObject
         try
         {
             IsBusy = true;
-            var candidates = Samples
-                .Where(s => s.Status == TrainingSampleStatus.Approved && s.ExportedUtc is null)
-                .ToList();
-            var approved = candidates
-                .Where(IsTrainingExportEligible)
-                .ToList();
+            var targetPath = Path.Combine(AppSettings.AppDataDir, "data", "protocol_training.json");
+            var result = await TrainingApprovedProtocolExportController.RunAsync(
+                Samples.ToList(),
+                IsTrainingExportEligible,
+                ProtocolTrainingStore.AddSample,
+                () => PersistSamplesAsync(),
+                () => DateTime.UtcNow,
+                targetPath).ConfigureAwait(false);
 
-            if (candidates.Count != approved.Count)
-                await PersistSamplesAsync();
+            foreach (var line in result.LogLines)
+                Log(line);
 
-            if (approved.Count == 0)
-            {
-                StatusText = "Keine nicht-exportierten Approved-Samples vorhanden.";
-                return;
-            }
-
-            foreach (var s in approved)
-            {
-                var entry = new AuswertungPro.Next.Domain.Protocol.ProtocolEntry
-                {
-                    Code = s.Code,
-                    Beschreibung = s.Beschreibung,
-                    MeterStart = s.MeterStart,
-                    MeterEnd = s.MeterEnd,
-                    IsStreckenschaden = s.IsStreckenschaden
-                };
-                ProtocolTrainingStore.AddSample(entry, s.CaseId);
-                s.ExportedUtc = DateTime.UtcNow;
-            }
-
-            await PersistSamplesAsync();
-
-            var codes = approved.Select(s => s.Code).Distinct().OrderBy(c => c).ToList();
-            Log($"Protokoll-Training: {approved.Count} Samples als Few-Shot-Beispiele gespeichert.");
-            Log($"  Codes: {string.Join(", ", codes)}");
-            Log($"  Ziel: {Path.Combine(AppSettings.AppDataDir, "data", "protocol_training.json")}");
-            Log("  Wirkung: Qwen nutzt diese Beispiele bei zukünftigen Protokoll-Generierungen.");
-            StatusText = $"Protokoll-Training: {approved.Count} Samples als Few-Shot-Beispiele gespeichert ({codes.Count} Codes).";
+            StatusText = result.StatusText;
         }
         finally
         {

@@ -395,6 +395,24 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_approved_protocol_export_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var exportSource = ExtractMethodBody(source, "private async Task ExportApprovedAsync()");
+
+        Assert.Contains("TrainingApprovedProtocolExportController.RunAsync(", exportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new AuswertungPro.Next.Domain.Protocol.ProtocolEntry", exportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("approved.Select(s => s.Code)", exportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("s.ExportedUtc = DateTime.UtcNow", exportSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_kb_update_workflow_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
