@@ -1006,17 +1006,19 @@ public partial class TrainingCenterViewModel : ObservableObject
 
                     var generation = caseGeneration.Generation;
                     var newSamples = generation.Samples;
+                    var generatedCasePlan = TrainingBatchImportGeneratedCaseController.CreatePlan(
+                        tc.CaseId,
+                        generation,
+                        previewFrame,
+                        SelfTrainingResults.Count + 1,
+                        existingSigs);
 
-                    if (newSamples.Count == 0)
+                    if (generatedCasePlan.Kind == TrainingBatchImportGeneratedCaseKind.Skipped)
                     {
-                        var skip = TrainingCenterSampleGenerationStatusFormatter.FormatBatchSkip(generation);
+                        var skip = generatedCasePlan.Skip!;
                         runSummary.RecordSkip(skip.Kind);
 
-                        var skipUiPlan = TrainingBatchImportSkippedCaseUiPlanBuilder.Build(
-                            tc.CaseId,
-                            skip,
-                            previewFrame,
-                            SelfTrainingResults.Count + 1);
+                        var skipUiPlan = generatedCasePlan.SkippedCase!;
                         Log(skip.LogMessage);
                         UpdateLivePreview(
                             skipUiPlan.Preview.CaseInfo,
@@ -1039,13 +1041,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
                     // Signaturen registrieren + Live-Visualisierung
                     // nie Auto-Approve; Freigabe nur ueber Review (Modul I)
-                    TrainingBatchImportSampleRegistrar.RegisterAsReviewCandidates(newSamples, existingSigs);
-                    var uiPlans = TrainingBatchImportSampleUiPlanBuilder.Build(
-                        tc.CaseId,
-                        newSamples,
-                        previewFrame,
-                        SelfTrainingResults.Count + 1);
-                    foreach (var plan in uiPlans)
+                    foreach (var plan in generatedCasePlan.SampleUiPlans)
                     {
                         // Live-Frame pro Sample (nicht nur pro Case)
                         UpdateLivePreview(
@@ -1069,9 +1065,9 @@ public partial class TrainingCenterViewModel : ObservableObject
                             AddResult();
                     }
 
-                    runSummary.AddNewSamples(newSamples.Count);
+                    runSummary.AddNewSamples(generatedCasePlan.NewSampleCount);
 
-                    foreach (var line in TrainingBatchImportSampleLogBuilder.Build(newSamples))
+                    foreach (var line in generatedCasePlan.SampleLogLines)
                         Log(line);
 
                     // ══════════════════════════════════════════════════════════════════

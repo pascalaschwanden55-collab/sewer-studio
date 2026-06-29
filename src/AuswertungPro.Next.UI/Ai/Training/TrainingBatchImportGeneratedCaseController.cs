@@ -1,0 +1,61 @@
+using AuswertungPro.Next.Infrastructure.Ai.Training;
+
+namespace AuswertungPro.Next.UI.Ai.Training;
+
+public enum TrainingBatchImportGeneratedCaseKind
+{
+    Skipped,
+    Samples
+}
+
+public sealed record TrainingBatchImportGeneratedCasePlan(
+    TrainingBatchImportGeneratedCaseKind Kind,
+    TrainingCenterBatchSkipInfo? Skip,
+    TrainingBatchImportSkippedCaseUiPlan? SkippedCase,
+    IReadOnlyList<TrainingBatchImportSampleUiPlan> SampleUiPlans,
+    IReadOnlyList<string> SampleLogLines,
+    int NewSampleCount);
+
+public static class TrainingBatchImportGeneratedCaseController
+{
+    public static TrainingBatchImportGeneratedCasePlan CreatePlan(
+        string caseId,
+        TrainingSampleGenerationResult generation,
+        string? previewFrame,
+        int firstResultIndex,
+        ISet<string> existingSignatures)
+    {
+        ArgumentNullException.ThrowIfNull(generation);
+        ArgumentNullException.ThrowIfNull(existingSignatures);
+
+        var samples = generation.Samples;
+        if (samples.Count == 0)
+        {
+            var skip = TrainingCenterSampleGenerationStatusFormatter.FormatBatchSkip(generation);
+            return new TrainingBatchImportGeneratedCasePlan(
+                TrainingBatchImportGeneratedCaseKind.Skipped,
+                skip,
+                TrainingBatchImportSkippedCaseUiPlanBuilder.Build(
+                    caseId,
+                    skip,
+                    previewFrame,
+                    firstResultIndex),
+                [],
+                [],
+                0);
+        }
+
+        TrainingBatchImportSampleRegistrar.RegisterAsReviewCandidates(samples, existingSignatures);
+        return new TrainingBatchImportGeneratedCasePlan(
+            TrainingBatchImportGeneratedCaseKind.Samples,
+            null,
+            null,
+            TrainingBatchImportSampleUiPlanBuilder.Build(
+                caseId,
+                samples,
+                previewFrame,
+                firstResultIndex),
+            TrainingBatchImportSampleLogBuilder.Build(samples),
+            samples.Count);
+    }
+}
