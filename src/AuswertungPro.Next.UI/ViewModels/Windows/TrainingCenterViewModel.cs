@@ -1834,14 +1834,10 @@ public partial class TrainingCenterViewModel : ObservableObject
             // Review Queue befuellen: PartialMatch/Mismatch (C1) UND vom RequireHumanReview-Schalter
             // zurueckgehaltene saubere ExactMatches (S2b: ExactMatch, aber Status New statt Approved).
             if (ReviewQueueServiceRef is not null
-                && (result.PartialMatches > 0 || result.Mismatches > 0 || result.ExactMatches > 0 || result.NoFindings > 0))
+                && SelfTrainingReviewCandidateSelector.HasReviewableMatches(result))
             {
                 var allSamplesForReview = await TrainingSamplesStore.LoadAsync();
-                var reviewCandidates = allSamplesForReview
-                    .Where(s => s.CaseId == result.CaseId
-                        && Enum.TryParse<MatchLevel>(s.MatchLevel, ignoreCase: true, out var lvl)
-                        && SelfTrainingReviewRouting.ShouldEnqueue(lvl, s.Status))
-                    .ToList();
+                var reviewCandidates = SelfTrainingReviewCandidateSelector.SelectForRun(allSamplesForReview, result);
 
                 foreach (var s in reviewCandidates)
                 {
