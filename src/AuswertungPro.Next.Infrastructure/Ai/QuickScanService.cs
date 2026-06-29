@@ -5,7 +5,6 @@ using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Infrastructure.Ai.Shared;
@@ -205,13 +204,9 @@ public sealed class QuickScanService
             var text = await p.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
             await p.WaitForExitAsync(ct).ConfigureAwait(false);
 
-            var m = Regex.Match(text, @"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)");
-            if (!m.Success) return null;
-
-            var h = double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
-            var min = double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
-            var s = double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture);
-            return h * 3600 + min * 60 + s;
+            // Gemeinsamen Parser nutzen statt lokaler Inline-Regex (Vereinheitlichung).
+            var dur = AuswertungPro.Next.Infrastructure.Ai.Training.FfmpegDurationParser.Parse(text);
+            return dur > 0 ? dur : null;
         }
         catch (OperationCanceledException) { throw; }
         catch { return null; }
