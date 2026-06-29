@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
+using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.DataPage;
@@ -168,77 +168,26 @@ public static class DataPageProtocolPathResolver
 
     /// <summary>
     /// Baut die Suchtoken einer Haltung: sanitisierter Name plus Rohname (dedupliziert).
+    /// Delegiert an <see cref="ProtocolPathResolver.BuildHoldingTokens"/>.
     /// </summary>
     public static IReadOnlyList<string> BuildHoldingTokens(HaltungRecord record)
-    {
-        var holdingRaw = (record.GetFieldValue("Haltungsname") ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(holdingRaw))
-            return Array.Empty<string>();
-
-        var sanitized = AuswertungPro.Next.Application.Common.ProjectPathResolver.SanitizePathSegment(holdingRaw);
-        return new[] { sanitized, holdingRaw }
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
+        => ProtocolPathResolver.BuildHoldingTokens(record);
 
     /// <summary>
     /// Waehlt aus mehreren PDF-Kandidaten den besten: bevorzugt einen Treffer mit
     /// Suffix "_&lt;token&gt;.pdf", sonst den lexikografisch letzten Dateinamen.
+    /// Delegiert an <see cref="PdfCandidateSelector.PickBest"/>.
     /// </summary>
     public static string? PickBestPdfCandidate(IEnumerable<string> candidates, IReadOnlyList<string> holdingTokens)
-    {
-        var list = candidates
-            .Where(path => !string.IsNullOrWhiteSpace(path))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        if (list.Count == 0)
-            return null;
-
-        foreach (var token in holdingTokens)
-        {
-            var expectedSuffix = "_" + token + ".pdf";
-            var exact = list
-                .Where(path => Path.GetFileName(path).EndsWith(expectedSuffix, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            if (exact.Count > 0)
-                return exact[0];
-        }
-
-        return list
-            .OrderByDescending(path => Path.GetFileName(path), StringComparer.OrdinalIgnoreCase)
-            .First();
-    }
+        => PdfCandidateSelector.PickBest(candidates, holdingTokens);
 
     /// <summary>
     /// Parst die in den Projekt-Metadaten gespeicherte PDF-Liste (JSON-Array; faellt
     /// auf Semikolon-Trennung zurueck).
+    /// Delegiert an <see cref="PdfCandidateSelector.ParseStoredPathList"/>.
     /// </summary>
     public static IReadOnlyList<string> ParseStoredPathList(string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return Array.Empty<string>();
-
-        try
-        {
-            var parsed = JsonSerializer.Deserialize<List<string>>(raw);
-            if (parsed is null)
-                return Array.Empty<string>();
-
-            return parsed
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Select(x => x.Trim())
-                .ToList();
-        }
-        catch
-        {
-            return raw.Split(';', StringSplitOptions.RemoveEmptyEntries)
-                .Select(x => x.Trim())
-                .Where(x => x.Length > 0)
-                .ToList();
-        }
-    }
+        => PdfCandidateSelector.ParseStoredPathList(raw);
 
     private static string? TryResolveProtocolFromLink(string? resolvedLink, IReadOnlyList<string> holdingTokens)
     {
