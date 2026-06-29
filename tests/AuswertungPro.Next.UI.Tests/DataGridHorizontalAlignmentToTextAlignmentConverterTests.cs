@@ -36,7 +36,7 @@ public sealed class DataGridHorizontalAlignmentToTextAlignmentConverterTests
     }
 
     [Fact]
-    public void DataPage_and_SchaechtePage_do_not_keep_nested_alignment_converter_duplicates()
+    public void DataGrid_combo_columns_do_not_keep_nested_alignment_converter_duplicates()
     {
         var root = FindRepositoryRoot();
         var dataPage = File.ReadAllText(Path.Combine(
@@ -53,11 +53,18 @@ public sealed class DataGridHorizontalAlignmentToTextAlignmentConverterTests
             "Views",
             "Pages",
             "SchaechtePage.xaml.cs"));
+        var comboColumnFactory = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "DataGridComboColumnFactory.cs"));
 
         Assert.DoesNotContain("HorizontalAlignmentToTextAlignmentValueConverter", dataPage);
         Assert.DoesNotContain("HorizontalAlignmentToTextAlignmentValueConverter", schaechtePage);
-        Assert.Contains("DataGridHorizontalAlignmentToTextAlignmentConverter", dataPage);
-        Assert.Contains("DataGridHorizontalAlignmentToTextAlignmentConverter", schaechtePage);
+        Assert.DoesNotContain("HorizontalAlignmentToTextAlignmentValueConverter", comboColumnFactory);
+        Assert.Contains("DataGridHorizontalAlignmentToTextAlignmentConverter", comboColumnFactory);
     }
 
     private static string FindRepositoryRoot()
