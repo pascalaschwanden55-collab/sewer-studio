@@ -1209,12 +1209,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void DropdownButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button btn || btn.ContextMenu is null)
-            return;
-        btn.ContextMenu.PlacementTarget = btn;
-        btn.ContextMenu.Placement = PlacementMode.Bottom;
-        btn.ContextMenu.DataContext = DataContext;
-        btn.ContextMenu.IsOpen = true;
+        ButtonContextMenuOpener.OpenFromButton(sender, DataContext);
     }
 
     private void RelinkMenu_Click(object sender, RoutedEventArgs e)
