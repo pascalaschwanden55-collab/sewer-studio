@@ -1732,30 +1732,20 @@ public partial class TrainingCenterViewModel : ObservableObject
                 await SelfTrainingHistoryStore.AppendRunAsync(snapshot);
 
             // Inkrementelles KB-Update fuer ExactMatch-Samples (B1)
-            if (result.ExactMatches > 0 && result.SamplesGenerated > 0)
+            if (SelfTrainingKbUpdateController.ShouldRun(result))
             {
                 var allSamples = await TrainingSamplesStore.LoadAsync();
-                var newApproved = allSamples
-                    .Where(s => s.CaseId == result.CaseId
-                        && s.Status == TrainingSampleStatus.Approved)
-                    .ToList();
+                var newApproved = SelfTrainingKbUpdateController.SelectApprovedSamplesForRun(allSamples, result);
 
                 if (newApproved.Count > 0)
                 {
                     // Samples als Pending markieren VOR dem Index-Versuch
-                    foreach (var s in newApproved.Where(s => s.KbIndexState is KbIndexState.None or KbIndexState.Error))
-                        s.KbIndexState = KbIndexState.Pending;
+                    SelfTrainingKbUpdateController.MarkPendingBeforeIndex(newApproved);
                     await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
 
-                    Log($"{newApproved.Count} ExactMatch-Samples — starte KB-Update...");
+                    Log(SelfTrainingKbUpdateController.BuildStartLogMessage(newApproved.Count));
                     var stOutcome = await IncrementalKbUpdateWithReasonAsync(newApproved, ct);
-                    var stIndexedSet = stOutcome.IndexedIds.ToHashSet();
-                    foreach (var s in newApproved)
-                        s.KbIndexState = stIndexedSet.Contains(s.SampleId)
-                            ? KbIndexState.Indexed
-                            : stOutcome.SkippedIds.Contains(s.SampleId)
-                                ? KbIndexState.Skipped   // bewusst/dauerhaft verworfen -> nicht als Fehler markieren
-                                : (s.KbIndexState == KbIndexState.Pending ? KbIndexState.Error : s.KbIndexState);
+                    SelfTrainingKbUpdateController.ApplyOutcome(newApproved, stOutcome);
                     await TrainingSamplesStore.MergeOrUpdateAsync(newApproved);
                 }
             }
