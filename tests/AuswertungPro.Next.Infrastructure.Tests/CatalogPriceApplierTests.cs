@@ -175,16 +175,9 @@ public sealed class CatalogPriceApplierTests
         decimal vatRate)
         => CatalogPriceApplier.ApplyCatalogPricesToStoredCosts(store, catalog, vatRate);
 
-    /// <summary>Analog zu BuildRowHinweis im ViewModel.</summary>
+    /// <summary>Delegiert an RowStoreProjection.BuildRowHinweis.</summary>
     private static string BuildHinweis(int anschluesse, HoldingCost cost)
-    {
-        var hints = new List<string>();
-        if (anschluesse > 0)
-            hints.Add($"{anschluesse} Anschluss(e)");
-        if (cost.Measures.SelectMany(m => m.Lines).Any(l => l.Selected && l.Qty > 0m && l.UnitPrice <= 0m))
-            hints.Add("Preis fehlt im Katalog");
-        return string.Join(" | ", hints);
-    }
+        => RowStoreProjection.BuildRowHinweis(anschluesse, cost);
 
     // --- Fabrik-Methoden ---
 

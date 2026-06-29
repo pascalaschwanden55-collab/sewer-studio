@@ -762,18 +762,11 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
                string.Equals((rec.GetFieldValue("Haltungsname") ?? "").Trim(), holding, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// Hinweis-Text der Zeile: Anschluss-Zahl plus Warnung bei fehlenden Katalogpreisen
-    /// (Audit W9: 0-CHF-Totals waren vorher unsichtbar).
+    /// Hinweis-Text der Zeile: Anschluss-Zahl plus Warnung bei fehlenden Katalogpreisen.
+    /// Delegiert an RowStoreProjection (Audit W9).
     /// </summary>
     private static string BuildRowHinweis(SanierungMatrixRowVm row, HoldingCost cost)
-    {
-        var hints = new List<string>();
-        if (row.Anschluesse > 0)
-            hints.Add($"{row.Anschluesse} Anschluss(e)");
-        if (cost.Measures.SelectMany(m => m.Lines).Any(l => l.Selected && l.Qty > 0m && l.UnitPrice <= 0m))
-            hints.Add("Preis fehlt im Katalog");
-        return string.Join(" | ", hints);
-    }
+        => RowStoreProjection.BuildRowHinweis(row.Anschluesse, cost);
 
     partial void OnSelectedRowChanged(SanierungMatrixRowVm? value)
     {
