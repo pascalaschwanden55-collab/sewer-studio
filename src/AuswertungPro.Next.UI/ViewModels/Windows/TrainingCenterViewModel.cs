@@ -1030,27 +1030,28 @@ public partial class TrainingCenterViewModel : ObservableObject
                     // Signaturen registrieren + Live-Visualisierung
                     // nie Auto-Approve; Freigabe nur ueber Review (Modul I)
                     TrainingBatchImportSampleRegistrar.RegisterAsReviewCandidates(newSamples, existingSigs);
-                    foreach (var s in newSamples)
+                    var uiPlans = TrainingBatchImportSampleUiPlanBuilder.Build(
+                        tc.CaseId,
+                        newSamples,
+                        previewFrame,
+                        SelfTrainingResults.Count + 1);
+                    foreach (var plan in uiPlans)
                     {
                         // Live-Frame pro Sample (nicht nur pro Case)
-                        var samplePreview = TrainingBatchImportLivePreviewBuilder.BuildSample(tc.CaseId, s, previewFrame);
                         UpdateLivePreview(
-                            samplePreview.CaseInfo,
-                            samplePreview.CodeInfo,
-                            samplePreview.MeterInfo,
-                            samplePreview.FramePath);
+                            plan.Preview.CaseInfo,
+                            plan.Preview.CodeInfo,
+                            plan.Preview.MeterInfo,
+                            plan.Preview.FramePath);
 
                         // Ergebnis-Verlauf: Sample als Eintrag hinzufuegen
                         // Batch-Import hat keinen echten KI-vs-Protokoll Vergleich,
                         // daher Match-Rate NICHT aktualisieren (nur im Selbsttraining sinnvoll).
                         void AddResult()
                         {
-                            var entry = TrainingBatchImportResultEntryFactory.CreateSample(
-                                SelfTrainingResults.Count + 1,
-                                s);
-                            SelfTrainingResults.Add(entry);
+                            SelfTrainingResults.Add(plan.Result);
                             // Code-Verteilung aktualisieren
-                            UpdateCodeDistribution(entry.VsaCode, entry.Level);
+                            UpdateCodeDistribution(plan.Result.VsaCode, plan.Result.Level);
                         }
                         if (System.Windows.Application.Current?.Dispatcher is { } dp && !dp.CheckAccess())
                             dp.Invoke(AddResult);
