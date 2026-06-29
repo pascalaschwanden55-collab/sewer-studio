@@ -1242,13 +1242,9 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// </summary>
     private async Task<string?> ResolveSelfTrainingSampleIdAsync(InfraSelfImproving.ReviewQueueItem item)
     {
-        if (!string.IsNullOrEmpty(item.SelfTrainingSampleId))
-            return item.SelfTrainingSampleId;
-        var allSamples = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
-        return allSamples.FirstOrDefault(s =>
-            s.CaseId == item.SelfTrainingCaseId
-            && s.Code == item.SelfTrainingVsaCode
-            && Math.Abs(s.MeterStart - (item.SelfTrainingMeter ?? 0)) < 0.2)?.SampleId;
+        return await SelfTrainingReviewSampleIdResolver.ResolveAsync(
+            item,
+            TrainingSamplesStore.LoadAsync).ConfigureAwait(false);
     }
 
     /// <summary>Baut den Review-Approval-Service mit Delegate auf die bestehende VM-KB-Indexierung.</summary>

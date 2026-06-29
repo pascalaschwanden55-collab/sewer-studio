@@ -269,6 +269,23 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_review_sample_id_aufloesung_an_resolver()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var resolverSource = ExtractMethodBody(source, "private async Task<string?> ResolveSelfTrainingSampleIdAsync(InfraSelfImproving.ReviewQueueItem item)");
+
+        Assert.Contains("SelfTrainingReviewSampleIdResolver.ResolveAsync(", resolverSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("FirstOrDefault", resolverSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Math.Abs", resolverSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_gold_kb_reconcile_workflow_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
