@@ -1770,21 +1770,15 @@ public partial class TrainingCenterViewModel : ObservableObject
                 && SelfTrainingReviewCandidateSelector.HasReviewableMatches(result))
             {
                 var allSamplesForReview = await TrainingSamplesStore.LoadAsync();
-                var reviewCandidates = SelfTrainingReviewCandidateSelector.SelectForRun(allSamplesForReview, result);
+                var reviewQueueUpdate = SelfTrainingReviewQueueController.EnqueueCandidates(
+                    ReviewQueueServiceRef,
+                    allSamplesForReview,
+                    result);
 
-                foreach (var s in reviewCandidates)
-                {
-                    ReviewQueueServiceRef.EnqueueFromSelfTraining(
-                        s.CaseId, s.Code, s.KiCode ?? s.Code,
-                        s.MeterStart, s.FramePath, s.MatchLevel!,
-                        reason: string.IsNullOrWhiteSpace(s.Notes) ? null : s.Notes,
-                        sampleId: s.SampleId);
-                }
-
-                if (reviewCandidates.Count > 0)
+                if (reviewQueueUpdate.ShouldReloadQueue)
                 {
                     LoadReviewQueue(ReviewQueueServiceRef);
-                    Log($"{reviewCandidates.Count} Samples in Review Queue eingereiht (Partial/Mismatch + zurueckgehaltene ExactMatches)");
+                    Log(reviewQueueUpdate.LogMessage ?? "");
                 }
             }
 
