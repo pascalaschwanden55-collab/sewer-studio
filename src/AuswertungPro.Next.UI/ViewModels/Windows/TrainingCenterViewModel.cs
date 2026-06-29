@@ -312,13 +312,14 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         void Apply()
         {
-            LiveCaseInfo = caseInfo;
-            LiveCodeInfo = code;
-            LiveMeterInfo = meter;
-            CurrentComparisonText = $"{code} @ {meter}";
-            CurrentEntryCode = code;
-            if (framePath is not null)
-                SetLiveFrameThrottled(framePath);
+            var preview = TrainingLivePreviewPresenter.Build(caseInfo, code, meter, framePath);
+            LiveCaseInfo = preview.LiveCaseInfo;
+            LiveCodeInfo = preview.LiveCodeInfo;
+            LiveMeterInfo = preview.LiveMeterInfo;
+            CurrentComparisonText = preview.CurrentComparisonText;
+            CurrentEntryCode = preview.CurrentEntryCode;
+            if (preview.FramePath is not null)
+                SetLiveFrameThrottled(preview.FramePath);
             else if (string.IsNullOrEmpty(LiveFramePath))
                 LiveFramePath = ""; // Explizit leer setzen damit UI reagiert
         }
@@ -331,10 +332,13 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     private void ClearLivePreview()
     {
-        SetLiveFrameThrottled(null);
-        LiveCaseInfo = "";
-        LiveCodeInfo = "";
-        LiveMeterInfo = "";
+        var preview = TrainingLivePreviewPresenter.Clear();
+        SetLiveFrameThrottled(preview.FramePath);
+        LiveCaseInfo = preview.LiveCaseInfo;
+        LiveCodeInfo = preview.LiveCodeInfo;
+        LiveMeterInfo = preview.LiveMeterInfo;
+        CurrentComparisonText = preview.CurrentComparisonText;
+        CurrentEntryCode = preview.CurrentEntryCode;
     }
 
     private async Task RefreshKbStatusAsync()

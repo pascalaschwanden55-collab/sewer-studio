@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
@@ -195,8 +194,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             var dataLines = IncludeDataSection ? BuildHoldingDataLines(filteredRows) : null;
 
             var projectMeta = _shell.Project.Metadata;
-            var projectCustomer = BuildProjectCustomerBlock(projectMeta);
-            var objectBlock = BuildObjectBlock(projectMeta, filteredRows);
+            var projectCustomer = BuilderPagePdfBlockBuilder.BuildProjectCustomerBlock(projectMeta);
+            var objectBlock = BuilderPagePdfBlockBuilder.BuildObjectBlock(projectMeta, filteredRows.Count);
             var filterSummary = BuildFilterSummaryText();
             var qualityHint = RowsWithDetailedCosts == FilteredRowsCount
                 ? "Alle gefilterten Haltungen haben Positionsdetails."
@@ -1152,54 +1151,6 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             return;
 
         parts.Add($"{label}={value}");
-    }
-
-    private static string BuildProjectCustomerBlock(Dictionary<string, string> metadata)
-    {
-        var sb = new StringBuilder();
-
-        AddLine(sb, metadata, "Auftraggeber");
-        AddLine(sb, metadata, "FirmaName");
-        AddLine(sb, metadata, "FirmaAdresse");
-        AddLine(sb, metadata, "FirmaTelefon");
-        AddLine(sb, metadata, "FirmaEmail");
-
-        var result = sb.ToString().Trim();
-        return result.Length == 0 ? "Nicht definiert" : result;
-    }
-
-    private static string BuildObjectBlock(Dictionary<string, string> metadata, IReadOnlyList<DruckcenterRowVm> filteredRows)
-    {
-        var lines = new List<string>();
-        AddLine(lines, "Projekt", metadata.TryGetValue("Zone", out var zone) ? zone : "");
-        AddLine(lines, "Gemeinde", metadata.TryGetValue("Gemeinde", out var gemeinde) ? gemeinde : "");
-        AddLine(lines, "Auftrag-Nr.", metadata.TryGetValue("AuftragNr", out var auftragNr) ? auftragNr : "");
-        AddLine(lines, "Bearbeiter", metadata.TryGetValue("Bearbeiter", out var bearbeiter) ? bearbeiter : "");
-        AddLine(lines, "Inspektionsdatum", metadata.TryGetValue("InspektionsDatum", out var datum) ? datum : "");
-        lines.Add($"Haltungen im Ausdruck: {filteredRows.Count}");
-        return string.Join("\n", lines);
-    }
-
-    private static void AddLine(StringBuilder sb, Dictionary<string, string> metadata, string key)
-    {
-        if (!metadata.TryGetValue(key, out var value))
-            return;
-
-        value = SafeText(value);
-        if (value.Length == 0)
-            return;
-
-        if (sb.Length > 0)
-            sb.AppendLine();
-        sb.Append(value);
-    }
-
-    private static void AddLine(List<string> lines, string label, string value)
-    {
-        value = SafeText(value);
-        if (value.Length == 0)
-            return;
-        lines.Add($"{label}: {value}");
     }
 
     private static bool HasSelectedLines(HoldingCost cost)

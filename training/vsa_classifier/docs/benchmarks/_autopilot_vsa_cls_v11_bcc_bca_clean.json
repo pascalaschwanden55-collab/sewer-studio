@@ -1,0 +1,59 @@
+{
+  "frames": 57,
+  "exact_correct": 23,
+  "exact_acc": 0.40350877192982454,
+  "findings_correct": 21,
+  "findings_total": 41,
+  "findings_acc": 0.5121951219512195,
+  "leer_correct": 2,
+  "leer_total": 16,
+  "leer_acc": 0.125,
+  "per_class": {
+    "BCD": [
+      15,
+      15
+    ],
+    "BDD": [
+      2,
+      6
+    ],
+    "BCE": [
+      2,
+      2
+    ],
+    "LEER": [
+      2,
+      16
+    ],
+    "BDA": [
+      1,
+      3
+    ],
+    "BAI": [
+      0,
+      5
+    ],
+    "BBA": [
+      0,
+      2
+    ],
+    "BAF": [
+      1,
+      2
+    ],
+    "BAB": [
+      0,
+      2
+    ],
+    "BAJ": [
+      0,
+      3
+    ],
+    "BBB": [
+      0,
+      1
+    ]
+  },
+  "weights": "C:\\KI_BRAIN\\yolo_cls_runs\\vsa_cls_v11_bcc_bca\\weights\\best.pt",
+  "eval_root": "C:\\Sewer-Studio_KI_4.4\\EvalVisibilityReview_20260525\\eval_visible_clean_eval_set"
+}
