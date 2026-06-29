@@ -11,7 +11,6 @@ using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Dialogs;
-using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
