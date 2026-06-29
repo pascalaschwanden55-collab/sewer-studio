@@ -1,5 +1,5 @@
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.UI.ViewModels.Pages;
 using Xunit;
 
 namespace AuswertungPro.Next.UI.Tests;
