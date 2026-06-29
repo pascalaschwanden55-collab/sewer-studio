@@ -1692,32 +1692,19 @@ public partial class TrainingCenterViewModel : ObservableObject
             }
         }
 
-        // Auto-Auswahl: Bereits verarbeitete Haltungen ueberspringen
-        if (SelectedCase is null)
+        var existingSamplesForSelection = SelectedCase is null
+            ? await TrainingSamplesStore.LoadAsync()
+            : Enumerable.Empty<TrainingSample>();
+        var selection = SelfTrainingCaseSelectionController.Select(
+            SelectedCase,
+            Cases,
+            existingSamplesForSelection);
+        if (selection.ShouldStop)
         {
-            var existingSamples = await TrainingSamplesStore.LoadAsync();
-            var processedIds = existingSamples.Select(s => s.CaseId)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            var firstUnprocessed = Cases.FirstOrDefault(c =>
-                !string.IsNullOrEmpty(c.ProtocolPath) && !processedIds.Contains(c.CaseId));
-
-            if (firstUnprocessed is null)
-            {
-                // Fallback: Alle bereits verarbeitet oder keine mit Protokoll
-                var withProtocol = Cases.Count(c => !string.IsNullOrEmpty(c.ProtocolPath));
-                StatusText = withProtocol > 0
-                    ? $"Alle {withProtocol} Faelle bereits verarbeitet. Waehle manuell fuer erneutes Training."
-                    : "Keine Faelle mit Protokoll vorhanden. Bitte zuerst Ordner waehlen und scannen.";
-                return;
-            }
-            SelectedCase = firstUnprocessed;
-        }
-        if (string.IsNullOrEmpty(SelectedCase.ProtocolPath))
-        {
-            StatusText = "Der ausgewaehlte Fall hat kein Protokoll (PDF).";
+            StatusText = selection.StatusText ?? "";
             return;
         }
+        SelectedCase = selection.Case;
 
         _selfTrainingCts?.Cancel();
         _selfTrainingCts?.Dispose();
