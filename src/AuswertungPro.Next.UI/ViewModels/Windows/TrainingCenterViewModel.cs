@@ -1090,8 +1090,10 @@ public partial class TrainingCenterViewModel : ObservableObject
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    runSummary.RecordError(ex.Message);
-                    Log($"  FEHLER: {ex.Message}");
+                    TrainingBatchImportRunExceptionController.RecordCaseFailure(
+                        ex,
+                        runSummary,
+                        Log);
                 }
             }
 
@@ -1120,13 +1122,16 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            Log("Batch-Import abgebrochen durch Benutzer.");
-            StatusText = "Batch-Import abgebrochen.";
+            TrainingBatchImportRunExceptionController.ApplyCanceled(
+                Log,
+                value => StatusText = value);
         }
         catch (Exception ex)
         {
-            Log($"FATALER FEHLER: {ex.Message}");
-            StatusText = $"Fehler beim Batch-Import: {ex.Message}";
+            TrainingBatchImportRunExceptionController.ApplyFatal(
+                ex,
+                Log,
+                value => StatusText = value);
         }
         finally
         {
