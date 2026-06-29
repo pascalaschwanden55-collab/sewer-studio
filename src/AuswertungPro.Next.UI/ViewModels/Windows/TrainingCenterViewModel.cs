@@ -1783,18 +1783,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                        + $"{result.SamplesGenerated} Samples in {result.Duration:mm\\:ss}";
 
             // Match-Rate-Verlauf persistieren (Counts → Prozente)
-            var matchTotal = result.ExactMatches + result.PartialMatches + result.Mismatches + result.NoFindings;
-            if (matchTotal > 0)
-            {
-                await SelfTrainingHistoryStore.AppendRunAsync(new SelfTrainingRunSnapshot(
-                    DateTime.UtcNow,
-                    result.CaseId,
-                    result.TotalEntries,
-                    (double)result.ExactMatches / matchTotal,
-                    (double)result.PartialMatches / matchTotal,
-                    (double)result.Mismatches / matchTotal,
-                    (double)result.NoFindings / matchTotal));
-            }
+            if (SelfTrainingHistorySnapshotBuilder.Build(result, DateTime.UtcNow) is { } snapshot)
+                await SelfTrainingHistoryStore.AppendRunAsync(snapshot);
 
             // Inkrementelles KB-Update fuer ExactMatch-Samples (B1)
             if (result.ExactMatches > 0 && result.SamplesGenerated > 0)
