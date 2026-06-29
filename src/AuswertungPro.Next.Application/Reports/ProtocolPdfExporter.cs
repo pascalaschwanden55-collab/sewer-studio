@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -20,15 +19,6 @@ namespace AuswertungPro.Next.Application.Reports;
 
 public sealed class ProtocolPdfExporter
 {
-    private const int HaltungsgrafikWidth = 770;
-    private const int HaltungsgrafikHeight = 520;
-    private const int HaltungsgrafikMarginTop = 8;
-    private const int HaltungsgrafikHeaderHeight = 16;
-    private const int HaltungsgrafikNodeZone = 32;   // Platz fuer Schachtknoten + Beschriftung
-    private const int HaltungsgrafikMarginBottom = 44; // Platz fuer unteren Knoten + Beschriftung
-    private const int HaltungsgrafikLineX = 42;
-    private const int HaltungsgrafikTableX = 98;
-    private const int HaltungsgrafikRightMargin = 6;
 
     public byte[] BuildPdf(string projectTitle, ProtocolDocument doc, string projectRootAbs)
         => BuildPdf(projectTitle, doc, projectRootAbs, new ProtocolPdfExportOptions());
@@ -850,25 +840,13 @@ public sealed class ProtocolPdfExporter
         _ => "#F2F4F5"          // neutral-hell (grau)
     };
 
+    // Dünne Delegation zu ProtocolZustandText (verhaltensneutral extrahiert).
     private static string Shorten(string text, int max)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return string.Empty;
-        if (text.Length <= max)
-            return text;
-        return text.Substring(0, Math.Max(0, max - 1)).TrimEnd() + "…";
-    }
+        => ProtocolZustandText.Shorten(text, max);
 
+    // Dünne Delegation zu ProtocolTextHelpers (verhaltensneutral extrahiert).
     private static string EscapeSvgText(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-            return string.Empty;
-        return text.Replace("&", "&amp;")
-            .Replace("<", "&lt;")
-            .Replace(">", "&gt;")
-            .Replace("\"", "&quot;")
-            .Replace("'", "&apos;");
-    }
+        => ProtocolTextHelpers.EscapeSvgText(text);
 
     private static List<PhotoItem> BuildPhotoItems(
         IReadOnlyList<ProtocolEntry> entries,
@@ -920,6 +898,7 @@ public sealed class ProtocolPdfExporter
         return "-";
     }
 
+    // Dünne Delegation zu HaltungsgrafikSvgBuilder (verhaltensneutral extrahiert).
     private static string BuildHaltungsgrafikSvg(
         double length,
         IReadOnlyList<ProtocolEntry> entries,
@@ -929,483 +908,19 @@ public sealed class ProtocolPdfExporter
         bool? flowDown,
         string brand = "#006E9C",
         int? overrideHeight = null)
-    {
-        var width = HaltungsgrafikWidth;
-        var height = overrideHeight ?? HaltungsgrafikHeight;
-        var marginTop = HaltungsgrafikMarginTop;
-        var headerHeight = HaltungsgrafikHeaderHeight;
-        var nodeZone = HaltungsgrafikNodeZone;
-        var marginBottom = HaltungsgrafikMarginBottom;
-        var lineX = HaltungsgrafikLineX;
-        var tableX = HaltungsgrafikTableX;
-        var rightMargin = HaltungsgrafikRightMargin;
+        => HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(length, entries, photoNumbers, startNode, endNode, flowDown, brand, overrideHeight);
 
-        // top/bottom: Rohr-Anfang/-Ende mit Abstand fuer Schachtknoten und Header
-        var top = (double)marginTop + headerHeight + nodeZone;
-        var bottom = height - marginBottom;
-        var pipeWidth = 14d;
-        var pipeHalf = pipeWidth / 2.0;
-
-        var tableWidth = Math.Max(1d, width - tableX - rightMargin);
-        var colMeterWidth = 54d;
-        var colCodeWidth = 56d;
-        var colMpegWidth = 62d;
-        var colFotoWidth = 38d;
-        var colStufeWidth = 40d;
-        var colZustandWidth = Math.Max(120d, tableWidth - (colMeterWidth + colCodeWidth + colMpegWidth + colFotoWidth + colStufeWidth));
-
-        var colMeterX = tableX;
-        var colCodeX = colMeterX + colMeterWidth;
-        var colZustandX = colCodeX + colCodeWidth;
-        var colMpegX = colZustandX + colZustandWidth;
-        var colFotoX = colMpegX + colMpegWidth;
-        var colStufeX = colFotoX + colFotoWidth;
-
-        var headerY = marginTop + 11;
-        var headerLineY = marginTop + headerHeight + 2;
-
-        var sb = new StringBuilder();
-        sb.Append($"<svg xmlns='http://www.w3.org/2000/svg' width='{width}' height='{height}' viewBox='0 0 {width} {height}'>");
-        sb.Append("<rect width='100%' height='100%' fill='#FFFFFF'/>");
-
-        // --- Defs: Gradients, Patterns, Filters, ClipPaths ---
-        sb.Append("<defs>");
-
-        // 3D-Rohr-Gradient (horizontal: hell -> dunkel -> hell)
-        sb.Append($"<linearGradient id='pipeGrad' x1='0' y1='0' x2='1' y2='0'>");
-        sb.Append($"<stop offset='0%' stop-color='{brand}' stop-opacity='0.3'/>");
-        sb.Append($"<stop offset='35%' stop-color='{brand}' stop-opacity='0.85'/>");
-        sb.Append($"<stop offset='50%' stop-color='{brand}' stop-opacity='1'/>");
-        sb.Append($"<stop offset='65%' stop-color='{brand}' stop-opacity='0.85'/>");
-        sb.Append($"<stop offset='100%' stop-color='{brand}' stop-opacity='0.3'/>");
-        sb.Append("</linearGradient>");
-
-        // Schaden-Schraffur-Pattern (diagonale rote Linien)
-        sb.Append("<pattern id='dmgHatch' patternUnits='userSpaceOnUse' width='6' height='6' patternTransform='rotate(45)'>");
-        sb.Append("<line x1='0' y1='0' x2='0' y2='6' stroke='#D64541' stroke-width='2'/>");
-        sb.Append("</pattern>");
-
-        // Drop-Shadow fuer Schachtknoten
-        sb.Append("<filter id='nodeShadow' x='-30%' y='-30%' width='160%' height='160%'>");
-        sb.Append("<feDropShadow dx='1' dy='1' stdDeviation='1.5' flood-color='#00000033'/>");
-        sb.Append("</filter>");
-
-        // Boden-Schraffur (horizontale Linien fuer Erdreich)
-        sb.Append("<pattern id='groundHatch' patternUnits='userSpaceOnUse' width='4' height='4'>");
-        sb.Append("<line x1='0' y1='2' x2='4' y2='2' stroke='#8B7355' stroke-width='0.7'/>");
-        sb.Append("</pattern>");
-
-        // Blauer Wasser-Gradient fuer Fliessrichtung
-        sb.Append("<linearGradient id='flowGrad' x1='0' y1='0' x2='0' y2='1'>");
-        sb.Append("<stop offset='0%' stop-color='#2196F3' stop-opacity='0.9'/>");
-        sb.Append("<stop offset='100%' stop-color='#1565C0' stop-opacity='1'/>");
-        sb.Append("</linearGradient>");
-
-        // Glow-Filter fuer Fliessrichtungspfeil
-        sb.Append("<filter id='flowGlow' x='-50%' y='-50%' width='200%' height='200%'>");
-        sb.Append("<feGaussianBlur in='SourceAlpha' stdDeviation='2' result='blur'/>");
-        sb.Append("<feFlood flood-color='#2196F3' flood-opacity='0.3'/>");
-        sb.Append("<feComposite in2='blur' operator='in'/>");
-        sb.Append("<feMerge><feMergeNode/><feMergeNode in='SourceGraphic'/></feMerge>");
-        sb.Append("</filter>");
-
-        // ClipPath-Definitionen fuer jede Spalte
-        sb.Append($"<clipPath id='clipMeter'><rect x='{Svg(colMeterX)}' y='0' width='{Svg(colMeterWidth - 2)}' height='{height}'/></clipPath>");
-        sb.Append($"<clipPath id='clipCode'><rect x='{Svg(colCodeX)}' y='0' width='{Svg(colCodeWidth - 2)}' height='{height}'/></clipPath>");
-        sb.Append($"<clipPath id='clipZustand'><rect x='{Svg(colZustandX)}' y='0' width='{Svg(colZustandWidth - 2)}' height='{height}'/></clipPath>");
-        sb.Append($"<clipPath id='clipMpeg'><rect x='{Svg(colMpegX)}' y='0' width='{Svg(colMpegWidth - 2)}' height='{height}'/></clipPath>");
-        sb.Append($"<clipPath id='clipFoto'><rect x='{Svg(colFotoX)}' y='0' width='{Svg(colFotoWidth - 2)}' height='{height}'/></clipPath>");
-        sb.Append($"<clipPath id='clipStufe'><rect x='{Svg(colStufeX)}' y='0' width='{Svg(colStufeWidth - 2)}' height='{height}'/></clipPath>");
-        sb.Append("</defs>");
-
-        // --- Card-Style Spaltenheader ---
-        var hdrBgY = marginTop - 2;
-        var hdrBgH = headerHeight + 4;
-        sb.Append($"<rect x='{Svg(tableX - 4)}' y='{Svg(hdrBgY)}' width='{Svg(tableWidth + 8)}' height='{Svg(hdrBgH)}' rx='4' ry='4' fill='#FFFFFF' stroke='#D1D5DB' stroke-width='0.6'/>");
-
-        sb.Append($"<text x='{Svg(colMeterX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>m+</text>");
-        sb.Append($"<text x='{Svg(colCodeX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>OP Kürzel</text>");
-        sb.Append($"<text x='{Svg(colZustandX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>Zustand</text>");
-        sb.Append($"<text x='{Svg(colMpegX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>MPEG</text>");
-        sb.Append($"<text x='{Svg(colFotoX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>Foto</text>");
-        sb.Append($"<text x='{Svg(colStufeX)}' y='{Svg(headerY)}' font-size='11' font-weight='bold' fill='#1F2937' font-family='sans-serif'>Stufe</text>");
-
-        // Vertikale Spaltentrennlinien
-        foreach (var cx in new[] { colCodeX, colZustandX, colMpegX, colFotoX, colStufeX })
-            sb.Append($"<line x1='{Svg(cx - 3)}' y1='{Svg(hdrBgY + 3)}' x2='{Svg(cx - 3)}' y2='{Svg(hdrBgY + hdrBgH - 3)}' stroke='#D1D5DB' stroke-width='0.5'/>");
-
-        sb.Append($"<line x1='{Svg(tableX - 4)}' y1='{Svg(headerLineY)}' x2='{Svg(width - rightMargin + 4)}' y2='{Svg(headerLineY)}' stroke='#D1D5DB' stroke-width='0.8'/>");
-
-        // --- Alternating tick background stripes ---
-        var tickStep = ChooseTickStep(length);
-        var ticks = BuildTicks(length, tickStep);
-        for (var ti = 0; ti < ticks.Count - 1; ti++)
-        {
-            if (ti % 2 != 0) continue;
-            var yStart = MapToLine(ticks[ti], length, top, bottom);
-            var yEnd = MapToLine(ticks[ti + 1], length, top, bottom);
-            sb.Append($"<rect x='{Svg(lineX - pipeHalf - 10)}' y='{Svg(yStart)}' width='{Svg(pipeWidth + 20)}' height='{Svg(yEnd - yStart)}' fill='#F5F5F5' rx='2'/>");
-        }
-
-        // --- Tick-Markierungen (Messband-Stil) ---
-        foreach (var meter in ticks)
-        {
-            var y = MapToLine(meter, length, top, bottom);
-            var isMainTick = Math.Abs(meter % (tickStep * 2)) < 0.001 || meter == 0 || Math.Abs(meter - length) < 0.001;
-            var tickLen = isMainTick ? 8d : 5d;
-            var strokeW = isMainTick ? "1.2" : "0.8";
-            sb.Append($"<line x1='{Svg(lineX - pipeHalf - tickLen)}' y1='{Svg(y)}' x2='{Svg(lineX - pipeHalf)}' y2='{Svg(y)}' stroke='#4A5568' stroke-width='{strokeW}'/>");
-            sb.Append($"<text x='{Svg(lineX - pipeHalf - tickLen - 3)}' y='{Svg(y + 3)}' font-size='{(isMainTick ? "11" : "10")}' text-anchor='end' fill='#1F2937' font-family='sans-serif'>{meter:0.00}</text>");
-        }
-
-        // --- 3D-Rohr (Gradient-Rechteck statt einfache Linie) ---
-        sb.Append($"<rect x='{Svg(lineX - pipeHalf)}' y='{Svg(top)}' width='{Svg(pipeWidth)}' height='{Svg(bottom - top)}' fill='url(#pipeGrad)' rx='3'/>");
-        // Rohrwand-Randlinien
-        sb.Append($"<line x1='{Svg(lineX - pipeHalf)}' y1='{Svg(top)}' x2='{Svg(lineX - pipeHalf)}' y2='{Svg(bottom)}' stroke='{brand}' stroke-width='0.8' opacity='0.6'/>");
-        sb.Append($"<line x1='{Svg(lineX + pipeHalf)}' y1='{Svg(top)}' x2='{Svg(lineX + pipeHalf)}' y2='{Svg(bottom)}' stroke='{brand}' stroke-width='0.8' opacity='0.6'/>");
-
-        // --- Bodenlinien an Schachtpositionen (Erdreich-Darstellung) ---
-        var hasAbort = entries.Any(e => IsAbortCode(e));
-        var groundW = 30d;
-        sb.Append($"<rect x='{Svg(lineX - groundW)}' y='{Svg(top - 2)}' width='{Svg(groundW * 2)}' height='4' fill='url(#groundHatch)'/>");
-
-        if (!hasAbort)
-            sb.Append($"<rect x='{Svg(lineX - groundW)}' y='{Svg(bottom - 2)}' width='{Svg(groundW * 2)}' height='4' fill='url(#groundHatch)'/>");
-
-        // --- Schachtknoten: Kreis sitzt UEBER/UNTER dem Rohranfang/-ende ---
-        // Rohranfang (top) und Rohrende (bottom) sind der Uebergang Schacht->Haltung.
-        // Der Schachtdeckel-Kreis sitzt daher oberhalb bzw. unterhalb des Rohres.
-        var nodeR = 11d;
-        var topNodeCY = top - nodeR;      // Oberer Schacht: Kreismitte oberhalb Rohranfang
-        var bottomNodeCY = bottom + nodeR; // Unterer Schacht: Kreismitte unterhalb Rohrende
-
-        // --- Oberer Schachtknoten: Realistischer Schachtdeckel ---
-        sb.Append($"<circle cx='{Svg(lineX)}' cy='{Svg(topNodeCY)}' r='{Svg(nodeR)}' fill='#F5F5F5' stroke='#4A5568' stroke-width='1.8' filter='url(#nodeShadow)'/>");
-        sb.Append($"<circle cx='{Svg(lineX)}' cy='{Svg(topNodeCY)}' r='{Svg(nodeR * 0.65)}' fill='none' stroke='{brand}' stroke-width='1.2'/>");
-        // Radiale Linien (Schachtdeckel-Muster)
-        for (var angle = 0; angle < 360; angle += 45)
-        {
-            var rad = angle * Math.PI / 180.0;
-            var x2 = lineX + Math.Cos(rad) * nodeR * 0.9;
-            var y2 = topNodeCY + Math.Sin(rad) * nodeR * 0.9;
-            sb.Append($"<line x1='{Svg(lineX)}' y1='{Svg(topNodeCY)}' x2='{Svg(x2)}' y2='{Svg(y2)}' stroke='{brand}' stroke-width='0.8' opacity='0.5'/>");
-        }
-
-        // --- Unterer Schachtknoten: Nur anzeigen wenn kein Abbruch ---
-        if (!hasAbort)
-        {
-            sb.Append($"<circle cx='{Svg(lineX)}' cy='{Svg(bottomNodeCY)}' r='{Svg(nodeR)}' fill='#F5F5F5' stroke='#4A5568' stroke-width='1.8' filter='url(#nodeShadow)'/>");
-            sb.Append($"<circle cx='{Svg(lineX)}' cy='{Svg(bottomNodeCY)}' r='{Svg(nodeR * 0.65)}' fill='none' stroke='{brand}' stroke-width='1.2'/>");
-            sb.Append($"<circle cx='{Svg(lineX)}' cy='{Svg(bottomNodeCY)}' r='3' fill='{brand}'/>");
-        }
-
-        // --- Schacht-Beschriftungen ---
-        if (!string.IsNullOrWhiteSpace(startNode))
-        {
-            var startLabelY = Math.Max(8, topNodeCY - nodeR - 4);
-            sb.Append($"<text x='{Svg(lineX)}' y='{Svg(startLabelY)}' font-size='13' font-weight='600' text-anchor='middle' fill='#1F2937' font-family='sans-serif'>{EscapeSvgText(startNode)}</text>");
-        }
-        if (!hasAbort && !string.IsNullOrWhiteSpace(endNode))
-        {
-            var endLabelY = Math.Min(height - 2, bottomNodeCY + nodeR + 12);
-            sb.Append($"<text x='{Svg(lineX)}' y='{Svg(endLabelY)}' font-size='13' font-weight='600' text-anchor='middle' fill='#1F2937' font-family='sans-serif'>{EscapeSvgText(endNode)}</text>");
-        }
-
-        // --- Fliessrichtung (Blauer Pfeil mit Wellen) ---
-        if (flowDown.HasValue)
-        {
-            var flowColor = "#2196F3";
-            var flowColorDark = "#1565C0";
-            var arrowX = lineX; // Pfeil zentriert auf dem Rohr
-            var arrowY = flowDown.Value
-                ? top + (bottom - top) * 0.30
-                : top + (bottom - top) * 0.70;
-            var aW = 10d; // Pfeilbreite (Halbbreite)
-            var aH = 14d; // Pfeilhoehe
-
-            // Grosser blauer Pfeil mit Glow-Effekt
-            if (flowDown.Value)
-            {
-                // Pfeil nach unten
-                sb.Append($"<polygon points='{Svg(arrowX - aW)},{Svg(arrowY - aH / 2)} {Svg(arrowX + aW)},{Svg(arrowY - aH / 2)} {Svg(arrowX)},{Svg(arrowY + aH / 2)}' " +
-                          $"fill='url(#flowGrad)' stroke='white' stroke-width='1.5' filter='url(#flowGlow)'/>");
-            }
-            else
-            {
-                // Pfeil nach oben
-                sb.Append($"<polygon points='{Svg(arrowX - aW)},{Svg(arrowY + aH / 2)} {Svg(arrowX + aW)},{Svg(arrowY + aH / 2)} {Svg(arrowX)},{Svg(arrowY - aH / 2)}' " +
-                          $"fill='url(#flowGrad)' stroke='white' stroke-width='1.5' filter='url(#flowGlow)'/>");
-            }
-
-            // Wellenlinien (3 Wellen) links neben dem Rohr
-            var waveX = lineX - pipeHalf - 10; // Links neben dem Rohr
-            var waveCenterY = (top + bottom) / 2.0;
-            var waveLen = 40d; // Laenge der Wellenlinien
-            var waveAmp = 2.5; // Amplitude der Wellen
-            var waveSpacing = 6d; // Abstand zwischen Wellenlinien
-
-            for (var wi = -1; wi <= 1; wi++)
-            {
-                var wy = waveCenterY + wi * waveSpacing;
-                var waveStartY = wy - waveLen / 2;
-                // SVG-Pfad fuer Sinuswelle (vertikal, da Rohr vertikal)
-                var wavePath = new StringBuilder();
-                wavePath.Append($"M {Svg(waveX)} {Svg(waveStartY)}");
-                var segments = 8;
-                var segLen = waveLen / segments;
-                for (var si = 0; si < segments; si++)
-                {
-                    var cy1 = waveStartY + si * segLen + segLen * 0.33;
-                    var cy2 = waveStartY + si * segLen + segLen * 0.66;
-                    var ey = waveStartY + (si + 1) * segLen;
-                    var dx = (si % 2 == 0) ? waveAmp : -waveAmp;
-                    wavePath.Append($" C {Svg(waveX + dx)} {Svg(cy1)}, {Svg(waveX + dx)} {Svg(cy2)}, {Svg(waveX)} {Svg(ey)}");
-                }
-                sb.Append($"<path d='{wavePath}' fill='none' stroke='{flowColor}' stroke-width='1.2' opacity='0.6'/>");
-            }
-
-            // Kleiner Richtungspfeil am Ende der Wellen
-            var waveArrowY = flowDown.Value ? waveCenterY + waveLen / 2 + 4 : waveCenterY - waveLen / 2 - 4;
-            var waTip = flowDown.Value ? waveArrowY + 5 : waveArrowY - 5;
-            sb.Append($"<polygon points='{Svg(waveX - 3)},{Svg(waveArrowY)} {Svg(waveX + 3)},{Svg(waveArrowY)} {Svg(waveX)},{Svg(waTip)}' " +
-                      $"fill='{flowColor}' opacity='0.7'/>");
-
-            // Rotierter Label-Text
-            var midY = (top + bottom) / 2.0;
-            var flowLabel = flowDown.Value ? "\u2193 Fliessrichtung" : "\u2191 Fliessrichtung";
-            var rotation = flowDown.Value ? 90 : -90;
-            sb.Append($"<text x='{Svg(waveX - 10)}' y='{Svg(midY)}' font-size='9' fill='{flowColorDark}' font-weight='600' text-anchor='middle' font-family='sans-serif' " +
-                      $"transform='rotate({rotation} {Svg(waveX - 10)} {Svg(midY)})'>{EscapeSvgText(flowLabel)}</text>");
-        }
-
-        // --- Streckenschaeden (schraffierte Rohr-Abschnitte) ---
-        foreach (var entry in entries)
-        {
-            if (!entry.IsStreckenschaden || entry.MeterStart is null || entry.MeterEnd is null)
-                continue;
-
-            var y1 = MapToLine(entry.MeterStart.Value, length, top, bottom);
-            var y2 = MapToLine(entry.MeterEnd.Value, length, top, bottom);
-            if (y2 < y1)
-                (y1, y2) = (y2, y1);
-
-            var segH = Math.Max(2, y2 - y1);
-            // Schraffierter Bereich ueber dem Rohr
-            sb.Append($"<rect x='{Svg(lineX - pipeHalf - 1)}' y='{Svg(y1)}' width='{Svg(pipeWidth + 2)}' height='{Svg(segH)}' fill='url(#dmgHatch)' opacity='0.7' rx='2'/>");
-            // Rote Randlinien
-            sb.Append($"<line x1='{Svg(lineX - pipeHalf - 1)}' y1='{Svg(y1)}' x2='{Svg(lineX + pipeHalf + 1)}' y2='{Svg(y1)}' stroke='#D64541' stroke-width='1.5'/>");
-            sb.Append($"<line x1='{Svg(lineX - pipeHalf - 1)}' y1='{Svg(y1 + segH)}' x2='{Svg(lineX + pipeHalf + 1)}' y2='{Svg(y1 + segH)}' stroke='#D64541' stroke-width='1.5'/>");
-        }
-
-        // --- Punktschaeden (schadenstypische Symbole) ---
-        foreach (var entry in entries)
-        {
-            if (entry.IsStreckenschaden)
-                continue;
-            if (IsAbortCode(entry) || IsLateralConnection(entry))
-                continue;
-
-            var pos = entry.MeterStart ?? entry.MeterEnd;
-            if (pos is null)
-                continue;
-
-            var y = MapToLine(pos.Value, length, top, bottom);
-            var category = ClassifyDamageSymbol(entry);
-            var symColor = GetDamageSymbolColor(category, brand);
-            RenderDamageSymbol(sb, lineX, y, category, symColor);
-        }
-
-        // --- Abbruch-Symbol (zwei rote schraege Parallelstriche) ---
-        foreach (var entry in entries)
-        {
-            if (!IsAbortCode(entry))
-                continue;
-
-            var pos = entry.MeterStart ?? entry.MeterEnd;
-            if (pos is null)
-                continue;
-
-            var ay = MapToLine(pos.Value, length, top, bottom);
-            var abortLen = 12d; // Laenge der Striche
-            var abortGap = 4d;  // Abstand zwischen den beiden Parallelstrichen
-            var abortStroke = 2.5;
-            // Erster Strich: schraeg von links-oben nach rechts-unten
-            sb.Append($"<line x1='{Svg(lineX - abortLen / 2 - abortGap / 2)}' y1='{Svg(ay - abortLen / 2)}' " +
-                      $"x2='{Svg(lineX + abortLen / 2 - abortGap / 2)}' y2='{Svg(ay + abortLen / 2)}' " +
-                      $"stroke='#D64541' stroke-width='{Svg(abortStroke)}' stroke-linecap='round'/>");
-            // Zweiter Strich: parallel verschoben
-            sb.Append($"<line x1='{Svg(lineX - abortLen / 2 + abortGap / 2)}' y1='{Svg(ay - abortLen / 2)}' " +
-                      $"x2='{Svg(lineX + abortLen / 2 + abortGap / 2)}' y2='{Svg(ay + abortLen / 2)}' " +
-                      $"stroke='#D64541' stroke-width='{Svg(abortStroke)}' stroke-linecap='round'/>");
-        }
-
-        // --- Seitenanschluesse (Laterale Rohrstutzen nach Uhrzeitposition) ---
-        foreach (var entry in entries)
-        {
-            if (!IsLateralConnection(entry))
-                continue;
-
-            var pos = entry.MeterStart ?? entry.MeterEnd;
-            if (pos is null)
-                continue;
-
-            var connY = MapToLine(pos.Value, length, top, bottom);
-            var clockHour = ExtractClockHour(entry);
-            if (clockHour is null)
-            {
-                // Kein Uhrzeitwert: Standardmaessig nach rechts (3 Uhr)
-                clockHour = 3;
-            }
-
-            // Winkel berechnen: 12 Uhr = 0 Grad (nach oben), Uhrzeigersinn
-            // In der Grafik: 9 Uhr = links, 3 Uhr = rechts
-            // Mapping: 3h=rechts(0°), 6h=unten(90°), 9h=links(180°), 12h=oben(270°)
-            var angleDeg = (clockHour.Value - 3) * 30.0; // 30° pro Stunde, 3 Uhr = 0°
-            var angleRad = angleDeg * Math.PI / 180.0;
-            var stubLen = 22d; // Laenge des Rohrstutzens
-            var stubEndX = lineX + Math.Cos(angleRad) * (pipeHalf + stubLen);
-            var stubEndY = connY + Math.Sin(angleRad) * (pipeHalf + stubLen);
-            var stubStartX = lineX + Math.Cos(angleRad) * pipeHalf;
-            var stubStartY = connY + Math.Sin(angleRad) * pipeHalf;
-
-            // Rohrstutzen-Linie
-            sb.Append($"<line x1='{Svg(stubStartX)}' y1='{Svg(stubStartY)}' x2='{Svg(stubEndX)}' y2='{Svg(stubEndY)}' " +
-                      $"stroke='#6B7280' stroke-width='3' stroke-linecap='round'/>");
-            // Anschluss-Kreis am Ende
-            sb.Append($"<circle cx='{Svg(stubEndX)}' cy='{Svg(stubEndY)}' r='3.5' fill='#6B7280' stroke='white' stroke-width='1'/>");
-            // Uhrzeitlabel
-            var labelOffsetX = Math.Cos(angleRad) * 8;
-            var labelOffsetY = Math.Sin(angleRad) * 8;
-            var anchor = clockHour.Value >= 7 && clockHour.Value <= 11 ? "end" : "start";
-            if (clockHour.Value == 12 || clockHour.Value == 6) anchor = "middle";
-            sb.Append($"<text x='{Svg(stubEndX + labelOffsetX)}' y='{Svg(stubEndY + labelOffsetY + 3)}' " +
-                      $"font-size='8' fill='#4B5563' text-anchor='{anchor}' font-family='sans-serif'>" +
-                      $"{clockHour.Value}h</text>");
-        }
-
-        // --- Beobachtungs-Labels ---
-        var labels = BuildHaltungsgrafikLabels(entries, length, top, bottom, photoNumbers, brand);
-        LayoutHaltungsgrafikLabels(labels, top, bottom);
-
-        // --- Bezugslinien (Verbindung Beobachtung auf Leitung -> Label-Zeile) ---
-        var refStartX = lineX + pipeHalf + 2;
-        var refEndX = colMeterX - 4;
-        foreach (var label in labels)
-        {
-            // Kleiner Punkt am Rohr (Abgangspunkt)
-            sb.Append($"<circle cx='{Svg(refStartX)}' cy='{Svg(label.TargetY)}' r='1.5' fill='{label.LineColor}' opacity='0.5'/>");
-            // Verbindungslinie vom Rohr zur Label-Zeile
-            sb.Append($"<line x1='{Svg(refStartX)}' y1='{Svg(label.TargetY)}' x2='{Svg(refEndX)}' y2='{Svg(label.LabelY)}' " +
-                      $"stroke='{label.LineColor}' stroke-width='0.6' opacity='0.35' stroke-dasharray='2,1.5'/>");
-            // Kleiner Punkt am Label-Ende
-            sb.Append($"<circle cx='{Svg(refEndX)}' cy='{Svg(label.LabelY)}' r='1' fill='{label.LineColor}' opacity='0.4'/>");
-        }
-
-        foreach (var label in labels)
-        {
-            var labelY = label.LabelY;
-
-            var textColor = "#111827";
-            var fontSize = Svg(label.FontSize);
-            sb.Append($"<text clip-path='url(#clipMeter)' x='{Svg(colMeterX)}' y='{Svg(labelY + 3)}' font-size='{fontSize}' text-anchor='start' fill='{textColor}' font-family='sans-serif'>" +
-                      $"{EscapeSvgText(label.MeterText)}</text>");
-            sb.Append($"<text clip-path='url(#clipCode)' x='{Svg(colCodeX)}' y='{Svg(labelY + 3)}' font-size='{fontSize}' font-weight='600' text-anchor='start' fill='{brand}' font-family='sans-serif'>" +
-                      $"{EscapeSvgText(label.CodeText)}</text>");
-            sb.Append($"<text clip-path='url(#clipZustand)' x='{Svg(colZustandX)}' y='{Svg(labelY + 3)}' font-size='{fontSize}' text-anchor='start' fill='{textColor}' font-family='sans-serif'>" +
-                      $"{EscapeSvgText(label.ZustandText)}</text>");
-            sb.Append($"<text clip-path='url(#clipMpeg)' x='{Svg(colMpegX)}' y='{Svg(labelY + 3)}' font-size='{fontSize}' text-anchor='start' fill='#4B5563' font-family='sans-serif'>" +
-                      $"{EscapeSvgText(label.MpegText)}</text>");
-            sb.Append($"<text clip-path='url(#clipFoto)' x='{Svg(colFotoX)}' y='{Svg(labelY + 3)}' font-size='{fontSize}' text-anchor='start' fill='#4B5563' font-family='sans-serif'>" +
-                      $"{EscapeSvgText(label.FotoText)}</text>");
-            sb.Append($"<text clip-path='url(#clipStufe)' x='{Svg(colStufeX)}' y='{Svg(labelY + 3)}' font-size='{fontSize}' text-anchor='start' fill='{textColor}' font-family='sans-serif'>" +
-                      $"{EscapeSvgText(label.StufeText)}</text>");
-        }
-
-        sb.Append("</svg>");
-        return sb.ToString();
-    }
-
+    // Dünne Delegationen zu ProtocolZustandText (verhaltensneutral extrahiert).
     private static string BuildHaltungsgrafikZustandText(ProtocolEntry entry)
-    {
-        var desc = NormalizeZustandDescription(entry.Beschreibung, entry.Code);
-        if (string.IsNullOrWhiteSpace(desc))
-            desc = BuildParameterShortText(entry);
-        if (string.IsNullOrWhiteSpace(desc))
-            desc = entry.CodeMeta?.Notes?.Trim();
-
-        if (string.IsNullOrWhiteSpace(desc))
-            return "-";
-
-        return Shorten(desc, 120);
-    }
+        => ProtocolZustandText.BuildHaltungsgrafikZustandText(entry);
 
     private static string BuildObservationZustandTextLong(ProtocolEntry entry)
-    {
-        var desc = NormalizeZustandDescription(entry.Beschreibung, entry.Code);
-        if (string.IsNullOrWhiteSpace(desc))
-            desc = BuildParameterShortText(entry);
-        if (string.IsNullOrWhiteSpace(desc))
-            desc = entry.CodeMeta?.Notes?.Trim();
-
-        return string.IsNullOrWhiteSpace(desc) ? "-" : desc;
-    }
+        => ProtocolZustandText.BuildObservationZustandTextLong(entry);
 
     private static string NormalizeZustandDescription(string? raw, string? code)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return string.Empty;
+        => ProtocolZustandText.NormalizeZustandDescription(raw, code);
 
-        var text = raw.Trim();
-        var codeToken = code?.Trim();
-
-        // If pattern is "CODE @0.00m (desc)" -> take the inside.
-        var open = text.IndexOf('(');
-        var close = text.LastIndexOf(')');
-        if (open >= 0 && close > open)
-        {
-            var prefix = text.Substring(0, open);
-            if ((!string.IsNullOrWhiteSpace(codeToken) && prefix.Contains(codeToken, StringComparison.OrdinalIgnoreCase))
-                || Regex.IsMatch(prefix, @"@\s*\d"))
-            {
-                text = text.Substring(open + 1, close - open - 1);
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(codeToken))
-            text = Regex.Replace(text, @"^\s*" + Regex.Escape(codeToken) + @"\b\s*", "", RegexOptions.IgnoreCase);
-
-        text = Regex.Replace(text, @"^\s*@?\s*\d+(?:[.,]\d+)?\s*m\b\s*", "", RegexOptions.IgnoreCase);
-        // Nur isolierte Kuerzel (z.B. "BCD", "BBCC") am Anfang entfernen, keine normalen Woerter
-        text = Regex.Replace(text, @"^\s*[A-Z0-9]{1,6}(?:\s+[A-Z0-9]{1,6})?(?=\s|$)", "", RegexOptions.None);
-
-        // Import-Artefakte: Trailing Hash/ID-Fragmente entfernen
-        // Beispiele: "-80631_6e c06c5c-c9", "137124-fc", "80fd46-", "f5fa69-828"
-        text = Regex.Replace(text, @"\s+-?\d+_[0-9a-fA-F]+(?:\s+[0-9a-fA-F-]+)*\s*$", "");
-        text = Regex.Replace(text, @"\s+[0-9a-fA-F]{5,}-[0-9a-fA-F]*\s*$", "");
-
-        // Klartext: Redundante Phrasen kuerzen
-        text = Regex.Replace(text, @"\s*Richtungs[aä]nderung\b", "", RegexOptions.IgnoreCase);
-        text = Regex.Replace(text, @"^Anderer Grund f[uü]r Abbruch der Inspektion,?\s*", "", RegexOptions.IgnoreCase);
-
-        text = text.Trim(' ', '-', '–', ':', ',', '/');
-
-        return text;
-    }
-
-    private sealed class HaltungsgrafikLabel
-    {
-        public double TargetY { get; init; }
-        public double LabelY { get; set; }
-        public string MeterText { get; init; } = "-";
-        public string CodeText { get; init; } = "-";
-        public string ZustandText { get; init; } = "-";
-        public string MpegText { get; init; } = "-";
-        public string FotoText { get; init; } = "-";
-        public string StufeText { get; init; } = "-";
-        public string LineColor { get; init; } = "#1F6FEB";
-        public double FontSize { get; set; } = 9;
-    }
-
+    // Dünne Delegationen zu HaltungsgrafikLabelLayout (verhaltensneutral extrahiert).
     private static List<HaltungsgrafikLabel> BuildHaltungsgrafikLabels(
         IReadOnlyList<ProtocolEntry> entries,
         double length,
@@ -1413,91 +928,10 @@ public sealed class ProtocolPdfExporter
         double bottom,
         IReadOnlyDictionary<ProtocolEntry, string>? photoNumbers,
         string brand = "#006E9C")
-    {
-        var list = new List<HaltungsgrafikLabel>();
+        => HaltungsgrafikLabelLayout.BuildHaltungsgrafikLabels(entries, length, top, bottom, photoNumbers, brand);
 
-        foreach (var entry in entries)
-        {
-            var isRange = entry.IsStreckenschaden && entry.MeterStart is not null && entry.MeterEnd is not null;
-            var pos = isRange
-                ? (entry.MeterStart!.Value + entry.MeterEnd!.Value) / 2d
-                : entry.MeterStart ?? entry.MeterEnd;
-
-            if (pos is null)
-                continue;
-
-            var y = MapToLine(pos.Value, length, top, bottom);
-            var meterText = BuildObservationMeterStartText(entry);
-            var codeText = string.IsNullOrWhiteSpace(entry.Code) ? "-" : entry.Code.Trim();
-            var zustandText = BuildHaltungsgrafikZustandText(entry);
-            var mpegText = BuildObservationMpegText(entry);
-            var fotoText = ResolvePhotoNumberText(entry, photoNumbers);
-            var stufeText = BuildObservationStufeText(entry);
-
-            list.Add(new HaltungsgrafikLabel
-            {
-                TargetY = y,
-                LabelY = y,
-                MeterText = string.IsNullOrWhiteSpace(meterText) ? "-" : meterText,
-                CodeText = string.IsNullOrWhiteSpace(codeText) ? "-" : codeText,
-                ZustandText = string.IsNullOrWhiteSpace(zustandText) ? "-" : zustandText,
-                MpegText = string.IsNullOrWhiteSpace(mpegText) ? "-" : mpegText,
-                FotoText = string.IsNullOrWhiteSpace(fotoText) ? "-" : fotoText,
-                StufeText = string.IsNullOrWhiteSpace(stufeText) ? "-" : stufeText,
-                LineColor = isRange ? "#D64541" : GetDamageSymbolColor(ClassifyDamageSymbol(entry), brand)
-            });
-        }
-
-        return list;
-    }
-
-    private static void LayoutHaltungsgrafikLabels(
-        List<HaltungsgrafikLabel> labels,
-        double top,
-        double bottom)
-    {
-        if (labels.Count == 0)
-            return;
-
-        labels.Sort((a, b) => a.TargetY.CompareTo(b.TargetY));
-        var available = Math.Max(1d, bottom - top);
-        var minGap = Math.Clamp(available / Math.Max(1, labels.Count), 9d, 15d);
-        var minY = top + 2;
-        var maxY = bottom - 2;
-
-        labels[0].LabelY = Math.Clamp(labels[0].TargetY, minY, maxY);
-        for (var i = 1; i < labels.Count; i++)
-        {
-            labels[i].LabelY = Math.Clamp(Math.Max(labels[i].TargetY, labels[i - 1].LabelY + minGap), minY, maxY);
-        }
-
-        var overflow = labels[^1].LabelY - maxY;
-        if (overflow > 0)
-        {
-            for (var i = 0; i < labels.Count; i++)
-                labels[i].LabelY -= overflow;
-        }
-
-        for (var i = labels.Count - 2; i >= 0; i--)
-        {
-            if (labels[i].LabelY > labels[i + 1].LabelY - minGap)
-                labels[i].LabelY = labels[i + 1].LabelY - minGap;
-        }
-
-        var underflow = minY - labels[0].LabelY;
-        if (underflow > 0)
-        {
-            for (var i = 0; i < labels.Count; i++)
-                labels[i].LabelY += underflow;
-        }
-
-        for (var i = 0; i < labels.Count; i++)
-            labels[i].LabelY = Math.Clamp(labels[i].LabelY, minY, maxY);
-
-        var fontSize = minGap < 10 ? 9 : minGap < 12 ? 10 : 11;
-        foreach (var label in labels)
-            label.FontSize = fontSize;
-    }
+    private static void LayoutHaltungsgrafikLabels(List<HaltungsgrafikLabel> labels, double top, double bottom)
+        => HaltungsgrafikLabelLayout.LayoutHaltungsgrafikLabels(labels, top, bottom);
 
     private sealed record HaltungsgrafikScale(string? LengthText, string? ScaleText);
 
@@ -1512,270 +946,55 @@ public sealed class ProtocolPdfExporter
         return new HaltungsgrafikScale(lengthText, scaleText);
     }
 
+    // Skala/Tick-Mathematik liegt verhaltensneutral in HaltungsgrafikScaleCalculator (unit-getestet);
+    // Geometrie-Konstanten liegen in HaltungsgrafikSvgBuilder (verhaltensneutral extrahiert).
     private static int? ComputeScaleRatio(double length, int? svgHeight = null)
     {
-        if (length <= 0)
-            return null;
-
-        var effectiveHeight = svgHeight ?? HaltungsgrafikHeight;
-        var plotHeight = effectiveHeight - HaltungsgrafikMarginTop - HaltungsgrafikMarginBottom - HaltungsgrafikHeaderHeight - HaltungsgrafikNodeZone;
-        var plotCm = plotHeight * 2.54 / 72.0;
-        if (plotCm <= 0.01)
-            return null;
-
-        var mPerCm = length / plotCm;
-        if (mPerCm <= 0)
-            return null;
-
-        return (int)Math.Round(mPerCm * 100.0, MidpointRounding.AwayFromZero);
+        var effectiveHeight = svgHeight ?? HaltungsgrafikSvgBuilder.Height;
+        var plotHeight = effectiveHeight - HaltungsgrafikSvgBuilder.MarginTop - HaltungsgrafikSvgBuilder.MarginBottom - HaltungsgrafikSvgBuilder.HeaderHeight - HaltungsgrafikSvgBuilder.NodeZone;
+        return HaltungsgrafikScaleCalculator.ComputeScaleRatio(length, plotHeight);
     }
 
     private static List<double> BuildTicks(double length, double step)
-    {
-        var list = new List<double>();
-        if (length <= 0 || step <= 0)
-            return list;
-
-        var m = 0d;
-        while (m <= length + 1e-6)
-        {
-            list.Add(m);
-            m += step;
-        }
-
-        if (list.Count == 0 || Math.Abs(list[^1] - length) > 1e-6)
-            list.Add(length);
-
-        return list.Distinct().OrderBy(x => x).ToList();
-    }
+        => HaltungsgrafikScaleCalculator.BuildTicks(length, step);
 
     private static double ChooseTickStep(double length)
-    {
-        var candidates = new[] { 0.2, 0.5, 1d, 2d, 5d, 10d, 20d, 50d };
-        if (length <= 0)
-            return 1;
+        => HaltungsgrafikScaleCalculator.ChooseTickStep(length);
 
-        foreach (var step in candidates)
-        {
-            var count = length / step;
-            if (count >= 4 && count <= 8)
-                return step;
-        }
-
-        return candidates.Last();
-    }
-
+    // Dünne Delegationen zu HoldingNodeParser (verhaltensneutral extrahiert).
     public static (string? Start, string? End) SplitHoldingNodes(string? holdingLabel)
-    {
-        if (string.IsNullOrWhiteSpace(holdingLabel))
-            return (null, null);
-
-        var parts = holdingLabel
-            .Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        if (parts.Length == 1)
-            return (parts[0], null);
-        if (parts.Length >= 2)
-            return (parts[0], parts[1]);
-
-        return (null, null);
-    }
+        => HoldingNodeParser.SplitHoldingNodes(holdingLabel);
 
     private static bool? ParseFlowDirection(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
+        => HoldingNodeParser.ParseFlowDirection(text);
 
-        if (text.Contains("gegen", StringComparison.OrdinalIgnoreCase))
-            return false;
-        if (text.Contains("in", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        return null;
-    }
-
-    /// <summary>Prüft ob ein Protokolleintrag einen Inspektions-Abbruch darstellt (BDC-Codes).</summary>
+    // Dünne Delegationen zu ProtocolTextHelpers (verhaltensneutral extrahiert).
+    /// <summary>Prueft ob ein Protokolleintrag einen Inspektions-Abbruch darstellt (BDC-Codes).</summary>
     private static bool IsAbortCode(ProtocolEntry entry)
-    {
-        var code = (entry.Code ?? "").Trim().ToUpperInvariant();
-        // BDC* = Abbruch der Inspektion (Hindernis, hoher Wasserstand, Versagen der Ausruestung, etc.)
-        return code.StartsWith("BDC", StringComparison.Ordinal);
-    }
+        => ProtocolTextHelpers.IsAbortCode(entry);
 
-    /// <summary>Prüft ob ein Protokolleintrag ein Seitenanschluss (lateral connection) ist.</summary>
+    /// <summary>Prueft ob ein Protokolleintrag ein Seitenanschluss (lateral connection) ist.</summary>
     private static bool IsLateralConnection(ProtocolEntry entry)
-    {
-        var code = (entry.Code ?? "").Trim().ToUpperInvariant();
-        // BAG* = Anschluss einragend, BAH* = Anschluss falsch/beschaedigt etc.
-        // BCA* = Bestandsaufnahme Anschluss (Formstueck, Sattelanschluss)
-        if (code.StartsWith("BAG", StringComparison.Ordinal) ||
-            code.StartsWith("BAH", StringComparison.Ordinal) ||
-            code.StartsWith("BCAA", StringComparison.Ordinal) ||
-            code.StartsWith("BCAB", StringComparison.Ordinal))
-            return true;
-
-        // Fallback: Beschreibung enthält "Anschluss" oder "Seiteneinlauf"
-        var desc = entry.Beschreibung ?? entry.CodeMeta?.Notes ?? "";
-        if (desc.Contains("Anschluss", StringComparison.OrdinalIgnoreCase) ||
-            desc.Contains("Seiteneinlauf", StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        return false;
-    }
+        => ProtocolTextHelpers.IsLateralConnection(entry);
 
     /// <summary>Extrahiert die Uhrzeitposition (1-12) eines Protokolleintrags.</summary>
     private static int? ExtractClockHour(ProtocolEntry entry)
-    {
-        var parameters = entry.CodeMeta?.Parameters;
-        if (parameters is null || parameters.Count == 0)
-            return null;
-
-        // Prioritaet: vsa.uhr.von > ClockPos1
-        var raw = GetParam(parameters, "vsa.uhr.von")
-               ?? GetParam(parameters, "ClockPos1")
-               ?? GetParam(parameters, "Quantifizierung1");
-
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        // Versuche die Uhrzeit zu parsen (z.B. "3", "3 Uhr", "03:00", "9")
-        var cleaned = Regex.Match(raw.Trim(), @"(\d{1,2})");
-        if (cleaned.Success && int.TryParse(cleaned.Groups[1].Value, out var hour) && hour >= 1 && hour <= 12)
-            return hour;
-
-        return null;
-    }
+        => ProtocolTextHelpers.ExtractClockHour(entry);
 
     /// <summary>Klassifiziert einen Schaden nach Symbol-Kategorie anhand des VSA-Codes.</summary>
     private static string ClassifyDamageSymbol(ProtocolEntry entry)
-        => ResolveDamageSymbolCategory(entry.Code);
+        => DamageSymbolClassifier.ResolveDamageSymbolCategory(entry.Code);
 
+    // Dünne Delegationen zu DamageSymbolClassifier (verhaltensneutral extrahiert).
     internal static string ResolveDamageSymbolCategory(string? rawCode)
-    {
-        var code = (rawCode ?? "").Trim().ToUpperInvariant();
-        if (code.StartsWith("BAA", StringComparison.Ordinal)) return "deformation";  // Verformung
-        if (code.StartsWith("BAB", StringComparison.Ordinal)) return "crack";        // Riss
-        if (code.StartsWith("BAC", StringComparison.Ordinal)) return "break";        // Bruch / Einsturz
-        if (code.StartsWith("BAD", StringComparison.Ordinal)) return "leak";         // Undichtheit
-        if (code.StartsWith("BAE", StringComparison.Ordinal)) return "offset";       // Versatz
-        if (code.StartsWith("BAF", StringComparison.Ordinal)) return "surface";      // Oberflaechenschaden
-        if (code.StartsWith("BAH", StringComparison.Ordinal)) return "offset";       // Schadhafter Anschluss
-        if (code.StartsWith("BAI", StringComparison.Ordinal)) return "obstacle";     // Hindernis
-        if (code.StartsWith("BAJ", StringComparison.Ordinal)) return "offset";       // Verschobene Rohrverbindung
-        if (code.StartsWith("BAK", StringComparison.Ordinal)) return "infiltration"; // Infiltration
-        if (code.StartsWith("BAL", StringComparison.Ordinal)) return "exfiltration"; // Exfiltration
-        if (code.StartsWith("BBA", StringComparison.Ordinal)) return "roots";        // Wurzeln / Bewuchs
-        if (code.StartsWith("BBB", StringComparison.Ordinal)) return "incrustation"; // Anhaftende Stoffe / Inkrustation
-        if (code.StartsWith("BBC", StringComparison.Ordinal)) return "deposit";      // Ablagerung
-        return "default";
-    }
+        => DamageSymbolClassifier.ResolveDamageSymbolCategory(rawCode);
 
-    /// <summary>Gibt die harmonisierte Farbe fuer eine Schadens-Kategorie zurueck.</summary>
     private static string GetDamageSymbolColor(string category, string fallback = "#006E9C")
-    {
-        return category switch
-        {
-            "crack" or "break"                          => "#D64541", // Rot - strukturell kritisch
-            "deformation" or "offset" or "surface"      => "#E67E22", // Orange - Verformung / Oberflaeche
-            "leak" or "infiltration" or "exfiltration"   => "#2196F3", // Blau - Wasser
-            "roots"                                      => "#27AE60", // Gruen - biologisch
-            "incrustation" or "deposit"                  => "#8B6914", // Braun - Anhaftung / Ablagerung
-            "obstacle"                                   => "#6B7280", // Grau - Hindernis
-            _ => fallback
-        };
-    }
+        => DamageSymbolClassifier.GetDamageSymbolColor(category, fallback);
 
-    /// <summary>Rendert ein schadenstypisches SVG-Symbol zentriert auf (cx, cy).</summary>
+    /// <summary>Dünne Delegation zu DamageSymbolRenderer (verhaltensneutral extrahiert).</summary>
     private static void RenderDamageSymbol(StringBuilder sb, double cx, double cy, string category, string color, double s = 5)
-    {
-        // Weisser Hintergrund-Kreis fuer Kontrast auf dem Rohr-Gradient
-        sb.Append($"<circle cx='{Svg(cx)}' cy='{Svg(cy)}' r='{Svg(s + 1.5)}' fill='white' opacity='0.85'/>");
-
-        switch (category)
-        {
-            case "crack": // Blitz-Zickzack (Rissbildung)
-                sb.Append($"<path d='M {Svg(cx)},{Svg(cy - s)} L {Svg(cx + s * 0.5)},{Svg(cy - s * 0.15)} " +
-                          $"L {Svg(cx - s * 0.5)},{Svg(cy + s * 0.15)} L {Svg(cx)},{Svg(cy + s)}' " +
-                          $"stroke='{color}' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>");
-                break;
-
-            case "break": // X-Kreuz (Bruch / Einsturz)
-                sb.Append($"<line x1='{Svg(cx - s * 0.7)}' y1='{Svg(cy - s * 0.7)}' x2='{Svg(cx + s * 0.7)}' y2='{Svg(cy + s * 0.7)}' " +
-                          $"stroke='{color}' stroke-width='2' stroke-linecap='round'/>");
-                sb.Append($"<line x1='{Svg(cx + s * 0.7)}' y1='{Svg(cy - s * 0.7)}' x2='{Svg(cx - s * 0.7)}' y2='{Svg(cy + s * 0.7)}' " +
-                          $"stroke='{color}' stroke-width='2' stroke-linecap='round'/>");
-                break;
-
-            case "deformation": // Gequetschte Ellipse (Deformation)
-                sb.Append($"<ellipse cx='{Svg(cx)}' cy='{Svg(cy)}' rx='{Svg(s)}' ry='{Svg(s * 0.5)}' " +
-                          $"fill='none' stroke='{color}' stroke-width='1.8'/>");
-                break;
-
-            case "leak": // Wassertropfen (Undichtheit)
-                sb.Append($"<path d='M {Svg(cx)},{Svg(cy - s)} " +
-                          $"Q {Svg(cx + s * 0.7)},{Svg(cy + s * 0.2)} {Svg(cx)},{Svg(cy + s)} " +
-                          $"Q {Svg(cx - s * 0.7)},{Svg(cy + s * 0.2)} {Svg(cx)},{Svg(cy - s)} Z' " +
-                          $"fill='{color}' opacity='0.85'/>");
-                break;
-
-            case "offset": // Versatz-Stufe
-                sb.Append($"<path d='M {Svg(cx - s)},{Svg(cy - s * 0.5)} L {Svg(cx)},{Svg(cy - s * 0.5)} " +
-                          $"L {Svg(cx)},{Svg(cy + s * 0.5)} L {Svg(cx + s)},{Svg(cy + s * 0.5)}' " +
-                          $"stroke='{color}' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>");
-                break;
-
-            case "surface": // Wellige Linie (Oberflaechenschaden)
-                sb.Append($"<path d='M {Svg(cx - s)},{Svg(cy)} " +
-                          $"Q {Svg(cx - s * 0.5)},{Svg(cy - s * 0.6)} {Svg(cx)},{Svg(cy)} " +
-                          $"Q {Svg(cx + s * 0.5)},{Svg(cy + s * 0.6)} {Svg(cx + s)},{Svg(cy)}' " +
-                          $"stroke='{color}' stroke-width='2' fill='none' stroke-linecap='round'/>");
-                break;
-
-            case "obstacle": // Gefuelltes Quadrat (Hindernis / Verstopfung)
-                sb.Append($"<rect x='{Svg(cx - s * 0.6)}' y='{Svg(cy - s * 0.6)}' " +
-                          $"width='{Svg(s * 1.2)}' height='{Svg(s * 1.2)}' " +
-                          $"fill='{color}' rx='1'/>");
-                break;
-
-            case "roots": // Y-Gabel (Wurzeleinwuchs)
-                sb.Append($"<line x1='{Svg(cx)}' y1='{Svg(cy + s)}' x2='{Svg(cx)}' y2='{Svg(cy)}' " +
-                          $"stroke='{color}' stroke-width='2' stroke-linecap='round'/>");
-                sb.Append($"<line x1='{Svg(cx)}' y1='{Svg(cy)}' x2='{Svg(cx - s * 0.6)}' y2='{Svg(cy - s)}' " +
-                          $"stroke='{color}' stroke-width='1.8' stroke-linecap='round'/>");
-                sb.Append($"<line x1='{Svg(cx)}' y1='{Svg(cy)}' x2='{Svg(cx + s * 0.6)}' y2='{Svg(cy - s)}' " +
-                          $"stroke='{color}' stroke-width='1.8' stroke-linecap='round'/>");
-                break;
-
-            case "infiltration": // Pfeil nach innen (Wassereintritt)
-                sb.Append($"<line x1='{Svg(cx + s)}' y1='{Svg(cy)}' x2='{Svg(cx - s * 0.3)}' y2='{Svg(cy)}' " +
-                          $"stroke='{color}' stroke-width='2' stroke-linecap='round'/>");
-                sb.Append($"<path d='M {Svg(cx + s * 0.2)},{Svg(cy - s * 0.4)} L {Svg(cx - s * 0.3)},{Svg(cy)} L {Svg(cx + s * 0.2)},{Svg(cy + s * 0.4)}' " +
-                          $"stroke='{color}' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/>");
-                break;
-
-            case "exfiltration": // Pfeil nach aussen (Wasseraustritt)
-                sb.Append($"<line x1='{Svg(cx - s)}' y1='{Svg(cy)}' x2='{Svg(cx + s * 0.3)}' y2='{Svg(cy)}' " +
-                          $"stroke='{color}' stroke-width='2' stroke-linecap='round'/>");
-                sb.Append($"<path d='M {Svg(cx - s * 0.2)},{Svg(cy - s * 0.4)} L {Svg(cx + s * 0.3)},{Svg(cy)} L {Svg(cx - s * 0.2)},{Svg(cy + s * 0.4)}' " +
-                          $"stroke='{color}' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/>");
-                break;
-
-            case "incrustation":
-            case "deposit": // Geschichtete Linien (Anhaftung / Ablagerung)
-                sb.Append($"<line x1='{Svg(cx - s * 0.8)}' y1='{Svg(cy)}' x2='{Svg(cx + s * 0.8)}' y2='{Svg(cy)}' " +
-                          $"stroke='{color}' stroke-width='1.8' stroke-linecap='round'/>");
-                sb.Append($"<line x1='{Svg(cx - s * 0.5)}' y1='{Svg(cy + s * 0.5)}' x2='{Svg(cx + s * 0.5)}' y2='{Svg(cy + s * 0.5)}' " +
-                          $"stroke='{color}' stroke-width='1.5' stroke-linecap='round'/>");
-                sb.Append($"<line x1='{Svg(cx - s * 0.3)}' y1='{Svg(cy + s)}' x2='{Svg(cx + s * 0.3)}' y2='{Svg(cy + s)}' " +
-                          $"stroke='{color}' stroke-width='1.2' stroke-linecap='round'/>");
-                break;
-
-            default: // Diamant (Allgemein / unbekannt)
-                sb.Append($"<polygon points='{Svg(cx)},{Svg(cy - s)} {Svg(cx + s)},{Svg(cy)} {Svg(cx)},{Svg(cy + s)} {Svg(cx - s)},{Svg(cy)}' " +
-                          $"fill='{color}' stroke='white' stroke-width='1.2'/>");
-                break;
-        }
-    }
+        => DamageSymbolRenderer.RenderDamageSymbol(sb, cx, cy, category, color, s);
 
     private static string ResolveInspectionDate(Project project, HaltungRecord record, ProtocolDocument doc)
     {
@@ -1793,25 +1012,7 @@ public sealed class ProtocolPdfExporter
 
     /// <summary>Aus einem Datumsbereich (z.B. "05.11.2025 - 11.11.2025") nur das erste Datum extrahieren.</summary>
     private static string ExtractSingleDate(string dateText)
-    {
-        if (string.IsNullOrWhiteSpace(dateText))
-            return dateText;
-
-        // "05.11.2025 - 11.11.2025" → "05.11.2025"
-        var separators = new[] { " - ", " – ", " bis ", "–", "-" };
-        foreach (var sep in separators)
-        {
-            var idx = dateText.IndexOf(sep, StringComparison.OrdinalIgnoreCase);
-            if (idx > 4) // mindestens ein Datum davor (dd.MM oder aehnlich)
-            {
-                var candidate = dateText.Substring(0, idx).Trim();
-                if (candidate.Length >= 8) // plausibles Datum
-                    return candidate;
-            }
-        }
-
-        return dateText;
-    }
+        => ProtocolTextHelpers.ExtractSingleDate(dateText);
 
     private static string BuildAiSummary(List<ProtocolEntry> entries, ProtocolPdfExportOptions options)
     {

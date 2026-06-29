@@ -192,7 +192,7 @@ public static class OfferPdfModelFactory
         var ownerBuckets = new Dictionary<string, OwnerSummaryBucket>(StringComparer.OrdinalIgnoreCase);
         var executorBuckets = new Dictionary<string, ExecutorSummaryBucket>(StringComparer.OrdinalIgnoreCase);
         var positionBuckets = new Dictionary<string, PositionSummaryBucket>(StringComparer.OrdinalIgnoreCase);
-        var specialStats = CreateSpecialStatsBuckets();
+        var specialStats = SpecialStatsClassifier.CreateSpecialStatsBuckets();
 
         foreach (var entry in list)
         {
@@ -281,13 +281,13 @@ public static class OfferPdfModelFactory
                     positionBucket.Holdings.Add(holding);
                     positionBucket.UnitPrices.Add(line.UnitPrice);
 
-                    if (TryResolveSpecialStatsCategory(line, out var category) &&
+                    if (SpecialStatsClassifier.TryResolveSpecialStatsCategory(line, out var category) &&
                         specialStats.TryGetValue(category, out var statBucket))
                     {
                         statBucket.TotalQty += line.Qty;
                         statBucket.TotalNet += lineTotal;
 
-                        var normalizedUnit = NormalizeUnit(line.Unit);
+                        var normalizedUnit = SpecialStatsClassifier.NormalizeUnit(line.Unit);
                         if (normalizedUnit.Length > 0)
                             statBucket.Units.Add(normalizedUnit);
                     }
@@ -313,7 +313,7 @@ public static class OfferPdfModelFactory
             });
         }
 
-        foreach (var cfg in SpecialStatsConfigs)
+        foreach (var cfg in SpecialStatsClassifier.SpecialStatsConfigs)
         {
             specialStats.TryGetValue(cfg.Category, out var bucket);
             bucket ??= new SpecialStatsBucket { DefaultUnit = cfg.DefaultUnit };
@@ -322,7 +322,7 @@ public static class OfferPdfModelFactory
             {
                 Category = cfg.Label,
                 QtyText = Qty(bucket.TotalQty),
-                Unit = ResolveDisplayUnit(bucket),
+                Unit = SpecialStatsClassifier.ResolveDisplayUnit(bucket),
                 NetText = Money(bucket.TotalNet)
             });
         }
@@ -486,111 +486,4 @@ public static class OfferPdfModelFactory
         public HashSet<decimal> UnitPrices { get; } = new();
     }
 
-    private static readonly SpecialStatsConfig[] SpecialStatsConfigs =
-    [
-        new(SpecialStatsCategory.InlinerGfk, "Inliner GFK", "m"),
-        new(SpecialStatsCategory.InlinerNadelfilz, "Inliner Nadelfilz", "m"),
-        new(SpecialStatsCategory.Manschette, "Manschetten", "stk"),
-        new(SpecialStatsCategory.Linerendmanschette, "Linerendmanschetten (LEM)", "stk")
-    ];
-
-    private static Dictionary<SpecialStatsCategory, SpecialStatsBucket> CreateSpecialStatsBuckets()
-    {
-        var dict = new Dictionary<SpecialStatsCategory, SpecialStatsBucket>();
-        foreach (var cfg in SpecialStatsConfigs)
-            dict[cfg.Category] = new SpecialStatsBucket { DefaultUnit = cfg.DefaultUnit };
-        return dict;
-    }
-
-    private static bool TryResolveSpecialStatsCategory(CostLine line, out SpecialStatsCategory category)
-    {
-        category = SpecialStatsCategory.None;
-        if (line is null)
-            return false;
-
-        var key = (line.ItemKey ?? "").Trim();
-        var text = (line.Text ?? "").Trim();
-        var combined = key + " " + text;
-
-        if (ContainsToken(combined, "LINERENDMANSCHETTE") ||
-            ContainsToken(combined, " ENDMANSCHETTE") ||
-            ContainsToken(combined, " LEM"))
-        {
-            category = SpecialStatsCategory.Linerendmanschette;
-            return true;
-        }
-
-        if (ContainsToken(combined, "SCHLAUCHLINER_GFK") ||
-            (ContainsToken(combined, "GFK") && ContainsToken(combined, "LINER")) ||
-            (ContainsToken(combined, "GFK") && ContainsToken(combined, "SCHLAUCHLINER")))
-        {
-            category = SpecialStatsCategory.InlinerGfk;
-            return true;
-        }
-
-        if (ContainsToken(combined, "SCHLAUCHLINER_NADELFILZ") ||
-            ContainsToken(combined, "NADELFILZ_LINER") ||
-            (ContainsToken(combined, "NADELFILZ") && ContainsToken(combined, "LINER")) ||
-            (ContainsToken(combined, "NADELFILZ") && ContainsToken(combined, "SCHLAUCHLINER")))
-        {
-            category = SpecialStatsCategory.InlinerNadelfilz;
-            return true;
-        }
-
-        if (ContainsToken(combined, "MANSCHETTE"))
-        {
-            category = SpecialStatsCategory.Manschette;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool ContainsToken(string text, string token)
-    {
-        if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(token))
-            return false;
-        return text.Contains(token.Trim(), StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string NormalizeUnit(string? unit)
-    {
-        var raw = (unit ?? "").Trim();
-        if (raw.Length == 0)
-            return "";
-        return raw.ToLowerInvariant();
-    }
-
-    private static string ResolveDisplayUnit(SpecialStatsBucket bucket)
-    {
-        if (bucket.Units.Count == 0)
-            return bucket.DefaultUnit;
-
-        if (bucket.Units.Count == 1)
-            return bucket.Units.First();
-
-        return "variabel";
-    }
-
-    private enum SpecialStatsCategory
-    {
-        None = 0,
-        InlinerGfk = 1,
-        InlinerNadelfilz = 2,
-        Manschette = 3,
-        Linerendmanschette = 4
-    }
-
-    private sealed record SpecialStatsConfig(
-        SpecialStatsCategory Category,
-        string Label,
-        string DefaultUnit);
-
-    private sealed class SpecialStatsBucket
-    {
-        public string DefaultUnit { get; set; } = "";
-        public decimal TotalQty { get; set; }
-        public decimal TotalNet { get; set; }
-        public HashSet<string> Units { get; } = new(StringComparer.OrdinalIgnoreCase);
-    }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -213,12 +213,7 @@ public static partial class HoldingFolderDistributor
 
 
     private static string? GetSuffixFromFirstUnderscore(string fileName)
-    {
-        var idx = fileName.IndexOf('_');
-        if (idx < 0)
-            return null;
-        return fileName.Substring(idx);
-    }
+        => HoldingDistribution.HoldingKeyUtils.GetSuffixFromFirstUnderscore(fileName);
 
 
     private static AuswertungPro.Next.Domain.Models.HaltungRecord? FindRecordByHolding(
@@ -257,7 +252,6 @@ public static partial class HoldingFolderDistributor
     }
 
 
-    private static readonly Regex NodePrefixRegex = new(@"^\d{1,2}\.", RegexOptions.Compiled);
 
     /// <summary>
     /// Entfernt XX. Praefixe (1-2 Ziffern + Punkt) von beiden Seiten eines Haltungsnamens.
@@ -269,44 +263,13 @@ public static partial class HoldingFolderDistributor
     /// Entfernt XX. Praefixe (1-2 Ziffern + Punkt) von beiden Seiten eines Haltungsnamens.
     /// Z.B. "07.7695-07.7078" → "7695-7078"
     /// </summary>
-    private static string StripNodePrefixes(string holdingKey)
-    {
-        var dashIdx = holdingKey.IndexOf('-');
-        if (dashIdx < 0)
-            return NodePrefixRegex.Replace(holdingKey, "");
-
-        var left = holdingKey[..dashIdx];
-        var right = holdingKey[(dashIdx + 1)..];
-        left = NodePrefixRegex.Replace(left, "");
-        right = NodePrefixRegex.Replace(right, "");
-        return $"{left}-{right}";
-    }
+    private static string StripNodePrefixes(string holdingKey) => HoldingIdNormalizer.StripNodePrefixes(holdingKey);
 
 
-    private static IEnumerable<string> EnumerateHoldingLookupKeys(string haltung)
-    {
-        var normalized = NormalizeHaltungId(haltung);
-        if (!string.IsNullOrWhiteSpace(normalized))
-            yield return normalized;
-
-        var reversed = ReverseHoldingId(normalized);
-        if (!string.IsNullOrWhiteSpace(reversed)
-            && !string.Equals(reversed, normalized, StringComparison.OrdinalIgnoreCase))
-            yield return reversed;
-    }
+    private static IEnumerable<string> EnumerateHoldingLookupKeys(string haltung) => HoldingIdNormalizer.EnumerateHoldingLookupKeys(haltung);
 
 
-    private static string ReverseHoldingId(string? haltung)
-    {
-        if (string.IsNullOrWhiteSpace(haltung))
-            return string.Empty;
-
-        var parts = haltung.Split('-', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 2)
-            return string.Empty;
-
-        return $"{parts[1]}-{parts[0]}";
-    }
+    private static string ReverseHoldingId(string? haltung) => HoldingIdNormalizer.ReverseHoldingId(haltung);
 
 
     private static VideoFindResult TryFindVideoFromRecordLink(

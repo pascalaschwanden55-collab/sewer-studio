@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 
@@ -576,7 +577,7 @@ public sealed class TrainingCenterImportService
             }
         };
 
-        var json = JsonSerializer.Serialize(root, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(root, JsonDefaults.Indented);
         File.WriteAllText(path, json);
     }
 

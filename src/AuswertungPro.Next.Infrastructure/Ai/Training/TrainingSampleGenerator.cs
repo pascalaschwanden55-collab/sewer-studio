@@ -277,11 +277,9 @@ public sealed class TrainingSampleGenerator
         return points;
     }
 
+    /// <summary>Delegiert an <see cref="VideoTimeEstimator"/>.</summary>
     private static double EstimateTime(double meter, double maxMeter, double duration)
-    {
-        if (maxMeter <= 0) return 0;
-        return Math.Clamp(meter / maxMeter * duration, 0, duration - 0.1);
-    }
+        => VideoTimeEstimator.EstimateTime(meter, maxMeter, duration);
 
     /// <summary>Delegiert an die zentrale Signatur-Methode auf TrainingSample.</summary>
     private static string BuildSignature(string caseId, string code, double meterCenter, double meterEnd)
@@ -438,15 +436,9 @@ public sealed class TrainingSampleGenerator
             {
                 var stderr = await p2.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
                 await p2.WaitForExitAsync(ct).ConfigureAwait(false);
-                var m = Regex.Match(stderr, @"Duration:\s*(\d+):(\d{2}):(\d{2}\.?\d*)");
-                if (m.Success
-                    && int.TryParse(m.Groups[1].Value, out var hh)
-                    && int.TryParse(m.Groups[2].Value, out var mm)
-                    && double.TryParse(m.Groups[3].Value, NumberStyles.Float,
-                        CultureInfo.InvariantCulture, out var ss))
-                {
-                    return (hh * 3600 + mm * 60 + ss, null);
-                }
+                var parsed = FfmpegDurationParser.Parse(stderr);
+                if (parsed > 0)
+                    return (parsed, null);
             }
         }
         catch (OperationCanceledException) { throw; }

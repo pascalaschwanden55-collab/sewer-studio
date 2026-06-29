@@ -174,62 +174,34 @@ public sealed class PipeCalibration
     /// <summary>Ist kalibriert (Auto-Erkennung ODER Referenzlinie wurde gezeichnet)?</summary>
     public bool IsCalibrated => (Source != CalibrationSource.None || WasManuallyCalibrated) && NormalizedDiameter > 0;
 
-    /// <summary>mm pro normiertem Pixel.</summary>
-    public double MmPerNormUnit => NormalizedDiameter > 0
-        ? NominalDiameterMm / NormalizedDiameter
-        : 0;
+    /// <summary>mm pro normiertem Pixel. Delegiert an <see cref="CalibrationMath.MmPerNormUnit"/>.</summary>
+    public double MmPerNormUnit => CalibrationMath.MmPerNormUnit(NominalDiameterMm, NormalizedDiameter);
 
-    /// <summary>Normierte Laenge in Millimeter umrechnen.</summary>
+    /// <summary>Normierte Laenge in Millimeter umrechnen. Delegiert an <see cref="CalibrationMath.NormToMm"/>.</summary>
     public double NormToMm(double normalizedLength)
-    {
-        if (NormalizedDiameter <= 0) return normalizedLength * 500; // Fallback
-        return normalizedLength * MmPerNormUnit;
-    }
+        => CalibrationMath.NormToMm(normalizedLength, NominalDiameterMm, NormalizedDiameter);
 
-    /// <summary>Pixel (normiert) in Millimeter umrechnen.</summary>
+    /// <summary>Pixel (normiert) in Millimeter umrechnen. Delegiert an <see cref="CalibrationMath.PixelToMm"/>.</summary>
     public double PixelToMm(double normalizedPixels, double frameWidthPx)
-    {
-        if (NormalizedDiameter > 0)
-            return NormToMm(normalizedPixels);
-        if (PipePixelDiameter <= 0) return 0;
-        double pipePixelNormalized = PipePixelDiameter / frameWidthPx;
-        double mmPerNormPixel = NominalDiameterMm / pipePixelNormalized;
-        return normalizedPixels * mmPerNormPixel;
-    }
+        => CalibrationMath.PixelToMm(normalizedPixels, frameWidthPx, NominalDiameterMm, NormalizedDiameter, PipePixelDiameter);
 
     /// <summary>
     /// Aspect-Ratio-korrigierte Distanz zwischen zwei normierten Punkten.
-    /// Normierte Koordinaten: X=0..1 ueber Bildbreite, Y=0..1 ueber Bildhoehe.
-    /// Bei nicht-quadratischen Bildern muss X mit Aspect (W/H) skaliert werden.
+    /// Delegiert an <see cref="CalibrationMath.AspectCorrectedDistance"/>.
     /// </summary>
     /// <param name="a">Startpunkt (normiert).</param>
     /// <param name="b">Endpunkt (normiert).</param>
     /// <param name="imageAspect">Seitenverhaeltnis (Breite/Hoehe). 1.0 fuer quadratisch, 1.78 fuer 16:9.</param>
     public static double AspectCorrectedDistance(NormalizedPoint a, NormalizedPoint b, double imageAspect = 1.0)
-    {
-        double dx = (b.X - a.X) * imageAspect;
-        double dy = b.Y - a.Y;
-        return Math.Sqrt(dx * dx + dy * dy);
-    }
+        => CalibrationMath.AspectCorrectedDistance(a, b, imageAspect);
 
-    /// <summary>Aspect-korrigierte normierte Laenge in mm umrechnen.</summary>
+    /// <summary>Aspect-korrigierte normierte Laenge in mm umrechnen. Delegiert an <see cref="CalibrationMath.NormToMmAspect"/>.</summary>
     public double NormToMmAspect(NormalizedPoint a, NormalizedPoint b, double imageAspect = 1.0)
-    {
-        double dist = AspectCorrectedDistance(a, b, imageAspect);
-        return NormToMm(dist);
-    }
+        => CalibrationMath.NormToMmAspect(a, b, NominalDiameterMm, NormalizedDiameter, imageAspect);
 
-    /// <summary>Punkt auf dem Frame → Uhrposition (0.0–12.0).</summary>
+    /// <summary>Punkt auf dem Frame → Uhrposition (0.0–12.0). Delegiert an <see cref="CalibrationMath.PointToClockHour"/>.</summary>
     public double PointToClockHour(NormalizedPoint point)
-    {
-        double dx = point.X - PipeCenter.X;
-        double dy = point.Y - PipeCenter.Y;
-        // atan2: 0° = rechts, wir wollen 0° = oben (12 Uhr)
-        double angleRad = Math.Atan2(dx, -dy); // -dy weil Y nach unten waechst
-        double angleDeg = angleRad * 180.0 / Math.PI;
-        if (angleDeg < 0) angleDeg += 360;
-        return angleDeg / 30.0; // 360° / 12 Stunden = 30° pro Stunde
-    }
+        => CalibrationMath.PointToClockHour(point, PipeCenter);
 }
 
 /// <summary>

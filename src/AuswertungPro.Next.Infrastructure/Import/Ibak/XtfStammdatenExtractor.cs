@@ -166,12 +166,8 @@ public static class XtfStammdatenExtractor
         => e.Name.LocalName.Equals(name, StringComparison.OrdinalIgnoreCase)
         || e.Name.LocalName.EndsWith("." + name, StringComparison.OrdinalIgnoreCase);
 
-    private static string? NormalizeKey(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return null;
-        var v = value.Trim().Replace(" ", "").Replace("/", "-").Replace("–", "-").Replace("—", "-");
-        return string.IsNullOrWhiteSpace(v) ? null : v;
-    }
+    // Delegiert an die gemeinsame Schlüsselnormalisierung im Namespace.
+    private static string? NormalizeKey(string? value) => IbakStammdatenKey.Normalize(value);
 
     private static StammdatenResult Merge(StammdatenResult a, StammdatenResult b) => new(
         Haltungsname:    string.IsNullOrWhiteSpace(a.Haltungsname) ? b.Haltungsname : a.Haltungsname,

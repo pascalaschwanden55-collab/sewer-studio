@@ -586,22 +586,9 @@ public sealed class MediaConflictCenterService
         return normalized.ToLowerInvariant();
     }
 
+    // Delegiert an HoldingTextNormalizer – identische Logik, zentralisiert.
     private static string? NormalizeVideoFileName(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        var candidate = value.Trim().Trim('"', '\'');
-        candidate = candidate.TrimEnd('.', ',', ';', ':', ')', ']', '}', '>');
-        if (candidate.Length == 0)
-            return null;
-
-        candidate = candidate.Replace('\\', '/');
-        var fileName = Path.GetFileName(candidate).Trim();
-        if (fileName.Length == 0)
-            return null;
-        return fileName.Trim('"', '\'');
-    }
+        => HoldingTextNormalizer.NormalizeVideoFileName(value);
 
     private static DateTime? ParseDateStamp(string? dateStamp)
     {

@@ -23,16 +23,11 @@ public sealed class IbakExportImportService : IIbakImportService
             .Concat(new[] { ".jpg", ".jpeg", ".png", ".bmp", ".pdf", ".txt" }),
         StringComparer.OrdinalIgnoreCase);
 
-    private static readonly Regex ObservationRegex = new(
-        @"^\s*(\d{2}:\d{2}:\d{2})\s+([\d.,]+)\s*m\s+([A-Z0-9]+)\s+(.*)$",
-        RegexOptions.Compiled);
+    // Regex-Felder: Delegation an IbakDatenTxtLineParser
+    private static readonly Regex ObservationRegex = IbakDatenTxtLineParser.ObservationRegex;
 
     // Zeilen ohne Zeitstempel (Header-Einträge wie AEC, AED, AEF)
-    private static readonly Regex HeaderLineRegex = new(
-        @"^\s+([\d.,]+)\s*m\s+([A-Z0-9]+)\s+(.*)$",
-        RegexOptions.Compiled);
-
-    private static readonly Regex RangeIndexRegex = new(@"\((\d+)\)", RegexOptions.Compiled);
+    private static readonly Regex HeaderLineRegex = IbakDatenTxtLineParser.HeaderLineRegex;
 
     public Result<ImportStats> ImportIbakExport(string exportRoot, Project project, ImportRunContext? ctx = null)
     {
@@ -170,31 +165,7 @@ public sealed class IbakExportImportService : IIbakImportService
     }
 
     private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, ProtocolService protocolService)
-    {
-        if (record.Protocol is null)
-        {
-            record.Protocol = protocolService.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
-            return;
-        }
-
-        if (record.Protocol.Current.Entries.Count == 0 && record.Protocol.Original.Entries.Count == 0)
-        {
-            record.Protocol = protocolService.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
-            return;
-        }
-
-        // Audit I1: identischer Re-Import erzeugt keine neue Revision
-        if (Common.ProtocolContentFingerprint.HasSameContent(record.Protocol.Current, entries))
-            return;
-
-        record.Protocol.History.Add(record.Protocol.Current);
-        record.Protocol.Current = new ProtocolRevision
-        {
-            Comment = "Import (IBAK Daten.txt)",
-            CreatedAt = DateTimeOffset.UtcNow,
-            Entries = entries
-        };
-    }
+        => Common.ImportProtocolApplier.Apply(record, entries, protocolService, "Import (IBAK Daten.txt)");
 
     private static void UpdateFindings(HaltungRecord record, List<ProtocolEntry> entries)
     {
@@ -248,17 +219,13 @@ public sealed class IbakExportImportService : IIbakImportService
 
     private static void LinkHoldingPdf(HaltungRecord record, string holdingKey, Dictionary<string, List<string>> index)
     {
-        var matches = index.Keys
-            .Where(k => k.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-            .Where(k => k.Contains(holdingKey, StringComparison.OrdinalIgnoreCase))
-            .Select(k => ResolveFile(index, k))
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
+        // Gemeinsame PDF-Treffer-Suche via Common-Helfer
+        var matches = Common.PdfFileIndexHelper.ResolvePdfMatches(index, holdingKey);
 
         if (matches.Count == 0)
             return;
 
-        var first = matches[0]!;
+        var first = matches[0];
         record.SetFieldValue("PDF_Path", first, FieldSource.Legacy, userEdited: false);
         if (matches.Count > 1)
             record.SetFieldValue("PDF_All", string.Join(";", matches), FieldSource.Legacy, userEdited: false);
@@ -409,13 +376,9 @@ public sealed class IbakExportImportService : IIbakImportService
         return map;
     }
 
+    // Delegation: Logik liegt jetzt in IbakFdbSchemaHeuristics
     private static int ExtractPhotoIndex(string fileName)
-    {
-        var m = Regex.Match(fileName, @"_(\d+)\.(jpg|jpeg|png|bmp)$", RegexOptions.IgnoreCase);
-        if (m.Success && int.TryParse(m.Groups[1].Value, out var n))
-            return n;
-        return int.MaxValue;
-    }
+        => IbakFdbSchemaHeuristics.ExtractPhotoIndex(fileName);
 
     private static void ApplyPhotosToEntries(
         string holdingKey,
@@ -562,13 +525,9 @@ public sealed class IbakExportImportService : IIbakImportService
         return result;
     }
 
+    // Delegation: Logik liegt jetzt in IbakFdbSchemaHeuristics
     private static string ExtractHoldingFromPhoto(string fileName)
-    {
-        var m = Regex.Match(fileName, @"^(?:L__|L_|H__)(.+?)_(\d+)\.(jpg|jpeg|png|bmp)$", RegexOptions.IgnoreCase);
-        if (m.Success)
-            return NormalizeHoldingKey(m.Groups[1].Value);
-        return "";
-    }
+        => IbakFdbSchemaHeuristics.ExtractHoldingFromPhoto(fileName);
 
     private static List<string> LoadTables(FbConnection conn)
     {
@@ -607,56 +566,17 @@ public sealed class IbakExportImportService : IIbakImportService
         return dict;
     }
 
+    // Delegation: Logik liegt jetzt in IbakFdbSchemaHeuristics
     private static string? PickPhotoTable(List<string> tables, Dictionary<string, List<string>> columns)
-    {
-        string? best = null;
-        var bestScore = 0;
+        => IbakFdbSchemaHeuristics.PickPhotoTable(tables, columns);
 
-        foreach (var t in tables)
-        {
-            if (!columns.TryGetValue(t, out var cols))
-                continue;
-
-            var score = 0;
-            var nameUpper = t.ToUpperInvariant();
-            if (nameUpper.Contains("PHOTO") || nameUpper.Contains("FOTO") || nameUpper.Contains("BILD") || nameUpper.Contains("IMAGE") || nameUpper.Contains("PIC"))
-                score += 6;
-            if (nameUpper.Contains("MEDIA"))
-                score += 3;
-
-            if (cols.Any(c => ContainsAny(c, "FILE", "FILENAME", "PATH", "NAME", "DATEI")))
-                score += 4;
-            if (cols.Any(c => ContainsAny(c, "HALT", "HOLD", "LINE", "SECTION", "ROHR", "PIPE", "OBJ", "OBJECT")))
-                score += 2;
-
-            if (score > bestScore)
-            {
-                bestScore = score;
-                best = t;
-            }
-        }
-
-        return bestScore >= 6 ? best : null;
-    }
-
+    // Delegation: Logik liegt jetzt in IbakFdbSchemaHeuristics
     private static string? FindColumn(List<string> cols, params string[] keys)
-    {
-        foreach (var key in keys)
-        {
-            var col = cols.FirstOrDefault(c => c.Contains(key, StringComparison.OrdinalIgnoreCase));
-            if (!string.IsNullOrWhiteSpace(col))
-                return col;
-        }
-        return null;
-    }
+        => IbakFdbSchemaHeuristics.FindColumn(cols, keys);
 
+    // Delegation: Logik liegt jetzt in IbakFdbSchemaHeuristics
     private static bool ContainsAny(string text, params string[] keys)
-    {
-        foreach (var key in keys)
-            if (text.Contains(key, StringComparison.OrdinalIgnoreCase))
-                return true;
-        return false;
-    }
+        => IbakFdbSchemaHeuristics.ContainsAny(text, keys);
 
     private static string? FindFdb(string root)
     {
@@ -688,89 +608,35 @@ public sealed class IbakExportImportService : IIbakImportService
         return null;
     }
 
+    // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser
     private static ProtocolEntry BuildEntry(string code, string desc, double? meter, string? mpeg, TimeSpan? time)
-    {
-        return new ProtocolEntry
-        {
-            Code = code,
-            Beschreibung = desc,
-            MeterStart = meter,
-            MeterEnd = meter,
-            Mpeg = mpeg,
-            Zeit = time,
-            Source = ProtocolEntrySource.Imported
-        };
-    }
+        => IbakDatenTxtLineParser.BuildEntry(code, desc, meter, mpeg, time);
 
+    // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser
     private static (bool isStart, bool isEnd, string index) ExtractRange(string desc)
-    {
-        var lower = desc.ToLowerInvariant();
-        var isStart = lower.Contains("anfang") || lower.Contains("beginn");
-        var isEnd = lower.Contains("ende");
-        var index = "0";
-        var m = RangeIndexRegex.Match(desc);
-        if (m.Success)
-            index = m.Groups[1].Value;
-        return (isStart, isEnd, index);
-    }
+        => IbakDatenTxtLineParser.ExtractRange(desc);
 
+    // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser
     private static double? ParseMeter(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-        var normalized = text.Replace(',', '.');
-        if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
-            return value;
-        return null;
-    }
+        => IbakDatenTxtLineParser.ParseMeter(text);
 
+    // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser
     private static TimeSpan? ParseTime(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-        if (TimeSpan.TryParseExact(text, @"hh\:mm\:ss", CultureInfo.InvariantCulture, out var ts))
-            return ts;
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out ts))
-            return ts;
-        return null;
-    }
+        => IbakDatenTxtLineParser.ParseTime(text);
 
+    // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser
     private static string StripIbakMeta(string text)
-    {
-        var idx = text.IndexOf("@!$ibak$!", StringComparison.OrdinalIgnoreCase);
-        if (idx >= 0)
-            return text[..idx].Trim();
-        return text.Trim();
-    }
+        => IbakDatenTxtLineParser.StripIbakMeta(text);
 
     private static Dictionary<string, List<string>> BuildFileIndex(string root)
     {
-        var dict = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(root, "*.*", recursive: true))
-        {
-            var ext = Path.GetExtension(file);
-            if (!MediaExtensions.Contains(ext))
-                continue;
-
-            var name = Path.GetFileName(file);
-            if (!dict.TryGetValue(name, out var list))
-            {
-                list = new List<string>();
-                dict[name] = list;
-            }
-            list.Add(file);
-        }
-        return dict;
+        // IO bleibt callerseitig; Kern-Logik liegt in MediaFileIndex.Build.
+        var files = AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(root, "*.*", recursive: true);
+        return Common.MediaFileIndex.Build(files, MediaExtensions);
     }
 
     private static string? ResolveFile(Dictionary<string, List<string>> index, string fileName)
-    {
-        if (!index.TryGetValue(fileName, out var list) || list.Count == 0)
-            return null;
-        if (list.Count == 1)
-            return list[0];
-        return null;
-    }
+        => Common.MediaFileIndex.ResolveSingle(index, fileName);
 
     private static string? FindDatenTxt(string root)
     {
@@ -786,42 +652,13 @@ public sealed class IbakExportImportService : IIbakImportService
         return preferred ?? candidates[0];
     }
 
+    // Delegation: Logik liegt jetzt in Common.HoldingKeyNormalizer (inkl. IBAK-Prefix-Strip)
     private static string NormalizeHoldingKey(string? value)
-    {
-        var v = (value ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(v))
-            return string.Empty;
-        v = Regex.Replace(v, @"\s+", string.Empty);
-        v = v.Replace('/', '-');
-        v = v.Replace('–', '-');
-        v = v.Replace('—', '-');
-        if (v.StartsWith("L__", StringComparison.OrdinalIgnoreCase))
-            v = v[3..];
-        else if (v.StartsWith("L_", StringComparison.OrdinalIgnoreCase))
-            v = v[2..];
-        else if (v.StartsWith("H__", StringComparison.OrdinalIgnoreCase))
-            v = v[3..];
-        return v;
-    }
+        => Common.HoldingKeyNormalizer.NormalizeIbak(value);
 
-    /// <summary>
-    /// Entfernt Knoten-Prefixe (z.B. "07.", "10.", "06.") aus beiden Teilen
-    /// eines Haltungsnamens, damit z.B. "07.1028055-10.1064892" zu "1028055-1064892" wird.
-    /// </summary>
-    private static readonly Regex NodePrefixRegex = new(@"^\d{1,2}\.", RegexOptions.Compiled);
-
+    // Delegation: Logik liegt in HoldingIdNormalizer (gemeinsame Implementierung)
     private static string StripNodePrefixes(string holdingKey)
-    {
-        var dashIdx = holdingKey.IndexOf('-');
-        if (dashIdx < 0)
-            return NodePrefixRegex.Replace(holdingKey, "");
-
-        var left = holdingKey[..dashIdx];
-        var right = holdingKey[(dashIdx + 1)..];
-        left = NodePrefixRegex.Replace(left, "");
-        right = NodePrefixRegex.Replace(right, "");
-        return $"{left}-{right}";
-    }
+        => HoldingIdNormalizer.StripNodePrefixes(holdingKey);
 
     /// <summary>
     /// Extrahiert Stammdaten aus IBAK-Header-Einträgen (AEC, AED, AEF)
@@ -884,100 +721,25 @@ public sealed class IbakExportImportService : IIbakImportService
             record.SetFieldValue("Haltungslaenge_m", lengthM.ToString("F1", CultureInfo.InvariantCulture), FieldSource.Legacy, userEdited: false);
     }
 
-    // Streckenschaden-Marker: A01, A02, B01, B02, ... (DIN EN 13508-2 Anfang/Ende Streckenschaden)
-    private static readonly Regex ContinuousDefectMarkerRegex = new(@"^[AB]\d{2}$", RegexOptions.Compiled);
-    private static readonly Regex EmbeddedVsaCodeRegex = new(@"^([A-Z]{3,5})\b", RegexOptions.Compiled);
-
+    // Delegation: Logik liegt jetzt in Common.ContinuousDefectCodeResolver
     private static string ResolveEffectiveCode(string code, string? description, out string? resolvedDescription)
-    {
-        resolvedDescription = description;
-        if (!ContinuousDefectMarkerRegex.IsMatch(code) || string.IsNullOrWhiteSpace(description))
-            return code;
-
-        var match = EmbeddedVsaCodeRegex.Match(description.Trim());
-        if (match.Success)
-        {
-            var vsaCode = match.Groups[1].Value;
-            var rest = description.Trim().Substring(vsaCode.Length).TrimStart(' ', '(');
-            if (rest.EndsWith(")"))
-                rest = rest.Substring(0, rest.Length - 1);
-            resolvedDescription = rest.Trim();
-            if (string.IsNullOrWhiteSpace(resolvedDescription))
-                resolvedDescription = description;
-            return vsaCode;
-        }
-
-        return code;
-    }
+        => Common.ContinuousDefectCodeResolver.ResolveEffectiveCode(code, description, out resolvedDescription);
 
     /// <summary>
     /// Erzeugt den "Primaere_Schaeden" Text aus den Protokoll-Eintraegen (analog WinCan).
-    /// Format: "0.00m CODE Beschreibung\n..."
-    /// Header-Codes (AEC/AED/AEF) und Streckenschaden-Marker (A01/B02) werden aufgeloest.
+    /// Delegation: Logik liegt jetzt in Common.PrimaryDamagesTextBuilder.
+    /// IBAK-Header-Codes (AEC/AED/AEF) werden via skipAePrefix:true uebersprungen.
     /// </summary>
     private static void BuildPrimaryDamagesText(HaltungRecord record, List<ProtocolEntry> entries)
     {
-        if (entries.Count == 0)
-            return;
-
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var lines = new List<string>();
-        foreach (var entry in entries)
-        {
-            var rawCode = entry.Code?.Trim() ?? "";
-            // IBAK-Header-Codes (Stammdaten) nicht als Schäden aufnehmen
-            if (rawCode.StartsWith("AE", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            var desc = entry.Beschreibung?.Trim();
-            if (string.IsNullOrWhiteSpace(desc) && string.IsNullOrWhiteSpace(rawCode))
-                continue;
-
-            // Streckenschaden-Marker zum echten VSA-Code aufloesen
-            var code = ResolveEffectiveCode(rawCode.ToUpperInvariant(), desc, out var resolvedDesc);
-
-            // Deduplicate by effective code + meter position
-            if (code.Length > 0)
-            {
-                var meterKey = entry.MeterStart.HasValue ? entry.MeterStart.Value.ToString("F2") : "";
-                var key = $"{code}|{meterKey}";
-                if (!seen.Add(key))
-                    continue;
-            }
-
-            var line = "";
-            if (entry.MeterStart.HasValue)
-                line = $"{entry.MeterStart.Value:0.00}m ";
-
-            if (!string.IsNullOrWhiteSpace(code) && !string.IsNullOrWhiteSpace(resolvedDesc))
-                line += $"{code} {resolvedDesc}";
-            else if (!string.IsNullOrWhiteSpace(code))
-                line += code;
-            else
-                line += resolvedDesc;
-
-            lines.Add(line.TrimEnd());
-        }
-
-        if (lines.Count == 0)
-            return;
-
-        var text = XtfPrimaryDamageFormatter.DeduplicateText(string.Join("\n", lines));
-        record.SetFieldValue("Primaere_Schaeden", text, FieldSource.Legacy, userEdited: false);
+        var text = Common.PrimaryDamagesTextBuilder.Build(entries, skipAePrefix: true);
+        if (text is not null)
+            record.SetFieldValue("Primaere_Schaeden", text, FieldSource.Legacy, userEdited: false);
     }
 
+    // Delegation: Logik liegt jetzt in IbakDatenTxtLineParser
     private static string MapMaterial(string ibakMaterial)
-    {
-        var lower = ibakMaterial.ToLowerInvariant();
-        if (lower.Contains("polypropylen")) return "PP";
-        if (lower.Contains("polyvinylchlorid") || lower.Contains("pvc")) return "PVC";
-        if (lower.Contains("polyethylen") || lower.Contains("pe")) return "PE";
-        if (lower.Contains("beton") || lower.Contains("normalbeton")) return "Beton";
-        if (lower.Contains("steinzeug")) return "Steinzeug";
-        if (lower.Contains("guss")) return "Guss";
-        if (lower.Contains("gfk") || lower.Contains("glasfaser")) return "GFK";
-        return ibakMaterial; // Originalwert beibehalten
-    }
+        => IbakDatenTxtLineParser.MapMaterial(ibakMaterial);
 
     private sealed record IbakHolding(string Holding)
     {

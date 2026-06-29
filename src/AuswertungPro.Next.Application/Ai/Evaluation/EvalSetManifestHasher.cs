@@ -56,8 +56,7 @@ public static class EvalSetManifestHasher
         }
         manifest["hashes"] = hashes;
 
-        var options = new JsonSerializerOptions { WriteIndented = true };
-        File.WriteAllText(manifestPath, manifest.ToJsonString(options));
+        File.WriteAllText(manifestPath, manifest.ToJsonString(JsonDefaults.Indented));
         return result;
     }
 

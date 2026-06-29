@@ -289,14 +289,9 @@ internal static class ProtocolPdfObservationText
         return parts.Count == 0 ? string.Empty : "Parameter: " + string.Join(" | ", parts);
     }
 
+    // Identische Logik wie ProtocolZustandText.Shorten \u2013 delegiert dorthin
     internal static string Shorten(string text, int max)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return string.Empty;
-        if (text.Length <= max)
-            return text;
-        return text.Substring(0, Math.Max(0, max - 1)).TrimEnd() + "\u2026";
-    }
+        => ProtocolZustandText.Shorten(text, max);
 
     internal static string FmtMeterValue(double? value)
         => value is null ? "-" : value.Value.ToString("0.00", CultureInfo.InvariantCulture);

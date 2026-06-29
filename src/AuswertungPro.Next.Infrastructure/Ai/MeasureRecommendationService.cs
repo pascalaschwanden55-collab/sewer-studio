@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 
@@ -254,30 +252,14 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
         }
     }
 
-    private static CostSnapshot SanitizeCosts(CostSnapshot costs)
-    {
-        return new CostSnapshot(
-            costs.TotalCost is > 0 and <= 10_000_000m ? costs.TotalCost : null,
-            costs.InlinerMeters is > 0 and <= 100_000m ? costs.InlinerMeters : null,
-            costs.InlinerStk is > 0 and <= 10_000 ? costs.InlinerStk : null,
-            costs.AnschluesseVerpressen is > 0 and <= 10_000 ? costs.AnschluesseVerpressen : null,
-            costs.ReparaturManschette is > 0 and <= 10_000 ? costs.ReparaturManschette : null,
-            costs.ReparaturKurzliner is > 0 and <= 10_000 ? costs.ReparaturKurzliner : null);
-    }
+    private static MeasureRecordParser.CostSnapshot SanitizeCosts(MeasureRecordParser.CostSnapshot costs)
+        => MeasureRecordParser.SanitizeCosts(costs);
 
     private static decimal? AverageDecimal(decimal sum, int count, int decimals)
-    {
-        if (count <= 0)
-            return null;
-        return Math.Round(sum / count, decimals, MidpointRounding.AwayFromZero);
-    }
+        => MeasureRecordParser.AverageDecimal(sum, count, decimals);
 
     private static int? AverageInt(int sum, int count)
-    {
-        if (count <= 0)
-            return null;
-        return (int)Math.Round((decimal)sum / count, 0, MidpointRounding.AwayFromZero);
-    }
+        => MeasureRecordParser.AverageInt(sum, count);
 
     private void EnsureLoaded()
     {
@@ -478,19 +460,11 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
         return result;
     }
 
-    private static string BuildSampleSignature(Guid recordId, IReadOnlyList<string> codes, IReadOnlyList<string> measures, CostSnapshot costs)
-    {
-        var total = costs.TotalCost?.ToString("0.00", CultureInfo.InvariantCulture) ?? "";
-        var inlinerM = costs.InlinerMeters?.ToString("0.00", CultureInfo.InvariantCulture) ?? "";
-        var inlinerStk = costs.InlinerStk?.ToString(CultureInfo.InvariantCulture) ?? "";
-        var anschluesse = costs.AnschluesseVerpressen?.ToString(CultureInfo.InvariantCulture) ?? "";
-        var manschette = costs.ReparaturManschette?.ToString(CultureInfo.InvariantCulture) ?? "";
-        var kurzliner = costs.ReparaturKurzliner?.ToString(CultureInfo.InvariantCulture) ?? "";
-        return $"{recordId:N}|{string.Join(";", codes)}|{string.Join(";", measures)}|{total}|{inlinerM}|{inlinerStk}|{anschluesse}|{manschette}|{kurzliner}";
-    }
+    private static string BuildSampleSignature(Guid recordId, IReadOnlyList<string> codes, IReadOnlyList<string> measures, MeasureRecordParser.CostSnapshot costs)
+        => MeasureRecordParser.BuildSampleSignature(recordId, codes, measures, costs);
 
     private static string BuildCodeSignature(IReadOnlyList<string> codes)
-        => string.Join(";", codes.OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
+        => MeasureRecordParser.BuildCodeSignature(codes);
 
     private static bool IsUserConfirmed(HaltungRecord record)
     {
@@ -506,113 +480,34 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
     private static bool IsUserEdited(HaltungRecord record, string field)
         => record.FieldMeta.TryGetValue(field, out var meta) && meta.UserEdited;
 
-    private static CostSnapshot ExtractCostSnapshot(HaltungRecord record)
+    private static MeasureRecordParser.CostSnapshot ExtractCostSnapshot(HaltungRecord record)
     {
-        return new CostSnapshot(
-            TryParseDecimal(record.GetFieldValue("Kosten")),
-            TryParseDecimal(record.GetFieldValue("Renovierung_Inliner_m")),
-            TryParseInt(record.GetFieldValue("Renovierung_Inliner_Stk")),
-            TryParseInt(record.GetFieldValue("Anschluesse_verpressen")),
-            TryParseInt(record.GetFieldValue("Reparatur_Manschette")),
-            TryParseInt(record.GetFieldValue("Reparatur_Kurzliner")));
+        return new MeasureRecordParser.CostSnapshot(
+            MeasureRecordParser.TryParseDecimal(record.GetFieldValue("Kosten")),
+            MeasureRecordParser.TryParseDecimal(record.GetFieldValue("Renovierung_Inliner_m")),
+            MeasureRecordParser.TryParseInt(record.GetFieldValue("Renovierung_Inliner_Stk")),
+            MeasureRecordParser.TryParseInt(record.GetFieldValue("Anschluesse_verpressen")),
+            MeasureRecordParser.TryParseInt(record.GetFieldValue("Reparatur_Manschette")),
+            MeasureRecordParser.TryParseInt(record.GetFieldValue("Reparatur_Kurzliner")));
     }
 
     private static decimal? TryParseDecimal(string? raw)
-    {
-        var text = (raw ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-        text = text.Replace(",", ".");
-        return decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
-            ? value
-            : null;
-    }
+        => MeasureRecordParser.TryParseDecimal(raw);
 
     private static int? TryParseInt(string? raw)
-    {
-        var text = (raw ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-
-        if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
-            return intValue;
-
-        text = text.Replace(",", ".");
-        if (decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var decimalValue))
-            return (int)Math.Round(decimalValue, 0, MidpointRounding.AwayFromZero);
-
-        return null;
-    }
+        => MeasureRecordParser.TryParseInt(raw);
 
     private static List<string> ExtractDamageCodes(HaltungRecord record)
-    {
-        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var finding in record.VsaFindings)
-        {
-            var code = NormalizeCode(finding.KanalSchadencode);
-            if (!string.IsNullOrWhiteSpace(code))
-                result.Add(code);
-        }
-
-        var primary = record.GetFieldValue("Primaere_Schaeden");
-        if (!string.IsNullOrWhiteSpace(primary))
-        {
-            var lines = primary.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var line in lines)
-            {
-                var firstToken = line
-                    .Split(new[] { ' ', '\t', '@', '(', ')', ':', ';', ',', '|' }, StringSplitOptions.RemoveEmptyEntries)
-                    .FirstOrDefault();
-                var code = NormalizeCode(firstToken);
-                if (!string.IsNullOrWhiteSpace(code))
-                    result.Add(code);
-            }
-        }
-
-        return result
-            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
+        => MeasureRecordParser.ExtractDamageCodes(record);
 
     private static List<string> ParseMeasures(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return new List<string>();
-
-        return raw.Split(new[] { '\r', '\n', ';', ',', '|' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(NormalizeMeasure)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
+        => MeasureRecordParser.ParseMeasures(raw);
 
     private static string NormalizeMeasure(string? value)
-    {
-        var text = (value ?? string.Empty).Trim();
-        while (text.Length > 0 && (text[0] == '-' || text[0] == '*'))
-            text = text[1..].TrimStart();
-        return text;
-    }
+        => MeasureRecordParser.NormalizeMeasure(value);
 
     private static string NormalizeCode(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return string.Empty;
-
-        var text = value.Trim().ToUpperInvariant();
-        text = Regex.Replace(text, @"[^A-Z0-9_]", "");
-
-        if (text.Length < 2 || text.Length > 12)
-            return string.Empty;
-        if (!text.Any(char.IsLetter))
-            return string.Empty;
-        if (text is "SCHADEN" or "SCHAEDEN" or "KEINE")
-            return string.Empty;
-
-        return text;
-    }
+        => MeasureRecordParser.NormalizeCode(value);
 
     private sealed class MeasureLearningStore
     {
@@ -648,11 +543,4 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
         public Dictionary<string, CostAggregate> ByCodeSignature { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
-    private readonly record struct CostSnapshot(
-        decimal? TotalCost,
-        decimal? InlinerMeters,
-        int? InlinerStk,
-        int? AnschluesseVerpressen,
-        int? ReparaturManschette,
-        int? ReparaturKurzliner);
 }

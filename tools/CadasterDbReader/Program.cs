@@ -899,130 +899,18 @@ static CadasterTopologyDocument BuildCadasterTopology(
     };
 }
 
+// Delegiert an CadasterHaltungResolver (reine Logik, kein IO).
 static List<CadasterTopologyHolding> ResolveCadasterHaltungen(
     Dictionary<string, List<CadasterStammdatenPair>> stammdatenByPair,
     List<CadasterRawTopologyPair> topologyRows,
     List<string> globalWarnings)
-{
-    var haltungen = new List<CadasterTopologyHolding>();
-    var stammdatenGroups = stammdatenByPair
-        .SelectMany(p => p.Value)
-        .GroupBy(p => UnorderedPairKey(p.StartObjName, p.EndObjName))
-        .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
-        .ToList();
+    => CadasterHaltungResolver.Resolve(stammdatenByPair, topologyRows, globalWarnings);
 
-    if (stammdatenGroups.Count > 0)
-    {
-        foreach (var group in stammdatenGroups)
-        {
-            var matches = group.ToList();
-            var first = matches[0];
-            var warnings = new List<string>();
-            var directedPairs = matches
-                .Select(p => $"{CleanNodeId(p.StartObjName)}-{CleanNodeId(p.EndObjName)}")
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            var schachtOben = CleanNodeId(first.StartObjName);
-            var schachtUnten = CleanNodeId(first.EndObjName);
-            var fliessrichtungQuelle = "cadaster_pair_name";
-
-            if (directedPairs.Count > 1)
-            {
-                var ordered = matches
-                    .SelectMany(p => new[] { CleanNodeId(p.StartObjName), CleanNodeId(p.EndObjName) })
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
-                    .Take(2)
-                    .ToList();
-                schachtOben = ordered.ElementAtOrDefault(0) ?? schachtOben;
-                schachtUnten = ordered.ElementAtOrDefault(1) ?? schachtUnten;
-                fliessrichtungQuelle = "unsicher";
-                warnings.Add("Mehrere Stammdaten-Richtungen (cadaster) fuer dieselbe Haltung; strikt-Modus.");
-            }
-
-            if (matches.Count > 1 && directedPairs.Count == 1)
-                warnings.Add($"Mehrere Stammdaten-Zeilen fuer {schachtOben}-{schachtUnten}; erster Eintrag verwendet.");
-
-            if (string.IsNullOrWhiteSpace(schachtOben) || string.IsNullOrWhiteSpace(schachtUnten))
-            {
-                globalWarnings.Add($"Stammdaten {first.ObjName}: leerer Schachtname, uebersprungen.");
-                continue;
-            }
-
-            if (fliessrichtungQuelle == "unsicher")
-                globalWarnings.Add($"{schachtOben}-{schachtUnten}: Fliessrichtung unsicher, strikt-Modus.");
-
-            var ht = new CadasterTopologyHolding
-            {
-                HaltungPk = $"GISOBJECT:{first.Id}",
-                CanonicalFolderName = $"{schachtOben}-{schachtUnten}",
-                SchachtOben = schachtOben,
-                SchachtUnten = schachtUnten,
-                FliessrichtungQuelle = fliessrichtungQuelle,
-                LaengeM = first.LengthM,
-                AlternativeHaltungIds = BuildAlternativeHoldingIds(schachtOben, schachtUnten),
-                VideoDateinamenAusDb = [],
-                Inspektionen = [],
-                Warnings = warnings
-            };
-            ApplyTopologyConventions(ht);
-            haltungen.Add(ht);
-        }
-
-        return haltungen
-            .OrderBy(h => h.CanonicalFolderName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    foreach (var pairName in topologyRows
-                 .SelectMany(r => new[] { r.StartObjName, r.EndObjName })
-                 .Where(name => TrySplitHoldingPair(name, out _, out _))
-                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
-    {
-        TrySplitHoldingPair(pairName, out var schachtOben, out var schachtUnten);
-        var ht = new CadasterTopologyHolding
-        {
-            HaltungPk = $"GISOBJECT_FALLBACK:{StableId(pairName)}",
-            CanonicalFolderName = $"{schachtOben}-{schachtUnten}",
-            SchachtOben = schachtOben,
-            SchachtUnten = schachtUnten,
-            FliessrichtungQuelle = "cadaster_gis_pair_name",
-            LaengeM = null,
-            AlternativeHaltungIds = BuildAlternativeHoldingIds(schachtOben, schachtUnten),
-            VideoDateinamenAusDb = [],
-            Inspektionen = [],
-            Warnings = ["Keine Lt/Sc-Stammdatenzeile gefunden; aus GISOBJECT-Paarnamen abgeleitet."]
-        };
-        ApplyTopologyConventions(ht);
-        haltungen.Add(ht);
-    }
-
-    return haltungen
-        .OrderBy(h => h.CanonicalFolderName, StringComparer.OrdinalIgnoreCase)
-        .ToList();
-}
-
+// Delegiert an CadasterTopologyConventions (reine Logik, kein IO).
 // Lokale Konvention: Schaechte mit "10.<ziffern>"-Praefix gehoeren immer
-// auf die Downstream-Seite. Spiegelt schacht_oben/schacht_unten + canonical
-// in-place. Mirror der Python-Implementierung.
+// auf die Downstream-Seite. Mirror der Python-Implementierung.
 static void ApplyTopologyConventions(CadasterTopologyHolding h)
-{
-    if (h is null) return;
-    var oben = (h.SchachtOben ?? "").Trim();
-    var unten = (h.SchachtUnten ?? "").Trim();
-    if (!System.Text.RegularExpressions.Regex.IsMatch(oben, @"^10\.\d+$")) return;
-    h.SchachtOben = unten;
-    h.SchachtUnten = oben;
-    h.CanonicalFolderName = $"{unten}-{oben}";
-    if (!h.FliessrichtungQuelle.Contains("+10dot_rule"))
-        h.FliessrichtungQuelle += "+10dot_rule";
-    const string msg = "schacht-Reihenfolge per 10.xxx-Konvention korrigiert";
-    if (!h.Warnings.Contains(msg))
-        h.Warnings.Add(msg);
-}
+    => CadasterTopologyConventions.ApplyTopologyConventions(h);
 
 static List<CadasterRawTopologyPair> LoadCadasterTopologyRows(FbConnection conn)
 {
@@ -1088,85 +976,27 @@ static Dictionary<string, List<CadasterStammdatenPair>> LoadCadasterStammdatenPa
     return pairs;
 }
 
+// Delegiert an CadasterTopologyConventions (reine Logik, kein IO).
 static bool TrySplitHoldingPair(string value, out string start, out string end)
-{
-    start = "";
-    end = "";
-    var clean = value.Trim();
-    var dash = clean.IndexOf('-');
-    if (dash <= 0 || dash >= clean.Length - 1)
-        return false;
-
-    start = CleanNodeId(clean[..dash]);
-    end = CleanNodeId(clean[(dash + 1)..]);
-    return !string.IsNullOrWhiteSpace(start) && !string.IsNullOrWhiteSpace(end);
-}
+    => CadasterTopologyConventions.TrySplitHoldingPair(value, out start, out end);
 
 static string UnorderedPairKey(string a, string b)
-{
-    var parts = new[] { NormalizePairComponent(a), NormalizePairComponent(b) }
-        .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-        .ToArray();
-    return $"{parts[0]}|{parts[1]}";
-}
+    => CadasterTopologyConventions.UnorderedPairKey(a, b);
 
 static string NormalizePairComponent(string value)
-{
-    var sb = new StringBuilder();
-    foreach (var ch in CleanNodeId(value).ToLowerInvariant())
-    {
-        if (char.IsLetterOrDigit(ch))
-            sb.Append(ch);
-    }
-    return sb.ToString();
-}
+    => CadasterTopologyConventions.NormalizePairComponent(value);
 
 static string CleanNodeId(string value)
-{
-    var clean = (value ?? "").Trim().Replace(" ", "");
-    if (clean.EndsWith(".0", StringComparison.Ordinal) &&
-        clean[..^2].All(char.IsDigit))
-    {
-        return clean[..^2];
-    }
-    return clean;
-}
+    => CadasterTopologyConventions.CleanNodeId(value);
 
 static List<string> BuildAlternativeHoldingIds(string schachtOben, string schachtUnten)
-{
-    var variants = new List<string>();
-    AddPairVariants(variants, schachtOben, schachtUnten);
-    AddPairVariants(variants, schachtUnten, schachtOben);
-    return variants
-        .Where(v => !string.IsNullOrWhiteSpace(v))
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToList();
-}
+    => CadasterTopologyConventions.BuildAlternativeHoldingIds(schachtOben, schachtUnten);
 
 static void AddPairVariants(List<string> variants, string a, string b)
-{
-    if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b))
-        return;
-
-    variants.Add($"{a}-{b}");
-
-    var aNoDot = a.Replace(".", "");
-    var bNoDot = b.Replace(".", "");
-    if (!string.Equals(aNoDot, a, StringComparison.Ordinal) || !string.Equals(bNoDot, b, StringComparison.Ordinal))
-        variants.Add($"{aNoDot}-{bNoDot}");
-
-    var aTail = a.Split('.', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? a;
-    var bTail = b.Split('.', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? b;
-    if (!string.Equals(aTail, a, StringComparison.Ordinal) || !string.Equals(bTail, b, StringComparison.Ordinal))
-        variants.Add($"{aTail}-{bTail}");
-}
+    => CadasterTopologyConventions.AddPairVariants(variants, a, b);
 
 static string SanitizePathSegment(string value)
-{
-    var invalid = Path.GetInvalidFileNameChars().ToHashSet();
-    var cleaned = new string(value.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray()).Trim();
-    return string.IsNullOrWhiteSpace(cleaned) ? "cadaster_project" : cleaned;
-}
+    => CadasterTopologyConventions.SanitizePathSegment(value);
 
 static Dictionary<long, List<CadasterPhotoRef>> LoadPhotoManifestRows(FbConnection conn, MediaLookup lookup)
 {
@@ -1353,25 +1183,9 @@ static MediaLookup BuildMediaLookup(string projectRoot, string folderName)
     return new MediaLookup(paths);
 }
 
+// Delegiert an CadasterClassification (reine Logik, kein IO).
 static string TrainingCategoryForCode(string? code)
-{
-    if (string.IsNullOrWhiteSpace(code))
-        return "other";
-
-    var upper = code.Trim().ToUpperInvariant();
-    var metaCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "BCD", "BCE", "BDA", "BDB", "BDC", "AEC", "AED", "AEF"
-    };
-
-    if (metaCodes.Contains(upper))
-        return "meta";
-    if (upper.StartsWith("BCA", StringComparison.OrdinalIgnoreCase) || upper.StartsWith("BCC", StringComparison.OrdinalIgnoreCase))
-        return "bauteil";
-    if (upper.StartsWith("BA", StringComparison.OrdinalIgnoreCase) || upper.StartsWith("BB", StringComparison.OrdinalIgnoreCase))
-        return "schaden";
-    return "other";
-}
+    => CadasterClassification.TrainingCategoryForCode(code);
 
 static long RequiredLong(FbDataReader reader, int index) => Convert.ToInt64(reader.GetValue(index));
 
@@ -1433,61 +1247,15 @@ static object? ReadValue(FbDataReader reader, int index)
     return value;
 }
 
+// Delegiert an CadasterClassification (reine Logik, kein IO).
 static List<CandidateTableReport> FindCandidateTables(List<TableReport> tables, CandidateKind kind)
-{
-    var result = new List<CandidateTableReport>();
-    foreach (var table in tables)
-    {
-        var score = ScoreTable(table, kind);
-        if (score <= 0)
-            continue;
-        result.Add(new CandidateTableReport(table.Name, table.RowCount, score, table.Columns));
-    }
-
-    return result
-        .OrderByDescending(t => t.Score)
-        .ThenByDescending(t => t.RowCount)
-        .ThenBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
-        .Take(20)
-        .ToList();
-}
+    => CadasterClassification.FindCandidateTables(tables, kind);
 
 static int ScoreTable(TableReport table, CandidateKind kind)
-{
-    var tableName = table.Name.ToUpperInvariant();
-    var columns = table.Columns.Select(c => c.ToUpperInvariant()).ToList();
-    var score = 0;
-
-    switch (kind)
-    {
-        case CandidateKind.Media:
-            if (ContainsAny(tableName, "PHOTO", "FOTO", "IMAGE", "PIC", "MEDIA", "MM")) score += 6;
-            if (columns.Any(c => ContainsAny(c, "FILE", "PATH", "NAME", "DATEI", "PHOTO", "IMAGE"))) score += 4;
-            if (columns.Any(c => ContainsAny(c, "OBJ", "HOLD", "HALT", "SECTION", "PIPE"))) score += 2;
-            break;
-        case CandidateKind.Observation:
-            if (ContainsAny(tableName, "OBS", "SCHAD", "DAMAGE", "DEFECT", "INSPECT", "INSPEK")) score += 6;
-            if (columns.Any(c => ContainsAny(c, "CODE", "SCHAD", "DAMAGE", "DEFECT", "OBS"))) score += 5;
-            if (columns.Any(c => ContainsAny(c, "DIST", "METER", "TIME", "CLOCK", "UHR"))) score += 3;
-            break;
-        case CandidateKind.CodeLike:
-            if (columns.Any(c => ContainsAny(c, "CODE", "SCHAD", "DEFECT", "DAMAGE", "CLASS"))) score += 5;
-            if (columns.Any(c => ContainsAny(c, "DIST", "METER", "TIME", "CLOCK", "UHR"))) score += 2;
-            break;
-    }
-
-    return score;
-}
+    => CadasterClassification.ScoreTable(table, kind);
 
 static bool ContainsAny(string text, params string[] keys)
-{
-    foreach (var key in keys)
-    {
-        if (text.Contains(key, StringComparison.OrdinalIgnoreCase))
-            return true;
-    }
-    return false;
-}
+    => CadasterClassification.ContainsAny(text, keys);
 
 static string QuoteId(string id) => "\"" + id.Replace("\"", "\"\"") + "\"";
 
@@ -1725,58 +1493,7 @@ internal sealed class CadasterTopologyHolding
     public List<string> Warnings { get; set; } = [];
 }
 
-internal sealed class MediaLookup
-{
-    private readonly Dictionary<string, string> _byFileName = new(StringComparer.OrdinalIgnoreCase);
-
-    public MediaLookup(IEnumerable<string> paths)
-    {
-        foreach (var path in paths)
-        {
-            var name = Path.GetFileName(path);
-            if (!_byFileName.ContainsKey(name))
-                _byFileName[name] = path;
-        }
-    }
-
-    public string? Resolve(string? fileName, string? extension)
-    {
-        foreach (var candidate in CandidateNames(fileName, extension))
-        {
-            if (_byFileName.TryGetValue(candidate, out var path))
-                return path;
-        }
-        return null;
-    }
-
-    private static IEnumerable<string> CandidateNames(string? fileName, string? extension)
-    {
-        if (string.IsNullOrWhiteSpace(fileName))
-            yield break;
-
-        var cleanName = fileName.Trim();
-        yield return cleanName;
-        var baseName = Path.GetFileName(cleanName);
-        if (!string.Equals(baseName, cleanName, StringComparison.OrdinalIgnoreCase))
-            yield return baseName;
-
-        var ext = NormalizeExtension(extension);
-        if (!string.IsNullOrWhiteSpace(ext) && string.IsNullOrWhiteSpace(Path.GetExtension(cleanName)))
-        {
-            yield return cleanName + ext;
-            if (!string.Equals(baseName, cleanName, StringComparison.OrdinalIgnoreCase))
-                yield return baseName + ext;
-        }
-    }
-
-    private static string? NormalizeExtension(string? extension)
-    {
-        if (string.IsNullOrWhiteSpace(extension))
-            return null;
-        var ext = extension.Trim();
-        return ext.StartsWith('.') ? ext : "." + ext;
-    }
-}
+// MediaLookup wurde in MediaLookup.cs verschoben (kein IO, reine Lookup-Klasse).
 
 internal sealed class CadasterManifest
 {

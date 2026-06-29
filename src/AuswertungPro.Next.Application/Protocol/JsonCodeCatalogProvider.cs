@@ -152,15 +152,7 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
     }
 
     public IReadOnlyList<string> AllowedCodes()
-    {
-        return _codes
-            .Where(x => x.IsSelectable && !x.IsObservedExtension)
-            .Select(x => x.Code)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
+        => CodeCatalogNormalization.AllowedCodes(_codes);
 
     public IReadOnlyList<string> Validate(IReadOnlyList<CodeDefinition>? codes = null)
     {
@@ -236,78 +228,16 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
     }
 
     private static List<CodeDefinition> NormalizeCodes(IEnumerable<CodeDefinition> codes)
-    {
-        return (codes ?? Array.Empty<CodeDefinition>())
-            .Select(CloneCode)
-            .Select(NormalizeCodeDefinition)
-            .ToList();
-    }
-
-    private static CodeDefinition NormalizeCodeDefinition(CodeDefinition code)
-    {
-        code.Code = NormalizeCode(code.Code);
-        code.Title = (code.Title ?? string.Empty).Trim();
-        code.CanonicalCode = string.IsNullOrWhiteSpace(code.CanonicalCode)
-            ? code.Code
-            : NormalizeCode(code.CanonicalCode);
-        code.Source = string.IsNullOrWhiteSpace(code.Source) ? null : code.Source.Trim();
-        code.StandardAnnotation = string.IsNullOrWhiteSpace(code.StandardAnnotation) ? null : code.StandardAnnotation.Trim();
-        code.Group = string.IsNullOrWhiteSpace(code.Group) ? "Unbekannt" : code.Group.Trim();
-        code.Description = string.IsNullOrWhiteSpace(code.Description) ? null : code.Description.Trim();
-        code.CategoryPath = (code.CategoryPath ?? new List<string>())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(x => x.Trim())
-            .ToList();
-        code.Parameters = (code.Parameters ?? new List<CodeParameter>()).Select(CloneParameter).ToList();
-        code.Examples = (code.Examples ?? new List<string>())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(x => x.Trim())
-            .ToList();
-        if (code.RangeThresholdM is not null && code.RangeThresholdM <= 0)
-            code.RangeThresholdM = null;
-
-        return code;
-    }
+        => CodeCatalogNormalization.NormalizeCodes(codes);
 
     private static CodeDefinition CloneCode(CodeDefinition source)
-    {
-        return new CodeDefinition
-        {
-            Code = source.Code ?? string.Empty,
-            Title = source.Title ?? string.Empty,
-            CanonicalCode = source.CanonicalCode,
-            Source = source.Source,
-            IsObservedExtension = source.IsObservedExtension,
-            IsSelectable = source.IsSelectable,
-            StandardAnnotation = source.StandardAnnotation,
-            Group = source.Group ?? "Unbekannt",
-            Description = source.Description,
-            CategoryPath = (source.CategoryPath ?? new List<string>()).ToList(),
-            Parameters = (source.Parameters ?? new List<CodeParameter>()).Select(CloneParameter).ToList(),
-            Examples = (source.Examples ?? new List<string>()).ToList(),
-            RequiresRange = source.RequiresRange,
-            RangeThresholdM = source.RangeThresholdM,
-            RangeThresholdText = source.RangeThresholdText
-        };
-    }
+        => CodeDefinitionCloning.CloneCode(source);
 
     private static CodeParameter CloneParameter(CodeParameter source)
-    {
-        return new CodeParameter
-        {
-            Name = source.Name ?? string.Empty,
-            DataKey = string.IsNullOrWhiteSpace(source.DataKey) ? null : source.DataKey.Trim(),
-            Type = string.IsNullOrWhiteSpace(source.Type) ? "string" : source.Type.Trim(),
-            AllowedValues = source.AllowedValues?.ToList(),
-            Unit = string.IsNullOrWhiteSpace(source.Unit) ? null : source.Unit.Trim(),
-            Required = source.Required
-        };
-    }
+        => CodeDefinitionCloning.CloneParameter(source);
 
     private static string NormalizeCode(string? code)
-    {
-        return (code ?? string.Empty).Trim().ToUpperInvariant();
-    }
+        => CodeCatalogNormalization.NormalizeCode(code);
 
     private static string SafeCodeLabel(string code, int row)
     {
@@ -349,43 +279,7 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
             .ToList();
     }
 
+    // Json-Provider: Score zaehlt Examples (bewusste Divergenz zu XmlCodeCatalogProvider).
     private static CodeDefinition ChoosePreferred(CodeDefinition first, CodeDefinition second)
-    {
-        var scoreFirst = Score(first);
-        var scoreSecond = Score(second);
-        if (scoreSecond > scoreFirst)
-            return second;
-        if (scoreFirst > scoreSecond)
-            return first;
-
-        var descFirst = first.Description?.Length ?? 0;
-        var descSecond = second.Description?.Length ?? 0;
-        if (descSecond > descFirst)
-            return second;
-        if (descFirst > descSecond)
-            return first;
-
-        return first;
-    }
-
-    private static int Score(CodeDefinition def)
-    {
-        var score = 0;
-        if (!string.IsNullOrWhiteSpace(def.Title) && !string.Equals(def.Title, def.Code, StringComparison.OrdinalIgnoreCase))
-            score += 3;
-        if (!string.IsNullOrWhiteSpace(def.Description))
-            score += 2;
-        if (!string.IsNullOrWhiteSpace(def.Group) && !string.Equals(def.Group, "Unbekannt", StringComparison.OrdinalIgnoreCase))
-            score += 1;
-        score += Math.Min(def.CategoryPath?.Count ?? 0, 3);
-        score += Math.Min(def.Parameters?.Count ?? 0, 3);
-        score += Math.Min(def.Examples?.Count ?? 0, 2);
-        if (def.RequiresRange)
-            score += 1;
-        if (def.RangeThresholdM is not null)
-            score += 1;
-        if (!string.IsNullOrWhiteSpace(def.RangeThresholdText))
-            score += 1;
-        return score;
-    }
+        => CodeDefinitionPreference.Choose(first, second, CodeDefinitionPreference.ScoreWithExamples);
 }

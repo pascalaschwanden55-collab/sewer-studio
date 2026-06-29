@@ -42,41 +42,60 @@ namespace AuswertungPro.Next.UI
     /// </summary>
     public sealed class ServiceProvider : IServiceProvider
     {
+        #region Infrastruktur / Querschnitt
+        // Basis-Einstellungen, Logging und Fehlercode-Generator
         public AppSettings Settings { get; }
         public DiagnosticsOptions Diagnostics { get; }
         public ILogger Logger { get; }
         public ILoggerFactory LoggerFactory { get; }
         public ErrorCodeGenerator ErrorCodes { get; } = new();
+        public IDialogService Dialogs { get; } = new DialogService();
+        public IPlaywrightInstallService PlaywrightInstaller { get; }
+        #endregion
+
+        #region Persistenz
+        // Projektverwaltung und lokale Datenspeicherung
         public IProjectRepository Projects { get; }
+        #endregion
+
+        #region Import
+        // Alle Import-Adapter für externe Datenformate
         public IPdfImportService PdfImport { get; }
         public IXtfImportService XtfImport { get; }
         public IWinCanDbImportService WinCanImport { get; }
         public IIbakImportService IbakImport { get; }
         public IKinsImportService KinsImport { get; }
-        public IExcelExportService ExcelExport { get; }
-        public IVsaEvaluationService Vsa { get; }
-
-        // Protocol/Photo/PDF services
-
-        public IProtocolService Protocols { get; }
         public IPhotoImportService PhotoImport { get; }
-        public ProtocolPdfExporter ProtocolPdfExporter { get; }
+        #endregion
 
-        // AI/CodeCatalog Services
+        #region Export / Protokoll
+        // Export-Dienste und Protokollerzeugung
+        public IExcelExportService ExcelExport { get; }
+        public IProtocolService Protocols { get; }
+        public ProtocolPdfExporter ProtocolPdfExporter { get; }
+        #endregion
+
+        #region VSA-Bewertung
+        // Zustandsklassifizierung nach VSA/EN 13508-2
+        public IVsaEvaluationService Vsa { get; }
+        #endregion
+
+        #region KI / Vision
+        // KI-Pipeline: CodeCatalog, Retrieval, KnowledgeBase, KI-Protokoll, Sanierungsempfehlung
         public IProtocolAiService ProtocolAi { get; }
         public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider CodeCatalog { get; }
         public AuswertungPro.Next.Application.Protocol.IVsaCodeSelectionCatalog CodeSelectionCatalog { get; }
         public string? VsaCatalogResolvedPath { get; }
 
-        public IDialogService Dialogs { get; } = new DialogService();
-        public IPlaywrightInstallService PlaywrightInstaller { get; }
+        /// <summary>Gibt bei jedem Zugriff eine frische PipelineConfig zurück (1x laden, projizieren).</summary>
         public PipelineConfig PipelineCfg => AiSettingsFactory
             .Load(AppSettingsAiSettingsProvider.ToSource(Settings))
             .ToPipelineConfig();
 
-        public IMeasureRecommendationService MeasureRecommendation { get; }
         public IRetrievalService? Retrieval { get; }
         public IKnowledgeBaseDiagnosticsRunner KnowledgeBaseDiagnostics { get; }
+        public IMeasureRecommendationService MeasureRecommendation { get; }
+        #endregion
 
         public ServiceProvider(AppSettings settings, DiagnosticsOptions diagnostics, ILogger logger, ILoggerFactory loggerFactory)
                 // Removed misplaced property initialization

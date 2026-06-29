@@ -192,45 +192,10 @@ public sealed class Project
     public HaltungRecord? GetRecord(Guid recordId)
         => Data.FirstOrDefault(r => r.Id == recordId);
 
+    /// <summary>
+    /// Delegiert an <see cref="AuswertungPro.Next.Domain.Protocol.ProtocolEntryCloner.CloneLegacyProtocolEntry"/>.
+    /// </summary>
     private static AuswertungPro.Next.Domain.Protocol.ProtocolEntry CloneLegacyProtocolEntry(
         AuswertungPro.Next.Domain.Protocol.ProtocolEntry source)
-    {
-        return new AuswertungPro.Next.Domain.Protocol.ProtocolEntry
-        {
-            EntryId = source.EntryId,
-            Code = source.Code,
-            Beschreibung = source.Beschreibung,
-            MeterStart = source.MeterStart,
-            MeterEnd = source.MeterEnd,
-            IsStreckenschaden = source.IsStreckenschaden,
-            Mpeg = source.Mpeg,
-            Zeit = source.Zeit,
-            FotoPaths = new List<string>(source.FotoPaths),
-            Source = source.Source,
-            IsDeleted = source.IsDeleted,
-            CodeMeta = source.CodeMeta is null
-                ? null
-                : new AuswertungPro.Next.Domain.Protocol.ProtocolEntryCodeMeta
-                {
-                    Code = source.CodeMeta.Code,
-                    Parameters = new Dictionary<string, string>(source.CodeMeta.Parameters, StringComparer.OrdinalIgnoreCase),
-                    Severity = source.CodeMeta.Severity,
-                    Count = source.CodeMeta.Count,
-                    Notes = source.CodeMeta.Notes,
-                    UpdatedAt = source.CodeMeta.UpdatedAt
-                },
-            Ai = source.Ai is null
-                ? null
-                : new AuswertungPro.Next.Domain.Protocol.ProtocolEntryAiMeta
-                {
-                    SuggestedCode = source.Ai.SuggestedCode,
-                    Confidence = source.Ai.Confidence,
-                    Reason = source.Ai.Reason,
-                    Flags = new List<string>(source.Ai.Flags),
-                    Accepted = source.Ai.Accepted,
-                    FinalCode = source.Ai.FinalCode,
-                    SuggestedAt = source.Ai.SuggestedAt
-                }
-        };
-    }
+        => AuswertungPro.Next.Domain.Protocol.ProtocolEntryCloner.CloneLegacyProtocolEntry(source);
 }

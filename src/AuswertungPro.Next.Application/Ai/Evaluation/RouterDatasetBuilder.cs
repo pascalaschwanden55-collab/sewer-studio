@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using AuswertungPro.Next.Application.Ai.Training;
 
 namespace AuswertungPro.Next.Application.Ai.Evaluation;
 
@@ -33,45 +34,6 @@ public static class RouterDatasetBuilder
         ".jpeg",
         ".bmp",
         ".webp",
-    };
-
-    private static readonly HashSet<string> KnownRouterClasses = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "leer",
-        "beginn_ende",
-        "wasserstand",
-        "anschluss",
-        "oberflaeche",
-        "riss_bruch",
-        "versatz",
-        "ablagerung",
-        "wurzeln",
-        "deformation",
-        "dichtung",
-        "infiltration",
-        "sonstiges",
-    };
-
-    private static readonly Dictionary<string, string> KnownSourceClasses = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["empty"] = "leer",
-        ["negative"] = "leer",
-        ["no_damage"] = "leer",
-        ["no_schaden"] = "leer",
-        ["kein_schaden"] = "leer",
-        ["meta"] = "beginn_ende",
-        ["start_ende"] = "beginn_ende",
-        ["rohranfang_ende"] = "beginn_ende",
-        ["oberflaeche"] = "oberflaeche",
-        ["versatz"] = "versatz",
-        ["riss_bruch"] = "riss_bruch",
-        ["rissbruch"] = "riss_bruch",
-        ["ablagerung"] = "ablagerung",
-        ["anschluss"] = "anschluss",
-        ["infiltration"] = "infiltration",
-        ["deformation"] = "deformation",
-        ["dichtung"] = "dichtung",
-        ["wurzeln"] = "wurzeln",
     };
 
     public static RouterDatasetBuilderResult Build(RouterDatasetBuilderOptions options)
@@ -151,25 +113,7 @@ public static class RouterDatasetBuilder
     }
 
     public static string? MapSourceClassToRouterClass(string sourceClass)
-    {
-        if (string.IsNullOrWhiteSpace(sourceClass))
-            return null;
-
-        var normalized = NormalizeClassName(sourceClass);
-        if (KnownRouterClasses.Contains(normalized))
-            return normalized;
-        if (KnownSourceClasses.TryGetValue(normalized, out var mapped))
-            return mapped;
-
-        var code = EvalSetBenchmarkDataset.NormalizeCode(sourceClass);
-        if (string.IsNullOrWhiteSpace(code))
-            return null;
-
-        var routerClass = EvalSetRouterPlanner.MapExpectedCodeToRouterClass(code);
-        return string.Equals(routerClass, "sonstiges", StringComparison.OrdinalIgnoreCase)
-            ? null
-            : routerClass;
-    }
+        => RouterSourceClassResolver.MapSourceClassToRouterClass(sourceClass);
 
     private static IReadOnlyList<SourceImage> EnumerateSourceImages(string sourceRoot)
     {
@@ -233,44 +177,10 @@ public static class RouterDatasetBuilder
     }
 
     private static string ChooseSplit(string path, double validationRatio)
-    {
-        if (validationRatio <= 0)
-            return "train";
-        if (validationRatio >= 1)
-            return "val";
-
-        var hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(path.ToUpperInvariant()));
-        var value = BitConverter.ToUInt32(hash, 0) / (double)uint.MaxValue;
-        return value < validationRatio ? "val" : "train";
-    }
+        => YoloDatasetNaming.ChooseSplit(path, validationRatio);
 
     private static string? ExtractClassFromFileName(string path)
-    {
-        var stem = Path.GetFileNameWithoutExtension(path);
-        if (string.IsNullOrWhiteSpace(stem))
-            return null;
-
-        var parts = stem.Split('_', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        foreach (var part in parts)
-        {
-            var code = EvalSetBenchmarkDataset.NormalizeCode(part);
-            if (!string.IsNullOrWhiteSpace(code) &&
-                (string.Equals(code, "LEER", StringComparison.OrdinalIgnoreCase) ||
-                 (code.Length >= 3 && code.Length <= 6 && code.StartsWith("B", StringComparison.OrdinalIgnoreCase))))
-            {
-                return code;
-            }
-        }
-
-        if (stem.Contains("kein_schaden", StringComparison.OrdinalIgnoreCase) ||
-            stem.Contains("no_damage", StringComparison.OrdinalIgnoreCase) ||
-            stem.Contains("leer", StringComparison.OrdinalIgnoreCase))
-        {
-            return "LEER";
-        }
-
-        return null;
-    }
+        => RouterSourceClassResolver.ExtractClassFromFileName(path);
 
     private static HashSet<string> LoadEvalSetImageHashes(string? evalSetRoot)
     {
@@ -290,9 +200,6 @@ public static class RouterDatasetBuilder
 
     private static bool IsImageFile(string path)
         => ImageExtensions.Contains(Path.GetExtension(path));
-
-    private static string NormalizeClassName(string value)
-        => value.Trim().Replace('-', '_').Replace(' ', '_').ToLowerInvariant();
 
     private static string ComputeSha256(string path)
     {

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Microsoft.Data.Sqlite;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
@@ -400,25 +399,11 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
 
     private static Dictionary<string, List<string>> BuildFileIndex(string root)
     {
-        var dict = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var dir in GetMediaRoots(root))
-        {
-            foreach (var file in AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(dir, "*.*", recursive: true))
-            {
-                var ext = Path.GetExtension(file);
-                if (!MediaExtensions.Contains(ext))
-                    continue;
-
-                var name = Path.GetFileName(file);
-                if (!dict.TryGetValue(name, out var list))
-                {
-                    list = new List<string>();
-                    dict[name] = list;
-                }
-                list.Add(file);
-            }
-        }
-        return dict;
+        // IO und GetMediaRoots bleiben callerseitig; Kern-Logik liegt in MediaFileIndex.Build.
+        // WinCan scannt mehrere Sub-Roots (Video/, Picture/, …) statt root rekursiv.
+        var files = GetMediaRoots(root)
+            .SelectMany(dir => AuswertungPro.Next.Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(dir, "*.*", recursive: true));
+        return Common.MediaFileIndex.Build(files, MediaExtensions);
     }
 
     private static IEnumerable<string> GetMediaRoots(string root)
@@ -444,130 +429,26 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
     }
 
     private static string? ResolveFile(Dictionary<string, List<string>> index, string fileName)
-    {
-        if (!index.TryGetValue(fileName, out var list) || list.Count == 0)
-            return null;
-
-        if (list.Count == 1)
-            return list[0];
-
-        return null;
-    }
+        => Common.MediaFileIndex.ResolveSingle(index, fileName);
 
     private static void ApplyProtocol(HaltungRecord record, List<ProtocolEntry> entries, ProtocolService protocolService)
-    {
-        if (record.Protocol is null)
-        {
-            record.Protocol = protocolService.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
-            return;
-        }
-
-        if (record.Protocol.Current.Entries.Count == 0 && record.Protocol.Original.Entries.Count == 0)
-        {
-            record.Protocol = protocolService.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
-            return;
-        }
-
-        // Audit I1: identischer Re-Import erzeugt keine neue Revision
-        if (Common.ProtocolContentFingerprint.HasSameContent(record.Protocol.Current, entries))
-            return;
-
-        record.Protocol.History.Add(record.Protocol.Current);
-        record.Protocol.Current = new ProtocolRevision
-        {
-            Comment = "Import (WinCan DB)",
-            CreatedAt = DateTimeOffset.UtcNow,
-            Entries = entries
-        };
-    }
+        => Common.ImportProtocolApplier.Apply(record, entries, protocolService, "Import (WinCan DB)");
 
     private static void UpdateFindings(HaltungRecord record, List<ProtocolEntry> entries)
     {
-        var findings = new List<VsaFinding>(entries.Count);
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var entry in entries)
-        {
-            var rawCode = (entry.Code ?? "").Trim().ToUpperInvariant();
-            // Streckenschaden-Marker zum echten VSA-Code aufloesen
-            var effectiveCode = ResolveEffectiveCode(rawCode, entry.Beschreibung, out _);
-
-            var meterStart = entry.MeterStart;
-            var meterEnd = entry.MeterEnd;
-            var meterKey = meterStart.HasValue
-                ? meterStart.Value.ToString("F2", CultureInfo.InvariantCulture)
-                : meterEnd.HasValue
-                    ? meterEnd.Value.ToString("F2", CultureInfo.InvariantCulture)
-                    : string.Empty;
-            var dedupeKey = $"{effectiveCode}|{meterKey}";
-            if (!seen.Add(dedupeKey))
-                continue;
-
-            var finding = new VsaFinding
-            {
-                KanalSchadencode = effectiveCode,
-                Raw = entry.Beschreibung,
-                MeterStart = meterStart,
-                MeterEnd = meterEnd,
-                SchadenlageAnfang = meterStart,
-                SchadenlageEnde = meterEnd,
-                MPEG = entry.Mpeg,
-                FotoPath = entry.FotoPaths.Count > 0 ? entry.FotoPaths[0] : null
-            };
-
-            // Quantifizierung1 aus Beschreibung extrahieren (WinCan liefert kein Q1-Feld)
-            // Nur fuer Codes mit QuantRules: BAA, BAB, BAC, BAF, BBA, BDD
-            if (string.IsNullOrEmpty(finding.Quantifizierung1) && !string.IsNullOrEmpty(entry.Beschreibung))
-            {
-                var normCode = effectiveCode.Length >= 3 ? effectiveCode[..3].ToUpperInvariant() : "";
-                if (normCode is "BAA" or "BAB" or "BAC" or "BAF" or "BBA" or "BDD")
-                {
-                    finding.Quantifizierung1 = ExtractQuantValue(entry.Beschreibung);
-                }
-            }
-
-            findings.Add(finding);
-        }
-
         // DB3 gilt als Quelle der Wahrheit: vorhandene VsaFindings durch den aktuellen Importstand ersetzen.
-        record.VsaFindings = findings;
-    }
-
-    /// <summary>
-    /// Extrahiert einen numerischen Quantifizierungswert aus dem WinCan-Beschreibungstext.
-    /// Sucht nach Prozent (%), Grad (°) oder Millimeter (mm) Angaben.
-    /// </summary>
-    private static string? ExtractQuantValue(string beschreibung)
-    {
-        // Prozent: "5%", "25 %", "10.5%"
-        var m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)\s*%");
-        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
-
-        // Grad: "15°", "45 °"
-        m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)°");
-        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
-
-        // Millimeter: "2mm", "0.5 mm"
-        m = Regex.Match(beschreibung, @"(\d+(?:[.,]\d+)?)\s*mm");
-        if (m.Success) return m.Groups[1].Value.Replace(',', '.');
-
-        return null;
+        record.VsaFindings = WinCanFindingFactory.BuildFindings(entries);
     }
 
     private static void LinkSectionPdf(HaltungRecord record, string sectionKey, Dictionary<string, List<string>> index)
     {
-        var key = sectionKey;
-        var matches = index.Keys
-            .Where(k => k.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-            .Where(k => k.Contains(sectionKey, StringComparison.OrdinalIgnoreCase))
-            .Select(k => ResolveFile(index, k))
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
+        // Gemeinsame PDF-Treffer-Suche via Common-Helfer
+        var matches = Common.PdfFileIndexHelper.ResolvePdfMatches(index, sectionKey);
 
         if (matches.Count == 0)
             return;
 
-        var first = matches[0]!;
+        var first = matches[0];
         record.SetFieldValue("PDF_Path", first, FieldSource.Legacy, userEdited: false);
         if (matches.Count > 1)
             record.SetFieldValue("PDF_All", string.Join(";", matches), FieldSource.Legacy, userEdited: false);
@@ -678,18 +559,13 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         if (string.IsNullOrWhiteSpace(nodeKey))
             return;
 
-        var matches = index.Keys
-            .Where(k => k.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-            .Where(k => k.Contains(nodeKey, StringComparison.OrdinalIgnoreCase))
-            .Select(k => ResolveFile(index, k))
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
+        // Gemeinsame PDF-Treffer-Suche via Common-Helfer
+        var matches = Common.PdfFileIndexHelper.ResolvePdfMatches(index, nodeKey);
 
         if (matches.Count == 0)
             return;
 
-        var first = matches[0]!;
-        SetSchachtField(record, "Link", first);
+        SetSchachtField(record, "Link", matches[0]);
     }
 
     private static Dictionary<string, string> BuildObsParameters(DbObservation obs)
@@ -720,46 +596,21 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         dict[key] = text.Trim();
     }
 
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static bool IsImage(string? type)
-    {
-        if (string.IsNullOrWhiteSpace(type))
-            return false;
-        var t = type.Trim().ToUpperInvariant();
-        return t is "JPG" or "JPEG" or "PNG" or "BMP";
-    }
+        => WinCanValueNormalizer.IsImage(type);
 
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static bool IsVideo(string? type)
-    {
-        if (string.IsNullOrWhiteSpace(type))
-            return false;
-        var t = type.Trim().ToUpperInvariant();
-        return t is "MPG" or "MPEG" or "MP4" or "AVI" or "MOV";
-    }
+        => WinCanValueNormalizer.IsVideo(type);
 
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static TimeSpan? ParseTimeSpan(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-        var text = value.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"hh\:mm\:ss\.ff", @"hh\:mm\:ss\.fff", @"mm\:ss\.ff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-            return parsed;
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed))
-            return parsed;
-        return null;
-    }
+        => WinCanValueNormalizer.ParseTimeSpan(value);
 
+    // Delegation: Logik liegt jetzt in Common.HoldingKeyNormalizer
     private static string NormalizeHoldingKey(string? value)
-    {
-        var v = (value ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(v))
-            return string.Empty;
-        v = Regex.Replace(v, @"\s+", string.Empty);
-        v = v.Replace('/', '-');
-        v = v.Replace('–', '-');
-        v = v.Replace('—', '-');
-        return v;
-    }
+        => Common.HoldingKeyNormalizer.Normalize(value);
 
     private static string? FindDb3(string exportRoot)
     {
@@ -1140,28 +991,9 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         return list;
     }
 
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static DateTime? ParseSqliteDate(object? raw)
-    {
-        if (raw is null)
-            return null;
-        var text = raw.ToString();
-        if (string.IsNullOrWhiteSpace(text))
-            return null;
-
-        var m = Regex.Match(text, @"Date\((\d+)\)");
-        if (m.Success && long.TryParse(m.Groups[1].Value, out var ms))
-            return DateTimeOffset.FromUnixTimeMilliseconds(ms).DateTime;
-
-        // Try explicit European date formats first to avoid DD/MM swap
-        var formats = new[] { "dd.MM.yyyy", "dd/MM/yyyy", "dd-MM-yyyy", "yyyy-MM-dd", "dd.MM.yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss" };
-        if (DateTime.TryParseExact(text, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dtExact))
-            return dtExact;
-
-        if (DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt))
-            return dt;
-
-        return null;
-    }
+        => WinCanValueNormalizer.ParseSqliteDate(raw);
 
     private sealed record DbSection(
         string Pk,
@@ -1242,89 +1074,15 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         "Schacht-ID"
     };
 
-    // Streckenschaden-Marker: A01, A02, B01, B02, ... (DIN EN 13508-2 Anfang/Ende Streckenschaden)
-    private static readonly Regex ContinuousDefectMarkerRegex = new(@"^[AB]\d{2}$", RegexOptions.Compiled);
-
-    // VSA-Code am Anfang der Beschreibung extrahieren (z.B. "BBCC (Harte Ablagerungen...)")
-    private static readonly Regex EmbeddedVsaCodeRegex = new(@"^([A-Z]{3,5})\b", RegexOptions.Compiled);
-
-    /// <summary>
-    /// Prueft ob der Code ein Streckenschaden-Marker (A01, B02 etc.) ist.
-    /// Falls ja, wird der echte VSA-Code aus der Beschreibung extrahiert.
-    /// </summary>
-    private static string ResolveEffectiveCode(string code, string? description, out string? resolvedDescription)
-    {
-        resolvedDescription = description;
-        if (!ContinuousDefectMarkerRegex.IsMatch(code) || string.IsNullOrWhiteSpace(description))
-            return code;
-
-        var match = EmbeddedVsaCodeRegex.Match(description.Trim());
-        if (match.Success)
-        {
-            var vsaCode = match.Groups[1].Value;
-            // Beschreibung bereinigen: VSA-Code am Anfang entfernen
-            var rest = description.Trim().Substring(vsaCode.Length).TrimStart(' ', '(');
-            if (rest.EndsWith(")"))
-                rest = rest.Substring(0, rest.Length - 1);
-            resolvedDescription = rest.Trim();
-            if (string.IsNullOrWhiteSpace(resolvedDescription))
-                resolvedDescription = description;
-            return vsaCode;
-        }
-
-        return code;
-    }
-
     /// <summary>
     /// Erzeugt den "Primaere_Schaeden" Text aus den Protokoll-Eintraegen.
-    /// Format: "0.00m CODE Beschreibung\n..."
-    /// Streckenschaden-Marker (A01, B02) werden zum echten VSA-Code aufgeloest.
+    /// Delegation: Logik liegt jetzt in Common.PrimaryDamagesTextBuilder.
     /// </summary>
     private static void BuildPrimaryDamagesText(HaltungRecord record, List<ProtocolEntry> entries)
     {
-        if (entries.Count == 0)
-            return;
-
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var lines = new List<string>();
-        foreach (var entry in entries)
-        {
-            var rawCode = (entry.Code ?? "").Trim().ToUpperInvariant();
-            var desc = entry.Beschreibung?.Trim();
-            if (string.IsNullOrWhiteSpace(desc) && string.IsNullOrWhiteSpace(rawCode))
-                continue;
-
-            // Streckenschaden-Marker zum echten VSA-Code aufloesen
-            var code = ResolveEffectiveCode(rawCode, desc, out var resolvedDesc);
-
-            // Deduplicate by effective code + meter position
-            if (code.Length > 0)
-            {
-                var meterKey = entry.MeterStart.HasValue ? entry.MeterStart.Value.ToString("F2") : "";
-                var key = $"{code}|{meterKey}";
-                if (!seen.Add(key))
-                    continue;
-            }
-
-            var line = "";
-            if (entry.MeterStart.HasValue)
-                line = $"{entry.MeterStart.Value:0.00}m ";
-
-            if (!string.IsNullOrWhiteSpace(code) && !string.IsNullOrWhiteSpace(resolvedDesc))
-                line += $"{code} {resolvedDesc}";
-            else if (!string.IsNullOrWhiteSpace(code))
-                line += code;
-            else
-                line += resolvedDesc;
-
-            lines.Add(line.TrimEnd());
-        }
-
-        if (lines.Count == 0)
-            return;
-
-        var text = XtfPrimaryDamageFormatter.DeduplicateText(string.Join("\n", lines));
-        record.SetFieldValue("Primaere_Schaeden", text, FieldSource.Legacy, userEdited: false);
+        var text = Common.PrimaryDamagesTextBuilder.Build(entries, skipAePrefix: false);
+        if (text is not null)
+            record.SetFieldValue("Primaere_Schaeden", text, FieldSource.Legacy, userEdited: false);
     }
 
     private static void ApplyField(HaltungRecord record, string field, string? value)
@@ -1384,113 +1142,29 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         record.SetFieldValue(field, value.Trim());
     }
 
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeNumber(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
+        => WinCanValueNormalizer.NormalizeNumber(raw);
 
-        var text = raw.Trim();
-        if (double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out var val) ||
-            double.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out val))
-        {
-            if (Math.Abs(val - Math.Round(val)) < 0.01)
-                return ((int)Math.Round(val)).ToString(CultureInfo.InvariantCulture);
-            return val.ToString("0.##", CultureInfo.InvariantCulture);
-        }
-
-        return text;
-    }
-
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeDate(string? yearText, string? rawDate)
-    {
-        if (!string.IsNullOrWhiteSpace(yearText))
-            return yearText.Trim();
+        => WinCanValueNormalizer.NormalizeDate(yearText, rawDate);
 
-        var dt = ParseSqliteDate(rawDate);
-        if (dt.HasValue)
-            return dt.Value.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
-
-        return null;
-    }
-
+    // Delegation: Logik liegt jetzt in Common.MaterialTextNormalizer
     private static string? NormalizeMaterial(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
+        => Common.MaterialTextNormalizer.Normalize(raw);
 
-        // Take only the first line – WinCan DB sometimes appends cleaning info
-        // like "Zement\nGereinigt    Ja" into the material field.
-        var t = raw.Split('\n')[0].Trim();
-        // Strip trailing non-material tokens (e.g. "Gereinigt Ja")
-        t = Regex.Replace(t, @"(?i)\s*(gereinigt|nicht\s*gereinigt|verschmutzt)\s*(ja|nein)?\s*$", "").Trim();
-
-        return string.IsNullOrWhiteSpace(t) ? null : t;
-    }
-
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeUsage(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
+        => WinCanValueNormalizer.NormalizeUsage(raw);
 
-        var t = raw.Trim();
-        var lower = t.ToLowerInvariant();
-
-        // Filter out non-usage values that sometimes end up in the Usage field
-        // (e.g. cleaning status, material info, yes/no flags)
-        if (lower is "gereinigt" or "nicht gereinigt" or "verschmutzt"
-            or "ja" or "nein" or "yes" or "no"
-            or "-" or "--" or "n/a" or "k.a.")
-            return null;
-
-        // Full-text matches (e.g. "Schmutzabwasser", "Regenwasser", "Mischabwasser")
-        if (lower.Contains("regen"))
-            return "Regenwasser";
-        if (lower.Contains("schmutz"))
-            return "Schmutzwasser";
-        if (lower.Contains("misch"))
-            return "Mischabwasser";
-
-        // DWA-M150 / ISYBAU / VSA codes
-        if (lower is "s" or "ks" or "sw") return "Schmutzwasser";
-        if (lower is "r" or "kr" or "rw") return "Regenwasser";
-        if (lower is "m" or "km" or "mw") return "Mischabwasser";
-
-        // Schweizer VSA-Codes (E=Entwaesserung, H=Hausentwaesserung,
-        // F=Fremdwasser, Z=Zufluss) und andere unbekannte Kurzformen
-        // sind keine Standard-Nutzungsarten - nicht uebernehmen.
-        if (t.Length <= 2)
-            return null;
-
-        return t;
-    }
-
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeInspectionDir(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
+        => WinCanValueNormalizer.NormalizeInspectionDir(raw);
 
-        var t = raw.Trim();
-        if (t == "1")
-            return "In Fliessrichtung";
-        if (t == "2")
-            return "Gegen Fliessrichtung";
-
-        return t;
-    }
-
+    // Delegation: Logik liegt jetzt in WinCanValueNormalizer
     private static string? NormalizeAccessible(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var t = raw.Trim().ToLowerInvariant();
-        if (t is "1" or "true" or "ja" or "yes")
-            return "offen";
-        if (t is "0" or "false" or "nein" or "no")
-            return "abgeschlossen";
-
-        return raw.Trim();
-    }
+        => WinCanValueNormalizer.NormalizeAccessible(raw);
 
     private static double? SafeReadDouble(SqliteDataReader r, int col)
     {

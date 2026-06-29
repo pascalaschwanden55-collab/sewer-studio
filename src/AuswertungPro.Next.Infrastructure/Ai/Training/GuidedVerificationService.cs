@@ -4,9 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Protocol;
 
@@ -139,7 +139,7 @@ public sealed class GuidedVerificationService
 
     private static GuidedVerificationResult ParseResponse(string raw, GroundTruthEntry entry)
     {
-        var json = ExtractJson(raw);
+        var json = JsonObjectExtractor.TryExtractFirstObject(raw);
         if (string.IsNullOrWhiteSpace(json))
             return FallbackResult("Kein JSON in Antwort");
 
@@ -201,17 +201,6 @@ public sealed class GuidedVerificationService
 
     private static GuidedVerificationResult FallbackResult(string reason) =>
         new(null, false, "nicht_sichtbar", null, null, 0, null, null, reason);
-
-    private static string? ExtractJson(string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        var m = Regex.Match(raw, @"```(?:json)?\s*(\{[\s\S]*?\})\s*```");
-        if (m.Success) return m.Groups[1].Value;
-        int start = raw.IndexOf('{');
-        int end = raw.LastIndexOf('}');
-        if (start >= 0 && end > start) return raw[start..(end + 1)];
-        return null;
-    }
 
     /// <summary>VSA-Code Kurzbeschreibung fuer den Prompt.</summary>
     internal static string ResolveCodeDescription(string vsaCode, ICodeCatalogProvider? codeCatalog)

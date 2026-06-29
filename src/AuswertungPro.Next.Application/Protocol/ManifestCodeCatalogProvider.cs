@@ -45,13 +45,7 @@ public sealed class ManifestCodeCatalogProvider : ICodeCatalogProvider
     }
 
     public IReadOnlyList<string> AllowedCodes()
-        => _codes
-            .Where(x => x.IsSelectable && !x.IsObservedExtension)
-            .Select(x => x.Code)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        => CodeCatalogNormalization.AllowedCodes(_codes);
 
     public IReadOnlyList<string> Validate(IReadOnlyList<CodeDefinition>? codes = null)
     {
@@ -104,72 +98,13 @@ public sealed class ManifestCodeCatalogProvider : ICodeCatalogProvider
     }
 
     private static List<CodeDefinition> NormalizeCodes(IEnumerable<CodeDefinition> codes)
-    {
-        return (codes ?? Array.Empty<CodeDefinition>())
-            .Select(CloneCode)
-            .Select(NormalizeCodeDefinition)
-            .ToList();
-    }
-
-    private static CodeDefinition NormalizeCodeDefinition(CodeDefinition code)
-    {
-        code.Code = NormalizeCode(code.Code);
-        code.Title = (code.Title ?? string.Empty).Trim();
-        code.CanonicalCode = string.IsNullOrWhiteSpace(code.CanonicalCode)
-            ? code.Code
-            : NormalizeCode(code.CanonicalCode);
-        code.Source = string.IsNullOrWhiteSpace(code.Source) ? null : code.Source.Trim();
-        code.StandardAnnotation = string.IsNullOrWhiteSpace(code.StandardAnnotation) ? null : code.StandardAnnotation.Trim();
-        code.Group = string.IsNullOrWhiteSpace(code.Group) ? "Unbekannt" : code.Group.Trim();
-        code.Description = string.IsNullOrWhiteSpace(code.Description) ? null : code.Description.Trim();
-        code.CategoryPath = (code.CategoryPath ?? new List<string>())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(x => x.Trim())
-            .ToList();
-        code.Parameters = (code.Parameters ?? new List<CodeParameter>()).Select(CloneParameter).ToList();
-        code.Examples = (code.Examples ?? new List<string>())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(x => x.Trim())
-            .ToList();
-        if (code.RangeThresholdM is not null && code.RangeThresholdM <= 0)
-            code.RangeThresholdM = null;
-
-        return code;
-    }
+        => CodeCatalogNormalization.NormalizeCodes(codes);
 
     private static CodeDefinition CloneCode(CodeDefinition source)
-        => new()
-        {
-            Code = source.Code ?? string.Empty,
-            Title = source.Title ?? string.Empty,
-            CanonicalCode = source.CanonicalCode,
-            Source = source.Source,
-            IsObservedExtension = source.IsObservedExtension,
-            IsSelectable = source.IsSelectable,
-            StandardAnnotation = source.StandardAnnotation,
-            Group = source.Group ?? "Unbekannt",
-            Description = source.Description,
-            CategoryPath = (source.CategoryPath ?? new List<string>()).ToList(),
-            Parameters = (source.Parameters ?? new List<CodeParameter>()).Select(CloneParameter).ToList(),
-            Examples = (source.Examples ?? new List<string>()).ToList(),
-            RequiresRange = source.RequiresRange,
-            RangeThresholdM = source.RangeThresholdM,
-            RangeThresholdText = source.RangeThresholdText
-        };
-
-    private static CodeParameter CloneParameter(CodeParameter source)
-        => new()
-        {
-            Name = source.Name ?? string.Empty,
-            DataKey = string.IsNullOrWhiteSpace(source.DataKey) ? null : source.DataKey.Trim(),
-            Type = string.IsNullOrWhiteSpace(source.Type) ? "string" : source.Type.Trim(),
-            AllowedValues = source.AllowedValues?.ToList(),
-            Unit = string.IsNullOrWhiteSpace(source.Unit) ? null : source.Unit.Trim(),
-            Required = source.Required
-        };
+        => CodeDefinitionCloning.CloneCode(source);
 
     private static string NormalizeCode(string? code)
-        => (code ?? string.Empty).Trim().ToUpperInvariant();
+        => CodeCatalogNormalization.NormalizeCode(code);
 
     private static List<CodeDefinition> DeduplicateCodes(
         IReadOnlyList<CodeDefinition> codes,

@@ -64,32 +64,7 @@ public sealed class FewShotExampleBuilder
         "AEDXP", // Materialwechsel
     };
 
-    // Codes die interessante Trainingsbeispiele sind.
-    // Bedeutungen nicht hier pflegen: Titel kommen aus dem VSA-KEK-Katalog.
-    private static readonly HashSet<string> HighValuePrefixes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "BAA",
-        "BAB",
-        "BAC",
-        "BAD",
-        "BAE",
-        "BAF",
-        "BAG",
-        "BAH",
-        "BAI",
-        "BAJ",
-        "BBA",
-        "BBB",
-        "BBC",
-        "BBD",
-        "BBE",
-        "BBF",
-    };
-
-    // Uhrzeitlage aus Beschreibungstext extrahieren
-    private static readonly Regex ClockRegex = new(
-        @"(?:von\s+)?(\d{1,2})\s*Uhr\s*(?:bis\s+(\d{1,2})\s*Uhr)?",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    // Delegiert an FewShotExampleClassifier – lokale Felder entfernt.
 
     // Material aus PDF-Header extrahieren
     private static readonly Regex MaterialRegex = new(
@@ -370,41 +345,12 @@ public sealed class FewShotExampleBuilder
     }
 
     /// <summary>Bestimmt die Qualitaet eines Beispiels basierend auf dem Code.</summary>
-    private static double DetermineQuality(GroundTruthEntry entry)
-    {
-        var code = entry.VsaCode.ToUpperInvariant();
-
-        // Hochwertiger Schaden mit spezifischem Code
-        if (code.Length >= 3 && HighValuePrefixes.Any(p => code.StartsWith(p)))
-            return 0.9;
-
-        // BDA = Allgemeinzustand — niedrigere Qualitaet weil wenig spezifisch
-        if (code.StartsWith("BDA", StringComparison.OrdinalIgnoreCase))
-            return 0.3;
-
-        // Anschluss-Codes (BC*) → mittlere Qualitaet
-        if (code.StartsWith("BC", StringComparison.OrdinalIgnoreCase))
-            return 0.7;
-
-        // A-Codes (Streckenschaeden Start/Ende)
-        if (code.StartsWith("A0", StringComparison.OrdinalIgnoreCase)
-            || code.StartsWith("B0", StringComparison.OrdinalIgnoreCase))
-            return 0.6;
-
-        return 0.5;
-    }
+    private static double DetermineQuality(GroundTruthEntry entry) =>
+        FewShotExampleClassifier.DetermineQuality(entry);
 
     /// <summary>Extrahiert Uhrzeitlage aus Beschreibungstext.</summary>
-    private static string? ExtractClockPosition(string text)
-    {
-        var match = ClockRegex.Match(text);
-        if (!match.Success) return null;
-
-        var from = match.Groups[1].Value;
-        var to = match.Groups[2].Success ? match.Groups[2].Value : null;
-
-        return to != null ? $"{from} Uhr bis {to} Uhr" : $"{from} Uhr";
-    }
+    private static string? ExtractClockPosition(string text) =>
+        FewShotExampleClassifier.ExtractClockPosition(text);
 
     /// <summary>Findet alle Ordner die ein PDF-Protokoll enthalten.</summary>
     private static List<(string Folder, string PdfPath)> FindPdfFolders(string rootFolder)

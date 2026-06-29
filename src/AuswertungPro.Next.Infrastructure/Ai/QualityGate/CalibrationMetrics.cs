@@ -23,15 +23,7 @@ public static class CalibrationMetrics
     {
         if (predictions.Count == 0) return 0;
 
-        var bins = new List<(double Confidence, bool WasCorrect)>[binCount];
-        for (int i = 0; i < binCount; i++)
-            bins[i] = new List<(double, bool)>();
-
-        foreach (var (conf, correct) in predictions)
-        {
-            var idx = Math.Min((int)(conf * binCount), binCount - 1);
-            bins[idx].Add((conf, correct));
-        }
+        var bins = BuildBins(predictions, binCount);
 
         double ece = 0;
         int total = predictions.Count;
@@ -56,15 +48,7 @@ public static class CalibrationMetrics
         IReadOnlyList<(double Confidence, bool WasCorrect)> predictions,
         int binCount = DefaultBinCount)
     {
-        var bins = new List<(double Confidence, bool WasCorrect)>[binCount];
-        for (int i = 0; i < binCount; i++)
-            bins[i] = new List<(double, bool)>();
-
-        foreach (var (conf, correct) in predictions)
-        {
-            var idx = Math.Min((int)(conf * binCount), binCount - 1);
-            bins[idx].Add((conf, correct));
-        }
+        var bins = BuildBins(predictions, binCount);
 
         var result = new List<CalibrationBin>(binCount);
         for (int i = 0; i < binCount; i++)
@@ -78,6 +62,27 @@ public static class CalibrationMetrics
                 Accuracy: bin.Count > 0 ? (double)bin.Count(b => b.WasCorrect) / bin.Count : 0));
         }
         return result;
+    }
+
+    /// <summary>
+    /// Verteilt Vorhersagen gleichmaessig auf <paramref name="binCount"/> Intervalle der Breite 1/binCount.
+    /// Gibt ein Array von Listen zurueck; jede Liste enthaelt die Vorhersagen im jeweiligen Bin.
+    /// </summary>
+    private static List<(double Confidence, bool WasCorrect)>[] BuildBins(
+        IReadOnlyList<(double Confidence, bool WasCorrect)> predictions,
+        int binCount)
+    {
+        var bins = new List<(double Confidence, bool WasCorrect)>[binCount];
+        for (int i = 0; i < binCount; i++)
+            bins[i] = new List<(double, bool)>();
+
+        foreach (var (conf, correct) in predictions)
+        {
+            var idx = Math.Min((int)(conf * binCount), binCount - 1);
+            bins[idx].Add((conf, correct));
+        }
+
+        return bins;
     }
 }
 

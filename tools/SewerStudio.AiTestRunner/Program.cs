@@ -421,26 +421,6 @@ internal static class SidecarTokenResolver
     }
 }
 
-internal static class PngInfo
-{
-    public static (int Width, int Height) ReadDimensions(byte[] pngBytes)
-    {
-        if (pngBytes.Length < 24)
-            return (0, 0);
-
-        try
-        {
-            var width = (pngBytes[16] << 24) | (pngBytes[17] << 16) | (pngBytes[18] << 8) | pngBytes[19];
-            var height = (pngBytes[20] << 24) | (pngBytes[21] << 16) | (pngBytes[22] << 8) | pngBytes[23];
-            return width > 0 && height > 0 ? (width, height) : (0, 0);
-        }
-        catch
-        {
-            return (0, 0);
-        }
-    }
-}
-
 internal sealed class AiAuditReport
 {
     public string RunnerVersion { get; set; } = "2026-05-14-headless-v1";
@@ -686,45 +666,6 @@ internal static class SvgOverlayWriter
 
     private static string F(double value)
         => value.ToString("0.###", CultureInfo.InvariantCulture);
-}
-
-internal static class RleMaskDecoder
-{
-    public static bool[,] Decode(string rle, int width, int height)
-    {
-        var mask = new bool[height, width];
-        if (string.IsNullOrWhiteSpace(rle) || width <= 0 || height <= 0)
-            return mask;
-
-        var parts = rle.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 2 || !int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var startValue))
-            return mask;
-
-        var current = startValue != 0;
-        var pos = 0;
-        var total = width * height;
-
-        for (var i = 1; i < parts.Length && pos < total; i++)
-        {
-            if (!int.TryParse(parts[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var runLength) || runLength <= 0)
-            {
-                current = !current;
-                continue;
-            }
-
-            var end = Math.Min(pos + runLength, total);
-            if (current)
-            {
-                for (var p = pos; p < end; p++)
-                    mask[p / width, p % width] = true;
-            }
-
-            pos = end;
-            current = !current;
-        }
-
-        return mask;
-    }
 }
 
 internal static class HtmlReportWriter

@@ -241,12 +241,7 @@ internal static class HoldingVideoMatching
         return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
     }
 
+    // Delegiert an HoldingTextNormalizer – identische Logik, jetzt mit Null-Guard.
     private static string NormalizeKey(string value)
-    {
-        var chars = value
-            .Where(char.IsLetterOrDigit)
-            .Select(char.ToLowerInvariant)
-            .ToArray();
-        return new string(chars);
-    }
+        => HoldingTextNormalizer.NormalizeKey(value);
 }

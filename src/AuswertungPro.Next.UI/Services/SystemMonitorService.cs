@@ -392,8 +392,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         {
             using var key = Registry.LocalMachine.OpenSubKey(
                 @"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity");
-            if (key?.GetValue("Enabled") is int enabled)
-                return enabled == 1;
+            return HvciDetector.IsEnabled(key?.GetValue("Enabled"));
         }
         catch (Exception ex)
         {
@@ -1079,10 +1078,9 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
         _prevIdleTicks = idleTicks;
         _prevTotalTicks = totalTicks;
 
-        if (deltaTotal <= 0)
-            return;
-
-        CpuPercent = (int)Math.Round(100.0 * (deltaTotal - deltaIdle) / deltaTotal);
+        var pct = CpuDeltaCalculator.ComputePercent(deltaIdle, deltaTotal);
+        if (pct.HasValue)
+            CpuPercent = pct.Value;
     }
 
     // ── RAM via GlobalMemoryStatusEx ──────────────────────────────────────
@@ -1175,21 +1173,13 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                 var output = result.StdOut;
 
                 // Parse "82, 4521, 12288, 65, 1920, NVIDIA GeForce RTX 4070"
-                var parts = output.Trim().Split(',', StringSplitOptions.TrimEntries);
-                if (parts.Length < 5)
+                var reading = NvidiaSmiOutputParser.Parse(output);
+                if (reading is null)
                 {
                     if (_gpuQuerySkip <= 4)
                         Log($"nvidia-smi: unerwartete Ausgabe: '{output.Trim()}'");
                     return;
                 }
-
-                if (!int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var gpuPct)) return;
-                if (!long.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var memUsed)) return;
-                if (!long.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var memTotal)) return;
-                // nvidia-smi may return "[N/A]" — keep last known value on parse failure
-                bool hasTempC = int.TryParse(parts[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out var tempC);
-                bool hasClockMhz = int.TryParse(parts[4], NumberStyles.Integer, CultureInfo.InvariantCulture, out var clockMhz);
-                var gpuName = parts.Length >= 6 ? parts[5].Trim() : "";
 
                 _gpuFailCount = 0; // reset on success
 
@@ -1198,22 +1188,22 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
                     if (Volatile.Read(ref _disposed) != 0)
                         return;
 
-                    GpuPercent = gpuPct;
-                    GpuMemUsedMb = memUsed;
-                    GpuMemTotalMb = memTotal;
-                    GpuMemPercent = memTotal > 0 ? (int)Math.Round(100.0 * memUsed / memTotal) : 0;
-                    if (hasTempC)
+                    GpuPercent = reading.GpuPercent;
+                    GpuMemUsedMb = reading.MemUsedMb;
+                    GpuMemTotalMb = reading.MemTotalMb;
+                    GpuMemPercent = NvidiaSmiOutputParser.ComputeMemPercent(reading.MemUsedMb, reading.MemTotalMb);
+                    if (reading.TempC.HasValue)
                     {
-                        GpuTempC = tempC;
+                        GpuTempC = reading.TempC.Value;
                         IsGpuTempAvailable = true;
                     }
-                    if (hasClockMhz)
+                    if (reading.ClockMhz.HasValue)
                     {
-                        GpuClockMhz = clockMhz;
+                        GpuClockMhz = reading.ClockMhz.Value;
                         IsGpuClockAvailable = true;
                     }
-                    if (gpuName.Length > 0)
-                        GpuName = gpuName;
+                    if (reading.GpuName.Length > 0)
+                        GpuName = reading.GpuName;
                     IsGpuAvailable = true;
                 });
             }

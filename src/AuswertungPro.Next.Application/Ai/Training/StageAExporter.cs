@@ -483,41 +483,15 @@ public sealed class StageAExporter
 
     private static string ChooseSplit(TrainingSample sample, double validationRatio)
     {
-        if (validationRatio <= 0)
-            return "train";
-        if (validationRatio >= 1)
-            return "val";
-
+        // Schluessel: SampleId bevorzugt, Fallback auf Pfad
         var key = string.IsNullOrWhiteSpace(sample.SampleId)
             ? sample.FramePath
             : sample.SampleId;
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(key.ToUpperInvariant()));
-        var value = BitConverter.ToUInt32(hash, 0) / (double)uint.MaxValue;
-        return value < validationRatio ? "val" : "train";
+        return YoloDatasetNaming.ChooseSplit(key, validationRatio);
     }
 
     private static string BuildYoloLabelLine(int classId, TrainingSample sample)
-    {
-        var (xc, yc, w, h) = sample.HasBbox
-            ? (
-                Clamp01(sample.BboxXCenter!.Value),
-                Clamp01(sample.BboxYCenter!.Value),
-                Clamp01(sample.BboxWidth!.Value),
-                Clamp01(sample.BboxHeight!.Value))
-            : (0.5, 0.5, 0.8, 0.8);
-
-        return string.Format(
-            CultureInfo.InvariantCulture,
-            "{0} {1:F6} {2:F6} {3:F6} {4:F6}",
-            classId,
-            xc,
-            yc,
-            w,
-            h);
-    }
-
-    private static double Clamp01(double value)
-        => Math.Min(1, Math.Max(0, value));
+        => StageALabelFormatting.BuildYoloLabelLine(classId, sample);
 
     // Voller VSA-Code (z. B. BABAC) bleibt erhalten — Char1/Char2 nicht verwerfen.
     // Fuer Grobklassen-Training spaeter optionalen ClassGranularity-Schalter ergaenzen.
@@ -535,19 +509,7 @@ public sealed class StageAExporter
     }
 
     private static string SanitizeFileName(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return Guid.NewGuid().ToString("N");
-
-        var invalid = Path.GetInvalidFileNameChars().ToHashSet();
-        var chars = value
-            .Select(ch => invalid.Contains(ch) ? '_' : ch)
-            .ToArray();
-        var sanitized = new string(chars).Trim();
-        return string.IsNullOrWhiteSpace(sanitized)
-            ? Guid.NewGuid().ToString("N")
-            : sanitized;
-    }
+        => StageALabelFormatting.SanitizeFileName(value);
 
     internal static TrainingSample CloneSample(TrainingSample source)
         => new()

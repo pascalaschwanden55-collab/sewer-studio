@@ -91,11 +91,5 @@ public static class QuantificationUnitPolicy
         return c.Length >= 4 && c.StartsWith("BAB", StringComparison.Ordinal) && c[3] == 'A';
     }
 
-    private static string? MainCode(string? code)
-    {
-        if (string.IsNullOrWhiteSpace(code))
-            return null;
-        var trimmed = code.Trim().Replace(".", "").ToUpperInvariant();
-        return trimmed.Length >= 3 ? trimmed[..3] : null;
-    }
+    private static string? MainCode(string? code) => VsaCodeNormalizer.MainCode(code);
 }

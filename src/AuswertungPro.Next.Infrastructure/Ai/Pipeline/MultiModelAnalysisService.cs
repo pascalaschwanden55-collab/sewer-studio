@@ -4,13 +4,13 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -987,51 +987,14 @@ public sealed class MultiModelAnalysisService
         return 0;
     }
 
-    private static string DeriveFfprobePath(string ffmpegPath)
-    {
-        if (string.IsNullOrWhiteSpace(ffmpegPath) ||
-            string.Equals(ffmpegPath, "ffmpeg", StringComparison.OrdinalIgnoreCase))
-            return "ffprobe";
-        var dir = Path.GetDirectoryName(ffmpegPath);
-        var ext = Path.GetExtension(ffmpegPath);
-        return string.IsNullOrWhiteSpace(dir) ? "ffprobe" + ext : Path.Combine(dir, "ffprobe" + ext);
-    }
+    // Delegiert an gemeinsamen Helfer in FfmpegLocator (verhaltensneutral).
+    private static string DeriveFfprobePath(string ffmpegPath) =>
+        FfmpegLocator.DeriveFfprobeFrom(ffmpegPath);
 
     /// <summary>
-    /// Normalisiert Clock-Positionen auf ganzzahlige Stunden.
-    /// "3:00" → "3", "12" → "12", "Scheitel" → "12", "Sohle" → "6", "rechts" → "3", "links" → "9".
+    /// Normalisiert Clock-Positionen — delegiert an kanonische Implementierung in VsaCodeResolver.
     /// </summary>
-    private static string? NormalizeClockPosition(string? clock)
-    {
-        var normalized = NormalizeClock(clock);
-        if (string.IsNullOrWhiteSpace(normalized))
-            return null;
-        return normalized;
-    }
-
-    private static string? NormalizeClock(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim().ToLowerInvariant();
-        if (text.Contains("oben") || text.Contains("scheitel") || text.Contains("krone"))
-            return "12:00";
-        if (text.Contains("unten") || text.Contains("sohle"))
-            return "6:00";
-        if (text.Contains("rechts")) return "3:00";
-        if (text.Contains("links")) return "9:00";
-
-        var match = Regex.Match(raw, @"\b(1[0-2]|0?[1-9])\b");
-        if (match.Success
-            && int.TryParse(match.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var hour)
-            && hour >= 1
-            && hour <= 12)
-        {
-            return $"{hour}:00";
-        }
-
-        return raw.Trim();
-    }
+    private static string? NormalizeClockPosition(string? clock) =>
+        VsaCodeResolver.NormalizeClock(clock);
 
 }

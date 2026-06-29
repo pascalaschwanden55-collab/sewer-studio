@@ -213,23 +213,7 @@ public sealed class AppSettings
     }
 
     private static void MigrateLegacySettingsIfNeeded()
-    {
-        try
-        {
-            if (File.Exists(SettingsPath))
-                return;
-
-            if (!File.Exists(LegacySettingsPath))
-                return;
-
-            Directory.CreateDirectory(AppDataDir);
-            File.Copy(LegacySettingsPath, SettingsPath, overwrite: false);
-        }
-        catch
-        {
-            // ignore migration errors
-        }
-    }
+        => SettingsMigrator.MigrateLegacyIfNeeded(SettingsPath, LegacySettingsPath, AppDataDir);
 
     private static AppSettings NormalizeAfterLoad(AppSettings settings)
     {
@@ -260,100 +244,10 @@ public sealed class AppSettings
     }
 
     private static void PersistSerializedState(string json, bool enableRestorePoints)
-    {
-        string? tempPath = null;
-
-        try
-        {
-            Directory.CreateDirectory(AppDataDir);
-            if (enableRestorePoints)
-            {
-                RestorePointService.TryCreate(
-                    sourceFilePath: SettingsPath,
-                    restoreRoot: RestorePointService.SettingsRestoreRoot,
-                    scopeName: "settings");
-            }
-
-            tempPath = Path.Combine(AppDataDir, $".{Path.GetFileName(SettingsPath)}.{Guid.NewGuid():N}.tmp");
-            File.WriteAllText(tempPath, json);
-
-            if (File.Exists(SettingsPath))
-            {
-                var backupPath = SettingsPath + ".bak";
-                try
-                {
-                    File.Replace(tempPath, SettingsPath, backupPath, ignoreMetadataErrors: true);
-                }
-                catch (Exception ex) when (ex is PlatformNotSupportedException || ex is IOException || ex is UnauthorizedAccessException)
-                {
-                    File.Copy(SettingsPath, backupPath, overwrite: true);
-                    File.Move(tempPath, SettingsPath, overwrite: true);
-                }
-            }
-            else
-            {
-                File.Move(tempPath, SettingsPath, overwrite: false);
-            }
-        }
-        finally
-        {
-            if (!string.IsNullOrWhiteSpace(tempPath) && File.Exists(tempPath))
-            {
-                try { File.Delete(tempPath); } catch { /* best effort cleanup */ }
-            }
-        }
-    }
+        => SettingsStore.Persist(json, SettingsPath, AppDataDir, enableRestorePoints);
 
     private static void TryQuarantineCorruptSettings(Exception ex)
-    {
-        string? quarantinePath = null;
-
-        try
-        {
-            if (!File.Exists(SettingsPath))
-            {
-                TryAppendSettingsLog("Settings-Load meldete korrupte Daten, aber settings.json wurde nicht gefunden.", ex);
-                return;
-            }
-
-            Directory.CreateDirectory(AppDataDir);
-            var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff");
-            quarantinePath = Path.Combine(AppDataDir, $"settings.corrupt-{stamp}.json");
-
-            File.Move(SettingsPath, quarantinePath, overwrite: false);
-            TryAppendSettingsLog($"Korrupte settings.json wurde nach '{quarantinePath}' verschoben.", ex);
-        }
-        catch (Exception moveEx)
-        {
-            try
-            {
-                if (!File.Exists(SettingsPath))
-                    return;
-
-                quarantinePath ??= Path.Combine(AppDataDir, $"settings.corrupt-{DateTime.UtcNow:yyyyMMdd-HHmmssfff}.json");
-                File.Copy(SettingsPath, quarantinePath, overwrite: false);
-
-                try
-                {
-                    File.Delete(SettingsPath);
-                }
-                catch
-                {
-                    // best effort delete; if this fails, startup still continues with defaults
-                }
-
-                TryAppendSettingsLog(
-                    $"Korrupte settings.json wurde nach fehlgeschlagenem Move nach '{quarantinePath}' kopiert.",
-                    new AggregateException(ex, moveEx));
-            }
-            catch (Exception copyEx)
-            {
-                TryAppendSettingsLog(
-                    "Korrupte settings.json konnte nicht in Quarantaene verschoben werden. Es werden Standardwerte verwendet.",
-                    new AggregateException(ex, moveEx, copyEx));
-            }
-        }
-    }
+        => SettingsQuarantine.TryMoveToQuarantine(SettingsPath, AppDataDir, ex, TryAppendSettingsLog);
 
     private static void TryAppendSettingsLog(string message, Exception? ex = null)
     {

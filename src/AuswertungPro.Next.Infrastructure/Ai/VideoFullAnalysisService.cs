@@ -4,13 +4,13 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -348,13 +348,9 @@ public sealed class VideoFullAnalysisService
             var text = await p.StandardError.ReadToEndAsync();
             await p.WaitForExitAsync(ct);
 
-            var m = System.Text.RegularExpressions.Regex.Match(text, @"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)");
-            if (!m.Success) return null;
-
-            var h = double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
-            var min = double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
-            var s = double.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture);
-            return h * 3600 + min * 60 + s;
+            // Gemeinsamen Parser nutzen statt lokaler Inline-Regex (Vereinheitlichung).
+            var dur = AuswertungPro.Next.Infrastructure.Ai.Training.FfmpegDurationParser.Parse(text);
+            return dur > 0 ? dur : null;
         }
         catch (OperationCanceledException) { throw; }
         catch { return null; }
@@ -375,15 +371,9 @@ public sealed class VideoFullAnalysisService
         return Math.Round(_lastKnownMeter + Math.Max(step, 0.01), 2);
     }
 
-    private static string DeriveFFprobePath(string ffmpegPath)
-    {
-        if (string.IsNullOrWhiteSpace(ffmpegPath) ||
-            string.Equals(ffmpegPath, "ffmpeg", StringComparison.OrdinalIgnoreCase))
-            return "ffprobe";
-        var dir = Path.GetDirectoryName(ffmpegPath);
-        var ext = Path.GetExtension(ffmpegPath);
-        return string.IsNullOrWhiteSpace(dir) ? "ffprobe" + ext : Path.Combine(dir, "ffprobe" + ext);
-    }
+    // Delegiert an gemeinsamen Helfer in FfmpegLocator (verhaltensneutral).
+    private static string DeriveFFprobePath(string ffmpegPath) =>
+        FfmpegLocator.DeriveFfprobeFrom(ffmpegPath);
 }
 
 // â”€â”€ DTOs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
