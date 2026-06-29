@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Import.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
@@ -139,10 +140,9 @@ public static class XtfPrimaryDamageFormatter
         return text.Length == 0 ? null : text;
     }
 
-    // Streckenschaden-Marker: A01, A02, B01, B02, ... (DIN EN 13508-2)
-    private static readonly Regex ContinuousDefectMarkerRegex = new(@"^[AB]\d{2}$", RegexOptions.Compiled);
-    // VSA-Code am Anfang eines Tokens: 3-5 Grossbuchstaben
-    private static readonly Regex EmbeddedVsaCodeRegex = new(@"^([A-Z]{3,5})\b", RegexOptions.Compiled);
+    // Streckenschaden-Marker und VSA-Code-Erkennung: Delegiert an ContinuousDefectCodeResolver (Common)
+    private static readonly Regex ContinuousDefectMarkerRegex = ContinuousDefectCodeResolver.ContinuousDefectMarkerRegex;
+    private static readonly Regex EmbeddedVsaCodeRegex = ContinuousDefectCodeResolver.EmbeddedVsaCodeRegex;
     // Erste Zeichen einer Zeile: optionaler Meter + Code
     private static readonly Regex LineCodeRegex = new(@"^\s*(?:\d+[.,]\d+\s*m?\s+)?([A-Z0-9]{2,6})\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     // Meter irgendwo in der Zeile (erste Zahl gefolgt von optionalem 'm')
