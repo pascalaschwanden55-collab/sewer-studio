@@ -1007,17 +1007,22 @@ public partial class TrainingCenterViewModel : ObservableObject
                         var skip = TrainingCenterSampleGenerationStatusFormatter.FormatBatchSkip(generation);
                         runSummary.RecordSkip(skip.Kind);
 
-                        var skipReason = skip.ResultSummary;
+                        var skipUiPlan = TrainingBatchImportSkippedCaseUiPlanBuilder.Build(
+                            tc.CaseId,
+                            skip,
+                            previewFrame,
+                            SelfTrainingResults.Count + 1);
                         Log(skip.LogMessage);
-                        UpdateLivePreview(tc.CaseId, skip.LiveCodeInfo, skip.LiveMeterInfo, previewFrame);
+                        UpdateLivePreview(
+                            skipUiPlan.Preview.CaseInfo,
+                            skipUiPlan.Preview.CodeInfo,
+                            skipUiPlan.Preview.MeterInfo,
+                            skipUiPlan.Preview.FramePath);
 
                         // Uebersprungene Haltungen trotzdem im Ergebnis-Verlauf zeigen
                         void AddSkipped()
                         {
-                            SelfTrainingResults.Add(TrainingBatchImportResultEntryFactory.CreateSkippedCase(
-                                SelfTrainingResults.Count + 1,
-                                tc.CaseId,
-                                skipReason));
+                            SelfTrainingResults.Add(skipUiPlan.Result);
                         }
                         if (System.Windows.Application.Current?.Dispatcher is { } dSkip && !dSkip.CheckAccess())
                             dSkip.Invoke(AddSkipped);
