@@ -1281,13 +1281,11 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        if (!int.TryParse(MoveToPositionBox.Text.Trim(), out var pos))
-        {
-            Dialogs.Info("Bitte eine gueltige Zahl eingeben.", "Position");
-            return;
-        }
-        if (!vm.MoveToPosition(pos))
-            Dialogs.Info("Verschieben nicht moeglich. Bitte Zeile auswaehlen.", "Position");
+
+        DataPageRowNavigationController.TryMoveToPosition(
+            MoveToPositionBox.Text,
+            vm.MoveToPosition,
+            Dialogs.Info);
     }
 
     private void GoToRowBox_KeyDown(object sender, KeyEventArgs e)
@@ -1301,17 +1299,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        if (!int.TryParse(GoToRowBox.Text.Trim(), out var row) || row < 1)
+
+        if (DataPageRowNavigationController.TryResolveRowIndex(
+            GoToRowBox.Text,
+            vm.Records.Count,
+            Dialogs.Info,
+            out var rowIndex))
         {
-            Dialogs.Info("Bitte eine gueltige Zeilennummer eingeben.", "Gehe zu Zeile");
-            return;
-        }
-        var idx = row - 1;
-        if (idx >= vm.Records.Count)
-            idx = vm.Records.Count - 1;
-        if (idx >= 0)
-        {
-            vm.Selected = vm.Records[idx];
+            vm.Selected = vm.Records[rowIndex];
             Grid.ScrollIntoView(vm.Selected);
         }
     }
