@@ -1736,9 +1736,9 @@ public partial class TrainingCenterViewModel : ObservableObject
                 LoadReviewQueue,
                 Log);
 
-            // Samples-Liste aktualisieren
-            await LoadSamplesInternalAsync();
-            await RefreshKbStatusAsync();
+            await SelfTrainingPostRunRefreshController.RefreshAsync(
+                LoadSamplesInternalAsync,
+                RefreshKbStatusAsync);
         }
         catch (OperationCanceledException)
         {

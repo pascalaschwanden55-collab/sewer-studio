@@ -176,6 +176,23 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_self_training_post_run_refresh_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+
+        Assert.Contains("SelfTrainingPostRunRefreshController.RefreshAsync(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("await LoadSamplesInternalAsync();", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("await RefreshKbStatusAsync();", selfTrainingSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_run_control_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
