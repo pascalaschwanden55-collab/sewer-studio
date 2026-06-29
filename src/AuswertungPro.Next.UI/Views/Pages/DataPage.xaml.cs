@@ -430,14 +430,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
             var target = GetDataGridRowItem(e.OriginalSource);
             if (droppedData == null || target == null || droppedData == target) return;
 
-            var list = vm.Records;
-            int oldIndex = list.IndexOf(droppedData);
-            int newIndex = list.IndexOf(target);
-            if (oldIndex < 0 || newIndex < 0 || oldIndex == newIndex) return;
-            list.Move(oldIndex, newIndex);
-            ResetSort();
-            var updateNr = vm.GetType().GetMethod("UpdateNr", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            updateNr?.Invoke(vm, null);
+            if (DataPageDropReorderController.TryMoveAndRenumber(vm.Records, droppedData, target))
+                ResetSort();
         }
     }
 
