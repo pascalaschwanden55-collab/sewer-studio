@@ -1168,86 +1168,24 @@ public partial class TrainingCenterViewModel : ObservableObject
         {
             IsBusy = true;
 
-            var all = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
-            var pending = KbReconcilePlanner.SelectPending(all);
-            var (total, eligible) = KbReconcilePlanner.CountPending(all);
-            if (total == 0)
-            {
-                Log("KB-Nachholen: keine offenen Gold-Samples (alles bereits indexiert).");
-                SetStatus("KB-Nachholen: nichts zu tun");
-                return;
-            }
-
-            // Ehrliche Laufzeit-Zahl: wie viele bestaetigte Gold-Samples warten wirklich,
-            // und wie viele davon sind trainingsfaehig. Keine fiktive Zahl.
-            Log($"KB-Nachholen: {total} bestaetigte Gold-Samples warten (davon {eligible} trainingsfaehig markiert).");
-
-            // Reversibles Backup VOR der ersten Aenderung — vollwertiger KI-Hirn-Export mit
-            // SQLite-WAL-Checkpoint (vorhandener KnowledgeBackupService). "Daten nie verlieren".
-            var backupZip = System.IO.Path.Combine(
-                KnowledgeBasePaths.GetRoot(), "kb_backups",
-                $"vor_kb_nachholen_{DateTime.Now:yyyy-MM-dd_HHmmss}.zip");
-            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(backupZip)!);
-            SetStatus("KB-Nachholen: Backup wird erstellt…");
-            // Progress<T> aus dem UI-Thread erstellt -> Callbacks laufen auf dem UI-Kontext;
-            // SetStatus ist zusaetzlich dispatcher-sicher.
-            var backup = await KnowledgeBackupService.ExportAsync(
-                backupZip, new Progress<string>(m => SetStatus($"Backup: {m}")), ct).ConfigureAwait(false);
-            if (!backup.Success)
-            {
-                Log($"KB-Nachholen ABGEBROCHEN: Backup fehlgeschlagen ({backup.Error}). Keine Aenderung vorgenommen.");
-                SetStatus("KB-Nachholen: Backup fehlgeschlagen");
-                return;
-            }
-            Log($"KB-Nachholen: Backup angelegt ({backup.FileCount} Dateien) unter {backupZip}");
-            SetStatus($"KB-Nachholen: 0/{total}");
-
-            var indexed = 0;
-            var skipped = 0;
-            var processed = 0;
-
-            // In Bloecken indexieren, damit Status laufend zurueckgeschrieben wird (kein "alles oder nichts").
-            const int batchSize = 50;
-            for (var i = 0; i < pending.Count; i += batchSize)
-            {
-                ct.ThrowIfCancellationRequested();
-                var batch = pending.Skip(i).Take(batchSize).ToList();
-
-                foreach (var s in batch)
-                    s.KbIndexState = KbIndexState.Pending;
-                await TrainingSamplesStore.MergeOrUpdateAsync(batch).ConfigureAwait(false);
-
-                var indexResult = await IncrementalKbUpdateWithReasonAsync(batch, ct).ConfigureAwait(false);
-
-                foreach (var s in batch)
+            await TrainingGoldKbReconcileWorkflowController.RunAsync(
+                TrainingSamplesStore.LoadAsync,
+                TrainingSamplesStore.MergeOrUpdateAsync,
+                IncrementalKbUpdateWithReasonAsync,
+                async (path, progress, token) =>
                 {
-                    if (indexResult.IndexedIds.Contains(s.SampleId))
-                    {
-                        s.KbIndexState = KbIndexState.Indexed;
-                        indexed++;
-                    }
-                    else if (indexResult.SkippedIds.Contains(s.SampleId))
-                    {
-                        // Bewusst/dauerhaft verworfen (Eval-Schutz/nicht index-wuerdig) -> Skipped,
-                        // damit der naechste Nachhol-Lauf es NICHT wieder aufgreift.
-                        s.KbIndexState = KbIndexState.Skipped;
-                        skipped++;
-                    }
-                    else
-                    {
-                        // Echter (transienter) Misserfolg, z.B. Ollama offline -> Error (spaeter erneut).
-                        s.KbIndexState = KbIndexState.Error;
-                        skipped++;
-                    }
-                    processed++;
-                }
-                await TrainingSamplesStore.MergeOrUpdateAsync(batch).ConfigureAwait(false);
-
-                SetStatus($"KB-Nachholen: {processed}/{total}");
-            }
-
-            Log($"KB-Nachholen fertig: {indexed} indexiert, {skipped} uebersprungen/fehlgeschlagen (von {total}).");
-            SetStatus($"KB-Nachholen: {indexed} indexiert, {skipped} uebersprungen");
+                    var backup = await KnowledgeBackupService.ExportAsync(path, progress, token).ConfigureAwait(false);
+                    return new TrainingGoldKbReconcileBackupResult(
+                        backup.Success,
+                        backup.Error,
+                        backup.FileCount);
+                },
+                () => KnowledgeBasePaths.GetRoot(),
+                () => DateTime.Now,
+                directory => System.IO.Directory.CreateDirectory(directory),
+                Log,
+                SetStatus,
+                ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -1582,33 +1520,23 @@ public partial class TrainingCenterViewModel : ObservableObject
             foreach (var line in startPresentation.LogLines)
                 Log(line);
 
-            // Services instanziieren (gleicher Pattern wie BatchImport)
-            var cfg = new AppSettingsAiSettingsProvider()
-                .Load()
-                .ToRuntimeSettings();
-            Log(SelfTrainingRunPresentationBuilder.BuildOllamaConfigLog(cfg.OllamaBaseUri, cfg.VisionModel));
-
-            var stSettings = await TrainingCenterSettingsStore.LoadAsync();
-
-            // Weg 1: read-only KB-Abgleich-Signal fuer den Orchestrator (KB-Widerspruch -> Review).
-            var stOllamaConfig = new AppSettingsAiSettingsProvider().Load().ToOllamaConfig();
-            _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = stOllamaConfig.RequestTimeout };
-            using var selfTrainingSession = SelfTrainingSessionController.Create(
-                cfg,
-                stOllamaConfig,
-                _kbHttpClient,
-                stSettings,
+            using var selfTrainingSetup = await SelfTrainingRuntimeSetupController.PrepareAsync(
+                () => PlayerAiSettingsLoader.LoadRuntimeSettings(),
+                TrainingCenterSettingsStore.LoadAsync,
+                () => PlayerAiSettingsLoader.LoadPlatformSettings().ToOllamaConfig(),
+                config => _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = config.RequestTimeout },
                 _settings,
-                _codeCatalog);
-            _activeVisionModel = selfTrainingSession.ActiveVisionModel;
-            _selfTrainingOrchestrator = selfTrainingSession.Orchestrator;
+                _codeCatalog,
+                Log);
+            _activeVisionModel = selfTrainingSetup.Session.ActiveVisionModel;
+            _selfTrainingOrchestrator = selfTrainingSetup.Session.Orchestrator;
 
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
 
             Log(SelfTrainingRunPresentationBuilder.BuildPipelineStartedLog());
             var result = await SelfTrainingRunExecutionController.RunAsync(
-                selfTrainingSession.Orchestrator,
+                selfTrainingSetup.Session.Orchestrator,
                 TrainingCenterRuntimeHelpers.ToTrainingCaseInput(selectedCase),
                 progress,
                 SelfTrainingHistorySnapshotBuilder.Build,

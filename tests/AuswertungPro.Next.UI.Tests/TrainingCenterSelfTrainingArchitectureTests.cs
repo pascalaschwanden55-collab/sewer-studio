@@ -111,9 +111,17 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var setupSource = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "SelfTrainingRuntimeSetupController.cs"));
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingRunPresentationBuilder.BuildOllamaConfigLog(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingRuntimeSetupController.PrepareAsync(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingRunPresentationBuilder.BuildOllamaConfigLog(", setupSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Ollama: {cfg.OllamaBaseUri}, Modell: {cfg.VisionModel}", selfTrainingSource, StringComparison.Ordinal);
     }
 
@@ -135,7 +143,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_self_training_service_erzeugung_an_session_controller()
+    public void TrainingCenterViewModel_delegiert_self_training_runtime_setup_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -144,10 +152,21 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var setupSource = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "SelfTrainingRuntimeSetupController.cs"));
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingSessionController.Create(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("using var selfTrainingSession", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingRuntimeSetupController.PrepareAsync(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("using var selfTrainingSetup", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingSessionController.Create(", setupSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingSessionController.Create(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new AppSettingsAiSettingsProvider()", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingCenterSettingsStore.LoadAsync()", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("new OllamaClient(", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("new EnhancedVisionAnalysisService(", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("new TechniqueAssessmentService(", selfTrainingSource, StringComparison.Ordinal);
@@ -247,6 +266,27 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.DoesNotContain("new KnowledgeBaseContext()", kbUpdateSource, StringComparison.Ordinal);
         Assert.DoesNotContain("new KnowledgeBaseManager(", kbUpdateSource, StringComparison.Ordinal);
         Assert.DoesNotContain("foreach (var sample in samples)", kbUpdateSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TrainingCenterViewModel_delegiert_gold_kb_reconcile_workflow_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var reconcileSource = ExtractMethodBody(source, "private async Task ReconcileGoldToKbAsync()");
+
+        Assert.Contains("TrainingGoldKbReconcileWorkflowController.RunAsync(", reconcileSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingSamplesStore.LoadAsync", reconcileSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingSamplesStore.MergeOrUpdateAsync", reconcileSource, StringComparison.Ordinal);
+        Assert.Contains("IncrementalKbUpdateWithReasonAsync", reconcileSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("KbReconcilePlanner.SelectPending", reconcileSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("const int batchSize", reconcileSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("foreach (var s in batch)", reconcileSource, StringComparison.Ordinal);
     }
 
     [Fact]
