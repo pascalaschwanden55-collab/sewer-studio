@@ -14,6 +14,15 @@ return App.Run(args);
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Geteilte Text-Hilfsmethoden fuer alle lokalen Klassen in dieser Datei
+static class TextHelpers
+{
+    /// <summary>Kuerzt <paramref name="s"/> auf maximal <paramref name="n"/> Zeichen und haengt "…" an.</summary>
+    public static string Trim(string? s, int n) => string.IsNullOrEmpty(s) ? "" : (s.Length <= n ? s : s[..n] + "…");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 static class App
 {
     public static int Run(string[] args)
@@ -103,8 +112,8 @@ static class App
 
         Print("TREFFER (TP)", o.Treffer.Select(p => $"{p.Tier,-5} {p.Gt.Code,-6}@{p.Gt.MeterStart,6:F2}m  ↔  KI {p.Ki.Code,-6}@{p.Ki.MeterStart,6:F2}m   (Δ {p.Gap:F2} m)"));
         Print("FALSCHER CODE (WC)", o.FalscherCode.Select(p => $"      {p.Gt.Code,-6}@{p.Gt.MeterStart,6:F2}m  ↔  KI {p.Ki.Code,-6}@{p.Ki.MeterStart,6:F2}m   (Δ {p.Gap:F2} m)"));
-        Print("VERPASST (FN)", o.Verpasst.Select(f => $"      {f.Code,-6}@{f.MeterStart,6:F2}m   {Trim(f.Label, 40)}"));
-        Print("FEHLALARM (FP)", o.Fehlalarm.Select(f => $"      {(f.Code.Length == 0 ? "(leer)" : f.Code),-6}@{f.MeterStart,6:F2}m   {Trim(f.Label, 40)}"));
+        Print("VERPASST (FN)", o.Verpasst.Select(f => $"      {f.Code,-6}@{f.MeterStart,6:F2}m   {TextHelpers.Trim(f.Label, 40)}"));
+        Print("FEHLALARM (FP)", o.Fehlalarm.Select(f => $"      {(f.Code.Length == 0 ? "(leer)" : f.Code),-6}@{f.MeterStart,6:F2}m   {TextHelpers.Trim(f.Label, 40)}"));
     }
 
     static void PrintMetrics(BefundMatchResult o)
@@ -122,7 +131,6 @@ static class App
         foreach (var s in list) Console.WriteLine($"    {s}");
     }
 
-    static string Trim(string? s, int n) => string.IsNullOrEmpty(s) ? "" : (s.Length <= n ? s : s[..n] + "…");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -252,7 +260,7 @@ static class Harvest
         Console.WriteLine();
         Console.WriteLine("DETAIL (Korrektur = der richtige Code an dieser Stelle):");
         foreach (var w in wrongCode.OrderBy(w => w.GtMain).ThenBy(w => w.Report).ThenBy(w => w.Meter))
-            Console.WriteLine($"  {w.GtCode,-6}@{w.Meter,6:F2}m  KI: {(string.IsNullOrEmpty(w.KiCode) ? "(leer)" : w.KiCode),-6}  {Trim(w.GtText, 38)}");
+            Console.WriteLine($"  {w.GtCode,-6}@{w.Meter,6:F2}m  KI: {(string.IsNullOrEmpty(w.KiCode) ? "(leer)" : w.KiCode),-6}  {TextHelpers.Trim(w.GtText, 38)}");
 
         Console.WriteLine();
         Console.WriteLine("VERPASST (Protokoll-Code, von KI gar nicht gefunden) nach Hauptcode:");
@@ -274,8 +282,6 @@ static class Harvest
         Console.WriteLine($"Gespeichert: {outPath}");
         return 0;
     }
-
-    static string Trim(string? s, int n) => string.IsNullOrEmpty(s) ? "" : (s.Length <= n ? s : s[..n] + "…");
 
     sealed record WcCase(string Report, double Meter, string GtCode, string GtMain, string KiCode, string KiMain, string GtText);
     sealed record FnCase(string Report, double Meter, string GtCode, string GtMain, string GtText);
