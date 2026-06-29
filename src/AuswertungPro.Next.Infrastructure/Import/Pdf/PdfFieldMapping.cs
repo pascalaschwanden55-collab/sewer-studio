@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Infrastructure.Import.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Pdf;
 
@@ -105,7 +106,7 @@ public static class PdfPostProcessors
             "Kosten" => NormalizeKosten(value),
             "Sanieren_JaNein" => NormalizeJaNein(value),
             "Offen_abgeschlossen" => NormalizeOffenAbgeschlossen(value),
-            "Rohrmaterial" => NormalizeMaterial(value),
+            "Rohrmaterial" => MaterialTextNormalizer.Normalize(value) ?? "",
             "Nutzungsart" => NormalizeNutzungsart(value),
             "Inspektionsrichtung" => NormalizeInspektionsrichtung(value),
             "DN_mm" => NormalizeDn(value),
@@ -154,17 +155,6 @@ public static class PdfPostProcessors
         if (Regex.IsMatch(v, "(?i)offen")) return "offen";
         if (Regex.IsMatch(v, "(?i)abgeschlossen")) return "abgeschlossen";
         return v.Trim();
-    }
-
-    private static string NormalizeMaterial(string v)
-    {
-        // Take only the first line – WinCan DB sometimes appends cleaning info
-        // like "Zement\nGereinigt    Ja" into the material field.
-        var firstLine = v.Split('\n')[0].Trim();
-        // Strip trailing non-material tokens (e.g. "Gereinigt", "Ja", "Nein")
-        firstLine = Regex.Replace(firstLine, @"(?i)\s*(gereinigt|nicht\s*gereinigt|verschmutzt)\s*(ja|nein)?\s*$", "").Trim();
-
-        return firstLine;
     }
 
     private static string NormalizeNutzungsart(string v)
