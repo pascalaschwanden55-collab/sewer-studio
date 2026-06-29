@@ -1632,16 +1632,17 @@ public partial class TrainingCenterViewModel : ObservableObject
         if (IsBusy || IsSelfTrainingRunning) return;
 
         // Auto-Scan: Wenn keine Faelle geladen, Ordner automatisch scannen
-        if (Cases.Count == 0 && _rootFolders.Count > 0)
+        if (SelfTrainingAutoScanController.ShouldScan(Cases.Count, _rootFolders.Count))
         {
-            StatusText = "Scanne Ordner automatisch...";
-            foreach (var folder in _rootFolders)
-            {
-                if (!Directory.Exists(folder)) continue;
-                var found = await _import.ScanAsync(folder);
-                foreach (var c in found.Select(TrainingCenterRuntimeHelpers.ToTrainingCase))
-                    Cases.Add(c);
-            }
+            StatusText = SelfTrainingAutoScanController.StatusText;
+            var autoScannedCases = await SelfTrainingAutoScanController.ScanAsync(
+                _rootFolders,
+                Directory.Exists,
+                async folder => (await _import.ScanAsync(folder))
+                    .Select(TrainingCenterRuntimeHelpers.ToTrainingCase)
+                    .ToList());
+            foreach (var c in autoScannedCases)
+                Cases.Add(c);
         }
 
         var existingSamplesForSelection = SelectedCase is null
