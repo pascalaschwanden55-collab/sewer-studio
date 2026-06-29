@@ -136,6 +136,26 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.DoesNotContain("new KnowledgeBaseContext()", selfTrainingSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void TrainingCenterViewModel_delegiert_self_training_run_control_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var stopSource = ExtractMethodBody(source, "private void StopSelfTraining()");
+        var pauseSource = ExtractMethodBody(source, "private void PauseSelfTraining()");
+
+        Assert.Contains("SelfTrainingRunControlController.RequestCancel(_selfTrainingCts)", stopSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("_selfTrainingCts?.Cancel();", stopSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingRunControlController.TogglePause(_selfTrainingOrchestrator)", pauseSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("_selfTrainingOrchestrator.Pause();", pauseSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("_selfTrainingOrchestrator.Resume();", pauseSource, StringComparison.Ordinal);
+    }
+
     private static string FindRepoRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);

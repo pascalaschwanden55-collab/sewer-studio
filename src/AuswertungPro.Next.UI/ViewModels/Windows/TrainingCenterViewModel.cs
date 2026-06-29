@@ -1852,26 +1852,17 @@ public partial class TrainingCenterViewModel : ObservableObject
     [RelayCommand]
     private void StopSelfTraining()
     {
-        _selfTrainingCts?.Cancel();
-        StatusText = "Selbsttraining wird abgebrochen...";
+        StatusText = SelfTrainingRunControlController.RequestCancel(_selfTrainingCts);
     }
 
     [RelayCommand]
     private void PauseSelfTraining()
     {
-        if (_selfTrainingOrchestrator is null) return;
-        if (_selfTrainingOrchestrator.IsPaused)
-        {
-            _selfTrainingOrchestrator.Resume();
-            StatusText = "Selbsttraining fortgesetzt.";
-            Log("Pipeline fortgesetzt.");
-        }
-        else
-        {
-            _selfTrainingOrchestrator.Pause();
-            StatusText = "Selbsttraining pausiert.";
-            Log("Pipeline pausiert.");
-        }
+        var pauseResult = SelfTrainingRunControlController.TogglePause(_selfTrainingOrchestrator);
+        if (!pauseResult.Handled) return;
+
+        StatusText = pauseResult.StatusText ?? "";
+        Log(pauseResult.LogMessage ?? "");
     }
 
     // ── Protokoll-Startdaten (B6) ────────────────────────────────────────
