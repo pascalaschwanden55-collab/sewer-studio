@@ -7,7 +7,6 @@ namespace AuswertungPro.Next.Infrastructure.Import.Xtf;
 
 public static class XtfPrimaryDamageFormatter
 {
-    private static readonly Regex NonCodeCharsRegex = new(@"[^A-Z0-9]+", RegexOptions.Compiled);
     private static readonly Regex SpaceRegex = new(@"\s+", RegexOptions.Compiled);
 
     // WinCan-interne GUID-Fragmente: "c06c5c-c9", "6ec06c5c-c9a3-4b12" etc.
@@ -89,14 +88,11 @@ public static class XtfPrimaryDamageFormatter
             : string.Join("\n", lines);
     }
 
-    private static string NormalizeCode(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return string.Empty;
-
-        var upper = raw.Trim().ToUpperInvariant();
-        return NonCodeCharsRegex.Replace(upper, string.Empty);
-    }
+    /// <summary>
+    /// Normalisiert einen Schadencode: Whitespace trimmen, Grossbuchstaben, Sonderzeichen entfernen.
+    /// Delegiert an XtfValueNormalizer.NormalizeCode (algorithmisch identisch).
+    /// </summary>
+    private static string NormalizeCode(string? raw) => XtfValueNormalizer.NormalizeCode(raw);
 
     private static string? ResolveCodeTitle(string code)
     {
