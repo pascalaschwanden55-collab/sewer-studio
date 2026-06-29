@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Protocol;
@@ -149,16 +150,9 @@ public partial class ProtocolEntryEditorDialog : Window
         ApplyLiveValidation();
     }
 
+    // Delegation an ProtocolEntryInputNormalizer (Application-Schicht)
     private static string NormalizeCode(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return string.Empty;
-
-        return string.Concat(value
-            .Trim()
-            .ToUpperInvariant()
-            .Where(ch => !char.IsWhiteSpace(ch)));
-    }
+        => ProtocolEntryInputNormalizer.NormalizeCode(value);
 
     private void HookParameterValidationEvents()
     {
@@ -481,6 +475,7 @@ public partial class ProtocolEntryEditorDialog : Window
             ApplyLiveValidation();
     }
 
+    // Delegation an ProtocolEntryValidator (Application-Schicht)
     private List<string> ValidateVsaUiFields(
         string code,
         bool codeInCatalog,
@@ -494,89 +489,35 @@ public partial class ProtocolEntryEditorDialog : Window
         out bool vsaEzOk,
         out bool vsaSchachtbereichOk)
     {
-        var errors = new List<string>();
-        var hasCode = !string.IsNullOrWhiteSpace(code);
+        CodeDefinition? catalogDef = null;
+        if (codeInCatalog && _sp?.CodeCatalog is not null)
+            _sp.CodeCatalog.TryGet(code, out catalogDef);
 
-        vsaDistanzOk = TryParseOptionalDouble(VsaDistanzTextBox.Text, out var distanz);
-        if (!vsaDistanzOk)
-            errors.Add("VSA: Distanz ist ungueltig.");
-        else if (hasCode && !distanz.HasValue)
+        var inputs = new VsaFieldInputs
         {
-            vsaDistanzOk = false;
-            errors.Add("VSA: Distanz (m) ist erforderlich.");
-        }
+            Distanz = VsaDistanzTextBox.Text,
+            Video = VsaVideoTextBox.Text,
+            UhrVon = VsaUhrVonComboBox.Text,
+            UhrBis = VsaUhrBisComboBox.Text,
+            Q1 = VsaQ1TextBox.Text,
+            Q2 = VsaQ2TextBox.Text,
+            Strecke = VsaStreckeTextBox.Text,
+            Ez = VsaEzComboBox.Text,
+            Schachtbereich = VsaSchachtbereichTextBox.Text,
+            IsStreckenschaden = StreckenschadenCheckBox.IsChecked == true
+        };
 
-        vsaVideoOk = TryParseOptionalTimeSpan(VsaVideoTextBox.Text, out _);
-        if (!vsaVideoOk)
-            errors.Add("VSA: Uhrzeit (Video) ist ungueltig.");
-
-        vsaUhrVonOk = TryNormalizeClockPosition(VsaUhrVonComboBox.Text, out _, out var hasUhrVon);
-        if (!vsaUhrVonOk)
-            errors.Add("VSA: Uhrzeit von nur 00 bis 12.");
-
-        vsaUhrBisOk = TryNormalizeClockPosition(VsaUhrBisComboBox.Text, out _, out var hasUhrBis);
-        if (!vsaUhrBisOk)
-            errors.Add("VSA: Uhrzeit bis nur 00 bis 12.");
-
-        vsaQ1Ok = TryParseOptionalDouble(VsaQ1TextBox.Text, out _);
-        if (!vsaQ1Ok)
-            errors.Add("VSA: Quantifizierung 1 ist ungueltig.");
-
-        vsaQ2Ok = TryParseOptionalDouble(VsaQ2TextBox.Text, out _);
-        if (!vsaQ2Ok)
-            errors.Add("VSA: Quantifizierung 2 ist ungueltig.");
-
-        vsaStreckeOk = TryNormalizeStrecke(VsaStreckeTextBox.Text, out _, out var hasStrecke);
-        if (!vsaStreckeOk)
-            errors.Add("VSA: Strecke nur im Format A1/B1/C1...");
-        if (StreckenschadenCheckBox.IsChecked == true && !hasStrecke)
-        {
-            vsaStreckeOk = false;
-            errors.Add("VSA: Strecke ist bei Streckenschaden erforderlich.");
-        }
-
-        vsaEzOk = TryNormalizeEz(VsaEzComboBox.Text, out _, out _);
-        if (!vsaEzOk)
-            errors.Add("VSA: EZ nur EZ0 bis EZ4.");
-
-        vsaSchachtbereichOk = TryNormalizeSchachtbereich(VsaSchachtbereichTextBox.Text, out _, out _);
-        if (!vsaSchachtbereichOk)
-            errors.Add("VSA: Schachtbereich nur A/B/D/F/H/I/J.");
-
-        if (codeInCatalog && _sp?.CodeCatalog is not null && _sp.CodeCatalog.TryGet(code, out var def))
-        {
-            var hasClock = def.Parameters.Any(p => string.Equals(p.Type, "clock", StringComparison.OrdinalIgnoreCase));
-            if (hasClock && !hasUhrVon)
-            {
-                vsaUhrVonOk = false;
-                errors.Add("VSA: Uhr von ist erforderlich.");
-            }
-
-            var hasQuant1 = def.Parameters.Any(p => string.Equals(p.Name, "Quant1", StringComparison.OrdinalIgnoreCase)
-                                                    || string.Equals(p.Name, "Quantifizierung 1", StringComparison.OrdinalIgnoreCase));
-            var hasQuant2 = def.Parameters.Any(p => string.Equals(p.Name, "Quant2", StringComparison.OrdinalIgnoreCase)
-                                                    || string.Equals(p.Name, "Quantifizierung 2", StringComparison.OrdinalIgnoreCase));
-
-            if (!hasQuant1 && !string.IsNullOrWhiteSpace(VsaQ1TextBox.Text))
-            {
-                vsaQ1Ok = false;
-                errors.Add("VSA: Quantifizierung 1 ist fuer diesen Code nicht vorgesehen.");
-            }
-
-            if (!hasQuant2 && !string.IsNullOrWhiteSpace(VsaQ2TextBox.Text))
-            {
-                vsaQ2Ok = false;
-                errors.Add("VSA: Quantifizierung 2 ist fuer diesen Code nicht vorgesehen.");
-            }
-        }
-
-        if (hasUhrBis && !hasUhrVon)
-        {
-            vsaUhrVonOk = false;
-            errors.Add("VSA: Uhr von ist erforderlich, wenn Uhr bis gesetzt ist.");
-        }
-
-        return errors;
+        var result = ProtocolEntryValidator.ValidateVsaFields(code, inputs, catalogDef, requireDistanz: true);
+        vsaDistanzOk = result.DistanzOk;
+        vsaVideoOk = result.VideoOk;
+        vsaUhrVonOk = result.UhrVonOk;
+        vsaUhrBisOk = result.UhrBisOk;
+        vsaQ1Ok = result.Q1Ok;
+        vsaQ2Ok = result.Q2Ok;
+        vsaStreckeOk = result.StreckeOk;
+        vsaEzOk = result.EzOk;
+        vsaSchachtbereichOk = result.SchachtbereichOk;
+        return result.Errors.ToList();
     }
 
     private void NormalizeAllStrictInputs()
@@ -852,73 +793,31 @@ public partial class ProtocolEntryEditorDialog : Window
         Close();
     }
 
+    // Delegation an ProtocolEntryValidator (Application-Schicht)
     private List<string> ValidateVsaFields()
     {
-        var errors = new List<string>();
         var code = (_entryVm.Code ?? string.Empty).Trim();
         if (code.Length == 0)
-            return errors;
+            return new List<string>();
 
-        if (!TryParseOptionalDouble(_entryVm.VsaDistanz ?? string.Empty, out var distanz))
-            errors.Add("VSA: Distanz ist ungueltig.");
-        else if (!distanz.HasValue)
-            errors.Add("VSA: Distanz (m) ist erforderlich.");
+        CodeDefinition? catalogDef = null;
+        _sp?.CodeCatalog?.TryGet(code, out catalogDef);
 
-        if (!TryParseOptionalTimeSpan(_entryVm.VsaVideo ?? string.Empty, out _))
-            errors.Add("VSA: Uhrzeit (Video) ist ungueltig.");
-
-        if (!TryParseOptionalDouble(_entryVm.VsaQ1 ?? string.Empty, out _))
-            errors.Add("VSA: Quantifizierung 1 ist ungueltig.");
-
-        if (!TryParseOptionalDouble(_entryVm.VsaQ2 ?? string.Empty, out _))
-            errors.Add("VSA: Quantifizierung 2 ist ungueltig.");
-
-        if (!TryNormalizeClockPosition(_entryVm.VsaUhrVon, out _, out var hasUhrVon))
-            errors.Add("VSA: Uhrzeit von nur 00 bis 12.");
-
-        if (!TryNormalizeClockPosition(_entryVm.VsaUhrBis, out _, out var hasUhrBis))
-            errors.Add("VSA: Uhrzeit bis nur 00 bis 12.");
-
-        if (!TryNormalizeStrecke(_entryVm.VsaStrecke, out _, out var hasStrecke))
-            errors.Add("VSA: Strecke nur im Format A1/B1/C1...");
-
-        if (_entryVm.Model.IsStreckenschaden && !hasStrecke)
-            errors.Add("VSA: Strecke ist bei Streckenschaden erforderlich.");
-
-        if (!TryNormalizeEz(_entryVm.VsaEz, out _, out _))
-            errors.Add("VSA: EZ nur EZ0 bis EZ4.");
-
-        if (!TryNormalizeSchachtbereich(_entryVm.VsaSchachtbereich, out _, out _))
-            errors.Add("VSA: Schachtbereich nur A/B/D/F/H/I/J.");
-
-        if (_sp?.CodeCatalog is not null && _sp.CodeCatalog.TryGet(code, out var def))
+        var inputs = new VsaFieldInputs
         {
-            var hasClock = def.Parameters.Any(p => string.Equals(p.Type, "clock", StringComparison.OrdinalIgnoreCase));
-            if (hasClock && !hasUhrVon)
-            {
-                errors.Add("VSA: Uhr von ist erforderlich.");
-            }
+            Distanz = _entryVm.VsaDistanz,
+            Video = _entryVm.VsaVideo,
+            UhrVon = _entryVm.VsaUhrVon,
+            UhrBis = _entryVm.VsaUhrBis,
+            Q1 = _entryVm.VsaQ1,
+            Q2 = _entryVm.VsaQ2,
+            Strecke = _entryVm.VsaStrecke,
+            Ez = _entryVm.VsaEz,
+            Schachtbereich = _entryVm.VsaSchachtbereich,
+            IsStreckenschaden = _entryVm.Model.IsStreckenschaden
+        };
 
-            var hasQuant1 = def.Parameters.Any(p => string.Equals(p.Name, "Quant1", StringComparison.OrdinalIgnoreCase)
-                                                    || string.Equals(p.Name, "Quantifizierung 1", StringComparison.OrdinalIgnoreCase));
-            var hasQuant2 = def.Parameters.Any(p => string.Equals(p.Name, "Quant2", StringComparison.OrdinalIgnoreCase)
-                                                    || string.Equals(p.Name, "Quantifizierung 2", StringComparison.OrdinalIgnoreCase));
-
-            if (!hasQuant1 && !string.IsNullOrWhiteSpace(_entryVm.VsaQ1))
-            {
-                errors.Add("VSA: Quantifizierung 1 ist fuer diesen Code nicht vorgesehen.");
-            }
-
-            if (!hasQuant2 && !string.IsNullOrWhiteSpace(_entryVm.VsaQ2))
-            {
-                errors.Add("VSA: Quantifizierung 2 ist fuer diesen Code nicht vorgesehen.");
-            }
-        }
-
-        if (hasUhrBis && !hasUhrVon)
-            errors.Add("VSA: Uhr von ist erforderlich, wenn Uhr bis gesetzt ist.");
-
-        return errors;
+        return ProtocolEntryValidator.ValidateVsaFields(code, inputs, catalogDef, requireDistanz: true).Errors.ToList();
     }
 
     private string ResolveProjectFolder()
@@ -979,154 +878,38 @@ public partial class ProtocolEntryEditorDialog : Window
         return value.Substring(0, maxLength) + "...";
     }
 
+    // Delegation an ProtocolEntryInputNormalizer (Application-Schicht)
     private static bool TryParseOptionalDouble(string raw, out double? value)
-    {
-        value = null;
-        if (string.IsNullOrWhiteSpace(raw))
-            return true;
-
-        var normalized = raw.Trim().Replace(',', '.');
-        if (!double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
-            return false;
-
-        value = parsed;
-        return true;
-    }
+        => ProtocolEntryInputNormalizer.TryParseOptionalDouble(raw, out value);
 
     private static bool TryNormalizeClockPosition(string? raw, out string normalized, out bool hasValue)
-    {
-        normalized = string.Empty;
-        hasValue = !string.IsNullOrWhiteSpace(raw);
-        if (!hasValue)
-            return true;
-
-        var text = raw!.Trim();
-        if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
-            return false;
-        if (value < 0 || value > 12)
-            return false;
-
-        normalized = value.ToString("00", CultureInfo.InvariantCulture);
-        return true;
-    }
+        => ProtocolEntryInputNormalizer.TryNormalizeClockPosition(raw, out normalized, out hasValue);
 
     private static bool TryNormalizeStrecke(string? raw, out string normalized, out bool hasValue)
-    {
-        normalized = string.Empty;
-        hasValue = !string.IsNullOrWhiteSpace(raw);
-        if (!hasValue)
-            return true;
-
-        var text = raw!.Trim().ToUpperInvariant();
-        if (text.Length == 1 && (text == "A" || text == "B" || text == "C"))
-        {
-            normalized = text + "1";
-            return true;
-        }
-
-        if (text.Length >= 2 && (text[0] == 'A' || text[0] == 'B' || text[0] == 'C') && text.Skip(1).All(char.IsDigit))
-        {
-            normalized = text;
-            return true;
-        }
-
-        return false;
-    }
+        => ProtocolEntryInputNormalizer.TryNormalizeStrecke(raw, out normalized, out hasValue);
 
     private static bool TryNormalizeEz(string? raw, out string normalized, out bool hasValue)
-    {
-        normalized = string.Empty;
-        hasValue = !string.IsNullOrWhiteSpace(raw);
-        if (!hasValue)
-            return true;
-
-        var text = raw!.Trim().ToUpperInvariant();
-        if (text.StartsWith("EZ", StringComparison.Ordinal))
-            text = text.Substring(2);
-
-        if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
-            return false;
-        if (value < 0 || value > 4)
-            return false;
-
-        normalized = $"EZ{value}";
-        return true;
-    }
+        => ProtocolEntryInputNormalizer.TryNormalizeEz(raw, out normalized, out hasValue);
 
     private static bool TryNormalizeSchachtbereich(string? raw, out string normalized, out bool hasValue)
-    {
-        normalized = string.Empty;
-        hasValue = !string.IsNullOrWhiteSpace(raw);
-        if (!hasValue)
-            return true;
-
-        normalized = raw!.Trim().ToUpperInvariant();
-        return normalized is "A" or "B" or "D" or "F" or "H" or "I" or "J";
-    }
+        => ProtocolEntryInputNormalizer.TryNormalizeSchachtbereich(raw, out normalized, out hasValue);
 
     private static bool TryParseOptionalTimeSpan(string raw, out TimeSpan? value)
-    {
-        value = null;
-        if (string.IsNullOrWhiteSpace(raw))
-            return true;
-
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-        {
-            value = parsed;
-            return true;
-        }
-
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed))
-        {
-            value = parsed;
-            return true;
-        }
-
-        return false;
-    }
+        => ProtocolEntryInputNormalizer.TryParseOptionalTimeSpan(raw, out value);
 
     private static TimeSpan? TryParseTimeFallback(string raw)
-    {
-        if (TryParseOptionalTimeSpan(raw, out var value))
-            return value;
-        return null;
-    }
+        => ProtocolEntryInputNormalizer.TryParseTimeFallback(raw);
 
     private static string FormatTime(TimeSpan value)
-        => value.TotalHours >= 1 ? value.ToString(@"hh\:mm\:ss") : value.ToString(@"mm\:ss");
+        => ProtocolEntryInputNormalizer.FormatTime(value);
 
+    // Delegation an DefaultDescriptionBuilder (Application-Schicht)
     private static string BuildDefaultDescription(
         AuswertungPro.Next.Application.Protocol.CodeDefinition def,
         IReadOnlyDictionary<string, string> parameters,
         double? meterStart,
         double? meterEnd)
-    {
-        var title = def.Title ?? string.Empty;
-        var parts = new List<string>();
-
-        if (parameters is not null && parameters.Count > 0)
-        {
-            foreach (var p in def.Parameters)
-            {
-                if (!parameters.TryGetValue(p.Name, out var value) || string.IsNullOrWhiteSpace(value))
-                    continue;
-                var unit = string.IsNullOrWhiteSpace(p.Unit) ? "" : $" {p.Unit}";
-                parts.Add($"{p.Name}={value}{unit}".Trim());
-            }
-        }
-
-        if (def.RequiresRange && meterStart.HasValue && meterEnd.HasValue)
-        {
-            parts.Add($"Strecke {meterStart:0.00}-{meterEnd:0.00} m");
-        }
-
-        if (parts.Count == 0)
-            return title;
-
-        return $"{title} ({string.Join(", ", parts)})";
-    }
+        => DefaultDescriptionBuilder.Build(def, parameters, meterStart, meterEnd);
 
     private void SetZeitFromVideo()
     {
