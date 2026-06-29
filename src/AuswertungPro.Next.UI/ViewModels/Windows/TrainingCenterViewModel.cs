@@ -1031,10 +1031,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                         {
                             SelfTrainingResults.Add(skipUiPlan.Result);
                         }
-                        if (System.Windows.Application.Current?.Dispatcher is { } dSkip && !dSkip.CheckAccess())
-                            dSkip.Invoke(AddSkipped);
-                        else
-                            AddSkipped();
+                        OnUi(AddSkipped);
 
                         continue; // Naechster Case
                     }
@@ -1059,10 +1056,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                             // Code-Verteilung aktualisieren
                             UpdateCodeDistribution(plan.Result.VsaCode, plan.Result.Level);
                         }
-                        if (System.Windows.Application.Current?.Dispatcher is { } dp && !dp.CheckAccess())
-                            dp.Invoke(AddResult);
-                        else
-                            AddResult();
+                        OnUi(AddResult);
                     }
 
                     runSummary.AddNewSamples(generatedCasePlan.NewSampleCount);
@@ -1087,10 +1081,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                         KbSampleCount = persistence.SampleCount;
                         KbCodesCovered = persistence.CodesCovered;
                     }
-                    if (System.Windows.Application.Current?.Dispatcher is { } disp && !disp.CheckAccess())
-                        disp.Invoke(UpdateCounters);
-                    else
-                        UpdateCounters();
+                    OnUi(UpdateCounters);
 
                     Log(persistence.StoredLogMessage);
 
