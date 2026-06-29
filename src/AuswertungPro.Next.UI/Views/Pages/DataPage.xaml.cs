@@ -31,14 +31,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private bool _columnsBuilt;
     private System.Windows.Point _dragStartPoint;
     private readonly DispatcherTimer _searchDebounceTimer;
-    private readonly Dictionary<DataGridColumn, HorizontalAlignment> _columnHorizontalAlignments = new();
-    private readonly Dictionary<DataGridColumn, VerticalAlignment> _columnVerticalAlignments = new();
-    private readonly Dictionary<DataGridColumn, Style?> _baseCellStyles = new();
-    private readonly Dictionary<DataGridTextColumn, Style?> _baseTextElementStyles = new();
-    private readonly Dictionary<DataGridTextColumn, Style?> _baseTextEditingStyles = new();
+    private readonly DataGridColumnLayoutController _columnLayoutController = new();
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
     private bool _updatingAlignmentButtons;
-    private bool _isRestoringLayout;
     private bool _isUndocking;
     private DataGridColumn? _activeColumn;
 
@@ -70,6 +65,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             _layoutSaveDebounceTimer.Stop();
             SaveLayoutToSettings();
         };
+        _columnLayoutController.LayoutChanged += (_, __) => QueueLayoutSave();
 
         Grid.AddHandler(DataGridColumnHeader.ClickEvent, new RoutedEventHandler(Grid_ColumnHeaderClick), true);
         Grid.ColumnReordered += Grid_ColumnReordered;
@@ -127,11 +123,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
 
         _columnsBuilt = true;
-        _columnHorizontalAlignments.Clear();
-        _columnVerticalAlignments.Clear();
-        _baseCellStyles.Clear();
-        _baseTextElementStyles.Clear();
-        _baseTextEditingStyles.Clear();
+        _columnLayoutController.Clear();
         _activeColumn = null;
 
         foreach (var field in FieldCatalog.ColumnOrder)
@@ -215,11 +207,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
             col.MinWidth = field == "NR" ? 56 : 72;
             Grid.Columns.Add(col);
 
-            _columnHorizontalAlignments[col] = string.Equals(field, "Kosten", StringComparison.Ordinal)
+            var defaultHorizontalAlignment = string.Equals(field, "Kosten", StringComparison.Ordinal)
                 ? HorizontalAlignment.Right
                 : HorizontalAlignment.Left;
-            _columnVerticalAlignments[col] = VerticalAlignment.Center;
-            ApplyColumnAlignment(col, _columnHorizontalAlignments[col], _columnVerticalAlignments[col]);
+            ApplyColumnAlignment(col, defaultHorizontalAlignment, VerticalAlignment.Center);
         }
 
         Grid.FrozenColumnCount = 2;
