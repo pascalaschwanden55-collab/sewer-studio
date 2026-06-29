@@ -15,16 +15,6 @@ using AuswertungPro.Next.UI.Dialogs;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-/// <summary>
-/// Eine waehlbare Hauptarbeit (Id=null = keine). Kategorie = Renovierung/Reparatur.
-/// ManuelleMenge = Menge wird vom Anwender eingegeben (Stk oder Stunden), sonst = Haltungslaenge.
-/// HauptItemKey = Katalog-Key der Hauptarbeit-Zeile (weicht bei Kanalroboter von Id ab).
-/// </summary>
-public sealed record MeasureOption(string? Id, string Name, string Kategorie, bool ManuelleMenge, string HauptItemKey)
-{
-    public override string ToString() => Name;
-}
-
 public static class SanierungsMatrixNavigationTarget
 {
     public static string? FromRecord(HaltungRecord? record)
@@ -640,35 +630,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     private void BuildMeasureOptions()
     {
         MeasureOptions.Clear();
-        MeasureOptions.Add(new MeasureOption(null, "— keine —", "", false, ""));
-
-        var options = new List<MeasureOption>();
-        foreach (var (id, kategorie) in MatrixMeasures)
-        {
-            if (!_templates.TryGetValue(id, out var tpl))
-                continue;
-
-            // Hauptarbeit-Zeile bestimmen (ItemKey + Einheit). Bei Kanalroboter weicht der
-            // Hauptarbeit-ItemKey von der Massnahmen-Id ab (HAUPTARBEIT_HINDERNISSE_ROBOTER).
-            var hauptLine = tpl.Lines.FirstOrDefault(l =>
-                string.Equals(l.Group, "Hauptarbeit", StringComparison.OrdinalIgnoreCase));
-            var hauptKey = string.IsNullOrWhiteSpace(hauptLine?.ItemKey) ? id : hauptLine!.ItemKey.Trim();
-            _catalog.TryGetValue(hauptKey, out var hauptItem);
-            var unit = hauptItem?.Unit ?? "";
-            // Manuelle Menge bei Stk (Reparatur) ODER h (Roboter-Stunden); m -> Haltungslaenge.
-            var manuelleMenge = string.Equals(unit, "Stk", StringComparison.OrdinalIgnoreCase)
-                             || string.Equals(unit, "h", StringComparison.OrdinalIgnoreCase);
-            var baseName = string.IsNullOrWhiteSpace(tpl.Name) ? id : tpl.Name;
-            // Name ohne Praefix - die Kategorie zeigt der ComboBox-Gruppen-Header.
-            options.Add(new MeasureOption(id, baseName, kategorie, manuelleMenge, hauptKey));
-        }
-
-        foreach (var o in options
-                     .OrderBy(o => o.Kategorie == "Renovierung" ? 0 : o.Kategorie == "Reparatur" ? 1 : 2)
-                     .ThenBy(o => o.Name, StringComparer.OrdinalIgnoreCase))
-        {
+        foreach (var o in MatrixMeasureOptionBuilder.Build(MatrixMeasures, _templates, _catalog))
             MeasureOptions.Add(o);
-        }
     }
 
     private void InitRowFromStore(SanierungMatrixRowVm row, string holding)
