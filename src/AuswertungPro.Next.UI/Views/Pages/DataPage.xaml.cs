@@ -1159,13 +1159,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Video");
-            return;
-        }
-        vm.PlayVideoCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.PlayVideoCommand, "Video");
     }
 
     private void MoveRecordUpMenu_Click(object sender, RoutedEventArgs e)
@@ -1211,78 +1206,48 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Video");
-            return;
-        }
-        vm.RelinkVideoCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.RelinkVideoCommand, "Video");
     }
 
     private void CostsMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Massnahmen");
-            return;
-        }
-        vm.OpenCostsCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.OpenCostsCommand, "Massnahmen");
     }
 
     private void PrintAwuHaltungsprotokollMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Haltungsprotokoll AWU");
-            return;
-        }
-        vm.PrintAwuHaltungsprotokollCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.PrintAwuHaltungsprotokollCommand, "Haltungsprotokoll AWU");
     }
 
     private void OpenOriginalPdfMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "PDF");
-            return;
-        }
-        vm.OpenOriginalPdfCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.OpenOriginalPdfCommand, "PDF");
     }
 
     private void RestoreCostsMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Kosten/Massnahmen");
-            return;
-        }
-        vm.RestoreCostsCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.RestoreCostsCommand, "Kosten/Massnahmen");
     }
 
     private void SuggestMeasuresMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Massnahmen");
-            return;
-        }
-        vm.SuggestMeasuresCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.SuggestMeasuresCommand, "Massnahmen");
     }
 
     private void SuggestAllMeasuresMenu_Click(object sender, RoutedEventArgs e)
@@ -1371,6 +1336,17 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private static HaltungRecord? ResolveActionRecord(object sender, DataPageViewModel vm)
         => DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected);
+
+    private void ExecuteRecordMenuCommand(
+        object sender,
+        DataPageViewModel vm,
+        ICommand command,
+        string missingSelectionTitle)
+        => DataPageRecordCommandRouter.TryExecute(
+            ResolveActionRecord(sender, vm),
+            command,
+            Dialogs.Info,
+            missingSelectionTitle);
 
     private static string? GetEditedTextValue(FrameworkElement? element)
     {
