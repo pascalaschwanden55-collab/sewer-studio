@@ -1734,23 +1734,12 @@ public partial class TrainingCenterViewModel : ObservableObject
             if (SelfTrainingRunPresentationBuilder.BuildFewShotExportHint(result) is { } fewShotHint)
                 Log(fewShotHint);
 
-            // Review Queue befuellen: PartialMatch/Mismatch (C1) UND vom RequireHumanReview-Schalter
-            // zurueckgehaltene saubere ExactMatches (S2b: ExactMatch, aber Status New statt Approved).
-            if (ReviewQueueServiceRef is not null
-                && SelfTrainingReviewCandidateSelector.HasReviewableMatches(result))
-            {
-                var allSamplesForReview = await TrainingSamplesStore.LoadAsync();
-                var reviewQueueUpdate = SelfTrainingReviewQueueController.EnqueueCandidates(
-                    ReviewQueueServiceRef,
-                    allSamplesForReview,
-                    result);
-
-                if (reviewQueueUpdate.ShouldReloadQueue)
-                {
-                    LoadReviewQueue(ReviewQueueServiceRef);
-                    Log(reviewQueueUpdate.LogMessage ?? "");
-                }
-            }
+            await SelfTrainingReviewQueueWorkflowController.RunAsync(
+                ReviewQueueServiceRef,
+                result,
+                TrainingSamplesStore.LoadAsync,
+                LoadReviewQueue,
+                Log);
 
             // Samples-Liste aktualisieren
             await LoadSamplesInternalAsync();

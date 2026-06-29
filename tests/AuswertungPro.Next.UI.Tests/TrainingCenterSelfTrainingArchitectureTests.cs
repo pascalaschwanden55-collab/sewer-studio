@@ -53,9 +53,12 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "TrainingCenterViewModel.cs"));
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingReviewQueueController.EnqueueCandidates(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingReviewQueueWorkflowController.RunAsync(", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ReviewQueueServiceRef.EnqueueFromSelfTraining(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingReviewQueueController.EnqueueCandidates(", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("SelfTrainingReviewCandidateSelector.SelectForRun(allSamplesForReview, result)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingReviewCandidateSelector.HasReviewableMatches(result)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("LoadReviewQueue(ReviewQueueServiceRef)", selfTrainingSource, StringComparison.Ordinal);
     }
 
     [Fact]
