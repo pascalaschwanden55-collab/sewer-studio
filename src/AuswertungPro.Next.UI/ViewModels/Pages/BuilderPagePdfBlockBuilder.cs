@@ -46,7 +46,7 @@ public static class BuilderPagePdfBlockBuilder
 
         if (sb.Length > 0)
         {
-            sb.AppendLine();
+            sb.Append('\n');
         }
 
         sb.Append(value);

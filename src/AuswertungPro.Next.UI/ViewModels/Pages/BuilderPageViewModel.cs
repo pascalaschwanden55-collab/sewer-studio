@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
@@ -190,8 +191,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         try
         {
             await Task.Yield();
-            var entries = BuildSummaryEntries(filteredRows);
-            var dataLines = IncludeDataSection ? BuildHoldingDataLines(filteredRows) : null;
+            var entries = BuilderPageSummaryEntryBuilder.Build(filteredRows, _vatRate);
+            var dataLines = IncludeDataSection ? BuilderPageHoldingDataLineBuilder.Build(filteredRows) : null;
 
             var projectMeta = _shell.Project.Metadata;
             var projectCustomer = BuilderPagePdfBlockBuilder.BuildProjectCustomerBlock(projectMeta);
@@ -275,7 +276,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var entries = BuildSummaryEntries(filteredRows);
+        var entries = BuilderPageSummaryEntryBuilder.Build(filteredRows, _vatRate);
         var holdings = entries
             .Where(e => e.Cost is not null)
             .Select(e => e.Cost!)
@@ -782,17 +783,12 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         RowsWithoutOwner = filtered.Count(row => row.Owner.Equals(UnknownOwnerLabel, StringComparison.OrdinalIgnoreCase));
         NetTotal = filtered.Sum(row => row.NetCost);
 
-        ComputeSpecialStats(
-            filtered,
-            out var gfk,
-            out var nadelfilz,
-            out var manschetten,
-            out var lem,
-            out var positionStats);
-        StatsInlinerGfk = gfk;
-        StatsInlinerNadelfilz = nadelfilz;
-        StatsManschetten = manschetten;
-        StatsLem = lem;
+        var specialStats = BuilderPageSpecialStatsCalculator.Compute(filtered);
+        StatsInlinerGfk = specialStats.InlinerGfk;
+        StatsInlinerNadelfilz = specialStats.InlinerNadelfilz;
+        StatsManschetten = specialStats.Manschetten;
+        StatsLem = specialStats.Linerendmanschetten;
+        var positionStats = specialStats.PositionStats;
         SpecialPositionStatsHint = positionStats.Count == 0
             ? "Keine spezialrelevanten Positionen in den gewaehlten Massnahmen gefunden."
             : $"Einzelpositionen aus Massnahmen: {positionStats.Count}";
@@ -847,183 +843,6 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         CostByExecutorHint = totalCost <= 0m
             ? "Keine Kosten in der aktuellen Filterauswahl."
             : $"Kostenverteilung nach 'Ausgefuehrt durch' (Basis: {filtered.Count} gefilterte Haltungen).";
-    }
-
-    private static void ComputeSpecialStats(
-        IEnumerable<DruckcenterRowVm> rows,
-        out decimal gfk,
-        out decimal nadelfilz,
-        out decimal manschetten,
-        out decimal lem,
-        out List<SpecialPositionStatVm> positionStats)
-    {
-        gfk = 0m;
-        nadelfilz = 0m;
-        manschetten = 0m;
-        lem = 0m;
-        var buckets = new Dictionary<string, PositionStatBucket>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var row in rows)
-        {
-            if (row.StoredCost is null)
-                continue;
-
-            foreach (var line in row.StoredCost.Measures.SelectMany(m => m.Lines).Where(l => l.Selected))
-            {
-                var key = SafeText(line.ItemKey);
-                var text = SafeText(line.Text);
-                var combined = key + " " + text;
-                if (!TryResolveSpecialCategory(combined, out var category))
-                    continue;
-
-                switch (category)
-                {
-                    case SpecialStatsCategory.InlinerGfk:
-                        gfk += line.Qty;
-                        break;
-                    case SpecialStatsCategory.InlinerNadelfilz:
-                        nadelfilz += line.Qty;
-                        break;
-                    case SpecialStatsCategory.Manschette:
-                        manschetten += line.Qty;
-                        break;
-                    case SpecialStatsCategory.Linerendmanschette:
-                        lem += line.Qty;
-                        break;
-                }
-
-                var categoryLabel = GetCategoryLabel(category);
-                var positionLabel = BuildPositionLabel(key, text);
-                var unit = NormalizeSpecialUnit(line.Unit, category);
-                var bucketKey = $"{categoryLabel}|{positionLabel}|{unit}";
-
-                if (!buckets.TryGetValue(bucketKey, out var bucket))
-                {
-                    bucket = new PositionStatBucket
-                    {
-                        Category = category,
-                        CategoryLabel = categoryLabel,
-                        Position = positionLabel,
-                        Unit = unit
-                    };
-                    buckets[bucketKey] = bucket;
-                }
-
-                bucket.Qty += line.Qty;
-                bucket.Holdings.Add(row.Holding);
-            }
-        }
-
-        positionStats = buckets.Values
-            .OrderBy(b => GetCategoryOrder(b.Category))
-            .ThenByDescending(b => b.Qty)
-            .ThenBy(b => b.Position, StringComparer.OrdinalIgnoreCase)
-            .Select(b => new SpecialPositionStatVm
-            {
-                Category = b.CategoryLabel,
-                Position = b.Position,
-                Qty = b.Qty,
-                Unit = b.Unit,
-                HoldingCount = b.Holdings.Count
-            })
-            .ToList();
-    }
-
-    private List<CostSummaryEntry> BuildSummaryEntries(IReadOnlyList<DruckcenterRowVm> filteredRows)
-    {
-        var entries = new List<CostSummaryEntry>(filteredRows.Count);
-
-        foreach (var row in filteredRows)
-        {
-            if (row.HasDetailedCost && row.StoredCost is not null)
-            {
-                entries.Add(new CostSummaryEntry
-                {
-                    Holding = row.Holding,
-                    Owner = row.Owner,
-                    ExecutedBy = row.ExecutedBy,
-                    Cost = row.StoredCost
-                });
-                continue;
-            }
-
-            if (row.NetCost <= 0m)
-                continue;
-
-            entries.Add(new CostSummaryEntry
-            {
-                Holding = row.Holding,
-                Owner = row.Owner,
-                ExecutedBy = row.ExecutedBy,
-                Cost = BuildFallbackHoldingCost(row)
-            });
-        }
-
-        return entries;
-    }
-
-    private HoldingCost BuildFallbackHoldingCost(DruckcenterRowVm row)
-    {
-        var measureName = "Kostenpauschale";
-        var lineText = "Kosten aus Tabelle (ohne Positionsdetails)";
-        var vat = Math.Round(row.NetCost * _vatRate, 2, MidpointRounding.AwayFromZero);
-
-        return new HoldingCost
-        {
-            Holding = row.Holding,
-            Date = null,
-            Total = row.NetCost,
-            MwstRate = _vatRate,
-            MwstAmount = vat,
-            TotalInclMwst = Math.Round(row.NetCost + vat, 2, MidpointRounding.AwayFromZero),
-            Measures = new List<MeasureCost>
-            {
-                new()
-                {
-                    MeasureId = "PAUSCHALE",
-                    MeasureName = measureName,
-                    Lines = new List<CostLine>
-                    {
-                        new()
-                        {
-                            Group = "Zusammenfassung",
-                            ItemKey = "PAUSCHALE",
-                            Text = lineText,
-                            Unit = "pl",
-                            Qty = 1m,
-                            UnitPrice = row.NetCost,
-                            Selected = true,
-                            IsPriceOverridden = false,
-                            IsQtyOverridden = false
-                        }
-                    },
-                    Total = row.NetCost
-                }
-            }
-        };
-    }
-
-    private List<OfferPdfHoldingDataLineModel> BuildHoldingDataLines(IReadOnlyList<DruckcenterRowVm> filteredRows)
-    {
-        return filteredRows
-            .OrderBy(r => string.IsNullOrWhiteSpace(r.ExecutedBy) ? 1 : 0)
-            .ThenBy(r => r.ExecutedBy, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(r => r.Owner, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(r => r.Holding, StringComparer.OrdinalIgnoreCase)
-            .Select(row => new OfferPdfHoldingDataLineModel
-            {
-                Holding = row.Holding,
-                Street = row.Street,
-                Owner = row.Owner,
-                ExecutedBy = row.ExecutedBy,
-                Sanieren = row.Sanieren,
-                Material = row.Material,
-                Zustand = row.Zustand,
-                NetText = Money(row.NetCost),
-                DetailText = row.CostSource,
-                MeasuresText = row.MeasuresPreview
-            })
-            .ToList();
     }
 
     private string BuildFilterSummaryText()
@@ -1202,125 +1021,12 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         return text;
     }
 
-    private static bool TryResolveSpecialCategory(string combinedText, out SpecialStatsCategory category)
-    {
-        category = SpecialStatsCategory.None;
-
-        if (ContainsToken(combinedText, "LINERENDMANSCHETTE") ||
-            ContainsToken(combinedText, "ENDMANSCHETTE") ||
-            ContainsToken(combinedText, "LEM"))
-        {
-            category = SpecialStatsCategory.Linerendmanschette;
-            return true;
-        }
-
-        if (ContainsToken(combinedText, "SCHLAUCHLINER_GFK") ||
-            (ContainsToken(combinedText, "GFK") && ContainsToken(combinedText, "LINER")) ||
-            (ContainsToken(combinedText, "GFK") && ContainsToken(combinedText, "SCHLAUCHLINER")))
-        {
-            category = SpecialStatsCategory.InlinerGfk;
-            return true;
-        }
-
-        if (ContainsToken(combinedText, "SCHLAUCHLINER_NADELFILZ") ||
-            ContainsToken(combinedText, "NADELFILZ_LINER") ||
-            (ContainsToken(combinedText, "NADELFILZ") && ContainsToken(combinedText, "LINER")) ||
-            (ContainsToken(combinedText, "NADELFILZ") && ContainsToken(combinedText, "SCHLAUCHLINER")))
-        {
-            category = SpecialStatsCategory.InlinerNadelfilz;
-            return true;
-        }
-
-        if (ContainsToken(combinedText, "MANSCHETTE"))
-        {
-            category = SpecialStatsCategory.Manschette;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static string GetCategoryLabel(SpecialStatsCategory category)
-        => category switch
-        {
-            SpecialStatsCategory.InlinerGfk => "Inliner GFK",
-            SpecialStatsCategory.InlinerNadelfilz => "Inliner Nadelfilz",
-            SpecialStatsCategory.Manschette => "Manschetten",
-            SpecialStatsCategory.Linerendmanschette => "Linerendmanschetten (LEM)",
-            _ => "Sonstiges"
-        };
-
-    private static int GetCategoryOrder(SpecialStatsCategory category)
-        => category switch
-        {
-            SpecialStatsCategory.InlinerGfk => 0,
-            SpecialStatsCategory.InlinerNadelfilz => 1,
-            SpecialStatsCategory.Manschette => 2,
-            SpecialStatsCategory.Linerendmanschette => 3,
-            _ => 99
-        };
-
-    private static string BuildPositionLabel(string key, string text)
-    {
-        if (key.Length == 0 && text.Length == 0)
-            return "(ohne Bezeichnung)";
-        if (key.Length == 0)
-            return text;
-        if (text.Length == 0)
-            return key;
-        if (text.Contains(key, StringComparison.OrdinalIgnoreCase))
-            return text;
-        return $"{key} - {text}";
-    }
-
-    private static string NormalizeSpecialUnit(string? unit, SpecialStatsCategory category)
-    {
-        var normalized = SafeText(unit).ToLowerInvariant();
-        if (normalized.Length > 0)
-            return normalized;
-
-        return category switch
-        {
-            SpecialStatsCategory.InlinerGfk => "m",
-            SpecialStatsCategory.InlinerNadelfilz => "m",
-            SpecialStatsCategory.Manschette => "stk",
-            SpecialStatsCategory.Linerendmanschette => "stk",
-            _ => "stk"
-        };
-    }
-
-    private static bool ContainsToken(string text, string token)
-    {
-        if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(token))
-            return false;
-        return text.Contains(token, StringComparison.OrdinalIgnoreCase);
-    }
-
     private static string SanitizeFilePart(string? value)
     {
         var name = string.IsNullOrWhiteSpace(value) ? "Projekt" : value.Trim();
         foreach (var c in Path.GetInvalidFileNameChars())
             name = name.Replace(c, '_');
         return name;
-    }
-
-    private enum SpecialStatsCategory
-    {
-        None = 0,
-        InlinerGfk = 1,
-        InlinerNadelfilz = 2,
-        Manschette = 3,
-        Linerendmanschette = 4
-    }
-
-    private sealed class PositionStatBucket
-    {
-        public SpecialStatsCategory Category { get; set; } = SpecialStatsCategory.None;
-        public string CategoryLabel { get; set; } = "";
-        public string Position { get; set; } = "";
-        public string Unit { get; set; } = "";
-        public decimal Qty { get; set; }
-        public HashSet<string> Holdings { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
     private static string Money(decimal value) => value.ToString("N2", Ch) + " CHF";

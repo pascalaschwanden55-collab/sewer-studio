@@ -36,7 +36,7 @@ public sealed class TrainingBatchImportRunPreparationControllerTests
         Assert.True(result.ShouldStop);
         Assert.Equal(default, result.CancellationToken);
         Assert.Null(result.CancellationTokenSource);
-        Assert.Equal(new[] { TrainingFolderStatusBuilder.BuildMissingRootFolderStatus() }, statusUpdates);
+        Assert.Equal(new[] { "Bitte zuerst einen oder mehrere Ordner wählen." }, statusUpdates);
     }
 
     [Fact]

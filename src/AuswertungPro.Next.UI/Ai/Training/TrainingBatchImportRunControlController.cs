@@ -5,6 +5,6 @@ public static class TrainingBatchImportRunControlController
     public static string RequestCancel(CancellationTokenSource? cancellationTokenSource)
     {
         cancellationTokenSource?.Cancel();
-        return TrainingBatchImportTerminalPresentationBuilder.BuildCancelRequestedStatus();
+        return "Abbruch angefordert...";
     }
 }

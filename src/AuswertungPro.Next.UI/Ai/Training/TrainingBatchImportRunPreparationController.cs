@@ -19,7 +19,7 @@ public static class TrainingBatchImportRunPreparationController
 
         if (rootFolderCount == 0)
         {
-            setStatus(TrainingFolderStatusBuilder.BuildMissingRootFolderStatus());
+            setStatus("Bitte zuerst einen oder mehrere Ordner wählen.");
             return Stop();
         }
 
