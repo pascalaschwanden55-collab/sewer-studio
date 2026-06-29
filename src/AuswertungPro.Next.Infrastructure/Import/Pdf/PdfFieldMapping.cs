@@ -125,23 +125,6 @@ public static class PdfPostProcessors
         return v.Trim();
     }
 
-    private static string NormalizeInt(string v)
-    {
-        var match = Regex.Match(v ?? "", @"-?\d+(?:[.,]\d+)?");
-        if (!match.Success)
-            return "";
-
-        var normalized = match.Value.Replace(',', '.');
-        if (!decimal.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
-            return "";
-
-        if (parsed <= 0)
-            return "";
-
-        var rounded = (int)Math.Round(parsed, 0, MidpointRounding.AwayFromZero);
-        return rounded.ToString(CultureInfo.InvariantCulture);
-    }
-
     private static string NormalizeNonNegativeInt(string v)
     {
         var match = Regex.Match(v ?? "", @"-?\d+(?:[.,]\d+)?");
