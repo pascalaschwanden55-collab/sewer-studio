@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Ai.Evaluation;
 
@@ -384,7 +385,7 @@ public static class YoloDetectBaselineScorer
             metadata,
             summary,
             threshold_sweep = thresholdSweep ?? Array.Empty<YoloDetectThresholdSummary>()
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, JsonDefaults.Indented);
         File.WriteAllText(path, json, new UTF8Encoding(false));
     }
 
@@ -862,7 +863,7 @@ public static class EvalSetBenchmarkScorer
     public static void WriteSummaryJson(string path, EvalSetBenchmarkSummary summary, object metadata)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        var json = JsonSerializer.Serialize(new { metadata, summary }, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(new { metadata, summary }, JsonDefaults.Indented);
         File.WriteAllText(path, json, new UTF8Encoding(false));
     }
 

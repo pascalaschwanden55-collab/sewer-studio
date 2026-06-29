@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Teacher;
@@ -169,7 +170,7 @@ public static class VsaYoloClassMap
             var dir = Path.GetDirectoryName(path);
             if (dir != null) Directory.CreateDirectory(dir);
 
-            var json = JsonSerializer.Serialize(_map, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(_map, JsonDefaults.Indented);
             File.WriteAllText(path, json);
 
             // Auto-Export classes.txt neben yolo_class_map.json (fuer YOLO-Training)
