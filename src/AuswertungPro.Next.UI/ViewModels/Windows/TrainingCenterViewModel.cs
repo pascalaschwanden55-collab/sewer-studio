@@ -1797,56 +1797,14 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// </summary>
     private async Task<KbIndexOutcome> IncrementalKbUpdateWithReasonAsync(List<TrainingSample> samples, CancellationToken ct)
     {
-        var indexedIds = new List<string>();
-        var skippedIds = new HashSet<string>(StringComparer.Ordinal);
-        try
-        {
-            var ollamaConfig = new AppSettingsAiSettingsProvider().Load().ToOllamaConfig();
-            if (!await TrainingCenterRuntimeHelpers.CheckOllamaReachableAsync(ollamaConfig, ct))
-            {
-                Log($"KB-Update uebersprungen: Ollama nicht erreichbar auf {ollamaConfig.BaseUri}");
-                return new KbIndexOutcome(indexedIds, skippedIds);
-            }
-
-            _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
-            using var kbCtx = new KnowledgeBaseContext();
-            var embedder = new EmbeddingService(_kbHttpClient, ollamaConfig);
-            var kbEvalSets = EvalContaminationSetProvider.Load(_settings);
-            var kbManager = new KnowledgeBaseManager(kbCtx, embedder, kbEvalSets.ImageHashes, kbEvalSets.HaltungKeys);
-
-            var newlyIndexed = 0;
-            foreach (var sample in samples)
-            {
-                ct.ThrowIfCancellationRequested();
-                if (kbManager.IsIndexed(sample.SampleId))
-                {
-                    indexedIds.Add(sample.SampleId);
-                    continue;
-                }
-                // Dauerhaft verworfen? -> Skipped, gar nicht erst indexieren.
-                if (kbManager.IsPermanentlySkipped(sample))
-                {
-                    skippedIds.Add(sample.SampleId);
-                    continue;
-                }
-                if (await kbManager.IndexSampleAsync(sample, ct))
-                {
-                    indexedIds.Add(sample.SampleId);
-                    newlyIndexed++;
-                }
-                // sonst: echter (transienter) Fehler -> weder indexed noch skipped -> Aufrufer setzt Error
-            }
-
-            // KB-Version nur bei tatsaechlich NEU indexierten Samples schnappschotten
-            // (Verhaltensparitaet zur frueheren IncrementalKbUpdateAsync).
-            if (newlyIndexed > 0)
-                kbManager.CreateVersion($"Inkrementell {DateTime.Now:yyyy-MM-dd HH:mm}");
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            Log($"KB-Update Fehler: {ex.Message}");
-        }
-        return new KbIndexOutcome(indexedIds, skippedIds);
+        var ollamaConfig = new AppSettingsAiSettingsProvider().Load().ToOllamaConfig();
+        _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = ollamaConfig.RequestTimeout };
+        var runner = TrainingKbIndexRunner.CreateDefault(
+            ollamaConfig,
+            _kbHttpClient,
+            _settings,
+            Log);
+        return await runner.RunAsync(samples, ct);
     }
 
     [RelayCommand]
