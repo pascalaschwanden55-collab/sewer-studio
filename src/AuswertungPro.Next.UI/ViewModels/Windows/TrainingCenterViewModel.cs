@@ -999,56 +999,20 @@ public partial class TrainingCenterViewModel : ObservableObject
                         SelfTrainingResults.Count + 1,
                         existingSigs);
 
-                    if (generatedCasePlan.Kind == TrainingBatchImportGeneratedCaseKind.Skipped)
-                    {
-                        var skip = generatedCasePlan.Skip!;
-                        runSummary.RecordSkip(skip.Kind);
-
-                        var skipUiPlan = generatedCasePlan.SkippedCase!;
-                        Log(skip.LogMessage);
-                        UpdateLivePreview(
-                            skipUiPlan.Preview.CaseInfo,
-                            skipUiPlan.Preview.CodeInfo,
-                            skipUiPlan.Preview.MeterInfo,
-                            skipUiPlan.Preview.FramePath);
-
-                        // Uebersprungene Haltungen trotzdem im Ergebnis-Verlauf zeigen
-                        void AddSkipped()
-                        {
-                            SelfTrainingResults.Add(skipUiPlan.Result);
-                        }
-                        OnUi(AddSkipped);
-
-                        continue; // Naechster Case
-                    }
-
-                    // Signaturen registrieren + Live-Visualisierung
-                    // nie Auto-Approve; Freigabe nur ueber Review (Modul I)
-                    foreach (var plan in generatedCasePlan.SampleUiPlans)
-                    {
-                        // Live-Frame pro Sample (nicht nur pro Case)
-                        UpdateLivePreview(
-                            plan.Preview.CaseInfo,
-                            plan.Preview.CodeInfo,
-                            plan.Preview.MeterInfo,
-                            plan.Preview.FramePath);
-
-                        // Ergebnis-Verlauf: Sample als Eintrag hinzufuegen
-                        // Batch-Import hat keinen echten KI-vs-Protokoll Vergleich,
-                        // daher Match-Rate NICHT aktualisieren (nur im Selbsttraining sinnvoll).
-                        void AddResult()
-                        {
-                            SelfTrainingResults.Add(plan.Result);
-                            // Code-Verteilung aktualisieren
-                            UpdateCodeDistribution(plan.Result.VsaCode, plan.Result.Level);
-                        }
-                        OnUi(AddResult);
-                    }
-
-                    runSummary.AddNewSamples(generatedCasePlan.NewSampleCount);
-
-                    foreach (var line in generatedCasePlan.SampleLogLines)
-                        Log(line);
+                    var generatedCaseUi = TrainingBatchImportGeneratedCaseUiController.Apply(
+                        generatedCasePlan,
+                        runSummary,
+                        preview => UpdateLivePreview(
+                            preview.CaseInfo,
+                            preview.CodeInfo,
+                            preview.MeterInfo,
+                            preview.FramePath),
+                        OnUi,
+                        SelfTrainingResults.Add,
+                        UpdateCodeDistribution,
+                        Log);
+                    if (generatedCaseUi.ShouldContinueWithNextCase)
+                        continue;
 
                     // ══════════════════════════════════════════════════════════════════
                     // SOFORT SPEICHERN — Crash-sicher pro Haltung

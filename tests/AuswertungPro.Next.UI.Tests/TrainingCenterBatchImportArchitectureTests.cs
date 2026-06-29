@@ -117,6 +117,24 @@ public sealed class TrainingCenterBatchImportArchitectureTests
         Assert.DoesNotContain("TrainingBatchImportScanPresentationBuilder.BuildSummary(found.Count, casesWithProtocol.Count)", batchImportSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void TrainingCenterViewModel_delegiert_batch_import_generated_case_ui_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+
+        Assert.Contains("TrainingBatchImportGeneratedCaseUiController.Apply(", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("generatedCasePlan.Kind == TrainingBatchImportGeneratedCaseKind.Skipped", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("foreach (var plan in generatedCasePlan.SampleUiPlans)", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("runSummary.AddNewSamples(generatedCasePlan.NewSampleCount)", batchImportSource, StringComparison.Ordinal);
+    }
+
     private static string FindRepoRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
