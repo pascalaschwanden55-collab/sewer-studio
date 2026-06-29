@@ -81,6 +81,24 @@ public sealed class TrainingCenterBatchImportArchitectureTests
         Assert.DoesNotContain("Log($\"FATALER FEHLER:", batchImportSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void TrainingCenterViewModel_delegiert_batch_import_abschluss_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+
+        Assert.Contains("TrainingBatchImportRunCompletionController.CompleteAsync(", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("runSummary.BuildNoNewStatus(casesToProcess.Count)", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("runSummary.BuildCompletionStatus()", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Log(\"F", batchImportSource, StringComparison.Ordinal);
+    }
+
     private static string FindRepoRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);

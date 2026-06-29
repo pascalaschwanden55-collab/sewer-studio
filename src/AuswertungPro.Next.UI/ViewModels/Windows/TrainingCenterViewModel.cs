@@ -1097,28 +1097,18 @@ public partial class TrainingCenterViewModel : ObservableObject
                 }
             }
 
-            // Abschlussmeldung
-            Samples.Clear();
-            allSamples = await TrainingSamplesStore.LoadAsync();
-            foreach (var s in allSamples)
-                Samples.Add(s);
-
-            if (runSummary.BuildNoNewStatus(casesToProcess.Count) is { } noNewStatus)
-            {
-                Log(noNewStatus);
-                StatusText = noNewStatus;
+            var completion = await TrainingBatchImportRunCompletionController.CompleteAsync(
+                runSummary,
+                casesToProcess.Count,
+                async () => await TrainingSamplesStore.LoadAsync(),
+                Samples.Clear,
+                Samples.Add,
+                RefreshKbStatusAsync,
+                () => _store.SaveAsync(BuildState()),
+                Log,
+                value => StatusText = value);
+            if (completion.ShouldStop)
                 return;
-            }
-
-            var finalStatus = runSummary.BuildCompletionStatus();
-            Log(finalStatus);
-            StatusText = finalStatus;
-
-            await RefreshKbStatusAsync();
-
-            // 5. Save cases
-            await _store.SaveAsync(BuildState());
-            Log("Fälle gespeichert. Batch-Import abgeschlossen.");
         }
         catch (OperationCanceledException)
         {
