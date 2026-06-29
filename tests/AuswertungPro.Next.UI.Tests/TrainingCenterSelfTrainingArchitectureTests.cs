@@ -113,6 +113,29 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.DoesNotContain("Ollama: {cfg.OllamaBaseUri}, Modell: {cfg.VisionModel}", selfTrainingSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void TrainingCenterViewModel_delegiert_self_training_service_erzeugung_an_session_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+
+        Assert.Contains("SelfTrainingSessionController.Create(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("using var selfTrainingSession", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new OllamaClient(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new EnhancedVisionAnalysisService(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new TechniqueAssessmentService(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new SelfTrainingComparisonService(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new PdfProtocolExtractor(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new SelfTrainingOrchestrator(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new KnowledgeBaseContext()", selfTrainingSource, StringComparison.Ordinal);
+    }
+
     private static string FindRepoRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);

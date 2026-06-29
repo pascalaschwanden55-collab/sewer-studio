@@ -1687,37 +1687,26 @@ public partial class TrainingCenterViewModel : ObservableObject
                 .ToRuntimeSettings();
             Log(SelfTrainingRunPresentationBuilder.BuildOllamaConfigLog(cfg.OllamaBaseUri, cfg.VisionModel));
 
-            var visionModel = cfg.VisionModel ?? OllamaConfig.DefaultVisionModel;
-            _activeVisionModel = visionModel;
-            var ollamaClient = new OllamaClient(
-                cfg.OllamaBaseUri,
-                ownedTimeout: cfg.OllamaRequestTimeout,
-                keepAlive: cfg.OllamaKeepAlive,
-                numCtx: cfg.OllamaNumCtx);
-            var vision = new EnhancedVisionAnalysisService(ollamaClient, visionModel, _codeCatalog);
-            var comparison = new SelfTrainingComparisonService();
-            var technique = new TechniqueAssessmentService(ollamaClient, visionModel);
-            var pdfExtractor = new PdfProtocolExtractor();
-
             var stSettings = await TrainingCenterSettingsStore.LoadAsync();
 
             // Weg 1: read-only KB-Abgleich-Signal fuer den Orchestrator (KB-Widerspruch -> Review).
             var stOllamaConfig = new AppSettingsAiSettingsProvider().Load().ToOllamaConfig();
             _kbHttpClient ??= new System.Net.Http.HttpClient { Timeout = stOllamaConfig.RequestTimeout };
-            using var stKbCtx = new KnowledgeBaseContext();
-            var stRetrieval = new RetrievalService(stKbCtx, new EmbeddingService(_kbHttpClient, stOllamaConfig));
-
-            // Eval-Schutz: reservierte Eval-Haltungen gar nicht erst sammeln (Early-Skip im Orchestrator).
-            var stEvalHaltungen = EvalContaminationSetProvider.Load(_settings).HaltungKeys;
-            _selfTrainingOrchestrator = new SelfTrainingOrchestrator(
-                vision, comparison, technique, pdfExtractor, stSettings,
-                TrainingCenterRuntimeHelpers.ResolveFfmpegPath(cfg.FfmpegPath), stRetrieval, stEvalHaltungen);
+            using var selfTrainingSession = SelfTrainingSessionController.Create(
+                cfg,
+                stOllamaConfig,
+                _kbHttpClient,
+                stSettings,
+                _settings,
+                _codeCatalog);
+            _activeVisionModel = selfTrainingSession.ActiveVisionModel;
+            _selfTrainingOrchestrator = selfTrainingSession.Orchestrator;
 
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
 
             Log(SelfTrainingRunPresentationBuilder.BuildPipelineStartedLog());
-            var result = await _selfTrainingOrchestrator.RunAsync(
+            var result = await selfTrainingSession.Orchestrator.RunAsync(
                 TrainingCenterRuntimeHelpers.ToTrainingCaseInput(selectedCase),
                 progress,
                 ct);
