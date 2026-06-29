@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
@@ -11,6 +10,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.UI.ViewModels.Protocol;
 
@@ -22,7 +22,7 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
     private readonly string? _haltungId;
     private readonly string? _videoPathAbs;
     private readonly string? _projectFolderAbs;
-    private readonly CategoryNode _root = new("Root", "Root");
+    private readonly CatalogTreeNode _root = new("Root", "Root");
     private readonly Dictionary<string, AppProtocol.CodeDefinition> _codeIndex;
     private readonly List<AppProtocol.CodeDefinition> _allCodes;
 
@@ -456,111 +456,14 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
         }
     }
 
-    // SN EN 13508-2 Hauptkategorie-Labels (2-Zeichen-Prefix)
-    private static readonly Dictionary<string, string> MainCategoryLabels = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["AE"] = "Aenderungen der Grundlagen",
-        ["BA"] = "Struktur der Rohrleitungen",
-        ["BB"] = "Betrieb der Rohrleitungen",
-        ["BC"] = "Bestandsaufnahme der Rohrleitungen",
-        ["BD"] = "Sonstiges Rohrleitungen",
-        ["DA"] = "Struktur Schacht",
-        ["DB"] = "Betrieb Schacht",
-        ["DC"] = "Bestandsaufnahme Schacht",
-        ["DD"] = "Sonstiges Schacht",
-    };
-
     private void BuildTree()
     {
-        foreach (var code in _allCodes)
-        {
-            // Wenn categoryPath explizit gesetzt ist, diesen verwenden
-            if (code.CategoryPath is { Count: > 0 })
-            {
-                var node = _root;
-                foreach (var level in code.CategoryPath)
-                {
-                    if (string.IsNullOrWhiteSpace(level))
-                        continue;
-                    if (!node.Children.TryGetValue(level, out var next))
-                    {
-                        next = new CategoryNode(level, ResolveCategoryLabel(level));
-                        node.Children[level] = next;
-                    }
-                    node = next;
-                }
-                node.Codes.Add(code);
-                continue;
-            }
-
-            // Automatische Baumstruktur aus Code-Prefix (SN EN 13508-2)
-            var codeStr = (code.Code ?? string.Empty).Trim().ToUpperInvariant();
-            if (codeStr.Length < 3)
-            {
-                _root.Codes.Add(code);
-                continue;
-            }
-
-            // Ebene 1: Hauptkategorie (2 Zeichen, z.B. "BA", "BB", "BC")
-            var mainPrefix = codeStr.Substring(0, 2);
-            if (!_root.Children.TryGetValue(mainPrefix, out var mainNode))
-            {
-                var mainLabel = MainCategoryLabels.TryGetValue(mainPrefix, out var label)
-                    ? label
-                    : (code.Group ?? mainPrefix);
-                mainNode = new CategoryNode(mainPrefix, mainLabel);
-                _root.Children[mainPrefix] = mainNode;
-            }
-
-            // Ebene 2: Unterkategorie (3 Zeichen, z.B. "BBA", "BBC")
-            var subPrefix = codeStr.Substring(0, 3);
-            if (!mainNode.Children.TryGetValue(subPrefix, out var subNode))
-            {
-                var subLabel = ResolveSubCategoryLabel(subPrefix);
-                subNode = new CategoryNode(subPrefix, subLabel);
-                mainNode.Children[subPrefix] = subNode;
-            }
-
-            // Code als Blatt unter der Unterkategorie
-            subNode.Codes.Add(code);
-        }
-    }
-
-    private string ResolveSubCategoryLabel(string prefix)
-    {
-        // Der VSA-KEK-Katalog ist die Quelle der Wahrheit fuer Code-Titel.
-        if (_catalog.TryGet(prefix, out var def))
-            return FormatCatalogLabel(prefix, def);
-
-        // Sonst: finde den ersten Code mit diesem Prefix und nutze dessen Gruppen-Info
-        var first = _allCodes.FirstOrDefault(c =>
-            c.Code.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
-        if (first is not null && !string.IsNullOrWhiteSpace(first.Title))
-        {
-            // Extrahiere einen kurzen Label aus dem Titel des ersten Codes
-            var groupPart = ExtractSubGroupName(first);
-            if (!string.IsNullOrWhiteSpace(groupPart))
-                return $"{prefix}  {groupPart}";
-        }
-
-        return prefix;
-    }
-
-    private static string FormatCatalogLabel(string requestedCode, AppProtocol.CodeDefinition def)
-    {
-        var code = string.IsNullOrWhiteSpace(def.Code) ? requestedCode : def.Code.Trim();
-        var title = def.Title?.Trim();
-        return string.IsNullOrWhiteSpace(title) ? code : $"{code}  {title}";
-    }
-
-    private static string ExtractSubGroupName(AppProtocol.CodeDefinition firstCode)
-    {
-        // Fallback: Titel des ersten Codes kuerzen
-        var title = firstCode.Title ?? string.Empty;
-        if (title.Contains(':'))
-            return title.Substring(0, title.IndexOf(':')).Trim();
-
-        return title;
+        // Delegiert an VsaCatalogTreeBuilder; Baum in _root uebertragen
+        var built = VsaCatalogTreeBuilder.BuildTree(_allCodes, _catalog);
+        foreach (var kv in built.Children)
+            _root.Children[kv.Key] = kv.Value;
+        foreach (var code in built.Codes)
+            _root.Codes.Add(code);
     }
 
     private void InitializeColumns()
@@ -611,89 +514,37 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
         }
     }
 
-    private List<string> BuildPathToCode(AppProtocol.CodeDefinition code)
-    {
-        // Wenn categoryPath explizit gesetzt ist, diesen verwenden
-        if (code.CategoryPath is { Count: > 0 })
-            return code.CategoryPath;
-
-        // Automatisch aus Code-Prefix ableiten
-        var codeStr = (code.Code ?? string.Empty).Trim().ToUpperInvariant();
-        var path = new List<string>();
-        if (codeStr.Length >= 2)
-            path.Add(codeStr.Substring(0, 2));
-        if (codeStr.Length >= 3)
-            path.Add(codeStr.Substring(0, 3));
-        return path;
-    }
+    private static List<string> BuildPathToCode(AppProtocol.CodeDefinition code)
+        => VsaCatalogTreeBuilder.BuildPathToCode(code);
 
     private void MergeVsaParameters(Dictionary<string, string> parameters)
-    {
-        void Add(string key, string? value)
-        {
-            if (!string.IsNullOrWhiteSpace(value))
-                parameters[key] = value.Trim();
-        }
-
-        void AddAliases(string? value, params string[] keys)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return;
-            foreach (var key in keys)
-                Add(key, value);
-        }
-
-        AddAliases(VsaDistanz, "vsa.distanz", "Distance");
-        AddAliases(VsaVideo, "vsa.video", "TimeCtr");
-        AddAliases(VsaUhrVon, "vsa.uhr.von", "ClockPos1");
-        AddAliases(VsaUhrBis, "vsa.uhr.bis", "ClockPos2");
-        AddAliases(VsaQ1, "vsa.q1", "Q1", "Quantifizierung1");
-        AddAliases(VsaQ2, "vsa.q2", "Q2", "Quantifizierung2");
-        Add("vsa.strecke", VsaStrecke);
-        if (VsaVerbindung)
-            parameters["vsa.verbindung"] = "ja";
-        Add("vsa.ansicht", VsaAnsicht);
-        Add("vsa.ez", VsaEz);
-        Add("vsa.schachtbereich", VsaSchachtbereich);
-        Add("vsa.anmerkung", VsaAnmerkung);
-    }
-
-    private static readonly Regex ClockFromDescriptionRegex = new(
-        @"von\s+(\d{1,2})\s*Uhr\s+bis\s+(\d{1,2})\s*Uhr",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-    private static readonly Regex QuantFromDescriptionRegex = new(
-        @"(\d+(?:[.,]\d+)?)\s*%",
-        RegexOptions.Compiled);
+        => VsaParameterMerger.Merge(
+            parameters,
+            vsaDistanz: VsaDistanz,
+            vsaVideo: VsaVideo,
+            vsaUhrVon: VsaUhrVon,
+            vsaUhrBis: VsaUhrBis,
+            vsaQ1: VsaQ1,
+            vsaQ2: VsaQ2,
+            vsaStrecke: VsaStrecke,
+            vsaVerbindung: VsaVerbindung,
+            vsaAnsicht: VsaAnsicht,
+            vsaEz: VsaEz,
+            vsaSchachtbereich: VsaSchachtbereich,
+            vsaAnmerkung: VsaAnmerkung);
 
     private void TryParseClockValuesFromDescription(ProtocolEntry entry)
     {
-        var desc = entry.Beschreibung;
-        if (string.IsNullOrWhiteSpace(desc))
-            return;
-
-        // Uhrzeit-Werte: "von 8 Uhr bis 3 Uhr"
-        if (string.IsNullOrWhiteSpace(VsaUhrVon) || string.IsNullOrWhiteSpace(VsaUhrBis))
-        {
-            var match = ClockFromDescriptionRegex.Match(desc);
-            if (match.Success)
-            {
-                if (string.IsNullOrWhiteSpace(VsaUhrVon))
-                    VsaUhrVon = match.Groups[1].Value.Trim();
-                if (string.IsNullOrWhiteSpace(VsaUhrBis))
-                    VsaUhrBis = match.Groups[2].Value.Trim();
-            }
-        }
-
-        // Quantifizierung: "1%" oder "10%"
-        if (string.IsNullOrWhiteSpace(VsaQ1))
-        {
-            var matches = QuantFromDescriptionRegex.Matches(desc);
-            if (matches.Count > 0)
-                VsaQ1 = matches[0].Groups[1].Value.Replace(',', '.').Trim();
-            if (matches.Count > 1 && string.IsNullOrWhiteSpace(VsaQ2))
-                VsaQ2 = matches[1].Groups[1].Value.Replace(',', '.').Trim();
-        }
+        // Fallback: Uhr-Werte aus Beschreibungstext parsen (delegiert an DescriptionClockQuantParser)
+        var uhrVon = VsaUhrVon;
+        var uhrBis = VsaUhrBis;
+        var q1 = VsaQ1;
+        var q2 = VsaQ2;
+        DescriptionClockQuantParser.TryParseFromDescription(entry.Beschreibung, ref uhrVon, ref uhrBis, ref q1, ref q2);
+        VsaUhrVon = uhrVon;
+        VsaUhrBis = uhrBis;
+        VsaQ1 = q1;
+        VsaQ2 = q2;
     }
 
     private void BuildParameters()
@@ -819,77 +670,7 @@ public sealed partial class ObservationCatalogViewModel : ObservableObject
         IReadOnlyDictionary<string, string> parameters,
         double? meterStart,
         double? meterEnd)
-    {
-        var title = def.Title ?? string.Empty;
-        var parts = new List<string>();
-
-        if (parameters is not null && parameters.Count > 0)
-        {
-            // Code-spezifische Parameter (Hoehe, Breite, Kruemmungswinkel, etc.)
-            foreach (var p in def.Parameters)
-            {
-                string? value = null;
-                var key = p.DataKey ?? p.Name;
-                if (!parameters.TryGetValue(key, out value) || string.IsNullOrWhiteSpace(value))
-                {
-                    if (!parameters.TryGetValue(p.Name, out value) || string.IsNullOrWhiteSpace(value))
-                        continue;
-                }
-                var unit = string.IsNullOrWhiteSpace(p.Unit) ? "" : $"{p.Unit}";
-                parts.Add($"{value}{unit}".Trim());
-            }
-
-            // Uhrzeiten (von/bis)
-            var uhrVon = GetFirstParameter(parameters, "vsa.uhr.von", "ClockPos1");
-            var uhrBis = GetFirstParameter(parameters, "vsa.uhr.bis", "ClockPos2");
-            if (!string.IsNullOrWhiteSpace(uhrVon) && !string.IsNullOrWhiteSpace(uhrBis))
-                parts.Add($"von {uhrVon} Uhr bis {uhrBis} Uhr");
-            else if (!string.IsNullOrWhiteSpace(uhrVon))
-                parts.Add($"bei {uhrVon} Uhr");
-
-            // Quantifizierung
-            var q1 = GetFirstParameter(parameters, "vsa.q1", "Q1", "Quantifizierung1");
-            if (!string.IsNullOrWhiteSpace(q1))
-                parts.Add($"{q1}%");
-            var q2 = GetFirstParameter(parameters, "vsa.q2", "Q2", "Quantifizierung2");
-            if (!string.IsNullOrWhiteSpace(q2))
-                parts.Add($"{q2}%");
-        }
-
-        if (def.RequiresRange && meterStart.HasValue && meterEnd.HasValue)
-            parts.Add($"Strecke {meterStart:0.00}-{meterEnd:0.00} m");
-
-        if (parts.Count == 0)
-            return title;
-
-        return $"{title}: {string.Join(", ", parts)}";
-    }
-
-    private static string? GetFirstParameter(IReadOnlyDictionary<string, string> parameters, params string[] keys)
-    {
-        if (parameters is null || keys.Length == 0)
-            return null;
-
-        foreach (var key in keys)
-        {
-            if (string.IsNullOrWhiteSpace(key))
-                continue;
-            if (!parameters.TryGetValue(key, out var value))
-                continue;
-            if (string.IsNullOrWhiteSpace(value))
-                continue;
-            return value.Trim();
-        }
-
-        return null;
-    }
-
-    private string ResolveCategoryLabel(string key)
-    {
-        if (_codeIndex.TryGetValue(key, out var def))
-            return $"{def.Code}  {def.Title}";
-        return key;
-    }
+        => ProtocolDescriptionBuilder.Build(def, parameters, meterStart, meterEnd);
 }
 
 public sealed partial class CatalogColumnViewModel : ObservableObject
@@ -909,34 +690,20 @@ public sealed partial class CatalogColumnViewModel : ObservableObject
 public sealed class CatalogItem
 {
     public string Label { get; }
-    public CategoryNode? Node { get; }
+    public CatalogTreeNode? Node { get; }
     public AppProtocol.CodeDefinition? Code { get; }
 
-    private CatalogItem(string label, CategoryNode? node, AppProtocol.CodeDefinition? code)
+    private CatalogItem(string label, CatalogTreeNode? node, AppProtocol.CodeDefinition? code)
     {
         Label = label;
         Node = node;
         Code = code;
     }
 
-    public static CatalogItem FromNode(CategoryNode node) => new(node.Label, node, null);
+    public static CatalogItem FromNode(CatalogTreeNode node) => new(node.Label, node, null);
 
     public static CatalogItem FromCode(AppProtocol.CodeDefinition code)
         => new($"{code.Code}  {code.Title}", null, code);
-}
-
-public sealed class CategoryNode
-{
-    public string Key { get; }
-    public string Label { get; }
-    public Dictionary<string, CategoryNode> Children { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public List<AppProtocol.CodeDefinition> Codes { get; } = new();
-
-    public CategoryNode(string key, string label)
-    {
-        Key = key;
-        Label = label;
-    }
 }
 
 public sealed partial class ObservationParameterViewModel : ObservableObject
@@ -985,60 +752,11 @@ public sealed partial class ObservationParameterViewModel : ObservableObject
 
     public bool Validate(out string error)
     {
-        error = string.Empty;
-        var v = Value?.Trim() ?? string.Empty;
-
-        if (Required && v.Length == 0)
-        {
-            error = $"Parameter '{Name}' ist erforderlich.";
-            IsValid = false;
-            ErrorMessage = error;
-            return false;
-        }
-
-        if (v.Length == 0)
-        {
-            IsValid = true;
-            ErrorMessage = string.Empty;
-            return true;
-        }
-
-        if (IsEnum && AllowedValues.Count > 0 && !AllowedValues.Contains(v, StringComparer.OrdinalIgnoreCase))
-        {
-            error = $"Parameter '{Name}' hat einen ungueltigen Wert.";
-            IsValid = false;
-            ErrorMessage = error;
-            return false;
-        }
-
-        if (IsNumber)
-        {
-            var normalized = v.Replace(',', '.');
-            if (!double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
-            {
-                error = $"Parameter '{Name}' muss numerisch sein.";
-                IsValid = false;
-                ErrorMessage = error;
-                return false;
-            }
-        }
-
-        if (IsClock)
-        {
-            if (!int.TryParse(v, NumberStyles.Integer, CultureInfo.InvariantCulture, out var clockValue)
-                || clockValue < 0
-                || clockValue > 12)
-            {
-                error = $"Parameter '{Name}' muss zwischen 00 und 12 liegen.";
-                IsValid = false;
-                ErrorMessage = error;
-                return false;
-            }
-        }
-
-        IsValid = true;
-        ErrorMessage = string.Empty;
-
-        return true;
+        // Delegiert an ObservationParameterValidator (reine Logik ohne UI-Abhaengigkeiten)
+        var ok = ObservationParameterValidator.Validate(
+            Name, Type, Required, AllowedValues, Value, out error);
+        IsValid = ok;
+        ErrorMessage = ok ? string.Empty : error;
+        return ok;
     }
 }
