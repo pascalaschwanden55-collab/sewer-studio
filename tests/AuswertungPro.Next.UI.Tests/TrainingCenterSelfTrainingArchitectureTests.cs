@@ -97,6 +97,22 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.DoesNotContain("Pipeline gestartet: OSD-Scan", selfTrainingSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void TrainingCenterViewModel_delegiert_self_training_ollama_log_an_presenter()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+
+        Assert.Contains("SelfTrainingRunPresentationBuilder.BuildOllamaConfigLog(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Ollama: {cfg.OllamaBaseUri}, Modell: {cfg.VisionModel}", selfTrainingSource, StringComparison.Ordinal);
+    }
+
     private static string FindRepoRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);

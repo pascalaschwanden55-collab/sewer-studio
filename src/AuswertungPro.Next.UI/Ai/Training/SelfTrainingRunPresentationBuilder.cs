@@ -28,6 +28,9 @@ public static class SelfTrainingRunPresentationBuilder
     public static string BuildPipelineStartedLog()
         => "Pipeline gestartet: OSD-Scan \u2192 Frame \u2192 KI-Analyse \u2192 Vergleich \u2192 Technik";
 
+    public static string BuildOllamaConfigLog(Uri ollamaBaseUri, string? visionModel)
+        => $"Ollama: {ollamaBaseUri}, Modell: {visionModel}";
+
     public static SelfTrainingRunCompletionPresentation BuildCompletion(SelfTrainingResult result)
     {
         ArgumentNullException.ThrowIfNull(result);

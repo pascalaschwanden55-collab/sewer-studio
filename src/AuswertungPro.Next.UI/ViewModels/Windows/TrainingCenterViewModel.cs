@@ -1685,7 +1685,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             var cfg = new AppSettingsAiSettingsProvider()
                 .Load()
                 .ToRuntimeSettings();
-            Log($"Ollama: {cfg.OllamaBaseUri}, Modell: {cfg.VisionModel}");
+            Log(SelfTrainingRunPresentationBuilder.BuildOllamaConfigLog(cfg.OllamaBaseUri, cfg.VisionModel));
 
             var visionModel = cfg.VisionModel ?? OllamaConfig.DefaultVisionModel;
             _activeVisionModel = visionModel;

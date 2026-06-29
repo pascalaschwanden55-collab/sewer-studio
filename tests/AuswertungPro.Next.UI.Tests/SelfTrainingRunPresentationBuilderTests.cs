@@ -37,6 +37,16 @@ public sealed class SelfTrainingRunPresentationBuilderTests
     }
 
     [Fact]
+    public void BuildOllamaConfigLog_formatiert_bisherige_ki_konfiguration()
+    {
+        Assert.Equal(
+            "Ollama: http://localhost:11434/, Modell: qwen2.5-vl",
+            SelfTrainingRunPresentationBuilder.BuildOllamaConfigLog(
+                new Uri("http://localhost:11434"),
+                "qwen2.5-vl"));
+    }
+
+    [Fact]
     public void BuildCompletion_maps_result_to_log_lines_and_status()
     {
         var result = Result(
