@@ -23,7 +23,7 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 public partial class DataPage : System.Windows.Controls.UserControl
 {
     private static readonly IValueConverter CostDisplayConverter = new ChfAccountingDisplayConverter();
-    private static readonly IValueConverter HorizontalAlignmentToTextAlignmentConverter = new HorizontalAlignmentToTextAlignmentValueConverter();
+    private static readonly IValueConverter HorizontalAlignmentToTextAlignmentConverter = new DataGridHorizontalAlignmentToTextAlignmentConverter();
     private DataPageViewModel Vm => DataContext as DataPageViewModel
         ?? throw new InvalidOperationException("DataPage benoetigt DataPageViewModel als DataContext.");
     private ServiceProvider Services => Vm.Services;
@@ -1749,24 +1749,4 @@ public partial class DataPage : System.Windows.Controls.UserControl
         ShowTextPreview(title, res.Value);
     }
 
-    private sealed class HorizontalAlignmentToTextAlignmentValueConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-        {
-            if (value is HorizontalAlignment horizontal)
-            {
-                return horizontal switch
-                {
-                    HorizontalAlignment.Center => TextAlignment.Center,
-                    HorizontalAlignment.Right => TextAlignment.Right,
-                    _ => TextAlignment.Left
-                };
-            }
-
-            return TextAlignment.Left;
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-            => Binding.DoNothing;
-    }
 }

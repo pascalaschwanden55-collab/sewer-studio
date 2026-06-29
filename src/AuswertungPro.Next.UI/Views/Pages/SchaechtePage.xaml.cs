@@ -38,29 +38,8 @@ public partial class SchaechtePage : UserControl
         public string OptionField { get; }
     }
 
-    private sealed class HorizontalAlignmentToTextAlignmentValueConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-        {
-            if (value is HorizontalAlignment horizontal)
-            {
-                return horizontal switch
-                {
-                    HorizontalAlignment.Center => TextAlignment.Center,
-                    HorizontalAlignment.Right => TextAlignment.Right,
-                    _ => TextAlignment.Left
-                };
-            }
-
-            return TextAlignment.Left;
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-            => Binding.DoNothing;
-    }
-
     private static readonly IValueConverter CostDisplayConverter = new ChfAccountingDisplayConverter();
-    private static readonly IValueConverter HorizontalAlignmentToTextAlignmentConverter = new HorizontalAlignmentToTextAlignmentValueConverter();
+    private static readonly IValueConverter HorizontalAlignmentToTextAlignmentConverter = new DataGridHorizontalAlignmentToTextAlignmentConverter();
     private static readonly Regex NonNumericRegex = new("[^0-9]", RegexOptions.Compiled);
 
     private SchaechtePageViewModel? _vm;
