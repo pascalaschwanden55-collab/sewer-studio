@@ -1066,9 +1066,8 @@ public partial class TrainingCenterViewModel : ObservableObject
 
                     runSummary.AddNewSamples(newSamples.Count);
 
-                    Log($"  -> {newSamples.Count} Samples (Status: Neu, Freigabe ueber Review):");
-                    foreach (var s in newSamples)
-                        Log($"     {s.Code} @ {s.MeterStart:F2}m [{s.Status}] - {s.Beschreibung}");
+                    foreach (var line in TrainingBatchImportSampleLogBuilder.Build(newSamples))
+                        Log(line);
 
                     // ══════════════════════════════════════════════════════════════════
                     // SOFORT SPEICHERN — Crash-sicher pro Haltung
