@@ -521,7 +521,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
 
         // Sender ist hier die DataPage (kein HaltungRecord-DataContext, kein offenes
-        // ContextMenu) -> GetContextMenuRecord(this) liefert null -> ResolveActionRecord
+        // ContextMenu) -> der Resolver faellt sauber auf die aktuelle Auswahl zurueck.
         // faellt auf das gerade gesetzte vm.Selected zurueck. Darum reicht 'this' als Sender.
         vm.Selected = record;
         var e = new RoutedEventArgs();
@@ -1178,7 +1178,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        var record = DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected);
         if (record is null)
         {
             Dialogs.Info("Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.", "Position");
@@ -1195,7 +1195,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        var record = DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected);
         if (record is null)
         {
             Dialogs.Info("Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.", "Position");
@@ -1308,7 +1308,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        var record = DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected);
         vm.OpenHydraulikCommand.Execute(record);
     }
 
@@ -1316,7 +1316,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        var record = DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected);
         vm.PrintHydraulikCommand.Execute(record);
     }
 
@@ -1324,7 +1324,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        var record = DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected);
         vm.PrintDossierCommand.Execute(record);
     }
 
@@ -1374,33 +1374,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
         }
     }
 
-    private static HaltungRecord? GetContextMenuRecord(object sender)
-    {
-        if (sender is not DependencyObject dep)
-            return null;
-
-        var current = dep;
-        while (current is not null)
-        {
-            if (current is FrameworkElement fe && fe.DataContext is HaltungRecord rec)
-                return rec;
-
-            if (current is ContextMenu menu)
-            {
-                if (menu.PlacementTarget is DataGridRow row)
-                    return row.Item as HaltungRecord;
-                if (menu.PlacementTarget is DataGrid grid)
-                    return grid.SelectedItem as HaltungRecord;
-            }
-
-            current = LogicalTreeHelper.GetParent(current) ?? VisualTreeHelper.GetParent(current);
-        }
-
-        return null;
-    }
-
     private static HaltungRecord? ResolveActionRecord(object sender, DataPageViewModel vm)
-        => GetContextMenuRecord(sender) ?? vm.Selected;
+        => DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected);
 
     private static string? GetEditedTextValue(FrameworkElement? element)
     {
