@@ -377,6 +377,24 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_sample_persistenz_workflow_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var persistSource = ExtractMethodBody(source, "private async Task PersistSamplesAsync(TrainingSample? changedSample = null)");
+
+        Assert.Contains("TrainingSamplePersistenceWorkflowController.PersistAsync(", persistSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("changedSample.KbIndexState = KbIndexState.Pending", persistSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("outcome.IndexedIds.Contains", persistSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample>", persistSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_kb_update_workflow_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(

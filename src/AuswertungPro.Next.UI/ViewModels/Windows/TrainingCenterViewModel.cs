@@ -1097,29 +1097,12 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// </summary>
     private async Task PersistSamplesAsync(TrainingSample? changedSample = null)
     {
-        // Immer Merge/Update statt Voll-Save — verhindert Ueberschreiben
-        // von parallel geschriebenen Samples (Batch-Import, Self-Training).
-        if (changedSample != null)
-            await TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample> { changedSample });
-        else
-            await TrainingSamplesStore.MergeOrUpdateAsync(Samples.ToList());
-
-        // Approved Sample sofort in KB indexieren ("sofort in die Datenbank")
-        if (changedSample?.Status == TrainingSampleStatus.Approved)
-        {
-            changedSample.KbIndexState = KbIndexState.Pending;
-            await TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample> { changedSample });
-            var outcome = await IncrementalKbUpdateWithReasonAsync(
-                new List<TrainingSample> { changedSample },
-                CancellationToken.None);
-            // Skipped (bewusst/dauerhaft verworfen) vs. Error (echter Fehler) sauber unterscheiden.
-            changedSample.KbIndexState = outcome.IndexedIds.Contains(changedSample.SampleId)
-                ? KbIndexState.Indexed
-                : outcome.SkippedIds.Contains(changedSample.SampleId)
-                    ? KbIndexState.Skipped
-                    : KbIndexState.Error;
-            await TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample> { changedSample });
-        }
+        await TrainingSamplePersistenceWorkflowController.PersistAsync(
+            Samples.ToList(),
+            changedSample,
+            TrainingSamplesStore.MergeOrUpdateAsync,
+            (samples, ct) => IncrementalKbUpdateWithReasonAsync(samples.ToList(), ct),
+            CancellationToken.None).ConfigureAwait(false);
     }
 
     /// <summary>
