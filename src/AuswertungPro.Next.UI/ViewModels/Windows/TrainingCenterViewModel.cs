@@ -972,33 +972,15 @@ public partial class TrainingCenterViewModel : ObservableObject
 
                 try
                 {
-                    // Preview-Frame extrahieren
-                    var caseGeneration = await TrainingBatchImportCaseGenerationController.GenerateAsync(
+                    var caseWorkflow = await TrainingBatchImportCaseWorkflowController.ProcessAsync(
                         tc,
                         existingSigs,
+                        allSamples,
+                        SelfTrainingResults.Count + 1,
+                        i + 1,
+                        runSummary,
                         (trainingCase, token) => TrainingCenterRuntimeHelpers.ExtractPreviewFrameAsync(trainingCase, cfg, token),
                         (input, signatures, token) => generator.GenerateWithDiagnosticsAsync(input, signatures, framesDir: null, token),
-                        ct);
-                    var previewFrame = caseGeneration.PreviewFrame;
-                    var processingPreview = caseGeneration.ProcessingPreview;
-                    UpdateLivePreview(
-                        processingPreview.CaseInfo,
-                        processingPreview.CodeInfo,
-                        processingPreview.MeterInfo,
-                        processingPreview.FramePath);
-
-                    var generation = caseGeneration.Generation;
-                    var newSamples = generation.Samples;
-                    var generatedCasePlan = TrainingBatchImportGeneratedCaseController.CreatePlan(
-                        tc.CaseId,
-                        generation,
-                        previewFrame,
-                        SelfTrainingResults.Count + 1,
-                        existingSigs);
-
-                    var generatedCaseUi = TrainingBatchImportGeneratedCaseUiController.Apply(
-                        generatedCasePlan,
-                        runSummary,
                         preview => UpdateLivePreview(
                             preview.CaseInfo,
                             preview.CodeInfo,
@@ -1007,23 +989,14 @@ public partial class TrainingCenterViewModel : ObservableObject
                         OnUi,
                         SelfTrainingResults.Add,
                         UpdateCodeDistribution,
-                        Log);
-                    if (generatedCaseUi.ShouldContinueWithNextCase)
-                        continue;
-
-                    // ══════════════════════════════════════════════════════════════════
-                    // SOFORT SPEICHERN — Crash-sicher pro Haltung
-                    // ══════════════════════════════════════════════════════════════════
-                    await TrainingBatchImportCasePersistenceWorkflowController.PersistAsync(
-                        newSamples,
-                        allSamples,
-                        i + 1,
                         TrainingSamplesStore.MergeAndSaveAsync,
                         () => _store.SaveAsync(BuildState()),
-                        OnUi,
                         value => KbSampleCount = value,
                         value => KbCodesCovered = value,
-                        Log);
+                        Log,
+                        ct);
+                    if (caseWorkflow.ShouldContinueWithNextCase)
+                        continue;
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
