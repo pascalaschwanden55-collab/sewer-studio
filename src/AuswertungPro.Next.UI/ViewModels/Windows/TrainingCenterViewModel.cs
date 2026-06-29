@@ -1081,14 +1081,10 @@ public partial class TrainingCenterViewModel : ObservableObject
 
                     // Case-State periodisch sichern (alle 10 Haltungen),
                     // damit die UI nach einem Crash den Fortschritt korrekt anzeigt.
-                    if ((i + 1) % 5 == 0)
-                    {
-                        try
-                        {
-                            await _store.SaveAsync(BuildState());
-                        }
-                        catch { /* best-effort, Samples sind bereits gesichert */ }
-                    }
+                    await TrainingBatchImportCaseStateSaveController.SaveIfDueAsync(
+                        i + 1,
+                        5,
+                        () => _store.SaveAsync(BuildState()));
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
