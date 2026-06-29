@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -46,6 +45,7 @@ public partial class SchaechtePage : UserControl
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
     private readonly DataGridColumnLayoutController _columnLayoutController = new();
+    private readonly SchaechtePageSubscriptionController _subscriptionController;
     private bool _updatingAlignmentButtons;
     private bool _isRestoringLayout;
     private DataGridColumn? _activeColumn;
@@ -68,6 +68,10 @@ public partial class SchaechtePage : UserControl
             SaveLayoutToSettings();
         };
         _columnLayoutController.LayoutChanged += (_, __) => QueueLayoutSave();
+        _subscriptionController = new SchaechtePageSubscriptionController(
+            RebuildColumns,
+            ApplySearchFilter,
+            RecordPropertyChanged);
 
         DataContextChanged += OnDataContextChanged;
         Grid.AddHandler(DataGridColumnHeader.ClickEvent, new RoutedEventHandler(Grid_ColumnHeaderClick), true);
@@ -89,54 +93,14 @@ public partial class SchaechtePage : UserControl
     {
         _ = sender;
 
-        if (_vm is not null)
-        {
-            _vm.Columns.CollectionChanged -= ColumnsChanged;
-            _vm.Records.CollectionChanged -= RecordsChanged;
-            foreach (var record in _vm.Records)
-                record.PropertyChanged -= RecordPropertyChanged;
-        }
-
         _vm = e.NewValue as SchaechtePageViewModel;
         if (_vm is null)
-            return;
-
-        _vm.Columns.CollectionChanged += ColumnsChanged;
-        _vm.Records.CollectionChanged += RecordsChanged;
-        foreach (var record in _vm.Records)
-            record.PropertyChanged += RecordPropertyChanged;
-
-        RebuildColumns();
-        ApplySearchFilter();
-    }
-
-    private void ColumnsChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-        RebuildColumns();
-    }
-
-    private void RecordsChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        _ = sender;
-
-        if (_vm is null)
-            return;
-
-        if (e.OldItems is not null)
         {
-            foreach (var record in e.OldItems.OfType<SchachtRecord>())
-                record.PropertyChanged -= RecordPropertyChanged;
+            _subscriptionController.Detach();
+            return;
         }
 
-        if (e.NewItems is not null)
-        {
-            foreach (var record in e.NewItems.OfType<SchachtRecord>())
-                record.PropertyChanged += RecordPropertyChanged;
-        }
-
-        ApplySearchFilter();
+        _subscriptionController.Switch(_vm.Columns, _vm.Records, () => _vm.Records);
     }
 
     private void RebuildColumns()
