@@ -1024,11 +1024,9 @@ public partial class TrainingCenterViewModel : ObservableObject
 
                     // Signaturen registrieren + Live-Visualisierung
                     // nie Auto-Approve; Freigabe nur ueber Review (Modul I)
+                    TrainingBatchImportSampleRegistrar.RegisterAsReviewCandidates(newSamples, existingSigs);
                     foreach (var s in newSamples)
                     {
-                        s.Status = TrainingSampleStatus.New;   // nie Auto-Approve; Freigabe nur ueber Review (Modul I)
-                        existingSigs.Add(s.Signature);
-
                         // Live-Frame pro Sample (nicht nur pro Case)
                         var sampleFrame = !string.IsNullOrEmpty(s.FramePath) ? s.FramePath : previewFrame;
                         UpdateLivePreview(tc.CaseId, s.Code, $"{s.MeterStart:F2} – {s.MeterEnd:F2} m", sampleFrame);
