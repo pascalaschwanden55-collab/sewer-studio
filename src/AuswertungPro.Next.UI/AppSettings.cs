@@ -4,12 +4,13 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
+using AuswertungPro.Next.Application.Ai.Startup;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI;
 
-public sealed class AppSettings
+public sealed class AppSettings : IAiStartupSettings
 {
     private const int SaveDebounceMs = 750;
     private static readonly JsonSerializerOptions JsonOptions = new()
