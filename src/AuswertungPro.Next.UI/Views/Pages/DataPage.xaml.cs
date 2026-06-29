@@ -1692,23 +1692,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var view = CollectionViewSource.GetDefaultView(Grid.ItemsSource);
-        if (view is null)
-            return;
 
-        if (string.IsNullOrWhiteSpace(vm.SearchText))
-        {
-            using (view.DeferRefresh())
-                view.Filter = null;
-            vm.UpdateSearchResultInfo(vm.Records.Count);
-        }
-        else
-        {
-            using (view.DeferRefresh())
-                view.Filter = obj => obj is HaltungRecord rec && vm.MatchesSearch(rec);
-            var count = view.Cast<object>().Count();
-            vm.UpdateSearchResultInfo(count);
-        }
+        DataGridSearchFilterController.Apply(
+            CollectionViewSource.GetDefaultView(Grid.ItemsSource),
+            vm.Records,
+            vm.SearchText,
+            vm.MatchesSearch,
+            vm.UpdateSearchResultInfo,
+            action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action));
     }
 
     private void ShowTextPreview(string title, string content)

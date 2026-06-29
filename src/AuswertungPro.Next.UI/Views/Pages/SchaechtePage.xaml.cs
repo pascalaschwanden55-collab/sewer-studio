@@ -740,29 +740,13 @@ public partial class SchaechtePage : UserControl
         if (DataContext is not SchaechtePageViewModel vm)
             return;
 
-        var view = CollectionViewSource.GetDefaultView(Grid.ItemsSource);
-        if (view is null)
-            return;
-
-        if (view is IEditableCollectionView editableView && (editableView.IsAddingNew || editableView.IsEditingItem))
-        {
-            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(ApplySearchFilter));
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(vm.SearchText))
-        {
-            using (view.DeferRefresh())
-                view.Filter = null;
-            vm.UpdateSearchResultInfo(vm.Records.Count);
-        }
-        else
-        {
-            using (view.DeferRefresh())
-                view.Filter = obj => obj is SchachtRecord rec && vm.MatchesSearch(rec);
-            var count = view.Cast<object>().Count();
-            vm.UpdateSearchResultInfo(count);
-        }
+        DataGridSearchFilterController.Apply(
+            CollectionViewSource.GetDefaultView(Grid.ItemsSource),
+            vm.Records,
+            vm.SearchText,
+            vm.MatchesSearch,
+            vm.UpdateSearchResultInfo,
+            action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action));
     }
 
     private void Grid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
