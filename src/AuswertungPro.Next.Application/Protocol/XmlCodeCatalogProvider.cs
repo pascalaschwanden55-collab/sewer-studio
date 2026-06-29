@@ -1079,44 +1079,9 @@ public sealed class XmlCodeCatalogProvider : ICodeCatalogProvider
             .ToList();
     }
 
+    // Xml-Provider: Score zaehlt Examples NICHT (bewusste Divergenz zu JsonCodeCatalogProvider).
     private static CodeDefinition ChoosePreferred(CodeDefinition first, CodeDefinition second)
-    {
-        var scoreFirst = Score(first);
-        var scoreSecond = Score(second);
-        if (scoreSecond > scoreFirst)
-            return second;
-        if (scoreFirst > scoreSecond)
-            return first;
-
-        var descFirst = first.Description?.Length ?? 0;
-        var descSecond = second.Description?.Length ?? 0;
-        if (descSecond > descFirst)
-            return second;
-        if (descFirst > descSecond)
-            return first;
-
-        return first;
-    }
-
-    private static int Score(CodeDefinition def)
-    {
-        var score = 0;
-        if (!string.IsNullOrWhiteSpace(def.Title) && !string.Equals(def.Title, def.Code, StringComparison.OrdinalIgnoreCase))
-            score += 3;
-        if (!string.IsNullOrWhiteSpace(def.Description))
-            score += 2;
-        if (!string.IsNullOrWhiteSpace(def.Group) && !string.Equals(def.Group, "Unbekannt", StringComparison.OrdinalIgnoreCase))
-            score += 1;
-        score += Math.Min(def.CategoryPath?.Count ?? 0, 3);
-        score += Math.Min(def.Parameters?.Count ?? 0, 3);
-        if (def.RequiresRange)
-            score += 1;
-        if (def.RangeThresholdM is not null)
-            score += 1;
-        if (!string.IsNullOrWhiteSpace(def.RangeThresholdText))
-            score += 1;
-        return score;
-    }
+        => CodeDefinitionPreference.Choose(first, second, CodeDefinitionPreference.ScoreWithoutExamples);
 
     private sealed class CatalogNavItem
     {
