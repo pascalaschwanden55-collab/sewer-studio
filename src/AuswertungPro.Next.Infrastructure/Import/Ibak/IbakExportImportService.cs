@@ -656,9 +656,9 @@ public sealed class IbakExportImportService : IIbakImportService
     private static string NormalizeHoldingKey(string? value)
         => Common.HoldingKeyNormalizer.NormalizeIbak(value);
 
-    // Delegation: Logik liegt jetzt in Common.NodePrefixStripper
+    // Delegation: Logik liegt in HoldingIdNormalizer (gemeinsame Implementierung)
     private static string StripNodePrefixes(string holdingKey)
-        => Common.NodePrefixStripper.StripNodePrefixes(holdingKey);
+        => HoldingIdNormalizer.StripNodePrefixes(holdingKey);
 
     /// <summary>
     /// Extrahiert Stammdaten aus IBAK-Header-Einträgen (AEC, AED, AEF)
