@@ -1722,17 +1722,10 @@ public partial class TrainingCenterViewModel : ObservableObject
                 ct);
 
             // Ergebnis loggen
-            Log($"--- Selbsttraining abgeschlossen ---");
-            Log($"  Dauer: {result.Duration:mm\\:ss}");
-            Log($"  Eintraege: {result.TotalEntries} gesamt");
-            Log($"  ExactMatch: {result.ExactMatches} | PartialMatch: {result.PartialMatches}");
-            Log($"  Mismatch: {result.Mismatches} | NoFindings: {result.NoFindings}");
-            Log($"  Samples erzeugt: {result.SamplesGenerated}");
-            if (result.OverallTechnique is { } t)
-                Log($"  Technik: {t.OverallGrade} (Licht={t.LightingQuality}, Schaerfe={t.SharpnessQuality})");
-
-            StatusText = $"Fertig! {result.ExactMatches}/{result.TotalEntries} ExactMatch, "
-                       + $"{result.SamplesGenerated} Samples in {result.Duration:mm\\:ss}";
+            var completionPresentation = SelfTrainingRunPresentationBuilder.BuildCompletion(result);
+            foreach (var line in completionPresentation.LogLines)
+                Log(line);
+            StatusText = completionPresentation.StatusText;
 
             // Match-Rate-Verlauf persistieren (Counts → Prozente)
             if (SelfTrainingHistorySnapshotBuilder.Build(result, DateTime.UtcNow) is { } snapshot)
@@ -1768,10 +1761,8 @@ public partial class TrainingCenterViewModel : ObservableObject
             }
 
             // Hinweis fuer Few-Shot-Export (B2)
-            if (result.ExactMatches > 0)
-            {
-                Log($"{result.ExactMatches} ExactMatch-Samples erzeugt. Fuer Few-Shot-Export: Tab 'Samples' → 'Export Approved'");
-            }
+            if (SelfTrainingRunPresentationBuilder.BuildFewShotExportHint(result) is { } fewShotHint)
+                Log(fewShotHint);
 
             // Review Queue befuellen: PartialMatch/Mismatch (C1) UND vom RequireHumanReview-Schalter
             // zurueckgehaltene saubere ExactMatches (S2b: ExactMatch, aber Status New statt Approved).
