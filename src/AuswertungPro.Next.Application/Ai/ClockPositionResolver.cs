@@ -164,10 +164,5 @@ public static class ClockPositionResolver
         return (startDeg / 30.0, endDeg / 30.0, spanDeg);
     }
 
-    private static string? MainCode(string? code)
-    {
-        if (string.IsNullOrWhiteSpace(code)) return null;
-        var t = code.Trim().Replace(".", "").ToUpperInvariant();
-        return t.Length >= 3 ? t[..3] : null;
-    }
+    private static string? MainCode(string? code) => VsaCodeNormalizer.MainCode(code);
 }
