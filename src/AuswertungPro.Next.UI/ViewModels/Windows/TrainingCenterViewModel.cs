@@ -988,10 +988,12 @@ public partial class TrainingCenterViewModel : ObservableObject
                 {
                     // Preview-Frame extrahieren
                     var previewFrame = await TrainingCenterRuntimeHelpers.ExtractPreviewFrameAsync(tc, cfg, ct);
-                    if (!string.IsNullOrEmpty(previewFrame))
-                        UpdateLivePreview(tc.CaseId, "Verarbeite...", "—", previewFrame);
-                    else
-                        UpdateLivePreview(tc.CaseId, "Verarbeite...", "—", null);
+                    var processingPreview = TrainingBatchImportLivePreviewBuilder.BuildProcessing(tc.CaseId, previewFrame);
+                    UpdateLivePreview(
+                        processingPreview.CaseInfo,
+                        processingPreview.CodeInfo,
+                        processingPreview.MeterInfo,
+                        processingPreview.FramePath);
 
                     var generation = await generator.GenerateWithDiagnosticsAsync(
                         TrainingCenterRuntimeHelpers.ToTrainingCaseInput(tc), existingSigs, framesDir: null, ct);
@@ -1028,8 +1030,12 @@ public partial class TrainingCenterViewModel : ObservableObject
                     foreach (var s in newSamples)
                     {
                         // Live-Frame pro Sample (nicht nur pro Case)
-                        var sampleFrame = !string.IsNullOrEmpty(s.FramePath) ? s.FramePath : previewFrame;
-                        UpdateLivePreview(tc.CaseId, s.Code, $"{s.MeterStart:F2} – {s.MeterEnd:F2} m", sampleFrame);
+                        var samplePreview = TrainingBatchImportLivePreviewBuilder.BuildSample(tc.CaseId, s, previewFrame);
+                        UpdateLivePreview(
+                            samplePreview.CaseInfo,
+                            samplePreview.CodeInfo,
+                            samplePreview.MeterInfo,
+                            samplePreview.FramePath);
 
                         // Ergebnis-Verlauf: Sample als Eintrag hinzufuegen
                         // Batch-Import hat keinen echten KI-vs-Protokoll Vergleich,
