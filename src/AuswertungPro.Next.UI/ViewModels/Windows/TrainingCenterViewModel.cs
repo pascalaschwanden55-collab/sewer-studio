@@ -1715,11 +1715,10 @@ public partial class TrainingCenterViewModel : ObservableObject
                 () => DateTime.UtcNow,
                 ct);
 
-            // Ergebnis loggen
-            var completionPresentation = SelfTrainingRunPresentationBuilder.BuildCompletion(result);
-            foreach (var line in completionPresentation.LogLines)
-                Log(line);
-            StatusText = completionPresentation.StatusText;
+            SelfTrainingRunCompletionController.Apply(
+                result,
+                Log,
+                value => StatusText = value);
 
             // Inkrementelles KB-Update fuer ExactMatch-Samples (B1)
             await SelfTrainingKbUpdateController.RunApprovedSamplesUpdateAsync(
@@ -1729,10 +1728,6 @@ public partial class TrainingCenterViewModel : ObservableObject
                 IncrementalKbUpdateWithReasonAsync,
                 Log,
                 ct);
-
-            // Hinweis fuer Few-Shot-Export (B2)
-            if (SelfTrainingRunPresentationBuilder.BuildFewShotExportHint(result) is { } fewShotHint)
-                Log(fewShotHint);
 
             await SelfTrainingReviewQueueWorkflowController.RunAsync(
                 ReviewQueueServiceRef,
