@@ -979,10 +979,13 @@ public partial class TrainingCenterViewModel : ObservableObject
                 ct.ThrowIfCancellationRequested();
                 var tc = casesToProcess[i];
                 ProgressValue = i + 1;
-                StatusText = $"[{i + 1}/{casesToProcess.Count}] {tc.CaseId}...";
-                Log($"--- [{i + 1}/{casesToProcess.Count}] {tc.CaseId} ---");
-                Log($"  Protokoll: {tc.ProtocolPath}");
-                Log($"  Video: {(string.IsNullOrEmpty(tc.VideoPath) ? "keins" : tc.VideoPath)}");
+                var progressPresentation = TrainingBatchImportCaseProgressPresentationBuilder.Build(
+                    i,
+                    casesToProcess.Count,
+                    tc);
+                StatusText = progressPresentation.StatusText;
+                foreach (var line in progressPresentation.LogLines)
+                    Log(line);
 
                 try
                 {
