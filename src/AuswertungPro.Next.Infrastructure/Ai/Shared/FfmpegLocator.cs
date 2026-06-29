@@ -127,6 +127,20 @@ public static class FfmpegLocator
     }
 
     /// <summary>
+    /// Leitet den ffprobe-Pfad rein aus dem übergebenen ffmpegPath ab – kein Dateisystem-Zugriff.
+    /// Gleiche Logik wie in MultiModelAnalysisService und VideoFullAnalysisService (konsolidiert).
+    /// </summary>
+    public static string DeriveFfprobeFrom(string ffmpegPath)
+    {
+        if (string.IsNullOrWhiteSpace(ffmpegPath) ||
+            string.Equals(ffmpegPath, "ffmpeg", StringComparison.OrdinalIgnoreCase))
+            return "ffprobe";
+        var dir = Path.GetDirectoryName(ffmpegPath);
+        var ext = Path.GetExtension(ffmpegPath);
+        return string.IsNullOrWhiteSpace(dir) ? "ffprobe" + ext : Path.Combine(dir, "ffprobe" + ext);
+    }
+
+    /// <summary>
     /// Prüft, ob ffmpeg über Process.Start erreichbar ist (absolut oder im PATH).
     /// </summary>
     public static bool IsFfmpegAvailable()

@@ -10,6 +10,7 @@ using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
+using AuswertungPro.Next.Infrastructure.Ai.Shared;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -986,15 +987,9 @@ public sealed class MultiModelAnalysisService
         return 0;
     }
 
-    private static string DeriveFfprobePath(string ffmpegPath)
-    {
-        if (string.IsNullOrWhiteSpace(ffmpegPath) ||
-            string.Equals(ffmpegPath, "ffmpeg", StringComparison.OrdinalIgnoreCase))
-            return "ffprobe";
-        var dir = Path.GetDirectoryName(ffmpegPath);
-        var ext = Path.GetExtension(ffmpegPath);
-        return string.IsNullOrWhiteSpace(dir) ? "ffprobe" + ext : Path.Combine(dir, "ffprobe" + ext);
-    }
+    // Delegiert an gemeinsamen Helfer in FfmpegLocator (verhaltensneutral).
+    private static string DeriveFfprobePath(string ffmpegPath) =>
+        FfmpegLocator.DeriveFfprobeFrom(ffmpegPath);
 
     /// <summary>
     /// Normalisiert Clock-Positionen — delegiert an kanonische Implementierung in VsaCodeResolver.
