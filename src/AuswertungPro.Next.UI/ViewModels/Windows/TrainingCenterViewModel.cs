@@ -1041,14 +1041,10 @@ public partial class TrainingCenterViewModel : ObservableObject
                         // Uebersprungene Haltungen trotzdem im Ergebnis-Verlauf zeigen
                         void AddSkipped()
                         {
-                            SelfTrainingResults.Add(new SelfTrainingEntryResult
-                            {
-                                Index = SelfTrainingResults.Count + 1,
-                                VsaCode = tc.CaseId,
-                                Meter = 0,
-                                Level = MatchLevel.NoFindings,
-                                Summary = skipReason
-                            });
+                            SelfTrainingResults.Add(TrainingBatchImportResultEntryFactory.CreateSkippedCase(
+                                SelfTrainingResults.Count + 1,
+                                tc.CaseId,
+                                skipReason));
                         }
                         if (System.Windows.Application.Current?.Dispatcher is { } dSkip && !dSkip.CheckAccess())
                             dSkip.Invoke(AddSkipped);
@@ -1072,19 +1068,14 @@ public partial class TrainingCenterViewModel : ObservableObject
                         // Ergebnis-Verlauf: Sample als Eintrag hinzufuegen
                         // Batch-Import hat keinen echten KI-vs-Protokoll Vergleich,
                         // daher Match-Rate NICHT aktualisieren (nur im Selbsttraining sinnvoll).
-                        var level = MatchLevel.NoFindings; // Status ist immer New, nie Approved
                         void AddResult()
                         {
-                            SelfTrainingResults.Add(new SelfTrainingEntryResult
-                            {
-                                Index = SelfTrainingResults.Count + 1,
-                                VsaCode = s.Code,
-                                Meter = s.MeterStart,
-                                Level = level,
-                                Summary = s.Beschreibung
-                            });
+                            var entry = TrainingBatchImportResultEntryFactory.CreateSample(
+                                SelfTrainingResults.Count + 1,
+                                s);
+                            SelfTrainingResults.Add(entry);
                             // Code-Verteilung aktualisieren
-                            UpdateCodeDistribution(s.Code, level);
+                            UpdateCodeDistribution(entry.VsaCode, entry.Level);
                         }
                         if (System.Windows.Application.Current?.Dispatcher is { } dp && !dp.CheckAccess())
                             dp.Invoke(AddResult);
