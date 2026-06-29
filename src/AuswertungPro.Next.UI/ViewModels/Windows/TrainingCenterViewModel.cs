@@ -1023,18 +1023,12 @@ public partial class TrainingCenterViewModel : ObservableObject
                         allSamples,
                         TrainingSamplesStore.MergeAndSaveAsync);
 
-                    // Kein KB-Index — Samples bleiben Kandidaten (Status: Neu)
-                    Log(persistence.CandidateLogMessage);
-
-                    // UI-Zaehler aktualisieren (Samples + Codes)
-                    void UpdateCounters()
-                    {
-                        KbSampleCount = persistence.SampleCount;
-                        KbCodesCovered = persistence.CodesCovered;
-                    }
-                    OnUi(UpdateCounters);
-
-                    Log(persistence.StoredLogMessage);
+                    TrainingBatchImportSamplePersistenceUiController.Apply(
+                        persistence,
+                        Log,
+                        OnUi,
+                        value => KbSampleCount = value,
+                        value => KbCodesCovered = value);
 
                     // Case-State periodisch sichern (alle 10 Haltungen),
                     // damit die UI nach einem Crash den Fortschritt korrekt anzeigt.

@@ -156,6 +156,26 @@ public sealed class TrainingCenterBatchImportArchitectureTests
         Assert.DoesNotContain("runSummary.AddNewSamples(generatedCasePlan.NewSampleCount)", batchImportSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void TrainingCenterViewModel_delegiert_batch_import_persistence_ui_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+
+        Assert.Contains("TrainingBatchImportSamplePersistenceUiController.Apply(", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("void UpdateCounters()", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("KbSampleCount = persistence.SampleCount", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("KbCodesCovered = persistence.CodesCovered", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Log(persistence.CandidateLogMessage)", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Log(persistence.StoredLogMessage)", batchImportSource, StringComparison.Ordinal);
+    }
+
     private static string FindRepoRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
