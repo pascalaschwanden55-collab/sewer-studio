@@ -939,27 +939,24 @@ public partial class TrainingCenterViewModel : ObservableObject
                 return;
             var casesWithProtocol = scanWorkflow.CasesWithProtocol;
 
-            // 2. Generate samples for all cases
-            var cfg = new AppSettingsAiSettingsProvider()
-                .Load()
-                .ToRuntimeSettings();
-            Log($"AI Config: Enabled={cfg.Enabled}, ffmpeg={cfg.FfmpegPath}");
-
-            var settings = await TrainingCenterSettingsStore.LoadAsync();
-            var meterSvc = TrainingCenterRuntimeHelpers.CreateMeterTimelineService(cfg, settings.GpuConcurrency);
-            var generator = new TrainingSampleGenerator(cfg, meterSvc, settings, _codeCatalog);
-
-            var allSamples = await TrainingSamplesStore.LoadAsync();
-            var existingSigs = allSamples.Select(s => s.Signature)
-                .Where(s => !string.IsNullOrEmpty(s))
-                .ToHashSet(StringComparer.Ordinal);
-            Log($"Bestehende Samples: {allSamples.Count} ({existingSigs.Count} Signaturen)");
-
-            // Dedup passiert per Signature auf Entry-Level.
-            var casesToProcess = casesWithProtocol;
-
-            ProgressMax = casesToProcess.Count;
-            var runSummary = new TrainingBatchImportRunSummary();
+            var runtimeSetup = await TrainingBatchImportRuntimeSetupController.PrepareAsync(
+                casesWithProtocol,
+                () => PlayerAiSettingsLoader.LoadRuntimeSettings(),
+                TrainingCenterSettingsStore.LoadAsync,
+                (cfg, settings) =>
+                {
+                    var meterSvc = TrainingCenterRuntimeHelpers.CreateMeterTimelineService(cfg, settings.GpuConcurrency);
+                    return new TrainingSampleGenerator(cfg, meterSvc, settings, _codeCatalog);
+                },
+                TrainingSamplesStore.LoadAsync,
+                value => ProgressMax = value,
+                Log);
+            var cfg = runtimeSetup.Config;
+            var generator = runtimeSetup.Generator;
+            var allSamples = runtimeSetup.AllSamples;
+            var existingSigs = runtimeSetup.ExistingSignatures;
+            var casesToProcess = runtimeSetup.CasesToProcess;
+            var runSummary = runtimeSetup.RunSummary;
 
             for (var i = 0; i < casesToProcess.Count; i++)
             {

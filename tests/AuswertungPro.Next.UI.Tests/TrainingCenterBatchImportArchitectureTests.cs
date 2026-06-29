@@ -139,6 +139,27 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_batch_import_runtime_setup_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+
+        Assert.Contains("TrainingBatchImportRuntimeSetupController.PrepareAsync(", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new AppSettingsAiSettingsProvider()", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("var settings = await TrainingCenterSettingsStore.LoadAsync();", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("var allSamples = await TrainingSamplesStore.LoadAsync();", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("var existingSigs = allSamples.Select", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("var casesToProcess = casesWithProtocol;", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("var runSummary = new TrainingBatchImportRunSummary();", batchImportSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_batch_import_generated_case_ui_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
