@@ -157,7 +157,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_batch_import_persistence_ui_an_controller()
+    public void TrainingCenterViewModel_delegiert_batch_import_case_progress_ui_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -168,7 +168,29 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "TrainingCenterViewModel.cs"));
         var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
 
-        Assert.Contains("TrainingBatchImportSamplePersistenceUiController.Apply(", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportCaseProgressUiController.Apply(", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProgressValue = i + 1;", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportCaseProgressPresentationBuilder.Build(", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("StatusText = progressPresentation.StatusText", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("foreach (var line in progressPresentation.LogLines)", batchImportSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TrainingCenterViewModel_delegiert_batch_import_case_persistenz_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+
+        Assert.Contains("TrainingBatchImportCasePersistenceWorkflowController.PersistAsync(", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportSamplePersistenceController.SaveCandidatesAsync(", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportSamplePersistenceUiController.Apply(", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportCaseStateSaveController.SaveIfDueAsync(", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("void UpdateCounters()", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("KbSampleCount = persistence.SampleCount", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("KbCodesCovered = persistence.CodesCovered", batchImportSource, StringComparison.Ordinal);

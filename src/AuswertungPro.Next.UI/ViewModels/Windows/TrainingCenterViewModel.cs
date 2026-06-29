@@ -965,14 +965,13 @@ public partial class TrainingCenterViewModel : ObservableObject
             {
                 ct.ThrowIfCancellationRequested();
                 var tc = casesToProcess[i];
-                ProgressValue = i + 1;
-                var progressPresentation = TrainingBatchImportCaseProgressPresentationBuilder.Build(
+                TrainingBatchImportCaseProgressUiController.Apply(
                     i,
                     casesToProcess.Count,
-                    tc);
-                StatusText = progressPresentation.StatusText;
-                foreach (var line in progressPresentation.LogLines)
-                    Log(line);
+                    tc,
+                    value => ProgressValue = value,
+                    value => StatusText = value,
+                    Log);
 
                 try
                 {
@@ -1018,24 +1017,16 @@ public partial class TrainingCenterViewModel : ObservableObject
                     // ══════════════════════════════════════════════════════════════════
                     // SOFORT SPEICHERN — Crash-sicher pro Haltung
                     // ══════════════════════════════════════════════════════════════════
-                    var persistence = await TrainingBatchImportSamplePersistenceController.SaveCandidatesAsync(
+                    await TrainingBatchImportCasePersistenceWorkflowController.PersistAsync(
                         newSamples,
                         allSamples,
-                        TrainingSamplesStore.MergeAndSaveAsync);
-
-                    TrainingBatchImportSamplePersistenceUiController.Apply(
-                        persistence,
-                        Log,
+                        i + 1,
+                        TrainingSamplesStore.MergeAndSaveAsync,
+                        () => _store.SaveAsync(BuildState()),
                         OnUi,
                         value => KbSampleCount = value,
-                        value => KbCodesCovered = value);
-
-                    // Case-State periodisch sichern (alle 10 Haltungen),
-                    // damit die UI nach einem Crash den Fortschritt korrekt anzeigt.
-                    await TrainingBatchImportCaseStateSaveController.SaveIfDueAsync(
-                        i + 1,
-                        5,
-                        () => _store.SaveAsync(BuildState()));
+                        value => KbCodesCovered = value,
+                        Log);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {

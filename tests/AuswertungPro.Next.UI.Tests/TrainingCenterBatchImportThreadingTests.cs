@@ -18,7 +18,7 @@ public sealed class TrainingCenterBatchImportThreadingTests
         var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
 
         Assert.Contains("TrainingBatchImportGeneratedCaseUiController.Apply(", batchImportSource);
-        Assert.Contains("TrainingBatchImportSamplePersistenceUiController.Apply(", batchImportSource);
+        Assert.Contains("TrainingBatchImportCasePersistenceWorkflowController.PersistAsync(", batchImportSource);
         Assert.Contains("OnUi,", batchImportSource);
         Assert.DoesNotContain("System.Windows.Application.Current?.Dispatcher", batchImportSource);
     }
