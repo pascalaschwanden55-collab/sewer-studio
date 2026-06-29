@@ -193,6 +193,24 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_self_training_exceptions_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+
+        Assert.Contains("SelfTrainingRunExceptionController.ApplyCanceled(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingRunExceptionController.ApplyFailure(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Log(\"Selbsttraining abgebrochen.\")", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Log($\"FEHLER:", selfTrainingSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_run_control_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
