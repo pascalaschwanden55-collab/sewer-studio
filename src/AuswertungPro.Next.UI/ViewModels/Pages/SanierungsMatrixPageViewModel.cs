@@ -1021,7 +1021,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             .GroupBy(i => i.Key.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        var updatedHoldings = ApplyCatalogPricesToStoredCosts();
+        var changedHoldings = CatalogPriceApplier.ApplyCatalogPricesToStoredCosts(_store, _catalog, _vatRate);
+        foreach (var h in changedHoldings)
+            _touchedHoldings.Add(h);
+        var updatedHoldings = changedHoldings.Count;
 
         // Zeilen-Anzeige nachziehen (Totals/Zusammenfassung) — ohne Rebuild.
         foreach (var row in Rows)
@@ -1044,86 +1047,6 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         Status = updatedHoldings == 0
             ? "Katalog neu geladen - keine Preisaenderungen."
             : $"Katalogpreise auf {updatedHoldings} Haltung(en) angewendet (manuelle Overrides unangetastet) - 'Speichern' schreibt costs.json.";
-    }
-
-    /// <summary>
-    /// Wendet die aktuellen Katalogpreise auf alle gespeicherten Positionen an (auch
-    /// Mehrfach-Buendel — reine Preisaktualisierung, kein Rebuild). Zeilen mit
-    /// IsPriceOverridden und Positionen ohne eindeutigen Katalogpreis bleiben unveraendert.
-    /// </summary>
-    private int ApplyCatalogPricesToStoredCosts()
-    {
-        var updated = 0;
-        foreach (var (holding, cost) in _store.ByHolding)
-        {
-            var changed = false;
-            foreach (var measure in cost.Measures)
-            {
-                var measureChanged = false;
-                foreach (var line in measure.Lines)
-                {
-                    if (line.IsPriceOverridden || string.IsNullOrWhiteSpace(line.ItemKey))
-                        continue;
-                    if (!_catalog.TryGetValue(line.ItemKey.Trim(), out var item) || !item.Active)
-                        continue;
-
-                    var price = ResolveExactCatalogPrice(item, measure.Dn, line.Qty);
-                    if (price is decimal p)
-                    {
-                        if (p != line.UnitPrice)
-                        {
-                            line.UnitPrice = p;
-                            measureChanged = true;
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(line.PriceHint))
-                        {
-                            line.PriceHint = "";
-                            measureChanged = true;
-                        }
-                    }
-                }
-
-                if (measureChanged)
-                {
-                    measure.Total = measure.Lines.Where(l => l.Selected).Sum(l => l.Qty * l.UnitPrice);
-                    changed = true;
-                }
-            }
-
-            if (changed)
-            {
-                var totals = CostCalculatorLogicService.CalculateTotals(cost.Measures.Sum(m => m.Total), _vatRate);
-                cost.Total = totals.Total;
-                cost.MwstRate = _vatRate;
-                cost.MwstAmount = totals.MwstAmount;
-                cost.TotalInclMwst = totals.TotalInclMwst;
-                _touchedHoldings.Add(holding);
-                updated++;
-            }
-        }
-
-        return updated;
-    }
-
-    /// <summary>
-    /// Exakter Katalogpreis: Fixed-Positionen direkt, ByDN nur bei passendem DN-/Mengen-Bereich.
-    /// Bewusst KEIN Naechster-DN-Fallback — lieber Preis stehen lassen als still falsch ersetzen.
-    /// </summary>
-    private static decimal? ResolveExactCatalogPrice(CostCatalogItem item, int? dn, decimal qty)
-    {
-        if (item.DnPrices is { Count: > 0 })
-        {
-            if (dn is not int d)
-                return null;
-            var bucket = item.DnPrices.FirstOrDefault(b =>
-                d >= b.DnFrom && d <= b.DnTo
-                && (!b.QtyFrom.HasValue || qty >= b.QtyFrom.Value)
-                && (!b.QtyTo.HasValue || qty <= b.QtyTo.Value));
-            return bucket?.Price;
-        }
-
-        return item.Price;
     }
 
     [RelayCommand]

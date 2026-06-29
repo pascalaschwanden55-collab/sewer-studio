@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Costs;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -62,7 +63,7 @@ public sealed class CatalogPriceApplierTests
     // --- ApplyCatalogPricesToStoredCosts-Faelle ---
 
     [Fact]
-    public void ApplyPrices_uebernimmt_neuen_Preis_und_zaehlt_geaenderte_Haltungen()
+    public void ApplyPrices_uebernimmt_neuen_Preis_und_liefert_geaenderte_Haltungen()
     {
         var catalog = new Dictionary<string, CostCatalogItem>(StringComparer.OrdinalIgnoreCase)
         {
@@ -70,9 +71,9 @@ public sealed class CatalogPriceApplierTests
         };
 
         var store = StoreWith("H1", Line("GFK", qty: 10m, price: 100m, overridden: false));
-        var updated = ApplyToStore(store, catalog, vatRate: 0.081m);
+        var changed = ApplyToStore(store, catalog, vatRate: 0.081m);
 
-        Assert.Equal(1, updated);
+        Assert.Equal(new[] { "H1" }, changed);
         var line = store.ByHolding["H1"].Measures[0].Lines[0];
         Assert.Equal(200m, line.UnitPrice);
     }
@@ -86,9 +87,9 @@ public sealed class CatalogPriceApplierTests
         };
 
         var store = StoreWith("H1", Line("GFK", qty: 10m, price: 99m, overridden: true));
-        var updated = ApplyToStore(store, catalog, vatRate: 0.081m);
+        var changed = ApplyToStore(store, catalog, vatRate: 0.081m);
 
-        Assert.Equal(0, updated);
+        Assert.Empty(changed);
         Assert.Equal(99m, store.ByHolding["H1"].Measures[0].Lines[0].UnitPrice);
     }
 
@@ -101,9 +102,9 @@ public sealed class CatalogPriceApplierTests
         };
 
         var store = StoreWith("H1", Line("GFK", qty: 10m, price: 100m, overridden: false));
-        var updated = ApplyToStore(store, catalog, vatRate: 0.081m);
+        var changed = ApplyToStore(store, catalog, vatRate: 0.081m);
 
-        Assert.Equal(0, updated);
+        Assert.Empty(changed);
     }
 
     [Fact]
@@ -162,87 +163,17 @@ public sealed class CatalogPriceApplierTests
     }
 
     // -----------------------------------------------------------------------
-    // Hilfsmethoden — rufen die privaten statischen Methoden indirekt per
-    // Reflection-freie Charakterisierung auf: Tests spiegeln die Logik 1:1.
-    // Nach der Extraktion zeigen die Tests auf die neue Klasse.
+    // Hilfsmethoden — rufen die extrahierten Klassen direkt auf.
     // -----------------------------------------------------------------------
 
-    /// <summary>
-    /// Ruft die Logik von ResolveExactCatalogPrice nach. Wird nach der Extraktion
-    /// durch den echten CatalogPriceApplier-Aufruf ersetzt.
-    /// </summary>
     private static decimal? ResolveExact(CostCatalogItem item, int? dn, decimal qty)
-    {
-        if (item.DnPrices is { Count: > 0 })
-        {
-            if (dn is not int d)
-                return null;
-            var bucket = item.DnPrices.FirstOrDefault(b =>
-                d >= b.DnFrom && d <= b.DnTo
-                && (!b.QtyFrom.HasValue || qty >= b.QtyFrom.Value)
-                && (!b.QtyTo.HasValue || qty <= b.QtyTo.Value));
-            return bucket?.Price;
-        }
-        return item.Price;
-    }
+        => CatalogPriceApplier.ResolveExactCatalogPrice(item, dn, qty);
 
-    /// <summary>Analog zu ApplyCatalogPricesToStoredCosts im ViewModel.</summary>
-    private static int ApplyToStore(
+    private static IReadOnlyList<string> ApplyToStore(
         ProjectCostStore store,
         Dictionary<string, CostCatalogItem> catalog,
         decimal vatRate)
-    {
-        var updated = 0;
-        foreach (var (holding, cost) in store.ByHolding)
-        {
-            var changed = false;
-            foreach (var measure in cost.Measures)
-            {
-                var measureChanged = false;
-                foreach (var line in measure.Lines)
-                {
-                    if (line.IsPriceOverridden || string.IsNullOrWhiteSpace(line.ItemKey))
-                        continue;
-                    if (!catalog.TryGetValue(line.ItemKey.Trim(), out var item) || !item.Active)
-                        continue;
-
-                    var price = ResolveExact(item, measure.Dn, line.Qty);
-                    if (price is decimal p)
-                    {
-                        if (p != line.UnitPrice)
-                        {
-                            line.UnitPrice = p;
-                            measureChanged = true;
-                        }
-                        if (!string.IsNullOrWhiteSpace(line.PriceHint))
-                        {
-                            line.PriceHint = "";
-                            measureChanged = true;
-                        }
-                    }
-                }
-
-                if (measureChanged)
-                {
-                    measure.Total = measure.Lines.Where(l => l.Selected).Sum(l => l.Qty * l.UnitPrice);
-                    changed = true;
-                }
-            }
-
-            if (changed)
-            {
-                var totals = AuswertungPro.Next.Infrastructure.Costs.CostCalculatorLogicService.CalculateTotals(
-                    cost.Measures.Sum(m => m.Total), vatRate);
-                cost.Total = totals.Total;
-                cost.MwstRate = vatRate;
-                cost.MwstAmount = totals.MwstAmount;
-                cost.TotalInclMwst = totals.TotalInclMwst;
-                updated++;
-            }
-        }
-
-        return updated;
-    }
+        => CatalogPriceApplier.ApplyCatalogPricesToStoredCosts(store, catalog, vatRate);
 
     /// <summary>Analog zu BuildRowHinweis im ViewModel.</summary>
     private static string BuildHinweis(int anschluesse, HoldingCost cost)
