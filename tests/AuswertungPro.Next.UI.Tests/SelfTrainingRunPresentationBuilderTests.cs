@@ -8,6 +8,35 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class SelfTrainingRunPresentationBuilderTests
 {
     [Fact]
+    public void BuildStart_maps_selected_case_to_status_and_log_lines()
+    {
+        var trainingCase = new TrainingCase
+        {
+            CaseId = "H-001",
+            ProtocolPath = @"C:\p\h-001.pdf"
+        };
+
+        var presentation = SelfTrainingRunPresentationBuilder.BuildStart(trainingCase);
+
+        Assert.Equal("Selbsttraining: H-001...", presentation.StatusText);
+        Assert.Equal(
+            new[]
+            {
+                "--- Selbsttraining starten: H-001 ---",
+                @"  Protokoll: C:\p\h-001.pdf"
+            },
+            presentation.LogLines);
+    }
+
+    [Fact]
+    public void BuildPipelineStartedLog_liefert_bisherige_pipeline_meldung()
+    {
+        Assert.Equal(
+            "Pipeline gestartet: OSD-Scan \u2192 Frame \u2192 KI-Analyse \u2192 Vergleich \u2192 Technik",
+            SelfTrainingRunPresentationBuilder.BuildPipelineStartedLog());
+    }
+
+    [Fact]
     public void BuildCompletion_maps_result_to_log_lines_and_status()
     {
         var result = Result(

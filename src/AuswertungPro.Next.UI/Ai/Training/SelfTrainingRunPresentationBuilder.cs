@@ -6,8 +6,28 @@ public sealed record SelfTrainingRunCompletionPresentation(
     IReadOnlyList<string> LogLines,
     string StatusText);
 
+public sealed record SelfTrainingRunStartPresentation(
+    IReadOnlyList<string> LogLines,
+    string StatusText);
+
 public static class SelfTrainingRunPresentationBuilder
 {
+    public static SelfTrainingRunStartPresentation BuildStart(TrainingCase trainingCase)
+    {
+        ArgumentNullException.ThrowIfNull(trainingCase);
+
+        return new SelfTrainingRunStartPresentation(
+            new[]
+            {
+                $"--- Selbsttraining starten: {trainingCase.CaseId} ---",
+                $"  Protokoll: {trainingCase.ProtocolPath}"
+            },
+            $"Selbsttraining: {trainingCase.CaseId}...");
+    }
+
+    public static string BuildPipelineStartedLog()
+        => "Pipeline gestartet: OSD-Scan \u2192 Frame \u2192 KI-Analyse \u2192 Vergleich \u2192 Technik";
+
     public static SelfTrainingRunCompletionPresentation BuildCompletion(SelfTrainingResult result)
     {
         ArgumentNullException.ThrowIfNull(result);

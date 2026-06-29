@@ -1676,9 +1676,10 @@ public partial class TrainingCenterViewModel : ObservableObject
             IsSelfTrainingRunning = true;
             ResetSelfTrainingVisuals(resetMatchRate: true);
             LogText = "";
-            StatusText = $"Selbsttraining: {selectedCase.CaseId}...";
-            Log($"--- Selbsttraining starten: {selectedCase.CaseId} ---");
-            Log($"  Protokoll: {selectedCase.ProtocolPath}");
+            var startPresentation = SelfTrainingRunPresentationBuilder.BuildStart(selectedCase);
+            StatusText = startPresentation.StatusText;
+            foreach (var line in startPresentation.LogLines)
+                Log(line);
 
             // Services instanziieren (gleicher Pattern wie BatchImport)
             var cfg = new AppSettingsAiSettingsProvider()
@@ -1715,7 +1716,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             // Progress-Callback verbindet Orchestrator → ViewModel-Visualisierungen
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
 
-            Log("Pipeline gestartet: OSD-Scan → Frame → KI-Analyse → Vergleich → Technik");
+            Log(SelfTrainingRunPresentationBuilder.BuildPipelineStartedLog());
             var result = await _selfTrainingOrchestrator.RunAsync(
                 TrainingCenterRuntimeHelpers.ToTrainingCaseInput(selectedCase),
                 progress,
