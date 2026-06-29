@@ -929,26 +929,17 @@ public partial class TrainingCenterViewModel : ObservableObject
             // 1. Scan aller Root-Ordner
             Log($"Scanne {_rootFolders.Count} Ordner...");
             StatusText = "Scanne Ordner...";
-            var found = new List<TrainingCase>();
-            foreach (var folder in _rootFolders)
-            {
-                if (!Directory.Exists(folder))
-                {
-                    Log($"  WARNUNG: Ordner existiert nicht: {folder}");
-                    continue;
-                }
-                Log($"  Scanne: {folder}");
-                var result = await _import.ScanAsync(folder);
-                found.AddRange(result.Select(TrainingCenterRuntimeHelpers.ToTrainingCase));
-            }
-            var casesWithProtocol = found.Where(c => !string.IsNullOrEmpty(c.ProtocolPath)).ToList();
+            var scan = await TrainingBatchImportScanController.ScanAsync(
+                _rootFolders,
+                Directory.Exists,
+                async folder => (await _import.ScanAsync(folder).ConfigureAwait(false))
+                    .Select(TrainingCenterRuntimeHelpers.ToTrainingCase)
+                    .ToList(),
+                Log);
+            var found = scan.Found;
+            var casesWithProtocol = scan.CasesWithProtocol;
 
-            var scanSummary = TrainingBatchImportScanPresentationBuilder.BuildSummary(found.Count, casesWithProtocol.Count);
-            Log(scanSummary);
-            foreach (var c in found)
-                Log(TrainingBatchImportScanPresentationBuilder.BuildCaseLine(c));
-
-            StatusText = scanSummary;
+            StatusText = TrainingBatchImportScanPresentationBuilder.BuildSummary(found.Count, casesWithProtocol.Count);
 
             Cases.Clear();
             foreach (var c in found)
