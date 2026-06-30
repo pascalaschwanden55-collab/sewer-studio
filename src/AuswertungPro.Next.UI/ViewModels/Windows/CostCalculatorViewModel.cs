@@ -13,6 +13,7 @@ using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.Collections;
 using AuswertungPro.Next.UI.Dialogs;
 using AuswertungPro.Next.UI.Services;
 using static AuswertungPro.Next.Infrastructure.Costs.CostCalculatorLogicService;
@@ -562,28 +563,10 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     }
 
     private void MoveMeasureUp(MeasureBlockVm? measure)
-    {
-        if (measure is null)
-            return;
-
-        var idx = SelectedMeasures.IndexOf(measure);
-        if (idx <= 0)
-            return;
-
-        SelectedMeasures.Move(idx, idx - 1);
-    }
+        => ObservableCollectionOrderController.TryMoveByOffset(SelectedMeasures, measure, -1);
 
     private void MoveMeasureDown(MeasureBlockVm? measure)
-    {
-        if (measure is null)
-            return;
-
-        var idx = SelectedMeasures.IndexOf(measure);
-        if (idx < 0 || idx >= SelectedMeasures.Count - 1)
-            return;
-
-        SelectedMeasures.Move(idx, idx + 1);
-    }
+        => ObservableCollectionOrderController.TryMoveByOffset(SelectedMeasures, measure, 1);
 
     private void SortMeasures()
     {
@@ -606,7 +589,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             .Select(x => x.Measure)
             .ToList();
 
-        ReorderCollection(SelectedMeasures, ordered);
+        ObservableCollectionOrderController.Reorder(SelectedMeasures, ordered);
     }
 
     private int GetMeasureOrder(MeasureBlockVm? measure)
@@ -617,20 +600,6 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         return _measureOrderById.TryGetValue(measure.MeasureId.Trim(), out var order)
             ? order
             : int.MaxValue;
-    }
-
-    private static void ReorderCollection<T>(ObservableCollection<T> collection, IReadOnlyList<T> ordered)
-    {
-        for (var targetIndex = 0; targetIndex < ordered.Count; targetIndex++)
-        {
-            var desired = ordered[targetIndex];
-            if (ReferenceEquals(collection[targetIndex], desired))
-                continue;
-
-            var currentIndex = collection.IndexOf(desired);
-            if (currentIndex >= 0 && currentIndex != targetIndex)
-                collection.Move(currentIndex, targetIndex);
-        }
     }
 
     private void SaveTemplate(MeasureBlockVm? measure)
@@ -1162,20 +1131,10 @@ public sealed partial class MeasureBlockVm : ObservableObject
     }
 
     private void MoveLineUp(CostLineVm? line)
-    {
-        if (line is null) return;
-        var idx = Lines.IndexOf(line);
-        if (idx <= 0) return;
-        Lines.Move(idx, idx - 1);
-    }
+        => ObservableCollectionOrderController.TryMoveByOffset(Lines, line, -1);
 
     private void MoveLineDown(CostLineVm? line)
-    {
-        if (line is null) return;
-        var idx = Lines.IndexOf(line);
-        if (idx < 0 || idx >= Lines.Count - 1) return;
-        Lines.Move(idx, idx + 1);
-    }
+        => ObservableCollectionOrderController.TryMoveByOffset(Lines, line, 1);
 
     public void SortLines()
     {
@@ -1200,7 +1159,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
             .Select(x => x.Line)
             .ToList();
 
-        ReorderCollection(Lines, ordered);
+        ObservableCollectionOrderController.Reorder(Lines, ordered);
     }
 
     private int GetTemplateLineOrder(string? itemKey)
@@ -1211,20 +1170,6 @@ public sealed partial class MeasureBlockVm : ObservableObject
         return _templateLineOrderByItemKey.TryGetValue(itemKey.Trim(), out var order)
             ? order
             : int.MaxValue;
-    }
-
-    private static void ReorderCollection<T>(ObservableCollection<T> collection, IReadOnlyList<T> ordered)
-    {
-        for (var targetIndex = 0; targetIndex < ordered.Count; targetIndex++)
-        {
-            var desired = ordered[targetIndex];
-            if (ReferenceEquals(collection[targetIndex], desired))
-                continue;
-
-            var currentIndex = collection.IndexOf(desired);
-            if (currentIndex >= 0 && currentIndex != targetIndex)
-                collection.Move(currentIndex, targetIndex);
-        }
     }
 
     private void OnLineChanged()
