@@ -45,6 +45,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     public IRelayCommand CancelImportCommand { get; }
     public IRelayCommand OpenLastReportCommand { get; }
     public IRelayCommand OpenReportFolderCommand { get; }
+    public IAsyncRelayCommand MakeProjectPortableCommand { get; }
 
     public ImportPageViewModel(ShellViewModel shell, ServiceProvider sp)
     {
@@ -61,6 +62,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         CancelImportCommand = new RelayCommand(CancelImport, () => CanCancel);
         OpenLastReportCommand = new RelayCommand(OpenLastReport);
         OpenReportFolderCommand = new RelayCommand(OpenReportFolder);
+        MakeProjectPortableCommand = new AsyncRelayCommand(MakeProjectPortableAsync);
 
         UpdateCatalogStatus();
     }
@@ -466,6 +468,46 @@ public sealed partial class ImportPageViewModel : ObservableObject
             DetailsText += "\n\nMedien-Details:\n" + string.Join("\n", distResult.Messages.Take(50));
 
         _shell.SetStatus($"{sourceLabel}-Projekt importiert und verteilt");
+    }
+
+    /// <summary>
+    /// Macht das aktuelle Projekt portabel: alle Medienpfade relativ auf die Projekt-Kopie,
+    /// Fotos aus der Quelle ins Projekt holen. Danach 1:1 auf einen anderen PC kopierbar.
+    /// </summary>
+    private async Task MakeProjectPortableAsync()
+    {
+        var projectFolder = _shell.GetProjectFolder();
+        if (string.IsNullOrWhiteSpace(projectFolder))
+        {
+            _sp.Dialogs.Info("Projekt bitte zuerst speichern, dann kann es portabel gemacht werden.", "Projekt portabel machen");
+            return;
+        }
+
+        var count = _shell.Project.Data.Count;
+        if (count == 0)
+        {
+            _sp.Dialogs.Info("Keine Haltungen im Projekt.", "Projekt portabel machen");
+            return;
+        }
+
+        ImportProgress = "Projekt portabel machen: Medienpfade relativ verlinken, Fotos einsammeln...";
+        var svc = new ProjectPortabilityService();
+        var result = await Task.Run(() => svc.MakePortable(projectFolder!, _shell.Project));
+        ImportProgress = "";
+
+        _ = _shell.TrySaveProject();
+
+        var summary = $"Projekt portabel gemacht ({count} Haltungen):"
+            + $"\n  {result.RelinkedPaths} Pfade relativ verlinkt"
+            + $"\n  {result.FotosCopied} Fotos ins Projekt kopiert"
+            + $"\n  {result.Unresolved} nicht aufloesbar";
+        SummaryText += "\n" + summary;
+        if (result.Messages.Count > 0)
+            DetailsText += "\n\nPortabilitaet-Details:\n" + string.Join("\n", result.Messages.Take(50));
+
+        _sp.Dialogs.Info(
+            summary + "\n\nDer Projektordner kann jetzt 1:1 auf einen anderen PC kopiert werden.",
+            "Projekt portabel machen");
     }
 
     private async Task RunVsaAfterImport(string sourceLabel)

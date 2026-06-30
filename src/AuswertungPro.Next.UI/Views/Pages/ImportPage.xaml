@@ -97,6 +97,17 @@
                             <TextBlock Text="Berichte" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,4"/>
+
+                    <Button Command="{Binding MakeProjectPortableCommand}"
+                            Style="{StaticResource ToolbarButton}"
+                            ToolTip="Alle Medienpfade relativ machen + Fotos ins Projekt holen → Projektordner 1:1 auf anderen PC kopierbar">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8C8;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Projekt portabel machen" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Border>
 
