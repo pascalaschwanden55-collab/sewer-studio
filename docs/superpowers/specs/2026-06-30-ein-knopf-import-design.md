@@ -38,6 +38,14 @@ Die Struktur wird **bei der Projekterzeugung** angelegt (leer); der Import **fü
   zusätzlich in den Verteil-Ordnern (keine Doppel).
 - In den Verteil-Ordnern liegen **Filme** (Haltungen) und **PDF-/Dokumentdateien** (Haltungen + Schächte).
 - In den Records werden **ausschließlich relative Pfade** gespeichert (portabel).
+- **Videos werden NICHT gedoppelt:** der Arbeitsbestand ist die verteilte Kopie unter
+  `Haltungen_Verteilt\<Haltung>\`; Filme werden NICHT zusätzlich in `Importdateien\` archiviert.
+- **`projekt.json`-Auffindbarkeit:** das Projekt-Öffnen muss die `projekt.json` zuverlässig über den
+  Projektordner finden, egal ob im Root oder in `Projektdateien\`. Lösung: der Opener sucht **beide**
+  Orte (rückwärtskompatibel zu bestehendem `<Projekt>\projekt.json`); neue Projekte schreiben
+  `Projektdateien\projekt.json` und legen zusätzlich eine kleine **Root-Pointer-Datei** ab. Im Plan
+  zuerst prüfen, wo der bestehende Code die `projekt.json` erwartet, damit „Projektordner auswählen"
+  nicht fragil wird.
 
 ## Workflow / Pipeline (`ProjectImportOrchestrator`)
 Voraussetzung: ein Projekt ist offen, die leere Struktur existiert. Ein Knopf **„Import
@@ -49,6 +57,8 @@ Kanalfernseh-Projekt"** → User wählt Quellordner → Pipeline:
    - **WinCan** ⟸ `*.db3` unter einem `…\DB\`-Ordner (typisch `DISK1\Projects\<name>\DB\`).
    - Beides/keins eindeutig → eine kurze Rückfrage (kein stiller Fehlgriff).
 3. **Rohdaten archivieren** → `Importdateien\{Datenbanken,XTF,PDF,TXT}` (Kopie, unverändert; idempotent).
+   Nur Original-Nachweisdaten: `.fdb`, `.db3`, `.xtf`, `.pdf`, `.txt`/`Daten.txt`. **Videos werden NICHT
+   archiviert** (nur verteilt) — sonst verdoppelt sich der riesige Film-Bestand. Kein `Importdateien\Film`.
 4. **Maßgebliche Quelle parsen** (siehe Datenhoheit) → Haltungen, Schächte, Befunde, Beobachtungen,
    Pro-Beobachtung-Foto-Zuordnung.
 5. **SIA405-Whitelist-Anreicherung** (nur IKAS, streng kontrolliert, siehe unten).
