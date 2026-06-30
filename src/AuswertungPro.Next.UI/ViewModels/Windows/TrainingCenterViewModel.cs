@@ -1692,32 +1692,25 @@ public partial class TrainingCenterViewModel : ObservableObject
             }
         }
 
-        // Auto-Auswahl: Bereits verarbeitete Haltungen ueberspringen
-        if (SelectedCase is null)
+        var existingSamplesForSelection = SelectedCase is null
+            ? await TrainingSamplesStore.LoadAsync()
+            : Enumerable.Empty<TrainingSample>();
+        var selection = SelfTrainingCaseSelectionController.Select(
+            SelectedCase,
+            Cases,
+            existingSamplesForSelection);
+        if (selection.ShouldStop)
         {
-            var existingSamples = await TrainingSamplesStore.LoadAsync();
-            var processedIds = existingSamples.Select(s => s.CaseId)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            var firstUnprocessed = Cases.FirstOrDefault(c =>
-                !string.IsNullOrEmpty(c.ProtocolPath) && !processedIds.Contains(c.CaseId));
-
-            if (firstUnprocessed is null)
-            {
-                // Fallback: Alle bereits verarbeitet oder keine mit Protokoll
-                var withProtocol = Cases.Count(c => !string.IsNullOrEmpty(c.ProtocolPath));
-                StatusText = withProtocol > 0
-                    ? $"Alle {withProtocol} Faelle bereits verarbeitet. Waehle manuell fuer erneutes Training."
-                    : "Keine Faelle mit Protokoll vorhanden. Bitte zuerst Ordner waehlen und scannen.";
-                return;
-            }
-            SelectedCase = firstUnprocessed;
-        }
-        if (string.IsNullOrEmpty(SelectedCase.ProtocolPath))
-        {
-            StatusText = "Der ausgewaehlte Fall hat kein Protokoll (PDF).";
+            StatusText = selection.StatusText ?? "";
             return;
         }
+        if (selection.Case is null)
+        {
+            StatusText = "Keine Faelle mit Protokoll vorhanden. Bitte zuerst Ordner waehlen und scannen.";
+            return;
+        }
+        var selectedCase = selection.Case;
+        SelectedCase = selectedCase;
 
         _selfTrainingCts?.Cancel();
         _selfTrainingCts?.Dispose();
@@ -1731,9 +1724,9 @@ public partial class TrainingCenterViewModel : ObservableObject
             IsSelfTrainingRunning = true;
             ResetSelfTrainingVisuals(resetMatchRate: true);
             LogText = "";
-            StatusText = $"Selbsttraining: {SelectedCase.CaseId}...";
-            Log($"--- Selbsttraining starten: {SelectedCase.CaseId} ---");
-            Log($"  Protokoll: {SelectedCase.ProtocolPath}");
+            StatusText = $"Selbsttraining: {selectedCase.CaseId}...";
+            Log($"--- Selbsttraining starten: {selectedCase.CaseId} ---");
+            Log($"  Protokoll: {selectedCase.ProtocolPath}");
 
             // Services instanziieren (gleicher Pattern wie BatchImport)
             var cfg = new AppSettingsAiSettingsProvider()
@@ -1772,7 +1765,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             Log("Pipeline gestartet: OSD-Scan → Frame → KI-Analyse → Vergleich → Technik");
             var result = await _selfTrainingOrchestrator.RunAsync(
-                TrainingCenterRuntimeHelpers.ToTrainingCaseInput(SelectedCase),
+                TrainingCenterRuntimeHelpers.ToTrainingCaseInput(selectedCase),
                 progress,
                 ct);
 
@@ -1841,14 +1834,10 @@ public partial class TrainingCenterViewModel : ObservableObject
             // Review Queue befuellen: PartialMatch/Mismatch (C1) UND vom RequireHumanReview-Schalter
             // zurueckgehaltene saubere ExactMatches (S2b: ExactMatch, aber Status New statt Approved).
             if (ReviewQueueServiceRef is not null
-                && (result.PartialMatches > 0 || result.Mismatches > 0 || result.ExactMatches > 0 || result.NoFindings > 0))
+                && SelfTrainingReviewCandidateSelector.HasReviewableMatches(result))
             {
                 var allSamplesForReview = await TrainingSamplesStore.LoadAsync();
-                var reviewCandidates = allSamplesForReview
-                    .Where(s => s.CaseId == result.CaseId
-                        && Enum.TryParse<MatchLevel>(s.MatchLevel, ignoreCase: true, out var lvl)
-                        && SelfTrainingReviewRouting.ShouldEnqueue(lvl, s.Status))
-                    .ToList();
+                var reviewCandidates = SelfTrainingReviewCandidateSelector.SelectForRun(allSamplesForReview, result);
 
                 foreach (var s in reviewCandidates)
                 {
