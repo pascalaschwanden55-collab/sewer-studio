@@ -33,12 +33,12 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     private readonly Dictionary<string, int> _measureOrderById = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _ownerByHolding = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _selectedMeasureIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly CostCalculatorWarningSuppressionController _warningSuppression = new();
     private ProjectCostStore _store = new();
     // != null wenn costs.json beim Laden nicht lesbar war -> Speichern gesperrt (Audit K3).
     private string? _storeLoadError;
     private readonly decimal _vatRate;
     private readonly CostConsistencyCheckService _consistencyChecker = new();
-    private readonly HashSet<string> _suppressedWarnings = new(StringComparer.OrdinalIgnoreCase);
     private System.Windows.Threading.DispatcherTimer? _checkDebounceTimer;
 
     public string Holding { get; }
@@ -448,10 +448,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             _store,
             Holding);
 
-        // Filter out suppressed warnings
-        var results = allResults
-            .Where(w => !_suppressedWarnings.Contains(GetWarningKey(w)))
-            .ToList();
+        var results = _warningSuppression.FilterVisibleWarnings(allResults);
 
         ConsistencyWarnings = new ObservableCollection<ConsistencyWarning>(results);
         ErrorCount = results.Count(w => w.Severity == ConsistencyWarningSeverity.Error);
@@ -465,7 +462,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     /// </summary>
     public void SuppressWarning(ConsistencyWarning warning)
     {
-        _suppressedWarnings.Add(GetWarningKey(warning));
+        _warningSuppression.SuppressWarning(warning);
         RunConsistencyCheck();
     }
 
@@ -474,12 +471,9 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     /// </summary>
     public void ResetSuppressedWarnings()
     {
-        _suppressedWarnings.Clear();
+        _warningSuppression.ResetSuppressedWarnings();
         RunConsistencyCheck();
     }
-
-    private static string GetWarningKey(ConsistencyWarning w)
-        => $"{w.RuleId}|{w.MeasureId ?? ""}|{w.ItemKey ?? ""}";
 
     partial void OnCatalogSearchTextChanged(string value)
     {
