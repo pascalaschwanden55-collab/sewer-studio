@@ -956,7 +956,8 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
+            TrainingBatchImportRunFinalizerController.Apply(
+                value => IsBusy = value);
         }
     }
 
