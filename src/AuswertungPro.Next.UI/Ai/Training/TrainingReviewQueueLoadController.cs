@@ -20,4 +20,16 @@ public static class TrainingReviewQueueLoadController
             count,
             $"{count} Einträge zur Prüfung");
     }
+
+    public static void Apply(
+        TrainingReviewQueueLoadResult result,
+        ICollection<InfraSelfImproving.ReviewQueueItem> reviewQueue)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(reviewQueue);
+
+        reviewQueue.Clear();
+        foreach (var item in result.Items)
+            reviewQueue.Add(item);
+    }
 }

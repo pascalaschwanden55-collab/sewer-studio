@@ -317,29 +317,19 @@ public partial class TrainingCenterViewModel : ObservableObject
         try
         {
             var status = await _kbDiagnostics.ReadStatusAsync(20).ConfigureAwait(false);
+            var presentation = TrainingKnowledgeBaseStatusPresentationBuilder.Build(status);
 
             void Apply()
             {
-                KbSampleCount = status.SampleCount;
-                KbErrorCount = status.ErrorCount;
-                KbNewCount = status.NewCount;
-                KbEmbeddingCount = status.EmbeddingCount;
-                KbCodesCovered = status.CodesCovered;
-                KbLastUpdate = status.LatestVersionAtUtc?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "\u2014";
-
-                static System.Windows.Media.SolidColorBrush Rgb(byte r, byte g, byte b)
-                    => new(System.Windows.Media.Color.FromRgb(r, g, b));
-
-                (KbReadinessLabel, KbReadinessBrush) = status.SampleCount switch
-                {
-                    >= 100 => ("KI-Modell einsatzbereit", Rgb(0x4A, 0xDE, 0x80)),
-                    >= 25  => ("Lernbasis grundlegend",   Rgb(0xFA, 0xCC, 0x15)),
-                    > 0    => ("Lernbasis unzureichend",  Rgb(0xF8, 0x71, 0x71)),
-                    _      => ("Keine Trainingsdaten",    Rgb(0x94, 0xA3, 0xB8))
-                };
-
-                KbTopCodesText = string.Join("\n", status.TopCodes
-                    .Select(c => $"{c.VsaCode}: {c.Count} Samples"));
+                KbSampleCount = presentation.SampleCount;
+                KbErrorCount = presentation.ErrorCount;
+                KbNewCount = presentation.NewCount;
+                KbEmbeddingCount = presentation.EmbeddingCount;
+                KbCodesCovered = presentation.CodesCovered;
+                KbLastUpdate = presentation.LastUpdateText;
+                KbReadinessLabel = presentation.ReadinessLabel;
+                KbReadinessBrush = presentation.ReadinessBrush;
+                KbTopCodesText = presentation.TopCodesText;
             }
 
             if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
@@ -365,35 +355,21 @@ public partial class TrainingCenterViewModel : ObservableObject
         {
             var quality = await _kbDiagnostics.ReadQualityAsync().ConfigureAwait(false);
 
-            // Trend (aus JSON, kein DB-Zugriff)
             var runs = await SelfTrainingHistoryStore.LoadAsync();
-            var last5 = runs.TakeLast(5).ToList();
-            var trendText = last5.Count > 0
-                ? string.Join("\n", last5.Select(r =>
-                    $"{r.TimestampUtc.ToLocalTime():dd.MM. HH:mm} — " +
-                    $"Exact: {r.ExactPercent:P0} | Partial: {r.PartialPercent:P0} | " +
-                    $"Miss: {r.MismatchPercent:P0} | Leer: {r.NoFindingsPercent:P0}"))
-                : "Noch keine Selbsttraining-Laeufe";
-
-            var direction = "";
-            if (last5.Count >= 2)
-            {
-                var delta = last5[^1].ExactPercent - last5[^2].ExactPercent;
-                direction = delta > 0.02 ? "\u2191" : delta < -0.02 ? "\u2193" : "\u2192";
-            }
+            var presentation = TrainingKnowledgeBaseQualityPresentationBuilder.Build(quality, runs);
 
             void Apply()
             {
-                KbCoverageGapsText = quality.CoverageGapsText;
-                KbCoverageGapsCount = quality.CoverageGapsCount;
-                KbAccuracyText = quality.AccuracyText;
-                KbStaleSampleCount = quality.StaleSampleCount;
-                KbTrendText = trendText;
-                KbTrendDirection = direction;
+                KbCoverageGapsText = presentation.CoverageGapsText;
+                KbCoverageGapsCount = presentation.CoverageGapsCount;
+                KbAccuracyText = presentation.AccuracyText;
+                KbStaleSampleCount = presentation.StaleSampleCount;
+                KbTrendText = presentation.TrendText;
+                KbTrendDirection = presentation.TrendDirection;
 
                 // Stale-Sample Warnung im Log (E1)
-                if (quality.StaleSampleCount > 0)
-                    Log($"KB-Qualitaet: {quality.StaleSampleCount} veraltete Samples erkannt (manuell pruefen im Tab 'Samples')");
+                foreach (var logLine in presentation.LogLines)
+                    Log(logLine);
             }
             if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
                 d.Invoke(Apply);
@@ -1146,9 +1122,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         OnUi(() =>
         {
             var loadResult = TrainingReviewQueueLoadController.Load(queueService);
-            ReviewQueue.Clear();
-            foreach (var item in loadResult.Items)
-                ReviewQueue.Add(item);
+            TrainingReviewQueueLoadController.Apply(loadResult, ReviewQueue);
             ReviewQueueCount = loadResult.ReviewQueueCount;
             ReviewStatusText = loadResult.StatusText;
         });
