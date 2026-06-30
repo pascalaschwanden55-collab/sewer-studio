@@ -115,8 +115,11 @@ public sealed class TrainingCenterBatchImportArchitectureTests
         var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
 
         Assert.Contains("TrainingBatchImportRunCompletionController.CompleteAsync(", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("ObservableCollectionContentController.ReplaceWith(Samples", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("runSummary.BuildNoNewStatus(casesToProcess.Count)", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("runSummary.BuildCompletionStatus()", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Samples.Clear", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Samples.Add", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Log(\"F", batchImportSource, StringComparison.Ordinal);
     }
 

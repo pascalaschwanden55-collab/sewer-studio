@@ -10,8 +10,7 @@ public static class TrainingBatchImportRunCompletionController
         TrainingBatchImportRunSummary runSummary,
         int processedCaseCount,
         Func<Task<IReadOnlyList<TrainingSample>>> loadSamplesAsync,
-        Action clearSamples,
-        Action<TrainingSample> addSample,
+        Action<IReadOnlyList<TrainingSample>> replaceSamples,
         Func<Task> refreshKbStatusAsync,
         Func<Task> saveStateAsync,
         Action<string> log,
@@ -19,17 +18,15 @@ public static class TrainingBatchImportRunCompletionController
     {
         ArgumentNullException.ThrowIfNull(runSummary);
         ArgumentNullException.ThrowIfNull(loadSamplesAsync);
-        ArgumentNullException.ThrowIfNull(clearSamples);
-        ArgumentNullException.ThrowIfNull(addSample);
+        ArgumentNullException.ThrowIfNull(replaceSamples);
         ArgumentNullException.ThrowIfNull(refreshKbStatusAsync);
         ArgumentNullException.ThrowIfNull(saveStateAsync);
         ArgumentNullException.ThrowIfNull(log);
         ArgumentNullException.ThrowIfNull(setStatus);
 
-        clearSamples();
+        replaceSamples(Array.Empty<TrainingSample>());
         var allSamples = await loadSamplesAsync();
-        foreach (var sample in allSamples)
-            addSample(sample);
+        replaceSamples(allSamples);
 
         if (runSummary.BuildNoNewStatus(processedCaseCount) is { } noNewStatus)
         {
