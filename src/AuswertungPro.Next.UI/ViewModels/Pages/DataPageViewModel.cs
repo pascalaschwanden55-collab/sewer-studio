@@ -32,7 +32,7 @@ using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-public sealed partial class DataPageViewModel : ObservableObject
+public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 {
     private const int MinimumSamplesForModelTraining = 25;
     private const int StrongModelThreshold = 100;
@@ -53,6 +53,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     private readonly DispatcherTimer _autoSaveTimer;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
+    private bool _disposed;
 
     internal ServiceProvider Services => _sp;
 
@@ -149,20 +150,7 @@ public sealed partial class DataPageViewModel : ObservableObject
         };
         _autoSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(5) };
         _autoSaveTimer.Tick += (_, __) => AutoSaveOnTimerTick();
-        _shell.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
-            {
-                OnPropertyChanged(nameof(IsProjectReady));
-                OnPropertyChanged(nameof(IsDataGridReadOnly));
-            }
-            else if (e.PropertyName == nameof(ShellViewModel.Project))
-            {
-                OnPropertyChanged(nameof(Project));
-                OnPropertyChanged(nameof(Records));
-                UpdateSearchResultInfo(Records.Count);
-            }
-        };
+        _shell.PropertyChanged += ShellPropertyChanged;
 
         // Live-Control: Retry-Handler registrieren, damit der MCP eine Haltung
         // per Name erneut durch die KI-Videoanalyse schicken kann (nur wenn diese Seite lebt).
@@ -244,6 +232,34 @@ public sealed partial class DataPageViewModel : ObservableObject
         PropertyChanged += DataPageViewModel_PropertyChanged;
         UpdateLearningInfo();
         LoadTrainedHaltungenAsync().SafeFireAndForget("TrainedHaltungen");
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        _shell.PropertyChanged -= ShellPropertyChanged;
+        PropertyChanged -= DataPageViewModel_PropertyChanged;
+        _saveBannerTimer.Stop();
+        _autoSaveTimer.Stop();
+        LiveControl.LiveControlRetryBridge.Reset();
+    }
+
+    private void ShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
+        {
+            OnPropertyChanged(nameof(IsProjectReady));
+            OnPropertyChanged(nameof(IsDataGridReadOnly));
+        }
+        else if (e.PropertyName == nameof(ShellViewModel.Project))
+        {
+            OnPropertyChanged(nameof(Project));
+            OnPropertyChanged(nameof(Records));
+            UpdateSearchResultInfo(Records.Count);
+        }
     }
 
     partial void OnGridMinRowHeightChanged(double value)
