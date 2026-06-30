@@ -372,8 +372,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         var restoredRootFolders = TrainingCenterStateController.RestoreExistingRootFolders(state, Directory.Exists);
         if (restoredRootFolders.Count > 0)
         {
-            _rootFolders.Clear();
-            _rootFolders.AddRange(restoredRootFolders);
+            TrainingCenterStateController.ReplaceRootFolders(_rootFolders, restoredRootFolders);
             UpdateRootFolderDisplay();
         }
 
@@ -422,7 +421,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     [RelayCommand]
     private void ClearRootFolders()
     {
-        _rootFolders.Clear();
+        TrainingCenterStateController.ReplaceRootFolders(_rootFolders, Array.Empty<string>());
         UpdateRootFolderDisplay();
     }
 
@@ -482,8 +481,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             // Output-Ordner automatisch als Root-Ordner setzen
             if (result.Distributed > 0)
             {
-                if (!_rootFolders.Contains(outputFolder, StringComparer.OrdinalIgnoreCase))
-                    _rootFolders.Add(outputFolder);
+                TrainingCenterStateController.AddRootFolder(_rootFolders, outputFolder);
                 UpdateRootFolderDisplay();
                 Log($"Output-Ordner als Trainings-Ordner hinzugefuegt. Klicke 'Scannen' zum Laden.");
             }
