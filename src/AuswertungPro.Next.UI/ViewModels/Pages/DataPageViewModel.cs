@@ -136,8 +136,9 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _saveBannerTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _saveBannerTimer.Tick += (_, __) =>
         {
-            _saveBannerTimer.Stop();
-            IsSaveStatusVisible = false;
+            DataPageSaveStatusController.Hide(
+                _saveBannerTimer.Stop,
+                value => IsSaveStatusVisible = value);
         };
         _autoSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(5) };
         _autoSaveTimer.Tick += (_, __) => AutoSaveOnTimerTick();
@@ -1362,10 +1363,12 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void ShowSaveStatus(string? text)
     {
-        SaveStatus = string.IsNullOrWhiteSpace(text) ? "Gespeichert" : text;
-        IsSaveStatusVisible = true;
-        _saveBannerTimer.Stop();
-        _saveBannerTimer.Start();
+        DataPageSaveStatusController.Show(
+            text,
+            value => SaveStatus = value,
+            value => IsSaveStatusVisible = value,
+            _saveBannerTimer.Stop,
+            _saveBannerTimer.Start);
     }
 
     private void UpdateLearningInfo(int? similarCases = null, decimal? estimatedCost = null)
