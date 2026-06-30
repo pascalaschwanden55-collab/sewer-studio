@@ -15,14 +15,7 @@ public sealed partial class HydraulikPanelViewModel : ObservableObject
     private readonly AppSettings _settings;
 
     // ── Material → kb Zuordnung (VSA-typische Werte) ──────────
-    public static IReadOnlyList<MaterialOption> Materialien { get; } = new[]
-    {
-        new MaterialOption("Beton", "Beton", 0.0005, 0.0015),
-        new MaterialOption("Steinzeug", "Steinzeug", 0.0003, 0.001),
-        new MaterialOption("PVC/PE", "Kunststoff (PVC/PE)", 0.0002, 0.0005),
-        new MaterialOption("GFK", "GFK", 0.0003, 0.0008),
-        new MaterialOption("Guss", "Gusseisen", 0.001, 0.003),
-    };
+    public static IReadOnlyList<MaterialOption> Materialien { get; } = HydraulikMaterialCatalog.Materials;
 
     // ── Eingabewerte ──────────────────────────────────────────
     [ObservableProperty] private double _dn = 300;
@@ -289,9 +282,4 @@ public sealed partial class HydraulikPanelViewModel : ObservableObject
         if (v < 0.001) return v.ToString("E2", CultureInfo.InvariantCulture);
         return v.ToString("F4", CultureInfo.InvariantCulture);
     }
-}
-
-public sealed record MaterialOption(string Key, string Label, double KbNeu, double KbAlt)
-{
-    public override string ToString() => Label;
 }

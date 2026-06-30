@@ -1219,7 +1219,10 @@ public sealed partial class DataPageViewModel : ObservableObject
             return;
         }
 
-        var calc = DataPageHydraulikReportCalculator.BuildReportCalculation(record, _sp.Settings);
+        var calc = DataPageHydraulikReportCalculator.BuildReportCalculation(
+            record,
+            _sp.Settings,
+            saveSettings: _sp.Settings.Save);
         if (calc is null)
         {
             _sp.Dialogs.Warn("Hydraulik-Berechnung konnte nicht durchgefuehrt werden.\nBitte DN und Gefaelle pruefen.", "Hydraulik PDF");
@@ -1333,7 +1336,9 @@ public sealed partial class DataPageViewModel : ObservableObject
                 calcResult = DataPageHydraulikReportCalculator.BuildReportCalculation(
                     record,
                     _sp.Settings,
-                    dn!.Value);
+                    dn!.Value,
+                    panelWasserstandMm: hydraulikAvailability.GefaellePromille,
+                    saveSettings: _sp.Settings.Save);
             }
 
             var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");

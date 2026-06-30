@@ -2,7 +2,6 @@ using System.Globalization;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Hydraulik;
-using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
@@ -82,14 +81,23 @@ public static class DataPageHydraulikReportCalculator
     public static HydraulikCalcResult? BuildReportCalculation(
         HaltungRecord record,
         AppSettings settings,
-        double? dnMm = null)
+        double? dnMm = null,
+        double? panelWasserstandMm = null,
+        Action? saveSettings = null)
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(settings);
 
         var dn = dnMm ?? ParseDnMm(record.GetFieldValue("DN_mm")) ?? 300d;
-        var panel = settings.HydraulikPanel ?? new HydraulikPanelSettings();
-        var material = ResolveMaterial(record.GetFieldValue("Rohrmaterial"), panel.MaterialKey);
+        var panel = settings.HydraulikPanel ??= new HydraulikPanelSettings();
+        var material = HydraulikMaterialCatalog.Resolve(record.GetFieldValue("Rohrmaterial"), panel.MaterialKey);
+
+        panel.Dn = dn;
+        panel.MaterialKey = material.Key;
+        if (panelWasserstandMm is > 0)
+            panel.Wasserstand = panelWasserstandMm.Value;
+        saveSettings?.Invoke();
+
         var kb = panel.IsNeuzustand ? material.KbNeu : material.KbAlt;
 
         var input = new HydraulikInput(
@@ -104,20 +112,5 @@ public static class DataPageHydraulikReportCalculator
         return result is null
             ? null
             : HydraulikCalcResultMapper.ToReportResult(input, result, material.Label);
-    }
-
-    private static MaterialOption ResolveMaterial(string? recordMaterial, string? settingsMaterialKey)
-    {
-        var material = HydraulikPanelViewModel.Materialien.FirstOrDefault(m =>
-                string.Equals(m.Key, settingsMaterialKey, StringComparison.OrdinalIgnoreCase))
-            ?? HydraulikPanelViewModel.Materialien[0];
-
-        if (string.IsNullOrWhiteSpace(recordMaterial))
-            return material;
-
-        return HydraulikPanelViewModel.Materialien.FirstOrDefault(m =>
-                m.Label.Contains(recordMaterial, StringComparison.OrdinalIgnoreCase)
-                || m.Key.Equals(recordMaterial, StringComparison.OrdinalIgnoreCase))
-            ?? material;
     }
 }

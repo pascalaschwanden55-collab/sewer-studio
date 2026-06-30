@@ -79,4 +79,33 @@ public sealed class DataPageHydraulikReportCalculatorTests
         Assert.Equal(12, calculation.Temperatur_C);
         Assert.True(calculation.Q_T > 0);
     }
+
+    [Fact]
+    public void BuildReportCalculation_persistiert_panel_defaults_wie_bisheriger_print_pfad()
+    {
+        var record = new HaltungRecord();
+        record.SetFieldValue("DN_mm", "400", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue("Rohrmaterial", "PVC", FieldSource.Manual, userEdited: true);
+        var settings = new AppSettings
+        {
+            HydraulikPanel = new HydraulikPanelSettings
+            {
+                Wasserstand = 90,
+                MaterialKey = "Beton"
+            }
+        };
+        var saveCalls = 0;
+
+        DataPageHydraulikReportCalculator.BuildReportCalculation(
+            record,
+            settings,
+            dnMm: 400,
+            panelWasserstandMm: 3.5,
+            saveSettings: () => saveCalls++);
+
+        Assert.Equal(1, saveCalls);
+        Assert.Equal(400, settings.HydraulikPanel.Dn);
+        Assert.Equal("PVC/PE", settings.HydraulikPanel.MaterialKey);
+        Assert.Equal(3.5, settings.HydraulikPanel.Wasserstand);
+    }
 }
