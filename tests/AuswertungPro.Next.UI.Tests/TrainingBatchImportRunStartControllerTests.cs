@@ -8,12 +8,14 @@ public sealed class TrainingBatchImportRunStartControllerTests
     public void Apply_setzt_startzustand_in_bisheriger_reihenfolge()
     {
         var calls = new List<string>();
+        var ui = new TrainingBatchUiSink(
+            SetBusy: value => calls.Add($"busy:{value}"),
+            SetLogText: value => calls.Add($"log:{value}"),
+            SetProgressValue: value => calls.Add($"progress:{value}"),
+            SetProgressMax: value => calls.Add($"max:{value}"));
 
         TrainingBatchImportRunStartController.Apply(
-            value => calls.Add($"busy:{value}"),
-            value => calls.Add($"log:{value}"),
-            value => calls.Add($"progress:{value}"),
-            value => calls.Add($"max:{value}"),
+            ui,
             () => calls.Add("clear-preview"),
             () => calls.Add("reset-visuals"));
 
