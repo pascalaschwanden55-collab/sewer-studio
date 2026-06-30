@@ -2,14 +2,14 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
-public sealed record DataPageDropdownCommandActions(
+public sealed record DropdownCommandActions(
     Action Edit,
     Action Preview,
     Action Reset,
     Action<object?> Add,
     Action<object?> Remove);
 
-public sealed record DataPageDropdownCommandGroup(
+public sealed record DropdownCommandGroup(
     IRelayCommand Edit,
     IRelayCommand Preview,
     IRelayCommand Reset,
@@ -17,30 +17,15 @@ public sealed record DataPageDropdownCommandGroup(
     IRelayCommand<object?> Remove);
 
 public sealed record DataPageDropdownCommandSet(
-    DataPageDropdownCommandGroup Sanieren,
-    DataPageDropdownCommandGroup Eigentuemer,
-    DataPageDropdownCommandGroup Pruefungsresultat,
-    DataPageDropdownCommandGroup Referenzpruefung,
-    DataPageDropdownCommandGroup EmpfohleneSanierungsmassnahmen);
+    DropdownCommandGroup Sanieren,
+    DropdownCommandGroup Eigentuemer,
+    DropdownCommandGroup Pruefungsresultat,
+    DropdownCommandGroup Referenzpruefung,
+    DropdownCommandGroup EmpfohleneSanierungsmassnahmen);
 
-public static class DataPageDropdownCommandFactory
+public static class DropdownCommandFactory
 {
-    public static DataPageDropdownCommandSet Create(
-        DataPageDropdownCommandActions sanieren,
-        DataPageDropdownCommandActions eigentuemer,
-        DataPageDropdownCommandActions pruefungsresultat,
-        DataPageDropdownCommandActions referenzpruefung,
-        DataPageDropdownCommandActions empfohleneSanierungsmassnahmen)
-    {
-        return new DataPageDropdownCommandSet(
-            CreateGroup(sanieren),
-            CreateGroup(eigentuemer),
-            CreateGroup(pruefungsresultat),
-            CreateGroup(referenzpruefung),
-            CreateGroup(empfohleneSanierungsmassnahmen));
-    }
-
-    private static DataPageDropdownCommandGroup CreateGroup(DataPageDropdownCommandActions actions)
+    public static DropdownCommandGroup Create(DropdownCommandActions actions)
     {
         ArgumentNullException.ThrowIfNull(actions);
         ArgumentNullException.ThrowIfNull(actions.Edit);
@@ -49,11 +34,29 @@ public static class DataPageDropdownCommandFactory
         ArgumentNullException.ThrowIfNull(actions.Add);
         ArgumentNullException.ThrowIfNull(actions.Remove);
 
-        return new DataPageDropdownCommandGroup(
+        return new DropdownCommandGroup(
             new RelayCommand(actions.Edit),
             new RelayCommand(actions.Preview),
             new RelayCommand(actions.Reset),
             new RelayCommand<object?>(actions.Add),
             new RelayCommand<object?>(actions.Remove));
+    }
+}
+
+public static class DataPageDropdownCommandFactory
+{
+    public static DataPageDropdownCommandSet Create(
+        DropdownCommandActions sanieren,
+        DropdownCommandActions eigentuemer,
+        DropdownCommandActions pruefungsresultat,
+        DropdownCommandActions referenzpruefung,
+        DropdownCommandActions empfohleneSanierungsmassnahmen)
+    {
+        return new DataPageDropdownCommandSet(
+            DropdownCommandFactory.Create(sanieren),
+            DropdownCommandFactory.Create(eigentuemer),
+            DropdownCommandFactory.Create(pruefungsresultat),
+            DropdownCommandFactory.Create(referenzpruefung),
+            DropdownCommandFactory.Create(empfohleneSanierungsmassnahmen));
     }
 }

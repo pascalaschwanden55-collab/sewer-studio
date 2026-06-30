@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Dialogs;
 using AuswertungPro.Next.UI.Services;
 
@@ -16,6 +17,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 {
     private readonly ServiceProvider _sp;
     private readonly ShellViewModel _shell;
+    private readonly DropdownCommandGroup _sanierenDropdownCommands;
+    private readonly DropdownCommandGroup _eigentuemerDropdownCommands;
+    private readonly DropdownCommandGroup _pruefungsresultatDropdownCommands;
+    private readonly DropdownCommandGroup _referenzpruefungDropdownCommands;
 
     internal ServiceProvider Services => _sp;
 
@@ -43,29 +48,29 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     public IRelayCommand SaveCommand { get; }
     public IRelayCommand ClearSearchCommand { get; }
 
-    public IRelayCommand EditSanierenOptionsCommand { get; }
-    public IRelayCommand PreviewSanierenOptionsCommand { get; }
-    public IRelayCommand ResetSanierenOptionsCommand { get; }
-    public IRelayCommand<object?> AddSanierenOptionCommand { get; }
-    public IRelayCommand<object?> RemoveSanierenOptionCommand { get; }
+    public IRelayCommand EditSanierenOptionsCommand => _sanierenDropdownCommands.Edit;
+    public IRelayCommand PreviewSanierenOptionsCommand => _sanierenDropdownCommands.Preview;
+    public IRelayCommand ResetSanierenOptionsCommand => _sanierenDropdownCommands.Reset;
+    public IRelayCommand<object?> AddSanierenOptionCommand => _sanierenDropdownCommands.Add;
+    public IRelayCommand<object?> RemoveSanierenOptionCommand => _sanierenDropdownCommands.Remove;
 
-    public IRelayCommand EditEigentuemerOptionsCommand { get; }
-    public IRelayCommand PreviewEigentuemerOptionsCommand { get; }
-    public IRelayCommand ResetEigentuemerOptionsCommand { get; }
-    public IRelayCommand<object?> AddEigentuemerOptionCommand { get; }
-    public IRelayCommand<object?> RemoveEigentuemerOptionCommand { get; }
+    public IRelayCommand EditEigentuemerOptionsCommand => _eigentuemerDropdownCommands.Edit;
+    public IRelayCommand PreviewEigentuemerOptionsCommand => _eigentuemerDropdownCommands.Preview;
+    public IRelayCommand ResetEigentuemerOptionsCommand => _eigentuemerDropdownCommands.Reset;
+    public IRelayCommand<object?> AddEigentuemerOptionCommand => _eigentuemerDropdownCommands.Add;
+    public IRelayCommand<object?> RemoveEigentuemerOptionCommand => _eigentuemerDropdownCommands.Remove;
 
-    public IRelayCommand EditPruefungsresultatOptionsCommand { get; }
-    public IRelayCommand PreviewPruefungsresultatOptionsCommand { get; }
-    public IRelayCommand ResetPruefungsresultatOptionsCommand { get; }
-    public IRelayCommand<object?> AddPruefungsresultatOptionCommand { get; }
-    public IRelayCommand<object?> RemovePruefungsresultatOptionCommand { get; }
+    public IRelayCommand EditPruefungsresultatOptionsCommand => _pruefungsresultatDropdownCommands.Edit;
+    public IRelayCommand PreviewPruefungsresultatOptionsCommand => _pruefungsresultatDropdownCommands.Preview;
+    public IRelayCommand ResetPruefungsresultatOptionsCommand => _pruefungsresultatDropdownCommands.Reset;
+    public IRelayCommand<object?> AddPruefungsresultatOptionCommand => _pruefungsresultatDropdownCommands.Add;
+    public IRelayCommand<object?> RemovePruefungsresultatOptionCommand => _pruefungsresultatDropdownCommands.Remove;
 
-    public IRelayCommand EditReferenzpruefungOptionsCommand { get; }
-    public IRelayCommand PreviewReferenzpruefungOptionsCommand { get; }
-    public IRelayCommand ResetReferenzpruefungOptionsCommand { get; }
-    public IRelayCommand<object?> AddReferenzpruefungOptionCommand { get; }
-    public IRelayCommand<object?> RemoveReferenzpruefungOptionCommand { get; }
+    public IRelayCommand EditReferenzpruefungOptionsCommand => _referenzpruefungDropdownCommands.Edit;
+    public IRelayCommand PreviewReferenzpruefungOptionsCommand => _referenzpruefungDropdownCommands.Preview;
+    public IRelayCommand ResetReferenzpruefungOptionsCommand => _referenzpruefungDropdownCommands.Reset;
+    public IRelayCommand<object?> AddReferenzpruefungOptionCommand => _referenzpruefungDropdownCommands.Add;
+    public IRelayCommand<object?> RemoveReferenzpruefungOptionCommand => _referenzpruefungDropdownCommands.Remove;
 
     public SchaechtePageViewModel(ShellViewModel shell, ServiceProvider services)
     {
@@ -95,29 +100,30 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         SaveCommand = new RelayCommand(Save);
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
 
-        EditSanierenOptionsCommand = new RelayCommand(EditSanierenOptions);
-        PreviewSanierenOptionsCommand = new RelayCommand(PreviewSanierenOptions);
-        ResetSanierenOptionsCommand = new RelayCommand(ResetSanierenOptions);
-        AddSanierenOptionCommand = new RelayCommand<object?>(AddSanierenOption);
-        RemoveSanierenOptionCommand = new RelayCommand<object?>(RemoveSanierenOption);
-
-        EditEigentuemerOptionsCommand = new RelayCommand(EditEigentuemerOptions);
-        PreviewEigentuemerOptionsCommand = new RelayCommand(PreviewEigentuemerOptions);
-        ResetEigentuemerOptionsCommand = new RelayCommand(ResetEigentuemerOptions);
-        AddEigentuemerOptionCommand = new RelayCommand<object?>(AddEigentuemerOption);
-        RemoveEigentuemerOptionCommand = new RelayCommand<object?>(RemoveEigentuemerOption);
-
-        EditPruefungsresultatOptionsCommand = new RelayCommand(EditPruefungsresultatOptions);
-        PreviewPruefungsresultatOptionsCommand = new RelayCommand(PreviewPruefungsresultatOptions);
-        ResetPruefungsresultatOptionsCommand = new RelayCommand(ResetPruefungsresultatOptions);
-        AddPruefungsresultatOptionCommand = new RelayCommand<object?>(AddPruefungsresultatOption);
-        RemovePruefungsresultatOptionCommand = new RelayCommand<object?>(RemovePruefungsresultatOption);
-
-        EditReferenzpruefungOptionsCommand = new RelayCommand(EditReferenzpruefungOptions);
-        PreviewReferenzpruefungOptionsCommand = new RelayCommand(PreviewReferenzpruefungOptions);
-        ResetReferenzpruefungOptionsCommand = new RelayCommand(ResetReferenzpruefungOptions);
-        AddReferenzpruefungOptionCommand = new RelayCommand<object?>(AddReferenzpruefungOption);
-        RemoveReferenzpruefungOptionCommand = new RelayCommand<object?>(RemoveReferenzpruefungOption);
+        _sanierenDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
+            EditSanierenOptions,
+            PreviewSanierenOptions,
+            ResetSanierenOptions,
+            AddSanierenOption,
+            RemoveSanierenOption));
+        _eigentuemerDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
+            EditEigentuemerOptions,
+            PreviewEigentuemerOptions,
+            ResetEigentuemerOptions,
+            AddEigentuemerOption,
+            RemoveEigentuemerOption));
+        _pruefungsresultatDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
+            EditPruefungsresultatOptions,
+            PreviewPruefungsresultatOptions,
+            ResetPruefungsresultatOptions,
+            AddPruefungsresultatOption,
+            RemovePruefungsresultatOption));
+        _referenzpruefungDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
+            EditReferenzpruefungOptions,
+            PreviewReferenzpruefungOptions,
+            ResetReferenzpruefungOptions,
+            AddReferenzpruefungOption,
+            RemoveReferenzpruefungOption));
 
         LoadColumnsFromTemplate();
         EnsureRecordColumns();

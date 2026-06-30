@@ -194,31 +194,31 @@ public sealed partial class DataPageViewModel : ObservableObject
         MoveDownCommand = new RelayCommand(MoveDown, CanMoveDown);
         SaveCommand = new RelayCommand(Save);
         _dropdownCommands = DataPageDropdownCommandFactory.Create(
-            new DataPageDropdownCommandActions(
+            new DropdownCommandActions(
                 EditSanierenOptions,
                 PreviewSanierenOptions,
                 ResetSanierenOptions,
                 AddSanierenOption,
                 RemoveSanierenOption),
-            new DataPageDropdownCommandActions(
+            new DropdownCommandActions(
                 EditEigentuemerOptions,
                 PreviewEigentuemerOptions,
                 ResetEigentuemerOptions,
                 AddEigentuemerOption,
                 RemoveEigentuemerOption),
-            new DataPageDropdownCommandActions(
+            new DropdownCommandActions(
                 EditPruefungsresultatOptions,
                 PreviewPruefungsresultatOptions,
                 ResetPruefungsresultatOptions,
                 AddPruefungsresultatOption,
                 RemovePruefungsresultatOption),
-            new DataPageDropdownCommandActions(
+            new DropdownCommandActions(
                 EditReferenzpruefungOptions,
                 PreviewReferenzpruefungOptions,
                 ResetReferenzpruefungOptions,
                 AddReferenzpruefungOption,
                 RemoveReferenzpruefungOption),
-            new DataPageDropdownCommandActions(
+            new DropdownCommandActions(
                 EditEmpfohleneSanierungsmassnahmenOptions,
                 PreviewEmpfohleneSanierungsmassnahmenOptions,
                 ResetEmpfohleneSanierungsmassnahmenOptions,

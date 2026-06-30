@@ -54,7 +54,7 @@ public sealed class DataPageDropdownCommandFactoryTests
             calls);
     }
 
-    private static DataPageDropdownCommandActions Actions(string name, List<string> calls)
+    private static DropdownCommandActions Actions(string name, List<string> calls)
         => new(
             Edit: () => calls.Add($"{name}:edit"),
             Preview: () => calls.Add($"{name}:preview"),
@@ -62,7 +62,7 @@ public sealed class DataPageDropdownCommandFactoryTests
             Add: value => calls.Add($"{name}:add:{value}"),
             Remove: value => calls.Add($"{name}:remove:{value}"));
 
-    private static void ExecuteAll(DataPageDropdownCommandGroup group, string value)
+    private static void ExecuteAll(DropdownCommandGroup group, string value)
     {
         group.Edit.Execute(null);
         group.Preview.Execute(null);
