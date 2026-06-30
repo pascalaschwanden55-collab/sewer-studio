@@ -7,7 +7,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
-using AuswertungPro.Next.UI.Dialogs;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
@@ -16,6 +15,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 {
     private readonly ServiceProvider _sp;
     private readonly ShellViewModel _shell;
+    private readonly DropdownOptionGroupController _sanierenDropdownOptions;
+    private readonly DropdownOptionGroupController _eigentuemerDropdownOptions;
+    private readonly DropdownOptionGroupController _pruefungsresultatDropdownOptions;
+    private readonly DropdownOptionGroupController _referenzpruefungDropdownOptions;
     private readonly DropdownCommandGroup _sanierenDropdownCommands;
     private readonly DropdownCommandGroup _eigentuemerDropdownCommands;
     private readonly DropdownCommandGroup _pruefungsresultatDropdownCommands;
@@ -92,6 +95,30 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         AusgefuehrtDurchOptions = new ObservableCollection<string>(FieldCatalog.GetComboItems("Ausgefuehrt_durch"));
         EnforceEigentuemerOptionsExact();
 
+        _sanierenDropdownOptions = CreateDropdownOptionGroup(
+            SanierenOptions,
+            "Sanieren-Liste",
+            new[] { "Nein", "Ja" });
+        _eigentuemerDropdownOptions = CreateDropdownOptionGroup(
+            EigentuemerOptions,
+            "Eigentuemer-Liste",
+            DropdownOptionsStore.FixedEigentuemerOptions,
+            lockedToResetItems: true);
+        _pruefungsresultatDropdownOptions = CreateDropdownOptionGroup(
+            PruefungsresultatOptions,
+            "Pruefungsresultat-Liste",
+            new[]
+            {
+                "Pruefung bestanden",
+                "Pruefung knapp nicht bestanden",
+                "Pruefung nicht bestanden (grob undicht)",
+                "Keine"
+            });
+        _referenzpruefungDropdownOptions = CreateDropdownOptionGroup(
+            ReferenzpruefungOptions,
+            "Referenzpruefung-Liste",
+            new[] { "Ja", "Nein" });
+
         AddCommand = new RelayCommand(Add);
         RemoveCommand = new RelayCommand(Remove, () => Selected is not null);
         MoveUpCommand = new RelayCommand(MoveUp, CanMoveUp);
@@ -100,29 +127,29 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
 
         _sanierenDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
-            EditSanierenOptions,
-            PreviewSanierenOptions,
-            ResetSanierenOptions,
-            AddSanierenOption,
-            RemoveSanierenOption));
+            _sanierenDropdownOptions.Edit,
+            _sanierenDropdownOptions.Preview,
+            _sanierenDropdownOptions.Reset,
+            _sanierenDropdownOptions.Add,
+            _sanierenDropdownOptions.Remove));
         _eigentuemerDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
-            EditEigentuemerOptions,
-            PreviewEigentuemerOptions,
-            ResetEigentuemerOptions,
-            AddEigentuemerOption,
-            RemoveEigentuemerOption));
+            _eigentuemerDropdownOptions.Edit,
+            _eigentuemerDropdownOptions.Preview,
+            _eigentuemerDropdownOptions.Reset,
+            _eigentuemerDropdownOptions.Add,
+            _eigentuemerDropdownOptions.Remove));
         _pruefungsresultatDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
-            EditPruefungsresultatOptions,
-            PreviewPruefungsresultatOptions,
-            ResetPruefungsresultatOptions,
-            AddPruefungsresultatOption,
-            RemovePruefungsresultatOption));
+            _pruefungsresultatDropdownOptions.Edit,
+            _pruefungsresultatDropdownOptions.Preview,
+            _pruefungsresultatDropdownOptions.Reset,
+            _pruefungsresultatDropdownOptions.Add,
+            _pruefungsresultatDropdownOptions.Remove));
         _referenzpruefungDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
-            EditReferenzpruefungOptions,
-            PreviewReferenzpruefungOptions,
-            ResetReferenzpruefungOptions,
-            AddReferenzpruefungOption,
-            RemoveReferenzpruefungOption));
+            _referenzpruefungDropdownOptions.Edit,
+            _referenzpruefungDropdownOptions.Preview,
+            _referenzpruefungDropdownOptions.Reset,
+            _referenzpruefungDropdownOptions.Add,
+            _referenzpruefungDropdownOptions.Remove));
 
         LoadColumnsFromTemplate();
         EnsureRecordColumns();
@@ -185,6 +212,19 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         else if (optionField == "Ausgefuehrt_durch")
             AddOptionIfMissing(AusgefuehrtDurchOptions, text);
     }
+
+    private DropdownOptionGroupController CreateDropdownOptionGroup(
+        ObservableCollection<string> options,
+        string previewTitle,
+        IReadOnlyList<string> resetItems,
+        bool lockedToResetItems = false)
+        => new(
+            options,
+            new DropdownOptionGroupSettings(previewTitle, resetItems, lockedToResetItems),
+            new DropdownOptionGroupActions(
+                OptionsEditorDialogService.Show,
+                _sp.Dialogs.Info,
+                SaveDropdownOptions));
 
     private void LoadColumnsFromTemplate()
     {
@@ -360,130 +400,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         return fallback ?? string.Empty;
     }
 
-    private void EditSanierenOptions()
-    {
-        var vm = new OptionsEditorViewModel(SanierenOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(SanierenOptions, vm.Items);
-            SaveDropdownOptions();
-        }
-    }
-
-    private void PreviewSanierenOptions()
-    {
-        var items = string.Join("\n", SanierenOptions);
-        _sp.Dialogs.Info(items, "Sanieren-Liste");
-    }
-
-    private void ResetSanierenOptions()
-    {
-        DropdownOptionList.ReplaceWith(SanierenOptions, new[] { "Nein", "Ja" });
-        SaveDropdownOptions();
-    }
-
-    private void AddSanierenOption(object? value) => AddOptionIfMissing(SanierenOptions, ExtractText(value));
-    private void RemoveSanierenOption(object? value) => RemoveOptionFromList(SanierenOptions, ExtractText(value));
-
-    private void EditEigentuemerOptions()
-    {
-        var vm = new OptionsEditorViewModel(EigentuemerOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(EigentuemerOptions, vm.Items);
-            EnforceEigentuemerOptionsExact();
-            SaveDropdownOptions();
-        }
-    }
-
-    private void PreviewEigentuemerOptions()
-    {
-        var items = string.Join("\n", EigentuemerOptions);
-        _sp.Dialogs.Info(items, "Eigentuemer-Liste");
-    }
-
-    private void ResetEigentuemerOptions()
-    {
-        EnforceEigentuemerOptionsExact();
-        SaveDropdownOptions();
-    }
-
-    private void AddEigentuemerOption(object? value)
-    {
-        _ = value;
-        EnforceEigentuemerOptionsExact();
-        SaveDropdownOptions();
-    }
-
-    private void RemoveEigentuemerOption(object? value)
-    {
-        _ = value;
-        EnforceEigentuemerOptionsExact();
-        SaveDropdownOptions();
-    }
-
-    private void EditPruefungsresultatOptions()
-    {
-        var vm = new OptionsEditorViewModel(PruefungsresultatOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(PruefungsresultatOptions, vm.Items);
-            SaveDropdownOptions();
-        }
-    }
-
-    private void PreviewPruefungsresultatOptions()
-    {
-        var items = string.Join("\n", PruefungsresultatOptions);
-        _sp.Dialogs.Info(items, "Pruefungsresultat-Liste");
-    }
-
-    private void ResetPruefungsresultatOptions()
-    {
-        DropdownOptionList.ReplaceWith(
-            PruefungsresultatOptions,
-            new[]
-            {
-                "Pruefung bestanden",
-                "Pruefung knapp nicht bestanden",
-                "Pruefung nicht bestanden (grob undicht)",
-                "Keine"
-            });
-        SaveDropdownOptions();
-    }
-
-    private void AddPruefungsresultatOption(object? value) => AddOptionIfMissing(PruefungsresultatOptions, ExtractText(value));
-    private void RemovePruefungsresultatOption(object? value) => RemoveOptionFromList(PruefungsresultatOptions, ExtractText(value));
-
-    private void EditReferenzpruefungOptions()
-    {
-        var vm = new OptionsEditorViewModel(ReferenzpruefungOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(ReferenzpruefungOptions, vm.Items);
-            SaveDropdownOptions();
-        }
-    }
-
-    private void PreviewReferenzpruefungOptions()
-    {
-        var items = string.Join("\n", ReferenzpruefungOptions);
-        _sp.Dialogs.Info(items, "Referenzpruefung-Liste");
-    }
-
-    private void ResetReferenzpruefungOptions()
-    {
-        DropdownOptionList.ReplaceWith(ReferenzpruefungOptions, new[] { "Ja", "Nein" });
-        SaveDropdownOptions();
-    }
-
-    private void AddReferenzpruefungOption(object? value) => AddOptionIfMissing(ReferenzpruefungOptions, ExtractText(value));
-    private void RemoveReferenzpruefungOption(object? value) => RemoveOptionFromList(ReferenzpruefungOptions, ExtractText(value));
-
     private void AddOptionIfMissing(ObservableCollection<string> options, string value)
     {
         if (!DropdownOptionList.AddIfMissing(options, value))
@@ -493,15 +409,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 
     private static bool AddOptionIfMissingCore(ObservableCollection<string> options, string? value)
         => DropdownOptionList.AddIfMissing(options, value);
-
-    private void RemoveOptionFromList(ObservableCollection<string> options, string? value)
-    {
-        if (DropdownOptionList.Remove(options, value))
-            SaveDropdownOptions();
-    }
-
-    private static string ExtractText(object? value)
-        => DropdownOptionList.ExtractText(value);
 
     private void SaveDropdownOptions()
     {

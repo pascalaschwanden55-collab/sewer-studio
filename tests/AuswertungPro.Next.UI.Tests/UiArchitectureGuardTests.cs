@@ -110,6 +110,49 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void SchaechtePage_dropdown_option_groups_live_in_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "SchaechtePageViewModel.cs");
+        var controllerPath = Path.Combine(uiRoot, "Services", "DropdownOptionGroupController.cs");
+
+        Assert.True(File.Exists(controllerPath), "Schaechte-Optionsgruppen sollen ausserhalb der ViewModel-Methoden orchestriert werden.");
+
+        var viewModel = File.ReadAllText(viewModelPath);
+        Assert.Contains("DropdownOptionGroupController", viewModel);
+        Assert.DoesNotContain("new OptionsEditorWindow", viewModel);
+        Assert.DoesNotContain("new OptionsEditorViewModel", viewModel);
+
+        var removedMethodNames = new[]
+        {
+            "EditSanierenOptions",
+            "PreviewSanierenOptions",
+            "ResetSanierenOptions",
+            "AddSanierenOption",
+            "RemoveSanierenOption",
+            "EditEigentuemerOptions",
+            "PreviewEigentuemerOptions",
+            "ResetEigentuemerOptions",
+            "AddEigentuemerOption",
+            "RemoveEigentuemerOption",
+            "EditPruefungsresultatOptions",
+            "PreviewPruefungsresultatOptions",
+            "ResetPruefungsresultatOptions",
+            "AddPruefungsresultatOption",
+            "RemovePruefungsresultatOption",
+            "EditReferenzpruefungOptions",
+            "PreviewReferenzpruefungOptions",
+            "ResetReferenzpruefungOptions",
+            "AddReferenzpruefungOption",
+            "RemoveReferenzpruefungOption"
+        };
+
+        foreach (var methodName in removedMethodNames)
+            Assert.DoesNotContain($"private void {methodName}", viewModel);
+    }
+
+    [Fact]
     public void PlayerWindow_damage_markers_live_in_controller()
     {
         var root = FindRepositoryRoot();
