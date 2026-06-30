@@ -399,65 +399,12 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         HaltungRecord? haltungRecord)
     {
         _ownerByHolding.Clear();
-
-        if (projectRecords is not null)
-        {
-            foreach (var record in projectRecords)
-            {
-                var holding = (record.GetFieldValue("Haltungsname") ?? "").Trim();
-                if (string.IsNullOrWhiteSpace(holding))
-                    continue;
-
-                var owner = (record.GetFieldValue("Eigentuemer") ?? "").Trim();
-                if (string.IsNullOrWhiteSpace(owner))
-                    continue;
-
-                _ownerByHolding[holding] = owner;
-            }
-        }
-
-        if (haltungRecord is not null)
-        {
-            var holding = (haltungRecord.GetFieldValue("Haltungsname") ?? "").Trim();
-            var owner = (haltungRecord.GetFieldValue("Eigentuemer") ?? "").Trim();
-            if (!string.IsNullOrWhiteSpace(holding) && !string.IsNullOrWhiteSpace(owner))
-                _ownerByHolding[holding] = owner;
-        }
+        foreach (var pair in CostCalculatorSummaryEntryBuilder.BuildOwnerLookup(projectRecords, haltungRecord))
+            _ownerByHolding[pair.Key] = pair.Value;
     }
 
     private List<CostSummaryEntry> BuildCostSummaryEntries(HoldingCost currentHoldingCost)
-    {
-        var currentHolding = (currentHoldingCost.Holding ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(currentHolding) || !HasSelectedLines(currentHoldingCost))
-            return new List<CostSummaryEntry>();
-
-        return new List<CostSummaryEntry>
-        {
-            new()
-            {
-                Holding = currentHolding,
-                Owner = ResolveOwnerForHolding(currentHoldingCost.Holding),
-                Cost = currentHoldingCost
-            }
-        };
-    }
-
-    private string ResolveOwnerForHolding(string? holding)
-    {
-        var key = (holding ?? "").Trim();
-        if (key.Length == 0)
-            return "Unbekannt";
-        return _ownerByHolding.TryGetValue(key, out var owner) && !string.IsNullOrWhiteSpace(owner)
-            ? owner.Trim()
-            : "Unbekannt";
-    }
-
-    private static bool HasSelectedLines(HoldingCost cost)
-    {
-        if (cost is null)
-            return false;
-        return cost.Measures.Any(m => m.Lines.Any(l => l.Selected));
-    }
+        => CostCalculatorSummaryEntryBuilder.Build(currentHoldingCost, _ownerByHolding);
 
     private HoldingCost BuildHoldingCost(string holding)
     {
