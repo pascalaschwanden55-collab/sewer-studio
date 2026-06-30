@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -16,6 +15,11 @@ using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Services;
+
+// Kurz-Aliase fuer die nach Application extrahierten reinen Helfer
+using StatusParser = AuswertungPro.Next.Application.Ai.PipelineStatusParser;
+using SummaryBuilder = AuswertungPro.Next.Application.Ai.LiveFindingSummaryBuilder;
+using TelemetryFmt = AuswertungPro.Next.Application.Ai.PipelineTelemetryFormatter;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -110,13 +114,12 @@ public partial class VideoAnalysisPipelineWindow : Window
                 Vm.MappingPhaseDone = p.Phase == PipelinePhase.Done;
                 Vm.IsMultiModelActive = p.Phase == PipelinePhase.MultiModelDetection;
 
-                // Extract YOLO skip count from status text (e.g. "38 gesamt" or "übersprungen")
+                // YOLO-Gesamtframezahl aus Status-Text extrahieren (z.B. "38 gesamt")
                 if (p.Phase == PipelinePhase.MultiModelDetection)
                 {
-                    var skipMatch = Regex.Match(p.Status, @"(\d+)\s+gesamt\b",
-                        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
-                    if (skipMatch.Success && int.TryParse(skipMatch.Groups[1].Value, out var skipCount))
-                        Vm.YoloSkippedFrames = skipCount;
+                    var skipCount = StatusParser.TryExtractYoloTotalFrames(p.Status);
+                    if (skipCount.HasValue)
+                        Vm.YoloSkippedFrames = skipCount.Value;
                 }
 
                 if (isVideoPhase)
@@ -129,16 +132,16 @@ public partial class VideoAnalysisPipelineWindow : Window
                     if (p.FramesTotal.HasValue)
                         Vm.TotalFrames = Math.Max(0, p.FramesTotal.Value);
 
-                    var meter = TryExtractMeterFromStatus(p.Status);
+                    var meter = StatusParser.TryExtractMeter(p.Status);
                     if (!string.IsNullOrWhiteSpace(meter))
                         Vm.CurrentMeter = meter;
 
-                    var liveFindings = TryExtractFindingsFromStatus(p.Status);
+                    var liveFindings = StatusParser.TryExtractFindingCount(p.Status);
                     if (liveFindings.HasValue)
                         Vm.DetectionCount = Math.Max(Vm.DetectionCount, liveFindings.Value);
 
                     Vm.LiveFrameStatus = p.Status;
-                    Vm.LiveFrameInfo = BuildLiveFrameInfo(Vm.FramesAnalyzed, Vm.TotalFrames, Vm.CurrentMeter);
+                    Vm.LiveFrameInfo = SummaryBuilder.BuildFrameInfo(Vm.FramesAnalyzed, Vm.TotalFrames, Vm.CurrentMeter);
                     if (p.FramePreviewPng is { Length: > 0 })
                     {
                         Vm.LiveFrameImage = ToBitmap(p.FramePreviewPng);
@@ -148,7 +151,7 @@ public partial class VideoAnalysisPipelineWindow : Window
                     {
                         _liveFrameFindings.Clear();
                         _liveFrameFindings.AddRange(p.LiveFindings.Take(8));
-                        Vm.LiveFrameQuantSummary = BuildLiveQuantSummary(_liveFrameFindings);
+                        Vm.LiveFrameQuantSummary = SummaryBuilder.BuildQuantSummary(_liveFrameFindings);
 
                         Vm.PillarDetectionCount = Math.Max(Vm.PillarDetectionCount, _liveFrameFindings.Count);
                         Vm.PillarQuantCount = Math.Max(Vm.PillarQuantCount,
@@ -175,15 +178,15 @@ public partial class VideoAnalysisPipelineWindow : Window
                         Vm.DetectionCount = Math.Max(Vm.DetectionCount, p.ItemsDone.Value);
 
                     Vm.LiveFrameStatus = p.Status;
-                    Vm.LiveFrameInfo = BuildLiveFrameInfo(Vm.FramesAnalyzed, Vm.TotalFrames, Vm.CurrentMeter);
+                    Vm.LiveFrameInfo = SummaryBuilder.BuildFrameInfo(Vm.FramesAnalyzed, Vm.TotalFrames, Vm.CurrentMeter);
                 }
                 else if (p.Phase == PipelinePhase.Done)
                 {
                     Vm.VideoProgressPct = 100.0;
                     Vm.MappingProgressPct = 100.0;
                     Vm.LiveFrameStatus = "Analyse abgeschlossen";
-                    Vm.LiveFrameInfo = BuildLiveFrameInfo(Vm.FramesAnalyzed, Vm.TotalFrames, Vm.CurrentMeter);
-                    Vm.LiveFrameQuantSummary = BuildLiveQuantSummary(_liveFrameFindings);
+                    Vm.LiveFrameInfo = SummaryBuilder.BuildFrameInfo(Vm.FramesAnalyzed, Vm.TotalFrames, Vm.CurrentMeter);
+                    Vm.LiveFrameQuantSummary = SummaryBuilder.BuildQuantSummary(_liveFrameFindings);
                 }
             });
 
@@ -216,7 +219,7 @@ public partial class VideoAnalysisPipelineWindow : Window
                 ? ""
                 : $"Frames: {result.Stats.FramesAnalyzed}, Detections: {result.Stats.DetectionsRaw}, Entries: {result.Stats.EntriesGenerated}, HighConf: {result.Stats.EntriesWithHighConfidence}";
 
-            Vm.TelemetryText = FormatTelemetry(result.Telemetry);
+            Vm.TelemetryText = TelemetryFmt.Format(result.Telemetry);
 
             // einfache Liste für UI
             Vm.Detections.Clear();
@@ -239,43 +242,6 @@ public partial class VideoAnalysisPipelineWindow : Window
         }
     }
 
-    private static string? TryExtractMeterFromStatus(string? status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-            return null;
-
-        var m = Regex.Match(status, @"@\s*(?<meter>\d+(?:[.,]\d+)?)m",
-            RegexOptions.CultureInvariant);
-        if (!m.Success)
-            return null;
-
-        var raw = m.Groups["meter"].Value.Replace(',', '.');
-        return double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var meter)
-            ? $"{meter:0.0} m"
-            : null;
-    }
-
-    private static int? TryExtractFindingsFromStatus(string? status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-            return null;
-
-        var m = Regex.Match(status, @"(?<count>\d+)\s+Befunde",
-            RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
-        if (!m.Success)
-            return null;
-
-        return int.TryParse(m.Groups["count"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var count)
-            ? count
-            : null;
-    }
-
-    private static string BuildLiveFrameInfo(int framesDone, int totalFrames, string currentMeter)
-    {
-        var meterText = string.IsNullOrWhiteSpace(currentMeter) ? "—" : currentMeter;
-        return $"Frame {framesDone}/{Math.Max(totalFrames, 0)}  |  Meter {meterText}";
-    }
-
     private static BitmapImage ToBitmap(byte[] pngBytes)
     {
         using var ms = new System.IO.MemoryStream(pngBytes);
@@ -286,28 +252,6 @@ public partial class VideoAnalysisPipelineWindow : Window
         bmp.EndInit();
         bmp.Freeze();
         return bmp;
-    }
-
-    private static string BuildLiveQuantSummary(IReadOnlyList<LiveFrameFinding> findings)
-    {
-        if (findings.Count == 0)
-            return "Quantifizierung: keine Punkte erkannt";
-
-        var parts = findings.Take(4).Select(f =>
-        {
-            var clock = string.IsNullOrWhiteSpace(f.PositionClock) ? "?" : f.PositionClock;
-            var quantParts = new List<string>();
-            if (f.ExtentPercent is > 0) quantParts.Add($"{f.ExtentPercent}%");
-            if (f.HeightMm is > 0) quantParts.Add($"H:{f.HeightMm}mm");
-            if (f.WidthMm is > 0) quantParts.Add($"B:{f.WidthMm}mm");
-            if (f.IntrusionPercent is > 0) quantParts.Add($"Einr:{f.IntrusionPercent}%");
-            if (f.CrossSectionReductionPercent is > 0) quantParts.Add($"QV:{f.CrossSectionReductionPercent}%");
-            if (f.DiameterReductionMm is > 0) quantParts.Add($"DV:{f.DiameterReductionMm}mm");
-            var quantStr = quantParts.Count > 0 ? string.Join(" ", quantParts) : "n/a";
-            return $"{clock} ({quantStr})";
-        });
-
-        return "Q: " + string.Join(" | ", parts);
     }
 
     private void RenderLiveFrameOverlay()
@@ -421,7 +365,7 @@ public partial class VideoAnalysisPipelineWindow : Window
             Canvas.SetTop(dot, my - 3.5);
             LiveFrameOverlayCanvas.Children.Add(dot);
 
-            var labelText = BuildLiveFindingLabel(finding);
+            var labelText = SummaryBuilder.BuildFindingLabel(finding);
             var label = new Border
             {
                 Background = new SolidColorBrush(Color.FromArgb(228, 14, 19, 28)),
@@ -444,23 +388,6 @@ public partial class VideoAnalysisPipelineWindow : Window
             Canvas.SetTop(label, Math.Clamp(ly, 2, height - desired.Height - 2));
             LiveFrameOverlayCanvas.Children.Add(label);
         }
-    }
-
-    private static string BuildLiveFindingLabel(LiveFrameFinding finding)
-    {
-        var baseText = string.IsNullOrWhiteSpace(finding.VsaCodeHint)
-            ? finding.Label
-            : $"{finding.VsaCodeHint} {finding.Label}";
-        if (baseText.Length > 20)
-            baseText = baseText[..20] + "...";
-
-        var clock = string.IsNullOrWhiteSpace(finding.PositionClock) ? "?" : finding.PositionClock;
-        var extent = finding.ExtentPercent is > 0 ? $"{finding.ExtentPercent}%" : "n/a";
-        var quantExtra = "";
-        if (finding.HeightMm is > 0) quantExtra += $" H:{finding.HeightMm}mm";
-        if (finding.IntrusionPercent is > 0) quantExtra += $" Einr:{finding.IntrusionPercent}%";
-        if (finding.CrossSectionReductionPercent is > 0) quantExtra += $" QV:{finding.CrossSectionReductionPercent}%";
-        return $"{clock} / {extent}{quantExtra} - {baseText}";
     }
 
     private static Color MapLiveSeverityColor(int severity)
@@ -795,83 +722,17 @@ public partial class VideoAnalysisPipelineWindow : Window
         return Math.Clamp(20.0 + meterSpan * 3.0 + item.Confidence * 22.0, 20.0, 62.0);
     }
 
+    /// <summary>Delegiert an <see cref="LiveDetectionGeometryMapper.ParseClockHour"/> (bestehende Utility).</summary>
     private static int? ParseClockHour(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
+        => LiveDetectionGeometryMapper.ParseClockHour(raw);
 
-        var m = System.Text.RegularExpressions.Regex.Match(raw, @"\b(?<h>1[0-2]|0?[1-9])\b");
-        if (!m.Success)
-            return null;
-
-        if (!int.TryParse(m.Groups["h"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var hour))
-            return null;
-
-        if (hour == 0)
-            return 12;
-
-        if (hour > 12)
-            hour %= 12;
-
-        return hour == 0 ? 12 : hour;
-    }
-
+    /// <summary>Delegiert an <see cref="LiveDetectionGeometryMapper.BuildRingSectorGeometry"/> (bestehende WPF-Geometrie-Utility).</summary>
     private static Geometry BuildRingSectorGeometry(
-        double cx,
-        double cy,
-        double innerRadius,
-        double outerRadius,
-        double startDeg,
-        double sweepDeg)
-    {
-        var startRad = DegToRad(startDeg);
-        var endRad = DegToRad(startDeg + sweepDeg);
-        var largeArc = sweepDeg > 180;
+        double cx, double cy, double innerRadius, double outerRadius, double startDeg, double sweepDeg)
+        => LiveDetectionGeometryMapper.BuildRingSectorGeometry(cx, cy, innerRadius, outerRadius, startDeg, sweepDeg);
 
-        var p1 = new Point(cx + Math.Cos(startRad) * outerRadius, cy + Math.Sin(startRad) * outerRadius);
-        var p2 = new Point(cx + Math.Cos(endRad) * outerRadius, cy + Math.Sin(endRad) * outerRadius);
-        var p3 = new Point(cx + Math.Cos(endRad) * innerRadius, cy + Math.Sin(endRad) * innerRadius);
-        var p4 = new Point(cx + Math.Cos(startRad) * innerRadius, cy + Math.Sin(startRad) * innerRadius);
-
-        var figure = new PathFigure
-        {
-            StartPoint = p1,
-            IsClosed = true,
-            IsFilled = true
-        };
-        figure.Segments.Add(new ArcSegment(p2, new Size(outerRadius, outerRadius), 0, largeArc, SweepDirection.Clockwise, true));
-        figure.Segments.Add(new LineSegment(p3, true));
-        figure.Segments.Add(new ArcSegment(p4, new Size(innerRadius, innerRadius), 0, largeArc, SweepDirection.Counterclockwise, true));
-
-        return new PathGeometry(new[] { figure });
-    }
-
-    private static double DegToRad(double deg) => deg * Math.PI / 180.0;
-
-    private static string FormatTelemetry(TelemetrySummary? t)
-    {
-        if (t is null)
-            return "";
-
-        static string Fmt(PhaseStat s) => s.TotalMs > 0
-            ? $"Mean={s.MeanMs:F0}ms  P95={s.P95Ms:F0}ms"
-            : "—";
-
-        var parts = new List<string>
-        {
-            $"Wall: {t.WallClockMs / 1000.0:F1}s",
-            $"Frames: {t.TotalFrames} ({t.SkippedFrames} skipped)",
-            $"Extraction: {Fmt(t.Extraction)}"
-        };
-
-        if (t.Yolo.TotalMs > 0) parts.Add($"YOLO: {Fmt(t.Yolo)}");
-        if (t.Dino.TotalMs > 0) parts.Add($"DINO: {Fmt(t.Dino)}");
-        if (t.Sam.TotalMs > 0) parts.Add($"SAM: {Fmt(t.Sam)}");
-        if (t.Qwen.TotalMs > 0) parts.Add($"Vision: {Fmt(t.Qwen)}");
-        parts.Add($"Total/Frame: {Fmt(t.Total)}");
-
-        return string.Join("  |  ", parts);
-    }
+    /// <summary>Delegiert an <see cref="LiveDetectionGeometryMapper.DegToRad"/>.</summary>
+    private static double DegToRad(double deg) => LiveDetectionGeometryMapper.DegToRad(deg);
 
     private void Undock_Click(object sender, RoutedEventArgs e)
     {
