@@ -1,6 +1,6 @@
 using System.Windows.Media;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -51,7 +51,7 @@ public static class CodingDefectStatusDisplayPolicy
 
     public static CodingInlineDefectDetailState BuildInlineDetail(CodingEvent ev)
     {
-        var status = CodingSessionViewModel.GetDefectStatus(ev);
+        var status = DefectStatusPolicy.GetStatus(ev);
         var confidence = ev.AiContext?.Confidence;
 
         return new CodingInlineDefectDetailState(
@@ -64,6 +64,6 @@ public static class CodingDefectStatusDisplayPolicy
             Confidence: confidence,
             Status: status,
             StatusText: DisplayText(status),
-            CanAct: CodingSessionViewModel.CanActOnDefect(ev));
+            CanAct: DefectStatusPolicy.CanAct(ev));
     }
 }

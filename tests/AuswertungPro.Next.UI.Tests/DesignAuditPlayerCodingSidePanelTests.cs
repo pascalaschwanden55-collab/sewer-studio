@@ -115,7 +115,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         Assert.Contains("CodingDefectStatusDisplayPolicy.BuildInlineDetail(ev)", detailBody);
         Assert.Contains("_codingSidePanelControllers.InlineDefectDetail.Apply(state)", detailBody);
-        Assert.Contains("CodingSessionViewModel.CanActOnDefect(ev)", policy);
+        // CanAct-Logik ist seit W2-2 in DefectStatusPolicy (Application.Ai), kein VM-Aufruf mehr.
+        Assert.Contains("DefectStatusPolicy.CanAct(ev)", policy);
         Assert.Contains("BtnInlineAccept.Visibility = state.CanAct ? Visibility.Visible : Visibility.Collapsed", controls);
         Assert.Contains("BtnInlineReject.Visibility = state.CanAct ? Visibility.Visible : Visibility.Collapsed", controls);
     }

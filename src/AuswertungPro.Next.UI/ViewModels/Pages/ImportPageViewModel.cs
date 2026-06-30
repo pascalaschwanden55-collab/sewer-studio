@@ -1,8 +1,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -500,22 +498,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private void TrackImportSource(string sourcePath, string importType)
     {
-        var project = _shell.Project;
-        var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
-        var entry = $"{timestamp} | {importType} | {sourcePath}";
-
-        // Letzte Import-Quelle speichern
-        project.Metadata["ImportQuelle"] = sourcePath;
-        project.Metadata["ImportQuellTyp"] = importType;
-
-        // Import-Historie anfuegen (max. 20 Eintraege)
-        var historyKey = "ImportQuellenHistorie";
-        var existing = project.Metadata.TryGetValue(historyKey, out var h) ? h : "";
-        var lines = existing.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
-        lines.Add(entry);
-        if (lines.Count > 20)
-            lines = lines.Skip(lines.Count - 20).ToList();
-        project.Metadata[historyKey] = string.Join("\n", lines);
+        // Delegiert an ImportSourceHistoryService (Application/Import)
+        ImportSourceHistoryService.Track(_shell.Project.Metadata, sourcePath, importType);
     }
 
     // ──── Post-Import Helpers ────
@@ -845,288 +829,70 @@ public sealed partial class ImportPageViewModel : ObservableObject
             return;
         }
 
+        // Delegiert an ProjectFieldCsvExporter (Infrastructure/Import)
         var reportDir = Path.Combine(projectDir, "__IMPORT_REPORTS");
-        Directory.CreateDirectory(reportDir);
-        var stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var path = Path.Combine(reportDir, $"import_summary_{stamp}.csv");
-
-        var sb = new StringBuilder();
-        sb.AppendLine("Type;RecordId;Field;Value;Source;UserEdited;LastUpdatedUtc");
-
-        foreach (var rec in _shell.Project.Data)
-        {
-            foreach (var field in FieldCatalog.ColumnOrder)
-            {
-                var value = rec.GetFieldValue(field) ?? "";
-                var meta = rec.FieldMeta.TryGetValue(field, out var m) ? m : null;
-                sb.AppendLine(string.Join(";",
-                    "Haltung",
-                    rec.Id,
-                    Escape(field),
-                    Escape(value),
-                    meta?.Source.ToString() ?? "",
-                    meta?.UserEdited.ToString() ?? "",
-                    meta?.LastUpdatedUtc.ToString("o") ?? ""));
-            }
-        }
-
-        foreach (var schacht in _shell.Project.SchaechteData)
-        {
-            foreach (var kv in schacht.Fields)
-            {
-                sb.AppendLine(string.Join(";",
-                    "Schacht",
-                    schacht.Id,
-                    Escape(kv.Key),
-                    Escape(kv.Value ?? ""),
-                    "",
-                    "",
-                    schacht.ModifiedAtUtc.ToString("o")));
-            }
-        }
-
-        File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
+        var path = ProjectFieldCsvExporter.Export(_shell.Project, reportDir);
         LastResult = $"Import-Report erstellt:\n{path}";
         _shell.SetStatus("Import-Report erstellt");
     }
 
-    private static string Escape(string v)
-    {
-        v ??= "";
-        if (v.Contains(';') || v.Contains('"') || v.Contains('\n') || v.Contains('\r'))
-            return "\"" + v.Replace("\"", "\"\"") + "\"";
-        return v;
-    }
-
     // ──── File Storage ────
+
+    // ──── Datei-Speicherung (delegiert an ImportFileStoreService) ────
 
     private void StoreXtfFiles(string[] paths)
     {
-        var projectPath = _sp.Settings.LastProjectPath;
-        if (string.IsNullOrWhiteSpace(projectPath))
-        {
-            LastResult += "\nHinweis: Projekt bitte speichern, um XTF-Dateien im Projekt abzulegen.";
-            return;
-        }
-
-        var projectDir = Path.GetDirectoryName(projectPath) ?? "";
-        if (string.IsNullOrWhiteSpace(projectDir)) return;
-
-        var targetDir = Path.Combine(projectDir, "Imports", "XTF");
-        Directory.CreateDirectory(targetDir);
-
-        var stored = new List<string>();
-        foreach (var src in paths)
-        {
-            if (!File.Exists(src)) continue;
-            var fileName = Path.GetFileName(src);
-            var dest = Path.Combine(targetDir, fileName);
-
-            if (File.Exists(dest))
-            {
-                var srcInfo = new FileInfo(src);
-                var destInfo = new FileInfo(dest);
-                if (srcInfo.Length != destInfo.Length)
-                {
-                    var name = Path.GetFileNameWithoutExtension(fileName);
-                    var ext = Path.GetExtension(fileName);
-                    dest = Path.Combine(targetDir, $"{name}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-                }
-                else
-                {
-                    stored.Add(Path.GetRelativePath(projectDir, dest));
-                    continue;
-                }
-            }
-
-            File.Copy(src, dest, overwrite: false);
-            stored.Add(Path.GetRelativePath(projectDir, dest));
-        }
-
-        if (stored.Count == 0) return;
-
-        var existing = LoadStoredXtfFiles(projectDir);
-        foreach (var sItem in stored)
-            if (!existing.Contains(sItem, StringComparer.OrdinalIgnoreCase))
-                existing.Add(sItem);
-
-        _shell.Project.Metadata["XTF_StoredFiles"] = JsonSerializer.Serialize(existing);
+        if (!TryGetProjectDir(out var projectDir, "XTF")) return;
+        ImportFileStoreService.StoreFiles(_shell.Project, projectDir!, paths, "XTF", "XTF_StoredFiles");
     }
 
     private void StorePdfFiles(string[] paths)
     {
-        var projectPath = _sp.Settings.LastProjectPath;
-        if (string.IsNullOrWhiteSpace(projectPath))
-        {
-            LastResult += "\nHinweis: Projekt bitte speichern, um PDF-Dateien im Projekt abzulegen.";
-            return;
-        }
-
-        var projectDir = Path.GetDirectoryName(projectPath) ?? "";
-        if (string.IsNullOrWhiteSpace(projectDir)) return;
-
-        var targetDir = Path.Combine(projectDir, "Imports", "PDF");
-        Directory.CreateDirectory(targetDir);
-
-        var stored = new List<string>();
-        foreach (var src in paths)
-        {
-            if (!File.Exists(src)) continue;
-            var fileName = Path.GetFileName(src);
-            var dest = Path.Combine(targetDir, fileName);
-
-            if (File.Exists(dest))
-            {
-                var srcInfo = new FileInfo(src);
-                var destInfo = new FileInfo(dest);
-                if (srcInfo.Length != destInfo.Length)
-                {
-                    var name = Path.GetFileNameWithoutExtension(fileName);
-                    var ext = Path.GetExtension(fileName);
-                    dest = Path.Combine(targetDir, $"{name}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-                }
-                else
-                {
-                    stored.Add(Path.GetRelativePath(projectDir, dest));
-                    continue;
-                }
-            }
-
-            File.Copy(src, dest, overwrite: false);
-            stored.Add(Path.GetRelativePath(projectDir, dest));
-        }
-
-        if (stored.Count == 0) return;
-
-        var existing = LoadStoredPdfFiles(projectDir);
-        foreach (var sItem in stored)
-            if (!existing.Contains(sItem, StringComparer.OrdinalIgnoreCase))
-                existing.Add(sItem);
-
-        _shell.Project.Metadata["PDF_StoredFiles"] = JsonSerializer.Serialize(existing);
+        if (!TryGetProjectDir(out var projectDir, "PDF")) return;
+        ImportFileStoreService.StoreFiles(_shell.Project, projectDir!, paths, "PDF", "PDF_StoredFiles");
     }
 
     private void StoreTxtFiles(string[] paths)
     {
+        if (!TryGetProjectDir(out var projectDir, "TXT")) return;
+        ImportFileStoreService.StoreFiles(_shell.Project, projectDir!, paths, "TXT", "TXT_StoredFiles");
+    }
+
+    /// <summary>
+    /// Hilfsmethode: Projektordner aus LastProjectPath ermitteln.
+    /// Gibt false zurueck (+ Hinweis im LastResult) wenn kein Pfad gesetzt.
+    /// </summary>
+    private bool TryGetProjectDir(out string? projectDir, string fileType)
+    {
         var projectPath = _sp.Settings.LastProjectPath;
         if (string.IsNullOrWhiteSpace(projectPath))
         {
-            LastResult += "\nHinweis: Projekt bitte speichern, um TXT-Dateien im Projekt abzulegen.";
-            return;
+            LastResult += $"\nHinweis: Projekt bitte speichern, um {fileType}-Dateien im Projekt abzulegen.";
+            projectDir = null;
+            return false;
         }
-
-        var projectDir = Path.GetDirectoryName(projectPath) ?? "";
-        if (string.IsNullOrWhiteSpace(projectDir)) return;
-
-        var targetDir = Path.Combine(projectDir, "Imports", "TXT");
-        Directory.CreateDirectory(targetDir);
-
-        var stored = new List<string>();
-        foreach (var src in paths)
+        projectDir = Path.GetDirectoryName(projectPath) ?? "";
+        if (string.IsNullOrWhiteSpace(projectDir))
         {
-            if (!File.Exists(src)) continue;
-            var fileName = Path.GetFileName(src);
-            var dest = Path.Combine(targetDir, fileName);
-
-            if (File.Exists(dest))
-            {
-                var srcInfo = new FileInfo(src);
-                var destInfo = new FileInfo(dest);
-                if (srcInfo.Length != destInfo.Length)
-                {
-                    var name = Path.GetFileNameWithoutExtension(fileName);
-                    var ext = Path.GetExtension(fileName);
-                    dest = Path.Combine(targetDir, $"{name}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-                }
-                else
-                {
-                    stored.Add(Path.GetRelativePath(projectDir, dest));
-                    continue;
-                }
-            }
-
-            File.Copy(src, dest, overwrite: false);
-            stored.Add(Path.GetRelativePath(projectDir, dest));
+            projectDir = null;
+            return false;
         }
-
-        if (stored.Count == 0) return;
-
-        var existing = LoadStoredTxtFiles(projectDir);
-        foreach (var sItem in stored)
-            if (!existing.Contains(sItem, StringComparer.OrdinalIgnoreCase))
-                existing.Add(sItem);
-
-        _shell.Project.Metadata["TXT_StoredFiles"] = JsonSerializer.Serialize(existing);
-    }
-
-    private List<string> LoadStoredXtfFiles(string projectDir)
-    {
-        if (!_shell.Project.Metadata.TryGetValue("XTF_StoredFiles", out var raw) || string.IsNullOrWhiteSpace(raw))
-            return new List<string>();
-
-        try
-        {
-            var list = JsonSerializer.Deserialize<List<string>>(raw);
-            return list?.Where(si => !string.IsNullOrWhiteSpace(si)).Select(si => si.Trim()).ToList() ?? new List<string>();
-        }
-        catch
-        {
-            var parts = raw.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            return parts.Select(p => p.Trim()).Where(p => p.Length > 0).ToList();
-        }
-    }
-
-    private List<string> LoadStoredPdfFiles(string projectDir)
-    {
-        if (!_shell.Project.Metadata.TryGetValue("PDF_StoredFiles", out var raw) || string.IsNullOrWhiteSpace(raw))
-            return new List<string>();
-
-        try
-        {
-            var list = JsonSerializer.Deserialize<List<string>>(raw);
-            return list?.Where(si => !string.IsNullOrWhiteSpace(si)).Select(si => si.Trim()).ToList() ?? new List<string>();
-        }
-        catch
-        {
-            var parts = raw.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            return parts.Select(p => p.Trim()).Where(p => p.Length > 0).ToList();
-        }
-    }
-
-    private List<string> LoadStoredTxtFiles(string projectDir)
-    {
-        if (!_shell.Project.Metadata.TryGetValue("TXT_StoredFiles", out var raw) || string.IsNullOrWhiteSpace(raw))
-            return new List<string>();
-
-        try
-        {
-            var list = JsonSerializer.Deserialize<List<string>>(raw);
-            return list?.Where(si => !string.IsNullOrWhiteSpace(si)).Select(si => si.Trim()).ToList() ?? new List<string>();
-        }
-        catch
-        {
-            var parts = raw.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            return parts.Select(p => p.Trim()).Where(p => p.Length > 0).ToList();
-        }
+        return true;
     }
 
     private static string BuildImportSummaryText(string sourceLabel, ImportStats source, ImportSummary sidecar)
     {
-        var sb = new StringBuilder();
-        var importSource = source.Messages.FirstOrDefault(m =>
-            m.StartsWith("Importquelle:", StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(importSource))
-            sb.AppendLine(importSource);
-
-        sb.AppendLine($"{sourceLabel}: Gefunden {source.Found}, Neu {source.Created}, Aktualisiert {source.Updated}, Unklar {source.Uncertain}, Fehler {source.Errors}");
-        sb.AppendLine($"XTF/M150/MDB/XML: Dateien {sidecar.XtfFiles}, Gefunden {sidecar.XtfFound}, Updates {sidecar.XtfUpdated}, Unklar {sidecar.XtfUncertain}, Fehler {sidecar.XtfErrors}");
-        sb.AppendLine($"PDF: Dateien {sidecar.PdfFiles}, Gefunden {sidecar.PdfFound}, Updates {sidecar.PdfUpdated}, Unklar {sidecar.PdfUncertain}, Fehler {sidecar.PdfErrors}");
-        return sb.ToString();
+        // Delegiert an ImportSummaryTextBuilder (Application/Import)
+        return ImportSummaryTextBuilder.BuildSummary(
+            sourceLabel, source,
+            sidecar.XtfFiles, sidecar.XtfFound, sidecar.XtfUpdated, sidecar.XtfUncertain, sidecar.XtfErrors,
+            sidecar.PdfFiles, sidecar.PdfFound, sidecar.PdfUpdated, sidecar.PdfUncertain, sidecar.PdfErrors);
     }
 
     private static string BuildImportDetailsText(ImportSummary sidecar, ImportStats source)
     {
-        return string.Join("\n", sidecar.Messages.Concat(source.Messages).Take(200));
+        // Delegiert an ImportSummaryTextBuilder (Application/Import)
+        return ImportSummaryTextBuilder.BuildDetails(sidecar.Messages, source.Messages);
     }
 
     /// <summary>

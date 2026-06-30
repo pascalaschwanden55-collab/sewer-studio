@@ -4,6 +4,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 

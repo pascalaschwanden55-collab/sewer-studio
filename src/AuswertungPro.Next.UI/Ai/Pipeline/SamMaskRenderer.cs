@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,6 +14,8 @@ namespace AuswertungPro.Next.UI.Ai.Pipeline;
 /// <summary>
 /// Dekodiert SAM-RLE-Masken und rendert sie als gruene Kontur-Overlays auf einem WPF Canvas.
 /// RLE-Format: "start_value,run1,run2,..." (aus sam_wrapper.py _rle_encode).
+/// Reine Logik (Dekodierung, Policy, Label-Text) ist nach Infrastructure.Ai.Pipeline
+/// ausgelagert: SamMaskDecoder, SamMaskRenderPolicy, MaskLabelTextBuilder.
 /// </summary>
 public static class SamMaskRenderer
 {
@@ -25,6 +26,8 @@ public static class SamMaskRenderer
     public const string LabelTag = "mm_label";
 
     // ── Render-Policy (WinCan-Stil) ─────────────────────────────────
+    // Typen werden von Infrastructure bereitgestellt und hier weitergereicht,
+    // damit alle Aufrufer (inkl. Codex-generierter Code) unveraendert bleiben.
 
     /// <summary>Wie eine Maske visuell dargestellt wird.</summary>
     public enum MaskVisualMode
@@ -53,20 +56,13 @@ public static class SamMaskRenderer
     {
         /// <summary>Voreinstellung im WinCan-Stil: grosse Befunde bleiben als Kontur erhalten.</summary>
         public static RenderOptions WinCanStyle { get; } = new(
-            LargeFindingOutlineAreaRatio: 0.30,
-            MinimumVisibleDetectionConfidence: 0.25,
-            MinimumVisibleSamConfidence: 0.25,
-            MinimumFillDetectionConfidence: 0.60,
-            FillAlpha: 24,
-            StrokeAlpha: 230,
-            HiddenLabelTokens: new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "water wall",
-                "structure water wall",
-                "pipe wall",
-                "black border",
-                "osd"
-            });
+            LargeFindingOutlineAreaRatio: SamMaskRenderPolicy.RenderOptions.WinCanStyle.LargeFindingOutlineAreaRatio,
+            MinimumVisibleDetectionConfidence: SamMaskRenderPolicy.RenderOptions.WinCanStyle.MinimumVisibleDetectionConfidence,
+            MinimumVisibleSamConfidence: SamMaskRenderPolicy.RenderOptions.WinCanStyle.MinimumVisibleSamConfidence,
+            MinimumFillDetectionConfidence: SamMaskRenderPolicy.RenderOptions.WinCanStyle.MinimumFillDetectionConfidence,
+            FillAlpha: SamMaskRenderPolicy.RenderOptions.WinCanStyle.FillAlpha,
+            StrokeAlpha: SamMaskRenderPolicy.RenderOptions.WinCanStyle.StrokeAlpha,
+            HiddenLabelTokens: SamMaskRenderPolicy.RenderOptions.WinCanStyle.HiddenLabelTokens);
     }
 
     /// <summary>
@@ -97,7 +93,7 @@ public static class SamMaskRenderer
     public static RenderOptions WinCanStyleOptions => RenderOptions.WinCanStyle;
 
     /// <summary>Obergrenze fuer Masken-Pixel (Schutz gegen absurde Dimensionen vom Sidecar). ~50 MB bool.</summary>
-    private const long MaxMaskPixels = 50_000_000;
+    private const long MaxMaskPixels = SamMaskDecoder.MaxMaskPixels;
 
     // ── Farben ──────────────────────────────────────────────────────
 
@@ -110,54 +106,10 @@ public static class SamMaskRenderer
     /// <summary>
     /// Dekodiert RLE-String zu Masken-Bitmap.
     /// Format: "start_value,run1,run2,..." mit C-order (row-major).
+    /// Delegiert an <see cref="SamMaskDecoder.DecodeRle"/> (Infrastructure).
     /// </summary>
     public static bool[,] DecodeRle(string rle, int width, int height)
-    {
-        // Defensiv: Dimensionen kommen ungeprueft vom Sidecar. Ungueltige oder absurd
-        // grosse Werte abweisen, bevor allokiert wird (sonst OutOfMemoryException).
-        if (width <= 0 || height <= 0 || (long)width * height > MaxMaskPixels)
-            return new bool[0, 0];
-
-        var mask = new bool[height, width];
-        if (string.IsNullOrWhiteSpace(rle)) return mask;
-
-        var parts = rle.Split(',');
-        if (parts.Length < 2) return mask;
-
-        // Start-Token defensiv parsen; bei Fehler leere (aber dimensionierte) Maske
-        if (!int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int startVal))
-            return mask;
-
-        bool currentVal = startVal != 0;
-        int pos = 0;
-        int totalPixels = width * height;
-
-        for (int i = 1; i < parts.Length && pos < totalPixels; i++)
-        {
-            // Defektes oder negatives Run-Token: Dekodierung abbrechen, bereits
-            // gesetzte Pixel behalten, statt zu werfen.
-            if (!int.TryParse(parts[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out int runLength)
-                || runLength < 0)
-                break;
-
-            // long-Arithmetik: ein korruptes Riesen-Run-Token (nahe int.MaxValue) wuerde
-            // sonst pos ueberlaufen lassen → negativer Index → IndexOutOfRangeException.
-            int end = (int)Math.Min((long)pos + runLength, totalPixels);
-            if (currentVal)
-            {
-                for (int p = pos; p < end; p++)
-                {
-                    int row = p / width;
-                    int col = p % width;
-                    mask[row, col] = true;
-                }
-            }
-            pos = end;
-            currentVal = !currentVal;
-        }
-
-        return mask;
-    }
+        => SamMaskDecoder.DecodeRle(rle, width, height);
 
     // ── Kontur-Extraktion ───────────────────────────────────────────
 
@@ -179,7 +131,7 @@ public static class SamMaskRenderer
         int dsW = (int)(maskW * scale);
         int dsH = (int)(maskH * scale);
 
-        var ds = Downsample(mask, maskH, maskW, dsH, dsW);
+        var ds = SamMaskDecoder.Downsample(mask, maskH, maskW, dsH, dsW);
 
         // Canvas-Skalierungsfaktoren
         double scaleX = canvasWidth / origWidth;
@@ -211,13 +163,13 @@ public static class SamMaskRenderer
                     double yNext = ((row + 1) / scale) * scaleY;
 
                     // Obere Kante (wenn Zeile darueber nicht in Maske)
-                    if (row == 0 || !HasOverlap(ds, row - 1, segStart, col))
+                    if (row == 0 || !SamMaskDecoder.HasOverlap(ds, row - 1, segStart, col))
                     {
                         ctx.BeginFigure(new Point(x1, y), false, false);
                         ctx.LineTo(new Point(x2, y), true, false);
                     }
                     // Untere Kante (wenn Zeile darunter nicht in Maske)
-                    if (row == dsH - 1 || !HasOverlap(ds, row + 1, segStart, col))
+                    if (row == dsH - 1 || !SamMaskDecoder.HasOverlap(ds, row + 1, segStart, col))
                     {
                         ctx.BeginFigure(new Point(x1, yNext), false, false);
                         ctx.LineTo(new Point(x2, yNext), true, false);
@@ -260,7 +212,7 @@ public static class SamMaskRenderer
         int dsW = (int)(maskW * scale);
         int dsH = (int)(maskH * scale);
 
-        var ds = Downsample(mask, maskH, maskW, dsH, dsW);
+        var ds = SamMaskDecoder.Downsample(mask, maskH, maskW, dsH, dsW);
 
         double scaleX = canvasWidth / origWidth;
         double scaleY = canvasHeight / origHeight;
@@ -307,46 +259,36 @@ public static class SamMaskRenderer
 
     /// <summary>
     /// Entscheidet, wie eine Maske dargestellt wird. Reine, testbare Logik ohne
-    /// WPF-Abhaengigkeit. Reihenfolge: Hintergrund-Label verstecken, dann zu
-    /// niedrige Konfidenz verstecken, dann grosse Befunde als Kontur, dann
-    /// kleine sichere Befunde mit Fuellung, sonst nur Kontur.
+    /// WPF-Abhaengigkeit. Delegiert an <see cref="SamMaskRenderPolicy.DecideVisualMode"/>
+    /// (Infrastructure) und bildet das Ergebnis auf die UI-lokalen Typen ab.
     /// </summary>
     public static RenderDecision DecideVisualMode(MaskRenderCandidate candidate, RenderOptions? options = null)
     {
-        options ??= WinCanStyleOptions;
+        // UI-RenderOptions in Infrastructure-RenderOptions mappen (Thin-Delegate).
+        var infraOpts = options is null
+            ? SamMaskRenderPolicy.RenderOptions.WinCanStyle
+            : new SamMaskRenderPolicy.RenderOptions(
+                options.LargeFindingOutlineAreaRatio,
+                options.MinimumVisibleDetectionConfidence,
+                options.MinimumVisibleSamConfidence,
+                options.MinimumFillDetectionConfidence,
+                options.FillAlpha,
+                options.StrokeAlpha,
+                options.HiddenLabelTokens);
 
-        var mask = candidate.Mask;
-        var label = NormalizeLabel(mask.Label ?? candidate.Quant?.Label ?? "");
-        if (options.HiddenLabelTokens.Any(token => label.Contains(NormalizeLabel(token), StringComparison.Ordinal)))
-            return new RenderDecision(MaskVisualMode.Hidden, "background_label");
+        var infraCandidate = new SamMaskRenderPolicy.MaskRenderCandidate(
+            candidate.Mask, candidate.Quant, candidate.DetectionConfidence);
 
-        var detectionConfidence = candidate.DetectionConfidence;
-        var samConfidence = Math.Max(mask.Confidence, candidate.Quant?.Confidence ?? 0);
-        if ((detectionConfidence ?? samConfidence) < options.MinimumVisibleDetectionConfidence
-            && samConfidence < options.MinimumVisibleSamConfidence)
-            return new RenderDecision(MaskVisualMode.Hidden, "confidence_too_low");
+        var decision = SamMaskRenderPolicy.DecideVisualMode(infraCandidate, infraOpts);
 
-        // Backup-Verhalten (11.06, gute Segmentierung): jede sichtbare Maske wird gefuellt +
-        // Kontur gezeichnet. Das fruehere OutlineOnly-Strippen (grosse Flaeche bzw. fehlende
-        // DINO-Confidence im manuellen Mark-Pfad) liess nur eine duenne Scanline-Kontur uebrig
-        // und wirkte "verzerrt/falsch". Hintergrund (Label/Confidence) bleibt weiter Hidden.
-        return new RenderDecision(MaskVisualMode.SubtleFill, null);
-    }
-
-    private static double GetAreaRatio(SamMaskResult mask)
-    {
-        if (mask.ImageAreaPixels > 0 && mask.MaskAreaPixels >= 0)
-            return mask.MaskAreaPixels / (double)mask.ImageAreaPixels;
-        return 0;
-    }
-
-    private static string NormalizeLabel(string label)
-    {
-        return label
-            .Trim()
-            .Replace('_', ' ')
-            .Replace('-', ' ')
-            .ToLowerInvariant();
+        // Infrastruktur-MaskVisualMode -> UI-MaskVisualMode (beide Enums identisch).
+        var uiMode = decision.Mode switch
+        {
+            SamMaskRenderPolicy.MaskVisualMode.Hidden => MaskVisualMode.Hidden,
+            SamMaskRenderPolicy.MaskVisualMode.OutlineOnly => MaskVisualMode.OutlineOnly,
+            _ => MaskVisualMode.SubtleFill
+        };
+        return new RenderDecision(uiMode, decision.Reason);
     }
 
     /// <summary>
@@ -553,28 +495,10 @@ public static class SamMaskRenderer
     /// <summary>
     /// Baut den Mess-Text fuer ein Label-Badge.
     /// Format: "H:45mm W:2mm | 3:00 | 15%"
+    /// Delegiert an <see cref="MaskLabelTextBuilder.BuildMeasurementText"/> (Infrastructure).
     /// </summary>
     private static string BuildMeasurementText(MaskQuantificationService.QuantifiedMask q)
-    {
-        var parts = new List<string>();
-
-        if (q.HeightMm.HasValue && q.WidthMm.HasValue)
-            parts.Add($"H:{q.HeightMm}mm W:{q.WidthMm}mm");
-        else if (q.HeightMm.HasValue)
-            parts.Add($"H:{q.HeightMm}mm");
-
-        if (!string.IsNullOrEmpty(q.ClockPosition))
-            parts.Add(q.ClockPosition);
-
-        if (q.ExtentPercent is > 0)
-            parts.Add($"{q.ExtentPercent}%");
-        else if (q.CrossSectionReductionPercent is > 0)
-            parts.Add($"QR:{q.CrossSectionReductionPercent}%");
-        else if (q.IntrusionPercent is > 0)
-            parts.Add($"Einr:{q.IntrusionPercent}%");
-
-        return string.Join(" | ", parts);
-    }
+        => MaskLabelTextBuilder.BuildMeasurementText(q);
 
     /// <summary>
     /// Entfernt alle SAM-Masken und Labels vom Canvas.
@@ -588,34 +512,4 @@ public static class SamMaskRenderer
             canvas.Children.Remove(el);
     }
 
-    // ── Hilfsfunktionen ─────────────────────────────────────────────
-
-    private static bool[,] Downsample(bool[,] src, int srcH, int srcW, int dstH, int dstW)
-    {
-        if (dstH >= srcH && dstW >= srcW) return src;
-
-        var dst = new bool[dstH, dstW];
-        double yScale = (double)srcH / dstH;
-        double xScale = (double)srcW / dstW;
-
-        for (int r = 0; r < dstH; r++)
-        {
-            int srcR = Math.Min((int)(r * yScale), srcH - 1);
-            for (int c = 0; c < dstW; c++)
-            {
-                int srcC = Math.Min((int)(c * xScale), srcW - 1);
-                dst[r, c] = src[srcR, srcC];
-            }
-        }
-        return dst;
-    }
-
-    private static bool HasOverlap(bool[,] ds, int row, int colStart, int colEnd)
-    {
-        int w = ds.GetLength(1);
-        if (row < 0 || row >= ds.GetLength(0)) return false;
-        for (int c = Math.Max(0, colStart); c < Math.Min(w, colEnd); c++)
-            if (ds[row, c]) return true;
-        return false;
-    }
 }

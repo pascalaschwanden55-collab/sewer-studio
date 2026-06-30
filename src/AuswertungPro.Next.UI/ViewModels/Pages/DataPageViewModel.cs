@@ -8,7 +8,6 @@ using System.Linq;
 using System.Globalization;
 using System.Diagnostics;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
@@ -26,6 +25,7 @@ using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Hydraulik;
 using AuswertungPro.Next.UI.Player;
@@ -34,8 +34,9 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class DataPageViewModel : ObservableObject
 {
-    private const int MinimumSamplesForModelTraining = 25;
-    private const int StrongModelThreshold = 100;
+    // Schwellenwerte aus LearningReadinessPresenter (Application.DataPage)
+    private const int MinimumSamplesForModelTraining = LearningReadinessPresenter.MinimumSamplesForTraining;
+    private const int StrongModelThreshold = LearningReadinessPresenter.StrongModelThreshold;
     public event Action? RecordsOrderChanged;
     /// <summary>
     /// Aktualisiert die laufende Nummer (NR) aller Records entsprechend der aktuellen Reihenfolge.
@@ -362,51 +363,9 @@ public sealed partial class DataPageViewModel : ObservableObject
         RefreshRecordInGrid(record);
     }
 
+    // Delegiert an DnValueParser (Application.DataPage) – reine Logik dort unit-testbar.
     private static double? TryParseDnMm(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim()
-            .Replace(" ", string.Empty, StringComparison.Ordinal)
-            .Replace("'", string.Empty, StringComparison.Ordinal);
-
-        if (double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var value)
-            && value > 0)
-        {
-            return value;
-        }
-
-        if (double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out value)
-            && value > 0)
-        {
-            return value;
-        }
-
-        if (text.Contains(',') && text.Contains('.'))
-        {
-            var commaAsDecimal = text.Replace(".", string.Empty, StringComparison.Ordinal).Replace(',', '.');
-            if (double.TryParse(commaAsDecimal, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0)
-                return value;
-
-            var dotAsDecimal = text.Replace(",", string.Empty, StringComparison.Ordinal);
-            if (double.TryParse(dotAsDecimal, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0)
-                return value;
-        }
-        else if (text.Contains(','))
-        {
-            var normalized = text.Replace(',', '.');
-            if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0)
-                return value;
-        }
-
-        var digitsOnly = text.Replace(".", string.Empty, StringComparison.Ordinal)
-            .Replace(",", string.Empty, StringComparison.Ordinal);
-        if (double.TryParse(digitsOnly, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value >= 50)
-            return value;
-
-        return null;
-    }
+        => DnValueParser.TryParseMillimeters(raw);
 
     private bool CanMoveUp()
     {
@@ -830,13 +789,10 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         var resolvedLink = ResolveExistingPath(record.GetFieldValue("Link"));
 
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
-            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
-                ? _sp.Settings.LastVideoFolder
-            : _sp.Settings.LastProjectPath is null
-                ? null
-                : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+        var initial = VideoFolderFallbackResolver.Resolve(
+            _sp.Settings.LastVideoSourceFolder,
+            _sp.Settings.LastVideoFolder,
+            _sp.Settings.LastProjectPath);
 
         var storedFilesRaw = _shell.Project.Metadata.TryGetValue("PDF_StoredFiles", out var raw) ? raw : null;
 
@@ -853,13 +809,10 @@ public sealed partial class DataPageViewModel : ObservableObject
         if (record is null)
             return;
 
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
-            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
-                ? _sp.Settings.LastVideoFolder
-            : _sp.Settings.LastProjectPath is null
-                ? null
-                : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+        var initial = VideoFolderFallbackResolver.Resolve(
+            _sp.Settings.LastVideoSourceFolder,
+            _sp.Settings.LastVideoFolder,
+            _sp.Settings.LastProjectPath);
 
         var path = _sp.Dialogs.OpenFile(
             "Video auswaehlen",
@@ -1141,13 +1094,10 @@ public sealed partial class DataPageViewModel : ObservableObject
             return resolved;
         }
 
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
-            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
-                ? _sp.Settings.LastVideoFolder
-            : _sp.Settings.LastProjectPath is null
-                ? null
-                : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+        var initial = VideoFolderFallbackResolver.Resolve(
+            _sp.Settings.LastVideoSourceFolder,
+            _sp.Settings.LastVideoFolder,
+            _sp.Settings.LastProjectPath);
 
         if (!string.IsNullOrWhiteSpace(initial) && Directory.Exists(initial))
         {
@@ -1198,11 +1148,10 @@ public sealed partial class DataPageViewModel : ObservableObject
             return;
         }
 
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
-            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
-                ? _sp.Settings.LastVideoFolder
-                : null;
+        var initial = VideoFolderFallbackResolver.Resolve(
+            _sp.Settings.LastVideoSourceFolder,
+            _sp.Settings.LastVideoFolder,
+            lastProjectPath: null);
 
         var win = new MediaSearchWindow(Records.ToList(), initial, _sp);
         win.Owner = System.Windows.Application.Current?.MainWindow;
@@ -1565,13 +1514,9 @@ public sealed partial class DataPageViewModel : ObservableObject
             string.Equals(s.GetFieldValue("Schachtnummer"), nummer, StringComparison.OrdinalIgnoreCase));
     }
 
+    // Delegiert an DataPageFilenameHelper (Application.DataPage) – reine Logik dort unit-testbar.
     private static string SanitizeFilenamePart(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return "unknown";
-        foreach (var c in Path.GetInvalidFileNameChars())
-            text = text.Replace(c, '_');
-        return text.Trim();
-    }
+        => DataPageFilenameHelper.SanitizeFilenamePart(text);
 
     private string? ResolveExistingPath(string? raw)
         => DataPageProtocolPathResolver.ResolveExistingPath(raw, _sp.Settings.LastProjectPath);
@@ -1612,24 +1557,12 @@ public sealed partial class DataPageViewModel : ObservableObject
         IsLearningInfoVisible = true;
     }
 
+    // Delegiert an LearningReadinessPresenter (Application.DataPage) – reine Logik dort unit-testbar.
     private void UpdateLearningTrafficLight(int totalSamples)
     {
-        if (totalSamples >= StrongModelThreshold)
-        {
-            LearningTrafficLightColor = "#2E7D32";
-            LearningTrafficLightText = "Gruen";
-            return;
-        }
-
-        if (totalSamples >= MinimumSamplesForModelTraining)
-        {
-            LearningTrafficLightColor = "#F9A825";
-            LearningTrafficLightText = "Gelb";
-            return;
-        }
-
-        LearningTrafficLightColor = "#C62828";
-        LearningTrafficLightText = "Rot";
+        var (color, text) = LearningReadinessPresenter.Evaluate(totalSamples);
+        LearningTrafficLightColor = color;
+        LearningTrafficLightText = text;
     }
 
     /// <summary>
@@ -1655,17 +1588,9 @@ public sealed partial class DataPageViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Normalisiert eine Training-CaseId zu einem Haltungsnamen.
-    /// Entfernt Datums-Prefixe wie "20250602_" und Knoten-Prefixe wie "07.", "10.".
-    /// </summary>
+    // Delegiert an TrainingCaseIdNormalizer (Application.DataPage) – reine Logik dort unit-testbar.
     private static string NormalizeTrainingCaseId(string caseId)
-    {
-        var v = (caseId ?? "").Trim();
-        // Datums-Prefix entfernen (z.B. "20250602_06.24341-35625" → "06.24341-35625")
-        v = Regex.Replace(v, @"^\d{8}_", "");
-        return v;
-    }
+        => TrainingCaseIdNormalizer.NormalizeCaseId(caseId);
 
     /// <summary>
     /// Prüft ob eine Haltung im Training Center erfasst ist.
@@ -1687,17 +1612,9 @@ public sealed partial class DataPageViewModel : ObservableObject
         return false;
     }
 
-    private static readonly Regex NodePrefixRx = new(@"^\d{1,2}\.", RegexOptions.Compiled);
-
+    // Delegiert an TrainingCaseIdNormalizer (Application.DataPage) – reine Logik dort unit-testbar.
     private static string StripNodePrefixes(string holdingKey)
-    {
-        var dashIdx = holdingKey.IndexOf('-');
-        if (dashIdx < 0)
-            return NodePrefixRx.Replace(holdingKey, "");
-        var left = holdingKey[..dashIdx];
-        var right = holdingKey[(dashIdx + 1)..];
-        return $"{NodePrefixRx.Replace(left, "")}-{NodePrefixRx.Replace(right, "")}";
-    }
+        => TrainingCaseIdNormalizer.StripNodePrefixes(holdingKey);
 
     private void ApplyCostsToRecord(HaltungRecord record, HoldingCost cost, bool learn = true, bool includeCosts = true)
     {

@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using AuswertungPro.Next.Application.Export;
 using AuswertungPro.Next.Infrastructure;
+using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.Domain.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -255,70 +256,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     progress: progress));
             }
 
-            static bool IsDataSidecar(string path)
-            {
-                var ext = Path.GetExtension(path);
-                return ext.Equals(".xtf", StringComparison.OrdinalIgnoreCase)
-                       || ext.Equals(".m150", StringComparison.OrdinalIgnoreCase)
-                       || ext.Equals(".mdb", StringComparison.OrdinalIgnoreCase)
-                       || ext.Equals(".xml", StringComparison.OrdinalIgnoreCase);
-            }
-
-            var sidecarResults = useTxtImport
-                ? new List<HoldingFolderDistributor.DistributionResult>()
-                : results.Where(r => IsDataSidecar(r.SourcePdfPath)).ToList();
-            var importResults = useTxtImport
-                ? results.ToList()
-                : results.Where(r => !IsDataSidecar(r.SourcePdfPath)).ToList();
-
-            var ok = importResults.Count(r => r.Success);
-            var failed = importResults.Count - ok;
-            var matched = importResults.Count(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Matched);
-            var missing = importResults.Count(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.NotFound);
-            var ambiguous = importResults.Count(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Ambiguous);
-
-            var sb = new StringBuilder();
-            sb.AppendLine($"Modus: {(useTxtImport ? "TXT-Import" : "PDF-Import")}");
-            sb.AppendLine($"Verarbeitet: {importResults.Count} | OK: {ok} | Fehler: {failed}");
-            sb.AppendLine($"Video: Matched {matched}, Missing {missing}, Ambiguous {ambiguous}");
-            if (sidecarResults.Count > 0)
-            {
-                var sidecarOk = sidecarResults.Count(r => r.Success);
-                sb.AppendLine($"XTF/M150/MDB/XML: {sidecarOk}/{sidecarResults.Count} kopiert");
-            }
-
-            static int PreviewRank(HoldingFolderDistributor.DistributionResult r)
-            {
-                if (r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Matched) return 0;
-                if (r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Ambiguous) return 1;
-                if (r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.NotFound) return 2;
-                return 3;
-            }
-
-            sb.AppendLine("Matched (Top 20):");
-            foreach (var r in importResults
-                         .Where(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.Matched)
-                         .OrderByDescending(r => r.Success)
-                         .Take(20))
-                sb.AppendLine($"{(r.Success ? "OK" : "FAIL")} - {r.Message} - {r.SourcePdfPath}");
-
-            sb.AppendLine("Missing (Top 20):");
-            foreach (var r in importResults
-                         .Where(r => r.VideoStatus == HoldingFolderDistributor.VideoMatchStatus.NotFound)
-                         .OrderByDescending(r => r.Success)
-                         .Take(20))
-                sb.AppendLine($"{(r.Success ? "OK" : "FAIL")} - {r.Message} - {r.SourcePdfPath}");
-
-            sb.AppendLine("Preview (Top 50):");
-            foreach (var r in importResults
-                         .OrderBy(PreviewRank)
-                         .ThenByDescending(r => r.Success)
-                         .Take(50))
-                sb.AppendLine($"{(r.Success ? "OK" : "FAIL")} - {r.Message} - {r.SourcePdfPath}");
-            foreach (var r in sidecarResults)
-                sb.AppendLine($"{(r.Success ? "OK" : "FAIL")} - {r.Message}");
-
-            LastResult = sb.ToString();
+            // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
+            LastResult = DistributionSummaryBuilder.BuildHoldingDistributionSummary(results, useTxtImport);
             _shell.SetStatus(useTxtImport ? "Haltungsdaten (TXT) verteilt" : "Haltungsdaten verteilt");
 
             if (!useTxtImport && selectedPdfFiles.Length > 0)
@@ -409,19 +348,12 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     progress: progress));
             }
 
-            var ok = results.Count(r => r.Success);
-            var failed = results.Count - ok;
-
-            var sb = new StringBuilder();
-            sb.AppendLine($"Schachtprotokolle: {results.Count} | OK: {ok} | Fehler: {failed}");
-            foreach (var r in results.Take(50))
-                sb.AppendLine($"{(r.Success ? "OK" : "FAIL")} - {r.Message} - {r.SourcePdfPath}");
-
+            // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
+            var summary = DistributionSummaryBuilder.BuildShaftDistributionSummary(results);
             var pdfUpdated = ApplyPdfPathsToSchachtRecords(results);
-            if (pdfUpdated > 0)
-                sb.AppendLine($"PDF-Pfade aktualisiert: {pdfUpdated}");
-
-            LastResult = sb.ToString();
+            LastResult = pdfUpdated > 0
+                ? summary + $"PDF-Pfade aktualisiert: {pdfUpdated}{Environment.NewLine}"
+                : summary;
             _shell.SetStatus("Schachtprotokolle verteilt");
 
             if (selectedPdfFiles.Length > 0)
@@ -521,15 +453,8 @@ public sealed partial class ExportPageViewModel : ObservableObject
                     cadastre: cadastre));
             }
 
-            var ok = results.Count(r => r.Success);
-            var failed = results.Count - ok;
-
-            var sb = new StringBuilder();
-            sb.AppendLine($"Dichtheitsprüfung: {results.Count} | OK: {ok} | Fehler: {failed}");
-            foreach (var r in results.Take(50))
-                sb.AppendLine($"{(r.Success ? "OK" : "FAIL")} - {r.Message} - {r.SourcePdfPath}");
-
-            LastResult = sb.ToString();
+            // Aggregation und Formatierung an DistributionSummaryBuilder delegiert
+            LastResult = DistributionSummaryBuilder.BuildDichtheitDistributionSummary(results);
             _shell.SetStatus("Dichtheitsprüfungsprotokolle verteilt");
 
             if (selectedPdfFiles.Length > 0)
@@ -682,35 +607,15 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private List<string> LoadStoredPdfFiles(string projectDir)
     {
-        if (!_shell.Project.Metadata.TryGetValue("PDF_StoredFiles", out var raw) || string.IsNullOrWhiteSpace(raw))
-            return new List<string>();
-
-        try
-        {
-            var list = JsonSerializer.Deserialize<List<string>>(raw);
-            return list?.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).ToList() ?? new List<string>();
-        }
-        catch
-        {
-            var parts = raw.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            return parts.Select(p => p.Trim()).Where(p => p.Length > 0).ToList();
-        }
+        _ = projectDir;
+        _shell.Project.Metadata.TryGetValue("PDF_StoredFiles", out var raw);
+        return StoredFileListParser.Parse(raw);
     }
 
     private List<string> LoadStoredTxtFiles(string projectDir)
     {
-        if (!_shell.Project.Metadata.TryGetValue("TXT_StoredFiles", out var raw) || string.IsNullOrWhiteSpace(raw))
-            return new List<string>();
-
-        try
-        {
-            var list = JsonSerializer.Deserialize<List<string>>(raw);
-            return list?.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).ToList() ?? new List<string>();
-        }
-        catch
-        {
-            var parts = raw.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            return parts.Select(p => p.Trim()).Where(p => p.Length > 0).ToList();
-        }
+        _ = projectDir;
+        _shell.Project.Metadata.TryGetValue("TXT_StoredFiles", out var raw);
+        return StoredFileListParser.Parse(raw);
     }
 }

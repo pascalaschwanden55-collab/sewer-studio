@@ -6,24 +6,14 @@ using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Vsa;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Dialogs;
-using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
-
-/// <summary>
-/// Eine waehlbare Hauptarbeit (Id=null = keine). Kategorie = Renovierung/Reparatur.
-/// ManuelleMenge = Menge wird vom Anwender eingegeben (Stk oder Stunden), sonst = Haltungslaenge.
-/// HauptItemKey = Katalog-Key der Hauptarbeit-Zeile (weicht bei Kanalroboter von Id ab).
-/// </summary>
-public sealed record MeasureOption(string? Id, string Name, string Kategorie, bool ManuelleMenge, string HauptItemKey)
-{
-    public override string ToString() => Name;
-}
 
 public static class SanierungsMatrixNavigationTarget
 {
@@ -61,80 +51,6 @@ public static class SanierungsMatrixNavigationTarget
 
         var row = FindRow(list, holding, targetRecord);
         return row is null ? Array.Empty<SanierungMatrixRowVm>() : new[] { row };
-    }
-}
-
-public sealed record SanierungMatrixDetailLineVm(
-    string Group,
-    string Text,
-    string Unit,
-    decimal Qty,
-    decimal UnitPrice,
-    decimal LineTotal);
-
-public sealed record SanierungMatrixDetailMeasureVm(
-    string MeasureName,
-    string MeasureId,
-    decimal Total,
-    IReadOnlyList<SanierungMatrixDetailLineVm> Lines);
-
-public static class SanierungsMatrixMeasureSummaryFormatter
-{
-    public const string EmptySummary = "- keine -";
-
-    public static string FormatSummary(HoldingCost? cost)
-    {
-        var names = MeasureNames(cost).ToList();
-        return names.Count switch
-        {
-            0 => EmptySummary,
-            1 => names[0],
-            2 => $"{names[0]} + {names[1]}",
-            _ => $"{names[0]} + {names[1]} + {names.Count - 2} weitere",
-        };
-    }
-
-    public static IReadOnlyList<SanierungMatrixDetailMeasureVm> BuildDetailMeasures(HoldingCost? cost)
-    {
-        if (cost?.Measures is null || cost.Measures.Count == 0)
-            return Array.Empty<SanierungMatrixDetailMeasureVm>();
-
-        return cost.Measures
-            .Select(m => new SanierungMatrixDetailMeasureVm(
-                CleanMeasureName(m),
-                m.MeasureId,
-                m.Total,
-                m.Lines
-                    .Where(l => l.Selected)
-                    .Select(l => new SanierungMatrixDetailLineVm(
-                        l.Group,
-                        l.Text,
-                        l.Unit,
-                        l.Qty,
-                        l.UnitPrice,
-                        l.Qty * l.UnitPrice))
-                    .ToList()))
-            .ToList();
-    }
-
-    private static IEnumerable<string> MeasureNames(HoldingCost? cost)
-    {
-        if (cost?.Measures is null)
-            yield break;
-
-        foreach (var measure in cost.Measures)
-            yield return CleanMeasureName(measure);
-    }
-
-    private static string CleanMeasureName(MeasureCost measure)
-    {
-        if (!string.IsNullOrWhiteSpace(measure.MeasureName))
-            return measure.MeasureName.Trim();
-
-        if (!string.IsNullOrWhiteSpace(measure.MeasureId))
-            return measure.MeasureId.Trim();
-
-        return "Massnahme";
     }
 }
 
@@ -714,35 +630,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     private void BuildMeasureOptions()
     {
         MeasureOptions.Clear();
-        MeasureOptions.Add(new MeasureOption(null, "— keine —", "", false, ""));
-
-        var options = new List<MeasureOption>();
-        foreach (var (id, kategorie) in MatrixMeasures)
-        {
-            if (!_templates.TryGetValue(id, out var tpl))
-                continue;
-
-            // Hauptarbeit-Zeile bestimmen (ItemKey + Einheit). Bei Kanalroboter weicht der
-            // Hauptarbeit-ItemKey von der Massnahmen-Id ab (HAUPTARBEIT_HINDERNISSE_ROBOTER).
-            var hauptLine = tpl.Lines.FirstOrDefault(l =>
-                string.Equals(l.Group, "Hauptarbeit", StringComparison.OrdinalIgnoreCase));
-            var hauptKey = string.IsNullOrWhiteSpace(hauptLine?.ItemKey) ? id : hauptLine!.ItemKey.Trim();
-            _catalog.TryGetValue(hauptKey, out var hauptItem);
-            var unit = hauptItem?.Unit ?? "";
-            // Manuelle Menge bei Stk (Reparatur) ODER h (Roboter-Stunden); m -> Haltungslaenge.
-            var manuelleMenge = string.Equals(unit, "Stk", StringComparison.OrdinalIgnoreCase)
-                             || string.Equals(unit, "h", StringComparison.OrdinalIgnoreCase);
-            var baseName = string.IsNullOrWhiteSpace(tpl.Name) ? id : tpl.Name;
-            // Name ohne Praefix - die Kategorie zeigt der ComboBox-Gruppen-Header.
-            options.Add(new MeasureOption(id, baseName, kategorie, manuelleMenge, hauptKey));
-        }
-
-        foreach (var o in options
-                     .OrderBy(o => o.Kategorie == "Renovierung" ? 0 : o.Kategorie == "Reparatur" ? 1 : 2)
-                     .ThenBy(o => o.Name, StringComparer.OrdinalIgnoreCase))
-        {
+        foreach (var o in MatrixMeasureOptionBuilder.Build(MatrixMeasures, _templates, _catalog))
             MeasureOptions.Add(o);
-        }
     }
 
     private void InitRowFromStore(SanierungMatrixRowVm row, string holding)
@@ -873,18 +762,11 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
                string.Equals((rec.GetFieldValue("Haltungsname") ?? "").Trim(), holding, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// Hinweis-Text der Zeile: Anschluss-Zahl plus Warnung bei fehlenden Katalogpreisen
-    /// (Audit W9: 0-CHF-Totals waren vorher unsichtbar).
+    /// Hinweis-Text der Zeile: Anschluss-Zahl plus Warnung bei fehlenden Katalogpreisen.
+    /// Delegiert an RowStoreProjection (Audit W9).
     /// </summary>
     private static string BuildRowHinweis(SanierungMatrixRowVm row, HoldingCost cost)
-    {
-        var hints = new List<string>();
-        if (row.Anschluesse > 0)
-            hints.Add($"{row.Anschluesse} Anschluss(e)");
-        if (cost.Measures.SelectMany(m => m.Lines).Any(l => l.Selected && l.Qty > 0m && l.UnitPrice <= 0m))
-            hints.Add("Preis fehlt im Katalog");
-        return string.Join(" | ", hints);
-    }
+        => RowStoreProjection.BuildRowHinweis(row.Anschluesse, cost);
 
     partial void OnSelectedRowChanged(SanierungMatrixRowVm? value)
     {
@@ -1095,7 +977,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             .GroupBy(i => i.Key.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        var updatedHoldings = ApplyCatalogPricesToStoredCosts();
+        var changedHoldings = CatalogPriceApplier.ApplyCatalogPricesToStoredCosts(_store, _catalog, _vatRate);
+        foreach (var h in changedHoldings)
+            _touchedHoldings.Add(h);
+        var updatedHoldings = changedHoldings.Count;
 
         // Zeilen-Anzeige nachziehen (Totals/Zusammenfassung) — ohne Rebuild.
         foreach (var row in Rows)
@@ -1118,86 +1003,6 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         Status = updatedHoldings == 0
             ? "Katalog neu geladen - keine Preisaenderungen."
             : $"Katalogpreise auf {updatedHoldings} Haltung(en) angewendet (manuelle Overrides unangetastet) - 'Speichern' schreibt costs.json.";
-    }
-
-    /// <summary>
-    /// Wendet die aktuellen Katalogpreise auf alle gespeicherten Positionen an (auch
-    /// Mehrfach-Buendel — reine Preisaktualisierung, kein Rebuild). Zeilen mit
-    /// IsPriceOverridden und Positionen ohne eindeutigen Katalogpreis bleiben unveraendert.
-    /// </summary>
-    private int ApplyCatalogPricesToStoredCosts()
-    {
-        var updated = 0;
-        foreach (var (holding, cost) in _store.ByHolding)
-        {
-            var changed = false;
-            foreach (var measure in cost.Measures)
-            {
-                var measureChanged = false;
-                foreach (var line in measure.Lines)
-                {
-                    if (line.IsPriceOverridden || string.IsNullOrWhiteSpace(line.ItemKey))
-                        continue;
-                    if (!_catalog.TryGetValue(line.ItemKey.Trim(), out var item) || !item.Active)
-                        continue;
-
-                    var price = ResolveExactCatalogPrice(item, measure.Dn, line.Qty);
-                    if (price is decimal p)
-                    {
-                        if (p != line.UnitPrice)
-                        {
-                            line.UnitPrice = p;
-                            measureChanged = true;
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(line.PriceHint))
-                        {
-                            line.PriceHint = "";
-                            measureChanged = true;
-                        }
-                    }
-                }
-
-                if (measureChanged)
-                {
-                    measure.Total = measure.Lines.Where(l => l.Selected).Sum(l => l.Qty * l.UnitPrice);
-                    changed = true;
-                }
-            }
-
-            if (changed)
-            {
-                var totals = CostCalculatorLogicService.CalculateTotals(cost.Measures.Sum(m => m.Total), _vatRate);
-                cost.Total = totals.Total;
-                cost.MwstRate = _vatRate;
-                cost.MwstAmount = totals.MwstAmount;
-                cost.TotalInclMwst = totals.TotalInclMwst;
-                _touchedHoldings.Add(holding);
-                updated++;
-            }
-        }
-
-        return updated;
-    }
-
-    /// <summary>
-    /// Exakter Katalogpreis: Fixed-Positionen direkt, ByDN nur bei passendem DN-/Mengen-Bereich.
-    /// Bewusst KEIN Naechster-DN-Fallback — lieber Preis stehen lassen als still falsch ersetzen.
-    /// </summary>
-    private static decimal? ResolveExactCatalogPrice(CostCatalogItem item, int? dn, decimal qty)
-    {
-        if (item.DnPrices is { Count: > 0 })
-        {
-            if (dn is not int d)
-                return null;
-            var bucket = item.DnPrices.FirstOrDefault(b =>
-                d >= b.DnFrom && d <= b.DnTo
-                && (!b.QtyFrom.HasValue || qty >= b.QtyFrom.Value)
-                && (!b.QtyTo.HasValue || qty <= b.QtyTo.Value));
-            return bucket?.Price;
-        }
-
-        return item.Price;
     }
 
     [RelayCommand]
