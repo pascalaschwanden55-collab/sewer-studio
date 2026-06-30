@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 

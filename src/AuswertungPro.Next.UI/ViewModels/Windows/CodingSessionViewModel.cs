@@ -11,6 +11,9 @@ using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 
+// DefectStatus ist in Application.Ai definiert; global ueber diesen using-Import zugaenglich.
+// ReSharper disable RedundantUsingDirective
+
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 
 /// <summary>
@@ -23,20 +26,7 @@ public enum CodingScanMode
     Full     // Alle Detektionen pruefen
 }
 
-/// <summary>
-/// Defekt-Status fuer die Anzeige in der KI-Codierung.
-/// </summary>
-public enum DefectStatus
-{
-    AutoAccepted,     // KI-akzeptiert (Green Zone)
-    Pending,          // Warten auf Review (Yellow Zone)
-    ReviewRequired,   // Manuell erforderlich (Red Zone)
-    Accepted,         // Manuell akzeptiert
-    AcceptedWithEdit, // Akzeptiert mit Korrektur
-    Rejected          // Abgelehnt
-}
-
-/// <summary>
+///<summary>
 /// ViewModel fuer den Codier-Modus: Steuert Session, Overlay-Werkzeuge und Event-Erfassung.
 /// </summary>
 public sealed partial class CodingSessionViewModel : ObservableObject, IDisposable
@@ -598,33 +588,18 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
 
     // --- Hilfsmethoden fuer Zone/Status/Farbe ---
 
+    /// <summary>
+    /// Thin-Delegate: delegiert an <see cref="DefectStatusPolicy.GetStatus"/>.
+    /// Bleibt hier fuer Abwaertskompatibilitaet (andere UI-Klassen referenzieren CodingSessionViewModel.GetDefectStatus).
+    /// </summary>
     public static DefectStatus GetDefectStatus(CodingEvent ev)
-    {
-        if (ev.AiContext == null) return DefectStatus.Pending; // Noch nicht bestaetigt
+        => DefectStatusPolicy.GetStatus(ev);
 
-        return ev.AiContext.Decision switch
-        {
-            CodingUserDecision.Accepted         => DefectStatus.Accepted,
-            CodingUserDecision.AcceptedWithEdit  => DefectStatus.AcceptedWithEdit,
-            CodingUserDecision.Rejected          => DefectStatus.Rejected,
-            _ => ev.AiContext.Confidence switch
-            {
-                >= 0.85 => DefectStatus.AutoAccepted,
-                >= 0.60 => DefectStatus.Pending,
-                _       => DefectStatus.ReviewRequired
-            }
-        };
-    }
-
+    /// <summary>
+    /// Thin-Delegate: delegiert an <see cref="DefectStatusPolicy.CanAct"/>.
+    /// </summary>
     public static bool CanActOnDefect(CodingEvent? ev)
-    {
-        if (ev == null) return false;
-
-        return GetDefectStatus(ev) is
-            DefectStatus.AutoAccepted or
-            DefectStatus.Pending or
-            DefectStatus.ReviewRequired;
-    }
+        => DefectStatusPolicy.CanAct(ev);
 
     public static Brush GetConfidenceBrush(double confidence) => confidence switch
     {

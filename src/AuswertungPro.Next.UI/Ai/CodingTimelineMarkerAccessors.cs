@@ -1,5 +1,5 @@
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -16,5 +16,5 @@ public static class CodingTimelineMarkerAccessors
 
     public static bool IsRejected(object marker)
         => marker is CodingEvent ev
-           && CodingSessionViewModel.GetDefectStatus(ev) == DefectStatus.Rejected;
+           && DefectStatusPolicy.GetStatus(ev) == DefectStatus.Rejected;
 }

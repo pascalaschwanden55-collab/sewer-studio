@@ -1,6 +1,7 @@
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
@@ -14,7 +15,7 @@ public static class CodingEventListItemControls
         TextBlock? statusIcon,
         CodingEvent codingEvent)
     {
-        var status = CodingSessionViewModel.GetDefectStatus(codingEvent);
+        var status = DefectStatusPolicy.GetStatus(codingEvent);
 
         if (zoneDot is not null)
             zoneDot.Fill = new SolidColorBrush(CodingDefectStatusDisplayPolicy.ZoneDotColor(status));
