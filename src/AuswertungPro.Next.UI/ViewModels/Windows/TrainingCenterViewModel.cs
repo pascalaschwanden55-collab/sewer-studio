@@ -384,16 +384,12 @@ public partial class TrainingCenterViewModel : ObservableObject
         foreach (var c in state.Cases)
             Cases.Add(c);
 
-        // Root-Ordner wiederherstellen
-        if (state.RootFolders.Count > 0)
+        var restoredRootFolders = TrainingCenterStateController.RestoreExistingRootFolders(state, Directory.Exists);
+        if (restoredRootFolders.Count > 0)
         {
             _rootFolders.Clear();
-            foreach (var folder in state.RootFolders)
-            {
-                if (Directory.Exists(folder))
-                    _rootFolders.Add(folder);
-            }
-            RootFolder = TrainingCenterDisplayFormatter.FormatRootFolders(_rootFolders);
+            _rootFolders.AddRange(restoredRootFolders);
+            UpdateRootFolderDisplay();
         }
 
         StatusText = $"Geladen: {Cases.Count} Fälle";
@@ -434,13 +430,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         if (dlg.ShowDialog() != true)
             return;
 
-        // Neue Auswahl zu bestehenden hinzufügen (Duplikate vermeiden)
-        foreach (var folder in dlg.FolderNames)
-        {
-            if (!_rootFolders.Contains(folder, StringComparer.OrdinalIgnoreCase))
-                _rootFolders.Add(folder);
-        }
-
+        TrainingCenterStateController.AddSelectedRootFolders(_rootFolders, dlg.FolderNames);
         UpdateRootFolderDisplay();
     }
 
@@ -572,12 +562,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     }
 
     private TrainingCenterState BuildState()
-        => new()
-        {
-            Cases = Cases.ToList(),
-            RootFolders = new List<string>(_rootFolders),
-            UpdatedUtc = DateTime.UtcNow
-        };
+        => TrainingCenterStateController.BuildState(Cases, _rootFolders, DateTime.UtcNow);
 
     [RelayCommand]
     private async Task SaveAsync()

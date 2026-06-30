@@ -11,7 +11,8 @@ public sealed class TrainingCenterPersistenceGuardTests
             "src", "AuswertungPro.Next.UI", "ViewModels", "Windows", "TrainingCenterViewModel.cs"));
 
         Assert.Contains("private TrainingCenterState BuildState()", source);
-        Assert.Contains("RootFolders = new List<string>(_rootFolders)", source);
+        Assert.Contains("TrainingCenterStateController.BuildState(Cases, _rootFolders, DateTime.UtcNow)", source);
+        Assert.DoesNotContain("RootFolders = new List<string>(_rootFolders)", source);
         Assert.DoesNotContain("SaveAsync(new TrainingCenterState", source);
     }
 
