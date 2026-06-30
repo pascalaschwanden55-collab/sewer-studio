@@ -33,6 +33,6 @@ public static class NewProjectFolderPlanner
             counter++;
         }
 
-        return new NewProjectFolderPlan(candidate, Path.Combine(candidate, ProjectFileName));
+        return new NewProjectFolderPlan(candidate, ProjectFileLocator.TargetPath(candidate));
     }
 }

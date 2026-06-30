@@ -19,7 +19,7 @@ public sealed class NewProjectFolderPlannerTests
         var plan = NewProjectFolderPlanner.Plan(@"D:\Projekt", "Meiental_Husen", Existing());
 
         Assert.Equal(Path.Combine(@"D:\Projekt", "Meiental_Husen"), plan.FolderPath);
-        Assert.Equal(Path.Combine(@"D:\Projekt", "Meiental_Husen", "projekt.json"), plan.ProjectFilePath);
+        Assert.Equal(Path.Combine(@"D:\Projekt", "Meiental_Husen", "Projektdateien", "projekt.json"), plan.ProjectFilePath);
     }
 
     [Fact]

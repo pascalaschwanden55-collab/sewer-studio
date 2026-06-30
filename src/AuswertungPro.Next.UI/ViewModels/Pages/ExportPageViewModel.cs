@@ -181,7 +181,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         var videoFolder = _sp.Dialogs.SelectFolder("Video-Ordner mit Rohvideos waehlen");
         if (string.IsNullOrWhiteSpace(videoFolder)) return;
 
-        var destFolder = _sp.Dialogs.SelectFolder("Zielordner (Gemeinde) waehlen");
+        var destFolder = ResolveDistributionTargetFolder();
         if (string.IsNullOrWhiteSpace(destFolder)) return;
 
         try
@@ -305,7 +305,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 return;
         }
 
-        var destFolder = _sp.Dialogs.SelectFolder("Zielordner (Gemeinde) waehlen");
+        var destFolder = ResolveDistributionTargetFolder();
         if (string.IsNullOrWhiteSpace(destFolder)) return;
 
         try
@@ -394,7 +394,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 return;
         }
 
-        var destFolder = _sp.Dialogs.SelectFolder("Zielordner (Gemeinde) waehlen");
+        var destFolder = ResolveDistributionTargetFolder();
         if (string.IsNullOrWhiteSpace(destFolder)) return;
 
         try
@@ -504,6 +504,15 @@ public sealed partial class ExportPageViewModel : ObservableObject
 
     private static string SanitizePathSegment(string value)
         => AuswertungPro.Next.Application.Common.ProjectPathResolver.SanitizePathSegment(value);
+
+    private string? ResolveDistributionTargetFolder()
+    {
+        // Standardziel ist der aktive Projektordner, damit manuelle Verteilungen
+        // im Projekt landen. Ohne gespeichertes Projekt bleibt der Ordnerdialog als Rueckfall.
+        return Services.DistributionTargetFolderPolicy.Resolve(
+            _shell.GetProjectFolder(),
+            () => _sp.Dialogs.SelectFolder("Zielordner (Gemeinde) waehlen"));
+    }
 
     private void StorePdfFiles(string[] paths)
     {
