@@ -377,6 +377,8 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         try
         {
             Directory.CreateDirectory(plan.FolderPath);
+            // Feste Projekt-Struktur anlegen (Importdateien/Haltungen_Verteilt/Schächte_Verteilt/Fotos/Projektdateien/...).
+            AuswertungPro.Next.Infrastructure.Import.ProjectStructure.EnsureCreated(plan.FolderPath);
         }
         catch (Exception ex)
         {
@@ -384,14 +386,17 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             return false;
         }
 
-        var res = _sp.Projects.Save(Project, plan.ProjectFilePath);
+        // projekt.json kommt nach <Projekt>\Projektdateien\ (+ Root-Pointer fuer Auffindbarkeit beim Oeffnen).
+        var projektJsonPath = ProjectFileLocator.TargetPath(plan.FolderPath);
+        var res = _sp.Projects.Save(Project, projektJsonPath);
         if (!res.Ok)
         {
             SetStatus($"Fehler: {res.ErrorMessage}");
             return false;
         }
+        ProjectFileLocator.WriteRootPointer(plan.FolderPath, projektJsonPath);
 
-        _sp.Settings.AddRecentProject(plan.ProjectFilePath);
+        _sp.Settings.AddRecentProject(projektJsonPath);
         _sp.Settings.Save();
         MarkProjectReady();
         SetStatus($"Neues Projekt: {name}");
@@ -400,11 +405,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     }
 
     /// <summary>
-    /// Gibt den Projektordner zurueck (Verzeichnis der projekt.json).
+    /// Gibt den Projekt-Root zurueck. Liegt die projekt.json in &lt;Projekt&gt;\Projektdateien\, ist der Root
+    /// dessen Eltern-Ordner; bei Alt-Projekten (projekt.json im Root) das Verzeichnis selbst.
+    /// So loesen relative Medienpfade weiterhin korrekt gegen den Projekt-Root auf.
     /// </summary>
     public string? GetProjectFolder()
-        => string.IsNullOrWhiteSpace(_sp.Settings.LastProjectPath)
-           ? null : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+        => ProjectFileLocator.ProjectRootFromFile(_sp.Settings.LastProjectPath);
 
     public bool TryOpenProject(string path)
     {
