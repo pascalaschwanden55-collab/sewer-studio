@@ -359,6 +359,24 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_review_queue_laden_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var loadSource = ExtractMethodBody(source, "public void LoadReviewQueue(InfraSelfImproving.ReviewQueueService queueService)");
+
+        Assert.Contains("TrainingReviewQueueLoadController.Load(queueService)", loadSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("queueService.GetAll()", loadSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("foreach (var item", loadSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ReviewStatusText = $\"{ReviewQueueCount}", loadSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_kb_check_presentation_an_builder()
     {
         var source = File.ReadAllText(Path.Combine(
@@ -374,6 +392,27 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         Assert.DoesNotContain("summary.LatestVersionAtUtc.Value.ToLocalTime()", kbCheckSource, StringComparison.Ordinal);
         Assert.DoesNotContain("summary.TopCodes.Count > 0", kbCheckSource, StringComparison.Ordinal);
         Assert.DoesNotContain("KB-Stand: Samples=", kbCheckSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TrainingCenterViewModel_delegiert_kb_status_und_quality_presentation_an_builder()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var statusSource = ExtractMethodBody(source, "private async Task RefreshKbStatusAsync()");
+        var qualitySource = ExtractMethodBody(source, "private async Task RefreshKbQualityAsync()");
+
+        Assert.Contains("TrainingKnowledgeBaseStatusPresentationBuilder.Build(status)", statusSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingKnowledgeBaseQualityPresentationBuilder.Build(quality, runs)", qualitySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("status.SampleCount switch", statusSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("System.Windows.Media.Color.FromRgb", statusSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TakeLast(5)", qualitySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("quality.StaleSampleCount > 0", qualitySource, StringComparison.Ordinal);
     }
 
     [Fact]

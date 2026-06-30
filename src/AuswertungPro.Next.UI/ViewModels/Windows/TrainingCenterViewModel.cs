@@ -1145,11 +1145,12 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         OnUi(() =>
         {
+            var loadResult = TrainingReviewQueueLoadController.Load(queueService);
             ReviewQueue.Clear();
-            foreach (var item in queueService.GetAll())
+            foreach (var item in loadResult.Items)
                 ReviewQueue.Add(item);
-            ReviewQueueCount = ReviewQueue.Count;
-            ReviewStatusText = $"{ReviewQueueCount} Einträge zur Prüfung";
+            ReviewQueueCount = loadResult.ReviewQueueCount;
+            ReviewStatusText = loadResult.StatusText;
         });
     }
 
