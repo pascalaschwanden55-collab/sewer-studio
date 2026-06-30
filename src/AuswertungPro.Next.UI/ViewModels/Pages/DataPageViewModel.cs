@@ -369,52 +369,6 @@ public sealed partial class DataPageViewModel : ObservableObject
         RefreshRecordInGrid(record);
     }
 
-    private static double? TryParseDnMm(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim()
-            .Replace(" ", string.Empty, StringComparison.Ordinal)
-            .Replace("'", string.Empty, StringComparison.Ordinal);
-
-        if (double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var value)
-            && value > 0)
-        {
-            return value;
-        }
-
-        if (double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out value)
-            && value > 0)
-        {
-            return value;
-        }
-
-        if (text.Contains(',') && text.Contains('.'))
-        {
-            var commaAsDecimal = text.Replace(".", string.Empty, StringComparison.Ordinal).Replace(',', '.');
-            if (double.TryParse(commaAsDecimal, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0)
-                return value;
-
-            var dotAsDecimal = text.Replace(",", string.Empty, StringComparison.Ordinal);
-            if (double.TryParse(dotAsDecimal, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0)
-                return value;
-        }
-        else if (text.Contains(','))
-        {
-            var normalized = text.Replace(',', '.');
-            if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0)
-                return value;
-        }
-
-        var digitsOnly = text.Replace(".", string.Empty, StringComparison.Ordinal)
-            .Replace(",", string.Empty, StringComparison.Ordinal);
-        if (double.TryParse(digitsOnly, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value >= 50)
-            return value;
-
-        return null;
-    }
-
     private bool CanMoveUp()
     {
         if (Selected is null) return false;
@@ -1176,7 +1130,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         if (record is not null)
         {
-            var dn = TryParseDnMm(record.GetFieldValue("DN_mm"));
+            var dn = DataPageHydraulikReportCalculator.ParseDnMm(record.GetFieldValue("DN_mm"));
             var material = record.GetFieldValue("Rohrmaterial");
             vm.LoadFromRecord(dn, material, null);
         }
@@ -1265,26 +1219,8 @@ public sealed partial class DataPageViewModel : ObservableObject
             return;
         }
 
-        // Build input from record
-        var dn = TryParseDnMm(record.GetFieldValue("DN_mm")) ?? 300;
-        var materialRaw = record.GetFieldValue("Rohrmaterial") ?? "";
-        var vm = new HydraulikPanelViewModel(_sp.Settings);
-        vm.LoadFromRecord(dn, materialRaw, null);
-
-        var mat = vm.SelectedMaterial;
-        double kb = vm.IsNeuzustand ? mat.KbNeu : mat.KbAlt;
-        double wasserstand = dn / 2; // default half-fill
-
-        var input = new HydraulikInput(
-            DN_mm: dn,
-            Wasserstand_mm: wasserstand,
-            Gefaelle_Promille: vm.Gefaelle,
-            Kb: kb,
-            AbwasserTyp: "MR",
-            Temperatur_C: vm.Temperatur);
-
-        var result = HydraulikEngine.Berechne(input);
-        if (result is null)
+        var calc = DataPageHydraulikReportCalculator.BuildReportCalculation(record, _sp.Settings);
+        if (calc is null)
         {
             _sp.Dialogs.Warn("Hydraulik-Berechnung konnte nicht durchgefuehrt werden.\nBitte DN und Gefaelle pruefen.", "Hydraulik PDF");
             return;
@@ -1315,8 +1251,6 @@ public sealed partial class DataPageViewModel : ObservableObject
                 LogoPathAbs = File.Exists(logoPath) ? logoPath : null
             };
 
-            var calc = HydraulikCalcResultMapper.ToReportResult(input, result, mat.Label);
-
             // PDF-Erzeugung auf Background-Thread (verhindert UI-Freeze)
             var pdf = await Task.Run(() => Application.Reports.HydraulikPdfBuilder.Build(record, calc, options));
             await Task.Run(() => File.WriteAllBytes(output, pdf));
@@ -1344,16 +1278,9 @@ public sealed partial class DataPageViewModel : ObservableObject
         var schachtBis = FindSchachtByNummer(bisNr);
 
         // Hydraulik pruefen
-        var dn = TryParseDnMm(record.GetFieldValue("DN_mm"));
-        var gefaelleRaw = record.GetFieldValue("Gefaelle_Promille");
-        double? gefaelle = null;
-        if (!string.IsNullOrWhiteSpace(gefaelleRaw))
-        {
-            var gText = gefaelleRaw.Trim().Replace(',', '.');
-            if (double.TryParse(gText, NumberStyles.Float, CultureInfo.InvariantCulture, out var gVal))
-                gefaelle = gVal;
-        }
-        var hydraulikAvailable = dn.HasValue && dn.Value > 0 && gefaelle.HasValue && gefaelle.Value > 0;
+        var hydraulikAvailability = DataPageHydraulikReportCalculator.ReadAvailability(record);
+        var dn = hydraulikAvailability.DnMm;
+        var hydraulikAvailable = hydraulikAvailability.IsAvailable;
 
         // Kosten pruefen
         var projectFolder = _shell.GetProjectFolder() ?? "";
@@ -1403,27 +1330,10 @@ public sealed partial class DataPageViewModel : ObservableObject
             Application.Reports.HydraulikCalcResult? calcResult = null;
             if (dialog.SelectedOptions.IncludeHydraulik && hydraulikAvailable)
             {
-                var materialRaw = record.GetFieldValue("Rohrmaterial") ?? "";
-                var vm = new HydraulikPanelViewModel(_sp.Settings);
-                vm.LoadFromRecord(dn!.Value, materialRaw, gefaelle);
-
-                var mat = vm.SelectedMaterial;
-                double kb = vm.IsNeuzustand ? mat.KbNeu : mat.KbAlt;
-                double wasserstand = dn.Value / 2;
-
-                var input = new HydraulikInput(
-                    DN_mm: dn.Value,
-                    Wasserstand_mm: wasserstand,
-                    Gefaelle_Promille: vm.Gefaelle,
-                    Kb: kb,
-                    AbwasserTyp: "MR",
-                    Temperatur_C: vm.Temperatur);
-
-                var result = HydraulikEngine.Berechne(input);
-                if (result != null)
-                {
-                    calcResult = HydraulikCalcResultMapper.ToReportResult(input, result, mat.Label);
-                }
+                calcResult = DataPageHydraulikReportCalculator.BuildReportCalculation(
+                    record,
+                    _sp.Settings,
+                    dn!.Value);
             }
 
             var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
