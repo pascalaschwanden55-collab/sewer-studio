@@ -1,8 +1,16 @@
 using System;
 using System.IO;
+using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.UI.DataPage;
+
+public sealed record DataPageDossierPrintableSections(
+    bool HasDossierBaseSection,
+    bool HasOriginalPdfSection)
+{
+    public bool HasAnySection => HasDossierBaseSection || HasOriginalPdfSection;
+}
 
 /// <summary>
 /// Reine Verfuegbarkeitspruefung fuer das Haltungs-Dossier: stellt fest, ob
@@ -10,6 +18,35 @@ namespace AuswertungPro.Next.UI.DataPage;
 /// </summary>
 public static class DataPageDossierAvailability
 {
+    public static DataPageDossierPrintableSections EvaluatePrintableSections(
+        DossierPrintOptions options,
+        HaltungRecord record,
+        string projectFolder,
+        bool hasSchachtVon,
+        bool hasSchachtBis,
+        bool hasHydraulikResult,
+        bool kostenAvailable,
+        int originalPdfCount)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(record);
+
+        var hasDossierBaseSection =
+            options.IncludeDeckblatt
+            || options.IncludeHaltungsprotokoll
+            || (options.IncludeFotos && HasPrintablePhotos(record, projectFolder))
+            || (options.IncludeSchachtVon && hasSchachtVon)
+            || (options.IncludeSchachtBis && hasSchachtBis)
+            || (options.IncludeHydraulik && hasHydraulikResult)
+            || (options.IncludeKostenschaetzung && kostenAvailable);
+
+        var hasOriginalPdfSection = options.IncludeOriginalProtokolle && originalPdfCount > 0;
+
+        return new DataPageDossierPrintableSections(
+            hasDossierBaseSection,
+            hasOriginalPdfSection);
+    }
+
     /// <summary>
     /// Prueft, ob die aktuelle Protokoll-Revision der Haltung mindestens ein
     /// (nicht geloeschtes) Foto enthaelt, dessen Datei tatsaechlich existiert.

@@ -1109,14 +1109,6 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private string? EnsureVideoPath(HaltungRecord record)
     {
-        var resolved = ResolveExistingPath(record.GetFieldValue("Link"));
-        if (!string.IsNullOrWhiteSpace(resolved))
-        {
-            if (!string.Equals(resolved, record.GetFieldValue("Link")?.Trim(), StringComparison.OrdinalIgnoreCase))
-                SaveVideoLink(record, resolved, userEdited: false);
-            return resolved;
-        }
-
         var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
             ? _sp.Settings.LastVideoSourceFolder
             : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
@@ -1125,37 +1117,23 @@ public sealed partial class DataPageViewModel : ObservableObject
                 ? null
                 : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
 
-        if (!string.IsNullOrWhiteSpace(initial) && Directory.Exists(initial))
-        {
-            var tool = new VideoSearchTool(initial);
-            var res = tool.ResolveForRecord(record);
-            if (res.Success && !string.IsNullOrWhiteSpace(res.VideoPath))
-                return SaveVideoLink(record, res.VideoPath!, userEdited: false);
-        }
-
-        var folder = _sp.Dialogs.SelectFolder("Video-Ordner auswaehlen", initial);
-        if (string.IsNullOrWhiteSpace(folder))
-            return null;
-
-        _sp.Settings.LastVideoSourceFolder = folder;
-        _sp.Settings.LastVideoFolder = folder; // legacy compatibility
-        _sp.Settings.Save();
-
-        var toolManual = new VideoSearchTool(folder);
-        var resManual = toolManual.ResolveForRecord(record);
-        if (resManual.Success && !string.IsNullOrWhiteSpace(resManual.VideoPath))
-            return SaveVideoLink(record, resManual.VideoPath!, userEdited: false);
-
-        _sp.Dialogs.Info(resManual.Message, "Video");
-
-        var manual = _sp.Dialogs.OpenFile(
-            "Video auswaehlen",
-            MediaFileTypes.VideoDialogFilter,
-            folder);
-        if (string.IsNullOrWhiteSpace(manual))
-            return null;
-
-        return SaveVideoLink(record, manual, userEdited: true);
+        return DataPageVideoPathWorkflowController.Resolve(
+            record,
+            record.GetFieldValue("Link"),
+            initial,
+            ResolveExistingPath,
+            Directory.Exists,
+            DataPageVideoPathWorkflowController.ResolveWithVideoSearchTool,
+            (title, initialFolder) => _sp.Dialogs.SelectFolder(title, initialFolder),
+            folder =>
+            {
+                _sp.Settings.LastVideoSourceFolder = folder;
+                _sp.Settings.LastVideoFolder = folder; // legacy compatibility
+                _sp.Settings.Save();
+            },
+            (message, title) => _sp.Dialogs.Info(message, title),
+            (title, filter, initialFolder) => _sp.Dialogs.OpenFile(title, filter, initialFolder),
+            (path, userEdited) => SaveVideoLink(record, path, userEdited));
     }
 
     private string SaveVideoLink(HaltungRecord record, string path, bool userEdited)
@@ -1456,17 +1434,19 @@ public sealed partial class DataPageViewModel : ObservableObject
                 OriginalPdfPaths = dialog.SelectedOptions.IncludeOriginalProtokolle ? originalPdfPaths : null,
             };
 
-            var hasDossierBaseSection =
-                options.IncludeDeckblatt
-                || options.IncludeHaltungsprotokoll
-                || (options.IncludeFotos && DataPageDossierAvailability.HasPrintablePhotos(record, projectFolder))
-                || (options.IncludeSchachtVon && schachtVon != null)
-                || (options.IncludeSchachtBis && schachtBis != null)
-                || (options.IncludeHydraulik && calcResult != null)
-                || (options.IncludeKostenschaetzung && kostenAvailable);
+            var printableSections = DataPageDossierAvailability.EvaluatePrintableSections(
+                options,
+                record,
+                projectFolder,
+                hasSchachtVon: schachtVon != null,
+                hasSchachtBis: schachtBis != null,
+                hasHydraulikResult: calcResult != null,
+                kostenAvailable,
+                originalPdfPaths.Count);
+            var hasDossierBaseSection = printableSections.HasDossierBaseSection;
 
             // Pruefung ob druckbar (muss auf UI-Thread, wegen MessageBox)
-            if (!hasDossierBaseSection && !(options.IncludeOriginalProtokolle && originalPdfPaths.Count > 0))
+            if (!printableSections.HasAnySection)
             {
                 _sp.Dialogs.Info(
                     "Die ausgewaehlte Kombination enthaelt keine druckbaren Inhalte.",
