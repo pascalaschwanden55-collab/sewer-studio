@@ -25,6 +25,27 @@ public sealed class DataPageAutoSaveArchitectureTests
         Assert.DoesNotContain("mode is not (AutoSaveMode.Every5Minutes or AutoSaveMode.Every10Minutes)", tickBody, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void DataPageViewModel_delegiert_save_status_banner_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Pages",
+            "DataPageViewModel.cs"));
+
+        var constructorBody = ExtractMethodBody(source, "public DataPageViewModel(ShellViewModel shell, ServiceProvider services)");
+        var showBody = ExtractMethodBody(source, "private void ShowSaveStatus(string? text)");
+
+        Assert.Contains("DataPageSaveStatusController.Hide(", constructorBody, StringComparison.Ordinal);
+        Assert.Contains("DataPageSaveStatusController.Show(", showBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("SaveStatus = string.IsNullOrWhiteSpace(text)", showBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("_saveBannerTimer.Stop();", showBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("_saveBannerTimer.Start();", showBody, StringComparison.Ordinal);
+    }
+
     private static string FindRepoRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
