@@ -885,6 +885,26 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 // Name erst nach erfolgreichem Rename setzen
                 hRecord.SetFieldValue("Haltungsname", newValue, FieldSource.Manual, userEdited: true);
                 PdfCorrectionMetadata.RegisterHoldingRename(vm.Project, oldValue, newValue);
+
+                // Haltungsnummer auch im Protokoll-PDF-Text mitziehen (best-effort, nur Text-PDFs;
+                // Bild-/Scan-PDFs bleiben unveraendert). Die PDF-Pfade wurden vom Rename bereits
+                // auf neuen Ordner/Dateinamen aktualisiert.
+                var pdfSet = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                void CollectPdf(string? raw)
+                {
+                    if (string.IsNullOrWhiteSpace(raw)) return;
+                    foreach (var part in raw.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        var resolved = AuswertungPro.Next.Application.Common.ProjectPathResolver.ResolveFilePath(part.Trim(), projectPath);
+                        if (!string.IsNullOrWhiteSpace(resolved) && resolved.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                            pdfSet.Add(resolved);
+                    }
+                }
+                CollectPdf(hRecord.GetFieldValue("PDF_Path"));
+                CollectPdf(hRecord.GetFieldValue("PDF_All"));
+                if (pdfSet.Count > 0)
+                    AuswertungPro.Next.Infrastructure.HoldingFolderDistributor.RewriteHoldingInPdfFiles(
+                        new System.Collections.Generic.List<string>(pdfSet), oldValue, newValue);
             }
         }
 

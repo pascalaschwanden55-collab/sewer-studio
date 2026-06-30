@@ -1265,6 +1265,60 @@ public static partial class HoldingFolderDistributor
     }
 
 
+    /// <summary>
+    /// Schreibt die Haltungsnummer im Text-Layer der angegebenen PDF-Dateien um (in-place).
+    /// Wird beim In-App-Umbenennen einer Haltung genutzt, damit die Nummer im Protokoll-PDF
+    /// sofort mitzieht (nicht erst bei der naechsten Verteilung). Reuse der Verteilungs-Korrektur:
+    /// visueller Overlay (weisses Rechteck + neue Nummer); der Original-Text-Layer bleibt darunter
+    /// erhalten. Best-effort: Bild-/Scan-PDFs ohne Text-Treffer bleiben unveraendert (Skipped).
+    /// </summary>
+    /// <returns>(Rewritten, Skipped, Failed) je PDF.</returns>
+    public static (int Rewritten, int Skipped, int Failed) RewriteHoldingInPdfFiles(
+        IReadOnlyList<string> pdfPaths, string oldHolding, string newHolding)
+    {
+        if (pdfPaths is null || pdfPaths.Count == 0)
+            return (0, 0, 0);
+
+        var replacements = BuildRenameReplacements(oldHolding, newHolding);
+        if (replacements.Count == 0)
+            return (0, 0, 0);
+
+        int rewritten = 0, skipped = 0, failed = 0;
+        foreach (var pdf in pdfPaths)
+        {
+            if (string.IsNullOrWhiteSpace(pdf) || !File.Exists(pdf))
+            {
+                skipped++;
+                continue;
+            }
+
+            try
+            {
+                var res = TryCorrectPdfTextLayer(pdf, replacements);
+                if (res.Corrected
+                    && !string.IsNullOrWhiteSpace(res.OutputPdfPath)
+                    && !string.Equals(res.OutputPdfPath, pdf, StringComparison.OrdinalIgnoreCase)
+                    && File.Exists(res.OutputPdfPath))
+                {
+                    File.Copy(res.OutputPdfPath, pdf, overwrite: true);
+                    try { File.Delete(res.OutputPdfPath); } catch { /* best-effort cleanup */ }
+                    rewritten++;
+                }
+                else
+                {
+                    skipped++; // kein Text-Treffer (z.B. Bild-/Scan-PDF)
+                }
+            }
+            catch
+            {
+                failed++;
+            }
+        }
+
+        return (rewritten, skipped, failed);
+    }
+
+
     private static IReadOnlyList<PdfTextReplacement> BuildRenameReplacements(string oldValue, string newValue)
     {
         var oldToken = (oldValue ?? string.Empty).Trim();
