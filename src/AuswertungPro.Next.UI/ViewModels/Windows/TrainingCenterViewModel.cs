@@ -783,32 +783,38 @@ public partial class TrainingCenterViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(HasSampleSelection))]
     private async Task ApproveSampleAsync()
     {
-        if (SelectedSample is null) return;
-        SelectedSample.Status = TrainingSampleStatus.Approved;
-        StatusText = $"Approved: {SelectedSample.SampleId}";
-        await PersistSamplesAsync(SelectedSample);
+        var sample = SelectedSample;
+        if (sample is null) return;
+
+        var decision = TrainingSampleDecisionController.Approve(sample);
+        StatusText = decision.StatusText;
+        await PersistSamplesAsync(decision.PersistChangedSample ? sample : null);
     }
 
     [RelayCommand(CanExecute = nameof(HasSampleSelection))]
     private async Task RejectSampleAsync()
     {
-        if (SelectedSample is null) return;
-        SelectedSample.Status = TrainingSampleStatus.Rejected;
-        SelectedSample.KbIndexState = KbIndexState.None;
-        TryDeindexSample(SelectedSample.SampleId);
-        StatusText = $"Rejected: {SelectedSample.SampleId}";
-        await PersistSamplesAsync();
+        var sample = SelectedSample;
+        if (sample is null) return;
+
+        var decision = TrainingSampleDecisionController.Reject(sample);
+        if (decision.ShouldDeindex)
+            TryDeindexSample(sample.SampleId);
+        StatusText = decision.StatusText;
+        await PersistSamplesAsync(decision.PersistChangedSample ? sample : null);
     }
 
     [RelayCommand(CanExecute = nameof(HasSampleSelection))]
     private async Task RemoveSampleAsync()
     {
-        if (SelectedSample is null) return;
-        SelectedSample.Status = TrainingSampleStatus.Removed;
-        SelectedSample.KbIndexState = KbIndexState.None;
-        TryDeindexSample(SelectedSample.SampleId);
-        StatusText = $"Entfernt: {SelectedSample.SampleId}";
-        await PersistSamplesAsync();
+        var sample = SelectedSample;
+        if (sample is null) return;
+
+        var decision = TrainingSampleDecisionController.Remove(sample);
+        if (decision.ShouldDeindex)
+            TryDeindexSample(sample.SampleId);
+        StatusText = decision.StatusText;
+        await PersistSamplesAsync(decision.PersistChangedSample ? sample : null);
     }
 
     /// <summary>

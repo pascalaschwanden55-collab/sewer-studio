@@ -413,6 +413,30 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_sample_decisions_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var approveSource = ExtractMethodBody(source, "private async Task ApproveSampleAsync()");
+        var rejectSource = ExtractMethodBody(source, "private async Task RejectSampleAsync()");
+        var removeSource = ExtractMethodBody(source, "private async Task RemoveSampleAsync()");
+
+        Assert.Contains("TrainingSampleDecisionController.Approve(", approveSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingSampleDecisionController.Reject(", rejectSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingSampleDecisionController.Remove(", removeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedSample.Status = TrainingSampleStatus.Approved", approveSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedSample.Status = TrainingSampleStatus.Rejected", rejectSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedSample.Status = TrainingSampleStatus.Removed", removeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedSample.KbIndexState = KbIndexState.None", rejectSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedSample.KbIndexState = KbIndexState.None", removeSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_kb_update_workflow_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
