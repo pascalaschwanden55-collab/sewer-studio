@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
@@ -169,10 +170,8 @@ public partial class VsaCodeExplorerWindow : Window
         }
         else if (_currentVideoTime.HasValue && _currentVideoTime.Value > TimeSpan.Zero)
         {
-            var t = _currentVideoTime.Value;
-            var formatted = t.TotalHours >= 1
-                ? t.ToString(@"hh\:mm\:ss")
-                : t.ToString(@"mm\:ss");
+            // Formatierung ueber gemeinsame Utility (mm:ss bzw. hh:mm:ss)
+            var formatted = ProtocolEntryInputNormalizer.FormatTime(_currentVideoTime.Value);
             TxtZeit.Text = formatted;
             _vm.Zeit = formatted;
         }
@@ -933,24 +932,14 @@ public partial class VsaCodeExplorerWindow : Window
     /// <summary>PhotoAssistant-Ergebnis uebernehmen.</summary>
     private void ApplyPhotoResult(Domain.Models.PhotoMeasurementResult result, int photoIndex)
     {
-        // Q1-Wert uebernehmen
-        if (result.Geometry?.FillPercent != null)
-            TxtQ1Value.Text = result.Geometry.FillPercent.Value.ToString("F1");
-        else if (result.Geometry?.Q1Mm != null)
-            TxtQ1Value.Text = result.Geometry.Q1Mm.Value.ToString("F1");
+        // Mapping der Messwerte (reine Logik in PhotoMeasurementResultMapper)
+        var mapped = PhotoMeasurementResultMapper.Map(result);
 
-        // Uhr-Position uebernehmen
-        if (result.Geometry?.ClockFrom != null)
-        {
-            double clockHours = result.Geometry.ClockFrom.Value;
-            int hours = (int)clockHours;
-            int minutes = (int)((clockHours - hours) * 60);
-            TxtClockVon.Text = $"{hours:D2}";
-        }
+        if (mapped.Q1Value is not null)
+            TxtQ1Value.Text = mapped.Q1Value;
 
-        // Bogenwinkel uebernehmen
-        if (result.Geometry?.ArcDegrees != null)
-            TxtQ1Value.Text = result.Geometry.ArcDegrees.Value.ToString("F0");
+        if (mapped.ClockVon is not null)
+            TxtClockVon.Text = mapped.ClockVon;
 
         // Foto mit Overlay ersetzen
         if (!string.IsNullOrEmpty(result.OverlayPhotoPath) && File.Exists(result.OverlayPhotoPath))
@@ -1097,9 +1086,8 @@ public partial class VsaCodeExplorerWindow : Window
     /// <summary>Transfer-Anzeige neben Von/Bis aktualisieren.</summary>
     private void UpdateClockTransfer()
     {
-        var von = string.IsNullOrWhiteSpace(TxtClockVon.Text) ? "--" : TxtClockVon.Text.Trim().PadLeft(2, '0');
-        var bis = string.IsNullOrWhiteSpace(TxtClockBis.Text) ? "--" : TxtClockBis.Text.Trim().PadLeft(2, '0');
-        TxtClockTransfer.Text = $"Transfer: {von} {bis}";
+        // Formatierung ueber gemeinsame Utility (ClockTransferFormatter)
+        TxtClockTransfer.Text = ClockTransferFormatter.Format(TxtClockVon.Text, TxtClockBis.Text);
     }
 
     // ═══════════════════════════════════════════════════════════════
