@@ -1,8 +1,10 @@
 namespace AuswertungPro.Next.UI.Services;
 
-public static class UiThreadDispatcher
+public sealed class UiThreadDispatcher : IUiThread
 {
-    public static void Run(Action action)
+    public static UiThreadDispatcher Instance { get; } = new();
+
+    public void Run(Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
 

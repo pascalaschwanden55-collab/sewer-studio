@@ -8,8 +8,9 @@ public sealed class UiThreadDispatcherTests
     public void Run_fuehrt_action_ohne_wpf_dispatcher_direkt_aus()
     {
         var calls = new List<string>();
+        var uiThread = new UiThreadDispatcher();
 
-        UiThreadDispatcher.Run(() => calls.Add("run"));
+        uiThread.Run(() => calls.Add("run"));
 
         Assert.Equal(new[] { "run" }, calls);
     }
@@ -17,6 +18,8 @@ public sealed class UiThreadDispatcherTests
     [Fact]
     public void Run_erfordert_action()
     {
-        Assert.Throws<ArgumentNullException>(() => UiThreadDispatcher.Run(null!));
+        var uiThread = new UiThreadDispatcher();
+
+        Assert.Throws<ArgumentNullException>(() => uiThread.Run(null!));
     }
 }

@@ -36,6 +36,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     private readonly ICodeCatalogProvider? _codeCatalog;
     private readonly IKnowledgeBaseDiagnosticsRunner _kbDiagnostics;
     private readonly AppSettings? _settings;
+    private readonly IUiThread _uiThread;
 
     /// <summary>Wiederverwendbarer HttpClient fuer KB-Operationen (Embedding-Requests).</summary>
     private System.Net.Http.HttpClient? _kbHttpClient;
@@ -363,13 +364,15 @@ public partial class TrainingCenterViewModel : ObservableObject
         TrainingCenterImportService import,
         ICodeCatalogProvider? codeCatalog,
         IKnowledgeBaseDiagnosticsRunner kbDiagnostics,
-        AppSettings? settings = null)
+        AppSettings? settings = null,
+        IUiThread? uiThread = null)
     {
         _store = store;
         _import = import;
         _codeCatalog = codeCatalog;
         _kbDiagnostics = kbDiagnostics;
         _settings = settings;
+        _uiThread = uiThread ?? UiThreadDispatcher.Instance;
     }
 
     // ── Cases ────────────────────────────────────────────────────────────────
@@ -1077,9 +1080,9 @@ public partial class TrainingCenterViewModel : ObservableObject
     // ── Review Queue (Self-Improving Loop) ──────────────────────────────
 
     /// <summary>Fuehrt UI-gebundene Aenderungen (ObservableCollection/Status) auf dem Dispatcher-Thread aus.</summary>
-    private static void OnUi(Action action)
+    private void OnUi(Action action)
     {
-        UiThreadDispatcher.Run(action);
+        _uiThread.Run(action);
     }
 
     // Thread-sicheres Setzen von StatusText: in async-Methoden mit ConfigureAwait(false)

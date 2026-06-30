@@ -16,7 +16,11 @@ public sealed class TrainingCenterUiThreadArchitectureTests
             "Windows",
             "TrainingCenterViewModel.cs"));
 
-        Assert.Contains("UiThreadDispatcher.Run(action)", source, StringComparison.Ordinal);
+        Assert.Contains("private readonly IUiThread _uiThread;", source, StringComparison.Ordinal);
+        Assert.Contains("IUiThread? uiThread = null", source, StringComparison.Ordinal);
+        Assert.Contains("_uiThread = uiThread ?? UiThreadDispatcher.Instance;", source, StringComparison.Ordinal);
+        Assert.Contains("_uiThread.Run(action)", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("UiThreadDispatcher.Run(action)", source, StringComparison.Ordinal);
         Assert.DoesNotContain("System.Windows.Application.Current?.Dispatcher", source, StringComparison.Ordinal);
     }
 
