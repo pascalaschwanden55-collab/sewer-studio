@@ -559,6 +559,28 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_match_rate_zaehler_an_tracker()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var stepSource = ExtractMethodBody(source, "public void OnSelfTrainingStep(SelfTrainingStep step)");
+        var refreshSource = ExtractMethodBody(source, "private void RefreshMatchRatePercents()");
+        var resetSource = ExtractMethodBody(source, "private void ResetSelfTrainingVisuals(bool resetMatchRate = false)");
+
+        Assert.Contains("private readonly SelfTrainingMatchRateTracker _matchRateTracker = new();", source, StringComparison.Ordinal);
+        Assert.Contains("_matchRateTracker.Record(level)", stepSource, StringComparison.Ordinal);
+        Assert.Contains("_matchRateTracker.ComputePercents()", refreshSource, StringComparison.Ordinal);
+        Assert.Contains("_matchRateTracker.Reset()", resetSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("_totalExact", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("case MatchLevel.ExactMatch", stepSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_log_format_und_trim_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
