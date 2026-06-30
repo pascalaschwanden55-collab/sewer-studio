@@ -53,6 +53,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DispatcherTimer _autoSaveTimer;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
+    private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
     private bool _disposed;
 
     internal ServiceProvider Services => _sp;
@@ -113,7 +114,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public ObservableCollection<string> ReferenzpruefungOptions { get; }
     public ObservableCollection<string> EmpfohleneSanierungsmassnahmenOptions { get; }
     public ObservableCollection<string> AusgefuehrtDurchOptions { get; }
-    public ObservableCollection<ProtocolEntry> SelectedProtocolEntries { get; } = new();
+    public ObservableCollection<ProtocolEntry> SelectedProtocolEntries => _selectedProtocolController.Entries;
 
     [ObservableProperty] private HaltungRecord? _selected;
     [ObservableProperty] private string _saveStatus = string.Empty;
@@ -314,60 +315,17 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         }
     }
 
-    private bool _isSyncingSelectedProtocol;
-
     private void SyncSelectedProtocolFromFindings(HaltungRecord record)
-    {
-        if (_isSyncingSelectedProtocol)
-            return;
-
-        if (record.VsaFindings is null || record.VsaFindings.Count == 0)
-            return;
-
-        var needsProtocol = record.Protocol is null
-                            || (record.Protocol.Current?.Entries.Count ?? 0) == 0
-                            && (record.Protocol.Original?.Entries.Count ?? 0) == 0;
-        if (!needsProtocol)
-            return;
-
-        _isSyncingSelectedProtocol = true;
-        try
-        {
-            var entries = VsaFindingToProtocolEntryMapper.BuildEntries(record.VsaFindings, ResolveCodeTitle);
-            record.Protocol = _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
-            RefreshRecordInGrid(record);
-            if (Selected?.Id == record.Id)
-                RefreshSelectedProtocolEntries();
-        }
-        finally
-        {
-            _isSyncingSelectedProtocol = false;
-        }
-    }
+        => _selectedProtocolController.SyncFromFindings(
+            record,
+            _sp.Protocols,
+            ResolveCodeTitle,
+            RefreshRecordInGrid,
+            Selected?.Id == record.Id,
+            _sp.CodeCatalog);
 
     private void RefreshSelectedProtocolEntries()
-    {
-        SelectedProtocolEntries.Clear();
-        var list = Selected?.Protocol?.Current?.Entries;
-        if (list is null || list.Count == 0)
-            return;
-
-        foreach (var entry in list.Where(e => !e.IsDeleted))
-        {
-            // Beschreibung aus dem VSA-Katalog auflösen, wenn sie leer ist
-            if (string.IsNullOrWhiteSpace(entry.Beschreibung) || entry.Beschreibung.Length <= 3)
-            {
-                if (!string.IsNullOrWhiteSpace(entry.Code) &&
-                    _sp.CodeCatalog.TryGet(entry.Code, out var def) &&
-                    !string.IsNullOrWhiteSpace(def.Title))
-                {
-                    entry.Beschreibung = def.Title;
-                }
-            }
-
-            SelectedProtocolEntries.Add(entry);
-        }
-    }
+        => _selectedProtocolController.Refresh(Selected, _sp.CodeCatalog);
 
     private string? ResolveCodeTitle(string code)
         => _sp.CodeCatalog.TryGet(code, out var codeDef) && !string.IsNullOrWhiteSpace(codeDef.Title)
