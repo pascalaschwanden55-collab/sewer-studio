@@ -54,6 +54,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
+    private readonly DataPageProtocolDocumentController _protocolDocumentController = new();
     private bool _disposed;
 
     internal ServiceProvider Services => _sp;
@@ -1159,31 +1160,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     }
 
     private ProtocolDocument EnsureProtocolDocumentForPdf(HaltungRecord record)
-    {
-        if (record.Protocol is not null)
-        {
-            record.Protocol.Current ??= new ProtocolRevision
-            {
-                Comment = "Arbeitskopie",
-                Entries = new List<ProtocolEntry>()
-            };
-
-            if ((record.Protocol.Original.Entries.Count == 0)
-                && (record.Protocol.Current.Entries.Count == 0)
-                && record.VsaFindings is { Count: > 0 })
-            {
-                var imported = VsaFindingToProtocolEntryMapper.BuildEntries(record.VsaFindings, ResolveCodeTitle);
-                record.Protocol = _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", imported, null);
-            }
-
-            return record.Protocol;
-        }
-
-        var entries = record.VsaFindings is { Count: > 0 }
-            ? VsaFindingToProtocolEntryMapper.BuildEntries(record.VsaFindings, ResolveCodeTitle)
-            : Array.Empty<ProtocolEntry>();
-        return _sp.Protocols.EnsureProtocol(record.GetFieldValue("Haltungsname") ?? "", entries, null);
-    }
+        => _protocolDocumentController.EnsureForPdf(record, _sp.Protocols, ResolveCodeTitle);
 
     private async void PrintHydraulikPdf(HaltungRecord? record)
     {
