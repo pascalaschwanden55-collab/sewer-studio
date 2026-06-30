@@ -1,0 +1,176 @@
+using System;
+using System.Collections.Generic;
+using AuswertungPro.Next.Domain.Models;
+
+namespace AuswertungPro.Next.Application.Ai;
+
+/// <summary>
+/// Reine Berechnungslogik fuer die PhotoMeasurement-Werkzeuge.
+/// Kein UI, kein WPF — vollstaendig testbar.
+/// </summary>
+public static class PhotoMeasurementGeometryService
+{
+    // ═══════════════════════════════════════════════════════════════════
+    // Letterbox-Geometrie
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Berechnet das tatsaechlich gerenderte Bild-Rechteck innerhalb eines Stretch=Uniform-Controls.
+    /// Gibt (OffsetX, OffsetY, RenderedW, RenderedH) zurueck.
+    /// Liefert (0, 0, controlW, controlH) wenn Eingaben ungueltg sind.
+    /// </summary>
+    public static (double OffsetX, double OffsetY, double RenderedW, double RenderedH)
+        LetterboxRect(double controlW, double controlH, double imgW, double imgH)
+    {
+        if (controlW <= 0 || controlH <= 0 || imgW <= 0 || imgH <= 0)
+            return (0, 0, controlW, controlH);
+
+        double scaleX = controlW / imgW;
+        double scaleY = controlH / imgH;
+        double scale = Math.Min(scaleX, scaleY);
+
+        double renderedW = imgW * scale;
+        double renderedH = imgH * scale;
+        double offsetX = (controlW - renderedW) / 2.0;
+        double offsetY = (controlH - renderedH) / 2.0;
+
+        return (offsetX, offsetY, renderedW, renderedH);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Deformations-Messung (4-Punkt-Klick)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Sortiert vier unsortierte Klickpunkte nach Uhrlage relativ zum Rohrmittelpunkt.
+    /// Gibt (top, bottom, right, left) zurueck — top = naechster an 12 Uhr (0°),
+    /// bottom = naechster an 6 Uhr (180°), right = 3 Uhr (90°), left = 9 Uhr (270°).
+    /// </summary>
+    public static (NormalizedPoint Top, NormalizedPoint Bottom, NormalizedPoint Right, NormalizedPoint Left)
+        SortDeformationPoints(IReadOnlyList<NormalizedPoint> points, double centerX, double centerY)
+    {
+        if (points.Count < 4)
+            throw new ArgumentException("Es werden genau 4 Punkte benoetigt.", nameof(points));
+
+        var pool = new List<NormalizedPoint>(points);
+
+        NormalizedPoint FindClosestToAngle(double targetDeg)
+        {
+            NormalizedPoint best = pool[0];
+            double bestDelta = double.MaxValue;
+            foreach (var p in pool)
+            {
+                double dx = p.X - centerX, dy = p.Y - centerY;
+                // 0° = 12 Uhr (Scheitel, Y negativ), im Uhrzeigersinn
+                double deg = Math.Atan2(dx, -dy) * 180.0 / Math.PI;
+                if (deg < 0) deg += 360;
+                double delta = Math.Abs(deg - targetDeg);
+                if (delta > 180) delta = 360 - delta;
+                if (delta < bestDelta) { bestDelta = delta; best = p; }
+            }
+            pool.Remove(best);
+            return best;
+        }
+
+        var top    = FindClosestToAngle(0);    // 12 Uhr
+        var bottom = FindClosestToAngle(180);  // 6 Uhr
+        var right  = FindClosestToAngle(90);   // 3 Uhr
+        var left   = pool[0];                  // letzter verbleibender = 9 Uhr
+
+        return (top, bottom, right, left);
+    }
+
+    /// <summary>
+    /// Berechnet den Deformationsprozentsatz aus den sortierten Messpunkten.
+    /// Formel: ((dMax - dMin) / dNominal) * 100.
+    /// </summary>
+    /// <param name="top">12-Uhr-Punkt</param>
+    /// <param name="bottom">6-Uhr-Punkt</param>
+    /// <param name="left">9-Uhr-Punkt</param>
+    /// <param name="right">3-Uhr-Punkt</param>
+    /// <param name="imageAspect">Seitenverhaeltnis (Breite/Hoehe) des Fotos fuer Aspect-Korrektur</param>
+    /// <param name="nominalDiameter">Normierter Rohrdurchmesser (0–1); 0 = aus Messung ableiten</param>
+    /// <returns>Deformationsprozentsatz (0–100+)</returns>
+    public static double DeformationPercent(
+        NormalizedPoint top, NormalizedPoint bottom,
+        NormalizedPoint left, NormalizedPoint right,
+        double imageAspect, double nominalDiameter)
+    {
+        double dVertNorm  = PipeCalibration.AspectCorrectedDistance(top, bottom, imageAspect);
+        double dHorizNorm = PipeCalibration.AspectCorrectedDistance(left, right, imageAspect);
+
+        double dMax = Math.Max(dVertNorm, dHorizNorm);
+        double dMin = Math.Min(dVertNorm, dHorizNorm);
+        double dNominal = nominalDiameter > 0
+            ? nominalDiameter
+            : Math.Max(dVertNorm, dHorizNorm);
+
+        return dNominal > 0 ? ((dMax - dMin) / dNominal) * 100.0 : 0;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Querschnittsverminderung (Shoelace-Polygon)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Berechnet die Polygon-Flaeche in Pixel-Einheiten mittels Shoelace-Formel.
+    /// Punkte sind normiert (0–1); renderWidth/renderHeight skalieren auf Pixel-Raum
+    /// (Aspect-Ratio-korrekte Flaeche im Display-Koordinatensystem).
+    /// </summary>
+    public static double ShoelaceAreaPx(
+        IReadOnlyList<NormalizedPoint> points, double renderWidth, double renderHeight)
+    {
+        if (points.Count < 3) return 0;
+
+        double area = 0;
+        int n = points.Count;
+        for (int i = 0; i < n; i++)
+        {
+            var curr = points[i];
+            var next = points[(i + 1) % n];
+            double cx = curr.X * renderWidth,  cy = curr.Y * renderHeight;
+            double nx = next.X * renderWidth,  ny = next.Y * renderHeight;
+            area += cx * ny - nx * cy;
+        }
+        return Math.Abs(area) / 2.0;
+    }
+
+    /// <summary>
+    /// Berechnet die Querschnittsverminderung in Prozent.
+    /// pipeAreaPx = PI * pipeRadiusPx^2.
+    /// </summary>
+    public static double CrossSectionPercent(double polygonAreaPx, double pipeRadiusPx)
+    {
+        double pipeArea = Math.PI * pipeRadiusPx * pipeRadiusPx;
+        return pipeArea > 0 ? (polygonAreaPx / pipeArea) * 100.0 : 0;
+    }
+
+    /// <summary>
+    /// Berechnet den Rohr-Radius in Pixel-Einheiten aus normierten Werten.
+    /// Nutzt denselben Referenz-Massstab wie das PhotoMeasurementWindow (Min der Render-Dimensionen).
+    /// </summary>
+    public static double PipeRadiusPx(double normalizedDiameter, double renderWidth, double renderHeight)
+    {
+        double pipeRadius = (normalizedDiameter > 0 ? normalizedDiameter : 0.7) / 2.0;
+        return pipeRadius * Math.Min(renderWidth, renderHeight);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Winkel-Werkzeuge (Abzweig / Bogen)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Wandelt eine Winkelposition in Grad (0–360, 0° = 12 Uhr) in Uhrlage (0.0–12.0) um.
+    /// Formel: positionDeg / 30.
+    /// </summary>
+    public static double PositionDegToClockHour(double positionDeg)
+        => positionDeg / 30.0;
+
+    /// <summary>
+    /// Wandelt Uhrlage (Grad, 0° = 12 Uhr) in einen WPF-kompatiblen Radiant-Wert um,
+    /// bei dem 0° = 3-Uhr-Richtung (Math.Cos/Sin-Konvention).
+    /// Formel: (positionDeg - 90) * PI / 180.
+    /// </summary>
+    public static double PositionDegToRadians(double positionDeg)
+        => (positionDeg - 90.0) * Math.PI / 180.0;
+}

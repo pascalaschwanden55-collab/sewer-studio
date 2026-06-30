@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Ai;
 
@@ -117,17 +118,9 @@ public partial class PhotoMeasurementWindow : Window
         double imgW = src.PixelWidth;
         double imgH = src.PixelHeight;
 
-        if (controlW <= 0 || controlH <= 0 || imgW <= 0 || imgH <= 0)
-            return new Rect(imageControl.RenderSize);
-
-        double scaleX = controlW / imgW;
-        double scaleY = controlH / imgH;
-        double scale = Math.Min(scaleX, scaleY);
-
-        double renderedW = imgW * scale;
-        double renderedH = imgH * scale;
-        double offsetX = (controlW - renderedW) / 2.0;
-        double offsetY = (controlH - renderedH) / 2.0;
+        // Reine Letterbox-Mathe an PhotoMeasurementGeometryService delegieren
+        var (offsetX, offsetY, renderedW, renderedH) =
+            PhotoMeasurementGeometryService.LetterboxRect(controlW, controlH, imgW, imgH);
 
         return new Rect(offsetX, offsetY, renderedW, renderedH);
     }
@@ -782,42 +775,11 @@ public partial class PhotoMeasurementWindow : Window
     {
         // Automatisch sortieren: nach Uhr-Position relativ zur Rohrmitte
         // Oben = naechster Punkt an 12h, Unten = naechster an 6h, Links = 9h, Rechts = 3h
-        var sorted = _clickPoints.ToList();
-        var cx = _calibration.PipeCenter.X;
-        var cy = _calibration.PipeCenter.Y;
+        var (top, bottom, right, left) = PhotoMeasurementGeometryService.SortDeformationPoints(
+            _clickPoints, _calibration.PipeCenter.X, _calibration.PipeCenter.Y);
 
-        NormalizedPoint FindClosestToAngle(List<NormalizedPoint> pts, double targetDeg)
-        {
-            NormalizedPoint best = pts[0];
-            double bestDelta = double.MaxValue;
-            foreach (var p in pts)
-            {
-                double dx = p.X - cx, dy = p.Y - cy;
-                double deg = Math.Atan2(dx, -dy) * 180.0 / Math.PI;
-                if (deg < 0) deg += 360;
-                double delta = Math.Abs(deg - targetDeg);
-                if (delta > 180) delta = 360 - delta;
-                if (delta < bestDelta) { bestDelta = delta; best = p; }
-            }
-            pts.Remove(best);
-            return best;
-        }
-
-        var top = FindClosestToAngle(sorted, 0);       // 12 Uhr
-        var bottom = FindClosestToAngle(sorted, 180);   // 6 Uhr
-        var right = FindClosestToAngle(sorted, 90);     // 3 Uhr
-        var left = sorted[0];                            // letzter = 9 Uhr
-
-        double dVertNorm = PipeCalibration.AspectCorrectedDistance(top, bottom, _imageAspect);
-        double dHorizNorm = PipeCalibration.AspectCorrectedDistance(left, right, _imageAspect);
-
-        double dMax = Math.Max(dVertNorm, dHorizNorm);
-        double dMin = Math.Min(dVertNorm, dHorizNorm);
-        double dNominal = _calibration.NormalizedDiameter > 0
-            ? _calibration.NormalizedDiameter
-            : Math.Max(dVertNorm, dHorizNorm);
-
-        double deformPct = dNominal > 0 ? ((dMax - dMin) / dNominal) * 100.0 : 0;
+        double deformPct = PhotoMeasurementGeometryService.DeformationPercent(
+            top, bottom, left, right, _imageAspect, _calibration.NormalizedDiameter);
 
         _currentGeometry = new OverlayGeometry
         {
@@ -852,8 +814,12 @@ public partial class PhotoMeasurementWindow : Window
         var center = new Point((pTop.X + pBot.X) / 2, (pTop.Y + pBot.Y) / 2);
         AddCanvasLabel($"Deform: {deformPct:F1}%", center.X, center.Y - 20, TagOverlay);
 
+        // Strecken fuer Statuszeile berechnen (Aspect-korrigiert)
+        double dV = PipeCalibration.AspectCorrectedDistance(top, bottom, _imageAspect);
+        double dH = PipeCalibration.AspectCorrectedDistance(left, right, _imageAspect);
+
         TxtMeasureInfo.Text = $"Deform: {deformPct:F1}%";
-        TxtStatus.Text = $"Deformation: {deformPct:F1}% (V={dVertNorm:F3}, H={dHorizNorm:F3})";
+        TxtStatus.Text = $"Deformation: {deformPct:F1}% (V={dV:F3}, H={dH:F3})";
     }
 
     // ═══════════════════════════════════════════════
@@ -908,24 +874,13 @@ public partial class PhotoMeasurementWindow : Window
 
         // Polygon-Flaeche (Shoelace in Pixel-Koordinaten fuer korrekte Aspect-Ratio)
         var r = GetImageRenderedRect(PhotoImage);
-        double area = 0;
-        for (int i = 0; i < _clickPoints.Count; i++)
-        {
-            var curr = _clickPoints[i];
-            var next = _clickPoints[(i + 1) % _clickPoints.Count];
-            double cx = curr.X * r.Width, cy = curr.Y * r.Height;
-            double nx = next.X * r.Width, ny = next.Y * r.Height;
-            area += cx * ny - nx * cy;
-        }
-        area = Math.Abs(area) / 2.0;
+        double area = PhotoMeasurementGeometryService.ShoelaceAreaPx(_clickPoints, r.Width, r.Height);
 
         // Rohr-Querschnittsflaeche (in Pixel-Raum)
-        double pipeRadius = (_calibration.NormalizedDiameter > 0
-            ? _calibration.NormalizedDiameter : 0.7) / 2.0;
-        double pipeRPx = pipeRadius * Math.Min(r.Width, r.Height);
-        double pipeArea = Math.PI * pipeRPx * pipeRPx;
+        double pipeRPx = PhotoMeasurementGeometryService.PipeRadiusPx(
+            _calibration.NormalizedDiameter, r.Width, r.Height);
 
-        double reductionPct = pipeArea > 0 ? (area / pipeArea) * 100.0 : 0;
+        double reductionPct = PhotoMeasurementGeometryService.CrossSectionPercent(area, pipeRPx);
 
         _currentGeometry = new OverlayGeometry
         {
@@ -1006,8 +961,8 @@ public partial class PhotoMeasurementWindow : Window
         double positionDeg = SliderPosition.Value;
         double angleDeg = SliderAngle.Value;
 
-        // Uhr-Position → Radiant (0° = 12 Uhr = oben)
-        double posRad = (positionDeg - 90) * Math.PI / 180.0;
+        // Uhr-Position → Radiant (0° = 12 Uhr = oben); delegiert an PhotoMeasurementGeometryService
+        double posRad = PhotoMeasurementGeometryService.PositionDegToRadians(positionDeg);
 
         if (_activeTool == PhotoTool.Lateral)
         {
@@ -1018,8 +973,8 @@ public partial class PhotoMeasurementWindow : Window
             DrawBendOverlay(center, pipeR, posRad, angleDeg);
         }
 
-        // Geometry
-        double clockFrom = positionDeg / 30.0; // 360° / 12h = 30°/h
+        // Geometry; delegiert an PhotoMeasurementGeometryService
+        double clockFrom = PhotoMeasurementGeometryService.PositionDegToClockHour(positionDeg);
         _currentGeometry = new OverlayGeometry
         {
             ToolType = _activeTool == PhotoTool.Lateral
