@@ -219,16 +219,20 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// <param name="resetMatchRate">Match-Rate auf 0 setzen (nur bei echtem Selbsttraining, nicht bei Batch-Import).</param>
     private void ResetSelfTrainingVisuals(bool resetMatchRate = false)
     {
-        SelfTrainingResults.Clear();
-        CodeDistribution.Clear();
-        SelfTrainingLogEntries.Clear();
-        PipelineActiveStep = 0;
-        CurrentEntryCode = "";
-        CurrentEntryMeter = 0;
-        CurrentComparisonText = "";
-        CurrentTechniqueGrade = "";
-        CurrentTechniqueDetails = "";
-        if (resetMatchRate)
+        var state = SelfTrainingVisualResetController.Reset(
+            SelfTrainingResults,
+            CodeDistribution,
+            SelfTrainingLogEntries,
+            resetMatchRate);
+
+        PipelineActiveStep = state.PipelineActiveStep;
+        CurrentEntryCode = state.CurrentEntryCode;
+        CurrentEntryMeter = state.CurrentEntryMeter;
+        CurrentComparisonText = state.CurrentComparisonText;
+        CurrentTechniqueGrade = state.CurrentTechniqueGrade;
+        CurrentTechniqueDetails = state.CurrentTechniqueDetails;
+
+        if (state.ShouldResetMatchRate)
         {
             _matchRateTracker.Reset();
             RefreshMatchRatePercents();

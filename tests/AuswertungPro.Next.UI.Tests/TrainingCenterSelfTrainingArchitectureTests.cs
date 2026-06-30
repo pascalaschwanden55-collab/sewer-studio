@@ -581,6 +581,24 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_self_training_visual_reset_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var resetSource = ExtractMethodBody(source, "private void ResetSelfTrainingVisuals(bool resetMatchRate = false)");
+
+        Assert.Contains("SelfTrainingVisualResetController.Reset(", resetSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingResults.Clear()", resetSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CodeDistribution.Clear()", resetSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingLogEntries.Clear()", resetSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_code_distribution_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
