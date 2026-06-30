@@ -62,6 +62,75 @@ public sealed class XtfImportTests
     }
 
     [Fact]
+    public void VsaKekImport_LinksPhotoToCorrectObservation_ViaKanalschadenTid()
+    {
+        // VSA_KEK-XTF: KEK.Datei.Objekt referenziert die Kanalschaden-TID (diese XTFs haben KEIN OBJ_ID-Element).
+        // Regression: frueher wurde Datei.Objekt nur gegen OBJ_ID gematcht -> findingsByObjId leer ->
+        // 0 Fotos verknuepft (Fallback packte alles auf die erste Beobachtung). Jetzt Match auch via TID.
+        var dir = Path.Combine(Path.GetTempPath(), $"vsakek-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(dir, "Foto"));
+        var xtf = Path.Combine(dir, "test.xtf");
+        File.WriteAllText(Path.Combine(dir, "Foto", "H_22152-3.01_119.jpg"), "bild");
+        File.WriteAllText(xtf, """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="VSA_KEK_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <VSA_KEK_2020_LV95.KEK BID="B1">
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="U1">
+        <Bezeichnung>22152-3.01</Bezeichnung>
+        <Zeitpunkt>2026-06-26</Zeitpunkt>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="S_BCD">
+        <UntersuchungRef REF="U1" />
+        <KanalSchadencode>BCD</KanalSchadencode>
+        <Distanz>0.00</Distanz>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="S_BAA">
+        <UntersuchungRef REF="U1" />
+        <KanalSchadencode>BAA</KanalSchadencode>
+        <Distanz>1.90</Distanz>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Datei TID="D1">
+        <Art>Foto</Art>
+        <Klasse>Kanalschaden</Klasse>
+        <Objekt>S_BAA</Objekt>
+        <Bezeichnung>H_22152-3.01_119.jpg</Bezeichnung>
+        <Relativpfad>Foto</Relativpfad>
+      </VSA_KEK_2020_LV95.KEK.Datei>
+    </VSA_KEK_2020_LV95.KEK>
+  </DATASECTION>
+</TRANSFER>
+""");
+
+        try
+        {
+            var project = new Project();
+            var svc = new LegacyXtfImportService();
+            var stats = svc.ImportXtfFiles(new[] { xtf }, project);
+            var debug = string.Join("\n", stats.Messages.Select(m => $"{m.Level}: {m.Message} ({m.Context})"));
+
+            var rec = project.Data.FirstOrDefault(r =>
+                string.Equals(r.GetFieldValue("Haltungsname"), "22152-3.01", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(rec);
+
+            var baa = rec!.VsaFindings.FirstOrDefault(f => string.Equals(f.KanalSchadencode, "BAA", StringComparison.OrdinalIgnoreCase));
+            var bcd = rec.VsaFindings.FirstOrDefault(f => string.Equals(f.KanalSchadencode, "BCD", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(baa);
+            Assert.False(string.IsNullOrWhiteSpace(baa!.FotoPath), $"Foto muss an BAA (1.90m) haengen.\n{debug}");
+            Assert.Contains("H_22152-3.01_119.jpg", baa.FotoPath!);
+            // Darf NICHT an der ersten Beobachtung (BCD) haengen — genau der frueher gemeldete Fehler.
+            Assert.True(string.IsNullOrWhiteSpace(bcd?.FotoPath), "BCD darf kein Foto haben (kein Lumping auf die erste Beobachtung).");
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void M150Import_MergesIntoExistingHolding_WhenNameFormattingDiffers()
     {
         var tempPath = Path.Combine(Path.GetTempPath(), $"xtf-import-{Guid.NewGuid():N}.m150");

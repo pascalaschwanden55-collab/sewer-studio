@@ -560,6 +560,7 @@ public sealed class LegacyXtfImportService
         var untersuchungen = new Dictionary<string, Untersuchung>(StringComparer.Ordinal);
         findingsPerHaltung = new Dictionary<string, List<VsaFinding>>(StringComparer.OrdinalIgnoreCase);
         var findingsByObjId = new Dictionary<string, VsaFinding>(StringComparer.OrdinalIgnoreCase);
+        var findingsByTid = new Dictionary<string, VsaFinding>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var node in doc.Descendants().Where(e => e.Name.LocalName.Contains("Untersuchung", StringComparison.OrdinalIgnoreCase)))
         {
@@ -598,6 +599,7 @@ public sealed class LegacyXtfImportService
             if (string.IsNullOrWhiteSpace(refTid) || !untersuchungen.TryGetValue(refTid!, out var u))
                 continue;
 
+            var schadenTid = (string?)node.Attribute("TID");
             var s = new Schaden();
             var finding = new VsaFinding();
             foreach (var child in node.Elements())
@@ -671,6 +673,9 @@ public sealed class LegacyXtfImportService
             u.Schaeden.Add(s);
             if (!string.IsNullOrWhiteSpace(s.ObjId))
                 findingsByObjId[s.ObjId] = finding;
+            // XTF-Variante nutzt Datei.Objekt = Kanalschaden-TID (kein OBJ_ID-Element vorhanden) — auch nach TID indizieren.
+            if (!string.IsNullOrWhiteSpace(schadenTid))
+                findingsByTid[schadenTid!] = finding;
             // Add finding to findingsPerHaltung (by Bezeichnung)
             if (!string.IsNullOrWhiteSpace(refTid) && untersuchungen.TryGetValue(refTid, out var untersuchung))
             {
@@ -721,7 +726,10 @@ public sealed class LegacyXtfImportService
                 continue;
             if (!klasse.Contains("Kanalschaden", StringComparison.OrdinalIgnoreCase))
                 continue;
-            if (string.IsNullOrWhiteSpace(objekt) || !findingsByObjId.TryGetValue(objekt, out var finding))
+            // Datei.Objekt referenziert den Kanalschaden — je nach XTF-Variante via OBJ_ID ODER TID.
+            if (string.IsNullOrWhiteSpace(objekt)
+                || !(findingsByObjId.TryGetValue(objekt, out var finding)
+                     || findingsByTid.TryGetValue(objekt, out finding)))
                 continue;
 
             var fotoPath = ResolveVsaPhotoPath(sourcePath, relativpfad, bezeichnung);

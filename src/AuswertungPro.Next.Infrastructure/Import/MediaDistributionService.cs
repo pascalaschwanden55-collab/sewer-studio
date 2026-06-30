@@ -289,7 +289,9 @@ public sealed class MediaDistributionService
 
                 try
                 {
-                    var destDir = Path.Combine(holdingRoot, "Fotos");
+                    // Fotos liegen ZENTRAL im Projekt (<Projekt>\Fotos\), nicht je verteilter Haltung.
+                    // Dateinamen tragen die Haltung (z.B. H_<Haltung>_NNN.jpg) -> kollisionssicher zentral.
+                    var destDir = Path.Combine(projectFolder, "Fotos");
                     if (!dryRun) Directory.CreateDirectory(destDir);
                     var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(rawPath)) : CopyFileUnique(rawPath, destDir);
                     if (!dryRun)

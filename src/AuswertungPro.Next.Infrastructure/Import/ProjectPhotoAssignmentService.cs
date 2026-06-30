@@ -69,7 +69,8 @@ public sealed class ProjectPhotoAssignmentService
         {
             var record = kv.Key;
             var san = ProjectPathResolver.SanitizePathSegment(record.GetFieldValue("Haltungsname") ?? "");
-            var fotoDir = Path.Combine(projectFolder, "Haltungen", san, "Fotos");
+            // Zentraler Foto-Ordner im Projekt (<Projekt>\Fotos\), nicht je verteilter Haltung.
+            var fotoDir = Path.Combine(projectFolder, "Fotos");
 
             var entries = GetEntries(record);
             if (entries.Count == 0)
