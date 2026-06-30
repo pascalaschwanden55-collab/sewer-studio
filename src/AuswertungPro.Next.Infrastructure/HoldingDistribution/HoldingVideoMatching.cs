@@ -102,10 +102,17 @@ internal static class HoldingVideoMatching
         // Strategy 2: Contains both Haltung and Date in filename (normalized)
         var hKey = NormalizeKey(haltung);
         var dateKey = NormalizeKey(dateStamp);
+        // Gegeninspektions-Marker: Videos, deren Name direkt nach der Haltung ein 'g' fuehrt
+        // (Konvention z.B. H__<Haltung>_G.mp4), gehoeren zur Gegeninspektion und duerfen die
+        // STANDARD-Suche nicht mehrdeutig machen. Bei der Gegeninspektions-Suche ist hKey selbst
+        // bereits "<haltung>g"; dann grenzt gKey "<haltung>gg" nichts faelschlich aus, und das
+        // _G-Video (endet auf "<haltung>g") bleibt korrekt Kandidat.
+        var gKey = hKey + "g";
         var containing = files.Where(f =>
         {
             var nameKey = NormalizeKey(Path.GetFileNameWithoutExtension(f));
             return nameKey.Contains(hKey, StringComparison.OrdinalIgnoreCase)
+                   && !nameKey.Contains(gKey, StringComparison.OrdinalIgnoreCase)
                    && nameKey.Contains(dateKey, StringComparison.OrdinalIgnoreCase);
         }).ToList();
         if (containing.Count == 1)
@@ -120,7 +127,8 @@ internal static class HoldingVideoMatching
         var haltungOnly = files.Where(f =>
         {
             var nameKey = NormalizeKey(Path.GetFileNameWithoutExtension(f));
-            return nameKey.Contains(hKey, StringComparison.OrdinalIgnoreCase);
+            return nameKey.Contains(hKey, StringComparison.OrdinalIgnoreCase)
+                   && !nameKey.Contains(gKey, StringComparison.OrdinalIgnoreCase);
         }).ToList();
 
         if (haltungOnly.Count == 0)

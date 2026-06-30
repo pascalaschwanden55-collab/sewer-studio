@@ -142,6 +142,57 @@ public sealed class HoldingFolderDistributorVideoMatchingTests
     }
 
     [Fact]
+    public void FindVideoByHaltungDate_StandardSearch_ExcludesGegeninspektionGSuffix()
+    {
+        // Reales Quell-Schema (D:\Videoprojekte\...\Film): Standard 'H__<Haltung>.mp4' (ohne
+        // Datum) + Gegeninspektion 'H__<Haltung>_G.mp4'. Die Standard-Suche darf das _G-Video
+        // NICHT als Kandidat ziehen (sonst mehrdeutig) und liefert eindeutig das Standard-Video.
+        var method = Type.GetType("AuswertungPro.Next.Infrastructure.HoldingVideoMatching, AuswertungPro.Next.Infrastructure")!
+            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static,
+                binder: null,
+                types: new[] { typeof(string), typeof(string), typeof(IReadOnlyList<string>) },
+                modifiers: null);
+        Assert.NotNull(method);
+
+        var std = Path.Combine(Path.GetTempPath(), "H__07.1026779-10750.mp4");
+        var geg = Path.Combine(Path.GetTempPath(), "H__07.1026779-10750_G.mp4");
+        var files = new List<string> { std, geg };
+
+        var result = (HoldingFolderDistributor.VideoFindResult?)method!.Invoke(
+            null,
+            new object?[] { "07.1026779-10750", "20250310", files });
+
+        Assert.NotNull(result);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.Matched, result!.Status);
+        Assert.Equal(std, result.VideoPath);
+    }
+
+    [Fact]
+    public void FindVideoByHaltungDate_GegeninspektionSearch_MatchesGSuffixVideo()
+    {
+        // Symmetrisch: Die Gegeninspektions-Suche (haltung + "g") liefert genau das _G-Video,
+        // nicht das Standard-Video.
+        var method = Type.GetType("AuswertungPro.Next.Infrastructure.HoldingVideoMatching, AuswertungPro.Next.Infrastructure")!
+            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static,
+                binder: null,
+                types: new[] { typeof(string), typeof(string), typeof(IReadOnlyList<string>) },
+                modifiers: null);
+        Assert.NotNull(method);
+
+        var std = Path.Combine(Path.GetTempPath(), "H__07.1026779-10750.mp4");
+        var geg = Path.Combine(Path.GetTempPath(), "H__07.1026779-10750_G.mp4");
+        var files = new List<string> { std, geg };
+
+        var result = (HoldingFolderDistributor.VideoFindResult?)method!.Invoke(
+            null,
+            new object?[] { "07.1026779-10750g", "20250310", files });
+
+        Assert.NotNull(result);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.Matched, result!.Status);
+        Assert.Equal(geg, result.VideoPath);
+    }
+
+    [Fact]
     public void SidecarLinkLookup_UsesReversedHolding_WhenPdfDirectionIsOpposite()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"video-match-{Guid.NewGuid():N}");
