@@ -42,6 +42,37 @@ public sealed class MediaDistributionServiceTests
     }
 
     [Fact]
+    public void DistributeImportedMedia_IncludeVideosFalse_KopiertPdfAberNichtVideo()
+    {
+        using var temp = new TempDir();
+        var projectFolder = temp.CreateSubdir("projekt");
+        var quelle = temp.CreateSubdir("quelle");
+        var videoQuelle = Path.Combine(quelle, "inspektion.mpg");
+        var pdfQuelle = Path.Combine(quelle, "protokoll.pdf");
+        File.WriteAllText(videoQuelle, "videodaten");
+        File.WriteAllText(pdfQuelle, "pdfdaten");
+
+        var project = new Project();
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "06.123-456", FieldSource.Manual, userEdited: false);
+        record.SetFieldValue("Link", videoQuelle, FieldSource.Manual, userEdited: false);
+        record.SetFieldValue("PDF_Path", pdfQuelle, FieldSource.Manual, userEdited: false);
+        project.Data.Add(record);
+        project.Dirty = false;
+
+        var result = new MediaDistributionService()
+            .DistributeImportedMedia(projectFolder, project, includeVideos: false);
+
+        Assert.Equal(1, result.FilesCopied);
+        Assert.Equal(0, result.Errors);
+        Assert.Equal(videoQuelle, record.GetFieldValue("Link"));
+        Assert.Equal("Haltungen_Verteilt/06.123-456/PDF/protokoll.pdf", record.GetFieldValue("PDF_Path"));
+        Assert.False(File.Exists(Path.Combine(projectFolder, "Haltungen_Verteilt", "06.123-456", "Video", "inspektion.mpg")));
+        Assert.True(File.Exists(Path.Combine(projectFolder, "Haltungen_Verteilt", "06.123-456", "PDF", "protokoll.pdf")));
+        Assert.True(File.Exists(videoQuelle)); // Quelle bleibt erhalten, wird nur nicht kopiert.
+    }
+
+    [Fact]
     public void DistributeImportedMedia_VerteiltSchachtDokument_NachSchaechteVerteilt()
     {
         using var temp = new TempDir();

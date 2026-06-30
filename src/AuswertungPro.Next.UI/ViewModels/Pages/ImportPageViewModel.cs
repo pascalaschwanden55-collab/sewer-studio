@@ -452,7 +452,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
             return;
         }
 
-        ImportProgress = $"{sourceLabel}: Medien von {haltungCount} Haltungen werden in Projektordner kopiert...";
+        ImportProgress = $"{sourceLabel}: Fotos/PDFs von {haltungCount} Haltungen werden in Projektordner kopiert (Videos erst beim Verteilen)...";
         var distService = new MediaDistributionService();
         var distProgress = new Progress<MediaDistributionService.CopyProgress>(p =>
         {
@@ -464,7 +464,14 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var ct = ctx?.CancellationToken ?? CancellationToken.None;
         var dryRun = ctx?.DryRun ?? false;
         var distResult = await Task.Run(() =>
-            distService.DistributeImportedMedia(projectFolder, _shell.Project, distProgress, ct, dryRun, _shell.CollectionLock));
+            distService.DistributeImportedMedia(
+                projectFolder,
+                _shell.Project,
+                distProgress,
+                ct,
+                dryRun,
+                _shell.CollectionLock,
+                includeVideos: false));
 
         var distSummary = $"\nMedien-Verteilung ({haltungCount} Haltungen):\n  {distResult.FilesCopied} Dateien kopiert\n  {distResult.FilesSkipped} uebersprungen\n  {distResult.Errors} Fehler";
         SummaryText += distSummary;

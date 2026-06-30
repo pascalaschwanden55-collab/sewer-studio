@@ -33,7 +33,8 @@ public sealed class MediaDistributionService
         IProgress<CopyProgress>? progress = null,
         CancellationToken ct = default,
         bool dryRun = false,
-        object? collectionLock = null)
+        object? collectionLock = null,
+        bool includeVideos = true)
     {
         var copied = 0;
         var skipped = 0;
@@ -58,8 +59,10 @@ public sealed class MediaDistributionService
             var sanitized = SanitizePathSegment(haltungsname);
             var holdingRoot = ProjectStructure.HaltungVerteiltDir(projectFolder, sanitized);
 
-            // 1) Video (Link-Feld)
-            CopyFieldFile(record, "Link", holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+            // 1) Video (Link-Feld). Der manuelle Import setzt includeVideos=false,
+            // damit Rohvideos erst im expliziten Verteil-Schritt ins Projekt kopiert werden.
+            if (includeVideos)
+                CopyFieldFile(record, "Link", holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
 
             // 2) PDF_Path
             CopyFieldFile(record, "PDF_Path", holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
