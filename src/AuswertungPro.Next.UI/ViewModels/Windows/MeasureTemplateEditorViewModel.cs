@@ -98,9 +98,8 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
             var priceItem = _catalog.Items.FirstOrDefault(i => i.Id == line.ItemRef);
             var label = priceItem?.Label ?? line.ItemRef;
             var unit = priceItem?.Unit ?? "Stk";
-            var qtyStr = line.Qty.ValueKind == System.Text.Json.JsonValueKind.String 
-                ? line.Qty.GetString() ?? "1"
-                : line.Qty.GetRawText();
+            // Mengen-Extraktion delegiert an TemplateQtyExtractor (Infrastructure)
+            var qtyStr = TemplateQtyExtractor.ExtractQtyString(line.Qty);
 
             CurrentLines.Add(new TemplateLineRow(
                 line.Group,
@@ -115,7 +114,8 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
     [RelayCommand]
     private void NewTemplate()
     {
-        TemplateId = $"template_{Templates.Count + 1}";
+        // ID-Generierung delegiert an MeasureEditorIdPolicy (Infrastructure)
+        TemplateId = MeasureEditorIdPolicy.NewTemplateId(Templates.Count);
         TemplateName = "Neue Maßnahme";
         TemplateDescription = string.Empty;
         CurrentLines.Clear();
@@ -276,14 +276,9 @@ public sealed partial class MeasureTemplateEditorViewModel : ObservableObject
 
     private string CreateNewCatalogId()
     {
-        var index = AvailablePrices.Count + 1;
-        while (true)
-        {
-            var candidate = $"neu_{index}";
-            if (!AvailablePrices.Any(r => string.Equals(r.Id, candidate, StringComparison.OrdinalIgnoreCase)))
-                return candidate;
-            index++;
-        }
+        // ID-Generierung delegiert an MeasureEditorIdPolicy (Infrastructure)
+        var existingIds = AvailablePrices.Select(r => r.Id).ToList();
+        return MeasureEditorIdPolicy.NewCatalogItemId(existingIds);
     }
 }
 
