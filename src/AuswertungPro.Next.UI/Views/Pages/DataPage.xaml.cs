@@ -394,27 +394,28 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void Grid_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (DataContext is DataPageViewModel vm && !vm.IsProjectReady)
+        if (e.OriginalSource is not DependencyObject dep)
             return;
 
-        // Don't start row drag when user is selecting text inside an editing TextBox
-        if (e.OriginalSource is DependencyObject dep && FindAncestor<TextBox>(dep) is not null)
-            return;
-
-        if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
+        System.Windows.Point mousePos = e.GetPosition(null);
+        System.Windows.Vector diff = _dragStartPoint - mousePos;
+        if (!DataPageDragStartPolicy.ShouldStartDrag(
+                isProjectReady: DataContext is not DataPageViewModel vm || vm.IsProjectReady,
+                isLeftButtonPressed: e.LeftButton == System.Windows.Input.MouseButtonState.Pressed,
+                isEditingTextBox: FindAncestor<TextBox>(dep) is not null,
+                deltaX: diff.X,
+                deltaY: diff.Y,
+                minimumHorizontalDragDistance: SystemParameters.MinimumHorizontalDragDistance,
+                minimumVerticalDragDistance: SystemParameters.MinimumVerticalDragDistance))
         {
-            System.Windows.Point mousePos = e.GetPosition(null);
-            System.Windows.Vector diff = _dragStartPoint - mousePos;
-            if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
-            {
-                var row = FindAncestor<DataGridRow>((DependencyObject)e.OriginalSource);
-                if (row == null) return;
-                var record = row.Item as HaltungRecord;
-                if (record == null) return;
-                DragDrop.DoDragDrop(row, record, DragDropEffects.Move);
-            }
+            return;
         }
+
+        var row = FindAncestor<DataGridRow>(dep);
+        if (row == null) return;
+        var record = row.Item as HaltungRecord;
+        if (record == null) return;
+        DragDrop.DoDragDrop(row, record, DragDropEffects.Move);
     }
 
     private void Grid_Drop(object sender, System.Windows.DragEventArgs e)
