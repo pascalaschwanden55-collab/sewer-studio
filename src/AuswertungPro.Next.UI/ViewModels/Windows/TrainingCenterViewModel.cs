@@ -1583,20 +1583,23 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// <summary>Gibt ALLE Protokoll-Startdaten-Kandidaten frei (nach expliziter Bestaetigung im View).</summary>
     public async Task ApproveAllStartdataAsync(CancellationToken ct = default)
     {
-        if (ReviewQueueServiceRef is null) return;
+        var queueService = ReviewQueueServiceRef;
+        if (queueService is null) return;
+
         var items = GetProtocolStartdataReviewItems();
-        int ok = 0;
-        foreach (var item in items)
-        {
-            try
+        var result = await TrainingProtocolStartdataApprovalController.ApproveAllAsync(
+            items,
+            async (item, token) =>
             {
                 using var db = new KnowledgeBaseContext();
                 var feedback = CreateFeedbackService(db);
-                await ApproveReviewItemAsync(item, feedback, ReviewQueueServiceRef, ct).ConfigureAwait(false);
-                ok++;
-            }
-            catch (Exception ex) { Log($"Startdaten-Freigabe Fehler ({item.SelfTrainingVsaCode}): {ex.Message}"); }
-        }
-        OnUi(() => ReviewStatusText = $"{ok}/{items.Count} Protokoll-Startdaten freigegeben.");
+                await ApproveReviewItemAsync(item, feedback, queueService, token).ConfigureAwait(false);
+            },
+            ct).ConfigureAwait(false);
+
+        foreach (var errorLog in result.ErrorLogTexts)
+            Log(errorLog);
+
+        OnUi(() => ReviewStatusText = result.StatusText);
     }
 }

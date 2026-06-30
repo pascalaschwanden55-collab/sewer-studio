@@ -474,6 +474,24 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_protocol_startdata_approval_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var approvalSource = ExtractMethodBody(source, "public async Task ApproveAllStartdataAsync(CancellationToken ct = default)");
+
+        Assert.Contains("TrainingProtocolStartdataApprovalController.ApproveAllAsync(", approvalSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("foreach (var item in items)", approvalSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("catch (Exception ex)", approvalSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ok++", approvalSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_kb_update_workflow_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
