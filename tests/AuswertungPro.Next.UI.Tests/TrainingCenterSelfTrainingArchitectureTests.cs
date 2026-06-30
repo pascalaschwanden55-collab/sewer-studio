@@ -518,6 +518,28 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_case_decisions_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var approveSource = ExtractMethodBody(source, "private void Approve()");
+        var rejectSource = ExtractMethodBody(source, "private void Reject()");
+        var setNewSource = ExtractMethodBody(source, "private void SetNew()");
+
+        Assert.Contains("TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.Approve)", approveSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.Reject)", rejectSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.SetNew)", setNewSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedCase.Status = TrainingCaseStatus.Approved", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedCase.Status = TrainingCaseStatus.Rejected", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedCase.Status = TrainingCaseStatus.New", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_step_presentation_an_builder()
     {
         var source = File.ReadAllText(Path.Combine(

@@ -580,24 +580,24 @@ public partial class TrainingCenterViewModel : ObservableObject
     private void Approve()
     {
         if (SelectedCase is null) return;
-        SelectedCase.Status = TrainingCaseStatus.Approved;
-        StatusText = $"Approved: {SelectedCase.CaseId}";
+        var decision = TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.Approve);
+        StatusText = decision.StatusText;
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private void Reject()
     {
         if (SelectedCase is null) return;
-        SelectedCase.Status = TrainingCaseStatus.Rejected;
-        StatusText = $"Rejected: {SelectedCase.CaseId}";
+        var decision = TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.Reject);
+        StatusText = decision.StatusText;
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private void SetNew()
     {
         if (SelectedCase is null) return;
-        SelectedCase.Status = TrainingCaseStatus.New;
-        StatusText = $"Status New: {SelectedCase.CaseId}";
+        var decision = TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.SetNew);
+        StatusText = decision.StatusText;
     }
 
     partial void OnSelectedCaseChanged(TrainingCase? value)
