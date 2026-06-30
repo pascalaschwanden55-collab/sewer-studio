@@ -5,7 +5,6 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Globalization;
 using System.Diagnostics;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -618,14 +617,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
         // Echte Haltungslaenge aus den Stammdaten fuer die Meter-Schaetzung
         // (sonst rechnet die Pipeline mit der 50m-Annahme)
-        double? reachLengthM = null;
-        var reachLengthRaw = record.GetFieldValue("Haltungslaenge_m")?.Replace(',', '.');
-        if (double.TryParse(reachLengthRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out var reachLength)
-            && reachLength > 0)
-        {
-            reachLengthM = reachLength;
-        }
-
+        var reachLengthM = PipelineReachLengthParser.TryParse(record.GetFieldValue("Haltungslaenge_m"));
         var request = new PipelineRequest(haltungId, videoPath, allowedCodes, ReachLengthM: reachLengthM);
 
         var win = new VideoAnalysisPipelineWindow(request, pipeline)
