@@ -656,6 +656,27 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_rootfolder_mutation_an_state_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var loadSource = ExtractMethodBody(source, "public async Task LoadAsync()");
+        var clearSource = ExtractMethodBody(source, "private void ClearRootFolders()");
+        var distributeSource = ExtractMethodBody(source, "private async Task DistributeHaltungAsync()");
+
+        Assert.Contains("TrainingCenterStateController.ReplaceRootFolders(_rootFolders, restoredRootFolders)", loadSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingCenterStateController.ReplaceRootFolders(_rootFolders, Array.Empty<string>())", clearSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingCenterStateController.AddRootFolder(_rootFolders, outputFolder)", distributeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("_rootFolders.Clear()", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("_rootFolders.Add(", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_log_format_und_trim_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(

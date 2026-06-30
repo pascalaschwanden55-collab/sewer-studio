@@ -33,14 +33,37 @@ public static class TrainingCenterStateController
         var changed = false;
         foreach (var folder in selectedFolders)
         {
-            if (rootFolders.Any(existing => string.Equals(existing, folder, StringComparison.OrdinalIgnoreCase)))
-                continue;
-
-            rootFolders.Add(folder);
-            changed = true;
+            if (AddRootFolder(rootFolders, folder))
+                changed = true;
         }
 
         return changed;
+    }
+
+    public static void ReplaceRootFolders(
+        IList<string> rootFolders,
+        IEnumerable<string> replacement)
+    {
+        ArgumentNullException.ThrowIfNull(rootFolders);
+        ArgumentNullException.ThrowIfNull(replacement);
+
+        rootFolders.Clear();
+        foreach (var folder in replacement)
+            rootFolders.Add(folder);
+    }
+
+    public static bool AddRootFolder(
+        IList<string> rootFolders,
+        string folder)
+    {
+        ArgumentNullException.ThrowIfNull(rootFolders);
+        ArgumentException.ThrowIfNullOrWhiteSpace(folder);
+
+        if (rootFolders.Any(existing => string.Equals(existing, folder, StringComparison.OrdinalIgnoreCase)))
+            return false;
+
+        rootFolders.Add(folder);
+        return true;
     }
 
     public static TrainingCenterState BuildState(
