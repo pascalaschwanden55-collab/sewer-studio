@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AppProtocol = AuswertungPro.Next.Application.Protocol;
@@ -51,7 +50,7 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
         GroupOptions.Add(AllGroups);
         foreach (var group in Codes
                      .Where(c => c.IsSelectable && !c.IsObservedExtension)
-                     .Select(c => string.IsNullOrWhiteSpace(c.Group) ? "Unbekannt" : c.Group.Trim())
+                     .Select(c => AppProtocol.CodeGroupParser.NormalizeGroup(c.Group))
                      .Distinct(StringComparer.OrdinalIgnoreCase)
                      .OrderBy(g => g, StringComparer.OrdinalIgnoreCase))
         {
@@ -102,10 +101,10 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
 
     private void InitializeFromEntry()
     {
-        MeterStartText = FormatDouble(_entryVm.MeterStart);
-        MeterEndText = FormatDouble(_entryVm.MeterEnd);
+        MeterStartText = AppProtocol.ProtocolEntryInputNormalizer.FormatDouble(_entryVm.MeterStart);
+        MeterEndText = AppProtocol.ProtocolEntryInputNormalizer.FormatDouble(_entryVm.MeterEnd);
         Severity = string.IsNullOrWhiteSpace(_entryVm.Severity) ? "mid" : _entryVm.Severity!;
-        CountText = _entryVm.Count?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+        CountText = _entryVm.Count?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
         Notes = _entryVm.CodeNotes ?? string.Empty;
 
         if (!string.IsNullOrWhiteSpace(_entryVm.Code)
@@ -140,7 +139,7 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
         if (SelectedCode.RangeThresholdM is not null)
         {
             var text = SelectedCode.RangeThresholdText;
-            var threshold = SelectedCode.RangeThresholdM.Value.ToString("0.00", CultureInfo.InvariantCulture);
+            var threshold = SelectedCode.RangeThresholdM.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
             RangeHint = string.IsNullOrWhiteSpace(text)
                 ? $"Streckenschaden: Anfang/Ende erfassen (ab {threshold} m)."
                 : $"Streckenschaden: {text}";
@@ -173,7 +172,7 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
     private static void BuildTree(IReadOnlyList<AppProtocol.CodeDefinition> filtered, ObservableCollection<CodeTreeNode> target)
     {
         var majorGroups = filtered
-            .Select(c => ParseGroup(c.Group).Major)
+            .Select(c => AppProtocol.CodeGroupParser.ParseGroup(c.Group).Major)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(g => g, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -182,8 +181,8 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
         {
             var majorNode = new CodeTreeNode(major);
             var baseGroups = filtered
-                .Where(c => string.Equals(ParseGroup(c.Group).Major, major, StringComparison.OrdinalIgnoreCase))
-                .Select(c => ParseGroup(c.Group).Base)
+                .Where(c => string.Equals(AppProtocol.CodeGroupParser.ParseGroup(c.Group).Major, major, StringComparison.OrdinalIgnoreCase))
+                .Select(c => AppProtocol.CodeGroupParser.ParseGroup(c.Group).Base)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(g => g, StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -192,8 +191,8 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
             {
                 var baseNode = new CodeTreeNode(baseGroup);
                 var codes = filtered
-                    .Where(c => string.Equals(ParseGroup(c.Group).Major, major, StringComparison.OrdinalIgnoreCase)
-                                && string.Equals(ParseGroup(c.Group).Base, baseGroup, StringComparison.OrdinalIgnoreCase))
+                    .Where(c => string.Equals(AppProtocol.CodeGroupParser.ParseGroup(c.Group).Major, major, StringComparison.OrdinalIgnoreCase)
+                                && string.Equals(AppProtocol.CodeGroupParser.ParseGroup(c.Group).Base, baseGroup, StringComparison.OrdinalIgnoreCase))
                     .OrderBy(c => c.Code, StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
@@ -241,7 +240,7 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
 
     private bool MatchesActiveFilters(AppProtocol.CodeDefinition code)
     {
-        var group = string.IsNullOrWhiteSpace(code.Group) ? "Unbekannt" : code.Group.Trim();
+        var group = AppProtocol.CodeGroupParser.NormalizeGroup(code.Group);
 
         if (!string.IsNullOrWhiteSpace(SelectedGroup)
             && !string.Equals(SelectedGroup, AllGroups, StringComparison.OrdinalIgnoreCase)
@@ -263,17 +262,6 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
                || (code.Description?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false);
     }
 
-    private static (string Major, string Base) ParseGroup(string? group)
-    {
-        var g = (group ?? "Unbekannt").Trim();
-        if (g.Contains('/'))
-        {
-            var parts = g.Split('/', 2, StringSplitOptions.TrimEntries);
-            return (parts[0], parts.Length > 1 ? parts[1] : parts[0]);
-        }
-        return (g, g);
-    }
-
     public bool ApplySelection()
     {
         ValidationMessage = string.Empty;
@@ -290,13 +278,13 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
             return false;
         }
 
-        if (!TryParseOptionalDouble(MeterStartText, out var meterStart))
+        if (!AppProtocol.ProtocolEntryInputNormalizer.TryParseOptionalDouble(MeterStartText, out var meterStart))
         {
             ValidationMessage = "MeterStart ist ungueltig.";
             return false;
         }
 
-        if (!TryParseOptionalDouble(MeterEndText, out var meterEnd))
+        if (!AppProtocol.ProtocolEntryInputNormalizer.TryParseOptionalDouble(MeterEndText, out var meterEnd))
         {
             ValidationMessage = "MeterEnd ist ungueltig.";
             return false;
@@ -307,7 +295,7 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
             return false;
         }
 
-        if (!TryParseOptionalInt(CountText, out var count))
+        if (!AppProtocol.ProtocolEntryInputNormalizer.TryParseOptionalInt(CountText, out var count))
         {
             ValidationMessage = "Anzahl ist ungueltig.";
             return false;
@@ -332,7 +320,7 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
                 parameters[parameter.Name] = parameter.Value.Trim();
         }
 
-        AddCatalogMetadata(parameters, SelectedCode);
+        AppProtocol.CatalogMetadataWriter.AddCatalogMetadata(parameters, SelectedCode);
 
         _entryVm.ApplyCodeSelection(
             SelectedCode.Code,
@@ -346,87 +334,11 @@ public sealed partial class ProtocolCodePickerViewModel : ObservableObject
             _entryVm.Model.IsStreckenschaden = true;
 
         if (string.IsNullOrWhiteSpace(_entryVm.Beschreibung))
-            _entryVm.Beschreibung = BuildDefaultDescription(SelectedCode, parameters, meterStart, meterEnd);
+            _entryVm.Beschreibung = AppProtocol.DefaultDescriptionBuilder.Build(SelectedCode, parameters, meterStart, meterEnd);
 
         return true;
     }
 
-    private static bool TryParseOptionalDouble(string raw, out double? value)
-    {
-        value = null;
-        if (string.IsNullOrWhiteSpace(raw))
-            return true;
-
-        var normalized = raw.Trim().Replace(',', '.');
-        if (!double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
-            return false;
-
-        value = parsed;
-        return true;
-    }
-
-    private static bool TryParseOptionalInt(string raw, out int? value)
-    {
-        value = null;
-        if (string.IsNullOrWhiteSpace(raw))
-            return true;
-
-        if (!int.TryParse(raw.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
-            return false;
-
-        value = parsed;
-        return true;
-    }
-
-    private static string FormatDouble(double? value)
-        => value?.ToString("0.00", CultureInfo.InvariantCulture) ?? string.Empty;
-
-    private static string BuildDefaultDescription(
-        AppProtocol.CodeDefinition def,
-        IReadOnlyDictionary<string, string> parameters,
-        double? meterStart,
-        double? meterEnd)
-    {
-        var title = def.Title ?? string.Empty;
-        var parts = new List<string>();
-
-        if (parameters is not null && parameters.Count > 0)
-        {
-            foreach (var p in def.Parameters)
-            {
-                if (!parameters.TryGetValue(p.Name, out var value) || string.IsNullOrWhiteSpace(value))
-                    continue;
-                var unit = string.IsNullOrWhiteSpace(p.Unit) ? "" : $" {p.Unit}";
-                parts.Add($"{p.Name}={value}{unit}".Trim());
-            }
-        }
-
-        if (def.RequiresRange && meterStart.HasValue && meterEnd.HasValue)
-        {
-            parts.Add($"Strecke {meterStart:0.00}-{meterEnd:0.00} m");
-        }
-
-        if (parts.Count == 0)
-            return title;
-
-        var suffix = string.Join(", ", parts);
-        return $"{title} ({suffix})";
-    }
-
-    private static void AddCatalogMetadata(
-        Dictionary<string, string> parameters,
-        AppProtocol.CodeDefinition code)
-    {
-        AddIfPresent(parameters, "catalog.source", code.Source);
-        AddIfPresent(parameters, "catalog.canonicalCode", code.CanonicalCode);
-        AddIfPresent(parameters, "catalog.standardAnnotation", code.StandardAnnotation);
-    }
-
-    private static void AddIfPresent(Dictionary<string, string> parameters, string key, string? value)
-    {
-        if (!string.IsNullOrWhiteSpace(value))
-            parameters[key] = value.Trim();
-    }
 }
 
 public sealed class CodeTreeNode
@@ -437,7 +349,7 @@ public sealed class CodeTreeNode
     public bool IsSelectable => Code is null || (Code.IsSelectable && !Code.IsObservedExtension);
     public bool IsObserved => Code?.IsObservedExtension == true;
     public string Source => Code?.Source ?? string.Empty;
-    public string SourceBadgeText => BuildSourceBadge(Code?.Source);
+    public string SourceBadgeText => AppProtocol.CodeSourceBadgeFormatter.GetBadgeText(Code?.Source);
     public bool HasSourceBadge => !string.IsNullOrWhiteSpace(SourceBadgeText);
     public string CanonicalCode => Code?.CanonicalCode ?? string.Empty;
     public string StandardAnnotation => Code?.StandardAnnotation ?? string.Empty;
@@ -446,21 +358,6 @@ public sealed class CodeTreeNode
     {
         Label = label;
         Code = code;
-    }
-
-    private static string BuildSourceBadge(string? source)
-    {
-        if (string.IsNullOrWhiteSpace(source))
-            return string.Empty;
-
-        return source.Trim() switch
-        {
-            AppProtocol.VsaKekCatalogSources.Ili => string.Empty,
-            AppProtocol.VsaKekCatalogSources.Icm => "ICM",
-            AppProtocol.VsaKekCatalogSources.XtfObserved => "XTF",
-            AppProtocol.VsaKekCatalogSources.WinCanFallback => "WinCan",
-            var other => other
-        };
     }
 }
 
@@ -488,35 +385,5 @@ public sealed partial class ParameterValueViewModel : ObservableObject
     }
 
     public bool Validate(out string error)
-    {
-        error = string.Empty;
-        var v = Value?.Trim() ?? string.Empty;
-
-        if (Required && v.Length == 0)
-        {
-            error = $"Parameter '{Name}' ist erforderlich.";
-            return false;
-        }
-
-        if (v.Length == 0)
-            return true;
-
-        if (IsEnum && AllowedValues.Count > 0 && !AllowedValues.Contains(v, StringComparer.OrdinalIgnoreCase))
-        {
-            error = $"Parameter '{Name}' hat einen ungueltigen Wert.";
-            return false;
-        }
-
-        if (IsNumber)
-        {
-            var normalized = v.Replace(',', '.');
-            if (!double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
-            {
-                error = $"Parameter '{Name}' muss numerisch sein.";
-                return false;
-            }
-        }
-
-        return true;
-    }
+        => AppProtocol.ObservationParameterValidator.Validate(Name, Type, Required, AllowedValues, Value, out error);
 }

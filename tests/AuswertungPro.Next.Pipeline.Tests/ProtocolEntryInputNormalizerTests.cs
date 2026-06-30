@@ -273,4 +273,65 @@ public sealed class ProtocolEntryInputNormalizerTests
         var ts = TimeSpan.Zero;
         Assert.Equal("00:00", ProtocolEntryInputNormalizer.FormatTime(ts));
     }
+
+    // ── TryParseOptionalInt ───────────────────────────────────────────────────
+
+    [Fact]
+    public void TryParseOptionalInt_leer_ergibt_null_und_true()
+    {
+        var ok = ProtocolEntryInputNormalizer.TryParseOptionalInt(string.Empty, out var value);
+        Assert.True(ok);
+        Assert.Null(value);
+    }
+
+    [Fact]
+    public void TryParseOptionalInt_leerzeichen_ergibt_null_und_true()
+    {
+        var ok = ProtocolEntryInputNormalizer.TryParseOptionalInt("   ", out var value);
+        Assert.True(ok);
+        Assert.Null(value);
+    }
+
+    [Theory]
+    [InlineData("0",   0)]
+    [InlineData("1",   1)]
+    [InlineData("42",  42)]
+    [InlineData("-5", -5)]
+    public void TryParseOptionalInt_gueltige_werte_werden_geparst(string input, int expected)
+    {
+        var ok = ProtocolEntryInputNormalizer.TryParseOptionalInt(input, out var value);
+        Assert.True(ok);
+        Assert.Equal(expected, value);
+    }
+
+    [Theory]
+    [InlineData("abc")]
+    [InlineData("1.5")]
+    [InlineData("1,5")]
+    public void TryParseOptionalInt_ungueltige_werte_ergeben_false(string input)
+    {
+        var ok = ProtocolEntryInputNormalizer.TryParseOptionalInt(input, out _);
+        Assert.False(ok);
+    }
+
+    // ── FormatDouble ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void FormatDouble_null_ergibt_leerstring()
+        => Assert.Equal(string.Empty, ProtocolEntryInputNormalizer.FormatDouble(null));
+
+    [Fact]
+    public void FormatDouble_null_double_ergibt_leerstring()
+    {
+        double? v = null;
+        Assert.Equal(string.Empty, ProtocolEntryInputNormalizer.FormatDouble(v));
+    }
+
+    [Theory]
+    [InlineData(0.0,   "0.00")]
+    [InlineData(1.5,   "1.50")]
+    [InlineData(12.34, "12.34")]
+    [InlineData(-3.14, "-3.14")]
+    public void FormatDouble_wert_wird_als_zwei_dezimalstellen_formatiert(double input, string expected)
+        => Assert.Equal(expected, ProtocolEntryInputNormalizer.FormatDouble(input));
 }

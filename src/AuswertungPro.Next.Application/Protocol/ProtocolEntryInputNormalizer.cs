@@ -163,6 +163,29 @@ public static class ProtocolEntryInputNormalizer
     }
 
     /// <summary>
+    /// Optionalen Int-Wert parsen (leer = null, ok).
+    /// Gibt false zurueck, wenn der Text nicht leer und nicht parsebar ist.
+    /// </summary>
+    public static bool TryParseOptionalInt(string raw, out int? value)
+    {
+        value = null;
+        if (string.IsNullOrWhiteSpace(raw))
+            return true;
+
+        if (!int.TryParse(raw.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+            return false;
+
+        value = parsed;
+        return true;
+    }
+
+    /// <summary>
+    /// Optionalen Double-Wert als "0.00"-String formatieren (null ergibt Leerstring).
+    /// </summary>
+    public static string FormatDouble(double? value)
+        => value?.ToString("0.00", CultureInfo.InvariantCulture) ?? string.Empty;
+
+    /// <summary>
     /// TimeSpan als Anzeigestring formatieren (mm:ss oder hh:mm:ss je nach Laenge).
     /// </summary>
     public static string FormatTime(TimeSpan value)
