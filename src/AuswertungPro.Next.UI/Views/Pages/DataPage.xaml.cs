@@ -22,8 +22,6 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 
 public partial class DataPage : System.Windows.Controls.UserControl
 {
-    private static readonly IValueConverter CostDisplayConverter = new ChfAccountingDisplayConverter();
-    private static readonly IValueConverter HorizontalAlignmentToTextAlignmentConverter = new HorizontalAlignmentToTextAlignmentValueConverter();
     private DataPageViewModel Vm => DataContext as DataPageViewModel
         ?? throw new InvalidOperationException("DataPage benoetigt DataPageViewModel als DataContext.");
     private ServiceProvider Services => Vm.Services;
@@ -31,14 +29,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private bool _columnsBuilt;
     private System.Windows.Point _dragStartPoint;
     private readonly DispatcherTimer _searchDebounceTimer;
-    private readonly Dictionary<DataGridColumn, HorizontalAlignment> _columnHorizontalAlignments = new();
-    private readonly Dictionary<DataGridColumn, VerticalAlignment> _columnVerticalAlignments = new();
-    private readonly Dictionary<DataGridColumn, Style?> _baseCellStyles = new();
-    private readonly Dictionary<DataGridTextColumn, Style?> _baseTextElementStyles = new();
-    private readonly Dictionary<DataGridTextColumn, Style?> _baseTextEditingStyles = new();
+    private readonly DataGridColumnLayoutController _columnLayoutController = new();
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
     private bool _updatingAlignmentButtons;
-    private bool _isRestoringLayout;
     private bool _isUndocking;
     private DataGridColumn? _activeColumn;
 
@@ -70,6 +63,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             _layoutSaveDebounceTimer.Stop();
             SaveLayoutToSettings();
         };
+        _columnLayoutController.LayoutChanged += (_, __) => QueueLayoutSave();
 
         Grid.AddHandler(DataGridColumnHeader.ClickEvent, new RoutedEventHandler(Grid_ColumnHeaderClick), true);
         Grid.ColumnReordered += Grid_ColumnReordered;
@@ -127,11 +121,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
 
         _columnsBuilt = true;
-        _columnHorizontalAlignments.Clear();
-        _columnVerticalAlignments.Clear();
-        _baseCellStyles.Clear();
-        _baseTextElementStyles.Clear();
-        _baseTextEditingStyles.Clear();
+        _columnLayoutController.Clear();
         _activeColumn = null;
 
         foreach (var field in FieldCatalog.ColumnOrder)
@@ -182,7 +172,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             }
             else if (field == "Kosten")
             {
-                col = CreateCostColumn(field, def.Label);
+                col = DataGridCostColumnFactory.Create(field, def.Label);
             }
             else
             {
@@ -215,91 +205,15 @@ public partial class DataPage : System.Windows.Controls.UserControl
             col.MinWidth = field == "NR" ? 56 : 72;
             Grid.Columns.Add(col);
 
-            _columnHorizontalAlignments[col] = string.Equals(field, "Kosten", StringComparison.Ordinal)
+            var defaultHorizontalAlignment = string.Equals(field, "Kosten", StringComparison.Ordinal)
                 ? HorizontalAlignment.Right
                 : HorizontalAlignment.Left;
-            _columnVerticalAlignments[col] = VerticalAlignment.Center;
-            ApplyColumnAlignment(col, _columnHorizontalAlignments[col], _columnVerticalAlignments[col]);
+            ApplyColumnAlignment(col, defaultHorizontalAlignment, VerticalAlignment.Center);
         }
 
         Grid.FrozenColumnCount = 2;
         RestoreLayoutFromSettings();
         ResetSort();
-    }
-
-    private DataGridTemplateColumn CreateCostColumn(string fieldName, string header)
-    {
-        var displayPanel = new FrameworkElementFactory(typeof(DockPanel));
-        displayPanel.SetValue(DockPanel.LastChildFillProperty, true);
-        displayPanel.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
-        displayPanel.SetBinding(FrameworkElement.WidthProperty, new Binding("ActualWidth")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
-        });
-
-        var displayCurrency = new FrameworkElementFactory(typeof(TextBlock));
-        displayCurrency.SetValue(DockPanel.DockProperty, Dock.Left);
-        displayCurrency.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 0, 8, 0));
-        displayCurrency.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
-        displayCurrency.SetBinding(TextBlock.TextProperty, new Binding($"Fields[{fieldName}]")
-        {
-            Converter = CostDisplayConverter,
-            ConverterParameter = "currency"
-        });
-        displayPanel.AppendChild(displayCurrency);
-
-        var displayAmount = new FrameworkElementFactory(typeof(TextBlock));
-        displayAmount.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
-        displayAmount.SetValue(TextBlock.TextAlignmentProperty, TextAlignment.Right);
-        displayAmount.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
-        displayAmount.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
-        displayAmount.SetBinding(TextBlock.TextProperty, new Binding($"Fields[{fieldName}]")
-        {
-            Converter = CostDisplayConverter,
-            ConverterParameter = "amount"
-        });
-        displayPanel.AppendChild(displayAmount);
-
-        var editPanel = new FrameworkElementFactory(typeof(DockPanel));
-        editPanel.SetValue(DockPanel.LastChildFillProperty, true);
-        editPanel.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
-        editPanel.SetBinding(FrameworkElement.WidthProperty, new Binding("ActualWidth")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
-        });
-
-        var editCurrency = new FrameworkElementFactory(typeof(TextBlock));
-        editCurrency.SetValue(DockPanel.DockProperty, Dock.Left);
-        editCurrency.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 0, 8, 0));
-        editCurrency.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
-        editCurrency.SetBinding(TextBlock.TextProperty, new Binding($"Fields[{fieldName}]")
-        {
-            Converter = CostDisplayConverter,
-            ConverterParameter = "currency"
-        });
-        editPanel.AppendChild(editCurrency);
-
-        var editAmount = new FrameworkElementFactory(typeof(TextBox));
-        editAmount.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
-        editAmount.SetValue(TextBox.TextAlignmentProperty, TextAlignment.Right);
-        editAmount.SetValue(Control.VerticalContentAlignmentProperty, VerticalAlignment.Center);
-        editAmount.SetBinding(TextBox.TextProperty, new Binding($"Fields[{fieldName}]")
-        {
-            Mode = BindingMode.TwoWay,
-            UpdateSourceTrigger = UpdateSourceTrigger.LostFocus,
-            Converter = CostDisplayConverter,
-            ConverterParameter = "amount"
-        });
-        editPanel.AppendChild(editAmount);
-
-        return new DataGridTemplateColumn
-        {
-            Header = header,
-            CellTemplate = new DataTemplate { VisualTree = displayPanel },
-            CellEditingTemplate = new DataTemplate { VisualTree = editPanel },
-            SortMemberPath = $"Fields[{fieldName}]",
-            Width = DataGridLength.SizeToHeader
-        };
     }
 
     private DataGridTemplateColumn CreateComboColumn(
@@ -312,183 +226,35 @@ public partial class DataPage : System.Windows.Controls.UserControl
         string removeCommand,
         string addCommand,
         bool allowFreeText = true)
-    {
-        var displayFactory = new FrameworkElementFactory(typeof(TextBlock));
-        displayFactory.SetBinding(TextBlock.TextProperty, new Binding($"Fields[{fieldName}]"));
-        displayFactory.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
-        displayFactory.SetBinding(TextBlock.VerticalAlignmentProperty, new Binding("VerticalContentAlignment")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
-        });
-        displayFactory.SetBinding(TextBlock.TextAlignmentProperty, new Binding("HorizontalContentAlignment")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1),
-            Converter = HorizontalAlignmentToTextAlignmentConverter
-        });
-        displayFactory.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
-
-        var comboFactory = new FrameworkElementFactory(typeof(ComboBox));
-        comboFactory.SetValue(ComboBox.IsEditableProperty, allowFreeText);
-        comboFactory.SetValue(ComboBox.StaysOpenOnEditProperty, allowFreeText);
-        comboFactory.SetValue(ComboBox.IsTextSearchEnabledProperty, false);
-        comboFactory.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
-        comboFactory.SetBinding(Control.BackgroundProperty, new Binding("Background")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
-        });
-        comboFactory.SetBinding(Control.ForegroundProperty, new Binding("Foreground")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
-        });
-        comboFactory.SetBinding(Control.HorizontalContentAlignmentProperty, new Binding("HorizontalContentAlignment")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
-        });
-        comboFactory.SetBinding(Control.VerticalContentAlignmentProperty, new Binding("VerticalContentAlignment")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
-        });
-        comboFactory.SetBinding(UIElement.IsHitTestVisibleProperty, new Binding("DataContext.IsProjectReady")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
-        });
-        comboFactory.SetBinding(ComboBox.ItemsSourceProperty, new Binding($"DataContext.{itemsSourcePath}")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
-        });
-        if (allowFreeText)
-        {
-            comboFactory.SetBinding(ComboBox.TextProperty, new Binding($"Fields[{fieldName}]")
-            {
-                Mode = BindingMode.TwoWay,
-                UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
-            });
-        }
-        else
-        {
-            comboFactory.SetBinding(Selector.SelectedItemProperty, new Binding($"Fields[{fieldName}]")
-            {
-                Mode = BindingMode.TwoWay,
-                UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
-            });
-        }
-        comboFactory.SetValue(FrameworkElement.TagProperty, fieldName);
-        comboFactory.AddHandler(UIElement.LostKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(ComboBox_LostKeyboardFocus));
-        comboFactory.AddHandler(Selector.SelectionChangedEvent, new SelectionChangedEventHandler(ComboBox_SelectionChanged));
-
-        var contextMenu = new ContextMenu();
-        contextMenu.Opened += (_, __) =>
-        {
-            if (contextMenu.PlacementTarget is not FrameworkElement target)
-                return;
-            var grid = FindAncestor<DataGrid>(target);
-            contextMenu.DataContext = grid?.DataContext ?? target.DataContext;
-        };
-
-        var editItem = new MenuItem { Header = "Liste bearbeiten..." };
-        editItem.SetBinding(MenuItem.CommandProperty, new Binding(editCommand));
-        var previewItem = new MenuItem { Header = "Vorschau" };
-        previewItem.SetBinding(MenuItem.CommandProperty, new Binding(previewCommand));
-        var resetItem = new MenuItem { Header = "Zuruecksetzen auf Standard" };
-        resetItem.SetBinding(MenuItem.CommandProperty, new Binding(resetCommand));
-        var addItem = new MenuItem { Header = "Wert hinzufuegen" };
-        addItem.SetBinding(MenuItem.CommandProperty, new Binding(addCommand));
-        addItem.SetBinding(MenuItem.CommandParameterProperty, new Binding("PlacementTarget")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(ContextMenu), 1)
-        });
-        var removeItem = new MenuItem { Header = "Wert entfernen" };
-        removeItem.SetBinding(MenuItem.CommandProperty, new Binding(removeCommand));
-        removeItem.SetBinding(MenuItem.CommandParameterProperty, new Binding("PlacementTarget")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(ContextMenu), 1)
-        });
-        contextMenu.Items.Add(editItem);
-        contextMenu.Items.Add(previewItem);
-        contextMenu.Items.Add(resetItem);
-        contextMenu.Items.Add(addItem);
-        contextMenu.Items.Add(removeItem);
-
-        comboFactory.SetValue(FrameworkElement.ContextMenuProperty, contextMenu);
-
-        var displayTemplate = new DataTemplate { VisualTree = displayFactory };
-        var editTemplate = new DataTemplate { VisualTree = comboFactory };
-        return new DataGridTemplateColumn
-        {
-            Header = header,
-            CellTemplate = displayTemplate,
-            CellEditingTemplate = editTemplate,
-            Width = DataGridLength.SizeToHeader
-        };
-    }
+        => DataGridComboColumnFactory.Create(
+            fieldName,
+            header,
+            itemsSourcePath,
+            tag: fieldName,
+            lostKeyboardFocus: ComboBox_LostKeyboardFocus,
+            selectionChanged: ComboBox_SelectionChanged,
+            allowFreeText,
+            bindIsProjectReady: true,
+            menuCommands: new DataGridComboColumnMenuCommands(
+                editCommand,
+                previewCommand,
+                resetCommand,
+                removeCommand,
+                addCommand));
 
     private DataGridTemplateColumn CreateSimpleComboColumn(
         string fieldName,
         string header,
         string itemsSourcePath)
-    {
-        var displayFactory = new FrameworkElementFactory(typeof(TextBlock));
-        displayFactory.SetBinding(TextBlock.TextProperty, new Binding($"Fields[{fieldName}]"));
-        displayFactory.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
-        displayFactory.SetBinding(TextBlock.VerticalAlignmentProperty, new Binding("VerticalContentAlignment")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
-        });
-        displayFactory.SetBinding(TextBlock.TextAlignmentProperty, new Binding("HorizontalContentAlignment")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1),
-            Converter = HorizontalAlignmentToTextAlignmentConverter
-        });
-        displayFactory.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
-
-        var comboFactory = new FrameworkElementFactory(typeof(ComboBox));
-        comboFactory.SetValue(ComboBox.IsEditableProperty, true);
-        comboFactory.SetValue(ComboBox.StaysOpenOnEditProperty, true);
-        comboFactory.SetValue(ComboBox.IsTextSearchEnabledProperty, false);
-        comboFactory.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
-        comboFactory.SetBinding(Control.BackgroundProperty, new Binding("Background")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
-        });
-        comboFactory.SetBinding(Control.ForegroundProperty, new Binding("Foreground")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
-        });
-        comboFactory.SetBinding(Control.HorizontalContentAlignmentProperty, new Binding("HorizontalContentAlignment")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
-        });
-        comboFactory.SetBinding(Control.VerticalContentAlignmentProperty, new Binding("VerticalContentAlignment")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
-        });
-        comboFactory.SetBinding(UIElement.IsHitTestVisibleProperty, new Binding("DataContext.IsProjectReady")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
-        });
-        comboFactory.SetBinding(ComboBox.ItemsSourceProperty, new Binding($"DataContext.{itemsSourcePath}")
-        {
-            RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
-        });
-        comboFactory.SetBinding(ComboBox.TextProperty, new Binding($"Fields[{fieldName}]")
-        {
-            Mode = BindingMode.TwoWay,
-            UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
-        });
-        comboFactory.SetValue(FrameworkElement.TagProperty, fieldName);
-        comboFactory.AddHandler(UIElement.LostKeyboardFocusEvent, new KeyboardFocusChangedEventHandler(ComboBox_LostKeyboardFocus));
-        comboFactory.AddHandler(Selector.SelectionChangedEvent, new SelectionChangedEventHandler(ComboBox_SelectionChanged));
-
-        var displayTemplate = new DataTemplate { VisualTree = displayFactory };
-        var editTemplate = new DataTemplate { VisualTree = comboFactory };
-        return new DataGridTemplateColumn
-        {
-            Header = header,
-            CellTemplate = displayTemplate,
-            CellEditingTemplate = editTemplate,
-            Width = DataGridLength.SizeToHeader
-        };
-    }
+        => DataGridComboColumnFactory.Create(
+            fieldName,
+            header,
+            itemsSourcePath,
+            tag: fieldName,
+            lostKeyboardFocus: ComboBox_LostKeyboardFocus,
+            selectionChanged: ComboBox_SelectionChanged,
+            allowFreeText: true,
+            bindIsProjectReady: true);
 
     private void Grid_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
@@ -1701,23 +1467,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var view = CollectionViewSource.GetDefaultView(Grid.ItemsSource);
-        if (view is null)
-            return;
 
-        if (string.IsNullOrWhiteSpace(vm.SearchText))
-        {
-            using (view.DeferRefresh())
-                view.Filter = null;
-            vm.UpdateSearchResultInfo(vm.Records.Count);
-        }
-        else
-        {
-            using (view.DeferRefresh())
-                view.Filter = obj => obj is HaltungRecord rec && vm.MatchesSearch(rec);
-            var count = view.Cast<object>().Count();
-            vm.UpdateSearchResultInfo(count);
-        }
+        DataGridSearchFilterController.Apply(
+            CollectionViewSource.GetDefaultView(Grid.ItemsSource),
+            vm.Records,
+            vm.SearchText,
+            vm.MatchesSearch,
+            vm.UpdateSearchResultInfo,
+            action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action));
     }
 
     private void ShowTextPreview(string title, string content)
@@ -1758,24 +1515,4 @@ public partial class DataPage : System.Windows.Controls.UserControl
         ShowTextPreview(title, res.Value);
     }
 
-    private sealed class HorizontalAlignmentToTextAlignmentValueConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-        {
-            if (value is HorizontalAlignment horizontal)
-            {
-                return horizontal switch
-                {
-                    HorizontalAlignment.Center => TextAlignment.Center,
-                    HorizontalAlignment.Right => TextAlignment.Right,
-                    _ => TextAlignment.Left
-                };
-            }
-
-            return TextAlignment.Left;
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
-            => Binding.DoNothing;
-    }
 }
