@@ -740,9 +740,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
     };
     private IReadOnlyDictionary<string, CostCatalogItem> _catalog;
     private readonly Dictionary<string, int> _templateLineOrderByItemKey = new(StringComparer.OrdinalIgnoreCase);
-    private bool _suppressDnUpdate;
-    private bool _suppressLengthUpdate;
-    private bool _suppressConnectionsUpdate;
+    private readonly CostCalculatorMeasureInputStateController _inputState = new();
     private bool _applyingPrices;
     private bool _enforcingInstallationRule;
     private bool _enforcingEndManschetteRule;
@@ -816,17 +814,11 @@ public sealed partial class MeasureBlockVm : ObservableObject
 
     public void LoadFrom(MeasureCost measure)
     {
-        _suppressDnUpdate = true;
-        DnText = measure.Dn?.ToString() ?? "";
-        _suppressDnUpdate = false;
+        _inputState.ApplyDnText(measure.Dn?.ToString() ?? "", value => DnText = value);
 
-        _suppressLengthUpdate = true;
-        LengthText = measure.LengthMeters?.ToString("0.00") ?? "";
-        _suppressLengthUpdate = false;
+        _inputState.ApplyLengthText(measure.LengthMeters?.ToString("0.00") ?? "", value => LengthText = value);
 
-        _suppressConnectionsUpdate = true;
-        ConnectionsText = "";
-        _suppressConnectionsUpdate = false;
+        _inputState.ApplyConnectionsText("", value => ConnectionsText = value);
 
         Lines.Clear();
         foreach (var line in measure.Lines)
@@ -893,9 +885,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(DnText)) // Only set if not already manually entered
         {
-            _suppressDnUpdate = true;
-            DnText = dn;
-            _suppressDnUpdate = false;
+            _inputState.ApplyDnText(dn, value => DnText = value);
             ApplyCatalogPrices();
             EnforceEndManschetteRule();
         }
@@ -905,9 +895,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(LengthText)) // Only set if not already manually entered
         {
-            _suppressLengthUpdate = true;
-            LengthText = length;
-            _suppressLengthUpdate = false;
+            _inputState.ApplyLengthText(length, value => LengthText = value);
             ApplyLengthToLines();
         }
     }
@@ -916,16 +904,14 @@ public sealed partial class MeasureBlockVm : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(ConnectionsText)) // Only set if not already manually entered
         {
-            _suppressConnectionsUpdate = true;
-            ConnectionsText = connections;
-            _suppressConnectionsUpdate = false;
+            _inputState.ApplyConnectionsText(connections, value => ConnectionsText = value);
             ApplyConnectionsToLines();
         }
     }
 
     partial void OnDnTextChanged(string value)
     {
-        if (_suppressDnUpdate)
+        if (!_inputState.ShouldHandleDnTextChange())
             return;
 
         ApplyCatalogPrices();
@@ -934,7 +920,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
 
     partial void OnLengthTextChanged(string value)
     {
-        if (_suppressLengthUpdate)
+        if (!_inputState.ShouldHandleLengthTextChange())
             return;
 
         ApplyLengthToLines();
@@ -942,7 +928,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
 
     partial void OnConnectionsTextChanged(string value)
     {
-        if (_suppressConnectionsUpdate)
+        if (!_inputState.ShouldHandleConnectionsTextChange())
             return;
 
         ApplyConnectionsToLines();
@@ -1227,9 +1213,9 @@ public sealed partial class MeasureBlockVm : ObservableObject
         if (qty is null)
             return;
 
-        _suppressConnectionsUpdate = true;
-        ConnectionsText = qty.Value.ToString(CultureInfo.InvariantCulture);
-        _suppressConnectionsUpdate = false;
+        _inputState.ApplyConnectionsText(
+            qty.Value.ToString(CultureInfo.InvariantCulture),
+            value => ConnectionsText = value);
     }
 
     private void ApplyCatalogPricesInternal(bool onlyQtyBased)
