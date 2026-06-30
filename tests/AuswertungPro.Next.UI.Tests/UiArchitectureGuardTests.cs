@@ -40,6 +40,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void ImportPage_stored_file_registry_owns_project_import_storage()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "ImportPageViewModel.cs");
+        var registryPath = Path.Combine(uiRoot, "Services", "StoredImportFileRegistry.cs");
+
+        Assert.True(File.Exists(registryPath), "Stored Import-Dateien muessen ausserhalb der ImportPageViewModel registriert werden.");
+
+        var viewModel = File.ReadAllText(viewModelPath);
+        var storageBody = ExtractMethodBody(viewModel, "private void StoreImportFiles");
+
+        Assert.Contains("StoredImportFileRegistry.Store", storageBody);
+        Assert.DoesNotContain("File.Copy", storageBody);
+        Assert.DoesNotContain("JsonSerializer.Deserialize", storageBody);
+        Assert.DoesNotContain("Directory.CreateDirectory", storageBody);
+        Assert.DoesNotContain("LoadStoredXtfFiles", viewModel);
+        Assert.DoesNotContain("LoadStoredPdfFiles", viewModel);
+        Assert.DoesNotContain("LoadStoredTxtFiles", viewModel);
+    }
+
+    [Fact]
     public void PlayerWindow_damage_markers_live_in_controller()
     {
         var root = FindRepositoryRoot();
