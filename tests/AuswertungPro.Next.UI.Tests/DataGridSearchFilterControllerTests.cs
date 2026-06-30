@@ -98,6 +98,44 @@ public sealed class DataGridSearchFilterControllerTests
         });
     }
 
+    [Fact]
+    public void Apply_deferred_filtering_uses_latest_search_text()
+    {
+        RunOnSta(() =>
+        {
+            var rows = new ObservableCollection<Row>
+            {
+                new("Alpha"),
+                new("Beta")
+            };
+            var view = CollectionViewSource.GetDefaultView(rows);
+            var editableView = Assert.IsAssignableFrom<IEditableCollectionView>(view);
+            var reportedCount = -1;
+            var searchText = " ";
+            Action? deferred = null;
+
+            editableView.AddNew();
+
+            DataGridSearchFilterController.Apply(
+                view,
+                rows,
+                getSearchText: () => searchText,
+                matches: row => row.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase),
+                updateSearchResultInfo: count => reportedCount = count,
+                deferRefresh: action => deferred = action);
+
+            Assert.NotNull(deferred);
+            Assert.Equal(-1, reportedCount);
+
+            searchText = "al";
+            editableView.CancelNew();
+            deferred();
+
+            Assert.Equal(1, reportedCount);
+            Assert.Equal(new[] { "Alpha" }, view.Cast<Row>().Select(x => x.Name).ToArray());
+        });
+    }
+
     private sealed class Row
     {
         public Row()

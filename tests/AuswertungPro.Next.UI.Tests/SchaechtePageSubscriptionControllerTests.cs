@@ -86,4 +86,31 @@ public sealed class SchaechtePageSubscriptionControllerTests
 
         Assert.Equal(3, recordChangeCount);
     }
+
+    [Fact]
+    public void Detach_unsubscribes_columns_records_and_record_property_changes()
+    {
+        var columns = new ObservableCollection<string> { "A" };
+        var record = new SchachtRecord();
+        var records = new ObservableCollection<SchachtRecord> { record };
+        var rebuildCount = 0;
+        var searchRefreshCount = 0;
+        var recordChangeCount = 0;
+
+        var controller = new SchaechtePageSubscriptionController(
+            rebuildColumns: () => rebuildCount++,
+            refreshSearch: () => searchRefreshCount++,
+            recordPropertyChanged: (_, __) => recordChangeCount++);
+
+        controller.Switch(columns, records, () => records);
+        controller.Detach();
+
+        columns.Add("Ignored");
+        records.Add(new SchachtRecord());
+        record.SetFieldValue("Name", "ignored");
+
+        Assert.Equal(1, rebuildCount);
+        Assert.Equal(1, searchRefreshCount);
+        Assert.Equal(0, recordChangeCount);
+    }
 }

@@ -15,17 +15,35 @@ public static class DataGridSearchFilterController
         Predicate<TRecord> matches,
         Action<int> updateSearchResultInfo,
         Action<Action> deferRefresh)
+        => Apply(
+            view,
+            records,
+            () => searchText,
+            matches,
+            updateSearchResultInfo,
+            deferRefresh);
+
+    public static void Apply<TRecord>(
+        ICollectionView? view,
+        IEnumerable<TRecord> records,
+        Func<string?> getSearchText,
+        Predicate<TRecord> matches,
+        Action<int> updateSearchResultInfo,
+        Action<Action> deferRefresh)
     {
+        ArgumentNullException.ThrowIfNull(getSearchText);
+
         if (view is null)
             return;
 
         if (view is IEditableCollectionView editableView &&
             (editableView.IsAddingNew || editableView.IsEditingItem))
         {
-            deferRefresh(() => Apply(view, records, searchText, matches, updateSearchResultInfo, deferRefresh));
+            deferRefresh(() => Apply(view, records, getSearchText, matches, updateSearchResultInfo, deferRefresh));
             return;
         }
 
+        var searchText = getSearchText();
         if (string.IsNullOrWhiteSpace(searchText))
         {
             using (view.DeferRefresh())

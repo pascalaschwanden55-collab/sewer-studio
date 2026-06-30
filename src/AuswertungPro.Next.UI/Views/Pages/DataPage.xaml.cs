@@ -1471,10 +1471,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
         DataGridSearchFilterController.Apply(
             CollectionViewSource.GetDefaultView(Grid.ItemsSource),
             vm.Records,
-            vm.SearchText,
-            vm.MatchesSearch,
-            vm.UpdateSearchResultInfo,
-            action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action));
+            getSearchText: () => vm.SearchText,
+            matches: vm.MatchesSearch,
+            updateSearchResultInfo: vm.UpdateSearchResultInfo,
+            deferRefresh: action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action));
     }
 
     private void ShowTextPreview(string title, string content)

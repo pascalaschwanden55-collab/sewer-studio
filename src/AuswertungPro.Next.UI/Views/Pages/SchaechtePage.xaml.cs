@@ -75,28 +75,49 @@ public partial class SchaechtePage : UserControl
         Grid.AddHandler(DataGridColumnHeader.ClickEvent, new RoutedEventHandler(Grid_ColumnHeaderClick), true);
         Grid.ColumnReordered += Grid_ColumnReordered;
 
-        Loaded += (_, __) =>
-        {
-            UpdateAlignmentButtonsForCurrentColumn();
-            ApplySearchFilter();
-        };
-        Unloaded += (_, __) =>
-        {
-            _layoutSaveDebounceTimer.Stop();
-            SaveLayoutToSettings();
-        };
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         _ = sender;
 
+        _subscriptionController.Detach();
         _vm = e.NewValue as SchaechtePageViewModel;
-        if (_vm is null)
-        {
-            _subscriptionController.Detach();
+        if (_vm is null || !IsLoaded)
             return;
-        }
+
+        AttachCurrentViewModelSubscriptions();
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        AttachCurrentViewModelSubscriptions();
+        UpdateAlignmentButtonsForCurrentColumn();
+        ApplySearchFilter();
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        _searchDebounceTimer.Stop();
+        _layoutSaveDebounceTimer.Stop();
+        if (_vm is not null)
+            SaveLayoutToSettings();
+
+        _subscriptionController.Detach();
+    }
+
+    private void AttachCurrentViewModelSubscriptions()
+    {
+        if (_vm is null)
+            return;
 
         _subscriptionController.Switch(_vm.Columns, _vm.Records, () => _vm.Records);
     }
@@ -520,10 +541,10 @@ public partial class SchaechtePage : UserControl
         DataGridSearchFilterController.Apply(
             CollectionViewSource.GetDefaultView(Grid.ItemsSource),
             vm.Records,
-            vm.SearchText,
-            vm.MatchesSearch,
-            vm.UpdateSearchResultInfo,
-            action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action));
+            getSearchText: () => vm.SearchText,
+            matches: vm.MatchesSearch,
+            updateSearchResultInfo: vm.UpdateSearchResultInfo,
+            deferRefresh: action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action));
     }
 
     private void Grid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
