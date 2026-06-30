@@ -30,10 +30,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private System.Windows.Point _dragStartPoint;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DataGridColumnLayoutController _columnLayoutController = new();
+    private readonly DataGridColumnAlignmentToolbar _columnAlignmentToolbar;
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
-    private bool _updatingAlignmentButtons;
     private bool _isUndocking;
-    private DataGridColumn? _activeColumn;
 
     public DataPage()
     {
@@ -64,6 +63,16 @@ public partial class DataPage : System.Windows.Controls.UserControl
             SaveLayoutToSettings();
         };
         _columnLayoutController.LayoutChanged += (_, __) => QueueLayoutSave();
+        _columnAlignmentToolbar = new DataGridColumnAlignmentToolbar(
+            Grid,
+            _columnLayoutController,
+            new DataGridColumnAlignmentButtons(
+                AlignLeftButton,
+                AlignCenterButton,
+                AlignRightButton,
+                AlignTopButton,
+                AlignMiddleButton,
+                AlignBottomButton));
 
         Grid.AddHandler(DataGridColumnHeader.ClickEvent, new RoutedEventHandler(Grid_ColumnHeaderClick), true);
         Grid.ColumnReordered += Grid_ColumnReordered;
@@ -71,7 +80,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         {
             ApplyHaltungsansichtSettings();
             EnsureColumns();
-            UpdateAlignmentButtonsForCurrentColumn();
+            _columnAlignmentToolbar.UpdateButtons();
         };
         Unloaded += (_, __) =>
         {
@@ -122,7 +131,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         _columnsBuilt = true;
         _columnLayoutController.Clear();
-        _activeColumn = null;
+        _columnAlignmentToolbar.ClearActiveColumn();
 
         foreach (var field in FieldCatalog.ColumnOrder)
         {
@@ -213,7 +222,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             var defaultHorizontalAlignment = string.Equals(field, "Kosten", StringComparison.Ordinal)
                 ? HorizontalAlignment.Right
                 : HorizontalAlignment.Left;
-            ApplyColumnAlignment(col, defaultHorizontalAlignment, VerticalAlignment.Center);
+            _columnAlignmentToolbar.SetAlignment(col, defaultHorizontalAlignment, VerticalAlignment.Center);
         }
 
         Grid.FrozenColumnCount = 2;

@@ -26,6 +26,44 @@ public sealed class SchaechtePageColumnLayoutRefactorTests
         Assert.DoesNotContain("ParseVerticalAlignment", source);
     }
 
+    [Fact]
+    public void DataPage_and_SchaechtePage_delegate_alignment_toolbar_state()
+    {
+        var root = FindRepositoryRoot();
+        var dataPageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "DataPage.ColumnLayout.cs"));
+        var dataPageRootSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "DataPage.xaml.cs"));
+        var schaechtePageSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "SchaechtePage.xaml.cs"));
+
+        Assert.Contains("DataGridColumnAlignmentToolbar", dataPageRootSource);
+        Assert.Contains("DataGridColumnAlignmentToolbar", schaechtePageSource);
+        Assert.DoesNotContain("_updatingAlignmentButtons", dataPageRootSource);
+        Assert.DoesNotContain("_updatingAlignmentButtons", schaechtePageSource);
+        Assert.DoesNotContain("DataGridColumn? _activeColumn", dataPageRootSource);
+        Assert.DoesNotContain("DataGridColumn? _activeColumn", schaechtePageSource);
+        Assert.DoesNotContain("private DataGridColumn? GetActiveColumn", dataPageSource);
+        Assert.DoesNotContain("private DataGridColumn? GetActiveColumn", schaechtePageSource);
+        Assert.DoesNotContain("private void SetAlignmentButtonsUnchecked", dataPageSource);
+        Assert.DoesNotContain("private void SetAlignmentButtonsUnchecked", schaechtePageSource);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
