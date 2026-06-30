@@ -793,10 +793,11 @@ public partial class TrainingCenterViewModel : ObservableObject
         try
         {
             TrainingBatchImportRunStartController.Apply(
-                value => IsBusy = value,
-                value => LogText = value,
-                value => ProgressValue = value,
-                value => ProgressMax = value,
+                new TrainingBatchUiSink(
+                    value => IsBusy = value,
+                    value => LogText = value,
+                    value => ProgressValue = value,
+                    value => ProgressMax = value),
                 ClearLivePreview,
                 () => ResetSelfTrainingVisuals());
 
