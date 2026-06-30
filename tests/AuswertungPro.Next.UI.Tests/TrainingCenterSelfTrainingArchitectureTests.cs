@@ -45,6 +45,25 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_self_training_case_selection_workflow_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+
+        Assert.Contains("SelfTrainingCaseSelectionWorkflowController.RunAsync(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingCaseSelectionController.Select(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("var existingSamplesForSelection", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedCase is null", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("await TrainingSamplesStore.LoadAsync()", selfTrainingSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_review_queue_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(

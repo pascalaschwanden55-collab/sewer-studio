@@ -1360,25 +1360,18 @@ public partial class TrainingCenterViewModel : ObservableObject
             value => StatusText = value,
             Cases.Add);
 
-        var existingSamplesForSelection = SelectedCase is null
-            ? await TrainingSamplesStore.LoadAsync()
-            : Enumerable.Empty<TrainingSample>();
-        var selection = SelfTrainingCaseSelectionController.Select(
+        var selection = await SelfTrainingCaseSelectionWorkflowController.RunAsync(
             SelectedCase,
             Cases,
-            existingSamplesForSelection);
+            TrainingSamplesStore.LoadAsync,
+            value => StatusText = value,
+            value => SelectedCase = value);
         if (selection.ShouldStop)
-        {
-            StatusText = selection.StatusText ?? "";
             return;
-        }
-        if (selection.Case is null)
-        {
-            StatusText = "Keine Faelle mit Protokoll vorhanden. Bitte zuerst Ordner waehlen und scannen.";
-            return;
-        }
+
         var selectedCase = selection.Case;
-        SelectedCase = selectedCase;
+        if (selectedCase is null)
+            return;
 
         var runPreparation = SelfTrainingRunPreparationController.PrepareCancellation(_selfTrainingCts);
         _selfTrainingCts = runPreparation.CancellationTokenSource;
