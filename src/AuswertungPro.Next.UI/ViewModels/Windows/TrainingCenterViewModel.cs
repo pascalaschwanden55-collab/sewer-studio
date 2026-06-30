@@ -363,9 +363,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     public async Task LoadAsync()
     {
         var state = await _store.LoadAsync();
-        Cases.Clear();
-        foreach (var c in state.Cases)
-            Cases.Add(c);
+        ObservableCollectionContentController.ReplaceWith(Cases, state.Cases);
 
         var restoredRootFolders = TrainingCenterStateController.RestoreExistingRootFolders(state, Directory.Exists);
         if (restoredRootFolders.Count > 0)
