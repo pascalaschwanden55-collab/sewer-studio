@@ -561,6 +561,8 @@ public sealed class LegacyXtfImportService
         findingsPerHaltung = new Dictionary<string, List<VsaFinding>>(StringComparer.OrdinalIgnoreCase);
         var findingsByObjId = new Dictionary<string, VsaFinding>(StringComparer.OrdinalIgnoreCase);
         var findingsByTid = new Dictionary<string, VsaFinding>(StringComparer.OrdinalIgnoreCase);
+        // Video-Pfad je Untersuchungs-TID (KEK.Datei mit Klasse=Untersuchung)
+        var videoByUntersuchungTid = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var node in doc.Descendants().Where(e => e.Name.LocalName.Contains("Untersuchung", StringComparison.OrdinalIgnoreCase)))
         {
@@ -722,6 +724,25 @@ public sealed class LegacyXtfImportService
                 }
             }
 
+            // --- Untersuchungs-Video (Klasse=Untersuchung, Dateierweiterung=mpg/mp4/avi/mpeg ODER relativpfad=Film) ---
+            if (klasse.Contains("Untersuchung", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(objekt))
+            {
+                var ext = Path.GetExtension(bezeichnung).ToLowerInvariant();
+                var istVideo = ext is ".mpg" or ".mp4" or ".avi" or ".mpeg"
+                               || relativpfad.Contains("Film", StringComparison.OrdinalIgnoreCase);
+                if (istVideo)
+                {
+                    var videoPfad = ResolveVsaVideoPath(sourcePath, relativpfad, bezeichnung);
+                    if (!string.IsNullOrWhiteSpace(videoPfad)
+                        && !videoByUntersuchungTid.ContainsKey(objekt))
+                    {
+                        videoByUntersuchungTid[objekt] = videoPfad;
+                    }
+                }
+                continue;
+            }
+
             if (!art.Contains("Foto", StringComparison.OrdinalIgnoreCase))
                 continue;
             if (!klasse.Contains("Kanalschaden", StringComparison.OrdinalIgnoreCase))
@@ -774,6 +795,13 @@ public sealed class LegacyXtfImportService
             if (!string.IsNullOrWhiteSpace(zeitpunkt)) rec.SetFieldValue("Datum_Jahr", zeitpunkt, FieldSource.Xtf, userEdited: false);
             if (findings is not null && findings.Count > 0)
                 rec.VsaFindings = new List<VsaFinding>(findings);
+
+            // Video-Link aus KEK.Datei (Klasse=Untersuchung) setzen, falls noch kein Link vorhanden
+            if (videoByUntersuchungTid.TryGetValue(u.Tid, out var videoLink)
+                && string.IsNullOrWhiteSpace(rec.GetFieldValue("Link")))
+            {
+                rec.SetFieldValue("Link", videoLink, FieldSource.Xtf, userEdited: false);
+            }
 
             if (primaere.Count > 0)
             {
@@ -836,6 +864,42 @@ public sealed class LegacyXtfImportService
                 return c;
         }
 
+        return candidates[0];
+    }
+
+    /// <summary>
+    /// Loesung des Video-Pfads aus dem KEK.Datei-Element (Klasse=Untersuchung).
+    /// Prueft: relativpfad\bezeichnung, dann Film\bezeichnung, dann direkt neben der XTF.
+    /// Gibt den ersten gefundenen Pfad zurueck; falls keiner existiert, den bevorzugten Kandidaten.
+    /// </summary>
+    private static string ResolveVsaVideoPath(string xtfPath, string? relativeFolder, string? fileName)
+    {
+        fileName = (fileName ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(fileName))
+            return string.Empty;
+
+        if (Path.IsPathRooted(fileName))
+            return fileName;
+
+        var baseDir = Path.GetDirectoryName(xtfPath) ?? "";
+        var rel = (relativeFolder ?? "").Trim().Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+        var candidates = new List<string>();
+
+        // 1. Bevorzugt: baseDir\<relativpfad>\<bezeichnung>  (z.B. baseDir\Film\H_06-001.mpg)
+        if (!string.IsNullOrWhiteSpace(rel))
+            candidates.Add(Path.GetFullPath(Path.Combine(baseDir, rel, fileName)));
+        // 2. Fallback: direkt im Film-Ordner
+        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, "Film", fileName)));
+        // 3. Direkt neben der XTF
+        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, fileName)));
+
+        foreach (var c in candidates)
+        {
+            if (File.Exists(c))
+                return c;
+        }
+
+        // Kein Treffer: ersten Kandidaten zurueckgeben (wird spaeter beim Kopieren als fehlend gemeldet)
         return candidates[0];
     }
 
