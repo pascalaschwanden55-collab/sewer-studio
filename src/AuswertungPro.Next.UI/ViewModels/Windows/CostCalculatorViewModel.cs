@@ -729,15 +729,6 @@ public sealed record CatalogItemOption(string Key, string Group, string DisplayN
 
 public sealed partial class MeasureBlockVm : ObservableObject
 {
-    private static readonly string[] GroupOrder =
-    {
-        "Installation",
-        "Vorarbeiten",
-        "Hauptarbeit",
-        "Qualitaetskontrolle",
-        "Qualitaet",
-        "Sonstiges"
-    };
     private IReadOnlyDictionary<string, CostCatalogItem> _catalog;
     private readonly Dictionary<string, int> _templateLineOrderByItemKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly CostCalculatorMeasureInputStateController _inputState = new();
@@ -791,17 +782,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
                     _templateLineOrderByItemKey[itemKey] = i;
             }
 
-            var ordered = template.Lines
-                .Select((line, index) => new
-                {
-                    Line = line,
-                    Index = index,
-                    Order = GetGroupOrder(line.Group)
-                })
-                .OrderBy(x => x.Order)
-                .ThenBy(x => x.Index)
-                .Select(x => x.Line)
-                .ToList();
+            var ordered = CostCalculatorLineOrderController.OrderTemplateLines(template.Lines);
 
             foreach (var line in ordered)
                 Lines.Add(CreateLine(line));
@@ -1068,23 +1049,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
         if (Lines.Count <= 1)
             return;
 
-        var ordered = Lines
-            .Select((line, index) => new
-            {
-                Line = line,
-                Index = index,
-                GroupOrder = GetGroupOrder(line.Group),
-                TemplateOrder = GetTemplateLineOrder(line.ItemKey),
-                Text = line.Text ?? string.Empty,
-                ItemKey = line.ItemKey ?? string.Empty
-            })
-            .OrderBy(x => x.GroupOrder)
-            .ThenBy(x => x.TemplateOrder)
-            .ThenBy(x => x.Text, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(x => x.ItemKey, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(x => x.Index)
-            .Select(x => x.Line)
-            .ToList();
+        var ordered = CostCalculatorLineOrderController.OrderLines(Lines, GetTemplateLineOrder);
 
         ObservableCollectionOrderController.Reorder(Lines, ordered);
     }
@@ -1386,15 +1351,6 @@ public sealed partial class MeasureBlockVm : ObservableObject
     private static bool IsItemKey(CostLineVm? line, string key)
         => CostCalculatorLogicService.IsItemKey(line?.ItemKey, key);
 
-    private static int GetGroupOrder(string? group)
-    {
-        if (string.IsNullOrWhiteSpace(group))
-            return GroupOrder.Length + 1;
-
-        var trimmed = group.Trim();
-        var idx = Array.FindIndex(GroupOrder, g => string.Equals(g, trimmed, StringComparison.OrdinalIgnoreCase));
-        return idx >= 0 ? idx : GroupOrder.Length + 1;
-    }
 }
 
 public sealed partial class CostLineVm : ObservableObject
