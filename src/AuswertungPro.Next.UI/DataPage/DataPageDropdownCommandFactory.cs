@@ -1,20 +1,6 @@
-using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.DataPage;
-
-public sealed record DropdownCommandActions(
-    Action Edit,
-    Action Preview,
-    Action Reset,
-    Action<object?> Add,
-    Action<object?> Remove);
-
-public sealed record DropdownCommandGroup(
-    IRelayCommand Edit,
-    IRelayCommand Preview,
-    IRelayCommand Reset,
-    IRelayCommand<object?> Add,
-    IRelayCommand<object?> Remove);
 
 public sealed record DataPageDropdownCommandSet(
     DropdownCommandGroup Sanieren,
@@ -22,26 +8,6 @@ public sealed record DataPageDropdownCommandSet(
     DropdownCommandGroup Pruefungsresultat,
     DropdownCommandGroup Referenzpruefung,
     DropdownCommandGroup EmpfohleneSanierungsmassnahmen);
-
-public static class DropdownCommandFactory
-{
-    public static DropdownCommandGroup Create(DropdownCommandActions actions)
-    {
-        ArgumentNullException.ThrowIfNull(actions);
-        ArgumentNullException.ThrowIfNull(actions.Edit);
-        ArgumentNullException.ThrowIfNull(actions.Preview);
-        ArgumentNullException.ThrowIfNull(actions.Reset);
-        ArgumentNullException.ThrowIfNull(actions.Add);
-        ArgumentNullException.ThrowIfNull(actions.Remove);
-
-        return new DropdownCommandGroup(
-            new RelayCommand(actions.Edit),
-            new RelayCommand(actions.Preview),
-            new RelayCommand(actions.Reset),
-            new RelayCommand<object?>(actions.Add),
-            new RelayCommand<object?>(actions.Remove));
-    }
-}
 
 public static class DataPageDropdownCommandFactory
 {

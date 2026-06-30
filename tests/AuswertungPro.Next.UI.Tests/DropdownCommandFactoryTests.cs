@@ -1,4 +1,4 @@
-using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Tests;
 
