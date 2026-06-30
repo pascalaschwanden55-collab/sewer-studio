@@ -581,6 +581,23 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_live_frame_throttling_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var throttleSource = ExtractMethodBody(source, "private void SetLiveFrameThrottled(string? path)");
+
+        Assert.Contains("TrainingLiveFrameThrottleController.Decide(path, _lastLiveFrameUpdate, DateTime.UtcNow)", throttleSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TotalMilliseconds < 180", throttleSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("string.IsNullOrEmpty(path)", throttleSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_protocol_startdata_queue_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(

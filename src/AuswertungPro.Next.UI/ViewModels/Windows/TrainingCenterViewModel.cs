@@ -66,10 +66,11 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// <summary>Setzt LiveFramePath mit Throttling (~5 fps max), um UI-Thread nicht zu ueberlasten.</summary>
     private void SetLiveFrameThrottled(string? path)
     {
-        if (string.IsNullOrEmpty(path)) { LiveFramePath = ""; return; }
-        if ((DateTime.UtcNow - _lastLiveFrameUpdate).TotalMilliseconds < 180) return;
-        LiveFramePath = path;
-        _lastLiveFrameUpdate = DateTime.UtcNow;
+        var decision = TrainingLiveFrameThrottleController.Decide(path, _lastLiveFrameUpdate, DateTime.UtcNow);
+        if (!decision.ShouldUpdateFramePath) return;
+
+        LiveFramePath = decision.FramePath ?? "";
+        _lastLiveFrameUpdate = decision.LastUpdatedUtc;
     }
 
     // KB-Trainingsstand
