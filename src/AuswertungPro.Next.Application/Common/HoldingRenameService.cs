@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 
@@ -138,11 +137,12 @@ public static class HoldingRenameService
 
         try
         {
-            // Dateien umbenennen (Muster: YYYYMMDD_HALTUNGSNAME...)
-            var pattern = new Regex(
-                @"^(?<d>\d{8})_" + Regex.Escape(oldSan) + @"(?<g>-g)?(?<rest>.*)$",
-                RegexOptions.IgnoreCase);
-
+            // Dateien umbenennen: die (sanitierte) Haltungsnummer als Token im Dateinamen
+            // ersetzen - separator-agnostisch. Deckt beide realen Schemata ab:
+            //   JJJJMMTT-<Haltung>.mp4 / ...-<Haltung>_G.mp4  (Bindestrich + _G, aktuell)
+            //   JJJJMMTT_<Haltung>-g.mp4                       (Unterstrich + -g, alt)
+            // Datum-Praefix, Gegeninspektions-Suffix (_G/-g) und Endung bleiben erhalten;
+            // ausgetauscht wird nur die Haltungsnummer selbst.
             IEnumerable<string> files;
             try { files = Directory.EnumerateFiles(folder); }
             catch { files = Array.Empty<string>(); }
@@ -152,15 +152,13 @@ public static class HoldingRenameService
                 var name = Path.GetFileName(f);
                 if (string.IsNullOrWhiteSpace(name)) continue;
 
-                var m = pattern.Match(Path.GetFileNameWithoutExtension(name));
-                if (!m.Success) continue;
+                var stem = Path.GetFileNameWithoutExtension(name);
+                if (stem.IndexOf(oldSan, StringComparison.OrdinalIgnoreCase) < 0)
+                    continue;
 
                 var ext = Path.GetExtension(name);
-                var date = m.Groups["d"].Value;
-                var g = m.Groups["g"].Value;
-                var rest = m.Groups["rest"].Value;
-                var newName = $"{date}_{newSan}{g}{rest}{ext}";
-                var dest = Path.Combine(folder, newName);
+                var newStem = stem.Replace(oldSan, newSan, StringComparison.OrdinalIgnoreCase);
+                var dest = Path.Combine(folder, newStem + ext);
 
                 if (!string.Equals(f, dest, StringComparison.OrdinalIgnoreCase))
                 {
@@ -285,8 +283,25 @@ public static class HoldingRenameService
     // ── Pfad-Ersetzung (delegiert an HoldingPathRewriter) ────────────────
 
     /// <summary>
-    /// Delegiert an <see cref="HoldingPathRewriter.ReplaceHoldingInPath"/>.
+    /// Ersetzt die Haltungsnummer in einem Pfad: zuerst die Ordner-Segmente
+    /// (<see cref="HoldingPathRewriter.ReplaceHoldingInPath"/>), dann zusaetzlich als Token im
+    /// Dateinamen (letzte Komponente). Notwendig, weil die Verteilung die Haltung auch in den
+    /// Dateinamen einbettet (z.B. 20250310-&lt;Haltung&gt;.mp4) - sonst zeigt der Link nach dem
+    /// Rename auf eine nicht existierende Datei (Ordner neu, Dateiname alt).
     /// </summary>
     internal static string ReplaceHoldingInPath(string path, string oldSan, string newSan)
-        => HoldingPathRewriter.ReplaceHoldingInPath(path, oldSan, newSan);
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return path;
+
+        var result = HoldingPathRewriter.ReplaceHoldingInPath(path, oldSan, newSan);
+
+        var sepIdx = result.LastIndexOfAny(new[] { '/', '\\' });
+        var dir = sepIdx >= 0 ? result[..(sepIdx + 1)] : string.Empty;
+        var file = sepIdx >= 0 ? result[(sepIdx + 1)..] : result;
+        if (file.IndexOf(oldSan, StringComparison.OrdinalIgnoreCase) >= 0)
+            file = file.Replace(oldSan, newSan, StringComparison.OrdinalIgnoreCase);
+
+        return dir + file;
+    }
 }
