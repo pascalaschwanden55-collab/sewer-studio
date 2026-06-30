@@ -32,6 +32,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     private readonly Dictionary<string, MeasureTemplate> _templateItems;
     private readonly Dictionary<string, string> _ownerByHolding = new(StringComparer.OrdinalIgnoreCase);
     private readonly CostCalculatorMeasureSelectionController _measureSelection = new();
+    private readonly CostCalculatorCatalogFilterController _catalogFilter = new();
     private readonly CostCalculatorWarningSuppressionController _warningSuppression = new();
     private ProjectCostStore _store = new();
     // != null wenn costs.json beim Laden nicht lesbar war -> Speichern gesperrt (Audit K3).
@@ -62,8 +63,8 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     public string MwstLabel => $"MWST {_vatRate * 100:0.0}%:";
 
     /// <summary>All active catalog items for the drag-source panel.</summary>
-    public List<CatalogItemOption> AllCatalogItems { get; }
-    public ObservableCollection<CatalogItemOption> FilteredCatalogItems { get; } = new();
+    public IReadOnlyList<CatalogItemOption> AllCatalogItems => _catalogFilter.AllCatalogItems;
+    public ObservableCollection<CatalogItemOption> FilteredCatalogItems => _catalogFilter.FilteredCatalogItems;
 
     public IRelayCommand ApplyMeasuresCommand { get; }
     public IRelayCommand SaveCommand { get; }
@@ -103,26 +104,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         _measureSelection.ReplaceMeasureOrder(templates.Measures.Select(t => t.Id));
         Measures = new ObservableCollection<MeasureTemplateListItem>(
             templates.Measures.Select(t => new MeasureTemplateListItem(t)));
-
-        // Build itemKey -> group lookup from all template lines
-        var keyToGroup = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var t in templates.Measures)
-            foreach (var line in t.Lines)
-                if (!keyToGroup.ContainsKey(line.ItemKey))
-                    keyToGroup[line.ItemKey] = line.Group;
-
-        AllCatalogItems = _catalogItems.Values
-            .Where(c => c.Active)
-            .Select(c =>
-            {
-                var group = keyToGroup.TryGetValue(c.Key, out var g) ? g : DeriveGroupFromKey(c.Key);
-                return new CatalogItemOption(c.Key, group, $"[{group}]  {c.Name}  ({c.Unit})");
-            })
-            .OrderBy(c => GetCatalogGroupOrder(c.Group))
-            .ThenBy(c => c.DisplayName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        foreach (var ci in AllCatalogItems)
-            FilteredCatalogItems.Add(ci);
+        _catalogFilter.ReplaceItems(_catalogItems.Values, templates.Measures, CatalogSearchText);
 
         _store = _costRepo.Load(projectPath, out _storeLoadError);
         if (_storeLoadError is not null)
@@ -464,18 +446,8 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
     partial void OnCatalogSearchTextChanged(string value)
     {
-        FilteredCatalogItems.Clear();
-        var filter = value?.Trim() ?? "";
-        foreach (var item in AllCatalogItems)
-        {
-            if (filter.Length == 0 || item.DisplayName.Contains(filter, StringComparison.OrdinalIgnoreCase))
-                FilteredCatalogItems.Add(item);
-        }
+        _catalogFilter.ApplyFilter(value);
     }
-
-    // Gruppen-Reihenfolge und -Ableitung werden von CatalogItemGrouping (Infrastructure.Costs) geliefert.
-    private static int GetCatalogGroupOrder(string? group)
-        => CatalogItemGrouping.GetGroupOrder(group);
 
     internal static string DeriveGroupFromKey(string key)
         => CatalogItemGrouping.DeriveGroupFromKey(key);
@@ -638,33 +610,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         foreach (var item in catalog.Items)
             _catalogItems[item.Key] = item;
 
-        // Rebuild key->group lookup
-        var keyToGroup = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var t in _templateItems.Values)
-            foreach (var line in t.Lines)
-                if (!keyToGroup.ContainsKey(line.ItemKey))
-                    keyToGroup[line.ItemKey] = line.Group;
-
-        // Rebuild AllCatalogItems + FilteredCatalogItems
-        AllCatalogItems.Clear();
-        AllCatalogItems.AddRange(
-            _catalogItems.Values
-                .Where(c => c.Active)
-                .Select(c =>
-                {
-                    var group = keyToGroup.TryGetValue(c.Key, out var g) ? g : DeriveGroupFromKey(c.Key);
-                    return new CatalogItemOption(c.Key, group, $"[{group}]  {c.Name}  ({c.Unit})");
-                })
-                .OrderBy(c => GetCatalogGroupOrder(c.Group))
-                .ThenBy(c => c.DisplayName, StringComparer.OrdinalIgnoreCase));
-
-        FilteredCatalogItems.Clear();
-        var filter = CatalogSearchText?.Trim() ?? "";
-        foreach (var item in AllCatalogItems)
-        {
-            if (filter.Length == 0 || item.DisplayName.Contains(filter, StringComparison.OrdinalIgnoreCase))
-                FilteredCatalogItems.Add(item);
-        }
+        _catalogFilter.ReplaceItems(_catalogItems.Values, _templateItems.Values, CatalogSearchText);
 
         // Update each measure block
         foreach (var block in SelectedMeasures)
