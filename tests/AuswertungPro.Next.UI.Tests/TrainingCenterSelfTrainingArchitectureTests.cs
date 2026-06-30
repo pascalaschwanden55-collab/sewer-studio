@@ -581,6 +581,25 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_code_distribution_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var distributionSource = ExtractMethodBody(source, "private void UpdateCodeDistribution(string code, MatchLevel level)");
+
+        Assert.Contains("SelfTrainingCodeDistributionController.Apply(CodeDistribution, code, level)", distributionSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("FirstOrDefault", distributionSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new CodeDistributionEntry", distributionSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CodeDistribution.Add", distributionSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingStatusCalculator.ApplyMatch", distributionSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_log_format_und_trim_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
