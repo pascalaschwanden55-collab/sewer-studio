@@ -12,18 +12,18 @@ public partial class PlayerWindow
 
     private async Task HandleDetectionAcceptAsync()
     {
-        var pendingFindings = _detectionConfirmationBuffer.Findings;
+        var pendingFindings = _liveDetectionController.PendingConfirmationFindings;
         await LiveDetectionConfirmationAcceptCommandWorkflow.ExecuteAsync(
             new LiveDetectionConfirmationAcceptCommandRequest(pendingFindings.Count > 0),
             new LiveDetectionConfirmationAcceptCommandActions(
                 SaveAcceptedAsync: async () =>
                 {
-                    var timestampSec = _detectionConfirmationBuffer.TimestampSeconds ?? _playerTimelineHost.CurrentSecondsOrZero;
+                    var timestampSec = _liveDetectionController.PendingConfirmationTimestampSeconds ?? _playerTimelineHost.CurrentSecondsOrZero;
                     var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
                     return await LiveDetectionConfirmationTrainingWorkflow.SaveAcceptedAsync(
                         pendingFindings,
                         timestampSec,
-                        _detectionConfirmationBuffer.FrameBytes,
+                        _liveDetectionController.PendingConfirmationFrameBytes,
                         CaptureCurrentFrameAsync,
                         annotationWriter);
                 },
@@ -39,7 +39,7 @@ public partial class PlayerWindow
 
     private async Task HandleDetectionCorrectAsync()
     {
-        var pendingFindings = _detectionConfirmationBuffer.Findings;
+        var pendingFindings = _liveDetectionController.PendingConfirmationFindings;
         var timestampSec = _playerTimelineHost.CurrentSecondsOrZero;
 
         await LiveDetectionConfirmationCorrectCommandWorkflow.ExecuteAsync(
@@ -59,13 +59,13 @@ public partial class PlayerWindow
                 },
                 SaveCorrectedAsync: async selectedEntry =>
                 {
-                    var timestampSecForFrame = _detectionConfirmationBuffer.TimestampSeconds ?? timestampSec;
+                    var timestampSecForFrame = _liveDetectionController.PendingConfirmationTimestampSeconds ?? timestampSec;
                     var annotationWriter = LiveDetectionTrainingAnnotationWriter.CreateDefault();
                     return await LiveDetectionConfirmationTrainingWorkflow.SaveCorrectedAsync(
                         pendingFindings,
                         selectedEntry,
                         timestampSecForFrame,
-                        _detectionConfirmationBuffer.FrameBytes,
+                        _liveDetectionController.PendingConfirmationFrameBytes,
                         CaptureCurrentFrameAsync,
                         annotationWriter);
                 },

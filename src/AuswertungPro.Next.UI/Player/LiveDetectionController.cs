@@ -26,6 +26,7 @@ public sealed class LiveDetectionController
     private bool _isDetecting;
     private bool _isDetectionInFlight;
     private readonly List<LiveFrameFinding> _currentFindings = new();
+    private readonly DetectionConfirmationBuffer _confirmationBuffer = new();
     private string _modelName = string.Empty;
     private bool _isManualMarkMode;
     private OverlayToolType _markToolType = OverlayToolType.None;
@@ -39,6 +40,10 @@ public sealed class LiveDetectionController
     public OverlayToolType MarkToolType => _markToolType;
     public double LastDetectionTimestamp { get; private set; }
     public IReadOnlyList<LiveFrameFinding> CurrentFindings => _currentFindings;
+    public IReadOnlyList<LiveFrameFinding> PendingConfirmationFindings => _confirmationBuffer.Findings;
+    public byte[]? PendingConfirmationFrameBytes => _confirmationBuffer.FrameBytes;
+    public double? PendingConfirmationTimestampSeconds => _confirmationBuffer.TimestampSeconds;
+    public bool HasPendingConfirmationFindings => _confirmationBuffer.HasFindings;
     public string ModelName => _modelName;
 
     public void StartRuntime(LiveDetectionRuntime runtime, LiveDetectionControllerStartActions actions)
@@ -93,6 +98,18 @@ public sealed class LiveDetectionController
         _currentFindings.Clear();
         _currentFindings.AddRange(result.Findings);
     }
+
+    public void StoreConfirmationFindings(
+        IReadOnlyList<LiveFrameFinding> findings,
+        byte[]? frameBytes,
+        double timestampSeconds)
+        => _confirmationBuffer.StoreFindings(findings, frameBytes, timestampSeconds);
+
+    public void StoreAnalyzedFrame(byte[]? frameBytes, double timestampSeconds)
+        => _confirmationBuffer.StoreAnalyzedFrame(frameBytes, timestampSeconds);
+
+    public void ClearConfirmationBuffer()
+        => _confirmationBuffer.Clear();
 
     public void CancelDetectionIfPresent()
         => CancellationTokenSourceLifecycle.CancelIfPresent(_cancellation);

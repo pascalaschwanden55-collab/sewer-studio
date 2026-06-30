@@ -63,7 +63,7 @@ public partial class PlayerWindow
                     new CodingSingleModelAnalysisWorkflowActions(
                         SetCodingAiState: SetCodingAiState,
                         CaptureSnapshotAsync: CaptureSnapshotAsync,
-                        StoreAnalyzedFrame: (frameBytes, timestamp) => _detectionConfirmationBuffer.StoreAnalyzedFrame(
+                        StoreAnalyzedFrame: (frameBytes, timestamp) => _liveDetectionController.StoreAnalyzedFrame(
                             frameBytes,
                             timestamp),
                         TryReadAnalyzedFrameOsdMeterAsync: TryReadAnalyzedFrameOsdMeterAsync,

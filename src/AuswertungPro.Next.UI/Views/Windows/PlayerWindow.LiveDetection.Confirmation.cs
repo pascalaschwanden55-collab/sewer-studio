@@ -15,7 +15,7 @@ public partial class PlayerWindow
                 findings,
                 _shutdownState.IsPlaybackDisposed,
                 _playerPlaybackControlHost.IsPlaying,
-                _detectionConfirmationBuffer.TimestampSeconds),
+                _liveDetectionController.PendingConfirmationTimestampSeconds),
             new LiveDetectionConfirmationShowActions(
                 SetPause: _playerPlaybackControlHost.SetPause,
                 SeekMilliseconds: _playerTimelineHost.SeekMilliseconds,
@@ -31,7 +31,7 @@ public partial class PlayerWindow
         LiveDetectionConfirmationDisplayWorkflow.Resume(
             new LiveDetectionConfirmationResumeRequest(_playerPlaybackControlHost.IsPlaying),
             new LiveDetectionConfirmationResumeActions(
-                ClearBuffer: _detectionConfirmationBuffer.Clear,
+                ClearBuffer: _liveDetectionController.ClearConfirmationBuffer,
                 HideConfirmation: () => LiveDetectionStatusControls.HideDetectionConfirmation(DetectionConfirmationPanel),
                 Play: _playerPlaybackControlHost.Play));
     }

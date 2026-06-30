@@ -604,15 +604,22 @@ public sealed class UiArchitectureGuardTests
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
         var bufferPath = Path.Combine(uiRoot, "Ai", "DetectionConfirmationBuffer.cs");
+        var controllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
 
         Assert.True(File.Exists(bufferPath), "Geteilter Detection-Pending-Zustand soll in einem eigenen Buffer liegen.");
+        Assert.True(File.Exists(controllerPath), "LiveDetectionController soll den Detection-Pending-Zustand fuer PlayerWindow besitzen.");
 
         var playerWindowText = string.Join(
             Environment.NewLine,
             Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
         var buffer = File.ReadAllText(bufferPath);
+        var controller = File.ReadAllText(controllerPath);
 
-        Assert.Contains("private readonly DetectionConfirmationBuffer _detectionConfirmationBuffer", playerWindowText);
+        Assert.DoesNotContain("private readonly DetectionConfirmationBuffer _detectionConfirmationBuffer", playerWindowText);
+        Assert.Contains("private readonly DetectionConfirmationBuffer _confirmationBuffer = new();", controller);
+        Assert.Contains("public void StoreConfirmationFindings", controller);
+        Assert.Contains("public void StoreAnalyzedFrame", controller);
+        Assert.Contains("public void ClearConfirmationBuffer", controller);
         Assert.DoesNotContain("_detectionPendingFindings", playerWindowText);
         Assert.DoesNotContain("_detectionPendingFrameBytes", playerWindowText);
         Assert.DoesNotContain("_detectionPendingTimestampSec", playerWindowText);

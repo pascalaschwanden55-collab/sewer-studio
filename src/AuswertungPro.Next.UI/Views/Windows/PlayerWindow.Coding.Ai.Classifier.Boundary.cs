@@ -23,7 +23,7 @@ public partial class PlayerWindow
                 FallbackVideoTime: TimeSpan.FromSeconds(captureTimestampSec),
                 EndMeter: _codingSessionHost.EndMeter,
                 ExistingEventCount: _codingSessionHost.EventCollection?.Count ?? 0,
-                AnalyzedFrameBytes: _detectionConfirmationBuffer.FrameBytes),
+                AnalyzedFrameBytes: _liveDetectionController.PendingConfirmationFrameBytes),
             new CodingBoundaryClassifierCommandActions(
                 ResolveMeterForFrame: (timestamp, osdMeter) =>
                     ResolveCodingMeterForFrame(timestamp, osdMeter),

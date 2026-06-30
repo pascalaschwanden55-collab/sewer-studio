@@ -1,4 +1,3 @@
-using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
@@ -10,9 +9,6 @@ public partial class PlayerWindow
     private readonly PlayerMediaHosts _playerMediaHosts;
     private readonly PlayerWindowPlaybackContext _playbackContext;
     private readonly PlayerWindowControllerSet _playerControllers;
-
-    // Live detection state.
-    private readonly DetectionConfirmationBuffer _detectionConfirmationBuffer = new();
 
     // Protocol integration state.
     private readonly PlayerWindowProtocolContext _protocolContext;
