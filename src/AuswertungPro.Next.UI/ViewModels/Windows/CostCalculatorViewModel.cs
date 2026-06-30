@@ -1413,8 +1413,7 @@ public sealed partial class MeasureBlockVm : ObservableObject
 
 public sealed partial class CostLineVm : ObservableObject
 {
-    private bool _suppressOverride;
-    private bool _suppressQtyOverride;
+    private readonly CostCalculatorLineSuggestionStateController _suggestionState = new();
 
     [ObservableProperty] private string _group = "";
     [ObservableProperty] private string _itemKey = "";
@@ -1435,9 +1434,7 @@ public sealed partial class CostLineVm : ObservableObject
 
     public void SetSuggestedPrice(decimal? price, bool hasPrice, string priceHint = "")
     {
-        _suppressOverride = true;
-        UnitPrice = price ?? 0m;
-        _suppressOverride = false;
+        _suggestionState.ApplySuggestedPrice(price ?? 0m, value => UnitPrice = value);
         PriceMissing = !hasPrice;
         PriceHint = hasPrice ? priceHint : "";
         OnPropertyChanged(nameof(LineTotal));
@@ -1446,16 +1443,14 @@ public sealed partial class CostLineVm : ObservableObject
 
     public void SetSuggestedQty(decimal qty)
     {
-        _suppressQtyOverride = true;
-        Qty = qty;
-        _suppressQtyOverride = false;
+        _suggestionState.ApplySuggestedQty(qty, value => Qty = value);
         OnPropertyChanged(nameof(LineTotal));
         LineChanged?.Invoke();
     }
 
     partial void OnQtyChanged(decimal value)
     {
-        if (!_suppressQtyOverride)
+        if (_suggestionState.ShouldMarkManualQtyChange())
             IsQtyOverridden = true;
         OnPropertyChanged(nameof(LineTotal));
         LineChanged?.Invoke();
@@ -1463,7 +1458,7 @@ public sealed partial class CostLineVm : ObservableObject
 
     partial void OnUnitPriceChanged(decimal value)
     {
-        if (!_suppressOverride)
+        if (_suggestionState.ShouldMarkManualPriceChange())
         {
             IsPriceOverridden = true;
             PriceMissing = false;
