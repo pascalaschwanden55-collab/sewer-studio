@@ -35,6 +35,48 @@ public sealed class SelfTrainingAutoScanControllerTests
         Assert.Equal(new[] { "a", "b" }, cases.Select(c => c.CaseId));
     }
 
+    [Fact]
+    public async Task RunAsync_scannt_setzt_status_und_haengt_cases_an()
+    {
+        var status = "";
+        var added = new List<TrainingCase>();
+
+        await SelfTrainingAutoScanController.RunAsync(
+            currentCaseCount: 0,
+            rootFolderCount: 1,
+            new[] { "a" },
+            _ => true,
+            folder => Task.FromResult<IReadOnlyList<TrainingCase>>(new[] { Case(folder) }),
+            value => status = value,
+            added.Add);
+
+        Assert.Equal(SelfTrainingAutoScanController.StatusText, status);
+        Assert.Equal(new[] { "a" }, added.Select(c => c.CaseId));
+    }
+
+    [Fact]
+    public async Task RunAsync_ueberspringt_scan_wenn_cases_vorhanden_sind()
+    {
+        var scanCalled = false;
+        var added = new List<TrainingCase>();
+
+        await SelfTrainingAutoScanController.RunAsync(
+            currentCaseCount: 1,
+            rootFolderCount: 1,
+            new[] { "a" },
+            _ => true,
+            _ =>
+            {
+                scanCalled = true;
+                return Task.FromResult<IReadOnlyList<TrainingCase>>(new[] { Case("unexpected") });
+            },
+            _ => { },
+            added.Add);
+
+        Assert.False(scanCalled);
+        Assert.Empty(added);
+    }
+
     private static TrainingCase Case(string caseId)
         => new()
         {

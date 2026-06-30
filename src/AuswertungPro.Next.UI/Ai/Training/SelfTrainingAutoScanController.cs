@@ -29,4 +29,28 @@ public static class SelfTrainingAutoScanController
 
         return cases;
     }
+
+    public static async Task RunAsync(
+        int currentCaseCount,
+        int rootFolderCount,
+        IEnumerable<string> rootFolders,
+        Func<string, bool> directoryExists,
+        Func<string, Task<IReadOnlyList<TrainingCase>>> scanFolderAsync,
+        Action<string> setStatus,
+        Action<TrainingCase> addCase)
+    {
+        ArgumentNullException.ThrowIfNull(rootFolders);
+        ArgumentNullException.ThrowIfNull(directoryExists);
+        ArgumentNullException.ThrowIfNull(scanFolderAsync);
+        ArgumentNullException.ThrowIfNull(setStatus);
+        ArgumentNullException.ThrowIfNull(addCase);
+
+        if (!ShouldScan(currentCaseCount, rootFolderCount))
+            return;
+
+        setStatus(StatusText);
+        var autoScannedCases = await ScanAsync(rootFolders, directoryExists, scanFolderAsync);
+        foreach (var trainingCase in autoScannedCases)
+            addCase(trainingCase);
+    }
 }

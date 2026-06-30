@@ -35,10 +35,13 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "TrainingCenterViewModel.cs"));
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingAutoScanController.ShouldScan(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingAutoScanController.ScanAsync(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingAutoScanController.StatusText", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingAutoScanController.RunAsync(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingAutoScanController.ShouldScan(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingAutoScanController.ScanAsync(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingAutoScanController.StatusText", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("if (Cases.Count == 0 && _rootFolders.Count > 0)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("foreach (var c in autoScannedCases)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Cases.Add(c);", selfTrainingSource, StringComparison.Ordinal);
     }
 
     [Fact]
