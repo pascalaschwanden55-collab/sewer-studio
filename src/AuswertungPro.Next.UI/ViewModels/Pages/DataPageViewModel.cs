@@ -282,24 +282,24 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void DataPageViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(Selected))
-        {
-            (RemoveCommand as RelayCommand)?.NotifyCanExecuteChanged();
-            (MoveUpCommand as RelayCommand)?.NotifyCanExecuteChanged();
-            (MoveDownCommand as RelayCommand)?.NotifyCanExecuteChanged();
-            (OpenCostsCommand as RelayCommand<HaltungRecord?>)?.NotifyCanExecuteChanged();
-            (RestoreCostsCommand as RelayCommand<HaltungRecord?>)?.NotifyCanExecuteChanged();
-            (SuggestMeasuresCommand as RelayCommand<HaltungRecord?>)?.NotifyCanExecuteChanged();
-            (OptimizeSanierungKiCommand as RelayCommand<HaltungRecord?>)?.NotifyCanExecuteChanged();
+        if (e.PropertyName != nameof(Selected))
+            return;
 
-            if (Selected is not null)
+        DataPageSelectionChangedController.Handle(
+            Selected,
+            new IRelayCommand?[]
             {
-                NormalizeSelectedFindings(Selected);
-                SyncSelectedProtocolFromFindings(Selected);
-            }
-
-            RefreshSelectedProtocolEntries();
-        }
+                RemoveCommand,
+                MoveUpCommand,
+                MoveDownCommand,
+                OpenCostsCommand,
+                RestoreCostsCommand,
+                SuggestMeasuresCommand,
+                OptimizeSanierungKiCommand
+            },
+            NormalizeSelectedFindings,
+            SyncSelectedProtocolFromFindings,
+            RefreshSelectedProtocolEntries);
     }
 
     private void SyncSelectedProtocolFromFindings(HaltungRecord record)
