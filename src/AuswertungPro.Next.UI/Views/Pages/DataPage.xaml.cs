@@ -30,9 +30,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private System.Windows.Point _dragStartPoint;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DataGridColumnLayoutController _columnLayoutController = new();
-    private readonly DataGridColumnAlignmentToolbar _columnAlignmentToolbar;
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
+    private bool _updatingAlignmentButtons;
     private bool _isUndocking;
+    private DataGridColumn? _activeColumn;
 
     public DataPage()
     {
@@ -63,16 +64,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
             SaveLayoutToSettings();
         };
         _columnLayoutController.LayoutChanged += (_, __) => QueueLayoutSave();
-        _columnAlignmentToolbar = new DataGridColumnAlignmentToolbar(
-            Grid,
-            _columnLayoutController,
-            new DataGridColumnAlignmentButtons(
-                AlignLeftButton,
-                AlignCenterButton,
-                AlignRightButton,
-                AlignTopButton,
-                AlignMiddleButton,
-                AlignBottomButton));
 
         Grid.AddHandler(DataGridColumnHeader.ClickEvent, new RoutedEventHandler(Grid_ColumnHeaderClick), true);
         Grid.ColumnReordered += Grid_ColumnReordered;
@@ -80,7 +71,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         {
             ApplyHaltungsansichtSettings();
             EnsureColumns();
-            _columnAlignmentToolbar.UpdateButtons();
+            UpdateAlignmentButtonsForCurrentColumn();
         };
         Unloaded += (_, __) =>
         {
@@ -131,7 +122,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         _columnsBuilt = true;
         _columnLayoutController.Clear();
-        _columnAlignmentToolbar.ClearActiveColumn();
+        _activeColumn = null;
 
         foreach (var field in FieldCatalog.ColumnOrder)
         {
@@ -140,23 +131,18 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
             if (GridDropdownFieldPolicy.TryResolve(field, out var comboSpec))
             {
-                col = DataGridComboColumnFactory.Create(
-                    field,
-                    def.Label,
-                    comboSpec.ItemsSourcePath,
-                    tag: field,
-                    lostKeyboardFocus: ComboBox_LostKeyboardFocus,
-                    selectionChanged: ComboBox_SelectionChanged,
-                    allowFreeText: comboSpec.AllowFreeText,
-                    bindIsProjectReady: true,
-                    menuCommands: comboSpec.Managed
-                        ? new DataGridComboColumnMenuCommands(
-                            comboSpec.EditCommand,
-                            comboSpec.PreviewCommand,
-                            comboSpec.ResetCommand,
-                            comboSpec.RemoveCommand,
-                            comboSpec.AddCommand)
-                        : null);
+                col = comboSpec.Managed
+                    ? CreateComboColumn(
+                        field,
+                        def.Label,
+                        comboSpec.ItemsSourcePath,
+                        comboSpec.EditCommand,
+                        comboSpec.PreviewCommand,
+                        comboSpec.ResetCommand,
+                        comboSpec.RemoveCommand,
+                        comboSpec.AddCommand,
+                        comboSpec.AllowFreeText)
+                    : CreateSimpleComboColumn(field, def.Label, comboSpec.ItemsSourcePath);
             }
             else if (field == "Empfohlene_Sanierungsmassnahmen")
             {
@@ -222,13 +208,53 @@ public partial class DataPage : System.Windows.Controls.UserControl
             var defaultHorizontalAlignment = string.Equals(field, "Kosten", StringComparison.Ordinal)
                 ? HorizontalAlignment.Right
                 : HorizontalAlignment.Left;
-            _columnAlignmentToolbar.SetAlignment(col, defaultHorizontalAlignment, VerticalAlignment.Center);
+            ApplyColumnAlignment(col, defaultHorizontalAlignment, VerticalAlignment.Center);
         }
 
         Grid.FrozenColumnCount = 2;
         RestoreLayoutFromSettings();
         ResetSort();
     }
+
+    private DataGridTemplateColumn CreateComboColumn(
+        string fieldName,
+        string header,
+        string itemsSourcePath,
+        string editCommand,
+        string previewCommand,
+        string resetCommand,
+        string removeCommand,
+        string addCommand,
+        bool allowFreeText = true)
+        => DataGridComboColumnFactory.Create(
+            fieldName,
+            header,
+            itemsSourcePath,
+            tag: fieldName,
+            lostKeyboardFocus: ComboBox_LostKeyboardFocus,
+            selectionChanged: ComboBox_SelectionChanged,
+            allowFreeText,
+            bindIsProjectReady: true,
+            menuCommands: new DataGridComboColumnMenuCommands(
+                editCommand,
+                previewCommand,
+                resetCommand,
+                removeCommand,
+                addCommand));
+
+    private DataGridTemplateColumn CreateSimpleComboColumn(
+        string fieldName,
+        string header,
+        string itemsSourcePath)
+        => DataGridComboColumnFactory.Create(
+            fieldName,
+            header,
+            itemsSourcePath,
+            tag: fieldName,
+            lostKeyboardFocus: ComboBox_LostKeyboardFocus,
+            selectionChanged: ComboBox_SelectionChanged,
+            allowFreeText: true,
+            bindIsProjectReady: true);
 
     private void Grid_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
@@ -368,27 +394,28 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void Grid_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (DataContext is DataPageViewModel vm && !vm.IsProjectReady)
+        if (e.OriginalSource is not DependencyObject dep)
             return;
 
-        // Don't start row drag when user is selecting text inside an editing TextBox
-        if (e.OriginalSource is DependencyObject dep && FindAncestor<TextBox>(dep) is not null)
-            return;
-
-        if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
+        System.Windows.Point mousePos = e.GetPosition(null);
+        System.Windows.Vector diff = _dragStartPoint - mousePos;
+        if (!DataPageDragStartPolicy.ShouldStartDrag(
+                isProjectReady: DataContext is not DataPageViewModel vm || vm.IsProjectReady,
+                isLeftButtonPressed: e.LeftButton == System.Windows.Input.MouseButtonState.Pressed,
+                isEditingTextBox: FindAncestor<TextBox>(dep) is not null,
+                deltaX: diff.X,
+                deltaY: diff.Y,
+                minimumHorizontalDragDistance: SystemParameters.MinimumHorizontalDragDistance,
+                minimumVerticalDragDistance: SystemParameters.MinimumVerticalDragDistance))
         {
-            System.Windows.Point mousePos = e.GetPosition(null);
-            System.Windows.Vector diff = _dragStartPoint - mousePos;
-            if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
-            {
-                var row = FindAncestor<DataGridRow>((DependencyObject)e.OriginalSource);
-                if (row == null) return;
-                var record = row.Item as HaltungRecord;
-                if (record == null) return;
-                DragDrop.DoDragDrop(row, record, DragDropEffects.Move);
-            }
+            return;
         }
+
+        var row = FindAncestor<DataGridRow>(dep);
+        if (row == null) return;
+        var record = row.Item as HaltungRecord;
+        if (record == null) return;
+        DragDrop.DoDragDrop(row, record, DragDropEffects.Move);
     }
 
     private void Grid_Drop(object sender, System.Windows.DragEventArgs e)
@@ -404,14 +431,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
             var target = GetDataGridRowItem(e.OriginalSource);
             if (droppedData == null || target == null || droppedData == target) return;
 
-            var list = vm.Records;
-            int oldIndex = list.IndexOf(droppedData);
-            int newIndex = list.IndexOf(target);
-            if (oldIndex < 0 || newIndex < 0 || oldIndex == newIndex) return;
-            list.Move(oldIndex, newIndex);
-            ResetSort();
-            var updateNr = vm.GetType().GetMethod("UpdateNr", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            updateNr?.Invoke(vm, null);
+            if (DataPageDropReorderController.TryMoveAndRenumber(vm.Records, droppedData, target))
+                ResetSort();
         }
     }
 
@@ -495,7 +516,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
 
         // Sender ist hier die DataPage (kein HaltungRecord-DataContext, kein offenes
-        // ContextMenu) -> GetContextMenuRecord(this) liefert null -> ResolveActionRecord
+        // ContextMenu) -> der Resolver faellt sauber auf die aktuelle Auswahl zurueck.
         // faellt auf das gerade gesetzte vm.Selected zurueck. Darum reicht 'this' als Sender.
         vm.Selected = record;
         var e = new RoutedEventArgs();
@@ -932,9 +953,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
             // Die aktuell gezeigte Ansicht abdocken: Haltungsansicht wenn der Umschalter
             // an ist, sonst die Tabelle. Umschalter sperren, solange abgedockt.
-            var active = HaltungsansichtToggle.IsChecked == true
-                ? (UIElement)HaltungsansichtView
-                : Grid;
+            var active = GridDockingController.ResolveActiveView(
+                HaltungsansichtToggle.IsChecked == true,
+                HaltungsansichtView,
+                Grid);
             _undockedView = active;
             HaltungsansichtToggle.IsEnabled = false;
 
@@ -947,13 +969,13 @@ public partial class DataPage : System.Windows.Controls.UserControl
             _floatingGridWindow.DataContext = DataContext;
 
             // Aktive Ansicht aus dem visuellen Baum entfernen und ins Floating-Fenster verschieben
-            GridHost.Children.Remove(active);
+            GridDockingController.ApplyUndockedState(
+                GridHost,
+                active,
+                UndockedPlaceholder,
+                UndockButton,
+                HaltungsansichtToggle);
             _floatingGridWindow.SetGridContent(active);
-            active.Visibility = Visibility.Visible;
-
-            // Platzhalter anzeigen
-            UndockedPlaceholder.Visibility = Visibility.Visible;
-            UndockButton.IsEnabled = false;
 
             // Fensterposition aus Settings laden
             var settings = Services.Settings;
@@ -975,16 +997,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
             Dialogs.Warn($"Fehler beim Abdocken:\n{ex.Message}", "Abdocken");
 
             // Abgedockte Ansicht zuruecksetzen falls sie schon entfernt wurde
-            if (_undockedView is not null)
-            {
-                if (!GridHost.Children.Contains(_undockedView))
-                    GridHost.Children.Add(_undockedView);
-                _undockedView.Visibility = Visibility.Visible;
-                _undockedView = null;
-            }
-            UndockedPlaceholder.Visibility = Visibility.Collapsed;
-            UndockButton.IsEnabled = true;
-            HaltungsansichtToggle.IsEnabled = true; // bei fehlgeschlagenem Abdocken Umschalter wieder freigeben
+            GridDockingController.RestoreDockedState(
+                GridHost,
+                view: _undockedView,
+                fallbackView: null,
+                UndockedPlaceholder,
+                UndockButton,
+                HaltungsansichtToggle);
+            _undockedView = null;
 
             if (_floatingGridWindow is not null)
             {
@@ -1021,23 +1041,21 @@ public partial class DataPage : System.Windows.Controls.UserControl
         _floatingGridWindow = null;
 
         RestoreUndockedView(view);
-
-        // Platzhalter ausblenden
-        UndockedPlaceholder.Visibility = Visibility.Collapsed;
-        UndockButton.IsEnabled = true;
-        HaltungsansichtToggle.IsEnabled = true;
     }
 
     // Holt die abgedockte Ansicht (Tabelle ODER Haltungsansicht) zurueck in den GridHost.
     private void RestoreUndockedView(UIElement? view)
     {
-        var element = view ?? _undockedView;
-        if (element is null)
-            return;
-        if (!GridHost.Children.Contains(element))
-            GridHost.Children.Add(element);
-        element.Visibility = Visibility.Visible;
-        _undockedView = null;
+        if (GridDockingController.RestoreDockedState(
+            GridHost,
+            view,
+            _undockedView,
+            UndockedPlaceholder,
+            UndockButton,
+            HaltungsansichtToggle))
+        {
+            _undockedView = null;
+        }
     }
 
     private void FloatingGridWindow_Closed(object? sender, EventArgs e)
@@ -1058,10 +1076,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
         _floatingGridWindow = null;
 
         RestoreUndockedView(view);
-
-        UndockedPlaceholder.Visibility = Visibility.Collapsed;
-        UndockButton.IsEnabled = true;
-        HaltungsansichtToggle.IsEnabled = true;
     }
 
     private void UpdateFloatingWindowInfo()
@@ -1138,13 +1152,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Video");
-            return;
-        }
-        vm.PlayVideoCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.PlayVideoCommand, "Video");
     }
 
     private void MoveRecordUpMenu_Click(object sender, RoutedEventArgs e)
@@ -1152,16 +1161,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        var record = GetContextMenuRecord(sender) ?? vm.Selected;
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.", "Position");
-            return;
-        }
-
-        vm.Selected = record;
-        if (vm.MoveUpCommand.CanExecute(null))
-            vm.MoveUpCommand.Execute(null);
+        ExecuteMoveRecordMenuCommand(sender, vm, vm.MoveUpCommand);
     }
 
     private void MoveRecordDownMenu_Click(object sender, RoutedEventArgs e)
@@ -1169,104 +1169,60 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        var record = GetContextMenuRecord(sender) ?? vm.Selected;
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.", "Position");
-            return;
-        }
-
-        vm.Selected = record;
-        if (vm.MoveDownCommand.CanExecute(null))
-            vm.MoveDownCommand.Execute(null);
+        ExecuteMoveRecordMenuCommand(sender, vm, vm.MoveDownCommand);
     }
 
     private void DropdownButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button btn || btn.ContextMenu is null)
-            return;
-        btn.ContextMenu.PlacementTarget = btn;
-        btn.ContextMenu.Placement = PlacementMode.Bottom;
-        btn.ContextMenu.DataContext = DataContext;
-        btn.ContextMenu.IsOpen = true;
+        ButtonContextMenuOpener.OpenFromButton(sender, DataContext);
     }
 
     private void RelinkMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Video");
-            return;
-        }
-        vm.RelinkVideoCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.RelinkVideoCommand, "Video");
     }
 
     private void CostsMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Massnahmen");
-            return;
-        }
-        vm.OpenCostsCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.OpenCostsCommand, "Massnahmen");
     }
 
     private void PrintAwuHaltungsprotokollMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Haltungsprotokoll AWU");
-            return;
-        }
-        vm.PrintAwuHaltungsprotokollCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.PrintAwuHaltungsprotokollCommand, "Haltungsprotokoll AWU");
     }
 
     private void OpenOriginalPdfMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "PDF");
-            return;
-        }
-        vm.OpenOriginalPdfCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.OpenOriginalPdfCommand, "PDF");
     }
 
     private void RestoreCostsMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Kosten/Massnahmen");
-            return;
-        }
-        vm.RestoreCostsCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.RestoreCostsCommand, "Kosten/Massnahmen");
     }
 
     private void SuggestMeasuresMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Massnahmen");
-            return;
-        }
-        vm.SuggestMeasuresCommand.Execute(record);
+
+        ExecuteRecordMenuCommand(sender, vm, vm.SuggestMeasuresCommand, "Massnahmen");
     }
 
     private void SuggestAllMeasuresMenu_Click(object sender, RoutedEventArgs e)
@@ -1287,7 +1243,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        var record = DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected);
         vm.OpenHydraulikCommand.Execute(record);
     }
 
@@ -1295,7 +1251,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        var record = DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected);
         vm.PrintHydraulikCommand.Execute(record);
     }
 
@@ -1303,7 +1259,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        var record = GetContextMenuRecord(sender) ?? vm.Selected;
+        var record = DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected);
         vm.PrintDossierCommand.Execute(record);
     }
 
@@ -1318,13 +1274,11 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        if (!int.TryParse(MoveToPositionBox.Text.Trim(), out var pos))
-        {
-            Dialogs.Info("Bitte eine gueltige Zahl eingeben.", "Position");
-            return;
-        }
-        if (!vm.MoveToPosition(pos))
-            Dialogs.Info("Verschieben nicht moeglich. Bitte Zeile auswaehlen.", "Position");
+
+        DataPageRowNavigationController.TryMoveToPosition(
+            MoveToPositionBox.Text,
+            vm.MoveToPosition,
+            Dialogs.Info);
     }
 
     private void GoToRowBox_KeyDown(object sender, KeyEventArgs e)
@@ -1338,48 +1292,42 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
-        if (!int.TryParse(GoToRowBox.Text.Trim(), out var row) || row < 1)
+
+        if (DataPageRowNavigationController.TryResolveRowIndex(
+            GoToRowBox.Text,
+            vm.Records.Count,
+            Dialogs.Info,
+            out var rowIndex))
         {
-            Dialogs.Info("Bitte eine gueltige Zeilennummer eingeben.", "Gehe zu Zeile");
-            return;
-        }
-        var idx = row - 1;
-        if (idx >= vm.Records.Count)
-            idx = vm.Records.Count - 1;
-        if (idx >= 0)
-        {
-            vm.Selected = vm.Records[idx];
+            vm.Selected = vm.Records[rowIndex];
             Grid.ScrollIntoView(vm.Selected);
         }
     }
 
-    private static HaltungRecord? GetContextMenuRecord(object sender)
-    {
-        if (sender is not DependencyObject dep)
-            return null;
-
-        var current = dep;
-        while (current is not null)
-        {
-            if (current is FrameworkElement fe && fe.DataContext is HaltungRecord rec)
-                return rec;
-
-            if (current is ContextMenu menu)
-            {
-                if (menu.PlacementTarget is DataGridRow row)
-                    return row.Item as HaltungRecord;
-                if (menu.PlacementTarget is DataGrid grid)
-                    return grid.SelectedItem as HaltungRecord;
-            }
-
-            current = LogicalTreeHelper.GetParent(current) ?? VisualTreeHelper.GetParent(current);
-        }
-
-        return null;
-    }
-
     private static HaltungRecord? ResolveActionRecord(object sender, DataPageViewModel vm)
-        => GetContextMenuRecord(sender) ?? vm.Selected;
+        => DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected);
+
+    private void ExecuteRecordMenuCommand(
+        object sender,
+        DataPageViewModel vm,
+        ICommand command,
+        string missingSelectionTitle)
+        => DataPageRecordCommandRouter.TryExecute(
+            ResolveActionRecord(sender, vm),
+            command,
+            Dialogs.Info,
+            missingSelectionTitle);
+
+    private void ExecuteMoveRecordMenuCommand(
+        object sender,
+        DataPageViewModel vm,
+        ICommand command)
+        => DataPageRecordCommandRouter.TrySelectAndExecute(
+            DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected),
+            record => vm.Selected = record,
+            command,
+            Dialogs.Info,
+            missingSelectionTitle: "Position");
 
     private static string? GetEditedTextValue(FrameworkElement? element)
     {
@@ -1445,10 +1393,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
         DataGridSearchFilterController.Apply(
             CollectionViewSource.GetDefaultView(Grid.ItemsSource),
             vm.Records,
-            vm.SearchText,
-            vm.MatchesSearch,
-            vm.UpdateSearchResultInfo,
-            action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action));
+            getSearchText: () => vm.SearchText,
+            matches: vm.MatchesSearch,
+            updateSearchResultInfo: vm.UpdateSearchResultInfo,
+            deferRefresh: action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action));
     }
 
     private void ShowTextPreview(string title, string content)
