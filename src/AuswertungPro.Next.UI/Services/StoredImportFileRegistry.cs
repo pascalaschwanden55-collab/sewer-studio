@@ -42,9 +42,7 @@ public static class StoredImportFileRegistry
 
             if (File.Exists(dest))
             {
-                var srcInfo = new FileInfo(src);
-                var destInfo = new FileInfo(dest);
-                if (srcInfo.Length != destInfo.Length)
+                if (!FileContentsEqual(src, dest))
                 {
                     var name = Path.GetFileNameWithoutExtension(fileName);
                     var ext = Path.GetExtension(fileName);
@@ -74,6 +72,33 @@ public static class StoredImportFileRegistry
 
         metadata[metadataKey] = JsonSerializer.Serialize(existing);
         return new StoredImportFileRegistryResult(false, stored);
+    }
+
+    private static bool FileContentsEqual(string firstPath, string secondPath)
+    {
+        var firstInfo = new FileInfo(firstPath);
+        var secondInfo = new FileInfo(secondPath);
+        if (firstInfo.Length != secondInfo.Length)
+            return false;
+
+        using var first = File.OpenRead(firstPath);
+        using var second = File.OpenRead(secondPath);
+        var firstBuffer = new byte[8192];
+        var secondBuffer = new byte[8192];
+
+        while (true)
+        {
+            var firstRead = first.Read(firstBuffer, 0, firstBuffer.Length);
+            var secondRead = second.Read(secondBuffer, 0, secondBuffer.Length);
+            if (firstRead != secondRead)
+                return false;
+
+            if (firstRead == 0)
+                return true;
+
+            if (!firstBuffer.AsSpan(0, firstRead).SequenceEqual(secondBuffer.AsSpan(0, secondRead)))
+                return false;
+        }
     }
 
     private static List<string> LoadStoredFiles(IDictionary<string, string> metadata, string metadataKey)

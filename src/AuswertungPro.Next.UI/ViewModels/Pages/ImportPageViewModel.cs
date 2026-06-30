@@ -174,6 +174,20 @@ public sealed partial class ImportPageViewModel : ObservableObject
             _importCts.Token);
     }
 
+    private Task RunImportWithOptionalPreviewAsync<TArg>(
+        string label,
+        TArg source,
+        Func<TArg, Project, ImportRunContext, Result<ImportStats>> importFunc,
+        Func<TArg, ImportRunContext, Task>? postImportAsync = null,
+        bool saveProjectAfterCommit = false)
+        => RunImportAsync(
+            label,
+            source,
+            importFunc,
+            dryRun: ShowPreviewFirst,
+            postImportAsync: postImportAsync,
+            saveProjectAfterCommit: saveProjectAfterCommit);
+
     private bool ShowPreviewWindow(ImportPreviewResult preview, string label)
     {
         var win = new Views.Windows.ImportPreviewWindow(preview, label)
@@ -191,14 +205,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
         if (paths.Length == 0) return;
 
         // Auto-Save nach Commit wie bei WinCan/IBAK/KINS — Import-Arbeit nicht nur im RAM (Audit H4)
-        if (ShowPreviewFirst)
-        {
-            await RunImportAsync("PDF", paths, ImportPdfCore, dryRun: true, postImportAsync: PostImportPdfAsync, saveProjectAfterCommit: true);
-        }
-        else
-        {
-            await RunImportAsync("PDF", paths, ImportPdfCore, postImportAsync: PostImportPdfAsync, saveProjectAfterCommit: true);
-        }
+        await RunImportWithOptionalPreviewAsync(
+            "PDF",
+            paths,
+            ImportPdfCore,
+            postImportAsync: PostImportPdfAsync,
+            saveProjectAfterCommit: true);
     }
 
     private Result<ImportStats> ImportPdfCore(string[] paths, Project project, ImportRunContext ctx)
@@ -258,14 +270,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
         if (paths.Length == 0) return;
 
         // Auto-Save nach Commit wie bei WinCan/IBAK/KINS (Audit H4)
-        if (ShowPreviewFirst)
-        {
-            await RunImportAsync("XTF", paths, ImportXtfCore, dryRun: true, postImportAsync: PostImportXtfAsync, saveProjectAfterCommit: true);
-        }
-        else
-        {
-            await RunImportAsync("XTF", paths, ImportXtfCore, postImportAsync: PostImportXtfAsync, saveProjectAfterCommit: true);
-        }
+        await RunImportWithOptionalPreviewAsync(
+            "XTF",
+            paths,
+            ImportXtfCore,
+            postImportAsync: PostImportXtfAsync,
+            saveProjectAfterCommit: true);
     }
 
     private Result<ImportStats> ImportXtfCore(string[] paths, Project project, ImportRunContext ctx)
@@ -290,25 +300,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var folder = _sp.Dialogs.SelectFolder("WinCan-Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder)) return;
 
-        if (ShowPreviewFirst)
-        {
-            await RunImportAsync(
-                "WinCan",
-                folder,
-                ImportFolderCore(_sp.WinCanImport.ImportWinCanExport),
-                dryRun: true,
-                postImportAsync: PostImportFolderAsync,
-                saveProjectAfterCommit: true);
-        }
-        else
-        {
-            await RunImportAsync(
-                "WinCan",
-                folder,
-                ImportFolderCore(_sp.WinCanImport.ImportWinCanExport),
-                postImportAsync: PostImportFolderAsync,
-                saveProjectAfterCommit: true);
-        }
+        await RunImportWithOptionalPreviewAsync(
+            "WinCan",
+            folder,
+            ImportFolderCore(_sp.WinCanImport.ImportWinCanExport),
+            postImportAsync: PostImportFolderAsync,
+            saveProjectAfterCommit: true);
     }
 
     private async Task ImportIbakAsync()
@@ -316,25 +313,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var folder = _sp.Dialogs.SelectFolder("IBAK-Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder)) return;
 
-        if (ShowPreviewFirst)
-        {
-            await RunImportAsync(
-                "IBAK",
-                folder,
-                ImportFolderCore(_sp.IbakImport.ImportIbakExport),
-                dryRun: true,
-                postImportAsync: PostImportFolderAsync,
-                saveProjectAfterCommit: true);
-        }
-        else
-        {
-            await RunImportAsync(
-                "IBAK",
-                folder,
-                ImportFolderCore(_sp.IbakImport.ImportIbakExport),
-                postImportAsync: PostImportFolderAsync,
-                saveProjectAfterCommit: true);
-        }
+        await RunImportWithOptionalPreviewAsync(
+            "IBAK",
+            folder,
+            ImportFolderCore(_sp.IbakImport.ImportIbakExport),
+            postImportAsync: PostImportFolderAsync,
+            saveProjectAfterCommit: true);
     }
 
     private async Task ImportKinsAsync()
@@ -342,25 +326,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var folder = _sp.Dialogs.SelectFolder("KINS-Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder)) return;
 
-        if (ShowPreviewFirst)
-        {
-            await RunImportAsync(
-                "KINS",
-                folder,
-                ImportFolderCore(_sp.KinsImport.ImportKinsExport),
-                dryRun: true,
-                postImportAsync: PostImportFolderAsync,
-                saveProjectAfterCommit: true);
-        }
-        else
-        {
-            await RunImportAsync(
-                "KINS",
-                folder,
-                ImportFolderCore(_sp.KinsImport.ImportKinsExport),
-                postImportAsync: PostImportFolderAsync,
-                saveProjectAfterCommit: true);
-        }
+        await RunImportWithOptionalPreviewAsync(
+            "KINS",
+            folder,
+            ImportFolderCore(_sp.KinsImport.ImportKinsExport),
+            postImportAsync: PostImportFolderAsync,
+            saveProjectAfterCommit: true);
     }
 
     private static Func<string, Project, ImportRunContext, Result<ImportStats>> ImportFolderCore(

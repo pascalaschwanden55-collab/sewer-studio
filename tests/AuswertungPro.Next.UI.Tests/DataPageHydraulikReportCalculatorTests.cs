@@ -81,7 +81,7 @@ public sealed class DataPageHydraulikReportCalculatorTests
     }
 
     [Fact]
-    public void BuildReportCalculation_persistiert_panel_defaults_wie_bisheriger_print_pfad()
+    public void BuildReportCalculation_persistiert_dn_und_material_ohne_gefaelle_als_wasserstand()
     {
         var record = new HaltungRecord();
         record.SetFieldValue("DN_mm", "400", FieldSource.Manual, userEdited: true);
@@ -100,12 +100,11 @@ public sealed class DataPageHydraulikReportCalculatorTests
             record,
             settings,
             dnMm: 400,
-            panelWasserstandMm: 3.5,
             saveSettings: () => saveCalls++);
 
         Assert.Equal(1, saveCalls);
         Assert.Equal(400, settings.HydraulikPanel.Dn);
         Assert.Equal("PVC/PE", settings.HydraulikPanel.MaterialKey);
-        Assert.Equal(3.5, settings.HydraulikPanel.Wasserstand);
+        Assert.Equal(90, settings.HydraulikPanel.Wasserstand);
     }
 }

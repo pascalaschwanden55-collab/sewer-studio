@@ -1337,7 +1337,6 @@ public sealed partial class DataPageViewModel : ObservableObject
                     record,
                     _sp.Settings,
                     dn!.Value,
-                    panelWasserstandMm: hydraulikAvailability.GefaellePromille,
                     saveSettings: _sp.Settings.Save);
             }
 

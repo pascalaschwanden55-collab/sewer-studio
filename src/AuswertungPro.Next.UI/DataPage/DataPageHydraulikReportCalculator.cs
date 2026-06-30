@@ -82,7 +82,6 @@ public static class DataPageHydraulikReportCalculator
         HaltungRecord record,
         AppSettings settings,
         double? dnMm = null,
-        double? panelWasserstandMm = null,
         Action? saveSettings = null)
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -91,13 +90,6 @@ public static class DataPageHydraulikReportCalculator
         var dn = dnMm ?? ParseDnMm(record.GetFieldValue("DN_mm")) ?? 300d;
         var panel = settings.HydraulikPanel ??= new HydraulikPanelSettings();
         var material = HydraulikMaterialCatalog.Resolve(record.GetFieldValue("Rohrmaterial"), panel.MaterialKey);
-
-        panel.Dn = dn;
-        panel.MaterialKey = material.Key;
-        if (panelWasserstandMm is > 0)
-            panel.Wasserstand = panelWasserstandMm.Value;
-        saveSettings?.Invoke();
-
         var kb = panel.IsNeuzustand ? material.KbNeu : material.KbAlt;
 
         var input = new HydraulikInput(
@@ -109,8 +101,13 @@ public static class DataPageHydraulikReportCalculator
             Temperatur_C: panel.Temperatur);
 
         var result = HydraulikEngine.Berechne(input);
-        return result is null
-            ? null
-            : HydraulikCalcResultMapper.ToReportResult(input, result, material.Label);
+        if (result is null)
+            return null;
+
+        panel.Dn = dn;
+        panel.MaterialKey = material.Key;
+        saveSettings?.Invoke();
+
+        return HydraulikCalcResultMapper.ToReportResult(input, result, material.Label);
     }
 }

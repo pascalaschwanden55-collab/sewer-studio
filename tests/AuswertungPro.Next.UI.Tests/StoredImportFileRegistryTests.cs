@@ -25,12 +25,12 @@ public sealed class StoredImportFileRegistryTests
     }
 
     [Fact]
-    public void Store_reuses_existing_same_size_file_without_duplicate_metadata()
+    public void Store_reuses_existing_same_content_file_without_duplicate_metadata()
     {
         using var temp = new TempDir();
         var projectPath = temp.CreateFile("Projekt.aproj", "project");
         temp.CreateFile("Imports/PDF/a.pdf", "abc");
-        var source = temp.CreateFile("source/a.pdf", "xyz");
+        var source = temp.CreateFile("source/a.pdf", "abc");
         var existing = Path.Combine("Imports", "PDF", "a.pdf");
         var metadata = new Dictionary<string, string>
         {
@@ -42,6 +42,28 @@ public sealed class StoredImportFileRegistryTests
         Assert.Equal(new[] { existing }, result.StoredRelativePaths);
         Assert.Equal(new[] { existing }, ReadMetadata(metadata, "PDF_StoredFiles"));
         Assert.Equal("abc", File.ReadAllText(Path.Combine(temp.Path, existing)));
+    }
+
+    [Fact]
+    public void Store_adds_timestamp_suffix_when_existing_file_has_same_size_but_different_content()
+    {
+        using var temp = new TempDir();
+        var projectPath = temp.CreateFile("Projekt.aproj", "project");
+        temp.CreateFile("Imports/PDF/a.pdf", "abc");
+        var source = temp.CreateFile("source/a.pdf", "xyz");
+        var metadata = new Dictionary<string, string>();
+
+        var result = StoredImportFileRegistry.Store(
+            projectPath,
+            metadata,
+            "PDF",
+            new[] { source },
+            now: () => new DateTime(2026, 6, 30, 12, 34, 56));
+
+        var expected = Path.Combine("Imports", "PDF", "a_20260630_123456.pdf");
+        Assert.Equal(new[] { expected }, result.StoredRelativePaths);
+        Assert.Equal("abc", File.ReadAllText(Path.Combine(temp.Path, "Imports", "PDF", "a.pdf")));
+        Assert.Equal("xyz", File.ReadAllText(Path.Combine(temp.Path, expected)));
     }
 
     [Fact]

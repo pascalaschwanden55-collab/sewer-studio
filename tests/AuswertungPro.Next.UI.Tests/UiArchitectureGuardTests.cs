@@ -84,6 +84,32 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void ImportPage_import_start_methods_share_optional_preview_dispatch()
+    {
+        var root = FindRepositoryRoot();
+        var viewModelPath = Path.Combine(root, "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "ImportPageViewModel.cs");
+        var viewModel = File.ReadAllText(viewModelPath);
+
+        Assert.Contains("private Task RunImportWithOptionalPreviewAsync<TArg>", viewModel);
+
+        var methodNames = new[]
+        {
+            "ImportPdfAsync",
+            "ImportXtfAsync",
+            "ImportWinCanAsync",
+            "ImportIbakAsync",
+            "ImportKinsAsync"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            var body = ExtractMethodBody(viewModel, $"private async Task {methodName}()");
+            Assert.DoesNotContain("ShowPreviewFirst", body);
+            Assert.Contains("RunImportWithOptionalPreviewAsync", body);
+        }
+    }
+
+    [Fact]
     public void PlayerWindow_damage_markers_live_in_controller()
     {
         var root = FindRepositoryRoot();
