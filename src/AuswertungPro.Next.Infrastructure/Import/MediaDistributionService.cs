@@ -56,7 +56,7 @@ public sealed class MediaDistributionService
             }
 
             var sanitized = SanitizePathSegment(haltungsname);
-            var holdingRoot = Path.Combine(projectFolder, "Haltungen", sanitized);
+            var holdingRoot = ProjectStructure.HaltungVerteiltDir(projectFolder, sanitized);
 
             // 1) Video (Link-Feld)
             CopyFieldFile(record, "Link", holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
@@ -69,11 +69,11 @@ public sealed class MediaDistributionService
 
             // 4) Protokoll-FotoPaths (Original, Current, History)
             if (record.Protocol != null)
-                CopyProtocolFotos(record.Protocol, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+                CopyProtocolFotos(record.Protocol, sanitized, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
 
             // 5) VsaFindings FotoPath
             if (record.VsaFindings != null)
-                CopyVsaFindingFotos(record.VsaFindings, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+                CopyVsaFindingFotos(record.VsaFindings, sanitized, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
 
             processed++;
             progress?.Report(new CopyProgress(processed, total, haltungsname));
@@ -230,17 +230,17 @@ public sealed class MediaDistributionService
     }
 
     private static void CopyProtocolFotos(
-        ProtocolDocument protocol, string holdingRoot, string projectFolder,
+        ProtocolDocument protocol, string haltungSan, string holdingRoot, string projectFolder,
         ref int copied, ref int errors, List<string> messages, bool dryRun = false)
     {
-        CopyRevisionFotos(protocol.Original, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
-        CopyRevisionFotos(protocol.Current, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+        CopyRevisionFotos(protocol.Original, haltungSan, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+        CopyRevisionFotos(protocol.Current, haltungSan, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
         foreach (var rev in protocol.History)
-            CopyRevisionFotos(rev, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+            CopyRevisionFotos(rev, haltungSan, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
     }
 
     private static void CopyRevisionFotos(
-        ProtocolRevision revision, string holdingRoot, string projectFolder,
+        ProtocolRevision revision, string haltungSan, string holdingRoot, string projectFolder,
         ref int copied, ref int errors, List<string> messages, bool dryRun = false)
     {
         foreach (var entry in revision.Entries)
@@ -289,9 +289,8 @@ public sealed class MediaDistributionService
 
                 try
                 {
-                    // Fotos liegen ZENTRAL im Projekt (<Projekt>\Fotos\), nicht je verteilter Haltung.
-                    // Dateinamen tragen die Haltung (z.B. H_<Haltung>_NNN.jpg) -> kollisionssicher zentral.
-                    var destDir = Path.Combine(projectFolder, "Fotos");
+                    // Fotos liegen GRUPPIERT je Haltung: <Projekt>\Fotos\Haltungen\<Haltung>\
+                    var destDir = ProjectStructure.FotosHaltungDir(projectFolder, haltungSan);
                     if (!dryRun) Directory.CreateDirectory(destDir);
                     var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(rawPath)) : CopyFileUnique(rawPath, destDir);
                     if (!dryRun)
@@ -308,7 +307,7 @@ public sealed class MediaDistributionService
     }
 
     private static void CopyVsaFindingFotos(
-        List<VsaFinding> findings, string holdingRoot, string projectFolder,
+        List<VsaFinding> findings, string haltungSan, string holdingRoot, string projectFolder,
         ref int copied, ref int errors, List<string> messages, bool dryRun = false)
     {
         foreach (var finding in findings)
@@ -354,7 +353,8 @@ public sealed class MediaDistributionService
 
             try
             {
-                var destDir = Path.Combine(holdingRoot, "Fotos");
+                // Fotos liegen GRUPPIERT je Haltung: <Projekt>\Fotos\Haltungen\<Haltung>\
+                var destDir = ProjectStructure.FotosHaltungDir(projectFolder, haltungSan);
                 if (!dryRun) Directory.CreateDirectory(destDir);
                 var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(finding.FotoPath)) : CopyFileUnique(finding.FotoPath, destDir);
                 if (!dryRun)
@@ -404,7 +404,7 @@ public sealed class MediaDistributionService
             }
         }
 
-        var haltungenRoot = Path.Combine(projectFolder, "Haltungen");
+        var haltungenRoot = Path.Combine(projectFolder, ProjectStructure.HaltungenVerteilt);
         if (!Directory.Exists(haltungenRoot))
             return null;
 
