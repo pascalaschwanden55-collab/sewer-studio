@@ -742,25 +742,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     }
 
     private bool CanOpenCosts(HaltungRecord? record)
-    {
-        if (record is not null)
-            return true;
-        return Selected is not null;
-    }
+        => DataPageCommandTargetController.HasTarget(record, Selected);
 
     private bool CanRestoreCosts(HaltungRecord? record)
-    {
-        if (record is not null)
-            return true;
-        return Selected is not null;
-    }
+        => DataPageCommandTargetController.HasTarget(record, Selected);
 
     private bool CanSuggestMeasures(HaltungRecord? record)
-    {
-        if (record is not null)
-            return true;
-        return Selected is not null;
-    }
+        => DataPageCommandTargetController.HasTarget(record, Selected);
 
     private void RestoreCosts(HaltungRecord? record)
     {
