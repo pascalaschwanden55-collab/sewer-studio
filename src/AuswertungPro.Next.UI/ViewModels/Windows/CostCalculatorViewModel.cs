@@ -30,9 +30,8 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     private readonly string? _projectPath;
     private readonly Dictionary<string, CostCatalogItem> _catalogItems;
     private readonly Dictionary<string, MeasureTemplate> _templateItems;
-    private readonly Dictionary<string, int> _measureOrderById = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _ownerByHolding = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _selectedMeasureIds = new(StringComparer.OrdinalIgnoreCase);
+    private readonly CostCalculatorMeasureSelectionController _measureSelection = new();
     private readonly CostCalculatorWarningSuppressionController _warningSuppression = new();
     private ProjectCostStore _store = new();
     // != null wenn costs.json beim Laden nicht lesbar war -> Speichern gesperrt (Audit K3).
@@ -101,13 +100,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
         var templates = _templateStore.LoadMerged(projectPath);
         _templateItems = templates.Measures.ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
-        _measureOrderById.Clear();
-        for (var i = 0; i < templates.Measures.Count; i++)
-        {
-            var id = templates.Measures[i].Id?.Trim();
-            if (!string.IsNullOrWhiteSpace(id) && !_measureOrderById.ContainsKey(id))
-                _measureOrderById[id] = i;
-        }
+        _measureSelection.ReplaceMeasureOrder(templates.Measures.Select(t => t.Id));
         Measures = new ObservableCollection<MeasureTemplateListItem>(
             templates.Measures.Select(t => new MeasureTemplateListItem(t)));
 
@@ -186,21 +179,15 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
 
     public void SetSelectedMeasures(IEnumerable<MeasureTemplateListItem> measures)
     {
-        _selectedMeasureIds.Clear();
-        foreach (var m in measures)
-        {
-            if (m.Disabled)
-                continue;
-            _selectedMeasureIds.Add(m.Id);
-        }
+        _measureSelection.SetSelectedMeasures(measures);
     }
 
     private void ApplySelectedMeasures()
     {
-        if (_selectedMeasureIds.Count == 0)
+        if (_measureSelection.SelectedMeasureIds.Count == 0)
             return;
 
-        foreach (var id in _selectedMeasureIds)
+        foreach (var id in _measureSelection.SelectedMeasureIds)
             TryAddMeasure(id, applyPrices: true);
 
         UpdateTotal();
@@ -517,30 +504,9 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         foreach (var measure in SelectedMeasures)
             measure.SortLines();
 
-        var ordered = SelectedMeasures
-            .Select((measure, index) => new
-            {
-                Measure = measure,
-                Index = index,
-                Order = GetMeasureOrder(measure)
-            })
-            .OrderBy(x => x.Order)
-            .ThenBy(x => x.Measure.MeasureName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(x => x.Index)
-            .Select(x => x.Measure)
-            .ToList();
+        var ordered = _measureSelection.OrderMeasures(SelectedMeasures);
 
         ObservableCollectionOrderController.Reorder(SelectedMeasures, ordered);
-    }
-
-    private int GetMeasureOrder(MeasureBlockVm? measure)
-    {
-        if (measure is null || string.IsNullOrWhiteSpace(measure.MeasureId))
-            return int.MaxValue;
-
-        return _measureOrderById.TryGetValue(measure.MeasureId.Trim(), out var order)
-            ? order
-            : int.MaxValue;
     }
 
     private void SaveTemplate(MeasureBlockVm? measure)
@@ -650,15 +616,13 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     {
         var templates = _templateStore.LoadMerged(_projectPath);
         _templateItems.Clear();
-        _measureOrderById.Clear();
-        var order = 0;
+        var orderIds = new List<string?>();
         foreach (var template in templates.Measures)
         {
             _templateItems[template.Id] = template;
-            if (!_measureOrderById.ContainsKey(template.Id))
-                _measureOrderById[template.Id] = order;
-            order++;
+            orderIds.Add(template.Id);
         }
+        _measureSelection.ReplaceMeasureOrder(orderIds);
 
         Measures.Clear();
         foreach (var template in templates.Measures.Select(t => new MeasureTemplateListItem(t)))
