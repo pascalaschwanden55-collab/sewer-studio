@@ -187,76 +187,47 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// <summary>Wird vom SelfTrainingOrchestrator bei jedem Schritt aufgerufen.</summary>
     public void OnSelfTrainingStep(SelfTrainingStep step)
     {
+        var presentation = SelfTrainingStepPresentationBuilder.Build(step, _activeVisionModel);
+
         void Apply()
         {
-            PipelineActiveStep = (int)step.Stage;
-            CurrentEntryCode = step.VsaCode;
-            CurrentEntryMeter = step.MeterPosition;
-            ProgressValue = step.EntryIndex + 1;
-            ProgressMax = step.TotalEntries;
+            PipelineActiveStep = presentation.PipelineActiveStep;
+            CurrentEntryCode = presentation.CurrentEntryCode;
+            CurrentEntryMeter = presentation.CurrentEntryMeter;
+            ProgressValue = presentation.ProgressValue;
+            ProgressMax = presentation.ProgressMax;
+            ActiveModelName = presentation.ActiveModelName;
+            IsModelActive = presentation.IsModelActive;
 
-            // Aktives Modell je Stage anzeigen
-            (ActiveModelName, IsModelActive) = SelfTrainingStatusCalculator.ResolveActiveModel(step.Stage, _activeVisionModel);
-
-            // Stage-spezifisches Logging
-            switch (step.Stage)
+            if (presentation.CurrentTechniqueGrade is not null)
             {
-                case SelfTrainingStage.BuildingTimeline:
-                    if (step.ErrorMessage is not null)
-                        AddSelfTrainingLog(step.ErrorMessage);
-                    break;
-                case SelfTrainingStage.ExtractingFrame:
-                    AddSelfTrainingLog($"Frame extrahieren: {step.VsaCode} @ {step.MeterPosition:F1}m");
-                    if (step.FramePath is not null) SetLiveFrameThrottled(step.FramePath);
-                    break;
-                case SelfTrainingStage.Analyzing:
-                    AddSelfTrainingLog($"KI-Analyse [{_activeVisionModel}]: {step.VsaCode}");
-                    break;
-                case SelfTrainingStage.Comparing:
-                    AddSelfTrainingLog($"Vergleich: {step.VsaCode}");
-                    break;
-                case SelfTrainingStage.AssessingTechnique:
-                    if (step.Technique is { } tech)
-                    {
-                        CurrentTechniqueGrade = tech.OverallGrade;
-                        CurrentTechniqueDetails = $"Licht: {tech.LightingQuality} | Schaerfe: {tech.SharpnessQuality}";
-                        AddSelfTrainingLog($"Technik: {tech.OverallGrade} (Licht={tech.LightingQuality}, Schaerfe={tech.SharpnessQuality})");
-                    }
-                    break;
-                case SelfTrainingStage.Completed:
-                    if (step.Comparison is { } cmp)
-                    {
-                        CurrentComparisonText = $"{cmp.Level} ({cmp.ConfidenceScore:P0})";
-                        var levelStr = SelfTrainingStatusCalculator.FormatLevel(cmp.Level);
-                        AddSelfTrainingLog($"Ergebnis: {step.VsaCode} → {levelStr} ({cmp.ConfidenceScore:P0}) {cmp.Explanation}");
-
-                        // Zaehler aktualisieren
-                        switch (cmp.Level)
-                        {
-                            case MatchLevel.ExactMatch: _totalExact++; break;
-                            case MatchLevel.PartialMatch: _totalPartial++; break;
-                            case MatchLevel.Mismatch: _totalMismatch++; break;
-                            case MatchLevel.NoFindings: _totalNoFindings++; break;
-                        }
-                        RefreshMatchRatePercents();
-
-                        // Ergebnis-Eintrag hinzufuegen
-                        SelfTrainingResults.Add(new SelfTrainingEntryResult
-                        {
-                            Index = step.EntryIndex + 1,
-                            VsaCode = step.VsaCode,
-                            Meter = step.MeterPosition,
-                            Level = cmp.Level,
-                            Summary = cmp.Explanation
-                        });
-
-                        UpdateCodeDistribution(step.VsaCode, cmp.Level);
-                    }
-                    break;
+                CurrentTechniqueGrade = presentation.CurrentTechniqueGrade;
+                CurrentTechniqueDetails = presentation.CurrentTechniqueDetails ?? "";
             }
 
-            if (step.ErrorMessage is not null)
-                AddSelfTrainingLog($"FEHLER: {step.ErrorMessage}");
+            if (presentation.CurrentComparisonText is not null)
+                CurrentComparisonText = presentation.CurrentComparisonText;
+
+            foreach (var logLine in presentation.LogLines)
+                AddSelfTrainingLog(logLine);
+
+            if (presentation.LiveFramePath is not null)
+                SetLiveFrameThrottled(presentation.LiveFramePath);
+
+            if (presentation.Result is not null && presentation.CompletedMatchLevel is { } level)
+            {
+                switch (level)
+                {
+                    case MatchLevel.ExactMatch: _totalExact++; break;
+                    case MatchLevel.PartialMatch: _totalPartial++; break;
+                    case MatchLevel.Mismatch: _totalMismatch++; break;
+                    case MatchLevel.NoFindings: _totalNoFindings++; break;
+                }
+                RefreshMatchRatePercents();
+
+                SelfTrainingResults.Add(presentation.Result);
+                UpdateCodeDistribution(presentation.Result.VsaCode, level);
+            }
         }
 
         if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
@@ -1587,23 +1558,10 @@ public partial class TrainingCenterViewModel : ObservableObject
         if (catalog is null) { OnUi(() => ReviewStatusText = "Kein Code-Katalog verfuegbar."); return; }
 
         var all = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
-        var candidates = ProtocolReviewCandidateFilter.SelectCandidates(all, catalog).ToList();
-
-        // Schon in der Queue stehende Samples nicht erneut einreihen (Dedup per SampleId).
-        var queued = ReviewQueueServiceRef.GetAll()
-            .Select(q => q.SelfTrainingSampleId).Where(s => !string.IsNullOrEmpty(s)).ToHashSet();
-        int added = 0;
-        foreach (var s in candidates)
-        {
-            if (queued.Contains(s.SampleId)) continue;
-            ReviewQueueServiceRef.EnqueueFromSelfTraining(
-                s.CaseId, s.Code, s.Code, s.MeterStart, s.FramePath,
-                matchLevel: "ProtocolStartdata", reason: "Protokoll-Startdaten", sampleId: s.SampleId);
-            added++;
-        }
+        var result = TrainingProtocolStartdataQueueController.Run(all, catalog, ReviewQueueServiceRef);
         LoadReviewQueue(ReviewQueueServiceRef);
-        OnUi(() => ReviewStatusText = $"{added} Protokoll-Startdaten als Kandidaten eingereiht (Freigabe ueber Review).");
-        Log($"Protokoll-Startdaten: {added} Kandidaten eingereiht (von {candidates.Count} gefiltert).");
+        OnUi(() => ReviewStatusText = result.StatusText);
+        Log(result.LogText);
     }
 
     /// <summary>Anzahl der aktuell als Protokoll-Startdaten eingereihten Kandidaten.</summary>

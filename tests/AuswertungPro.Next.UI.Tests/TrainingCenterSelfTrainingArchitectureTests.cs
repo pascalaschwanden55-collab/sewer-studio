@@ -437,6 +437,43 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_self_training_step_presentation_an_builder()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var stepSource = ExtractMethodBody(source, "public void OnSelfTrainingStep(SelfTrainingStep step)");
+
+        Assert.Contains("SelfTrainingStepPresentationBuilder.Build(step, _activeVisionModel)", stepSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("case SelfTrainingStage.ExtractingFrame", stepSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("case SelfTrainingStage.Completed", stepSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new SelfTrainingEntryResult", stepSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CurrentTechniqueGrade = tech.OverallGrade", stepSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TrainingCenterViewModel_delegiert_protocol_startdata_queue_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var startdataSource = ExtractMethodBody(source, "private async Task SuggestProtocolStartdataAsync()");
+
+        Assert.Contains("TrainingProtocolStartdataQueueController.Run(", startdataSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProtocolReviewCandidateFilter.SelectCandidates", startdataSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ReviewQueueServiceRef.GetAll()", startdataSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ReviewQueueServiceRef.EnqueueFromSelfTraining", startdataSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_kb_update_workflow_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
