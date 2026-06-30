@@ -34,7 +34,8 @@ public sealed class ProjectPhotoAssignmentServiceTests
             {
                 Assert.False(Path.IsPathRooted(f), $"FotoPath sollte relativ sein: {f}");
                 Assert.True(File.Exists(Path.Combine(root, f)), $"Foto sollte im Projekt liegen: {f}");
-                Assert.Contains("Fotos", f, StringComparison.OrdinalIgnoreCase);
+                // Fotos liegen nun gruppiert unter Fotos\Haltungen\<Haltung>\
+                Assert.StartsWith("Fotos/Haltungen/22149-3.01/", f, StringComparison.OrdinalIgnoreCase);
             }
         }
         finally { TryDelete(root); TryDelete(ext); }
@@ -44,7 +45,8 @@ public sealed class ProjectPhotoAssignmentServiceTests
     public void AssignFromFolder_PhotoAlreadyInProject_LinkedRelativeNotCopied()
     {
         var root = NewDir();
-        var inProj = Path.Combine(root, "Fotos");
+        // Foto liegt bereits unter der neuen gruppierten Struktur im Projekt.
+        var inProj = Path.Combine(root, "Fotos", "Haltungen", "22149-3.01");
         Directory.CreateDirectory(inProj);
         File.WriteAllText(Path.Combine(inProj, "H_22149-3.01_001.jpg"), "a");
         try
@@ -60,8 +62,38 @@ public sealed class ProjectPhotoAssignmentServiceTests
             var fotos = rec.Protocol!.Current.Entries[0].FotoPaths;
             Assert.Single(fotos);
             Assert.False(Path.IsPathRooted(fotos[0]));
+            Assert.StartsWith("Fotos/Haltungen/22149-3.01/", fotos[0], StringComparison.OrdinalIgnoreCase);
         }
         finally { TryDelete(root); }
+    }
+
+    [Fact]
+    public void AssignFromFolder_ExternesFoto_LandetUnterFotosHaltungenGruppiert()
+    {
+        // Belegt: Foto wird nach Fotos\Haltungen\<Haltung>\ kopiert und relativ verlinkt.
+        var root = NewDir();
+        var ext = NewDir();
+        File.WriteAllText(Path.Combine(ext, "H_06-001_001.jpg"), "bilddaten");
+        try
+        {
+            var project = new Project();
+            var rec = NewRecordWithEntry("06-001", "Foto1");
+            project.AddRecord(rec);
+
+            var result = new ProjectPhotoAssignmentService().AssignFromFolder(root, ext, project);
+
+            Assert.Equal(1, result.HoldingsMatched);
+            Assert.Equal(1, result.PhotosCopied);
+
+            var fotos = rec.Protocol!.Current.Entries[0].FotoPaths;
+            Assert.Single(fotos);
+            var relPath = fotos[0];
+            Assert.False(Path.IsPathRooted(relPath), "Pfad muss relativ sein.");
+            Assert.Equal("Fotos/Haltungen/06-001/H_06-001_001.jpg", relPath);
+            Assert.True(File.Exists(Path.Combine(root, "Fotos", "Haltungen", "06-001", "H_06-001_001.jpg")),
+                "Foto muss physisch unter Fotos\\Haltungen\\06-001\\ liegen.");
+        }
+        finally { TryDelete(root); TryDelete(ext); }
     }
 
     [Fact]

@@ -131,6 +131,61 @@ public sealed class XtfImportTests
     }
 
     [Fact]
+    public void VsaKekImport_SetztVideoLink_AusUntersuchungsDatei()
+    {
+        // VSA_KEK-XTF: KEK.Datei mit Klasse=Untersuchung, Objekt=Untersuchungs-TID, Bezeichnung=H_06-001.mpg, Relativpfad=Film.
+        // Erwartet: nach Import ist rec.GetFieldValue("Link") der aufgeloeste Videopfad (enthaelt H_06-001.mpg).
+        var dir = Path.Combine(Path.GetTempPath(), $"vsakek-video-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(dir, "Film"));
+        var xtf = Path.Combine(dir, "test.xtf");
+        File.WriteAllText(Path.Combine(dir, "Film", "H_06-001.mpg"), "dummy-video");
+        File.WriteAllText(xtf, """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="VSA_KEK_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <VSA_KEK_2020_LV95.KEK BID="B1">
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="U1">
+        <Bezeichnung>06-001</Bezeichnung>
+        <Zeitpunkt>2026-06-26</Zeitpunkt>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Datei TID="DV1">
+        <Art>Film</Art>
+        <Klasse>Untersuchung</Klasse>
+        <Objekt>U1</Objekt>
+        <Bezeichnung>H_06-001.mpg</Bezeichnung>
+        <Relativpfad>Film</Relativpfad>
+      </VSA_KEK_2020_LV95.KEK.Datei>
+    </VSA_KEK_2020_LV95.KEK>
+  </DATASECTION>
+</TRANSFER>
+""");
+
+        try
+        {
+            var project = new Project();
+            var svc = new LegacyXtfImportService();
+            var stats = svc.ImportXtfFiles(new[] { xtf }, project);
+            var debug = string.Join("\n", stats.Messages.Select(m => $"{m.Level}: {m.Message} ({m.Context})"));
+
+            var rec = project.Data.FirstOrDefault(r =>
+                string.Equals(r.GetFieldValue("Haltungsname"), "06-001", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(rec);
+
+            var link = rec!.GetFieldValue("Link");
+            Assert.False(string.IsNullOrWhiteSpace(link),
+                $"Link-Feld muss den Videopfad enthalten.\n{debug}");
+            Assert.Contains("H_06-001.mpg", link!, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void M150Import_MergesIntoExistingHolding_WhenNameFormattingDiffers()
     {
         var tempPath = Path.Combine(Path.GetTempPath(), $"xtf-import-{Guid.NewGuid():N}.m150");
