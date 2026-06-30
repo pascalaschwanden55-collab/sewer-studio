@@ -246,74 +246,83 @@ public partial class VsaCodeExplorerWindow : Window
 
     private void Vm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        Dispatcher.Invoke(() =>
+        var propertyName = e.PropertyName;
+        if (Dispatcher.CheckAccess())
         {
-            switch (e.PropertyName)
-            {
-                case nameof(VsaCodeExplorerViewModel.CurrentLevel):
-                    UpdateBreadcrumb();
-                    UpdateProgress();
-                    break;
+            ApplyViewModelPropertyChanged(propertyName);
+            return;
+        }
 
-                case nameof(VsaCodeExplorerViewModel.CurrentGroupColor):
-                    UpdateProgress();
-                    break;
+        _ = Dispatcher.BeginInvoke(new Action(() => ApplyViewModelPropertyChanged(propertyName)));
+    }
 
-                case nameof(VsaCodeExplorerViewModel.ShowResultPanel):
-                    UpdateResultPanel();
-                    UpdateProgress();
-                    break;
-
-                case nameof(VsaCodeExplorerViewModel.FinalCode):
-                    TxtFinalCode.Text = _vm.FinalCode;
-                    TxtCodePreview.Text = _vm.FinalCode;
-                    break;
-
-                case nameof(VsaCodeExplorerViewModel.FinalLabel):
-                    TxtFinalLabel.Text = _vm.FinalLabel + (_vm.FinalSublabel is not null ? $" — {_vm.FinalSublabel}" : "");
-                    break;
-
-                case nameof(VsaCodeExplorerViewModel.FinalSublabel):
-                    TxtFinalLabel.Text = _vm.FinalLabel + (_vm.FinalSublabel is not null ? $" — {_vm.FinalSublabel}" : "");
-                    break;
-
-                case nameof(VsaCodeExplorerViewModel.WarnMessage):
-                    TxtWarn.Text = _vm.WarnMessage ?? "";
-                    TxtWarn.Visibility = string.IsNullOrEmpty(_vm.WarnMessage) ? Visibility.Collapsed : Visibility.Visible;
-                    break;
-
-                case nameof(VsaCodeExplorerViewModel.Q1Rule):
-                case nameof(VsaCodeExplorerViewModel.Q2Rule):
-                    UpdateQuantPanel();
-                    break;
-
-                case nameof(VsaCodeExplorerViewModel.Q1Error):
-                    TxtQ1Error.Text = _vm.Q1Error ?? "";
-                    TxtQ1Error.Visibility = _vm.Q1Error is not null ? Visibility.Visible : Visibility.Collapsed;
-                    break;
-
-                case nameof(VsaCodeExplorerViewModel.Q2Error):
-                    TxtQ2Error.Text = _vm.Q2Error ?? "";
-                    TxtQ2Error.Visibility = _vm.Q2Error is not null ? Visibility.Visible : Visibility.Collapsed;
-                    break;
-
-                case nameof(VsaCodeExplorerViewModel.ClockMode):
-                case nameof(VsaCodeExplorerViewModel.ClockHint):
-                    UpdateClockPanel();
-                    break;
-
-                case nameof(VsaCodeExplorerViewModel.CanConfirm):
-                    SyncValidationUi();
-                    break;
-
-                case nameof(VsaCodeExplorerViewModel.ValidationMessage):
-                    SyncValidationUi();
-                    break;
-            }
-
-            if (e.PropertyName is nameof(VsaCodeExplorerViewModel.BreadcrumbItems))
+    private void ApplyViewModelPropertyChanged(string? propertyName)
+    {
+        switch (propertyName)
+        {
+            case nameof(VsaCodeExplorerViewModel.CurrentLevel):
                 UpdateBreadcrumb();
-        });
+                UpdateProgress();
+                break;
+
+            case nameof(VsaCodeExplorerViewModel.CurrentGroupColor):
+                UpdateProgress();
+                break;
+
+            case nameof(VsaCodeExplorerViewModel.ShowResultPanel):
+                UpdateResultPanel();
+                UpdateProgress();
+                break;
+
+            case nameof(VsaCodeExplorerViewModel.FinalCode):
+                TxtFinalCode.Text = _vm.FinalCode;
+                TxtCodePreview.Text = _vm.FinalCode;
+                break;
+
+            case nameof(VsaCodeExplorerViewModel.FinalLabel):
+                TxtFinalLabel.Text = _vm.FinalLabel + (_vm.FinalSublabel is not null ? $" — {_vm.FinalSublabel}" : "");
+                break;
+
+            case nameof(VsaCodeExplorerViewModel.FinalSublabel):
+                TxtFinalLabel.Text = _vm.FinalLabel + (_vm.FinalSublabel is not null ? $" — {_vm.FinalSublabel}" : "");
+                break;
+
+            case nameof(VsaCodeExplorerViewModel.WarnMessage):
+                TxtWarn.Text = _vm.WarnMessage ?? "";
+                TxtWarn.Visibility = string.IsNullOrEmpty(_vm.WarnMessage) ? Visibility.Collapsed : Visibility.Visible;
+                break;
+
+            case nameof(VsaCodeExplorerViewModel.Q1Rule):
+            case nameof(VsaCodeExplorerViewModel.Q2Rule):
+                UpdateQuantPanel();
+                break;
+
+            case nameof(VsaCodeExplorerViewModel.Q1Error):
+                TxtQ1Error.Text = _vm.Q1Error ?? "";
+                TxtQ1Error.Visibility = _vm.Q1Error is not null ? Visibility.Visible : Visibility.Collapsed;
+                break;
+
+            case nameof(VsaCodeExplorerViewModel.Q2Error):
+                TxtQ2Error.Text = _vm.Q2Error ?? "";
+                TxtQ2Error.Visibility = _vm.Q2Error is not null ? Visibility.Visible : Visibility.Collapsed;
+                break;
+
+            case nameof(VsaCodeExplorerViewModel.ClockMode):
+            case nameof(VsaCodeExplorerViewModel.ClockHint):
+                UpdateClockPanel();
+                break;
+
+            case nameof(VsaCodeExplorerViewModel.CanConfirm):
+                SyncValidationUi();
+                break;
+
+            case nameof(VsaCodeExplorerViewModel.ValidationMessage):
+                SyncValidationUi();
+                break;
+        }
+
+        if (propertyName is nameof(VsaCodeExplorerViewModel.BreadcrumbItems))
+            UpdateBreadcrumb();
     }
 
     // ═══════════════════════════════════════════════════════════════
