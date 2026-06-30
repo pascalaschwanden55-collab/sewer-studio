@@ -492,6 +492,25 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_protocol_startdata_review_item_filter_an_selector()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var countSource = ExtractPropertyBody(source, "public int StartdataCandidateCount");
+        var itemsSource = ExtractMethodBody(source, "private List<InfraSelfImproving.ReviewQueueItem> GetProtocolStartdataReviewItems()");
+
+        Assert.Contains("TrainingProtocolStartdataReviewItemSelector.Count(ReviewQueue)", countSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingProtocolStartdataReviewItemSelector.Select(ReviewQueue)", itemsSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingMatchLevel", countSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingMatchLevel", itemsSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_kb_update_workflow_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
@@ -547,5 +566,16 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         }
 
         throw new InvalidOperationException($"Methodenrumpf nicht abgeschlossen: {signature}");
+    }
+
+    private static string ExtractPropertyBody(string source, string signature)
+    {
+        var signatureIndex = source.IndexOf(signature, StringComparison.Ordinal);
+        Assert.True(signatureIndex >= 0, $"Property nicht gefunden: {signature}");
+
+        var semicolonIndex = source.IndexOf(';', signatureIndex);
+        Assert.True(semicolonIndex > signatureIndex, $"Property-Ende nicht gefunden: {signature}");
+
+        return source[signatureIndex..(semicolonIndex + 1)];
     }
 }

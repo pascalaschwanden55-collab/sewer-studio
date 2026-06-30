@@ -1566,16 +1566,14 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     /// <summary>Anzahl der aktuell als Protokoll-Startdaten eingereihten Kandidaten.</summary>
     public int StartdataCandidateCount =>
-        ReviewQueue.Count(i => string.Equals(i.SelfTrainingMatchLevel, "ProtocolStartdata", StringComparison.OrdinalIgnoreCase));
+        TrainingProtocolStartdataReviewItemSelector.Count(ReviewQueue);
 
     private List<InfraSelfImproving.ReviewQueueItem> GetProtocolStartdataReviewItems()
     {
         List<InfraSelfImproving.ReviewQueueItem>? items = null;
         OnUi(() =>
         {
-            items = ReviewQueue
-                .Where(i => string.Equals(i.SelfTrainingMatchLevel, "ProtocolStartdata", StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            items = TrainingProtocolStartdataReviewItemSelector.Select(ReviewQueue);
         });
         return items ?? new List<InfraSelfImproving.ReviewQueueItem>();
     }
