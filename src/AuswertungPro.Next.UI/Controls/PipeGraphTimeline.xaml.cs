@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using AuswertungPro.Next.Application.Reports;
 
 namespace AuswertungPro.Next.UI.Controls;
 
@@ -182,20 +183,18 @@ public partial class PipeGraphTimeline : UserControl
             double conf = ConfidenceAccessor?.Invoke(item) ?? -1;
             bool rejected = IsRejectedAccessor?.Invoke(item) ?? false;
 
-            double x = Math.Clamp(meter / TotalLength, 0, 1) * canvasW;
+            double x = TimelineScaleCalculator.MeterToX(meter, TotalLength, canvasW);
 
-            // Farbe nach QualityGate-Zone
-            Brush fill;
-            if (rejected)
-                fill = BrushRejected;
-            else if (conf < 0)
-                fill = BrushManual; // Kein AI-Kontext → manuell
-            else if (conf >= 0.85)
-                fill = BrushGreen;
-            else if (conf >= 0.60)
-                fill = BrushYellow;
-            else
-                fill = BrushRed;
+            // Farbe nach QualityGate-Zone (Klassifikation via MarkerColorClassifier)
+            var zone = MarkerColorClassifier.Classify(conf, rejected);
+            Brush fill = zone switch
+            {
+                MarkerZone.Rejected => BrushRejected,
+                MarkerZone.Manual   => BrushManual,
+                MarkerZone.Green    => BrushGreen,
+                MarkerZone.Yellow   => BrushYellow,
+                _                   => BrushRed
+            };
 
             // Vertikaler Balken (wie im Mockup)
             var bar = new Border
@@ -252,7 +251,7 @@ public partial class PipeGraphTimeline : UserControl
         if (canvasW <= 0) canvasW = 400;
 
         double barH = 36;
-        double x = Math.Clamp(CurrentMeter / TotalLength, 0, 1) * canvasW;
+        double x = TimelineScaleCalculator.MeterToX(CurrentMeter, TotalLength, canvasW);
 
         PlayheadLine.Height = barH;
         Canvas.SetLeft(PlayheadLine, x - 1);
@@ -274,20 +273,12 @@ public partial class PipeGraphTimeline : UserControl
         double canvasW = TimelineBar.ActualWidth;
         if (canvasW <= 0) canvasW = 400;
 
-        // Sinnvolle Intervalle wählen
-        double interval = TotalLength switch
-        {
-            <= 10 => 2,
-            <= 25 => 5,
-            <= 50 => 10,
-            <= 100 => 20,
-            <= 250 => 50,
-            _ => 100
-        };
+        // Sinnvolles Intervall waehlen (Logik via TimelineScaleCalculator)
+        double interval = TimelineScaleCalculator.ChooseInterval(TotalLength);
 
         for (double m = 0; m <= TotalLength; m += interval)
         {
-            double x = (m / TotalLength) * canvasW;
+            double x = TimelineScaleCalculator.MeterToX(m, TotalLength, canvasW);
             var tb = new TextBlock
             {
                 Text = $"{m:F0}m",
@@ -356,7 +347,7 @@ public partial class PipeGraphTimeline : UserControl
         if (canvasW <= 0) return;
 
         double x = e.GetPosition(TimelineBar).X;
-        double meter = Math.Clamp((x / canvasW) * TotalLength, 0, TotalLength);
+        double meter = TimelineScaleCalculator.XToMeter(x, TotalLength, canvasW);
 
         NavigateToMeterCommand?.Execute(meter);
     }
