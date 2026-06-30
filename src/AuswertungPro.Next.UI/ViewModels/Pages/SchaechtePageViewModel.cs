@@ -399,26 +399,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     }
 
     public bool MatchesSearch(SchachtRecord record)
-    {
-        if (string.IsNullOrWhiteSpace(SearchText))
-            return true;
-
-        var term = SearchText.Trim();
-        if (term.Length == 0)
-            return true;
-
-        return record.Fields.Any(kvp =>
-            (!string.IsNullOrWhiteSpace(kvp.Key) && kvp.Key.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-            (!string.IsNullOrWhiteSpace(kvp.Value) && kvp.Value.Contains(term, StringComparison.OrdinalIgnoreCase)));
-    }
+        => SchaechteSearchMatcher.Matches(record, SearchText);
 
     public void UpdateSearchResultInfo(int visibleCount)
-    {
-        if (string.IsNullOrWhiteSpace(SearchText))
-            SearchResultInfo = string.Empty;
-        else
-            SearchResultInfo = $"{visibleCount} von {Records.Count} Schaechten";
-    }
+        => SearchResultInfo = SchaechteSearchMatcher.BuildResultInfo(SearchText, visibleCount, Records.Count);
 
     private void PersistSchaechtePageBasicUiSettings()
     {

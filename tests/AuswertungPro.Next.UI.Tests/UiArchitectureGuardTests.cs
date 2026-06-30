@@ -194,6 +194,23 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void SchaechtePage_search_logic_lives_in_matcher()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "SchaechtePageViewModel.cs");
+        var matcherPath = Path.Combine(uiRoot, "Services", "SchaechteSearchMatcher.cs");
+
+        Assert.True(File.Exists(matcherPath), "Schaechte-Suche soll als kleiner testbarer Matcher ausserhalb der ViewModel-Methoden leben.");
+
+        var viewModel = File.ReadAllText(viewModelPath);
+        Assert.Contains("SchaechteSearchMatcher.Matches", viewModel);
+        Assert.Contains("SchaechteSearchMatcher.BuildResultInfo", viewModel);
+        Assert.DoesNotContain("record.Fields.Any", viewModel);
+        Assert.DoesNotContain("von {Records.Count} Schaechten", viewModel);
+    }
+
+    [Fact]
     public void PlayerWindow_damage_markers_live_in_controller()
     {
         var root = FindRepositoryRoot();
