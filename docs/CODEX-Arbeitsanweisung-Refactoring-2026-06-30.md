@@ -72,10 +72,38 @@ guten, nicht-duplizierten Verbesserungen aus `projektmanager` darauf, integriert
 4. **Verifikation:** volle Solution grün (`dotnet test AuswertungPro.sln`); manueller WPF-Smoke des
    Ein-Knopf-Imports + Projekterzeugung (Struktur + `Projektdateien\projekt.json` + Root-Pointer).
 
-## Danach (optionale UI-Refactoring-Folge, falls Kapazität)
-Siehe `docs/ARCHITEKTUR-FAHRPLAN-V3-QUALITAET.md` — Codex-UI-Lanes: Page-VMs `IDisposable`
-(BuilderPageViewModel-Muster), UI-Threading-Fixes, Test-Hygiene (brittle String-Guards raus),
-Dekompositions-Boden. Diese sind unabhängig vom Import und können nach der Reconciliation laufen.
+## Phase 2 (nach der Reconciliation): God-Klassen minimieren + Wartbarkeit erhöhen
+Sobald `projektmanager` auf `gis-karte` reconciled + grün ist, **mach mit dem UI-Refactoring weiter** —
+Ziel: die großen UI-God-Klassen entflechten und die Wartbarkeit erhöhen. Das ist die eigentliche
+Daueraufgabe deiner Lane.
+
+**Muster (etabliert, NICHT neu erfinden):**
+- **Exklusiver Zustand → Controller:** ein klar abgegrenzter Zustands-/Interaktionsbereich einer
+  God-Klasse wird in einen fokussierten Controller/Sub-Komponenten ausgelagert; geteilte Helfer als
+  Delegate. Vorbild: PlayerWindow-Pilot (`DamageMarkerController`, `QuickScanController`).
+- **Thin-VM:** UI-Mechanik in fokussierte Controller; fachliche Logik bleibt/geht nach
+  Application/Domain (Logik-Extraktion = Claude-Lane, bereits weit gediehen — du machst die UI-Mechanik).
+- **Verhaltensneutral + Guard-Test je Schritt; klein committen** (ein Controller pro Commit).
+
+**Maßgebliche Roadmaps (lesen + abarbeiten):**
+- `docs/ARCHITEKTUR-FAHRPLAN-V3-QUALITAET.md` — Codex-UI-Lanes (Page-VMs `IDisposable` nach
+  BuilderPageViewModel-Muster, UI-Threading, Test-Hygiene, Dekompositions-Boden).
+- `docs/ARCHITEKTUR-FAHRPLAN-V2-UI.md` — Thin-VM-Fahrplan (UI-Mechanik-Lane).
+- `docs/superpowers/specs/2026-06-22-playerwindow-decomposition-design.md` +
+  `docs/superpowers/plans/2026-06-22-playerwindow-*.md` — PlayerWindow-Decomposition (fortsetzen).
+
+**Konkrete God-Klassen-Ziele (größte UI-Dateien, absteigend angehen):**
+1. **PlayerWindow** — Decomposition fortsetzen (nächste exklusive Zustandsbereiche → Controller).
+2. `ViewModels/Pages/DataPageViewModel.cs` (~1640 Z.)
+3. `ViewModels/Windows/CostCalculatorViewModel.cs` (~1595 Z.) — siehe V3 Q10 (Logik-Services = Claude, VM dünnen = Codex).
+4. `ViewModels/Windows/TrainingCenterViewModel.cs` (~1540 Z.)
+5. `Views/Windows/PhotoMeasurementWindow.xaml.cs` (~1515 Z.)
+6. `Views/Pages/DataPage.xaml.cs` (~1460 Z.), dann `SanierungsMatrixPageViewModel`, `SchaechtePage.xaml.cs`, `ImportPageViewModel` …
+
+**Vorgehen je God-Klasse:** kleinsten exklusiven Zustandsbereich identifizieren → in Controller ziehen
+(verhaltensneutral) → Guard-Test → Build/Tests grün → committen → nächster Bereich. Keine fachliche
+Änderung (z.B. Severity-Logik, VSA-Regeln) ohne Rückfrage. Wo Logik in eine tiefere Schicht gehört
+(Application/Domain), markieren/abstimmen statt selbst dorthin schreiben (Whole-File-Ownership).
 
 ## Leitplanken
 - Eigener Worktree/Branch off `feature/gis-karte`, nicht direkt auf gis-karte arbeiten.
