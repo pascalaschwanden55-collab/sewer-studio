@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
 
@@ -11,6 +12,8 @@ namespace AuswertungPro.Next.Infrastructure;
 /// </summary>
 internal static class HoldingIdNormalizer
 {
+    private const string NodeTokenPattern = @"(?:\d{1,4}\.\d{2,12}|\d{4,16})";
+
     /// <summary>
     /// Entfernt XX. Praefixe (1-2 Ziffern + Punkt) von beiden Seiten eines Haltungsnamens.
     /// Z.B. "07.7695-07.7078" → "7695-7078"
@@ -28,7 +31,7 @@ internal static class HoldingIdNormalizer
 
         var text = HoldingTextNormalizer.NormalizeText(value).Trim();
         // Paar-Muster extrahieren: XXXXX-XXXXX oder XX.XXXX-XX.XXXX
-        var pairRx = new Regex(@"((?:\d{2,}\.\d{2,}|\d{4,})\s*[-]\s*(?:\d{2,}\.\d{2,}|\d{4,}))");
+        var pairRx = new Regex($@"({NodeTokenPattern}\s*[-/]\s*{NodeTokenPattern})");
         var m = pairRx.Match(text);
         if (m.Success)
         {
@@ -51,12 +54,15 @@ internal static class HoldingIdNormalizer
             return false;
 
         var normalized = value.Trim();
-        var rx = new Regex(@"^(?:\d{2,}\.\d{2,}|\d{4,})\s*-\s*(?:\d{2,}\.\d{2,}|\d{4,})$");
+        var rx = new Regex($@"^{NodeTokenPattern}\s*-\s*{NodeTokenPattern}$");
         if (!rx.IsMatch(normalized))
             return false;
 
         var parts = normalized.Split('-', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 2)
+            return false;
+
+        if (parts.Any(IsDateLikeNode))
             return false;
 
         // Ablehnen bekannter OCR-Kleberartefakte wie "04.201423022-215987" (Datumsfragment + ID).
@@ -67,6 +73,23 @@ internal static class HoldingIdNormalizer
         }
 
         return HoldingIdPlausibility.IsLikelyHoldingId(normalized);
+    }
+
+    internal static bool IsDateLikeNode(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        var part = value.Trim();
+        if (Regex.IsMatch(part, @"^\d{1,2}\.\d{1,2}\.\d{2,4}$"))
+            return true;
+        if (Regex.IsMatch(part, @"^\d{4}[.\-]\d{1,2}[.\-]\d{1,2}$"))
+            return true;
+
+        var monthYear = Regex.Match(part, @"^(?<m>\d{1,2})\.20\d{2}$");
+        return monthYear.Success
+            && int.TryParse(monthYear.Groups["m"].Value, out var month)
+            && month is >= 1 and <= 12;
     }
 
     /// <summary>

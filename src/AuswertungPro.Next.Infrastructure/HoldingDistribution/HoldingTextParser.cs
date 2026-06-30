@@ -13,6 +13,8 @@ namespace AuswertungPro.Next.Infrastructure.HoldingDistribution;
 /// </summary>
 internal static class HoldingTextParser
 {
+    private const string NodeTokenPattern = @"(?:\d{1,4}\.\d{2,12}|\d{4,16})";
+
     // ── Regex-Felder (verbatim aus HoldingFolderDistributor.PdfParsing/TextUtils) ─────
 
     private static readonly Regex InspectionDateRx = new(
@@ -32,7 +34,7 @@ internal static class HoldingTextParser
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static readonly Regex GeneralPairRx = new(
-        @"((?:\d{2,}\.\d{2,}|\d{4,})\s*[-]\s*(?:\d{2,}\.\d{2,}|\d{4,}))(?=[^\d]|$)",
+        $@"({NodeTokenPattern}\s*[-/]\s*{NodeTokenPattern})(?=[^\d.]|$)",
         RegexOptions.Compiled);
 
     private static readonly Regex GluedDatePairRx = new(
@@ -44,7 +46,7 @@ internal static class HoldingTextParser
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
     private static readonly Regex PdfFilenamePairRegex = new(
-        @"(?:\d{2,}\.\d{2,}|\d{4,})\s*[-_]\s*(?:\d{2,}\.\d{2,}|\d{4,})",
+        $@"{NodeTokenPattern}\s*[-_]\s*{NodeTokenPattern}",
         RegexOptions.Compiled);
 
     // ── Oeffentliche Methoden ────────────────────────────────────────────────────────
@@ -57,6 +59,11 @@ internal static class HoldingTextParser
         var idRx = HaltungIdRx;
         var generalPairRx = GeneralPairRx;
         var gluedDatePairRx = GluedDatePairRx;
+        var lines = text.Replace("\r\n", "\n").Split('\n');
+
+        var labeled = TryFindLabeledHoldingOrLineId(lines, idRx, generalPairRx);
+        if (!string.IsNullOrWhiteSpace(labeled))
+            return labeled;
 
         // Prioritaet 1: Schacht-Muster (zuverlaessigste Quelle)
         var shaftPattern = ShaftCandidateScanner.TryExtractFromShafts(text);
@@ -97,7 +104,6 @@ internal static class HoldingTextParser
         }
 
         // Prioritaet 2: Zeilen mit "Haltung"
-        var lines = text.Replace("\r\n", "\n").Split('\n');
         foreach (var line in lines)
         {
             if (!line.Contains("Haltung", StringComparison.OrdinalIgnoreCase))
@@ -171,6 +177,39 @@ internal static class HoldingTextParser
             var normalized = HoldingIdNormalizer.NormalizeHaltungId(anyIdLine.Trim());
             if (HoldingIdNormalizer.IsValidHaltungId(normalized))
                 return normalized;
+        }
+
+        return null;
+    }
+
+    private static string? TryFindLabeledHoldingOrLineId(IEnumerable<string> lines, Regex idRx, Regex generalPairRx)
+    {
+        foreach (var line in lines)
+        {
+            var isHoldingLine = line.Contains("Haltung", StringComparison.OrdinalIgnoreCase);
+            var isLineLine = line.Contains("Leitung", StringComparison.OrdinalIgnoreCase);
+            if (!isHoldingLine && !isLineLine)
+                continue;
+
+            var m = idRx.Match(line);
+            if (m.Success)
+            {
+                var id = m.Groups["id"].Value?.Trim();
+                if (!string.IsNullOrWhiteSpace(id))
+                {
+                    var normalized = HoldingIdNormalizer.NormalizeHaltungId(id);
+                    if (HoldingIdNormalizer.IsValidHaltungId(normalized))
+                        return normalized;
+                }
+            }
+
+            var inline = generalPairRx.Match(line);
+            if (inline.Success)
+            {
+                var normalized = HoldingIdNormalizer.NormalizeHaltungId(inline.Groups[1].Value);
+                if (HoldingIdNormalizer.IsValidHaltungId(normalized))
+                    return normalized;
+            }
         }
 
         return null;
@@ -431,6 +470,14 @@ internal static class HoldingTextParser
         var explicitParts = explicitPair.Split('-', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         if (shaftParts.Length != 2 || explicitParts.Length != 2)
             return false;
+
+        if (string.Equals(shaftParts[0], explicitParts[1], StringComparison.OrdinalIgnoreCase)
+            && string.Equals(shaftParts[1], explicitParts[0], StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (shaftParts.Any(HoldingIdNormalizer.IsDateLikeNode)
+            && !explicitParts.Any(HoldingIdNormalizer.IsDateLikeNode))
+            return true;
 
         if (string.Equals(shaftParts[0], shaftParts[1], StringComparison.OrdinalIgnoreCase))
             return true;

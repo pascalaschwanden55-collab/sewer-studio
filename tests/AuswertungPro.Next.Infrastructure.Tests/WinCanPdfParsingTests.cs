@@ -147,6 +147,33 @@ public sealed class WinCanPdfParsingTests
         Assert.Equal("07.1031733-10.1031732", parsed.Haltung);
     }
 
+    [Theory]
+    [InlineData("Haltung", "Oberer Schacht", "Unterer Schacht", "22152-1085605", "1085605", "22152")]
+    [InlineData("Leitung", "Oberer Punkt", "Unterer Punkt", "4.01-07.1061504", "07.1061504", "4.01")]
+    public void ParsePdfPage_FretzReport_PrefersExplicitHoldingOverShaftOrder(
+        string holdingLabel,
+        string upperLabel,
+        string lowerLabel,
+        string explicitHolding,
+        string upper,
+        string lower)
+    {
+        var text = string.Join("\n", new[]
+        {
+            "Fretz Kanal-Service AG",
+            $"{holdingLabel}                   {explicitHolding}",
+            $"{upperLabel}            {upper}",
+            $"{lowerLabel}           {lower}",
+            "Inspektion 17.06.2026"
+        });
+
+        var parsed = HoldingFolderDistributor.ParsePdfPage(text);
+
+        Assert.True(parsed.Success, parsed.Message);
+        Assert.Equal(new DateTime(2026, 6, 17), parsed.Date);
+        Assert.Equal(explicitHolding, parsed.Haltung);
+    }
+
     [Fact]
     public void ParsePdf_AcceptsMp2FilmExtension()
     {
