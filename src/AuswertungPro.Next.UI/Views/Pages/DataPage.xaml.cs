@@ -146,29 +146,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             }
             else if (field == "Empfohlene_Sanierungsmassnahmen")
             {
-                var displayStyle = new Style(typeof(TextBlock));
-                displayStyle.Setters.Add(new Setter(TextBlock.TextWrappingProperty, TextWrapping.NoWrap));
-                displayStyle.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
-                displayStyle.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));
-
-                var editStyle = new Style(typeof(TextBox));
-                editStyle.Setters.Add(new Setter(TextBox.TextWrappingProperty, TextWrapping.Wrap));
-                editStyle.Setters.Add(new Setter(TextBox.AcceptsReturnProperty, true));
-                editStyle.Setters.Add(new Setter(TextBox.VerticalContentAlignmentProperty, VerticalAlignment.Top));
-                editStyle.Setters.Add(new Setter(TextBox.MinHeightProperty, 60d));
-
-                col = new DataGridTextColumn
-                {
-                    Header = def.Label,
-                    Binding = new Binding($"Fields[{field}]")
-                    {
-                        Mode = BindingMode.TwoWay,
-                        UpdateSourceTrigger = UpdateSourceTrigger.LostFocus
-                    },
-                    ElementStyle = displayStyle,
-                    EditingElementStyle = editStyle,
-                    Width = DataGridLength.SizeToHeader
-                };
+                col = DataGridWrappingTextColumnFactory.Create(field, def.Label);
             }
             else if (field == "Kosten")
             {
