@@ -170,6 +170,30 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void SchaechtePage_template_column_reading_lives_in_infrastructure()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "SchaechtePageViewModel.cs");
+        var infrastructurePath = Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.Infrastructure",
+            "Export",
+            "Excel",
+            "SchaechteTemplateColumnReader.cs");
+
+        Assert.True(File.Exists(infrastructurePath), "Schaechte-Template-Spalten sollen ausserhalb der ViewModel-UI-Schicht gelesen werden.");
+
+        var viewModel = File.ReadAllText(viewModelPath);
+        Assert.Contains("SchaechteTemplateColumnReader.LoadFromExportDirectory", viewModel);
+        Assert.DoesNotContain("using ClosedXML.Excel", viewModel);
+        Assert.DoesNotContain("XLWorkbook", viewModel);
+        Assert.DoesNotContain("private static string ResolveTemplatePath", viewModel);
+        Assert.DoesNotContain("private void SwapColumnOrder", viewModel);
+    }
+
+    [Fact]
     public void PlayerWindow_damage_markers_live_in_controller()
     {
         var root = FindRepositoryRoot();

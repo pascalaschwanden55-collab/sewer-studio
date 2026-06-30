@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
-using ClosedXML.Excel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Export.Excel;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Services;
 
@@ -230,51 +229,19 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         Columns.Clear();
 
-        var templatePath = ResolveTemplatePath();
-        if (string.IsNullOrWhiteSpace(templatePath) || !File.Exists(templatePath))
+        var result = SchaechteTemplateColumnReader.LoadFromExportDirectory(AppContext.BaseDirectory);
+        if (!result.TemplateFound)
         {
             LastResult = "Schaechte-Vorlage nicht gefunden.";
             return;
         }
 
-        using var wb = new XLWorkbook(templatePath);
-        var ws = wb.Worksheets.FirstOrDefault(w => string.Equals(w.Name, "Schaechte", StringComparison.OrdinalIgnoreCase))
-                 ?? wb.Worksheet(1);
+        foreach (var column in result.Columns)
+            Columns.Add(column);
 
-        const int headerRow = 12;
-        var lastHeaderCell = ws.Row(headerRow).LastCellUsed();
-        var lastCol = lastHeaderCell?.Address.ColumnNumber ?? 1;
-
-        for (var c = 1; c <= lastCol; c++)
-        {
-            var header = ws.Cell(headerRow, c).GetString()?.Trim();
-            if (!string.IsNullOrWhiteSpace(header) && !Columns.Contains(header))
-                Columns.Add(header);
-        }
-
-        SwapColumnOrder("Funktion", "Schachtnummer");
         EnsureRecordColumns();
         UpdateNr();
         LastResult = $"Spalten geladen: {Columns.Count}";
-    }
-
-    private void SwapColumnOrder(string firstColumnName, string secondColumnName)
-    {
-        if (Columns.Count == 0)
-            return;
-
-        var first = Columns.FirstOrDefault(x => x.Equals(firstColumnName, StringComparison.OrdinalIgnoreCase));
-        var second = Columns.FirstOrDefault(x => x.Equals(secondColumnName, StringComparison.OrdinalIgnoreCase));
-        if (first is null || second is null)
-            return;
-
-        var firstIndex = Columns.IndexOf(first);
-        var secondIndex = Columns.IndexOf(second);
-        if (firstIndex < 0 || secondIndex < 0 || firstIndex == secondIndex)
-            return;
-
-        Columns[firstIndex] = second;
-        Columns[secondIndex] = first;
     }
 
     private void EnsureRecordColumns()
@@ -380,24 +347,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         var ok = _shell.TrySaveProject();
         LastResult = ok ? "Schaechte gespeichert." : "Speichern fehlgeschlagen.";
-    }
-
-    private static string ResolveTemplatePath()
-    {
-        var exportDir = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage");
-        if (!Directory.Exists(exportDir))
-            return string.Empty;
-
-        var exact = Path.Combine(exportDir, "Schaechte.xlsx");
-        if (File.Exists(exact))
-            return exact;
-
-        var fallback = Directory
-            .GetFiles(exportDir, "*.xlsx")
-            .FirstOrDefault(f => Path.GetFileName(f).Contains("ch", StringComparison.OrdinalIgnoreCase) &&
-                                 Path.GetFileName(f).Contains("te", StringComparison.OrdinalIgnoreCase));
-
-        return fallback ?? string.Empty;
     }
 
     private void AddOptionIfMissing(ObservableCollection<string> options, string value)
