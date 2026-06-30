@@ -953,9 +953,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
             // Die aktuell gezeigte Ansicht abdocken: Haltungsansicht wenn der Umschalter
             // an ist, sonst die Tabelle. Umschalter sperren, solange abgedockt.
-            var active = HaltungsansichtToggle.IsChecked == true
-                ? (UIElement)HaltungsansichtView
-                : Grid;
+            var active = GridDockingController.ResolveActiveView(
+                HaltungsansichtToggle.IsChecked == true,
+                HaltungsansichtView,
+                Grid);
             _undockedView = active;
             HaltungsansichtToggle.IsEnabled = false;
 
@@ -968,13 +969,13 @@ public partial class DataPage : System.Windows.Controls.UserControl
             _floatingGridWindow.DataContext = DataContext;
 
             // Aktive Ansicht aus dem visuellen Baum entfernen und ins Floating-Fenster verschieben
-            GridHost.Children.Remove(active);
+            GridDockingController.ApplyUndockedState(
+                GridHost,
+                active,
+                UndockedPlaceholder,
+                UndockButton,
+                HaltungsansichtToggle);
             _floatingGridWindow.SetGridContent(active);
-            active.Visibility = Visibility.Visible;
-
-            // Platzhalter anzeigen
-            UndockedPlaceholder.Visibility = Visibility.Visible;
-            UndockButton.IsEnabled = false;
 
             // Fensterposition aus Settings laden
             var settings = Services.Settings;
@@ -996,16 +997,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
             Dialogs.Warn($"Fehler beim Abdocken:\n{ex.Message}", "Abdocken");
 
             // Abgedockte Ansicht zuruecksetzen falls sie schon entfernt wurde
-            if (_undockedView is not null)
-            {
-                if (!GridHost.Children.Contains(_undockedView))
-                    GridHost.Children.Add(_undockedView);
-                _undockedView.Visibility = Visibility.Visible;
-                _undockedView = null;
-            }
-            UndockedPlaceholder.Visibility = Visibility.Collapsed;
-            UndockButton.IsEnabled = true;
-            HaltungsansichtToggle.IsEnabled = true; // bei fehlgeschlagenem Abdocken Umschalter wieder freigeben
+            GridDockingController.RestoreDockedState(
+                GridHost,
+                view: _undockedView,
+                fallbackView: null,
+                UndockedPlaceholder,
+                UndockButton,
+                HaltungsansichtToggle);
+            _undockedView = null;
 
             if (_floatingGridWindow is not null)
             {
@@ -1042,23 +1041,21 @@ public partial class DataPage : System.Windows.Controls.UserControl
         _floatingGridWindow = null;
 
         RestoreUndockedView(view);
-
-        // Platzhalter ausblenden
-        UndockedPlaceholder.Visibility = Visibility.Collapsed;
-        UndockButton.IsEnabled = true;
-        HaltungsansichtToggle.IsEnabled = true;
     }
 
     // Holt die abgedockte Ansicht (Tabelle ODER Haltungsansicht) zurueck in den GridHost.
     private void RestoreUndockedView(UIElement? view)
     {
-        var element = view ?? _undockedView;
-        if (element is null)
-            return;
-        if (!GridHost.Children.Contains(element))
-            GridHost.Children.Add(element);
-        element.Visibility = Visibility.Visible;
-        _undockedView = null;
+        if (GridDockingController.RestoreDockedState(
+            GridHost,
+            view,
+            _undockedView,
+            UndockedPlaceholder,
+            UndockButton,
+            HaltungsansichtToggle))
+        {
+            _undockedView = null;
+        }
     }
 
     private void FloatingGridWindow_Closed(object? sender, EventArgs e)
@@ -1079,10 +1076,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
         _floatingGridWindow = null;
 
         RestoreUndockedView(view);
-
-        UndockedPlaceholder.Visibility = Visibility.Collapsed;
-        UndockButton.IsEnabled = true;
-        HaltungsansichtToggle.IsEnabled = true;
     }
 
     private void UpdateFloatingWindowInfo()
