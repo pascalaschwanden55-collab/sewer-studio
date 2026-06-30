@@ -47,6 +47,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     public IRelayCommand OpenReportFolderCommand { get; }
     public IAsyncRelayCommand MakeProjectPortableCommand { get; }
     public IAsyncRelayCommand AssignPhotosFromFolderCommand { get; }
+    public IAsyncRelayCommand ImportKanalProjektCommand { get; }
 
     public ImportPageViewModel(ShellViewModel shell, ServiceProvider sp)
     {
@@ -65,6 +66,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         OpenReportFolderCommand = new RelayCommand(OpenReportFolder);
         MakeProjectPortableCommand = new AsyncRelayCommand(MakeProjectPortableAsync);
         AssignPhotosFromFolderCommand = new AsyncRelayCommand(AssignPhotosFromFolderAsync);
+        ImportKanalProjektCommand = new AsyncRelayCommand(ImportKanalProjektAsync, CanStartImport);
 
         UpdateCatalogStatus();
     }
@@ -552,6 +554,79 @@ public sealed partial class ImportPageViewModel : ObservableObject
         if (result.Messages.Count > 0)
             DetailsText += "\n\nFoto-Zuordnung:\n" + string.Join("\n", result.Messages.Take(50));
         _sp.Dialogs.Info(summary, "Fotos zuordnen");
+    }
+
+    /// <summary>
+    /// Ein-Knopf-Import: Quellordner der Kanalfernsehdaten waehlen → Format erkennen (WinCan/IKAS) →
+    /// massgebliche Quelle importieren (inkl. Pro-Beobachtung-Fotos) → Rohdaten archivieren →
+    /// Filme/PDFs verteilen → Fotos zentral gruppieren → relativ verlinken. Nutzt den getesteten
+    /// ProjectImportOrchestrator. Die 5 manuellen Format-Knoepfe bleiben als Spezialfall.
+    /// </summary>
+    private async Task ImportKanalProjektAsync()
+    {
+        var projectFolder = _shell.GetProjectFolder();
+        if (string.IsNullOrWhiteSpace(projectFolder))
+        {
+            _sp.Dialogs.Info("Bitte zuerst ein Projekt anlegen/speichern.", "Import Kanalfernseh-Projekt");
+            return;
+        }
+
+        var src = _sp.Dialogs.SelectFolder(
+            "Quellordner der Kanalfernsehdaten waehlen (WinCan- oder IKAS-Projektordner)", null);
+        if (string.IsNullOrWhiteSpace(src))
+            return;
+
+        ImportProgress = "Kanalfernseh-Projekt importieren: erkennen → archivieren → parsen → verteilen...";
+        var orchestrator = new ProjectImportOrchestrator(
+            new XtfImportServiceAdapter(),
+            new AuswertungPro.Next.Infrastructure.Import.WinCan.WinCanDbImportService());
+        var result = await Task.Run(() => orchestrator.Import(src!, projectFolder!, _shell.Project));
+        ImportProgress = "";
+
+        if (result.Format == KanalExportFormat.Unknown || result.Format == KanalExportFormat.Ambiguous)
+        {
+            var hint = string.Join("\n", result.Messages.Take(6));
+            _sp.Dialogs.Info(
+                $"Format nicht eindeutig erkannt ({result.Format}).\n{hint}\n\nNutze ggf. die manuellen Import-Knoepfe (WinCan/XTF/PDF/IBAK/KINS).",
+                "Import Kanalfernseh-Projekt");
+            return;
+        }
+
+        _ = _shell.TrySaveProject();
+        TryWriteKanalImportReport(projectFolder!, result);
+
+        var summary = $"Import abgeschlossen ({result.Format}):"
+            + $"\n  {result.Found} Haltungen ({result.Created} neu, {result.Updated} aktualisiert)"
+            + $"\n  {result.Errors} Fehler, {result.Conflicts} Feld-Konflikte"
+            + $"\n  Rohdaten archiviert, Filme/Fotos verteilt (Report in __IMPORT_REPORTS\\)";
+        SummaryText += "\n" + summary;
+        if (result.Messages.Count > 0)
+            DetailsText += "\n\nKanalfernseh-Import:\n" + string.Join("\n", result.Messages.Take(80));
+        _sp.Dialogs.Info(summary, "Import Kanalfernseh-Projekt");
+    }
+
+    // Schreibt einen einfachen Textreport des Ein-Knopf-Imports nach <Projekt>\__IMPORT_REPORTS\.
+    private static void TryWriteKanalImportReport(string projectFolder, OneClickImportResult result)
+    {
+        try
+        {
+            var dir = System.IO.Path.Combine(projectFolder, "__IMPORT_REPORTS");
+            System.IO.Directory.CreateDirectory(dir);
+            var path = System.IO.Path.Combine(dir, $"kanalimport_{System.DateTime.Now:yyyyMMdd_HHmmss}.txt");
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Kanalfernseh-Import {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            sb.AppendLine($"Format: {result.Format}");
+            sb.AppendLine($"Haltungen: {result.Found} (neu {result.Created}, aktualisiert {result.Updated})");
+            sb.AppendLine($"Fehler: {result.Errors}, Feld-Konflikte: {result.Conflicts}");
+            sb.AppendLine();
+            foreach (var m in result.Messages)
+                sb.AppendLine(m);
+            System.IO.File.WriteAllText(path, sb.ToString());
+        }
+        catch
+        {
+            // best effort — ein fehlender Report darf den Import nicht stoeren
+        }
     }
 
     private async Task RunVsaAfterImport(string sourceLabel)

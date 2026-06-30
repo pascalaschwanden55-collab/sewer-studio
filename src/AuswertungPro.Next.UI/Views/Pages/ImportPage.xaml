@@ -14,6 +14,19 @@
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     Padding="6,4" CornerRadius="8">
                 <StackPanel Orientation="Horizontal">
+                    <Button Command="{Binding ImportKanalProjektCommand}"
+                            Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,8,0"
+                            ToolTip="Quellordner der Kanalfernsehdaten waehlen — erkennt WinCan/IKAS automatisch, importiert maszgebliche Quelle + Pro-Beobachtung-Fotos, archiviert Rohdaten, verteilt Filme/PDFs, alles relativ verlinkt">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8B7;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Import Kanalfernseh-Projekt" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,4"/>
+
+                    <TextBlock Text="Manuell:" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.7" FontSize="11"/>
+
                     <Button Command="{Binding ImportPdfCommand}"
                             Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,4,0">
                         <StackPanel Orientation="Horizontal">
