@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
-using ClosedXML.Excel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Import.Xlsx;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Dialogs;
 using AuswertungPro.Next.UI.Services;
@@ -185,27 +185,17 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         Columns.Clear();
 
-        var templatePath = ResolveTemplatePath();
-        if (string.IsNullOrWhiteSpace(templatePath) || !File.Exists(templatePath))
+        var templatePath = SchaechteTemplateColumnReader.ResolveTemplatePath();
+        var cols = SchaechteTemplateColumnReader.ReadColumns(templatePath);
+
+        if (cols.Count == 0)
         {
             LastResult = "Schaechte-Vorlage nicht gefunden.";
             return;
         }
 
-        using var wb = new XLWorkbook(templatePath);
-        var ws = wb.Worksheets.FirstOrDefault(w => string.Equals(w.Name, "Schaechte", StringComparison.OrdinalIgnoreCase))
-                 ?? wb.Worksheet(1);
-
-        const int headerRow = 12;
-        var lastHeaderCell = ws.Row(headerRow).LastCellUsed();
-        var lastCol = lastHeaderCell?.Address.ColumnNumber ?? 1;
-
-        for (var c = 1; c <= lastCol; c++)
-        {
-            var header = ws.Cell(headerRow, c).GetString()?.Trim();
-            if (!string.IsNullOrWhiteSpace(header) && !Columns.Contains(header))
-                Columns.Add(header);
-        }
+        foreach (var col in cols)
+            Columns.Add(col);
 
         SwapColumnOrder("Funktion", "Schachtnummer");
         EnsureRecordColumns();
@@ -335,24 +325,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     {
         var ok = _shell.TrySaveProject();
         LastResult = ok ? "Schaechte gespeichert." : "Speichern fehlgeschlagen.";
-    }
-
-    private static string ResolveTemplatePath()
-    {
-        var exportDir = Path.Combine(AppContext.BaseDirectory, "Export_Vorlage");
-        if (!Directory.Exists(exportDir))
-            return string.Empty;
-
-        var exact = Path.Combine(exportDir, "Schaechte.xlsx");
-        if (File.Exists(exact))
-            return exact;
-
-        var fallback = Directory
-            .GetFiles(exportDir, "*.xlsx")
-            .FirstOrDefault(f => Path.GetFileName(f).Contains("ch", StringComparison.OrdinalIgnoreCase) &&
-                                 Path.GetFileName(f).Contains("te", StringComparison.OrdinalIgnoreCase));
-
-        return fallback ?? string.Empty;
     }
 
     private void EditSanierenOptions()
@@ -520,62 +492,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     }
 
     private static string ResolveFieldValue(SchachtRecord record, string logicalField)
-    {
-        foreach (var kvp in record.Fields)
-        {
-            var n = NormalizeKey(kvp.Key);
-            if (logicalField == "sanieren" && n.Contains("sanieren", StringComparison.Ordinal))
-                return kvp.Value ?? "";
-            if (logicalField == "pruefungsresultat" &&
-                (n.Contains("pruefung", StringComparison.Ordinal) || n.Contains("dichtheit", StringComparison.Ordinal) || n.Contains("dichtigkeit", StringComparison.Ordinal)))
-                return kvp.Value ?? "";
-            if (logicalField == "referenzpruefung" && n.Contains("referenz", StringComparison.Ordinal) && n.Contains("pruefung", StringComparison.Ordinal))
-                return kvp.Value ?? "";
-            if (logicalField == "ausgefuehrt_durch" &&
-                (n.Contains("ausgefuehrt", StringComparison.Ordinal) || n.Contains("ausgefuhrt", StringComparison.Ordinal)) && n.Contains("durch", StringComparison.Ordinal))
-                return kvp.Value ?? "";
-        }
-
-        return "";
-    }
-
-    private static string NormalizeKey(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "";
-
-        return value
-            .Trim()
-            .ToLowerInvariant()
-            .Replace("ä", "ae", StringComparison.Ordinal)
-            .Replace("ö", "oe", StringComparison.Ordinal)
-            .Replace("ü", "ue", StringComparison.Ordinal)
-            .Replace("ß", "ss", StringComparison.Ordinal)
-            .Replace("Ã¤", "ae", StringComparison.Ordinal)
-            .Replace("Ã¶", "oe", StringComparison.Ordinal)
-            .Replace("Ã¼", "ue", StringComparison.Ordinal)
-            .Replace("ÃŸ", "ss", StringComparison.Ordinal)
-            .Replace("ÃƒÂ¤", "ae", StringComparison.Ordinal)
-            .Replace("ÃƒÂ¶", "oe", StringComparison.Ordinal)
-            .Replace("ÃƒÂ¼", "ue", StringComparison.Ordinal)
-            .Replace("ÃƒÅ¸", "ss", StringComparison.Ordinal);
-    }
+        => SchaechteFieldLogic.ResolveFieldValue(record, logicalField);
 
     private string? ResolveNrColumnName()
-    {
-        var fromColumns = Columns.FirstOrDefault(c =>
-            c.Contains("NR", StringComparison.OrdinalIgnoreCase) ||
-            c.Contains("Nr", StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(fromColumns))
-            return fromColumns;
-
-        var fromRecord = Records
-            .SelectMany(r => r.Fields.Keys)
-            .FirstOrDefault(c =>
-                c.Contains("NR", StringComparison.OrdinalIgnoreCase) ||
-                c.Contains("Nr", StringComparison.OrdinalIgnoreCase));
-        return fromRecord;
-    }
+        => SchaechteFieldLogic.ResolveNrColumnName(Columns, Records);
 
     private void UpdateNr()
     {
@@ -588,26 +508,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     }
 
     public bool MatchesSearch(SchachtRecord record)
-    {
-        if (string.IsNullOrWhiteSpace(SearchText))
-            return true;
-
-        var term = SearchText.Trim();
-        if (term.Length == 0)
-            return true;
-
-        return record.Fields.Any(kvp =>
-            (!string.IsNullOrWhiteSpace(kvp.Key) && kvp.Key.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-            (!string.IsNullOrWhiteSpace(kvp.Value) && kvp.Value.Contains(term, StringComparison.OrdinalIgnoreCase)));
-    }
+        => SchaechteFieldLogic.MatchesSearch(record, SearchText);
 
     public void UpdateSearchResultInfo(int visibleCount)
-    {
-        if (string.IsNullOrWhiteSpace(SearchText))
-            SearchResultInfo = string.Empty;
-        else
-            SearchResultInfo = $"{visibleCount} von {Records.Count} Schaechten";
-    }
+        => SearchResultInfo = SchaechteFieldLogic.BuildSearchResultInfo(visibleCount, Records.Count, SearchText);
 
     private void PersistSchaechtePageBasicUiSettings()
     {
