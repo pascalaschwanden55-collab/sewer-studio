@@ -532,58 +532,27 @@ public sealed partial class DataPageViewModel : ObservableObject
     /// </summary>
     public void ScheduleAutoSave()
     {
-        _shell.Project.Dirty = true;
-        var mode = _sp.Settings.DataAutoSaveMode.Normalize();
-        switch (mode)
-        {
-            case AutoSaveMode.OnEachChange:
-                _autoSaveTimer.Stop();
-                AutoSave();
-                break;
-            case AutoSaveMode.Every5Minutes:
-            case AutoSaveMode.Every10Minutes:
-                ScheduleIntervalAutoSave(mode);
-                break;
-            case AutoSaveMode.Disabled:
-                _autoSaveTimer.Stop();
-                break;
-            default:
-                _autoSaveTimer.Stop();
-                AutoSave();
-                break;
-        }
-    }
-
-    private void ScheduleIntervalAutoSave(AutoSaveMode mode)
-    {
-        var interval = mode.GetInterval();
-        if (interval is null)
-        {
-            _autoSaveTimer.Stop();
-            return;
-        }
-
-        if (_autoSaveTimer.Interval != interval.Value)
-            _autoSaveTimer.Interval = interval.Value;
-
-        if (!_autoSaveTimer.IsEnabled)
-            _autoSaveTimer.Start();
+        DataPageAutoSaveController.Schedule(
+            _sp.Settings.DataAutoSaveMode,
+            markDirty: () => _shell.Project.Dirty = true,
+            stopTimer: _autoSaveTimer.Stop,
+            setInterval: interval =>
+            {
+                if (_autoSaveTimer.Interval != interval)
+                    _autoSaveTimer.Interval = interval;
+            },
+            isTimerEnabled: () => _autoSaveTimer.IsEnabled,
+            startTimer: _autoSaveTimer.Start,
+            save: AutoSave);
     }
 
     private void AutoSaveOnTimerTick()
     {
-        var mode = _sp.Settings.DataAutoSaveMode.Normalize();
-        if (mode is not (AutoSaveMode.Every5Minutes or AutoSaveMode.Every10Minutes))
-        {
-            _autoSaveTimer.Stop();
-            return;
-        }
-
-        AutoSave();
-
-        // No pending changes left -> no need to keep ticking.
-        if (!_shell.Project.Dirty)
-            _autoSaveTimer.Stop();
+        DataPageAutoSaveController.HandleTimerTick(
+            _sp.Settings.DataAutoSaveMode,
+            save: AutoSave,
+            isProjectDirty: () => _shell.Project.Dirty,
+            stopTimer: _autoSaveTimer.Stop);
     }
 
     private void AutoSave()
