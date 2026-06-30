@@ -33,6 +33,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
     private readonly Dictionary<string, string> _ownerByHolding = new(StringComparer.OrdinalIgnoreCase);
     private readonly CostCalculatorMeasureSelectionController _measureSelection = new();
     private readonly CostCalculatorCatalogFilterController _catalogFilter = new();
+    private readonly CostCalculatorImportDefaultsController _importDefaults = new();
     private readonly CostCalculatorWarningSuppressionController _warningSuppression = new();
     private ProjectCostStore _store = new();
     // != null wenn costs.json beim Laden nicht lesbar war -> Speichern gesperrt (Audit K3).
@@ -121,7 +122,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         // Initialize DN and Length from HaltungRecord if provided
         if (haltungRecord != null)
         {
-            InitializeFromHaltungRecord(haltungRecord);
+            _importDefaults.InitializeFromHaltungRecord(haltungRecord, SelectedMeasures);
         }
 
         if (existing is not null)
@@ -189,13 +190,7 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         block.BlockChanged += UpdateTotal;
         SelectedMeasures.Add(block);
 
-        // Apply default DN and Length from import if available
-        if (!string.IsNullOrWhiteSpace(DefaultDn))
-            block.SetDnFromImport(DefaultDn);
-        if (!string.IsNullOrWhiteSpace(DefaultLength))
-            block.SetLengthFromImport(DefaultLength);
-        if (!string.IsNullOrWhiteSpace(DefaultConnections))
-            block.SetConnectionsFromImport(DefaultConnections);
+        _importDefaults.ApplyTo(block);
 
         if (applyPrices)
             block.ApplyCatalogPrices();
@@ -541,40 +536,6 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         var ids = CostCalculatorLogicService.ResolveMeasureIds(tokens, templates, _catalogItems);
         return new HashSet<string>(ids, StringComparer.OrdinalIgnoreCase);
     }
-
-    private void InitializeFromHaltungRecord(HaltungRecord haltungRecord)
-    {
-        // MeasureImportDefaultsResolver uebernimmt das kulturunabhaengige Parsen
-        // und die Anschlussanzahl-Schaetzung.
-        var defaults = MeasureImportDefaultsResolver.Resolve(haltungRecord);
-
-        if (defaults.Dn.HasValue)
-        {
-            var dnText = defaults.Dn.Value.ToString();
-            foreach (var measure in SelectedMeasures)
-                measure.SetDnFromImport(dnText);
-            DefaultDn = dnText;
-        }
-
-        if (defaults.LengthMeters.HasValue)
-        {
-            var lengthText = defaults.LengthMeters.Value.ToString("0.00");
-            foreach (var measure in SelectedMeasures)
-                measure.SetLengthFromImport(lengthText);
-            DefaultLength = lengthText;
-        }
-
-        // Anschlussanzahl: 0 ist explizit (deaktiviert Anschluss-Zeilen).
-        var connectionText = defaults.Connections.ToString(CultureInfo.InvariantCulture);
-        foreach (var measure in SelectedMeasures)
-            measure.SetConnectionsFromImport(connectionText);
-        DefaultConnections = connectionText;
-    }
-
-    // Store defaults for new measures added later
-    public string? DefaultDn { get; private set; }
-    public string? DefaultLength { get; private set; }
-    public string? DefaultConnections { get; private set; }
 
     private void EditPositionTemplates()
     {
