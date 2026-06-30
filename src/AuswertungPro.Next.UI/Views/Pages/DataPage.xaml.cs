@@ -1168,16 +1168,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        var record = DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.", "Position");
-            return;
-        }
-
-        vm.Selected = record;
-        if (vm.MoveUpCommand.CanExecute(null))
-            vm.MoveUpCommand.Execute(null);
+        ExecuteMoveRecordMenuCommand(sender, vm, vm.MoveUpCommand);
     }
 
     private void MoveRecordDownMenu_Click(object sender, RoutedEventArgs e)
@@ -1185,16 +1176,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        var record = DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte zuerst eine Haltung auswaehlen.", "Position");
-            return;
-        }
-
-        vm.Selected = record;
-        if (vm.MoveDownCommand.CanExecute(null))
-            vm.MoveDownCommand.Execute(null);
+        ExecuteMoveRecordMenuCommand(sender, vm, vm.MoveDownCommand);
     }
 
     private void DropdownButton_Click(object sender, RoutedEventArgs e)
@@ -1347,6 +1329,17 @@ public partial class DataPage : System.Windows.Controls.UserControl
             command,
             Dialogs.Info,
             missingSelectionTitle);
+
+    private void ExecuteMoveRecordMenuCommand(
+        object sender,
+        DataPageViewModel vm,
+        ICommand command)
+        => DataPageRecordCommandRouter.TrySelectAndExecute(
+            DataPageContextMenuRecordResolver.Resolve(sender, vm.Selected),
+            record => vm.Selected = record,
+            command,
+            Dialogs.Info,
+            missingSelectionTitle: "Position");
 
     private static string? GetEditedTextValue(FrameworkElement? element)
     {
