@@ -79,6 +79,20 @@ public sealed class MediaDistributionService
             progress?.Report(new CopyProgress(processed, total, haltungsname));
         }
 
+        // Schächte verteilen: Schacht-Dokumente (PDF im Link-Feld) → Schächte_Verteilt\<Schacht>\.
+        // Echte Schacht-Bilddateien liefert der aktuelle Import nicht (kein Foto-Feld am SchachtRecord) →
+        // Fotos\Schächte\ bleibt vorerst ungenutzt.
+        foreach (var schacht in SnapshotSchaechte(project, collectionLock))
+        {
+            ct.ThrowIfCancellationRequested();
+            var schachtNr = schacht.GetFieldValue("Schachtnummer")?.Trim();
+            if (string.IsNullOrWhiteSpace(schachtNr))
+                continue;
+            var sanS = SanitizePathSegment(schachtNr);
+            var schachtRoot = ProjectStructure.SchachtVerteiltDir(projectFolder, sanS);
+            CopySchachtFieldFile(schacht, "Link", schachtRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+        }
+
         if (!dryRun)
             project.Dirty = true;
         return new CopyResult(copied, skipped, errors, messages);
@@ -376,6 +390,57 @@ public sealed class MediaDistributionService
 
         lock (collectionLock)
             return project.Data.ToList();
+    }
+
+    private static IReadOnlyList<SchachtRecord> SnapshotSchaechte(Project project, object? collectionLock)
+    {
+        if (collectionLock is null)
+            return project.SchaechteData.ToList();
+
+        lock (collectionLock)
+            return project.SchaechteData.ToList();
+    }
+
+    // Wie CopyFieldFile, aber fuer SchachtRecord (eigene SetFieldValue-Signatur ohne FieldSource).
+    private static void CopySchachtFieldFile(
+        SchachtRecord record, string fieldName, string schachtRoot, string projectFolder,
+        ref int copied, ref int errors, List<string> messages, bool dryRun = false)
+    {
+        var rawPath = record.GetFieldValue(fieldName)?.Trim();
+        if (string.IsNullOrWhiteSpace(rawPath))
+            return;
+
+        if (ProjectPathResolver.IsRelative(rawPath))
+        {
+            // Bereits relativ: ok, wenn aufloesbar; sonst nur protokollieren (keine globale Schacht-Reparatur).
+            if (ProjectPathResolver.IsSafeRelativeProjectPath(rawPath)
+                && ProjectPathResolver.ResolveFilePathFromProjectFolder(rawPath, projectFolder) is not null)
+                return;
+            messages.Add($"Schacht {fieldName}: relative Datei nicht gefunden: {rawPath}");
+            return;
+        }
+
+        if (!File.Exists(rawPath))
+        {
+            messages.Add($"Schacht {fieldName}: Datei nicht gefunden: {rawPath}");
+            return;
+        }
+
+        try
+        {
+            var subfolder = GetSubfolder(Path.GetExtension(rawPath));
+            var destDir = Path.Combine(schachtRoot, subfolder);
+            if (!dryRun) Directory.CreateDirectory(destDir);
+            var destPath = dryRun ? Path.Combine(destDir, Path.GetFileName(rawPath)) : CopyFileUnique(rawPath, destDir);
+            if (!dryRun)
+                record.SetFieldValue(fieldName, ProjectPathResolver.MakeRelative(destPath, projectFolder));
+            copied++;
+        }
+        catch (Exception ex)
+        {
+            errors++;
+            messages.Add($"Schacht {fieldName}: Kopierfehler: {ex.Message}");
+        }
     }
 
     /// <summary>
