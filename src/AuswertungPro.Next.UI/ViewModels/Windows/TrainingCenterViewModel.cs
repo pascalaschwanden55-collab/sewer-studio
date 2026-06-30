@@ -511,14 +511,15 @@ public partial class TrainingCenterViewModel : ObservableObject
         {
             IsBusy = true;
             StatusText = "Scanne Ordner...";
-            Cases.Clear();
+            ObservableCollectionContentController.ReplaceWith(Cases, Array.Empty<TrainingCase>());
 
             foreach (var folder in _rootFolders)
             {
                 if (!Directory.Exists(folder)) continue;
                 var found = await _import.ScanAsync(folder);
-                foreach (var c in found.Select(TrainingCenterRuntimeHelpers.ToTrainingCase))
-                    Cases.Add(c);
+                ObservableCollectionContentController.Append(
+                    Cases,
+                    found.Select(TrainingCenterRuntimeHelpers.ToTrainingCase));
             }
 
             var withProto = Cases.Count(c => !string.IsNullOrEmpty(c.ProtocolPath));
