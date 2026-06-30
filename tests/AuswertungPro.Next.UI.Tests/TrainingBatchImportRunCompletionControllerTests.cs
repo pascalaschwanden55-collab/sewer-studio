@@ -20,8 +20,11 @@ public sealed class TrainingBatchImportRunCompletionControllerTests
             processedCaseCount: 2,
             loadSamplesAsync: () => Task.FromResult<IReadOnlyList<TrainingSample>>(
                 new List<TrainingSample> { Sample("new") }),
-            clearSamples: samples.Clear,
-            addSample: samples.Add,
+            replaceSamples: items =>
+            {
+                samples.Clear();
+                samples.AddRange(items);
+            },
             refreshKbStatusAsync: () =>
             {
                 refreshCalls++;
@@ -58,15 +61,11 @@ public sealed class TrainingBatchImportRunCompletionControllerTests
             processedCaseCount: 2,
             loadSamplesAsync: () => Task.FromResult<IReadOnlyList<TrainingSample>>(
                 new List<TrainingSample> { Sample("s1"), Sample("s2") }),
-            clearSamples: () =>
+            replaceSamples: items =>
             {
-                calls.Add("clear");
+                calls.Add($"replace:{items.Count}");
                 samples.Clear();
-            },
-            addSample: sample =>
-            {
-                calls.Add($"add:{sample.SampleId}");
-                samples.Add(sample);
+                samples.AddRange(items);
             },
             refreshKbStatusAsync: () =>
             {
@@ -89,6 +88,8 @@ public sealed class TrainingBatchImportRunCompletionControllerTests
         Assert.False(result.ShouldStop);
         Assert.Equal(new[] { "s1", "s2" }, samples.Select(s => s.SampleId));
         Assert.Equal(finalStatus, statusText);
+        Assert.Equal("replace:0", calls[0]);
+        Assert.Equal("replace:2", calls[1]);
         Assert.Contains($"log:{finalStatus}", calls);
         Assert.Contains("refresh-kb", calls);
         Assert.Contains("save-state", calls);
