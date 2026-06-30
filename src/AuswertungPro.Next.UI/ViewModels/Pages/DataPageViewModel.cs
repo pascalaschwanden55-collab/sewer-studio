@@ -35,16 +35,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 {
     public event Action? RecordsOrderChanged;
-    /// <summary>
-    /// Aktualisiert die laufende Nummer (NR) aller Records entsprechend der aktuellen Reihenfolge.
-    /// </summary>
-    private void UpdateNr()
-    {
-        for (int i = 0; i < Records.Count; i++)
-        {
-            Records[i].SetFieldValue("NR", (i + 1).ToString(), FieldSource.Manual, true);
-        }
-    }
+
     private readonly ServiceProvider _sp;
     private readonly ShellViewModel _shell;
     private readonly DispatcherTimer _saveBannerTimer;
@@ -344,18 +335,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     }
 
     private bool CanMoveUp()
-    {
-        if (Selected is null) return false;
-        var idx = Records.IndexOf(Selected);
-        return idx > 0;
-    }
+        => DataPageRecordOrderController.CanMoveByOffset(Records, Selected, -1);
 
     private bool CanMoveDown()
-    {
-        if (Selected is null) return false;
-        var idx = Records.IndexOf(Selected);
-        return idx >= 0 && idx < Records.Count - 1;
-    }
+        => DataPageRecordOrderController.CanMoveByOffset(Records, Selected, 1);
 
     private void Add()
     {
@@ -397,28 +380,18 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void MoveUp()
     {
-        if (Selected is null) return;
-        var idx = Records.IndexOf(Selected);
-        if (idx <= 0) return;
-        Records.Move(idx, idx - 1);
-        UpdateNr();
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-        RecordsOrderChanged?.Invoke();
-        ScheduleAutoSave();
+        if (!DataPageRecordOrderController.TryMoveByOffset(Records, Selected, -1))
+            return;
+
+        MarkRecordOrderChanged();
     }
 
     private void MoveDown()
     {
-        if (Selected is null) return;
-        var idx = Records.IndexOf(Selected);
-        if (idx < 0 || idx >= Records.Count - 1) return;
-        Records.Move(idx, idx + 1);
-        UpdateNr();
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-        RecordsOrderChanged?.Invoke();
-        ScheduleAutoSave();
+        if (!DataPageRecordOrderController.TryMoveByOffset(Records, Selected, 1))
+            return;
+
+        MarkRecordOrderChanged();
     }
 
     /// <summary>
@@ -427,23 +400,19 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     /// </summary>
     public bool MoveToPosition(int targetPosition)
     {
-        if (Selected is null) return false;
-        var idx = Records.IndexOf(Selected);
-        if (idx < 0) return false;
+        if (!DataPageRecordOrderController.TryMoveToPosition(Records, Selected, targetPosition))
+            return false;
 
-        // 1-basiert -> 0-basiert
-        int targetIdx = targetPosition - 1;
-        if (targetIdx < 0) targetIdx = 0;
-        if (targetIdx >= Records.Count) targetIdx = Records.Count - 1;
-        if (targetIdx == idx) return false;
+        MarkRecordOrderChanged();
+        return true;
+    }
 
-        Records.Move(idx, targetIdx);
-        UpdateNr();
+    private void MarkRecordOrderChanged()
+    {
         _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
         _shell.Project.Dirty = true;
         RecordsOrderChanged?.Invoke();
         ScheduleAutoSave();
-        return true;
     }
 
     private void Save()

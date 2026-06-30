@@ -57,10 +57,80 @@ public sealed class DataPageDropReorderControllerTests
         Assert.Equal("2", second.GetFieldValue("NR"));
     }
 
-    private static HaltungRecord Record(string nr)
+    [Fact]
+    public void CanMoveByOffset_erkennt_bewegliche_auswahl()
+    {
+        var first = Record("1");
+        var second = Record("2");
+        var third = Record("3");
+        var records = new ObservableCollection<HaltungRecord> { first, second, third };
+
+        Assert.False(DataPageRecordOrderController.CanMoveByOffset(records, null, -1));
+        Assert.False(DataPageRecordOrderController.CanMoveByOffset(records, first, -1));
+        Assert.True(DataPageRecordOrderController.CanMoveByOffset(records, second, -1));
+        Assert.True(DataPageRecordOrderController.CanMoveByOffset(records, second, 1));
+        Assert.False(DataPageRecordOrderController.CanMoveByOffset(records, third, 1));
+        Assert.False(DataPageRecordOrderController.CanMoveByOffset(records, new HaltungRecord(), 1));
+    }
+
+    [Fact]
+    public void TryMoveByOffset_verschiebt_auswahl_und_aktualisiert_nr()
+    {
+        var first = Record("10");
+        var second = Record("20");
+        var third = Record("30");
+        var records = new ObservableCollection<HaltungRecord> { first, second, third };
+
+        var moved = DataPageRecordOrderController.TryMoveByOffset(records, second, -1);
+
+        Assert.True(moved);
+        Assert.Equal(new[] { second, first, third }, records);
+        Assert.Equal("1", second.GetFieldValue("NR"));
+        Assert.Equal("2", first.GetFieldValue("NR"));
+        Assert.Equal("3", third.GetFieldValue("NR"));
+    }
+
+    [Theory]
+    [InlineData(0, new[] { "B", "A", "C" })]
+    [InlineData(1, new[] { "B", "A", "C" })]
+    [InlineData(3, new[] { "A", "C", "B" })]
+    [InlineData(99, new[] { "A", "C", "B" })]
+    public void TryMoveToPosition_nutzt_eins_basierte_position_mit_grenzen(int targetPosition, string[] expectedOrder)
+    {
+        var first = Record("1", "A");
+        var second = Record("2", "B");
+        var third = Record("3", "C");
+        var records = new ObservableCollection<HaltungRecord> { first, second, third };
+
+        var moved = DataPageRecordOrderController.TryMoveToPosition(records, second, targetPosition);
+
+        Assert.True(moved);
+        Assert.Equal(expectedOrder, records.Select(r => r.GetFieldValue("Haltungsname")).ToArray());
+        Assert.Equal(new[] { "1", "2", "3" }, records.Select(r => r.GetFieldValue("NR")).ToArray());
+    }
+
+    [Fact]
+    public void TryMoveToPosition_ignoriert_fehlende_oder_unveraenderte_position()
+    {
+        var first = Record("1");
+        var second = Record("2");
+        var records = new ObservableCollection<HaltungRecord> { first, second };
+        var original = records.ToArray();
+
+        Assert.False(DataPageRecordOrderController.TryMoveToPosition(records, null, 1));
+        Assert.False(DataPageRecordOrderController.TryMoveToPosition(records, new HaltungRecord(), 1));
+        Assert.False(DataPageRecordOrderController.TryMoveToPosition(records, first, 1));
+
+        Assert.Equal(original, records);
+        Assert.Equal(new[] { "1", "2" }, records.Select(r => r.GetFieldValue("NR")).ToArray());
+    }
+
+    private static HaltungRecord Record(string nr, string? name = null)
     {
         var record = new HaltungRecord();
         record.SetFieldValue("NR", nr, FieldSource.Manual, userEdited: true);
+        if (name is not null)
+            record.SetFieldValue("Haltungsname", name, FieldSource.Manual, userEdited: true);
         return record;
     }
 
