@@ -285,8 +285,14 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
             if (owner is not null) owner.Cursor = System.Windows.Input.Cursors.Wait;
 
             var holdingCost = BuildHoldingCost(Holding);
-            var entries = BuildCostSummaryEntries(holdingCost);
-            if (entries.Count == 0)
+            var pdfExport = CostCalculatorPdfExportModelBuilder.Build(
+                Holding,
+                Date,
+                holdingCost,
+                SelectedMeasures,
+                _ownerByHolding,
+                DateTimeOffset.Now);
+            if (pdfExport is null)
             {
                 _dialogs.Info(
                     "Keine passenden Kostenpositionen gefunden.",
@@ -294,47 +300,11 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
                 return;
             }
 
-            int? dn = null;
-            decimal? lengthM = null;
-            foreach (var m in SelectedMeasures)
-            {
-                if (dn is null && int.TryParse(m.DnText?.Trim(), out var d))
-                    dn = d;
-                if (lengthM is null && decimal.TryParse(m.LengthText?.Trim(), out var l))
-                    lengthM = l;
-                if (dn.HasValue && lengthM.HasValue)
-                    break;
-            }
-
-            var ctx = new OfferPdfContext
-            {
-                ProjectTitle = "Abwasser Uri - Kostenzusammenstellung",
-                VariantTitle = $"Auswertung ({entries.Count} Haltung(en))",
-                CustomerBlock = "",
-                ObjectBlock = OfferPdfModelFactory.BuildObjectBlock(Holding, dn, lengthM, Date),
-                FilterSummaryText = "Eigentuemer: Alle",
-                Currency = "CHF",
-                OfferNo = "",
-                TextBlocks = new List<string>
-                {
-                    "Kosten je Massnahme: Nettobetraege fuer die aktuell ausgewaehlte Haltung.",
-                    "Kostenzusammenstellung nach Eigentuemer und Gesamtpositionen fuer diese Haltung.",
-                    "Diese Ausgabe ersetzt eine Offerte und dient als Kostenuebersicht."
-                }
-            };
-
-            var model = OfferPdfModelFactory.CreateCostSummary(
-                entries,
-                ctx,
-                DateTimeOffset.Now,
-                includeOwnerSummary: true,
-                includePositionSummary: true);
-
             var templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "cost_summary.sbnhtml");
             var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
 
             var renderer = new OfferHtmlToPdfRenderer();
-            await renderer.RenderAsync(model, templatePath, output, logoPath);
+            await renderer.RenderAsync(pdfExport.Model, templatePath, output, logoPath);
 
             _dialogs.Info($"PDF-Kostenzusammenstellung wurde erstellt:\n{output}", "PDF-Export");
         }
@@ -366,9 +336,6 @@ public sealed partial class CostCalculatorViewModel : ObservableObject
         foreach (var pair in CostCalculatorSummaryEntryBuilder.BuildOwnerLookup(projectRecords, haltungRecord))
             _ownerByHolding[pair.Key] = pair.Value;
     }
-
-    private List<CostSummaryEntry> BuildCostSummaryEntries(HoldingCost currentHoldingCost)
-        => CostCalculatorSummaryEntryBuilder.Build(currentHoldingCost, _ownerByHolding);
 
     private HoldingCost BuildHoldingCost(string holding)
     {
