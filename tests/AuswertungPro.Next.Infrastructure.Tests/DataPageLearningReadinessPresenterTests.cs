@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.DataPage;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -56,5 +57,48 @@ public sealed class DataPageLearningReadinessPresenterTests
         var (color, text) = LearningReadinessPresenter.Evaluate(samples);
         Assert.Equal("#2E7D32", color);
         Assert.Equal("Gruen", text);
+    }
+
+    [Fact]
+    public void Build_liefert_null_fall_text_und_rot()
+    {
+        var stats = new MeasureLearningStats(0, 0, 0, false, null, null, "");
+
+        var presentation = LearningReadinessPresenter.Build(stats);
+
+        Assert.Equal("Lernbasis: 0 Faelle", presentation.Info);
+        Assert.Equal("#C62828", presentation.Color);
+        Assert.Equal("Rot", presentation.Text);
+        Assert.True(presentation.IsVisible);
+    }
+
+    [Fact]
+    public void Build_liefert_text_mit_aehnlichen_faellen_und_modell_hinweis()
+    {
+        var stats = new MeasureLearningStats(42, 3, 5, false, null, null, "");
+
+        var presentation = LearningReadinessPresenter.Build(stats, similarCases: 4, estimatedCost: 123.45m);
+
+        Assert.Equal(
+            "Lernbasis: 42 Faelle / letzte Kostenschaetzung 123.45 aus 4 aehnlichen Haltungen / KI-Modell ab 25 Faellen",
+            presentation.Info);
+        Assert.Equal("#F9A825", presentation.Color);
+        Assert.Equal("Gelb", presentation.Text);
+        Assert.True(presentation.IsVisible);
+    }
+
+    [Fact]
+    public void Build_liefert_text_mit_aktivem_modell()
+    {
+        var stats = new MeasureLearningStats(120, 8, 12, true, 98, null, "model.json");
+
+        var presentation = LearningReadinessPresenter.Build(stats, similarCases: 3, estimatedCost: null);
+
+        Assert.Equal(
+            "Lernbasis: 120 Faelle / letzte Schaetzung aus 3 aehnlichen Haltungen / KI-Modell aktiv (98 Faelle)",
+            presentation.Info);
+        Assert.Equal("#2E7D32", presentation.Color);
+        Assert.Equal("Gruen", presentation.Text);
+        Assert.True(presentation.IsVisible);
     }
 }

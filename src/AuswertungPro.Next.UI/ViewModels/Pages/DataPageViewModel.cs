@@ -34,8 +34,6 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 {
-    private const int MinimumSamplesForModelTraining = 25;
-    private const int StrongModelThreshold = 100;
     public event Action? RecordsOrderChanged;
     /// <summary>
     /// Aktualisiert die laufende Nummer (NR) aller Records entsprechend der aktuellen Reihenfolge.
@@ -454,7 +452,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         foreach (var record in Records)
             learnedAny |= _measureRecommendationService.Learn(record);
         if (learnedAny)
-            _measureRecommendationService.TrainModel(MinimumSamplesForModelTraining);
+            _measureRecommendationService.TrainModel(LearningReadinessPresenter.MinimumSamplesForTraining);
         UpdateLearningInfo();
 
         SaveDropdownOptions();
@@ -1416,49 +1414,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private void UpdateLearningInfo(int? similarCases = null, decimal? estimatedCost = null)
     {
         var stats = _measureRecommendationService.GetStats();
-        if (stats.TotalSamples <= 0)
-        {
-            LearningInfo = "Lernbasis: 0 Faelle";
-            UpdateLearningTrafficLight(0);
-            IsLearningInfoVisible = true;
-            return;
-        }
-
-        var suffix = string.Empty;
-        if (similarCases is not null && similarCases.Value > 0)
-        {
-            suffix = estimatedCost is null
-                ? $" / letzte Schaetzung aus {similarCases.Value} aehnlichen Haltungen"
-                : $" / letzte Kostenschaetzung {estimatedCost.Value:0.00} aus {similarCases.Value} aehnlichen Haltungen";
-        }
-
-        var modelText = stats.TrainedModelAvailable
-            ? $" / KI-Modell aktiv ({stats.TrainedModelSamples ?? 0} Faelle)"
-            : $" / KI-Modell ab {MinimumSamplesForModelTraining} Faellen";
-
-        LearningInfo = $"Lernbasis: {stats.TotalSamples} Faelle{suffix}{modelText}";
-        UpdateLearningTrafficLight(stats.TotalSamples);
-        IsLearningInfoVisible = true;
-    }
-
-    private void UpdateLearningTrafficLight(int totalSamples)
-    {
-        if (totalSamples >= StrongModelThreshold)
-        {
-            LearningTrafficLightColor = "#2E7D32";
-            LearningTrafficLightText = "Gruen";
-            return;
-        }
-
-        if (totalSamples >= MinimumSamplesForModelTraining)
-        {
-            LearningTrafficLightColor = "#F9A825";
-            LearningTrafficLightText = "Gelb";
-            return;
-        }
-
-        LearningTrafficLightColor = "#C62828";
-        LearningTrafficLightText = "Rot";
+        var presentation = LearningReadinessPresenter.Build(stats, similarCases, estimatedCost);
+        LearningInfo = presentation.Info;
+        LearningTrafficLightColor = presentation.Color;
+        LearningTrafficLightText = presentation.Text;
+        IsLearningInfoVisible = presentation.IsVisible;
     }
 
     /// <summary>
@@ -1495,7 +1455,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         {
             var learnedNow = _measureRecommendationService.Learn(record);
             if (learnedNow)
-                _measureRecommendationService.TrainModel(MinimumSamplesForModelTraining);
+                _measureRecommendationService.TrainModel(LearningReadinessPresenter.MinimumSamplesForTraining);
             UpdateLearningInfo();
         }
 
