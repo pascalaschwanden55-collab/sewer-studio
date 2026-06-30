@@ -407,70 +407,20 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         SaveDropdownOptions();
     }
 
-    private static bool AddOptionIfMissingCore(ObservableCollection<string> options, string? value)
-        => DropdownOptionList.AddIfMissing(options, value);
-
     private void SaveDropdownOptions()
     {
         EnforceEigentuemerOptionsExact();
-        SyncDropdownOptionsFromRecords();
+        SchaechteDropdownOptionSynchronizer.SyncFromRecords(
+            Records,
+            new SchaechteDropdownOptionSets(
+                SanierenOptions,
+                PruefungsresultatOptions,
+                ReferenzpruefungOptions,
+                AusgefuehrtDurchOptions));
         DropdownOptionsStore.SaveSanierenOptions(SanierenOptions);
         DropdownOptionsStore.SaveEigentuemerOptions(EigentuemerOptions);
         DropdownOptionsStore.SavePruefungsresultatOptions(PruefungsresultatOptions);
         DropdownOptionsStore.SaveReferenzpruefungOptions(ReferenzpruefungOptions);
-    }
-
-    private void SyncDropdownOptionsFromRecords()
-    {
-        foreach (var record in Records)
-        {
-            AddOptionIfMissingCore(SanierenOptions, ResolveFieldValue(record, "sanieren"));
-            AddOptionIfMissingCore(PruefungsresultatOptions, ResolveFieldValue(record, "pruefungsresultat"));
-            AddOptionIfMissingCore(ReferenzpruefungOptions, ResolveFieldValue(record, "referenzpruefung"));
-            AddOptionIfMissingCore(AusgefuehrtDurchOptions, ResolveFieldValue(record, "ausgefuehrt_durch"));
-        }
-    }
-
-    private static string ResolveFieldValue(SchachtRecord record, string logicalField)
-    {
-        foreach (var kvp in record.Fields)
-        {
-            var n = NormalizeKey(kvp.Key);
-            if (logicalField == "sanieren" && n.Contains("sanieren", StringComparison.Ordinal))
-                return kvp.Value ?? "";
-            if (logicalField == "pruefungsresultat" &&
-                (n.Contains("pruefung", StringComparison.Ordinal) || n.Contains("dichtheit", StringComparison.Ordinal) || n.Contains("dichtigkeit", StringComparison.Ordinal)))
-                return kvp.Value ?? "";
-            if (logicalField == "referenzpruefung" && n.Contains("referenz", StringComparison.Ordinal) && n.Contains("pruefung", StringComparison.Ordinal))
-                return kvp.Value ?? "";
-            if (logicalField == "ausgefuehrt_durch" &&
-                (n.Contains("ausgefuehrt", StringComparison.Ordinal) || n.Contains("ausgefuhrt", StringComparison.Ordinal)) && n.Contains("durch", StringComparison.Ordinal))
-                return kvp.Value ?? "";
-        }
-
-        return "";
-    }
-
-    private static string NormalizeKey(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "";
-
-        return value
-            .Trim()
-            .ToLowerInvariant()
-            .Replace("ä", "ae", StringComparison.Ordinal)
-            .Replace("ö", "oe", StringComparison.Ordinal)
-            .Replace("ü", "ue", StringComparison.Ordinal)
-            .Replace("ß", "ss", StringComparison.Ordinal)
-            .Replace("Ã¤", "ae", StringComparison.Ordinal)
-            .Replace("Ã¶", "oe", StringComparison.Ordinal)
-            .Replace("Ã¼", "ue", StringComparison.Ordinal)
-            .Replace("ÃŸ", "ss", StringComparison.Ordinal)
-            .Replace("ÃƒÂ¤", "ae", StringComparison.Ordinal)
-            .Replace("ÃƒÂ¶", "oe", StringComparison.Ordinal)
-            .Replace("ÃƒÂ¼", "ue", StringComparison.Ordinal)
-            .Replace("ÃƒÅ¸", "ss", StringComparison.Ordinal);
     }
 
     private string? ResolveNrColumnName()

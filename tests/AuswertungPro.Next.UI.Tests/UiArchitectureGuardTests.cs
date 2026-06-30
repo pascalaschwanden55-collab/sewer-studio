@@ -153,6 +153,23 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void SchaechtePage_dropdown_record_sync_lives_in_synchronizer()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "SchaechtePageViewModel.cs");
+        var synchronizerPath = Path.Combine(uiRoot, "Services", "SchaechteDropdownOptionSynchronizer.cs");
+
+        Assert.True(File.Exists(synchronizerPath), "Schaechte-Dropdown-Sync aus Record-Feldern soll als testbarer Service existieren.");
+
+        var viewModel = File.ReadAllText(viewModelPath);
+        Assert.Contains("SchaechteDropdownOptionSynchronizer.SyncFromRecords", viewModel);
+        Assert.DoesNotContain("private void SyncDropdownOptionsFromRecords", viewModel);
+        Assert.DoesNotContain("private static string ResolveFieldValue", viewModel);
+        Assert.DoesNotContain("private static string NormalizeKey", viewModel);
+    }
+
+    [Fact]
     public void PlayerWindow_damage_markers_live_in_controller()
     {
         var root = FindRepositoryRoot();
