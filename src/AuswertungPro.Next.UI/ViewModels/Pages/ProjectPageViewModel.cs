@@ -3,15 +3,17 @@ using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System;
 using AuswertungPro.Next.UI.Dialogs;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
-public sealed partial class ProjectPageViewModel : ObservableObject
+public sealed partial class ProjectPageViewModel : ObservableObject, IDisposable
 {
     private readonly ShellViewModel _shell;
     private readonly IDialogService _dialogs;
+    private bool _disposed;
 
     public Project Project => _shell.Project;
     public IRelayCommand SaveCommand => _shell.SaveCommand;
@@ -84,20 +86,31 @@ public sealed partial class ProjectPageViewModel : ObservableObject
 
         DraftName = Project.Name ?? string.Empty;
 
-        _shell.PropertyChanged += (_, e) =>
+        _shell.PropertyChanged += ShellPropertyChanged;
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        _shell.PropertyChanged -= ShellPropertyChanged;
+    }
+
+    private void ShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ShellViewModel.Project))
         {
-            if (e.PropertyName == nameof(ShellViewModel.Project))
-            {
-                OnPropertyChanged(nameof(Project));
-                DraftName = Project.Name ?? string.Empty;
-                SyncDropdownsFromProject();
-            }
-            else if (e.PropertyName == nameof(ShellViewModel.CurrentMode))
-            {
-                OnPropertyChanged(nameof(IsDraft));
-                OnPropertyChanged(nameof(IsNotDraft));
-            }
-        };
+            OnPropertyChanged(nameof(Project));
+            DraftName = Project.Name ?? string.Empty;
+            SyncDropdownsFromProject();
+        }
+        else if (e.PropertyName == nameof(ShellViewModel.CurrentMode))
+        {
+            OnPropertyChanged(nameof(IsDraft));
+            OnPropertyChanged(nameof(IsNotDraft));
+        }
     }
 
     /// <summary>Schreibt den eingetippten Namen ins Projekt und aktualisiert den Anlegen-Button.</summary>

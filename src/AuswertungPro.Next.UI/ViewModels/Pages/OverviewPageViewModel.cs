@@ -7,10 +7,11 @@ using System.Text.Json;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages
 {
-    public sealed partial class OverviewPageViewModel : ObservableObject
+    public sealed partial class OverviewPageViewModel : ObservableObject, IDisposable
     {
         [ObservableProperty]
         private ProjectOverviewEntry? _selectedProjectEntry;
@@ -26,6 +27,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
         public ObservableCollection<ProjectOverviewEntry> ProjectEntries { get; } = new();
         private List<ProjectOverviewEntry> _allEntries = new();
+        private bool _disposed;
 
         public IRelayCommand NewCommand { get; }
         public IRelayCommand OpenCommand { get; }
@@ -52,20 +54,31 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
             LoadAllProjects();
 
-            _shell.PropertyChanged += (_, e) =>
+            _shell.PropertyChanged += ShellPropertyChanged;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            _shell.PropertyChanged -= ShellPropertyChanged;
+        }
+
+        private void ShellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ShellViewModel.Project) ||
+                e.PropertyName == nameof(ShellViewModel.IsProjectReady) ||
+                e.PropertyName == nameof(ShellViewModel.IsDirty))
             {
-                if (e.PropertyName == nameof(ShellViewModel.Project) ||
-                    e.PropertyName == nameof(ShellViewModel.IsProjectReady) ||
-                    e.PropertyName == nameof(ShellViewModel.IsDirty))
-                {
-                    OnPropertyChanged(nameof(Project));
-                    OnPropertyChanged(nameof(IsProjectReady));
-                    ProjectStatus = BuildProjectStatus();
-                    LastProjectPath = _sp.Settings.LastProjectPath;
-                    if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
-                        LoadAllProjects();
-                }
-            };
+                OnPropertyChanged(nameof(Project));
+                OnPropertyChanged(nameof(IsProjectReady));
+                ProjectStatus = BuildProjectStatus();
+                LastProjectPath = _sp.Settings.LastProjectPath;
+                if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))
+                    LoadAllProjects();
+            }
         }
 
     partial void OnFilterTextChanged(string value) => ApplyFilter();
