@@ -225,6 +225,26 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_last_match_rate_presentation_an_builder()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var lastMatchSource = ExtractMethodBody(source, "private async Task LoadLastMatchRateAsync()");
+
+        Assert.Contains("SelfTrainingLastMatchRatePresentationBuilder.Build(runs)", lastMatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("runs[^1]", lastMatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ExactPercent = last.ExactPercent", lastMatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("PartialPercent = last.PartialPercent", lastMatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("MismatchPercent = last.MismatchPercent", lastMatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("NoFindingsPercent = last.NoFindingsPercent", lastMatchSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_self_training_exceptions_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(

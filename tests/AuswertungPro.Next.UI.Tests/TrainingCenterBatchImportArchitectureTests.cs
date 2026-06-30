@@ -213,6 +213,23 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_batch_import_case_loop_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+
+        Assert.Contains("TrainingBatchImportCaseLoopController.RunAsync(", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("for (var i = 0; i < casesToProcess.Count; i++)", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("catch (Exception ex) when (ex is not OperationCanceledException)", batchImportSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_batch_import_case_persistenz_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(

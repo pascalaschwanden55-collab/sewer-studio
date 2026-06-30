@@ -430,12 +430,13 @@ public partial class TrainingCenterViewModel : ObservableObject
         try
         {
             var runs = await SelfTrainingHistoryStore.LoadAsync();
-            if (runs.Count == 0) return;
-            var last = runs[^1];
-            ExactPercent = last.ExactPercent;
-            PartialPercent = last.PartialPercent;
-            MismatchPercent = last.MismatchPercent;
-            NoFindingsPercent = last.NoFindingsPercent;
+            var presentation = SelfTrainingLastMatchRatePresentationBuilder.Build(runs);
+            if (presentation is null) return;
+
+            ExactPercent = presentation.ExactPercent;
+            PartialPercent = presentation.PartialPercent;
+            MismatchPercent = presentation.MismatchPercent;
+            NoFindingsPercent = presentation.NoFindingsPercent;
         }
         catch { /* Historie nicht vorhanden */ }
     }
@@ -886,29 +887,26 @@ public partial class TrainingCenterViewModel : ObservableObject
             var casesToProcess = runtimeSetup.CasesToProcess;
             var runSummary = runtimeSetup.RunSummary;
 
-            for (var i = 0; i < casesToProcess.Count; i++)
-            {
-                ct.ThrowIfCancellationRequested();
-                var tc = casesToProcess[i];
-                TrainingBatchImportCaseProgressUiController.Apply(
-                    i,
-                    casesToProcess.Count,
-                    tc,
+            await TrainingBatchImportCaseLoopController.RunAsync(
+                casesToProcess,
+                (caseIndex, totalCount, trainingCase) => TrainingBatchImportCaseProgressUiController.Apply(
+                    caseIndex,
+                    totalCount,
+                    trainingCase,
                     value => ProgressValue = value,
                     value => StatusText = value,
-                    Log);
-
-                try
+                    Log),
+                async (caseIndex, trainingCase, token) =>
                 {
-                    var caseWorkflow = await TrainingBatchImportCaseWorkflowController.ProcessAsync(
-                        tc,
+                    await TrainingBatchImportCaseWorkflowController.ProcessAsync(
+                        trainingCase,
                         existingSigs,
                         allSamples,
                         SelfTrainingResults.Count + 1,
-                        i + 1,
+                        caseIndex + 1,
                         runSummary,
-                        (trainingCase, token) => TrainingCenterRuntimeHelpers.ExtractPreviewFrameAsync(trainingCase, cfg, token),
-                        (input, signatures, token) => generator.GenerateWithDiagnosticsAsync(input, signatures, framesDir: null, token),
+                        (currentCase, currentToken) => TrainingCenterRuntimeHelpers.ExtractPreviewFrameAsync(currentCase, cfg, currentToken),
+                        (input, signatures, currentToken) => generator.GenerateWithDiagnosticsAsync(input, signatures, framesDir: null, currentToken),
                         preview => UpdateLivePreview(
                             preview.CaseInfo,
                             preview.CodeInfo,
@@ -922,18 +920,13 @@ public partial class TrainingCenterViewModel : ObservableObject
                         value => KbSampleCount = value,
                         value => KbCodesCovered = value,
                         Log,
-                        ct);
-                    if (caseWorkflow.ShouldContinueWithNextCase)
-                        continue;
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    TrainingBatchImportRunExceptionController.RecordCaseFailure(
-                        ex,
-                        runSummary,
-                        Log);
-                }
-            }
+                        token).ConfigureAwait(false);
+                },
+                ex => TrainingBatchImportRunExceptionController.RecordCaseFailure(
+                    ex,
+                    runSummary,
+                    Log),
+                ct).ConfigureAwait(false);
 
             var completion = await TrainingBatchImportRunCompletionController.CompleteAsync(
                 runSummary,
