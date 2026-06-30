@@ -537,6 +537,28 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_log_format_und_trim_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var selfTrainingLogSource = ExtractMethodBody(source, "private void AddSelfTrainingLog(string message)");
+        var logSource = ExtractMethodBody(source, "private void Log(string message)");
+
+        Assert.Contains("TrainingCenterLogController.CreateLine(DateTime.Now, message)", selfTrainingLogSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingCenterLogController.AppendCapped(SelfTrainingLogEntries, line.EntryText)", selfTrainingLogSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingCenterLogController.CreateLine(DateTime.Now, message)", logSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingCenterLogController.AppendCapped(SelfTrainingLogEntries, line.EntryText)", logSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingLogEntries.Count > 100", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("RemoveAt(0)", selfTrainingLogSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("RemoveAt(0)", logSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_protocol_startdata_queue_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
