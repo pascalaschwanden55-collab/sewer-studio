@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.UI;
@@ -73,22 +74,9 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
         MoveToStorageCommand = new RelayCommand(MoveToStorage, () => SelectedPosition is not null);
         RestoreFromStorageCommand = new RelayCommand(RestoreFromStorage, () => SelectedStoragePosition is not null);
 
-        // Setup groups (deep copy for editing)
+        // Setup groups (Tief-Kopie fuer Bearbeitung via PositionTemplateCopier)
         Groups = new ObservableCollection<PositionGroup>(
-            _originalCatalog.Groups.Select(g => new PositionGroup
-            {
-                Name = g.Name,
-                Positions = new List<PositionTemplate>(g.Positions.Select(p => new PositionTemplate
-                {
-                    ItemKey = p.ItemKey,
-                    Enabled = p.Enabled,
-                    DefaultQty = p.DefaultQty,
-                    Name = p.Name,
-                    Unit = p.Unit,
-                    Price = p.Price,
-                    IsCustom = p.IsCustom
-                }))
-            }));
+            PositionTemplateCopier.DeepCopyAll(_originalCatalog.Groups));
 
         // Select first group by default - NOW commands are initialized
         if (Groups.Count > 0)
@@ -151,23 +139,8 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
         {
             var defaultCatalog = _store.Load(_projectPath);
             Groups.Clear();
-            foreach (var group in defaultCatalog.Groups)
-            {
-                Groups.Add(new PositionGroup
-                {
-                    Name = group.Name,
-                    Positions = new List<PositionTemplate>(group.Positions.Select(p => new PositionTemplate
-                    {
-                        ItemKey = p.ItemKey,
-                        Enabled = p.Enabled,
-                        DefaultQty = p.DefaultQty,
-                        Name = p.Name,
-                        Unit = p.Unit,
-                        Price = p.Price,
-                        IsCustom = p.IsCustom
-                    }))
-                });
-            }
+            foreach (var group in PositionTemplateCopier.DeepCopyAll(defaultCatalog.Groups))
+                Groups.Add(group);
 
             SelectedGroup = Groups.FirstOrDefault();
         }
@@ -229,16 +202,8 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
     {
         if (SelectedGroup is null) return;
 
-        var newPosition = new PositionTemplate
-        {
-            Enabled = true,
-            DefaultQty = 1,
-            Name = "Neue Position",
-            Unit = "Stk",
-            Price = 0,
-            IsCustom = true
-        };
-
+        // Standard-Position ueber PositionListEditor anlegen
+        var newPosition = PositionListEditor.CreateDefault();
         SelectedGroup.Positions.Add(newPosition);
         SelectedPosition = newPosition;
     }
@@ -248,18 +213,9 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
         if (SelectedPosition is null || SelectedGroup is null) return;
 
         var index = SelectedGroup.Positions.IndexOf(SelectedPosition);
-        SelectedGroup.Positions.Remove(SelectedPosition);
-
-        // Select next position or previous if this was the last
-        if (SelectedGroup.Positions.Count > 0)
-        {
-            var newIndex = Math.Min(index, SelectedGroup.Positions.Count - 1);
-            SelectedPosition = SelectedGroup.Positions[newIndex];
-        }
-        else
-        {
-            SelectedPosition = null;
-        }
+        // Entfernen und Folge-Index via PositionListEditor berechnen
+        var nextIndex = PositionListEditor.RemoveAndGetNextIndex(SelectedGroup.Positions, index);
+        SelectedPosition = nextIndex >= 0 ? SelectedGroup.Positions[nextIndex] : null;
     }
 
     private void MoveUp()
@@ -267,13 +223,8 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
         if (SelectedPosition is null || SelectedGroup is null) return;
 
         var index = SelectedGroup.Positions.IndexOf(SelectedPosition);
-        if (index > 0)
+        if (PositionListEditor.MoveUp(SelectedGroup.Positions, index))
         {
-            var temp = SelectedGroup.Positions[index];
-            SelectedGroup.Positions[index] = SelectedGroup.Positions[index - 1];
-            SelectedGroup.Positions[index - 1] = temp;
-            
-            // Refresh commands
             MoveUpCommand.NotifyCanExecuteChanged();
             MoveDownCommand.NotifyCanExecuteChanged();
         }
@@ -284,13 +235,8 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
         if (SelectedPosition is null || SelectedGroup is null) return;
 
         var index = SelectedGroup.Positions.IndexOf(SelectedPosition);
-        if (index < SelectedGroup.Positions.Count - 1)
+        if (PositionListEditor.MoveDown(SelectedGroup.Positions, index))
         {
-            var temp = SelectedGroup.Positions[index];
-            SelectedGroup.Positions[index] = SelectedGroup.Positions[index + 1];
-            SelectedGroup.Positions[index + 1] = temp;
-            
-            // Refresh commands
             MoveUpCommand.NotifyCanExecuteChanged();
             MoveDownCommand.NotifyCanExecuteChanged();
         }
@@ -299,33 +245,23 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
     private bool CanMoveUp()
     {
         if (SelectedPosition is null || SelectedGroup is null) return false;
-        return SelectedGroup.Positions.IndexOf(SelectedPosition) > 0;
+        var index = SelectedGroup.Positions.IndexOf(SelectedPosition);
+        return PositionListEditor.CanMoveUp(SelectedGroup.Positions, index);
     }
 
     private bool CanMoveDown()
     {
         if (SelectedPosition is null || SelectedGroup is null) return false;
         var index = SelectedGroup.Positions.IndexOf(SelectedPosition);
-        return index >= 0 && index < SelectedGroup.Positions.Count - 1;
+        return PositionListEditor.CanMoveDown(SelectedGroup.Positions, index);
     }
 
     private void MoveToStorage()
     {
         if (SelectedPosition is null || SelectedGroup is null) return;
 
-        // Kopiere Position in Wartebox
-        var positionCopy = new PositionTemplate
-        {
-            ItemKey = SelectedPosition.ItemKey,
-            Enabled = SelectedPosition.Enabled,
-            DefaultQty = SelectedPosition.DefaultQty,
-            Name = SelectedPosition.Name,
-            Unit = SelectedPosition.Unit,
-            Price = SelectedPosition.Price,
-            IsCustom = SelectedPosition.IsCustom
-        };
-
-        StorageBox.Add(positionCopy);
+        // Kopiere Position in Wartebox (Tief-Kopie via PositionTemplateCopier)
+        StorageBox.Add(PositionTemplateCopier.DeepCopy(SelectedPosition));
 
         // Entferne aus Gruppe
         SelectedGroup.Positions.Remove(SelectedPosition);
@@ -336,19 +272,8 @@ public sealed partial class PositionTemplateEditorViewModel : ObservableObject
     {
         if (SelectedStoragePosition is null || SelectedGroup is null) return;
 
-        // Kopiere Position zurück zur Gruppe
-        var positionCopy = new PositionTemplate
-        {
-            ItemKey = SelectedStoragePosition.ItemKey,
-            Enabled = SelectedStoragePosition.Enabled,
-            DefaultQty = SelectedStoragePosition.DefaultQty,
-            Name = SelectedStoragePosition.Name,
-            Unit = SelectedStoragePosition.Unit,
-            Price = SelectedStoragePosition.Price,
-            IsCustom = SelectedStoragePosition.IsCustom
-        };
-
-        SelectedGroup.Positions.Add(positionCopy);
+        // Kopiere Position zurueck zur Gruppe (Tief-Kopie via PositionTemplateCopier)
+        SelectedGroup.Positions.Add(PositionTemplateCopier.DeepCopy(SelectedStoragePosition));
 
         // Entferne aus Wartebox
         StorageBox.Remove(SelectedStoragePosition);
