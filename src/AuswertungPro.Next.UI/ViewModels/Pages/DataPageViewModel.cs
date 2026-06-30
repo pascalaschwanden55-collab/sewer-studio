@@ -147,14 +147,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         // per Name erneut durch die KI-Videoanalyse schicken kann (nur wenn diese Seite lebt).
         LiveControl.LiveControlRetryBridge.Register(TryStartVideoAiPipelineByName);
 
-        var uiLayout = _sp.Settings.DataPageLayout ?? new DataPageLayoutSettings();
-        GridMinRowHeight = uiLayout.GridMinRowHeight is >= 24d and <= 240d
-            ? uiLayout.GridMinRowHeight
-            : 38d;
-        GridZoom = uiLayout.GridZoom is >= 0.5d and <= 2.0d
-            ? uiLayout.GridZoom
-            : 1.0d;
-        IsColumnReorderEnabled = uiLayout.IsColumnReorderEnabled;
+        var gridLayout = DataPageGridLayoutController.Restore(_sp.Settings.DataPageLayout);
+        GridMinRowHeight = gridLayout.GridMinRowHeight;
+        GridZoom = gridLayout.GridZoom;
+        IsColumnReorderEnabled = gridLayout.IsColumnReorderEnabled;
 
         SanierenOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadSanierenOptions());
         EigentuemerOptions = new ObservableCollection<string>(DropdownOptionsStore.LoadEigentuemerOptions());
@@ -255,7 +251,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     partial void OnGridMinRowHeightChanged(double value)
     {
-        var clamped = Math.Clamp(value, 24d, 240d);
+        var clamped = DataPageGridLayoutController.ClampGridMinRowHeight(value);
         if (Math.Abs(clamped - value) > 0.001d)
         {
             GridMinRowHeight = clamped;
@@ -267,7 +263,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     partial void OnGridZoomChanged(double value)
     {
-        var clamped = Math.Clamp(value, 0.5d, 2.0d);
+        var clamped = DataPageGridLayoutController.ClampGridZoom(value);
         if (Math.Abs(clamped - value) > 0.001d)
         {
             GridZoom = clamped;
@@ -1456,11 +1452,12 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void PersistDataPageBasicUiSettings()
     {
-        var layout = _sp.Settings.DataPageLayout ?? new DataPageLayoutSettings();
-        layout.GridMinRowHeight = GridMinRowHeight;
-        layout.GridZoom = GridZoom;
-        layout.IsColumnReorderEnabled = IsColumnReorderEnabled;
-        _sp.Settings.DataPageLayout = layout;
-        _sp.Settings.Save();
+        DataPageGridLayoutController.Persist(
+            _sp.Settings.DataPageLayout,
+            GridMinRowHeight,
+            GridZoom,
+            IsColumnReorderEnabled,
+            layout => _sp.Settings.DataPageLayout = layout,
+            _sp.Settings.Save);
     }
 }
