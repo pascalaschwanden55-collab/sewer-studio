@@ -54,6 +54,15 @@ public static class Sia405WhitelistEnricher
         Project project,
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> sia405ByHaltung)
     {
+        // Internen case-insensitiven Lookup aufbauen, weil der Aufrufer moeglicherweise
+        // einen Default-Comparer (Ordinal/case-sensitiv) verwendet hat. So sind stille
+        // Fehltreffer ausgeschlossen, unabhaengig davon, wie die Map gebaut wurde.
+        // TryAdd statt Indexer: bei seltenen Case-Duplikaten im Eingabe-Dictionary
+        // gewinnt der erste Eintrag und es wird kein ArgumentException geworfen.
+        var ci = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in sia405ByHaltung)
+            ci.TryAdd(kv.Key, kv.Value);
+
         var filled = 0;
         var conflicts = new List<string>();
 
@@ -62,7 +71,7 @@ public static class Sia405WhitelistEnricher
             var haltungsname = record.GetFieldValue("Haltungsname");
 
             // Kein SIA405-Eintrag fuer diese Haltung -> ueberspringen
-            if (!sia405ByHaltung.TryGetValue(haltungsname, out var sia405Felder))
+            if (!ci.TryGetValue(haltungsname, out var sia405Felder))
                 continue;
 
             foreach (var feld in Whitelist)

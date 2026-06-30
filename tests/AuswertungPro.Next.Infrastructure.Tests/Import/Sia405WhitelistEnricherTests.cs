@@ -175,4 +175,34 @@ public sealed class Sia405WhitelistEnricherTests
         Assert.Equal(0, ergebnis.Filled);
         Assert.Empty(ergebnis.Conflicts);
     }
+
+    // --- Robustheit: Apply ist case-insensitiv AUCH wenn Aufrufer Default-Comparer verwendet ---
+    // Szenario: Aufrufer baut die Map mit new Dictionary<>() (Ordinal/case-sensitiv).
+    // Der Haltungsname im Record unterscheidet sich nur in der Gross-/Kleinschreibung.
+    // Apply muss trotzdem treffen (interner ci-Lookup).
+
+    [Fact]
+    public void Apply_MitDefaultComparerMap_FindetHaltungCaseInsensitiv()
+    {
+        // Arrange: Record mit Kleinschreibung "h-008", Map mit Grossschreibung "H-008"
+        // Die Map wird bewusst mit Default-Comparer (case-sensitiv) gebaut.
+        var projekt = ErzeugeTestProjekt(("h-008", ""));
+        var feldDict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Rohrmaterial"] = "Beton"
+        };
+        // Default-Comparer — wuerde bei direktem TryGetValue("h-008") NICHT treffen
+        var sia405 = new Dictionary<string, IReadOnlyDictionary<string, string>>
+        {
+            ["H-008"] = feldDict
+        };
+
+        // Act
+        var ergebnis = Sia405WhitelistEnricher.Apply(projekt, sia405);
+
+        // Assert: Anreicherung muss trotzdem greifen
+        Assert.Equal("Beton", projekt.Data[0].GetFieldValue("Rohrmaterial"));
+        Assert.Equal(1, ergebnis.Filled);
+        Assert.Empty(ergebnis.Conflicts);
+    }
 }
