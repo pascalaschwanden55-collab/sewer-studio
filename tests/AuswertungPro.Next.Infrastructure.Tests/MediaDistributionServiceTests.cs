@@ -42,6 +42,32 @@ public sealed class MediaDistributionServiceTests
     }
 
     [Fact]
+    public void DistributeImportedMedia_VerteiltSchachtDokument_NachSchaechteVerteilt()
+    {
+        using var temp = new TempDir();
+        var projectFolder = temp.CreateSubdir("projekt");
+        var quelle = temp.CreateSubdir("quelle");
+        var pdfQuelle = Path.Combine(quelle, "schacht.pdf");
+        File.WriteAllText(pdfQuelle, "pdfdaten");
+
+        var project = new Project();
+        var schacht = new SchachtRecord();
+        schacht.SetFieldValue("Schachtnummer", "S-100");
+        schacht.SetFieldValue("Link", pdfQuelle);
+        project.SchaechteData.Add(schacht);
+
+        var result = new MediaDistributionService().DistributeImportedMedia(projectFolder, project);
+
+        Assert.Equal(0, result.Errors);
+        Assert.True(File.Exists(pdfQuelle)); // Quelle bleibt erhalten (Kopieren, nicht Verschieben)
+
+        var rel = schacht.GetFieldValue("Link").Replace('\\', '/');
+        Assert.False(Path.IsPathRooted(rel));
+        Assert.StartsWith("Schächte_Verteilt/S-100/", rel);
+        Assert.True(File.Exists(Path.Combine(projectFolder, rel)));
+    }
+
+    [Fact]
     public void DistributeImportedMedia_RelativerPfadVorhanden_BleibtUnveraendert()
     {
         using var temp = new TempDir();
