@@ -141,12 +141,11 @@ public partial class TrainingCenterViewModel : ObservableObject
     [ObservableProperty] private double _partialPercent;
     [ObservableProperty] private double _mismatchPercent;
     [ObservableProperty] private double _noFindingsPercent;
-    private int _totalExact, _totalPartial, _totalMismatch, _totalNoFindings;
+    private readonly SelfTrainingMatchRateTracker _matchRateTracker = new();
 
     private void RefreshMatchRatePercents()
     {
-        var p = SelfTrainingStatusCalculator.ComputeMatchRatePercents(
-            _totalExact, _totalPartial, _totalMismatch, _totalNoFindings);
+        var p = _matchRateTracker.ComputePercents();
         ExactPercent = p.Exact;
         PartialPercent = p.Partial;
         MismatchPercent = p.Mismatch;
@@ -210,13 +209,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             if (presentation.Result is not null && presentation.CompletedMatchLevel is { } level)
             {
-                switch (level)
-                {
-                    case MatchLevel.ExactMatch: _totalExact++; break;
-                    case MatchLevel.PartialMatch: _totalPartial++; break;
-                    case MatchLevel.Mismatch: _totalMismatch++; break;
-                    case MatchLevel.NoFindings: _totalNoFindings++; break;
-                }
+                _matchRateTracker.Record(level);
                 RefreshMatchRatePercents();
 
                 SelfTrainingResults.Add(presentation.Result);
@@ -242,7 +235,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         CurrentTechniqueDetails = "";
         if (resetMatchRate)
         {
-            _totalExact = _totalPartial = _totalMismatch = _totalNoFindings = 0;
+            _matchRateTracker.Reset();
             RefreshMatchRatePercents();
         }
     }
