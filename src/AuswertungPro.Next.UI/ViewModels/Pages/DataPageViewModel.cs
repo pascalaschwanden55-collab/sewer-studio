@@ -1408,19 +1408,26 @@ public sealed partial class DataPageViewModel : ObservableObject
         if (record is null)
             return;
 
-        var projectFolder = _shell.GetProjectFolder() ?? "";
-        var paths = DataPageProtocolPathResolver.ResolveOriginalPdfPaths(record, projectFolder);
+        // Das Haltung-spezifische Protokoll aus der Verteilung bevorzugen (via Link -> Haltungs-
+        // ordner), statt das grosse Original-PDF mit ALLEN Protokollen (PDF_Path/PDF_All[0]).
+        var path = EnsureProtocolPath(record);
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            var projectFolder = _shell.GetProjectFolder() ?? "";
+            var paths = DataPageProtocolPathResolver.ResolveOriginalPdfPaths(record, projectFolder);
+            path = paths.Count > 0 ? paths[0] : null;
+        }
 
-        if (paths.Count == 0)
+        if (string.IsNullOrWhiteSpace(path))
         {
             var name = record.GetFieldValue("Haltungsname") ?? "(unbekannt)";
             _sp.Dialogs.Info(
-                $"Kein PDF gefunden fuer Haltung '{name}'.\n\nPruefen Sie, ob das Original-PDF im Projektordner liegt.",
+                $"Kein PDF gefunden fuer Haltung '{name}'.\n\nPruefen Sie, ob das Protokoll-PDF in der Verteilung liegt.",
                 "Haltungsprotokoll (PDF)");
             return;
         }
 
-        if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(paths[0], out var error))
+        if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(path, out var error))
         {
             _sp.Dialogs.Warn($"PDF konnte nicht geoeffnet werden:\n{error}",
                 "Fehler");

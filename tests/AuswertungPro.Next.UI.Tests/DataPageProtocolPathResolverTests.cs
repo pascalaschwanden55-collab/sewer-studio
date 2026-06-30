@@ -239,6 +239,32 @@ public sealed class DataPageProtocolPathResolverTests
         Assert.Equal(Path.GetFullPath(pdf), found, ignoreCase: true);
     }
 
+    [Fact]
+    public void FindProtocolPath_findet_split_pdf_im_link_ordner_neben_video()
+    {
+        // Befund 'Original PDF oeffnen': soll das Haltung-spezifische, gesplittete Protokoll aus
+        // der Verteilung liefern. Der Link zeigt auf das Video im Haltungsordner; das passende
+        // PDF liegt daneben - nicht das grosse Original mit allen Protokollen.
+        using var temp = new TempDir();
+        var holdingDir = Directory.CreateDirectory(Path.Combine(temp.Path, "Verteilung", "06-001")).FullName;
+        var video = Path.Combine(holdingDir, "20250310-06-001.mp4");
+        var splitPdf = Path.Combine(holdingDir, "20250310-06-001.pdf");
+        File.WriteAllText(video, "x");
+        File.WriteAllText(splitPdf, "x");
+
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "06-001", FieldSource.Manual, userEdited: true);
+
+        var found = DataPageProtocolPathResolver.FindProtocolPath(
+            record,
+            resolvedLink: video,
+            initialFolder: null,
+            projectPath: null,
+            storedFilesRaw: null);
+
+        Assert.Equal(splitPdf, found, ignoreCase: true);
+    }
+
     // --- ResolveSchachtPdfPaths ---
 
     [Fact]
