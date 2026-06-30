@@ -113,93 +113,113 @@ internal static class HoldingVideoMatching
         if (containing.Count > 1)
             return new HoldingFolderDistributor.VideoFindResult(HoldingFolderDistributor.VideoMatchStatus.Ambiguous, null, containing, "Multiple date+haltung matches");
 
-        // Strategy 3: Contains Haltung only (no date filter) – Fallback mit Warnung,
-        // da ohne Datumsabgleich eine Falschzuordnung moeglich ist.
+        // Strategy 3: Enthaelt die Haltung. Politik (User 2026-06-30): Die Haltung ist das
+        // Indiz - lieber zuordnen UND klar kennzeichnen als stillschweigend "missing". Das
+        // fruehere harte Datums-Veto wird zum Tiebreaker/Hinweis; unsichere Treffer werden im
+        // Import-Report etikettiert (Sicherheitsnetz statt zusaetzlicher UI).
         var haltungOnly = files.Where(f =>
         {
             var nameKey = NormalizeKey(Path.GetFileNameWithoutExtension(f));
             return nameKey.Contains(hKey, StringComparison.OrdinalIgnoreCase);
         }).ToList();
 
-        if (haltungOnly.Count > 0)
+        if (haltungOnly.Count == 0)
+            return new HoldingFolderDistributor.VideoFindResult(
+                HoldingFolderDistributor.VideoMatchStatus.NotFound, null, Array.Empty<string>(), "No video found (fallback)");
+
+        var haveProtocolDate = TryParseStamp(dateStamp, out var protocolDate);
+
+        // Genau EIN Haltung-Video -> zuordnen. Traegt der Name ein abweichendes Datum, wird der
+        // Treffer als "Datum weicht ab" gekennzeichnet (frueher: NotFound = Verwechslungsschutz).
+        if (haltungOnly.Count == 1)
         {
-            // Eindeutiger Fall (User Buerglen_Gosmergasse): Genau EIN Haltung-Video, das
-            // KEIN eigenes Datum im Namen traegt (z.B. L_58875-10.1089399.mpg). Dann ist die
-            // Zuordnung ueber die Haltung eindeutig und ungefaehrlich -> Matched. Traegt der
-            // einzige Kandidat dagegen ein ABWEICHENDES Datum (z.B. 20230101_06-001.mp4 bei
-            // gesuchtem 20240630), bleibt es bei NotFound (Verwechslungsschutz). Bei mehreren
-            // Kandidaten ebenfalls NotFound.
-            // Nur datumslose Kandidaten (Name traegt KEIN eigenes Datum) duerfen ueber die
-            // Haltung allein zugeordnet werden. Namen mit abweichendem Datum bleiben geschuetzt.
-            var dateless = haltungOnly.Where(f => !FileNameHasOwnDate(f, haltung)).ToList();
-
-            if (dateless.Count == 1)
-                return new HoldingFolderDistributor.VideoFindResult(
-                    HoldingFolderDistributor.VideoMatchStatus.Matched,
-                    dateless[0],
-                    Array.Empty<string>(),
-                    "Eindeutiges Haltung-Video ohne Datum im Namen");
-
-            // Mehrere datumslose Videos derselben Haltung (z.B. Nachinspektion): da im Namen
-            // kein Datum steht, ueber den Datei-Zeitstempel das dem Protokoll-Datum
-            // naechstgelegene Video waehlen (User-Regel: Haltung ist das Indiz, Datum der
-            // Tiebreaker). Ist kein Zeitstempel verfuegbar oder nicht eindeutig -> Ambiguous.
-            if (dateless.Count > 1 && fileTimestamp is not null && TryParseStamp(dateStamp, out var target))
-            {
-                var byClosest = dateless
-                    .Select(f => new { File = f, Ts = fileTimestamp(f) })
-                    .Where(x => x.Ts.HasValue)
-                    .OrderBy(x => Math.Abs((x.Ts!.Value - target).TotalDays))
-                    .ToList();
-
-                if (byClosest.Count >= 1)
-                {
-                    var best = byClosest[0];
-                    var secondDist = byClosest.Count > 1
-                        ? Math.Abs((byClosest[1].Ts!.Value - target).TotalDays)
-                        : double.MaxValue;
-                    var bestDist = Math.Abs((best.Ts!.Value - target).TotalDays);
-                    // Eindeutig naeher (mind. 1 Tag Abstand zum naechsten) -> zuordnen.
-                    if (secondDist - bestDist >= 1.0)
-                        return new HoldingFolderDistributor.VideoFindResult(
-                            HoldingFolderDistributor.VideoMatchStatus.Matched,
-                            best.File,
-                            Array.Empty<string>(),
-                            "Haltung-Video ueber Datei-Zeitstempel dem Protokoll-Datum zugeordnet");
-                }
-            }
+            var only = haltungOnly[0];
+            string message;
+            if (TryExtractFileNameDate(only, haltung, out var ownDate))
+                message = haveProtocolDate && ownDate.Date == protocolDate.Date
+                    ? "Haltung-Video mit passendem Datum zugeordnet"
+                    : "Einziges Haltung-Video zugeordnet (Datum im Namen weicht ab)";
+            else
+                message = "Eindeutiges Haltung-Video ohne Datum im Namen";
 
             return new HoldingFolderDistributor.VideoFindResult(
-                HoldingFolderDistributor.VideoMatchStatus.NotFound,
-                null,
-                haltungOnly,
-                "Haltung-only candidates found, but not auto-matched without date validation");
+                HoldingFolderDistributor.VideoMatchStatus.Matched, only, Array.Empty<string>(), message);
         }
 
-        return new HoldingFolderDistributor.VideoFindResult(HoldingFolderDistributor.VideoMatchStatus.NotFound, null, Array.Empty<string>(), "No video found (fallback)");
+        // Mehrere Haltung-Videos -> das dem Protokoll-Datum naechstgelegene ueber das effektive
+        // Datum (Dateiname-Datum bevorzugt, sonst Datei-Zeitstempel) waehlen. Nur bei klarem
+        // Abstand (mind. 1 Tag zum naechsten Kandidaten); sonst bleibt es Ambiguous.
+        if (haveProtocolDate)
+        {
+            var scored = haltungOnly
+                .Select(f => new { File = f, Date = EffectiveDate(f, haltung, fileTimestamp) })
+                .Where(x => x.Date.HasValue)
+                .OrderBy(x => Math.Abs((x.Date!.Value - protocolDate).TotalDays))
+                .ToList();
+
+            if (scored.Count >= 1)
+            {
+                var bestDist = Math.Abs((scored[0].Date!.Value - protocolDate).TotalDays);
+                var secondDist = scored.Count > 1
+                    ? Math.Abs((scored[1].Date!.Value - protocolDate).TotalDays)
+                    : double.MaxValue;
+                if (secondDist - bestDist >= 1.0)
+                {
+                    var message = bestDist < 1.0
+                        ? "Naechstes Haltung-Video ueber Datum/Zeitstempel zugeordnet"
+                        : "Naechstes Haltung-Video zugeordnet (Datum weicht ab)";
+                    return new HoldingFolderDistributor.VideoFindResult(
+                        HoldingFolderDistributor.VideoMatchStatus.Matched, scored[0].File, Array.Empty<string>(), message);
+                }
+            }
+        }
+
+        // Nicht eindeutig aufloesbar -> Kandidaten als Ambiguous (statt "missing") zurueckgeben,
+        // damit sie im Report sichtbar bleiben.
+        return new HoldingFolderDistributor.VideoFindResult(
+            HoldingFolderDistributor.VideoMatchStatus.Ambiguous, null, haltungOnly,
+            "Mehrere Haltung-Videos, nicht eindeutig per Datum/Zeitstempel aufloesbar");
     }
 
-    // True, wenn der Dateiname ein eigenes Datum traegt (8-stellig YYYYMMDD oder DD.MM.YYYY /
-    // YYYY-MM-DD). Solche Namen NICHT ohne Datumsabgleich zuordnen (Verwechslungsschutz);
-    // datumslose Namen (nur Haltung) duerfen bei Eindeutigkeit zugeordnet werden.
-    // WICHTIG: zuerst die Haltungsnummer aus dem Namen entfernen - sie kann selbst wie ein
-    // Datum aussehen (z.B. 58875-10.1089399 -> "75-10.1089"), sonst falscher Datums-Treffer.
-    private static bool FileNameHasOwnDate(string path, string haltung)
+    // Extrahiert das Datum aus dem Dateinamen (nach Tilgung der Haltungsnummer), falls vorhanden
+    // (8-stellig YYYYMMDD, YYYY-MM-DD/YYYY.MM.DD oder DD.MM.YYYY/DD.MM.YY).
+    // WICHTIG: zuerst die Haltungsnummer (und umgedrehte Variante) tilgen - sie kann selbst wie
+    // ein Datum aussehen (z.B. 58875-10.1089399 -> "75-10.1089"), sonst falscher Datums-Treffer.
+    private static bool TryExtractFileNameDate(string path, string haltung, out DateTime date)
     {
+        date = default;
         var name = Path.GetFileNameWithoutExtension(path);
         if (string.IsNullOrWhiteSpace(name))
             return false;
 
-        // Haltungsnummer (und ihre umgedrehte Variante) aus dem Namen tilgen.
         foreach (var h in new[] { haltung, ReverseHaltung(haltung) })
         {
             if (string.IsNullOrWhiteSpace(h)) continue;
             name = name.Replace(h, " ", StringComparison.OrdinalIgnoreCase);
         }
 
-        return Regex.IsMatch(name, @"\d{8}")
-            || Regex.IsMatch(name, @"\d{2}[.\-]\d{2}[.\-]\d{2,4}")
-            || Regex.IsMatch(name, @"\d{4}[.\-]\d{2}[.\-]\d{2}");
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var none = System.Globalization.DateTimeStyles.None;
+
+        foreach (Match m in Regex.Matches(name, @"\d{8}"))
+            if (DateTime.TryParseExact(m.Value, "yyyyMMdd", inv, none, out date))
+                return true;
+        foreach (Match m in Regex.Matches(name, @"\d{4}[.\-]\d{2}[.\-]\d{2}"))
+            if (DateTime.TryParseExact(m.Value, new[] { "yyyy-MM-dd", "yyyy.MM.dd" }, inv, none, out date))
+                return true;
+        foreach (Match m in Regex.Matches(name, @"\d{2}[.\-]\d{2}[.\-]\d{2,4}"))
+            if (DateTime.TryParseExact(m.Value, new[] { "dd.MM.yyyy", "dd-MM-yyyy", "dd.MM.yy", "dd-MM-yy" }, inv, none, out date))
+                return true;
+
+        return false;
+    }
+
+    // Effektives Datum eines Kandidaten: Dateiname-Datum bevorzugt, sonst Datei-Zeitstempel.
+    private static DateTime? EffectiveDate(string path, string haltung, Func<string, DateTime?>? fileTimestamp)
+    {
+        if (TryExtractFileNameDate(path, haltung, out var d))
+            return d;
+        return fileTimestamp?.Invoke(path);
     }
 
     private static string ReverseHaltung(string haltung)

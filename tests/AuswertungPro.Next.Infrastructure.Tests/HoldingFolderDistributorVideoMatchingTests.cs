@@ -10,8 +10,12 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class HoldingFolderDistributorVideoMatchingTests
 {
     [Fact]
-    public void FindVideoByHaltungDate_DoesNotMatchHaltungOnlyFallback()
+    public void FindVideoByHaltungDate_SingleHaltungVideoWithDivergingDate_NowMatchesWithWarning()
     {
+        // Neue Politik (User 2026-06-30): Die Haltung ist das Indiz. Ein EINZIGES Haltung-Video
+        // wird auch bei abweichendem Datum im Namen ZUGEORDNET - aber klar als "Datum weicht ab"
+        // gekennzeichnet (Sicherheitsnetz = Import-Report), statt stillschweigend "missing".
+        // (Frueher: NotFound = hartes Verwechslungs-Veto.)
         var method = Type.GetType("AuswertungPro.Next.Infrastructure.HoldingVideoMatching, AuswertungPro.Next.Infrastructure")!
             .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static,
                 binder: null,
@@ -19,18 +23,17 @@ public sealed class HoldingFolderDistributorVideoMatchingTests
                 modifiers: null);
         Assert.NotNull(method);
 
-        var files = new List<string>
-        {
-            Path.Combine(Path.GetTempPath(), "20230101_06-001.mp4")
-        };
+        var only = Path.Combine(Path.GetTempPath(), "20230101_06-001.mp4");
+        var files = new List<string> { only };
 
         var result = (HoldingFolderDistributor.VideoFindResult?)method!.Invoke(
             null,
             new object?[] { "06-001", "20240630", files });
 
         Assert.NotNull(result);
-        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotFound, result!.Status);
-        Assert.Contains("Haltung-only", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.Matched, result!.Status);
+        Assert.Equal(only, result.VideoPath);
+        Assert.Contains("weicht ab", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -88,10 +91,10 @@ public sealed class HoldingFolderDistributorVideoMatchingTests
     }
 
     [Fact]
-    public void FindVideoByHaltungDate_DoesNotMatchSingleHaltungVideoWithConflictingDate()
+    public void FindVideoByHaltungDate_MultipleDatedHaltungVideos_PicksClosestToProtocolDate()
     {
-        // Schutz bleibt: traegt das einzige Haltung-Video ein ANDERES Datum als gesucht,
-        // wird NICHT automatisch zugeordnet (Verwechslungsgefahr bei mehreren Inspektionen).
+        // Modus 2 (mehrdeutig): Mehrere Haltung-Videos mit unterschiedlichem Datum im Namen ->
+        // das dem Protokoll-Datum naechstgelegene gewinnt (statt Abbruch/missing).
         var method = Type.GetType("AuswertungPro.Next.Infrastructure.HoldingVideoMatching, AuswertungPro.Next.Infrastructure")!
             .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static,
                 binder: null,
@@ -99,17 +102,43 @@ public sealed class HoldingFolderDistributorVideoMatchingTests
                 modifiers: null);
         Assert.NotNull(method);
 
-        var files = new List<string>
-        {
-            Path.Combine(Path.GetTempPath(), "20230101_06-001.mp4")
-        };
+        var fern = Path.Combine(Path.GetTempPath(), "20240601_06-001.mp4");   // 28 Tage weg
+        var nah = Path.Combine(Path.GetTempPath(), "20240630_06-001.mp4");    // 1 Tag weg
+        var files = new List<string> { fern, nah };
 
         var result = (HoldingFolderDistributor.VideoFindResult?)method!.Invoke(
             null,
-            new object?[] { "06-001", "20240630", files });
+            new object?[] { "06-001", "20240629", files });
 
         Assert.NotNull(result);
-        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.NotFound, result!.Status);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.Matched, result!.Status);
+        Assert.Equal(nah, result.VideoPath);
+    }
+
+    [Fact]
+    public void FindVideoByHaltungDate_MultipleHaltungVideos_Indistinguishable_ReturnsAmbiguous()
+    {
+        // Kein klarer Sieger (gleiche Distanz zum Protokoll-Datum) -> bleibt Ambiguous; die
+        // Kandidaten werden sichtbar gemacht, nicht geraten (Verwechslungsschutz bei Gleichstand).
+        var method = Type.GetType("AuswertungPro.Next.Infrastructure.HoldingVideoMatching, AuswertungPro.Next.Infrastructure")!
+            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static,
+                binder: null,
+                types: new[] { typeof(string), typeof(string), typeof(IReadOnlyList<string>) },
+                modifiers: null);
+        Assert.NotNull(method);
+
+        // Beide tragen dasselbe (abweichende) Datum -> gleiche Distanz -> kein klarer Sieger.
+        var a = Path.Combine(Path.GetTempPath(), "20240630_06-001.mp4");
+        var b = Path.Combine(Path.GetTempPath(), "20240630_06-001_b.mp4");
+        var files = new List<string> { a, b };
+
+        var result = (HoldingFolderDistributor.VideoFindResult?)method!.Invoke(
+            null,
+            new object?[] { "06-001", "20240620", files });
+
+        Assert.NotNull(result);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.Ambiguous, result!.Status);
+        Assert.Equal(2, result.Candidates.Count);
     }
 
     [Fact]
