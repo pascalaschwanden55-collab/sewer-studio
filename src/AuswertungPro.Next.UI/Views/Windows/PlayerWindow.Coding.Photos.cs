@@ -15,7 +15,7 @@ public partial class PlayerWindow
             entry,
             new CodingAnalyzedFramePhotoAttachmentActions(
                 GetPreferredFrameBytes: TryExtractAnalyzedFrameBytes,
-                GetBufferedFrameBytes: () => _detectionConfirmationBuffer.FrameBytes,
+                GetBufferedFrameBytes: () => _liveDetectionController.PendingConfirmationFrameBytes,
                 AttachAnalyzedFramePhoto: frameBytes => CodingAnalyzedFramePhotoAttacher.Attach(
                     entry,
                     frameBytes,

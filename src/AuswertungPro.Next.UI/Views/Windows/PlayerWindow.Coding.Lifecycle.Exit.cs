@@ -23,7 +23,7 @@ public partial class PlayerWindow
                 _codingOsdMeterController.LastMeter,
                 _codingSessionHost.EndMeter,
                 _playerTimelineHost.DurationTimeOrZero,
-                _detectionConfirmationBuffer.FrameBytes),
+                _liveDetectionController.PendingConfirmationFrameBytes),
             new CodingModeExitFinalizationWorkflowActions(
                 CloseTrackedStreckenschaeden,
                 CloseOpenStreckenschaeden,
@@ -53,7 +53,7 @@ public partial class PlayerWindow
                     CodingConfirmationPanel,
                     DetectionConfirmationPanel),
                 ClearPendingConfirmation: _codingPendingConfirmationState.Clear,
-                ClearDetectionConfirmationBuffer: _detectionConfirmationBuffer.Clear,
+                ClearDetectionConfirmationBuffer: _liveDetectionController.ClearConfirmationBuffer,
                 ClearDetectionOverlay: hideOverlay => DetectionOverlayCleanupController.ClearCanvas(
                     DetectionCanvas,
                     DetectionOverlayGrid,

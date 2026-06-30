@@ -196,7 +196,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         Assert.DoesNotContain("PlayerBoundaryPhotoPolicy.GetRequiredSnapshotTime(entry.Code", captureBody);
         Assert.DoesNotContain("SeekToRequiredPhotoTime", captureBody);
-        Assert.Contains("_detectionConfirmationBuffer.FrameBytes", persistBody);
+        Assert.Contains("_liveDetectionController.PendingConfirmationFrameBytes", persistBody);
         Assert.DoesNotContain("CaptureFrameBytesAtRequiredPhotoTimeAsync", persistBody);
         Assert.DoesNotContain("Rohranfang-Foto nach Datenblendung nicht verfuegbar", persistBody);
     }
@@ -249,7 +249,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var boundaryBody = ExtractMethodBody(coding, "private bool TryHandleBoundaryClassifierResult");
         var boundaryCommandWorkflow = ReadUiFile("Ai", "CodingBoundaryClassifierCommandWorkflow.cs");
 
-        Assert.Contains("_detectionConfirmationBuffer.FrameBytes", boundaryBody);
+        Assert.Contains("_liveDetectionController.PendingConfirmationFrameBytes", boundaryBody);
         Assert.Contains("request.AnalyzedFrameBytes", boundaryCommandWorkflow);
         Assert.Contains("EnsureRohranfangExists(startMeter, startTime, frameBytes, ref anyAdded)", boundaryBody);
         Assert.Contains("EnsureRohrendeExists(meterEnd, endTime, frameBytes)", boundaryBody);
@@ -295,7 +295,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var exitBody = ExtractMethodBody(coding, "private void ExitCodingMode");
 
         Assert.Contains("CodingModeExitCommandWorkflow.Execute", exitBody);
-        Assert.Contains("_detectionConfirmationBuffer.FrameBytes", coding);
+        Assert.Contains("_liveDetectionController.PendingConfirmationFrameBytes", coding);
         Assert.Contains("actions.FinalizeExit()", commandWorkflow);
         Assert.Contains("request.AnalyzedFrameBytes", workflow);
         Assert.Contains("actions.EnsureRohrendeExists", workflow);

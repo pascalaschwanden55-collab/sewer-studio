@@ -201,4 +201,33 @@ public sealed class LiveDetectionControllerTests
         Assert.False((bool)isManualMarkMode.GetValue(controller)!);
         Assert.Equal(OverlayToolType.None, markToolType.GetValue(controller));
     }
+
+    [Fact]
+    public void Confirmation_buffer_state_is_owned_by_live_detection_controller()
+    {
+        var controller = new LiveDetectionController();
+        var finding = new LiveFrameFinding("Riss", 3, null, null, null, null, null, null);
+        var frameBytes = new byte[] { 1, 2, 3 };
+
+        controller.StoreConfirmationFindings([finding], frameBytes, timestampSeconds: 12.5);
+
+        Assert.True(controller.HasPendingConfirmationFindings);
+        Assert.Equal(12.5, controller.PendingConfirmationTimestampSeconds);
+        Assert.Same(frameBytes, controller.PendingConfirmationFrameBytes);
+        Assert.Single(controller.PendingConfirmationFindings);
+
+        controller.StoreAnalyzedFrame(frameBytes: [4, 5], timestampSeconds: 15);
+
+        Assert.True(controller.HasPendingConfirmationFindings);
+        Assert.Equal(15, controller.PendingConfirmationTimestampSeconds);
+        Assert.Equal([4, 5], controller.PendingConfirmationFrameBytes);
+        Assert.Single(controller.PendingConfirmationFindings);
+
+        controller.ClearConfirmationBuffer();
+
+        Assert.False(controller.HasPendingConfirmationFindings);
+        Assert.Empty(controller.PendingConfirmationFindings);
+        Assert.Null(controller.PendingConfirmationFrameBytes);
+        Assert.Null(controller.PendingConfirmationTimestampSeconds);
+    }
 }

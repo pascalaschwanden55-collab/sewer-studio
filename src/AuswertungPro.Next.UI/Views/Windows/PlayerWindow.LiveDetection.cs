@@ -27,7 +27,7 @@ public partial class PlayerWindow
                     isClosing: _shutdownState.IsClosing,
                     hasPlayer: !_shutdownState.IsPlaybackDisposed,
                     isPlayerPlaying: !_shutdownState.IsPlaybackDisposed && _playerPlaybackControlHost.IsPlaying,
-                    hasPendingFindings: _detectionConfirmationBuffer.HasFindings),
+                    hasPendingFindings: _liveDetectionController.HasPendingConfirmationFindings),
                 GetModelName: () => _liveDetectionController.ModelName,
                 BeginDetection: _liveDetectionController.BeginDetection,
                 EndDetection: _liveDetectionController.EndDetection,
@@ -43,7 +43,7 @@ public partial class PlayerWindow
                 RenderDetectionOverlay: RenderDetectionOverlay,
                 UpdateDetectionStatus: UpdateDetectionStatus,
                 SetLiveDetectionBadge: SetLiveDetectionBadge,
-                StoreFindings: (findings, frameBytes, timestamp) => _detectionConfirmationBuffer.StoreFindings(
+                StoreFindings: (findings, frameBytes, timestamp) => _liveDetectionController.StoreConfirmationFindings(
                     findings,
                     frameBytes,
                     timestamp),
