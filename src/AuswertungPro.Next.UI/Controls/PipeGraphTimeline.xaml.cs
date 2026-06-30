@@ -8,7 +8,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using AuswertungPro.Next.Application.Reports;
 
 namespace AuswertungPro.Next.UI.Controls;
 
@@ -98,6 +97,17 @@ public partial class PipeGraphTimeline : UserControl
 
     // ═══════ State ═══════
 
+    private static Brush BrushForMarkerColor(MarkerColorKind color)
+        => color switch
+        {
+            MarkerColorKind.Green => BrushGreen,
+            MarkerColorKind.Yellow => BrushYellow,
+            MarkerColorKind.Red => BrushRed,
+            MarkerColorKind.Rejected => BrushRejected,
+            MarkerColorKind.Manual => BrushManual,
+            _ => BrushRed
+        };
+
     private bool _isDragging;
     private INotifyCollectionChanged? _subscribedCollection;
 
@@ -173,8 +183,7 @@ public partial class PipeGraphTimeline : UserControl
         MarkerCanvas.Children.Clear();
         if (TotalLength <= 0 || Markers == null) return;
 
-        double canvasW = TimelineBar.ActualWidth;
-        if (canvasW <= 0) canvasW = 400;
+        double canvasW = TimelineScaleCalculator.EffectiveCanvasWidth(TimelineBar.ActualWidth);
 
         foreach (var item in Markers)
         {
@@ -185,16 +194,9 @@ public partial class PipeGraphTimeline : UserControl
 
             double x = TimelineScaleCalculator.MeterToX(meter, TotalLength, canvasW);
 
-            // Farbe nach QualityGate-Zone (Klassifikation via MarkerColorClassifier)
-            var zone = MarkerColorClassifier.Classify(conf, rejected);
-            Brush fill = zone switch
-            {
-                MarkerZone.Rejected => BrushRejected,
-                MarkerZone.Manual   => BrushManual,
-                MarkerZone.Green    => BrushGreen,
-                MarkerZone.Yellow   => BrushYellow,
-                _                   => BrushRed
-            };
+            // Farbe nach QualityGate-Zone
+            var color = MarkerColorClassifier.Classify(rejected, conf);
+            Brush fill = BrushForMarkerColor(color);
 
             // Vertikaler Balken (wie im Mockup)
             var bar = new Border
@@ -247,11 +249,8 @@ public partial class PipeGraphTimeline : UserControl
     {
         if (TotalLength <= 0) return;
 
-        double canvasW = TimelineBar.ActualWidth;
-        if (canvasW <= 0) canvasW = 400;
-
         double barH = 36;
-        double x = TimelineScaleCalculator.MeterToX(CurrentMeter, TotalLength, canvasW);
+        double x = TimelineScaleCalculator.MeterToX(CurrentMeter, TotalLength, TimelineBar.ActualWidth);
 
         PlayheadLine.Height = barH;
         Canvas.SetLeft(PlayheadLine, x - 1);
@@ -270,52 +269,32 @@ public partial class PipeGraphTimeline : UserControl
         ScaleCanvas.Children.Clear();
         if (TotalLength <= 0) return;
 
-        double canvasW = TimelineBar.ActualWidth;
-        if (canvasW <= 0) canvasW = 400;
+        double canvasW = TimelineScaleCalculator.EffectiveCanvasWidth(TimelineBar.ActualWidth);
 
-        // Sinnvolles Intervall waehlen (Logik via TimelineScaleCalculator)
-        double interval = TimelineScaleCalculator.ChooseInterval(TotalLength);
-
-        for (double m = 0; m <= TotalLength; m += interval)
+        foreach (var tick in TimelineScaleCalculator.BuildTicks(TotalLength, canvasW))
         {
-            double x = TimelineScaleCalculator.MeterToX(m, TotalLength, canvasW);
             var tb = new TextBlock
             {
-                Text = $"{m:F0}m",
+                Text = tick.Text,
                 FontSize = 10,
                 Foreground = BrushScaleText,
                 FontFamily = new FontFamily("Consolas")
             };
 
             // Letzte Beschriftung rechtsbuendig
-            if (Math.Abs(m - TotalLength) < 0.01 || m + interval > TotalLength)
+            if (tick.AlignRight)
             {
-                tb.Text = $"{TotalLength:F1}m";
                 Canvas.SetRight(tb, 0);
             }
             else
             {
-                Canvas.SetLeft(tb, Math.Max(0, x - 8));
+                Canvas.SetLeft(tb, tick.Left);
             }
 
             Canvas.SetTop(tb, 0);
             ScaleCanvas.Children.Add(tb);
         }
 
-        // Erste (0m) immer anzeigen, wenn nicht schon da
-        if (interval > 0)
-        {
-            var first = new TextBlock
-            {
-                Text = "0m",
-                FontSize = 10,
-                Foreground = BrushScaleText,
-                FontFamily = new FontFamily("Consolas")
-            };
-            Canvas.SetLeft(first, 0);
-            Canvas.SetTop(first, 0);
-            ScaleCanvas.Children.Insert(0, first);
-        }
     }
 
     // ═══════ Maus-Interaktion (Klick + Drag auf Timeline) ═══════
@@ -343,12 +322,10 @@ public partial class PipeGraphTimeline : UserControl
     {
         if (TotalLength <= 0) return;
 
-        double canvasW = TimelineBar.ActualWidth;
-        if (canvasW <= 0) return;
-
         double x = e.GetPosition(TimelineBar).X;
-        double meter = TimelineScaleCalculator.XToMeter(x, TotalLength, canvasW);
+        var meter = TimelineScaleCalculator.XToMeter(x, TotalLength, TimelineBar.ActualWidth);
+        if (meter is null) return;
 
-        NavigateToMeterCommand?.Execute(meter);
+        NavigateToMeterCommand?.Execute(meter.Value);
     }
 }

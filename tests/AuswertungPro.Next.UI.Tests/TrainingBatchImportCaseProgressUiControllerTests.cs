@@ -1,0 +1,37 @@
+using AuswertungPro.Next.UI.Ai.Training;
+
+namespace AuswertungPro.Next.UI.Tests;
+
+public sealed class TrainingBatchImportCaseProgressUiControllerTests
+{
+    [Fact]
+    public void Apply_setzt_progress_status_und_loggt_case_zeilen()
+    {
+        var trainingCase = new TrainingCase
+        {
+            CaseId = "101.1-102.1",
+            ProtocolPath = @"C:\Import\protokoll.pdf",
+            VideoPath = @"C:\Import\haltung.mp4"
+        };
+        var calls = new List<string>();
+
+        TrainingBatchImportCaseProgressUiController.Apply(
+            zeroBasedIndex: 1,
+            totalCount: 4,
+            trainingCase,
+            value => calls.Add($"progress:{value}"),
+            value => calls.Add($"status:{value}"),
+            value => calls.Add($"log:{value}"));
+
+        Assert.Equal(
+            new[]
+            {
+                "progress:2",
+                "status:[2/4] 101.1-102.1...",
+                "log:--- [2/4] 101.1-102.1 ---",
+                @"log:  Protokoll: C:\Import\protokoll.pdf",
+                @"log:  Video: C:\Import\haltung.mp4"
+            },
+            calls);
+    }
+}

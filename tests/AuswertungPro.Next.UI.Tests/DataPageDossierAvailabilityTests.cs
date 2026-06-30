@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.DataPage;
@@ -86,6 +87,82 @@ public sealed class DataPageDossierAvailabilityTests
         Assert.False(DataPageDossierAvailability.HasPrintablePhotos(record, temp.Path));
     }
 
+    // --- EvaluatePrintableSections ---
+
+    [Theory]
+    [InlineData("deckblatt")]
+    [InlineData("haltungsprotokoll")]
+    [InlineData("fotos")]
+    [InlineData("schachtVon")]
+    [InlineData("schachtBis")]
+    [InlineData("hydraulik")]
+    [InlineData("kosten")]
+    public void EvaluatePrintableSections_erkennt_druckbare_basisabschnitte(string section)
+    {
+        using var temp = new TempDir();
+        temp.CreateFile("foto.jpg");
+
+        var options = OptionsFor(section);
+        var record = RecordWithFotos(deleted: false, "foto.jpg");
+
+        var state = DataPageDossierAvailability.EvaluatePrintableSections(
+            options,
+            record,
+            temp.Path,
+            hasSchachtVon: section == "schachtVon",
+            hasSchachtBis: section == "schachtBis",
+            hasHydraulikResult: section == "hydraulik",
+            kostenAvailable: section == "kosten",
+            originalPdfCount: 0);
+
+        Assert.True(state.HasDossierBaseSection);
+        Assert.False(state.HasOriginalPdfSection);
+        Assert.True(state.HasAnySection);
+    }
+
+    [Fact]
+    public void EvaluatePrintableSections_erkennt_original_pdfs_ohne_basisabschnitt()
+    {
+        var state = DataPageDossierAvailability.EvaluatePrintableSections(
+            EmptyOptions() with { IncludeOriginalProtokolle = true },
+            new HaltungRecord(),
+            projectFolder: "",
+            hasSchachtVon: false,
+            hasSchachtBis: false,
+            hasHydraulikResult: false,
+            kostenAvailable: false,
+            originalPdfCount: 2);
+
+        Assert.False(state.HasDossierBaseSection);
+        Assert.True(state.HasOriginalPdfSection);
+        Assert.True(state.HasAnySection);
+    }
+
+    [Fact]
+    public void EvaluatePrintableSections_false_wenn_auswahl_keinen_druckbaren_inhalt_liefert()
+    {
+        using var temp = new TempDir();
+        var record = RecordWithFotos(deleted: false, "fehlt.jpg");
+
+        var state = DataPageDossierAvailability.EvaluatePrintableSections(
+            EmptyOptions() with
+            {
+                IncludeFotos = true,
+                IncludeOriginalProtokolle = true
+            },
+            record,
+            temp.Path,
+            hasSchachtVon: false,
+            hasSchachtBis: false,
+            hasHydraulikResult: false,
+            kostenAvailable: false,
+            originalPdfCount: 0);
+
+        Assert.False(state.HasDossierBaseSection);
+        Assert.False(state.HasOriginalPdfSection);
+        Assert.False(state.HasAnySection);
+    }
+
     private static HaltungRecord RecordWithFotos(bool deleted, params string[] fotoPaths)
     {
         var entry = new ProtocolEntry { IsDeleted = deleted };
@@ -100,6 +177,32 @@ public sealed class DataPageDossierAvailabilityTests
             },
         };
     }
+
+    private static DossierPrintOptions OptionsFor(string section)
+        => section switch
+        {
+            "deckblatt" => EmptyOptions() with { IncludeDeckblatt = true },
+            "haltungsprotokoll" => EmptyOptions() with { IncludeHaltungsprotokoll = true },
+            "fotos" => EmptyOptions() with { IncludeFotos = true },
+            "schachtVon" => EmptyOptions() with { IncludeSchachtVon = true },
+            "schachtBis" => EmptyOptions() with { IncludeSchachtBis = true },
+            "hydraulik" => EmptyOptions() with { IncludeHydraulik = true },
+            "kosten" => EmptyOptions() with { IncludeKostenschaetzung = true },
+            _ => throw new ArgumentOutOfRangeException(nameof(section), section, null)
+        };
+
+    private static DossierPrintOptions EmptyOptions()
+        => new()
+        {
+            IncludeDeckblatt = false,
+            IncludeHaltungsprotokoll = false,
+            IncludeFotos = false,
+            IncludeSchachtVon = false,
+            IncludeSchachtBis = false,
+            IncludeHydraulik = false,
+            IncludeKostenschaetzung = false,
+            IncludeOriginalProtokolle = false
+        };
 
     private sealed class TempDir : IDisposable
     {

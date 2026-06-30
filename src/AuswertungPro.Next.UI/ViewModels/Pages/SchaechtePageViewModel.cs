@@ -3,11 +3,9 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.Infrastructure.Import.Xlsx;
+using AuswertungPro.Next.Infrastructure.Export.Excel;
 using AuswertungPro.Next.UI;
-using AuswertungPro.Next.UI.Dialogs;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
@@ -16,6 +14,14 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
 {
     private readonly ServiceProvider _sp;
     private readonly ShellViewModel _shell;
+    private readonly DropdownOptionGroupController _sanierenDropdownOptions;
+    private readonly DropdownOptionGroupController _eigentuemerDropdownOptions;
+    private readonly DropdownOptionGroupController _pruefungsresultatDropdownOptions;
+    private readonly DropdownOptionGroupController _referenzpruefungDropdownOptions;
+    private readonly DropdownCommandGroup _sanierenDropdownCommands;
+    private readonly DropdownCommandGroup _eigentuemerDropdownCommands;
+    private readonly DropdownCommandGroup _pruefungsresultatDropdownCommands;
+    private readonly DropdownCommandGroup _referenzpruefungDropdownCommands;
 
     internal ServiceProvider Services => _sp;
 
@@ -43,29 +49,29 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     public IRelayCommand SaveCommand { get; }
     public IRelayCommand ClearSearchCommand { get; }
 
-    public IRelayCommand EditSanierenOptionsCommand { get; }
-    public IRelayCommand PreviewSanierenOptionsCommand { get; }
-    public IRelayCommand ResetSanierenOptionsCommand { get; }
-    public IRelayCommand<object?> AddSanierenOptionCommand { get; }
-    public IRelayCommand<object?> RemoveSanierenOptionCommand { get; }
+    public IRelayCommand EditSanierenOptionsCommand => _sanierenDropdownCommands.Edit;
+    public IRelayCommand PreviewSanierenOptionsCommand => _sanierenDropdownCommands.Preview;
+    public IRelayCommand ResetSanierenOptionsCommand => _sanierenDropdownCommands.Reset;
+    public IRelayCommand<object?> AddSanierenOptionCommand => _sanierenDropdownCommands.Add;
+    public IRelayCommand<object?> RemoveSanierenOptionCommand => _sanierenDropdownCommands.Remove;
 
-    public IRelayCommand EditEigentuemerOptionsCommand { get; }
-    public IRelayCommand PreviewEigentuemerOptionsCommand { get; }
-    public IRelayCommand ResetEigentuemerOptionsCommand { get; }
-    public IRelayCommand<object?> AddEigentuemerOptionCommand { get; }
-    public IRelayCommand<object?> RemoveEigentuemerOptionCommand { get; }
+    public IRelayCommand EditEigentuemerOptionsCommand => _eigentuemerDropdownCommands.Edit;
+    public IRelayCommand PreviewEigentuemerOptionsCommand => _eigentuemerDropdownCommands.Preview;
+    public IRelayCommand ResetEigentuemerOptionsCommand => _eigentuemerDropdownCommands.Reset;
+    public IRelayCommand<object?> AddEigentuemerOptionCommand => _eigentuemerDropdownCommands.Add;
+    public IRelayCommand<object?> RemoveEigentuemerOptionCommand => _eigentuemerDropdownCommands.Remove;
 
-    public IRelayCommand EditPruefungsresultatOptionsCommand { get; }
-    public IRelayCommand PreviewPruefungsresultatOptionsCommand { get; }
-    public IRelayCommand ResetPruefungsresultatOptionsCommand { get; }
-    public IRelayCommand<object?> AddPruefungsresultatOptionCommand { get; }
-    public IRelayCommand<object?> RemovePruefungsresultatOptionCommand { get; }
+    public IRelayCommand EditPruefungsresultatOptionsCommand => _pruefungsresultatDropdownCommands.Edit;
+    public IRelayCommand PreviewPruefungsresultatOptionsCommand => _pruefungsresultatDropdownCommands.Preview;
+    public IRelayCommand ResetPruefungsresultatOptionsCommand => _pruefungsresultatDropdownCommands.Reset;
+    public IRelayCommand<object?> AddPruefungsresultatOptionCommand => _pruefungsresultatDropdownCommands.Add;
+    public IRelayCommand<object?> RemovePruefungsresultatOptionCommand => _pruefungsresultatDropdownCommands.Remove;
 
-    public IRelayCommand EditReferenzpruefungOptionsCommand { get; }
-    public IRelayCommand PreviewReferenzpruefungOptionsCommand { get; }
-    public IRelayCommand ResetReferenzpruefungOptionsCommand { get; }
-    public IRelayCommand<object?> AddReferenzpruefungOptionCommand { get; }
-    public IRelayCommand<object?> RemoveReferenzpruefungOptionCommand { get; }
+    public IRelayCommand EditReferenzpruefungOptionsCommand => _referenzpruefungDropdownCommands.Edit;
+    public IRelayCommand PreviewReferenzpruefungOptionsCommand => _referenzpruefungDropdownCommands.Preview;
+    public IRelayCommand ResetReferenzpruefungOptionsCommand => _referenzpruefungDropdownCommands.Reset;
+    public IRelayCommand<object?> AddReferenzpruefungOptionCommand => _referenzpruefungDropdownCommands.Add;
+    public IRelayCommand<object?> RemoveReferenzpruefungOptionCommand => _referenzpruefungDropdownCommands.Remove;
 
     public SchaechtePageViewModel(ShellViewModel shell, ServiceProvider services)
     {
@@ -88,6 +94,30 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         AusgefuehrtDurchOptions = new ObservableCollection<string>(FieldCatalog.GetComboItems("Ausgefuehrt_durch"));
         EnforceEigentuemerOptionsExact();
 
+        _sanierenDropdownOptions = CreateDropdownOptionGroup(
+            SanierenOptions,
+            "Sanieren-Liste",
+            new[] { "Nein", "Ja" });
+        _eigentuemerDropdownOptions = CreateDropdownOptionGroup(
+            EigentuemerOptions,
+            "Eigentuemer-Liste",
+            DropdownOptionsStore.FixedEigentuemerOptions,
+            lockedToResetItems: true);
+        _pruefungsresultatDropdownOptions = CreateDropdownOptionGroup(
+            PruefungsresultatOptions,
+            "Pruefungsresultat-Liste",
+            new[]
+            {
+                "Pruefung bestanden",
+                "Pruefung knapp nicht bestanden",
+                "Pruefung nicht bestanden (grob undicht)",
+                "Keine"
+            });
+        _referenzpruefungDropdownOptions = CreateDropdownOptionGroup(
+            ReferenzpruefungOptions,
+            "Referenzpruefung-Liste",
+            new[] { "Ja", "Nein" });
+
         AddCommand = new RelayCommand(Add);
         RemoveCommand = new RelayCommand(Remove, () => Selected is not null);
         MoveUpCommand = new RelayCommand(MoveUp, CanMoveUp);
@@ -95,29 +125,30 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         SaveCommand = new RelayCommand(Save);
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
 
-        EditSanierenOptionsCommand = new RelayCommand(EditSanierenOptions);
-        PreviewSanierenOptionsCommand = new RelayCommand(PreviewSanierenOptions);
-        ResetSanierenOptionsCommand = new RelayCommand(ResetSanierenOptions);
-        AddSanierenOptionCommand = new RelayCommand<object?>(AddSanierenOption);
-        RemoveSanierenOptionCommand = new RelayCommand<object?>(RemoveSanierenOption);
-
-        EditEigentuemerOptionsCommand = new RelayCommand(EditEigentuemerOptions);
-        PreviewEigentuemerOptionsCommand = new RelayCommand(PreviewEigentuemerOptions);
-        ResetEigentuemerOptionsCommand = new RelayCommand(ResetEigentuemerOptions);
-        AddEigentuemerOptionCommand = new RelayCommand<object?>(AddEigentuemerOption);
-        RemoveEigentuemerOptionCommand = new RelayCommand<object?>(RemoveEigentuemerOption);
-
-        EditPruefungsresultatOptionsCommand = new RelayCommand(EditPruefungsresultatOptions);
-        PreviewPruefungsresultatOptionsCommand = new RelayCommand(PreviewPruefungsresultatOptions);
-        ResetPruefungsresultatOptionsCommand = new RelayCommand(ResetPruefungsresultatOptions);
-        AddPruefungsresultatOptionCommand = new RelayCommand<object?>(AddPruefungsresultatOption);
-        RemovePruefungsresultatOptionCommand = new RelayCommand<object?>(RemovePruefungsresultatOption);
-
-        EditReferenzpruefungOptionsCommand = new RelayCommand(EditReferenzpruefungOptions);
-        PreviewReferenzpruefungOptionsCommand = new RelayCommand(PreviewReferenzpruefungOptions);
-        ResetReferenzpruefungOptionsCommand = new RelayCommand(ResetReferenzpruefungOptions);
-        AddReferenzpruefungOptionCommand = new RelayCommand<object?>(AddReferenzpruefungOption);
-        RemoveReferenzpruefungOptionCommand = new RelayCommand<object?>(RemoveReferenzpruefungOption);
+        _sanierenDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
+            _sanierenDropdownOptions.Edit,
+            _sanierenDropdownOptions.Preview,
+            _sanierenDropdownOptions.Reset,
+            _sanierenDropdownOptions.Add,
+            _sanierenDropdownOptions.Remove));
+        _eigentuemerDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
+            _eigentuemerDropdownOptions.Edit,
+            _eigentuemerDropdownOptions.Preview,
+            _eigentuemerDropdownOptions.Reset,
+            _eigentuemerDropdownOptions.Add,
+            _eigentuemerDropdownOptions.Remove));
+        _pruefungsresultatDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
+            _pruefungsresultatDropdownOptions.Edit,
+            _pruefungsresultatDropdownOptions.Preview,
+            _pruefungsresultatDropdownOptions.Reset,
+            _pruefungsresultatDropdownOptions.Add,
+            _pruefungsresultatDropdownOptions.Remove));
+        _referenzpruefungDropdownCommands = DropdownCommandFactory.Create(new DropdownCommandActions(
+            _referenzpruefungDropdownOptions.Edit,
+            _referenzpruefungDropdownOptions.Preview,
+            _referenzpruefungDropdownOptions.Reset,
+            _referenzpruefungDropdownOptions.Add,
+            _referenzpruefungDropdownOptions.Remove));
 
         LoadColumnsFromTemplate();
         EnsureRecordColumns();
@@ -181,45 +212,36 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
             AddOptionIfMissing(AusgefuehrtDurchOptions, text);
     }
 
+    private DropdownOptionGroupController CreateDropdownOptionGroup(
+        ObservableCollection<string> options,
+        string previewTitle,
+        IReadOnlyList<string> resetItems,
+        bool lockedToResetItems = false)
+        => new(
+            options,
+            new DropdownOptionGroupSettings(previewTitle, resetItems, lockedToResetItems),
+            new DropdownOptionGroupActions(
+                OptionsEditorDialogService.Show,
+                _sp.Dialogs.Info,
+                SaveDropdownOptions));
+
     private void LoadColumnsFromTemplate()
     {
         Columns.Clear();
 
-        var templatePath = SchaechteTemplateColumnReader.ResolveTemplatePath();
-        var cols = SchaechteTemplateColumnReader.ReadColumns(templatePath);
-
-        if (cols.Count == 0)
+        var result = SchaechteTemplateColumnReader.LoadFromExportDirectory(AppContext.BaseDirectory);
+        if (!result.TemplateFound)
         {
             LastResult = "Schaechte-Vorlage nicht gefunden.";
             return;
         }
 
-        foreach (var col in cols)
-            Columns.Add(col);
+        foreach (var column in result.Columns)
+            Columns.Add(column);
 
-        SwapColumnOrder("Funktion", "Schachtnummer");
         EnsureRecordColumns();
         UpdateNr();
         LastResult = $"Spalten geladen: {Columns.Count}";
-    }
-
-    private void SwapColumnOrder(string firstColumnName, string secondColumnName)
-    {
-        if (Columns.Count == 0)
-            return;
-
-        var first = Columns.FirstOrDefault(x => x.Equals(firstColumnName, StringComparison.OrdinalIgnoreCase));
-        var second = Columns.FirstOrDefault(x => x.Equals(secondColumnName, StringComparison.OrdinalIgnoreCase));
-        if (first is null || second is null)
-            return;
-
-        var firstIndex = Columns.IndexOf(first);
-        var secondIndex = Columns.IndexOf(second);
-        if (firstIndex < 0 || secondIndex < 0 || firstIndex == secondIndex)
-            return;
-
-        Columns[firstIndex] = second;
-        Columns[secondIndex] = first;
     }
 
     private void EnsureRecordColumns()
@@ -327,130 +349,6 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         LastResult = ok ? "Schaechte gespeichert." : "Speichern fehlgeschlagen.";
     }
 
-    private void EditSanierenOptions()
-    {
-        var vm = new OptionsEditorViewModel(SanierenOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(SanierenOptions, vm.Items);
-            SaveDropdownOptions();
-        }
-    }
-
-    private void PreviewSanierenOptions()
-    {
-        var items = string.Join("\n", SanierenOptions);
-        _sp.Dialogs.Info(items, "Sanieren-Liste");
-    }
-
-    private void ResetSanierenOptions()
-    {
-        DropdownOptionList.ReplaceWith(SanierenOptions, new[] { "Nein", "Ja" });
-        SaveDropdownOptions();
-    }
-
-    private void AddSanierenOption(object? value) => AddOptionIfMissing(SanierenOptions, ExtractText(value));
-    private void RemoveSanierenOption(object? value) => RemoveOptionFromList(SanierenOptions, ExtractText(value));
-
-    private void EditEigentuemerOptions()
-    {
-        var vm = new OptionsEditorViewModel(EigentuemerOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(EigentuemerOptions, vm.Items);
-            EnforceEigentuemerOptionsExact();
-            SaveDropdownOptions();
-        }
-    }
-
-    private void PreviewEigentuemerOptions()
-    {
-        var items = string.Join("\n", EigentuemerOptions);
-        _sp.Dialogs.Info(items, "Eigentuemer-Liste");
-    }
-
-    private void ResetEigentuemerOptions()
-    {
-        EnforceEigentuemerOptionsExact();
-        SaveDropdownOptions();
-    }
-
-    private void AddEigentuemerOption(object? value)
-    {
-        _ = value;
-        EnforceEigentuemerOptionsExact();
-        SaveDropdownOptions();
-    }
-
-    private void RemoveEigentuemerOption(object? value)
-    {
-        _ = value;
-        EnforceEigentuemerOptionsExact();
-        SaveDropdownOptions();
-    }
-
-    private void EditPruefungsresultatOptions()
-    {
-        var vm = new OptionsEditorViewModel(PruefungsresultatOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(PruefungsresultatOptions, vm.Items);
-            SaveDropdownOptions();
-        }
-    }
-
-    private void PreviewPruefungsresultatOptions()
-    {
-        var items = string.Join("\n", PruefungsresultatOptions);
-        _sp.Dialogs.Info(items, "Pruefungsresultat-Liste");
-    }
-
-    private void ResetPruefungsresultatOptions()
-    {
-        DropdownOptionList.ReplaceWith(
-            PruefungsresultatOptions,
-            new[]
-            {
-                "Pruefung bestanden",
-                "Pruefung knapp nicht bestanden",
-                "Pruefung nicht bestanden (grob undicht)",
-                "Keine"
-            });
-        SaveDropdownOptions();
-    }
-
-    private void AddPruefungsresultatOption(object? value) => AddOptionIfMissing(PruefungsresultatOptions, ExtractText(value));
-    private void RemovePruefungsresultatOption(object? value) => RemoveOptionFromList(PruefungsresultatOptions, ExtractText(value));
-
-    private void EditReferenzpruefungOptions()
-    {
-        var vm = new OptionsEditorViewModel(ReferenzpruefungOptions);
-        var dlg = new OptionsEditorWindow(vm);
-        if (dlg.ShowDialog() == true)
-        {
-            DropdownOptionList.ReplaceWith(ReferenzpruefungOptions, vm.Items);
-            SaveDropdownOptions();
-        }
-    }
-
-    private void PreviewReferenzpruefungOptions()
-    {
-        var items = string.Join("\n", ReferenzpruefungOptions);
-        _sp.Dialogs.Info(items, "Referenzpruefung-Liste");
-    }
-
-    private void ResetReferenzpruefungOptions()
-    {
-        DropdownOptionList.ReplaceWith(ReferenzpruefungOptions, new[] { "Ja", "Nein" });
-        SaveDropdownOptions();
-    }
-
-    private void AddReferenzpruefungOption(object? value) => AddOptionIfMissing(ReferenzpruefungOptions, ExtractText(value));
-    private void RemoveReferenzpruefungOption(object? value) => RemoveOptionFromList(ReferenzpruefungOptions, ExtractText(value));
-
     private void AddOptionIfMissing(ObservableCollection<string> options, string value)
     {
         if (!DropdownOptionList.AddIfMissing(options, value))
@@ -458,44 +356,37 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         SaveDropdownOptions();
     }
 
-    private static bool AddOptionIfMissingCore(ObservableCollection<string> options, string? value)
-        => DropdownOptionList.AddIfMissing(options, value);
-
-    private void RemoveOptionFromList(ObservableCollection<string> options, string? value)
-    {
-        if (DropdownOptionList.Remove(options, value))
-            SaveDropdownOptions();
-    }
-
-    private static string ExtractText(object? value)
-        => DropdownOptionList.ExtractText(value);
-
     private void SaveDropdownOptions()
     {
         EnforceEigentuemerOptionsExact();
-        SyncDropdownOptionsFromRecords();
+        SchaechteDropdownOptionSynchronizer.SyncFromRecords(
+            Records,
+            new SchaechteDropdownOptionSets(
+                SanierenOptions,
+                PruefungsresultatOptions,
+                ReferenzpruefungOptions,
+                AusgefuehrtDurchOptions));
         DropdownOptionsStore.SaveSanierenOptions(SanierenOptions);
         DropdownOptionsStore.SaveEigentuemerOptions(EigentuemerOptions);
         DropdownOptionsStore.SavePruefungsresultatOptions(PruefungsresultatOptions);
         DropdownOptionsStore.SaveReferenzpruefungOptions(ReferenzpruefungOptions);
     }
 
-    private void SyncDropdownOptionsFromRecords()
-    {
-        foreach (var record in Records)
-        {
-            AddOptionIfMissingCore(SanierenOptions, ResolveFieldValue(record, "sanieren"));
-            AddOptionIfMissingCore(PruefungsresultatOptions, ResolveFieldValue(record, "pruefungsresultat"));
-            AddOptionIfMissingCore(ReferenzpruefungOptions, ResolveFieldValue(record, "referenzpruefung"));
-            AddOptionIfMissingCore(AusgefuehrtDurchOptions, ResolveFieldValue(record, "ausgefuehrt_durch"));
-        }
-    }
-
-    private static string ResolveFieldValue(SchachtRecord record, string logicalField)
-        => SchaechteFieldLogic.ResolveFieldValue(record, logicalField);
-
     private string? ResolveNrColumnName()
-        => SchaechteFieldLogic.ResolveNrColumnName(Columns, Records);
+    {
+        var fromColumns = Columns.FirstOrDefault(c =>
+            c.Contains("NR", StringComparison.OrdinalIgnoreCase) ||
+            c.Contains("Nr", StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(fromColumns))
+            return fromColumns;
+
+        var fromRecord = Records
+            .SelectMany(r => r.Fields.Keys)
+            .FirstOrDefault(c =>
+                c.Contains("NR", StringComparison.OrdinalIgnoreCase) ||
+                c.Contains("Nr", StringComparison.OrdinalIgnoreCase));
+        return fromRecord;
+    }
 
     private void UpdateNr()
     {
@@ -508,10 +399,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     }
 
     public bool MatchesSearch(SchachtRecord record)
-        => SchaechteFieldLogic.MatchesSearch(record, SearchText);
+        => SchaechteSearchMatcher.Matches(record, SearchText);
 
     public void UpdateSearchResultInfo(int visibleCount)
-        => SearchResultInfo = SchaechteFieldLogic.BuildSearchResultInfo(visibleCount, Records.Count, SearchText);
+        => SearchResultInfo = SchaechteSearchMatcher.BuildResultInfo(SearchText, visibleCount, Records.Count);
 
     private void PersistSchaechtePageBasicUiSettings()
     {

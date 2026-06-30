@@ -43,10 +43,9 @@ public partial class SchaechtePage : UserControl
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
     private readonly DataGridColumnLayoutController _columnLayoutController = new();
+    private readonly DataGridColumnAlignmentToolbar _columnAlignmentToolbar;
     private readonly SchaechtePageSubscriptionController _subscriptionController;
-    private bool _updatingAlignmentButtons;
     private bool _isRestoringLayout;
-    private DataGridColumn? _activeColumn;
 
     public SchaechtePage()
     {
@@ -66,6 +65,16 @@ public partial class SchaechtePage : UserControl
             SaveLayoutToSettings();
         };
         _columnLayoutController.LayoutChanged += (_, __) => QueueLayoutSave();
+        _columnAlignmentToolbar = new DataGridColumnAlignmentToolbar(
+            Grid,
+            _columnLayoutController,
+            new DataGridColumnAlignmentButtons(
+                AlignLeftButton,
+                AlignCenterButton,
+                AlignRightButton,
+                AlignTopButton,
+                AlignMiddleButton,
+                AlignBottomButton));
         _subscriptionController = new SchaechtePageSubscriptionController(
             RebuildColumns,
             ApplySearchFilter,
@@ -75,49 +84,28 @@ public partial class SchaechtePage : UserControl
         Grid.AddHandler(DataGridColumnHeader.ClickEvent, new RoutedEventHandler(Grid_ColumnHeaderClick), true);
         Grid.ColumnReordered += Grid_ColumnReordered;
 
-        Loaded += OnLoaded;
-        Unloaded += OnUnloaded;
+        Loaded += (_, __) =>
+        {
+            _columnAlignmentToolbar.UpdateButtons();
+            ApplySearchFilter();
+        };
+        Unloaded += (_, __) =>
+        {
+            _layoutSaveDebounceTimer.Stop();
+            SaveLayoutToSettings();
+        };
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
         _ = sender;
 
-        _subscriptionController.Detach();
         _vm = e.NewValue as SchaechtePageViewModel;
-        if (_vm is null || !IsLoaded)
-            return;
-
-        AttachCurrentViewModelSubscriptions();
-    }
-
-    private void OnLoaded(object sender, RoutedEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        AttachCurrentViewModelSubscriptions();
-        UpdateAlignmentButtonsForCurrentColumn();
-        ApplySearchFilter();
-    }
-
-    private void OnUnloaded(object sender, RoutedEventArgs e)
-    {
-        _ = sender;
-        _ = e;
-
-        _searchDebounceTimer.Stop();
-        _layoutSaveDebounceTimer.Stop();
-        if (_vm is not null)
-            SaveLayoutToSettings();
-
-        _subscriptionController.Detach();
-    }
-
-    private void AttachCurrentViewModelSubscriptions()
-    {
         if (_vm is null)
+        {
+            _subscriptionController.Detach();
             return;
+        }
 
         _subscriptionController.Switch(_vm.Columns, _vm.Records, () => _vm.Records);
     }
@@ -129,7 +117,7 @@ public partial class SchaechtePage : UserControl
 
         Grid.Columns.Clear();
         _columnLayoutController.Clear();
-        _activeColumn = null;
+        _columnAlignmentToolbar.ClearActiveColumn();
 
         _isRestoringLayout = true;
         try
@@ -147,22 +135,24 @@ public partial class SchaechtePage : UserControl
                 }
                 else if (TryResolveDropdownColumnSpec(col, out var spec))
                 {
-                    column = spec.Managed
-                        ? CreateManagedComboColumn(
-                            col,
-                            spec.OptionField,
-                            spec.ItemsSourcePath,
-                            spec.EditCommand,
-                            spec.PreviewCommand,
-                            spec.ResetCommand,
-                            spec.RemoveCommand,
-                            spec.AddCommand,
-                            spec.AllowFreeText)
-                        : CreateSimpleComboColumn(
-                            col,
-                            spec.OptionField,
-                            spec.ItemsSourcePath,
-                            spec.AllowFreeText);
+                    column = DataGridComboColumnFactory.Create(
+                        col,
+                        col,
+                        spec.ItemsSourcePath,
+                        tag: new ComboBindingTag(col, spec.OptionField),
+                        lostKeyboardFocus: ComboBox_LostKeyboardFocus,
+                        selectionChanged: ComboBox_SelectionChanged,
+                        allowFreeText: spec.AllowFreeText,
+                        bindIsProjectReady: false,
+                        menuCommands: spec.Managed
+                            ? new DataGridComboColumnMenuCommands(
+                                spec.EditCommand,
+                                spec.PreviewCommand,
+                                spec.ResetCommand,
+                                spec.RemoveCommand,
+                                spec.AddCommand)
+                            : null,
+                        useSelectedItemWhenNotFreeText: spec.Managed);
                 }
                 else
                 {
@@ -188,7 +178,7 @@ public partial class SchaechtePage : UserControl
                 var defaultHorizontal = IsCostColumn(col)
                     ? HorizontalAlignment.Right
                     : HorizontalAlignment.Left;
-                ApplyColumnAlignment(column, defaultHorizontal, VerticalAlignment.Center);
+                _columnAlignmentToolbar.SetAlignment(column, defaultHorizontal, VerticalAlignment.Center);
             }
         }
         finally
@@ -198,7 +188,7 @@ public partial class SchaechtePage : UserControl
 
         Grid.FrozenColumnCount = Math.Min(2, Grid.Columns.Count);
         RestoreLayoutFromSettings();
-        UpdateAlignmentButtonsForCurrentColumn();
+        _columnAlignmentToolbar.UpdateButtons();
         ApplySearchFilter();
     }
 
@@ -221,47 +211,6 @@ public partial class SchaechtePage : UserControl
                  normalizedHeader.Contains("dichtigkeit", StringComparison.Ordinal))
             column.CellStyle = ZustandsklasseCellStyleFactory.CreatePruefungsresultatStyle(columnName);
     }
-
-    private DataGridTemplateColumn CreateManagedComboColumn(
-        string recordField,
-        string optionField,
-        string itemsSourcePath,
-        string editCommand,
-        string previewCommand,
-        string resetCommand,
-        string removeCommand,
-        string addCommand,
-        bool allowFreeText)
-        => DataGridComboColumnFactory.Create(
-            recordField,
-            header: recordField,
-            itemsSourcePath,
-            tag: new ComboBindingTag(recordField, optionField),
-            lostKeyboardFocus: ComboBox_LostKeyboardFocus,
-            selectionChanged: ComboBox_SelectionChanged,
-            allowFreeText,
-            bindIsProjectReady: false,
-            menuCommands: new DataGridComboColumnMenuCommands(
-                editCommand,
-                previewCommand,
-                resetCommand,
-                removeCommand,
-                addCommand));
-
-    private DataGridTemplateColumn CreateSimpleComboColumn(
-        string recordField,
-        string optionField,
-        string itemsSourcePath,
-        bool allowFreeText)
-        => DataGridComboColumnFactory.Create(
-            recordField,
-            header: recordField,
-            itemsSourcePath,
-            tag: new ComboBindingTag(recordField, optionField),
-            lostKeyboardFocus: ComboBox_LostKeyboardFocus,
-            selectionChanged: ComboBox_SelectionChanged,
-            allowFreeText,
-            bindIsProjectReady: false);
 
     private DataGridTextColumn CreateZustandsklasseColumn(string recordField)
     {
@@ -294,10 +243,7 @@ public partial class SchaechtePage : UserControl
         _ = sender;
         _ = e;
 
-        if (Grid.SelectedCells.Count > 0)
-            _activeColumn = Grid.SelectedCells[0].Column;
-
-        UpdateAlignmentButtonsForCurrentColumn();
+        _columnAlignmentToolbar.TrackSelectedCells();
     }
 
     private void Grid_CurrentCellChanged(object sender, EventArgs e)
@@ -305,10 +251,7 @@ public partial class SchaechtePage : UserControl
         _ = sender;
         _ = e;
 
-        if (Grid.CurrentCell.Column is not null)
-            _activeColumn = Grid.CurrentCell.Column;
-
-        UpdateAlignmentButtonsForCurrentColumn();
+        _columnAlignmentToolbar.TrackCurrentCell();
     }
 
     private void Grid_ColumnHeaderClick(object sender, RoutedEventArgs e)
@@ -318,13 +261,7 @@ public partial class SchaechtePage : UserControl
         if (e.OriginalSource is not DependencyObject dep)
             return;
 
-        var header = FindAncestor<DataGridColumnHeader>(dep);
-        if (header?.Column is null)
-            return;
-
-        _activeColumn = header.Column;
-        TrySetCurrentCellForColumn(_activeColumn);
-        UpdateAlignmentButtonsForCurrentColumn();
+        _columnAlignmentToolbar.TrackHeaderClick(dep);
     }
 
     private void Grid_ColumnReordered(object? sender, DataGridColumnEventArgs e)
@@ -338,147 +275,42 @@ public partial class SchaechtePage : UserControl
     {
         _ = sender;
         _ = e;
-        ApplyHorizontalAlignmentToCurrentColumn(HorizontalAlignment.Left);
+        _columnAlignmentToolbar.ApplyHorizontalAlignment(HorizontalAlignment.Left);
     }
 
     private void AlignCenterButton_Click(object sender, RoutedEventArgs e)
     {
         _ = sender;
         _ = e;
-        ApplyHorizontalAlignmentToCurrentColumn(HorizontalAlignment.Center);
+        _columnAlignmentToolbar.ApplyHorizontalAlignment(HorizontalAlignment.Center);
     }
 
     private void AlignRightButton_Click(object sender, RoutedEventArgs e)
     {
         _ = sender;
         _ = e;
-        ApplyHorizontalAlignmentToCurrentColumn(HorizontalAlignment.Right);
+        _columnAlignmentToolbar.ApplyHorizontalAlignment(HorizontalAlignment.Right);
     }
 
     private void AlignTopButton_Click(object sender, RoutedEventArgs e)
     {
         _ = sender;
         _ = e;
-        ApplyVerticalAlignmentToCurrentColumn(VerticalAlignment.Top);
+        _columnAlignmentToolbar.ApplyVerticalAlignment(VerticalAlignment.Top);
     }
 
     private void AlignMiddleButton_Click(object sender, RoutedEventArgs e)
     {
         _ = sender;
         _ = e;
-        ApplyVerticalAlignmentToCurrentColumn(VerticalAlignment.Center);
+        _columnAlignmentToolbar.ApplyVerticalAlignment(VerticalAlignment.Center);
     }
 
     private void AlignBottomButton_Click(object sender, RoutedEventArgs e)
     {
         _ = sender;
         _ = e;
-        ApplyVerticalAlignmentToCurrentColumn(VerticalAlignment.Bottom);
-    }
-
-    private void ApplyHorizontalAlignmentToCurrentColumn(HorizontalAlignment horizontalAlignment)
-    {
-        if (_updatingAlignmentButtons)
-            return;
-
-        var column = GetActiveColumn();
-        if (column is null)
-            return;
-
-        var verticalAlignment = GetColumnVerticalAlignment(column);
-        ApplyColumnAlignment(column, horizontalAlignment, verticalAlignment);
-        UpdateAlignmentButtonsForCurrentColumn();
-    }
-
-    private void ApplyVerticalAlignmentToCurrentColumn(VerticalAlignment verticalAlignment)
-    {
-        if (_updatingAlignmentButtons)
-            return;
-
-        var column = GetActiveColumn();
-        if (column is null)
-            return;
-
-        var horizontalAlignment = GetColumnHorizontalAlignment(column);
-        ApplyColumnAlignment(column, horizontalAlignment, verticalAlignment);
-        UpdateAlignmentButtonsForCurrentColumn();
-    }
-
-    private DataGridColumn? GetActiveColumn()
-    {
-        if (_activeColumn is not null)
-            return _activeColumn;
-
-        if (Grid.CurrentCell.Column is not null)
-            return Grid.CurrentCell.Column;
-
-        if (Grid.SelectedCells.Count > 0)
-            return Grid.SelectedCells[0].Column;
-
-        return null;
-    }
-
-    private HorizontalAlignment GetColumnHorizontalAlignment(DataGridColumn column)
-    {
-        return _columnLayoutController.GetHorizontalAlignment(column);
-    }
-
-    private VerticalAlignment GetColumnVerticalAlignment(DataGridColumn column)
-    {
-        return _columnLayoutController.GetVerticalAlignment(column);
-    }
-
-    private void TrySetCurrentCellForColumn(DataGridColumn column)
-    {
-        var rowItem = Grid.SelectedItem ?? Grid.Items.Cast<object>().FirstOrDefault();
-        if (rowItem is null)
-            return;
-
-        Grid.CurrentCell = new DataGridCellInfo(rowItem, column);
-    }
-
-    private void ApplyColumnAlignment(DataGridColumn column, HorizontalAlignment horizontalAlignment, VerticalAlignment verticalAlignment)
-    {
-        _columnLayoutController.SetAlignment(column, horizontalAlignment, verticalAlignment);
-    }
-
-    private void UpdateAlignmentButtonsForCurrentColumn()
-    {
-        _updatingAlignmentButtons = true;
-        try
-        {
-            var column = GetActiveColumn();
-            if (column is null)
-            {
-                SetAlignmentButtonsUnchecked();
-                return;
-            }
-
-            var horizontal = GetColumnHorizontalAlignment(column);
-            var vertical = GetColumnVerticalAlignment(column);
-
-            AlignLeftButton.IsChecked = horizontal == HorizontalAlignment.Left;
-            AlignCenterButton.IsChecked = horizontal == HorizontalAlignment.Center;
-            AlignRightButton.IsChecked = horizontal == HorizontalAlignment.Right;
-
-            AlignTopButton.IsChecked = vertical == VerticalAlignment.Top;
-            AlignMiddleButton.IsChecked = vertical == VerticalAlignment.Center;
-            AlignBottomButton.IsChecked = vertical == VerticalAlignment.Bottom;
-        }
-        finally
-        {
-            _updatingAlignmentButtons = false;
-        }
-    }
-
-    private void SetAlignmentButtonsUnchecked()
-    {
-        AlignLeftButton.IsChecked = false;
-        AlignCenterButton.IsChecked = false;
-        AlignRightButton.IsChecked = false;
-        AlignTopButton.IsChecked = false;
-        AlignMiddleButton.IsChecked = false;
-        AlignBottomButton.IsChecked = false;
+        _columnAlignmentToolbar.ApplyVerticalAlignment(VerticalAlignment.Bottom);
     }
 
     private void RestoreLayoutFromSettings()
@@ -541,10 +373,10 @@ public partial class SchaechtePage : UserControl
         DataGridSearchFilterController.Apply(
             CollectionViewSource.GetDefaultView(Grid.ItemsSource),
             vm.Records,
-            getSearchText: () => vm.SearchText,
-            matches: vm.MatchesSearch,
-            updateSearchResultInfo: vm.UpdateSearchResultInfo,
-            deferRefresh: action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action));
+            vm.SearchText,
+            vm.MatchesSearch,
+            vm.UpdateSearchResultInfo,
+            action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action));
     }
 
     private void Grid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)

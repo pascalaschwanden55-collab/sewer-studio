@@ -40,6 +40,177 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void ImportPage_stored_file_registry_owns_project_import_storage()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "ImportPageViewModel.cs");
+        var registryPath = Path.Combine(uiRoot, "Services", "StoredImportFileRegistry.cs");
+
+        Assert.True(File.Exists(registryPath), "Stored Import-Dateien muessen ausserhalb der ImportPageViewModel registriert werden.");
+
+        var viewModel = File.ReadAllText(viewModelPath);
+        var storageBody = ExtractMethodBody(viewModel, "private void StoreImportFiles");
+
+        Assert.Contains("StoredImportFileRegistry.Store", storageBody);
+        Assert.DoesNotContain("File.Copy", storageBody);
+        Assert.DoesNotContain("JsonSerializer.Deserialize", storageBody);
+        Assert.DoesNotContain("Directory.CreateDirectory", storageBody);
+        Assert.DoesNotContain("LoadStoredXtfFiles", viewModel);
+        Assert.DoesNotContain("LoadStoredPdfFiles", viewModel);
+        Assert.DoesNotContain("LoadStoredTxtFiles", viewModel);
+    }
+
+    [Fact]
+    public void ImportPage_run_import_workflow_lives_in_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "ImportPageViewModel.cs");
+        var controllerPath = Path.Combine(uiRoot, "Services", "ImportRunWorkflowController.cs");
+
+        Assert.True(File.Exists(controllerPath), "Import-Lauf-Orchestrierung muss ausserhalb der ImportPageViewModel liegen.");
+
+        var viewModel = File.ReadAllText(viewModelPath);
+        var runBody = ExtractMethodBody(viewModel, "private async Task RunImportAsync<TArg>");
+
+        Assert.Contains("ImportRunWorkflowController.RunAsync", runBody);
+        Assert.DoesNotContain("Task.Run", runBody);
+        Assert.DoesNotContain("ImportPreviewResult.FromLog", runBody);
+        Assert.DoesNotContain("ImportRunLog", runBody);
+        Assert.DoesNotContain("ImportRunReportExporter.Export(runLog", runBody);
+        Assert.DoesNotContain("PostImport-Fehler", runBody);
+        Assert.DoesNotContain("Plausibilitaet", runBody);
+    }
+
+    [Fact]
+    public void ImportPage_import_start_methods_share_optional_preview_dispatch()
+    {
+        var root = FindRepositoryRoot();
+        var viewModelPath = Path.Combine(root, "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "ImportPageViewModel.cs");
+        var viewModel = File.ReadAllText(viewModelPath);
+
+        Assert.Contains("private Task RunImportWithOptionalPreviewAsync<TArg>", viewModel);
+
+        var methodNames = new[]
+        {
+            "ImportPdfAsync",
+            "ImportXtfAsync",
+            "ImportWinCanAsync",
+            "ImportIbakAsync",
+            "ImportKinsAsync"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            var body = ExtractMethodBody(viewModel, $"private async Task {methodName}()");
+            Assert.DoesNotContain("ShowPreviewFirst", body);
+            Assert.Contains("RunImportWithOptionalPreviewAsync", body);
+        }
+    }
+
+    [Fact]
+    public void SchaechtePage_dropdown_option_groups_live_in_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "SchaechtePageViewModel.cs");
+        var controllerPath = Path.Combine(uiRoot, "Services", "DropdownOptionGroupController.cs");
+
+        Assert.True(File.Exists(controllerPath), "Schaechte-Optionsgruppen sollen ausserhalb der ViewModel-Methoden orchestriert werden.");
+
+        var viewModel = File.ReadAllText(viewModelPath);
+        Assert.Contains("DropdownOptionGroupController", viewModel);
+        Assert.DoesNotContain("new OptionsEditorWindow", viewModel);
+        Assert.DoesNotContain("new OptionsEditorViewModel", viewModel);
+
+        var removedMethodNames = new[]
+        {
+            "EditSanierenOptions",
+            "PreviewSanierenOptions",
+            "ResetSanierenOptions",
+            "AddSanierenOption",
+            "RemoveSanierenOption",
+            "EditEigentuemerOptions",
+            "PreviewEigentuemerOptions",
+            "ResetEigentuemerOptions",
+            "AddEigentuemerOption",
+            "RemoveEigentuemerOption",
+            "EditPruefungsresultatOptions",
+            "PreviewPruefungsresultatOptions",
+            "ResetPruefungsresultatOptions",
+            "AddPruefungsresultatOption",
+            "RemovePruefungsresultatOption",
+            "EditReferenzpruefungOptions",
+            "PreviewReferenzpruefungOptions",
+            "ResetReferenzpruefungOptions",
+            "AddReferenzpruefungOption",
+            "RemoveReferenzpruefungOption"
+        };
+
+        foreach (var methodName in removedMethodNames)
+            Assert.DoesNotContain($"private void {methodName}", viewModel);
+    }
+
+    [Fact]
+    public void SchaechtePage_dropdown_record_sync_lives_in_synchronizer()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "SchaechtePageViewModel.cs");
+        var synchronizerPath = Path.Combine(uiRoot, "Services", "SchaechteDropdownOptionSynchronizer.cs");
+
+        Assert.True(File.Exists(synchronizerPath), "Schaechte-Dropdown-Sync aus Record-Feldern soll als testbarer Service existieren.");
+
+        var viewModel = File.ReadAllText(viewModelPath);
+        Assert.Contains("SchaechteDropdownOptionSynchronizer.SyncFromRecords", viewModel);
+        Assert.DoesNotContain("private void SyncDropdownOptionsFromRecords", viewModel);
+        Assert.DoesNotContain("private static string ResolveFieldValue", viewModel);
+        Assert.DoesNotContain("private static string NormalizeKey", viewModel);
+    }
+
+    [Fact]
+    public void SchaechtePage_template_column_reading_lives_in_infrastructure()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "SchaechtePageViewModel.cs");
+        var infrastructurePath = Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.Infrastructure",
+            "Export",
+            "Excel",
+            "SchaechteTemplateColumnReader.cs");
+
+        Assert.True(File.Exists(infrastructurePath), "Schaechte-Template-Spalten sollen ausserhalb der ViewModel-UI-Schicht gelesen werden.");
+
+        var viewModel = File.ReadAllText(viewModelPath);
+        Assert.Contains("SchaechteTemplateColumnReader.LoadFromExportDirectory", viewModel);
+        Assert.DoesNotContain("using ClosedXML.Excel", viewModel);
+        Assert.DoesNotContain("XLWorkbook", viewModel);
+        Assert.DoesNotContain("private static string ResolveTemplatePath", viewModel);
+        Assert.DoesNotContain("private void SwapColumnOrder", viewModel);
+    }
+
+    [Fact]
+    public void SchaechtePage_search_logic_lives_in_matcher()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "SchaechtePageViewModel.cs");
+        var matcherPath = Path.Combine(uiRoot, "Services", "SchaechteSearchMatcher.cs");
+
+        Assert.True(File.Exists(matcherPath), "Schaechte-Suche soll als kleiner testbarer Matcher ausserhalb der ViewModel-Methoden leben.");
+
+        var viewModel = File.ReadAllText(viewModelPath);
+        Assert.Contains("SchaechteSearchMatcher.Matches", viewModel);
+        Assert.Contains("SchaechteSearchMatcher.BuildResultInfo", viewModel);
+        Assert.DoesNotContain("record.Fields.Any", viewModel);
+        Assert.DoesNotContain("von {Records.Count} Schaechten", viewModel);
+    }
+
+    [Fact]
     public void PlayerWindow_damage_markers_live_in_controller()
     {
         var root = FindRepositoryRoot();

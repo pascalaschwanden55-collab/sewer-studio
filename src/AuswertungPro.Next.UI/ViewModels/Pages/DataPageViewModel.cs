@@ -8,6 +8,7 @@ using System.Linq;
 using System.Globalization;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Domain.Models;
@@ -25,7 +26,6 @@ using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.Application.Protocol;
-using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Hydraulik;
 using AuswertungPro.Next.UI.Player;
@@ -34,9 +34,8 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class DataPageViewModel : ObservableObject
 {
-    // Schwellenwerte aus LearningReadinessPresenter (Application.DataPage)
-    private const int MinimumSamplesForModelTraining = LearningReadinessPresenter.MinimumSamplesForTraining;
-    private const int StrongModelThreshold = LearningReadinessPresenter.StrongModelThreshold;
+    private const int MinimumSamplesForModelTraining = 25;
+    private const int StrongModelThreshold = 100;
     public event Action? RecordsOrderChanged;
     /// <summary>
     /// Aktualisiert die laufende Nummer (NR) aller Records entsprechend der aktuellen Reihenfolge.
@@ -53,6 +52,7 @@ public sealed partial class DataPageViewModel : ObservableObject
     private readonly DispatcherTimer _saveBannerTimer;
     private readonly DispatcherTimer _autoSaveTimer;
     private readonly IMeasureRecommendationService _measureRecommendationService;
+    private readonly DataPageDropdownCommandSet _dropdownCommands;
 
     internal ServiceProvider Services => _sp;
 
@@ -61,31 +61,31 @@ public sealed partial class DataPageViewModel : ObservableObject
     public IRelayCommand MoveUpCommand { get; }
     public IRelayCommand MoveDownCommand { get; }
     public IRelayCommand SaveCommand { get; }
-    public IRelayCommand EditSanierenOptionsCommand { get; }
-    public IRelayCommand PreviewSanierenOptionsCommand { get; }
-    public IRelayCommand ResetSanierenOptionsCommand { get; }
-    public IRelayCommand<object?> AddSanierenOptionCommand { get; }
-    public IRelayCommand<object?> RemoveSanierenOptionCommand { get; }
-    public IRelayCommand EditEigentuemerOptionsCommand { get; }
-    public IRelayCommand PreviewEigentuemerOptionsCommand { get; }
-    public IRelayCommand ResetEigentuemerOptionsCommand { get; }
-    public IRelayCommand<object?> AddEigentuemerOptionCommand { get; }
-    public IRelayCommand<object?> RemoveEigentuemerOptionCommand { get; }
-    public IRelayCommand EditPruefungsresultatOptionsCommand { get; }
-    public IRelayCommand PreviewPruefungsresultatOptionsCommand { get; }
-    public IRelayCommand ResetPruefungsresultatOptionsCommand { get; }
-    public IRelayCommand<object?> AddPruefungsresultatOptionCommand { get; }
-    public IRelayCommand<object?> RemovePruefungsresultatOptionCommand { get; }
-    public IRelayCommand EditReferenzpruefungOptionsCommand { get; }
-    public IRelayCommand PreviewReferenzpruefungOptionsCommand { get; }
-    public IRelayCommand ResetReferenzpruefungOptionsCommand { get; }
-    public IRelayCommand<object?> AddReferenzpruefungOptionCommand { get; }
-    public IRelayCommand<object?> RemoveReferenzpruefungOptionCommand { get; }
-    public IRelayCommand EditEmpfohleneSanierungsmassnahmenOptionsCommand { get; }
-    public IRelayCommand PreviewEmpfohleneSanierungsmassnahmenOptionsCommand { get; }
-    public IRelayCommand ResetEmpfohleneSanierungsmassnahmenOptionsCommand { get; }
-    public IRelayCommand<object?> AddEmpfohleneSanierungsmassnahmenOptionCommand { get; }
-    public IRelayCommand<object?> RemoveEmpfohleneSanierungsmassnahmenOptionCommand { get; }
+    public IRelayCommand EditSanierenOptionsCommand => _dropdownCommands.Sanieren.Edit;
+    public IRelayCommand PreviewSanierenOptionsCommand => _dropdownCommands.Sanieren.Preview;
+    public IRelayCommand ResetSanierenOptionsCommand => _dropdownCommands.Sanieren.Reset;
+    public IRelayCommand<object?> AddSanierenOptionCommand => _dropdownCommands.Sanieren.Add;
+    public IRelayCommand<object?> RemoveSanierenOptionCommand => _dropdownCommands.Sanieren.Remove;
+    public IRelayCommand EditEigentuemerOptionsCommand => _dropdownCommands.Eigentuemer.Edit;
+    public IRelayCommand PreviewEigentuemerOptionsCommand => _dropdownCommands.Eigentuemer.Preview;
+    public IRelayCommand ResetEigentuemerOptionsCommand => _dropdownCommands.Eigentuemer.Reset;
+    public IRelayCommand<object?> AddEigentuemerOptionCommand => _dropdownCommands.Eigentuemer.Add;
+    public IRelayCommand<object?> RemoveEigentuemerOptionCommand => _dropdownCommands.Eigentuemer.Remove;
+    public IRelayCommand EditPruefungsresultatOptionsCommand => _dropdownCommands.Pruefungsresultat.Edit;
+    public IRelayCommand PreviewPruefungsresultatOptionsCommand => _dropdownCommands.Pruefungsresultat.Preview;
+    public IRelayCommand ResetPruefungsresultatOptionsCommand => _dropdownCommands.Pruefungsresultat.Reset;
+    public IRelayCommand<object?> AddPruefungsresultatOptionCommand => _dropdownCommands.Pruefungsresultat.Add;
+    public IRelayCommand<object?> RemovePruefungsresultatOptionCommand => _dropdownCommands.Pruefungsresultat.Remove;
+    public IRelayCommand EditReferenzpruefungOptionsCommand => _dropdownCommands.Referenzpruefung.Edit;
+    public IRelayCommand PreviewReferenzpruefungOptionsCommand => _dropdownCommands.Referenzpruefung.Preview;
+    public IRelayCommand ResetReferenzpruefungOptionsCommand => _dropdownCommands.Referenzpruefung.Reset;
+    public IRelayCommand<object?> AddReferenzpruefungOptionCommand => _dropdownCommands.Referenzpruefung.Add;
+    public IRelayCommand<object?> RemoveReferenzpruefungOptionCommand => _dropdownCommands.Referenzpruefung.Remove;
+    public IRelayCommand EditEmpfohleneSanierungsmassnahmenOptionsCommand => _dropdownCommands.EmpfohleneSanierungsmassnahmen.Edit;
+    public IRelayCommand PreviewEmpfohleneSanierungsmassnahmenOptionsCommand => _dropdownCommands.EmpfohleneSanierungsmassnahmen.Preview;
+    public IRelayCommand ResetEmpfohleneSanierungsmassnahmenOptionsCommand => _dropdownCommands.EmpfohleneSanierungsmassnahmen.Reset;
+    public IRelayCommand<object?> AddEmpfohleneSanierungsmassnahmenOptionCommand => _dropdownCommands.EmpfohleneSanierungsmassnahmen.Add;
+    public IRelayCommand<object?> RemoveEmpfohleneSanierungsmassnahmenOptionCommand => _dropdownCommands.EmpfohleneSanierungsmassnahmen.Remove;
     public IRelayCommand<HaltungRecord?> PlayVideoCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenProtocolCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenVideoAiPipelineCommand { get; }
@@ -193,31 +193,37 @@ public sealed partial class DataPageViewModel : ObservableObject
         MoveUpCommand = new RelayCommand(MoveUp, CanMoveUp);
         MoveDownCommand = new RelayCommand(MoveDown, CanMoveDown);
         SaveCommand = new RelayCommand(Save);
-        EditSanierenOptionsCommand = new RelayCommand(EditSanierenOptions);
-        PreviewSanierenOptionsCommand = new RelayCommand(PreviewSanierenOptions);
-        ResetSanierenOptionsCommand = new RelayCommand(ResetSanierenOptions);
-        AddSanierenOptionCommand = new RelayCommand<object?>(AddSanierenOption);
-        RemoveSanierenOptionCommand = new RelayCommand<object?>(RemoveSanierenOption);
-        EditEigentuemerOptionsCommand = new RelayCommand(EditEigentuemerOptions);
-        PreviewEigentuemerOptionsCommand = new RelayCommand(PreviewEigentuemerOptions);
-        ResetEigentuemerOptionsCommand = new RelayCommand(ResetEigentuemerOptions);
-        AddEigentuemerOptionCommand = new RelayCommand<object?>(AddEigentuemerOption);
-        RemoveEigentuemerOptionCommand = new RelayCommand<object?>(RemoveEigentuemerOption);
-        EditPruefungsresultatOptionsCommand = new RelayCommand(EditPruefungsresultatOptions);
-        PreviewPruefungsresultatOptionsCommand = new RelayCommand(PreviewPruefungsresultatOptions);
-        ResetPruefungsresultatOptionsCommand = new RelayCommand(ResetPruefungsresultatOptions);
-        AddPruefungsresultatOptionCommand = new RelayCommand<object?>(AddPruefungsresultatOption);
-        RemovePruefungsresultatOptionCommand = new RelayCommand<object?>(RemovePruefungsresultatOption);
-        EditReferenzpruefungOptionsCommand = new RelayCommand(EditReferenzpruefungOptions);
-        PreviewReferenzpruefungOptionsCommand = new RelayCommand(PreviewReferenzpruefungOptions);
-        ResetReferenzpruefungOptionsCommand = new RelayCommand(ResetReferenzpruefungOptions);
-        AddReferenzpruefungOptionCommand = new RelayCommand<object?>(AddReferenzpruefungOption);
-        RemoveReferenzpruefungOptionCommand = new RelayCommand<object?>(RemoveReferenzpruefungOption);
-        EditEmpfohleneSanierungsmassnahmenOptionsCommand = new RelayCommand(EditEmpfohleneSanierungsmassnahmenOptions);
-        PreviewEmpfohleneSanierungsmassnahmenOptionsCommand = new RelayCommand(PreviewEmpfohleneSanierungsmassnahmenOptions);
-        ResetEmpfohleneSanierungsmassnahmenOptionsCommand = new RelayCommand(ResetEmpfohleneSanierungsmassnahmenOptions);
-        AddEmpfohleneSanierungsmassnahmenOptionCommand = new RelayCommand<object?>(AddEmpfohleneSanierungsmassnahmenOption);
-        RemoveEmpfohleneSanierungsmassnahmenOptionCommand = new RelayCommand<object?>(RemoveEmpfohleneSanierungsmassnahmenOption);
+        _dropdownCommands = DataPageDropdownCommandFactory.Create(
+            new DropdownCommandActions(
+                EditSanierenOptions,
+                PreviewSanierenOptions,
+                ResetSanierenOptions,
+                AddSanierenOption,
+                RemoveSanierenOption),
+            new DropdownCommandActions(
+                EditEigentuemerOptions,
+                PreviewEigentuemerOptions,
+                ResetEigentuemerOptions,
+                AddEigentuemerOption,
+                RemoveEigentuemerOption),
+            new DropdownCommandActions(
+                EditPruefungsresultatOptions,
+                PreviewPruefungsresultatOptions,
+                ResetPruefungsresultatOptions,
+                AddPruefungsresultatOption,
+                RemovePruefungsresultatOption),
+            new DropdownCommandActions(
+                EditReferenzpruefungOptions,
+                PreviewReferenzpruefungOptions,
+                ResetReferenzpruefungOptions,
+                AddReferenzpruefungOption,
+                RemoveReferenzpruefungOption),
+            new DropdownCommandActions(
+                EditEmpfohleneSanierungsmassnahmenOptions,
+                PreviewEmpfohleneSanierungsmassnahmenOptions,
+                ResetEmpfohleneSanierungsmassnahmenOptions,
+                AddEmpfohleneSanierungsmassnahmenOption,
+                RemoveEmpfohleneSanierungsmassnahmenOption));
         PlayVideoCommand = new RelayCommand<HaltungRecord?>(PlayVideo);
         OpenProtocolCommand = new RelayCommand<HaltungRecord?>(OpenProtocol);
         OpenVideoAiPipelineCommand = new RelayCommand<HaltungRecord?>(OpenVideoAiPipeline);
@@ -363,10 +369,6 @@ public sealed partial class DataPageViewModel : ObservableObject
         RefreshRecordInGrid(record);
     }
 
-    // Delegiert an DnValueParser (Application.DataPage) – reine Logik dort unit-testbar.
-    private static double? TryParseDnMm(string? raw)
-        => DnValueParser.TryParseMillimeters(raw);
-
     private bool CanMoveUp()
     {
         if (Selected is null) return false;
@@ -491,58 +493,27 @@ public sealed partial class DataPageViewModel : ObservableObject
     /// </summary>
     public void ScheduleAutoSave()
     {
-        _shell.Project.Dirty = true;
-        var mode = _sp.Settings.DataAutoSaveMode.Normalize();
-        switch (mode)
-        {
-            case AutoSaveMode.OnEachChange:
-                _autoSaveTimer.Stop();
-                AutoSave();
-                break;
-            case AutoSaveMode.Every5Minutes:
-            case AutoSaveMode.Every10Minutes:
-                ScheduleIntervalAutoSave(mode);
-                break;
-            case AutoSaveMode.Disabled:
-                _autoSaveTimer.Stop();
-                break;
-            default:
-                _autoSaveTimer.Stop();
-                AutoSave();
-                break;
-        }
-    }
-
-    private void ScheduleIntervalAutoSave(AutoSaveMode mode)
-    {
-        var interval = mode.GetInterval();
-        if (interval is null)
-        {
-            _autoSaveTimer.Stop();
-            return;
-        }
-
-        if (_autoSaveTimer.Interval != interval.Value)
-            _autoSaveTimer.Interval = interval.Value;
-
-        if (!_autoSaveTimer.IsEnabled)
-            _autoSaveTimer.Start();
+        DataPageAutoSaveController.Schedule(
+            _sp.Settings.DataAutoSaveMode,
+            markDirty: () => _shell.Project.Dirty = true,
+            stopTimer: _autoSaveTimer.Stop,
+            setInterval: interval =>
+            {
+                if (_autoSaveTimer.Interval != interval)
+                    _autoSaveTimer.Interval = interval;
+            },
+            isTimerEnabled: () => _autoSaveTimer.IsEnabled,
+            startTimer: _autoSaveTimer.Start,
+            save: AutoSave);
     }
 
     private void AutoSaveOnTimerTick()
     {
-        var mode = _sp.Settings.DataAutoSaveMode.Normalize();
-        if (mode is not (AutoSaveMode.Every5Minutes or AutoSaveMode.Every10Minutes))
-        {
-            _autoSaveTimer.Stop();
-            return;
-        }
-
-        AutoSave();
-
-        // No pending changes left -> no need to keep ticking.
-        if (!_shell.Project.Dirty)
-            _autoSaveTimer.Stop();
+        DataPageAutoSaveController.HandleTimerTick(
+            _sp.Settings.DataAutoSaveMode,
+            save: AutoSave,
+            isProjectDirty: () => _shell.Project.Dirty,
+            stopTimer: _autoSaveTimer.Stop);
     }
 
     private void AutoSave()
@@ -789,10 +760,13 @@ public sealed partial class DataPageViewModel : ObservableObject
     {
         var resolvedLink = ResolveExistingPath(record.GetFieldValue("Link"));
 
-        var initial = VideoFolderFallbackResolver.Resolve(
-            _sp.Settings.LastVideoSourceFolder,
-            _sp.Settings.LastVideoFolder,
-            _sp.Settings.LastProjectPath);
+        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
+            ? _sp.Settings.LastVideoSourceFolder
+            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
+                ? _sp.Settings.LastVideoFolder
+            : _sp.Settings.LastProjectPath is null
+                ? null
+                : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
 
         var storedFilesRaw = _shell.Project.Metadata.TryGetValue("PDF_StoredFiles", out var raw) ? raw : null;
 
@@ -809,10 +783,13 @@ public sealed partial class DataPageViewModel : ObservableObject
         if (record is null)
             return;
 
-        var initial = VideoFolderFallbackResolver.Resolve(
-            _sp.Settings.LastVideoSourceFolder,
-            _sp.Settings.LastVideoFolder,
-            _sp.Settings.LastProjectPath);
+        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
+            ? _sp.Settings.LastVideoSourceFolder
+            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
+                ? _sp.Settings.LastVideoFolder
+            : _sp.Settings.LastProjectPath is null
+                ? null
+                : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
 
         var path = _sp.Dialogs.OpenFile(
             "Video auswaehlen",
@@ -1086,50 +1063,31 @@ public sealed partial class DataPageViewModel : ObservableObject
 
     private string? EnsureVideoPath(HaltungRecord record)
     {
-        var resolved = ResolveExistingPath(record.GetFieldValue("Link"));
-        if (!string.IsNullOrWhiteSpace(resolved))
-        {
-            if (!string.Equals(resolved, record.GetFieldValue("Link")?.Trim(), StringComparison.OrdinalIgnoreCase))
-                SaveVideoLink(record, resolved, userEdited: false);
-            return resolved;
-        }
+        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
+            ? _sp.Settings.LastVideoSourceFolder
+            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
+                ? _sp.Settings.LastVideoFolder
+            : _sp.Settings.LastProjectPath is null
+                ? null
+                : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
 
-        var initial = VideoFolderFallbackResolver.Resolve(
-            _sp.Settings.LastVideoSourceFolder,
-            _sp.Settings.LastVideoFolder,
-            _sp.Settings.LastProjectPath);
-
-        if (!string.IsNullOrWhiteSpace(initial) && Directory.Exists(initial))
-        {
-            var tool = new VideoSearchTool(initial);
-            var res = tool.ResolveForRecord(record);
-            if (res.Success && !string.IsNullOrWhiteSpace(res.VideoPath))
-                return SaveVideoLink(record, res.VideoPath!, userEdited: false);
-        }
-
-        var folder = _sp.Dialogs.SelectFolder("Video-Ordner auswaehlen", initial);
-        if (string.IsNullOrWhiteSpace(folder))
-            return null;
-
-        _sp.Settings.LastVideoSourceFolder = folder;
-        _sp.Settings.LastVideoFolder = folder; // legacy compatibility
-        _sp.Settings.Save();
-
-        var toolManual = new VideoSearchTool(folder);
-        var resManual = toolManual.ResolveForRecord(record);
-        if (resManual.Success && !string.IsNullOrWhiteSpace(resManual.VideoPath))
-            return SaveVideoLink(record, resManual.VideoPath!, userEdited: false);
-
-        _sp.Dialogs.Info(resManual.Message, "Video");
-
-        var manual = _sp.Dialogs.OpenFile(
-            "Video auswaehlen",
-            MediaFileTypes.VideoDialogFilter,
-            folder);
-        if (string.IsNullOrWhiteSpace(manual))
-            return null;
-
-        return SaveVideoLink(record, manual, userEdited: true);
+        return DataPageVideoPathWorkflowController.Resolve(
+            record,
+            record.GetFieldValue("Link"),
+            initial,
+            ResolveExistingPath,
+            Directory.Exists,
+            DataPageVideoPathWorkflowController.ResolveWithVideoSearchTool,
+            (title, initialFolder) => _sp.Dialogs.SelectFolder(title, initialFolder),
+            folder =>
+            {
+                _sp.Settings.LastVideoSourceFolder = folder;
+                _sp.Settings.LastVideoFolder = folder; // legacy compatibility
+                _sp.Settings.Save();
+            },
+            (message, title) => _sp.Dialogs.Info(message, title),
+            (title, filter, initialFolder) => _sp.Dialogs.OpenFile(title, filter, initialFolder),
+            (path, userEdited) => SaveVideoLink(record, path, userEdited));
     }
 
     private string SaveVideoLink(HaltungRecord record, string path, bool userEdited)
@@ -1148,10 +1106,11 @@ public sealed partial class DataPageViewModel : ObservableObject
             return;
         }
 
-        var initial = VideoFolderFallbackResolver.Resolve(
-            _sp.Settings.LastVideoSourceFolder,
-            _sp.Settings.LastVideoFolder,
-            lastProjectPath: null);
+        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
+            ? _sp.Settings.LastVideoSourceFolder
+            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
+                ? _sp.Settings.LastVideoFolder
+                : null;
 
         var win = new MediaSearchWindow(Records.ToList(), initial, _sp);
         win.Owner = System.Windows.Application.Current?.MainWindow;
@@ -1171,7 +1130,7 @@ public sealed partial class DataPageViewModel : ObservableObject
 
         if (record is not null)
         {
-            var dn = TryParseDnMm(record.GetFieldValue("DN_mm"));
+            var dn = DataPageHydraulikReportCalculator.ParseDnMm(record.GetFieldValue("DN_mm"));
             var material = record.GetFieldValue("Rohrmaterial");
             vm.LoadFromRecord(dn, material, null);
         }
@@ -1260,26 +1219,11 @@ public sealed partial class DataPageViewModel : ObservableObject
             return;
         }
 
-        // Build input from record
-        var dn = TryParseDnMm(record.GetFieldValue("DN_mm")) ?? 300;
-        var materialRaw = record.GetFieldValue("Rohrmaterial") ?? "";
-        var vm = new HydraulikPanelViewModel(_sp.Settings);
-        vm.LoadFromRecord(dn, materialRaw, null);
-
-        var mat = vm.SelectedMaterial;
-        double kb = vm.IsNeuzustand ? mat.KbNeu : mat.KbAlt;
-        double wasserstand = dn / 2; // default half-fill
-
-        var input = new HydraulikInput(
-            DN_mm: dn,
-            Wasserstand_mm: wasserstand,
-            Gefaelle_Promille: vm.Gefaelle,
-            Kb: kb,
-            AbwasserTyp: "MR",
-            Temperatur_C: vm.Temperatur);
-
-        var result = HydraulikEngine.Berechne(input);
-        if (result is null)
+        var calc = DataPageHydraulikReportCalculator.BuildReportCalculation(
+            record,
+            _sp.Settings,
+            saveSettings: _sp.Settings.Save);
+        if (calc is null)
         {
             _sp.Dialogs.Warn("Hydraulik-Berechnung konnte nicht durchgefuehrt werden.\nBitte DN und Gefaelle pruefen.", "Hydraulik PDF");
             return;
@@ -1310,8 +1254,6 @@ public sealed partial class DataPageViewModel : ObservableObject
                 LogoPathAbs = File.Exists(logoPath) ? logoPath : null
             };
 
-            var calc = HydraulikCalcResultMapper.ToReportResult(input, result, mat.Label);
-
             // PDF-Erzeugung auf Background-Thread (verhindert UI-Freeze)
             var pdf = await Task.Run(() => Application.Reports.HydraulikPdfBuilder.Build(record, calc, options));
             await Task.Run(() => File.WriteAllBytes(output, pdf));
@@ -1339,16 +1281,9 @@ public sealed partial class DataPageViewModel : ObservableObject
         var schachtBis = FindSchachtByNummer(bisNr);
 
         // Hydraulik pruefen
-        var dn = TryParseDnMm(record.GetFieldValue("DN_mm"));
-        var gefaelleRaw = record.GetFieldValue("Gefaelle_Promille");
-        double? gefaelle = null;
-        if (!string.IsNullOrWhiteSpace(gefaelleRaw))
-        {
-            var gText = gefaelleRaw.Trim().Replace(',', '.');
-            if (double.TryParse(gText, NumberStyles.Float, CultureInfo.InvariantCulture, out var gVal))
-                gefaelle = gVal;
-        }
-        var hydraulikAvailable = dn.HasValue && dn.Value > 0 && gefaelle.HasValue && gefaelle.Value > 0;
+        var hydraulikAvailability = DataPageHydraulikReportCalculator.ReadAvailability(record);
+        var dn = hydraulikAvailability.DnMm;
+        var hydraulikAvailable = hydraulikAvailability.IsAvailable;
 
         // Kosten pruefen
         var projectFolder = _shell.GetProjectFolder() ?? "";
@@ -1398,27 +1333,11 @@ public sealed partial class DataPageViewModel : ObservableObject
             Application.Reports.HydraulikCalcResult? calcResult = null;
             if (dialog.SelectedOptions.IncludeHydraulik && hydraulikAvailable)
             {
-                var materialRaw = record.GetFieldValue("Rohrmaterial") ?? "";
-                var vm = new HydraulikPanelViewModel(_sp.Settings);
-                vm.LoadFromRecord(dn!.Value, materialRaw, gefaelle);
-
-                var mat = vm.SelectedMaterial;
-                double kb = vm.IsNeuzustand ? mat.KbNeu : mat.KbAlt;
-                double wasserstand = dn.Value / 2;
-
-                var input = new HydraulikInput(
-                    DN_mm: dn.Value,
-                    Wasserstand_mm: wasserstand,
-                    Gefaelle_Promille: vm.Gefaelle,
-                    Kb: kb,
-                    AbwasserTyp: "MR",
-                    Temperatur_C: vm.Temperatur);
-
-                var result = HydraulikEngine.Berechne(input);
-                if (result != null)
-                {
-                    calcResult = HydraulikCalcResultMapper.ToReportResult(input, result, mat.Label);
-                }
+                calcResult = DataPageHydraulikReportCalculator.BuildReportCalculation(
+                    record,
+                    _sp.Settings,
+                    dn!.Value,
+                    saveSettings: _sp.Settings.Save);
             }
 
             var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
@@ -1429,17 +1348,19 @@ public sealed partial class DataPageViewModel : ObservableObject
                 OriginalPdfPaths = dialog.SelectedOptions.IncludeOriginalProtokolle ? originalPdfPaths : null,
             };
 
-            var hasDossierBaseSection =
-                options.IncludeDeckblatt
-                || options.IncludeHaltungsprotokoll
-                || (options.IncludeFotos && DataPageDossierAvailability.HasPrintablePhotos(record, projectFolder))
-                || (options.IncludeSchachtVon && schachtVon != null)
-                || (options.IncludeSchachtBis && schachtBis != null)
-                || (options.IncludeHydraulik && calcResult != null)
-                || (options.IncludeKostenschaetzung && kostenAvailable);
+            var printableSections = DataPageDossierAvailability.EvaluatePrintableSections(
+                options,
+                record,
+                projectFolder,
+                hasSchachtVon: schachtVon != null,
+                hasSchachtBis: schachtBis != null,
+                hasHydraulikResult: calcResult != null,
+                kostenAvailable,
+                originalPdfPaths.Count);
+            var hasDossierBaseSection = printableSections.HasDossierBaseSection;
 
             // Pruefung ob druckbar (muss auf UI-Thread, wegen MessageBox)
-            if (!hasDossierBaseSection && !(options.IncludeOriginalProtokolle && originalPdfPaths.Count > 0))
+            if (!printableSections.HasAnySection)
             {
                 _sp.Dialogs.Info(
                     "Die ausgewaehlte Kombination enthaelt keine druckbaren Inhalte.",
@@ -1514,9 +1435,13 @@ public sealed partial class DataPageViewModel : ObservableObject
             string.Equals(s.GetFieldValue("Schachtnummer"), nummer, StringComparison.OrdinalIgnoreCase));
     }
 
-    // Delegiert an DataPageFilenameHelper (Application.DataPage) – reine Logik dort unit-testbar.
     private static string SanitizeFilenamePart(string? text)
-        => DataPageFilenameHelper.SanitizeFilenamePart(text);
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "unknown";
+        foreach (var c in Path.GetInvalidFileNameChars())
+            text = text.Replace(c, '_');
+        return text.Trim();
+    }
 
     private string? ResolveExistingPath(string? raw)
         => DataPageProtocolPathResolver.ResolveExistingPath(raw, _sp.Settings.LastProjectPath);
@@ -1557,12 +1482,24 @@ public sealed partial class DataPageViewModel : ObservableObject
         IsLearningInfoVisible = true;
     }
 
-    // Delegiert an LearningReadinessPresenter (Application.DataPage) – reine Logik dort unit-testbar.
     private void UpdateLearningTrafficLight(int totalSamples)
     {
-        var (color, text) = LearningReadinessPresenter.Evaluate(totalSamples);
-        LearningTrafficLightColor = color;
-        LearningTrafficLightText = text;
+        if (totalSamples >= StrongModelThreshold)
+        {
+            LearningTrafficLightColor = "#2E7D32";
+            LearningTrafficLightText = "Gruen";
+            return;
+        }
+
+        if (totalSamples >= MinimumSamplesForModelTraining)
+        {
+            LearningTrafficLightColor = "#F9A825";
+            LearningTrafficLightText = "Gelb";
+            return;
+        }
+
+        LearningTrafficLightColor = "#C62828";
+        LearningTrafficLightText = "Rot";
     }
 
     /// <summary>
@@ -1588,9 +1525,17 @@ public sealed partial class DataPageViewModel : ObservableObject
         }
     }
 
-    // Delegiert an TrainingCaseIdNormalizer (Application.DataPage) – reine Logik dort unit-testbar.
+    /// <summary>
+    /// Normalisiert eine Training-CaseId zu einem Haltungsnamen.
+    /// Entfernt Datums-Prefixe wie "20250602_" und Knoten-Prefixe wie "07.", "10.".
+    /// </summary>
     private static string NormalizeTrainingCaseId(string caseId)
-        => TrainingCaseIdNormalizer.NormalizeCaseId(caseId);
+    {
+        var v = (caseId ?? "").Trim();
+        // Datums-Prefix entfernen (z.B. "20250602_06.24341-35625" → "06.24341-35625")
+        v = Regex.Replace(v, @"^\d{8}_", "");
+        return v;
+    }
 
     /// <summary>
     /// Prüft ob eine Haltung im Training Center erfasst ist.
@@ -1612,9 +1557,17 @@ public sealed partial class DataPageViewModel : ObservableObject
         return false;
     }
 
-    // Delegiert an TrainingCaseIdNormalizer (Application.DataPage) – reine Logik dort unit-testbar.
+    private static readonly Regex NodePrefixRx = new(@"^\d{1,2}\.", RegexOptions.Compiled);
+
     private static string StripNodePrefixes(string holdingKey)
-        => TrainingCaseIdNormalizer.StripNodePrefixes(holdingKey);
+    {
+        var dashIdx = holdingKey.IndexOf('-');
+        if (dashIdx < 0)
+            return NodePrefixRx.Replace(holdingKey, "");
+        var left = holdingKey[..dashIdx];
+        var right = holdingKey[(dashIdx + 1)..];
+        return $"{NodePrefixRx.Replace(left, "")}-{NodePrefixRx.Replace(right, "")}";
+    }
 
     private void ApplyCostsToRecord(HaltungRecord record, HoldingCost cost, bool learn = true, bool includeCosts = true)
     {

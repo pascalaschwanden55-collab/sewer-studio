@@ -7,7 +7,7 @@ using System.Windows.Media;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
-public sealed record DataGridComboColumnMenuCommands
+public sealed class DataGridComboColumnMenuCommands
 {
     public DataGridComboColumnMenuCommands(
         string editCommand,
@@ -44,8 +44,12 @@ public static class DataGridComboColumnFactory
         SelectionChangedEventHandler selectionChanged,
         bool allowFreeText,
         bool bindIsProjectReady,
-        DataGridComboColumnMenuCommands? menuCommands = null)
+        DataGridComboColumnMenuCommands? menuCommands = null,
+        bool useSelectedItemWhenNotFreeText = true)
     {
+        ArgumentNullException.ThrowIfNull(lostKeyboardFocus);
+        ArgumentNullException.ThrowIfNull(selectionChanged);
+
         var displayFactory = CreateDisplayFactory(fieldName);
         var comboFactory = CreateComboFactory(
             fieldName,
@@ -54,7 +58,8 @@ public static class DataGridComboColumnFactory
             lostKeyboardFocus,
             selectionChanged,
             allowFreeText,
-            bindIsProjectReady);
+            bindIsProjectReady,
+            useSelectedItemWhenNotFreeText);
 
         if (menuCommands is not null)
             comboFactory.SetValue(FrameworkElement.ContextMenuProperty, CreateContextMenu(menuCommands));
@@ -93,7 +98,8 @@ public static class DataGridComboColumnFactory
         KeyboardFocusChangedEventHandler lostKeyboardFocus,
         SelectionChangedEventHandler selectionChanged,
         bool allowFreeText,
-        bool bindIsProjectReady)
+        bool bindIsProjectReady,
+        bool useSelectedItemWhenNotFreeText)
     {
         var comboFactory = new FrameworkElementFactory(typeof(ComboBox));
         comboFactory.SetValue(ComboBox.IsEditableProperty, allowFreeText);
@@ -116,7 +122,6 @@ public static class DataGridComboColumnFactory
         {
             RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGridCell), 1)
         });
-
         if (bindIsProjectReady)
         {
             comboFactory.SetBinding(UIElement.IsHitTestVisibleProperty, new Binding("DataContext.IsProjectReady")
@@ -124,12 +129,11 @@ public static class DataGridComboColumnFactory
                 RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
             });
         }
-
         comboFactory.SetBinding(ComboBox.ItemsSourceProperty, new Binding($"DataContext.{itemsSourcePath}")
         {
             RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(DataGrid), 1)
         });
-        if (allowFreeText)
+        if (allowFreeText || !useSelectedItemWhenNotFreeText)
         {
             comboFactory.SetBinding(ComboBox.TextProperty, new Binding($"Fields[{fieldName}]")
             {
@@ -145,7 +149,6 @@ public static class DataGridComboColumnFactory
                 UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
             });
         }
-
         comboFactory.SetValue(FrameworkElement.TagProperty, tag);
         comboFactory.AddHandler(UIElement.LostKeyboardFocusEvent, lostKeyboardFocus);
         comboFactory.AddHandler(Selector.SelectionChangedEvent, selectionChanged);
@@ -164,19 +167,19 @@ public static class DataGridComboColumnFactory
             contextMenu.DataContext = grid?.DataContext ?? target.DataContext;
         };
 
-        contextMenu.Items.Add(BoundMenuItem("Liste bearbeiten...", commands.EditCommand));
-        contextMenu.Items.Add(BoundMenuItem("Vorschau", commands.PreviewCommand));
-        contextMenu.Items.Add(BoundMenuItem("Zuruecksetzen auf Standard", commands.ResetCommand));
-        contextMenu.Items.Add(BoundMenuItem("Wert hinzufuegen", commands.AddCommand, withPlacementTargetParameter: true));
-        contextMenu.Items.Add(BoundMenuItem("Wert entfernen", commands.RemoveCommand, withPlacementTargetParameter: true));
+        contextMenu.Items.Add(CreateCommandMenuItem("Liste bearbeiten...", commands.EditCommand, false));
+        contextMenu.Items.Add(CreateCommandMenuItem("Vorschau", commands.PreviewCommand, false));
+        contextMenu.Items.Add(CreateCommandMenuItem("Zuruecksetzen auf Standard", commands.ResetCommand, false));
+        contextMenu.Items.Add(CreateCommandMenuItem("Wert hinzufuegen", commands.AddCommand, true));
+        contextMenu.Items.Add(CreateCommandMenuItem("Wert entfernen", commands.RemoveCommand, true));
         return contextMenu;
     }
 
-    private static MenuItem BoundMenuItem(string header, string commandPath, bool withPlacementTargetParameter = false)
+    private static MenuItem CreateCommandMenuItem(string header, string commandPath, bool bindPlacementTarget)
     {
         var item = new MenuItem { Header = header };
         item.SetBinding(MenuItem.CommandProperty, new Binding(commandPath));
-        if (withPlacementTargetParameter)
+        if (bindPlacementTarget)
         {
             item.SetBinding(MenuItem.CommandParameterProperty, new Binding("PlacementTarget")
             {
@@ -187,12 +190,12 @@ public static class DataGridComboColumnFactory
         return item;
     }
 
-    private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
+    private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
     {
         while (current is not null)
         {
-            if (current is T target)
-                return target;
+            if (current is T match)
+                return match;
 
             current = VisualTreeHelper.GetParent(current);
         }

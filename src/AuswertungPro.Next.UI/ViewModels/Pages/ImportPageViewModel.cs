@@ -1,10 +1,9 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Threading;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Domain.Models;
@@ -141,151 +140,53 @@ public sealed partial class ImportPageViewModel : ObservableObject
     {
         _importCts?.Dispose();
         _importCts = new CancellationTokenSource();
-        CanCancel = true;
-        IsImportInProgress = true;
-        ImportProgressPercent = 0;
-        ImportPhase = dryRun ? $"{label}: Vorschau wird berechnet..." : $"{label}: Import laeuft...";
-        ImportProgress = "";
-        SummaryText = $"{label}: gestartet{(dryRun ? " (Vorschau)" : "")}";
-        DetailsText = "";
 
-        var runLog = new ImportRunLog { ImportType = label, WasDryRun = dryRun };
-        if (source is string s)
-            runLog.SourcePath = s;
-        else if (source is string[] arr && arr.Length > 0)
-            runLog.SourcePath = arr[0];
-
-        var progress = new Progress<Application.Import.ImportProgress>(p =>
-        {
-            ImportPhase = p.Phase;
-            ImportProgress = p.StatusText;
-            if (p.Total > 0)
-                ImportProgressPercent = (double)p.Current / p.Total * 100.0;
-            if (!string.IsNullOrWhiteSpace(p.CurrentFile))
-                _shell.SetStatus($"{label}: {p.CurrentFile}");
-        });
-
-        var ctx = new ImportRunContext(_importCts.Token, progress, runLog, dryRun, _shell.CollectionLock);
-
-        try
-        {
-            // Bei der Vorschau (DryRun) auf einer unabhaengigen Kopie arbeiten, damit der
-            // Import das echte Live-Projekt NICHT veraendert. Die Kopie wird auf dem
-            // UI-Thread erstellt, weil Project.Data eine UI-gebundene ObservableCollection
-            // ist und die Serialisierung sie sonst aus dem Worker-Thread enumerieren wuerde.
-            var targetProject = dryRun ? _sp.Projects.DeepCopy(_shell.Project) : _shell.Project;
-
-            var result = await Task.Run(() =>
-            {
-                try
-                {
-                    return importFunc(source, targetProject, ctx);
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    return Result<ImportStats>.Fail($"{label}_EXCEPTION", ex.Message);
-                }
-            });
-
-            if (!result.Ok || result.Value is null)
-            {
-                SummaryText = $"{label} Import fehlgeschlagen: {result.ErrorMessage}";
-                _shell.SetStatus($"{label} Import fehlgeschlagen");
-                return;
-            }
-
-            var stats = result.Value;
-            SummaryText = $"{label} Import{(dryRun ? " (Vorschau)" : "")}:\n" +
-                          $"  Haltungen: {stats.Found} gefunden, {stats.Created} neu, {stats.Updated} aktualisiert\n" +
-                          $"  Fehler: {stats.Errors}, Unklar: {stats.Uncertain}";
-            DetailsText = string.Join("\n", stats.Messages.Take(80));
-
-            if (dryRun)
-            {
-                var preview = ImportPreviewResult.FromLog(runLog);
-                var doImport = ShowPreviewWindow(preview, label);
-                if (doImport)
-                {
-                    await RunImportAsync(
-                        label,
-                        source,
-                        importFunc,
-                        dryRun: false,
-                        postImportAsync: postImportAsync,
-                        saveProjectAfterCommit: saveProjectAfterCommit);
-                }
-                return;
-            }
-
-            if (postImportAsync is not null)
-            {
-                try
-                {
-                    await postImportAsync(source, ctx);
-                }
-                catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
-                {
-                    runLog.AddEntry(label, "PostImport", ImportLogStatus.Error,
-                        detail: $"PostImport-Fehler: {ex.Message}");
-                }
-            }
-
-            DeduplicateAllPrimaryDamages();
-            await RunVsaAfterImport(label);
-
-            // Fachliche Plausibilitaetspruefung: offensichtlich falsche Werte sichtbar machen,
-            // damit sie nicht unbemerkt bis in den Export durchlaufen.
-            var plausibilityWarnings = Application.Import.ImportPlausibilityValidator.Validate(_shell.Project);
-            if (plausibilityWarnings.Count > 0)
-            {
-                SummaryText += $"\n  Plausibilitaet: {plausibilityWarnings.Count} Warnung(en) - bitte pruefen.";
-                DetailsText += "\n\n--- Plausibilitaets-Warnungen ---\n"
-                    + string.Join("\n", plausibilityWarnings.Take(80));
-                foreach (var w in plausibilityWarnings.Take(200))
-                    runLog.AddEntry(label, "Plausibilitaet", ImportLogStatus.Info, detail: w);
-            }
-
-            if (saveProjectAfterCommit)
-                _shell.TrySaveProject();
-
-            _shell.SetStatus($"{label} importiert");
-            ImportProgressPercent = 100;
-        }
-        catch (OperationCanceledException)
-        {
-            runLog.WasCancelled = true;
-            SummaryText = $"{label} Import abgebrochen.";
-            _shell.SetStatus($"{label} Import abgebrochen");
-        }
-        catch (Exception ex)
-        {
-            SummaryText = $"{label} Import fehlgeschlagen: {ex.Message}";
-            DetailsText = ex.ToString();
-            _shell.SetStatus($"{label} Import fehlgeschlagen");
-        }
-        finally
-        {
-            runLog.Complete();
-            CanCancel = false;
-            IsImportInProgress = false;
-            ImportPhase = "";
-
-            var reportDir = GetReportDir();
-            if (reportDir != null)
-            {
-                try
-                {
-                    _lastReportPath = ImportRunReportExporter.Export(runLog, reportDir);
-                }
-                catch { /* ignore report errors */ }
-            }
-        }
+        await Services.ImportRunWorkflowController.RunAsync(
+            new Services.ImportRunWorkflowRequest<TArg>(
+                label,
+                source,
+                importFunc,
+                dryRun,
+                postImportAsync,
+                saveProjectAfterCommit),
+            new Services.ImportRunWorkflowActions(
+                GetProject: () => _shell.Project,
+                DeepCopyProject: _sp.Projects.DeepCopy,
+                GetReportDir: GetReportDir,
+                ExportReport: ImportRunReportExporter.Export,
+                ShowPreview: ShowPreviewWindow,
+                ValidatePlausibility: Application.Import.ImportPlausibilityValidator.Validate,
+                DeduplicateAllPrimaryDamages: DeduplicateAllPrimaryDamages,
+                RunAfterImportAsync: RunVsaAfterImport,
+                SaveProject: () => _ = _shell.TrySaveProject(),
+                SetStatus: _shell.SetStatus,
+                SetCanCancel: value => CanCancel = value,
+                SetIsImportInProgress: value => IsImportInProgress = value,
+                SetProgressPercent: value => ImportProgressPercent = value,
+                SetPhase: value => ImportPhase = value,
+                SetProgressText: value => ImportProgress = value,
+                GetSummaryText: () => SummaryText,
+                SetSummaryText: value => SummaryText = value,
+                GetDetailsText: () => DetailsText,
+                SetDetailsText: value => DetailsText = value,
+                SetLastReportPath: value => _lastReportPath = value,
+                CollectionLock: _shell.CollectionLock),
+            _importCts.Token);
     }
+
+    private Task RunImportWithOptionalPreviewAsync<TArg>(
+        string label,
+        TArg source,
+        Func<TArg, Project, ImportRunContext, Result<ImportStats>> importFunc,
+        Func<TArg, ImportRunContext, Task>? postImportAsync = null,
+        bool saveProjectAfterCommit = false)
+        => RunImportAsync(
+            label,
+            source,
+            importFunc,
+            dryRun: ShowPreviewFirst,
+            postImportAsync: postImportAsync,
+            saveProjectAfterCommit: saveProjectAfterCommit);
 
     private bool ShowPreviewWindow(ImportPreviewResult preview, string label)
     {
@@ -304,14 +205,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
         if (paths.Length == 0) return;
 
         // Auto-Save nach Commit wie bei WinCan/IBAK/KINS — Import-Arbeit nicht nur im RAM (Audit H4)
-        if (ShowPreviewFirst)
-        {
-            await RunImportAsync("PDF", paths, ImportPdfCore, dryRun: true, postImportAsync: PostImportPdfAsync, saveProjectAfterCommit: true);
-        }
-        else
-        {
-            await RunImportAsync("PDF", paths, ImportPdfCore, postImportAsync: PostImportPdfAsync, saveProjectAfterCommit: true);
-        }
+        await RunImportWithOptionalPreviewAsync(
+            "PDF",
+            paths,
+            ImportPdfCore,
+            postImportAsync: PostImportPdfAsync,
+            saveProjectAfterCommit: true);
     }
 
     private Result<ImportStats> ImportPdfCore(string[] paths, Project project, ImportRunContext ctx)
@@ -371,14 +270,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
         if (paths.Length == 0) return;
 
         // Auto-Save nach Commit wie bei WinCan/IBAK/KINS (Audit H4)
-        if (ShowPreviewFirst)
-        {
-            await RunImportAsync("XTF", paths, ImportXtfCore, dryRun: true, postImportAsync: PostImportXtfAsync, saveProjectAfterCommit: true);
-        }
-        else
-        {
-            await RunImportAsync("XTF", paths, ImportXtfCore, postImportAsync: PostImportXtfAsync, saveProjectAfterCommit: true);
-        }
+        await RunImportWithOptionalPreviewAsync(
+            "XTF",
+            paths,
+            ImportXtfCore,
+            postImportAsync: PostImportXtfAsync,
+            saveProjectAfterCommit: true);
     }
 
     private Result<ImportStats> ImportXtfCore(string[] paths, Project project, ImportRunContext ctx)
@@ -403,25 +300,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var folder = _sp.Dialogs.SelectFolder("WinCan-Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder)) return;
 
-        if (ShowPreviewFirst)
-        {
-            await RunImportAsync(
-                "WinCan",
-                folder,
-                ImportFolderCore(_sp.WinCanImport.ImportWinCanExport),
-                dryRun: true,
-                postImportAsync: PostImportFolderAsync,
-                saveProjectAfterCommit: true);
-        }
-        else
-        {
-            await RunImportAsync(
-                "WinCan",
-                folder,
-                ImportFolderCore(_sp.WinCanImport.ImportWinCanExport),
-                postImportAsync: PostImportFolderAsync,
-                saveProjectAfterCommit: true);
-        }
+        await RunImportWithOptionalPreviewAsync(
+            "WinCan",
+            folder,
+            ImportFolderCore(_sp.WinCanImport.ImportWinCanExport),
+            postImportAsync: PostImportFolderAsync,
+            saveProjectAfterCommit: true);
     }
 
     private async Task ImportIbakAsync()
@@ -429,25 +313,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var folder = _sp.Dialogs.SelectFolder("IBAK-Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder)) return;
 
-        if (ShowPreviewFirst)
-        {
-            await RunImportAsync(
-                "IBAK",
-                folder,
-                ImportFolderCore(_sp.IbakImport.ImportIbakExport),
-                dryRun: true,
-                postImportAsync: PostImportFolderAsync,
-                saveProjectAfterCommit: true);
-        }
-        else
-        {
-            await RunImportAsync(
-                "IBAK",
-                folder,
-                ImportFolderCore(_sp.IbakImport.ImportIbakExport),
-                postImportAsync: PostImportFolderAsync,
-                saveProjectAfterCommit: true);
-        }
+        await RunImportWithOptionalPreviewAsync(
+            "IBAK",
+            folder,
+            ImportFolderCore(_sp.IbakImport.ImportIbakExport),
+            postImportAsync: PostImportFolderAsync,
+            saveProjectAfterCommit: true);
     }
 
     private async Task ImportKinsAsync()
@@ -455,25 +326,12 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var folder = _sp.Dialogs.SelectFolder("KINS-Projektordner waehlen");
         if (string.IsNullOrWhiteSpace(folder)) return;
 
-        if (ShowPreviewFirst)
-        {
-            await RunImportAsync(
-                "KINS",
-                folder,
-                ImportFolderCore(_sp.KinsImport.ImportKinsExport),
-                dryRun: true,
-                postImportAsync: PostImportFolderAsync,
-                saveProjectAfterCommit: true);
-        }
-        else
-        {
-            await RunImportAsync(
-                "KINS",
-                folder,
-                ImportFolderCore(_sp.KinsImport.ImportKinsExport),
-                postImportAsync: PostImportFolderAsync,
-                saveProjectAfterCommit: true);
-        }
+        await RunImportWithOptionalPreviewAsync(
+            "KINS",
+            folder,
+            ImportFolderCore(_sp.KinsImport.ImportKinsExport),
+            postImportAsync: PostImportFolderAsync,
+            saveProjectAfterCommit: true);
     }
 
     private static Func<string, Project, ImportRunContext, Result<ImportStats>> ImportFolderCore(
@@ -498,8 +356,22 @@ public sealed partial class ImportPageViewModel : ObservableObject
 
     private void TrackImportSource(string sourcePath, string importType)
     {
-        // Delegiert an ImportSourceHistoryService (Application/Import)
-        ImportSourceHistoryService.Track(_shell.Project.Metadata, sourcePath, importType);
+        var project = _shell.Project;
+        var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        var entry = $"{timestamp} | {importType} | {sourcePath}";
+
+        // Letzte Import-Quelle speichern
+        project.Metadata["ImportQuelle"] = sourcePath;
+        project.Metadata["ImportQuellTyp"] = importType;
+
+        // Import-Historie anfuegen (max. 20 Eintraege)
+        var historyKey = "ImportQuellenHistorie";
+        var existing = project.Metadata.TryGetValue(historyKey, out var h) ? h : "";
+        var lines = existing.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
+        lines.Add(entry);
+        if (lines.Count > 20)
+            lines = lines.Skip(lines.Count - 20).ToList();
+        project.Metadata[historyKey] = string.Join("\n", lines);
     }
 
     // ──── Post-Import Helpers ────
@@ -829,70 +701,107 @@ public sealed partial class ImportPageViewModel : ObservableObject
             return;
         }
 
-        // Delegiert an ProjectFieldCsvExporter (Infrastructure/Import)
         var reportDir = Path.Combine(projectDir, "__IMPORT_REPORTS");
-        var path = ProjectFieldCsvExporter.Export(_shell.Project, reportDir);
+        Directory.CreateDirectory(reportDir);
+        var stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var path = Path.Combine(reportDir, $"import_summary_{stamp}.csv");
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Type;RecordId;Field;Value;Source;UserEdited;LastUpdatedUtc");
+
+        foreach (var rec in _shell.Project.Data)
+        {
+            foreach (var field in FieldCatalog.ColumnOrder)
+            {
+                var value = rec.GetFieldValue(field) ?? "";
+                var meta = rec.FieldMeta.TryGetValue(field, out var m) ? m : null;
+                sb.AppendLine(string.Join(";",
+                    "Haltung",
+                    rec.Id,
+                    Escape(field),
+                    Escape(value),
+                    meta?.Source.ToString() ?? "",
+                    meta?.UserEdited.ToString() ?? "",
+                    meta?.LastUpdatedUtc.ToString("o") ?? ""));
+            }
+        }
+
+        foreach (var schacht in _shell.Project.SchaechteData)
+        {
+            foreach (var kv in schacht.Fields)
+            {
+                sb.AppendLine(string.Join(";",
+                    "Schacht",
+                    schacht.Id,
+                    Escape(kv.Key),
+                    Escape(kv.Value ?? ""),
+                    "",
+                    "",
+                    schacht.ModifiedAtUtc.ToString("o")));
+            }
+        }
+
+        File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
         LastResult = $"Import-Report erstellt:\n{path}";
         _shell.SetStatus("Import-Report erstellt");
     }
 
-    // ──── File Storage ────
+    private static string Escape(string v)
+    {
+        v ??= "";
+        if (v.Contains(';') || v.Contains('"') || v.Contains('\n') || v.Contains('\r'))
+            return "\"" + v.Replace("\"", "\"\"") + "\"";
+        return v;
+    }
 
-    // ──── Datei-Speicherung (delegiert an ImportFileStoreService) ────
+    // ──── File Storage ────
 
     private void StoreXtfFiles(string[] paths)
     {
-        if (!TryGetProjectDir(out var projectDir, "XTF")) return;
-        ImportFileStoreService.StoreFiles(_shell.Project, projectDir!, paths, "XTF", "XTF_StoredFiles");
+        StoreImportFiles(paths, "XTF", "XTF-Dateien");
     }
 
     private void StorePdfFiles(string[] paths)
     {
-        if (!TryGetProjectDir(out var projectDir, "PDF")) return;
-        ImportFileStoreService.StoreFiles(_shell.Project, projectDir!, paths, "PDF", "PDF_StoredFiles");
+        StoreImportFiles(paths, "PDF", "PDF-Dateien");
     }
 
     private void StoreTxtFiles(string[] paths)
     {
-        if (!TryGetProjectDir(out var projectDir, "TXT")) return;
-        ImportFileStoreService.StoreFiles(_shell.Project, projectDir!, paths, "TXT", "TXT_StoredFiles");
+        StoreImportFiles(paths, "TXT", "TXT-Dateien");
     }
 
-    /// <summary>
-    /// Hilfsmethode: Projektordner aus LastProjectPath ermitteln.
-    /// Gibt false zurueck (+ Hinweis im LastResult) wenn kein Pfad gesetzt.
-    /// </summary>
-    private bool TryGetProjectDir(out string? projectDir, string fileType)
+    private void StoreImportFiles(string[] paths, string importKind, string displayName)
     {
-        var projectPath = _sp.Settings.LastProjectPath;
-        if (string.IsNullOrWhiteSpace(projectPath))
+        var result = Services.StoredImportFileRegistry.Store(
+            _sp.Settings.LastProjectPath,
+            _shell.Project.Metadata,
+            importKind,
+            paths);
+
+        if (result.MissingProjectPath)
         {
-            LastResult += $"\nHinweis: Projekt bitte speichern, um {fileType}-Dateien im Projekt abzulegen.";
-            projectDir = null;
-            return false;
+            LastResult += $"\nHinweis: Projekt bitte speichern, um {displayName} im Projekt abzulegen.";
         }
-        projectDir = Path.GetDirectoryName(projectPath) ?? "";
-        if (string.IsNullOrWhiteSpace(projectDir))
-        {
-            projectDir = null;
-            return false;
-        }
-        return true;
     }
 
     private static string BuildImportSummaryText(string sourceLabel, ImportStats source, ImportSummary sidecar)
     {
-        // Delegiert an ImportSummaryTextBuilder (Application/Import)
-        return ImportSummaryTextBuilder.BuildSummary(
-            sourceLabel, source,
-            sidecar.XtfFiles, sidecar.XtfFound, sidecar.XtfUpdated, sidecar.XtfUncertain, sidecar.XtfErrors,
-            sidecar.PdfFiles, sidecar.PdfFound, sidecar.PdfUpdated, sidecar.PdfUncertain, sidecar.PdfErrors);
+        var sb = new StringBuilder();
+        var importSource = source.Messages.FirstOrDefault(m =>
+            m.StartsWith("Importquelle:", StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(importSource))
+            sb.AppendLine(importSource);
+
+        sb.AppendLine($"{sourceLabel}: Gefunden {source.Found}, Neu {source.Created}, Aktualisiert {source.Updated}, Unklar {source.Uncertain}, Fehler {source.Errors}");
+        sb.AppendLine($"XTF/M150/MDB/XML: Dateien {sidecar.XtfFiles}, Gefunden {sidecar.XtfFound}, Updates {sidecar.XtfUpdated}, Unklar {sidecar.XtfUncertain}, Fehler {sidecar.XtfErrors}");
+        sb.AppendLine($"PDF: Dateien {sidecar.PdfFiles}, Gefunden {sidecar.PdfFound}, Updates {sidecar.PdfUpdated}, Unklar {sidecar.PdfUncertain}, Fehler {sidecar.PdfErrors}");
+        return sb.ToString();
     }
 
     private static string BuildImportDetailsText(ImportSummary sidecar, ImportStats source)
     {
-        // Delegiert an ImportSummaryTextBuilder (Application/Import)
-        return ImportSummaryTextBuilder.BuildDetails(sidecar.Messages, source.Messages);
+        return string.Join("\n", sidecar.Messages.Concat(source.Messages).Take(200));
     }
 
     /// <summary>

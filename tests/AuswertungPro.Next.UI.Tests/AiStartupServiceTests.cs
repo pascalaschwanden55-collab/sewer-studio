@@ -381,7 +381,7 @@ public sealed class AiStartupServiceTests
                 PipelineSidecarUrl = "http://localhost:8100"
             };
             var steps = new ConcurrentQueue<string>();
-            var progress = new Progress<string>(steps.Enqueue);
+            var progress = new ImmediateProgress<string>(steps.Enqueue);
 
             await AiStartupService.StartAsync(
                 settings,
@@ -473,6 +473,11 @@ public sealed class AiStartupServiceTests
     {
         var trackerType = typeof(AiStartupService).Assembly.GetType("AuswertungPro.Next.UI.Services.AiRuntimeStatusTracker");
         trackerType?.GetMethod("ResetForTests")?.Invoke(null, null);
+    }
+
+    private sealed class ImmediateProgress<T>(Action<T> onReport) : IProgress<T>
+    {
+        public void Report(T value) => onReport(value);
     }
 
     private sealed class FakeAiStartupLauncher : IAiStartupLauncher
