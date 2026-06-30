@@ -8,9 +8,9 @@ using System.Linq;
 using System.Globalization;
 using System.Diagnostics;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using System.Windows;
@@ -55,6 +55,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
     private readonly DataPageProtocolDocumentController _protocolDocumentController = new();
+    private readonly TrainingCaseIndex _trainingCaseIndex = new();
     private bool _disposed;
 
     internal ServiceProvider Services => _sp;
@@ -131,7 +132,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     /// Normalisierte Haltungsnamen die im Training Center erfasst sind.
     /// Wird beim Start geladen; DataPage nutzt dieses Set für die rote Zeilenmarkierung.
     /// </summary>
-    public HashSet<string> TrainedHaltungen { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public IReadOnlySet<string> TrainedHaltungen => _trainingCaseIndex.TrainedHaltungen;
     [ObservableProperty] private double _gridMinRowHeight = 38d;
     [ObservableProperty] private double _gridZoom = 1.0d;
     [ObservableProperty] private bool _isColumnReorderEnabled;
@@ -1469,13 +1470,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         {
             var store = new TrainingCenterStore();
             var state = await store.LoadAsync();
-            TrainedHaltungen.Clear();
-            foreach (var tc in state.Cases)
-            {
-                var name = NormalizeTrainingCaseId(tc.CaseId);
-                if (!string.IsNullOrWhiteSpace(name))
-                    TrainedHaltungen.Add(name);
-            }
+            _trainingCaseIndex.ReplaceCaseIds(state.Cases.Select(tc => tc.CaseId));
         }
         catch
         {
@@ -1484,48 +1479,9 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Normalisiert eine Training-CaseId zu einem Haltungsnamen.
-    /// Entfernt Datums-Prefixe wie "20250602_" und Knoten-Prefixe wie "07.", "10.".
-    /// </summary>
-    private static string NormalizeTrainingCaseId(string caseId)
-    {
-        var v = (caseId ?? "").Trim();
-        // Datums-Prefix entfernen (z.B. "20250602_06.24341-35625" → "06.24341-35625")
-        v = Regex.Replace(v, @"^\d{8}_", "");
-        return v;
-    }
-
-    /// <summary>
     /// Prüft ob eine Haltung im Training Center erfasst ist.
     /// </summary>
-    public bool IsTrainedCase(string? haltungsname)
-    {
-        if (string.IsNullOrWhiteSpace(haltungsname) || TrainedHaltungen.Count == 0)
-            return false;
-        // Exakter Match
-        if (TrainedHaltungen.Contains(haltungsname))
-            return true;
-        // Ohne Knoten-Prefixe vergleichen (z.B. "07.1028055" → "1028055")
-        var stripped = StripNodePrefixes(haltungsname);
-        foreach (var trained in TrainedHaltungen)
-        {
-            if (string.Equals(StripNodePrefixes(trained), stripped, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-        return false;
-    }
-
-    private static readonly Regex NodePrefixRx = new(@"^\d{1,2}\.", RegexOptions.Compiled);
-
-    private static string StripNodePrefixes(string holdingKey)
-    {
-        var dashIdx = holdingKey.IndexOf('-');
-        if (dashIdx < 0)
-            return NodePrefixRx.Replace(holdingKey, "");
-        var left = holdingKey[..dashIdx];
-        var right = holdingKey[(dashIdx + 1)..];
-        return $"{NodePrefixRx.Replace(left, "")}-{NodePrefixRx.Replace(right, "")}";
-    }
+    public bool IsTrainedCase(string? haltungsname) => _trainingCaseIndex.IsTrainedCase(haltungsname);
 
     private void ApplyCostsToRecord(HaltungRecord record, HoldingCost cost, bool learn = true, bool includeCosts = true)
     {
