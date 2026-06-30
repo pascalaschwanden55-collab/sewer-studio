@@ -677,6 +677,24 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_scan_cases_collection_mutation_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var scanSource = ExtractMethodBody(source, "private async Task ScanAsync()");
+
+        Assert.Contains("ObservableCollectionContentController.ReplaceWith(Cases, Array.Empty<TrainingCase>())", scanSource, StringComparison.Ordinal);
+        Assert.Contains("ObservableCollectionContentController.Append(", scanSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Cases.Clear()", scanSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Cases.Add(c)", scanSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_log_format_und_trim_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
