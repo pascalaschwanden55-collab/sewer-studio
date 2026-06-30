@@ -46,6 +46,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     public IRelayCommand OpenLastReportCommand { get; }
     public IRelayCommand OpenReportFolderCommand { get; }
     public IAsyncRelayCommand MakeProjectPortableCommand { get; }
+    public IAsyncRelayCommand AssignPhotosFromFolderCommand { get; }
 
     public ImportPageViewModel(ShellViewModel shell, ServiceProvider sp)
     {
@@ -63,6 +64,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         OpenLastReportCommand = new RelayCommand(OpenLastReport);
         OpenReportFolderCommand = new RelayCommand(OpenReportFolder);
         MakeProjectPortableCommand = new AsyncRelayCommand(MakeProjectPortableAsync);
+        AssignPhotosFromFolderCommand = new AsyncRelayCommand(AssignPhotosFromFolderAsync);
 
         UpdateCatalogStatus();
     }
@@ -508,6 +510,48 @@ public sealed partial class ImportPageViewModel : ObservableObject
         _sp.Dialogs.Info(
             summary + "\n\nDer Projektordner kann jetzt 1:1 auf einen anderen PC kopiert werden.",
             "Projekt portabel machen");
+    }
+
+    /// <summary>
+    /// Ordnet Fotos aus einem gewaehlten Quellordner den Haltungen/Beobachtungen zu (per Dateiname,
+    /// IKAS wie WinCan), kopiert sie ins Projekt und verlinkt relativ. Fuer haltungs-benannte Fotos;
+    /// GUID-benannte (nur ueber die DB zuordenbar) bleiben offen.
+    /// </summary>
+    private async Task AssignPhotosFromFolderAsync()
+    {
+        var projectFolder = _shell.GetProjectFolder();
+        if (string.IsNullOrWhiteSpace(projectFolder))
+        {
+            _sp.Dialogs.Info("Projekt bitte zuerst speichern.", "Fotos zuordnen");
+            return;
+        }
+        if (_shell.Project.Data.Count == 0)
+        {
+            _sp.Dialogs.Info("Keine Haltungen im Projekt.", "Fotos zuordnen");
+            return;
+        }
+
+        var src = _sp.Dialogs.SelectFolder(
+            "Quellordner mit den Fotos waehlen (z.B. der Foto-/Picture-Ordner des Exports)", null);
+        if (string.IsNullOrWhiteSpace(src))
+            return;
+
+        ImportProgress = "Fotos zuordnen: nach Haltung matchen, ins Projekt kopieren, verlinken...";
+        var svc = new ProjectPhotoAssignmentService();
+        var result = await Task.Run(() => svc.AssignFromFolder(projectFolder!, src!, _shell.Project));
+        ImportProgress = "";
+
+        _ = _shell.TrySaveProject();
+
+        var summary = $"Fotos zugeordnet:"
+            + $"\n  {result.HoldingsMatched} Haltungen mit Fotos"
+            + $"\n  {result.PhotosAssigned} Fotos an Beobachtungen gehaengt"
+            + $"\n  {result.PhotosCopied} ins Projekt kopiert"
+            + $"\n  {result.UnmatchedFiles} nicht zuordenbar (z.B. GUID-benannt -> braucht DB-Import)";
+        SummaryText += "\n" + summary;
+        if (result.Messages.Count > 0)
+            DetailsText += "\n\nFoto-Zuordnung:\n" + string.Join("\n", result.Messages.Take(50));
+        _sp.Dialogs.Info(summary, "Fotos zuordnen");
     }
 
     private async Task RunVsaAfterImport(string sourceLabel)

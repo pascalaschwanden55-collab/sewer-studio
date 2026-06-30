@@ -108,6 +108,15 @@
                             <TextBlock Text="Projekt portabel machen" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
+
+                    <Button Command="{Binding AssignPhotosFromFolderCommand}"
+                            Style="{StaticResource ToolbarButton}" Margin="4,0,0,0"
+                            ToolTip="Fotos aus einem Quellordner (IKAS/WinCan) den Beobachtungen zuordnen + ins Projekt holen">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE91B;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Fotos zuordnen" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Border>
 
