@@ -62,6 +62,28 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
+    public void ImportPage_run_import_workflow_lives_in_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "ImportPageViewModel.cs");
+        var controllerPath = Path.Combine(uiRoot, "Services", "ImportRunWorkflowController.cs");
+
+        Assert.True(File.Exists(controllerPath), "Import-Lauf-Orchestrierung muss ausserhalb der ImportPageViewModel liegen.");
+
+        var viewModel = File.ReadAllText(viewModelPath);
+        var runBody = ExtractMethodBody(viewModel, "private async Task RunImportAsync<TArg>");
+
+        Assert.Contains("ImportRunWorkflowController.RunAsync", runBody);
+        Assert.DoesNotContain("Task.Run", runBody);
+        Assert.DoesNotContain("ImportPreviewResult.FromLog", runBody);
+        Assert.DoesNotContain("ImportRunLog", runBody);
+        Assert.DoesNotContain("ImportRunReportExporter.Export(runLog", runBody);
+        Assert.DoesNotContain("PostImport-Fehler", runBody);
+        Assert.DoesNotContain("Plausibilitaet", runBody);
+    }
+
+    [Fact]
     public void PlayerWindow_damage_markers_live_in_controller()
     {
         var root = FindRepositoryRoot();

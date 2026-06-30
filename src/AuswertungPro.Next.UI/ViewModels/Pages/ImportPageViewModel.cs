@@ -4,8 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Threading;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Domain.Models;
@@ -142,150 +140,38 @@ public sealed partial class ImportPageViewModel : ObservableObject
     {
         _importCts?.Dispose();
         _importCts = new CancellationTokenSource();
-        CanCancel = true;
-        IsImportInProgress = true;
-        ImportProgressPercent = 0;
-        ImportPhase = dryRun ? $"{label}: Vorschau wird berechnet..." : $"{label}: Import laeuft...";
-        ImportProgress = "";
-        SummaryText = $"{label}: gestartet{(dryRun ? " (Vorschau)" : "")}";
-        DetailsText = "";
 
-        var runLog = new ImportRunLog { ImportType = label, WasDryRun = dryRun };
-        if (source is string s)
-            runLog.SourcePath = s;
-        else if (source is string[] arr && arr.Length > 0)
-            runLog.SourcePath = arr[0];
-
-        var progress = new Progress<Application.Import.ImportProgress>(p =>
-        {
-            ImportPhase = p.Phase;
-            ImportProgress = p.StatusText;
-            if (p.Total > 0)
-                ImportProgressPercent = (double)p.Current / p.Total * 100.0;
-            if (!string.IsNullOrWhiteSpace(p.CurrentFile))
-                _shell.SetStatus($"{label}: {p.CurrentFile}");
-        });
-
-        var ctx = new ImportRunContext(_importCts.Token, progress, runLog, dryRun, _shell.CollectionLock);
-
-        try
-        {
-            // Bei der Vorschau (DryRun) auf einer unabhaengigen Kopie arbeiten, damit der
-            // Import das echte Live-Projekt NICHT veraendert. Die Kopie wird auf dem
-            // UI-Thread erstellt, weil Project.Data eine UI-gebundene ObservableCollection
-            // ist und die Serialisierung sie sonst aus dem Worker-Thread enumerieren wuerde.
-            var targetProject = dryRun ? _sp.Projects.DeepCopy(_shell.Project) : _shell.Project;
-
-            var result = await Task.Run(() =>
-            {
-                try
-                {
-                    return importFunc(source, targetProject, ctx);
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    return Result<ImportStats>.Fail($"{label}_EXCEPTION", ex.Message);
-                }
-            });
-
-            if (!result.Ok || result.Value is null)
-            {
-                SummaryText = $"{label} Import fehlgeschlagen: {result.ErrorMessage}";
-                _shell.SetStatus($"{label} Import fehlgeschlagen");
-                return;
-            }
-
-            var stats = result.Value;
-            SummaryText = $"{label} Import{(dryRun ? " (Vorschau)" : "")}:\n" +
-                          $"  Haltungen: {stats.Found} gefunden, {stats.Created} neu, {stats.Updated} aktualisiert\n" +
-                          $"  Fehler: {stats.Errors}, Unklar: {stats.Uncertain}";
-            DetailsText = string.Join("\n", stats.Messages.Take(80));
-
-            if (dryRun)
-            {
-                var preview = ImportPreviewResult.FromLog(runLog);
-                var doImport = ShowPreviewWindow(preview, label);
-                if (doImport)
-                {
-                    await RunImportAsync(
-                        label,
-                        source,
-                        importFunc,
-                        dryRun: false,
-                        postImportAsync: postImportAsync,
-                        saveProjectAfterCommit: saveProjectAfterCommit);
-                }
-                return;
-            }
-
-            if (postImportAsync is not null)
-            {
-                try
-                {
-                    await postImportAsync(source, ctx);
-                }
-                catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
-                {
-                    runLog.AddEntry(label, "PostImport", ImportLogStatus.Error,
-                        detail: $"PostImport-Fehler: {ex.Message}");
-                }
-            }
-
-            DeduplicateAllPrimaryDamages();
-            await RunVsaAfterImport(label);
-
-            // Fachliche Plausibilitaetspruefung: offensichtlich falsche Werte sichtbar machen,
-            // damit sie nicht unbemerkt bis in den Export durchlaufen.
-            var plausibilityWarnings = Application.Import.ImportPlausibilityValidator.Validate(_shell.Project);
-            if (plausibilityWarnings.Count > 0)
-            {
-                SummaryText += $"\n  Plausibilitaet: {plausibilityWarnings.Count} Warnung(en) - bitte pruefen.";
-                DetailsText += "\n\n--- Plausibilitaets-Warnungen ---\n"
-                    + string.Join("\n", plausibilityWarnings.Take(80));
-                foreach (var w in plausibilityWarnings.Take(200))
-                    runLog.AddEntry(label, "Plausibilitaet", ImportLogStatus.Info, detail: w);
-            }
-
-            if (saveProjectAfterCommit)
-                _shell.TrySaveProject();
-
-            _shell.SetStatus($"{label} importiert");
-            ImportProgressPercent = 100;
-        }
-        catch (OperationCanceledException)
-        {
-            runLog.WasCancelled = true;
-            SummaryText = $"{label} Import abgebrochen.";
-            _shell.SetStatus($"{label} Import abgebrochen");
-        }
-        catch (Exception ex)
-        {
-            SummaryText = $"{label} Import fehlgeschlagen: {ex.Message}";
-            DetailsText = ex.ToString();
-            _shell.SetStatus($"{label} Import fehlgeschlagen");
-        }
-        finally
-        {
-            runLog.Complete();
-            CanCancel = false;
-            IsImportInProgress = false;
-            ImportPhase = "";
-
-            var reportDir = GetReportDir();
-            if (reportDir != null)
-            {
-                try
-                {
-                    _lastReportPath = ImportRunReportExporter.Export(runLog, reportDir);
-                }
-                catch { /* ignore report errors */ }
-            }
-        }
+        await Services.ImportRunWorkflowController.RunAsync(
+            new Services.ImportRunWorkflowRequest<TArg>(
+                label,
+                source,
+                importFunc,
+                dryRun,
+                postImportAsync,
+                saveProjectAfterCommit),
+            new Services.ImportRunWorkflowActions(
+                GetProject: () => _shell.Project,
+                DeepCopyProject: _sp.Projects.DeepCopy,
+                GetReportDir: GetReportDir,
+                ExportReport: ImportRunReportExporter.Export,
+                ShowPreview: ShowPreviewWindow,
+                ValidatePlausibility: Application.Import.ImportPlausibilityValidator.Validate,
+                DeduplicateAllPrimaryDamages: DeduplicateAllPrimaryDamages,
+                RunAfterImportAsync: RunVsaAfterImport,
+                SaveProject: () => _ = _shell.TrySaveProject(),
+                SetStatus: _shell.SetStatus,
+                SetCanCancel: value => CanCancel = value,
+                SetIsImportInProgress: value => IsImportInProgress = value,
+                SetProgressPercent: value => ImportProgressPercent = value,
+                SetPhase: value => ImportPhase = value,
+                SetProgressText: value => ImportProgress = value,
+                GetSummaryText: () => SummaryText,
+                SetSummaryText: value => SummaryText = value,
+                GetDetailsText: () => DetailsText,
+                SetDetailsText: value => DetailsText = value,
+                SetLastReportPath: value => _lastReportPath = value,
+                CollectionLock: _shell.CollectionLock),
+            _importCts.Token);
     }
 
     private bool ShowPreviewWindow(ImportPreviewResult preview, string label)
