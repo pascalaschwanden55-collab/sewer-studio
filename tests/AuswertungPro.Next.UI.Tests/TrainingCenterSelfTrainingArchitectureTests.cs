@@ -600,6 +600,26 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
+    public void TrainingCenterViewModel_delegiert_samples_collection_mutation_an_controller()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "ViewModels",
+            "Windows",
+            "TrainingCenterViewModel.cs"));
+        var loadSource = ExtractMethodBody(source, "private async Task LoadSamplesInternalAsync()");
+        var generateSource = ExtractMethodBody(source, "private async Task GenerateSamplesAsync()");
+
+        Assert.Contains("ObservableCollectionContentController.ReplaceWith(Samples, list)", loadSource, StringComparison.Ordinal);
+        Assert.Contains("ObservableCollectionContentController.Append(Samples, newSamples)", generateSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Samples.Clear()", loadSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("foreach (var s in list)", loadSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("foreach (var s in newSamples)", generateSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_log_format_und_trim_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(

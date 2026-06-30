@@ -15,10 +15,11 @@ public sealed class TrainingCenterReviewThreadingTests
         var method = ExtractMethod(source, "private async Task LoadSamplesInternalAsync()");
 
         Assert.Contains("OnUi(() =>", method);
+        Assert.Contains("ObservableCollectionContentController.ReplaceWith(Samples, list)", method);
         Assert.True(
             method.IndexOf("OnUi(() =>", StringComparison.Ordinal)
-            < method.IndexOf("Samples.Clear()", StringComparison.Ordinal),
-            "Samples.Clear/Add muss ueber den UI-Dispatcher laufen; Review-Freigaben koennen nach ConfigureAwait(false) auf einem Hintergrundthread fortsetzen.");
+            < method.IndexOf("ObservableCollectionContentController.ReplaceWith(Samples, list)", StringComparison.Ordinal),
+            "Samples-Replace muss ueber den UI-Dispatcher laufen; Review-Freigaben koennen nach ConfigureAwait(false) auf einem Hintergrundthread fortsetzen.");
     }
 
     [Fact]

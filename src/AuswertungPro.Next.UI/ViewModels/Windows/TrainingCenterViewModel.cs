@@ -25,6 +25,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 using AuswertungPro.Next.UI.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai.Training;
+using AuswertungPro.Next.UI.Collections;
 using AuswertungPro.Next.UI.Services;
 using AiTrack = AuswertungPro.Next.UI.Services.AiActivityTracker;
 using InfraSelfImproving = AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
@@ -609,9 +610,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         var list = await TrainingSamplesStore.LoadAsync().ConfigureAwait(false);
         OnUi(() =>
         {
-            Samples.Clear();
-            foreach (var s in list)
-                Samples.Add(s);
+            ObservableCollectionContentController.ReplaceWith(Samples, list);
         });
     }
 
@@ -656,8 +655,7 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             await TrainingSamplesStore.MergeAndSaveAsync(newSamples);
 
-            foreach (var s in newSamples)
-                Samples.Add(s);
+            ObservableCollectionContentController.Append(Samples, newSamples);
 
             StatusText = $"{newSamples.Count} neue Samples generiert für {SelectedCase.CaseId}.";
         }
