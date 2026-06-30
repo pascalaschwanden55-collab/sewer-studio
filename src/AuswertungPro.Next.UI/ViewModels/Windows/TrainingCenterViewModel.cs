@@ -160,10 +160,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             while (SelfTrainingLogEntries.Count > 100)
                 SelfTrainingLogEntries.RemoveAt(0);
         }
-        if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
-            d.Invoke(Apply);
-        else
-            Apply();
+        OnUi(Apply);
     }
 
     private void UpdateCodeDistribution(string code, MatchLevel level)
@@ -178,10 +175,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             }
             SelfTrainingStatusCalculator.ApplyMatch(entry, level);
         }
-        if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
-            d.Invoke(Apply);
-        else
-            Apply();
+        OnUi(Apply);
     }
 
     /// <summary>Wird vom SelfTrainingOrchestrator bei jedem Schritt aufgerufen.</summary>
@@ -230,10 +224,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             }
         }
 
-        if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
-            d.Invoke(Apply);
-        else
-            Apply();
+        OnUi(Apply);
     }
 
     /// <summary>Setzt alle Selbsttraining-Visualisierungen zurueck.</summary>
@@ -272,10 +263,7 @@ public partial class TrainingCenterViewModel : ObservableObject
             while (SelfTrainingLogEntries.Count > 100)
                 SelfTrainingLogEntries.RemoveAt(0);
         }
-        if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
-            d.Invoke(Apply);
-        else
-            Apply();
+        OnUi(Apply);
     }
 
     /// <summary>Aktualisiert die Live-Vorschau (Thread-safe).</summary>
@@ -295,10 +283,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 LiveFramePath = ""; // Explizit leer setzen damit UI reagiert
         }
 
-        if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
-            d.Invoke(Apply);
-        else
-            Apply();
+        OnUi(Apply);
     }
 
     private void ClearLivePreview()
@@ -332,10 +317,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 KbTopCodesText = presentation.TopCodesText;
             }
 
-            if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
-                d.Invoke(Apply);
-            else
-                Apply();
+            OnUi(Apply);
 
             // KB-Qualitaet ebenfalls aktualisieren
             await RefreshKbQualityAsync();
@@ -371,10 +353,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                 foreach (var logLine in presentation.LogLines)
                     Log(logLine);
             }
-            if (System.Windows.Application.Current?.Dispatcher is { } d && !d.CheckAccess())
-                d.Invoke(Apply);
-            else
-                Apply();
+            OnUi(Apply);
         }
         catch { /* KB evtl. noch nicht vorhanden */ }
     }
@@ -1100,9 +1079,7 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// <summary>Fuehrt UI-gebundene Aenderungen (ObservableCollection/Status) auf dem Dispatcher-Thread aus.</summary>
     private static void OnUi(Action action)
     {
-        var dispatcher = System.Windows.Application.Current?.Dispatcher;
-        if (dispatcher is null || dispatcher.CheckAccess()) action();
-        else dispatcher.Invoke(action);
+        UiThreadDispatcher.Run(action);
     }
 
     // Thread-sicheres Setzen von StatusText: in async-Methoden mit ConfigureAwait(false)
