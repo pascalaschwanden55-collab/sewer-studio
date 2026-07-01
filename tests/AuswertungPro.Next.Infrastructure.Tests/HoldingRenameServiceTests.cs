@@ -120,6 +120,49 @@ public sealed class HoldingRenameServiceTests
     }
 
     [Fact]
+    public void Rename_BenenntAuchDenFotosOrdner_UndDessenDateienUm()
+    {
+        // Fotos liegen in einem SEPARATEN Ordner (Fotos\Haltungen\<H>\), nicht ueber den Link
+        // auffindbar. Regression: der Rename fasste ihn nicht an -> Fotos blieben unter altem Namen.
+        var oldH = "3.01-3.04";
+        var newH = "07.1085601-22152";
+        var oldSan = ProjectPathResolver.SanitizePathSegment(oldH);
+        var newSan = ProjectPathResolver.SanitizePathSegment(newH);
+
+        var root = Path.Combine(Path.GetTempPath(), $"holdrename-fotos-{Guid.NewGuid():N}");
+        var projFile = Path.Combine(root, "Projektdateien", "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(projFile)!);
+        File.WriteAllText(projFile, "{}");
+
+        // Verteil-Ordner mit Video (damit LocateHoldingFolder etwas findet)
+        var verteiltOld = Path.Combine(root, "Haltungen_Verteilt", oldSan);
+        Directory.CreateDirectory(verteiltOld);
+        File.WriteAllText(Path.Combine(verteiltOld, $"20250310_{oldSan}.mpg"), "x");
+
+        // Separater Fotos-Ordner mit haltungsbenannten Fotos
+        var fotoOld = Path.Combine(root, "Fotos", "Haltungen", oldSan);
+        Directory.CreateDirectory(fotoOld);
+        File.WriteAllText(Path.Combine(fotoOld, $"H_{oldSan}_034.jpg"), "x");
+
+        try
+        {
+            var record = new HaltungRecord();
+            record.SetFieldValue("Haltungsname", oldH, FieldSource.Xtf, userEdited: false);
+            record.SetFieldValue("Link", Path.Combine("Haltungen_Verteilt", oldSan, $"20250310_{oldSan}.mpg"),
+                FieldSource.Xtf, userEdited: false);
+
+            var result = HoldingRenameService.Rename(record, oldH, newH, projFile);
+            Assert.True(result.Success, result.ErrorMessage);
+
+            var fotoNew = Path.Combine(root, "Fotos", "Haltungen", newSan);
+            Assert.True(Directory.Exists(fotoNew), "Fotos-Ordner wurde nicht umbenannt");
+            Assert.False(Directory.Exists(fotoOld), "alter Fotos-Ordner existiert noch");
+            Assert.True(File.Exists(Path.Combine(fotoNew, $"H_{newSan}_034.jpg")), "Foto-Datei nicht umbenannt");
+        }
+        finally { try { Directory.Delete(root, recursive: true); } catch { } }
+    }
+
+    [Fact]
     public void Rename_LegacyUnderscoreDashGSchema_StillRenamesFiles()
     {
         // Regression: altes Schema JJJJMMTT_<Haltung>-g.mp4 muss weiter umbenannt werden.

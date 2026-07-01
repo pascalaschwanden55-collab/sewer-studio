@@ -67,10 +67,49 @@ public static class HoldingRenameService
             folderRenamed = true;
         }
 
+        // ── Phase 2b: Fotos-Ordner der Haltung mit umbenennen ────────────
+        //    Die Fotos liegen in einem SEPARATEN Verteil-Ort (Fotos\Haltungen\<H>\), der nicht ueber
+        //    den Video-Link gefunden wird. Ordner + Dateien (Haltung im Dateinamen) mitumbenennen,
+        //    damit die in Phase 3 aktualisierten FotoPath-Felder auf existierende Dateien zeigen.
+        if (RenameSiblingHoldingFolder(projectFilePath, Path.Combine("Fotos", "Haltungen"), oldSan, newSan, folder))
+            folderRenamed = true;
+
         // ── Phase 3: Alle Pfad-Referenzen im Record aktualisieren ────────
         var updated = UpdateAllPaths(record, oldSan, newSan);
 
         return HoldingRenameResult.Ok(folderRenamed, updated);
+    }
+
+    // Benennt einen parallelen, haltungsbenannten Verteil-Ordner um (z.B. Fotos\Haltungen\<H>\),
+    // der NICHT ueber den Link auffindbar ist. Gegen den Projekt-ROOT aufgeloest. Best-effort:
+    // schlaegt der Rename fehl, wird intern zurueckgerollt und false zurueckgegeben; die uebrige
+    // Umbenennung laeuft weiter. Gibt true zurueck, wenn der Ordner umbenannt wurde.
+    private static bool RenameSiblingHoldingFolder(
+        string? projectFilePath, string relativeParent, string oldSan, string newSan, string? alreadyRenamedFolder)
+    {
+        if (string.IsNullOrWhiteSpace(projectFilePath))
+            return false;
+
+        var root = ProjectFileLocator.ProjectRootFromFile(projectFilePath)
+                   ?? Path.GetDirectoryName(projectFilePath);
+        if (string.IsNullOrWhiteSpace(root))
+            return false;
+
+        var src = Path.Combine(root, relativeParent, oldSan);
+        if (!Directory.Exists(src))
+            return false;
+
+        // Nicht denselben Ordner doppelt behandeln, den Phase 2 bereits umbenannt hat.
+        if (!string.IsNullOrWhiteSpace(alreadyRenamedFolder)
+            && string.Equals(Path.GetFullPath(src), Path.GetFullPath(alreadyRenamedFolder), StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var dest = Path.Combine(root, relativeParent, newSan);
+        if (Directory.Exists(dest))
+            return false;   // Zielordner existiert bereits -> nicht anfassen
+
+        var result = RenameFilesystemWithRollback(src, dest, oldSan, newSan);
+        return result.Success;
     }
 
     // ── Ordner-Suche ──────────────────────────────────────────────────────
