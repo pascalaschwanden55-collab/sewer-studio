@@ -5,7 +5,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class TrainingCenterSelfTrainingArchitectureTests
 {
     [Fact]
-    public void TrainingCenterViewModel_delegiert_self_training_run_preparation_an_controller()
+    public void TrainingCenterViewModel_setzt_triviale_self_training_run_preparation_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -14,13 +14,21 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var preparationControllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "SelfTrainingRunPreparationController.cs");
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingRunPreparationController.PrepareCancellation(_selfTrainingCts)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("_selfTrainingCts = runPreparation.CancellationTokenSource;", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_selfTrainingCts?.Cancel();", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_selfTrainingCts?.Dispose();", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_selfTrainingCts = new CancellationTokenSource();", selfTrainingSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(preparationControllerPath), "Triviale Self-Training-CTS-Vorbereitung soll inline in der VM stehen.");
+        Assert.DoesNotContain("SelfTrainingRunPreparationController.PrepareCancellation(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingCts?.Cancel();", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingCts?.Dispose();", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingCts = new CancellationTokenSource();", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("var ct = _selfTrainingCts.Token;", selfTrainingSource, StringComparison.Ordinal);
     }
 
     [Fact]
