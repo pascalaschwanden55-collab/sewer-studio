@@ -530,13 +530,77 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private void CommitHaltungDetailField(HaltungRecord record, string fieldName, string? value)
     {
         var next = value ?? string.Empty;
-        record.SetFieldValue(fieldName, next, FieldSource.Manual, userEdited: true);
+        var vm = DataContext as DataPageViewModel;
 
-        if (DataContext is DataPageViewModel vm)
+        if (fieldName == "Haltungsname" && vm is not null)
+        {
+            // Haltungsnummer-Aenderung MUSS ueber den Rename laufen (Verteil-Ordner/Dateien mitziehen),
+            // sonst zeigen Link/PDF nach dem Umbenennen ins Leere. Gleicher Pfad wie der Datagrid-Edit.
+            var oldValue = record.GetFieldValue("Haltungsname");
+            if (!ApplyHoldingNameChange(record, oldValue, next, vm))
+                return;   // Rename fehlgeschlagen -> Name nicht aendern
+        }
+        else
+        {
+            record.SetFieldValue(fieldName, next, FieldSource.Manual, userEdited: true);
+        }
+
+        if (vm is not null)
         {
             vm.EnsureOptionForField(fieldName, next);
             vm.ScheduleAutoSave();
         }
+    }
+
+    /// <summary>
+    /// Wendet eine Haltungsnamen-Aenderung an: benennt Verteil-Ordner + Dateien um
+    /// (<see cref="AuswertungPro.Next.Application.Common.HoldingRenameService"/>), setzt den Namen,
+    /// registriert den Rename und zieht die Nummer im Protokoll-PDF-Text mit. Gibt false zurueck, wenn
+    /// der Rename fehlschlaegt (dann bleibt der Name unveraendert). Wird aus dem Datagrid-Zellen-Edit
+    /// UND dem Formular-Detail-Editor aufgerufen, damit die Verteilung in beiden Faellen konsistent bleibt.
+    /// </summary>
+    private bool ApplyHoldingNameChange(HaltungRecord record, string? oldValue, string? newValue, DataPageViewModel vm)
+    {
+        var oldName = oldValue ?? string.Empty;
+        var newName = newValue ?? string.Empty;
+        if (string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var projectPath = Services?.Settings.LastProjectPath;
+
+        // Erst Ordner + Pfade umbenennen, DANN erst den Namen setzen
+        var renameResult = AuswertungPro.Next.Application.Common.HoldingRenameService.Rename(
+            record, oldName, newName, projectPath);
+
+        if (!renameResult.Success)
+        {
+            Dialogs.Error($"Umbenennen fehlgeschlagen:\n{renameResult.ErrorMessage}", "Umbenennen");
+            return false;
+        }
+
+        record.SetFieldValue("Haltungsname", newName, FieldSource.Manual, userEdited: true);
+        PdfCorrectionMetadata.RegisterHoldingRename(vm.Project, oldName, newName);
+
+        // Haltungsnummer auch im Protokoll-PDF-Text mitziehen (best-effort, nur Text-PDFs;
+        // Bild-/Scan-PDFs bleiben unveraendert). Die PDF-Pfade wurden vom Rename bereits aktualisiert.
+        var pdfSet = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void CollectPdf(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return;
+            foreach (var part in raw.Split(';', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var resolved = AuswertungPro.Next.Application.Common.ProjectPathResolver.ResolveFilePath(part.Trim(), projectPath);
+                if (!string.IsNullOrWhiteSpace(resolved) && resolved.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                    pdfSet.Add(resolved);
+            }
+        }
+        CollectPdf(record.GetFieldValue("PDF_Path"));
+        CollectPdf(record.GetFieldValue("PDF_All"));
+        if (pdfSet.Count > 0)
+            AuswertungPro.Next.Infrastructure.HoldingFolderDistributor.RewriteHoldingInPdfFiles(
+                new System.Collections.Generic.List<string>(pdfSet), oldName, newName);
+
+        return true;
     }
 
     private static readonly SolidColorBrush TrainedRowBrush = new(Color.FromArgb(60, 220, 40, 40));
@@ -691,45 +755,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
             handled = true;
             var oldValue = hRecord.GetFieldValue("Haltungsname");
             var newValue = DataGridEditedTextValueResolver.Resolve(e.EditingElement) ?? oldValue;
-            if (!string.Equals(oldValue, newValue, StringComparison.OrdinalIgnoreCase))
-            {
-                var sp = Services;
-                var projectPath = sp?.Settings.LastProjectPath;
-
-                // Erst Ordner + Pfade umbenennen, DANN erst den Namen setzen
-                var renameResult = AuswertungPro.Next.Application.Common.HoldingRenameService.Rename(
-                    hRecord, oldValue, newValue, projectPath);
-
-                if (!renameResult.Success)
-                {
-                    Dialogs.Error($"Umbenennen fehlgeschlagen:\n{renameResult.ErrorMessage}", "Umbenennen");
-                    return;
-                }
-
-                // Name erst nach erfolgreichem Rename setzen
-                hRecord.SetFieldValue("Haltungsname", newValue, FieldSource.Manual, userEdited: true);
-                PdfCorrectionMetadata.RegisterHoldingRename(vm.Project, oldValue, newValue);
-
-                // Haltungsnummer auch im Protokoll-PDF-Text mitziehen (best-effort, nur Text-PDFs;
-                // Bild-/Scan-PDFs bleiben unveraendert). Die PDF-Pfade wurden vom Rename bereits
-                // auf neuen Ordner/Dateinamen aktualisiert.
-                var pdfSet = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                void CollectPdf(string? raw)
-                {
-                    if (string.IsNullOrWhiteSpace(raw)) return;
-                    foreach (var part in raw.Split(';', StringSplitOptions.RemoveEmptyEntries))
-                    {
-                        var resolved = AuswertungPro.Next.Application.Common.ProjectPathResolver.ResolveFilePath(part.Trim(), projectPath);
-                        if (!string.IsNullOrWhiteSpace(resolved) && resolved.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-                            pdfSet.Add(resolved);
-                    }
-                }
-                CollectPdf(hRecord.GetFieldValue("PDF_Path"));
-                CollectPdf(hRecord.GetFieldValue("PDF_All"));
-                if (pdfSet.Count > 0)
-                    AuswertungPro.Next.Infrastructure.HoldingFolderDistributor.RewriteHoldingInPdfFiles(
-                        new System.Collections.Generic.List<string>(pdfSet), oldValue, newValue);
-            }
+            if (!ApplyHoldingNameChange(hRecord, oldValue, newValue, vm))
+                return;
         }
 
         // S3: Alle uebrigen (normalen) Textspalten ebenfalls als manuell editiert markieren.
