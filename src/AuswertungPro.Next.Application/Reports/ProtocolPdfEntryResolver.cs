@@ -74,7 +74,9 @@ internal static class ProtocolPdfEntryResolver
             }
         }
 
-        return result;
+        // Redundante Fortsetzungs-/Quantifizierungszeilen zu einer Beobachtung falten
+        // (Merge statt Drop, kein Datenverlust) -> Protokoll wie das Original schlank halten.
+        return ObservationCollapser.Collapse(result);
     }
 
     private static void MergePhotoPaths(ProtocolEntry target, ProtocolEntry source)
