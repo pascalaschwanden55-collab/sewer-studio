@@ -61,6 +61,7 @@ public sealed class DataPageVideoRelinkController
         var projectPath = _getLastProjectPath();
         return string.IsNullOrWhiteSpace(projectPath)
             ? null
-            : Path.GetDirectoryName(projectPath);
+            : (AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(projectPath)
+               ?? Path.GetDirectoryName(projectPath));
     }
 }

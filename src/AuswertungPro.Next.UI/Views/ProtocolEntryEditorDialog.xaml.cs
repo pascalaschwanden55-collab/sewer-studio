@@ -828,7 +828,9 @@ public partial class ProtocolEntryEditorDialog : Window
         var fromSettings = _sp?.Settings.LastProjectPath;
         if (!string.IsNullOrWhiteSpace(fromSettings))
         {
-            var dir = Path.GetDirectoryName(fromSettings);
+            // Projekt-ROOT (nicht GetDirectoryName): projekt.json kann unter Projektdateien\ liegen.
+            var dir = AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(fromSettings)
+                      ?? Path.GetDirectoryName(fromSettings);
             if (!string.IsNullOrWhiteSpace(dir))
                 return dir;
         }
