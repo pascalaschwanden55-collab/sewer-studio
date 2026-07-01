@@ -408,11 +408,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         if (_numberedRecords is not null)
             _numberedRecords.CollectionChanged += RecordsCollectionChangedForNumbers;
 
-        AuswertungPro.Next.Application.Common.HaltungRunningNumberService.Assign(Records);
+        AuswertungPro.Next.Application.Common.HaltungRunningNumberService.AssignNr(Records);
     }
 
     private void RecordsCollectionChangedForNumbers(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        => AuswertungPro.Next.Application.Common.HaltungRunningNumberService.Assign(Records);
+        => AuswertungPro.Next.Application.Common.HaltungRunningNumberService.AssignNr(Records);
 
     partial void OnGridMinRowHeightChanged(double value)
     {

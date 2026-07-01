@@ -81,8 +81,5 @@ public static class DataPageRecordOrderController
     }
 
     private static void Renumber(ObservableCollection<HaltungRecord> records)
-    {
-        for (var i = 0; i < records.Count; i++)
-            records[i].SetFieldValue("NR", (i + 1).ToString(), FieldSource.Manual, userEdited: true);
-    }
+        => AuswertungPro.Next.Application.Common.HaltungRunningNumberService.AssignNr(records);
 }

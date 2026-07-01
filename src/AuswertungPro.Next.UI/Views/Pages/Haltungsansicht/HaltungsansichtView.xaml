@@ -58,8 +58,8 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal">
-                                <!-- Laufende Anzeige-Nummer (1..N), folgt automatisch der Reihenfolge -->
-                                <TextBlock Text="{Binding LaufendeNr}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                <!-- Laufende Nummer = Feld NR (automatisch = Position, siehe HaltungRunningNumberService) -->
+                                <TextBlock Text="{Binding Fields[NR]}" Foreground="{DynamicResource TextSecondaryBrush}"
                                            FontSize="11" Margin="0,0,8,0" MinWidth="16" TextAlignment="Right"/>
                                 <TextBlock Text="{Binding Fields[Haltungsname]}" Foreground="{DynamicResource TextBrush}"
                                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
