@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 
@@ -28,7 +29,7 @@ public static class ProtocolRegenerationService
     /// <summary>
     /// Generiert für alle Haltungen mit Protokoll das eigene <c>_E</c>-Protokoll in die Verteilung.
     /// </summary>
-    public static Result RegenerateAll(Project project, string projectFolder)
+    public static Result RegenerateAll(Project project, string projectFolder, ICodeCatalogProvider? codeCatalog = null)
     {
         var messages = new List<string>();
         int generated = 0, errors = 0;
@@ -49,7 +50,7 @@ public static class ProtocolRegenerationService
                 var stamp = KanalImportDistributor.ResolveDateStamp(record);
                 var pdf = exporter.BuildHaltungsprotokollPdf(
                     project, record, record.Protocol, projectFolder,
-                    new HaltungsprotokollPdfOptions { IncludePhotos = true });
+                    new HaltungsprotokollPdfOptions { IncludePhotos = true, CodeCatalog = codeCatalog });
 
                 // Fester Name -> Regenerierung überschreibt die vorherige Version (immer aktuell).
                 var dest = Path.Combine(dir, $"{stamp}_{san}_E.pdf");

@@ -549,7 +549,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         ImportProgress = "Eigene Protokolle (_E, mit Fotos) werden fuer die Verteilung erzeugt...";
         var result = await Task.Run(() =>
             AuswertungPro.Next.Infrastructure.Import.ProtocolRegenerationService.RegenerateAll(
-                _shell.Project, projectFolder!));
+                _shell.Project, projectFolder!, _sp.CodeCatalog));
         ImportProgress = "";
 
         _ = _shell.TrySaveProject();
