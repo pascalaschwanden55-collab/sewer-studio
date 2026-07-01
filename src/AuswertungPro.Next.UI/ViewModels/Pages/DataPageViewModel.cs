@@ -13,7 +13,6 @@ using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using System.Windows;
-using System.Windows.Threading;
 using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.UI.ViewModels.Windows;
@@ -37,8 +36,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private readonly ServiceProvider _sp;
     private readonly ShellViewModel _shell;
-    private readonly DispatcherTimer _saveBannerTimer;
-    private readonly DispatcherTimer _autoSaveTimer;
+    private readonly DataPageTimerController _timers;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
@@ -133,15 +131,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _shell = shell;
         _sp = services;
         _measureRecommendationService = _sp.MeasureRecommendation;
-        _saveBannerTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
-        _saveBannerTimer.Tick += (_, __) =>
-        {
-            DataPageSaveStatusController.Hide(
-                _saveBannerTimer.Stop,
-                value => IsSaveStatusVisible = value);
-        };
-        _autoSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(5) };
-        _autoSaveTimer.Tick += (_, __) => AutoSaveOnTimerTick();
+        _timers = new DataPageTimerController(
+            value => SaveStatus = value,
+            value => IsSaveStatusVisible = value,
+            AutoSaveOnTimerTick);
         _shell.PropertyChanged += ShellPropertyChanged;
 
         // Live-Control: Retry-Handler registrieren, damit der MCP eine Haltung
@@ -230,8 +223,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _disposed = true;
         _shell.PropertyChanged -= ShellPropertyChanged;
         PropertyChanged -= DataPageViewModel_PropertyChanged;
-        _saveBannerTimer.Stop();
-        _autoSaveTimer.Stop();
+        _timers.Stop();
         LiveControl.LiveControlRetryBridge.Reset();
     }
 
@@ -432,27 +424,18 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     /// </summary>
     public void ScheduleAutoSave()
     {
-        DataPageAutoSaveController.Schedule(
+        _timers.ScheduleAutoSave(
             _sp.Settings.DataAutoSaveMode,
             markDirty: () => _shell.Project.Dirty = true,
-            stopTimer: _autoSaveTimer.Stop,
-            setInterval: interval =>
-            {
-                if (_autoSaveTimer.Interval != interval)
-                    _autoSaveTimer.Interval = interval;
-            },
-            isTimerEnabled: () => _autoSaveTimer.IsEnabled,
-            startTimer: _autoSaveTimer.Start,
             save: AutoSave);
     }
 
     private void AutoSaveOnTimerTick()
     {
-        DataPageAutoSaveController.HandleTimerTick(
+        _timers.HandleAutoSaveTimerTick(
             _sp.Settings.DataAutoSaveMode,
             save: AutoSave,
-            isProjectDirty: () => _shell.Project.Dirty,
-            stopTimer: _autoSaveTimer.Stop);
+            isProjectDirty: () => _shell.Project.Dirty);
     }
 
     private void AutoSave()
@@ -1351,12 +1334,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void ShowSaveStatus(string? text)
     {
-        DataPageSaveStatusController.Show(
-            text,
-            value => SaveStatus = value,
-            value => IsSaveStatusVisible = value,
-            _saveBannerTimer.Stop,
-            _saveBannerTimer.Start);
+        _timers.ShowSaveStatus(text);
     }
 
     private void UpdateLearningInfo(int? similarCases = null, decimal? estimatedCost = null)
