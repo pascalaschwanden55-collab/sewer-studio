@@ -153,6 +153,26 @@ public sealed class SourceTextArchitectureHygieneTests
         }
     }
 
+    [Fact]
+    public void Player_window_media_infrastructure_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowMediaInfrastructureArchitectureTests.cs"));
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        var methodNames = new[]
+        {
+            "PlayerWindow_slider_track_bounds_live_in_policy",
+            "PlayerWindow_libvlc_creation_lives_in_factory"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -202,6 +222,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowCodingStateArchitectureTests.cs")]
     [InlineData("PlayerWindowCoreArchitectureTests.cs")]
     [InlineData("PlayerWindowControllerArchitectureTests.cs")]
+    [InlineData("PlayerWindowMediaInfrastructureArchitectureTests.cs")]
     [InlineData("PlayerWindowResourceDictionaryTests.cs")]
     [InlineData("PlayerWindowRuntimeArchitectureTests.cs")]
     [InlineData("PlayerWindowVisualInfrastructureArchitectureTests.cs")]
