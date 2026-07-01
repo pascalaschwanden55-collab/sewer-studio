@@ -763,13 +763,17 @@ public partial class TrainingCenterViewModel : ObservableObject
     [RelayCommand]
     private async Task BatchImportAndIndexAsync()
     {
-        var runPreparation = TrainingBatchImportRunPreparationController.Prepare(
-            IsBusy,
-            _rootFolders.Count,
-            _genCts,
-            value => StatusText = value);
-        if (runPreparation.ShouldStop)
+        if (IsBusy) return;
+
+        if (_rootFolders.Count == 0)
+        {
+            StatusText = "Bitte zuerst einen oder mehrere Ordner wählen.";
             return;
+        }
+
+        _genCts?.Cancel();
+        _genCts?.Dispose();
+        var runCts = new CancellationTokenSource();
 
         // S8: Dieser Pfad setzt erkannte Samples automatisch auf Approved und indexiert sie
         // OHNE manuelle Pruefung direkt in die Knowledge Base (umgeht die Review-Politik des
@@ -779,13 +783,13 @@ public partial class TrainingCenterViewModel : ObservableObject
             DialogHost.Current);
         if (!confirmation.ShouldContinue)
         {
-            runPreparation.CancellationTokenSource?.Dispose();
+            runCts.Dispose();
             StatusText = confirmation.StatusText ?? "";
             return;
         }
 
-        _genCts = runPreparation.CancellationTokenSource;
-        var ct = runPreparation.CancellationToken;
+        _genCts = runCts;
+        var ct = runCts.Token;
 
         var batchUi = new TrainingBatchUiSink(
             value => IsBusy = value,

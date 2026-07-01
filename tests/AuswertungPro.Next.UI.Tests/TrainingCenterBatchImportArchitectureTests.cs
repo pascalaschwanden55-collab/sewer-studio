@@ -33,7 +33,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_batch_import_run_preparation_an_controller()
+    public void TrainingCenterViewModel_setzt_triviale_batch_import_run_preparation_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -42,14 +42,26 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var controllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportRunPreparationController.cs");
         var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
 
-        Assert.Contains("TrainingBatchImportRunPreparationController.Prepare(", batchImportSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(controllerPath), "Triviale Batch-Import-Run-Preparation soll inline in der VM stehen.");
+        Assert.DoesNotContain("TrainingBatchImportRunPreparationController", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("if (IsBusy) return;", batchImportSource, StringComparison.Ordinal);
         Assert.Contains("_rootFolders.Count", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("_genCts = runPreparation.CancellationTokenSource;", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_genCts?.Cancel();", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_genCts?.Dispose();", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_genCts = new CancellationTokenSource();", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = \"Bitte zuerst einen oder mehrere Ordner wählen.\";", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("_genCts?.Cancel();", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("_genCts?.Dispose();", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("var runCts = new CancellationTokenSource();", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("runCts.Dispose();", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("_genCts = runCts;", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("var ct = runCts.Token;", batchImportSource, StringComparison.Ordinal);
     }
 
     [Fact]
