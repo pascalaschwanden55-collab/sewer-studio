@@ -286,6 +286,19 @@ public sealed class SourceTextArchitectureHygieneTests
         }
     }
 
+    [Fact]
+    public void Player_window_shell_project_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowShellProjectArchitectureTests.cs"));
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        const string methodName = "PlayerWindow_shell_project_access_uses_service";
+
+        Assert.Contains($"public void {methodName}", focused);
+        Assert.DoesNotContain($"public void {methodName}", guard);
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -343,6 +356,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowProtocolEventMappingArchitectureTests.cs")]
     [InlineData("PlayerWindowResourceDictionaryTests.cs")]
     [InlineData("PlayerWindowRuntimeArchitectureTests.cs")]
+    [InlineData("PlayerWindowShellProjectArchitectureTests.cs")]
     [InlineData("PlayerWindowTimerArchitectureTests.cs")]
     [InlineData("PlayerWindowVisualInfrastructureArchitectureTests.cs")]
     [InlineData("PlayerWindowWiringArchitectureTests.cs")]
