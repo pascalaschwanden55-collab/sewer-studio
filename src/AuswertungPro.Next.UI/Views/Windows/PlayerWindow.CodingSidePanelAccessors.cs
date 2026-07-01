@@ -68,26 +68,9 @@ public partial class PlayerWindow
 
     private void InitializeCodingSidePanelControllers()
     {
-        _codingSidePanelControllers.Initialize(
-            new CodingSidePanelControllerControls(
-                CodingEvents: LstCodingEvents,
-                CodingDefectCount: RunCodingDefectCount,
-                CodingOpenCount: RunCodingOpenCount,
-                CodingStatAutoAccepted: TxtCodingStatAutoAccepted,
-                CodingStatPending: TxtCodingStatPending,
-                CodingStatReviewRequired: TxtCodingStatReviewRequired,
-                CodingStatAvgConfidence: TxtCodingStatAvgConfidence,
-                InlineDetailCode: TxtInlineDetailCode,
-                InlineDetailDescription: TxtInlineDetailDesc,
-                InlineDetailDistance: TxtInlineDetailDistance,
-                InlineDetailConfidence: TxtInlineDetailConfidence,
-                InlineDetailStatus: TxtInlineDetailStatus,
-                InlineEvidencePreview: ImgInlineEvidencePreview,
-                InlineEvidencePreviewStatus: TxtInlineEvidencePreviewStatus,
-                InlineAccept: BtnInlineAccept,
-                InlineReject: BtnInlineReject,
-                DefectDetailInline: CodingDefectDetailInline,
-                DefectDetailColumn: ColDefectDetail),
+        PlayerCodingSidePanelControllerInitializer.Initialize(
+            _codingSidePanelControllers,
+            CodingSidePanelControl,
             new CodingSidePanelControllerActions(
                 RefreshEvents: RefreshCodingEventsList,
                 SelectCreatedEvent: ev => _codingSidePanelControllers.EventsList.SelectEvent(ev),

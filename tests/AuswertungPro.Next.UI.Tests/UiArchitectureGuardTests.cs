@@ -684,6 +684,7 @@ public sealed class UiArchitectureGuardTests
         var overlayStateControllerSetPath = Path.Combine(uiRoot, "Player", "CodingOverlayStateControllerSet.cs");
         var sidePanelControllerSetPath = Path.Combine(uiRoot, "Player", "CodingSidePanelControllerSet.cs");
         var sidePanelEventBinderPath = Path.Combine(windowsRoot, "PlayerCodingSidePanelEventBinder.cs");
+        var sidePanelControllerInitializerPath = Path.Combine(windowsRoot, "PlayerCodingSidePanelControllerInitializer.cs");
 
         Assert.True(File.Exists(statePath), "Coding-Feldzustand soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(codingModeStatePath), "Coding-Modus-Zustand soll nicht mehr als Rohfeld im PlayerWindow liegen.");
@@ -695,6 +696,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(overlayStateControllerSetPath), "Coding-Overlay-Zustandscontroller sollen nicht einzeln im PlayerWindow liegen.");
         Assert.True(File.Exists(sidePanelControllerSetPath), "Coding-SidePanel-Control-Wrapper sollen nicht mehr als einzelne Rohfelder im PlayerWindow liegen.");
         Assert.True(File.Exists(sidePanelEventBinderPath), "Coding-SidePanel-Event-Wiring soll ausserhalb des PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(sidePanelControllerInitializerPath), "Coding-SidePanel-Control-Mapping soll ausserhalb des PlayerWindow-Partials liegen.");
 
         var coding = File.ReadAllText(codingPath);
         var state = File.ReadAllText(statePath);
@@ -708,6 +710,7 @@ public sealed class UiArchitectureGuardTests
         var sidePanelControllerSet = File.Exists(sidePanelControllerSetPath) ? File.ReadAllText(sidePanelControllerSetPath) : "";
         var accessors = File.ReadAllText(Path.Combine(windowsRoot, "PlayerWindow.CodingSidePanelAccessors.cs"));
         var sidePanelEventBinder = File.Exists(sidePanelEventBinderPath) ? File.ReadAllText(sidePanelEventBinderPath) : "";
+        var sidePanelControllerInitializer = File.Exists(sidePanelControllerInitializerPath) ? File.ReadAllText(sidePanelControllerInitializerPath) : "";
 
         Assert.DoesNotContain("private bool _isCodingMode", coding);
         Assert.DoesNotContain("private CodingSessionViewModel? _codingVm", coding);
@@ -785,6 +788,10 @@ public sealed class UiArchitectureGuardTests
         Assert.Contains("private readonly CodingSidePanelControllerSet _codingSidePanelControllers = new();", state);
         Assert.Contains("public sealed class CodingSidePanelControllerSet", sidePanelControllerSet);
         Assert.Contains("public void Initialize", sidePanelControllerSet);
+        Assert.Contains("PlayerCodingSidePanelControllerInitializer.Initialize", accessors);
+        Assert.DoesNotContain("new CodingSidePanelControllerControls(", accessors);
+        Assert.Contains("new CodingSidePanelControllerControls(", sidePanelControllerInitializer);
+        Assert.Contains("sidePanel.LstCodingEvents", sidePanelControllerInitializer);
         Assert.Contains("PlayerCodingSidePanelEventBinder.Bind", accessors);
         Assert.DoesNotContain("CodingSidePanelControl.CodingTakePhotoRequested +=", accessors);
         Assert.DoesNotContain("CodingSidePanelControl.CodingProtocolMatchRequested +=", accessors);
