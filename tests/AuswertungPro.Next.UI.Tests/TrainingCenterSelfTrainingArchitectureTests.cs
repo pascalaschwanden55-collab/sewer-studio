@@ -230,7 +230,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_self_training_post_run_refresh_an_controller()
+    public void TrainingCenterViewModel_setzt_trivialen_self_training_post_run_refresh_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -241,9 +241,9 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "TrainingCenterViewModel.cs"));
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingPostRunRefreshController.RefreshAsync(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("await LoadSamplesInternalAsync();", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("await RefreshKbStatusAsync();", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("await LoadSamplesInternalAsync();", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("await RefreshKbStatusAsync();", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingPostRunRefreshController.RefreshAsync(", selfTrainingSource, StringComparison.Ordinal);
     }
 
     [Fact]
