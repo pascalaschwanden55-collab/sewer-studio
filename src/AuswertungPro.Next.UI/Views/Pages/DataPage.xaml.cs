@@ -295,9 +295,8 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        var betroffen = vm.Records.Count(r =>
-            !string.IsNullOrEmpty(r.GetFieldValue(fieldName)));
-        if (betroffen == 0)
+        var plan = DataPageClearColumnController.BuildPlan(vm.Records, fieldName);
+        if (plan.Status == DataPageClearColumnStatus.AlreadyEmpty)
         {
             Dialogs.Info($"Spalte \"{displayName}\" ist bereits leer.", "Spalte leeren");
             return;
@@ -305,21 +304,13 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         if (!Dialogs.ConfirmWarn(
             $"ACHTUNG: Alle Werte in Spalte \"{displayName}\" werden geloescht.\n\n" +
-            $"Betroffen: {betroffen} von {vm.Records.Count} Haltungen.\n" +
+            $"Betroffen: {plan.AffectedCount} von {plan.TotalCount} Haltungen.\n" +
             "Auch manuell bearbeitete Werte gehen verloren und koennen nicht rueckgaengig gemacht werden.\n\n" +
             "Wirklich loeschen?",
             "Spalte leeren"))
             return;
 
-        foreach (var record in vm.Records)
-        {
-            // userEdited: true um die Guard-Clause zu umgehen (sonst wird das Leeren blockiert)
-            record.SetFieldValue(fieldName, string.Empty, FieldSource.Manual, userEdited: true);
-            // Danach UserEdited zuruecksetzen, damit Importe das Feld wieder fuellen koennen
-            if (record.FieldMeta.TryGetValue(fieldName, out var meta))
-                meta.UserEdited = false;
-        }
-
+        DataPageClearColumnController.ClearColumn(vm.Records, fieldName);
         vm.ScheduleAutoSave();
     }
 
