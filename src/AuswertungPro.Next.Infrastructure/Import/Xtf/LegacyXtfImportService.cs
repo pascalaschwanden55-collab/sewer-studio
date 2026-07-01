@@ -838,41 +838,22 @@ public sealed class LegacyXtfImportService
     }
 
     private static string ResolveVsaPhotoPath(string xtfPath, string? relativeFolder, string? fileName)
-    {
-        fileName = (fileName ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(fileName))
-            return string.Empty;
-
-        if (Path.IsPathRooted(fileName))
-            return fileName;
-
-        var baseDir = Path.GetDirectoryName(xtfPath) ?? "";
-        var rel = (relativeFolder ?? "").Trim().Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
-        var candidates = new List<string>();
-
-        if (!string.IsNullOrWhiteSpace(rel))
-            candidates.Add(Path.GetFullPath(Path.Combine(baseDir, rel, fileName)));
-        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, fileName)));
-        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, "Foto", fileName)));
-        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, "Fotos", fileName)));
-        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, "Picture", fileName)));
-        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, "Pictures", fileName)));
-
-        foreach (var c in candidates)
-        {
-            if (File.Exists(c))
-                return c;
-        }
-
-        return candidates[0];
-    }
+        => ResolveVsaMediaPath(xtfPath, relativeFolder, fileName, new[] { "Foto", "Fotos", "Picture", "Pictures" });
 
     /// <summary>
     /// Loesung des Video-Pfads aus dem KEK.Datei-Element (Klasse=Untersuchung).
-    /// Prueft: relativpfad\bezeichnung, dann Film\bezeichnung, dann direkt neben der XTF.
-    /// Gibt den ersten gefundenen Pfad zurueck; falls keiner existiert, den bevorzugten Kandidaten.
     /// </summary>
     private static string ResolveVsaVideoPath(string xtfPath, string? relativeFolder, string? fileName)
+        => ResolveVsaMediaPath(xtfPath, relativeFolder, fileName, new[] { "Film", "Video", "Videos" });
+
+    /// <summary>
+    /// Loest eine Medien-Datei aus einem KEK.Datei-Element auf. Sucht in baseDir (Verzeichnis der XTF)
+    /// UND dessen Eltern-Ebenen — bei IKAS liegt die XTF in &lt;Export&gt;\Dokumente\, die Medien-Ordner
+    /// (Foto/Film) aber im Export-Root eine Ebene hoeher. Prueft je Ebene: &lt;relativpfad&gt;\&lt;datei&gt;,
+    /// direkt daneben und die bekannten Medien-Unterordner. Gibt den ersten existierenden Pfad zurueck,
+    /// sonst den bevorzugten Kandidaten (wird beim Kopieren als fehlend gemeldet).
+    /// </summary>
+    private static string ResolveVsaMediaPath(string xtfPath, string? relativeFolder, string? fileName, string[] subfolders)
     {
         fileName = (fileName ?? "").Trim();
         if (string.IsNullOrWhiteSpace(fileName))
@@ -881,17 +862,21 @@ public sealed class LegacyXtfImportService
         if (Path.IsPathRooted(fileName))
             return fileName;
 
-        var baseDir = Path.GetDirectoryName(xtfPath) ?? "";
-        var rel = (relativeFolder ?? "").Trim().Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
-        var candidates = new List<string>();
+        var rel = (relativeFolder ?? "").Trim()
+            .Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
 
-        // 1. Bevorzugt: baseDir\<relativpfad>\<bezeichnung>  (z.B. baseDir\Film\H_06-001.mpg)
-        if (!string.IsNullOrWhiteSpace(rel))
-            candidates.Add(Path.GetFullPath(Path.Combine(baseDir, rel, fileName)));
-        // 2. Fallback: direkt im Film-Ordner
-        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, "Film", fileName)));
-        // 3. Direkt neben der XTF
-        candidates.Add(Path.GetFullPath(Path.Combine(baseDir, fileName)));
+        var candidates = new List<string>();
+        var dir = Path.GetDirectoryName(xtfPath) ?? "";
+        // baseDir + bis zu 2 Eltern-Ebenen (deckt <Export>\Dokumente\x.xtf mit Foto/Film im Export-Root ab).
+        for (var level = 0; level < 3 && !string.IsNullOrWhiteSpace(dir); level++)
+        {
+            if (!string.IsNullOrWhiteSpace(rel))
+                candidates.Add(Path.GetFullPath(Path.Combine(dir, rel, fileName)));
+            candidates.Add(Path.GetFullPath(Path.Combine(dir, fileName)));
+            foreach (var sub in subfolders)
+                candidates.Add(Path.GetFullPath(Path.Combine(dir, sub, fileName)));
+            dir = Path.GetDirectoryName(dir) ?? "";
+        }
 
         foreach (var c in candidates)
         {
@@ -899,8 +884,7 @@ public sealed class LegacyXtfImportService
                 return c;
         }
 
-        // Kein Treffer: ersten Kandidaten zurueckgeben (wird spaeter beim Kopieren als fehlend gemeldet)
-        return candidates[0];
+        return candidates.Count > 0 ? candidates[0] : fileName;
     }
 
     private static void SyncProtocolFromFindings(HaltungRecord record, IReadOnlyList<VsaFinding> findings)
