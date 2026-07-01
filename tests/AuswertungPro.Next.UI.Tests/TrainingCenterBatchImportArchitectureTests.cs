@@ -7,7 +7,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class TrainingCenterBatchImportArchitectureTests
 {
     [Fact]
-    public void TrainingCenterViewModel_delegiert_batch_cancel_an_controller()
+    public void TrainingCenterViewModel_setzt_trivialen_batch_cancel_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -16,11 +16,19 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var controllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportRunControlController.cs");
         var cancelSource = ExtractMethodBody(source, "private void CancelBatch()");
 
-        Assert.Contains("TrainingBatchImportRunControlController.RequestCancel(_genCts)", cancelSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_genCts?.Cancel();", cancelSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("StatusText = \"Abbruch angefordert...\";", cancelSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(controllerPath), "Trivialer Batch-Cancel soll inline in der VM stehen.");
+        Assert.DoesNotContain("TrainingBatchImportRunControlController.RequestCancel", cancelSource, StringComparison.Ordinal);
+        Assert.Contains("_genCts?.Cancel();", cancelSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = \"Abbruch angefordert...\";", cancelSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TrainingBatchImportTerminalPresentationBuilder.BuildCancelRequestedStatus", cancelSource, StringComparison.Ordinal);
     }
 

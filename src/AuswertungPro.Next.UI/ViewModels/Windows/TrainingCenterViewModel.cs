@@ -915,7 +915,8 @@ public partial class TrainingCenterViewModel : ObservableObject
     [RelayCommand]
     private void CancelBatch()
     {
-        StatusText = TrainingBatchImportRunControlController.RequestCancel(_genCts);
+        _genCts?.Cancel();
+        StatusText = "Abbruch angefordert...";
     }
 
     [RelayCommand]
