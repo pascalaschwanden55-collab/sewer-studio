@@ -798,14 +798,14 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void OpenHydraulikPanel(HaltungRecord? record)
     {
-        var vm = new HydraulikPanelViewModel(_sp.Settings);
+        var request = DataPageHydraulikPanelController.BuildOpenRequest(record);
+        ShowHydraulikPanel(request);
+    }
 
-        if (record is not null)
-        {
-            var dn = DnValueParser.TryParseMillimeters(record.GetFieldValue("DN_mm"));
-            var material = record.GetFieldValue("Rohrmaterial");
-            vm.LoadFromRecord(dn, material, null);
-        }
+    private void ShowHydraulikPanel(DataPageHydraulikPanelRequest request)
+    {
+        var vm = new HydraulikPanelViewModel(_sp.Settings);
+        vm.LoadFromRecord(request.DnMillimeters, request.Material, request.WasserstandMillimeters);
 
         var win = new HydraulikPanelWindow(vm);
         win.Owner = System.Windows.Application.Current?.MainWindow;
