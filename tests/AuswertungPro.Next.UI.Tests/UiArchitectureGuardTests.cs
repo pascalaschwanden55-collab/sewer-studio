@@ -4093,18 +4093,23 @@ public sealed class UiArchitectureGuardTests
         var statePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.State.cs");
         var controlsPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationPanelControls.cs");
         var ownerPath = Path.Combine(uiRoot, "Player", "CodingConfirmationPanelControlsOwner.cs");
+        var initializerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerCodingConfirmationPanelInitializer.cs");
 
         Assert.True(File.Exists(controlsPath), "Coding-Bestaetigungspanel-Anzeige soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(ownerPath), "Coding-Bestaetigungspanel-Besitz soll nicht als nullable Rohfeld im PlayerWindow liegen.");
+        Assert.True(File.Exists(initializerPath), "Coding-Bestaetigungspanel-Control-Mapping soll ausserhalb der PlayerWindow-Partials liegen.");
 
         var confirmation = File.ReadAllText(confirmationPath);
         var state = File.ReadAllText(statePath);
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
         var owner = File.Exists(ownerPath) ? File.ReadAllText(ownerPath) : "";
+        var initializer = File.Exists(initializerPath) ? File.ReadAllText(initializerPath) : "";
 
         Assert.DoesNotContain("private CodingConfirmationPanelControls _codingConfirmationPanelControls", state);
         Assert.Contains("private readonly CodingConfirmationPanelControlsOwner _codingConfirmationPanelControls = new();", state);
-        Assert.Contains("_codingConfirmationPanelControls.Initialize", confirmation);
+        Assert.Contains("PlayerCodingConfirmationPanelInitializer.Initialize", confirmation);
+        Assert.DoesNotContain("new CodingConfirmationPanelControls(", confirmation);
+        Assert.Contains("new CodingConfirmationPanelControls(", initializer);
         Assert.Contains("_codingConfirmationPanelControls.Apply", confirmation);
         Assert.Contains("_codingConfirmationPanelControls.Hide()", confirmation);
         Assert.DoesNotContain("ConfirmAmpel.Fill", confirmation);
