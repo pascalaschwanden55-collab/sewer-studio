@@ -27,7 +27,13 @@ public sealed class TrainingBatchImportGeneratedCaseControllerTests
         Assert.Equal(TrainingBatchImportGeneratedCaseKind.Skipped, plan.Kind);
         Assert.Equal(TrainingCenterBatchSkipKind.MissingProtocol, plan.Skip!.Kind);
         Assert.NotNull(plan.SkippedCase);
+        Assert.Equal("101.1-102.1", plan.SkippedCase!.Preview.CaseInfo);
+        Assert.Equal("\u2014", plan.SkippedCase.Preview.CodeInfo);
+        Assert.Equal("Protokoll fehlt", plan.SkippedCase.Preview.MeterInfo);
+        Assert.Equal(@"C:\frames\preview.jpg", plan.SkippedCase.Preview.FramePath);
         Assert.Equal(5, plan.SkippedCase!.Result.Index);
+        Assert.Equal("101.1-102.1", plan.SkippedCase.Result.VsaCode);
+        Assert.Equal(MatchLevel.NoFindings, plan.SkippedCase.Result.Level);
         Assert.Equal("Protokoll fehlt", plan.SkippedCase.Result.Summary);
         Assert.Empty(plan.SampleUiPlans);
         Assert.Empty(plan.SampleLogLines);
