@@ -64,6 +64,62 @@ public sealed class HoldingRenameServiceTests
     }
 
     [Fact]
+    public void Rename_NeueStruktur_ProjektjsonInProjektdateien_RelativerLink_BenenntVerteilteDateienUm()
+    {
+        // Neue Struktur: projekt.json unter Projektdateien\, verteilte Dateien in Haltungen_Verteilt\,
+        // Link RELATIV zum Root. Frueher fand LocateHoldingFolder den Ordner nicht (relativ gegen
+        // Projektdateien\ aufgeloest + Fallback suchte nur "Haltungen") -> Dateien blieben unbenannt,
+        // Record-Pfade zeigten ins Leere.
+        var oldH = "06-001";
+        var newH = "06-999";
+        var oldSan = ProjectPathResolver.SanitizePathSegment(oldH);
+        var newSan = ProjectPathResolver.SanitizePathSegment(newH);
+
+        var root = Path.Combine(Path.GetTempPath(), $"holdrename-neu-{Guid.NewGuid():N}");
+        var projFile = Path.Combine(root, "Projektdateien", "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(projFile)!);
+        var oldFolder = Path.Combine(root, "Haltungen_Verteilt", oldSan);
+        Directory.CreateDirectory(oldFolder);
+
+        var video = Path.Combine(oldFolder, $"20250310_{oldSan}.mpg");
+        var pdf = Path.Combine(oldFolder, $"20250310_{oldSan}.pdf");
+        File.WriteAllText(video, "x");
+        File.WriteAllText(pdf, "x");
+        File.WriteAllText(projFile, "{}");
+
+        try
+        {
+            var relLink = Path.Combine("Haltungen_Verteilt", oldSan, $"20250310_{oldSan}.mpg");
+            var relPdf = Path.Combine("Haltungen_Verteilt", oldSan, $"20250310_{oldSan}.pdf");
+            var record = new HaltungRecord();
+            record.SetFieldValue("Haltungsname", oldH, FieldSource.Xtf, userEdited: false);
+            record.SetFieldValue("Link", relLink, FieldSource.Xtf, userEdited: false);
+            record.SetFieldValue("PDF_Path", relPdf, FieldSource.Xtf, userEdited: false);
+
+            var result = HoldingRenameService.Rename(record, oldH, newH, projFile);
+
+            Assert.True(result.Success, result.ErrorMessage);
+            Assert.True(result.FolderRenamed);
+
+            var newFolder = Path.Combine(root, "Haltungen_Verteilt", newSan);
+            Assert.True(Directory.Exists(newFolder), "Verteil-Ordner wurde nicht umbenannt");
+            Assert.False(Directory.Exists(oldFolder));
+            Assert.True(File.Exists(Path.Combine(newFolder, $"20250310_{newSan}.mpg")), "Video nicht umbenannt");
+            Assert.True(File.Exists(Path.Combine(newFolder, $"20250310_{newSan}.pdf")), "PDF nicht umbenannt");
+
+            // Link ist relativ aktualisiert und ueber den Root auf die existierende Datei aufloesbar.
+            var link = record.GetFieldValue("Link") ?? "";
+            Assert.Contains(newSan, link, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(oldSan, link, StringComparison.OrdinalIgnoreCase);
+            Assert.False(Path.IsPathRooted(link), $"Link soll relativ bleiben: {link}");
+            var resolved = ProjectPathResolver.ResolveFilePath(link, projFile);
+            Assert.False(string.IsNullOrWhiteSpace(resolved), "Link nicht gegen Root aufloesbar");
+            Assert.True(File.Exists(resolved!), $"aufgeloester Link existiert nicht: {resolved}");
+        }
+        finally { try { Directory.Delete(root, recursive: true); } catch { } }
+    }
+
+    [Fact]
     public void Rename_LegacyUnderscoreDashGSchema_StillRenamesFiles()
     {
         // Regression: altes Schema JJJJMMTT_<Haltung>-g.mp4 muss weiter umbenannt werden.
