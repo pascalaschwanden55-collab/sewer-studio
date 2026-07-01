@@ -179,25 +179,30 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void Grid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (ClearColumnMenuItem.IsChecked)
-        {
-            var header = FindAncestor<DataGridColumnHeader>((DependencyObject)e.OriginalSource);
-            if (header?.Column is not null)
-            {
-                var fieldName = header.Column.GetValue(FrameworkElement.TagProperty) as string;
-                if (!string.IsNullOrWhiteSpace(fieldName))
-                {
-                    var displayName = header.Column.Header?.ToString() ?? fieldName;
-                    ClearColumn(fieldName, displayName);
-                    e.Handled = true;
-                    return;
-                }
-            }
-        }
+        if (e.OriginalSource is not DependencyObject originalSource)
+            return;
 
-        var row = FindAncestor<DataGridRow>((DependencyObject)e.OriginalSource);
-        if (row is not null)
-            Grid.SelectedItem = row.Item;
+        var header = FindAncestor<DataGridColumnHeader>(originalSource);
+        var row = FindAncestor<DataGridRow>(originalSource);
+        var fieldName = header?.Column.GetValue(FrameworkElement.TagProperty) as string;
+        var displayName = header?.Column.Header?.ToString() ?? fieldName;
+
+        var result = DataPageRightClickController.Resolve(
+            ClearColumnMenuItem.IsChecked,
+            fieldName,
+            displayName,
+            row?.Item);
+
+        switch (result.Action)
+        {
+            case DataPageRightClickAction.ClearColumn:
+                ClearColumn(result.FieldName!, result.DisplayName!);
+                e.Handled = true;
+                break;
+            case DataPageRightClickAction.SelectRow:
+                Grid.SelectedItem = result.RowItem;
+                break;
+        }
     }
 
     private void ClearColumn(string fieldName, string displayName)
