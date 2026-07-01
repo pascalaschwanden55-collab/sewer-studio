@@ -6,6 +6,33 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerWindowCodingAiArchitectureTests
 {
     [Fact]
+    public void PlayerWindow_live_ai_timer_gate_uses_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiTickPolicy.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiTimerTickWorkflow.cs");
+
+        Assert.True(File.Exists(policyPath), "Live-AI-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "Live-AI-Timer-Gate-Orchestrierung muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var ai = File.ReadAllText(aiPath);
+        var policy = File.ReadAllText(policyPath);
+        var workflow = File.ReadAllText(workflowPath);
+
+        Assert.Contains("CodingLiveAiTimerTickWorkflow.ExecuteAsync", ai);
+        Assert.DoesNotContain("CodingLiveAiTickPolicy.ShouldAnalyze", ai);
+        Assert.Contains("CodingLiveAiTickPolicy.ShouldAnalyze", workflow);
+        Assert.Contains("actions.RunAnalysisAsync()", workflow);
+        Assert.Contains("actions.TraceError(ex.Message)", workflow);
+        Assert.DoesNotContain("_codingLiveDetection == null) return", ai);
+        Assert.DoesNotContain("ActiveSession?.State == CodingSessionState.WaitingForUserInput", ai);
+        Assert.DoesNotContain("!_player.IsPlaying) return", ai);
+        Assert.Contains("public static bool ShouldAnalyze", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_live_ai_status_text_uses_display_policy()
     {
         var root = FindRepositoryRoot();
