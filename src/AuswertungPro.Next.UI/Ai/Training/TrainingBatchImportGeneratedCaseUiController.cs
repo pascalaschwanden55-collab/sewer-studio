@@ -9,19 +9,11 @@ public static class TrainingBatchImportGeneratedCaseUiController
     public static TrainingBatchImportGeneratedCaseUiResult Apply(
         TrainingBatchImportGeneratedCasePlan generatedCasePlan,
         TrainingBatchImportRunSummary runSummary,
-        Action<TrainingBatchImportLivePreview> updateLivePreview,
-        Action<Action> invokeOnUi,
-        Action<SelfTrainingEntryResult> addResult,
-        Action<string, MatchLevel> updateCodeDistribution,
-        Action<string> log)
+        TrainingBatchImportCaseUiSink caseUi)
     {
         ArgumentNullException.ThrowIfNull(generatedCasePlan);
         ArgumentNullException.ThrowIfNull(runSummary);
-        ArgumentNullException.ThrowIfNull(updateLivePreview);
-        ArgumentNullException.ThrowIfNull(invokeOnUi);
-        ArgumentNullException.ThrowIfNull(addResult);
-        ArgumentNullException.ThrowIfNull(updateCodeDistribution);
-        ArgumentNullException.ThrowIfNull(log);
+        ArgumentNullException.ThrowIfNull(caseUi);
 
         if (generatedCasePlan.Kind == TrainingBatchImportGeneratedCaseKind.Skipped)
         {
@@ -29,25 +21,25 @@ public static class TrainingBatchImportGeneratedCaseUiController
             runSummary.RecordSkip(skip.Kind);
 
             var skipUiPlan = generatedCasePlan.SkippedCase!;
-            log(skip.LogMessage);
-            updateLivePreview(skipUiPlan.Preview);
-            invokeOnUi(() => addResult(skipUiPlan.Result));
+            caseUi.Log(skip.LogMessage);
+            caseUi.UpdateLivePreview(skipUiPlan.Preview);
+            caseUi.InvokeOnUi(() => caseUi.AddResult(skipUiPlan.Result));
             return new TrainingBatchImportGeneratedCaseUiResult(true);
         }
 
         foreach (var plan in generatedCasePlan.SampleUiPlans)
         {
-            updateLivePreview(plan.Preview);
-            invokeOnUi(() =>
+            caseUi.UpdateLivePreview(plan.Preview);
+            caseUi.InvokeOnUi(() =>
             {
-                addResult(plan.Result);
-                updateCodeDistribution(plan.Result.VsaCode, plan.Result.Level);
+                caseUi.AddResult(plan.Result);
+                caseUi.UpdateCodeDistribution(plan.Result.VsaCode, plan.Result.Level);
             });
         }
 
         runSummary.AddNewSamples(generatedCasePlan.NewSampleCount);
         foreach (var line in generatedCasePlan.SampleLogLines)
-            log(line);
+            caseUi.Log(line);
 
         return new TrainingBatchImportGeneratedCaseUiResult(false);
     }

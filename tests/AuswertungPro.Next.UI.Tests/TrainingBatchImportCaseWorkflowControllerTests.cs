@@ -52,14 +52,16 @@ public sealed class TrainingBatchImportCaseWorkflowControllerTests
                     DuplicateSkipped: 0,
                     TrainingSampleGenerationOutcome.Success));
             },
-            updateLivePreview: previews.Add,
-            invokeOnUi: action =>
-            {
-                calls.Add("on-ui");
-                action();
-            },
-            addResult: results.Add,
-            updateCodeDistribution: (code, level) => distributions.Add((code, level)),
+            caseUi: new TrainingBatchImportCaseUiSink(
+                previews.Add,
+                action =>
+                {
+                    calls.Add("on-ui");
+                    action();
+                },
+                results.Add,
+                (code, level) => distributions.Add((code, level)),
+                message => calls.Add($"log:{message}")),
             saveSamplesAsync: samples =>
             {
                 savedSamples = samples;
@@ -74,7 +76,7 @@ public sealed class TrainingBatchImportCaseWorkflowControllerTests
             setSampleCount: value => calls.Add($"samples:{value}"),
             setCodesCovered: value => calls.Add($"codes:{value}"),
             log: message => calls.Add($"log:{message}"),
-            CancellationToken.None);
+            ct: CancellationToken.None);
 
         Assert.False(result.ShouldContinueWithNextCase);
         Assert.NotNull(generatedInput);
@@ -120,10 +122,12 @@ public sealed class TrainingBatchImportCaseWorkflowControllerTests
                 ParsedEntries: 2,
                 DuplicateSkipped: 2,
                 TrainingSampleGenerationOutcome.OnlyDuplicates)),
-            updateLivePreview: _ => { },
-            invokeOnUi: action => action(),
-            addResult: results.Add,
-            updateCodeDistribution: (_, _) => { },
+            caseUi: new TrainingBatchImportCaseUiSink(
+                _ => { },
+                action => action(),
+                results.Add,
+                (_, _) => { },
+                _ => { }),
             saveSamplesAsync: _ =>
             {
                 saveCalled = true;
@@ -133,7 +137,7 @@ public sealed class TrainingBatchImportCaseWorkflowControllerTests
             setSampleCount: _ => { },
             setCodesCovered: _ => { },
             log: _ => { },
-            CancellationToken.None);
+            ct: CancellationToken.None);
 
         Assert.True(result.ShouldContinueWithNextCase);
         Assert.False(saveCalled);

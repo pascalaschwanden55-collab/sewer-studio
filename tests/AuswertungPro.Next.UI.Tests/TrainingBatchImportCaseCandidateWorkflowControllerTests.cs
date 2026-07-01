@@ -40,15 +40,16 @@ public sealed class TrainingBatchImportCaseCandidateWorkflowControllerTests
             nextResultIndex: 4,
             signatures,
             summary,
-            preview => calls.Add($"preview:{preview.CodeInfo}:{preview.FramePath}"),
-            action =>
-            {
-                calls.Add("on-ui");
-                action();
-            },
-            entry => calls.Add($"add-result:{entry.Index}:{entry.VsaCode}"),
-            (code, level) => calls.Add($"distribution:{code}:{level}"),
-            calls.Add);
+            new TrainingBatchImportCaseUiSink(
+                preview => calls.Add($"preview:{preview.CodeInfo}:{preview.FramePath}"),
+                action =>
+                {
+                    calls.Add("on-ui");
+                    action();
+                },
+                entry => calls.Add($"add-result:{entry.Index}:{entry.VsaCode}"),
+                (code, level) => calls.Add($"distribution:{code}:{level}"),
+                calls.Add));
 
         Assert.True(result.ShouldPersist);
         Assert.Same(samples, result.NewSamples);
@@ -90,15 +91,16 @@ public sealed class TrainingBatchImportCaseCandidateWorkflowControllerTests
             nextResultIndex: 8,
             signatures,
             summary,
-            preview => calls.Add($"preview:{preview.CodeInfo}:{preview.FramePath}"),
-            action =>
-            {
-                calls.Add("on-ui");
-                action();
-            },
-            entry => calls.Add($"add-result:{entry.Index}:{entry.VsaCode}:{entry.Summary}"),
-            (_, _) => calls.Add("distribution"),
-            calls.Add);
+            new TrainingBatchImportCaseUiSink(
+                preview => calls.Add($"preview:{preview.CodeInfo}:{preview.FramePath}"),
+                action =>
+                {
+                    calls.Add("on-ui");
+                    action();
+                },
+                entry => calls.Add($"add-result:{entry.Index}:{entry.VsaCode}:{entry.Summary}"),
+                (_, _) => calls.Add("distribution"),
+                calls.Add));
 
         Assert.False(result.ShouldPersist);
         Assert.Empty(result.NewSamples);

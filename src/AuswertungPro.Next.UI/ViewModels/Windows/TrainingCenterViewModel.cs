@@ -841,6 +841,16 @@ public partial class TrainingCenterViewModel : ObservableObject
             var existingSigs = runtimeSetup.ExistingSignatures;
             var casesToProcess = runtimeSetup.CasesToProcess;
             var runSummary = runtimeSetup.RunSummary;
+            var caseUi = new TrainingBatchImportCaseUiSink(
+                preview => UpdateLivePreview(
+                    preview.CaseInfo,
+                    preview.CodeInfo,
+                    preview.MeterInfo,
+                    preview.FramePath),
+                OnUi,
+                SelfTrainingResults.Add,
+                UpdateCodeDistribution,
+                Log);
 
             await TrainingBatchImportCaseLoopController.RunAsync(
                 casesToProcess,
@@ -866,14 +876,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                         runSummary,
                         (currentCase, currentToken) => TrainingCenterRuntimeHelpers.ExtractPreviewFrameAsync(currentCase, cfg, currentToken),
                         (input, signatures, currentToken) => generator.GenerateWithDiagnosticsAsync(input, signatures, framesDir: null, currentToken),
-                        preview => UpdateLivePreview(
-                            preview.CaseInfo,
-                            preview.CodeInfo,
-                            preview.MeterInfo,
-                            preview.FramePath),
-                        OnUi,
-                        SelfTrainingResults.Add,
-                        UpdateCodeDistribution,
+                        caseUi,
                         TrainingSamplesStore.MergeAndSaveAsync,
                         () => _store.SaveAsync(BuildState()),
                         value => KbSampleCount = value,
@@ -881,10 +884,11 @@ public partial class TrainingCenterViewModel : ObservableObject
                         Log,
                         token).ConfigureAwait(false);
                 },
-                ex => TrainingBatchImportRunExceptionController.RecordCaseFailure(
-                    ex,
-                    runSummary,
-                    Log),
+                ex =>
+                {
+                    runSummary.RecordError(ex.Message);
+                    batchUi.Log($"  FEHLER: {ex.Message}");
+                },
                 ct).ConfigureAwait(false);
 
             var completion = await TrainingBatchImportRunCompletionController.CompleteAsync(
@@ -901,16 +905,13 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            TrainingBatchImportRunExceptionController.ApplyCanceled(
-                Log,
-                value => StatusText = value);
+            batchUi.Log("Batch-Import abgebrochen durch Benutzer.");
+            batchUi.SetStatusText("Batch-Import abgebrochen.");
         }
         catch (Exception ex)
         {
-            TrainingBatchImportRunExceptionController.ApplyFatal(
-                ex,
-                Log,
-                value => StatusText = value);
+            batchUi.Log($"FATALER FEHLER: {ex.Message}");
+            batchUi.SetStatusText($"Fehler beim Batch-Import: {ex.Message}");
         }
         finally
         {

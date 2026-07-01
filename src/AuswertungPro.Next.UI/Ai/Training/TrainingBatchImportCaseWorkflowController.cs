@@ -16,10 +16,7 @@ public static class TrainingBatchImportCaseWorkflowController
         TrainingBatchImportRunSummary runSummary,
         Func<TrainingCase, CancellationToken, Task<string?>> extractPreviewFrameAsync,
         Func<TrainingCaseInput, IReadOnlyCollection<string>, CancellationToken, Task<TrainingSampleGenerationResult>> generateWithDiagnosticsAsync,
-        Action<TrainingBatchImportLivePreview> updateLivePreview,
-        Action<Action> invokeOnUi,
-        Action<SelfTrainingEntryResult> addResult,
-        Action<string, MatchLevel> updateCodeDistribution,
+        TrainingBatchImportCaseUiSink caseUi,
         Func<List<TrainingSample>, Task> saveSamplesAsync,
         Func<Task> saveStateAsync,
         Action<int> setSampleCount,
@@ -33,10 +30,7 @@ public static class TrainingBatchImportCaseWorkflowController
         ArgumentNullException.ThrowIfNull(runSummary);
         ArgumentNullException.ThrowIfNull(extractPreviewFrameAsync);
         ArgumentNullException.ThrowIfNull(generateWithDiagnosticsAsync);
-        ArgumentNullException.ThrowIfNull(updateLivePreview);
-        ArgumentNullException.ThrowIfNull(invokeOnUi);
-        ArgumentNullException.ThrowIfNull(addResult);
-        ArgumentNullException.ThrowIfNull(updateCodeDistribution);
+        ArgumentNullException.ThrowIfNull(caseUi);
         ArgumentNullException.ThrowIfNull(saveSamplesAsync);
         ArgumentNullException.ThrowIfNull(saveStateAsync);
         ArgumentNullException.ThrowIfNull(setSampleCount);
@@ -56,11 +50,7 @@ public static class TrainingBatchImportCaseWorkflowController
             firstResultIndex,
             existingSignatures,
             runSummary,
-            updateLivePreview,
-            invokeOnUi,
-            addResult,
-            updateCodeDistribution,
-            log);
+            caseUi);
         if (!candidateWorkflow.ShouldPersist)
             return new TrainingBatchImportCaseWorkflowResult(true);
 
@@ -70,7 +60,7 @@ public static class TrainingBatchImportCaseWorkflowController
             processedCount,
             saveSamplesAsync,
             saveStateAsync,
-            invokeOnUi,
+            caseUi.InvokeOnUi,
             setSampleCount,
             setCodesCovered,
             log).ConfigureAwait(false);

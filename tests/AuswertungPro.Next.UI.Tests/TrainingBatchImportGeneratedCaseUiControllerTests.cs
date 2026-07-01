@@ -29,15 +29,16 @@ public sealed class TrainingBatchImportGeneratedCaseUiControllerTests
         var applyResult = TrainingBatchImportGeneratedCaseUiController.Apply(
             plan,
             summary,
-            p => calls.Add($"preview:{p.CaseInfo}:{p.CodeInfo}:{p.MeterInfo}:{p.FramePath}"),
-            action =>
-            {
-                calls.Add("on-ui");
-                action();
-            },
-            entry => calls.Add($"add-result:{entry.VsaCode}"),
-            (_, _) => calls.Add("distribution"),
-            calls.Add);
+            new TrainingBatchImportCaseUiSink(
+                p => calls.Add($"preview:{p.CaseInfo}:{p.CodeInfo}:{p.MeterInfo}:{p.FramePath}"),
+                action =>
+                {
+                    calls.Add("on-ui");
+                    action();
+                },
+                entry => calls.Add($"add-result:{entry.VsaCode}"),
+                (_, _) => calls.Add("distribution"),
+                calls.Add));
 
         Assert.True(applyResult.ShouldContinueWithNextCase);
         Assert.Contains("1 ohne Eintraege.", summary.BuildNoNewStatus(processedCaseCount: 1));
@@ -70,15 +71,16 @@ public sealed class TrainingBatchImportGeneratedCaseUiControllerTests
         var result = TrainingBatchImportGeneratedCaseUiController.Apply(
             plan,
             summary,
-            p => calls.Add($"preview:{p.CodeInfo}"),
-            action =>
-            {
-                calls.Add("on-ui");
-                action();
-            },
-            entry => calls.Add($"add-result:{entry.VsaCode}"),
-            (code, level) => calls.Add($"distribution:{code}:{level}"),
-            calls.Add);
+            new TrainingBatchImportCaseUiSink(
+                p => calls.Add($"preview:{p.CodeInfo}"),
+                action =>
+                {
+                    calls.Add("on-ui");
+                    action();
+                },
+                entry => calls.Add($"add-result:{entry.VsaCode}"),
+                (code, level) => calls.Add($"distribution:{code}:{level}"),
+                calls.Add));
 
         Assert.False(result.ShouldContinueWithNextCase);
         Assert.Contains("2 Kandidaten gespeichert", summary.BuildCompletionStatus());

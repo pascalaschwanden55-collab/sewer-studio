@@ -14,22 +14,14 @@ public static class TrainingBatchImportCaseCandidateWorkflowController
         int nextResultIndex,
         ISet<string> existingSignatures,
         TrainingBatchImportRunSummary runSummary,
-        Action<TrainingBatchImportLivePreview> updateLivePreview,
-        Action<Action> invokeOnUi,
-        Action<SelfTrainingEntryResult> addResult,
-        Action<string, MatchLevel> updateCodeDistribution,
-        Action<string> log)
+        TrainingBatchImportCaseUiSink caseUi)
     {
         ArgumentNullException.ThrowIfNull(caseGeneration);
         ArgumentNullException.ThrowIfNull(existingSignatures);
         ArgumentNullException.ThrowIfNull(runSummary);
-        ArgumentNullException.ThrowIfNull(updateLivePreview);
-        ArgumentNullException.ThrowIfNull(invokeOnUi);
-        ArgumentNullException.ThrowIfNull(addResult);
-        ArgumentNullException.ThrowIfNull(updateCodeDistribution);
-        ArgumentNullException.ThrowIfNull(log);
+        ArgumentNullException.ThrowIfNull(caseUi);
 
-        updateLivePreview(caseGeneration.ProcessingPreview);
+        caseUi.UpdateLivePreview(caseGeneration.ProcessingPreview);
 
         var generation = caseGeneration.Generation;
         var generatedCasePlan = TrainingBatchImportGeneratedCaseController.CreatePlan(
@@ -42,11 +34,7 @@ public static class TrainingBatchImportCaseCandidateWorkflowController
         var generatedCaseUi = TrainingBatchImportGeneratedCaseUiController.Apply(
             generatedCasePlan,
             runSummary,
-            updateLivePreview,
-            invokeOnUi,
-            addResult,
-            updateCodeDistribution,
-            log);
+            caseUi);
 
         return new TrainingBatchImportCaseCandidateWorkflowResult(
             !generatedCaseUi.ShouldContinueWithNextCase,

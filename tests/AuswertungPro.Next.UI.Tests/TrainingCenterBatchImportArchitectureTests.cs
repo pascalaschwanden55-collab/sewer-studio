@@ -101,7 +101,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_batch_import_fehlerbehandlung_an_controller()
+    public void TrainingCenterViewModel_setzt_triviale_batch_import_fehlerbehandlung_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -110,14 +110,23 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var controllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportRunExceptionController.cs");
         var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
 
-        Assert.Contains("TrainingBatchImportRunExceptionController.RecordCaseFailure(", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingBatchImportRunExceptionController.ApplyCanceled(", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingBatchImportRunExceptionController.ApplyFatal(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Log($\"  FEHLER:", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Log(\"Batch-Import abgebrochen durch Benutzer.\")", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Log($\"FATALER FEHLER:", batchImportSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(controllerPath), "Triviale Batch-Import-Fehlerbehandlung soll inline in der VM stehen.");
+        Assert.DoesNotContain("TrainingBatchImportRunExceptionController", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("runSummary.RecordError(ex.Message);", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.Log($\"  FEHLER: {ex.Message}\");", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.Log(\"Batch-Import abgebrochen durch Benutzer.\");", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetStatusText(\"Batch-Import abgebrochen.\");", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.Log($\"FATALER FEHLER: {ex.Message}\");", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetStatusText($\"Fehler beim Batch-Import: {ex.Message}\");", batchImportSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -228,6 +237,40 @@ public sealed class TrainingCenterBatchImportArchitectureTests
         Assert.DoesNotContain("generatedCasePlan.Kind == TrainingBatchImportGeneratedCaseKind.Skipped", candidateWorkflowSource, StringComparison.Ordinal);
         Assert.DoesNotContain("foreach (var plan in generatedCasePlan.SampleUiPlans)", candidateWorkflowSource, StringComparison.Ordinal);
         Assert.DoesNotContain("runSummary.AddNewSamples(generatedCasePlan.NewSampleCount)", candidateWorkflowSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TrainingBatchImportCaseWorkflowController_buendelt_case_ui_delegates_in_sink()
+    {
+        var caseWorkflowSource = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportCaseWorkflowController.cs"));
+        var candidateWorkflowSource = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportCaseCandidateWorkflowController.cs"));
+        var generatedCaseUiSource = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportGeneratedCaseUiController.cs"));
+
+        Assert.Contains("TrainingBatchImportCaseUiSink caseUi", caseWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportCaseUiSink caseUi", candidateWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportCaseUiSink caseUi", generatedCaseUiSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Action<TrainingBatchImportLivePreview> updateLivePreview", caseWorkflowSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Action<Action> invokeOnUi", caseWorkflowSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Action<SelfTrainingEntryResult> addResult", caseWorkflowSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Action<string, MatchLevel> updateCodeDistribution", caseWorkflowSource, StringComparison.Ordinal);
     }
 
     [Fact]
