@@ -1108,6 +1108,15 @@ public sealed record HaltungsprotokollPdfOptions
 
     public bool IncludePhotos { get; init; } = true;
     public bool IncludeHaltungsgrafik { get; init; } = true;
+
+    /// <summary>Detaillierte Beobachtungstabelle unter der Haltungsgrafik anzeigen (Foto/MPEG/Zeit/Klartext-Zustand).</summary>
+    public bool IncludeObservationTable { get; init; } = true;
+
+    /// <summary>
+    /// Optionaler Code-Katalog zur Klartext-Formatierung der Quantifizierung
+    /// (z.B. "Winkel = 45°" statt "Q1=45"). Null = heutiges Verhalten (Rohtext).
+    /// </summary>
+    public AuswertungPro.Next.Application.Protocol.ICodeCatalogProvider? CodeCatalog { get; init; }
     public int PhotosPerRow { get; init; } = 1;
     public int PhotosPerPage { get; init; } = 2;
     public int MaxPhotosPerEntry { get; init; } = int.MaxValue;
