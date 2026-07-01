@@ -39,6 +39,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageTimerController _timers;
     private readonly DataPagePrintController _printController;
     private readonly DataPageOriginalPdfController _originalPdfController;
+    private readonly DataPageMeasureSuggestionController _measureSuggestionController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
@@ -176,6 +177,19 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         EmpfohleneSanierungsmassnahmenOptions = new ObservableCollection<string>(
             DropdownOptionsStore.LoadEmpfohleneSanierungsmassnahmenOptions());
         AusgefuehrtDurchOptions = new ObservableCollection<string>(FieldCatalog.GetComboItems("Ausgefuehrt_durch"));
+        _measureSuggestionController = new DataPageMeasureSuggestionController(
+            _sp.Dialogs,
+            _measureRecommendationService,
+            () => Selected,
+            () => Records,
+            value => AddOptionIfMissing(EmpfohleneSanierungsmassnahmenOptions, value),
+            () =>
+            {
+                _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+                _shell.Project.Dirty = true;
+            },
+            _shell.SetStatus,
+            UpdateLearningInfo);
 
         // Seed measure template names from Offerten into dropdown if missing
         SeedMeasureTemplateNames();
@@ -797,39 +811,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void SuggestMeasures(HaltungRecord? record)
     {
-        record ??= Selected;
-        if (record is null)
-            return;
-
-        var recommendation = _measureRecommendationService.Recommend(record, maxSuggestions: 5);
-        if (recommendation.Measures.Count == 0)
-        {
-            _sp.Dialogs.Info(
-                "Noch keine Vorschlaege verfuegbar. Bitte zuerst einige Haltungen mit Massnahmen bewerten.",
-                "Massnahmen");
-            return;
-        }
-
-        DataPageSanierungCostMapper.ApplyRecommendation(record, recommendation);
-        foreach (var suggestion in recommendation.Measures)
-            AddOptionIfMissing(EmpfohleneSanierungsmassnahmenOptions, suggestion);
-
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-        var sourceText = recommendation.UsedTrainedModel ? "KI-Modell" : "Lernlogik";
-        _shell.SetStatus(recommendation.EstimatedTotalCost is null
-            ? $"Maßnahmenvorschlag aus Schadenscodes gesetzt ({sourceText})"
-            : $"Maßnahmenvorschlag mit Kostenschätzung gesetzt ({recommendation.EstimatedTotalCost.Value:0.00}, {sourceText})");
-        UpdateLearningInfo(recommendation.SimilarCasesCount, recommendation.EstimatedTotalCost);
-
-        // Show result dialog so user sees the suggested measures
-        var summary = string.Join("\n", recommendation.Measures);
-        if (recommendation.EstimatedTotalCost is not null)
-            summary += $"\n\nGeschaetzte Kosten: {recommendation.EstimatedTotalCost.Value:N2}";
-        summary += $"\n\nQuelle: {sourceText}";
-        if (recommendation.SimilarCasesCount > 0)
-            summary += $" ({recommendation.SimilarCasesCount} aehnliche Faelle)";
-        _sp.Dialogs.Info(summary, "Empfohlene Sanierungsmassnahmen");
+        _measureSuggestionController.Suggest(record);
     }
 
     /// <summary>
@@ -838,66 +820,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     /// </summary>
     public void SuggestAllMeasures()
     {
-        var records = _shell.Project.Data;
-        if (records.Count == 0)
-        {
-            _sp.Dialogs.Info("Keine Haltungen vorhanden.", "Massnahmen");
-            return;
-        }
-
-        var filled = 0;
-        var skipped = 0;
-        var noSuggestion = 0;
-
-        foreach (var record in records)
-        {
-            // Nur Records mit Sanierungsbedarf oder schlechter Zustandsnote beruecksichtigen
-            var pruefung = (record.GetFieldValue("Pruefungsresultat") ?? "").Trim();
-            var existingMeasures = (record.GetFieldValue("Empfohlene_Sanierungsmassnahmen") ?? "").Trim();
-            var hasDamageCodes = record.VsaFindings is not null && record.VsaFindings.Count > 0
-                || !string.IsNullOrWhiteSpace(record.GetFieldValue("Primaere_Schaeden"));
-
-            // Ueberspringe Records die bereits manuell bearbeitete Massnahmen haben
-            if (!string.IsNullOrWhiteSpace(existingMeasures))
-            {
-                var meta = record.FieldMeta.GetValueOrDefault("Empfohlene_Sanierungsmassnahmen");
-                if (meta is not null && meta.UserEdited)
-                {
-                    skipped++;
-                    continue;
-                }
-            }
-
-            // Nur Records mit Sanierungsbedarf oder Schadenscodes verarbeiten
-            if (!string.Equals(pruefung, "Sanierungsbedarf", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(pruefung, "beobachten", StringComparison.OrdinalIgnoreCase)
-                && !hasDamageCodes)
-            {
-                skipped++;
-                continue;
-            }
-
-            var recommendation = _measureRecommendationService.Recommend(record, maxSuggestions: 5);
-            if (recommendation.Measures.Count == 0)
-            {
-                noSuggestion++;
-                continue;
-            }
-
-            DataPageSanierungCostMapper.ApplyRecommendation(record, recommendation);
-            foreach (var suggestion in recommendation.Measures)
-                AddOptionIfMissing(EmpfohleneSanierungsmassnahmenOptions, suggestion);
-
-            filled++;
-        }
-
-        if (filled > 0)
-        {
-            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-            _shell.Project.Dirty = true;
-        }
-
-        _shell.SetStatus($"Maßnahmen: {filled} Haltungen befüllt, {skipped} übersprungen, {noSuggestion} ohne Vorschlag");
+        _measureSuggestionController.SuggestAll();
     }
 
     private void OpenSanierungOptimizationWindow(HaltungRecord? record)
