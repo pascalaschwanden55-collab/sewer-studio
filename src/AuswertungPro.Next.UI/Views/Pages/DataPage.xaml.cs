@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,7 +14,6 @@ using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 using System.IO;
-using AuswertungPro.Next.Domain.Protocol;
 using CommunityToolkit.Mvvm.Input;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
@@ -707,29 +705,24 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
         }
 
-        var entry = ResolveProtocolEntry(sender);
+        if (sender is not FrameworkElement fe)
+            return;
+
+        var entry = DataPageProtocolMediaLinkController.ResolveEntry(fe.Tag, fe.DataContext);
         if (entry is null)
         {
             Dialogs.Info("Keine Beobachtung erkannt.", "Video");
             return;
         }
 
-        var targetTime = entry.Zeit ?? ParseMpegTime(entry.Mpeg);
+        var targetTime = DataPageProtocolMediaLinkController.ResolveTargetTime(entry);
         vm.PlayVideoCommand.Execute(record);
 
         if (targetTime is null)
             return;
 
-        var overlayText = BuildOverlayText(entry);
+        var overlayText = DataPageProtocolMediaLinkController.BuildOverlayText(entry);
         SeekVideoWithRetry(targetTime.Value, overlayText);
-    }
-
-    private static ProtocolEntry? ResolveProtocolEntry(object sender)
-    {
-        if (sender is not FrameworkElement fe)
-            return null;
-
-        return fe.Tag as ProtocolEntry ?? fe.DataContext as ProtocolEntry;
     }
 
     private void SeekVideoWithRetry(TimeSpan time, string? overlayText)
@@ -758,39 +751,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 timer.Stop();
         };
         timer.Start();
-    }
-
-    private static string BuildOverlayText(ProtocolEntry entry)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(entry.Code))
-            parts.Add(entry.Code.Trim());
-        if (!string.IsNullOrWhiteSpace(entry.Beschreibung))
-            parts.Add(entry.Beschreibung.Trim());
-        if (entry.MeterStart.HasValue || entry.MeterEnd.HasValue)
-        {
-            var m1 = entry.MeterStart?.ToString("0.00") ?? "-";
-            var m2 = entry.MeterEnd?.ToString("0.00") ?? "-";
-            parts.Add(entry.IsStreckenschaden ? $"Strecke {m1} - {m2} m" : $"Meter {m1} - {m2}");
-        }
-
-        return string.Join(" | ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
-    }
-
-    private static TimeSpan? ParseMpegTime(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim();
-        var formats = new[] { @"hh\:mm\:ss", @"mm\:ss", @"h\:mm\:ss", @"m\:ss", @"hh\:mm\:ss\.fff", @"mm\:ss\.fff" };
-        if (TimeSpan.TryParseExact(text, formats, CultureInfo.InvariantCulture, out var parsed))
-            return parsed;
-
-        if (TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out parsed))
-            return parsed;
-
-        return null;
     }
 
     private void Grid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
