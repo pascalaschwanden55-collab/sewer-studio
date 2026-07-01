@@ -25,7 +25,6 @@ public static class CodingProtocolPdfExportPlanner
         var projectRoot = "";
         if (!string.IsNullOrWhiteSpace(lastProjectPath))
             projectRoot = ProjectFileLocator.ProjectRootFromFile(lastProjectPath)
-                          ?? Path.GetDirectoryName(lastProjectPath)
                           ?? "";
 
         var logoPath = Path.Combine(baseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");

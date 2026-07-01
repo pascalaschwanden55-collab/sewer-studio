@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -28,9 +29,9 @@ public sealed class ProjectRootPathArchitectureTests
                     problems.Add($"{file}: nutzt ProjectFileLocator.ProjectRootFromFile(lastProjectPath) nicht");
 
                 problems.AddRange(lines
-                    .Where(line => line.Contains("= Path.GetDirectoryName(lastProjectPath)", StringComparison.Ordinal)
-                                   || line.Contains("= System.IO.Path.GetDirectoryName(lastProjectPath)", StringComparison.Ordinal))
-                    .Select(line => $"{file}: direkte Projektroot-Zuweisung per {line.Trim()}"));
+                    .Where(line => line.Contains("Path.GetDirectoryName(lastProjectPath)", StringComparison.Ordinal)
+                                   || line.Contains("System.IO.Path.GetDirectoryName(lastProjectPath)", StringComparison.Ordinal))
+                    .Select(line => $"{file}: direkte Projektroot-Ableitung per {line.Trim()}"));
 
                 return problems;
             })
@@ -44,17 +45,5 @@ public sealed class ProjectRootPathArchitectureTests
     }
 
     private static string ReadRepoFile(string relativePath)
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(dir.FullName, relativePath.Replace('/', Path.DirectorySeparatorChar));
-            if (File.Exists(candidate))
-                return File.ReadAllText(candidate);
-
-            dir = dir.Parent;
-        }
-
-        throw new FileNotFoundException("Repo-Datei nicht gefunden.", relativePath);
-    }
+        => File.ReadAllText(RepoFile(relativePath.Split('/')));
 }

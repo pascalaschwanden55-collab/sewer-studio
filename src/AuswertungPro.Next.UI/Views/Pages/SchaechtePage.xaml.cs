@@ -1015,8 +1015,7 @@ public partial class SchaechtePage : UserControl
             return path;
         if (!System.IO.Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(lastProjectPath))
         {
-            var baseDir = ProjectFileLocator.ProjectRootFromFile(lastProjectPath)
-                          ?? System.IO.Path.GetDirectoryName(lastProjectPath);
+            var baseDir = ProjectFileLocator.ProjectRootFromFile(lastProjectPath);
             if (!string.IsNullOrWhiteSpace(baseDir))
             {
                 var combined = System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, path));

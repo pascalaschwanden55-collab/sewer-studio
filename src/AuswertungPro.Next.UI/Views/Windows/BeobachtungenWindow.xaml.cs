@@ -134,8 +134,7 @@ public partial class BeobachtungenWindow : Window
             return path;
         if (!Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(lastProjectPath))
         {
-            var baseDir = ProjectFileLocator.ProjectRootFromFile(lastProjectPath)
-                          ?? Path.GetDirectoryName(lastProjectPath);
+            var baseDir = ProjectFileLocator.ProjectRootFromFile(lastProjectPath);
             if (!string.IsNullOrWhiteSpace(baseDir))
             {
                 var combined = Path.GetFullPath(Path.Combine(baseDir, path));

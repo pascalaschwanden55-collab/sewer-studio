@@ -1239,7 +1239,8 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("SafeShellOpen.TryOpen", protocol);
         Assert.Contains("public static class CodingProtocolPdfExportPlanner", planner);
         Assert.Contains("HaltungsprotokollPdfOptions", planner);
-        Assert.Contains("Path.GetDirectoryName", planner);
+        Assert.Contains("ProjectFileLocator.ProjectRootFromFile", planner);
+        Assert.DoesNotContain("Path.GetDirectoryName(lastProjectPath)", planner);
         Assert.Contains("TryOfferPdfExport", exportService);
         Assert.Contains("CodingProtocolPdfExportPlanner.Build", exportServiceFactory);
         Assert.Contains("CodingProtocolPdfSavePathDialogFactory.Create", exportServiceFactory);
