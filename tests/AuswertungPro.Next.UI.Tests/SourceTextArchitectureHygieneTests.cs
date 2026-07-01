@@ -39,6 +39,26 @@ public sealed class SourceTextArchitectureHygieneTests
         }
     }
 
+    [Fact]
+    public void Player_window_controller_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowControllerArchitectureTests.cs"));
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        var methodNames = new[]
+        {
+            "PlayerWindow_damage_markers_live_in_controller",
+            "PlayerWindow_quickscan_lives_in_controller"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -85,6 +105,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("GridDockingControllerTests.cs")]
     [InlineData("ImportArchitectureGuardTests.cs")]
     [InlineData("PageViewModelLifecycleTests.cs")]
+    [InlineData("PlayerWindowControllerArchitectureTests.cs")]
     [InlineData("PlayerWindowResourceDictionaryTests.cs")]
     [InlineData("ProjektEroeffnungShellGuardTests.cs")]
     [InlineData("SchaechtePageArchitectureGuardTests.cs")]
