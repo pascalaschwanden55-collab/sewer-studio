@@ -660,6 +660,7 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_green_match_accept_overlay_uses_display_policy",
             "PlayerWindow_protocol_match_summary_uses_controls_adapter",
             "PlayerWindow_protocol_match_training_lives_in_training_partial",
+            "PlayerWindow_protocol_match_highlighting_lives_in_highlighting_partial",
         };
 
         foreach (var methodName in methodNames)
