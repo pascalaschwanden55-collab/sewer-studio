@@ -9,6 +9,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using static AuswertungPro.Next.Application.Reports.ProtocolPdfAssetResolver;
@@ -206,6 +207,16 @@ public sealed class ProtocolPdfExporter
                             col.Item().Border(0.5f).BorderColor("#D1D5DB").Background("#FAFBFC").Padding(8)
                                 .Text("Keine Distanzdaten fuer eine Haltungsgrafik vorhanden.");
                         }
+                    }
+
+                    // === Detaillierte Beobachtungstabelle unter der Grafik ===
+                    // Fliessend/paginierend, mit Foto-/MPEG-/Zeit-Spalten, Klartext-Zustand (Katalog)
+                    // und Trennzeile Haupt-/Gegeninspektion.
+                    if (options.IncludeObservationTable && entries.Count > 0)
+                    {
+                        col.Item().PaddingTop(8).Element(c => ComposeSectionHeading(c, "Befunde", brand));
+                        col.Item().PaddingTop(2).Element(c =>
+                            ComposeObservationListTable(c, entries, photoNumberMap, options.CodeCatalog, ResolveNutzungsartBrandLight(brand)));
                     }
 
                     if (options.IncludePhotos)
@@ -701,6 +712,7 @@ public sealed class ProtocolPdfExporter
         IContainer container,
         IReadOnlyList<ProtocolEntry> entries,
         IReadOnlyDictionary<ProtocolEntry, string>? photoNumbers,
+        ICodeCatalogProvider? catalog = null,
         string? headerBackground = null)
     {
         var headerBg = string.IsNullOrWhiteSpace(headerBackground) ? "#EAF5F9" : headerBackground;
@@ -737,16 +749,28 @@ public sealed class ProtocolPdfExporter
                 header.Cell().Element(HeaderCell).Text("Bemerkung").FontSize(9).SemiBold();
             });
 
-            foreach (var entry in entries)
+            // Segmentierung: Hauptinspektion / Gegeninspektion (Trennzeile am ersten Abbruchcode).
+            foreach (var segment in InspectionSegmenter.Segments(entries))
             {
-                table.Cell().Element(BodyCell).Text(FmtMeterValue(entry.MeterStart)).FontSize(9);
-                table.Cell().Element(BodyCell).Text(FmtMeterValue(entry.MeterEnd)).FontSize(9);
-                table.Cell().Element(BodyCell).Text(string.IsNullOrWhiteSpace(entry.Code) ? "-" : entry.Code.Trim()).FontSize(9);
-                table.Cell().Element(BodyCell).Text(BuildObservationZustandTextLong(entry)).FontSize(9);
-                table.Cell().Element(BodyCell).Text(ResolvePhotoNumberText(entry, photoNumbers)).FontSize(9);
-                table.Cell().Element(BodyCell).Text(entry.Mpeg?.Trim() ?? "-").FontSize(9);
-                table.Cell().Element(BodyCell).Text(entry.Zeit.HasValue ? FormatTime(entry.Zeit.Value) : "-").FontSize(9);
-                table.Cell().Element(BodyCell).Text(BuildObservationNotesText(entry)).FontSize(9);
+                if (!string.IsNullOrWhiteSpace(segment.Title))
+                {
+                    table.Cell().ColumnSpan(8)
+                        .Background("#EEF2F4").BorderTop(0.8f).BorderColor(Colors.Grey.Medium)
+                        .PaddingVertical(3).PaddingHorizontal(4)
+                        .Text(segment.Title).FontSize(9).Bold().FontColor("#374151");
+                }
+
+                foreach (var entry in segment.Entries)
+                {
+                    table.Cell().Element(BodyCell).Text(FmtMeterValue(entry.MeterStart)).FontSize(9);
+                    table.Cell().Element(BodyCell).Text(FmtMeterValue(entry.MeterEnd)).FontSize(9);
+                    table.Cell().Element(BodyCell).Text(string.IsNullOrWhiteSpace(entry.Code) ? "-" : entry.Code.Trim()).FontSize(9);
+                    table.Cell().Element(BodyCell).Text(ObservationZustandBuilder.Build(entry, catalog)).FontSize(9);
+                    table.Cell().Element(BodyCell).Text(ResolvePhotoNumberText(entry, photoNumbers)).FontSize(9);
+                    table.Cell().Element(BodyCell).Text(entry.Mpeg?.Trim() ?? "-").FontSize(9);
+                    table.Cell().Element(BodyCell).Text(entry.Zeit.HasValue ? FormatTime(entry.Zeit.Value) : "-").FontSize(9);
+                    table.Cell().Element(BodyCell).Text(BuildObservationNotesText(entry)).FontSize(9);
+                }
             }
         });
     }
