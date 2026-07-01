@@ -352,10 +352,17 @@ public sealed class SourceTextArchitectureHygieneTests
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowLiveDetectionArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
-        const string methodName = "PlayerWindow_live_detection_status_lives_in_status_partial";
+        var methodNames = new[]
+        {
+            "PlayerWindow_live_detection_status_lives_in_status_partial",
+            "PlayerWindow_live_detection_lifecycle_lives_in_lifecycle_partial"
+        };
 
-        Assert.Contains($"public void {methodName}", focused);
-        Assert.DoesNotContain($"public void {methodName}", guard);
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
     }
 
     [Theory]
