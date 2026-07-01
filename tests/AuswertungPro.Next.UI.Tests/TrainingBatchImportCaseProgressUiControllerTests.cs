@@ -14,14 +14,19 @@ public sealed class TrainingBatchImportCaseProgressUiControllerTests
             VideoPath = @"C:\Import\haltung.mp4"
         };
         var calls = new List<string>();
+        var ui = new TrainingBatchUiSink(
+            setBusy: _ => { },
+            setLogText: _ => { },
+            setProgressValue: value => calls.Add($"progress:{value}"),
+            setProgressMax: _ => { },
+            setStatusText: value => calls.Add($"status:{value}"),
+            log: value => calls.Add($"log:{value}"));
 
         TrainingBatchImportCaseProgressUiController.Apply(
             zeroBasedIndex: 1,
             totalCount: 4,
             trainingCase,
-            value => calls.Add($"progress:{value}"),
-            value => calls.Add($"status:{value}"),
-            value => calls.Add($"log:{value}"));
+            ui);
 
         Assert.Equal(
             new[]

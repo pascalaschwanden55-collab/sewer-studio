@@ -6,22 +6,18 @@ public static class TrainingBatchImportCaseProgressUiController
         int zeroBasedIndex,
         int totalCount,
         TrainingCase trainingCase,
-        Action<int> setProgressValue,
-        Action<string> setStatus,
-        Action<string> log)
+        TrainingBatchUiSink ui)
     {
         ArgumentNullException.ThrowIfNull(trainingCase);
-        ArgumentNullException.ThrowIfNull(setProgressValue);
-        ArgumentNullException.ThrowIfNull(setStatus);
-        ArgumentNullException.ThrowIfNull(log);
+        ArgumentNullException.ThrowIfNull(ui);
 
-        setProgressValue(zeroBasedIndex + 1);
+        ui.SetProgressValue(zeroBasedIndex + 1);
         var progressPresentation = TrainingBatchImportCaseProgressPresentationBuilder.Build(
             zeroBasedIndex,
             totalCount,
             trainingCase);
-        setStatus(progressPresentation.StatusText);
+        ui.SetStatusText(progressPresentation.StatusText);
         foreach (var line in progressPresentation.LogLines)
-            log(line);
+            ui.Log(line);
     }
 }
