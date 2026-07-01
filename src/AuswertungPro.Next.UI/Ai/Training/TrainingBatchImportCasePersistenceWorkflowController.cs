@@ -29,12 +29,13 @@ public static class TrainingBatchImportCasePersistenceWorkflowController
             allSamples,
             saveSamplesAsync);
 
-        TrainingBatchImportSamplePersistenceUiController.Apply(
-            persistence,
-            log,
-            invokeOnUi,
-            setSampleCount,
-            setCodesCovered);
+        log(persistence.CandidateLogMessage);
+        invokeOnUi(() =>
+        {
+            setSampleCount(persistence.SampleCount);
+            setCodesCovered(persistence.CodesCovered);
+        });
+        log(persistence.StoredLogMessage);
 
         if (processedCount > 0 && processedCount % 5 == 0)
         {

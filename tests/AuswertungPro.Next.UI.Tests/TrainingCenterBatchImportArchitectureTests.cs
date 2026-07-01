@@ -356,14 +356,28 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportCaseStateSaveController.cs");
+        var persistenceUiControllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportSamplePersistenceUiController.cs");
         var persistenceWorkflowSource = File.ReadAllText(persistenceWorkflowPath);
         var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
 
         Assert.Contains("TrainingBatchImportCaseWorkflowController.ProcessAsync(", batchImportSource, StringComparison.Ordinal);
         Assert.Contains("TrainingBatchImportCasePersistenceWorkflowController.PersistAsync(", caseWorkflowSource, StringComparison.Ordinal);
         Assert.False(File.Exists(stateSaveControllerPath), "Triviale Best-Effort-State-Save-Logik soll im Persistence-Workflow leben.");
+        Assert.False(File.Exists(persistenceUiControllerPath), "Triviale Persistence-UI-Weiterleitung soll im Persistence-Workflow leben.");
         Assert.Contains("processedCount % 5 == 0", persistenceWorkflowSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TrainingBatchImportCaseStateSaveController", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportSamplePersistenceUiController.Apply(", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("log(persistence.CandidateLogMessage);", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("invokeOnUi(() =>", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("setSampleCount(persistence.SampleCount);", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("setCodesCovered(persistence.CodesCovered);", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("log(persistence.StoredLogMessage);", persistenceWorkflowSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TrainingBatchImportCasePersistenceWorkflowController.PersistAsync(", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TrainingBatchImportSamplePersistenceController.SaveCandidatesAsync(", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TrainingBatchImportSamplePersistenceUiController.Apply(", batchImportSource, StringComparison.Ordinal);
