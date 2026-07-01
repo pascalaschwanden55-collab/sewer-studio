@@ -1386,9 +1386,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 LoadReviewQueue,
                 Log);
 
-            await SelfTrainingPostRunRefreshController.RefreshAsync(
-                LoadSamplesInternalAsync,
-                RefreshKbStatusAsync);
+            await LoadSamplesInternalAsync();
+            await RefreshKbStatusAsync();
         }
         catch (OperationCanceledException)
         {
@@ -1411,10 +1410,6 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Indexiert Samples inkrementell in die KB (ohne vollen Rebuild).
-    /// Nutzt KnowledgeBaseManager.IndexSampleAsync pro Sample.
-    /// </summary>
     /// <summary>
     /// Indexiert Samples inkrementell in die KB und liefert ein <see cref="KbIndexOutcome"/>, das
     /// erfolgreich indexierte von bewusst/dauerhaft uebersprungenen (Skipped: Eval-Schutz/nicht
