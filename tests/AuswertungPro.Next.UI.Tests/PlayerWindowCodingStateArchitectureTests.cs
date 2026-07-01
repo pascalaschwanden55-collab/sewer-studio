@@ -1,6 +1,4 @@
-using System;
 using System.IO;
-using System.Linq;
 using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;

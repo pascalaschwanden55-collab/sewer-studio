@@ -132,6 +132,27 @@ public sealed class SourceTextArchitectureHygieneTests
         }
     }
 
+    [Fact]
+    public void Player_window_visual_infrastructure_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowVisualInfrastructureArchitectureTests.cs"));
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        var methodNames = new[]
+        {
+            "PlayerWindow_does_not_own_win32_screenshot_capture",
+            "PlayerWindow_uses_overlay_tag_constants_for_bend_marker",
+            "PlayerWindow_uses_status_color_constants"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -183,6 +204,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowControllerArchitectureTests.cs")]
     [InlineData("PlayerWindowResourceDictionaryTests.cs")]
     [InlineData("PlayerWindowRuntimeArchitectureTests.cs")]
+    [InlineData("PlayerWindowVisualInfrastructureArchitectureTests.cs")]
     [InlineData("PlayerWindowWiringArchitectureTests.cs")]
     [InlineData("ProjektEroeffnungShellGuardTests.cs")]
     [InlineData("SchaechtePageArchitectureGuardTests.cs")]
