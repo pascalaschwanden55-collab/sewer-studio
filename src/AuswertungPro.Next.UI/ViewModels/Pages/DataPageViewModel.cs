@@ -44,6 +44,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageVideoRelinkController _videoRelinkController;
     private readonly DataPageVideoPlaybackController _videoPlaybackController;
     private readonly DataPageMediaSearchController _mediaSearchController;
+    private readonly DataPageProtocolWindowController _protocolWindowController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
@@ -233,6 +234,23 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             },
             () => OnPropertyChanged(nameof(Records)),
             _shell.SetStatus);
+        _protocolWindowController = new DataPageProtocolWindowController(
+            () => _shell.Project,
+            () => _sp.Settings.LastProjectPath,
+            ResolveExistingPath,
+            ShowProtocolWindow,
+            () =>
+            {
+                _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+                _shell.Project.Dirty = true;
+                ScheduleAutoSave();
+            },
+            record => SyncObservationsToHoldingFields(record),
+            record =>
+            {
+                if (Selected?.Id == record.Id)
+                    RefreshSelectedProtocolEntries();
+            });
 
         // Seed measure template names from Offerten into dropdown if missing
         SeedMeasureTemplateNames();
@@ -551,34 +569,20 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void OpenProtocol(HaltungRecord? record)
     {
-        if (record is null)
-            return;
+        _protocolWindowController.Open(record);
+    }
 
-        var projectFolder = string.IsNullOrWhiteSpace(_sp.Settings.LastProjectPath)
-            ? null
-            : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
-
-        var resolvedVideoPath = ResolveExistingPath(record.GetFieldValue("Link"));
+    private void ShowProtocolWindow(DataPageProtocolWindowRequest request)
+    {
         var dlg = new AuswertungPro.Next.UI.Views.ProtocolObservationsWindow(
-            record,
-            _shell.Project,
+            request.Record,
+            request.Project,
             _sp,
-            resolvedVideoPath,
-            projectFolder,
-            markDirty: () =>
-            {
-                _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-                _shell.Project.Dirty = true;
-                ScheduleAutoSave();
-            });
+            request.ResolvedVideoPath,
+            request.ProjectFolder,
+            request.MarkDirty);
         dlg.Owner = System.Windows.Application.Current?.MainWindow;
         dlg.ShowDialog();
-
-        // Protokoll-Änderungen in die Haltungsfelder zurückschreiben.
-        SyncObservationsToHoldingFields(record);
-
-        if (Selected?.Id == record.Id)
-            RefreshSelectedProtocolEntries();
     }
 
     public void SyncObservationsToHoldingFields(HaltungRecord? record, bool showStatus = false)
