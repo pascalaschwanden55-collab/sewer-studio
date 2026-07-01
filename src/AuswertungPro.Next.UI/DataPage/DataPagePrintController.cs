@@ -284,30 +284,37 @@ public sealed class DataPagePrintController
             return;
         }
 
-        var holding = record.GetFieldValue("Haltungsname");
-        var defaultName = $"Haltungsprotokoll_AWU_{SanitizeFilenamePart(holding)}_{_now():yyyyMMdd}.pdf";
-        var output = _dialogs.SaveFile(
-            "Haltungsprotokoll AWU als PDF speichern",
-            "PDF (*.pdf)|*.pdf",
-            defaultExt: "pdf",
-            defaultFileName: defaultName);
-        if (string.IsNullOrWhiteSpace(output))
+        var projectFolder = _getProjectFolder() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(projectFolder))
+        {
+            _dialogs.Info(
+                "Projekt bitte zuerst speichern — dann wird das Protokoll direkt in den Haltungsordner erzeugt.",
+                "Haltungsprotokoll AWU");
             return;
+        }
 
         try
         {
+            // Direkt in den Haltungsordner (Haltungen_Verteilt\<H>\...._E.pdf), kein Speichern-Dialog.
+            // Gleiche Logik wie "Protokoll neu generieren", nur fuer diese eine Haltung.
             var doc = ensureProtocolDocument(record);
-            var logoPath = Path.Combine(_baseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
-            var options = new HaltungsprotokollPdfOptions
+            var dest = AuswertungPro.Next.Infrastructure.Import.ProtocolRegenerationService.RegenerateOne(
+                project, projectFolder, record, doc);
+            if (string.IsNullOrWhiteSpace(dest))
             {
-                LogoPathAbs = _fileExists(logoPath) ? logoPath : null
-            };
+                _dialogs.Info(
+                    "Fuer diese Haltung liegt kein Haltungsname vor — der Zielordner kann nicht bestimmt werden.",
+                    "Haltungsprotokoll AWU");
+                return;
+            }
 
-            var projectFolder = _getProjectFolder() ?? string.Empty;
-            var pdf = _buildAwuPdf(project, record, doc, projectFolder, options);
+            project.ModifiedAtUtc = DateTime.UtcNow;
+            project.Dirty = true;
 
-            _writeAllBytes(output, pdf);
-            _dialogs.Info($"AWU-Haltungsprotokoll wurde erstellt:\n{output}", "Haltungsprotokoll AWU");
+            // PDF direkt anzeigen; nur wenn das nicht klappt, den Pfad melden.
+            var (opened, _) = DataPageOriginalPdfController.TryShellOpen(dest);
+            if (!opened)
+                _dialogs.Info($"AWU-Haltungsprotokoll wurde erstellt:\n{dest}", "Haltungsprotokoll AWU");
         }
         catch (Exception ex)
         {

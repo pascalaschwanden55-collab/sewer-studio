@@ -6,6 +6,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
 
@@ -33,7 +34,6 @@ public static class ProtocolRegenerationService
     {
         var messages = new List<string>();
         int generated = 0, errors = 0;
-        var exporter = new ProtocolPdfExporter();
 
         foreach (var record in project.Data.ToList())
         {
@@ -43,24 +43,7 @@ public static class ProtocolRegenerationService
 
             try
             {
-                var san = ProjectPathResolver.SanitizePathSegment(haltung);
-                var dir = ProjectStructure.HaltungVerteiltDir(projectFolder, san);
-                Directory.CreateDirectory(dir);
-
-                var stamp = KanalImportDistributor.ResolveDateStamp(record);
-                var pdf = exporter.BuildHaltungsprotokollPdf(
-                    project, record, record.Protocol, projectFolder,
-                    new HaltungsprotokollPdfOptions { IncludePhotos = true, CodeCatalog = codeCatalog });
-
-                // Fester Name -> Regenerierung überschreibt die vorherige Version (immer aktuell).
-                var dest = Path.Combine(dir, $"{stamp}_{san}_E.pdf");
-                File.WriteAllBytes(dest, pdf);
-
-                record.SetFieldValue(
-                    "PDF_Eigen",
-                    ProjectPathResolver.MakeRelative(dest, projectFolder),
-                    FieldSource.Legacy,
-                    userEdited: false);
+                RegenerateOne(project, projectFolder, record, record.Protocol, codeCatalog);
                 generated++;
             }
             catch (Exception ex)
@@ -77,5 +60,50 @@ public static class ProtocolRegenerationService
         }
 
         return new Result(generated, errors, messages);
+    }
+
+    /// <summary>
+    /// Erzeugt das eigene <c>_E</c>-Protokoll fuer EINE Haltung in ihren Verteil-Ordner
+    /// (<c>Haltungen_Verteilt\&lt;H&gt;\JJJJMMTT_&lt;H&gt;_E.pdf</c>), verlinkt es relativ als
+    /// <c>PDF_Eigen</c> und gibt den absoluten Zielpfad zurueck. Fester Name -> ueberschreibt die
+    /// vorherige Version (immer aktuell). Gibt <c>null</c> zurueck, wenn kein Haltungsname vorliegt.
+    /// Setzt NICHT <c>project.Dirty</c> (das entscheidet der Aufrufer).
+    /// </summary>
+    public static string? RegenerateOne(
+        Project project,
+        string projectFolder,
+        HaltungRecord record,
+        ProtocolDocument doc,
+        ICodeCatalogProvider? codeCatalog = null)
+    {
+        var haltung = record.GetFieldValue("Haltungsname")?.Trim();
+        if (string.IsNullOrWhiteSpace(haltung))
+            return null;
+
+        var san = ProjectPathResolver.SanitizePathSegment(haltung);
+        var dir = ProjectStructure.HaltungVerteiltDir(projectFolder, san);
+        Directory.CreateDirectory(dir);
+
+        var stamp = KanalImportDistributor.ResolveDateStamp(record);
+        var logo = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+        var options = new HaltungsprotokollPdfOptions
+        {
+            IncludePhotos = true,
+            CodeCatalog = codeCatalog,
+            LogoPathAbs = File.Exists(logo) ? logo : null
+        };
+
+        var pdf = new ProtocolPdfExporter().BuildHaltungsprotokollPdf(project, record, doc, projectFolder, options);
+
+        var dest = Path.Combine(dir, $"{stamp}_{san}_E.pdf");
+        File.WriteAllBytes(dest, pdf);
+
+        record.SetFieldValue(
+            "PDF_Eigen",
+            ProjectPathResolver.MakeRelative(dest, projectFolder),
+            FieldSource.Legacy,
+            userEdited: false);
+
+        return dest;
     }
 }
