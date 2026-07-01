@@ -1,5 +1,6 @@
 using System.IO;
 using AuswertungPro.Next.UI.ViewModels.Pages;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -71,19 +72,4 @@ public sealed class BuilderPagePdfBlockBuilderTests
         Assert.DoesNotContain("private static void AddLine(StringBuilder", source, StringComparison.Ordinal);
     }
 
-    private static string FindRepositoryRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (Directory.Exists(Path.Combine(current.FullName, "src", "AuswertungPro.Next.UI")))
-            {
-                return current.FullName;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repository root not found.");
-    }
 }

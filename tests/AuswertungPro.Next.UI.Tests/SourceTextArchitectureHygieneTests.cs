@@ -5,6 +5,12 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class SourceTextArchitectureHygieneTests
 {
     [Theory]
+    [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
+    [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
+    [InlineData("BuilderPageRowFilterTests.cs")]
+    [InlineData("BuilderPageSpecialStatsCalculatorTests.cs")]
+    [InlineData("BuilderPageSummaryEntryBuilderTests.cs")]
+    [InlineData("BuilderPageViewModelThreadingTests.cs")]
     [InlineData("CostCalculatorCatalogFilterArchitectureTests.cs")]
     [InlineData("CostCalculatorImportDefaultsArchitectureTests.cs")]
     [InlineData("CostCalculatorLineOrderArchitectureTests.cs")]
@@ -48,6 +54,7 @@ public sealed class SourceTextArchitectureHygieneTests
 
         Assert.DoesNotContain("private static string FindRepositoryRoot", source);
         Assert.DoesNotContain("private static string FindRepoRoot", source);
+        Assert.DoesNotContain("private static string FindRepoFile", source);
         Assert.DoesNotContain("private static string RepoFile", source);
         Assert.DoesNotContain("private static string ExtractMethod(", source);
         Assert.DoesNotContain("private static string ExtractMethodBody", source);
