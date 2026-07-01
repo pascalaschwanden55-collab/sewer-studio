@@ -169,7 +169,8 @@ public sealed class SourceTextArchitectureHygieneTests
         {
             "PlayerWindow_does_not_own_win32_screenshot_capture",
             "PlayerWindow_uses_overlay_tag_constants_for_bend_marker",
-            "PlayerWindow_uses_status_color_constants"
+            "PlayerWindow_uses_status_color_constants",
+            "PlayerWindow_coding_visual_tree_helper_lives_in_visual_tree_partial"
         };
 
         foreach (var methodName in methodNames)
