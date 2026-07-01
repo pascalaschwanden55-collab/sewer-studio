@@ -9,25 +9,6 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class UiArchitectureGuardTests
 {
     [Fact]
-    public void PlayerWindow_import_confirmation_badge_uses_display_policy()
-    {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var trainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchDisplayPolicy.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingProtocolImportTrainingWorkflowService.cs");
-
-        var training = File.ReadAllText(trainingPath);
-        var policy = File.ReadAllText(policyPath);
-        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : string.Empty;
-
-        Assert.Contains("CodingProtocolMatchDisplayPolicy.BuildImportConfirmationBadge", workflow);
-        Assert.DoesNotContain("bestaetigt", training);
-        Assert.DoesNotContain("Interval = TimeSpan.FromSeconds(3)", training);
-        Assert.Contains("public static CodingImportConfirmationBadgeState BuildImportConfirmationBadge", policy);
-    }
-
-    [Fact]
     public void PlayerWindow_green_match_accept_overlay_uses_display_policy()
     {
         var root = FindRepositoryRoot();
