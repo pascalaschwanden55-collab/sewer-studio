@@ -635,7 +635,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_self_training_visual_reset_an_controller()
+    public void TrainingCenterViewModel_setzt_trivialen_self_training_visual_reset_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -644,12 +644,27 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var controllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "SelfTrainingVisualResetController.cs");
         var resetSource = ExtractMethodBody(source, "private void ResetSelfTrainingVisuals(bool resetMatchRate = false)");
 
-        Assert.Contains("SelfTrainingVisualResetController.Reset(", resetSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingResults.Clear()", resetSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("CodeDistribution.Clear()", resetSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingLogEntries.Clear()", resetSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(controllerPath), "Trivialer Self-Training-Visual-Reset soll inline in der VM stehen.");
+        Assert.DoesNotContain("SelfTrainingVisualResetController", resetSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingResults.Clear();", resetSource, StringComparison.Ordinal);
+        Assert.Contains("CodeDistribution.Clear();", resetSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingLogEntries.Clear();", resetSource, StringComparison.Ordinal);
+        Assert.Contains("PipelineActiveStep = 0;", resetSource, StringComparison.Ordinal);
+        Assert.Contains("CurrentEntryCode = \"\";", resetSource, StringComparison.Ordinal);
+        Assert.Contains("CurrentEntryMeter = 0;", resetSource, StringComparison.Ordinal);
+        Assert.Contains("CurrentComparisonText = \"\";", resetSource, StringComparison.Ordinal);
+        Assert.Contains("CurrentTechniqueGrade = \"\";", resetSource, StringComparison.Ordinal);
+        Assert.Contains("CurrentTechniqueDetails = \"\";", resetSource, StringComparison.Ordinal);
+        Assert.Contains("if (resetMatchRate)", resetSource, StringComparison.Ordinal);
     }
 
     [Fact]
