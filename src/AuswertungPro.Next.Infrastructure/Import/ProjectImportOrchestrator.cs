@@ -265,16 +265,14 @@ public sealed class ProjectImportOrchestrator
             messages.AddRange(distResult.Messages);
             errors += distResult.Errors;
 
-            // 7c) Schacht-Protokolle: Seiten des maßgeblichen Protokolls nach Ober-/Unter-Schacht gruppieren
-            //     → pro Schacht ein zusammengefasstes PDF in Schächte_Verteilt\<S>\ (relativ verlinkt).
-            var schachtResult = KanalImportDistributor.DistributeSchachtProtocols(project, projectFolder, archivedPdfDir);
-            messages.AddRange(schachtResult.Messages);
-            errors += schachtResult.Errors;
+            // HINWEIS: Schächte verteilt der Import bewusst NICHT (includeSchacht:false oben) — das macht der
+            // Anwender manuell über „Schacht Verteilen" mit dem separaten Schacht-Gesamtauszug-PDF, damit kein
+            // falsches/ganzes PDF automatisch an die Schächte gehängt wird.
 
             messages.Add(
                 $"Verteilung: {mediaResult.FilesCopied} Fotos/Dateien, {distResult.VideosDistributed} Videos, " +
-                $"{distResult.OriginalProtocolsDistributed} Original-Protokolle, {schachtResult.Schaechte} Schacht-Protokolle, " +
-                $"{mediaResult.Errors + distResult.Errors + schachtResult.Errors} Fehler.");
+                $"{distResult.OriginalProtocolsDistributed} Original-Protokolle, " +
+                $"{mediaResult.Errors + distResult.Errors} Fehler.");
         }
         catch (Exception ex)
         {
