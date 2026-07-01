@@ -124,7 +124,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_batch_import_final_state_an_controller()
+    public void TrainingCenterViewModel_setzt_trivialen_batch_import_final_state_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -135,8 +135,8 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "TrainingCenterViewModel.cs"));
         var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
 
-        Assert.Contains("TrainingBatchImportRunFinalizerController.Apply(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("IsBusy = false;", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetBusy(false);", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportRunFinalizerController.Apply(", batchImportSource, StringComparison.Ordinal);
     }
 
     [Fact]
