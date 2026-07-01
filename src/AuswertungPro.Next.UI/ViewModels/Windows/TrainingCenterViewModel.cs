@@ -155,12 +155,19 @@ public partial class TrainingCenterViewModel : ObservableObject
 
     private void AddSelfTrainingLog(string message)
     {
-        var line = TrainingCenterLogController.CreateLine(DateTime.Now, message);
+        var entryText = $"[{DateTime.Now:HH:mm:ss}] {message}";
         void Apply()
         {
-            TrainingCenterLogController.AppendCapped(SelfTrainingLogEntries, line.EntryText);
+            AppendSelfTrainingLogEntry(entryText);
         }
         OnUi(Apply);
+    }
+
+    private void AppendSelfTrainingLogEntry(string entryText)
+    {
+        SelfTrainingLogEntries.Add(entryText);
+        while (SelfTrainingLogEntries.Count > 100)
+            SelfTrainingLogEntries.RemoveAt(0);
     }
 
     private void UpdateCodeDistribution(string code, MatchLevel level)
@@ -243,11 +250,11 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// <summary>Fügt eine Zeile zum Log hinzu (Thread-safe via Dispatcher).</summary>
     private void Log(string message)
     {
-        var line = TrainingCenterLogController.CreateLine(DateTime.Now, message);
+        var entryText = $"[{DateTime.Now:HH:mm:ss}] {message}";
         void Apply()
         {
-            LogText += line.LogTextAppend;
-            TrainingCenterLogController.AppendCapped(SelfTrainingLogEntries, line.EntryText);
+            LogText += entryText + "\n";
+            AppendSelfTrainingLogEntry(entryText);
         }
         OnUi(Apply);
     }

@@ -785,10 +785,18 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_log_format_und_trim_an_controller()
+    public void TrainingCenterViewModel_setzt_log_format_und_trim_inline()
     {
+        var repoRoot = FindRepoRoot();
+        var controllerPath = Path.Combine(
+            repoRoot,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingCenterLogController.cs");
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            repoRoot,
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -796,12 +804,17 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "TrainingCenterViewModel.cs"));
         var selfTrainingLogSource = ExtractMethodBody(source, "private void AddSelfTrainingLog(string message)");
         var logSource = ExtractMethodBody(source, "private void Log(string message)");
+        var appendSource = ExtractMethodBody(source, "private void AppendSelfTrainingLogEntry(string entryText)");
 
-        Assert.Contains("TrainingCenterLogController.CreateLine(DateTime.Now, message)", selfTrainingLogSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingCenterLogController.AppendCapped(SelfTrainingLogEntries, line.EntryText)", selfTrainingLogSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingCenterLogController.CreateLine(DateTime.Now, message)", logSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingCenterLogController.AppendCapped(SelfTrainingLogEntries, line.EntryText)", logSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingLogEntries.Count > 100", source, StringComparison.Ordinal);
+        Assert.False(File.Exists(controllerPath), controllerPath);
+        Assert.DoesNotContain("TrainingCenterLogController", source, StringComparison.Ordinal);
+        Assert.Contains("var entryText = $\"[{DateTime.Now:HH:mm:ss}] {message}\";", selfTrainingLogSource, StringComparison.Ordinal);
+        Assert.Contains("AppendSelfTrainingLogEntry(entryText);", selfTrainingLogSource, StringComparison.Ordinal);
+        Assert.Contains("var entryText = $\"[{DateTime.Now:HH:mm:ss}] {message}\";", logSource, StringComparison.Ordinal);
+        Assert.Contains("LogText += entryText + \"\\n\";", logSource, StringComparison.Ordinal);
+        Assert.Contains("AppendSelfTrainingLogEntry(entryText);", logSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingLogEntries.Count > 100", appendSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingLogEntries.RemoveAt(0)", appendSource, StringComparison.Ordinal);
         Assert.DoesNotContain("RemoveAt(0)", selfTrainingLogSource, StringComparison.Ordinal);
         Assert.DoesNotContain("RemoveAt(0)", logSource, StringComparison.Ordinal);
     }
