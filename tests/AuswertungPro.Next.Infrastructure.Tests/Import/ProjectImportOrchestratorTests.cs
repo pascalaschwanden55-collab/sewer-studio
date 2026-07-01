@@ -80,8 +80,11 @@ public sealed class ProjectImportOrchestratorTests
         // XTF direkt im sourceDir (nicht in Unterordner), damit Pfad-Aufloesung klappt
         File.WriteAllText(Path.Combine(sourceDir, "test.xtf"), xtfContent);
 
-        // Foto-Datei und Video-Datei (Inhalt beliebig)
-        File.WriteAllText(Path.Combine(sourceDir, "Foto", "H_06-001_002.jpg"), "dummy-bild");
+        // Foto = echtes Mini-PNG (das generierte Protokoll bettet es ein -> muss dekodierbar sein).
+        File.WriteAllBytes(Path.Combine(sourceDir, "Foto", "H_06-001_002.jpg"),
+            System.Convert.FromBase64String(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC"));
+        // Video-Inhalt beliebig (wird nur kopiert, nicht dekodiert).
         File.WriteAllText(Path.Combine(sourceDir, "Film", "H_06-001.mpg"), "dummy-video");
 
         return (sourceDir, projectDir);
@@ -137,13 +140,18 @@ public sealed class ProjectImportOrchestratorTests
                 Directory.Exists(fotoDir) && Directory.GetFiles(fotoDir).Length > 0,
                 $"Kein Foto unter {fotoDir} nach Verteilung");
 
-            // Video muss im Projekt-Ordner Haltungen_Verteilt\06-001\Video\ liegen
-            // (MediaDistributionService.CopyFieldFile legt GetSubfolder(".mpg")="Video" an)
-            var videoDir = Path.Combine(
-                ProjectStructure.HaltungVerteiltDir(projectDir, "06-001"), "Video");
-            Assert.True(
-                Directory.Exists(videoDir) && Directory.GetFiles(videoDir).Length > 0,
-                $"Kein Inspektionsvideo unter {videoDir} nach Verteilung (IKAS-Link-Gap)");
+            // Video muss FLACH + datumsbenannt im Haltungsordner liegen (JJJJMMTT_06-001.mpg),
+            // NICHT in einem Video\-Unterordner (wie "Haltung Verteilen").
+            var haltungDir = ProjectStructure.HaltungVerteiltDir(projectDir, "06-001");
+            var videos = Directory.Exists(haltungDir)
+                ? Directory.GetFiles(haltungDir, "*.mpg") : System.Array.Empty<string>();
+            Assert.True(videos.Length > 0, $"Kein flach verteiltes Video in {haltungDir}");
+            Assert.EndsWith("_06-001.mpg", videos[0]);
+
+            // Eigenes Protokoll (generiert, Suffix _E.pdf) muss im Haltungsordner liegen.
+            var protokolle = Directory.Exists(haltungDir)
+                ? Directory.GetFiles(haltungDir, "*_E.pdf") : System.Array.Empty<string>();
+            Assert.True(protokolle.Length > 0, $"Kein generiertes _E-Protokoll in {haltungDir}");
         }
         finally
         {
@@ -176,19 +184,16 @@ public sealed class ProjectImportOrchestratorTests
                 string.Equals(r.GetFieldValue("Haltungsname"), "06-001", StringComparison.OrdinalIgnoreCase));
             Assert.NotNull(rec);
 
-            // Link-Feld muss nach dem XTF-Parse gesetzt sein (vor Medienverteilung)
-            // Nach Medienverteilung ist der Pfad relativ
+            // Nach der Verteilung ist der Link RELATIV auf das flach+datumsbenannte Video im Haltungsordner
+            // (JJJJMMTT_06-001.mpg) und die Datei existiert im Projekt.
             var linkNachImport = rec!.GetFieldValue("Link");
             Assert.False(string.IsNullOrWhiteSpace(linkNachImport),
-                "Link-Feld muss nach IKAS-Import gesetzt sein (KEK.Datei Klasse=Untersuchung)");
-            Assert.Contains("H_06-001.mpg", linkNachImport!, StringComparison.OrdinalIgnoreCase);
-
-            // Video muss im Haltungen_Verteilt\06-001\Video\-Ordner liegen
-            var videoDir = Path.Combine(
-                ProjectStructure.HaltungVerteiltDir(projectDir, "06-001"), "Video");
-            Assert.True(
-                Directory.Exists(videoDir) && Directory.GetFiles(videoDir).Length > 0,
-                $"Inspektionsfilm wurde nicht nach {videoDir} verteilt");
+                "Link-Feld muss nach IKAS-Import gesetzt + verteilt sein");
+            Assert.False(Path.IsPathRooted(linkNachImport), $"Link sollte relativ sein: {linkNachImport}");
+            Assert.Contains("Haltungen_Verteilt", linkNachImport!.Replace('\\', '/'));
+            Assert.EndsWith("_06-001.mpg", linkNachImport);
+            Assert.True(File.Exists(Path.Combine(projectDir, linkNachImport)),
+                $"Verteiltes Video sollte existieren: {linkNachImport}");
         }
         finally
         {

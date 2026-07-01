@@ -34,7 +34,8 @@ public sealed class MediaDistributionService
         CancellationToken ct = default,
         bool dryRun = false,
         object? collectionLock = null,
-        bool includeVideos = true)
+        bool includeVideos = true,
+        bool includePdfs = true)
     {
         var copied = 0;
         var skipped = 0;
@@ -64,11 +65,13 @@ public sealed class MediaDistributionService
             if (includeVideos)
                 CopyFieldFile(record, "Link", holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
 
-            // 2) PDF_Path
-            CopyFieldFile(record, "PDF_Path", holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
-
-            // 3) PDF_All (semikolon-getrennt)
-            CopyFieldFileList(record, "PDF_All", holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+            // 2+3) PDF_Path / PDF_All. Der Ein-Knopf-Import setzt includePdfs=false, weil er das
+            // eigene Protokoll (_E.pdf) generiert statt die Original-PDFs in die Haltung zu kopieren.
+            if (includePdfs)
+            {
+                CopyFieldFile(record, "PDF_Path", holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+                CopyFieldFileList(record, "PDF_All", holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+            }
 
             // 4) Protokoll-FotoPaths (Original, Current, History)
             if (record.Protocol != null)

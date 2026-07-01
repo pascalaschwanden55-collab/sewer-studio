@@ -242,6 +242,8 @@ public sealed class ProjectImportOrchestrator
         // ------------------------------------------------------------------
         try
         {
+            // 7a) Fotos zentral gruppiert (Fotos\Haltungen\) + Schächte verteilen — KEINE Videos/Original-PDFs
+            //     (die kommen in 7b flach+datumsbenannt bzw. als generiertes Protokoll).
             var mediaResult = new MediaDistributionService()
                 .DistributeImportedMedia(
                     projectFolder,
@@ -249,12 +251,20 @@ public sealed class ProjectImportOrchestrator
                     progress: null,
                     ct: ct,
                     dryRun: false,
-                    collectionLock: new object());
-
+                    collectionLock: new object(),
+                    includeVideos: false,
+                    includePdfs: false);
             messages.AddRange(mediaResult.Messages);
+
+            // 7b) Video flach+datumsbenannt (wie „Haltung Verteilen") + eigenes Protokoll (_E, mit Fotos)
+            //     generieren; beide relativ verlinkt. NACH 7a, damit die Fotos schon relativ im Projekt
+            //     liegen und ins Protokoll eingebettet werden koennen.
+            var distResult = KanalImportDistributor.DistributeVideosAndProtocols(project, projectFolder);
+            messages.AddRange(distResult.Messages);
+            errors += distResult.Errors;
             messages.Add(
-                $"Medienverteilung: {mediaResult.FilesCopied} kopiert, " +
-                $"{mediaResult.FilesSkipped} uebersprungen, {mediaResult.Errors} Fehler.");
+                $"Verteilung: {mediaResult.FilesCopied} Fotos/Dateien, {distResult.VideosDistributed} Videos, " +
+                $"{distResult.ProtocolsGenerated} eigene Protokolle, {mediaResult.Errors + distResult.Errors} Fehler.");
         }
         catch (Exception ex)
         {
