@@ -58,7 +58,7 @@ internal static class ZustandsklasseCellStyleFactory
         IValueConverter backgroundConverter,
         IValueConverter foregroundConverter)
     {
-        var baseStyle = System.Windows.Application.Current.TryFindResource(typeof(DataGridCell)) as Style;
+        var baseStyle = System.Windows.Application.Current?.TryFindResource(typeof(DataGridCell)) as Style;
         var style = baseStyle is null
             ? new Style(typeof(DataGridCell))
             : new Style(typeof(DataGridCell), baseStyle);

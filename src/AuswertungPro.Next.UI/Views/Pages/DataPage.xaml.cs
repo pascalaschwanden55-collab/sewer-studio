@@ -173,16 +173,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
             }
 
             col.SetValue(FrameworkElement.TagProperty, field);
-            if (string.Equals(field, "Zustandsklasse", StringComparison.Ordinal))
-                col.CellStyle = ZustandsklasseCellStyleFactory.CreateHaltungenStyle(field);
-            else if (string.Equals(field, "Eigentuemer", StringComparison.Ordinal))
-                col.CellStyle = ZustandsklasseCellStyleFactory.CreateEigentuemerStyle(field);
-            else if (string.Equals(field, "Pruefungsresultat", StringComparison.Ordinal))
-                col.CellStyle = ZustandsklasseCellStyleFactory.CreatePruefungsresultatStyle(field);
-            else if (string.Equals(field, "Referenzpruefung", StringComparison.Ordinal))
-                col.CellStyle = ZustandsklasseCellStyleFactory.CreatePruefungsresultatStyle(field);
-            else if (string.Equals(field, "Ausgefuehrt_durch", StringComparison.Ordinal))
-                col.CellStyle = ZustandsklasseCellStyleFactory.CreateAusgefuehrtDurchStyle(field);
+            var colorStyle = DataGridColorCellStyleFactory.CreateHaltungenStyle(field);
+            if (colorStyle is not null)
+                col.CellStyle = colorStyle;
 
             ApplyFieldMetaTooltip(col, field);
             col.CanUserResize = true;

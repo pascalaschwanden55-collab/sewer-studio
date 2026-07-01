@@ -194,22 +194,9 @@ public partial class SchaechtePage : UserControl
 
     private static void ApplyColorStyle(DataGridColumn column, string columnName)
     {
-        var normalizedHeader = Normalize(columnName);
-
-        if (normalizedHeader.Contains("zustandsklasse", StringComparison.Ordinal))
-            column.CellStyle = ZustandsklasseCellStyleFactory.CreateSchaechteStyle(columnName);
-        else if (normalizedHeader.Contains("eigentuemer", StringComparison.Ordinal) ||
-                 normalizedHeader.Contains("eigentumer", StringComparison.Ordinal) ||
-                 normalizedHeader.Contains("eigentum", StringComparison.Ordinal))
-            column.CellStyle = ZustandsklasseCellStyleFactory.CreateEigentuemerStyle(columnName);
-        else if ((normalizedHeader.Contains("ausgefuehrt", StringComparison.Ordinal) ||
-                  normalizedHeader.Contains("ausgefuhrt", StringComparison.Ordinal)) &&
-                 normalizedHeader.Contains("durch", StringComparison.Ordinal))
-            column.CellStyle = ZustandsklasseCellStyleFactory.CreateAusgefuehrtDurchStyle(columnName);
-        else if (normalizedHeader.Contains("pruefung", StringComparison.Ordinal) ||
-                 normalizedHeader.Contains("dichtheit", StringComparison.Ordinal) ||
-                 normalizedHeader.Contains("dichtigkeit", StringComparison.Ordinal))
-            column.CellStyle = ZustandsklasseCellStyleFactory.CreatePruefungsresultatStyle(columnName);
+        var colorStyle = DataGridColorCellStyleFactory.CreateSchaechteStyle(columnName);
+        if (colorStyle is not null)
+            column.CellStyle = colorStyle;
     }
 
     private DataGridTextColumn CreateZustandsklasseColumn(string recordField)
