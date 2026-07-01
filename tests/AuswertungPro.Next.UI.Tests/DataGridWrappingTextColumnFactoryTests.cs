@@ -51,7 +51,7 @@ public sealed class DataGridWrappingTextColumnFactoryTests
     }
 
     [Fact]
-    public void DataPage_delegates_recommendation_column_styling_to_factory()
+    public void DataPageColumnFactory_delegates_recommendation_column_styling_to_factory()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
@@ -59,7 +59,7 @@ public sealed class DataGridWrappingTextColumnFactoryTests
             "AuswertungPro.Next.UI",
             "Views",
             "Pages",
-            "DataPage.xaml.cs"));
+            "DataPageColumnFactory.cs"));
 
         Assert.Contains("DataGridWrappingTextColumnFactory.Create", source);
         Assert.DoesNotContain("TextBlock.TextWrappingProperty", source);

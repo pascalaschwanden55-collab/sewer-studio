@@ -27,7 +27,7 @@ public sealed class DataGridStandardTextColumnFactoryTests
     }
 
     [Fact]
-    public void DataPage_delegates_standard_text_columns_to_factory()
+    public void DataPageColumnFactory_delegates_standard_text_columns_to_factory()
     {
         var source = File.ReadAllText(Path.Combine(
             SourceTextTestHelpers.FindRepositoryRoot(),
@@ -35,11 +35,11 @@ public sealed class DataGridStandardTextColumnFactoryTests
             "AuswertungPro.Next.UI",
             "Views",
             "Pages",
-            "DataPage.xaml.cs"));
+            "DataPageColumnFactory.cs"));
 
         Assert.Contains("DataGridStandardTextColumnFactory.Create", source, StringComparison.Ordinal);
         Assert.DoesNotContain("new DataGridTextColumn", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("new Binding($\"Fields[{field}]\")", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("new Binding($\"Fields[{fieldName}]\")", source, StringComparison.Ordinal);
     }
 
     private static void RunOnSta(Action action)

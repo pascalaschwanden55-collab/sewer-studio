@@ -142,35 +142,11 @@ public partial class DataPage : System.Windows.Controls.UserControl
         foreach (var field in FieldCatalog.ColumnOrder)
         {
             var def = FieldCatalog.Get(field);
-            DataGridColumn col;
-
-            if (GridDropdownFieldPolicy.TryResolve(field, out var comboSpec))
-            {
-                col = comboSpec.Managed
-                    ? CreateComboColumn(
-                        field,
-                        def.Label,
-                        comboSpec.ItemsSourcePath,
-                        comboSpec.EditCommand,
-                        comboSpec.PreviewCommand,
-                        comboSpec.ResetCommand,
-                        comboSpec.RemoveCommand,
-                        comboSpec.AddCommand,
-                        comboSpec.AllowFreeText)
-                    : CreateSimpleComboColumn(field, def.Label, comboSpec.ItemsSourcePath);
-            }
-            else if (field == "Empfohlene_Sanierungsmassnahmen")
-            {
-                col = DataGridWrappingTextColumnFactory.Create(field, def.Label);
-            }
-            else if (field == "Kosten")
-            {
-                col = DataGridCostColumnFactory.Create(field, def.Label);
-            }
-            else
-            {
-                col = DataGridStandardTextColumnFactory.Create(field, def.Label);
-            }
+            var col = DataPageColumnFactory.Create(
+                field,
+                def.Label,
+                ComboBox_LostKeyboardFocus,
+                ComboBox_SelectionChanged);
 
             col.SetValue(FrameworkElement.TagProperty, field);
             var colorStyle = DataGridColorCellStyleFactory.CreateHaltungenStyle(field);
@@ -192,46 +168,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
         RestoreLayoutFromSettings();
         ResetSort();
     }
-
-    private DataGridTemplateColumn CreateComboColumn(
-        string fieldName,
-        string header,
-        string itemsSourcePath,
-        string editCommand,
-        string previewCommand,
-        string resetCommand,
-        string removeCommand,
-        string addCommand,
-        bool allowFreeText = true)
-        => DataGridComboColumnFactory.Create(
-            fieldName,
-            header,
-            itemsSourcePath,
-            tag: fieldName,
-            lostKeyboardFocus: ComboBox_LostKeyboardFocus,
-            selectionChanged: ComboBox_SelectionChanged,
-            allowFreeText,
-            bindIsProjectReady: true,
-            menuCommands: new DataGridComboColumnMenuCommands(
-                editCommand,
-                previewCommand,
-                resetCommand,
-                removeCommand,
-                addCommand));
-
-    private DataGridTemplateColumn CreateSimpleComboColumn(
-        string fieldName,
-        string header,
-        string itemsSourcePath)
-        => DataGridComboColumnFactory.Create(
-            fieldName,
-            header,
-            itemsSourcePath,
-            tag: fieldName,
-            lostKeyboardFocus: ComboBox_LostKeyboardFocus,
-            selectionChanged: ComboBox_SelectionChanged,
-            allowFreeText: true,
-            bindIsProjectReady: true);
 
     private void Grid_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
