@@ -8,6 +8,23 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class SchaechteTemplateColumnReaderTests
 {
     [Fact]
+    public void Only_export_excel_reader_exists()
+    {
+        var root = FindRepositoryRoot();
+        var duplicateImportReader = Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.Infrastructure",
+            "Import",
+            "Xlsx",
+            "SchaechteTemplateColumnReader.cs");
+
+        Assert.False(
+            File.Exists(duplicateImportReader),
+            "SchaechteTemplateColumnReader darf nur unter Infrastructure/Export/Excel existieren, sonst gibt es zwei konkurrierende Wahrheiten.");
+    }
+
+    [Fact]
     public void LoadFromExportDirectory_prefers_exact_template_and_keeps_unique_trimmed_headers()
     {
         var root = CreateTempRoot();
@@ -74,5 +91,19 @@ public sealed class SchaechteTemplateColumnReaderTests
             worksheet.Cell(headerRow, i + 1).Value = headers[i];
 
         workbook.SaveAs(path);
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "AuswertungPro.sln")))
+                return directory.FullName;
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Repository root not found.");
     }
 }
