@@ -14,6 +14,7 @@
 ## Claudes Merges heute (chronologisch, oben = neu)
 | Merge | Inhalt |
 |---|---|
+| `13e97255` | AWU-Protokoll-Parität (A/B/C/D): `ObservationCollapser`/`ObservationZustandBuilder`/`InspectionSegmenter` (neu, Application/Reports), Befundtabelle unter der Grafik, Klartext-Quantifizierung via Katalog. UI-seitig nur 1 Zeile in `ImportPageViewModel` (`_sp.CodeCatalog` an `RegenerateAll`). |
 | `94fc05ee` | Manuelle Verteilung (Export) → `Haltungen_Verteilt\` / `Schächte_Verteilt\` statt Projekt-Root |
 | `45e8f53d` | Revert: KEINE Auto-Schacht-Verteilung (Schächte werden manuell verteilt); Haltung-„ein-PDF" bleibt |
 | `aa2a5c79` | Ein Protokoll/Haltung (SelectPrimaryProtocolPdf) + (revidiert) seiten-gruppierte Schacht-Protokolle |
