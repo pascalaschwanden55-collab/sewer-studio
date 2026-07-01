@@ -4,6 +4,19 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class SourceTextArchitectureHygieneTests
 {
+    [Fact]
+    public void Layer_boundary_fitness_tests_live_in_fitness_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var fitness = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "ArchitectureFitnessTests.cs"));
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        const string layerBoundaryTest = "PlayerWindow_partials_do_not_import_ui_services_namespace";
+
+        Assert.Contains($"public void {layerBoundaryTest}", fitness);
+        Assert.DoesNotContain($"public void {layerBoundaryTest}", guard);
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -48,6 +61,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("DesignAuditPlayerCodingSidePanelTests.cs")]
     [InlineData("DesignAuditThemeResourceTests.cs")]
     [InlineData("GridDockingControllerTests.cs")]
+    [InlineData("ImportArchitectureGuardTests.cs")]
     [InlineData("PageViewModelLifecycleTests.cs")]
     [InlineData("PlayerWindowResourceDictionaryTests.cs")]
     [InlineData("ProjektEroeffnungShellGuardTests.cs")]
