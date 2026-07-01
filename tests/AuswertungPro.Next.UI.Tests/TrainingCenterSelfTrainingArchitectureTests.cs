@@ -105,7 +105,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_self_training_startanzeige_an_presenter()
+    public void TrainingCenterViewModel_setzt_trivialen_self_training_startzustand_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -114,22 +114,27 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var startControllerSource = File.ReadAllText(Path.Combine(
+        var startControllerPath = Path.Combine(
             FindRepoRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Ai",
             "Training",
-            "SelfTrainingRunStartController.cs"));
+            "SelfTrainingRunStartController.cs");
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingRunStartController.Apply(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingRunPresentationBuilder.BuildStart(trainingCase)", startControllerSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingRunPresentationBuilder.BuildStart(selectedCase)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(startControllerPath), "Trivialer Self-Training-Startzustand soll inline in der VM stehen.");
+        Assert.DoesNotContain("SelfTrainingRunStartController.Apply(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("selfTrainingUi.SetBusy(true);", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("selfTrainingUi.SetSelfTrainingRunning(true);", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("ResetSelfTrainingVisuals(resetMatchRate: true);", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("selfTrainingUi.SetLogText(\"\");", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingRunPresentationBuilder.BuildStart(selectedCase)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("selfTrainingUi.SetStatusText(startPresentation.StatusText);", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("foreach (var line in startPresentation.LogLines)", selfTrainingSource, StringComparison.Ordinal);
         Assert.Contains("SelfTrainingRunPresentationBuilder.BuildPipelineStartedLog()", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("IsBusy = true;", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("IsSelfTrainingRunning = true;", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ResetSelfTrainingVisuals(resetMatchRate: true);", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("LogText = \"\";", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Selbsttraining: {selectedCase.CaseId}", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("--- Selbsttraining starten: {selectedCase.CaseId} ---", selfTrainingSource, StringComparison.Ordinal);

@@ -1338,10 +1338,15 @@ public partial class TrainingCenterViewModel : ObservableObject
         using var _aiToken = AiTrack.Begin("Selbsttraining");
         try
         {
-            SelfTrainingRunStartController.Apply(
-                selectedCase,
-                selfTrainingUi,
-                () => ResetSelfTrainingVisuals(resetMatchRate: true));
+            selfTrainingUi.SetBusy(true);
+            selfTrainingUi.SetSelfTrainingRunning(true);
+            ResetSelfTrainingVisuals(resetMatchRate: true);
+            selfTrainingUi.SetLogText("");
+
+            var startPresentation = SelfTrainingRunPresentationBuilder.BuildStart(selectedCase);
+            selfTrainingUi.SetStatusText(startPresentation.StatusText);
+            foreach (var line in startPresentation.LogLines)
+                selfTrainingUi.Log(line);
 
             using var selfTrainingSetup = await SelfTrainingRuntimeSetupController.PrepareAsync(
                 () => PlayerAiSettingsLoader.LoadRuntimeSettings(),
