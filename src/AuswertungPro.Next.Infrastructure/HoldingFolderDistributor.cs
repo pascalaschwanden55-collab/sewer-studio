@@ -1059,6 +1059,22 @@ public static partial class HoldingFolderDistributor
                     MoveOrCopy(videoFindG.VideoPath, destVideoPathG, moveInsteadOfCopy, overwrite);
                 }
                 videoPaths.Add(destVideoPathG);
+
+                // Gegeninspektions-Video am Record verlinken (Feld Link_G), damit „Play (G)" es findet.
+                if (project != null && !string.IsNullOrWhiteSpace(destVideoPathG))
+                {
+                    var recordG = FindRecordByHolding(project, haltung);
+                    if (recordG != null)
+                    {
+                        var metaG = recordG.FieldMeta.TryGetValue("Link_G", out var mg) ? mg : null;
+                        if (metaG == null || !metaG.UserEdited)
+                        {
+                            recordG.SetFieldValue("Link_G", destVideoPathG, FieldSource.Unknown, userEdited: false);
+                            project.ModifiedAtUtc = DateTime.UtcNow;
+                            project.Dirty = true;
+                        }
+                    }
+                }
             }
 
             // Fehlerbehandlung wie bisher

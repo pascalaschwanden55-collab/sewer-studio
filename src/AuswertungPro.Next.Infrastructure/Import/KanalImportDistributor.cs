@@ -97,6 +97,7 @@ public static class KanalImportDistributor
         foreach (var record in project.Data)
         {
             RelativizeIfInProject(record, "Link", projectFolder);
+            RelativizeIfInProject(record, "Link_G", projectFolder);   // Gegeninspektions-Video
             RelativizeIfInProject(record, "PDF_Path", projectFolder);
         }
 

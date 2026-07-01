@@ -487,6 +487,7 @@
                         <MenuItem Header="Beobachtungen..." Click="BeobachtungenMenu_Click" />
                         <Separator/>
                         <MenuItem Header="Play" Click="PlayMenu_Click" />
+                        <MenuItem Header="Play (Gegeninspektion)" Click="PlayGegenMenu_Click" />
                         <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="PrintAwuHaltungsprotokollMenu_Click" />
                         <MenuItem Header="Haltungsprotokoll Original (PDF) öffnen..." Click="OpenOriginalPdfMenu_Click" />
                         <MenuItem Header="Sanierungsmaßnahmen..." Click="CostsMenu_Click" />

@@ -39,8 +39,15 @@ public sealed class DataPageVideoPlaybackController
         if (record is null)
             return;
 
-        var path = _ensureVideoPath(record);
-        if (string.IsNullOrWhiteSpace(path))
+        PlayResolved(record, _ensureVideoPath(record));
+    }
+
+    /// <summary>
+    /// Spielt einen BEREITS aufgelösten Videopfad ab (z.B. Gegeninspektions-Video aus Link_G).
+    /// </summary>
+    public void PlayResolved(HaltungRecord? record, string? path)
+    {
+        if (record is null || string.IsNullOrWhiteSpace(path))
             return;
 
         try

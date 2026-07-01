@@ -1000,6 +1000,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
         ExecuteRecordMenuCommand(sender, vm, vm.PlayVideoCommand, "Video");
     }
 
+    private void PlayGegenMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+
+        ExecuteRecordMenuCommand(sender, vm, vm.PlayGegenVideoCommand, "Gegeninspektion");
+    }
+
     private void MoveRecordUpMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)
