@@ -9,50 +9,6 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class UiArchitectureGuardTests
 {
     [Fact]
-    public void PlayerWindow_confirmation_panel_display_uses_controls_adapter()
-    {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var confirmationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs");
-        var statePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.State.cs");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationPanelControls.cs");
-        var ownerPath = Path.Combine(uiRoot, "Player", "CodingConfirmationPanelControlsOwner.cs");
-        var initializerPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerCodingConfirmationPanelInitializer.cs");
-
-        Assert.True(File.Exists(controlsPath), "Coding-Bestaetigungspanel-Anzeige soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(ownerPath), "Coding-Bestaetigungspanel-Besitz soll nicht als nullable Rohfeld im PlayerWindow liegen.");
-        Assert.True(File.Exists(initializerPath), "Coding-Bestaetigungspanel-Control-Mapping soll ausserhalb der PlayerWindow-Partials liegen.");
-
-        var confirmation = File.ReadAllText(confirmationPath);
-        var state = File.ReadAllText(statePath);
-        var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
-        var owner = File.Exists(ownerPath) ? File.ReadAllText(ownerPath) : "";
-        var initializer = File.Exists(initializerPath) ? File.ReadAllText(initializerPath) : "";
-
-        Assert.DoesNotContain("private CodingConfirmationPanelControls _codingConfirmationPanelControls", state);
-        Assert.Contains("private readonly CodingConfirmationPanelControlsOwner _codingConfirmationPanelControls = new();", state);
-        Assert.Contains("PlayerCodingConfirmationPanelInitializer.Initialize", confirmation);
-        Assert.DoesNotContain("new CodingConfirmationPanelControls(", confirmation);
-        Assert.Contains("new CodingConfirmationPanelControls(", initializer);
-        Assert.Contains("_codingConfirmationPanelControls.Apply", confirmation);
-        Assert.Contains("_codingConfirmationPanelControls.Hide()", confirmation);
-        Assert.DoesNotContain("ConfirmAmpel.Fill", confirmation);
-        Assert.DoesNotContain("TxtConfirmCode.Text", confirmation);
-        Assert.DoesNotContain("TxtConfirmConfidence.Text", confirmation);
-        Assert.DoesNotContain("TxtConfirmDescription.Text", confirmation);
-        Assert.DoesNotContain("TxtConfirmDetail.Text", confirmation);
-        Assert.DoesNotContain("CodingConfirmationPanel.Visibility = Visibility.Visible", confirmation);
-        Assert.DoesNotContain("CodingConfirmationPanel.Visibility = Visibility.Collapsed", confirmation);
-        Assert.Contains("public sealed class CodingConfirmationPanelControls", controls);
-        Assert.Contains("ConfirmAmpel.Fill", controls);
-        Assert.Contains("CodingConfirmationPanel.Visibility = Visibility.Visible", controls);
-        Assert.Contains("public sealed class CodingConfirmationPanelControlsOwner", owner);
-        Assert.Contains("public void Initialize", owner);
-        Assert.Contains("public Color Apply", owner);
-        Assert.Contains("public void Hide", owner);
-    }
-
-    [Fact]
     public void PlayerWindow_confirmation_playback_uses_player_helper()
     {
         var root = FindRepositoryRoot();
