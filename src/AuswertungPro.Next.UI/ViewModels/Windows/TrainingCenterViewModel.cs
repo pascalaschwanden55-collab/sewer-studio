@@ -1413,16 +1413,13 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            SelfTrainingRunExceptionController.ApplyCanceled(
-                Log,
-                value => StatusText = value);
+            Log("Selbsttraining abgebrochen.");
+            StatusText = "Selbsttraining abgebrochen.";
         }
         catch (Exception ex)
         {
-            SelfTrainingRunExceptionController.ApplyFailure(
-                ex,
-                Log,
-                value => StatusText = value);
+            Log($"FEHLER: {ex.GetType().Name}: {ex.Message}");
+            StatusText = $"Fehler: {ex.Message}";
         }
         finally
         {

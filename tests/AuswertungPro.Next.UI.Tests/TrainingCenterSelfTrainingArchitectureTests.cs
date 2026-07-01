@@ -290,7 +290,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_self_training_exceptions_an_controller()
+    public void TrainingCenterViewModel_setzt_triviale_self_training_exceptions_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -299,12 +299,22 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var controllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "SelfTrainingRunExceptionController.cs");
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingRunExceptionController.ApplyCanceled(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingRunExceptionController.ApplyFailure(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Log(\"Selbsttraining abgebrochen.\")", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Log($\"FEHLER:", selfTrainingSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(controllerPath), "Triviale Self-Training-Exception-UI soll inline in der VM stehen.");
+        Assert.DoesNotContain("SelfTrainingRunExceptionController.ApplyCanceled(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingRunExceptionController.ApplyFailure(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("Log(\"Selbsttraining abgebrochen.\");", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = \"Selbsttraining abgebrochen.\";", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("Log($\"FEHLER: {ex.GetType().Name}: {ex.Message}\");", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = $\"Fehler: {ex.Message}\";", selfTrainingSource, StringComparison.Ordinal);
     }
 
     [Fact]
