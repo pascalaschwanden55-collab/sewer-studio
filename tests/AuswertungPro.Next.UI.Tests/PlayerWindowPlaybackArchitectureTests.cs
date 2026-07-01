@@ -6,6 +6,45 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerWindowPlaybackArchitectureTests
 {
     [Fact]
+    public void PlayerWindow_coding_interaction_playback_uses_player_helper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var helperPath = Path.Combine(uiRoot, "Player", "PlayerCodingPlayback.cs");
+        var preparePlaybackWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModePreparePlaybackWorkflow.cs");
+        var lifecycleUiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Ui.cs");
+        var codingPaths = new[]
+        {
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.Actions.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.Eingabemarker.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.Navigation.cs")
+        };
+
+        Assert.True(File.Exists(helperPath), "Coding-Interaktions-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(preparePlaybackWorkflowPath), "Coding-Mode-Playback-Vorbereitung soll den Pause-Helper verwenden.");
+
+        var helper = File.ReadAllText(helperPath);
+        var workflow = File.ReadAllText(preparePlaybackWorkflowPath);
+        var lifecycleUi = File.ReadAllText(lifecycleUiPath);
+        Assert.Contains("public static class PlayerCodingPlayback", helper);
+        Assert.Contains("PauseForCodingInteraction", helper);
+        Assert.Contains("PlayerCodingPlayback.PauseForCodingInteraction", workflow);
+        Assert.Contains("CodingModePreparePlaybackWorkflow.Execute", lifecycleUi);
+        Assert.DoesNotContain("PlayerCodingPlayback.PauseForCodingInteraction", lifecycleUi);
+
+        foreach (var path in codingPaths)
+        {
+            var text = File.ReadAllText(path);
+            Assert.Contains("PlayerCodingPlayback.PauseForCodingInteraction", text);
+            Assert.DoesNotContain("_player.SetPause(true)", text);
+            Assert.DoesNotContain("_player.SetPause(false)", text);
+        }
+    }
+
+    [Fact]
     public void PlayerWindow_playback_preview_lives_in_policy_and_speed_controls_in_controller()
     {
         var root = FindRepositoryRoot();
