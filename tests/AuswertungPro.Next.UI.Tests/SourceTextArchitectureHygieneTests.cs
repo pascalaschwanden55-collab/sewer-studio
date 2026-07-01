@@ -579,6 +579,22 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.DoesNotContain($"public void {methodName}", guard);
     }
 
+    [Fact]
+    public void Player_window_coding_apply_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingApplyArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "Coding-Apply-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        const string methodName = "PlayerWindow_protocol_revision_update_lives_in_policy";
+
+        Assert.Contains($"public void {methodName}", focused);
+        Assert.DoesNotContain($"public void {methodName}", guard);
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -626,6 +642,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("ImportArchitectureGuardTests.cs")]
     [InlineData("PageViewModelLifecycleTests.cs")]
     [InlineData("PlayerWindowCodingAiArchitectureTests.cs")]
+    [InlineData("PlayerWindowCodingApplyArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingClassifierArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingAiEventsArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingMultiModelArchitectureTests.cs")]
