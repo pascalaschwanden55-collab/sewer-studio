@@ -357,20 +357,15 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
         if (DataContext is not DataPageViewModel vm)
             return;
-        if (!vm.IsProjectReady)
-            return;
 
         var record = ResolveRecordFromComboBox(combo);
-        if (record is not null)
-        {
-            var value = ResolveComboBoxValue(combo);
-            if (string.IsNullOrWhiteSpace(value))
-                return;
-            record.SetFieldValue(fieldName, value, FieldSource.Manual, userEdited: true);
-        }
-
-        vm.EnsureOptionForField(fieldName, ResolveComboBoxValue(combo));
-        vm.ScheduleAutoSave();
+        DataPageComboBoxCommitController.Commit(
+            fieldName,
+            vm.IsProjectReady,
+            record,
+            ResolveComboBoxValue(combo),
+            vm.EnsureOptionForField,
+            vm.ScheduleAutoSave);
     }
 
     private HaltungRecord? ResolveRecordFromComboBox(ComboBox combo)
