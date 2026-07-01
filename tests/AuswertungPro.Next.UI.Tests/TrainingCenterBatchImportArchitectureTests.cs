@@ -7,7 +7,7 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class TrainingCenterBatchImportArchitectureTests
 {
     [Fact]
-    public void TrainingCenterViewModel_setzt_trivialen_batch_cancel_inline()
+    public void TrainingCenterViewModel_delegiert_batch_cancel_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -18,9 +18,9 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "TrainingCenterViewModel.cs"));
         var cancelSource = ExtractMethodBody(source, "private void CancelBatch()");
 
-        Assert.Contains("_genCts?.Cancel();", cancelSource, StringComparison.Ordinal);
-        Assert.Contains("StatusText = \"Abbruch angefordert...\";", cancelSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("TrainingBatchImportRunControlController.RequestCancel(", cancelSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportRunControlController.RequestCancel(_genCts)", cancelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("_genCts?.Cancel();", cancelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("StatusText = \"Abbruch angefordert...\";", cancelSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TrainingBatchImportTerminalPresentationBuilder.BuildCancelRequestedStatus", cancelSource, StringComparison.Ordinal);
     }
 
