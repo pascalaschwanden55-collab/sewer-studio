@@ -86,6 +86,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public IRelayCommand<object?> AddEmpfohleneSanierungsmassnahmenOptionCommand => _dropdownCommands.EmpfohleneSanierungsmassnahmen.Add;
     public IRelayCommand<object?> RemoveEmpfohleneSanierungsmassnahmenOptionCommand => _dropdownCommands.EmpfohleneSanierungsmassnahmen.Remove;
     public IRelayCommand<HaltungRecord?> PlayVideoCommand { get; }
+    public IRelayCommand<HaltungRecord?> PlayGegenVideoCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenProtocolCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenVideoAiPipelineCommand { get; }
     public IRelayCommand<HaltungRecord?> RelinkVideoCommand { get; }
@@ -341,6 +342,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                 AddEmpfohleneSanierungsmassnahmenOption,
                 RemoveEmpfohleneSanierungsmassnahmenOption));
         PlayVideoCommand = new RelayCommand<HaltungRecord?>(PlayVideo);
+        PlayGegenVideoCommand = new RelayCommand<HaltungRecord?>(PlayGegenVideo);
         OpenProtocolCommand = new RelayCommand<HaltungRecord?>(OpenProtocol);
         OpenVideoAiPipelineCommand = new RelayCommand<HaltungRecord?>(OpenVideoAiPipeline);
         RelinkVideoCommand = new RelayCommand<HaltungRecord?>(RelinkVideo);
@@ -553,6 +555,22 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private void PlayVideo(HaltungRecord? record)
     {
         _videoPlaybackController.Play(record);
+    }
+
+    // Spielt das Gegeninspektions-Video (Feld Link_G) ab, relativ gegen den Projekt-Root aufgelöst.
+    private void PlayGegenVideo(HaltungRecord? record)
+    {
+        if (record is null)
+            return;
+
+        var path = ResolveExistingPath(record.GetFieldValue("Link_G"));
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            _sp.Dialogs.Info("Für diese Haltung ist keine Gegeninspektion vorhanden.", "Gegeninspektion");
+            return;
+        }
+
+        _videoPlaybackController.PlayResolved(record, path);
     }
 
     private void ShowPlayerWindow(DataPageVideoPlaybackRequest request)

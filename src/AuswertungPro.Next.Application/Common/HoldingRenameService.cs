@@ -245,6 +245,9 @@ public static class HoldingRenameService
         // Link (Video)
         count += UpdateFieldPath(record, "Link", oldSan, newSan);
 
+        // Link_G (Gegeninspektions-Video)
+        count += UpdateFieldPath(record, "Link_G", oldSan, newSan);
+
         // PDF_Path (Original-Protokoll)
         count += UpdateFieldPath(record, "PDF_Path", oldSan, newSan);
 
