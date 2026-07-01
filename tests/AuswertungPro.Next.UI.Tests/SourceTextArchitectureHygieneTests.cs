@@ -82,7 +82,8 @@ public sealed class SourceTextArchitectureHygieneTests
         var methodNames = new[]
         {
             "PlayerWindow_video_path_validation_lives_in_guard",
-            "PlayerWindow_state_fields_live_in_state_partial"
+            "PlayerWindow_state_fields_live_in_state_partial",
+            "PlayerWindow_bounds_adjustment_lives_in_policy"
         };
 
         foreach (var methodName in methodNames)
