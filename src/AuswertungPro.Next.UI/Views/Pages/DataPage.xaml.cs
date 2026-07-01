@@ -169,16 +169,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             }
             else
             {
-                col = new DataGridTextColumn
-                {
-                    Header = def.Label,
-                    Binding = new Binding($"Fields[{field}]")
-                    {
-                        Mode = BindingMode.TwoWay,
-                        UpdateSourceTrigger = UpdateSourceTrigger.LostFocus
-                    },
-                    Width = DataGridLength.SizeToHeader
-                };
+                col = DataGridStandardTextColumnFactory.Create(field, def.Label);
             }
 
             col.SetValue(FrameworkElement.TagProperty, field);
