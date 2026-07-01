@@ -442,7 +442,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_kb_check_presentation_an_builder()
+    public void TrainingCenterViewModel_delegiert_kb_check_run_state_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -453,7 +453,13 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "TrainingCenterViewModel.cs"));
         var kbCheckSource = ExtractMethodBody(source, "private async Task CheckKnowledgeBaseAsync()");
 
+        Assert.Contains("TrainingKnowledgeBaseCheckRunController.TryStart(IsBusy)", kbCheckSource, StringComparison.Ordinal);
         Assert.Contains("TrainingKnowledgeBaseCheckPresentationBuilder.Build(summary)", kbCheckSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingKnowledgeBaseCheckRunController.ApplySuccess(", kbCheckSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingKnowledgeBaseCheckRunController.ApplyFailure(", kbCheckSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("StatusText = \"Pr", kbCheckSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("StatusText = $\"KB-Pr", kbCheckSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Log($\"KB-Pr", kbCheckSource, StringComparison.Ordinal);
         Assert.DoesNotContain("summary.LatestVersionAtUtc.Value.ToLocalTime()", kbCheckSource, StringComparison.Ordinal);
         Assert.DoesNotContain("summary.TopCodes.Count > 0", kbCheckSource, StringComparison.Ordinal);
         Assert.DoesNotContain("KB-Stand: Samples=", kbCheckSource, StringComparison.Ordinal);

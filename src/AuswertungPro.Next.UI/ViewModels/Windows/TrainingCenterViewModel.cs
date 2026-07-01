@@ -921,26 +921,30 @@ public partial class TrainingCenterViewModel : ObservableObject
     [RelayCommand]
     private async Task CheckKnowledgeBaseAsync()
     {
-        if (IsBusy) return;
+        var start = TrainingKnowledgeBaseCheckRunController.TryStart(IsBusy);
+        if (start.ShouldStop) return;
 
         try
         {
-            IsBusy = true;
-            StatusText = "Prüfe Knowledge Base...";
+            IsBusy = start.IsBusy;
+            StatusText = start.StatusText ?? "";
 
             var summary = await _kbDiagnostics.ReadSummaryAsync(12).ConfigureAwait(false);
 
             var presentation = TrainingKnowledgeBaseCheckPresentationBuilder.Build(summary);
-            foreach (var line in presentation.LogLines)
-                Log(line);
-            StatusText = presentation.StatusText;
+            TrainingKnowledgeBaseCheckRunController.ApplySuccess(
+                presentation,
+                Log,
+                value => StatusText = value);
 
             await RefreshKbStatusAsync();
         }
         catch (Exception ex)
         {
-            StatusText = $"KB-Prüfung fehlgeschlagen: {ex.Message}";
-            Log($"KB-Prüfung FEHLER: {ex.Message}");
+            TrainingKnowledgeBaseCheckRunController.ApplyFailure(
+                ex,
+                Log,
+                value => StatusText = value);
         }
         finally
         {
