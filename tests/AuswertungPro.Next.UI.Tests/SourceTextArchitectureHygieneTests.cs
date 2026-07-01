@@ -7,6 +7,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Theory]
     [InlineData("DataPageCommandTargetControllerTests.cs")]
     [InlineData("DataGridWrappingTextColumnFactoryTests.cs")]
+    [InlineData("TrainingCenterSelfTrainingArchitectureTests.cs")]
     [InlineData("VsaCodeExplorerWindowDispatcherTests.cs")]
     public void Focused_architecture_tests_use_shared_source_text_helpers(string fileName)
     {
