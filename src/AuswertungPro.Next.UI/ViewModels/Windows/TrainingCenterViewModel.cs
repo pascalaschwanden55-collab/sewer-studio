@@ -1420,12 +1420,20 @@ public partial class TrainingCenterViewModel : ObservableObject
                 Log,
                 ct);
 
-            await SelfTrainingReviewQueueWorkflowController.RunAsync(
-                ReviewQueueServiceRef,
-                result,
-                TrainingSamplesStore.LoadAsync,
-                LoadReviewQueue,
-                Log);
+            if (ReviewQueueServiceRef is not null && SelfTrainingReviewCandidateSelector.HasReviewableMatches(result))
+            {
+                var reviewSamples = await TrainingSamplesStore.LoadAsync();
+                var reviewQueueUpdate = SelfTrainingReviewQueueController.EnqueueCandidates(
+                    ReviewQueueServiceRef,
+                    reviewSamples,
+                    result);
+
+                if (reviewQueueUpdate.ShouldReloadQueue)
+                {
+                    LoadReviewQueue(ReviewQueueServiceRef);
+                    Log(reviewQueueUpdate.LogMessage ?? "");
+                }
+            }
 
             await LoadSamplesInternalAsync();
             await RefreshKbStatusAsync();

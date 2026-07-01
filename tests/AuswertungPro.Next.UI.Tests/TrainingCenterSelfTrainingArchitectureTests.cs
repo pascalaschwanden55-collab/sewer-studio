@@ -65,17 +65,25 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
         Assert.Contains("SelfTrainingCaseSelectionWorkflowController.RunAsync(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingSamplesStore.LoadAsync,", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("SelfTrainingCaseSelectionController.Select(", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("var existingSamplesForSelection", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("SelectedCase is null", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("await TrainingSamplesStore.LoadAsync()", selfTrainingSource, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_self_training_review_queue_an_controller()
+    public void TrainingCenterViewModel_setzt_triviale_self_training_review_queue_orchestrierung_inline()
     {
+        var repoRoot = FindRepoRoot();
+        var workflowControllerPath = Path.Combine(
+            repoRoot,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "SelfTrainingReviewQueueWorkflowController.cs");
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            repoRoot,
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -83,12 +91,16 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "TrainingCenterViewModel.cs"));
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingReviewQueueWorkflowController.RunAsync(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(workflowControllerPath), workflowControllerPath);
+        Assert.DoesNotContain("SelfTrainingReviewQueueWorkflowController", source, StringComparison.Ordinal);
+        Assert.Contains("ReviewQueueServiceRef is not null", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingReviewCandidateSelector.HasReviewableMatches(result)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("var reviewSamples = await TrainingSamplesStore.LoadAsync();", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingReviewQueueController.EnqueueCandidates(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("LoadReviewQueue(ReviewQueueServiceRef);", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("Log(reviewQueueUpdate.LogMessage ?? \"\");", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ReviewQueueServiceRef.EnqueueFromSelfTraining(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingReviewQueueController.EnqueueCandidates(", selfTrainingSource, StringComparison.Ordinal);
         Assert.DoesNotContain("SelfTrainingReviewCandidateSelector.SelectForRun(allSamplesForReview, result)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingReviewCandidateSelector.HasReviewableMatches(result)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("LoadReviewQueue(ReviewQueueServiceRef)", selfTrainingSource, StringComparison.Ordinal);
     }
 
     [Fact]
