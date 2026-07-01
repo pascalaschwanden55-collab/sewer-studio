@@ -1154,11 +1154,14 @@ public partial class VsaCodeExplorerWindow : Window
 
     // Benannte CollectionChanged Handler (fuer Cleanup via -=)
     private void GroupTiles_Changed(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        => Dispatcher.InvokeAsync(() => RenderColumnTiles(GroupList, _vm.GroupTiles, tile => _vm.SelectGroup(tile.Key)));
+        => _ = Dispatcher.BeginInvoke(new Action(() => RenderColumnTiles(GroupList, _vm.GroupTiles, tile => _vm.SelectGroup(tile.Key))));
+
     private void CodeTiles_Changed(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        => Dispatcher.InvokeAsync(() => RenderColumnTiles(CodeList, _vm.CodeTiles, tile => _vm.SelectCode(tile.Key)));
+        => _ = Dispatcher.BeginInvoke(new Action(() => RenderColumnTiles(CodeList, _vm.CodeTiles, tile => _vm.SelectCode(tile.Key))));
+
     private void Char1Tiles_Changed(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        => Dispatcher.InvokeAsync(() => RenderColumnTiles(Char1List, _vm.Char1Tiles, tile => _vm.SelectChar1(tile.Key)));
+        => _ = Dispatcher.BeginInvoke(new Action(() => RenderColumnTiles(Char1List, _vm.Char1Tiles, tile => _vm.SelectChar1(tile.Key))));
+
     private void Char2Tiles_Changed(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        => Dispatcher.InvokeAsync(() => RenderColumnTiles(Char2List, _vm.Char2Tiles, tile => _vm.SelectChar2(tile.Key)));
+        => _ = Dispatcher.BeginInvoke(new Action(() => RenderColumnTiles(Char2List, _vm.Char2Tiles, tile => _vm.SelectChar2(tile.Key))));
 }
