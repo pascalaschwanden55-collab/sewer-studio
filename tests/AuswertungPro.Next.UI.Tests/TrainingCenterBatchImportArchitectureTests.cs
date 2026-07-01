@@ -54,15 +54,23 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var controllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportRunStartController.cs");
         var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
 
-        Assert.Contains("TrainingBatchImportRunStartController.Apply(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("IsBusy = true;", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("LogText = \"\";", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ProgressValue = 0;", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ProgressMax = 1;", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ClearLivePreview();", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ResetSelfTrainingVisuals();", batchImportSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(controllerPath), "Trivialer Batch-Startzustand soll inline in der VM stehen.");
+        Assert.DoesNotContain("TrainingBatchImportRunStartController.Apply(", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetBusy(true);", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetLogText(\"\");", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetProgressValue(0);", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetProgressMax(1);", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("ClearLivePreview();", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("ResetSelfTrainingVisuals();", batchImportSource, StringComparison.Ordinal);
     }
 
     [Fact]

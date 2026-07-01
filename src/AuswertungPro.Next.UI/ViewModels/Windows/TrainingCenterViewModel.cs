@@ -800,10 +800,12 @@ public partial class TrainingCenterViewModel : ObservableObject
         using var _aiToken = AiTrack.Begin("Training Center");
         try
         {
-            TrainingBatchImportRunStartController.Apply(
-                batchUi,
-                ClearLivePreview,
-                () => ResetSelfTrainingVisuals());
+            batchUi.SetBusy(true);
+            batchUi.SetLogText("");
+            batchUi.SetProgressValue(0);
+            batchUi.SetProgressMax(1);
+            ClearLivePreview();
+            ResetSelfTrainingVisuals();
 
             var scanWorkflow = await TrainingBatchImportScanWorkflowController.RunAsync(
                 _rootFolders.Count,
