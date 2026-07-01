@@ -689,10 +689,18 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_code_distribution_an_controller()
+    public void TrainingCenterViewModel_setzt_code_distribution_inline()
     {
+        var repoRoot = FindRepoRoot();
+        var controllerPath = Path.Combine(
+            repoRoot,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "SelfTrainingCodeDistributionController.cs");
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            repoRoot,
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -700,11 +708,12 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "TrainingCenterViewModel.cs"));
         var distributionSource = ExtractMethodBody(source, "private void UpdateCodeDistribution(string code, MatchLevel level)");
 
-        Assert.Contains("SelfTrainingCodeDistributionController.Apply(CodeDistribution, code, level)", distributionSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("FirstOrDefault", distributionSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("new CodeDistributionEntry", distributionSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("CodeDistribution.Add", distributionSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingStatusCalculator.ApplyMatch", distributionSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(controllerPath), controllerPath);
+        Assert.DoesNotContain("SelfTrainingCodeDistributionController", source, StringComparison.Ordinal);
+        Assert.Contains("CodeDistribution.FirstOrDefault(e => e.Code == code)", distributionSource, StringComparison.Ordinal);
+        Assert.Contains("new CodeDistributionEntry { Code = code }", distributionSource, StringComparison.Ordinal);
+        Assert.Contains("CodeDistribution.Add(entry)", distributionSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingStatusCalculator.ApplyMatch(entry, level)", distributionSource, StringComparison.Ordinal);
     }
 
     [Fact]

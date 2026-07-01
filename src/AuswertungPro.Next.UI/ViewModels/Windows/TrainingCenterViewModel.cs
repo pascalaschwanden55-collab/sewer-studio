@@ -174,7 +174,14 @@ public partial class TrainingCenterViewModel : ObservableObject
     {
         void Apply()
         {
-            SelfTrainingCodeDistributionController.Apply(CodeDistribution, code, level);
+            var entry = CodeDistribution.FirstOrDefault(e => e.Code == code);
+            if (entry is null)
+            {
+                entry = new CodeDistributionEntry { Code = code };
+                CodeDistribution.Add(entry);
+            }
+
+            SelfTrainingStatusCalculator.ApplyMatch(entry, level);
         }
         OnUi(Apply);
     }
