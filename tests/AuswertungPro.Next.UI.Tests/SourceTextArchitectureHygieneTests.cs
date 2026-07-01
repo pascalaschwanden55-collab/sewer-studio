@@ -665,6 +665,22 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.DoesNotContain($"public void {methodName}", guard);
     }
 
+    [Fact]
+    public void Player_window_confirmation_action_guard_lives_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingConfirmationArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "Coding-Confirmation-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        const string methodName = "PlayerWindow_confirmation_actions_use_workflows_and_delete_applier";
+
+        Assert.Contains($"public void {methodName}", focused);
+        Assert.DoesNotContain($"public void {methodName}", guard);
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -714,6 +730,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowCodingAiArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingApplyArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingClassifierArchitectureTests.cs")]
+    [InlineData("PlayerWindowCodingConfirmationArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingAiEventsArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingEventActionsArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingMultiModelArchitectureTests.cs")]
