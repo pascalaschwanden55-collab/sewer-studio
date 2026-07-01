@@ -27,8 +27,9 @@ public sealed class PageViewModelLifecycleTests
         var source = ReadPageViewModel("DataPageViewModel.cs");
 
         Assert.Contains("PropertyChanged -= DataPageViewModel_PropertyChanged;", source);
-        Assert.Contains("_saveBannerTimer.Stop();", source);
-        Assert.Contains("_autoSaveTimer.Stop();", source);
+        Assert.Contains("_timers.Stop();", source);
+        Assert.DoesNotContain("_saveBannerTimer.Stop();", source);
+        Assert.DoesNotContain("_autoSaveTimer.Stop();", source);
         Assert.Contains("LiveControlRetryBridge.Reset();", source);
     }
 
