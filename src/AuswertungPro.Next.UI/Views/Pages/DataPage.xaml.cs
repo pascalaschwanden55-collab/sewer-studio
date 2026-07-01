@@ -675,19 +675,22 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (sender is not FrameworkElement fe)
             return;
 
-        var rawPath = fe.Tag as string;
-        if (string.IsNullOrWhiteSpace(rawPath))
+        var plan = DataPagePhotoLinkController.BuildOpenPlan(
+            fe.Tag as string,
+            Services?.Settings.LastProjectPath,
+            AuswertungPro.Next.Application.Common.ProjectPathResolver.ResolveFilePath,
+            File.Exists);
+
+        if (plan.Status == DataPagePhotoLinkStatus.Noop)
             return;
 
-        var sp = Services;
-        var resolved = AuswertungPro.Next.Application.Common.ProjectPathResolver.ResolveFilePath(rawPath, sp?.Settings.LastProjectPath) ?? rawPath;
-        if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
+        if (plan.Status == DataPagePhotoLinkStatus.Missing)
         {
-            Dialogs.Info($"Foto nicht gefunden:\n{rawPath}", "Foto");
+            Dialogs.Info($"Foto nicht gefunden:\n{plan.RawPath}", "Foto");
             return;
         }
 
-        if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(resolved, out var error))
+        if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(plan.ResolvedPath!, out var error))
         {
             Dialogs.Error($"Foto konnte nicht geoeffnet werden:\n{error}", "Foto");
         }
