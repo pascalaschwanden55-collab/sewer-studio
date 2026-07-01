@@ -24,26 +24,6 @@ public sealed class HaltungRecord : System.ComponentModel.INotifyPropertyChanged
     public DateTime ModifiedAtUtc { get; set; } = DateTime.UtcNow;
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
 
-    private int _laufendeNr;
-
-    /// <summary>
-    /// Transiente Anzeige-Laufnummer (1..N) in der aktuellen Listenreihenfolge.
-    /// NICHT persistiert (kein Fachdatum) und ueberschreibt insbesondere NICHT das Feld "NR" —
-    /// wird vom UI-ViewModel bei jeder Reihenfolge-/Bestandsaenderung neu gesetzt.
-    /// </summary>
-    [System.Text.Json.Serialization.JsonIgnore]
-    public int LaufendeNr
-    {
-        get => _laufendeNr;
-        set
-        {
-            if (_laufendeNr == value)
-                return;
-            _laufendeNr = value;
-            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(LaufendeNr)));
-        }
-    }
-
     public HaltungRecord()
     {
         // Initialisiere alle Felder + Metadata

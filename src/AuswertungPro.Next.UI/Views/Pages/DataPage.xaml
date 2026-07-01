@@ -449,7 +449,7 @@
                       VerticalGridLinesBrush="{DynamicResource BorderBrush}"
                       HorizontalGridLinesBrush="{DynamicResource BorderBrush}"
                       FrozenColumnCount="2"
-                      RowHeaderWidth="38"
+                      RowHeaderWidth="24"
                       MinRowHeight="{Binding GridMinRowHeight}"
                       EnableRowVirtualization="True"
                       EnableColumnVirtualization="True"
@@ -476,14 +476,6 @@
                       PreviewMouseDoubleClick="Grid_PreviewMouseDoubleClick"
                       PreviewKeyDown="Grid_PreviewKeyDown"
                       LoadingRow="Grid_LoadingRow">
-                <!-- Laufende Anzeige-Nummer (1..N) im Zeilenkopf, folgt automatisch der Reihenfolge -->
-                <DataGrid.RowHeaderTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding LaufendeNr}" FontSize="11"
-                                   HorizontalAlignment="Right" VerticalAlignment="Center"
-                                   Margin="0,0,4,0" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                    </DataTemplate>
-                </DataGrid.RowHeaderTemplate>
                 <DataGrid.LayoutTransform>
                     <ScaleTransform ScaleX="{Binding GridZoom}" ScaleY="{Binding GridZoom}"/>
                 </DataGrid.LayoutTransform>
