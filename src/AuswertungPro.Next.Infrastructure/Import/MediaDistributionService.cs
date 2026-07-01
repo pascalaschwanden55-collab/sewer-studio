@@ -35,7 +35,8 @@ public sealed class MediaDistributionService
         bool dryRun = false,
         object? collectionLock = null,
         bool includeVideos = true,
-        bool includePdfs = true)
+        bool includePdfs = true,
+        bool includeSchacht = true)
     {
         var copied = 0;
         var skipped = 0;
@@ -86,17 +87,21 @@ public sealed class MediaDistributionService
         }
 
         // Schächte verteilen: Schacht-Dokumente (PDF im Link-Feld) → Schächte_Verteilt\<Schacht>\.
-        // Echte Schacht-Bilddateien liefert der aktuelle Import nicht (kein Foto-Feld am SchachtRecord) →
-        // Fotos\Schächte\ bleibt vorerst ungenutzt.
-        foreach (var schacht in SnapshotSchaechte(project, collectionLock))
+        // Der Ein-Knopf-Import setzt includeSchacht:false, weil dort die Schacht-PDFs stattdessen per
+        // Seiten-Gruppierung (KanalImportDistributor.DistributeSchachtProtocols) erzeugt werden — ein
+        // 1:1-Kopieren des Link-Feldes würde sonst ein ganzes Gesamt-PDF als Klumpen ablegen.
+        if (includeSchacht)
         {
-            ct.ThrowIfCancellationRequested();
-            var schachtNr = schacht.GetFieldValue("Schachtnummer")?.Trim();
-            if (string.IsNullOrWhiteSpace(schachtNr))
-                continue;
-            var sanS = SanitizePathSegment(schachtNr);
-            var schachtRoot = ProjectStructure.SchachtVerteiltDir(projectFolder, sanS);
-            CopySchachtFieldFile(schacht, "Link", schachtRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+            foreach (var schacht in SnapshotSchaechte(project, collectionLock))
+            {
+                ct.ThrowIfCancellationRequested();
+                var schachtNr = schacht.GetFieldValue("Schachtnummer")?.Trim();
+                if (string.IsNullOrWhiteSpace(schachtNr))
+                    continue;
+                var sanS = SanitizePathSegment(schachtNr);
+                var schachtRoot = ProjectStructure.SchachtVerteiltDir(projectFolder, sanS);
+                CopySchachtFieldFile(schacht, "Link", schachtRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+            }
         }
 
         if (!dryRun)
