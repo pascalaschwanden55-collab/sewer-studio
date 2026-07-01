@@ -765,6 +765,20 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.DoesNotContain($"public void {methodName}", guard);
     }
 
+    [Fact]
+    public void Player_window_live_ai_timer_wiring_guard_lives_in_coding_ai_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingAiArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        var focused = File.ReadAllText(focusedPath);
+        const string methodName = "PlayerWindow_live_ai_timer_wiring_lives_in_controller";
+
+        Assert.Contains($"public void {methodName}", focused);
+        Assert.DoesNotContain($"public void {methodName}", guard);
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
