@@ -24,45 +24,46 @@ public sealed class DataPagePrintControllerTests
     }
 
     [Fact]
-    public void PrintAwuHaltungsprotokollPdf_cancel_speichern_ohne_pdf_erzeugung()
+    public void PrintAwuHaltungsprotokollPdf_hinweis_wenn_projekt_nicht_gespeichert()
     {
-        var dialogs = new CapturingDialogService { SaveFileResult = "" };
+        var dialogs = new CapturingDialogService();
+        var regenCalled = false;
         var controller = CreateController(
             dialogs,
-            buildAwuPdf: (_, _, _, _, _) => throw new InvalidOperationException("pdf should not be built"));
+            projectFolder: "",
+            regenerateOne: (_, _, _, _) => { regenCalled = true; return "x"; });
 
         controller.PrintAwuHaltungsprotokollPdf(
             new Project(),
             Record("12/34"),
-            ensureProtocolDocument: _ => throw new InvalidOperationException("document should not be requested"));
+            ensureProtocolDocument: _ => new ProtocolDocument());
 
-        Assert.Single(dialogs.SaveFileCalls);
-        Assert.Null(dialogs.LastInfo);
-        Assert.Null(dialogs.LastError);
+        Assert.False(regenCalled);
+        Assert.Equal(
+            ("Projekt bitte zuerst speichern — dann wird das Protokoll direkt in den Haltungsordner erzeugt.", "Haltungsprotokoll AWU"),
+            dialogs.LastInfo);
+        Assert.Empty(dialogs.SaveFileCalls);
     }
 
     [Fact]
-    public void PrintAwuHaltungsprotokollPdf_erzeugt_pdf_und_meldet_erfolg()
+    public void PrintAwuHaltungsprotokollPdf_erzeugt_direkt_in_ordner_und_oeffnet()
     {
         var record = Record("12/34");
         var project = new Project { Name = "P" };
         var doc = new ProtocolDocument { HaltungId = "12/34" };
-        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\awu.pdf" };
-        var written = new List<(string Path, byte[] Bytes)>();
-        var buildCalls = new List<(Project Project, HaltungRecord Record, ProtocolDocument Doc, string Root, HaltungsprotokollPdfOptions Options)>();
+        var dialogs = new CapturingDialogService();
+        var regenCalls = new List<(Project P, string Folder, HaltungRecord R, ProtocolDocument D)>();
+        string? opened = null;
 
         var controller = CreateController(
             dialogs,
             projectFolder: "C:\\projekt",
-            baseDirectory: "C:\\app",
-            fileExists: path => path == "C:\\app\\Assets\\Brand\\abwasser-uri-logo.png",
-            writeAllBytes: (path, bytes) => written.Add((path, bytes)),
-            now: () => new DateTime(2026, 1, 2),
-            buildAwuPdf: (p, r, d, root, options) =>
+            regenerateOne: (p, folder, r, d) =>
             {
-                buildCalls.Add((p, r, d, root, options));
-                return new byte[] { 1, 2, 3 };
-            });
+                regenCalls.Add((p, folder, r, d));
+                return "C:\\projekt\\Haltungen_Verteilt\\12_34\\20260102_12_34_E.pdf";
+            },
+            openPdf: path => { opened = path; return true; });
 
         controller.PrintAwuHaltungsprotokollPdf(
             project,
@@ -73,33 +74,65 @@ public sealed class DataPagePrintControllerTests
                 return doc;
             });
 
-        var saveCall = Assert.Single(dialogs.SaveFileCalls);
-        Assert.Equal("Haltungsprotokoll AWU als PDF speichern", saveCall.Title);
-        Assert.Equal("PDF (*.pdf)|*.pdf", saveCall.Filter);
-        Assert.Equal("pdf", saveCall.DefaultExt);
-        Assert.Equal("Haltungsprotokoll_AWU_12_34_20260102.pdf", saveCall.DefaultFileName);
-
-        var build = Assert.Single(buildCalls);
-        Assert.Same(project, build.Project);
-        Assert.Same(record, build.Record);
-        Assert.Same(doc, build.Doc);
-        Assert.Equal("C:\\projekt", build.Root);
-        Assert.Equal("C:\\app\\Assets\\Brand\\abwasser-uri-logo.png", build.Options.LogoPathAbs);
-
-        var output = Assert.Single(written);
-        Assert.Equal("C:\\out\\awu.pdf", output.Path);
-        Assert.Equal(new byte[] { 1, 2, 3 }, output.Bytes);
-        Assert.Equal(("AWU-Haltungsprotokoll wurde erstellt:\nC:\\out\\awu.pdf", "Haltungsprotokoll AWU"), dialogs.LastInfo);
+        var call = Assert.Single(regenCalls);
+        Assert.Same(project, call.P);
+        Assert.Equal("C:\\projekt", call.Folder);
+        Assert.Same(record, call.R);
+        Assert.Same(doc, call.D);
+        Assert.Equal("C:\\projekt\\Haltungen_Verteilt\\12_34\\20260102_12_34_E.pdf", opened);
+        Assert.True(project.Dirty);
+        Assert.Empty(dialogs.SaveFileCalls); // kein Speichern-Dialog mehr
+        Assert.Null(dialogs.LastInfo);        // bei erfolgreichem Oeffnen keine zusaetzliche Meldung
         Assert.Null(dialogs.LastError);
+    }
+
+    [Fact]
+    public void PrintAwuHaltungsprotokollPdf_meldet_pfad_wenn_oeffnen_fehlschlaegt()
+    {
+        var dialogs = new CapturingDialogService();
+        var controller = CreateController(
+            dialogs,
+            projectFolder: "C:\\projekt",
+            regenerateOne: (_, _, _, _) => "C:\\projekt\\Haltungen_Verteilt\\12_34\\x_E.pdf",
+            openPdf: _ => false);
+
+        controller.PrintAwuHaltungsprotokollPdf(
+            new Project(),
+            Record("12/34"),
+            ensureProtocolDocument: _ => new ProtocolDocument());
+
+        Assert.Equal(
+            ("AWU-Haltungsprotokoll wurde erstellt:\nC:\\projekt\\Haltungen_Verteilt\\12_34\\x_E.pdf", "Haltungsprotokoll AWU"),
+            dialogs.LastInfo);
+    }
+
+    [Fact]
+    public void PrintAwuHaltungsprotokollPdf_info_wenn_kein_zielpfad()
+    {
+        var dialogs = new CapturingDialogService();
+        var controller = CreateController(
+            dialogs,
+            projectFolder: "C:\\projekt",
+            regenerateOne: (_, _, _, _) => null);
+
+        controller.PrintAwuHaltungsprotokollPdf(
+            new Project(),
+            Record("12/34"),
+            ensureProtocolDocument: _ => new ProtocolDocument());
+
+        Assert.Equal(
+            ("Fuer diese Haltung liegt kein Haltungsname vor — der Zielordner kann nicht bestimmt werden.", "Haltungsprotokoll AWU"),
+            dialogs.LastInfo);
     }
 
     [Fact]
     public void PrintAwuHaltungsprotokollPdf_meldet_fehler_ohne_exception()
     {
-        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\awu.pdf" };
+        var dialogs = new CapturingDialogService();
         var controller = CreateController(
             dialogs,
-            buildAwuPdf: (_, _, _, _, _) => throw new InvalidOperationException("kaputt"));
+            projectFolder: "C:\\projekt",
+            regenerateOne: (_, _, _, _) => throw new InvalidOperationException("kaputt"));
 
         controller.PrintAwuHaltungsprotokollPdf(
             new Project(),
@@ -460,7 +493,9 @@ public sealed class DataPagePrintControllerTests
         Func<DataPageDossierPrintAvailability, DossierPrintOptions?>? selectDossierPrintOptions = null,
         Func<Project, HaltungRecord, SchachtRecord?, SchachtRecord?, HydraulikCalcResult?, string, DossierPrintOptions, Task<byte[]>>? buildDossierPdfAsync = null,
         Func<IReadOnlyList<string>, byte[]>? mergeOriginals = null,
-        Func<byte[], IReadOnlyList<string>, byte[]>? mergeWithOriginals = null)
+        Func<byte[], IReadOnlyList<string>, byte[]>? mergeWithOriginals = null,
+        Func<Project, string, HaltungRecord, ProtocolDocument, string?>? regenerateOne = null,
+        Func<string, bool>? openPdf = null)
         => new(
             dialogs,
             getProjectFolder: () => projectFolder,
@@ -482,7 +517,9 @@ public sealed class DataPagePrintControllerTests
             selectDossierPrintOptions: selectDossierPrintOptions,
             buildDossierPdfAsync: buildDossierPdfAsync,
             mergeOriginals: mergeOriginals,
-            mergeWithOriginals: mergeWithOriginals);
+            mergeWithOriginals: mergeWithOriginals,
+            regenerateOne: regenerateOne,
+            openPdf: openPdf);
 
     private static HaltungRecord Record(string holding)
     {
