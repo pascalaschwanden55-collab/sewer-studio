@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
 using AuswertungPro.Next.UI;
@@ -262,7 +263,7 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         foreach (var col in Columns)
             rec.Fields[col] = "";
 
-        var nrCol = ResolveNrColumnName();
+        var nrCol = SchaechteFieldLogic.ResolveNrColumnName(Columns, Records);
 
         if (!string.IsNullOrWhiteSpace(nrCol))
             rec.Fields[nrCol] = (Records.Count + 1).ToString();
@@ -372,25 +373,9 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         DropdownOptionsStore.SaveReferenzpruefungOptions(ReferenzpruefungOptions);
     }
 
-    private string? ResolveNrColumnName()
-    {
-        var fromColumns = Columns.FirstOrDefault(c =>
-            c.Contains("NR", StringComparison.OrdinalIgnoreCase) ||
-            c.Contains("Nr", StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(fromColumns))
-            return fromColumns;
-
-        var fromRecord = Records
-            .SelectMany(r => r.Fields.Keys)
-            .FirstOrDefault(c =>
-                c.Contains("NR", StringComparison.OrdinalIgnoreCase) ||
-                c.Contains("Nr", StringComparison.OrdinalIgnoreCase));
-        return fromRecord;
-    }
-
     private void UpdateNr()
     {
-        var nrField = ResolveNrColumnName();
+        var nrField = SchaechteFieldLogic.ResolveNrColumnName(Columns, Records);
         if (string.IsNullOrWhiteSpace(nrField))
             return;
 
@@ -399,10 +384,10 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
     }
 
     public bool MatchesSearch(SchachtRecord record)
-        => SchaechteSearchMatcher.Matches(record, SearchText);
+        => SchaechteFieldLogic.MatchesSearch(record, SearchText ?? "");
 
     public void UpdateSearchResultInfo(int visibleCount)
-        => SearchResultInfo = SchaechteSearchMatcher.BuildResultInfo(SearchText, visibleCount, Records.Count);
+        => SearchResultInfo = SchaechteFieldLogic.BuildSearchResultInfo(visibleCount, Records.Count, SearchText ?? "");
 
     private void PersistSchaechtePageBasicUiSettings()
     {

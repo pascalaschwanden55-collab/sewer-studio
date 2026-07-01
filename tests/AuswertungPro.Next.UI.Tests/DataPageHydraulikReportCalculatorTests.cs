@@ -6,25 +6,9 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageHydraulikReportCalculatorTests
 {
-    [Theory]
-    [InlineData("300", 300)]
-    [InlineData("1'200", 1200)]
-    [InlineData("1.200,5", 1200.5)]
-    [InlineData(" 450 ", 450)]
-    public void ParseDnMm_liefert_positive_dn_werte(string raw, double expected)
-    {
-        Assert.Equal(expected, DataPageHydraulikReportCalculator.ParseDnMm(raw));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("0")]
-    [InlineData("-300")]
-    [InlineData("abc")]
-    public void ParseDnMm_liefert_null_bei_ungueltigen_werten(string raw)
-    {
-        Assert.Null(DataPageHydraulikReportCalculator.ParseDnMm(raw));
-    }
+    [Fact]
+    public void Dn_parsing_lebt_nicht_mehr_in_der_ui()
+        => Assert.Null(typeof(DataPageHydraulikReportCalculator).GetMethod("ParseDnMm"));
 
     [Theory]
     [InlineData("5", 5)]
@@ -39,13 +23,13 @@ public sealed class DataPageHydraulikReportCalculatorTests
     public void ReadAvailability_ist_nur_mit_positiver_dn_und_positivem_gefaelle_verfuegbar()
     {
         var record = new HaltungRecord();
-        record.SetFieldValue("DN_mm", "400", FieldSource.Manual, userEdited: true);
+        record.SetFieldValue("DN_mm", "1'200", FieldSource.Manual, userEdited: true);
         record.SetFieldValue("Gefaelle_Promille", "3,5", FieldSource.Manual, userEdited: true);
 
         var availability = DataPageHydraulikReportCalculator.ReadAvailability(record);
 
         Assert.True(availability.IsAvailable);
-        Assert.Equal(400, availability.DnMm);
+        Assert.Equal(1200, availability.DnMm);
         Assert.Equal(3.5, availability.GefaellePromille);
     }
 

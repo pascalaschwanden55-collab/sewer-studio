@@ -194,18 +194,18 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
-    public void SchaechtePage_search_logic_lives_in_matcher()
+    public void SchaechtePage_search_and_nr_logic_uses_application_field_logic()
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var viewModelPath = Path.Combine(uiRoot, "ViewModels", "Pages", "SchaechtePageViewModel.cs");
-        var matcherPath = Path.Combine(uiRoot, "Services", "SchaechteSearchMatcher.cs");
-
-        Assert.True(File.Exists(matcherPath), "Schaechte-Suche soll als kleiner testbarer Matcher ausserhalb der ViewModel-Methoden leben.");
 
         var viewModel = File.ReadAllText(viewModelPath);
-        Assert.Contains("SchaechteSearchMatcher.Matches", viewModel);
-        Assert.Contains("SchaechteSearchMatcher.BuildResultInfo", viewModel);
+        Assert.Contains("SchaechteFieldLogic.ResolveNrColumnName(Columns, Records)", viewModel);
+        Assert.Contains("SchaechteFieldLogic.MatchesSearch(record, SearchText ?? \"\")", viewModel);
+        Assert.Contains("SchaechteFieldLogic.BuildSearchResultInfo(visibleCount, Records.Count, SearchText ?? \"\")", viewModel);
+        Assert.DoesNotContain("SchaechteSearchMatcher", viewModel);
+        Assert.DoesNotContain("private string? ResolveNrColumnName()", viewModel);
         Assert.DoesNotContain("record.Fields.Any", viewModel);
         Assert.DoesNotContain("von {Records.Count} Schaechten", viewModel);
     }

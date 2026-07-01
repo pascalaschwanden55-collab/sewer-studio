@@ -1050,7 +1050,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
         if (record is not null)
         {
-            var dn = DataPageHydraulikReportCalculator.ParseDnMm(record.GetFieldValue("DN_mm"));
+            var dn = DnValueParser.TryParseMillimeters(record.GetFieldValue("DN_mm"));
             var material = record.GetFieldValue("Rohrmaterial");
             vm.LoadFromRecord(dn, material, null);
         }
