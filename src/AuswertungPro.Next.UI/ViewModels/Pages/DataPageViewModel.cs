@@ -45,6 +45,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageVideoPlaybackController _videoPlaybackController;
     private readonly DataPageMediaSearchController _mediaSearchController;
     private readonly DataPageProtocolWindowController _protocolWindowController;
+    private readonly DataPageRecordCollectionController _recordCollectionController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
@@ -251,6 +252,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                 if (Selected?.Id == record.Id)
                     RefreshSelectedProtocolEntries();
             });
+        _recordCollectionController = new DataPageRecordCollectionController(
+            () => _shell.Project,
+            () => Selected,
+            value => Selected = value,
+            (message, title) => _sp.Dialogs.Confirm(message, title),
+            () => RecordsOrderChanged?.Invoke(),
+            ScheduleAutoSave);
 
         // Seed measure template names from Offerten into dropdown if missing
         SeedMeasureTemplateNames();
@@ -421,63 +429,29 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     }
 
     private bool CanMoveUp()
-        => DataPageRecordOrderController.CanMoveByOffset(Records, Selected, -1);
+        => _recordCollectionController.CanMoveUp();
 
     private bool CanMoveDown()
-        => DataPageRecordOrderController.CanMoveByOffset(Records, Selected, 1);
+        => _recordCollectionController.CanMoveDown();
 
     private void Add()
     {
-        var record = _shell.Project.CreateNewRecord();
-        _shell.Project.AddRecord(record);
-        Selected = record;
-        ScheduleAutoSave();
+        _recordCollectionController.Add();
     }
 
     private void Remove()
     {
-        if (Selected is null) return;
-
-        var name = Selected.GetFieldValue("Haltungsname");
-        var label = string.IsNullOrWhiteSpace(name) ? "diese Haltung" : $"die Haltung \"{name}\"";
-        if (!_sp.Dialogs.Confirm($"Soll {label} wirklich geloescht werden?\n\nDie Zeile inkl. aller Daten wird entfernt.",
-                "Haltung loeschen"))
-            return;
-
-        var idx = Records.IndexOf(Selected);
-        var removedId = Selected.Id;
-        var removed = _shell.Project.RemoveRecord(removedId);
-        if (!removed)
-        {
-            return;
-        }
-
-        if (Records.Count == 0)
-        {
-            Selected = null;
-            ScheduleAutoSave();
-            return;
-        }
-
-        if (idx >= Records.Count) idx = Records.Count - 1;
-        Selected = Records[idx];
-        ScheduleAutoSave();
+        _recordCollectionController.Remove();
     }
 
     private void MoveUp()
     {
-        if (!DataPageRecordOrderController.TryMoveByOffset(Records, Selected, -1))
-            return;
-
-        MarkRecordOrderChanged();
+        _recordCollectionController.MoveUp();
     }
 
     private void MoveDown()
     {
-        if (!DataPageRecordOrderController.TryMoveByOffset(Records, Selected, 1))
-            return;
-
-        MarkRecordOrderChanged();
+        _recordCollectionController.MoveDown();
     }
 
     /// <summary>
@@ -486,19 +460,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     /// </summary>
     public bool MoveToPosition(int targetPosition)
     {
-        if (!DataPageRecordOrderController.TryMoveToPosition(Records, Selected, targetPosition))
-            return false;
-
-        MarkRecordOrderChanged();
-        return true;
-    }
-
-    private void MarkRecordOrderChanged()
-    {
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-        RecordsOrderChanged?.Invoke();
-        ScheduleAutoSave();
+        return _recordCollectionController.MoveToPosition(targetPosition);
     }
 
     private void Save()
