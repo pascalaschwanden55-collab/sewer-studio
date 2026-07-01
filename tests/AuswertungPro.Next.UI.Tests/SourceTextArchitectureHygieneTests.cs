@@ -381,7 +381,9 @@ public sealed class SourceTextArchitectureHygieneTests
         var methodNames = new[]
         {
             "PlayerWindow_coding_live_ai_wiring_lives_in_live_partial",
-            "PlayerWindow_coding_health_monitoring_lives_in_monitoring_partial"
+            "PlayerWindow_coding_health_monitoring_lives_in_monitoring_partial",
+            "PlayerWindow_coding_ai_shared_helpers_live_in_helpers_partial",
+            "PlayerWindow_coding_osd_reading_lives_in_reading_partial"
         };
 
         foreach (var methodName in methodNames)
@@ -399,6 +401,22 @@ public sealed class SourceTextArchitectureHygieneTests
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
         const string methodName = "PlayerWindow_code_catalog_helpers_live_in_coding_catalog_partial";
+
+        Assert.Contains($"public void {methodName}", focused);
+        Assert.DoesNotContain($"public void {methodName}", guard);
+    }
+
+    [Fact]
+    public void Player_window_coding_classifier_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingClassifierArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "Coding-Classifier-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        const string methodName = "PlayerWindow_coding_classifier_results_live_in_classifier_partial";
 
         Assert.Contains($"public void {methodName}", focused);
         Assert.DoesNotContain($"public void {methodName}", guard);
@@ -450,6 +468,8 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("GridDockingControllerTests.cs")]
     [InlineData("ImportArchitectureGuardTests.cs")]
     [InlineData("PageViewModelLifecycleTests.cs")]
+    [InlineData("PlayerWindowCodingAiArchitectureTests.cs")]
+    [InlineData("PlayerWindowCodingClassifierArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingStatisticsArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingStateArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingCatalogArchitectureTests.cs")]
