@@ -248,6 +248,32 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     }
 
     [Fact]
+    public void TrainingBatchImportGeneratedCaseController_setzt_triviale_skip_case_ui_planung_inline()
+    {
+        var generatedCaseControllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportGeneratedCaseController.cs");
+        var skippedCaseUiPlanBuilderPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportSkippedCaseUiPlanBuilder.cs");
+        var generatedCaseControllerSource = File.ReadAllText(generatedCaseControllerPath);
+
+        Assert.False(File.Exists(skippedCaseUiPlanBuilderPath), "Triviale Skip-Case-UI-Planung soll im Generated-Case-Controller stehen.");
+        Assert.DoesNotContain("TrainingBatchImportSkippedCaseUiPlanBuilder", generatedCaseControllerSource, StringComparison.Ordinal);
+        Assert.Contains("new TrainingBatchImportSkippedCaseUiPlan(", generatedCaseControllerSource, StringComparison.Ordinal);
+        Assert.Contains("new TrainingBatchImportLivePreview(", generatedCaseControllerSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportResultEntryFactory.CreateSkippedCase(", generatedCaseControllerSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_batch_import_case_progress_ui_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(

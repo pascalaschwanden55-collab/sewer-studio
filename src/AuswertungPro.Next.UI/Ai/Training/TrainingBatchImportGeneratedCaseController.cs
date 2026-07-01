@@ -9,6 +9,10 @@ public enum TrainingBatchImportGeneratedCaseKind
     Samples
 }
 
+public sealed record TrainingBatchImportSkippedCaseUiPlan(
+    TrainingBatchImportLivePreview Preview,
+    SelfTrainingEntryResult Result);
+
 public sealed record TrainingBatchImportGeneratedCasePlan(
     TrainingBatchImportGeneratedCaseKind Kind,
     TrainingCenterBatchSkipInfo? Skip,
@@ -36,7 +40,7 @@ public static class TrainingBatchImportGeneratedCaseController
             return new TrainingBatchImportGeneratedCasePlan(
                 TrainingBatchImportGeneratedCaseKind.Skipped,
                 skip,
-                TrainingBatchImportSkippedCaseUiPlanBuilder.Build(
+                CreateSkippedCaseUiPlan(
                     caseId,
                     skip,
                     previewFrame,
@@ -64,6 +68,22 @@ public static class TrainingBatchImportGeneratedCaseController
             BuildSampleLogLines(samples),
             samples.Count);
     }
+
+    private static TrainingBatchImportSkippedCaseUiPlan CreateSkippedCaseUiPlan(
+        string caseId,
+        TrainingCenterBatchSkipInfo skip,
+        string? previewFrame,
+        int resultIndex)
+        => new TrainingBatchImportSkippedCaseUiPlan(
+            new TrainingBatchImportLivePreview(
+                caseId,
+                skip.LiveCodeInfo,
+                skip.LiveMeterInfo,
+                previewFrame),
+            TrainingBatchImportResultEntryFactory.CreateSkippedCase(
+                resultIndex,
+                caseId,
+                skip.ResultSummary));
 
     private static IReadOnlyList<string> BuildSampleLogLines(IReadOnlyCollection<TrainingSample> samples)
     {
