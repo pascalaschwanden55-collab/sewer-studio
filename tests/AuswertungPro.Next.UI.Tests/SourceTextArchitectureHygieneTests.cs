@@ -17,6 +17,28 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.DoesNotContain($"public void {layerBoundaryTest}", guard);
     }
 
+    [Fact]
+    public void Schaechte_architecture_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "SchaechtePageArchitectureGuardTests.cs"));
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        var methodNames = new[]
+        {
+            "SchaechtePage_dropdown_option_groups_live_in_controller",
+            "SchaechtePage_dropdown_record_sync_lives_in_synchronizer",
+            "SchaechtePage_template_column_reading_lives_in_infrastructure",
+            "SchaechtePage_search_and_nr_logic_uses_application_field_logic"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -65,6 +87,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PageViewModelLifecycleTests.cs")]
     [InlineData("PlayerWindowResourceDictionaryTests.cs")]
     [InlineData("ProjektEroeffnungShellGuardTests.cs")]
+    [InlineData("SchaechtePageArchitectureGuardTests.cs")]
     [InlineData("SchaechtePageColumnLayoutRefactorTests.cs")]
     [InlineData("ShellNavigationPolicyTests.cs")]
     [InlineData("SystemMonitorProcessSafetyTests.cs")]
