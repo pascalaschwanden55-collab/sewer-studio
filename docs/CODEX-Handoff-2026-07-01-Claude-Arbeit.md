@@ -68,13 +68,14 @@ Bitte beim Refactoring dieser Dateien Claudes Änderungen berücksichtigen:
   `Views/ProtocolEntryEditorDialog.xaml.cs` — Root-Auflösung von Medienpfaden.
 
 ## Offene Punkte / nächste Schritte
-1. **Gegeninspektion abspielen/ansehen** (User-Wunsch, noch offen): das `_G`-Video wird verteilt
-   (`<stamp>_<H>_G.mpg`), aber an kein Record-Feld gehängt → Play kommt nicht dran. Vorschlag:
-   Backend setzt `Link_G` (+ ggf. `PDF_G`) beim Verteilen; UI zeigt einen zweiten „Play (G)"/
-   „Protokoll (G)"-Knopf, wenn das Feld gesetzt ist. (UI-Teil = deine Lane.)
+1. ~~Gegeninspektion abspielen~~ **ERLEDIGT @ f7b618d5:** Feld `Link_G` (Backend, beim Verteilen +
+   relativiert + rename-sync), UI-Kommando `DataPageViewModel.PlayGegenVideoCommand` +
+   `DataPageVideoPlaybackController.PlayResolved` + Kontextmenü „Play (Gegeninspektion)" in
+   `DataPage.xaml`/`.xaml.cs`. OFFEN nur noch: Gegeninspektions-PROTOKOLL (`PDF_G`) — braucht ein
+   unterscheidbares Zweit-Protokoll (Zweitinspektion = zweites Datum), folgt bei Bedarf.
 2. **Schacht-Parser an SchachtPro-Format anpassen**, falls „Schacht Verteilen" den 203-MB-Gesamtauszug
    nicht sauber pro Schacht trennt (`SplitPdfIntoShafts`/`ParseSchachtPdf`).
-3. **Manueller WPF-Smoke** des Ein-Knopf-Imports + der neuen Abläufe (Play/Rename/Protokoll neu generieren).
+3. **Manueller WPF-Smoke** des Ein-Knopf-Imports + der neuen Abläufe (Play/Play-G/Rename/Protokoll neu generieren).
 
 ## Wissenstransfer-Mechanismus (Vorschlag)
 - **Git-Log ist die Wahrheit:** Claude-Commits tragen `Co-Authored-By: Claude …`, Codex-Commits nicht.
