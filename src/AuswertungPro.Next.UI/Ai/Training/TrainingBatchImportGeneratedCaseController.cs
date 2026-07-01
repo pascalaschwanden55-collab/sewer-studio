@@ -61,7 +61,18 @@ public static class TrainingBatchImportGeneratedCaseController
                 samples,
                 previewFrame,
                 firstResultIndex),
-            TrainingBatchImportSampleLogBuilder.Build(samples),
+            BuildSampleLogLines(samples),
             samples.Count);
+    }
+
+    private static IReadOnlyList<string> BuildSampleLogLines(IReadOnlyCollection<TrainingSample> samples)
+    {
+        var lines = new List<string>
+        {
+            $"  -> {samples.Count} Samples (Status: Neu, Freigabe ueber Review):"
+        };
+        lines.AddRange(samples.Select(sample =>
+            $"     {sample.Code} @ {sample.MeterStart:F2}m [{sample.Status}] - {sample.Beschreibung}"));
+        return lines;
     }
 }
