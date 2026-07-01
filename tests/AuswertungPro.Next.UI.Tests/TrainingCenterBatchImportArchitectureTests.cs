@@ -223,6 +223,31 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     }
 
     [Fact]
+    public void TrainingBatchImportGeneratedCaseController_setzt_triviale_sample_log_zeilen_inline()
+    {
+        var generatedCaseControllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportGeneratedCaseController.cs");
+        var sampleLogBuilderPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportSampleLogBuilder.cs");
+        var generatedCaseControllerSource = File.ReadAllText(generatedCaseControllerPath);
+
+        Assert.False(File.Exists(sampleLogBuilderPath), "Triviale Sample-Log-Zeilen sollen im Generated-Case-Controller stehen.");
+        Assert.DoesNotContain("TrainingBatchImportSampleLogBuilder", generatedCaseControllerSource, StringComparison.Ordinal);
+        Assert.Contains("\"  -> {samples.Count} Samples", generatedCaseControllerSource, StringComparison.Ordinal);
+        Assert.Contains("\"     {sample.Code} @ {sample.MeterStart:F2}m", generatedCaseControllerSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_batch_import_case_progress_ui_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
