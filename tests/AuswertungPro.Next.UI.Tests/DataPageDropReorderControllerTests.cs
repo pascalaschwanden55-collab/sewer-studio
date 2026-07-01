@@ -4,6 +4,7 @@ using System.Linq;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
 using Xunit;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -132,20 +133,5 @@ public sealed class DataPageDropReorderControllerTests
         if (name is not null)
             record.SetFieldValue("Haltungsname", name, FieldSource.Manual, userEdited: true);
         return record;
-    }
-
-    private static string RepoFile(params string[] segments)
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            var candidate = Path.Combine(directory.FullName, "AuswertungPro.sln");
-            if (File.Exists(candidate))
-                return Path.Combine(new[] { directory.FullName }.Concat(segments).ToArray());
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Repository root not found.");
     }
 }

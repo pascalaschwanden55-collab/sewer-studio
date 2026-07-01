@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -21,6 +22,12 @@ internal static class SourceTextTestHelpers
 
     public static string FindRepoRoot()
         => FindRepositoryRoot();
+
+    public static string RepoFile(params string[] segments)
+        => Path.Combine(new[] { FindRepositoryRoot() }.Concat(segments).ToArray());
+
+    public static string ExtractMethod(string source, string signature)
+        => ExtractMethodBody(source, signature);
 
     public static string ExtractMethodBody(string source, string signature)
     {
