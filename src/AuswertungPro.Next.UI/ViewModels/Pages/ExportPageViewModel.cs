@@ -181,7 +181,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
         var videoFolder = _sp.Dialogs.SelectFolder("Video-Ordner mit Rohvideos waehlen");
         if (string.IsNullOrWhiteSpace(videoFolder)) return;
 
-        var destFolder = ResolveDistributionTargetFolder();
+        var destFolder = ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
 
         try
@@ -305,7 +305,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 return;
         }
 
-        var destFolder = ResolveDistributionTargetFolder();
+        var destFolder = ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.SchaechteVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
 
         try
@@ -394,7 +394,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
                 return;
         }
 
-        var destFolder = ResolveDistributionTargetFolder();
+        var destFolder = ResolveDistributionSubfolder(AuswertungPro.Next.Infrastructure.Import.ProjectStructure.HaltungenVerteilt);
         if (string.IsNullOrWhiteSpace(destFolder)) return;
 
         try
@@ -512,6 +512,14 @@ public sealed partial class ExportPageViewModel : ObservableObject
         return Services.DistributionTargetFolderPolicy.Resolve(
             _shell.GetProjectFolder(),
             () => _sp.Dialogs.SelectFolder("Zielordner (Gemeinde) waehlen"));
+    }
+
+    // Zielordner + strukturierter Unterordner (Haltungen_Verteilt\ / Schächte_Verteilt\), damit manuelle
+    // Verteilungen NICHT in den Projekt-Root, sondern in die vorgesehene Struktur landen.
+    private string? ResolveDistributionSubfolder(string subfolder)
+    {
+        var baseFolder = ResolveDistributionTargetFolder();
+        return string.IsNullOrWhiteSpace(baseFolder) ? null : Path.Combine(baseFolder, subfolder);
     }
 
     private void StorePdfFiles(string[] paths)
