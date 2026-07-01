@@ -42,6 +42,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageMeasureSuggestionController _measureSuggestionController;
     private readonly DataPageCostRestoreController _costRestoreController;
     private readonly DataPageVideoRelinkController _videoRelinkController;
+    private readonly DataPageVideoPlaybackController _videoPlaybackController;
     private readonly DataPageMediaSearchController _mediaSearchController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
@@ -213,6 +214,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                 _sp.Settings.Save();
             },
             (record, path, userEdited) => SaveVideoLink(record, path, userEdited));
+        _videoPlaybackController = new DataPageVideoPlaybackController(
+            _sp.Dialogs,
+            EnsureVideoPath,
+            () => PlayerWindowOptions.FromSettings(_sp.Settings),
+            DataPageVideoOverlayBuilder.Build,
+            ShowPlayerWindow,
+            (ex, path) => DataPageVideoStartErrorLogWriter.TryWrite(ex, path));
         _mediaSearchController = new DataPageMediaSearchController(
             () => Records,
             () => _sp.Settings.LastVideoSourceFolder,
@@ -523,40 +531,22 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void PlayVideo(HaltungRecord? record)
     {
-        if (record is null)
-            return;
+        _videoPlaybackController.Play(record);
+    }
 
-        var path = EnsureVideoPath(record);
-        if (string.IsNullOrWhiteSpace(path))
-            return;
-
-        try
+    private void ShowPlayerWindow(DataPageVideoPlaybackRequest request)
+    {
+        var window = new PlayerWindow(
+            request.Path,
+            request.Options,
+            damageOverlay: request.DamageOverlay,
+            serviceProvider: _sp,
+            haltungId: request.Record.Id.ToString(),
+            haltungRecord: request.Record)
         {
-            var options = PlayerWindowOptions.FromSettings(_sp.Settings);
-
-            var damageOverlay = DataPageVideoOverlayBuilder.Build(record);
-
-            var window = new PlayerWindow(path, options,
-                damageOverlay: damageOverlay,
-                serviceProvider: _sp,
-                haltungId: record.Id.ToString(),
-                haltungRecord: record)
-            {
-                Owner = System.Windows.Application.Current?.MainWindow
-            };
-            window.Show();
-        }
-        catch (Exception ex)
-        {
-            var logPath = DataPageVideoStartErrorLogWriter.TryWrite(ex, path);
-            var nativeHint = ex.Message.Contains("native side", StringComparison.OrdinalIgnoreCase)
-                ? "\n\nHinweis: Bitte pruefen, ob 'VideoLAN.LibVLC.Windows' fuer dieses Projekt/Plattform installiert ist."
-                : string.Empty;
-            var msg = logPath is null
-                ? $"Video konnte nicht gestartet werden:\n{ex.Message}{nativeHint}\n\n(Details: ex.ToString() nicht gespeichert)"
-                : $"Video konnte nicht gestartet werden:\n{ex.Message}{nativeHint}\n\nDetails gespeichert in:\n{logPath}";
-            _sp.Dialogs.Error(msg, "Video");
-        }
+            Owner = System.Windows.Application.Current?.MainWindow
+        };
+        window.Show();
     }
 
     private void OpenProtocol(HaltungRecord? record)
