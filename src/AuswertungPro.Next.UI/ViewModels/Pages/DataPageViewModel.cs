@@ -42,6 +42,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageVideoPlaybackController _videoPlaybackController;
     private readonly DataPageMediaSearchController _mediaSearchController;
     private readonly DataPageProtocolWindowController _protocolWindowController;
+    private readonly DataPageObservationSyncController _observationSyncController;
     private readonly DataPageRecordCollectionController _recordCollectionController;
     private readonly DataPageVideoAnalysisController _videoAnalysisController;
     private readonly DataPageSanierungWindowController _sanierungWindowController;
@@ -233,6 +234,17 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                 _shell.Project.Dirty = true;
             },
             () => OnPropertyChanged(nameof(Records)),
+            _shell.SetStatus);
+        _observationSyncController = new DataPageObservationSyncController(
+            () =>
+            {
+                _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+                _shell.Project.Dirty = true;
+            },
+            RefreshRecordInGrid,
+            record => Selected?.Id == record.Id,
+            RefreshSelectedProtocolEntries,
+            ScheduleAutoSave,
             _shell.SetStatus);
         _protocolWindowController = new DataPageProtocolWindowController(
             () => _shell.Project,
@@ -578,45 +590,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     public void SyncObservationsToHoldingFields(HaltungRecord? record, bool showStatus = false)
     {
-        if (record is null)
-            return;
-
-        var entries = record.Protocol?.Current?.Entries?
-            .Where(e => !e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code))
-            .ToList();
-        if (entries is null)
-            return;
-
-        var changed = false;
-
-        var mapped = DataPageProtocolObservationMapper.Build(entries, record.VsaFindings);
-        var primaryText = mapped.PrimaryDamageText;
-        var currentPrimary = record.GetFieldValue("Primaere_Schaeden") ?? string.Empty;
-        if (!string.Equals(currentPrimary, primaryText, StringComparison.Ordinal))
-        {
-            record.SetFieldValue("Primaere_Schaeden", primaryText, FieldSource.Manual, userEdited: true);
-            changed = true;
-        }
-
-        if (DataPageProtocolObservationMapper.HasFindingChanges(record.VsaFindings, mapped.Findings))
-        {
-            record.VsaFindings = mapped.Findings;
-            changed = true;
-        }
-
-        if (!changed)
-            return;
-
-        _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-        _shell.Project.Dirty = true;
-        RefreshRecordInGrid(record);
-
-        if (Selected?.Id == record.Id)
-            RefreshSelectedProtocolEntries();
-
-        ScheduleAutoSave();
-        if (showStatus)
-            _shell.SetStatus("Beobachtungen in Haltungen-Feldern aktualisiert");
+        _observationSyncController.Sync(record, showStatus);
     }
 
     private void OpenVideoAiPipeline(HaltungRecord? record)
