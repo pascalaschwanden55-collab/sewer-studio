@@ -37,17 +37,19 @@ public static class TrainingBatchImportRuntimeSetupController
         var settings = await loadSettingsAsync().ConfigureAwait(false);
         var generator = createGenerator(cfg, settings);
 
-        var sampleSnapshot = await TrainingBatchImportExistingSampleSnapshotController.LoadAsync(
-            loadSamplesAsync,
-            log).ConfigureAwait(false);
+        var allSamples = await loadSamplesAsync().ConfigureAwait(false);
+        var existingSigs = allSamples.Select(s => s.Signature)
+            .Where(s => !string.IsNullOrEmpty(s))
+            .ToHashSet(StringComparer.Ordinal);
+        log($"Bestehende Samples: {allSamples.Count} ({existingSigs.Count} Signaturen)");
 
         setProgressMax(casesWithProtocol.Count);
         return new TrainingBatchImportRuntimeSetupResult<TGenerator>(
             cfg,
             settings,
             generator,
-            sampleSnapshot.AllSamples,
-            sampleSnapshot.ExistingSignatures,
+            allSamples,
+            existingSigs,
             casesWithProtocol,
             new TrainingBatchImportRunSummary());
     }

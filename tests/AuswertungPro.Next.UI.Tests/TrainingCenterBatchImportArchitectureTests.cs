@@ -218,6 +218,34 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     }
 
     [Fact]
+    public void TrainingBatchImportRuntimeSetupController_setzt_existing_sample_snapshot_inline()
+    {
+        var repoRoot = FindRepoRoot();
+        var snapshotControllerPath = Path.Combine(
+            repoRoot,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportExistingSampleSnapshotController.cs");
+        var source = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportRuntimeSetupController.cs"));
+        var prepareSource = ExtractMethodBody(source, "public static async Task<TrainingBatchImportRuntimeSetupResult<TGenerator>> PrepareAsync<TGenerator>(");
+
+        Assert.False(File.Exists(snapshotControllerPath), snapshotControllerPath);
+        Assert.DoesNotContain("TrainingBatchImportExistingSampleSnapshotController", source, StringComparison.Ordinal);
+        Assert.Contains("var allSamples = await loadSamplesAsync().ConfigureAwait(false);", prepareSource, StringComparison.Ordinal);
+        Assert.Contains("var existingSigs = allSamples.Select(s => s.Signature)", prepareSource, StringComparison.Ordinal);
+        Assert.Contains("ToHashSet(StringComparer.Ordinal)", prepareSource, StringComparison.Ordinal);
+        Assert.Contains("log($\"Bestehende Samples: {allSamples.Count} ({existingSigs.Count} Signaturen)\");", prepareSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TrainingCenterViewModel_delegiert_batch_import_generated_case_ui_an_controller()
     {
         var source = File.ReadAllText(Path.Combine(
