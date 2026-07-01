@@ -38,6 +38,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly ShellViewModel _shell;
     private readonly DataPageTimerController _timers;
     private readonly DataPagePrintController _printController;
+    private readonly DataPageOriginalPdfController _originalPdfController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
@@ -151,6 +152,12 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                 _sp.Settings,
                 dn,
                 saveSettings: _sp.Settings.Save));
+        _originalPdfController = new DataPageOriginalPdfController(
+            _sp.Dialogs,
+            EnsureProtocolPath,
+            () => _shell.GetProjectFolder(),
+            DataPageProtocolPathResolver.ResolveOriginalPdfPaths,
+            DataPageOriginalPdfController.TryShellOpen);
         _shell.PropertyChanged += ShellPropertyChanged;
 
         // Live-Control: Retry-Handler registrieren, damit der MCP eine Haltung
@@ -1082,33 +1089,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void OpenOriginalPdf(HaltungRecord? record)
     {
-        if (record is null)
-            return;
-
-        // Das Haltung-spezifische Protokoll aus der Verteilung bevorzugen (via Link -> Haltungs-
-        // ordner), statt das grosse Original-PDF mit ALLEN Protokollen (PDF_Path/PDF_All[0]).
-        var path = EnsureProtocolPath(record);
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            var projectFolder = _shell.GetProjectFolder() ?? "";
-            var paths = DataPageProtocolPathResolver.ResolveOriginalPdfPaths(record, projectFolder);
-            path = paths.Count > 0 ? paths[0] : null;
-        }
-
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            var name = record.GetFieldValue("Haltungsname") ?? "(unbekannt)";
-            _sp.Dialogs.Info(
-                $"Kein PDF gefunden fuer Haltung '{name}'.\n\nPruefen Sie, ob das Protokoll-PDF in der Verteilung liegt.",
-                "Haltungsprotokoll (PDF)");
-            return;
-        }
-
-        if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(path, out var error))
-        {
-            _sp.Dialogs.Warn($"PDF konnte nicht geoeffnet werden:\n{error}",
-                "Fehler");
-        }
+        _originalPdfController.Open(record);
     }
 
     private SchachtRecord? FindSchachtByNummer(string? nummer)
