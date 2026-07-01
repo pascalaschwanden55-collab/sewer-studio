@@ -789,17 +789,17 @@ public partial class TrainingCenterViewModel : ObservableObject
         _genCts = runPreparation.CancellationTokenSource;
         var ct = runPreparation.CancellationToken;
 
+        var batchUi = new TrainingBatchUiSink(
+            value => IsBusy = value,
+            value => LogText = value,
+            value => ProgressValue = value,
+            value => ProgressMax = value,
+            value => StatusText = value,
+            Log);
+
         using var _aiToken = AiTrack.Begin("Training Center");
         try
         {
-            var batchUi = new TrainingBatchUiSink(
-                value => IsBusy = value,
-                value => LogText = value,
-                value => ProgressValue = value,
-                value => ProgressMax = value,
-                value => StatusText = value,
-                Log);
-
             TrainingBatchImportRunStartController.Apply(
                 batchUi,
                 ClearLivePreview,
@@ -906,8 +906,7 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
         finally
         {
-            TrainingBatchImportRunFinalizerController.Apply(
-                value => IsBusy = value);
+            batchUi.SetBusy(false);
         }
     }
 
