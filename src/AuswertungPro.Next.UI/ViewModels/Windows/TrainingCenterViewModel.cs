@@ -844,11 +844,17 @@ public partial class TrainingCenterViewModel : ObservableObject
 
             await TrainingBatchImportCaseLoopController.RunAsync(
                 casesToProcess,
-                (caseIndex, totalCount, trainingCase) => TrainingBatchImportCaseProgressUiController.Apply(
-                    caseIndex,
-                    totalCount,
-                    trainingCase,
-                    batchUi),
+                (caseIndex, totalCount, trainingCase) =>
+                {
+                    batchUi.SetProgressValue(caseIndex + 1);
+                    var progressPresentation = TrainingBatchImportCaseProgressPresentationBuilder.Build(
+                        caseIndex,
+                        totalCount,
+                        trainingCase);
+                    batchUi.SetStatusText(progressPresentation.StatusText);
+                    foreach (var line in progressPresentation.LogLines)
+                        batchUi.Log(line);
+                },
                 async (caseIndex, trainingCase, token) =>
                 {
                     await TrainingBatchImportCaseWorkflowController.ProcessAsync(

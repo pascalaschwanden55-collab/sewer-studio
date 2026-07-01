@@ -282,7 +282,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_batch_import_case_progress_ui_an_controller()
+    public void TrainingCenterViewModel_setzt_trivialen_batch_import_case_progress_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -291,13 +291,21 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var controllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportCaseProgressUiController.cs");
         var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
 
-        Assert.Contains("TrainingBatchImportCaseProgressUiController.Apply(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ProgressValue = i + 1;", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("TrainingBatchImportCaseProgressPresentationBuilder.Build(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("StatusText = progressPresentation.StatusText", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("foreach (var line in progressPresentation.LogLines)", batchImportSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(controllerPath), "Triviale Case-Progress-UI-Weiterleitung soll inline in der VM stehen.");
+        Assert.DoesNotContain("TrainingBatchImportCaseProgressUiController.Apply(", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetProgressValue(caseIndex + 1);", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportCaseProgressPresentationBuilder.Build(", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetStatusText(progressPresentation.StatusText);", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("foreach (var line in progressPresentation.LogLines)", batchImportSource, StringComparison.Ordinal);
     }
 
     [Fact]
