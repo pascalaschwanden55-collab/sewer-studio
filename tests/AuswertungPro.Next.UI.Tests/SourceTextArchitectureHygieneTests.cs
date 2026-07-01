@@ -347,10 +347,18 @@ public sealed class SourceTextArchitectureHygieneTests
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowStretchDamageArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
-        const string methodName = "PlayerWindow_open_stretch_damage_prompt_lives_in_policy";
+        var methodNames = new[]
+        {
+            "PlayerWindow_open_stretch_damage_prompt_lives_in_policy",
+            "PlayerWindow_stretch_damage_close_marker_lives_in_factory",
+            "PlayerWindow_stretch_damage_close_decision_lives_in_policy"
+        };
 
-        Assert.Contains($"public void {methodName}", focused);
-        Assert.DoesNotContain($"public void {methodName}", guard);
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
     }
 
     [Fact]
