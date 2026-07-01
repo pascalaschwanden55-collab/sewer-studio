@@ -2495,11 +2495,11 @@ public sealed class UiArchitectureGuardTests
         var structuralCommandWorkflow = File.Exists(structuralCommandWorkflowPath) ? File.ReadAllText(structuralCommandWorkflowPath) : "";
         var structuralWorkflow = File.ReadAllText(structuralWorkflowPath);
 
-        Assert.DoesNotContain("private bool TryHandleBoundaryClassifierResult", ai);
+        Assert.DoesNotContain("private async Task<bool> TryHandleBoundaryClassifierResultAsync", ai);
         Assert.DoesNotContain("private bool TryHandleStructuralClassifierResult", ai);
-        Assert.DoesNotContain("private bool TryHandleBoundaryClassifierResult", classifier);
+        Assert.DoesNotContain("private async Task<bool> TryHandleBoundaryClassifierResultAsync", classifier);
         Assert.DoesNotContain("private bool TryHandleStructuralClassifierResult", classifier);
-        Assert.Contains("private bool TryHandleBoundaryClassifierResult", boundary);
+        Assert.Contains("private async Task<bool> TryHandleBoundaryClassifierResultAsync", boundary);
         Assert.Contains("CodingBoundaryClassifierCommandWorkflow.Execute", boundary);
         Assert.Contains("CodingBoundaryClassifierResultWorkflow.Execute", boundary);
         Assert.DoesNotContain("if (!CodingBoundaryClassifierResultWorkflow.CanHandle(mmResult))", boundary);
@@ -2508,7 +2508,7 @@ public sealed class UiArchitectureGuardTests
         Assert.DoesNotContain("CodingClassifierDisplayPolicy.IsBoundaryClassifierCode", boundary);
         Assert.Contains("CodingBoundaryClassifierResultWorkflow.CanHandle", boundaryCommandWorkflow);
         Assert.Contains("actions.ResolveMeterForFrame", boundaryCommandWorkflow);
-        Assert.Contains("actions.ExecuteResultWorkflow", boundaryCommandWorkflow);
+        Assert.Contains("actions.ExecuteResultWorkflowAsync", boundaryCommandWorkflow);
         Assert.Contains("CodingClassifierDisplayPolicy.IsBoundaryClassifierCode", boundaryWorkflow);
         Assert.Contains("CodingDedupPolicy.IsBoundaryEndCodePlausible", boundaryWorkflow);
         Assert.Contains("private bool TryHandleStructuralClassifierResult", structural);

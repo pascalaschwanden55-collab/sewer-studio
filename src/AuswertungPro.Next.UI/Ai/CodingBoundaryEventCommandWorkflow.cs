@@ -31,7 +31,7 @@ public sealed record CodingBoundaryEndCommandRequest(
     byte[]? AnalyzedFrameBytes);
 
 public sealed record CodingBoundaryStartCommandActions(
-    Func<CodingBoundaryStartEventWorkflowRequest, CodingBoundaryEventWorkflowResult> EnsureStart);
+    Func<CodingBoundaryStartEventWorkflowRequest, Task<CodingBoundaryEventWorkflowResult>> EnsureStartAsync);
 
 public sealed record CodingBoundaryEndCommandActions(
     Func<CodingBoundaryEndEventWorkflowRequest, CodingBoundaryEventWorkflowResult> EnsureEnd);
@@ -45,7 +45,7 @@ public sealed record CodingBoundaryEventCommandResult(
 
 public static class CodingBoundaryEventCommandWorkflow
 {
-    public static CodingBoundaryEventCommandResult EnsureStart(
+    public static async Task<CodingBoundaryEventCommandResult> EnsureStartAsync(
         CodingBoundaryStartCommandRequest request,
         CodingBoundaryStartCommandActions actions)
     {
@@ -59,7 +59,7 @@ public static class CodingBoundaryEventCommandWorkflow
             return Result(CodingBoundaryEventCommandOutcome.Skipped, null);
         }
 
-        var workflowResult = actions.EnsureStart(
+        var workflowResult = await actions.EnsureStartAsync(
             new CodingBoundaryStartEventWorkflowRequest(
                 request.CurrentMeter,
                 request.ViewEvents,

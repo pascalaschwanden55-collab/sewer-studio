@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
@@ -7,12 +8,12 @@ namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private bool TryHandleBoundaryClassifierResult(
+    private async Task<bool> TryHandleBoundaryClassifierResultAsync(
         SingleFrameResult mmResult,
         double captureTimestampSec,
         double? frameOsdMeter)
     {
-        var result = CodingBoundaryClassifierCommandWorkflow.Execute(
+        var result = await CodingBoundaryClassifierCommandWorkflow.ExecuteAsync(
             new CodingBoundaryClassifierCommandRequest(
                 Result: mmResult,
                 HasCodingViewModel: _codingSessionHost.HasViewModel,
@@ -27,7 +28,7 @@ public partial class PlayerWindow
             new CodingBoundaryClassifierCommandActions(
                 ResolveMeterForFrame: (timestamp, osdMeter) =>
                     ResolveCodingMeterForFrame(timestamp, osdMeter),
-                ExecuteResultWorkflow: request => CodingBoundaryClassifierResultWorkflow.Execute(
+                ExecuteResultWorkflowAsync: request => CodingBoundaryClassifierResultWorkflow.ExecuteAsync(
                     request,
                     new CodingBoundaryClassifierResultWorkflowActions(
                         LookupVsaLabel,
@@ -42,12 +43,7 @@ public partial class PlayerWindow
                             CodingFindingsList,
                             code,
                             label),
-                        (startMeter, startTime, frameBytes) =>
-                        {
-                            var anyAdded = false;
-                            EnsureRohranfangExists(startMeter, startTime, frameBytes, ref anyAdded);
-                            return anyAdded;
-                        },
+                        EnsureRohranfangExistsAsync,
                         CloseTrackedStreckenschaeden,
                         (meterEnd, endTime, frameBytes) => EnsureRohrendeExists(meterEnd, endTime, frameBytes),
                         () => _codingSessionHost.EventCollection?.Count ?? 0,

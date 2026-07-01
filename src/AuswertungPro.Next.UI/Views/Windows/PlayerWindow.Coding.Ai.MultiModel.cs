@@ -51,7 +51,7 @@ public partial class PlayerWindow
                             classifierInput.CurrentMeter,
                             classifierInput.ReachLength),
                         SetCodingAiState: SetCodingAiState,
-                        TryHandleBoundaryClassifierResult: TryHandleBoundaryClassifierResult,
+                        TryHandleBoundaryClassifierResultAsync: TryHandleBoundaryClassifierResultAsync,
                         TryHandleStructuralClassifierResult: TryHandleStructuralClassifierResult,
                         HandleAnalysisResult: result => CodingMultiModelAnalysisResultWorkflow.Execute(
                             new CodingMultiModelAnalysisResultWorkflowRequest(result, activityText),

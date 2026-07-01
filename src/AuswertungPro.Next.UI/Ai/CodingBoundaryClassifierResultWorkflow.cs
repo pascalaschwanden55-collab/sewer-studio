@@ -27,7 +27,7 @@ public sealed record CodingBoundaryClassifierResultWorkflowActions(
     Action ClearMasks,
     Action<string, string> ShowPossibleBoundary,
     Action<string, string> ShowBoundary,
-    Func<double, TimeSpan, byte[]?, bool> EnsureStartExists,
+    Func<double, TimeSpan, byte[]?, Task<bool>> EnsureStartExistsAsync,
     Action<double> CloseTrackedStretchDamages,
     Action<double, TimeSpan, byte[]?> EnsureEndExists,
     Func<int> GetCurrentEventCount,
@@ -48,7 +48,7 @@ public static class CodingBoundaryClassifierResultWorkflow
         return CodingClassifierDisplayPolicy.IsBoundaryClassifierCode(result.ClassifierCode);
     }
 
-    public static CodingBoundaryClassifierResultWorkflowResult Execute(
+    public static async Task<CodingBoundaryClassifierResultWorkflowResult> ExecuteAsync(
         CodingBoundaryClassifierResultWorkflowRequest request,
         CodingBoundaryClassifierResultWorkflowActions actions)
     {
@@ -87,7 +87,7 @@ public static class CodingBoundaryClassifierResultWorkflow
 
         if (boundaryCode == "BCD")
         {
-            anyAdded = actions.EnsureStartExists(
+            anyAdded = await actions.EnsureStartExistsAsync(
                 request.Meter,
                 request.VideoTime,
                 request.AnalyzedFrameBytes);

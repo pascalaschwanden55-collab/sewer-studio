@@ -58,14 +58,39 @@ public sealed class CodingMultiModelInferenceWorkflowTests
 
         var result = await CodingMultiModelInferenceWorkflow.ExecuteAsync(
             Request(nominalDiameterMm: 600, endMeter: 20),
-            Actions(calls, tryHandleBoundary: (_, _, _) =>
+            Actions(calls, tryHandleBoundaryAsync: (_, _, _) =>
             {
                 calls.Add("boundary");
-                return true;
+                return Task.FromResult(true);
             }));
 
         Assert.Equal(CodingMultiModelInferenceWorkflowOutcome.BoundaryHandled, result.Outcome);
         Assert.Equal(["resolve:12.3:7.8", "analyze:600:4.5:20.0:3", "boundary"], calls);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_awaits_boundary_classifier_before_returning()
+    {
+        var calls = new List<string>();
+        var boundaryCompletion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var pending = CodingMultiModelInferenceWorkflow.ExecuteAsync(
+            Request(nominalDiameterMm: 600, endMeter: 20),
+            Actions(calls, tryHandleBoundaryAsync: (_, _, _) =>
+            {
+                calls.Add("boundary-pending");
+                return boundaryCompletion.Task;
+            }));
+
+        Assert.False(pending.IsCompleted);
+        Assert.Equal(["resolve:12.3:7.8", "analyze:600:4.5:20.0:3", "boundary-pending"], calls);
+
+        boundaryCompletion.SetResult(true);
+        var result = await pending;
+
+        Assert.Equal(CodingMultiModelInferenceWorkflowOutcome.BoundaryHandled, result.Outcome);
+        Assert.Equal(["resolve:12.3:7.8", "analyze:600:4.5:20.0:3", "boundary-pending"], calls);
     }
 
     [Fact]
@@ -102,7 +127,7 @@ public sealed class CodingMultiModelInferenceWorkflowTests
     private static CodingMultiModelInferenceWorkflowActions Actions(
         List<string> calls,
         Func<byte[], CodingMultiModelClassifierInput, CancellationToken, Task<SingleFrameResult>>? analyzeFrameAsync = null,
-        Func<SingleFrameResult, double, double?, bool>? tryHandleBoundary = null,
+        Func<SingleFrameResult, double, double?, Task<bool>>? tryHandleBoundaryAsync = null,
         Func<SingleFrameResult, double, double?, bool>? tryHandleStructural = null)
         => new(
             ResolveCurrentMeter: (timestamp, meter) =>
@@ -117,10 +142,10 @@ public sealed class CodingMultiModelInferenceWorkflowTests
                 return Task.FromResult(SingleFrameResult.Empty());
             }),
             SetCodingAiState: (status, _, detail, pulse) => calls.Add($"state:{status}|{detail}|pulse:{pulse}"),
-            TryHandleBoundaryClassifierResult: tryHandleBoundary ?? ((_, timestamp, meter) =>
+            TryHandleBoundaryClassifierResultAsync: tryHandleBoundaryAsync ?? ((_, timestamp, meter) =>
             {
                 calls.Add($"boundary:{timestamp:F1}:{meter:F1}");
-                return false;
+                return Task.FromResult(false);
             }),
             TryHandleStructuralClassifierResult: tryHandleStructural ?? ((_, timestamp, meter) =>
             {

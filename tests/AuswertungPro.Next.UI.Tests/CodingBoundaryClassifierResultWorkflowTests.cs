@@ -18,9 +18,9 @@ public sealed class CodingBoundaryClassifierResultWorkflowTests
     }
 
     [Fact]
-    public void Execute_ignores_non_boundary_classifier_result()
+    public async Task ExecuteAsync_ignores_non_boundary_classifier_result()
     {
-        var result = CodingBoundaryClassifierResultWorkflow.Execute(
+        var result = await CodingBoundaryClassifierResultWorkflow.ExecuteAsync(
             new CodingBoundaryClassifierResultWorkflowRequest(
                 Result("BCA"),
                 Meter: 4.2,
@@ -35,11 +35,11 @@ public sealed class CodingBoundaryClassifierResultWorkflowTests
     }
 
     [Fact]
-    public void Execute_marks_early_bce_as_possible_boundary_without_adding_event()
+    public async Task ExecuteAsync_marks_early_bce_as_possible_boundary_without_adding_event()
     {
         var calls = new List<string>();
 
-        var result = CodingBoundaryClassifierResultWorkflow.Execute(
+        var result = await CodingBoundaryClassifierResultWorkflow.ExecuteAsync(
             new CodingBoundaryClassifierResultWorkflowRequest(
                 Result("BCE", confidence: 0.61),
                 Meter: 28.68,
@@ -62,7 +62,7 @@ public sealed class CodingBoundaryClassifierResultWorkflowTests
                 clearDetectionOverlays: () => calls.Add("clear-overlays"),
                 clearMasks: () => calls.Add("clear-masks"),
                 showPossibleBoundary: (code, label) => calls.Add($"possible:{code}:{label}"),
-                ensureStartExists: (_, _, _) => throw new InvalidOperationException("Rohranfang darf nicht angelegt werden."),
+                ensureStartExistsAsync: (_, _, _) => throw new InvalidOperationException("Rohranfang darf nicht angelegt werden."),
                 closeTrackedStretchDamages: _ => throw new InvalidOperationException("Streckenschaeden duerfen nicht geschlossen werden."),
                 ensureEndExists: (_, _, _) => throw new InvalidOperationException("Rohrende darf noch nicht angelegt werden."),
                 setAiState: (status, color, detail) =>
@@ -86,12 +86,12 @@ public sealed class CodingBoundaryClassifierResultWorkflowTests
     }
 
     [Fact]
-    public void Execute_handles_bcd_by_ensuring_start_and_reporting_added_status()
+    public async Task ExecuteAsync_handles_bcd_by_ensuring_start_and_reporting_added_status()
     {
         var calls = new List<string>();
         var frameBytes = new byte[] { 7, 8, 9 };
 
-        var result = CodingBoundaryClassifierResultWorkflow.Execute(
+        var result = await CodingBoundaryClassifierResultWorkflow.ExecuteAsync(
             new CodingBoundaryClassifierResultWorkflowRequest(
                 Result("BCD", confidence: 0.72),
                 Meter: 0.3,
@@ -105,11 +105,11 @@ public sealed class CodingBoundaryClassifierResultWorkflowTests
                     calls.Add($"lookup:{code}");
                     return "Rohranfang";
                 },
-                ensureStartExists: (meter, videoTime, analyzedFrameBytes) =>
+                ensureStartExistsAsync: (meter, videoTime, analyzedFrameBytes) =>
                 {
                     calls.Add($"ensure-start:{meter:F1}:{videoTime.TotalSeconds:F0}");
                     Assert.Same(frameBytes, analyzedFrameBytes);
-                    return true;
+                    return Task.FromResult(true);
                 },
                 getCurrentEventCount: () => 2,
                 setAiState: (status, color, detail) =>
@@ -132,12 +132,12 @@ public sealed class CodingBoundaryClassifierResultWorkflowTests
     }
 
     [Fact]
-    public void Execute_handles_plausible_bce_by_closing_open_stretches_and_ensuring_end()
+    public async Task ExecuteAsync_handles_plausible_bce_by_closing_open_stretches_and_ensuring_end()
     {
         var calls = new List<string>();
         var frameBytes = new byte[] { 10, 11, 12 };
 
-        var result = CodingBoundaryClassifierResultWorkflow.Execute(
+        var result = await CodingBoundaryClassifierResultWorkflow.ExecuteAsync(
             new CodingBoundaryClassifierResultWorkflowRequest(
                 Result("BCE", confidence: 0.84),
                 Meter: 44.0,
@@ -190,7 +190,7 @@ public sealed class CodingBoundaryClassifierResultWorkflowTests
             clearMasks: () => throw new InvalidOperationException("Clear masks should not run."),
             showPossibleBoundary: (_, _) => throw new InvalidOperationException("Show possible boundary should not run."),
             showBoundary: (_, _) => throw new InvalidOperationException("Show boundary should not run."),
-            ensureStartExists: (_, _, _) => throw new InvalidOperationException("Ensure start should not run."),
+            ensureStartExistsAsync: (_, _, _) => throw new InvalidOperationException("Ensure start should not run."),
             closeTrackedStretchDamages: _ => throw new InvalidOperationException("Close stretches should not run."),
             ensureEndExists: (_, _, _) => throw new InvalidOperationException("Ensure end should not run."),
             getCurrentEventCount: () => throw new InvalidOperationException("Event count should not be read."),
@@ -203,7 +203,7 @@ public sealed class CodingBoundaryClassifierResultWorkflowTests
         Action? clearMasks = null,
         Action<string, string>? showPossibleBoundary = null,
         Action<string, string>? showBoundary = null,
-        Func<double, TimeSpan, byte[]?, bool>? ensureStartExists = null,
+        Func<double, TimeSpan, byte[]?, Task<bool>>? ensureStartExistsAsync = null,
         Action<double>? closeTrackedStretchDamages = null,
         Action<double, TimeSpan, byte[]?>? ensureEndExists = null,
         Func<int>? getCurrentEventCount = null,
@@ -215,7 +215,7 @@ public sealed class CodingBoundaryClassifierResultWorkflowTests
             ClearMasks: clearMasks ?? (() => { }),
             ShowPossibleBoundary: showPossibleBoundary ?? ((_, _) => { }),
             ShowBoundary: showBoundary ?? ((_, _) => { }),
-            EnsureStartExists: ensureStartExists ?? ((_, _, _) => false),
+            EnsureStartExistsAsync: ensureStartExistsAsync ?? ((_, _, _) => Task.FromResult(false)),
             CloseTrackedStretchDamages: closeTrackedStretchDamages ?? (_ => { }),
             EnsureEndExists: ensureEndExists ?? ((_, _, _) => { }),
             GetCurrentEventCount: getCurrentEventCount ?? (() => 0),

@@ -246,12 +246,12 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_boundary_classifier_passes_current_analyzed_frame_to_boundary_events()
     {
         var coding = ReadCodingPartials();
-        var boundaryBody = ExtractMethodBody(coding, "private bool TryHandleBoundaryClassifierResult");
+        var boundaryBody = ExtractMethodBody(coding, "private async Task<bool> TryHandleBoundaryClassifierResultAsync");
         var boundaryCommandWorkflow = ReadUiFile("Ai", "CodingBoundaryClassifierCommandWorkflow.cs");
 
         Assert.Contains("_liveDetectionController.PendingConfirmationFrameBytes", boundaryBody);
         Assert.Contains("request.AnalyzedFrameBytes", boundaryCommandWorkflow);
-        Assert.Contains("EnsureRohranfangExists(startMeter, startTime, frameBytes, ref anyAdded)", boundaryBody);
+        Assert.Contains("EnsureRohranfangExistsAsync", boundaryBody);
         Assert.Contains("EnsureRohrendeExists(meterEnd, endTime, frameBytes)", boundaryBody);
     }
 
@@ -339,7 +339,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var multiModelCommandWorkflow = ReadUiFile("Ai", "CodingMultiModelFindingEventCommandWorkflow.cs");
         var qwenBody = ExtractMethodBody(coding, "private void AddAiFindingsAsEvents");
         var qwenCommandWorkflow = ReadUiFile("Ai", "CodingLiveFindingEventCommandWorkflow.cs");
-        var boundaryBody = ExtractMethodBody(coding, "private bool TryHandleBoundaryClassifierResult");
+        var boundaryBody = ExtractMethodBody(coding, "private async Task<bool> TryHandleBoundaryClassifierResultAsync");
         var boundaryCommandWorkflow = ReadUiFile("Ai", "CodingBoundaryClassifierCommandWorkflow.cs");
 
         Assert.Contains("CodingAnalysisPreflightWorkflow.Execute", runBody);
@@ -395,9 +395,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var workflow = ReadUiFile("Ai", "CodingBoundaryEventWorkflow.cs");
-        var bcdBody = ExtractMethodBody(coding, "private void EnsureRohranfangExists");
+        var bcdBody = ExtractMethodBody(coding, "private async Task<bool> EnsureRohranfangExistsAsync");
         var bceBody = ExtractMethodBody(coding, "private void EnsureRohrendeExists");
-        var workflowStartBody = ExtractMethodBody(workflow, "public static CodingBoundaryEventWorkflowResult EnsureStart");
+        var workflowStartBody = ExtractMethodBody(workflow, "public static async Task<CodingBoundaryEventWorkflowResult> EnsureStartAsync");
         var workflowEndBody = ExtractMethodBody(workflow, "public static CodingBoundaryEventWorkflowResult EnsureEnd");
 
         Assert.Contains("CodingBoundaryEventWorkflow.EnsureStart", bcdBody);

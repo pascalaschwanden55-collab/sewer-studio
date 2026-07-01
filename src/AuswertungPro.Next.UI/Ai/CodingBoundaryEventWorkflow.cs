@@ -32,7 +32,7 @@ public sealed record CodingBoundaryEndEventWorkflowRequest(
 public sealed record CodingBoundaryEventWorkflowActions(
     Func<string, string?> LookupLabel,
     Action<string> Trace,
-    Func<double?, byte[]?> TryExtractFrameAtSeconds,
+    Func<double?, Task<byte[]?>> TryExtractFrameAtSecondsAsync,
     Action<ProtocolEntry, byte[]?> AttachBoundaryAnalyzedFramePhoto,
     Action StartAutoCalibration,
     Action RefreshEvents);
@@ -45,7 +45,7 @@ public sealed record CodingBoundaryEventWorkflowResult(
 
 public static class CodingBoundaryEventWorkflow
 {
-    public static CodingBoundaryEventWorkflowResult EnsureStart(
+    public static async Task<CodingBoundaryEventWorkflowResult> EnsureStartAsync(
         CodingBoundaryStartEventWorkflowRequest request,
         CodingBoundaryEventWorkflowActions actions)
     {
@@ -77,7 +77,7 @@ public static class CodingBoundaryEventWorkflow
             startReference.Meter,
             startReference.VideoTime);
 
-        var frameBytes = actions.TryExtractFrameAtSeconds(request.FirstCleanFrameSeconds)
+        var frameBytes = await actions.TryExtractFrameAtSecondsAsync(request.FirstCleanFrameSeconds)
                          ?? request.AnalyzedFrameBytes;
         actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, frameBytes);
 

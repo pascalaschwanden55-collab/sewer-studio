@@ -6,9 +6,9 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingBoundaryClassifierCommandWorkflowTests
 {
     [Fact]
-    public void Execute_skips_non_boundary_without_resolving_meter()
+    public async Task ExecuteAsync_skips_non_boundary_without_resolving_meter()
     {
-        var result = CodingBoundaryClassifierCommandWorkflow.Execute(
+        var result = await CodingBoundaryClassifierCommandWorkflow.ExecuteAsync(
             Request(result: Result("BCA")),
             NoActions());
 
@@ -18,9 +18,9 @@ public sealed class CodingBoundaryClassifierCommandWorkflowTests
     }
 
     [Fact]
-    public void Execute_skips_without_ready_coding_session()
+    public async Task ExecuteAsync_skips_without_ready_coding_session()
     {
-        var result = CodingBoundaryClassifierCommandWorkflow.Execute(
+        var result = await CodingBoundaryClassifierCommandWorkflow.ExecuteAsync(
             Request(hasCodingViewModel: false, hasCodingSessionService: true),
             NoActions());
 
@@ -28,7 +28,7 @@ public sealed class CodingBoundaryClassifierCommandWorkflowTests
         Assert.Null(result.Result);
         Assert.False(result.Handled);
 
-        result = CodingBoundaryClassifierCommandWorkflow.Execute(
+        result = await CodingBoundaryClassifierCommandWorkflow.ExecuteAsync(
             Request(hasCodingViewModel: true, hasCodingSessionService: false),
             NoActions());
 
@@ -38,7 +38,7 @@ public sealed class CodingBoundaryClassifierCommandWorkflowTests
     }
 
     [Fact]
-    public void Execute_resolves_meter_and_delegates_with_current_video_time()
+    public async Task ExecuteAsync_resolves_meter_and_delegates_with_current_video_time()
     {
         var calls = new List<string>();
         var mmResult = Result("BCD");
@@ -47,7 +47,7 @@ public sealed class CodingBoundaryClassifierCommandWorkflowTests
         var workflowResult = new CodingBoundaryClassifierResultWorkflowResult(
             CodingBoundaryClassifierResultWorkflowOutcome.BoundaryHandled);
 
-        var result = CodingBoundaryClassifierCommandWorkflow.Execute(
+        var result = await CodingBoundaryClassifierCommandWorkflow.ExecuteAsync(
             new CodingBoundaryClassifierCommandRequest(
                 Result: mmResult,
                 HasCodingViewModel: true,
@@ -67,11 +67,11 @@ public sealed class CodingBoundaryClassifierCommandWorkflowTests
                     Assert.Equal(7.25, osdMeter);
                     return 12.3;
                 },
-                ExecuteResultWorkflow: request =>
+                ExecuteResultWorkflowAsync: request =>
                 {
                     calls.Add("execute");
                     delegated = request;
-                    return workflowResult;
+                    return Task.FromResult(workflowResult);
                 }));
 
         Assert.Equal(CodingBoundaryClassifierCommandOutcome.Executed, result.Outcome);
@@ -90,9 +90,9 @@ public sealed class CodingBoundaryClassifierCommandWorkflowTests
     }
 
     [Fact]
-    public void Execute_uses_capture_timestamp_when_current_video_time_is_missing()
+    public async Task ExecuteAsync_uses_capture_timestamp_when_current_video_time_is_missing()
     {
-        var result = CodingBoundaryClassifierCommandWorkflow.Execute(
+        var result = await CodingBoundaryClassifierCommandWorkflow.ExecuteAsync(
             new CodingBoundaryClassifierCommandRequest(
                 Result: Result("BCE"),
                 HasCodingViewModel: true,
@@ -106,8 +106,9 @@ public sealed class CodingBoundaryClassifierCommandWorkflowTests
                 AnalyzedFrameBytes: null),
             new CodingBoundaryClassifierCommandActions(
                 ResolveMeterForFrame: (_, _) => 3.5,
-                ExecuteResultWorkflow: _ => new CodingBoundaryClassifierResultWorkflowResult(
-                    CodingBoundaryClassifierResultWorkflowOutcome.NotHandled)));
+                ExecuteResultWorkflowAsync: _ => Task.FromResult(
+                    new CodingBoundaryClassifierResultWorkflowResult(
+                        CodingBoundaryClassifierResultWorkflowOutcome.NotHandled))));
 
         Assert.Equal(CodingBoundaryClassifierCommandOutcome.Executed, result.Outcome);
         Assert.False(result.Handled);
@@ -137,7 +138,7 @@ public sealed class CodingBoundaryClassifierCommandWorkflowTests
     private static CodingBoundaryClassifierCommandActions NoActions()
         => new(
             ResolveMeterForFrame: (_, _) => throw new InvalidOperationException("Meter should not be resolved."),
-            ExecuteResultWorkflow: _ => throw new InvalidOperationException("Workflow should not run."));
+            ExecuteResultWorkflowAsync: _ => throw new InvalidOperationException("Workflow should not run."));
 
     private static SingleFrameResult Result(string? code)
         => new(

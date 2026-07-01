@@ -26,7 +26,7 @@ public sealed record CodingMultiModelInferenceWorkflowActions(
     Func<double?, double?, double> ResolveCurrentMeter,
     Func<byte[], CodingMultiModelClassifierInput, CancellationToken, Task<SingleFrameResult>> AnalyzeFrameAsync,
     Action<string, Color, string?, bool> SetCodingAiState,
-    Func<SingleFrameResult, double, double?, bool> TryHandleBoundaryClassifierResult,
+    Func<SingleFrameResult, double, double?, Task<bool>> TryHandleBoundaryClassifierResultAsync,
     Func<SingleFrameResult, double, double?, bool> TryHandleStructuralClassifierResult,
     Action<SingleFrameResult> HandleAnalysisResult);
 
@@ -67,7 +67,7 @@ public static class CodingMultiModelInferenceWorkflow
                 CodingMultiModelInferenceWorkflowOutcome.Error);
         }
 
-        if (actions.TryHandleBoundaryClassifierResult(
+        if (await actions.TryHandleBoundaryClassifierResultAsync(
                 result,
                 request.CaptureTimestampSeconds,
                 request.FrameOsdMeter))

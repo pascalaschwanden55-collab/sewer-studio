@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Helpers;
 using AuswertungPro.Next.UI.Player;
@@ -11,9 +12,12 @@ public partial class PlayerWindow
     /// Stellt sicher, dass BCD (Rohranfang) als erster Eintrag existiert.
     /// Meter und Timestamp werden automatisch aus OSD / Video entnommen.
     /// </summary>
-    private void EnsureRohranfangExists(double currentMeter, TimeSpan currentVideoTime, byte[]? analyzedFrameBytes, ref bool anyAdded)
+    private async Task<bool> EnsureRohranfangExistsAsync(
+        double currentMeter,
+        TimeSpan currentVideoTime,
+        byte[]? analyzedFrameBytes)
     {
-        var result = CodingBoundaryEventCommandWorkflow.EnsureStart(
+        var result = await CodingBoundaryEventCommandWorkflow.EnsureStartAsync(
             new CodingBoundaryStartCommandRequest(
                 CurrentMeter: currentMeter,
                 HasCodingViewModel: _codingSessionHost.HasViewModel,
@@ -24,10 +28,10 @@ public partial class PlayerWindow
                 FirstCleanFrameSeconds: _codingFrameReadinessController.FirstCleanFrameSeconds,
                 AnalyzedFrameBytes: analyzedFrameBytes),
             new CodingBoundaryStartCommandActions(
-                request => CodingBoundaryEventWorkflow.EnsureStart(
+                request => CodingBoundaryEventWorkflow.EnsureStartAsync(
                     request,
                     BoundaryEventWorkflowActions())));
-        anyAdded = result.Added;
+        return result.Added;
     }
 
     /// <summary>
@@ -58,7 +62,7 @@ public partial class PlayerWindow
         => new(
             VsaCodeResolver.LookupLabel,
             message => PlayerTrace.WriteLine(message),
-            TryExtractFrameAtSeconds,
+            TryExtractFrameAtSecondsAsync,
             (entry, frameBytes) => AttachBoundaryAnalyzedFramePhoto(entry, frameBytes),
             () => TryAutoCalibrationFromCurrentFrame().SafeFireAndForget("TryAutoCalibration"),
             RefreshCodingEventsList);

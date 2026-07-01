@@ -8,12 +8,12 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingBoundaryEventWorkflowTests
 {
     [Fact]
-    public void EnsureStart_skips_existing_bcd_without_adding_event()
+    public async Task EnsureStart_skips_existing_bcd_without_adding_event()
     {
         var calls = new List<string>();
         var service = new RecordingCodingSessionService();
 
-        var result = CodingBoundaryEventWorkflow.EnsureStart(
+        var result = await CodingBoundaryEventWorkflow.EnsureStartAsync(
             new CodingBoundaryStartEventWorkflowRequest(
                 CurrentMeter: 0.3,
                 ViewEvents: [Event("BCD")],
@@ -29,7 +29,7 @@ public sealed class CodingBoundaryEventWorkflowTests
                     Assert.Contains("bereits vorhanden", message);
                 },
                 lookupLabel: _ => throw new InvalidOperationException("Label lookup should not run."),
-                tryExtractFrameAtSeconds: _ => throw new InvalidOperationException("Frame extraction should not run."),
+                tryExtractFrameAtSecondsAsync: _ => throw new InvalidOperationException("Frame extraction should not run."),
                 attachBoundaryAnalyzedFramePhoto: (_, _) => throw new InvalidOperationException("Attach should not run."),
                 startAutoCalibration: () => throw new InvalidOperationException("Auto calibration should not run.")));
 
@@ -40,7 +40,7 @@ public sealed class CodingBoundaryEventWorkflowTests
     }
 
     [Fact]
-    public void EnsureStart_adds_bcd_from_import_reference_and_prefers_clean_frame()
+    public async Task EnsureStart_adds_bcd_from_import_reference_and_prefers_clean_frame()
     {
         var calls = new List<string>();
         var service = new RecordingCodingSessionService();
@@ -48,7 +48,7 @@ public sealed class CodingBoundaryEventWorkflowTests
         var cleanFrame = new byte[] { 9, 8, 7 };
         ProtocolEntry? attachedEntry = null;
 
-        var result = CodingBoundaryEventWorkflow.EnsureStart(
+        var result = await CodingBoundaryEventWorkflow.EnsureStartAsync(
             new CodingBoundaryStartEventWorkflowRequest(
                 CurrentMeter: 0.3,
                 ViewEvents: [],
@@ -68,10 +68,10 @@ public sealed class CodingBoundaryEventWorkflowTests
                     calls.Add($"lookup:{code}");
                     return "Rohranfang";
                 },
-                tryExtractFrameAtSeconds: seconds =>
+                tryExtractFrameAtSecondsAsync: seconds =>
                 {
                     calls.Add($"extract:{seconds:F1}");
-                    return cleanFrame;
+                    return Task.FromResult<byte[]?>(cleanFrame);
                 },
                 attachBoundaryAnalyzedFramePhoto: (entry, frameBytes) =>
                 {
@@ -92,6 +92,57 @@ public sealed class CodingBoundaryEventWorkflowTests
         Assert.Equal("Rohranfang", added.Entry.Beschreibung);
         Assert.Equal(0.12, added.MeterAtCapture);
         Assert.Equal(TimeSpan.FromSeconds(5), added.VideoTimestamp);
+    }
+
+    [Fact]
+    public async Task EnsureStartAsync_awaits_clean_frame_extraction_before_attaching_photo()
+    {
+        var calls = new List<string>();
+        var service = new RecordingCodingSessionService();
+        var cleanFrame = new byte[] { 9, 8, 7 };
+        var frameCompletion = new TaskCompletionSource<byte[]?>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var attached = false;
+
+        var pending = CodingBoundaryEventWorkflow.EnsureStartAsync(
+            new CodingBoundaryStartEventWorkflowRequest(
+                CurrentMeter: 0.3,
+                ViewEvents: [],
+                SessionEvents: [],
+                ImportEvents: [Event("BCD", 0.12, 5)],
+                CodingSessionService: service,
+                FirstCleanFrameSeconds: 6.5,
+                AnalyzedFrameBytes: [1, 2, 3]),
+            Actions(
+                trace: _ => calls.Add("trace"),
+                lookupLabel: code =>
+                {
+                    calls.Add($"lookup:{code}");
+                    return "Rohranfang";
+                },
+                tryExtractFrameAtSecondsAsync: seconds =>
+                {
+                    calls.Add($"extract:{seconds:F1}");
+                    return frameCompletion.Task;
+                },
+                attachBoundaryAnalyzedFramePhoto: (_, frameBytes) =>
+                {
+                    calls.Add("attach");
+                    attached = true;
+                    Assert.Same(cleanFrame, frameBytes);
+                },
+                startAutoCalibration: () => calls.Add("auto-calibration")));
+
+        Assert.False(pending.IsCompleted);
+        Assert.False(attached);
+        Assert.Equal(["trace", "lookup:BCD", "extract:6.5"], calls);
+
+        frameCompletion.SetResult(cleanFrame);
+        var result = await pending;
+
+        Assert.Equal(["trace", "lookup:BCD", "extract:6.5", "attach", "auto-calibration"], calls);
+        Assert.Equal(CodingBoundaryEventWorkflowOutcome.Added, result.Outcome);
+        Assert.True(result.Added);
     }
 
     [Fact]
@@ -165,14 +216,14 @@ public sealed class CodingBoundaryEventWorkflowTests
     private static CodingBoundaryEventWorkflowActions Actions(
         Func<string, string?>? lookupLabel = null,
         Action<string>? trace = null,
-        Func<double?, byte[]?>? tryExtractFrameAtSeconds = null,
+        Func<double?, Task<byte[]?>>? tryExtractFrameAtSecondsAsync = null,
         Action<ProtocolEntry, byte[]?>? attachBoundaryAnalyzedFramePhoto = null,
         Action? startAutoCalibration = null,
         Action? refreshEvents = null)
         => new(
             LookupLabel: lookupLabel ?? (_ => null),
             Trace: trace ?? (_ => { }),
-            TryExtractFrameAtSeconds: tryExtractFrameAtSeconds ?? (_ => null),
+            TryExtractFrameAtSecondsAsync: tryExtractFrameAtSecondsAsync ?? (_ => Task.FromResult<byte[]?>(null)),
             AttachBoundaryAnalyzedFramePhoto: attachBoundaryAnalyzedFramePhoto ?? ((_, _) => { }),
             StartAutoCalibration: startAutoCalibration ?? (() => { }),
             RefreshEvents: refreshEvents ?? (() => { }));

@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
@@ -24,6 +25,11 @@ public partial class PlayerWindow
     private byte[]? TryExtractFrameAtSeconds(double? sec)
     {
         return CodingFrameExtractionService.TryExtractFrameAtSeconds(_playbackContext.VideoPath, sec);
+    }
+
+    private Task<byte[]?> TryExtractFrameAtSecondsAsync(double? sec)
+    {
+        return CodingFrameExtractionService.TryExtractFrameAtSecondsAsync(_playbackContext.VideoPath, sec);
     }
 
     private TimeSpan? GetCurrentPlayerTimestamp()

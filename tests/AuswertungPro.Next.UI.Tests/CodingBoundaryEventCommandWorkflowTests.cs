@@ -8,23 +8,23 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class CodingBoundaryEventCommandWorkflowTests
 {
     [Fact]
-    public void EnsureStart_skips_when_coding_session_is_not_ready()
+    public async Task EnsureStart_skips_when_coding_session_is_not_ready()
     {
-        var result = CodingBoundaryEventCommandWorkflow.EnsureStart(
+        var result = await CodingBoundaryEventCommandWorkflow.EnsureStartAsync(
             StartRequest(hasCodingViewModel: false, codingSessionService: new RecordingCodingSessionService()),
             NoStartActions());
 
         Assert.Equal(CodingBoundaryEventCommandOutcome.Skipped, result.Outcome);
         Assert.False(result.Added);
 
-        result = CodingBoundaryEventCommandWorkflow.EnsureStart(
+        result = await CodingBoundaryEventCommandWorkflow.EnsureStartAsync(
             StartRequest(hasCodingViewModel: true, useNullCodingSessionService: true),
             NoStartActions());
 
         Assert.Equal(CodingBoundaryEventCommandOutcome.Skipped, result.Outcome);
         Assert.False(result.Added);
 
-        result = CodingBoundaryEventCommandWorkflow.EnsureStart(
+        result = await CodingBoundaryEventCommandWorkflow.EnsureStartAsync(
             StartRequest(hasCodingViewModel: true, useNullViewEvents: true, codingSessionService: new RecordingCodingSessionService()),
             NoStartActions());
 
@@ -33,7 +33,7 @@ public sealed class CodingBoundaryEventCommandWorkflowTests
     }
 
     [Fact]
-    public void EnsureStart_builds_workflow_request_and_returns_added_state()
+    public async Task EnsureStart_builds_workflow_request_and_returns_added_state()
     {
         var service = new RecordingCodingSessionService();
         var viewEvents = new[] { Event("BAA") };
@@ -42,7 +42,7 @@ public sealed class CodingBoundaryEventCommandWorkflowTests
         var frameBytes = new byte[] { 1, 2, 3 };
         CodingBoundaryStartEventWorkflowRequest? delegated = null;
 
-        var result = CodingBoundaryEventCommandWorkflow.EnsureStart(
+        var result = await CodingBoundaryEventCommandWorkflow.EnsureStartAsync(
             StartRequest(
                 viewEvents: viewEvents,
                 sessionEvents: sessionEvents,
@@ -54,7 +54,8 @@ public sealed class CodingBoundaryEventCommandWorkflowTests
                 request =>
                 {
                     delegated = request;
-                    return new CodingBoundaryEventWorkflowResult(CodingBoundaryEventWorkflowOutcome.Added);
+                    return Task.FromResult(
+                        new CodingBoundaryEventWorkflowResult(CodingBoundaryEventWorkflowOutcome.Added));
                 }));
 
         Assert.Equal(CodingBoundaryEventCommandOutcome.Executed, result.Outcome);

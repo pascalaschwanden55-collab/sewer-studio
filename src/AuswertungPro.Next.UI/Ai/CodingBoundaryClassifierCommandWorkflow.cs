@@ -22,7 +22,7 @@ public sealed record CodingBoundaryClassifierCommandRequest(
 
 public sealed record CodingBoundaryClassifierCommandActions(
     Func<double?, double?, double> ResolveMeterForFrame,
-    Func<CodingBoundaryClassifierResultWorkflowRequest, CodingBoundaryClassifierResultWorkflowResult> ExecuteResultWorkflow);
+    Func<CodingBoundaryClassifierResultWorkflowRequest, Task<CodingBoundaryClassifierResultWorkflowResult>> ExecuteResultWorkflowAsync);
 
 public sealed record CodingBoundaryClassifierCommandResult(
     CodingBoundaryClassifierCommandOutcome Outcome,
@@ -35,7 +35,7 @@ public sealed record CodingBoundaryClassifierCommandResult(
 
 public static class CodingBoundaryClassifierCommandWorkflow
 {
-    public static CodingBoundaryClassifierCommandResult Execute(
+    public static async Task<CodingBoundaryClassifierCommandResult> ExecuteAsync(
         CodingBoundaryClassifierCommandRequest request,
         CodingBoundaryClassifierCommandActions actions)
     {
@@ -54,7 +54,7 @@ public static class CodingBoundaryClassifierCommandWorkflow
             request.CaptureTimestampSeconds,
             request.FrameOsdMeter);
         var videoTime = request.CurrentVideoTime ?? request.FallbackVideoTime;
-        var result = actions.ExecuteResultWorkflow(
+        var result = await actions.ExecuteResultWorkflowAsync(
             new CodingBoundaryClassifierResultWorkflowRequest(
                 request.Result,
                 meter,
