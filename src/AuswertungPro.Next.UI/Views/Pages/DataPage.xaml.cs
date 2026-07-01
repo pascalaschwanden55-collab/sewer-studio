@@ -354,7 +354,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             fieldName,
             vm.IsProjectReady,
             record,
-            ResolveComboBoxValue(combo),
+            DataGridEditedTextValueResolver.ResolveComboBoxValue(combo),
             vm.EnsureOptionForField,
             vm.ScheduleAutoSave);
     }
@@ -760,7 +760,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             fieldName == "Pruefungsresultat" || fieldName == "Referenzpruefung")
         {
             handled = true;
-            var value = GetEditedTextValue(e.EditingElement);
+            var value = DataGridEditedTextValueResolver.Resolve(e.EditingElement);
             if (!string.IsNullOrWhiteSpace(value) && e.Row?.Item is HaltungRecord editedRecord)
                 editedRecord.SetFieldValue(fieldName, value ?? string.Empty, FieldSource.Manual, userEdited: true);
             vm.EnsureOptionForField(fieldName, value);
@@ -769,7 +769,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         if (fieldName == "Zustandsklasse" && e.Row?.Item is HaltungRecord record)
         {
             handled = true;
-            var value = GetEditedTextValue(e.EditingElement) ?? record.GetFieldValue(fieldName);
+            var value = DataGridEditedTextValueResolver.Resolve(e.EditingElement) ?? record.GetFieldValue(fieldName);
             record.SetFieldValue(fieldName, value, FieldSource.Manual, userEdited: true);
         }
 
@@ -777,7 +777,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         {
             handled = true;
             var oldValue = hRecord.GetFieldValue("Haltungsname");
-            var newValue = GetEditedTextValue(e.EditingElement) ?? oldValue;
+            var newValue = DataGridEditedTextValueResolver.Resolve(e.EditingElement) ?? oldValue;
             if (!string.Equals(oldValue, newValue, StringComparison.OrdinalIgnoreCase))
             {
                 var sp = Services;
@@ -826,7 +826,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
         // (HaltungRecord.SetFieldValue/MergeEngine schuetzen nur Felder mit UserEdited==true).
         if (!handled && e.Row?.Item is HaltungRecord genericRecord)
         {
-            var value = GetEditedTextValue(e.EditingElement);
+            var value = DataGridEditedTextValueResolver.Resolve(e.EditingElement);
             if (value is not null)
                 genericRecord.SetFieldValue(fieldName, value, FieldSource.Manual, userEdited: true);
         }
@@ -1237,23 +1237,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
             command,
             Dialogs.Info,
             missingSelectionTitle: "Position");
-
-    private static string? GetEditedTextValue(FrameworkElement? element)
-    {
-        if (element is ComboBox combo)
-            return ResolveComboBoxValue(combo);
-        if (element is TextBox textBox)
-            return textBox.Text;
-        return null;
-    }
-
-    private static string ResolveComboBoxValue(ComboBox combo)
-    {
-        if (combo.SelectedItem is string selected && !string.IsNullOrWhiteSpace(selected))
-            return selected;
-
-        return combo.Text ?? string.Empty;
-    }
 
     private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
     {

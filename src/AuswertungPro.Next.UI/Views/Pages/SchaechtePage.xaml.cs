@@ -423,7 +423,7 @@ public partial class SchaechtePage : UserControl
         if (record is null)
             return;
 
-        var value = ResolveComboBoxValue(combo);
+        var value = DataGridEditedTextValueResolver.ResolveComboBoxValue(combo);
         if (string.IsNullOrWhiteSpace(value))
             return;
 
@@ -443,14 +443,6 @@ public partial class SchaechtePage : UserControl
             return fromRow;
 
         return Grid.CurrentItem as SchachtRecord;
-    }
-
-    private static string ResolveComboBoxValue(ComboBox combo)
-    {
-        if (combo.SelectedItem is string selected && !string.IsNullOrWhiteSpace(selected))
-            return selected;
-
-        return combo.Text ?? string.Empty;
     }
 
     private static bool TryResolveDropdownColumnSpec(string columnName, out GridDropdownFieldSpec spec)
@@ -552,7 +544,7 @@ public partial class SchaechtePage : UserControl
             return;
         }
 
-        if (!TryGetEditedTextValue(e.EditingElement, out var value))
+        if (!DataGridEditedTextValueResolver.TryResolve(e.EditingElement, out var value))
             return;
 
         string? oldShaftNumber = null;
@@ -906,24 +898,6 @@ public partial class SchaechtePage : UserControl
         }
 
         return null;
-    }
-
-    private static bool TryGetEditedTextValue(FrameworkElement? element, out string value)
-    {
-        if (element is ComboBox combo)
-        {
-            value = ResolveComboBoxValue(combo);
-            return true;
-        }
-
-        if (element is TextBox textBox)
-        {
-            value = textBox.Text ?? string.Empty;
-            return true;
-        }
-
-        value = string.Empty;
-        return false;
     }
 
     private void Grid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
