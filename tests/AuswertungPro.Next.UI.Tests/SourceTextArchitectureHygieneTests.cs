@@ -216,7 +216,8 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_playback_start_uses_control_host",
             "Playback_position_fallback_uses_timeline_host",
             "PlayerWindow_snapshot_pause_uses_playback_control_host",
-            "PlayerWindow_playback_snapshot_lives_in_snapshot_partial"
+            "PlayerWindow_playback_snapshot_lives_in_snapshot_partial",
+            "PlayerWindow_marquee_overlay_settings_live_in_policy"
         };
 
         foreach (var methodName in methodNames)
