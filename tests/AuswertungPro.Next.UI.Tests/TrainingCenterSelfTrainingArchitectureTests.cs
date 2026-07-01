@@ -285,7 +285,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_self_training_final_state_an_controller()
+    public void TrainingCenterViewModel_setzt_trivialen_self_training_final_state_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -296,10 +296,10 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "TrainingCenterViewModel.cs"));
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingRunFinalizerController.Apply(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("IsBusy = false;", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("IsSelfTrainingRunning = false;", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_selfTrainingOrchestrator = null;", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("selfTrainingUi.SetBusy(false);", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("selfTrainingUi.SetSelfTrainingRunning(false);", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingOrchestrator = null;", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingRunFinalizerController.Apply(", selfTrainingSource, StringComparison.Ordinal);
     }
 
     [Fact]
