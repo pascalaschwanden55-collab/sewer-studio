@@ -156,6 +156,21 @@ public sealed class WinCanFindingFactoryTests
     }
 
     [Fact]
+    public void BuildFindings_UebertraegtMpegTimecodeAufsFinding()
+    {
+        // Timecode (OBS_TimeCtr -> entry.Mpeg) muss aufs Finding wandern, damit die
+        // MPEG-Spalte des Haltungsprotokolls gefuellt wird.
+        var entries = new List<ProtocolEntry>
+        {
+            new() { Code = "BAB", MeterStart = 5.0, Mpeg = "00:00:21" }
+        };
+
+        var result = WinCanFindingFactory.BuildFindings(entries);
+
+        Assert.Equal("00:00:21", result[0].MPEG);
+    }
+
+    [Fact]
     public void BuildFindings_EintragOhneFoto_FotoPathNull()
     {
         var entries = new List<ProtocolEntry>
