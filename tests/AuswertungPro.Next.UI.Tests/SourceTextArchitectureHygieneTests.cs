@@ -173,6 +173,32 @@ public sealed class SourceTextArchitectureHygieneTests
         }
     }
 
+    [Fact]
+    public void Player_window_playback_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowPlaybackArchitectureTests.cs"));
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        var methodNames = new[]
+        {
+            "PlayerWindow_playback_preview_lives_in_policy_and_speed_controls_in_controller",
+            "PlayerWindow_playback_controls_live_in_controls_partial",
+            "PlayerWindow_playback_timeline_reads_through_timeline_host",
+            "PlayerWindow_keyboard_slider_and_button_playback_uses_control_host",
+            "PlayerWindow_playback_rate_uses_control_host",
+            "PlayerWindow_playback_start_uses_control_host",
+            "Playback_position_fallback_uses_timeline_host",
+            "PlayerWindow_snapshot_pause_uses_playback_control_host"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -223,6 +249,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowCoreArchitectureTests.cs")]
     [InlineData("PlayerWindowControllerArchitectureTests.cs")]
     [InlineData("PlayerWindowMediaInfrastructureArchitectureTests.cs")]
+    [InlineData("PlayerWindowPlaybackArchitectureTests.cs")]
     [InlineData("PlayerWindowResourceDictionaryTests.cs")]
     [InlineData("PlayerWindowRuntimeArchitectureTests.cs")]
     [InlineData("PlayerWindowVisualInfrastructureArchitectureTests.cs")]
