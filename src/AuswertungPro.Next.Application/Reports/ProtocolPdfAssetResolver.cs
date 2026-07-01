@@ -45,7 +45,8 @@ internal static class ProtocolPdfAssetResolver
         IReadOnlyList<string> photoPaths,
         string projectRootAbs,
         int maxPhotos,
-        Dictionary<string, string?> resolveCache)
+        Dictionary<string, string?> resolveCache,
+        string? preferredFolder = null)
     {
         var list = new List<string>();
         foreach (var raw in photoPaths)
@@ -53,7 +54,7 @@ internal static class ProtocolPdfAssetResolver
             if (string.IsNullOrWhiteSpace(raw))
                 continue;
 
-            var resolved = ResolvePhotoPath(projectRootAbs, raw, resolveCache);
+            var resolved = ResolvePhotoPath(projectRootAbs, raw, resolveCache, preferredFolder);
             if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
                 continue;
 
@@ -68,42 +69,40 @@ internal static class ProtocolPdfAssetResolver
     internal static string ResolvePhotoPath(
         string projectRootAbs,
         string raw,
-        Dictionary<string, string?> resolveCache)
+        Dictionary<string, string?> resolveCache,
+        string? preferredFolder = null)
     {
         var normalized = raw.Replace('/', Path.DirectorySeparatorChar);
         var fileName = Path.GetFileName(normalized);
 
-        if (Path.IsPathRooted(normalized))
+        // 1) Bevorzugter (Verteil-)Ordner der Haltung, z.B. Fotos\Haltungen\<H>. Greift auch dann,
+        //    wenn der gespeicherte Foto-Pfad auf einen veralteten Import-Ort zeigt (haeufig nach
+        //    Medienverteilung: Datei liegt im Haltungsordner, nicht mehr am Original-Pfad).
+        if (!string.IsNullOrWhiteSpace(preferredFolder) && !string.IsNullOrWhiteSpace(fileName))
         {
-            if (File.Exists(normalized))
-                return normalized;
-
-            if (!string.IsNullOrWhiteSpace(fileName))
-            {
-                var rootedSearchRoot = Path.GetDirectoryName(normalized);
-                while (!string.IsNullOrWhiteSpace(rootedSearchRoot))
-                {
-                    if (Directory.Exists(rootedSearchRoot))
-                    {
-                        var rootedMatch = FindFileByName(rootedSearchRoot, fileName, resolveCache);
-                        if (!string.IsNullOrWhiteSpace(rootedMatch))
-                            return rootedMatch;
-                    }
-
-                    rootedSearchRoot = Path.GetDirectoryName(rootedSearchRoot);
-                }
-            }
+            var preferred = Path.Combine(preferredFolder, fileName);
+            if (File.Exists(preferred))
+                return preferred;
         }
+
+        // 2) Absoluter Pfad, falls die Datei dort noch liegt.
+        if (Path.IsPathRooted(normalized) && File.Exists(normalized))
+            return normalized;
 
         if (string.IsNullOrWhiteSpace(projectRootAbs))
             return normalized;
 
-        var direct = Path.Combine(projectRootAbs, normalized);
-        if (File.Exists(direct))
-            return direct;
+        // 3) Relativ zum Projekt-Root.
+        if (!Path.IsPathRooted(normalized))
+        {
+            var direct = Path.Combine(projectRootAbs, normalized);
+            if (File.Exists(direct))
+                return direct;
+        }
 
         if (!string.IsNullOrWhiteSpace(fileName))
         {
+            // 4) Bekannte Foto-Unterordner direkt unter dem Root.
             var candidates = new[] { "Fotos", "Photos", "Bilder", "Images", "Fotos_TV", "TV_Fotos", "Foto", "Photo" };
             foreach (var sub in candidates)
             {
@@ -112,27 +111,14 @@ internal static class ProtocolPdfAssetResolver
                     return candidate;
             }
 
-            var parent = Path.GetDirectoryName(projectRootAbs);
-            if (!string.IsNullOrWhiteSpace(parent))
-            {
-                var parentCandidate = Path.Combine(parent, normalized);
-                if (File.Exists(parentCandidate))
-                    return parentCandidate;
-            }
-
+            // 5) Projektweite Suche nach Dateiname — NUR innerhalb des Projekt-Roots.
+            //    KEIN Hochlaufen bis zum Laufwerk (das war ein potenzieller Voll-Scan von D:\).
             var projectMatch = FindFileByName(projectRootAbs, fileName, resolveCache);
             if (!string.IsNullOrWhiteSpace(projectMatch))
                 return projectMatch;
-
-            if (!string.IsNullOrWhiteSpace(parent))
-            {
-                var parentMatch = FindFileByName(parent, fileName, resolveCache);
-                if (!string.IsNullOrWhiteSpace(parentMatch))
-                    return parentMatch;
-            }
         }
 
-        return direct;
+        return Path.IsPathRooted(normalized) ? normalized : Path.Combine(projectRootAbs, normalized);
     }
 
     internal static string? FindFileByName(

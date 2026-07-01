@@ -147,8 +147,16 @@ public sealed class ProtocolPdfExporter
             ? $"{options.Title} - {inspectionDate}"
             : $"{options.Title} - {inspectionDate} - {holdingLabel}";
 
+        // Verteil-Foto-Ordner der Haltung (Fotos\Haltungen\<H>) als bevorzugter Such-Ort — dort liegen
+        // die Fotos nach der Medienverteilung, auch wenn der gespeicherte FotoPath auf einen alten
+        // Import-Ort zeigt. (Ordnernamen entsprechen ProjectStructure.Fotos/FotosHaltungen.)
+        var fotoSan = AuswertungPro.Next.Application.Common.ProjectPathResolver.SanitizePathSegment(holdingLabel);
+        var haltungFotoDir = string.IsNullOrWhiteSpace(fotoSan)
+            ? null
+            : Path.Combine(projectRootAbs, "Fotos", "Haltungen", fotoSan);
+
         var photoItems = options.IncludePhotos
-            ? BuildPhotoItems(entries, projectRootAbs, options.MaxPhotosPerEntry)
+            ? BuildPhotoItems(entries, projectRootAbs, options.MaxPhotosPerEntry, haltungFotoDir)
             : new List<PhotoItem>();
         var photoNumberMap = BuildPhotoNumberMap(photoItems);
         var (startNode, endNode) = SplitHoldingNodes(holdingLabel);
@@ -875,7 +883,8 @@ public sealed class ProtocolPdfExporter
     private static List<PhotoItem> BuildPhotoItems(
         IReadOnlyList<ProtocolEntry> entries,
         string projectRootAbs,
-        int maxPhotosPerEntry)
+        int maxPhotosPerEntry,
+        string? preferredFolder = null)
     {
         var items = new List<PhotoItem>();
         var resolveCache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
@@ -884,7 +893,7 @@ public sealed class ProtocolPdfExporter
             if (entry.FotoPaths is null || entry.FotoPaths.Count == 0)
                 continue;
 
-            var resolved = ResolvePhotoPaths(entry.FotoPaths, projectRootAbs, maxPhotosPerEntry, resolveCache);
+            var resolved = ResolvePhotoPaths(entry.FotoPaths, projectRootAbs, maxPhotosPerEntry, resolveCache, preferredFolder);
             foreach (var path in resolved)
                 items.Add(new PhotoItem(entry, path));
         }
