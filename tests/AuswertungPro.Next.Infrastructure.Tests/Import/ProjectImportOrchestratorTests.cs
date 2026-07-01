@@ -148,10 +148,13 @@ public sealed class ProjectImportOrchestratorTests
             Assert.True(videos.Length > 0, $"Kein flach verteiltes Video in {haltungDir}");
             Assert.EndsWith("_06-001.mpg", videos[0]);
 
-            // Eigenes Protokoll (generiert, Suffix _E.pdf) muss im Haltungsordner liegen.
-            var protokolle = Directory.Exists(haltungDir)
+            // BEIM IMPORT darf KEIN eigenes _E-Protokoll erzeugt werden — das passiert erst am Ende der
+            // Bearbeitung via „Protokoll neu generieren" (ProtocolRegenerationService). Die Fixture hat
+            // zudem kein Original-Protokoll-PDF, also wird auch kein Original verteilt.
+            var eigeneProtokolle = Directory.Exists(haltungDir)
                 ? Directory.GetFiles(haltungDir, "*_E.pdf") : System.Array.Empty<string>();
-            Assert.True(protokolle.Length > 0, $"Kein generiertes _E-Protokoll in {haltungDir}");
+            Assert.True(eigeneProtokolle.Length == 0,
+                $"Beim Import darf kein _E-Protokoll erzeugt werden, gefunden in {haltungDir}");
         }
         finally
         {
@@ -241,6 +244,60 @@ public sealed class ProjectImportOrchestratorTests
                     }
                 }
             }
+        }
+        finally
+        {
+            try { Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true); } catch { }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Test 3: „Protokoll neu generieren" erzeugt das eigene _E-Protokoll (PDF_Eigen),
+    //         ohne das Original (PDF_Path) anzufassen.
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public void ProtokollNeuGenerieren_ErzeugtEigenesProtokoll_UndLaesstOriginalUnberuehrt()
+    {
+        var (sourceDir, projectDir) = ErstelleMiniIkasFixture();
+        try
+        {
+            var project = new Project();
+            var orch = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new WinCanDbImportService());
+
+            // Import (verteilt Fotos, kein _E) — Ausgangslage fuer die Regenerierung
+            orch.Import(sourceDir, projectDir, project);
+
+            var rec = project.Data.FirstOrDefault(r =>
+                string.Equals(r.GetFieldValue("Haltungsname"), "06-001", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(rec);
+
+            // Vor der Regenerierung: kein eigenes Protokoll verlinkt
+            Assert.True(string.IsNullOrWhiteSpace(rec!.GetFieldValue("PDF_Eigen")));
+            var pdfPathVorher = rec.GetFieldValue("PDF_Path");
+
+            // Am Ende der Bearbeitung: eigenes Protokoll erzeugen
+            var result = ProtocolRegenerationService.RegenerateAll(project, projectDir);
+            Assert.True(result.Generated > 0, "Es muss mindestens ein eigenes Protokoll erzeugt werden");
+
+            // _E-Protokoll liegt flach im Haltungsordner
+            var haltungDir = ProjectStructure.HaltungVerteiltDir(projectDir, "06-001");
+            var eigene = Directory.Exists(haltungDir)
+                ? Directory.GetFiles(haltungDir, "*_E.pdf") : System.Array.Empty<string>();
+            Assert.True(eigene.Length > 0, $"Kein generiertes _E-Protokoll in {haltungDir}");
+
+            // PDF_Eigen ist relativ gesetzt und die Datei existiert
+            var pdfEigen = rec.GetFieldValue("PDF_Eigen");
+            Assert.False(string.IsNullOrWhiteSpace(pdfEigen), "PDF_Eigen muss gesetzt sein");
+            Assert.False(Path.IsPathRooted(pdfEigen), $"PDF_Eigen soll relativ sein: {pdfEigen}");
+            Assert.EndsWith("_E.pdf", pdfEigen);
+            Assert.True(File.Exists(Path.Combine(projectDir, pdfEigen!)),
+                $"Verlinktes eigenes Protokoll sollte existieren: {pdfEigen}");
+
+            // Das Original (PDF_Path) wurde NICHT angefasst
+            Assert.Equal(pdfPathVorher, rec.GetFieldValue("PDF_Path"));
         }
         finally
         {

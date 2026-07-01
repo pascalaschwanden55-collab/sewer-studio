@@ -23,6 +23,15 @@
                         </StackPanel>
                     </Button>
 
+                    <Button Command="{Binding ProtokollNeuGenerierenCommand}"
+                            Style="{StaticResource ToolbarButton}" Margin="0,0,8,0"
+                            ToolTip="Am Ende der Bearbeitung: erzeugt je Haltung das programm-eigene Protokoll (mit Fotos, Suffix _E) in die Verteilung. Das Original-Protokoll bleibt unberuehrt.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Protokoll neu generieren" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
                     <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,4"/>
 
                     <TextBlock Text="Manuell:" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.7" FontSize="11"/>

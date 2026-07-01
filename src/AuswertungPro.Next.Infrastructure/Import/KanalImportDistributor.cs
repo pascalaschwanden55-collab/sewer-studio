@@ -4,88 +4,171 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
-using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
 
 /// <summary>
-/// Verteilt beim Ein-Knopf-Import je Haltung das Video (flach + datumsbenannt <c>JJJJMMTT_&lt;Haltung&gt;.mpg</c>,
-/// wie „Haltung Verteilen") und generiert das programm-eigene Protokoll (mit eingebetteten Fotos, Suffix
-/// <c>_E</c>) in den Haltungsordner. Beide werden als RELATIVER Pfad am Record verlinkt, damit „Video Play"
-/// und „Protokoll öffnen" die verteilte Kopie nutzen. Das generierte Protokoll ist immer aktuell
-/// (Haltungsnummer, DN, Befunde) — kein Original-PDF-Rewrite noetig.
+/// Verteilt beim Ein-Knopf-Import je Haltung Video + ORIGINAL-Protokoll — mit der gleichen Logik wie
+/// „Haltung Verteilen" (<see cref="HoldingFolderDistributor"/>):
 ///
-/// WICHTIG: erst die Fotos ins Projekt verteilen (relativ, z.B. via MediaDistributionService), DANN das
-/// Protokoll generieren — der Exporter bettet nur projekt-relative, existierende Fotos ein.
+///  1. Das Original-Protokoll-PDF (aus <c>Importdateien\PDF</c>) wird pro Haltung gesplittet und flach +
+///     datumsbenannt nach <c>Haltungen_Verteilt\&lt;H&gt;\JJJJMMTT_&lt;H&gt;.pdf</c> gelegt; dabei wird auch das
+///     Video gematcht (über <c>record.Link</c> aus dem XTF bzw. OSD). Das Original-Protokoll wird als
+///     <c>PDF_Path</c> (RELATIV) verlinkt — das ist das Menü „Haltungsprotokoll Original (PDF) öffnen".
+///  2. Alle projekt-internen absoluten Pfade (Link/PDF_Path) werden relativiert, damit „Video Play" und
+///     „Protokoll öffnen" die verteilte Kopie nutzen.
+///  3. Fallback: für Haltungen, deren Video der PDF-getriebene Lauf NICHT verteilt hat (z. B. wenn kein
+///     Original-PDF existiert oder die Protokollseite nicht erkannt wurde), wird das Video eigenständig
+///     flach + datumsbenannt kopiert. So bleibt die Video-Verteilung zuverlässig, auch wenn der PDF-Split
+///     einzelne Haltungen verpasst.
+///
+/// Das programm-EIGENE Protokoll (Suffix <c>_E</c>) wird hier bewusst NICHT erzeugt — das übernimmt der
+/// <see cref="ProtocolRegenerationService"/> am Ende der Bearbeitung („Protokoll neu generieren").
 /// </summary>
 public static class KanalImportDistributor
 {
-    public sealed record Result(int VideosDistributed, int ProtocolsGenerated, int Errors, IReadOnlyList<string> Messages);
+    public sealed record Result(
+        int VideosDistributed,
+        int OriginalProtocolsDistributed,
+        int Errors,
+        IReadOnlyList<string> Messages);
 
-    public static Result DistributeVideosAndProtocols(Project project, string projectFolder)
+    /// <summary>
+    /// Verteilt Video + Original-Protokoll je Haltung (siehe Klassen-Doku).
+    /// </summary>
+    /// <param name="project">Offenes Projekt (Records werden verlinkt).</param>
+    /// <param name="projectFolder">Absoluter Projektstammordner.</param>
+    /// <param name="archivedPdfDir">Ordner mit dem/den archivierten Original-Protokoll-PDF(s) (i. d. R. Importdateien\PDF).</param>
+    /// <param name="sourceVideoDir">Quellordner, in dem die Videos liegen (Export-Root, rekursiv).</param>
+    public static Result Distribute(Project project, string projectFolder, string archivedPdfDir, string sourceVideoDir)
     {
         var messages = new List<string>();
-        int videos = 0, protos = 0, errors = 0;
-        var exporter = new ProtocolPdfExporter();
+        int videos = 0, origs = 0, errors = 0;
+        var destRoot = Path.Combine(projectFolder, ProjectStructure.HaltungenVerteilt);
 
+        // 1) Original-Protokoll pro Haltung splitten + Video matchen (die echte „Haltung Verteilen"-Logik).
+        //    HoldingFolderDistributor liefert bei leerem PDF-Ordner ein Fehlerergebnis (Success=false) und
+        //    fasst dann kein Video an — die Videos übernimmt in diesem Fall der Fallback in Schritt 3.
+        if (Directory.Exists(archivedPdfDir))
+        {
+            try
+            {
+                var results = HoldingFolderDistributor.Distribute(
+                    pdfSourceFolder: archivedPdfDir,
+                    videoSourceFolder: sourceVideoDir,
+                    destGemeindeFolder: destRoot,
+                    project: project);
+
+                foreach (var r in results)
+                {
+                    if (!r.Success)
+                        continue;
+                    if (!string.IsNullOrWhiteSpace(r.DestVideoPath))
+                        videos++;
+                    if (string.IsNullOrWhiteSpace(r.DestPdfPath) || string.IsNullOrWhiteSpace(r.HoldingFolder))
+                        continue;
+
+                    // Zuordnung Ergebnis -> Record über den sanitisierten Ordnernamen (wie in Export/Schacht).
+                    var folderName = Path.GetFileName(
+                        r.HoldingFolder!.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                    var record = FindRecordBySanitizedHaltung(project, folderName);
+                    if (record is null)
+                        continue;
+
+                    // PDF_Path = verteiltes ORIGINAL-Protokoll (Menü „Haltungsprotokoll Original öffnen").
+                    record.SetFieldValue("PDF_Path", r.DestPdfPath!, FieldSource.Legacy, userEdited: false);
+                    origs++;
+                }
+            }
+            catch (Exception ex)
+            {
+                errors++;
+                messages.Add($"Original-Protokoll-Verteilung: {ex.Message}");
+            }
+        }
+
+        // 2) Projekt-interne absolute Pfade relativieren (HoldingFolderDistributor setzt Link absolut).
+        foreach (var record in project.Data)
+        {
+            RelativizeIfInProject(record, "Link", projectFolder);
+            RelativizeIfInProject(record, "PDF_Path", projectFolder);
+        }
+
+        // 3) Fallback-Video: Haltungen, deren Link noch auf die absolute QUELLE zeigt (nicht verteilt),
+        //    bekommen ihr Video flach + datumsbenannt in den Haltungsordner + relativen Link.
         foreach (var record in project.Data.ToList())
         {
             var haltung = record.GetFieldValue("Haltungsname")?.Trim();
             if (string.IsNullOrWhiteSpace(haltung))
                 continue;
 
-            var san = ProjectPathResolver.SanitizePathSegment(haltung);
-            var dir = ProjectStructure.HaltungVerteiltDir(projectFolder, san);
-            var stamp = ResolveDateStamp(record);
+            var link = record.GetFieldValue("Link")?.Trim();
+            if (string.IsNullOrWhiteSpace(link) || ProjectPathResolver.IsRelative(link) || !File.Exists(link))
+                continue;
 
-            // 1) Video flach + datumsbenannt (JJJJMMTT_<Haltung>.<ext>) + relativ verlinken.
             try
             {
-                var link = record.GetFieldValue("Link")?.Trim();
-                if (!string.IsNullOrWhiteSpace(link) && !ProjectPathResolver.IsRelative(link) && File.Exists(link))
-                {
-                    Directory.CreateDirectory(dir);
-                    var ext = Path.GetExtension(link);
-                    var dest = UniquePath(Path.Combine(dir, $"{stamp}_{san}{ext}"));
-                    File.Copy(link, dest, overwrite: false);
-                    record.SetFieldValue("Link", ProjectPathResolver.MakeRelative(dest, projectFolder), FieldSource.Legacy, userEdited: false);
-                    videos++;
-                }
+                var san = ProjectPathResolver.SanitizePathSegment(haltung);
+                var dir = ProjectStructure.HaltungVerteiltDir(projectFolder, san);
+                Directory.CreateDirectory(dir);
+                var stamp = ResolveDateStamp(record);
+                var ext = Path.GetExtension(link);
+                var dest = UniquePath(Path.Combine(dir, $"{stamp}_{san}{ext}"));
+                File.Copy(link, dest, overwrite: false);
+                record.SetFieldValue("Link", ProjectPathResolver.MakeRelative(dest, projectFolder), FieldSource.Legacy, userEdited: false);
+                videos++;
             }
             catch (Exception ex)
             {
                 errors++;
                 messages.Add($"Video {haltung}: {ex.Message}");
             }
-
-            // 2) Eigenes Protokoll generieren (mit Fotos) -> JJJJMMTT_<Haltung>_E.pdf + relativ verlinken.
-            try
-            {
-                if (record.Protocol != null)
-                {
-                    var pdf = exporter.BuildHaltungsprotokollPdf(
-                        project, record, record.Protocol, projectFolder,
-                        new HaltungsprotokollPdfOptions { IncludePhotos = true });
-                    Directory.CreateDirectory(dir);
-                    var dest = Path.Combine(dir, $"{stamp}_{san}_E.pdf");
-                    File.WriteAllBytes(dest, pdf);
-                    record.SetFieldValue("PDF_Path", ProjectPathResolver.MakeRelative(dest, projectFolder), FieldSource.Legacy, userEdited: false);
-                    protos++;
-                }
-            }
-            catch (Exception ex)
-            {
-                errors++;
-                messages.Add($"Protokoll {haltung}: {ex.Message}");
-            }
         }
 
-        return new Result(videos, protos, errors, messages);
+        return new Result(videos, origs, errors, messages);
+    }
+
+    // Record über den sanitisierten Haltungsnamen (== Ordnername) finden.
+    private static HaltungRecord? FindRecordBySanitizedHaltung(Project project, string sanitizedFolderName)
+    {
+        if (string.IsNullOrWhiteSpace(sanitizedFolderName))
+            return null;
+
+        return project.Data.FirstOrDefault(x =>
+            string.Equals(
+                ProjectPathResolver.SanitizePathSegment((x.GetFieldValue("Haltungsname") ?? "").Trim()),
+                sanitizedFolderName,
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    // Relativiert ein Pfadfeld NUR, wenn es absolut ist UND unter dem Projektordner liegt (verteilte
+    // Kopie). Absolute Quellpfade (außerhalb des Projekts) bleiben unverändert, damit der Fallback greift.
+    private static void RelativizeIfInProject(HaltungRecord record, string field, string projectFolder)
+    {
+        var val = record.GetFieldValue(field)?.Trim();
+        if (string.IsNullOrWhiteSpace(val) || ProjectPathResolver.IsRelative(val))
+            return;
+
+        string full, root;
+        try
+        {
+            full = Path.GetFullPath(val);
+            root = Path.GetFullPath(projectFolder);
+        }
+        catch
+        {
+            return;
+        }
+
+        if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        record.SetFieldValue(field, ProjectPathResolver.MakeRelative(full, projectFolder), FieldSource.Legacy, userEdited: false);
     }
 
     // JJJJMMTT aus Datum_Jahr (verschiedene Formate), sonst "00000000".
-    private static string ResolveDateStamp(HaltungRecord record)
+    internal static string ResolveDateStamp(HaltungRecord record)
     {
         var raw = record.GetFieldValue("Datum_Jahr")?.Trim();
         if (string.IsNullOrWhiteSpace(raw))
@@ -103,7 +186,7 @@ public static class KanalImportDistributor
         return "00000000";
     }
 
-    private static string UniquePath(string path)
+    internal static string UniquePath(string path)
     {
         if (!File.Exists(path))
             return path;

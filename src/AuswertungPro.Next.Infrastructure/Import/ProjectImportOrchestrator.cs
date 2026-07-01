@@ -243,7 +243,7 @@ public sealed class ProjectImportOrchestrator
         try
         {
             // 7a) Fotos zentral gruppiert (Fotos\Haltungen\) + Schächte verteilen — KEINE Videos/Original-PDFs
-            //     (die kommen in 7b flach+datumsbenannt bzw. als generiertes Protokoll).
+            //     (die kommen in 7b flach+datumsbenannt bzw. als gesplittetes Original-Protokoll).
             var mediaResult = new MediaDistributionService()
                 .DistributeImportedMedia(
                     projectFolder,
@@ -256,15 +256,16 @@ public sealed class ProjectImportOrchestrator
                     includePdfs: false);
             messages.AddRange(mediaResult.Messages);
 
-            // 7b) Video flach+datumsbenannt (wie „Haltung Verteilen") + eigenes Protokoll (_E, mit Fotos)
-            //     generieren; beide relativ verlinkt. NACH 7a, damit die Fotos schon relativ im Projekt
-            //     liegen und ins Protokoll eingebettet werden koennen.
-            var distResult = KanalImportDistributor.DistributeVideosAndProtocols(project, projectFolder);
+            // 7b) Video + ORIGINAL-Protokoll flach+datumsbenannt (wie „Haltung Verteilen") verteilen; beide
+            //     relativ verlinkt (PDF_Path = Original). Das eigene _E-Protokoll wird hier NICHT erzeugt —
+            //     das macht der ProtocolRegenerationService am Ende der Bearbeitung („Protokoll neu generieren").
+            var archivedPdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
+            var distResult = KanalImportDistributor.Distribute(project, projectFolder, archivedPdfDir, sourceFolder);
             messages.AddRange(distResult.Messages);
             errors += distResult.Errors;
             messages.Add(
                 $"Verteilung: {mediaResult.FilesCopied} Fotos/Dateien, {distResult.VideosDistributed} Videos, " +
-                $"{distResult.ProtocolsGenerated} eigene Protokolle, {mediaResult.Errors + distResult.Errors} Fehler.");
+                $"{distResult.OriginalProtocolsDistributed} Original-Protokolle, {mediaResult.Errors + distResult.Errors} Fehler.");
         }
         catch (Exception ex)
         {
