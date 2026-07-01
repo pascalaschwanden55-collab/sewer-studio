@@ -30,6 +30,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private System.Windows.Point _dragStartPoint;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DataGridColumnLayoutController _columnLayoutController = new();
+    private readonly DataPageDetailItemFactory _haltungDetailItemFactory;
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
     private bool _updatingAlignmentButtons;
     private bool _isUndocking;
@@ -38,6 +39,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
     public DataPage()
     {
         InitializeComponent();
+        _haltungDetailItemFactory = new DataPageDetailItemFactory(
+            ResolveManagedComboSpec,
+            CommitHaltungDetailField);
 
         // Haltungsansicht teilt sich Selected/Records mit der Tabelle; Detail-Aufbau wie im Detailfenster,
         // aber ohne Primaere_Schaeden (steht dort schon als Schadensliste unten).
@@ -572,55 +576,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private RecordDetailItem CreateHaltungDetailItem(string fieldName, HaltungRecord record)
     {
-        var def = FieldCatalog.Get(fieldName);
-        var label = def.Label;
-        var value = record.GetFieldValue(fieldName);
-
-        // Managed combo fields (ViewModel-driven dropdowns)
-        var managedCombo = ResolveManagedComboSpec(fieldName);
-        if (managedCombo is not null)
-        {
-            return new RecordDetailItem(
-                label,
-                value,
-                commitValue: next => CommitHaltungDetailField(record, fieldName, next),
-                isCombo: true,
-                allowFreeText: managedCombo.Value.AllowFreeText,
-                options: managedCombo.Value.Options,
-                editOptionsCommand: managedCombo.Value.EditCmd,
-                previewOptionsCommand: managedCombo.Value.PreviewCmd,
-                resetOptionsCommand: managedCombo.Value.ResetCmd,
-                addOptionCommand: managedCombo.Value.AddCmd,
-                removeOptionCommand: managedCombo.Value.RemoveCmd);
-        }
-
-        // Catalog combo fields
-        var catalogItems = FieldCatalog.GetComboItems(fieldName);
-        if (catalogItems.Count > 0)
-        {
-            return new RecordDetailItem(
-                label,
-                value,
-                commitValue: next => CommitHaltungDetailField(record, fieldName, next),
-                isCombo: true,
-                allowFreeText: false,
-                options: catalogItems);
-        }
-
-        var isMultiline = fieldName is "Primaere_Schaeden" or "Bemerkungen" or "Empfohlene_Sanierungsmassnahmen";
-        var digitsOnly = def.Type == FieldType.Int;
-
-        return new RecordDetailItem(
-            label,
-            value,
-            commitValue: next => CommitHaltungDetailField(record, fieldName, next),
-            isMultiline: isMultiline,
-            digitsOnly: digitsOnly);
+        return _haltungDetailItemFactory.Create(fieldName, record);
     }
 
-    private (IEnumerable<string> Options, bool AllowFreeText,
-        ICommand? EditCmd, ICommand? PreviewCmd, ICommand? ResetCmd,
-        ICommand? AddCmd, ICommand? RemoveCmd)? ResolveManagedComboSpec(string fieldName)
+    private DataPageManagedComboSpec? ResolveManagedComboSpec(string fieldName)
     {
         if (DataContext is not DataPageViewModel vm)
             return null;
@@ -630,18 +589,30 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
         return spec.OptionField switch
         {
-            "Sanieren_JaNein" => (vm.SanierenOptions, spec.AllowFreeText,
-                vm.EditSanierenOptionsCommand, vm.PreviewSanierenOptionsCommand,
-                vm.ResetSanierenOptionsCommand, null, null),
-            "Eigentuemer" => (vm.EigentuemerOptions, spec.AllowFreeText,
-                vm.EditEigentuemerOptionsCommand, vm.PreviewEigentuemerOptionsCommand,
-                vm.ResetEigentuemerOptionsCommand, null, null),
-            "Pruefungsresultat" => (vm.PruefungsresultatOptions, spec.AllowFreeText,
-                vm.EditPruefungsresultatOptionsCommand, vm.PreviewPruefungsresultatOptionsCommand,
-                vm.ResetPruefungsresultatOptionsCommand, null, null),
-            "Referenzpruefung" => (vm.ReferenzpruefungOptions, spec.AllowFreeText,
-                vm.EditReferenzpruefungOptionsCommand, vm.PreviewReferenzpruefungOptionsCommand,
-                vm.ResetReferenzpruefungOptionsCommand, null, null),
+            "Sanieren_JaNein" => new DataPageManagedComboSpec(
+                vm.SanierenOptions,
+                spec.AllowFreeText,
+                vm.EditSanierenOptionsCommand,
+                vm.PreviewSanierenOptionsCommand,
+                vm.ResetSanierenOptionsCommand),
+            "Eigentuemer" => new DataPageManagedComboSpec(
+                vm.EigentuemerOptions,
+                spec.AllowFreeText,
+                vm.EditEigentuemerOptionsCommand,
+                vm.PreviewEigentuemerOptionsCommand,
+                vm.ResetEigentuemerOptionsCommand),
+            "Pruefungsresultat" => new DataPageManagedComboSpec(
+                vm.PruefungsresultatOptions,
+                spec.AllowFreeText,
+                vm.EditPruefungsresultatOptionsCommand,
+                vm.PreviewPruefungsresultatOptionsCommand,
+                vm.ResetPruefungsresultatOptionsCommand),
+            "Referenzpruefung" => new DataPageManagedComboSpec(
+                vm.ReferenzpruefungOptions,
+                spec.AllowFreeText,
+                vm.EditReferenzpruefungOptionsCommand,
+                vm.PreviewReferenzpruefungOptionsCommand,
+                vm.ResetReferenzpruefungOptionsCommand),
             _ => null
         };
     }
