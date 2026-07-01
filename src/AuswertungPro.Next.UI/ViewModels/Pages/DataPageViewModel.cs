@@ -37,6 +37,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly ServiceProvider _sp;
     private readonly ShellViewModel _shell;
     private readonly DataPageTimerController _timers;
+    private readonly DataPagePrintController _printController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
@@ -135,6 +136,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             value => SaveStatus = value,
             value => IsSaveStatusVisible = value,
             AutoSaveOnTimerTick);
+        _printController = new DataPagePrintController(
+            _sp.Dialogs,
+            _sp.ProtocolPdfExporter,
+            () => _shell.GetProjectFolder());
         _shell.PropertyChanged += ShellPropertyChanged;
 
         // Live-Control: Retry-Handler registrieren, damit der MCP eine Haltung
@@ -1045,46 +1050,10 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void PrintAwuHaltungsprotokollPdf(HaltungRecord? record)
     {
-        if (record is null)
-        {
-            _sp.Dialogs.Info("Bitte zuerst eine Haltung auswaehlen.", "Haltungsprotokoll AWU");
-            return;
-        }
-
-        var doc = EnsureProtocolDocumentForPdf(record);
-        var holding = record.GetFieldValue("Haltungsname");
-        var defaultName = $"Haltungsprotokoll_AWU_{SanitizeFilenamePart(holding)}_{DateTime.Now:yyyyMMdd}.pdf";
-        var output = _sp.Dialogs.SaveFile(
-            "Haltungsprotokoll AWU als PDF speichern",
-            "PDF (*.pdf)|*.pdf",
-            defaultExt: "pdf",
-            defaultFileName: defaultName);
-        if (string.IsNullOrWhiteSpace(output))
-            return;
-
-        try
-        {
-            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
-            var options = new Application.Reports.HaltungsprotokollPdfOptions
-            {
-                LogoPathAbs = File.Exists(logoPath) ? logoPath : null
-            };
-
-            var projectFolder = _shell.GetProjectFolder() ?? string.Empty;
-            var pdf = _sp.ProtocolPdfExporter.BuildHaltungsprotokollPdf(
-                _shell.Project,
-                record,
-                doc,
-                projectFolder,
-                options);
-
-            File.WriteAllBytes(output, pdf);
-            _sp.Dialogs.Info($"AWU-Haltungsprotokoll wurde erstellt:\n{output}", "Haltungsprotokoll AWU");
-        }
-        catch (Exception ex)
-        {
-            _sp.Dialogs.Error($"AWU-Haltungsprotokoll konnte nicht erstellt werden:\n{ex.Message}", "Haltungsprotokoll AWU");
-        }
+        _printController.PrintAwuHaltungsprotokollPdf(
+            _shell.Project,
+            record,
+            EnsureProtocolDocumentForPdf);
     }
 
     private ProtocolDocument EnsureProtocolDocumentForPdf(HaltungRecord record)
