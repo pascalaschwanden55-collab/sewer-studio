@@ -5,6 +5,13 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class SourceTextArchitectureHygieneTests
 {
     [Theory]
+    [InlineData("CostCalculatorCatalogFilterArchitectureTests.cs")]
+    [InlineData("CostCalculatorImportDefaultsArchitectureTests.cs")]
+    [InlineData("CostCalculatorLineOrderArchitectureTests.cs")]
+    [InlineData("CostCalculatorLineSuggestionArchitectureTests.cs")]
+    [InlineData("CostCalculatorMeasureInputArchitectureTests.cs")]
+    [InlineData("CostCalculatorMeasureSelectionArchitectureTests.cs")]
+    [InlineData("CostCalculatorPdfExportModelBuilderTests.cs")]
     [InlineData("DataPageCommandTargetControllerTests.cs")]
     [InlineData("DataGridWrappingTextColumnFactoryTests.cs")]
     [InlineData("TrainingCenterBatchImportThreadingTests.cs")]
