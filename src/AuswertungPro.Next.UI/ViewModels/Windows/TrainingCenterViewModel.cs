@@ -1326,17 +1326,19 @@ public partial class TrainingCenterViewModel : ObservableObject
         _selfTrainingCts = runPreparation.CancellationTokenSource;
         var ct = runPreparation.CancellationToken;
 
+        var selfTrainingUi = new SelfTrainingUiSink(
+            value => IsBusy = value,
+            value => IsSelfTrainingRunning = value,
+            value => LogText = value,
+            value => StatusText = value,
+            Log);
+
         using var _aiToken = AiTrack.Begin("Selbsttraining");
         try
         {
             SelfTrainingRunStartController.Apply(
                 selectedCase,
-                new SelfTrainingUiSink(
-                    value => IsBusy = value,
-                    value => IsSelfTrainingRunning = value,
-                    value => LogText = value,
-                    value => StatusText = value,
-                    Log),
+                selfTrainingUi,
                 () => ResetSelfTrainingVisuals(resetMatchRate: true));
 
             using var selfTrainingSetup = await SelfTrainingRuntimeSetupController.PrepareAsync(
@@ -1403,10 +1405,9 @@ public partial class TrainingCenterViewModel : ObservableObject
         }
         finally
         {
-            SelfTrainingRunFinalizerController.Apply(
-                value => IsBusy = value,
-                value => IsSelfTrainingRunning = value,
-                () => _selfTrainingOrchestrator = null);
+            selfTrainingUi.SetBusy(false);
+            selfTrainingUi.SetSelfTrainingRunning(false);
+            _selfTrainingOrchestrator = null;
         }
     }
 
