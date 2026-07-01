@@ -325,6 +325,26 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.DoesNotContain($"public void {methodName}", guard);
     }
 
+    [Fact]
+    public void Player_window_overlay_input_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowOverlayInputArchitectureTests.cs"));
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        var methodNames = new[]
+        {
+            "PlayerWindow_overlay_measurement_panel_uses_formatter_state",
+            "PlayerWindow_overlay_input_mouseflow_keeps_only_direct_dependencies"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -377,6 +397,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowControllerArchitectureTests.cs")]
     [InlineData("PlayerWindowInlineEvidenceArchitectureTests.cs")]
     [InlineData("PlayerWindowMediaInfrastructureArchitectureTests.cs")]
+    [InlineData("PlayerWindowOverlayInputArchitectureTests.cs")]
     [InlineData("PlayerWindowPlaybackArchitectureTests.cs")]
     [InlineData("PlayerWindowPrimaryDamageArchitectureTests.cs")]
     [InlineData("PlayerWindowProtocolPdfArchitectureTests.cs")]
