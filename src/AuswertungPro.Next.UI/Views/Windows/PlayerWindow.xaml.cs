@@ -53,31 +53,8 @@ public partial class PlayerWindow : Window
         _playerMediaRuntime.AttachVideoView(VideoView);
         _playerMediaHosts = _playerMediaRuntime.Hosts;
 
-        _playerControllers = PlayerWindowControllerSetFactory.Create(
-            new PlayerWindowControllerSetControls(
-                DamageMarkerCanvas: DamageMarkerCanvas,
-                PositionSlider: PositionSlider,
-                HeatmapCanvas: HeatmapCanvas,
-                QuickScanButton: QuickScanButton,
-                QuickScanStatusText: QuickScanStatusText,
-                CurrentTimeText: CurrentTimeText,
-                DurationText: DurationText,
-                RateText: RateText,
-                Speed05Button: Speed05Button,
-                Speed1Button: Speed1Button,
-                Speed15Button: Speed15Button,
-                Speed2Button: Speed2Button,
-                Speed4Button: Speed4Button,
-                Speed8Button: Speed8Button,
-                MarkToolPopup: MarkToolPopup,
-                CodingMarkToolPopup: CodingMarkToolPopup,
-                ToolsDropdownPopup: ToolsDropdownPopup,
-                MarkToolName: TxtMarkToolName,
-                ActiveToolLabel: TxtActiveToolLabel,
-                DetectionOverlayGrid: DetectionOverlayGrid,
-                DetectionCanvas: DetectionCanvas,
-                CodingOverlayPopup: CodingOverlayPopup,
-                CodingOverlayCanvas: CodingOverlayCanvas),
+        _playerControllers = PlayerWindowControllerSetInitializer.Create(
+            this,
             new PlayerWindowControllerSetDependencies(
                 DamageOverlay: _playbackContext.DamageOverlay,
                 PlaybackControlHost: _playerPlaybackControlHost,
