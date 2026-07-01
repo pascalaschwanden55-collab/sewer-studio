@@ -9,65 +9,6 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class UiArchitectureGuardTests
 {
     [Fact]
-    public void PlayerWindow_live_detection_snapshot_lives_in_snapshot_partial()
-    {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var liveDetectionPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.cs");
-        var snapshotPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Snapshot.cs");
-        var servicePath = Path.Combine(uiRoot, "Player", "LiveDetectionFrameCaptureService.cs");
-        var workflowPath = Path.Combine(uiRoot, "Player", "LiveDetectionFrameCaptureWorkflow.cs");
-
-        Assert.True(File.Exists(snapshotPath), "LiveDetection-Snapshot-Capture soll in ein eigenes Snapshot-Partial.");
-        Assert.True(File.Exists(servicePath), "LiveDetection-Snapshot-Dateilogik soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(workflowPath), "LiveDetection-Snapshot-Serviceaufruf soll ausserhalb der PlayerWindow-Partials liegen.");
-
-        var liveDetection = File.ReadAllText(liveDetectionPath);
-        var snapshot = File.ReadAllText(snapshotPath);
-        var service = File.ReadAllText(servicePath);
-        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
-
-        Assert.DoesNotContain("private async Task<byte[]?> CaptureCurrentFrameAsync", liveDetection);
-        Assert.Contains("private async Task<byte[]?> CaptureCurrentFrameAsync", snapshot);
-        Assert.Contains("LiveDetectionFrameCaptureWorkflow.CaptureAsync", snapshot);
-        Assert.DoesNotContain("LiveDetectionFrameCaptureServiceFactory.Create", snapshot);
-        Assert.Contains("LiveDetectionFrameCaptureServiceFactory.Create", workflow);
-        Assert.Contains("service.CaptureAsync(isUnavailable, cancellationToken)", workflow);
-        Assert.Contains("TakeSnapshotSafe", snapshot);
-        Assert.DoesNotContain("sewer_live_", snapshot);
-        Assert.DoesNotContain("File.Exists", snapshot);
-        Assert.DoesNotContain("File.ReadAllBytesAsync", snapshot);
-        Assert.Contains("sewer_live_", service);
-        Assert.Contains("File.ReadAllBytesAsync", service);
-    }
-
-    [Fact]
-    public void PlayerWindow_live_detection_overlay_lives_in_overlay_partial()
-    {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var liveDetectionPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.cs");
-        var overlayPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Overlay.cs");
-        var controllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionOverlayController.cs");
-
-        Assert.True(File.Exists(overlayPath), "LiveDetection-Overlay-Rendering soll in ein eigenes Overlay-Partial.");
-        Assert.True(File.Exists(controllerPath), "LiveDetection-Overlay-Rendering soll ueber einen Player-Controller laufen.");
-
-        var liveDetection = File.ReadAllText(liveDetectionPath);
-        var overlay = File.ReadAllText(overlayPath);
-        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
-
-        Assert.DoesNotContain("private void RenderDetectionOverlay", liveDetection);
-        Assert.Contains("private void RenderDetectionOverlay", overlay);
-        Assert.Contains("LiveDetectionOverlayController.Render", overlay);
-        Assert.DoesNotContain("LiveDetectionOverlayRenderer.Render", overlay);
-        Assert.Contains("LiveDetectionOverlayRenderer.Render", controller);
-        Assert.Contains("OnFindingClicked", overlay);
-    }
-
-    [Fact]
     public void PlayerWindow_code_catalog_helpers_live_in_coding_catalog_partial()
     {
         var root = FindRepositoryRoot();

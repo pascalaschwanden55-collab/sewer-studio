@@ -356,7 +356,9 @@ public sealed class SourceTextArchitectureHygieneTests
         {
             "PlayerWindow_live_detection_status_lives_in_status_partial",
             "PlayerWindow_live_detection_lifecycle_lives_in_lifecycle_partial",
-            "PlayerWindow_live_detection_dialogs_live_in_service"
+            "PlayerWindow_live_detection_dialogs_live_in_service",
+            "PlayerWindow_live_detection_snapshot_lives_in_snapshot_partial",
+            "PlayerWindow_live_detection_overlay_lives_in_overlay_partial"
         };
 
         foreach (var methodName in methodNames)
