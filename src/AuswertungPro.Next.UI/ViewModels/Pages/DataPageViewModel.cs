@@ -41,6 +41,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageOriginalPdfController _originalPdfController;
     private readonly DataPageMeasureSuggestionController _measureSuggestionController;
     private readonly DataPageCostRestoreController _costRestoreController;
+    private readonly DataPageVideoRelinkController _videoRelinkController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
@@ -199,6 +200,18 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             ProjectCostStoreRepository.GetStorePath,
             (record, cost) => ApplyCostsToRecord(record, cost, learn: false),
             _shell.SetStatus);
+        _videoRelinkController = new DataPageVideoRelinkController(
+            _sp.Dialogs,
+            () => _sp.Settings.LastVideoSourceFolder,
+            () => _sp.Settings.LastVideoFolder,
+            () => _sp.Settings.LastProjectPath,
+            folder =>
+            {
+                _sp.Settings.LastVideoSourceFolder = folder;
+                _sp.Settings.LastVideoFolder = folder; // legacy compatibility
+                _sp.Settings.Save();
+            },
+            (record, path, userEdited) => SaveVideoLink(record, path, userEdited));
 
         // Seed measure template names from Offerten into dropdown if missing
         SeedMeasureTemplateNames();
@@ -741,33 +754,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void RelinkVideo(HaltungRecord? record)
     {
-        if (record is null)
-            return;
-
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
-            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
-                ? _sp.Settings.LastVideoFolder
-            : _sp.Settings.LastProjectPath is null
-                ? null
-                : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
-
-        var path = _sp.Dialogs.OpenFile(
-            "Video auswaehlen",
-            MediaFileTypes.VideoDialogFilter,
-            initial);
-        if (string.IsNullOrWhiteSpace(path))
-            return;
-
-        var selectedDir = Path.GetDirectoryName(path);
-        if (!string.IsNullOrWhiteSpace(selectedDir))
-        {
-            _sp.Settings.LastVideoSourceFolder = selectedDir;
-            _sp.Settings.LastVideoFolder = selectedDir; // legacy compatibility
-            _sp.Settings.Save();
-        }
-
-        SaveVideoLink(record, path, userEdited: true);
+        _videoRelinkController.Relink(record);
     }
 
     private bool CanOpenCosts(HaltungRecord? record)
