@@ -606,6 +606,22 @@ public sealed class SourceTextArchitectureHygieneTests
     }
 
     [Fact]
+    public void Player_window_coding_events_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingEventsArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "Coding-Events-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        const string methodName = "PlayerWindow_coding_event_display_order_lives_in_policy";
+
+        Assert.Contains($"public void {methodName}", focused);
+        Assert.DoesNotContain($"public void {methodName}", guard);
+    }
+
+    [Fact]
     public void Player_window_coding_apply_guards_live_in_focused_suite()
     {
         var root = SourceTextTestHelpers.FindRepositoryRoot();
