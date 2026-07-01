@@ -280,6 +280,7 @@ public sealed class UiArchitectureGuardTests
         var stateControlsPath = Path.Combine(uiRoot, "Player", "PlayerWindowStateControls.cs");
         var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
         var controllerSetFactoryPath = Path.Combine(uiRoot, "Player", "PlayerWindowControllerSetFactory.cs");
+        var controllerSetInitializerPath = Path.Combine(windowsRoot, "PlayerWindowControllerSetInitializer.cs");
 
         Assert.True(File.Exists(wiringPath), "Fenster-, Slider- und Viewport-Wiring soll aus dem Konstruktor heraus.");
         Assert.True(File.Exists(lifecycleEventBinderPath), "Fenster-Lifecycle-Event-Binding soll ausserhalb der PlayerWindow-Partials gebuendelt werden.");
@@ -300,6 +301,7 @@ public sealed class UiArchitectureGuardTests
         Assert.True(File.Exists(stateControlsPath), "WindowStateManager-Zugriff soll ausserhalb des PlayerWindow-Konstruktors liegen.");
         Assert.True(File.Exists(closedWorkflowPath), "Closed-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controllerSetFactoryPath), "PlayerWindow-Controller-Konstruktion soll ausserhalb des Konstruktors gebuendelt werden.");
+        Assert.True(File.Exists(controllerSetInitializerPath), "PlayerWindow-Control-Mapping fuer Controller soll ausserhalb des Konstruktors liegen.");
 
         var windowRoot = File.ReadAllText(windowRootPath);
         var wiring = File.ReadAllText(wiringPath);
@@ -322,8 +324,12 @@ public sealed class UiArchitectureGuardTests
         var stateControls = File.Exists(stateControlsPath) ? File.ReadAllText(stateControlsPath) : "";
         var closedWorkflow = File.Exists(closedWorkflowPath) ? File.ReadAllText(closedWorkflowPath) : "";
         var controllerSetFactory = File.Exists(controllerSetFactoryPath) ? File.ReadAllText(controllerSetFactoryPath) : "";
+        var controllerSetInitializer = File.Exists(controllerSetInitializerPath) ? File.ReadAllText(controllerSetInitializerPath) : "";
 
-        Assert.Contains("_playerControllers = PlayerWindowControllerSetFactory.Create", windowRoot);
+        Assert.Contains("_playerControllers = PlayerWindowControllerSetInitializer.Create", windowRoot);
+        Assert.DoesNotContain("new PlayerWindowControllerSetControls(", windowRoot);
+        Assert.Contains("new PlayerWindowControllerSetControls(", controllerSetInitializer);
+        Assert.Contains("window.DamageMarkerCanvas", controllerSetInitializer);
         Assert.DoesNotContain("var controllerSet = PlayerWindowControllerSetFactory.Create", windowRoot);
         Assert.DoesNotContain("= controllerSet.", windowRoot);
         Assert.DoesNotContain("new DamageMarkerController", windowRoot);
