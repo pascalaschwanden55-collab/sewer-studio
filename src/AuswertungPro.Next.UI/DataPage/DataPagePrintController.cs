@@ -44,6 +44,9 @@ public sealed class DataPagePrintController
     private readonly Action<string, byte[]> _writeAllBytes;
     private readonly Func<string, byte[], Task> _writeAllBytesAsync;
     private readonly Func<DateTime> _now;
+    // AWU-Einzeldruck: erzeugt das _E-Protokoll in den Haltungsordner (Rueckgabe = Zielpfad, null wenn kein Haltungsname)
+    private readonly Func<Project, string, HaltungRecord, ProtocolDocument, string?> _regenerateOne;
+    private readonly Func<string, bool> _openPdf;
 
     public DataPagePrintController(
         IDialogService dialogs,
@@ -87,7 +90,9 @@ public sealed class DataPagePrintController
         Func<DataPageDossierPrintAvailability, DossierPrintOptions?>? selectDossierPrintOptions = null,
         Func<Project, HaltungRecord, SchachtRecord?, SchachtRecord?, HydraulikCalcResult?, string, DossierPrintOptions, Task<byte[]>>? buildDossierPdfAsync = null,
         Func<IReadOnlyList<string>, byte[]>? mergeOriginals = null,
-        Func<byte[], IReadOnlyList<string>, byte[]>? mergeWithOriginals = null)
+        Func<byte[], IReadOnlyList<string>, byte[]>? mergeWithOriginals = null,
+        Func<Project, string, HaltungRecord, ProtocolDocument, string?>? regenerateOne = null,
+        Func<string, bool>? openPdf = null)
     {
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
         _getProjectFolder = getProjectFolder ?? throw new ArgumentNullException(nameof(getProjectFolder));
@@ -114,6 +119,10 @@ public sealed class DataPagePrintController
                 Task.Run(() => HaltungsDossierPdfBuilder.Build(project, record, schachtVon, schachtBis, calc, projectRoot, options)));
         _mergeOriginals = mergeOriginals ?? PdfMergeHelper.MergeOriginals;
         _mergeWithOriginals = mergeWithOriginals ?? PdfMergeHelper.MergeWithOriginals;
+        _regenerateOne = regenerateOne
+            ?? ((project, folder, record, doc) =>
+                AuswertungPro.Next.Infrastructure.Import.ProtocolRegenerationService.RegenerateOne(project, folder, record, doc));
+        _openPdf = openPdf ?? (path => DataPageOriginalPdfController.TryShellOpen(path).Success);
     }
 
     public async Task PrintDossierPdfAsync(Project project, HaltungRecord? record)
@@ -298,8 +307,7 @@ public sealed class DataPagePrintController
             // Direkt in den Haltungsordner (Haltungen_Verteilt\<H>\...._E.pdf), kein Speichern-Dialog.
             // Gleiche Logik wie "Protokoll neu generieren", nur fuer diese eine Haltung.
             var doc = ensureProtocolDocument(record);
-            var dest = AuswertungPro.Next.Infrastructure.Import.ProtocolRegenerationService.RegenerateOne(
-                project, projectFolder, record, doc);
+            var dest = _regenerateOne(project, projectFolder, record, doc);
             if (string.IsNullOrWhiteSpace(dest))
             {
                 _dialogs.Info(
@@ -312,8 +320,7 @@ public sealed class DataPagePrintController
             project.Dirty = true;
 
             // PDF direkt anzeigen; nur wenn das nicht klappt, den Pfad melden.
-            var (opened, _) = DataPageOriginalPdfController.TryShellOpen(dest);
-            if (!opened)
+            if (!_openPdf(dest!))
                 _dialogs.Info($"AWU-Haltungsprotokoll wurde erstellt:\n{dest}", "Haltungsprotokoll AWU");
         }
         catch (Exception ex)
