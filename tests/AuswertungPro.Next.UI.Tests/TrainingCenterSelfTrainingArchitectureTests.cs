@@ -235,10 +235,18 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_self_training_run_execution_an_controller()
+    public void TrainingCenterViewModel_setzt_triviale_self_training_run_execution_inline()
     {
+        var repoRoot = FindRepoRoot();
+        var controllerPath = Path.Combine(
+            repoRoot,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "SelfTrainingRunExecutionController.cs");
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            repoRoot,
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -246,10 +254,11 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "TrainingCenterViewModel.cs"));
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingRunExecutionController.RunAsync(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("selfTrainingSession.Orchestrator.RunAsync(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("if (SelfTrainingHistorySnapshotBuilder.Build(result, DateTime.UtcNow)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingHistoryStore.AppendRunAsync(snapshot)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(controllerPath), controllerPath);
+        Assert.DoesNotContain("SelfTrainingRunExecutionController.RunAsync(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("selfTrainingSetup.Session.Orchestrator.RunAsync(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingHistorySnapshotBuilder.Build(result, DateTime.UtcNow)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingHistoryStore.AppendRunAsync(snapshot)", selfTrainingSource, StringComparison.Ordinal);
     }
 
     [Fact]

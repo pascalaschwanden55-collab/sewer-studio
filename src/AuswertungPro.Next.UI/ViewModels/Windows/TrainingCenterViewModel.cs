@@ -1381,14 +1381,12 @@ public partial class TrainingCenterViewModel : ObservableObject
             var progress = new Progress<SelfTrainingStep>(OnSelfTrainingStep);
 
             Log(SelfTrainingRunPresentationBuilder.BuildPipelineStartedLog());
-            var result = await SelfTrainingRunExecutionController.RunAsync(
-                selfTrainingSetup.Session.Orchestrator,
+            var result = await selfTrainingSetup.Session.Orchestrator.RunAsync(
                 TrainingCenterRuntimeHelpers.ToTrainingCaseInput(selectedCase),
                 progress,
-                SelfTrainingHistorySnapshotBuilder.Build,
-                SelfTrainingHistoryStore.AppendRunAsync,
-                () => DateTime.UtcNow,
                 ct);
+            if (SelfTrainingHistorySnapshotBuilder.Build(result, DateTime.UtcNow) is { } snapshot)
+                await SelfTrainingHistoryStore.AppendRunAsync(snapshot);
 
             var completionPresentation = SelfTrainingRunPresentationBuilder.BuildCompletion(result);
             foreach (var line in completionPresentation.LogLines)
