@@ -2,6 +2,7 @@ using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
 using CommunityToolkit.Mvvm.Input;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -46,7 +47,8 @@ public sealed class DataPageSelectionChangedControllerTests
     [Fact]
     public void DataPageViewModel_delegiert_selected_change_an_controller()
     {
-        var source = File.ReadAllText(RepoFile(
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -58,45 +60,6 @@ public sealed class DataPageSelectionChangedControllerTests
         Assert.DoesNotContain("NotifyCanExecuteChanged", method, StringComparison.Ordinal);
         Assert.DoesNotContain("NormalizeSelectedFindings(Selected)", method, StringComparison.Ordinal);
         Assert.DoesNotContain("SyncSelectedProtocolFromFindings(Selected)", method, StringComparison.Ordinal);
-    }
-
-    private static string RepoFile(params string[] parts)
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(new[] { dir.FullName }.Concat(parts).ToArray());
-            if (File.Exists(candidate))
-                return candidate;
-
-            dir = dir.Parent;
-        }
-
-        throw new FileNotFoundException("Repo-Datei nicht gefunden.", Path.Combine(parts));
-    }
-
-    private static string ExtractMethodBody(string source, string signature)
-    {
-        var signatureIndex = source.IndexOf(signature, StringComparison.Ordinal);
-        Assert.True(signatureIndex >= 0, $"Signatur nicht gefunden: {signature}");
-
-        var braceIndex = source.IndexOf('{', signatureIndex);
-        Assert.True(braceIndex >= 0, $"Methodenrumpf nicht gefunden: {signature}");
-
-        var depth = 0;
-        for (var i = braceIndex; i < source.Length; i++)
-        {
-            if (source[i] == '{')
-                depth++;
-            else if (source[i] == '}')
-            {
-                depth--;
-                if (depth == 0)
-                    return source[braceIndex..(i + 1)];
-            }
-        }
-
-        throw new InvalidOperationException($"Methodenrumpf nicht abgeschlossen: {signature}");
     }
 
     private sealed class TestRelayCommand : IRelayCommand
