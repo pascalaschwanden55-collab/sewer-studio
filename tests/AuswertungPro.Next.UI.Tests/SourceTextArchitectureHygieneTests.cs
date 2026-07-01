@@ -658,6 +658,7 @@ public sealed class SourceTextArchitectureHygieneTests
         {
             "PlayerWindow_import_confirmation_badge_uses_display_policy",
             "PlayerWindow_green_match_accept_overlay_uses_display_policy",
+            "PlayerWindow_protocol_match_summary_uses_controls_adapter",
         };
 
         foreach (var methodName in methodNames)
