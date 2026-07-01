@@ -14,15 +14,17 @@ public sealed class SelfTrainingRunStartControllerTests
             ProtocolPath = @"C:\Import\protokoll.pdf"
         };
         var calls = new List<string>();
+        var ui = new SelfTrainingUiSink(
+            setBusy: value => calls.Add($"busy:{value}"),
+            setSelfTrainingRunning: value => calls.Add($"running:{value}"),
+            setLogText: value => calls.Add($"logtext:{value}"),
+            setStatusText: value => calls.Add($"status:{value}"),
+            log: value => calls.Add($"log:{value}"));
 
         SelfTrainingRunStartController.Apply(
             trainingCase,
-            value => calls.Add($"busy:{value}"),
-            value => calls.Add($"running:{value}"),
-            () => calls.Add("reset"),
-            value => calls.Add($"logtext:{value}"),
-            value => calls.Add($"status:{value}"),
-            value => calls.Add($"log:{value}"));
+            ui,
+            () => calls.Add("reset"));
 
         Assert.Equal(
             new[]

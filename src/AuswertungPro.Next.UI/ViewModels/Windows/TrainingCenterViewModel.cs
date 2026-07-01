@@ -1329,12 +1329,13 @@ public partial class TrainingCenterViewModel : ObservableObject
         {
             SelfTrainingRunStartController.Apply(
                 selectedCase,
-                value => IsBusy = value,
-                value => IsSelfTrainingRunning = value,
-                () => ResetSelfTrainingVisuals(resetMatchRate: true),
-                value => LogText = value,
-                value => StatusText = value,
-                Log);
+                new SelfTrainingUiSink(
+                    value => IsBusy = value,
+                    value => IsSelfTrainingRunning = value,
+                    value => LogText = value,
+                    value => StatusText = value,
+                    Log),
+                () => ResetSelfTrainingVisuals(resetMatchRate: true));
 
             using var selfTrainingSetup = await SelfTrainingRuntimeSetupController.PrepareAsync(
                 () => PlayerAiSettingsLoader.LoadRuntimeSettings(),

@@ -6,29 +6,21 @@ public static class SelfTrainingRunStartController
 {
     public static void Apply(
         TrainingCase trainingCase,
-        Action<bool> setBusy,
-        Action<bool> setSelfTrainingRunning,
-        Action resetSelfTrainingVisuals,
-        Action<string> setLogText,
-        Action<string> setStatusText,
-        Action<string> log)
+        SelfTrainingUiSink ui,
+        Action resetSelfTrainingVisuals)
     {
         ArgumentNullException.ThrowIfNull(trainingCase);
-        ArgumentNullException.ThrowIfNull(setBusy);
-        ArgumentNullException.ThrowIfNull(setSelfTrainingRunning);
+        ArgumentNullException.ThrowIfNull(ui);
         ArgumentNullException.ThrowIfNull(resetSelfTrainingVisuals);
-        ArgumentNullException.ThrowIfNull(setLogText);
-        ArgumentNullException.ThrowIfNull(setStatusText);
-        ArgumentNullException.ThrowIfNull(log);
 
-        setBusy(true);
-        setSelfTrainingRunning(true);
+        ui.SetBusy(true);
+        ui.SetSelfTrainingRunning(true);
         resetSelfTrainingVisuals();
-        setLogText("");
+        ui.SetLogText("");
 
         var startPresentation = SelfTrainingRunPresentationBuilder.BuildStart(trainingCase);
-        setStatusText(startPresentation.StatusText);
+        ui.SetStatusText(startPresentation.StatusText);
         foreach (var line in startPresentation.LogLines)
-            log(line);
+            ui.Log(line);
     }
 }
