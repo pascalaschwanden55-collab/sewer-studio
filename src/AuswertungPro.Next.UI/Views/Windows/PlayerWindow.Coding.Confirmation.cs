@@ -13,14 +13,14 @@ public partial class PlayerWindow
 {
     private void InitializeCodingConfirmationPanelControls()
     {
-        _codingConfirmationPanelControls.Initialize(
-            new CodingConfirmationPanelControls(
-                CodingConfirmationPanel,
-                ConfirmAmpel,
-                TxtConfirmCode,
-                TxtConfirmConfidence,
-                TxtConfirmDescription,
-                TxtConfirmDetail));
+        PlayerCodingConfirmationPanelInitializer.Initialize(
+            _codingConfirmationPanelControls,
+            CodingConfirmationPanel,
+            ConfirmAmpel,
+            TxtConfirmCode,
+            TxtConfirmConfidence,
+            TxtConfirmDescription,
+            TxtConfirmDetail);
     }
 
     private void PauseAndAskConfirmation(CodingEvent codingEvent, QualityGateResult gateResult)
