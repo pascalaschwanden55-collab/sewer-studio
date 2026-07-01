@@ -70,6 +70,22 @@ public sealed class CodingFrameExtractionServiceTests
     }
 
     [Fact]
+    public async Task TryExtractFrameAtSecondsAsync_does_not_block_waiting_for_extractor_completion()
+    {
+        var extractorCompletion = new TaskCompletionSource<byte[]?>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var service = new CodingFrameExtractionService(
+            () => "ffmpeg.exe",
+            (_, _, _, _) => extractorCompletion.Task);
+
+        var pending = service.TryExtractFrameAtSecondsAsync("video.mp4", 2.5);
+
+        Assert.False(pending.IsCompleted);
+        extractorCompletion.SetResult([7, 8, 9]);
+        Assert.Equal([7, 8, 9], await pending);
+    }
+
+    [Fact]
     public void TryExtractFrameAtSeconds_logs_and_returns_null_when_extractor_fails()
     {
         var logs = new List<string>();

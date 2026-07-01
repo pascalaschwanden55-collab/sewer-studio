@@ -31,6 +31,12 @@ public sealed class CodingFrameExtractionService
     }
 
     public byte[]? TryExtractFrameAtSeconds(string? videoPath, double? seconds)
+        => TryExtractFrameAtSecondsAsync(videoPath, seconds).GetAwaiter().GetResult();
+
+    public async Task<byte[]?> TryExtractFrameAtSecondsAsync(
+        string? videoPath,
+        double? seconds,
+        CancellationToken cancellationToken = default)
     {
         if (seconds is null || seconds.Value < 0 || string.IsNullOrWhiteSpace(videoPath))
             return null;
@@ -41,12 +47,11 @@ public sealed class CodingFrameExtractionService
             if (string.IsNullOrWhiteSpace(ffmpeg))
                 return null;
 
-            return _extractFrameAsync(
+            return await _extractFrameAsync(
                 ffmpeg,
                 videoPath,
                 TimeSpan.FromSeconds(seconds.Value),
-                CancellationToken.None)
-                .GetAwaiter().GetResult();
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
