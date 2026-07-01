@@ -312,6 +312,19 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.DoesNotContain($"public void {methodName}", guard);
     }
 
+    [Fact]
+    public void Player_window_stretch_damage_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowStretchDamageArchitectureTests.cs"));
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        const string methodName = "PlayerWindow_open_stretch_damage_prompt_lives_in_policy";
+
+        Assert.Contains($"public void {methodName}", focused);
+        Assert.DoesNotContain($"public void {methodName}", guard);
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -371,6 +384,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowResourceDictionaryTests.cs")]
     [InlineData("PlayerWindowRuntimeArchitectureTests.cs")]
     [InlineData("PlayerWindowShellProjectArchitectureTests.cs")]
+    [InlineData("PlayerWindowStretchDamageArchitectureTests.cs")]
     [InlineData("PlayerWindowTimerArchitectureTests.cs")]
     [InlineData("PlayerWindowVisualInfrastructureArchitectureTests.cs")]
     [InlineData("PlayerWindowWiringArchitectureTests.cs")]
