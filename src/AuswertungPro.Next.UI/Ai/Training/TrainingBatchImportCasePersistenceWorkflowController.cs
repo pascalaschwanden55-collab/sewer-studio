@@ -36,9 +36,16 @@ public static class TrainingBatchImportCasePersistenceWorkflowController
             setSampleCount,
             setCodesCovered);
 
-        await TrainingBatchImportCaseStateSaveController.SaveIfDueAsync(
-            processedCount,
-            5,
-            saveStateAsync);
+        if (processedCount > 0 && processedCount % 5 == 0)
+        {
+            try
+            {
+                await saveStateAsync().ConfigureAwait(false);
+            }
+            catch
+            {
+                // Best-Effort: Batch-Import darf wegen Autosave-State nicht abbrechen.
+            }
+        }
     }
 }

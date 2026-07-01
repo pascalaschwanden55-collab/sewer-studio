@@ -80,6 +80,21 @@ public sealed class TrainingBatchImportCasePersistenceWorkflowControllerTests
         Assert.DoesNotContain("save-state", calls);
     }
 
+    [Fact]
+    public async Task PersistAsync_schluckt_best_effort_state_save_fehler()
+    {
+        await TrainingBatchImportCasePersistenceWorkflowController.PersistAsync(
+            new List<TrainingSample> { Sample("new", "BBB") },
+            new List<TrainingSample>(),
+            processedCount: 5,
+            saveSamplesAsync: _ => Task.CompletedTask,
+            saveStateAsync: () => throw new InvalidOperationException("kaputt"),
+            invokeOnUi: action => action(),
+            setSampleCount: _ => { },
+            setCodesCovered: _ => { },
+            log: _ => { });
+    }
+
     private static TrainingSample Sample(string id, string code)
         => new()
         {
