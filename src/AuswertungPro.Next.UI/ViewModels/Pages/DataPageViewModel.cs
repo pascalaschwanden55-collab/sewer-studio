@@ -44,6 +44,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageProtocolWindowController _protocolWindowController;
     private readonly DataPageRecordCollectionController _recordCollectionController;
     private readonly DataPageVideoAnalysisController _videoAnalysisController;
+    private readonly DataPageSanierungWindowController _sanierungWindowController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
@@ -271,6 +272,22 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             RefreshSelectedProtocolEntries,
             ScheduleAutoSave,
             action => System.Windows.Application.Current?.Dispatcher.BeginInvoke(action));
+        _sanierungWindowController = new DataPageSanierungWindowController(
+            _sp.Dialogs,
+            () => Selected,
+            ParseRecommendedTemplates,
+            () => new AppSettingsAiSettingsProvider().Load().ToRuntimeSettings(),
+            (record, maxSuggestions) => _measureRecommendationService.Recommend(record, maxSuggestions),
+            (record, cost) => ApplyCostsToRecord(record, cost),
+            () =>
+            {
+                _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+                _shell.Project.Dirty = true;
+            },
+            RefreshRecordInGrid,
+            ScheduleAutoSave,
+            _shell.SetStatus,
+            ShowSanierungsmassnahmenWindow);
 
         // Seed measure template names from Offerten into dropdown if missing
         SeedMeasureTemplateNames();
@@ -722,60 +739,29 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void OpenSanierungsmassnahmenWindow(HaltungRecord? record, InitialFocusMode focus)
     {
-        record ??= Selected;
-        if (record is null) return;
+        _sanierungWindowController.Open(record, focus);
+    }
 
-        var holding = (record.GetFieldValue("Haltungsname") ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(holding))
-        {
-            _sp.Dialogs.Warn("Haltungsname fehlt in der Zeile.", "Sanierungsmassnahmen");
-            return;
-        }
-
-        // Build CostCalculatorViewModel
-        var recommended = ParseRecommendedTemplates(record.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
+    private void ShowSanierungsmassnahmenWindow(DataPageSanierungWindowRequest request)
+    {
         var costCalcVm = new CostCalculatorViewModel(
-            holding,
+            request.Holding,
             null,
-            recommended,
+            request.RecommendedTemplates,
             _sp.Settings.LastProjectPath,
-            cost => ApplyCostsToRecord(record, cost),
-            haltungRecord: record,
+            request.ApplyCosts,
+            haltungRecord: request.Record,
             projectRecords: Records);
 
-        // Build SanierungOptimizationViewModel (nullable when AI disabled)
         SanierungOptimizationViewModel? optimizationVm = null;
-        var cfg = new AppSettingsAiSettingsProvider()
-            .Load()
-            .ToRuntimeSettings();
-        if (cfg.Enabled)
+        if (request.RuntimeSettings is not null)
         {
-            var ruleResult = _measureRecommendationService.Recommend(record, maxSuggestions: 5);
-            RuleRecommendationDto? ruleDto = null;
-            if (ruleResult.Measures.Count > 0)
-            {
-                ruleDto = new RuleRecommendationDto
-                {
-                    Measures         = ruleResult.Measures,
-                    EstimatedCost    = ruleResult.EstimatedTotalCost,
-                    UsedTrainedModel = ruleResult.UsedTrainedModel
-                };
-            }
-
-            var aiService = _sp.CreateSanierungOptimization(cfg);
-            optimizationVm = new SanierungOptimizationViewModel(record, aiService, ruleDto);
-
-            optimizationVm.TransferredToPrimary += _ =>
-            {
-                _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-                _shell.Project.Dirty         = true;
-                RefreshRecordInGrid(record);
-                ScheduleAutoSave();
-                _shell.SetStatus($"KI-Sanierungsvorschlag übertragen: {holding}");
-            };
+            var aiService = _sp.CreateSanierungOptimization(request.RuntimeSettings);
+            optimizationVm = new SanierungOptimizationViewModel(request.Record, aiService, request.RuleRecommendation);
+            optimizationVm.TransferredToPrimary += _ => request.OnOptimizationTransferred();
         }
 
-        var vm = new SanierungsmassnahmenViewModel(costCalcVm, optimizationVm, record, focus);
+        var vm = new SanierungsmassnahmenViewModel(costCalcVm, optimizationVm, request.Record, request.Focus);
         var win = new SanierungsmassnahmenWindow(vm)
         {
             Owner = System.Windows.Application.Current?.MainWindow
