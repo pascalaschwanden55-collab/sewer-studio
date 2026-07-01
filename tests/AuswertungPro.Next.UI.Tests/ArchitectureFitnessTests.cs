@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -44,20 +45,6 @@ public sealed class ArchitectureFitnessTests
         var normalized = Normalize(path);
         return normalized.Contains("/bin/", StringComparison.OrdinalIgnoreCase)
                || normalized.Contains("/obj/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AuswertungPro.sln")))
-                return current.FullName;
-
-            current = current.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repository-Root mit AuswertungPro.sln wurde nicht gefunden.");
     }
 
     private static string Normalize(string path)

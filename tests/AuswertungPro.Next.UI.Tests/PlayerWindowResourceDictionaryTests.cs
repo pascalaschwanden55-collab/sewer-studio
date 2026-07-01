@@ -1,5 +1,6 @@
 using System.IO;
 using Xunit;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -44,17 +45,4 @@ public sealed class PlayerWindowResourceDictionaryTests
         Assert.DoesNotContain("Style=\"{StaticResource StatTile}\"", sidePanel);
     }
 
-    private static string FindRepoRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AuswertungPro.sln")))
-                return current.FullName;
-
-            current = current.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repo root with AuswertungPro.sln was not found.");
-    }
 }

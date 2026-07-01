@@ -1,15 +1,16 @@
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class ProjektEroeffnungSettingsGuardTests
 {
     private static string Vm()
-        => File.ReadAllText(ProjektEroeffnungShellGuardTests.RepoFile(
+        => File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "ViewModels", "Pages", "SettingsPageViewModel.cs"));
 
     private static string Xaml()
-        => File.ReadAllText(ProjektEroeffnungShellGuardTests.RepoFile(
+        => File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "Views", "Pages", "SettingsPage.xaml"));
 
     [Fact]

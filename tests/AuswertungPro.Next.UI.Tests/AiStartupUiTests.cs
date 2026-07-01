@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -66,17 +67,4 @@ public sealed class AiStartupUiTests
         return source.Substring(start, end - start);
     }
 
-    private static string FindRepoRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AuswertungPro.sln")))
-                return current.FullName;
-
-            current = current.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repo root with AuswertungPro.sln was not found.");
-    }
 }

@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.UI.DataPage;
 using Xunit;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -166,21 +167,6 @@ public sealed class GridDockingControllerTests
 
         if (exception is not null)
             ExceptionDispatchInfo.Capture(exception).Throw();
-    }
-
-    private static string RepoFile(params string[] segments)
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            var candidate = Path.Combine(directory.FullName, "AuswertungPro.sln");
-            if (File.Exists(candidate))
-                return Path.Combine(new[] { directory.FullName }.Concat(segments).ToArray());
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Repository root not found.");
     }
 
     private static string ExtractBetween(string source, string startMarker, string endMarker)

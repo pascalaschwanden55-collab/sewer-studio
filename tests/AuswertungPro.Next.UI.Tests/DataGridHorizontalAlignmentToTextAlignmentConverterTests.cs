@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Data;
 using AuswertungPro.Next.UI.Views.Pages;
 using Xunit;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -68,17 +69,4 @@ public sealed class DataGridHorizontalAlignmentToTextAlignmentConverterTests
         Assert.Contains("DataGridHorizontalAlignmentToTextAlignmentConverter", comboFactory);
     }
 
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "AuswertungPro.sln")))
-                return directory.FullName;
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Repository root not found.");
-    }
 }

@@ -11,6 +11,8 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("BuilderPageSpecialStatsCalculatorTests.cs")]
     [InlineData("BuilderPageSummaryEntryBuilderTests.cs")]
     [InlineData("BuilderPageViewModelThreadingTests.cs")]
+    [InlineData("AiStartupUiTests.cs")]
+    [InlineData("ArchitectureFitnessTests.cs")]
     [InlineData("CostCalculatorCatalogFilterArchitectureTests.cs")]
     [InlineData("CostCalculatorImportDefaultsArchitectureTests.cs")]
     [InlineData("CostCalculatorLineOrderArchitectureTests.cs")]
@@ -40,7 +42,12 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("DataPageVideoPathArchitectureTests.cs")]
     [InlineData("DataPageVideoRelinkArchitectureTests.cs")]
     [InlineData("DataGridWrappingTextColumnFactoryTests.cs")]
+    [InlineData("DataGridHorizontalAlignmentToTextAlignmentConverterTests.cs")]
+    [InlineData("GridDockingControllerTests.cs")]
     [InlineData("PageViewModelLifecycleTests.cs")]
+    [InlineData("PlayerWindowResourceDictionaryTests.cs")]
+    [InlineData("ProjektEroeffnungShellGuardTests.cs")]
+    [InlineData("SchaechtePageColumnLayoutRefactorTests.cs")]
     [InlineData("ShellNavigationPolicyTests.cs")]
     [InlineData("SystemMonitorProcessSafetyTests.cs")]
     [InlineData("TrainingCenterBatchImportThreadingTests.cs")]
@@ -55,6 +62,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("VideoLabelToolSelectionTests.cs")]
     [InlineData("VideoLabelToolServerSecurityTests.cs")]
     [InlineData("VideoLabelToolVisualStyleTests.cs")]
+    [InlineData("VsaCodeExplorerCollectionDispatchTests.cs")]
     [InlineData("VsaCodeExplorerWindowDispatcherTests.cs")]
     public void Focused_architecture_tests_use_shared_source_text_helpers(string fileName)
     {
@@ -68,6 +76,7 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.DoesNotContain("private static string FindRepoRoot", source);
         Assert.DoesNotContain("private static string FindRepoFile", source);
         Assert.DoesNotContain("private static string RepoFile", source);
+        Assert.DoesNotContain("internal static string RepoFile", source);
         Assert.DoesNotContain("private static string ExtractMethod(", source);
         Assert.DoesNotContain("private static string ExtractMethodBody", source);
     }

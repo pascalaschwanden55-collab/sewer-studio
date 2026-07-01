@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using System.Linq;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -40,15 +40,4 @@ public sealed class ProjektEroeffnungShellGuardTests
         Assert.DoesNotContain("\"Uebersicht\", () => new Pages.OverviewPageViewModel", src);
     }
 
-    internal static string RepoFile(params string[] parts)
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(new[] { dir.FullName }.Concat(parts).ToArray());
-            if (File.Exists(candidate)) return candidate;
-            dir = dir.Parent;
-        }
-        throw new FileNotFoundException("Repo-Datei nicht gefunden.", Path.Combine(parts));
-    }
 }

@@ -1,5 +1,6 @@
 using System.IO;
 using Xunit;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -48,17 +49,4 @@ public sealed class SchaechtePageColumnLayoutRefactorTests
         Assert.DoesNotContain("private void SetAlignmentButtonsUnchecked", schaechtePageSource);
     }
 
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "AuswertungPro.sln")))
-                return directory.FullName;
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Repository root not found.");
-    }
 }

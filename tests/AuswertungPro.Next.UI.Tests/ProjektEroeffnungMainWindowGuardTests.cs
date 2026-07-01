@@ -1,11 +1,12 @@
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class ProjektEroeffnungMainWindowGuardTests
 {
     private static string Xaml()
-        => File.ReadAllText(ProjektEroeffnungShellGuardTests.RepoFile(
+        => File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "MainWindow.xaml"));
 
     [Fact]
