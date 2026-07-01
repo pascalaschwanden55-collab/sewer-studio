@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using System.Linq;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -9,7 +9,7 @@ public sealed class TrainingCenterReviewCodeExplorerTests
     [Fact]
     public void ReviewKorrektur_nutzt_vsa_code_explorer_statt_freitext_dialog()
     {
-        var source = File.ReadAllText(FindRepoFile(
+        var source = File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "Views", "Windows", "TrainingCenterWindow.xaml.cs"));
 
         var methodStart = source.IndexOf("private async void ReviewCorrect_Click", StringComparison.Ordinal);
@@ -25,17 +25,4 @@ public sealed class TrainingCenterReviewCodeExplorerTests
         Assert.DoesNotContain("new CorrectionDialog", method);
     }
 
-    private static string FindRepoFile(params string[] relativeParts)
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(new[] { dir.FullName }.Concat(relativeParts).ToArray());
-            if (File.Exists(candidate))
-                return candidate;
-            dir = dir.Parent;
-        }
-
-        throw new FileNotFoundException("Repo-Datei nicht gefunden.", Path.Combine(relativeParts));
-    }
 }

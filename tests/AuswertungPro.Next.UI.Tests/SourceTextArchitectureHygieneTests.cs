@@ -43,6 +43,11 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("TrainingCenterBatchImportThreadingTests.cs")]
     [InlineData("TrainingCenterSelfTrainingArchitectureTests.cs")]
     [InlineData("TrainingCenterUiThreadArchitectureTests.cs")]
+    [InlineData("TrainingCenterPersistenceGuardTests.cs")]
+    [InlineData("TrainingCenterReviewCodeExplorerTests.cs")]
+    [InlineData("TrainingCenterReviewSamPersistenceTests.cs")]
+    [InlineData("TrainingCenterReviewThreadingTests.cs")]
+    [InlineData("TrainingFfmpegPathResolverTests.cs")]
     [InlineData("VsaCodeExplorerWindowDispatcherTests.cs")]
     public void Focused_architecture_tests_use_shared_source_text_helpers(string fileName)
     {

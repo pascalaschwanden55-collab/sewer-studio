@@ -1,5 +1,6 @@
 using System.IO;
 using AuswertungPro.Next.UI.ViewModels.Windows;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -59,19 +60,4 @@ public sealed class TrainingFfmpegPathResolverTests
         Assert.DoesNotContain("private static string ResolveFfmpegPath", source, StringComparison.Ordinal);
     }
 
-    private static string FindRepositoryRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AuswertungPro.sln")))
-            {
-                return current.FullName;
-            }
-
-            current = current.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repository root not found.");
-    }
 }
