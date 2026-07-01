@@ -336,7 +336,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_self_training_run_control_an_controller()
+    public void TrainingCenterViewModel_setzt_triviale_self_training_run_control_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -345,14 +345,29 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var controllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "SelfTrainingRunControlController.cs");
         var stopSource = ExtractMethodBody(source, "private void StopSelfTraining()");
         var pauseSource = ExtractMethodBody(source, "private void PauseSelfTraining()");
 
-        Assert.Contains("SelfTrainingRunControlController.RequestCancel(_selfTrainingCts)", stopSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_selfTrainingCts?.Cancel();", stopSource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingRunControlController.TogglePause(_selfTrainingOrchestrator)", pauseSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_selfTrainingOrchestrator.Pause();", pauseSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("_selfTrainingOrchestrator.Resume();", pauseSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(controllerPath), "Triviale Self-Training-Run-Control soll inline in der VM stehen.");
+        Assert.DoesNotContain("SelfTrainingRunControlController", stopSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingRunControlController", pauseSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingCts?.Cancel();", stopSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = \"Selbsttraining wird abgebrochen...\";", stopSource, StringComparison.Ordinal);
+        Assert.Contains("if (_selfTrainingOrchestrator is null) return;", pauseSource, StringComparison.Ordinal);
+        Assert.Contains("if (_selfTrainingOrchestrator.IsPaused)", pauseSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingOrchestrator.Resume();", pauseSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = \"Selbsttraining fortgesetzt.\";", pauseSource, StringComparison.Ordinal);
+        Assert.Contains("Log(\"Pipeline fortgesetzt.\");", pauseSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingOrchestrator.Pause();", pauseSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = \"Selbsttraining pausiert.\";", pauseSource, StringComparison.Ordinal);
+        Assert.Contains("Log(\"Pipeline pausiert.\");", pauseSource, StringComparison.Ordinal);
     }
 
     [Fact]
