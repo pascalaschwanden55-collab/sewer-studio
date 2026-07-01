@@ -84,7 +84,8 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_video_path_validation_lives_in_guard",
             "PlayerWindow_state_fields_live_in_state_partial",
             "PlayerWindow_bounds_adjustment_lives_in_policy",
-            "PlayerWindow_trace_output_lives_in_player_trace"
+            "PlayerWindow_trace_output_lives_in_player_trace",
+            "PlayerWindow_timestamp_access_lives_in_player_clock"
         };
 
         foreach (var methodName in methodNames)
@@ -545,6 +546,22 @@ public sealed class SourceTextArchitectureHygieneTests
         }
     }
 
+    [Fact]
+    public void Player_window_coding_training_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingTrainingArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "Coding-Training-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        const string methodName = "PlayerWindow_training_sample_persistence_lives_in_coordinator";
+
+        Assert.Contains($"public void {methodName}", focused);
+        Assert.DoesNotContain($"public void {methodName}", guard);
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -599,6 +616,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowCodingStateArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingCatalogArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingPhotoArchitectureTests.cs")]
+    [InlineData("PlayerWindowCodingTrainingArchitectureTests.cs")]
     [InlineData("PlayerWindowCoreArchitectureTests.cs")]
     [InlineData("PlayerWindowControllerArchitectureTests.cs")]
     [InlineData("PlayerWindowInlineEvidenceArchitectureTests.cs")]
