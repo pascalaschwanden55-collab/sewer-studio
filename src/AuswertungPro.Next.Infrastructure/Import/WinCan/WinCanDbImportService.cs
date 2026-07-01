@@ -488,7 +488,10 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         ApplyField(record, "Nutzungsart", NormalizeUsage(section.Usage));
         ApplyField(record, "Eigentuemer", section.Ownership);
         ApplyField(record, "Bemerkungen", section.Memo);
-        ApplyField(record, "Datum_Jahr", NormalizeDate(section.ConstructionYearText, section.ConstructionDate));
+        // Datum_Jahr = INSPEKTIONSdatum (INS_StartDate), konsistent mit VSA_KEK (Untersuchungs-Zeitpunkt)
+        // und dem PDF-Import. Das Bau-/Konstruktionsjahr (OBJ_ConstructionDate) wird bewusst NICHT als
+        // Fallback verwendet, sonst mischt sich wieder ein Baujahr ein. Ohne Inspektionsdatum bleibt leer.
+        ApplyField(record, "Datum_Jahr", NormalizeDate(null, inspection?.StartDate));
         ApplyField(record, "Inspektionsrichtung", NormalizeInspectionDir(inspection?.InspectionDir));
     }
 
@@ -914,7 +917,8 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             var sectionFk = r.GetString(1);
             var sortKey = ParseSqliteDate(r[2]) ?? ParseSqliteDate(r[3]) ?? ParseSqliteDate(r[4]) ?? DateTime.MinValue;
             var dir = r.IsDBNull(5) ? null : r.GetValue(5)?.ToString();
-            list.Add(new DbInspection(pk, sectionFk, sortKey, dir));
+            var startDate = r.IsDBNull(2) ? null : r.GetValue(2)?.ToString();
+            list.Add(new DbInspection(pk, sectionFk, sortKey, dir, startDate));
         }
         return list;
     }
@@ -1049,7 +1053,7 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         string? Memo,
         string? FromNodeFk,
         string? ToNodeFk);
-    private sealed record DbInspection(string Pk, string SectionFk, DateTime SortKey, string? InspectionDir);
+    private sealed record DbInspection(string Pk, string SectionFk, DateTime SortKey, string? InspectionDir, string? StartDate);
     private sealed record DbObservation(
         string Pk,
         string InspectionFk,
