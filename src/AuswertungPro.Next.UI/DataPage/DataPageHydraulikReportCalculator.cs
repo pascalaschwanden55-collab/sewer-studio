@@ -1,4 +1,5 @@
 using System.Globalization;
+using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.Hydraulik;
@@ -12,52 +13,6 @@ public sealed record DataPageHydraulikAvailability(double? DnMm, double? Gefaell
 
 public static class DataPageHydraulikReportCalculator
 {
-    public static double? ParseDnMm(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return null;
-
-        var text = raw.Trim()
-            .Replace(" ", string.Empty, StringComparison.Ordinal)
-            .Replace("'", string.Empty, StringComparison.Ordinal);
-
-        if (double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var value)
-            && value > 0)
-        {
-            return value;
-        }
-
-        if (double.TryParse(text, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out value)
-            && value > 0)
-        {
-            return value;
-        }
-
-        if (text.Contains(',') && text.Contains('.'))
-        {
-            var commaAsDecimal = text.Replace(".", string.Empty, StringComparison.Ordinal).Replace(',', '.');
-            if (double.TryParse(commaAsDecimal, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0)
-                return value;
-
-            var dotAsDecimal = text.Replace(",", string.Empty, StringComparison.Ordinal);
-            if (double.TryParse(dotAsDecimal, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0)
-                return value;
-        }
-        else if (text.Contains(','))
-        {
-            var normalized = text.Replace(',', '.');
-            if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value > 0)
-                return value;
-        }
-
-        var digitsOnly = text.Replace(".", string.Empty, StringComparison.Ordinal)
-            .Replace(",", string.Empty, StringComparison.Ordinal);
-        if (double.TryParse(digitsOnly, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && value >= 50)
-            return value;
-
-        return null;
-    }
-
     public static double? ParseGefaellePromille(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
@@ -74,7 +29,7 @@ public static class DataPageHydraulikReportCalculator
         ArgumentNullException.ThrowIfNull(record);
 
         return new DataPageHydraulikAvailability(
-            ParseDnMm(record.GetFieldValue("DN_mm")),
+            DnValueParser.TryParseMillimeters(record.GetFieldValue("DN_mm")),
             ParseGefaellePromille(record.GetFieldValue("Gefaelle_Promille")));
     }
 
@@ -87,7 +42,7 @@ public static class DataPageHydraulikReportCalculator
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(settings);
 
-        var dn = dnMm ?? ParseDnMm(record.GetFieldValue("DN_mm")) ?? 300d;
+        var dn = dnMm ?? DnValueParser.TryParseMillimeters(record.GetFieldValue("DN_mm")) ?? 300d;
         var panel = settings.HydraulikPanel ??= new HydraulikPanelSettings();
         var material = HydraulikMaterialCatalog.Resolve(record.GetFieldValue("Rohrmaterial"), panel.MaterialKey);
         var kb = panel.IsNeuzustand ? material.KbNeu : material.KbAlt;
