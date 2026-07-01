@@ -654,10 +654,17 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.True(File.Exists(focusedPath), "Coding-Protocol-Match-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
 
         var focused = File.ReadAllText(focusedPath);
-        const string methodName = "PlayerWindow_import_confirmation_badge_uses_display_policy";
+        var methodNames = new[]
+        {
+            "PlayerWindow_import_confirmation_badge_uses_display_policy",
+            "PlayerWindow_green_match_accept_overlay_uses_display_policy",
+        };
 
-        Assert.Contains($"public void {methodName}", focused);
-        Assert.DoesNotContain($"public void {methodName}", guard);
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
     }
 
     [Fact]
