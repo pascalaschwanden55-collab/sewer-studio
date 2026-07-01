@@ -228,19 +228,17 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         _ = sender;
 
-        if ((Keyboard.Modifiers & ModifierKeys.Control) == 0)
-            return;
-
         if (DataContext is not DataPageViewModel vm)
             return;
 
-        const double step = 0.05d;
-        var delta = e.Delta > 0 ? step : -step;
-        var next = Math.Clamp(vm.GridZoom + delta, 0.5d, 2.0d);
-        if (Math.Abs(next - vm.GridZoom) < 0.001d)
+        var zoom = DataPageGridZoomController.Resolve(
+            vm.GridZoom,
+            e.Delta,
+            hasControlModifier: (Keyboard.Modifiers & ModifierKeys.Control) != 0);
+        if (!zoom.Handled)
             return;
 
-        vm.GridZoom = next;
+        vm.GridZoom = zoom.NextZoom;
         e.Handled = true;
     }
 
