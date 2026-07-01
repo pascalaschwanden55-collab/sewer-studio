@@ -1287,16 +1287,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void ResetSort()
     {
-        var view = CollectionViewSource.GetDefaultView(Grid.ItemsSource);
-        if (view is null)
-            return;
-
-        view.SortDescriptions.Clear();
-        if (view is ListCollectionView listView)
-            listView.CustomSort = null;
-
-        foreach (var col in Grid.Columns)
-            col.SortDirection = null;
+        DataGridSortResetController.Reset(
+            CollectionViewSource.GetDefaultView(Grid.ItemsSource),
+            Grid.Columns);
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
