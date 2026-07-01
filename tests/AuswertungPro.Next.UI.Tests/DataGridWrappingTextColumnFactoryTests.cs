@@ -54,7 +54,7 @@ public sealed class DataGridWrappingTextColumnFactoryTests
     public void DataPageColumnFactory_delegates_recommendation_column_styling_to_factory()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(),
+            SourceTextTestHelpers.FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Views",
@@ -72,20 +72,6 @@ public sealed class DataGridWrappingTextColumnFactoryTests
         Assert.Contains(
             style.Setters.OfType<Setter>(),
             setter => setter.Property == property && Equals(setter.Value, expectedValue));
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "AuswertungPro.sln")))
-                return directory.FullName;
-
-            directory = directory.Parent;
-        }
-
-        throw new InvalidOperationException("Repository root not found.");
     }
 
     private static void RunOnSta(Action action)

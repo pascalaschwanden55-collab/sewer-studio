@@ -1,6 +1,7 @@
 using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -24,7 +25,8 @@ public sealed class DataPageCommandTargetControllerTests
     [Fact]
     public void DataPageViewModel_delegiert_command_target_pruefungen()
     {
-        var source = File.ReadAllText(RepoFile(
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -42,52 +44,5 @@ public sealed class DataPageCommandTargetControllerTests
 
         Assert.Contains("DataPageCommandTargetController.HasTarget(record, Selected)", body, StringComparison.Ordinal);
         Assert.DoesNotContain("if (record is not null)", body, StringComparison.Ordinal);
-    }
-
-    private static string RepoFile(params string[] parts)
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(new[] { dir.FullName }.Concat(parts).ToArray());
-            if (File.Exists(candidate))
-                return candidate;
-
-            dir = dir.Parent;
-        }
-
-        throw new FileNotFoundException("Repo-Datei nicht gefunden.", Path.Combine(parts));
-    }
-
-    private static string ExtractMethodBody(string source, string signature)
-    {
-        var signatureIndex = source.IndexOf(signature, StringComparison.Ordinal);
-        Assert.True(signatureIndex >= 0, $"Signatur nicht gefunden: {signature}");
-
-        var arrowIndex = source.IndexOf("=>", signatureIndex, StringComparison.Ordinal);
-        var nextBraceIndex = source.IndexOf('{', signatureIndex);
-        if (arrowIndex >= 0 && (nextBraceIndex < 0 || arrowIndex < nextBraceIndex))
-        {
-            var semicolonIndex = source.IndexOf(';', arrowIndex);
-            Assert.True(semicolonIndex >= 0, $"Expression-Body nicht abgeschlossen: {signature}");
-            return source[signatureIndex..(semicolonIndex + 1)];
-        }
-
-        var braceIndex = nextBraceIndex;
-        Assert.True(braceIndex >= 0, $"Methodenrumpf nicht gefunden: {signature}");
-        var depth = 0;
-        for (var i = braceIndex; i < source.Length; i++)
-        {
-            if (source[i] == '{')
-                depth++;
-            else if (source[i] == '}')
-            {
-                depth--;
-                if (depth == 0)
-                    return source[braceIndex..(i + 1)];
-            }
-        }
-
-        throw new InvalidOperationException($"Methodenrumpf nicht abgeschlossen: {signature}");
     }
 }

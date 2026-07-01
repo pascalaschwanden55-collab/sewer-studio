@@ -27,7 +27,16 @@ internal static class SourceTextTestHelpers
         var signatureIndex = source.IndexOf(signature, StringComparison.Ordinal);
         Assert.True(signatureIndex >= 0, $"Signatur nicht gefunden: {signature}");
 
-        var braceIndex = source.IndexOf('{', signatureIndex);
+        var arrowIndex = source.IndexOf("=>", signatureIndex, StringComparison.Ordinal);
+        var nextBraceIndex = source.IndexOf('{', signatureIndex);
+        if (arrowIndex >= 0 && (nextBraceIndex < 0 || arrowIndex < nextBraceIndex))
+        {
+            var semicolonIndex = source.IndexOf(';', arrowIndex);
+            Assert.True(semicolonIndex >= 0, $"Expression-Body nicht abgeschlossen: {signature}");
+            return source[signatureIndex..(semicolonIndex + 1)];
+        }
+
+        var braceIndex = nextBraceIndex;
         Assert.True(braceIndex >= 0, $"Methodenrumpf nicht gefunden: {signature}");
 
         var depth = 0;
