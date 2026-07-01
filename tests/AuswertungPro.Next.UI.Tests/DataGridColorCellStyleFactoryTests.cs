@@ -60,12 +60,12 @@ public sealed class DataGridColorCellStyleFactoryTests
     {
         var root = SourceTextTestHelpers.FindRepositoryRoot();
         var pagesRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages");
-        var dataPage = File.ReadAllText(Path.Combine(pagesRoot, "DataPage.xaml.cs"));
+        var dataPageSetup = File.ReadAllText(Path.Combine(pagesRoot, "DataPageColumnSetup.cs"));
         var schaechtePage = File.ReadAllText(Path.Combine(pagesRoot, "SchaechtePage.xaml.cs"));
 
-        Assert.Contains("DataGridColorCellStyleFactory.CreateHaltungenStyle(", dataPage, StringComparison.Ordinal);
+        Assert.Contains("DataGridColorCellStyleFactory.CreateHaltungenStyle(", dataPageSetup, StringComparison.Ordinal);
         Assert.Contains("DataGridColorCellStyleFactory.CreateSchaechteStyle(", schaechtePage, StringComparison.Ordinal);
-        Assert.DoesNotContain("ZustandsklasseCellStyleFactory.Create", dataPage, StringComparison.Ordinal);
+        Assert.DoesNotContain("ZustandsklasseCellStyleFactory.Create", dataPageSetup, StringComparison.Ordinal);
         Assert.DoesNotContain("ZustandsklasseCellStyleFactory.Create", schaechtePage, StringComparison.Ordinal);
     }
 

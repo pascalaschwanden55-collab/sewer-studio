@@ -41,11 +41,11 @@ public sealed class DataGridFieldMetaTooltipStyleFactoryTests
     }
 
     [Fact]
-    public void DataPage_delegates_field_meta_tooltip_style_to_factory()
+    public void DataPageColumnSetup_delegates_field_meta_tooltip_style_to_factory()
     {
         var root = SourceTextTestHelpers.FindRepositoryRoot();
-        var source = File.ReadAllText(Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml.cs"));
-        var method = SourceTextTestHelpers.ExtractMethodBody(source, "private void ApplyFieldMetaTooltip(DataGridColumn col, string field)");
+        var source = File.ReadAllText(Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPageColumnSetup.cs"));
+        var method = SourceTextTestHelpers.ExtractMethodBody(source, "public static DataPageColumnSetupResult Apply(DataGridColumn column, string fieldName)");
 
         Assert.Contains("DataGridFieldMetaTooltipStyleFactory.Create(", method, StringComparison.Ordinal);
         Assert.DoesNotContain("new MultiBinding", method, StringComparison.Ordinal);

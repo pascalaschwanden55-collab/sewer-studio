@@ -148,20 +148,10 @@ public partial class DataPage : System.Windows.Controls.UserControl
                 ComboBox_LostKeyboardFocus,
                 ComboBox_SelectionChanged);
 
-            col.SetValue(FrameworkElement.TagProperty, field);
-            var colorStyle = DataGridColorCellStyleFactory.CreateHaltungenStyle(field);
-            if (colorStyle is not null)
-                col.CellStyle = colorStyle;
-
-            ApplyFieldMetaTooltip(col, field);
-            col.CanUserResize = true;
-            col.MinWidth = field == "NR" ? 56 : 72;
+            var setup = DataPageColumnSetup.Apply(col, field);
             Grid.Columns.Add(col);
 
-            var defaultHorizontalAlignment = string.Equals(field, "Kosten", StringComparison.Ordinal)
-                ? HorizontalAlignment.Right
-                : HorizontalAlignment.Left;
-            ApplyColumnAlignment(col, defaultHorizontalAlignment, VerticalAlignment.Center);
+            ApplyColumnAlignment(col, setup.DefaultHorizontalAlignment, setup.DefaultVerticalAlignment);
         }
 
         Grid.FrozenColumnCount = 2;
@@ -752,11 +742,6 @@ public partial class DataPage : System.Windows.Controls.UserControl
         }
 
         vm.ScheduleAutoSave();
-    }
-
-    private void ApplyFieldMetaTooltip(DataGridColumn col, string field)
-    {
-        col.CellStyle = DataGridFieldMetaTooltipStyleFactory.Create(field, col.CellStyle);
     }
 
 
