@@ -12,7 +12,7 @@ public static class FieldCatalog
     public static readonly IReadOnlyList<string> ColumnOrder = new ReadOnlyCollection<string>(new List<string>
     {
         "NR",
-        "Haltungsname",
+        FieldKeys.HoldingName,
         "Strasse",
         "Rohrmaterial",
         "DN_mm",
@@ -30,7 +30,7 @@ public static class FieldCatalog
         "Eigentuemer",
         "Ausgefuehrt_durch",
         "Bemerkungen",
-        "Link",
+        FieldKeys.Link,
         "Renovierung_Inliner_Stk",
         "Renovierung_Inliner_m",
         "Anschluesse_verpressen",
@@ -103,7 +103,7 @@ public static class FieldCatalog
         new ReadOnlyDictionary<string, FieldDefinition>(new Dictionary<string, FieldDefinition>
         {
             ["NR"] = new("NR", "NR.", FieldType.Int),
-            ["Haltungsname"] = new("Haltungsname", "Haltungsname (ID)", FieldType.Text),
+            [FieldKeys.HoldingName] = new(FieldKeys.HoldingName, "Haltungsname (ID)", FieldType.Text),
             ["Strasse"] = new("Strasse", "Strasse", FieldType.Text),
             ["Rohrmaterial"] = new("Rohrmaterial", "Rohrmaterial", FieldType.Combo, ComboItems["Rohrmaterial"]),
             ["DN_mm"] = new("DN_mm", "DN mm", FieldType.Int),
@@ -121,7 +121,7 @@ public static class FieldCatalog
             ["Ausgefuehrt_durch"] = new("Ausgefuehrt_durch", "Ausgefuehrt durch", FieldType.Combo, ComboItems["Ausgefuehrt_durch"]),
             ["Eigentuemer"] = new("Eigentuemer", "Eigentümer", FieldType.Text),
             ["Bemerkungen"] = new("Bemerkungen", "Bemerkungen", FieldType.Multiline),
-            ["Link"] = new("Link", "Link", FieldType.Text),
+            [FieldKeys.Link] = new(FieldKeys.Link, "Link", FieldType.Text),
             ["Renovierung_Inliner_Stk"] = new("Renovierung_Inliner_Stk", "Renovierung Inliner Stk.", FieldType.Int),
             ["Renovierung_Inliner_m"] = new("Renovierung_Inliner_m", "Renovierung Inliner m", FieldType.Decimal),
             ["Anschluesse_verpressen"] = new("Anschluesse_verpressen", "Anschlüsse verpressen", FieldType.Int),

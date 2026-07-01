@@ -107,11 +107,11 @@ public static class DataPageProtocolPathResolver
         var paths = new List<string>();
 
         // PDF_Path
-        var pdfPath = record.GetFieldValue("PDF_Path")?.Trim();
+        var pdfPath = record.GetFieldValue(FieldKeys.PdfPath)?.Trim();
         AddResolvedPdf(paths, pdfPath, projectFolder);
 
         // PDF_All (semikolon-getrennt)
-        var pdfAll = record.GetFieldValue("PDF_All")?.Trim();
+        var pdfAll = record.GetFieldValue(FieldKeys.PdfAll)?.Trim();
         if (!string.IsNullOrWhiteSpace(pdfAll))
         {
             foreach (var part in pdfAll.Split(';', StringSplitOptions.RemoveEmptyEntries))
@@ -176,10 +176,10 @@ public static class DataPageProtocolPathResolver
     /// </summary>
     public static void ResolveSchachtPdfPaths(SchachtRecord schacht, string projectFolder, List<string> paths)
     {
-        var pdfPath = schacht.GetFieldValue("PDF_Path")?.Trim();
+        var pdfPath = schacht.GetFieldValue(FieldKeys.PdfPath)?.Trim();
         AddResolvedPdf(paths, pdfPath, projectFolder);
 
-        var link = schacht.GetFieldValue("Link")?.Trim();
+        var link = schacht.GetFieldValue(FieldKeys.Link)?.Trim();
         if (!string.IsNullOrWhiteSpace(link) && link.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
             AddResolvedPdf(paths, link, projectFolder);
     }

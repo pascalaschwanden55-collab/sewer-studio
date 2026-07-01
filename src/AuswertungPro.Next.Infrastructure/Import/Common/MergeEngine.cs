@@ -26,12 +26,12 @@ public static class MergeEngine
 {
     // Felder die Dateipfade enthalten - werden bei Reimport immer aktualisiert
     private static readonly HashSet<string> PathFields = new(StringComparer.Ordinal)
-        { "Link", "PDF_Path", "PDF_All" };
+        { FieldKeys.Link, FieldKeys.PdfPath, FieldKeys.PdfAll };
 
     public static MergeResult MergeRecord(HaltungRecord target, HaltungRecord source, FieldSource importSource, bool fillMissingOnly = false, ImportRunContext? ctx = null)
     {
         var res = new MergeResult();
-        var recordKey = (target.GetFieldValue("Haltungsname") ?? "").Trim();
+        var recordKey = (target.GetFieldValue(FieldKeys.HoldingName) ?? "").Trim();
 
         try
         {
@@ -45,7 +45,7 @@ public static class MergeEngine
             foreach (var field in fieldsToMerge)
             {
                 // Key-Feld nicht "kaputt-mergen"
-                if (string.Equals(field, "Haltungsname", StringComparison.Ordinal))
+                if (string.Equals(field, FieldKeys.HoldingName, StringComparison.Ordinal))
                     continue;
                 // Prüfungsresultat soll nicht aus Importen übernommen werden
                 if (string.Equals(field, "Pruefungsresultat", StringComparison.Ordinal))
@@ -179,7 +179,7 @@ public static class MergeEngine
     {
         res.Conflicts++;
 
-        var key = (target.GetFieldValue("Haltungsname") ?? "").Trim();
+        var key = (target.GetFieldValue(FieldKeys.HoldingName) ?? "").Trim();
 
         res.ConflictDetails.Add(new JsonObject
         {

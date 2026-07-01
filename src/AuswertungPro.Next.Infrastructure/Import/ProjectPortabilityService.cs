@@ -48,7 +48,7 @@ public sealed class ProjectPortabilityService
 
         foreach (var record in project.Data.ToList())
         {
-            var haltung = record.GetFieldValue("Haltungsname")?.Trim();
+            var haltung = record.GetFieldValue(FieldKeys.HoldingName)?.Trim();
             if (string.IsNullOrWhiteSpace(haltung))
                 continue;
 
@@ -56,9 +56,9 @@ public sealed class ProjectPortabilityService
             var holdingFolder = ResolveHoldingFolder(projectFolder, san);
 
             // Video + PDF: auf die Projekt-Kopie im Haltungsordner umbiegen (nicht neu kopieren).
-            RelinkField(record, "Link", holdingFolder, projectFolder, IsVideo, copyExternalFotos: false, dryRun, Tally, messages);
-            RelinkField(record, "PDF_Path", holdingFolder, projectFolder, IsPdf, copyExternalFotos: false, dryRun, Tally, messages);
-            RelinkFieldList(record, "PDF_All", holdingFolder, projectFolder, IsPdf, dryRun, Tally, messages);
+            RelinkField(record, FieldKeys.Link, holdingFolder, projectFolder, IsVideo, copyExternalFotos: false, dryRun, Tally, messages);
+            RelinkField(record, FieldKeys.PdfPath, holdingFolder, projectFolder, IsPdf, copyExternalFotos: false, dryRun, Tally, messages);
+            RelinkFieldList(record, FieldKeys.PdfAll, holdingFolder, projectFolder, IsPdf, dryRun, Tally, messages);
 
             // Fotos: Pro-Befund-Bindung bleibt, nur Pfad relativ (Quell-Foto ggf. ins Projekt kopieren).
             if (record.Protocol != null)

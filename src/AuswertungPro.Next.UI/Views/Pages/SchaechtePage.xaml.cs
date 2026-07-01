@@ -10,6 +10,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.DataPage;
@@ -1014,7 +1015,8 @@ public partial class SchaechtePage : UserControl
             return path;
         if (!System.IO.Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(lastProjectPath))
         {
-            var baseDir = System.IO.Path.GetDirectoryName(lastProjectPath);
+            var baseDir = ProjectFileLocator.ProjectRootFromFile(lastProjectPath)
+                          ?? System.IO.Path.GetDirectoryName(lastProjectPath);
             if (!string.IsNullOrWhiteSpace(baseDir))
             {
                 var combined = System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, path));

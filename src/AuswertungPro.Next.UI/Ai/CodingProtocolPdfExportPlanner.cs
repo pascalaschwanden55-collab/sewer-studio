@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 
@@ -23,7 +24,9 @@ public static class CodingProtocolPdfExportPlanner
 
         var projectRoot = "";
         if (!string.IsNullOrWhiteSpace(lastProjectPath))
-            projectRoot = Path.GetDirectoryName(lastProjectPath) ?? "";
+            projectRoot = ProjectFileLocator.ProjectRootFromFile(lastProjectPath)
+                          ?? Path.GetDirectoryName(lastProjectPath)
+                          ?? "";
 
         var logoPath = Path.Combine(baseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
         var options = new HaltungsprotokollPdfOptions
@@ -34,7 +37,7 @@ public static class CodingProtocolPdfExportPlanner
         };
 
         return new CodingProtocolPdfExportPlan(
-            $"Protokoll_{record.GetFieldValue("Haltungsname") ?? "Haltung"}_{now:yyyyMMdd}.pdf",
+            $"Protokoll_{record.GetFieldValue(FieldKeys.HoldingName) ?? "Haltung"}_{now:yyyyMMdd}.pdf",
             projectRoot,
             options);
     }

@@ -82,7 +82,7 @@ public static class KanalImportDistributor
                         continue;
 
                     // PDF_Path = verteiltes ORIGINAL-Protokoll (Menü „Haltungsprotokoll Original öffnen").
-                    record.SetFieldValue("PDF_Path", r.DestPdfPath!, FieldSource.Legacy, userEdited: false);
+                    record.SetFieldValue(FieldKeys.PdfPath, r.DestPdfPath!, FieldSource.Legacy, userEdited: false);
                     origs++;
                 }
             }
@@ -96,20 +96,20 @@ public static class KanalImportDistributor
         // 2) Projekt-interne absolute Pfade relativieren (HoldingFolderDistributor setzt Link absolut).
         foreach (var record in project.Data)
         {
-            RelativizeIfInProject(record, "Link", projectFolder);
+            RelativizeIfInProject(record, FieldKeys.Link, projectFolder);
             RelativizeIfInProject(record, "Link_G", projectFolder);   // Gegeninspektions-Video
-            RelativizeIfInProject(record, "PDF_Path", projectFolder);
+            RelativizeIfInProject(record, FieldKeys.PdfPath, projectFolder);
         }
 
         // 3) Fallback-Video: Haltungen, deren Link noch auf die absolute QUELLE zeigt (nicht verteilt),
         //    bekommen ihr Video flach + datumsbenannt in den Haltungsordner + relativen Link.
         foreach (var record in project.Data.ToList())
         {
-            var haltung = record.GetFieldValue("Haltungsname")?.Trim();
+            var haltung = record.GetFieldValue(FieldKeys.HoldingName)?.Trim();
             if (string.IsNullOrWhiteSpace(haltung))
                 continue;
 
-            var link = record.GetFieldValue("Link")?.Trim();
+            var link = record.GetFieldValue(FieldKeys.Link)?.Trim();
             if (string.IsNullOrWhiteSpace(link) || ProjectPathResolver.IsRelative(link) || !File.Exists(link))
                 continue;
 
@@ -122,7 +122,7 @@ public static class KanalImportDistributor
                 var ext = Path.GetExtension(link);
                 var dest = UniquePath(Path.Combine(dir, $"{stamp}_{san}{ext}"));
                 File.Copy(link, dest, overwrite: false);
-                record.SetFieldValue("Link", ProjectPathResolver.MakeRelative(dest, projectFolder), FieldSource.Legacy, userEdited: false);
+                record.SetFieldValue(FieldKeys.Link, ProjectPathResolver.MakeRelative(dest, projectFolder), FieldSource.Legacy, userEdited: false);
                 videos++;
             }
             catch (Exception ex)
@@ -181,7 +181,7 @@ public static class KanalImportDistributor
 
         return project.Data.FirstOrDefault(x =>
             string.Equals(
-                ProjectPathResolver.SanitizePathSegment((x.GetFieldValue("Haltungsname") ?? "").Trim()),
+                ProjectPathResolver.SanitizePathSegment((x.GetFieldValue(FieldKeys.HoldingName) ?? "").Trim()),
                 sanitizedFolderName,
                 StringComparison.OrdinalIgnoreCase));
     }

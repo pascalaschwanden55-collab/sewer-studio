@@ -117,7 +117,7 @@ public static class HoldingRenameService
     private static string? LocateHoldingFolder(HaltungRecord record, string oldSan, string? projectFilePath)
     {
         // 1) Ueber Link-Feld
-        var link = record.GetFieldValue("Link")?.Trim();
+        var link = record.GetFieldValue(FieldKeys.Link)?.Trim();
         if (!string.IsNullOrWhiteSpace(link))
         {
             var resolved = ProjectPathResolver.ResolveFilePath(link, projectFilePath);
@@ -243,19 +243,19 @@ public static class HoldingRenameService
         var count = 0;
 
         // Link (Video)
-        count += UpdateFieldPath(record, "Link", oldSan, newSan);
+        count += UpdateFieldPath(record, FieldKeys.Link, oldSan, newSan);
 
         // Link_G (Gegeninspektions-Video)
         count += UpdateFieldPath(record, "Link_G", oldSan, newSan);
 
         // PDF_Path (Original-Protokoll)
-        count += UpdateFieldPath(record, "PDF_Path", oldSan, newSan);
+        count += UpdateFieldPath(record, FieldKeys.PdfPath, oldSan, newSan);
 
         // PDF_Eigen (generiertes _E-Protokoll)
-        count += UpdateFieldPath(record, "PDF_Eigen", oldSan, newSan);
+        count += UpdateFieldPath(record, FieldKeys.PdfEigen, oldSan, newSan);
 
         // PDF_All (Semikolon-getrennt)
-        var pdfAll = record.GetFieldValue("PDF_All");
+        var pdfAll = record.GetFieldValue(FieldKeys.PdfAll);
         if (!string.IsNullOrWhiteSpace(pdfAll))
         {
             var parts = pdfAll.Split(';', StringSplitOptions.RemoveEmptyEntries);
@@ -263,7 +263,7 @@ public static class HoldingRenameService
             var newVal = string.Join(";", newParts);
             if (!string.Equals(pdfAll, newVal, StringComparison.OrdinalIgnoreCase))
             {
-                record.SetFieldValue("PDF_All", newVal, FieldSource.Manual, userEdited: false);
+                record.SetFieldValue(FieldKeys.PdfAll, newVal, FieldSource.Manual, userEdited: false);
                 count++;
             }
         }

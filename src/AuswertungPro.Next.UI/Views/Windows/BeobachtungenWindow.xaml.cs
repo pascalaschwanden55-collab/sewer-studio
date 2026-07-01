@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Services;
 
@@ -133,7 +134,8 @@ public partial class BeobachtungenWindow : Window
             return path;
         if (!Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(lastProjectPath))
         {
-            var baseDir = Path.GetDirectoryName(lastProjectPath);
+            var baseDir = ProjectFileLocator.ProjectRootFromFile(lastProjectPath)
+                          ?? Path.GetDirectoryName(lastProjectPath);
             if (!string.IsNullOrWhiteSpace(baseDir))
             {
                 var combined = Path.GetFullPath(Path.Combine(baseDir, path));

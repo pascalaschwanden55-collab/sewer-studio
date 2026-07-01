@@ -37,7 +37,7 @@ public static class ProtocolRegenerationService
 
         foreach (var record in project.Data.ToList())
         {
-            var haltung = record.GetFieldValue("Haltungsname")?.Trim();
+            var haltung = record.GetFieldValue(FieldKeys.HoldingName)?.Trim();
             if (string.IsNullOrWhiteSpace(haltung) || record.Protocol is null)
                 continue;
 
@@ -76,7 +76,7 @@ public static class ProtocolRegenerationService
         ProtocolDocument doc,
         ICodeCatalogProvider? codeCatalog = null)
     {
-        var haltung = record.GetFieldValue("Haltungsname")?.Trim();
+        var haltung = record.GetFieldValue(FieldKeys.HoldingName)?.Trim();
         if (string.IsNullOrWhiteSpace(haltung))
             return null;
 
@@ -99,7 +99,7 @@ public static class ProtocolRegenerationService
         File.WriteAllBytes(dest, pdf);
 
         record.SetFieldValue(
-            "PDF_Eigen",
+            FieldKeys.PdfEigen,
             ProjectPathResolver.MakeRelative(dest, projectFolder),
             FieldSource.Legacy,
             userEdited: false);

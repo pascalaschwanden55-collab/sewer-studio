@@ -49,7 +49,7 @@ public sealed class MediaDistributionService
         foreach (var record in records)
         {
             ct.ThrowIfCancellationRequested();
-            var haltungsname = record.GetFieldValue("Haltungsname")?.Trim();
+            var haltungsname = record.GetFieldValue(FieldKeys.HoldingName)?.Trim();
             if (string.IsNullOrWhiteSpace(haltungsname))
             {
                 skipped++;
@@ -64,14 +64,14 @@ public sealed class MediaDistributionService
             // 1) Video (Link-Feld). Der manuelle Import setzt includeVideos=false,
             // damit Rohvideos erst im expliziten Verteil-Schritt ins Projekt kopiert werden.
             if (includeVideos)
-                CopyFieldFile(record, "Link", holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+                CopyFieldFile(record, FieldKeys.Link, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
 
             // 2+3) PDF_Path / PDF_All. Der Ein-Knopf-Import setzt includePdfs=false, weil er das
             // eigene Protokoll (_E.pdf) generiert statt die Original-PDFs in die Haltung zu kopieren.
             if (includePdfs)
             {
-                CopyFieldFile(record, "PDF_Path", holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
-                CopyFieldFileList(record, "PDF_All", holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+                CopyFieldFile(record, FieldKeys.PdfPath, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+                CopyFieldFileList(record, FieldKeys.PdfAll, holdingRoot, projectFolder, ref copied, ref errors, messages, dryRun);
             }
 
             // 4) Protokoll-FotoPaths (Original, Current, History)
@@ -101,7 +101,7 @@ public sealed class MediaDistributionService
                     continue;
                 var sanS = SanitizePathSegment(schachtNr);
                 var schachtRoot = ProjectStructure.SchachtVerteiltDir(projectFolder, sanS);
-                CopySchachtFieldFile(schacht, "Link", schachtRoot, projectFolder, ref copied, ref errors, messages, dryRun);
+                CopySchachtFieldFile(schacht, FieldKeys.Link, schachtRoot, projectFolder, ref copied, ref errors, messages, dryRun);
             }
         }
 
