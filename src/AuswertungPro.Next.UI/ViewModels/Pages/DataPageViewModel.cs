@@ -167,6 +167,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             DataPageProtocolPathResolver.ResolveOriginalPdfPaths,
             DataPageOriginalPdfController.TryShellOpen);
         _shell.PropertyChanged += ShellPropertyChanged;
+        HookRunningNumbers();
 
         // Live-Control: Retry-Handler registrieren, damit der MCP eine Haltung
         // per Name erneut durch die KI-Videoanalyse schicken kann (nur wenn diese Seite lebt).
@@ -371,6 +372,8 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
         _disposed = true;
         _shell.PropertyChanged -= ShellPropertyChanged;
+        if (_numberedRecords is not null)
+            _numberedRecords.CollectionChanged -= RecordsCollectionChangedForNumbers;
         PropertyChanged -= DataPageViewModel_PropertyChanged;
         _timers.Stop();
         LiveControl.LiveControlRetryBridge.Reset();
@@ -388,8 +391,28 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(Project));
             OnPropertyChanged(nameof(Records));
             UpdateSearchResultInfo(Records.Count);
+            HookRunningNumbers();
         }
     }
+
+    // Transiente Anzeige-Laufnummer (1..N): bei Projektwechsel neu abonnieren und durchzaehlen,
+    // danach bei jeder Reihenfolge-/Bestandsaenderung (Add/Remove/Move) automatisch aktualisieren.
+    private System.Collections.Specialized.INotifyCollectionChanged? _numberedRecords;
+
+    private void HookRunningNumbers()
+    {
+        if (_numberedRecords is not null)
+            _numberedRecords.CollectionChanged -= RecordsCollectionChangedForNumbers;
+
+        _numberedRecords = Records as System.Collections.Specialized.INotifyCollectionChanged;
+        if (_numberedRecords is not null)
+            _numberedRecords.CollectionChanged += RecordsCollectionChangedForNumbers;
+
+        AuswertungPro.Next.Application.Common.HaltungRunningNumberService.Assign(Records);
+    }
+
+    private void RecordsCollectionChangedForNumbers(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        => AuswertungPro.Next.Application.Common.HaltungRunningNumberService.Assign(Records);
 
     partial void OnGridMinRowHeightChanged(double value)
     {
