@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.Json.Nodes;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Import;
@@ -34,7 +35,14 @@ public static class MergeEngine
 
         try
         {
-            foreach (var field in FieldCatalog.ColumnOrder)
+            // Zu mergende Felder = Katalog-Spalten PLUS dynamische Felder, die die Quelle gesetzt hat
+            // (z.B. Schacht_oben/Schacht_unten). Ohne die dynamischen Felder wuerde der Merge sie
+            // verwerfen und das Datagrid bliebe unnoetig leer.
+            var fieldsToMerge = FieldCatalog.ColumnOrder
+                .Concat(source.FieldMeta.Keys.Where(k =>
+                    !FieldCatalog.ColumnOrder.Contains(k, StringComparer.Ordinal)));
+
+            foreach (var field in fieldsToMerge)
             {
                 // Key-Feld nicht "kaputt-mergen"
                 if (string.Equals(field, "Haltungsname", StringComparison.Ordinal))

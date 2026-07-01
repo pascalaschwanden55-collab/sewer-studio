@@ -96,6 +96,16 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             var mediaByObs = LoadObservationMedia(conn);
             var nodes = LoadNodes(conn);
 
+            // Knoten-Lookup (OBJ_PK -> Schachtnummer), um Schacht oben/unten an den Haltungen
+            // aus OBJ_FromNode_REF/OBJ_ToNode_REF aufzuloesen.
+            var nodeKeyByPk = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var n in nodes)
+            {
+                var nk = n.Key ?? n.Number;
+                if (!string.IsNullOrWhiteSpace(n.Pk) && !string.IsNullOrWhiteSpace(nk))
+                    nodeKeyByPk[n.Pk] = nk!;
+            }
+
             var sectionIndex = 0;
             foreach (var section in sections)
             {
@@ -131,6 +141,14 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
                         .FirstOrDefault();
 
                     ApplySectionFields(record, section, inspection);
+
+                    // Schacht oben/unten aus den Knoten-Referenzen der Section (FromNode = oben, ToNode = unten).
+                    if (!string.IsNullOrWhiteSpace(section.FromNodeFk)
+                        && nodeKeyByPk.TryGetValue(section.FromNodeFk!, out var schachtOben))
+                        ApplyField(record, "Schacht_oben", schachtOben);
+                    if (!string.IsNullOrWhiteSpace(section.ToNodeFk)
+                        && nodeKeyByPk.TryGetValue(section.ToNodeFk!, out var schachtUnten))
+                        ApplyField(record, "Schacht_unten", schachtUnten);
 
                     if (inspection is null)
                     {

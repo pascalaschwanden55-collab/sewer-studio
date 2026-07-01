@@ -29,7 +29,14 @@ public static class Sia405WhitelistEnricher
         "Rohrmaterial",
         "DN_mm",
         "Nutzungsart",
-        "Strasse"
+        "Strasse",
+        // Zusaetzliche sichere Stammdaten, die die SIA405-XTF liefert, die VSA_KEK (IKAS) aber nicht
+        // setzt — damit das Datagrid maximal gefuellt wird. Weiterhin nur empty-only + konfliktgeloggt,
+        // nie ueberschreibend. NICHT aufgenommen: Datum_Jahr/Bemerkungen/Haltungslaenge_m (Protected)
+        // und Offen_abgeschlossen (semantisch mehrdeutig: Betriebs- vs. Bearbeitungsstatus).
+        "Eigentuemer",
+        "Schacht_oben",
+        "Schacht_unten"
     };
 
     /// <summary>

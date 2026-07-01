@@ -176,6 +176,50 @@ public sealed class Sia405WhitelistEnricherTests
         Assert.Empty(ergebnis.Conflicts);
     }
 
+    // --- Feldabdeckung: Neue Whitelist-Felder (Eigentuemer, Schacht_oben, Schacht_unten) werden gefuellt ---
+    // Diese Felder liefert die SIA405-XTF, die VSA_KEK (IKAS) aber nicht setzt -> Datagrid maximal fuellen.
+
+    [Fact]
+    public void NeueWhitelistFelder_Eigentuemer_SchachtObenUnten_WerdenGefuellt()
+    {
+        // Arrange: Haltung mit leeren Feldern; SIA405 liefert Eigentuemer + Schacht oben/unten
+        var projekt = ErzeugeTestProjekt(("H-100", ""));
+        var sia405 = ErzeugeSia405("H-100",
+            ("Eigentuemer", "Gemeinde Meien"),
+            ("Schacht_oben", "S-865"),
+            ("Schacht_unten", "S-864"));
+
+        // Act
+        var ergebnis = Sia405WhitelistEnricher.Apply(projekt, sia405);
+
+        // Assert: alle drei neuen Felder gesetzt
+        var record = projekt.Data[0];
+        Assert.Equal("Gemeinde Meien", record.GetFieldValue("Eigentuemer"));
+        Assert.Equal("S-865", record.GetFieldValue("Schacht_oben"));
+        Assert.Equal("S-864", record.GetFieldValue("Schacht_unten"));
+        Assert.Equal(3, ergebnis.Filled);
+        Assert.Empty(ergebnis.Conflicts);
+    }
+
+    [Fact]
+    public void NeueWhitelistFelder_UeberschreibenVorhandeneNicht()
+    {
+        // Arrange: Schacht_oben ist bereits gesetzt (z.B. aus VSA_KEK als Hauptquelle)
+        var projekt = ErzeugeTestProjekt(("H-101", ""));
+        var record = projekt.Data[0];
+        record.SetFieldValue("Schacht_oben", "S-KEK", FieldSource.Xtf, userEdited: false);
+
+        var sia405 = ErzeugeSia405("H-101", ("Schacht_oben", "S-SIA"));
+
+        // Act
+        var ergebnis = Sia405WhitelistEnricher.Apply(projekt, sia405);
+
+        // Assert: Hauptquelle bleibt, Abweichung als Konflikt geloggt (nie ueberschrieben)
+        Assert.Equal("S-KEK", record.GetFieldValue("Schacht_oben"));
+        Assert.Equal(0, ergebnis.Filled);
+        Assert.Single(ergebnis.Conflicts);
+    }
+
     // --- Robustheit: Apply ist case-insensitiv AUCH wenn Aufrufer Default-Comparer verwendet ---
     // Szenario: Aufrufer baut die Map mit new Dictionary<>() (Ordinal/case-sensitiv).
     // Der Haltungsname im Record unterscheidet sich nur in der Gross-/Kleinschreibung.
