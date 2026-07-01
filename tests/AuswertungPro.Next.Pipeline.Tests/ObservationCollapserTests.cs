@@ -65,6 +65,74 @@ public sealed class ObservationCollapserTests
     }
 
     [Fact]
+    public void Collapse_keeps_thin_rows_with_different_clock_positions_no_loss()
+    {
+        // Zwei Beobachtungen gleichen Codes am gleichen Meter, beide ohne Freitext,
+        // aber unterschiedliche Uhrlage (3 Uhr vs. 9 Uhr) -> muessen BEIDE erhalten bleiben.
+        var a = new ProtocolEntry
+        {
+            Code = "BCA",
+            MeterStart = 3,
+            Beschreibung = "",
+            CodeMeta = new ProtocolEntryCodeMeta { Code = "BCA", Parameters = { ["ClockPos1"] = "3" } }
+        };
+        var b = new ProtocolEntry
+        {
+            Code = "BCA",
+            MeterStart = 3,
+            Beschreibung = "",
+            CodeMeta = new ProtocolEntryCodeMeta { Code = "BCA", Parameters = { ["ClockPos1"] = "9" } }
+        };
+
+        var result = ObservationCollapser.Collapse(new[] { a, b });
+
+        Assert.Equal(2, result.Count);
+    }
+
+    [Fact]
+    public void Collapse_keeps_thin_rows_with_different_quantifier_no_loss()
+    {
+        var a = new ProtocolEntry
+        {
+            Code = "BAA",
+            MeterStart = 7,
+            Beschreibung = "",
+            CodeMeta = new ProtocolEntryCodeMeta { Code = "BAA", Parameters = { ["Quantifizierung1"] = "20" } }
+        };
+        var b = new ProtocolEntry
+        {
+            Code = "BAA",
+            MeterStart = 7,
+            Beschreibung = "",
+            CodeMeta = new ProtocolEntryCodeMeta { Code = "BAA", Parameters = { ["Quantifizierung1"] = "40" } }
+        };
+
+        var result = ObservationCollapser.Collapse(new[] { a, b });
+
+        Assert.Equal(2, result.Count);
+    }
+
+    [Fact]
+    public void Collapse_still_folds_thin_rows_with_identical_quantifier()
+    {
+        // Gleiche Uhrlage/Quantifizierung + eine Textzeile -> weiterhin zu EINEM Eintrag falten.
+        var text = new ProtocolEntry { Code = "BAA", MeterStart = 7, Beschreibung = "Verformung" };
+        var quant = new ProtocolEntry
+        {
+            Code = "BAA",
+            MeterStart = 7,
+            Beschreibung = "",
+            CodeMeta = new ProtocolEntryCodeMeta { Code = "BAA", Parameters = { ["Quantifizierung1"] = "20" } }
+        };
+
+        var result = ObservationCollapser.Collapse(new[] { text, quant });
+
+        var entry = Assert.Single(result);
+        Assert.Equal("Verformung", entry.Beschreibung);
+        Assert.Equal("20", entry.CodeMeta!.Parameters["Quantifizierung1"]);
+    }
+
+    [Fact]
     public void Collapse_unions_photos_and_timecode_when_folding()
     {
         var a = new ProtocolEntry { Code = "BAF", MeterStart = 2, Beschreibung = "Korrosion" };

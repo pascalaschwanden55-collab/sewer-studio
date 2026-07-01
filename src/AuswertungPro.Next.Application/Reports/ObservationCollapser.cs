@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
+using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.Application.Reports;
@@ -53,21 +55,16 @@ public static class ObservationCollapser
                 continue;
             }
 
-            var substantive = group.Where(IsSubstantive).ToList();
-            var distinctDescriptions = substantive
-                .Select(NormDesc)
-                .Distinct(System.StringComparer.OrdinalIgnoreCase)
-                .Count();
-
-            if (distinctDescriptions >= 2)
+            if (!IsMergeableGroup(group))
             {
-                // Echte, unterschiedliche Beobachtungen am selben Code+Meter -> alle behalten.
+                // Divergierende Beobachtungen am selben Code+Meter (unterschiedliche Beschreibung,
+                // Uhrlage oder Quantifizierung) -> alle behalten (kein Datenverlust).
                 result.AddRange(group);
                 continue;
             }
 
             // Eine logische Beobachtung über mehrere Zeilen verteilt -> in einen Klon falten.
-            var baseEntry = substantive.FirstOrDefault() ?? group[0];
+            var baseEntry = group.FirstOrDefault(IsSubstantive) ?? group[0];
             var merged = ProtocolEntryCloner.CloneLegacyProtocolEntry(baseEntry);
             foreach (var other in group)
             {
@@ -118,6 +115,32 @@ public static class ObservationCollapser
             if (string.IsNullOrWhiteSpace(target.CodeMeta.Notes) && !string.IsNullOrWhiteSpace(other.CodeMeta.Notes))
                 target.CodeMeta.Notes = other.CodeMeta.Notes;
         }
+    }
+
+    /// <summary>
+    /// Eine Gruppe (gleicher Code + Meter) ist nur dann zusammenführbar, wenn jede
+    /// diskriminierende Dimension (Beschreibung, Uhrlage von/bis, Quantifizierung 1/2)
+    /// höchstens EINEN distinkten nicht-leeren Wert trägt. Andernfalls sind es echte,
+    /// unterschiedliche Beobachtungen -> nicht falten (kein Datenverlust).
+    /// </summary>
+    private static bool IsMergeableGroup(List<ProtocolEntry> group)
+        => DistinctNonEmpty(group, NormDesc) <= 1
+           && DistinctNonEmpty(group, e => ParamValue(e, "vsa.uhr.von", "ClockPos1", "Uhr_von")) <= 1
+           && DistinctNonEmpty(group, e => ParamValue(e, "vsa.uhr.bis", "ClockPos2", "Uhr_bis")) <= 1
+           && DistinctNonEmpty(group, e => ParamValue(e, "Quantifizierung1", "vsa.q1", "Q1")) <= 1
+           && DistinctNonEmpty(group, e => ParamValue(e, "Quantifizierung2", "vsa.q2", "Q2")) <= 1;
+
+    private static int DistinctNonEmpty(List<ProtocolEntry> group, Func<ProtocolEntry, string?> selector)
+        => group.Select(selector)
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .Select(v => v!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count();
+
+    private static string? ParamValue(ProtocolEntry e, params string[] keys)
+    {
+        var parameters = e.CodeMeta?.Parameters;
+        return parameters is null ? null : ProtocolDescriptionBuilder.GetFirstParameter(parameters, keys);
     }
 
     private static string GroupKey(ProtocolEntry e)

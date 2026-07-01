@@ -44,6 +44,7 @@ public static class ObservationZustandBuilder
             return result;
 
         var consumed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var emittedValues = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // Code-spezifische Parameter mit Namen + Einheit ("Winkel = 45°", "Breite = 10mm").
         foreach (var p in def.Parameters)
@@ -55,6 +56,7 @@ public static class ObservationZustandBuilder
 
             consumed.Add(key);
             consumed.Add(p.Name);
+            emittedValues.Add(value.Trim());
 
             var label = string.IsNullOrWhiteSpace(p.Name) ? key : p.Name;
             var unit = p.Unit ?? string.Empty;
@@ -70,17 +72,18 @@ public static class ObservationZustandBuilder
         else if (!string.IsNullOrWhiteSpace(uhrVon))
             result.Add($"Lage {uhrVon} Uhr");
 
-        // Rohe Quantifizierung nur, wenn kein benannter Parameter sie bereits abgedeckt hat.
+        // Rohe Quantifizierung nur, wenn kein benannter Parameter sie bereits abgedeckt hat
+        // (weder über den Schlüssel noch über denselben Wert -> keine Doppelzählung).
         if (!ConsumedAny(consumed, "Quantifizierung1", "vsa.q1", "Q1"))
         {
             var q1 = ProtocolDescriptionBuilder.GetFirstParameter(parameters, "Quantifizierung1", "vsa.q1", "Q1");
-            if (!string.IsNullOrWhiteSpace(q1))
+            if (!string.IsNullOrWhiteSpace(q1) && !emittedValues.Contains(q1.Trim()))
                 result.Add($"Q1 = {q1}");
         }
         if (!ConsumedAny(consumed, "Quantifizierung2", "vsa.q2", "Q2"))
         {
             var q2 = ProtocolDescriptionBuilder.GetFirstParameter(parameters, "Quantifizierung2", "vsa.q2", "Q2");
-            if (!string.IsNullOrWhiteSpace(q2))
+            if (!string.IsNullOrWhiteSpace(q2) && !emittedValues.Contains(q2.Trim()))
                 result.Add($"Q2 = {q2}");
         }
 

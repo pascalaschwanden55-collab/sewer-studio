@@ -100,6 +100,44 @@ public sealed class ObservationZustandBuilderTests
     }
 
     [Fact]
+    public void Build_with_catalog_does_not_double_count_same_value_under_two_keys()
+    {
+        // Katalog mappt Q1 via DataKey "Kruemmungswinkel"; der Wert liegt im Entry aber
+        // zusaetzlich unter "Quantifizierung1" (WinCan-Import). Der benannte Parameter greift,
+        // der rohe Q1-Fallback darf denselben Wert NICHT ein zweites Mal ausgeben.
+        var catalog = new FakeCatalog(new CodeDefinition
+        {
+            Code = "BCCBY",
+            Title = "Bogen",
+            Parameters =
+            {
+                new CodeParameter { Name = "Winkel", DataKey = "Kruemmungswinkel", Unit = "°" }
+            }
+        });
+
+        var entry = new ProtocolEntry
+        {
+            Code = "BCCBY",
+            MeterStart = 0,
+            Beschreibung = "Bogen nach rechts",
+            CodeMeta = new ProtocolEntryCodeMeta
+            {
+                Code = "BCCBY",
+                Parameters =
+                {
+                    ["Kruemmungswinkel"] = "45",
+                    ["Quantifizierung1"] = "45"
+                }
+            }
+        };
+
+        var text = ObservationZustandBuilder.Build(entry, catalog);
+
+        Assert.Equal("Bogen nach rechts, Winkel = 45°", text);
+        Assert.DoesNotContain("Q1", text);
+    }
+
+    [Fact]
     public void Build_with_catalog_but_unknown_code_is_behaviour_neutral()
     {
         var catalog = new FakeCatalog(); // leer
