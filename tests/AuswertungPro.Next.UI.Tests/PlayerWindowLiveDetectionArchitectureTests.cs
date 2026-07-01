@@ -8,6 +8,32 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerWindowLiveDetectionArchitectureTests
 {
     [Fact]
+    public void PlayerWindow_live_detection_stop_playback_uses_player_helper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var helperPath = Path.Combine(uiRoot, "Player", "PlayerLiveDetectionStopPlayback.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStopUiWorkflow.cs");
+        var stopPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.Stop.cs");
+
+        Assert.True(File.Exists(helperPath), "LiveDetection-Stop-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "LiveDetection-Stop-Pause soll im Stop-UI-Workflow verdrahtet werden.");
+
+        var helper = File.ReadAllText(helperPath);
+        var workflow = File.ReadAllText(workflowPath);
+        var stop = File.ReadAllText(stopPath);
+
+        Assert.Contains("public static class PlayerLiveDetectionStopPlayback", helper);
+        Assert.Contains("PauseIfRunning", helper);
+        Assert.Contains("PlayerLiveDetectionStopPlayback.PauseIfRunning", workflow);
+        Assert.Contains("LiveDetectionStopUiWorkflow.Execute", stop);
+        Assert.DoesNotContain("PlayerLiveDetectionStopPlayback.PauseIfRunning", stop);
+        Assert.DoesNotContain("_player.SetPause(true)", stop);
+        Assert.DoesNotContain("_player.SetPause(false)", stop);
+    }
+
+    [Fact]
     public void PlayerWindow_live_detection_status_lives_in_status_partial()
     {
         var root = FindRepositoryRoot();
