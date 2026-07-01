@@ -6,6 +6,43 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerWindowCodingAiArchitectureTests
 {
     [Fact]
+    public void PlayerWindow_live_ai_status_text_uses_display_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Live.cs");
+        var confirmationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Confirmation.cs");
+        var resumeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationResumeWorkflow.cs");
+        var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiToggleWorkflow.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
+
+        Assert.True(File.Exists(resumeWorkflowPath), "Confirmation-Resume-Statusentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(toggleWorkflowPath), "Live-AI-Toggle-Statusentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
+
+        var live = File.ReadAllText(livePath);
+        var confirmation = File.ReadAllText(confirmationPath);
+        var resumeWorkflow = File.ReadAllText(resumeWorkflowPath);
+        var toggleWorkflow = File.ReadAllText(toggleWorkflowPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("CodingLiveAiToggleWorkflow.Execute", live);
+        Assert.DoesNotContain("CodingLiveAiButtonDisplayPolicy.BuildStatus", live);
+        Assert.Contains("CodingConfirmationResumeWorkflow.Apply", confirmation);
+        Assert.DoesNotContain("CodingLiveAiButtonDisplayPolicy.BuildStatus", confirmation);
+        Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", resumeWorkflow);
+        Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", toggleWorkflow);
+        Assert.Contains("actions.StartTimers()", toggleWorkflow);
+        Assert.Contains("actions.StopTimers(true)", toggleWorkflow);
+        Assert.DoesNotContain("Automatische KI-Analyse aktiv", live);
+        Assert.DoesNotContain("Automatische KI-Analyse aktiv", confirmation);
+        Assert.DoesNotContain("Automatische KI-Analyse aktiv", resumeWorkflow);
+        Assert.DoesNotContain("Intervall alle 5 Sekunden", live);
+        Assert.DoesNotContain("Intervall alle 5 Sekunden", confirmation);
+        Assert.Contains("public static CodingLiveAiStatusState BuildStatus", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_live_ai_wiring_lives_in_live_partial()
     {
         var root = FindRepositoryRoot();
