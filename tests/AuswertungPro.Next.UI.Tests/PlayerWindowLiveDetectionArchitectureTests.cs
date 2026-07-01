@@ -282,4 +282,41 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.DoesNotContain("_liveDetectionClient = null;", stop);
         Assert.Contains("public static T? DisposeAndClear<T>", disposableLifecycle);
     }
+
+    [Fact]
+    public void PlayerWindow_live_detection_dialogs_live_in_service()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Lifecycle.cs");
+        var catalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
+        var servicePath = Path.Combine(uiRoot, "Ai", "LiveDetectionDialogService.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionDialogServiceFactory.cs");
+        var startupDisplayWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionStartupDisplayWorkflow.cs");
+
+        Assert.True(File.Exists(servicePath), "LiveDetection-Dialogtexte muessen ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(factoryPath), "LiveDetection-DialogHost-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(startupDisplayWorkflowPath), "LiveDetection-Startup-Dialogverdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var lifecycle = File.ReadAllText(lifecyclePath);
+        var catalog = File.ReadAllText(catalogPath);
+        var playerText = lifecycle + catalog;
+        var service = File.ReadAllText(servicePath);
+        var factory = File.ReadAllText(factoryPath);
+        var startupDisplayWorkflow = File.ReadAllText(startupDisplayWorkflowPath);
+
+        Assert.DoesNotContain("LiveDetectionDialogServiceFactory.Create", playerText);
+        Assert.DoesNotContain("DialogHost.Current", playerText);
+        Assert.DoesNotContain("KI-Konfiguration konnte nicht geladen werden.", playerText);
+        Assert.DoesNotContain("KI ist deaktiviert.", playerText);
+        Assert.DoesNotContain("Live-KI konnte nicht gestartet werden:", playerText);
+        Assert.DoesNotContain("Schadenscode-Katalog nicht", playerText);
+        Assert.Contains("ShowRuntimeSettingsLoadFailed", service);
+        Assert.Contains("ShowDisabled", service);
+        Assert.Contains("ShowStartFailed", service);
+        Assert.Contains("ShowCodeCatalogUnavailable", service);
+        Assert.Contains("DialogHost.Current", factory);
+        Assert.Contains("LiveDetectionDialogServiceFactory.Create", startupDisplayWorkflow);
+    }
 }
