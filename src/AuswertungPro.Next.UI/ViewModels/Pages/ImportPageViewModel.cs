@@ -48,6 +48,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     public IAsyncRelayCommand MakeProjectPortableCommand { get; }
     public IAsyncRelayCommand AssignPhotosFromFolderCommand { get; }
     public IAsyncRelayCommand ImportKanalProjektCommand { get; }
+    public IAsyncRelayCommand ProtokollNeuGenerierenCommand { get; }
 
     public ImportPageViewModel(ShellViewModel shell, ServiceProvider sp)
     {
@@ -67,6 +68,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         MakeProjectPortableCommand = new AsyncRelayCommand(MakeProjectPortableAsync);
         AssignPhotosFromFolderCommand = new AsyncRelayCommand(AssignPhotosFromFolderAsync);
         ImportKanalProjektCommand = new AsyncRelayCommand(ImportKanalProjektAsync, CanStartImport);
+        ProtokollNeuGenerierenCommand = new AsyncRelayCommand(ProtokollNeuGenerierenAsync);
 
         UpdateCatalogStatus();
     }
@@ -519,6 +521,51 @@ public sealed partial class ImportPageViewModel : ObservableObject
         _sp.Dialogs.Info(
             summary + "\n\nDer Projektordner kann jetzt 1:1 auf einen anderen PC kopiert werden.",
             "Projekt portabel machen");
+    }
+
+    /// <summary>
+    /// Erzeugt am Ende der Bearbeitung je Haltung das programm-EIGENE Protokoll (mit Fotos, Suffix _E)
+    /// in die Verteilung (Haltungen_Verteilt) und verlinkt es relativ als „Eigenes Protokoll" (PDF_Eigen).
+    /// Das ORIGINAL-Protokoll (PDF_Path) bleibt unberuehrt. Immer aktuell (Haltungsnummer, DN, Befunde).
+    /// </summary>
+    private async Task ProtokollNeuGenerierenAsync()
+    {
+        var projectFolder = _shell.GetProjectFolder();
+        if (string.IsNullOrWhiteSpace(projectFolder))
+        {
+            _sp.Dialogs.Info(
+                "Projekt bitte zuerst speichern, dann koennen die eigenen Protokolle erzeugt werden.",
+                "Protokoll neu generieren");
+            return;
+        }
+
+        var count = _shell.Project.Data.Count;
+        if (count == 0)
+        {
+            _sp.Dialogs.Info("Keine Haltungen im Projekt.", "Protokoll neu generieren");
+            return;
+        }
+
+        ImportProgress = "Eigene Protokolle (_E, mit Fotos) werden fuer die Verteilung erzeugt...";
+        var result = await Task.Run(() =>
+            AuswertungPro.Next.Infrastructure.Import.ProtocolRegenerationService.RegenerateAll(
+                _shell.Project, projectFolder!));
+        ImportProgress = "";
+
+        _ = _shell.TrySaveProject();
+
+        var summary = $"Eigene Protokolle neu generiert ({count} Haltungen):"
+            + $"\n  {result.Generated} Protokolle erzeugt (_E, in die Verteilung)"
+            + $"\n  {result.Errors} Fehler";
+        SummaryText += "\n" + summary;
+        if (result.Messages.Count > 0)
+            DetailsText += "\n\nProtokoll-Details:\n" + string.Join("\n", result.Messages.Take(50));
+
+        _shell.SetStatus("Eigene Protokolle neu generiert");
+        _sp.Dialogs.Info(
+            summary + "\n\nDie eigenen Protokolle (_E) liegen jetzt in Haltungen_Verteilt und sind ueber "
+            + "das Feld „Eigenes Protokoll“ (PDF_Eigen) verlinkt.",
+            "Protokoll neu generieren");
     }
 
     /// <summary>
