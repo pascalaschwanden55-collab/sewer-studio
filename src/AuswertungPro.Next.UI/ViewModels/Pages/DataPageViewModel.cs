@@ -42,6 +42,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageMeasureSuggestionController _measureSuggestionController;
     private readonly DataPageCostRestoreController _costRestoreController;
     private readonly DataPageVideoRelinkController _videoRelinkController;
+    private readonly DataPageMediaSearchController _mediaSearchController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
@@ -212,6 +213,18 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
                 _sp.Settings.Save();
             },
             (record, path, userEdited) => SaveVideoLink(record, path, userEdited));
+        _mediaSearchController = new DataPageMediaSearchController(
+            () => Records,
+            () => _sp.Settings.LastVideoSourceFolder,
+            () => _sp.Settings.LastVideoFolder,
+            ShowMediaSearchWindow,
+            () =>
+            {
+                _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
+                _shell.Project.Dirty = true;
+            },
+            () => OnPropertyChanged(nameof(Records)),
+            _shell.SetStatus);
 
         // Seed measure template names from Offerten into dropdown if missing
         SeedMeasureTemplateNames();
@@ -916,28 +929,17 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     public void OpenMediaSearchWindow()
     {
-        if (Records.Count == 0)
-        {
-            _shell.SetStatus("Keine Haltungen vorhanden.");
-            return;
-        }
+        _mediaSearchController.Open();
+    }
 
-        var initial = !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoSourceFolder)
-            ? _sp.Settings.LastVideoSourceFolder
-            : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
-                ? _sp.Settings.LastVideoFolder
-                : null;
-
-        var win = new MediaSearchWindow(Records.ToList(), initial, _sp);
+    private DataPageMediaSearchResult? ShowMediaSearchWindow(IReadOnlyList<HaltungRecord> records, string? initial)
+    {
+        var win = new MediaSearchWindow(records.ToList(), initial, _sp);
         win.Owner = System.Windows.Application.Current?.MainWindow;
 
-        if (win.ShowDialog() == true && win.Applied)
-        {
-            _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
-            _shell.Project.Dirty = true;
-            OnPropertyChanged(nameof(Records));
-            _shell.SetStatus($"Medien verlinkt: {win.AppliedVideoCount} Videos, {win.AppliedPdfCount} PDFs, {win.AppliedFotoCount} Fotos");
-        }
+        return win.ShowDialog() == true
+            ? new DataPageMediaSearchResult(win.Applied, win.AppliedVideoCount, win.AppliedPdfCount, win.AppliedFotoCount)
+            : null;
     }
 
     private void OpenHydraulikPanel(HaltungRecord? record)
