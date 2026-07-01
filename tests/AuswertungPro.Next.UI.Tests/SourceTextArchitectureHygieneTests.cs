@@ -422,6 +422,29 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.DoesNotContain($"public void {methodName}", guard);
     }
 
+    [Fact]
+    public void Player_window_coding_multi_model_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingMultiModelArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "Coding-Multi-Model-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        var methodNames = new[]
+        {
+            "PlayerWindow_multi_model_analysis_sequence_lives_in_command_workflow",
+            "PlayerWindow_multi_model_ai_events_live_in_multimodel_partial"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -470,6 +493,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PageViewModelLifecycleTests.cs")]
     [InlineData("PlayerWindowCodingAiArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingClassifierArchitectureTests.cs")]
+    [InlineData("PlayerWindowCodingMultiModelArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingStatisticsArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingStateArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingCatalogArchitectureTests.cs")]
