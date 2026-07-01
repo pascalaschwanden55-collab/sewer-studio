@@ -242,8 +242,8 @@ public sealed class ProjectImportOrchestrator
         // ------------------------------------------------------------------
         try
         {
-            // 7a) Fotos zentral gruppiert (Fotos\Haltungen\) + Schächte verteilen — KEINE Videos/Original-PDFs
-            //     (die kommen in 7b flach+datumsbenannt bzw. als gesplittetes Original-Protokoll).
+            // 7a) Fotos zentral gruppiert (Fotos\Haltungen\) — KEINE Videos/Original-PDFs und KEINE Schacht-
+            //     Kopie (Schächte kommen in 7c als seiten-gruppierte Protokolle; Videos/Protokolle in 7b).
             var mediaResult = new MediaDistributionService()
                 .DistributeImportedMedia(
                     projectFolder,
@@ -253,19 +253,28 @@ public sealed class ProjectImportOrchestrator
                     dryRun: false,
                     collectionLock: new object(),
                     includeVideos: false,
-                    includePdfs: false);
+                    includePdfs: false,
+                    includeSchacht: false);
             messages.AddRange(mediaResult.Messages);
 
-            // 7b) Video + ORIGINAL-Protokoll flach+datumsbenannt (wie „Haltung Verteilen") verteilen; beide
-            //     relativ verlinkt (PDF_Path = Original). Das eigene _E-Protokoll wird hier NICHT erzeugt —
-            //     das macht der ProtocolRegenerationService am Ende der Bearbeitung („Protokoll neu generieren").
+            // 7b) Video + ORIGINAL-Protokoll (NUR das maßgebliche PDF, ein PDF/Haltung) flach+datumsbenannt
+            //     verteilen; beide relativ verlinkt (PDF_Path = Original). Das eigene _E-Protokoll wird hier
+            //     NICHT erzeugt — das macht der ProtocolRegenerationService („Protokoll neu generieren").
             var archivedPdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
             var distResult = KanalImportDistributor.Distribute(project, projectFolder, archivedPdfDir, sourceFolder);
             messages.AddRange(distResult.Messages);
             errors += distResult.Errors;
+
+            // 7c) Schacht-Protokolle: Seiten des maßgeblichen Protokolls nach Ober-/Unter-Schacht gruppieren
+            //     → pro Schacht ein zusammengefasstes PDF in Schächte_Verteilt\<S>\ (relativ verlinkt).
+            var schachtResult = KanalImportDistributor.DistributeSchachtProtocols(project, projectFolder, archivedPdfDir);
+            messages.AddRange(schachtResult.Messages);
+            errors += schachtResult.Errors;
+
             messages.Add(
                 $"Verteilung: {mediaResult.FilesCopied} Fotos/Dateien, {distResult.VideosDistributed} Videos, " +
-                $"{distResult.OriginalProtocolsDistributed} Original-Protokolle, {mediaResult.Errors + distResult.Errors} Fehler.");
+                $"{distResult.OriginalProtocolsDistributed} Original-Protokolle, {schachtResult.Schaechte} Schacht-Protokolle, " +
+                $"{mediaResult.Errors + distResult.Errors + schachtResult.Errors} Fehler.");
         }
         catch (Exception ex)
         {
