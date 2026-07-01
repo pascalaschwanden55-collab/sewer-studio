@@ -321,4 +321,40 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.DoesNotContain("_player.IsPlaying", snapshot);
         Assert.DoesNotContain("_player.SetPause", snapshot);
     }
+
+    [Fact]
+    public void PlayerWindow_playback_snapshot_lives_in_snapshot_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
+        var snapshotPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Snapshot.cs");
+        var pauseRestorerPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotPauseRestorer.cs");
+        var snapshotWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerSnapshotWorkflow.cs");
+
+        Assert.True(File.Exists(snapshotPath), "Playback-Snapshot-Erzeugung soll aus dem allgemeinen Playback-Partial heraus.");
+        Assert.True(File.Exists(pauseRestorerPath), "Snapshot-Pause-Resume muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(snapshotWorkflowPath), "Snapshot-Workflow muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var playback = File.ReadAllText(playbackPath);
+        var snapshot = File.ReadAllText(snapshotPath);
+        var pauseRestorer = File.Exists(pauseRestorerPath) ? File.ReadAllText(pauseRestorerPath) : "";
+        var snapshotWorkflow = File.Exists(snapshotWorkflowPath) ? File.ReadAllText(snapshotWorkflowPath) : "";
+
+        Assert.DoesNotContain("public static bool TryTakeSnapshot", playback);
+        Assert.DoesNotContain("private bool TakeSnapshotSafe", playback);
+        Assert.Contains("public static bool TryTakeSnapshot", snapshot);
+        Assert.Contains("private bool TakeSnapshotSafe", snapshot);
+        Assert.Contains("PlayerSnapshotWorkflow.TryTakeSnapshot", snapshot);
+        Assert.Contains("PlayerSnapshotWorkflow.TakeSnapshotSafe", snapshot);
+        Assert.Contains("PlayerSnapshotPauseRestorer.ResumeIfNeeded", snapshot);
+        Assert.DoesNotContain("_player.SetPause(false)", snapshot);
+        Assert.DoesNotContain("AuswertungPro.Next.Application.Common.BestEffort.Try", snapshot);
+        Assert.DoesNotContain("VLC: Pause aufheben", snapshot);
+        Assert.Contains("try", snapshotWorkflow);
+        Assert.Contains("finally", snapshotWorkflow);
+        Assert.Contains("public static void ResumeIfNeeded", pauseRestorer);
+        Assert.Contains("AuswertungPro.Next.Application.Common.BestEffort.Try", pauseRestorer);
+    }
 }

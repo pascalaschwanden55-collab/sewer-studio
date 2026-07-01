@@ -95,6 +95,29 @@ public sealed class SourceTextArchitectureHygieneTests
     }
 
     [Fact]
+    public void Player_window_snapshot_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowSnapshotArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "PlayerWindow-Snapshot-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        var methodNames = new[]
+        {
+            "PlayerWindow_live_snapshot_temp_path_lives_in_policy",
+            "PlayerWindow_public_snapshot_path_lives_in_policy"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
+    [Fact]
     public void Player_window_runtime_guards_live_in_focused_suite()
     {
         var root = SourceTextTestHelpers.FindRepositoryRoot();
@@ -191,7 +214,8 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_playback_rate_uses_control_host",
             "PlayerWindow_playback_start_uses_control_host",
             "Playback_position_fallback_uses_timeline_host",
-            "PlayerWindow_snapshot_pause_uses_playback_control_host"
+            "PlayerWindow_snapshot_pause_uses_playback_control_host",
+            "PlayerWindow_playback_snapshot_lives_in_snapshot_partial"
         };
 
         foreach (var methodName in methodNames)
@@ -588,6 +612,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowProtocolEventMappingArchitectureTests.cs")]
     [InlineData("PlayerWindowResourceDictionaryTests.cs")]
     [InlineData("PlayerWindowRuntimeArchitectureTests.cs")]
+    [InlineData("PlayerWindowSnapshotArchitectureTests.cs")]
     [InlineData("PlayerWindowShellProjectArchitectureTests.cs")]
     [InlineData("PlayerWindowStretchDamageArchitectureTests.cs")]
     [InlineData("PlayerWindowTimerArchitectureTests.cs")]
