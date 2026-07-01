@@ -31,6 +31,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DataGridColumnLayoutController _columnLayoutController = new();
     private readonly DataPageDetailItemFactory _haltungDetailItemFactory;
+    private readonly DataPageRecordDetailsDialogController _recordDetailsDialogController;
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
     private bool _updatingAlignmentButtons;
     private bool _isUndocking;
@@ -42,6 +43,9 @@ public partial class DataPage : System.Windows.Controls.UserControl
         _haltungDetailItemFactory = new DataPageDetailItemFactory(
             ResolveManagedComboSpec,
             CommitHaltungDetailField);
+        _recordDetailsDialogController = new DataPageRecordDetailsDialogController(
+            BuildHaltungRecordDetails,
+            CreateSuggestMeasuresCommand);
 
         // Haltungsansicht teilt sich Selected/Records mit der Tabelle; Detail-Aufbau wie im Detailfenster,
         // aber ohne Primaere_Schaeden (steht dort schon als Schadensliste unten).
@@ -529,26 +533,26 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void ShowHaltungRecordDetails(HaltungRecord record)
     {
-        var holding = record.GetFieldValue("Haltungsname");
-        var header = string.IsNullOrWhiteSpace(holding)
-            ? "Haltungsdetails"
-            : $"Haltung {holding}";
+        var request = _recordDetailsDialogController.Build(record);
+        ShowRecordDetailsWindow(request);
+    }
 
-        var subtitle = "Komplette Zeile in Spaltenreihenfolge der Haltungs-Ansicht.";
-        var groups = BuildHaltungRecordDetails(record);
-
-        ICommand? suggestCmd = null;
+    private ICommand? CreateSuggestMeasuresCommand(HaltungRecord record)
+    {
         if (DataContext is DataPageViewModel vm)
-        {
-            suggestCmd = new RelayCommand(() => vm.OpenCostsCommand.Execute(record));
-        }
+            return new RelayCommand(() => vm.OpenCostsCommand.Execute(record));
 
+        return null;
+    }
+
+    private void ShowRecordDetailsWindow(DataPageRecordDetailsDialogRequest request)
+    {
         var window = new RecordDetailsWindow(
-            title: string.IsNullOrWhiteSpace(holding) ? "Haltungsdetails" : $"Haltungsdetails - {holding}",
-            header: header,
-            subHeader: subtitle,
-            groups: groups,
-            suggestMeasuresCommand: suggestCmd)
+            title: request.Title,
+            header: request.Header,
+            subHeader: request.SubHeader,
+            groups: request.Groups,
+            suggestMeasuresCommand: request.SuggestMeasuresCommand)
         {
             Owner = Window.GetWindow(this)
         };
