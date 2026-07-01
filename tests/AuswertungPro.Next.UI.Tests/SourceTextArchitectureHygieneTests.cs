@@ -635,6 +635,22 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.DoesNotContain($"public void {methodName}", guard);
     }
 
+    [Fact]
+    public void Player_window_vsa_code_explorer_guard_lives_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowVsaCodeExplorerArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "VSA-Code-Explorer-Architekturguard soll in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        const string methodName = "PlayerWindow_vsa_code_explorer_window_creation_lives_in_dialog_service";
+
+        Assert.Contains($"public void {methodName}", focused);
+        Assert.DoesNotContain($"public void {methodName}", guard);
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -712,6 +728,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowStretchDamageArchitectureTests.cs")]
     [InlineData("PlayerWindowTimerArchitectureTests.cs")]
     [InlineData("PlayerWindowVisualInfrastructureArchitectureTests.cs")]
+    [InlineData("PlayerWindowVsaCodeExplorerArchitectureTests.cs")]
     [InlineData("PlayerWindowWiringArchitectureTests.cs")]
     [InlineData("ProjektEroeffnungShellGuardTests.cs")]
     [InlineData("SchaechtePageArchitectureGuardTests.cs")]
