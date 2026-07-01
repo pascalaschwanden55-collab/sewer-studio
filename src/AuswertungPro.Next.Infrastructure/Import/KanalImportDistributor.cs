@@ -134,56 +134,6 @@ public static class KanalImportDistributor
         return new Result(videos, origs, errors, messages);
     }
 
-    /// <summary>
-    /// Verteilt Schacht-Protokolle: gruppiert die Seiten des maßgeblichen Protokoll-PDF nach ihrem
-    /// Ober-/Unter-Schacht (jede Haltung-Seite landet im PDF ihres Ober- UND Unter-Schachts) und legt
-    /// pro (echtem) Schacht ein zusammengefasstes PDF nach Schächte_Verteilt\&lt;S&gt;\ ab. Verlinkt relativ.
-    /// </summary>
-    public static (int Schaechte, int Errors, IReadOnlyList<string> Messages) DistributeSchachtProtocols(
-        Project project, string projectFolder, string archivedPdfDir)
-    {
-        var messages = new List<string>();
-        int schaechte = 0, errors = 0;
-
-        var primaryPdf = SelectPrimaryProtocolPdf(archivedPdfDir);
-        if (string.IsNullOrWhiteSpace(primaryPdf))
-            return (0, 0, messages);
-
-        var destRoot = Path.Combine(projectFolder, ProjectStructure.SchaechteVerteilt);
-        try
-        {
-            var results = HoldingFolderDistributor.DistributeSchachtPagesByHaltung(
-                new[] { primaryPdf! }, destRoot, project);
-
-            foreach (var r in results)
-            {
-                if (!r.Success)
-                {
-                    errors++;
-                    messages.Add(r.Message);
-                    continue;
-                }
-                if (string.IsNullOrWhiteSpace(r.DestPdfPath) || string.IsNullOrWhiteSpace(r.HoldingFolder))
-                    continue;
-
-                var folderName = Path.GetFileName(
-                    r.HoldingFolder!.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                var record = FindSchachtBySanitized(project, folderName);
-                if (record is not null)
-                    record.SetFieldValue("PDF_Path",
-                        ProjectPathResolver.MakeRelative(r.DestPdfPath!, projectFolder));
-                schaechte++;
-            }
-        }
-        catch (Exception ex)
-        {
-            errors++;
-            messages.Add($"Schacht-Protokoll-Verteilung: {ex.Message}");
-        }
-
-        return (schaechte, errors, messages);
-    }
-
     // Wählt aus dem Archiv-PDF-Ordner das MASSGEBLICHE Inspektionsprotokoll: das größte PDF, das kein
     // Duplikat-Suffix (<basis>_&lt;n&gt;.pdf, wenn <basis>.pdf existiert) ist. So gewinnt das Basis-Protokoll
     // gegen Zweit-Export (_1) und den kleineren Plan. Liefert null, wenn keine PDFs vorhanden.
@@ -220,17 +170,6 @@ public static class KanalImportDistributor
             .ThenByDescending(p => { try { return new FileInfo(p).Length; } catch { return 0L; } })
             .ThenBy(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase)
             .FirstOrDefault();
-    }
-
-    private static SchachtRecord? FindSchachtBySanitized(Project project, string sanitizedFolderName)
-    {
-        if (project.SchaechteData is null || string.IsNullOrWhiteSpace(sanitizedFolderName))
-            return null;
-        return project.SchaechteData.FirstOrDefault(s =>
-            string.Equals(
-                ProjectPathResolver.SanitizePathSegment((s.GetFieldValue("Schachtnummer") ?? s.GetFieldValue("Nr.") ?? "").Trim()),
-                sanitizedFolderName,
-                StringComparison.OrdinalIgnoreCase));
     }
 
     // Record über den sanitisierten Haltungsnamen (== Ordnername) finden.

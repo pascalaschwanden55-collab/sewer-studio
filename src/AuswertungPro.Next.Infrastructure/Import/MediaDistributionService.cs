@@ -87,9 +87,10 @@ public sealed class MediaDistributionService
         }
 
         // Schächte verteilen: Schacht-Dokumente (PDF im Link-Feld) → Schächte_Verteilt\<Schacht>\.
-        // Der Ein-Knopf-Import setzt includeSchacht:false, weil dort die Schacht-PDFs stattdessen per
-        // Seiten-Gruppierung (KanalImportDistributor.DistributeSchachtProtocols) erzeugt werden — ein
-        // 1:1-Kopieren des Link-Feldes würde sonst ein ganzes Gesamt-PDF als Klumpen ablegen.
+        // Der Ein-Knopf-Import setzt includeSchacht:false und lässt Schächte bewusst UNANGETASTET —
+        // die Schacht-Verteilung macht der Anwender manuell über „Schacht Verteilen" mit dem separaten
+        // Schacht-Gesamtauszug-PDF (ein 1:1-Kopieren des Link-Feldes würde sonst ein ganzes/falsches
+        // Gesamt-PDF als Klumpen an jeden Schacht hängen).
         if (includeSchacht)
         {
             foreach (var schacht in SnapshotSchaechte(project, collectionLock))
