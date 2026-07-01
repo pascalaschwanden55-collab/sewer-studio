@@ -32,6 +32,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     private readonly DataGridColumnLayoutController _columnLayoutController = new();
     private readonly DataPageDetailItemFactory _haltungDetailItemFactory;
     private readonly DataPageRecordDetailsDialogController _recordDetailsDialogController;
+    private readonly DataPageBeobachtungenController _beobachtungenController;
     private readonly DispatcherTimer _layoutSaveDebounceTimer;
     private bool _updatingAlignmentButtons;
     private bool _isUndocking;
@@ -46,6 +47,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
         _recordDetailsDialogController = new DataPageRecordDetailsDialogController(
             BuildHaltungRecordDetails,
             CreateSuggestMeasuresCommand);
+        _beobachtungenController = new DataPageBeobachtungenController(
+            (message, title) => Dialogs.Info(message, title),
+            (message, title) => Dialogs.Warn(message, title),
+            record =>
+            {
+                var result = Services.Vsa.EvaluateRecord(record);
+                return new DataPageBeobachtungenVsaResult(result.Ok, result.ErrorMessage);
+            });
 
         // Haltungsansicht teilt sich Selected/Records mit der Tabelle; Detail-Aufbau wie im Detailfenster,
         // aber ohne Primaere_Schaeden (steht dort schon als Schadensliste unten).
@@ -1067,53 +1076,42 @@ public partial class DataPage : System.Windows.Controls.UserControl
     {
         if (DataContext is not DataPageViewModel vm)
             return;
+
         var record = ResolveActionRecord(sender, vm);
-        if (record is null)
-        {
-            Dialogs.Info("Keine Zeile erkannt. Bitte direkt auf eine Zeile rechtsklicken oder zuerst eine Zeile auswaehlen.", "Beobachtungen");
+        var request = _beobachtungenController.BuildOpenRequest(
+            record,
+            vm.SelectedProtocolEntries,
+            vm.OpenProtocolCommand,
+            value => vm.Selected = value,
+            vm.RefreshSelectedRecord,
+            (target, showStatus) => vm.SyncObservationsToHoldingFields(target, showStatus));
+        if (request is null)
             return;
-        }
 
-        vm.Selected = record;
+        ShowOrUpdateBeobachtungenWindow(request);
+    }
 
-        var holdingName = record.GetFieldValue("Haltungsname");
-
-        Action vsaUpdateAction = () =>
-        {
-            var sp = Services;
-            if (sp?.Vsa is null) return;
-            var res = sp.Vsa.EvaluateRecord(record);
-            if (res.Ok)
-            {
-                vm.RefreshSelectedRecord();
-                Dialogs.Info($"VSA Zustand aktualisiert für {holdingName}.", "VSA");
-            }
-            else
-            {
-                Dialogs.Warn($"VSA Fehler: {res.ErrorMessage}", "VSA");
-            }
-        };
-
-        Action syncHoldingFieldsAction = () =>
-        {
-            vm.SyncObservationsToHoldingFields(record, showStatus: true);
-        };
-
+    private void ShowOrUpdateBeobachtungenWindow(DataPageBeobachtungenWindowRequest request)
+    {
         if (_beobachtungenWindow is not null && _beobachtungenWindow.IsLoaded)
         {
-            _beobachtungenWindow.UpdateEntries(vm.SelectedProtocolEntries, holdingName, vsaUpdateAction, syncHoldingFieldsAction);
+            _beobachtungenWindow.UpdateEntries(
+                request.Entries,
+                request.HoldingName,
+                request.VsaUpdateAction,
+                request.SyncHoldingFieldsAction);
             _beobachtungenWindow.Activate();
             return;
         }
 
         _beobachtungenWindow = new BeobachtungenWindow(
-            vm.SelectedProtocolEntries,
+            request.Entries,
             Services,
-            holdingName,
-            vm.OpenProtocolCommand,
-            record,
-            vsaUpdateAction,
-            syncHoldingFieldsAction)
+            request.HoldingName,
+            request.OpenProtocolCommand,
+            request.Record,
+            request.VsaUpdateAction,
+            request.SyncHoldingFieldsAction)
         {
             Owner = Window.GetWindow(this)
         };
