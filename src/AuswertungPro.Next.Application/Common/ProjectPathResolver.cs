@@ -24,10 +24,14 @@ public static class ProjectPathResolver
         if (Path.IsPathRooted(path) && File.Exists(path))
             return path;
 
-        // Relativer Pfad: gegen Projektordner aufloesen
+        // Relativer Pfad: gegen den Projekt-ROOT aufloesen. Seit die projekt.json unter
+        // Projektdateien\ liegen kann, ist GetDirectoryName(projekt.json) NICHT der Root; relative
+        // Medienpfade (Haltungen_Verteilt\...) sind aber relativ zum Root gespeichert.
+        // ProjectRootFromFile ist rueckwaertskompatibel (liegt die Datei im Root, ist es dessen Ordner).
         if (!Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(projectFilePath))
         {
-            var baseDir = Path.GetDirectoryName(projectFilePath);
+            var baseDir = ProjectFileLocator.ProjectRootFromFile(projectFilePath)
+                          ?? Path.GetDirectoryName(projectFilePath);
             return ResolveFilePathFromProjectFolder(path, baseDir);
         }
 

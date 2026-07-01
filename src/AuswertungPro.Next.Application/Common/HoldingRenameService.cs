@@ -99,23 +99,31 @@ public static class HoldingRenameService
             }
         }
 
-        // 2) Fallback: im Haltungen-Ordner suchen
+        // 2) Fallback: im Verteil-Ordner suchen (neue Struktur Haltungen_Verteilt\, alte Haltungen\).
+        //    Gegen den Projekt-ROOT (nicht GetDirectoryName der projekt.json, die unter Projektdateien\
+        //    liegen kann).
         if (!string.IsNullOrWhiteSpace(projectFilePath))
         {
-            var projectDir = Path.GetDirectoryName(projectFilePath);
+            var projectDir = ProjectFileLocator.ProjectRootFromFile(projectFilePath)
+                             ?? Path.GetDirectoryName(projectFilePath);
             if (!string.IsNullOrWhiteSpace(projectDir))
             {
-                var holdingsRoot = Path.Combine(projectDir, "Haltungen");
-                if (Directory.Exists(holdingsRoot))
+                foreach (var rootName in new[] { "Haltungen_Verteilt", "Haltungen" })
                 {
+                    var holdingsRoot = Path.Combine(projectDir, rootName);
+                    if (!Directory.Exists(holdingsRoot))
+                        continue;
+
                     var direct = Path.Combine(holdingsRoot, oldSan);
                     if (Directory.Exists(direct))
                         return direct;
 
                     try
                     {
-                        return Directory.EnumerateDirectories(holdingsRoot, oldSan, SearchOption.TopDirectoryOnly)
+                        var found = Directory.EnumerateDirectories(holdingsRoot, oldSan, SearchOption.TopDirectoryOnly)
                             .FirstOrDefault();
+                        if (!string.IsNullOrWhiteSpace(found))
+                            return found;
                     }
                     catch { /* ignore search errors */ }
                 }
@@ -198,8 +206,11 @@ public static class HoldingRenameService
         // Link (Video)
         count += UpdateFieldPath(record, "Link", oldSan, newSan);
 
-        // PDF_Path
+        // PDF_Path (Original-Protokoll)
         count += UpdateFieldPath(record, "PDF_Path", oldSan, newSan);
+
+        // PDF_Eigen (generiertes _E-Protokoll)
+        count += UpdateFieldPath(record, "PDF_Eigen", oldSan, newSan);
 
         // PDF_All (Semikolon-getrennt)
         var pdfAll = record.GetFieldValue("PDF_All");
