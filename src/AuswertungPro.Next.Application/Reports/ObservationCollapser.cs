@@ -124,11 +124,38 @@ public static class ObservationCollapser
     /// unterschiedliche Beobachtungen -> nicht falten (kein Datenverlust).
     /// </summary>
     private static bool IsMergeableGroup(List<ProtocolEntry> group)
-        => DistinctNonEmpty(group, NormDesc) <= 1
-           && DistinctNonEmpty(group, e => ParamValue(e, "vsa.uhr.von", "ClockPos1", "Uhr_von")) <= 1
-           && DistinctNonEmpty(group, e => ParamValue(e, "vsa.uhr.bis", "ClockPos2", "Uhr_bis")) <= 1
-           && DistinctNonEmpty(group, e => ParamValue(e, "Quantifizierung1", "vsa.q1", "Q1")) <= 1
-           && DistinctNonEmpty(group, e => ParamValue(e, "Quantifizierung2", "vsa.q2", "Q2")) <= 1;
+    {
+        if (DistinctNonEmpty(group, NormDesc) > 1)
+            return false;
+
+        // Bekannte semantische Dimensionen mit Alias-Normalisierung (Uhrlage/Quantifizierung):
+        // derselbe Wert unter unterschiedlichen Schlüsseln zählt als EIN Wert.
+        if (DistinctNonEmpty(group, e => ParamValue(e, "vsa.uhr.von", "ClockPos1", "Uhr_von")) > 1
+            || DistinctNonEmpty(group, e => ParamValue(e, "vsa.uhr.bis", "ClockPos2", "Uhr_bis")) > 1
+            || DistinctNonEmpty(group, e => ParamValue(e, "Quantifizierung1", "vsa.q1", "Q1")) > 1
+            || DistinctNonEmpty(group, e => ParamValue(e, "Quantifizierung2", "vsa.q2", "Q2")) > 1)
+            return false;
+
+        // Jeder weitere Parameter-Schlüssel ist ebenfalls eine Unterscheidungs-Dimension
+        // (z.B. Breite/Höhe unter eigenem Schlüssel) -> divergierende Werte blocken die Faltung.
+        var keys = group
+            .Where(e => e.CodeMeta?.Parameters is { Count: > 0 })
+            .SelectMany(e => e.CodeMeta!.Parameters.Keys)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+        foreach (var key in keys)
+        {
+            if (DistinctNonEmpty(group, e => ParamValueByKey(e, key)) > 1)
+                return false;
+        }
+
+        return true;
+    }
+
+    private static string? ParamValueByKey(ProtocolEntry e, string key)
+    {
+        var parameters = e.CodeMeta?.Parameters;
+        return parameters is not null && parameters.TryGetValue(key, out var value) ? value : null;
+    }
 
     private static int DistinctNonEmpty(List<ProtocolEntry> group, Func<ProtocolEntry, string?> selector)
         => group.Select(selector)

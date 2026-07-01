@@ -113,6 +113,31 @@ public sealed class ObservationCollapserTests
     }
 
     [Fact]
+    public void Collapse_keeps_thin_rows_with_different_named_parameter_no_loss()
+    {
+        // Divergierender benannter Katalog-Parameter (Breite) unter eigenem Schluessel,
+        // nicht Q1/Q2/Uhr -> beide Beobachtungen muessen erhalten bleiben.
+        var a = new ProtocolEntry
+        {
+            Code = "BAJ",
+            MeterStart = 4,
+            Beschreibung = "",
+            CodeMeta = new ProtocolEntryCodeMeta { Code = "BAJ", Parameters = { ["Breite"] = "10" } }
+        };
+        var b = new ProtocolEntry
+        {
+            Code = "BAJ",
+            MeterStart = 4,
+            Beschreibung = "",
+            CodeMeta = new ProtocolEntryCodeMeta { Code = "BAJ", Parameters = { ["Breite"] = "20" } }
+        };
+
+        var result = ObservationCollapser.Collapse(new[] { a, b });
+
+        Assert.Equal(2, result.Count);
+    }
+
+    [Fact]
     public void Collapse_still_folds_thin_rows_with_identical_quantifier()
     {
         // Gleiche Uhrlage/Quantifizierung + eine Textzeile -> weiterhin zu EINEM Eintrag falten.
