@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Ai.Training;
@@ -45,7 +46,12 @@ public static class TrainingBatchImportGeneratedCaseController
                 0);
         }
 
-        TrainingBatchImportSampleRegistrar.RegisterAsReviewCandidates(samples, existingSignatures);
+        foreach (var sample in samples)
+        {
+            sample.Status = TrainingSampleStatus.New;
+            existingSignatures.Add(sample.Signature);
+        }
+
         return new TrainingBatchImportGeneratedCasePlan(
             TrainingBatchImportGeneratedCaseKind.Samples,
             null,
