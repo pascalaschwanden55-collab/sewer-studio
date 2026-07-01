@@ -109,14 +109,153 @@ public sealed class DataPagePrintControllerTests
         Assert.Equal(("AWU-Haltungsprotokoll konnte nicht erstellt werden:\nkaputt", "Haltungsprotokoll AWU"), dialogs.LastError);
     }
 
+    [Fact]
+    public async Task PrintHydraulikPdfAsync_zeigt_hinweis_wenn_keine_haltung_ausgewaehlt_ist()
+    {
+        var dialogs = new CapturingDialogService();
+        var controller = CreateController(
+            dialogs,
+            buildHydraulikCalculation: _ => throw new InvalidOperationException("calculation should not run"));
+
+        await controller.PrintHydraulikPdfAsync(record: null);
+
+        Assert.Equal(("Bitte zuerst eine Haltung auswaehlen.", "Hydraulik PDF"), dialogs.LastInfo);
+        Assert.Empty(dialogs.SaveFileCalls);
+    }
+
+    [Fact]
+    public async Task PrintHydraulikPdfAsync_warnt_wenn_berechnung_fehlt()
+    {
+        var dialogs = new CapturingDialogService();
+        var controller = CreateController(
+            dialogs,
+            buildHydraulikCalculation: _ => null,
+            selectHydraulikPrintOptions: () => throw new InvalidOperationException("options should not be requested"));
+
+        await controller.PrintHydraulikPdfAsync(Record("12/34"));
+
+        Assert.Equal(("Hydraulik-Berechnung konnte nicht durchgefuehrt werden.\nBitte DN und Gefaelle pruefen.", "Hydraulik PDF"), dialogs.LastWarn);
+        Assert.Empty(dialogs.SaveFileCalls);
+    }
+
+    [Fact]
+    public async Task PrintHydraulikPdfAsync_bricht_ab_wenn_optionen_abgebrochen_werden()
+    {
+        var dialogs = new CapturingDialogService();
+        var controller = CreateController(
+            dialogs,
+            buildHydraulikCalculation: _ => HydraulikCalc(),
+            selectHydraulikPrintOptions: () => null,
+            buildHydraulikPdfAsync: (_, _, _) => throw new InvalidOperationException("pdf should not be built"));
+
+        await controller.PrintHydraulikPdfAsync(Record("12/34"));
+
+        Assert.Empty(dialogs.SaveFileCalls);
+        Assert.Null(dialogs.LastInfo);
+        Assert.Null(dialogs.LastError);
+    }
+
+    [Fact]
+    public async Task PrintHydraulikPdfAsync_cancel_speichern_ohne_pdf_erzeugung()
+    {
+        var dialogs = new CapturingDialogService { SaveFileResult = "" };
+        var controller = CreateController(
+            dialogs,
+            buildHydraulikCalculation: _ => HydraulikCalc(),
+            selectHydraulikPrintOptions: () => new HydraulikPrintOptions(),
+            buildHydraulikPdfAsync: (_, _, _) => throw new InvalidOperationException("pdf should not be built"));
+
+        await controller.PrintHydraulikPdfAsync(Record("12/34"));
+
+        Assert.Single(dialogs.SaveFileCalls);
+        Assert.Null(dialogs.LastInfo);
+        Assert.Null(dialogs.LastError);
+    }
+
+    [Fact]
+    public async Task PrintHydraulikPdfAsync_erzeugt_pdf_und_meldet_erfolg()
+    {
+        var record = Record("12/34");
+        var calc = HydraulikCalc();
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\hydraulik.pdf" };
+        var written = new List<(string Path, byte[] Bytes)>();
+        var buildCalls = new List<(HaltungRecord Record, HydraulikCalcResult Calc, HydraulikPrintOptions Options)>();
+
+        var controller = CreateController(
+            dialogs,
+            baseDirectory: "C:\\app",
+            fileExists: path => path == "C:\\app\\Assets\\Brand\\abwasser-uri-logo.png",
+            writeAllBytesAsync: (path, bytes) =>
+            {
+                written.Add((path, bytes));
+                return Task.CompletedTask;
+            },
+            now: () => new DateTime(2026, 1, 2),
+            buildHydraulikCalculation: r =>
+            {
+                Assert.Same(record, r);
+                return calc;
+            },
+            selectHydraulikPrintOptions: () => new HydraulikPrintOptions
+            {
+                IncludeAblagerung = false,
+                FooterLine = "Footer"
+            },
+            buildHydraulikPdfAsync: (r, c, options) =>
+            {
+                buildCalls.Add((r, c, options));
+                return Task.FromResult(new byte[] { 4, 5, 6 });
+            });
+
+        await controller.PrintHydraulikPdfAsync(record);
+
+        var saveCall = Assert.Single(dialogs.SaveFileCalls);
+        Assert.Equal("Hydraulik-Bericht als PDF speichern", saveCall.Title);
+        Assert.Equal("PDF (*.pdf)|*.pdf", saveCall.Filter);
+        Assert.Equal("pdf", saveCall.DefaultExt);
+        Assert.Equal("Hydraulik_12_34_20260102.pdf", saveCall.DefaultFileName);
+
+        var build = Assert.Single(buildCalls);
+        Assert.Same(record, build.Record);
+        Assert.Same(calc, build.Calc);
+        Assert.False(build.Options.IncludeAblagerung);
+        Assert.Equal("Footer", build.Options.FooterLine);
+        Assert.Equal("C:\\app\\Assets\\Brand\\abwasser-uri-logo.png", build.Options.LogoPathAbs);
+
+        var output = Assert.Single(written);
+        Assert.Equal("C:\\out\\hydraulik.pdf", output.Path);
+        Assert.Equal(new byte[] { 4, 5, 6 }, output.Bytes);
+        Assert.Equal(("PDF wurde erstellt:\nC:\\out\\hydraulik.pdf", "Hydraulik PDF"), dialogs.LastInfo);
+        Assert.Null(dialogs.LastError);
+    }
+
+    [Fact]
+    public async Task PrintHydraulikPdfAsync_meldet_fehler_ohne_exception()
+    {
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\hydraulik.pdf" };
+        var controller = CreateController(
+            dialogs,
+            buildHydraulikCalculation: _ => HydraulikCalc(),
+            selectHydraulikPrintOptions: () => new HydraulikPrintOptions(),
+            buildHydraulikPdfAsync: (_, _, _) => throw new InvalidOperationException("kaputt"));
+
+        await controller.PrintHydraulikPdfAsync(Record("12/34"));
+
+        Assert.Equal(("PDF konnte nicht erstellt werden:\nkaputt", "Hydraulik PDF"), dialogs.LastError);
+    }
+
     private static DataPagePrintController CreateController(
         CapturingDialogService dialogs,
         string projectFolder = "",
         string baseDirectory = "C:\\app",
         Func<string, bool>? fileExists = null,
         Action<string, byte[]>? writeAllBytes = null,
+        Func<string, byte[], Task>? writeAllBytesAsync = null,
         Func<DateTime>? now = null,
-        Func<Project, HaltungRecord, ProtocolDocument, string, HaltungsprotokollPdfOptions, byte[]>? buildAwuPdf = null)
+        Func<Project, HaltungRecord, ProtocolDocument, string, HaltungsprotokollPdfOptions, byte[]>? buildAwuPdf = null,
+        Func<HaltungRecord, HydraulikCalcResult?>? buildHydraulikCalculation = null,
+        Func<HydraulikPrintOptions?>? selectHydraulikPrintOptions = null,
+        Func<HaltungRecord, HydraulikCalcResult, HydraulikPrintOptions, Task<byte[]>>? buildHydraulikPdfAsync = null)
         => new(
             dialogs,
             getProjectFolder: () => projectFolder,
@@ -124,7 +263,11 @@ public sealed class DataPagePrintControllerTests
             baseDirectory,
             fileExists: fileExists ?? (_ => false),
             writeAllBytes: writeAllBytes ?? ((_, _) => { }),
-            now: now ?? (() => new DateTime(2026, 1, 2)));
+            writeAllBytesAsync: writeAllBytesAsync ?? ((_, _) => Task.CompletedTask),
+            now: now ?? (() => new DateTime(2026, 1, 2)),
+            buildHydraulikCalculation: buildHydraulikCalculation,
+            selectHydraulikPrintOptions: selectHydraulikPrintOptions,
+            buildHydraulikPdfAsync: buildHydraulikPdfAsync);
 
     private static HaltungRecord Record(string holding)
     {
@@ -133,11 +276,23 @@ public sealed class DataPagePrintControllerTests
         return record;
     }
 
+    private static HydraulikCalcResult HydraulikCalc()
+        => new()
+        {
+            DN_mm = 300,
+            Wasserstand_mm = 150,
+            Gefaelle_Promille = 10,
+            Kb = 0.0015,
+            Temperatur_C = 10,
+            Material = "Beton"
+        };
+
     private sealed class CapturingDialogService : IDialogService
     {
         public string? SaveFileResult { get; set; } = "C:\\out\\awu.pdf";
         public List<(string Title, string Filter, string? DefaultExt, string? DefaultFileName)> SaveFileCalls { get; } = new();
         public (string Message, string Title)? LastInfo { get; private set; }
+        public (string Message, string Title)? LastWarn { get; private set; }
         public (string Message, string Title)? LastError { get; private set; }
 
         public string? OpenFile(string title, string filter, string? initialDirectory = null)
@@ -159,7 +314,7 @@ public sealed class DataPagePrintControllerTests
             => LastInfo = (message, title);
 
         public void Warn(string message, string title = "Warnung")
-            => throw new NotSupportedException();
+            => LastWarn = (message, title);
 
         public void Error(string message, string title = "Fehler")
             => LastError = (message, title);

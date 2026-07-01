@@ -139,7 +139,11 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _printController = new DataPagePrintController(
             _sp.Dialogs,
             _sp.ProtocolPdfExporter,
-            () => _shell.GetProjectFolder());
+            () => _shell.GetProjectFolder(),
+            record => DataPageHydraulikReportCalculator.BuildReportCalculation(
+                record,
+                _sp.Settings,
+                saveSettings: _sp.Settings.Save));
         _shell.PropertyChanged += ShellPropertyChanged;
 
         // Live-Control: Retry-Handler registrieren, damit der MCP eine Haltung
@@ -1061,57 +1065,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private async void PrintHydraulikPdf(HaltungRecord? record)
     {
-        if (record is null)
-        {
-            _sp.Dialogs.Info("Bitte zuerst eine Haltung auswaehlen.", "Hydraulik PDF");
-            return;
-        }
-
-        var calc = DataPageHydraulikReportCalculator.BuildReportCalculation(
-            record,
-            _sp.Settings,
-            saveSettings: _sp.Settings.Save);
-        if (calc is null)
-        {
-            _sp.Dialogs.Warn("Hydraulik-Berechnung konnte nicht durchgefuehrt werden.\nBitte DN und Gefaelle pruefen.", "Hydraulik PDF");
-            return;
-        }
-
-        // Show print options dialog
-        var dialog = new HydraulikPrintDialog();
-        dialog.Owner = System.Windows.Application.Current?.MainWindow;
-        if (dialog.ShowDialog() != true || dialog.SelectedOptions is null)
-            return;
-
-        // SaveFile dialog
-        var holding = record.GetFieldValue("Haltungsname") ?? "Haltung";
-        var defaultName = $"Hydraulik_{SanitizeFilenamePart(holding)}_{DateTime.Now:yyyyMMdd}.pdf";
-        var output = _sp.Dialogs.SaveFile(
-            "Hydraulik-Bericht als PDF speichern",
-            "PDF (*.pdf)|*.pdf",
-            defaultExt: "pdf",
-            defaultFileName: defaultName);
-        if (string.IsNullOrWhiteSpace(output))
-            return;
-
-        try
-        {
-            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
-            var options = dialog.SelectedOptions with
-            {
-                LogoPathAbs = File.Exists(logoPath) ? logoPath : null
-            };
-
-            // PDF-Erzeugung auf Background-Thread (verhindert UI-Freeze)
-            var pdf = await Task.Run(() => Application.Reports.HydraulikPdfBuilder.Build(record, calc, options));
-            await Task.Run(() => File.WriteAllBytes(output, pdf));
-
-            _sp.Dialogs.Info($"PDF wurde erstellt:\n{output}", "Hydraulik PDF");
-        }
-        catch (Exception ex)
-        {
-            _sp.Dialogs.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "Hydraulik PDF");
-        }
+        await _printController.PrintHydraulikPdfAsync(record);
     }
 
     private async void PrintDossierPdf(HaltungRecord? record)
