@@ -54,9 +54,9 @@ public sealed class WinCanDbImportSchachtTests
         Exec(@"CREATE TABLE SECOBSMM(
             OMM_Observation_FK TEXT, OMM_FileName TEXT, OMM_FileType TEXT, OMM_Deleted TEXT);");
 
-        // Eine Haltung 06-001 mit FromNode=N1, ToNode=N2
-        Exec(@"INSERT INTO SECTION(OBJ_PK, OBJ_Key, OBJ_FromNode_REF, OBJ_ToNode_REF)
-               VALUES('SEC1', '06-001', 'N1', 'N2');");
+        // Eine Haltung 06-001 mit FromNode=N1, ToNode=N2 und einem BAUJAHR (darf Datum_Jahr NICHT belegen).
+        Exec(@"INSERT INTO SECTION(OBJ_PK, OBJ_Key, OBJ_FromNode_REF, OBJ_ToNode_REF, OBJ_ConstructionDate)
+               VALUES('SEC1', '06-001', 'N1', 'N2', '1998-05-05');");
         // Zwei Schaechte; N1 mit zusaetzlichen Stammdaten (Form/Groesse/Tiefe/Material)
         Exec(@"INSERT INTO NODE(OBJ_PK, OBJ_Key, OBJ_Shape, OBJ_Size1, OBJ_RimToInvert, OBJ_Material)
                VALUES('N1', 'S-865', 'rund', '1000', '2500', 'Beton');");
@@ -94,6 +94,38 @@ public sealed class WinCanDbImportSchachtTests
             Assert.NotNull(rec);
             Assert.Equal("S-865", rec!.GetFieldValue("Schacht_oben"));
             Assert.Equal("S-864", rec.GetFieldValue("Schacht_unten"));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void WinCanImport_DatumJahr_AusInspektionsdatum_NichtBaujahr()
+    {
+        // Datum_Jahr muss das Inspektionsdatum (INS_StartDate=2024-01-15) tragen, nicht das
+        // Baujahr (OBJ_ConstructionDate=1998). Ohne stillen Baujahr-Fallback.
+        var root = Path.Combine(Path.GetTempPath(), $"wincan-datum-{Guid.NewGuid():N}");
+        var dbDir = Path.Combine(root, "DB");
+        Directory.CreateDirectory(dbDir);
+        var db3 = Path.Combine(dbDir, "projekt.db3");
+        try
+        {
+            ErzeugeMiniDb3(db3, inspectionDir: "D");   // Inspektion vorhanden -> INS_StartDate 2024-01-15
+
+            var project = new Project();
+            var svc = new WinCanDbImportService();
+            var result = svc.ImportWinCanExport(root, project);
+            Assert.True(result.Ok, result.ErrorMessage);
+
+            var rec = project.Data.FirstOrDefault(r =>
+                string.Equals(r.GetFieldValue("Haltungsname"), "06-001", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(rec);
+            var datum = rec!.GetFieldValue("Datum_Jahr") ?? "";
+            Assert.Contains("2024", datum);
+            Assert.DoesNotContain("1998", datum);
         }
         finally
         {
