@@ -836,18 +836,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
 
     private void ApplyFieldMetaTooltip(DataGridColumn col, string field)
     {
-        var baseStyle = col.CellStyle;
-        var style = new Style(typeof(DataGridCell), baseStyle);
-
-        var tooltip = new TextBlock();
-        var mb = new MultiBinding { StringFormat = "Quelle: {0} | UserEdited: {1} | Konflikt: {2}" };
-        mb.Bindings.Add(new Binding($"FieldMeta[{field}].Source"));
-        mb.Bindings.Add(new Binding($"FieldMeta[{field}].UserEdited"));
-        mb.Bindings.Add(new Binding($"FieldMeta[{field}].Conflict"));
-        tooltip.SetBinding(TextBlock.TextProperty, mb);
-        style.Setters.Add(new Setter(FrameworkElement.ToolTipProperty, tooltip));
-
-        col.CellStyle = style;
+        col.CellStyle = DataGridFieldMetaTooltipStyleFactory.Create(field, col.CellStyle);
     }
 
 
