@@ -82,6 +82,52 @@ public sealed class XtfImportTests
     }
 
     [Fact]
+    public void VsaKekImport_SetztSchachtObenUnten_AusVonBisPunkt()
+    {
+        // VSA_KEK liefert die Schachtnamen ueber von-/bisPunktBezeichnung der Untersuchung.
+        // Feldabdeckung: diese wurden geparst, aber nicht als Schacht_oben/unten gesetzt.
+        var dir = Path.Combine(Path.GetTempPath(), $"vsakek-schacht-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var xtf = Path.Combine(dir, "test.xtf");
+        File.WriteAllText(xtf, """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="VSA_KEK_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <VSA_KEK_2020_LV95.KEK BID="B1">
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="U1">
+        <Bezeichnung>865-864</Bezeichnung>
+        <Zeitpunkt>2026-06-26</Zeitpunkt>
+        <vonPunktBezeichnung>865</vonPunktBezeichnung>
+        <bisPunktBezeichnung>864</bisPunktBezeichnung>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="S_BCD">
+        <UntersuchungRef REF="U1" />
+        <KanalSchadencode>BCD</KanalSchadencode>
+        <Distanz>0.00</Distanz>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+    </VSA_KEK_2020_LV95.KEK>
+  </DATASECTION>
+</TRANSFER>
+""");
+        try
+        {
+            var project = new Project();
+            var svc = new LegacyXtfImportService();
+            svc.ImportXtfFiles(new[] { xtf }, project);
+
+            var rec = project.Data.FirstOrDefault(r =>
+                string.Equals(r.GetFieldValue("Haltungsname"), "865-864", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(rec);
+            Assert.Equal("865", rec!.GetFieldValue("Schacht_oben"));
+            Assert.Equal("864", rec.GetFieldValue("Schacht_unten"));
+        }
+        finally { try { Directory.Delete(dir, recursive: true); } catch { } }
+    }
+
+    [Fact]
     public void Sia405Import_ParsesHoldingMaterialAndDn_FromSyntheticBasket()
     {
         // Minimales SYNTHETISCHES SIA405-XTF (kein echter Kundendatensatz):
@@ -127,6 +173,50 @@ public sealed class XtfImportTests
             Assert.Equal("Steinzeug", rec!.GetFieldValue("Rohrmaterial"));
             Assert.Equal("300", rec.GetFieldValue("DN_mm"));
             Assert.Equal("22.5", rec.GetFieldValue("Haltungslaenge_m"));
+        }
+        finally
+        {
+            try { File.Delete(tempPath); } catch { }
+        }
+    }
+
+    [Fact]
+    public void Sia405Import_SetztFunktionHierarchisch_AusKanal()
+    {
+        // SIA405-Kanal liefert Funktionhierarchisch; Haltung verweist via AbwasserbauwerkRef.
+        // Erwartet: gueltiger Katalog-Combo-Wert "PAA.<Suffix>".
+        var tempPath = Path.Combine(Path.GetTempPath(), $"sia405-fh-{Guid.NewGuid():N}.xtf");
+        File.WriteAllText(tempPath, """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="SewerStudioTest" VERSION="2.3">
+    <MODELS><MODEL NAME="SIA405_Abwasser_2015_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_Abwasser.SIA405_Abwasser BID="B1">
+      <Kanal TID="K1">
+        <Bezeichnung>K-1</Bezeichnung>
+        <Funktionhierarchisch>Sammelkanal</Funktionhierarchisch>
+      </Kanal>
+      <Haltung TID="H1">
+        <Bezeichnung>80638-80631</Bezeichnung>
+        <LaengeEffektiv>22.5</LaengeEffektiv>
+        <AbwasserbauwerkRef REF="K1" />
+      </Haltung>
+    </SIA405_Abwasser.SIA405_Abwasser>
+  </DATASECTION>
+</TRANSFER>
+""");
+        try
+        {
+            var project = new Project();
+            var svc = new LegacyXtfImportService();
+            svc.ImportXtfFiles(new[] { tempPath }, project);
+
+            var rec = project.Data.FirstOrDefault(r =>
+                string.Equals(r.GetFieldValue("Haltungsname"), "80638-80631", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(rec);
+            Assert.Equal("PAA.Sammelkanal", rec!.GetFieldValue("FunktionHierarchisch"));
         }
         finally
         {

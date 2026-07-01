@@ -135,6 +135,26 @@ public class MergeEngineDryRunTests
         Assert.Equal("300", (target.GetFieldValue("DN_mm") ?? "").Trim());
     }
 
+    [Fact]
+    public void DynamicField_NotInColumnOrder_IsMerged()
+    {
+        // Schacht_oben/Schacht_unten sind dynamische Felder (nicht in FieldCatalog.ColumnOrder).
+        // Regression: der Merge iterierte nur ColumnOrder und verwarf sie -> Datagrid blieb leer.
+        var target = CreateRecord("H1", new Dictionary<string, string> { ["Haltungsname"] = "H1" });
+        var source = CreateRecord("H1", new Dictionary<string, string>
+        {
+            ["Haltungsname"] = "H1",
+            ["Schacht_oben"] = "S-865",
+            ["Schacht_unten"] = "S-864"
+        });
+
+        var result = MergeEngine.MergeRecord(target, source, FieldSource.Xtf);
+
+        Assert.Equal("S-865", (target.GetFieldValue("Schacht_oben") ?? "").Trim());
+        Assert.Equal("S-864", (target.GetFieldValue("Schacht_unten") ?? "").Trim());
+        Assert.True(result.Updated >= 2);
+    }
+
     private static HaltungRecord CreateRecord(string key, Dictionary<string, string> fields)
     {
         var record = new HaltungRecord();

@@ -96,6 +96,16 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
             var mediaByObs = LoadObservationMedia(conn);
             var nodes = LoadNodes(conn);
 
+            // Knoten-Lookup (OBJ_PK -> Schachtnummer), um Schacht oben/unten an den Haltungen
+            // aus OBJ_FromNode_REF/OBJ_ToNode_REF aufzuloesen.
+            var nodeKeyByPk = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var n in nodes)
+            {
+                var nk = n.Key ?? n.Number;
+                if (!string.IsNullOrWhiteSpace(n.Pk) && !string.IsNullOrWhiteSpace(nk))
+                    nodeKeyByPk[n.Pk] = nk!;
+            }
+
             var sectionIndex = 0;
             foreach (var section in sections)
             {
@@ -131,6 +141,21 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
                         .FirstOrDefault();
 
                     ApplySectionFields(record, section, inspection);
+
+                    // Schacht oben/unten aus den Knoten-Referenzen der Section aufloesen.
+                    // Schacht_oben = Anfangsschacht der BEFAHRUNG. Im Normalfall (in Fliessrichtung)
+                    // ist das FromNode, ToNode = unten. Bei GEGENBEFAHRUNG (INS_InspectionDir U/UP/
+                    // UPSTREAM/2) faehrt die Kamera von ToNode nach FromNode -> oben/unten tauschen
+                    // (konsistent mit M150ValueExtractor.ShouldReverseWinCanDirection und VSA_KEK von=oben).
+                    var reverseDir = Xtf.M150ValueExtractor.ShouldReverseWinCanDirection(inspection?.InspectionDir);
+                    var obenRef  = reverseDir ? section.ToNodeFk   : section.FromNodeFk;
+                    var untenRef = reverseDir ? section.FromNodeFk : section.ToNodeFk;
+                    if (!string.IsNullOrWhiteSpace(obenRef)
+                        && nodeKeyByPk.TryGetValue(obenRef!, out var schachtOben))
+                        ApplyField(record, "Schacht_oben", schachtOben);
+                    if (!string.IsNullOrWhiteSpace(untenRef)
+                        && nodeKeyByPk.TryGetValue(untenRef!, out var schachtUnten))
+                        ApplyField(record, "Schacht_unten", schachtUnten);
 
                     if (inspection is null)
                     {
@@ -552,6 +577,18 @@ public sealed class WinCanDbImportService : IWinCanDbImportService
         SetSchachtField(record, "offen/abgeschlossen", NormalizeAccessible(node.Accessible));
         SetSchachtField(record, "Ausführung", node.ConstructionStyle);
         SetSchachtField(record, "Datum/Jahr", NormalizeDate(node.ConstructionYearText, node.ConstructionDate));
+
+        // Zusaetzliche Schacht-Stammdaten aus der NODE-Tabelle (bisher gelesen, aber nie gesetzt).
+        // Additiv/empty-only ueber SetSchachtField — schliesst dokumentierte Schacht-Datenluecken.
+        SetSchachtField(record, "Schachtform", node.Shape);
+        var d1 = NormalizeNumber(node.Size1);
+        var d2 = NormalizeNumber(node.Size2);
+        var durchmesser = (!string.IsNullOrWhiteSpace(d1) && !string.IsNullOrWhiteSpace(d2))
+            ? $"{d1} x {d2}"      // rechteckiger Schacht: beide Kanten
+            : (d1 ?? d2);          // rund: nur Durchmesser
+        SetSchachtField(record, "Durchmesser", durchmesser);
+        SetSchachtField(record, "Schachttiefe", NormalizeNumber(node.RimToInvert) ?? NormalizeNumber(node.DepthToInvert));
+        SetSchachtField(record, "Material", NormalizeMaterial(node.Material));
     }
 
     private static void LinkNodePdf(SchachtRecord record, string nodeKey, Dictionary<string, List<string>> index)
