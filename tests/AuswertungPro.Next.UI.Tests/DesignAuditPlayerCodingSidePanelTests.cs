@@ -1,5 +1,7 @@
 ﻿using System.IO;
 
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
+
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DesignAuditPlayerCodingSidePanelTests
@@ -566,15 +568,13 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
     private static string ReadUiFile(params string[] relativeParts)
     {
-        var root = FindRepoRoot();
-        var path = Path.Combine(new[] { root, "src", "AuswertungPro.Next.UI" }.Concat(relativeParts).ToArray());
+        var path = RepoFile(new[] { "src", "AuswertungPro.Next.UI" }.Concat(relativeParts).ToArray());
         return File.ReadAllText(path);
     }
 
     private static string ReadCodingPartials()
     {
-        var root = FindRepoRoot();
-        var dir = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var dir = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows");
         var files = Directory.GetFiles(dir, "PlayerWindow.Coding*.cs")
             .Where(path => !Path.GetFileName(path).Contains("SidePanelAccessors", StringComparison.Ordinal))
             .OrderBy(path => path, StringComparer.Ordinal);
@@ -630,30 +630,6 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.True(attachIndex < addIndex, "Boundary-Frame muss vor AddEvent am ProtocolEntry haengen.");
     }
 
-    private static string ExtractMethodBody(string source, string signature)
-    {
-        var start = source.IndexOf(signature, StringComparison.Ordinal);
-        Assert.True(start >= 0, $"Method signature not found: {signature}");
-
-        var braceStart = source.IndexOf('{', start);
-        Assert.True(braceStart >= 0, $"Method body not found: {signature}");
-
-        var depth = 0;
-        for (var i = braceStart; i < source.Length; i++)
-        {
-            if (source[i] == '{')
-                depth++;
-            else if (source[i] == '}')
-            {
-                depth--;
-                if (depth == 0)
-                    return source[braceStart..(i + 1)];
-            }
-        }
-
-        throw new InvalidDataException($"Method body not closed: {signature}");
-    }
-
     private static int CountOccurrences(string source, string needle)
     {
         var count = 0;
@@ -669,18 +645,5 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         }
     }
 
-    private static string FindRepoRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AuswertungPro.sln")))
-                return current.FullName;
-
-            current = current.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repo root with AuswertungPro.sln was not found.");
-    }
 }
 

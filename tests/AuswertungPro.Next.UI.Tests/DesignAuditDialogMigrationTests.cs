@@ -1,4 +1,5 @@
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -38,21 +39,8 @@ public sealed class DesignAuditDialogMigrationTests
 
     private static string ReadUiFile(string relativePath)
     {
-        var path = Path.Combine(FindRepoRoot(), "src", "AuswertungPro.Next.UI", relativePath);
+        var path = RepoFile("src", "AuswertungPro.Next.UI", relativePath);
         return File.ReadAllText(path);
     }
 
-    private static string FindRepoRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AuswertungPro.sln")))
-                return current.FullName;
-
-            current = current.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repo root with AuswertungPro.sln was not found.");
-    }
 }

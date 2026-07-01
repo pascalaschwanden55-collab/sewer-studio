@@ -1,5 +1,6 @@
 using System.IO;
 using Xunit;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -267,10 +268,10 @@ public sealed class DesignAuditThemeResourceTests
         AssertNoStaticThemeBrushResources("Theme/ThemeLight.xaml", ReadUiFile("Theme", "ThemeLight.xaml"));
         AssertNoStaticThemeBrushResources("Theme/Theme.xaml", ReadUiFile("Theme", "Theme.xaml"));
 
-        var root = Path.Combine(FindRepoRoot(), "src", "AuswertungPro.Next.UI", "Views", "Pages");
+        var root = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages");
         foreach (var file in Directory.EnumerateFiles(root, "*.xaml", SearchOption.AllDirectories))
         {
-            var relative = Path.GetRelativePath(Path.Combine(FindRepoRoot(), "src", "AuswertungPro.Next.UI"), file);
+            var relative = Path.GetRelativePath(RepoFile("src", "AuswertungPro.Next.UI"), file);
             AssertNoStaticThemeBrushResources(relative, File.ReadAllText(file));
         }
     }
@@ -338,22 +339,8 @@ public sealed class DesignAuditThemeResourceTests
 
     private static string ReadUiFile(params string[] relativeParts)
     {
-        var root = FindRepoRoot();
-        var path = Path.Combine(new[] { root, "src", "AuswertungPro.Next.UI" }.Concat(relativeParts).ToArray());
+        var path = RepoFile(new[] { "src", "AuswertungPro.Next.UI" }.Concat(relativeParts).ToArray());
         return File.ReadAllText(path);
     }
 
-    private static string FindRepoRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AuswertungPro.sln")))
-                return current.FullName;
-
-            current = current.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repo root with AuswertungPro.sln was not found.");
-    }
 }

@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.RegularExpressions;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -34,7 +35,7 @@ public sealed class DesignAuditChromeAndGlyphTests
     [Fact]
     public void Shell_view_model_has_no_dead_guide_code_when_xaml_has_no_guide_bindings()
     {
-        var uiRoot = Path.Combine(FindRepoRoot(), "src", "AuswertungPro.Next.UI");
+        var uiRoot = RepoFile("src", "AuswertungPro.Next.UI");
         foreach (var file in Directory.EnumerateFiles(uiRoot, "*.xaml", SearchOption.AllDirectories))
         {
             var relative = Path.GetRelativePath(uiRoot, file);
@@ -94,21 +95,8 @@ public sealed class DesignAuditChromeAndGlyphTests
 
     private static string ReadUiFile(string relativePath)
     {
-        var path = Path.Combine(FindRepoRoot(), "src", "AuswertungPro.Next.UI", relativePath);
+        var path = RepoFile("src", "AuswertungPro.Next.UI", relativePath);
         return File.ReadAllText(path);
     }
 
-    private static string FindRepoRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AuswertungPro.sln")))
-                return current.FullName;
-
-            current = current.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repo root with AuswertungPro.sln was not found.");
-    }
 }
