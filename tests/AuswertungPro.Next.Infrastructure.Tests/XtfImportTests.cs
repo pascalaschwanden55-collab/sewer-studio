@@ -9,6 +9,79 @@ namespace AuswertungPro.Next.Infrastructure.Tests;
 public sealed class XtfImportTests
 {
     [Fact]
+    public void VsaKekImport_FindetFotoUndVideo_WennXtfInDokumenteUnterordner()
+    {
+        // Reales IKAS-Layout: XTF in <Export>\Dokumente\, Foto/Film aber im Export-Root eine Ebene hoeher.
+        // Regression: frueher wurde nur <Dokumente>\Foto / <Dokumente>\Film gesucht -> alles "nicht gefunden".
+        var dir = Path.Combine(Path.GetTempPath(), $"vsakek-sub-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(dir, "Dokumente"));
+        Directory.CreateDirectory(Path.Combine(dir, "Foto"));
+        Directory.CreateDirectory(Path.Combine(dir, "Film"));
+        var xtf = Path.Combine(dir, "Dokumente", "test.xtf");
+        File.WriteAllText(Path.Combine(dir, "Foto", "H_06-001_002.jpg"), "bild");
+        File.WriteAllText(Path.Combine(dir, "Film", "H_06-001.mpg"), "video");
+        File.WriteAllText(xtf, """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="VSA_KEK_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <VSA_KEK_2020_LV95.KEK BID="B1">
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="U1">
+        <Bezeichnung>06-001</Bezeichnung>
+        <Zeitpunkt>2026-06-26</Zeitpunkt>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="S_BAA">
+        <UntersuchungRef REF="U1" />
+        <KanalSchadencode>BAA</KanalSchadencode>
+        <Distanz>1.90</Distanz>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+      <VSA_KEK_2020_LV95.KEK.Datei TID="D1">
+        <Art>Foto</Art>
+        <Klasse>Kanalschaden</Klasse>
+        <Objekt>S_BAA</Objekt>
+        <Bezeichnung>H_06-001_002.jpg</Bezeichnung>
+        <Relativpfad>Foto</Relativpfad>
+      </VSA_KEK_2020_LV95.KEK.Datei>
+      <VSA_KEK_2020_LV95.KEK.Datei TID="D2">
+        <Art>Film</Art>
+        <Klasse>Untersuchung</Klasse>
+        <Objekt>U1</Objekt>
+        <Bezeichnung>H_06-001.mpg</Bezeichnung>
+        <Relativpfad>Film</Relativpfad>
+      </VSA_KEK_2020_LV95.KEK.Datei>
+    </VSA_KEK_2020_LV95.KEK>
+  </DATASECTION>
+</TRANSFER>
+""");
+
+        try
+        {
+            var project = new Project();
+            var svc = new LegacyXtfImportService();
+            var stats = svc.ImportXtfFiles(new[] { xtf }, project);
+            var debug = string.Join("\n", stats.Messages.Select(m => $"{m.Level}: {m.Message}"));
+
+            var rec = project.Data.FirstOrDefault(r =>
+                string.Equals(r.GetFieldValue("Haltungsname"), "06-001", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(rec);
+
+            // Video-Link zeigt auf die Datei im Export-Root\Film (Eltern-Ebene) und existiert.
+            var link = rec!.GetFieldValue("Link");
+            Assert.Contains("H_06-001.mpg", link);
+            Assert.True(File.Exists(link), $"Link sollte existieren (Eltern-Ebene): {link}\n{debug}");
+
+            // Foto am BAA-Finding zeigt auf Export-Root\Foto und existiert.
+            var baa = rec.VsaFindings.FirstOrDefault(f => string.Equals(f.KanalSchadencode, "BAA", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(baa);
+            Assert.False(string.IsNullOrWhiteSpace(baa!.FotoPath), debug);
+            Assert.True(File.Exists(baa.FotoPath!), $"FotoPath sollte existieren (Eltern-Ebene): {baa.FotoPath}\n{debug}");
+        }
+        finally { try { Directory.Delete(dir, recursive: true); } catch { } }
+    }
+
+    [Fact]
     public void Sia405Import_ParsesHoldingMaterialAndDn_FromSyntheticBasket()
     {
         // Minimales SYNTHETISCHES SIA405-XTF (kein echter Kundendatensatz):
