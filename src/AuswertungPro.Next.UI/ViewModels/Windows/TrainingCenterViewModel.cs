@@ -1372,10 +1372,14 @@ public partial class TrainingCenterViewModel : ObservableObject
                 () => DateTime.UtcNow,
                 ct);
 
-            SelfTrainingRunCompletionController.Apply(
-                result,
-                Log,
-                value => StatusText = value);
+            var completionPresentation = SelfTrainingRunPresentationBuilder.BuildCompletion(result);
+            foreach (var line in completionPresentation.LogLines)
+                Log(line);
+
+            selfTrainingUi.SetStatusText(completionPresentation.StatusText);
+
+            if (SelfTrainingRunPresentationBuilder.BuildFewShotExportHint(result) is { } fewShotHint)
+                Log(fewShotHint);
 
             // Inkrementelles KB-Update fuer ExactMatch-Samples (B1)
             await SelfTrainingKbUpdateController.RunApprovedSamplesUpdateAsync(

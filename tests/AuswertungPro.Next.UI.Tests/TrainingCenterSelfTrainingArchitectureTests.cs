@@ -166,7 +166,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_self_training_completion_an_controller()
+    public void TrainingCenterViewModel_setzt_triviale_self_training_completion_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -175,11 +175,21 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var completionControllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "SelfTrainingRunCompletionController.cs");
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingRunCompletionController.Apply(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingRunPresentationBuilder.BuildCompletion(result)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingRunPresentationBuilder.BuildFewShotExportHint(result)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(completionControllerPath), "Triviale Self-Training-Completion-Sequenz soll inline in der VM stehen.");
+        Assert.DoesNotContain("SelfTrainingRunCompletionController.Apply(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingRunPresentationBuilder.BuildCompletion(result)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("foreach (var line in completionPresentation.LogLines)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("selfTrainingUi.SetStatusText(completionPresentation.StatusText);", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingRunPresentationBuilder.BuildFewShotExportHint(result)", selfTrainingSource, StringComparison.Ordinal);
     }
 
     [Fact]
