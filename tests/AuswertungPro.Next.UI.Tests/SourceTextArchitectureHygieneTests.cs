@@ -83,7 +83,8 @@ public sealed class SourceTextArchitectureHygieneTests
         {
             "PlayerWindow_video_path_validation_lives_in_guard",
             "PlayerWindow_state_fields_live_in_state_partial",
-            "PlayerWindow_bounds_adjustment_lives_in_policy"
+            "PlayerWindow_bounds_adjustment_lives_in_policy",
+            "PlayerWindow_trace_output_lives_in_player_trace"
         };
 
         foreach (var methodName in methodNames)
