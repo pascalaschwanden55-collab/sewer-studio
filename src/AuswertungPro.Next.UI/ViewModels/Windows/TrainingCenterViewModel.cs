@@ -852,6 +852,8 @@ public partial class TrainingCenterViewModel : ObservableObject
                 OnUi,
                 SelfTrainingResults.Add,
                 UpdateCodeDistribution,
+                value => KbSampleCount = value,
+                value => KbCodesCovered = value,
                 Log);
 
             await TrainingBatchImportCaseLoopController.RunAsync(
@@ -881,9 +883,6 @@ public partial class TrainingCenterViewModel : ObservableObject
                         caseUi,
                         TrainingSamplesStore.MergeAndSaveAsync,
                         () => _store.SaveAsync(BuildState()),
-                        value => KbSampleCount = value,
-                        value => KbCodesCovered = value,
-                        Log,
                         token).ConfigureAwait(false);
                 },
                 ex =>

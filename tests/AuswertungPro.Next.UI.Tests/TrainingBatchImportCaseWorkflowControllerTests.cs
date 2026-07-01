@@ -61,6 +61,8 @@ public sealed class TrainingBatchImportCaseWorkflowControllerTests
                 },
                 results.Add,
                 (code, level) => distributions.Add((code, level)),
+                value => calls.Add($"samples:{value}"),
+                value => calls.Add($"codes:{value}"),
                 message => calls.Add($"log:{message}")),
             saveSamplesAsync: samples =>
             {
@@ -73,9 +75,6 @@ public sealed class TrainingBatchImportCaseWorkflowControllerTests
                 calls.Add("save-state");
                 return Task.CompletedTask;
             },
-            setSampleCount: value => calls.Add($"samples:{value}"),
-            setCodesCovered: value => calls.Add($"codes:{value}"),
-            log: message => calls.Add($"log:{message}"),
             ct: CancellationToken.None);
 
         Assert.False(result.ShouldContinueWithNextCase);
@@ -127,6 +126,8 @@ public sealed class TrainingBatchImportCaseWorkflowControllerTests
                 action => action(),
                 results.Add,
                 (_, _) => { },
+                _ => { },
+                _ => { },
                 _ => { }),
             saveSamplesAsync: _ =>
             {
@@ -134,9 +135,6 @@ public sealed class TrainingBatchImportCaseWorkflowControllerTests
                 return Task.CompletedTask;
             },
             saveStateAsync: () => Task.CompletedTask,
-            setSampleCount: _ => { },
-            setCodesCovered: _ => { },
-            log: _ => { },
             ct: CancellationToken.None);
 
         Assert.True(result.ShouldContinueWithNextCase);

@@ -10,32 +10,26 @@ public static class TrainingBatchImportCasePersistenceWorkflowController
         int processedCount,
         Func<List<TrainingSample>, Task> saveSamplesAsync,
         Func<Task> saveStateAsync,
-        Action<Action> invokeOnUi,
-        Action<int> setSampleCount,
-        Action<int> setCodesCovered,
-        Action<string> log)
+        TrainingBatchImportCaseUiSink caseUi)
     {
         ArgumentNullException.ThrowIfNull(newSamples);
         ArgumentNullException.ThrowIfNull(allSamples);
         ArgumentNullException.ThrowIfNull(saveSamplesAsync);
         ArgumentNullException.ThrowIfNull(saveStateAsync);
-        ArgumentNullException.ThrowIfNull(invokeOnUi);
-        ArgumentNullException.ThrowIfNull(setSampleCount);
-        ArgumentNullException.ThrowIfNull(setCodesCovered);
-        ArgumentNullException.ThrowIfNull(log);
+        ArgumentNullException.ThrowIfNull(caseUi);
 
         var persistence = await TrainingBatchImportSamplePersistenceController.SaveCandidatesAsync(
             newSamples,
             allSamples,
             saveSamplesAsync);
 
-        log(persistence.CandidateLogMessage);
-        invokeOnUi(() =>
+        caseUi.Log(persistence.CandidateLogMessage);
+        caseUi.InvokeOnUi(() =>
         {
-            setSampleCount(persistence.SampleCount);
-            setCodesCovered(persistence.CodesCovered);
+            caseUi.SetSampleCount(persistence.SampleCount);
+            caseUi.SetCodesCovered(persistence.CodesCovered);
         });
-        log(persistence.StoredLogMessage);
+        caseUi.Log(persistence.StoredLogMessage);
 
         if (processedCount > 0 && processedCount % 5 == 0)
         {

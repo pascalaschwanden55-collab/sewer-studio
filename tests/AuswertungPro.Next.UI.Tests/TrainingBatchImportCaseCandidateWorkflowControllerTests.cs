@@ -49,6 +49,8 @@ public sealed class TrainingBatchImportCaseCandidateWorkflowControllerTests
                 },
                 entry => calls.Add($"add-result:{entry.Index}:{entry.VsaCode}"),
                 (code, level) => calls.Add($"distribution:{code}:{level}"),
+                _ => { },
+                _ => { },
                 calls.Add));
 
         Assert.True(result.ShouldPersist);
@@ -100,6 +102,8 @@ public sealed class TrainingBatchImportCaseCandidateWorkflowControllerTests
                 },
                 entry => calls.Add($"add-result:{entry.Index}:{entry.VsaCode}:{entry.Summary}"),
                 (_, _) => calls.Add("distribution"),
+                _ => { },
+                _ => { },
                 calls.Add));
 
         Assert.False(result.ShouldPersist);

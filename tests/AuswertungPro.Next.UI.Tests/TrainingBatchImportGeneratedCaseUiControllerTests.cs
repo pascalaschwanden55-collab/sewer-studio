@@ -38,6 +38,8 @@ public sealed class TrainingBatchImportGeneratedCaseUiControllerTests
                 },
                 entry => calls.Add($"add-result:{entry.VsaCode}"),
                 (_, _) => calls.Add("distribution"),
+                _ => { },
+                _ => { },
                 calls.Add));
 
         Assert.True(applyResult.ShouldContinueWithNextCase);
@@ -80,6 +82,8 @@ public sealed class TrainingBatchImportGeneratedCaseUiControllerTests
                 },
                 entry => calls.Add($"add-result:{entry.VsaCode}"),
                 (code, level) => calls.Add($"distribution:{code}:{level}"),
+                _ => { },
+                _ => { },
                 calls.Add));
 
         Assert.False(result.ShouldContinueWithNextCase);

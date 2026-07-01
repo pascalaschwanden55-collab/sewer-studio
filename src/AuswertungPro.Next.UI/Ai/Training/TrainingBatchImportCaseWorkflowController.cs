@@ -19,9 +19,6 @@ public static class TrainingBatchImportCaseWorkflowController
         TrainingBatchImportCaseUiSink caseUi,
         Func<List<TrainingSample>, Task> saveSamplesAsync,
         Func<Task> saveStateAsync,
-        Action<int> setSampleCount,
-        Action<int> setCodesCovered,
-        Action<string> log,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(trainingCase);
@@ -33,9 +30,6 @@ public static class TrainingBatchImportCaseWorkflowController
         ArgumentNullException.ThrowIfNull(caseUi);
         ArgumentNullException.ThrowIfNull(saveSamplesAsync);
         ArgumentNullException.ThrowIfNull(saveStateAsync);
-        ArgumentNullException.ThrowIfNull(setSampleCount);
-        ArgumentNullException.ThrowIfNull(setCodesCovered);
-        ArgumentNullException.ThrowIfNull(log);
 
         var caseGeneration = await TrainingBatchImportCaseGenerationController.GenerateAsync(
             trainingCase,
@@ -60,10 +54,7 @@ public static class TrainingBatchImportCaseWorkflowController
             processedCount,
             saveSamplesAsync,
             saveStateAsync,
-            caseUi.InvokeOnUi,
-            setSampleCount,
-            setCodesCovered,
-            log).ConfigureAwait(false);
+            caseUi).ConfigureAwait(false);
 
         return new TrainingBatchImportCaseWorkflowResult(false);
     }

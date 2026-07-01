@@ -32,14 +32,18 @@ public sealed class TrainingBatchImportCasePersistenceWorkflowControllerTests
                 calls.Add("save-state");
                 return Task.CompletedTask;
             },
-            invokeOnUi: action =>
-            {
-                calls.Add("on-ui");
-                action();
-            },
-            setSampleCount: value => calls.Add($"samples:{value}"),
-            setCodesCovered: value => calls.Add($"codes:{value}"),
-            log: message => calls.Add($"log:{message}"));
+            caseUi: new TrainingBatchImportCaseUiSink(
+                _ => { },
+                action =>
+                {
+                    calls.Add("on-ui");
+                    action();
+                },
+                _ => { },
+                (_, _) => { },
+                value => calls.Add($"samples:{value}"),
+                value => calls.Add($"codes:{value}"),
+                message => calls.Add($"log:{message}")));
 
         Assert.Same(newSamples, savedSamples);
         Assert.Equal(new[] { "old", "new-1", "new-2" }, existingSamples.Select(s => s.SampleId));
@@ -72,10 +76,7 @@ public sealed class TrainingBatchImportCasePersistenceWorkflowControllerTests
                 calls.Add("save-state");
                 return Task.CompletedTask;
             },
-            invokeOnUi: action => action(),
-            setSampleCount: _ => { },
-            setCodesCovered: _ => { },
-            log: _ => { });
+            caseUi: NoOpCaseUi());
 
         Assert.DoesNotContain("save-state", calls);
     }
@@ -89,11 +90,18 @@ public sealed class TrainingBatchImportCasePersistenceWorkflowControllerTests
             processedCount: 5,
             saveSamplesAsync: _ => Task.CompletedTask,
             saveStateAsync: () => throw new InvalidOperationException("kaputt"),
-            invokeOnUi: action => action(),
-            setSampleCount: _ => { },
-            setCodesCovered: _ => { },
-            log: _ => { });
+            caseUi: NoOpCaseUi());
     }
+
+    private static TrainingBatchImportCaseUiSink NoOpCaseUi()
+        => new(
+            _ => { },
+            action => action(),
+            _ => { },
+            (_, _) => { },
+            _ => { },
+            _ => { },
+            _ => { });
 
     private static TrainingSample Sample(string id, string code)
         => new()

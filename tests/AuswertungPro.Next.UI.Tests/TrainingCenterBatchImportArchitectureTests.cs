@@ -275,14 +275,27 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportGeneratedCaseUiController.cs"));
+        var persistenceWorkflowSource = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingBatchImportCasePersistenceWorkflowController.cs"));
 
         Assert.Contains("TrainingBatchImportCaseUiSink caseUi", caseWorkflowSource, StringComparison.Ordinal);
         Assert.Contains("TrainingBatchImportCaseUiSink caseUi", candidateWorkflowSource, StringComparison.Ordinal);
         Assert.Contains("TrainingBatchImportCaseUiSink caseUi", generatedCaseUiSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportCaseUiSink caseUi", persistenceWorkflowSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Action<TrainingBatchImportLivePreview> updateLivePreview", caseWorkflowSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Action<Action> invokeOnUi", caseWorkflowSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Action<SelfTrainingEntryResult> addResult", caseWorkflowSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Action<string, MatchLevel> updateCodeDistribution", caseWorkflowSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Action<Action> invokeOnUi", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Action<int> setSampleCount", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Action<int> setCodesCovered", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("caseUi.SetSampleCount(persistence.SampleCount);", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("caseUi.SetCodesCovered(persistence.CodesCovered);", persistenceWorkflowSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -428,11 +441,11 @@ public sealed class TrainingCenterBatchImportArchitectureTests
         Assert.Contains("processedCount % 5 == 0", persistenceWorkflowSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TrainingBatchImportCaseStateSaveController", persistenceWorkflowSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TrainingBatchImportSamplePersistenceUiController.Apply(", persistenceWorkflowSource, StringComparison.Ordinal);
-        Assert.Contains("log(persistence.CandidateLogMessage);", persistenceWorkflowSource, StringComparison.Ordinal);
-        Assert.Contains("invokeOnUi(() =>", persistenceWorkflowSource, StringComparison.Ordinal);
-        Assert.Contains("setSampleCount(persistence.SampleCount);", persistenceWorkflowSource, StringComparison.Ordinal);
-        Assert.Contains("setCodesCovered(persistence.CodesCovered);", persistenceWorkflowSource, StringComparison.Ordinal);
-        Assert.Contains("log(persistence.StoredLogMessage);", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("caseUi.Log(persistence.CandidateLogMessage);", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("caseUi.InvokeOnUi(() =>", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("caseUi.SetSampleCount(persistence.SampleCount);", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("caseUi.SetCodesCovered(persistence.CodesCovered);", persistenceWorkflowSource, StringComparison.Ordinal);
+        Assert.Contains("caseUi.Log(persistence.StoredLogMessage);", persistenceWorkflowSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TrainingBatchImportCasePersistenceWorkflowController.PersistAsync(", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TrainingBatchImportSamplePersistenceController.SaveCandidatesAsync(", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TrainingBatchImportSamplePersistenceUiController.Apply(", batchImportSource, StringComparison.Ordinal);
