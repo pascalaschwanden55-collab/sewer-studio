@@ -266,6 +266,26 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.DoesNotContain($"public void {methodName}", guard);
     }
 
+    [Fact]
+    public void Player_window_primary_damage_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowPrimaryDamageArchitectureTests.cs"));
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        var methodNames = new[]
+        {
+            "PlayerWindow_coding_primary_damage_text_uses_existing_mapper",
+            "PlayerWindow_primary_damage_text_lives_in_policy"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -318,6 +338,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowControllerArchitectureTests.cs")]
     [InlineData("PlayerWindowMediaInfrastructureArchitectureTests.cs")]
     [InlineData("PlayerWindowPlaybackArchitectureTests.cs")]
+    [InlineData("PlayerWindowPrimaryDamageArchitectureTests.cs")]
     [InlineData("PlayerWindowProtocolPdfArchitectureTests.cs")]
     [InlineData("PlayerWindowProtocolEventMappingArchitectureTests.cs")]
     [InlineData("PlayerWindowResourceDictionaryTests.cs")]
