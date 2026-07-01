@@ -9,10 +9,12 @@ public sealed class TrainingBatchImportRunStartControllerTests
     {
         var calls = new List<string>();
         var ui = new TrainingBatchUiSink(
-            SetBusy: value => calls.Add($"busy:{value}"),
-            SetLogText: value => calls.Add($"log:{value}"),
-            SetProgressValue: value => calls.Add($"progress:{value}"),
-            SetProgressMax: value => calls.Add($"max:{value}"));
+            setBusy: value => calls.Add($"busy:{value}"),
+            setLogText: value => calls.Add($"log:{value}"),
+            setProgressValue: value => calls.Add($"progress:{value}"),
+            setProgressMax: value => calls.Add($"max:{value}"),
+            setStatusText: _ => { },
+            log: _ => { });
 
         TrainingBatchImportRunStartController.Apply(
             ui,

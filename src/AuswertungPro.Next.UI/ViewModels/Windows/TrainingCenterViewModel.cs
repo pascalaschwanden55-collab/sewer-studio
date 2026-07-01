@@ -792,12 +792,16 @@ public partial class TrainingCenterViewModel : ObservableObject
         using var _aiToken = AiTrack.Begin("Training Center");
         try
         {
+            var batchUi = new TrainingBatchUiSink(
+                value => IsBusy = value,
+                value => LogText = value,
+                value => ProgressValue = value,
+                value => ProgressMax = value,
+                value => StatusText = value,
+                Log);
+
             TrainingBatchImportRunStartController.Apply(
-                new TrainingBatchUiSink(
-                    value => IsBusy = value,
-                    value => LogText = value,
-                    value => ProgressValue = value,
-                    value => ProgressMax = value),
+                batchUi,
                 ClearLivePreview,
                 () => ResetSelfTrainingVisuals());
 
@@ -842,9 +846,7 @@ public partial class TrainingCenterViewModel : ObservableObject
                     caseIndex,
                     totalCount,
                     trainingCase,
-                    value => ProgressValue = value,
-                    value => StatusText = value,
-                    Log),
+                    batchUi),
                 async (caseIndex, trainingCase, token) =>
                 {
                     await TrainingBatchImportCaseWorkflowController.ProcessAsync(
