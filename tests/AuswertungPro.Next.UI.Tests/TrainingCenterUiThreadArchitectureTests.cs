@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -24,17 +25,4 @@ public sealed class TrainingCenterUiThreadArchitectureTests
         Assert.DoesNotContain("System.Windows.Application.Current?.Dispatcher", source, StringComparison.Ordinal);
     }
 
-    private static string FindRepoRoot()
-    {
-        var current = new DirectoryInfo(AppContext.BaseDirectory);
-        while (current is not null)
-        {
-            if (File.Exists(Path.Combine(current.FullName, "AuswertungPro.sln")))
-                return current.FullName;
-
-            current = current.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repository-Root mit AuswertungPro.sln wurde nicht gefunden.");
-    }
 }
