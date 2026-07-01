@@ -17,13 +17,10 @@ using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using AuswertungPro.Next.Infrastructure.Costs;
-using AuswertungPro.Next.Infrastructure.Ai;
-using System.Net.Http;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Sanierung;
-using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.UI.DataPage;
 using AuswertungPro.Next.UI.Hydraulik;
 using AuswertungPro.Next.UI.Player;
@@ -46,6 +43,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPageMediaSearchController _mediaSearchController;
     private readonly DataPageProtocolWindowController _protocolWindowController;
     private readonly DataPageRecordCollectionController _recordCollectionController;
+    private readonly DataPageVideoAnalysisController _videoAnalysisController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
@@ -259,6 +257,20 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             (message, title) => _sp.Dialogs.Confirm(message, title),
             () => RecordsOrderChanged?.Invoke(),
             ScheduleAutoSave);
+        _videoAnalysisController = new DataPageVideoAnalysisController(
+            _sp.Dialogs,
+            () => Records,
+            EnsureVideoPath,
+            () => _sp.CodeCatalog.AllowedCodes(),
+            () => new AppSettingsAiSettingsProvider().Load().ToRuntimeSettings(),
+            (cfg, plausibility, http) => _sp.CreateVideoAnalysisPipeline(cfg, plausibility, http),
+            ShowVideoAnalysisPipelineWindow,
+            record => Selected?.Id == record.Id,
+            _shell.MarkProjectDirty,
+            RefreshRecordInGrid,
+            RefreshSelectedProtocolEntries,
+            ScheduleAutoSave,
+            action => System.Windows.Application.Current?.Dispatcher.BeginInvoke(action));
 
         // Seed measure template names from Offerten into dropdown if missing
         SeedMeasureTemplateNames();
@@ -592,78 +604,19 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void OpenVideoAiPipeline(HaltungRecord? record)
     {
-        if (record is null) return;
+        _videoAnalysisController.Open(record);
+    }
 
-        var videoPath = EnsureVideoPath(record);
-        if (string.IsNullOrWhiteSpace(videoPath)) return;
-
-        var allowedCodes = _sp.CodeCatalog.AllowedCodes();
-        if (allowedCodes is null || allowedCodes.Count == 0)
-        {
-            _sp.Dialogs.Warn("VSA-Code-Katalog ist leer oder nicht geladen.", "Videoanalyse KI");
-            return;
-        }
-
-        var cfg = new AppSettingsAiSettingsProvider()
-            .Load()
-            .ToRuntimeSettings();
-        if (!cfg.Enabled)
-        {
-            _sp.Dialogs.Info("KI ist deaktiviert (SEWERSTUDIO_AI_ENABLED=0).", "Videoanalyse KI");
-            return;
-        }
-
-        var timeout = cfg.OllamaRequestTimeout > TimeSpan.Zero
-            ? cfg.OllamaRequestTimeout
-            : TimeSpan.FromMinutes(30);
-        using var http = new HttpClient { Timeout = timeout };
-        var allowedSet = new HashSet<string>(allowedCodes, StringComparer.OrdinalIgnoreCase);
-        var plausibility = new RuleBasedAiSuggestionPlausibilityService(allowedSet);
-        var pipeline = _sp.CreateVideoAnalysisPipeline(cfg, plausibility, http);
-
-        var haltungId = record.GetFieldValue("Haltungsname") ?? record.Id.ToString();
-
-        // Echte Haltungslaenge aus den Stammdaten fuer die Meter-Schaetzung
-        // (sonst rechnet die Pipeline mit der 50m-Annahme)
-        var reachLengthM = PipelineReachLengthParser.TryParse(record.GetFieldValue("Haltungslaenge_m"));
-        var request = new PipelineRequest(haltungId, videoPath, allowedCodes, ReachLengthM: reachLengthM);
-
+    private PipelineResult? ShowVideoAnalysisPipelineWindow(
+        PipelineRequest request,
+        IVideoAnalysisPipelineService pipeline)
+    {
         var win = new VideoAnalysisPipelineWindow(request, pipeline)
         {
             Owner = System.Windows.Application.Current?.MainWindow
         };
 
-        var ok = win.ShowDialog() == true;
-
-        if (ok && win.Result?.IsSuccess == true && win.Result.Document is not null)
-        {
-            // S4: Hat die Haltung manuell codierte Eintraege, vor dem Ersetzen rueckfragen.
-            // Das bisherige Protokoll wird zwar in die Historie gesichert (wiederherstellbar),
-            // die Anzeige (Current) aber durch die KI-Ergebnisse ersetzt.
-            if (ProtocolReplacementService.HasManualCurrentEntries(record.Protocol)
-                && !_sp.Dialogs.Confirm(
-                    "Diese Haltung enthaelt manuell codierte Eintraege.\n\n" +
-                    "Die KI-Reanalyse ersetzt das angezeigte Protokoll. Das bisherige Protokoll " +
-                    "wird in die Historie verschoben (wiederherstellbar).\n\nFortfahren?",
-                    "KI-Reanalyse"))
-            {
-                return;
-            }
-
-            record.Protocol = ProtocolReplacementService.PrepareReplacement(
-                record.Protocol,
-                win.Result.Document,
-                user: "KI-Reanalyse",
-                archiveComment: "Auto-Archiv vor KI-Reanalyse");
-
-            _shell.MarkProjectDirty(record);
-
-            RefreshRecordInGrid(record);
-            if (Selected?.Id == record.Id)
-                RefreshSelectedProtocolEntries();
-
-            ScheduleAutoSave();
-        }
+        return win.ShowDialog() == true ? win.Result : null;
     }
 
     /// <summary>
@@ -674,22 +627,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     /// </summary>
     public LiveControl.LiveControlRetryResult TryStartVideoAiPipelineByName(string haltungsname)
     {
-        if (string.IsNullOrWhiteSpace(haltungsname))
-            return new LiveControl.LiveControlRetryResult(false, "Haltungsname fehlt.");
-
-        var name = haltungsname.Trim();
-        var record = _shell.Project.Data.FirstOrDefault(r =>
-            string.Equals(r.GetFieldValue("Haltungsname"), name, StringComparison.OrdinalIgnoreCase));
-
-        if (record is null)
-            return new LiveControl.LiveControlRetryResult(
-                false, $"Haltung '{name}' nicht im geladenen Projekt gefunden.");
-
-        // Modales Analyse-Fenster nicht blockierend hier oeffnen – nachschieben.
-        System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => OpenVideoAiPipeline(record));
-
-        return new LiveControl.LiveControlRetryResult(
-            true, $"KI-Videoanalyse fuer '{name}' gestartet.");
+        return _videoAnalysisController.TryStartByName(haltungsname);
     }
 
 
