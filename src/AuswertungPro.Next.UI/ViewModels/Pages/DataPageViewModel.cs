@@ -40,6 +40,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private readonly DataPagePrintController _printController;
     private readonly DataPageOriginalPdfController _originalPdfController;
     private readonly DataPageMeasureSuggestionController _measureSuggestionController;
+    private readonly DataPageCostRestoreController _costRestoreController;
     private readonly IMeasureRecommendationService _measureRecommendationService;
     private readonly DataPageDropdownCommandSet _dropdownCommands;
     private readonly DataPageSelectedProtocolController _selectedProtocolController = new();
@@ -190,6 +191,14 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             },
             _shell.SetStatus,
             UpdateLearningInfo);
+        _costRestoreController = new DataPageCostRestoreController(
+            _sp.Dialogs,
+            () => Selected,
+            () => _sp.Settings.LastProjectPath,
+            projectPath => new ProjectCostStoreRepository().Load(projectPath),
+            ProjectCostStoreRepository.GetStorePath,
+            (record, cost) => ApplyCostsToRecord(record, cost, learn: false),
+            _shell.SetStatus);
 
         // Seed measure template names from Offerten into dropdown if missing
         SeedMeasureTemplateNames();
@@ -772,36 +781,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private void RestoreCosts(HaltungRecord? record)
     {
-        record ??= Selected;
-        if (record is null)
-            return;
-
-        var holding = (record.GetFieldValue("Haltungsname") ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(holding))
-        {
-            _sp.Dialogs.Warn("Haltungsname fehlt in der Zeile.", "Kosten/Massnahmen");
-            return;
-        }
-
-        var projectPath = _sp.Settings.LastProjectPath;
-        if (string.IsNullOrWhiteSpace(projectPath))
-        {
-            _sp.Dialogs.Info("Projekt bitte zuerst speichern/oeffnen, um Kosten wiederherzustellen.", "Kosten/Massnahmen");
-            return;
-        }
-
-        var store = new ProjectCostStoreRepository().Load(projectPath);
-        if (!store.ByHolding.TryGetValue(holding, out var cost))
-        {
-            var dir = Path.GetDirectoryName(projectPath);
-            var storePath = string.IsNullOrWhiteSpace(dir) ? "" : ProjectCostStoreRepository.GetStorePath(dir);
-            _sp.Dialogs.Info($"Keine gespeicherten Kosten/Massnahmen gefunden fuer:\n{holding}\n\nDatei:\n{storePath}",
-                "Kosten/Massnahmen");
-            return;
-        }
-
-        ApplyCostsToRecord(record, cost, learn: false);
-        _shell.SetStatus($"Kosten/Maßnahmen wiederhergestellt: {holding}");
+        _costRestoreController.Restore(record);
     }
 
     private void OpenCosts(HaltungRecord? record)
