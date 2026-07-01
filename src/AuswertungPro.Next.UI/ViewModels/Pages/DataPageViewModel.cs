@@ -143,6 +143,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             record => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
                 _sp.Settings,
+                saveSettings: _sp.Settings.Save),
+            getLastProjectPath: () => _sp.Settings.LastProjectPath,
+            findSchachtByNummer: FindSchachtByNummer,
+            buildDossierHydraulikCalculation: (record, dn) => DataPageHydraulikReportCalculator.BuildReportCalculation(
+                record,
+                _sp.Settings,
+                dn,
                 saveSettings: _sp.Settings.Save));
         _shell.PropertyChanged += ShellPropertyChanged;
 
@@ -1070,139 +1077,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
 
     private async void PrintDossierPdf(HaltungRecord? record)
     {
-        if (record is null)
-        {
-            _sp.Dialogs.Info("Bitte zuerst eine Haltung auswaehlen.", "Dossier");
-            return;
-        }
-
-        var holdingLabel = record.GetFieldValue("Haltungsname") ?? "";
-        var (vonNr, bisNr) = Application.Reports.ProtocolPdfExporter.SplitHoldingNodes(holdingLabel);
-
-        var schachtVon = FindSchachtByNummer(vonNr);
-        var schachtBis = FindSchachtByNummer(bisNr);
-
-        // Hydraulik pruefen
-        var hydraulikAvailability = DataPageHydraulikReportCalculator.ReadAvailability(record);
-        var dn = hydraulikAvailability.DnMm;
-        var hydraulikAvailable = hydraulikAvailability.IsAvailable;
-
-        // Kosten pruefen
-        var projectFolder = _shell.GetProjectFolder() ?? "";
-        var costRepo = new Infrastructure.Costs.ProjectCostStoreRepository();
-        var costStore = costRepo.Load(_sp.Settings.LastProjectPath);
-        Domain.Models.HoldingCost? holdingCost = null;
-        if (costStore.ByHolding.TryGetValue(holdingLabel.Trim(), out var hc))
-            holdingCost = hc;
-        var kostenField = record.GetFieldValue("Kosten");
-        var kostenAvailable = holdingCost?.Measures is { Count: > 0 }
-            || !string.IsNullOrWhiteSpace(kostenField)
-            || !string.IsNullOrWhiteSpace(record.GetFieldValue("Empfohlene_Sanierungsmassnahmen"));
-
-        // Original-PDFs pruefen (Haltung + Schaechte)
-        var originalPdfPaths = DataPageProtocolPathResolver.ResolveOriginalPdfPaths(record, projectFolder);
-        if (schachtVon != null)
-            DataPageProtocolPathResolver.ResolveSchachtPdfPaths(schachtVon, projectFolder, originalPdfPaths);
-        if (schachtBis != null)
-            DataPageProtocolPathResolver.ResolveSchachtPdfPaths(schachtBis, projectFolder, originalPdfPaths);
-
-        // Dialog oeffnen
-        var dialog = new DossierPrintDialog();
-        dialog.Owner = System.Windows.Application.Current?.MainWindow;
-        dialog.SetAvailability(
-            schachtVon != null, vonNr,
-            schachtBis != null, bisNr,
-            hydraulikAvailable,
-            kostenAvailable,
-            originalPdfPaths.Count);
-
-        if (dialog.ShowDialog() != true || dialog.SelectedOptions is null)
-            return;
-
-        // SaveFileDialog
-        var defaultName = $"Dossier_{SanitizeFilenamePart(holdingLabel)}_{DateTime.Now:yyyyMMdd}.pdf";
-        var output = _sp.Dialogs.SaveFile(
-            "Haltungsdossier als PDF speichern",
-            "PDF (*.pdf)|*.pdf",
-            defaultExt: "pdf",
-            defaultFileName: defaultName);
-        if (string.IsNullOrWhiteSpace(output))
-            return;
-
-        try
-        {
-            // Hydraulik berechnen falls gewuenscht
-            Application.Reports.HydraulikCalcResult? calcResult = null;
-            if (dialog.SelectedOptions.IncludeHydraulik && hydraulikAvailable)
-            {
-                calcResult = DataPageHydraulikReportCalculator.BuildReportCalculation(
-                    record,
-                    _sp.Settings,
-                    dn!.Value,
-                    saveSettings: _sp.Settings.Save);
-            }
-
-            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
-            var options = dialog.SelectedOptions with
-            {
-                LogoPathAbs = File.Exists(logoPath) ? logoPath : null,
-                HoldingCost = dialog.SelectedOptions.IncludeKostenschaetzung ? holdingCost : null,
-                OriginalPdfPaths = dialog.SelectedOptions.IncludeOriginalProtokolle ? originalPdfPaths : null,
-            };
-
-            var printableSections = DataPageDossierAvailability.EvaluatePrintableSections(
-                options,
-                record,
-                projectFolder,
-                hasSchachtVon: schachtVon != null,
-                hasSchachtBis: schachtBis != null,
-                hasHydraulikResult: calcResult != null,
-                kostenAvailable,
-                originalPdfPaths.Count);
-            var hasDossierBaseSection = printableSections.HasDossierBaseSection;
-
-            // Pruefung ob druckbar (muss auf UI-Thread, wegen MessageBox)
-            if (!printableSections.HasAnySection)
-            {
-                _sp.Dialogs.Info(
-                    "Die ausgewaehlte Kombination enthaelt keine druckbaren Inhalte.",
-                    "Dossier");
-                return;
-            }
-
-            // PDF-Erzeugung auf Background-Thread (verhindert UI-Freeze)
-            // Alle CPU-intensiven Operationen: Build, Merge, WriteAllBytes
-            var localHasDossierBase = hasDossierBaseSection;
-            await Task.Run(() =>
-            {
-                var originalsAlreadyMerged = false;
-                byte[] pdf;
-                if (localHasDossierBase)
-                {
-                    pdf = Application.Reports.HaltungsDossierPdfBuilder.Build(
-                        _shell.Project, record, schachtVon, schachtBis, calcResult, projectFolder, options);
-                }
-                else
-                {
-                    pdf = Infrastructure.Media.PdfMergeHelper.MergeOriginals(originalPdfPaths);
-                    if (pdf.Length == 0)
-                        throw new InvalidOperationException("Die Original-Protokolle konnten nicht zusammengefuehrt werden.");
-                    originalsAlreadyMerged = true;
-                }
-
-                // Original-PDFs anhaengen
-                if (!originalsAlreadyMerged && options.IncludeOriginalProtokolle && originalPdfPaths.Count > 0)
-                    pdf = Infrastructure.Media.PdfMergeHelper.MergeWithOriginals(pdf, originalPdfPaths);
-
-                File.WriteAllBytes(output, pdf);
-            });
-
-            _sp.Dialogs.Info($"Dossier wurde erstellt:\n{output}", "Dossier");
-        }
-        catch (Exception ex)
-        {
-            _sp.Dialogs.Error($"Dossier konnte nicht erstellt werden:\n{ex.Message}", "Dossier");
-        }
+        await _printController.PrintDossierPdfAsync(_shell.Project, record);
     }
 
     private void OpenOriginalPdf(HaltungRecord? record)
@@ -1242,14 +1117,6 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             return null;
         return _shell.Project.SchaechteData.FirstOrDefault(s =>
             string.Equals(s.GetFieldValue("Schachtnummer"), nummer, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static string SanitizeFilenamePart(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return "unknown";
-        foreach (var c in Path.GetInvalidFileNameChars())
-            text = text.Replace(c, '_');
-        return text.Trim();
     }
 
     private string? ResolveExistingPath(string? raw)

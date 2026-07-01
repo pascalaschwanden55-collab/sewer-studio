@@ -244,6 +244,201 @@ public sealed class DataPagePrintControllerTests
         Assert.Equal(("PDF konnte nicht erstellt werden:\nkaputt", "Hydraulik PDF"), dialogs.LastError);
     }
 
+    [Fact]
+    public async Task PrintDossierPdfAsync_zeigt_hinweis_wenn_keine_haltung_ausgewaehlt_ist()
+    {
+        var dialogs = new CapturingDialogService();
+        var controller = CreateController(
+            dialogs,
+            selectDossierPrintOptions: _ => throw new InvalidOperationException("options should not be requested"));
+
+        await controller.PrintDossierPdfAsync(new Project(), record: null);
+
+        Assert.Equal(("Bitte zuerst eine Haltung auswaehlen.", "Dossier"), dialogs.LastInfo);
+        Assert.Empty(dialogs.SaveFileCalls);
+    }
+
+    [Fact]
+    public async Task PrintDossierPdfAsync_gibt_verfuegbarkeit_an_dialog_und_bricht_bei_cancel_ab()
+    {
+        var dialogs = new CapturingDialogService();
+        var schachtVon = Schacht("A");
+        var schachtBis = Schacht("B");
+        DataPageDossierPrintAvailability? captured = null;
+        var controller = CreateController(
+            dialogs,
+            splitHoldingNodes: _ => ("A", "B"),
+            findSchachtByNummer: nr => nr == "A" ? schachtVon : nr == "B" ? schachtBis : null,
+            readDossierHydraulikAvailability: _ => new DataPageHydraulikAvailability(300, 10),
+            findHoldingCost: _ => HoldingCostWithMeasure("12/34"),
+            resolveDossierOriginalPdfPaths: (_, _, _, _) => new List<string> { "C:\\orig1.pdf", "C:\\orig2.pdf" },
+            selectDossierPrintOptions: availability =>
+            {
+                captured = availability;
+                return null;
+            },
+            buildDossierPdfAsync: (_, _, _, _, _, _, _) => throw new InvalidOperationException("pdf should not be built"));
+
+        await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
+
+        Assert.NotNull(captured);
+        Assert.True(captured!.HasSchachtVon);
+        Assert.Equal("A", captured.SchachtVonNr);
+        Assert.True(captured.HasSchachtBis);
+        Assert.Equal("B", captured.SchachtBisNr);
+        Assert.True(captured.HydraulikAvailable);
+        Assert.True(captured.KostenAvailable);
+        Assert.Equal(2, captured.OriginalPdfCount);
+        Assert.Empty(dialogs.SaveFileCalls);
+    }
+
+    [Fact]
+    public async Task PrintDossierPdfAsync_meldet_nicht_druckbare_auswahl_ohne_pdf_build()
+    {
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\dossier.pdf" };
+        var controller = CreateController(
+            dialogs,
+            selectDossierPrintOptions: _ => EmptyDossierOptions(),
+            buildDossierPdfAsync: (_, _, _, _, _, _, _) => throw new InvalidOperationException("pdf should not be built"));
+
+        await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
+
+        Assert.Single(dialogs.SaveFileCalls);
+        Assert.Equal(("Die ausgewaehlte Kombination enthaelt keine druckbaren Inhalte.", "Dossier"), dialogs.LastInfo);
+        Assert.Null(dialogs.LastError);
+    }
+
+    [Fact]
+    public async Task PrintDossierPdfAsync_erzeugt_basis_dossier_und_haengt_originale_an()
+    {
+        var project = new Project { Name = "P" };
+        var record = Record("12/34");
+        var schachtVon = Schacht("12");
+        var schachtBis = Schacht("34");
+        var calc = HydraulikCalc();
+        var cost = HoldingCostWithMeasure("12/34");
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\dossier.pdf" };
+        var written = new List<(string Path, byte[] Bytes)>();
+        var buildCalls = new List<(Project Project, HaltungRecord Record, SchachtRecord? Von, SchachtRecord? Bis, HydraulikCalcResult? Calc, string Root, DossierPrintOptions Options)>();
+        var merged = new List<(byte[] Generated, IReadOnlyList<string> Originals)>();
+
+        var controller = CreateController(
+            dialogs,
+            projectFolder: "C:\\projekt",
+            baseDirectory: "C:\\app",
+            fileExists: path => path == "C:\\app\\Assets\\Brand\\abwasser-uri-logo.png",
+            writeAllBytesAsync: (path, bytes) =>
+            {
+                written.Add((path, bytes));
+                return Task.CompletedTask;
+            },
+            now: () => new DateTime(2026, 1, 2),
+            splitHoldingNodes: _ => ("12", "34"),
+            findSchachtByNummer: nr => nr == "12" ? schachtVon : nr == "34" ? schachtBis : null,
+            readDossierHydraulikAvailability: _ => new DataPageHydraulikAvailability(300, 10),
+            buildDossierHydraulikCalculation: (_, dn) =>
+            {
+                Assert.Equal(300, dn);
+                return calc;
+            },
+            findHoldingCost: holding => holding == "12/34" ? cost : null,
+            resolveDossierOriginalPdfPaths: (_, _, _, _) => new List<string> { "C:\\orig.pdf" },
+            selectDossierPrintOptions: _ => EmptyDossierOptions() with
+            {
+                IncludeDeckblatt = true,
+                IncludeHydraulik = true,
+                IncludeKostenschaetzung = true,
+                IncludeOriginalProtokolle = true,
+                FooterLine = "Footer"
+            },
+            buildDossierPdfAsync: (p, r, von, bis, hydraulik, root, options) =>
+            {
+                buildCalls.Add((p, r, von, bis, hydraulik, root, options));
+                return Task.FromResult(new byte[] { 1, 2, 3 });
+            },
+            mergeWithOriginals: (generated, originals) =>
+            {
+                merged.Add((generated, originals));
+                return new byte[] { 9, 9 };
+            });
+
+        await controller.PrintDossierPdfAsync(project, record);
+
+        var saveCall = Assert.Single(dialogs.SaveFileCalls);
+        Assert.Equal("Haltungsdossier als PDF speichern", saveCall.Title);
+        Assert.Equal("PDF (*.pdf)|*.pdf", saveCall.Filter);
+        Assert.Equal("pdf", saveCall.DefaultExt);
+        Assert.Equal("Dossier_12_34_20260102.pdf", saveCall.DefaultFileName);
+
+        var build = Assert.Single(buildCalls);
+        Assert.Same(project, build.Project);
+        Assert.Same(record, build.Record);
+        Assert.Same(schachtVon, build.Von);
+        Assert.Same(schachtBis, build.Bis);
+        Assert.Same(calc, build.Calc);
+        Assert.Equal("C:\\projekt", build.Root);
+        Assert.Equal("Footer", build.Options.FooterLine);
+        Assert.Equal("C:\\app\\Assets\\Brand\\abwasser-uri-logo.png", build.Options.LogoPathAbs);
+        Assert.Same(cost, build.Options.HoldingCost);
+        Assert.Equal(new[] { "C:\\orig.pdf" }, build.Options.OriginalPdfPaths);
+
+        var merge = Assert.Single(merged);
+        Assert.Equal(new byte[] { 1, 2, 3 }, merge.Generated);
+        Assert.Equal(new[] { "C:\\orig.pdf" }, merge.Originals);
+
+        var output = Assert.Single(written);
+        Assert.Equal("C:\\out\\dossier.pdf", output.Path);
+        Assert.Equal(new byte[] { 9, 9 }, output.Bytes);
+        Assert.Equal(("Dossier wurde erstellt:\nC:\\out\\dossier.pdf", "Dossier"), dialogs.LastInfo);
+        Assert.Null(dialogs.LastError);
+    }
+
+    [Fact]
+    public async Task PrintDossierPdfAsync_originale_allein_werden_ohne_basis_dossier_gemerged()
+    {
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\dossier.pdf" };
+        var written = new List<(string Path, byte[] Bytes)>();
+        var controller = CreateController(
+            dialogs,
+            resolveDossierOriginalPdfPaths: (_, _, _, _) => new List<string> { "C:\\orig.pdf" },
+            selectDossierPrintOptions: _ => EmptyDossierOptions() with { IncludeOriginalProtokolle = true },
+            buildDossierPdfAsync: (_, _, _, _, _, _, _) => throw new InvalidOperationException("base dossier should not be built"),
+            mergeOriginals: originals =>
+            {
+                Assert.Equal(new[] { "C:\\orig.pdf" }, originals);
+                return new byte[] { 7, 7 };
+            },
+            mergeWithOriginals: (_, _) => throw new InvalidOperationException("originals are already merged"),
+            writeAllBytesAsync: (path, bytes) =>
+            {
+                written.Add((path, bytes));
+                return Task.CompletedTask;
+            });
+
+        await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
+
+        var output = Assert.Single(written);
+        Assert.Equal("C:\\out\\dossier.pdf", output.Path);
+        Assert.Equal(new byte[] { 7, 7 }, output.Bytes);
+        Assert.Equal(("Dossier wurde erstellt:\nC:\\out\\dossier.pdf", "Dossier"), dialogs.LastInfo);
+    }
+
+    [Fact]
+    public async Task PrintDossierPdfAsync_meldet_fehler_wenn_original_merge_leer_ist()
+    {
+        var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\dossier.pdf" };
+        var controller = CreateController(
+            dialogs,
+            resolveDossierOriginalPdfPaths: (_, _, _, _) => new List<string> { "C:\\orig.pdf" },
+            selectDossierPrintOptions: _ => EmptyDossierOptions() with { IncludeOriginalProtokolle = true },
+            mergeOriginals: _ => Array.Empty<byte>(),
+            writeAllBytesAsync: (_, _) => throw new InvalidOperationException("file should not be written"));
+
+        await controller.PrintDossierPdfAsync(new Project(), Record("12/34"));
+
+        Assert.Equal(("Dossier konnte nicht erstellt werden:\nDie Original-Protokolle konnten nicht zusammengefuehrt werden.", "Dossier"), dialogs.LastError);
+    }
+
     private static DataPagePrintController CreateController(
         CapturingDialogService dialogs,
         string projectFolder = "",
@@ -255,7 +450,17 @@ public sealed class DataPagePrintControllerTests
         Func<Project, HaltungRecord, ProtocolDocument, string, HaltungsprotokollPdfOptions, byte[]>? buildAwuPdf = null,
         Func<HaltungRecord, HydraulikCalcResult?>? buildHydraulikCalculation = null,
         Func<HydraulikPrintOptions?>? selectHydraulikPrintOptions = null,
-        Func<HaltungRecord, HydraulikCalcResult, HydraulikPrintOptions, Task<byte[]>>? buildHydraulikPdfAsync = null)
+        Func<HaltungRecord, HydraulikCalcResult, HydraulikPrintOptions, Task<byte[]>>? buildHydraulikPdfAsync = null,
+        Func<string, (string? VonNr, string? BisNr)>? splitHoldingNodes = null,
+        Func<string?, SchachtRecord?>? findSchachtByNummer = null,
+        Func<HaltungRecord, DataPageHydraulikAvailability>? readDossierHydraulikAvailability = null,
+        Func<HaltungRecord, double?, HydraulikCalcResult?>? buildDossierHydraulikCalculation = null,
+        Func<string, HoldingCost?>? findHoldingCost = null,
+        Func<HaltungRecord, string, SchachtRecord?, SchachtRecord?, List<string>>? resolveDossierOriginalPdfPaths = null,
+        Func<DataPageDossierPrintAvailability, DossierPrintOptions?>? selectDossierPrintOptions = null,
+        Func<Project, HaltungRecord, SchachtRecord?, SchachtRecord?, HydraulikCalcResult?, string, DossierPrintOptions, Task<byte[]>>? buildDossierPdfAsync = null,
+        Func<IReadOnlyList<string>, byte[]>? mergeOriginals = null,
+        Func<byte[], IReadOnlyList<string>, byte[]>? mergeWithOriginals = null)
         => new(
             dialogs,
             getProjectFolder: () => projectFolder,
@@ -267,7 +472,17 @@ public sealed class DataPagePrintControllerTests
             now: now ?? (() => new DateTime(2026, 1, 2)),
             buildHydraulikCalculation: buildHydraulikCalculation,
             selectHydraulikPrintOptions: selectHydraulikPrintOptions,
-            buildHydraulikPdfAsync: buildHydraulikPdfAsync);
+            buildHydraulikPdfAsync: buildHydraulikPdfAsync,
+            splitHoldingNodes: splitHoldingNodes,
+            findSchachtByNummer: findSchachtByNummer,
+            readDossierHydraulikAvailability: readDossierHydraulikAvailability,
+            buildDossierHydraulikCalculation: buildDossierHydraulikCalculation,
+            findHoldingCost: findHoldingCost,
+            resolveDossierOriginalPdfPaths: resolveDossierOriginalPdfPaths,
+            selectDossierPrintOptions: selectDossierPrintOptions,
+            buildDossierPdfAsync: buildDossierPdfAsync,
+            mergeOriginals: mergeOriginals,
+            mergeWithOriginals: mergeWithOriginals);
 
     private static HaltungRecord Record(string holding)
     {
@@ -285,6 +500,41 @@ public sealed class DataPagePrintControllerTests
             Kb = 0.0015,
             Temperatur_C = 10,
             Material = "Beton"
+        };
+
+    private static SchachtRecord Schacht(string nr)
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Schachtnummer", nr);
+        return record;
+    }
+
+    private static HoldingCost HoldingCostWithMeasure(string holding)
+        => new()
+        {
+            Holding = holding,
+            Measures =
+            {
+                new MeasureCost
+                {
+                    MeasureId = "m",
+                    MeasureName = "Massnahme",
+                    Total = 1
+                }
+            }
+        };
+
+    private static DossierPrintOptions EmptyDossierOptions()
+        => new()
+        {
+            IncludeDeckblatt = false,
+            IncludeHaltungsprotokoll = false,
+            IncludeFotos = false,
+            IncludeSchachtVon = false,
+            IncludeSchachtBis = false,
+            IncludeHydraulik = false,
+            IncludeKostenschaetzung = false,
+            IncludeOriginalProtokolle = false
         };
 
     private sealed class CapturingDialogService : IDialogService
