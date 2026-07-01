@@ -181,6 +181,50 @@ public sealed class XtfImportTests
     }
 
     [Fact]
+    public void Sia405Import_SetztFunktionHierarchisch_AusKanal()
+    {
+        // SIA405-Kanal liefert Funktionhierarchisch; Haltung verweist via AbwasserbauwerkRef.
+        // Erwartet: gueltiger Katalog-Combo-Wert "PAA.<Suffix>".
+        var tempPath = Path.Combine(Path.GetTempPath(), $"sia405-fh-{Guid.NewGuid():N}.xtf");
+        File.WriteAllText(tempPath, """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="SewerStudioTest" VERSION="2.3">
+    <MODELS><MODEL NAME="SIA405_Abwasser_2015_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_Abwasser.SIA405_Abwasser BID="B1">
+      <Kanal TID="K1">
+        <Bezeichnung>K-1</Bezeichnung>
+        <Funktionhierarchisch>Sammelkanal</Funktionhierarchisch>
+      </Kanal>
+      <Haltung TID="H1">
+        <Bezeichnung>80638-80631</Bezeichnung>
+        <LaengeEffektiv>22.5</LaengeEffektiv>
+        <AbwasserbauwerkRef REF="K1" />
+      </Haltung>
+    </SIA405_Abwasser.SIA405_Abwasser>
+  </DATASECTION>
+</TRANSFER>
+""");
+        try
+        {
+            var project = new Project();
+            var svc = new LegacyXtfImportService();
+            svc.ImportXtfFiles(new[] { tempPath }, project);
+
+            var rec = project.Data.FirstOrDefault(r =>
+                string.Equals(r.GetFieldValue("Haltungsname"), "80638-80631", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(rec);
+            Assert.Equal("PAA.Sammelkanal", rec!.GetFieldValue("FunktionHierarchisch"));
+        }
+        finally
+        {
+            try { File.Delete(tempPath); } catch { }
+        }
+    }
+
+    [Fact]
     public void VsaKekImport_LinksPhotoToCorrectObservation_ViaKanalschadenTid()
     {
         // VSA_KEK-XTF: KEK.Datei.Objekt referenziert die Kanalschaden-TID (diese XTFs haben KEIN OBJ_ID-Element).

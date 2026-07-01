@@ -302,6 +302,7 @@ public sealed class LegacyXtfImportService
         public string Eigentuemer { get; set; } = "";
         public string Baujahr { get; set; } = "";
         public string Rohrlaenge { get; set; } = "";
+        public string Funktion { get; set; } = "";
     }
 
     private sealed class HaltungData
@@ -354,6 +355,8 @@ public sealed class LegacyXtfImportService
                         case "Eigentuemer": kd.Eigentuemer = child.Value; break;
                         case "Baujahr": kd.Baujahr = child.Value; break;
                         case "Rohrlaenge": kd.Rohrlaenge = child.Value; break;
+                        case "Funktionhierarchisch": kd.Funktion = child.Value; break;
+                        case "Funktion_hierarchisch": kd.Funktion = child.Value; break;
                     }
                 }
                 kanaele[tid!] = kd;
@@ -479,6 +482,10 @@ public sealed class LegacyXtfImportService
                 if (!string.IsNullOrWhiteSpace(kanal.Bemerkung)) rec.SetFieldValue("Bemerkungen", kanal.Bemerkung, FieldSource.Xtf405, userEdited: false);
                 if (!string.IsNullOrWhiteSpace(kanal.Eigentuemer)) rec.SetFieldValue("Eigentuemer", kanal.Eigentuemer, FieldSource.Xtf405, userEdited: false);
 
+                // Funktionhierarchisch -> Katalog-Combo "PAA.<Suffix>" (speist u.a. VSA-Zustandsnote B4)
+                var funktion = NormalizeFunktionHierarchisch(kanal.Funktion);
+                if (!string.IsNullOrWhiteSpace(funktion)) rec.SetFieldValue("FunktionHierarchisch", funktion, FieldSource.Xtf405, userEdited: false);
+
                 // Baujahr -> Datum_Jahr (falls leer)
                 if (!string.IsNullOrWhiteSpace(kanal.Baujahr) && string.IsNullOrWhiteSpace(rec.GetFieldValue("Datum_Jahr")))
                     rec.SetFieldValue("Datum_Jahr", kanal.Baujahr, FieldSource.Xtf405, userEdited: false);
@@ -512,6 +519,42 @@ public sealed class LegacyXtfImportService
         }
 
         return records;
+    }
+
+    // Bekannte FunktionHierarchisch-Suffixe (ohne "PAA."-Praefix), passend zu FieldCatalog.ComboItems.
+    private static readonly string[] FunktionHierarchischSuffixe =
+    {
+        "Sammelkanal", "Hauptsammelkanal", "Hauptsammelkanal_regional",
+        "Liegenschaftsentwaesserung", "Sanierungsleitung",
+        "Strassenentwaesserung", "Gewaesser"
+    };
+
+    /// <summary>
+    /// Normalisiert die SIA405-Funktion (Funktionhierarchisch) auf einen GUELTIGEN Katalog-Combo-Wert
+    /// "PAA.&lt;Suffix&gt;". Verarbeitet gaengige Rohformen (mit/ohne "PAA."-Praefix, Sub-Level-Trenner "."
+    /// wie "Hauptsammelkanal.regional", Umlaute). Liefert leer, wenn der Rohwert keinem bekannten Suffix
+    /// entspricht — dann wird das Feld NICHT gesetzt (kein ungueltiger Combo-Wert im Datagrid).
+    /// </summary>
+    private static string NormalizeFunktionHierarchisch(string? raw)
+    {
+        var v = (raw ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(v))
+            return "";
+
+        if (v.StartsWith("PAA.", StringComparison.OrdinalIgnoreCase))
+            v = v.Substring(4);
+
+        // Sub-Level-Trenner "." -> "_" (Hauptsammelkanal.regional -> Hauptsammelkanal_regional)
+        v = v.Replace('.', '_');
+        // Umlaute -> ASCII (Katalog nutzt ...entwaesserung)
+        v = v.Replace("ä", "ae").Replace("ö", "oe").Replace("ü", "ue")
+             .Replace("Ä", "Ae").Replace("Ö", "Oe").Replace("Ü", "Ue");
+
+        foreach (var known in FunktionHierarchischSuffixe)
+            if (string.Equals(v, known, StringComparison.OrdinalIgnoreCase))
+                return "PAA." + known;
+
+        return "";
     }
 
     // Delegation: Logik liegt jetzt in XtfValueNormalizer
@@ -825,13 +868,19 @@ public sealed class LegacyXtfImportService
 
             // Inspektionsrichtung ist in den XTF-Daten nicht enthalten (nur in PDF-Reports)
 
-            if (!string.IsNullOrWhiteSpace(u.Erfassungsart))
+            // Bemerkungen mit Inspektionskontext anreichern. VSA_KEK ist Hauptquelle und darf Bemerkungen
+            // setzen. Alle verfuegbaren Kontextangaben einbeziehen (nicht nur wenn Erfassungsart da ist),
+            // damit Grund/Witterung/Ausfuehrender/Fahrzeug/Geraet nicht verloren gehen.
+            var bemParts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(u.Erfassungsart)) bemParts.Add($"Erfassung: {u.Erfassungsart}");
+            if (!string.IsNullOrWhiteSpace(u.Grund)) bemParts.Add($"Grund: {u.Grund}");
+            if (!string.IsNullOrWhiteSpace(u.Witterung)) bemParts.Add($"Witterung: {u.Witterung}");
+            if (!string.IsNullOrWhiteSpace(u.Ausfuehrender)) bemParts.Add($"Ausfuehrender: {u.Ausfuehrender}");
+            if (!string.IsNullOrWhiteSpace(u.Fahrzeug)) bemParts.Add($"Fahrzeug: {u.Fahrzeug}");
+            if (!string.IsNullOrWhiteSpace(u.Geraet)) bemParts.Add($"Geraet: {u.Geraet}");
+            if (bemParts.Count > 0)
             {
-                var bem = $"Erfassung: {u.Erfassungsart}";
-                if (!string.IsNullOrWhiteSpace(u.Fahrzeug)) bem += $", Fahrzeug: {u.Fahrzeug}";
-                if (!string.IsNullOrWhiteSpace(u.Geraet)) bem += $", Geraet: {u.Geraet}";
-                rec.SetFieldValue("Bemerkungen", bem, FieldSource.Xtf, userEdited: false);
-
+                rec.SetFieldValue("Bemerkungen", string.Join(", ", bemParts), FieldSource.Xtf, userEdited: false);
                 rec.SetFieldValue("Pruefungsresultat", "", FieldSource.Xtf, userEdited: false);
             }
 

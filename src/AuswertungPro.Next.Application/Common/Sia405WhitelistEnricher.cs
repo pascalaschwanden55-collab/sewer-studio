@@ -36,7 +36,10 @@ public static class Sia405WhitelistEnricher
         // und Offen_abgeschlossen (semantisch mehrdeutig: Betriebs- vs. Bearbeitungsstatus).
         "Eigentuemer",
         "Schacht_oben",
-        "Schacht_unten"
+        "Schacht_unten",
+        // Funktion/Nutzungshierarchie (SIA405 liefert sie, VSA_KEK nicht). Speist zusaetzlich die
+        // VSA-Zustandsnote B4 (VsaConditionScorer), die sonst mangels Daten immer 1.00 bleibt.
+        "FunktionHierarchisch"
     };
 
     /// <summary>
