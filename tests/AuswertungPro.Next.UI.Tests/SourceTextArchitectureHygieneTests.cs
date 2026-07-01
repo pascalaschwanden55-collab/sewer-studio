@@ -468,6 +468,33 @@ public sealed class SourceTextArchitectureHygieneTests
         }
     }
 
+    [Fact]
+    public void Player_window_inline_defect_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowInlineDefectArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "Inline-Defekt-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        var methodNames = new[]
+        {
+            "PlayerWindow_inline_defect_detail_uses_display_policy_state",
+            "PlayerWindow_inline_defect_preview_lives_in_preview_partial",
+            "PlayerWindow_event_list_right_click_selection_uses_helper",
+            "PlayerWindow_coding_event_list_item_coloring_lives_in_list_items_partial",
+            "PlayerWindow_coding_side_panel_width_lives_in_policy",
+            "PlayerWindow_inline_defect_actions_live_in_actions_partial"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
     [Theory]
     [InlineData("BuilderPageHoldingDataLineBuilderTests.cs")]
     [InlineData("BuilderPagePdfBlockBuilderTests.cs")]
@@ -524,6 +551,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowCoreArchitectureTests.cs")]
     [InlineData("PlayerWindowControllerArchitectureTests.cs")]
     [InlineData("PlayerWindowInlineEvidenceArchitectureTests.cs")]
+    [InlineData("PlayerWindowInlineDefectArchitectureTests.cs")]
     [InlineData("PlayerWindowLiveDetectionArchitectureTests.cs")]
     [InlineData("PlayerWindowMediaInfrastructureArchitectureTests.cs")]
     [InlineData("PlayerWindowOverlayInputArchitectureTests.cs")]
