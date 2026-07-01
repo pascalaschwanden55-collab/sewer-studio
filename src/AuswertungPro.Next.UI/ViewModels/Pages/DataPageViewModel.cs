@@ -636,9 +636,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             ? _sp.Settings.LastVideoSourceFolder
             : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
                 ? _sp.Settings.LastVideoFolder
-            : _sp.Settings.LastProjectPath is null
-                ? null
-                : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+            : _shell.GetProjectFolder();   // Projekt-ROOT (nicht GetDirectoryName der projekt.json)
 
         var storedFilesRaw = _shell.Project.Metadata.TryGetValue("PDF_StoredFiles", out var raw) ? raw : null;
 
@@ -750,9 +748,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             ? _sp.Settings.LastVideoSourceFolder
             : !string.IsNullOrWhiteSpace(_sp.Settings.LastVideoFolder)
                 ? _sp.Settings.LastVideoFolder
-            : _sp.Settings.LastProjectPath is null
-                ? null
-                : Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+            : _shell.GetProjectFolder();   // Projekt-ROOT (nicht GetDirectoryName der projekt.json)
 
         return DataPageVideoPathWorkflowController.Resolve(
             record,

@@ -347,7 +347,8 @@ public partial class ProtocolObservationsWindow : Window
 
             var root = _projectFolder;
             if (string.IsNullOrWhiteSpace(root) && !string.IsNullOrWhiteSpace(_sp.Settings.LastProjectPath))
-                root = Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+                root = AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(_sp.Settings.LastProjectPath)
+                       ?? Path.GetDirectoryName(_sp.Settings.LastProjectPath);
             root ??= "";
             var pdf = _sp.ProtocolPdfExporter.BuildHaltungsprotokollPdf(_project, _record, _doc, root, options);
             File.WriteAllBytes(output, pdf);

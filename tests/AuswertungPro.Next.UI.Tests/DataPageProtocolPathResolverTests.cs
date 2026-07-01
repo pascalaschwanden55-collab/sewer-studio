@@ -137,6 +137,27 @@ public sealed class DataPageProtocolPathResolverTests
         Assert.Null(DataPageProtocolPathResolver.ResolveExistingPath("gibt-es-nicht.pdf", projectPath: null));
     }
 
+    [Fact]
+    public void ResolveExistingPath_loest_relativen_link_gegen_ROOT_wenn_projektjson_in_projektdateien()
+    {
+        // Neue Struktur: projekt.json liegt unter Projektdateien\; das verteilte Video ist RELATIV zum
+        // Projekt-ROOT gespeichert (Haltungen_Verteilt\...). Der Resolver muss gegen den Root aufloesen,
+        // nicht gegen den projekt.json-Ordner (= Projektdateien) — sonst oeffnet „Play" nichts.
+        using var temp = new TempDir();
+        var projektdateien = Directory.CreateDirectory(Path.Combine(temp.Path, "Projektdateien")).FullName;
+        var projectPath = Path.Combine(projektdateien, "projekt.json");
+        File.WriteAllText(projectPath, "{}");
+
+        var haltungDir = Directory.CreateDirectory(Path.Combine(temp.Path, "Haltungen_Verteilt", "06-001")).FullName;
+        var video = Path.Combine(haltungDir, "20250310_06-001.mpg");
+        File.WriteAllText(video, "x");
+
+        var relLink = Path.Combine("Haltungen_Verteilt", "06-001", "20250310_06-001.mpg");
+        var resolved = DataPageProtocolPathResolver.ResolveExistingPath(relLink, projectPath);
+
+        Assert.Equal(Path.GetFullPath(video), resolved, ignoreCase: true);
+    }
+
     // --- ResolveOriginalPdfPaths ---
 
     [Fact]

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
 
@@ -27,9 +28,9 @@ public static class DataPageProtocolPathResolver
         if (File.Exists(path))
             return path;
 
-        if (!Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(projectPath))
+        if (!Path.IsPathRooted(path))
         {
-            var baseDir = Path.GetDirectoryName(projectPath);
+            var baseDir = ResolveProjectRoot(projectPath);
             if (!string.IsNullOrWhiteSpace(baseDir))
             {
                 var combined = Path.GetFullPath(Path.Combine(baseDir, path));
@@ -39,6 +40,21 @@ public static class DataPageProtocolPathResolver
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Ermittelt den Projekt-ROOT aus dem projekt.json-Pfad. Seit die projekt.json unter
+    /// <c>Projektdateien\</c> liegen kann, ist <see cref="Path.GetDirectoryName(string)"/> NICHT
+    /// mehr der Root — relative Medienpfade (z.B. <c>Haltungen_Verteilt\…</c>) sind aber relativ
+    /// zum Root gespeichert. <see cref="ProjectFileLocator.ProjectRootFromFile"/> liefert den echten
+    /// Root (rueckwaertskompatibel: liegt die Datei direkt im Root, ist es dessen Verzeichnis).
+    /// </summary>
+    private static string? ResolveProjectRoot(string? projectPath)
+    {
+        if (string.IsNullOrWhiteSpace(projectPath))
+            return null;
+        return ProjectFileLocator.ProjectRootFromFile(projectPath)
+               ?? Path.GetDirectoryName(projectPath);
     }
 
     /// <summary>
@@ -63,19 +79,21 @@ public static class DataPageProtocolPathResolver
         if (!string.IsNullOrWhiteSpace(fromInitial))
             return fromInitial;
 
-        if (!string.IsNullOrWhiteSpace(projectPath))
+        var projectDir = ResolveProjectRoot(projectPath);
+        if (!string.IsNullOrWhiteSpace(projectDir))
         {
-            var projectDir = Path.GetDirectoryName(projectPath);
-            if (!string.IsNullOrWhiteSpace(projectDir))
-            {
-                var fromHoldings = TryFindProtocolFromRoot(Path.Combine(projectDir, "Haltungen"), holdingTokens);
-                if (!string.IsNullOrWhiteSpace(fromHoldings))
-                    return fromHoldings;
+            // Neue Struktur: verteilte Protokolle liegen in Haltungen_Verteilt\; alte in Haltungen\.
+            var fromVerteilt = TryFindProtocolFromRoot(Path.Combine(projectDir, "Haltungen_Verteilt"), holdingTokens);
+            if (!string.IsNullOrWhiteSpace(fromVerteilt))
+                return fromVerteilt;
 
-                var fromStored = TryFindProtocolFromStoredPdfFiles(storedFilesRaw, projectDir, holdingTokens);
-                if (!string.IsNullOrWhiteSpace(fromStored))
-                    return fromStored;
-            }
+            var fromHoldings = TryFindProtocolFromRoot(Path.Combine(projectDir, "Haltungen"), holdingTokens);
+            if (!string.IsNullOrWhiteSpace(fromHoldings))
+                return fromHoldings;
+
+            var fromStored = TryFindProtocolFromStoredPdfFiles(storedFilesRaw, projectDir, holdingTokens);
+            if (!string.IsNullOrWhiteSpace(fromStored))
+                return fromStored;
         }
 
         return null;

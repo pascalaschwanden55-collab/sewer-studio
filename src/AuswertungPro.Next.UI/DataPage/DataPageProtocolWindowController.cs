@@ -46,7 +46,8 @@ public sealed class DataPageProtocolWindowController
         var projectPath = _getLastProjectPath();
         var projectFolder = string.IsNullOrWhiteSpace(projectPath)
             ? null
-            : Path.GetDirectoryName(projectPath);
+            : (AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(projectPath)
+               ?? Path.GetDirectoryName(projectPath));
         var resolvedVideoPath = _resolveExistingPath(record.GetFieldValue("Link"));
 
         _showProtocolWindow(new DataPageProtocolWindowRequest(
