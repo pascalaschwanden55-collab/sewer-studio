@@ -53,10 +53,18 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_self_training_case_selection_workflow_an_controller()
+    public void TrainingCenterViewModel_setzt_triviale_self_training_case_selection_orchestrierung_inline()
     {
+        var repoRoot = FindRepoRoot();
+        var workflowControllerPath = Path.Combine(
+            repoRoot,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "SelfTrainingCaseSelectionWorkflowController.cs");
         var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
+            repoRoot,
             "src",
             "AuswertungPro.Next.UI",
             "ViewModels",
@@ -64,11 +72,13 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "TrainingCenterViewModel.cs"));
         var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
 
-        Assert.Contains("SelfTrainingCaseSelectionWorkflowController.RunAsync(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingSamplesStore.LoadAsync,", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingCaseSelectionController.Select(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("var existingSamplesForSelection", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelectedCase is null", selfTrainingSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(workflowControllerPath), workflowControllerPath);
+        Assert.DoesNotContain("SelfTrainingCaseSelectionWorkflowController", source, StringComparison.Ordinal);
+        Assert.Contains("if (SelectedCase is null)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("existingSamplesForSelection = await TrainingSamplesStore.LoadAsync();", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingCaseSelectionController.Select(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelectedCase = selectedCase;", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingCaseSelectionController.WithProtocolOrStop", selfTrainingSource, StringComparison.Ordinal);
     }
 
     [Fact]
