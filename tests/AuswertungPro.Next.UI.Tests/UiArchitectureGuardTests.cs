@@ -9,45 +9,6 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class UiArchitectureGuardTests
 {
     [Fact]
-    public void PlayerWindow_coding_event_list_surface_uses_controls()
-    {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var eventsControlsPath = Path.Combine(uiRoot, "Ai", "CodingEventsListControls.cs");
-        var importControlsPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceControls.cs");
-        var relevantPartials = new[]
-        {
-            "PlayerWindow.Coding.Confirmation.cs",
-            "PlayerWindow.Coding.Lifecycle.Exit.cs",
-            "PlayerWindow.Coding.Lifecycle.ImportReference.cs",
-            "PlayerWindow.Coding.Lifecycle.Timeline.cs",
-            "PlayerWindow.CodingSidePanelAccessors.cs"
-        };
-
-        Assert.True(File.Exists(eventsControlsPath), "Coding-Event-Listenoberflaeche soll ueber CodingEventsListControls laufen.");
-        Assert.True(File.Exists(importControlsPath), "Import-Referenzliste soll ueber CodingImportReferenceControls laufen.");
-
-        var joinedPartials = string.Join(
-            Environment.NewLine,
-            relevantPartials.Select(file => File.ReadAllText(Path.Combine(windowsRoot, file))));
-        var eventsControls = File.ReadAllText(eventsControlsPath);
-        var importControls = File.ReadAllText(importControlsPath);
-
-        Assert.Contains("_codingSidePanelControllers.EventsList.SelectEvent", joinedPartials);
-        Assert.Contains("_codingSidePanelControllers.EventsList.SetItemsSource", joinedPartials);
-        Assert.Contains("CodingImportReferenceControls.SetItemsSource", joinedPartials);
-        Assert.Contains("CodingImportReferenceControls.ClearItemsSource", joinedPartials);
-        Assert.DoesNotContain("LstCodingEvents.SelectedItem =", joinedPartials);
-        Assert.DoesNotContain("LstCodingEvents.ItemsSource =", joinedPartials);
-        Assert.DoesNotContain("LstImportEvents.ItemsSource =", joinedPartials);
-        Assert.Contains("public void SelectEvent", eventsControls);
-        Assert.Contains("public void SetItemsSource", eventsControls);
-        Assert.Contains("public static void SetItemsSource", importControls);
-        Assert.Contains("public static void ClearItemsSource", importControls);
-    }
-
-    [Fact]
     public void PlayerWindow_toggle_button_state_uses_controls()
     {
         var root = FindRepositoryRoot();

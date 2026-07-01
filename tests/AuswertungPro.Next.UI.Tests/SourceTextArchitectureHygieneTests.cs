@@ -615,10 +615,17 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.True(File.Exists(focusedPath), "Coding-Events-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
 
         var focused = File.ReadAllText(focusedPath);
-        const string methodName = "PlayerWindow_coding_event_display_order_lives_in_policy";
+        var methodNames = new[]
+        {
+            "PlayerWindow_coding_event_display_order_lives_in_policy",
+            "PlayerWindow_coding_event_list_surface_uses_controls"
+        };
 
-        Assert.Contains($"public void {methodName}", focused);
-        Assert.DoesNotContain($"public void {methodName}", guard);
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
     }
 
     [Fact]
