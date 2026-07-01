@@ -1324,9 +1324,10 @@ public partial class TrainingCenterViewModel : ObservableObject
         if (selectedCase is null)
             return;
 
-        var runPreparation = SelfTrainingRunPreparationController.PrepareCancellation(_selfTrainingCts);
-        _selfTrainingCts = runPreparation.CancellationTokenSource;
-        var ct = runPreparation.CancellationToken;
+        _selfTrainingCts?.Cancel();
+        _selfTrainingCts?.Dispose();
+        _selfTrainingCts = new CancellationTokenSource();
+        var ct = _selfTrainingCts.Token;
 
         var selfTrainingUi = new SelfTrainingUiSink(
             value => IsBusy = value,
