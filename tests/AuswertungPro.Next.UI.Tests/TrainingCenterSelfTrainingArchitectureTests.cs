@@ -449,7 +449,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
     }
 
     [Fact]
-    public void TrainingCenterViewModel_delegiert_review_queue_laden_an_controller()
+    public void TrainingCenterViewModel_setzt_trivialen_review_queue_load_inline()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepoRoot(),
@@ -458,12 +458,24 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
+        var controllerPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "Training",
+            "TrainingReviewQueueLoadController.cs");
         var loadSource = ExtractMethodBody(source, "public void LoadReviewQueue(InfraSelfImproving.ReviewQueueService queueService)");
 
-        Assert.Contains("TrainingReviewQueueLoadController.Load(queueService)", loadSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("queueService.GetAll()", loadSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("foreach (var item", loadSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ReviewStatusText = $\"{ReviewQueueCount}", loadSource, StringComparison.Ordinal);
+        Assert.False(File.Exists(controllerPath), "Trivialer Review-Queue-Load soll inline in der VM stehen.");
+        Assert.DoesNotContain("TrainingReviewQueueLoadController", loadSource, StringComparison.Ordinal);
+        Assert.Contains("ArgumentNullException.ThrowIfNull(queueService);", loadSource, StringComparison.Ordinal);
+        Assert.Contains("var items = queueService.GetAll();", loadSource, StringComparison.Ordinal);
+        Assert.Contains("ReviewQueue.Clear();", loadSource, StringComparison.Ordinal);
+        Assert.Contains("foreach (var item in items)", loadSource, StringComparison.Ordinal);
+        Assert.Contains("ReviewQueue.Add(item);", loadSource, StringComparison.Ordinal);
+        Assert.Contains("ReviewQueueCount = items.Count;", loadSource, StringComparison.Ordinal);
+        Assert.Contains("ReviewStatusText = $\"{ReviewQueueCount} Einträge zur Prüfung\";", loadSource, StringComparison.Ordinal);
     }
 
     [Fact]

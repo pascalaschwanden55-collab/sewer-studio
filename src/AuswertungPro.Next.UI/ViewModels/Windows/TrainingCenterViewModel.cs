@@ -1075,12 +1075,17 @@ public partial class TrainingCenterViewModel : ObservableObject
     /// <summary>Loads pending review items into the queue.</summary>
     public void LoadReviewQueue(InfraSelfImproving.ReviewQueueService queueService)
     {
+        ArgumentNullException.ThrowIfNull(queueService);
+
         OnUi(() =>
         {
-            var loadResult = TrainingReviewQueueLoadController.Load(queueService);
-            TrainingReviewQueueLoadController.Apply(loadResult, ReviewQueue);
-            ReviewQueueCount = loadResult.ReviewQueueCount;
-            ReviewStatusText = loadResult.StatusText;
+            var items = queueService.GetAll();
+            ReviewQueue.Clear();
+            foreach (var item in items)
+                ReviewQueue.Add(item);
+
+            ReviewQueueCount = items.Count;
+            ReviewStatusText = $"{ReviewQueueCount} Einträge zur Prüfung";
         });
     }
 
