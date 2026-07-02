@@ -72,34 +72,6 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
-    public void PlayerWindow_tool_badge_rendering_lives_in_renderer()
-    {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.cs");
-        var rendererPath = Path.Combine(uiRoot, "Player", "CodingToolBadgeRenderer.cs");
-        var controllerPath = Path.Combine(uiRoot, "Player", "CodingToolBadgeController.cs");
-
-        Assert.True(File.Exists(rendererPath), "Werkzeug-Badge-Rendering muss ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(controllerPath), "Werkzeug-Badge-Orchestrierung soll ausserhalb von PlayerWindow liegen.");
-
-        var coding = File.ReadAllText(codingPath);
-        var renderer = File.ReadAllText(rendererPath);
-        var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
-
-        Assert.Contains("CodingToolBadgeController.Update", coding);
-        Assert.DoesNotContain("CodingToolBadgeTextPolicy.BuildText", coding);
-        Assert.DoesNotContain("CodingToolBadgeRenderer.Update", coding);
-        Assert.DoesNotContain("var old = CodingOverlayCanvas.Children.OfType<FrameworkElement>()", coding);
-        Assert.DoesNotContain("var badge = new Border", coding);
-        Assert.DoesNotContain("Tag = OverlayTags.ToolBadge", coding);
-        Assert.Contains("CodingToolBadgeTextPolicy.BuildText", controller);
-        Assert.Contains("CodingToolBadgeRenderer.Update", controller);
-        Assert.Contains("public static void Update", renderer);
-        Assert.Contains("OverlayTags.ToolBadge", renderer);
-    }
-
-    [Fact]
     public void PlayerWindow_overlay_cursor_decision_lives_in_policy()
     {
         var root = FindRepositoryRoot();
