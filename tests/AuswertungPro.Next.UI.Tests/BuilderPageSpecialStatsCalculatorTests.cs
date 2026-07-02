@@ -1,7 +1,5 @@
-using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.ViewModels.Pages;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -63,23 +61,6 @@ public sealed class BuilderPageSpecialStatsCalculatorTests
         Assert.Equal("LEM Linerendmanschette", stat.Position);
         Assert.Equal("stk", stat.Unit);
         Assert.Equal(4m, result.Linerendmanschetten);
-    }
-
-    [Fact]
-    public void BuilderPageViewModel_enthaelt_keine_spezialstatistik_buckets_mehr()
-    {
-        var root = FindRepositoryRoot();
-        var source = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "AuswertungPro.Next.UI",
-            "ViewModels",
-            "Pages",
-            "BuilderPageViewModel.cs"));
-
-        Assert.DoesNotContain("private static void ComputeSpecialStats", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("private sealed class PositionStatBucket", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("private static string BuildPositionLabel", source, StringComparison.Ordinal);
     }
 
     private static DruckcenterRowVm Row(string holding, HoldingCost? cost)

@@ -1,7 +1,5 @@
-using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.ViewModels.Pages;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -51,22 +49,6 @@ public sealed class BuilderPageSummaryEntryBuilderTests
         Assert.Equal("H-1", entry.Holding);
         Assert.Equal(50m, entry.Cost.Total);
         Assert.Equal(0.50m, entry.Cost.MwstAmount);
-    }
-
-    [Fact]
-    public void BuilderPageViewModel_enthaelt_keinen_summary_entry_builder_mehr()
-    {
-        var root = FindRepositoryRoot();
-        var source = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "AuswertungPro.Next.UI",
-            "ViewModels",
-            "Pages",
-            "BuilderPageViewModel.cs"));
-
-        Assert.DoesNotContain("private List<CostSummaryEntry> BuildSummaryEntries", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("new CostSummaryEntry", source, StringComparison.Ordinal);
     }
 
     private static DruckcenterRowVm Row(

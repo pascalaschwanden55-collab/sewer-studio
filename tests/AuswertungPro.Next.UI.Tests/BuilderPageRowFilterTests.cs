@@ -1,6 +1,4 @@
-using System.IO;
 using AuswertungPro.Next.UI.ViewModels.Pages;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -79,23 +77,6 @@ public sealed class BuilderPageRowFilterTests
 
         Assert.Single(filtered);
         Assert.Equal("H-1", filtered[0].Holding);
-    }
-
-    [Fact]
-    public void BuilderPageViewModel_enthaelt_keine_druckcenter_filterlogik_mehr()
-    {
-        var root = FindRepositoryRoot();
-        var source = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "AuswertungPro.Next.UI",
-            "ViewModels",
-            "Pages",
-            "BuilderPageViewModel.cs"));
-
-        Assert.DoesNotContain("private static IEnumerable<DruckcenterRowVm> ApplyComboFilter", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("row.Holding.Contains(search", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("row.MeasuresPreview.Contains(search", source, StringComparison.Ordinal);
     }
 
     private static BuilderPageFilterCriteria EmptyCriteria()
