@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Import;
 
@@ -88,7 +89,7 @@ public static class ImportRunReportExporter
                           $"{entry.RecordKey ?? ""} {entry.Field ?? ""} {entry.Detail ?? ""}".TrimEnd());
         }
 
-        File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
+        AtomicTextFileWriter.WriteAllText(path, sb.ToString());
     }
 
     private static void WriteJsonReport(ImportRunLog log, string path)
@@ -126,7 +127,7 @@ public static class ImportRunReportExporter
         };
 
         var json = JsonSerializer.Serialize(dto, JsonOpts);
-        File.WriteAllText(path, json, Encoding.UTF8);
+        AtomicTextFileWriter.WriteAllText(path, json);
     }
 
     private static void WriteErrorReport(ImportRunLog log, string path)
@@ -137,7 +138,7 @@ public static class ImportRunReportExporter
 
         if (issues.Count == 0)
         {
-            File.WriteAllText(path, "Keine Fehler oder Konflikte.\n", Encoding.UTF8);
+            AtomicTextFileWriter.WriteAllText(path, "Keine Fehler oder Konflikte.\n");
             return;
         }
 
@@ -160,6 +161,6 @@ public static class ImportRunReportExporter
             sb.AppendLine();
         }
 
-        File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
+        AtomicTextFileWriter.WriteAllText(path, sb.ToString());
     }
 }

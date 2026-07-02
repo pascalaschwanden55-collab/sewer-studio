@@ -8,6 +8,7 @@ public sealed class AtomicPersistenceArchitectureTests
     public static TheoryData<string> DirectOverwriteTargets => new()
     {
         Path.Combine("src", "AuswertungPro.Next.Application", "Protocol", "JsonCodeCatalogProvider.cs"),
+        Path.Combine("src", "AuswertungPro.Next.Application", "Import", "ImportRunReportExporter.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "MeasureRecommendationService.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Map", "NetworkGeometryCache.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "TrainingCenterImportService.cs"),
