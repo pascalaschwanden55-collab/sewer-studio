@@ -454,7 +454,8 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_coding_live_ai_wiring_lives_in_live_partial",
             "PlayerWindow_coding_health_monitoring_lives_in_monitoring_partial",
             "PlayerWindow_coding_ai_shared_helpers_live_in_helpers_partial",
-            "PlayerWindow_coding_osd_reading_lives_in_reading_partial"
+            "PlayerWindow_coding_osd_reading_lives_in_reading_partial",
+            "PlayerWindow_osd_badge_meter_text_uses_display_policy"
         };
 
         foreach (var methodName in methodNames)
