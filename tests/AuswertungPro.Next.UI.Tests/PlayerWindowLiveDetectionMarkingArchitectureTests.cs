@@ -164,6 +164,34 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
     }
 
     [Fact]
+    public void PlayerWindow_mark_drawing_completion_uses_fire_and_forget_wrapper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkCompletionCommandWorkflow.cs");
+
+        Assert.True(File.Exists(workflowPath), "Manual-Mark-Completion-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
+        var marking = File.ReadAllText(markingPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
+
+        Assert.DoesNotContain("private async void HandleMarkDrawingComplete", marking);
+        Assert.Contains("private void HandleMarkDrawingComplete", marking);
+        Assert.Contains(".SafeFireAndForget(\"MarkDrawingComplete\")", marking);
+        Assert.Contains("private async Task HandleMarkDrawingCompleteAsync", marking);
+        Assert.Contains("LiveDetectionManualMarkCompletionCommandWorkflow.ExecuteAsync", marking);
+        Assert.DoesNotContain("if (overlay == null)", marking);
+        Assert.DoesNotContain("catch (Exception ex)", marking);
+        Assert.DoesNotContain("Task.Delay(3000)", marking);
+        Assert.Contains("actions.GetCurrentOverlay()", workflow);
+        Assert.Contains("actions.SegmentMarkAsync(overlay, frameBytes)", workflow);
+        Assert.Contains("DelayAfterSegmentPreviewAsync", workflow);
+        Assert.Contains("actions.SaveTrainingAsync(overlay, timestampSec, clockPosition, frameBytes)", workflow);
+        Assert.Contains("actions.CompleteManualMark(saved)", workflow);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_mark_completion_decision_lives_in_workflow()
     {
         var root = FindRepositoryRoot();

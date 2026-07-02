@@ -844,6 +844,7 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_mark_segmentation_lives_in_segmentation_partial",
             "PlayerWindow_live_detection_marking_playback_uses_player_helper",
             "PlayerWindow_live_detection_mark_catalog_lives_in_catalog_partial",
+            "PlayerWindow_mark_drawing_completion_uses_fire_and_forget_wrapper",
             "PlayerWindow_manual_mark_completion_decision_lives_in_workflow",
             "PlayerWindow_manual_mark_training_save_lives_in_training_partial",
             "PlayerWindow_mark_tool_wiring_lives_in_mark_tools_partial"
