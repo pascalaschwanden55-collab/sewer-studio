@@ -361,6 +361,8 @@ public sealed class SourceTextArchitectureHygieneTests
 
         var methodNames = new[]
         {
+            "PlayerWindow_coding_and_live_detection_pause_uses_playback_control_host",
+            "PlayerWindow_live_detection_and_timers_read_playback_through_hosts",
             "PlayerWindow_playback_lifecycle_lives_in_lifecycle_partial",
             "PlayerWindow_playback_preview_lives_in_policy_and_speed_controls_in_controller",
             "PlayerWindow_playback_controls_live_in_controls_partial",
