@@ -387,6 +387,13 @@ public static class HaltungsDossierPdfBuilder
         string projectRootAbs)
     {
         var result = new List<(string, string)>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var resolveCache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var holding = record.GetFieldValue(FieldKeys.HoldingName) ?? string.Empty;
+        var holdingSan = ProjectPathResolver.SanitizePathSegment(holding);
+        var preferredFolder = string.IsNullOrWhiteSpace(holdingSan)
+            ? null
+            : Path.Combine(projectRootAbs, "Fotos", "Haltungen", holdingSan);
         var entries = (doc.Current?.Entries ?? new List<ProtocolEntry>())
             .Where(e => !e.IsDeleted)
             .ToList();
@@ -398,9 +405,17 @@ public static class HaltungsDossierPdfBuilder
 
             foreach (var raw in entry.FotoPaths)
             {
-                var resolved = ResolveMediaPath(raw, projectRootAbs);
+                var resolved = ProtocolPdfAssetResolver.ResolvePhotoPath(
+                    projectRootAbs,
+                    raw,
+                    resolveCache,
+                    preferredFolder);
                 if (resolved != null && File.Exists(resolved))
                 {
+                    var key = NormalizeResolvedPhotoKey(resolved);
+                    if (!seen.Add(key))
+                        continue;
+
                     var label = $"{entry.Code ?? "–"} @ {FormatMeterRange(entry.MeterStart, entry.MeterEnd)}";
                     result.Add((label, resolved));
                 }
@@ -408,6 +423,18 @@ public static class HaltungsDossierPdfBuilder
         }
 
         return result;
+    }
+
+    private static string NormalizeResolvedPhotoKey(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch
+        {
+            return path.Replace('/', Path.DirectorySeparatorChar);
+        }
     }
 
     private static void ComposePhotos(IContainer container, List<(string Label, string AbsPath)> photos)
