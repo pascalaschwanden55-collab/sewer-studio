@@ -425,6 +425,43 @@ public sealed class MediaDistributionServiceTests
         Assert.True(project.Dirty);
     }
 
+    [Fact]
+    public void DistributeImportedMedia_StaleImportFotoPaths_UsesCentralHoldingPhotoAndDeduplicates()
+    {
+        // Realer Fuerlauwi-Fall: zentraler Foto-Pfad plus alter Importdateien-Pfad duerfen
+        // nicht als zwei Fotos im AWU-Protokoll landen.
+        using var temp = new TempDir();
+        var projectFolder = temp.CreateSubdir("projekt");
+        var fotoDir = Path.Combine(projectFolder, "Fotos", "Haltungen", "06-001");
+        Directory.CreateDirectory(fotoDir);
+        File.WriteAllText(Path.Combine(fotoDir, "H_06-001_002.jpg"), "bilddaten");
+
+        var staleImportPath = Path.Combine(projectFolder, "Importdateien", "XTF", "Foto", "H_06-001_002.jpg");
+        var centralRel = "Fotos/Haltungen/06-001/H_06-001_002.jpg";
+
+        var project = new Project();
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "06-001", FieldSource.Manual, userEdited: false);
+        record.Protocol = new AuswertungPro.Next.Domain.Protocol.ProtocolDocument();
+        var entry = new AuswertungPro.Next.Domain.Protocol.ProtocolEntry { Code = "BAA" };
+        entry.FotoPaths.Add(centralRel);
+        entry.FotoPaths.Add(staleImportPath);
+        record.Protocol.Current.Entries.Add(entry);
+        record.VsaFindings.Add(new VsaFinding { KanalSchadencode = "BAA", FotoPath = staleImportPath });
+        project.Data.Add(record);
+
+        var result = new MediaDistributionService().DistributeImportedMedia(
+            projectFolder,
+            project,
+            includeVideos: false,
+            includePdfs: false,
+            includeSchacht: false);
+
+        Assert.Equal(0, result.Errors);
+        Assert.Equal(new[] { centralRel }, entry.FotoPaths);
+        Assert.Equal(centralRel, record.VsaFindings[0].FotoPath!.Replace('\\', '/'));
+    }
+
     private static Project NewProject(string haltungsname, string fieldName, string fieldValue)
     {
         var project = new Project();

@@ -23,6 +23,7 @@ public sealed class JsonProjectRepository : IProjectRepository
             var json = File.ReadAllText(path);
             var project = JsonSerializer.Deserialize<Project>(json, Opt) ?? new Project();
             project.EnsureMetadataDefaults();
+            ProjectPhotoReferenceNormalizer.Normalize(project, path);
             return Result<Project>.Success(project);
         }
         catch (Exception ex)
@@ -48,6 +49,7 @@ public sealed class JsonProjectRepository : IProjectRepository
             if (string.IsNullOrWhiteSpace(path))
                 return Result.Fail("APP-SAVE", "Speicherpfad ist leer.");
 
+            ProjectPhotoReferenceNormalizer.Normalize(project, path);
             project.ModifiedAtUtc = DateTime.UtcNow;
             var json = JsonSerializer.Serialize(project, Opt);
 

@@ -179,6 +179,9 @@ public sealed class HoldingRenameServiceTests
         var fotoOld = Path.Combine(root, "Fotos", "Haltungen", oldSan);
         Directory.CreateDirectory(fotoOld);
         File.WriteAllText(Path.Combine(fotoOld, $"H_{oldSan}_116.jpg"), "x");
+        var importFoto = Path.Combine(root, "Importdateien", "XTF", "Foto", $"H_{oldSan}_116.jpg");
+        Directory.CreateDirectory(Path.GetDirectoryName(importFoto)!);
+        File.WriteAllText(importFoto, "archive");
 
         try
         {
@@ -195,7 +198,8 @@ public sealed class HoldingRenameServiceTests
                             {
                                 FotoPaths =
                                 [
-                                    $"Fotos/Haltungen/{oldSan}/H_{oldSan}_116.jpg"
+                                    $"Fotos/Haltungen/{oldSan}/H_{oldSan}_116.jpg",
+                                    importFoto
                                 ]
                             }
                         ]

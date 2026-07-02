@@ -85,14 +85,38 @@ internal static class ProtocolPdfEntryResolver
             return;
 
         var existing = new HashSet<string>(
-            target.FotoPaths.Select(p => p.Replace('\\', '/').ToUpperInvariant()));
+            target.FotoPaths.Select(NormalizePhotoPathKey));
+        var existingFileNames = new HashSet<string>(
+            target.FotoPaths.Select(PhotoFileNameKey).Where(p => !string.IsNullOrWhiteSpace(p))!,
+            StringComparer.OrdinalIgnoreCase);
 
         foreach (var path in source.FotoPaths)
         {
-            var normalized = path.Replace('\\', '/').ToUpperInvariant();
-            if (existing.Add(normalized))
-                target.FotoPaths.Add(path);
+            var normalized = NormalizePhotoPathKey(path);
+            var fileName = PhotoFileNameKey(path);
+            if (existing.Contains(normalized))
+                continue;
+            if (!string.IsNullOrWhiteSpace(fileName) && existingFileNames.Contains(fileName))
+                continue;
+
+            target.FotoPaths.Add(path);
+            existing.Add(normalized);
+            if (!string.IsNullOrWhiteSpace(fileName))
+                existingFileNames.Add(fileName);
         }
+    }
+
+    private static string NormalizePhotoPathKey(string path)
+        => (path ?? string.Empty).Replace('\\', '/').Trim().ToUpperInvariant();
+
+    private static string? PhotoFileNameKey(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return null;
+
+        var normalized = path.Replace('\\', '/');
+        var idx = normalized.LastIndexOf('/');
+        return idx >= 0 ? normalized[(idx + 1)..] : normalized;
     }
 
     private static List<ProtocolEntry> BuildImportedEntriesFromFindings(IReadOnlyList<VsaFinding> findings)

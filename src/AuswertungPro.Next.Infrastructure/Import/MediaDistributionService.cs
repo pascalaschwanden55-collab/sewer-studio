@@ -277,6 +277,13 @@ public sealed class MediaDistributionService
                 if (string.IsNullOrWhiteSpace(rawPath))
                     continue;
 
+                if (TryUseCentralHoldingPhoto(rawPath, haltungSan, projectFolder, dryRun, ref copied, ref errors, messages, out var centralRel))
+                {
+                    if (!dryRun)
+                        entry.FotoPaths[i] = centralRel!;
+                    continue;
+                }
+
                 // Relativer Pfad: pruefen ob Datei existiert, sonst reparieren
                 if (ProjectPathResolver.IsRelative(rawPath))
                 {
@@ -329,6 +336,9 @@ public sealed class MediaDistributionService
                     messages.Add($"Foto Kopierfehler: {ex.Message}");
                 }
             }
+
+            if (!dryRun)
+                DeduplicatePhotoPaths(entry.FotoPaths);
         }
     }
 
@@ -340,6 +350,13 @@ public sealed class MediaDistributionService
         {
             if (string.IsNullOrWhiteSpace(finding.FotoPath))
                 continue;
+
+            if (TryUseCentralHoldingPhoto(finding.FotoPath, haltungSan, projectFolder, dryRun, ref copied, ref errors, messages, out var centralRel))
+            {
+                if (!dryRun)
+                    finding.FotoPath = centralRel;
+                continue;
+            }
 
             // Relativer Pfad: pruefen ob Datei existiert, sonst reparieren
             if (ProjectPathResolver.IsRelative(finding.FotoPath))
@@ -392,6 +409,118 @@ public sealed class MediaDistributionService
                 errors++;
                 messages.Add($"VsaFinding Foto Kopierfehler: {ex.Message}");
             }
+        }
+    }
+
+    private static bool TryUseCentralHoldingPhoto(
+        string rawPath,
+        string haltungSan,
+        string projectFolder,
+        bool dryRun,
+        ref int copied,
+        ref int errors,
+        List<string> messages,
+        out string? relativePath)
+    {
+        relativePath = null;
+        if (string.IsNullOrWhiteSpace(rawPath) || string.IsNullOrWhiteSpace(haltungSan))
+            return false;
+
+        var normalized = rawPath.Replace('/', Path.DirectorySeparatorChar);
+        var fileName = Path.GetFileName(normalized);
+        if (string.IsNullOrWhiteSpace(fileName) || !MediaFileTypes.HasImageExtension(fileName))
+            return false;
+
+        if (ProjectPathResolver.IsRelative(rawPath) && !ProjectPathResolver.IsSafeRelativeProjectPath(rawPath))
+            return false;
+
+        var destDir = ProjectStructure.FotosHaltungDir(projectFolder, haltungSan);
+        var preferred = Path.Combine(destDir, fileName);
+        var source = ResolveExistingPhotoSource(rawPath, projectFolder);
+
+        if (File.Exists(preferred))
+        {
+            if (source is not null
+                && !SamePath(source, preferred)
+                && new FileInfo(source).Length != new FileInfo(preferred).Length)
+            {
+                try
+                {
+                    if (!dryRun) Directory.CreateDirectory(destDir);
+                    var copiedPath = dryRun ? Path.Combine(destDir, fileName) : CopyFileUnique(source, destDir);
+                    relativePath = ProjectPathResolver.MakeRelative(copiedPath, projectFolder);
+                    copied++;
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    errors++;
+                    messages.Add($"Foto Kopierfehler: {ex.Message}");
+                    return false;
+                }
+            }
+
+            relativePath = ProjectPathResolver.MakeRelative(preferred, projectFolder);
+            return true;
+        }
+
+        if (source is null)
+            return false;
+
+        try
+        {
+            if (!dryRun) Directory.CreateDirectory(destDir);
+            var destPath = dryRun ? preferred : CopyFileUnique(source, destDir);
+            relativePath = ProjectPathResolver.MakeRelative(destPath, projectFolder);
+            copied++;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            errors++;
+            messages.Add($"Foto Kopierfehler: {ex.Message}");
+            return false;
+        }
+    }
+
+    private static string? ResolveExistingPhotoSource(string rawPath, string projectFolder)
+    {
+        var normalized = rawPath.Replace('/', Path.DirectorySeparatorChar);
+        if (Path.IsPathRooted(normalized))
+            return File.Exists(normalized) ? normalized : null;
+
+        if (!ProjectPathResolver.IsSafeRelativeProjectPath(rawPath))
+            return null;
+
+        var resolved = ProjectPathResolver.ResolveFilePathFromProjectFolder(rawPath, projectFolder);
+        return resolved is not null && File.Exists(resolved) ? resolved : null;
+    }
+
+    private static void DeduplicatePhotoPaths(IList<string> paths)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var i = paths.Count - 1; i >= 0; i--)
+        {
+            var key = NormalizePhotoPathKey(paths[i]);
+            if (string.IsNullOrWhiteSpace(key))
+                continue;
+            if (!seen.Add(key))
+                paths.RemoveAt(i);
+        }
+    }
+
+    private static string NormalizePhotoPathKey(string path)
+        => (path ?? string.Empty).Replace('\\', '/').Trim();
+
+    private static bool SamePath(string left, string right)
+    {
+        try
+        {
+            return string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
         }
     }
 

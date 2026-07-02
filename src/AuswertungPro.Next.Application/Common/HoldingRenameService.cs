@@ -383,8 +383,28 @@ public static class HoldingRenameService
                     count++;
                 }
             }
+            count += DeduplicatePhotoPaths(entry.FotoPaths);
         }
         return count;
+    }
+
+    private static int DeduplicatePhotoPaths(IList<string> paths)
+    {
+        var removed = 0;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var i = paths.Count - 1; i >= 0; i--)
+        {
+            var key = (paths[i] ?? string.Empty).Replace('\\', '/').Trim();
+            if (string.IsNullOrWhiteSpace(key))
+                continue;
+            if (seen.Add(key))
+                continue;
+
+            paths.RemoveAt(i);
+            removed++;
+        }
+
+        return removed;
     }
 
     private static string? ResolveProjectRoot(string? projectFilePath)

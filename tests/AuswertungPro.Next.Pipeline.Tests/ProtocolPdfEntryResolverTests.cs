@@ -42,6 +42,41 @@ public sealed class ProtocolPdfEntryResolverTests
     }
 
     [Fact]
+    public void ResolveEntriesForExport_does_not_merge_stale_import_photo_when_central_photo_exists()
+    {
+        var record = new HaltungRecord();
+        record.VsaFindings.Add(new VsaFinding
+        {
+            KanalSchadencode = "BAA",
+            MeterStart = 1.2,
+            Raw = "Ablagerung",
+            FotoPath = @"D:\Projekt\Importdateien\XTF\Foto\H_06-001_002.jpg"
+        });
+
+        var existing = new ProtocolEntry
+        {
+            Code = "BAA",
+            MeterStart = 1.2,
+            Beschreibung = "Ablagerung"
+        };
+        existing.FotoPaths.Add("Fotos/Haltungen/06-001/H_06-001_002.jpg");
+
+        var doc = new ProtocolDocument
+        {
+            Current = new ProtocolRevision
+            {
+                Entries = { existing }
+            }
+        };
+
+        var entries = ProtocolPdfEntryResolver.ResolveEntriesForExport(record, doc);
+
+        var entry = Assert.Single(entries);
+        Assert.Same(existing, entry);
+        Assert.Equal(new[] { "Fotos/Haltungen/06-001/H_06-001_002.jpg" }, entry.FotoPaths);
+    }
+
+    [Fact]
     public void ResolveEntriesForExport_skips_imported_finding_when_user_deleted_matching_entry()
     {
         var record = new HaltungRecord();

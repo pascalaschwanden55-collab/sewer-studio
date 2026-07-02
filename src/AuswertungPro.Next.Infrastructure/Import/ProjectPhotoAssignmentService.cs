@@ -136,9 +136,9 @@ public sealed class ProjectPhotoAssignmentService
         if (!File.Exists(srcFull))
             return null;
 
-        var projFull = Path.GetFullPath(projectFolder);
-        if (srcFull.StartsWith(projFull, StringComparison.OrdinalIgnoreCase))
-            return ProjectPathResolver.MakeRelative(srcFull, projectFolder); // schon im Projekt
+        var targetFull = Path.GetFullPath(fotoDir);
+        if (IsUnderDirectory(srcFull, targetFull))
+            return ProjectPathResolver.MakeRelative(srcFull, projectFolder); // schon im gekoppelten Zielordner
 
         Directory.CreateDirectory(fotoDir);
         var dest = Path.Combine(fotoDir, Path.GetFileName(srcFull));
@@ -160,6 +160,15 @@ public sealed class ProjectPhotoAssignmentService
             copied++;
         }
         return ProjectPathResolver.MakeRelative(dest, projectFolder);
+    }
+
+    private static bool IsUnderDirectory(string path, string directory)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var fullDirectory = Path.GetFullPath(directory);
+        if (!fullDirectory.EndsWith(Path.DirectorySeparatorChar))
+            fullDirectory += Path.DirectorySeparatorChar;
+        return fullPath.StartsWith(fullDirectory, StringComparison.OrdinalIgnoreCase);
     }
 
     private static List<ProtocolEntry> GetEntries(HaltungRecord record)
@@ -187,8 +196,8 @@ public sealed class ProjectPhotoAssignmentService
             var want = ExtractPhotoCount(e.Beschreibung);
             for (var i = 0; i < want && queue.Count > 0; i++)
             {
-                e.FotoPaths.Add(queue.Dequeue());
-                n++;
+                if (AddOrReplacePhotoPath(e.FotoPaths, queue.Dequeue()))
+                    n++;
             }
         }
 
@@ -197,13 +206,54 @@ public sealed class ProjectPhotoAssignmentService
             var first = entries[0];
             while (queue.Count > 0)
             {
-                first.FotoPaths.Add(queue.Dequeue());
-                n++;
+                if (AddOrReplacePhotoPath(first.FotoPaths, queue.Dequeue()))
+                    n++;
             }
         }
 
         return n;
     }
+
+    private static bool AddOrReplacePhotoPath(IList<string> paths, string photoPath)
+    {
+        if (string.IsNullOrWhiteSpace(photoPath))
+            return false;
+
+        var normalized = NormalizePath(photoPath);
+        var fileName = Path.GetFileName(normalized.Replace('/', Path.DirectorySeparatorChar));
+        for (var i = 0; i < paths.Count; i++)
+        {
+            var existing = NormalizePath(paths[i]);
+            if (string.Equals(existing, normalized, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            var existingFile = Path.GetFileName(existing.Replace('/', Path.DirectorySeparatorChar));
+            if (!string.IsNullOrWhiteSpace(fileName)
+                && string.Equals(existingFile, fileName, StringComparison.OrdinalIgnoreCase))
+            {
+                paths[i] = photoPath;
+                RemoveDuplicatePhotoPaths(paths, normalized, keepIndex: i);
+                return true;
+            }
+        }
+
+        paths.Add(photoPath);
+        return true;
+    }
+
+    private static void RemoveDuplicatePhotoPaths(IList<string> paths, string normalizedKeep, int keepIndex)
+    {
+        for (var i = paths.Count - 1; i >= 0; i--)
+        {
+            if (i == keepIndex)
+                continue;
+            if (string.Equals(NormalizePath(paths[i]), normalizedKeep, StringComparison.OrdinalIgnoreCase))
+                paths.RemoveAt(i);
+        }
+    }
+
+    private static string NormalizePath(string path)
+        => (path ?? string.Empty).Replace('\\', '/').Trim();
 
     private static bool EntryWantsPhoto(ProtocolEntry entry)
         => (entry.Beschreibung?.ToLowerInvariant() ?? "").Contains("foto");

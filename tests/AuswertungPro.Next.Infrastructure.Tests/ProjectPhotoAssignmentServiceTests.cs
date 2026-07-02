@@ -68,6 +68,35 @@ public sealed class ProjectPhotoAssignmentServiceTests
     }
 
     [Fact]
+    public void AssignFromFolder_PhotoInImportdateien_IsCopiedToCentralFolderAndReplacesStalePath()
+    {
+        var root = NewDir();
+        var importFotos = Path.Combine(root, "Importdateien", "XTF", "Foto");
+        Directory.CreateDirectory(importFotos);
+        var importFoto = Path.Combine(importFotos, "H_22149-3.01_044.jpg");
+        File.WriteAllText(importFoto, "a");
+        try
+        {
+            var project = new Project();
+            var rec = NewRecordWithEntry("22149-3.01", "Foto1");
+            rec.Protocol!.Current.Entries[0].FotoPaths.Add("Importdateien/XTF/Foto/H_22149-3.01_044.jpg");
+            project.AddRecord(rec);
+
+            var result = new ProjectPhotoAssignmentService().AssignFromFolder(root, importFotos, project);
+
+            Assert.Equal(1, result.HoldingsMatched);
+            Assert.Equal(1, result.PhotosCopied);
+
+            var fotos = rec.Protocol!.Current.Entries[0].FotoPaths;
+            var rel = Assert.Single(fotos);
+            Assert.Equal("Fotos/Haltungen/22149-3.01/H_22149-3.01_044.jpg", rel);
+            Assert.True(File.Exists(Path.Combine(root, "Fotos", "Haltungen", "22149-3.01", "H_22149-3.01_044.jpg")));
+            Assert.True(File.Exists(importFoto), "Importquelle bleibt erhalten.");
+        }
+        finally { TryDelete(root); }
+    }
+
+    [Fact]
     public void AssignFromFolder_ExternesFoto_LandetUnterFotosHaltungenGruppiert()
     {
         // Belegt: Foto wird nach Fotos\Haltungen\<Haltung>\ kopiert und relativ verlinkt.
