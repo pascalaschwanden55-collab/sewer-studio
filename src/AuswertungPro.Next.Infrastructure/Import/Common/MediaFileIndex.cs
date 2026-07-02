@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace AuswertungPro.Next.Infrastructure.Import.Common;
 
@@ -43,7 +44,8 @@ internal static class MediaFileIndex
                 list = new List<string>();
                 dict[name] = list;
             }
-            list.Add(file);
+            if (!list.Any(existing => string.Equals(existing, file, StringComparison.OrdinalIgnoreCase)))
+                list.Add(file);
         }
 
         return dict;

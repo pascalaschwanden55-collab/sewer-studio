@@ -72,6 +72,27 @@ public sealed class WinCanDbImportSchachtTests
         }
     }
 
+    private static void FuegeBeobachtungMitFotoEin(string db3Path)
+    {
+        using var conn = new SqliteConnection($"Data Source={db3Path};");
+        conn.Open();
+
+        void Exec(string sql)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = sql;
+            cmd.ExecuteNonQuery();
+        }
+
+        Exec(@"INSERT INTO SECOBS(
+            OBS_PK, OBS_Inspection_FK, OBS_OpCode, OBS_Observation, OBS_Distance,
+            OBS_ContDefectLength, OBS_TimeCtr, OBS_Q1_Value, OBS_ClockPos1, OBS_SortOrder)
+            VALUES('OBS1', 'INS1', 'BAA', 'Wurzeln 25%', '3.4', '1.2', '00:01:30', '25', '03', '1');");
+
+        Exec(@"INSERT INTO SECOBSMM(OMM_Observation_FK, OMM_FileName, OMM_FileType)
+            VALUES('OBS1', 'obs001.jpg', 'JPG');");
+    }
+
     [Fact]
     public void WinCanImport_SetztSchachtObenUnten_AusFromToNodeRefs()
     {
@@ -94,6 +115,59 @@ public sealed class WinCanDbImportSchachtTests
             Assert.NotNull(rec);
             Assert.Equal("S-865", rec!.GetFieldValue("Schacht_oben"));
             Assert.Equal("S-864", rec.GetFieldValue("Schacht_unten"));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void WinCanImport_ImportiertBeobachtungUndFoto_AusDb3()
+    {
+        // Charakterisierung des Kernpfads SECTION -> SECINSP -> SECOBS -> SECOBSMM:
+        // Eine WinCan-Beobachtung wird als Protokoll-Eintrag und VsaFinding mit Foto uebernommen.
+        var root = Path.Combine(Path.GetTempPath(), $"wincan-observation-{Guid.NewGuid():N}");
+        var dbDir = Path.Combine(root, "DB");
+        var pictureDir = Path.Combine(root, "Picture");
+        Directory.CreateDirectory(dbDir);
+        Directory.CreateDirectory(pictureDir);
+        var db3 = Path.Combine(dbDir, "projekt.db3");
+        var photo = Path.Combine(pictureDir, "obs001.jpg");
+        try
+        {
+            File.WriteAllText(photo, "bild");
+            ErzeugeMiniDb3(db3, inspectionDir: "D");
+            FuegeBeobachtungMitFotoEin(db3);
+
+            var project = new Project();
+            var svc = new WinCanDbImportService();
+            var result = svc.ImportWinCanExport(root, project);
+            Assert.True(result.Ok, result.ErrorMessage);
+
+            var rec = project.Data.FirstOrDefault(r =>
+                string.Equals(r.GetFieldValue("Haltungsname"), "06-001", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(rec);
+
+            var entry = Assert.Single(rec!.Protocol!.Current.Entries);
+            Assert.Equal("BAA", entry.Code);
+            Assert.Equal("Wurzeln 25%", entry.Beschreibung);
+            Assert.Equal(3.4, entry.MeterStart);
+            Assert.Equal(4.6, entry.MeterEnd);
+            Assert.True(entry.IsStreckenschaden);
+            Assert.Equal("00:01:30", entry.Mpeg);
+            Assert.Equal(TimeSpan.FromSeconds(90), entry.Zeit);
+            Assert.Equal(photo, Assert.Single(entry.FotoPaths));
+            Assert.Equal("25", entry.CodeMeta!.Parameters["Q1"]);
+            Assert.Equal("03", entry.CodeMeta.Parameters["ClockPos1"]);
+
+            var finding = Assert.Single(rec.VsaFindings);
+            Assert.Equal("BAA", finding.KanalSchadencode);
+            Assert.Equal(3.4, finding.MeterStart);
+            Assert.Equal(4.6, finding.MeterEnd);
+            Assert.Equal(photo, finding.FotoPath);
+            Assert.Equal("25", finding.Quantifizierung1);
         }
         finally
         {
