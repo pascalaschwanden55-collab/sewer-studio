@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Telemetry;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
@@ -28,29 +29,27 @@ public static class PipelineTraceWriter
 
     public static async Task WriteAsync(PipelineFrameTrace entry)
     {
-        try
-        {
-            var path = ResolvePath(entry.RunId);
-            if (path is null)
-                return;
-
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            var line = JsonSerializer.Serialize(entry, JsonOptions) + Environment.NewLine;
-
-            await WriteLock.WaitAsync().ConfigureAwait(false);
-            try
+        await BestEffort.TryAsync(
+            async () =>
             {
-                await File.AppendAllTextAsync(path, line).ConfigureAwait(false);
-            }
-            finally
-            {
-                WriteLock.Release();
-            }
-        }
-        catch
-        {
-            // Trace darf die eigentliche Analyse niemals stoeren.
-        }
+                var path = ResolvePath(entry.RunId);
+                if (path is null)
+                    return;
+
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                var line = JsonSerializer.Serialize(entry, JsonOptions) + Environment.NewLine;
+
+                await WriteLock.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    await File.AppendAllTextAsync(path, line).ConfigureAwait(false);
+                }
+                finally
+                {
+                    WriteLock.Release();
+                }
+            },
+            $"PipelineTraceWriter Trace schreiben: {entry.RunId}").ConfigureAwait(false);
     }
 
     /// <summary>
@@ -60,29 +59,27 @@ public static class PipelineTraceWriter
     /// </summary>
     public static async Task WriteSummaryAsync(string runId, TelemetrySummary summary)
     {
-        try
-        {
-            var path = ResolveSummaryPath(runId);
-            if (path is null)
-                return;
-
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            var json = JsonSerializer.Serialize(summary, JsonOptions);
-
-            await WriteLock.WaitAsync().ConfigureAwait(false);
-            try
+        await BestEffort.TryAsync(
+            async () =>
             {
-                await File.WriteAllTextAsync(path, json).ConfigureAwait(false);
-            }
-            finally
-            {
-                WriteLock.Release();
-            }
-        }
-        catch
-        {
-            // Trace darf die eigentliche Analyse niemals stoeren.
-        }
+                var path = ResolveSummaryPath(runId);
+                if (path is null)
+                    return;
+
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                var json = JsonSerializer.Serialize(summary, JsonOptions);
+
+                await WriteLock.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    await AtomicTextFileWriter.WriteAllTextAsync(path, json).ConfigureAwait(false);
+                }
+                finally
+                {
+                    WriteLock.Release();
+                }
+            },
+            $"PipelineTraceWriter Summary schreiben: {runId}").ConfigureAwait(false);
     }
 
     public static string? ResolvePath(string runId)
