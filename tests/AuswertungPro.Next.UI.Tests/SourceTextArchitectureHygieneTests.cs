@@ -626,7 +626,8 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_frame_extraction_lives_in_service",
             "PlayerWindow_photo_display_paths_live_in_policy",
             "PlayerWindow_photo_viewer_lives_in_viewer_partial",
-            "PlayerWindow_manual_photo_slot_logic_lives_in_policy"
+            "PlayerWindow_manual_photo_slot_logic_lives_in_policy",
+            "PlayerWindow_analyzed_frame_timestamp_lives_in_policy"
         };
 
         foreach (var methodName in methodNames)
