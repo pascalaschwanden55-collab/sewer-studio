@@ -638,7 +638,8 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_overlay_input_mouseflow_keeps_only_direct_dependencies",
             "PlayerWindow_multipoint_overlay_input_lives_in_multipoint_partial",
             "PlayerWindow_overlay_input_mouseflow_uses_workflow",
-            "PlayerWindow_standard_overlay_input_lives_in_standard_partial"
+            "PlayerWindow_standard_overlay_input_lives_in_standard_partial",
+            "PlayerWindow_overlay_input_visibility_lives_in_visibility_partial"
         };
 
         foreach (var methodName in methodNames)
