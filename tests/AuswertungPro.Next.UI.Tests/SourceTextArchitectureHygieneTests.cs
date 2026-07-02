@@ -635,7 +635,10 @@ public sealed class SourceTextArchitectureHygieneTests
         {
             "PlayerWindow_overlay_measurement_panel_uses_formatter_state",
             "PlayerWindow_overlay_cursor_decision_lives_in_policy",
-            "PlayerWindow_overlay_input_mouseflow_keeps_only_direct_dependencies"
+            "PlayerWindow_overlay_input_mouseflow_keeps_only_direct_dependencies",
+            "PlayerWindow_multipoint_overlay_input_lives_in_multipoint_partial",
+            "PlayerWindow_overlay_input_mouseflow_uses_workflow",
+            "PlayerWindow_standard_overlay_input_lives_in_standard_partial"
         };
 
         foreach (var methodName in methodNames)
