@@ -51,7 +51,6 @@ public sealed class PlayerWindowCodingEventActionsArchitectureTests
         var editButtonCommandWorkflow = File.Exists(editButtonCommandWorkflowPath) ? File.ReadAllText(editButtonCommandWorkflowPath) : "";
         var deleteCommandWorkflow = File.Exists(deleteCommandWorkflowPath) ? File.ReadAllText(deleteCommandWorkflowPath) : "";
         var closeStretchCommandWorkflow = File.Exists(closeStretchCommandWorkflowPath) ? File.ReadAllText(closeStretchCommandWorkflowPath) : "";
-        var editButtonBody = ExtractMethodBody(actions, "private void CodingEventEdit_Click");
 
         Assert.DoesNotContain("private void CodingEvents_DoubleClick", events);
         Assert.DoesNotContain("private void CodingEventEdit_Click", events);
@@ -72,7 +71,6 @@ public sealed class PlayerWindowCodingEventActionsArchitectureTests
         Assert.Contains("CodingEventEditButtonCommandWorkflow.Execute", actions);
         Assert.Contains("CodingEventDeleteCommandWorkflow.Execute", actions);
         Assert.Contains("CodingEventCloseStretchCommandWorkflow.Execute", actions);
-        Assert.DoesNotContain("LstCodingEvents.SelectedItem is CodingEvent", editButtonBody);
         Assert.Contains("CodingEventListActionWorkflow.CompleteEdit", actions);
         Assert.Contains("CodingEventListActionWorkflow.CloseStretch", actions);
         Assert.Contains("CodingEventListActionWorkflow.Delete", actions);

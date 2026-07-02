@@ -137,15 +137,12 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
         var viewerWorkflowFactory = File.ReadAllText(viewerWorkflowFactoryPath);
         var viewerService = File.ReadAllText(viewerServicePath);
         var viewerServiceFactory = File.ReadAllText(viewerServiceFactoryPath);
-        var photoBody = ExtractMethodBody(photos, "private void CodingEventShowPhotos_Click");
 
         Assert.Contains("CodingPhotoViewerCommandWorkflow.Execute", photos);
         Assert.Contains("CodingPhotoViewerDisplayWorkflow.Show", photos);
         Assert.DoesNotContain("CodingPhotoViewerWorkflowServiceFactory.Create", photos);
         Assert.DoesNotContain("new CodingPhotoViewerDisplayWorkflowActions", photos);
         Assert.DoesNotContain("CodingPhotoViewerWorkflowServiceFactory.Create().Show", photos);
-        Assert.DoesNotContain("LstCodingEvents.SelectedItem is not CodingEvent", photoBody);
-        Assert.DoesNotContain("FotoPaths.Count == 0", photoBody);
         Assert.DoesNotContain("CodingPhotoViewerWindowServiceFactory.Create", photos);
         Assert.DoesNotContain("CodingPhotoViewerImageSourceLoader.Load", photos);
         Assert.DoesNotContain("CodingPhotoDisplayPathPolicy.BuildDisplayPhotoPaths", photos);

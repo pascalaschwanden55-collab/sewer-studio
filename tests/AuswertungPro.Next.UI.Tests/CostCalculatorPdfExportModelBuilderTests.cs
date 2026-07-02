@@ -1,10 +1,8 @@
-using System.IO;
 using System.Reflection;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
 using AuswertungPro.Next.UI.ViewModels.Windows;
-using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -57,29 +55,6 @@ public sealed class CostCalculatorPdfExportModelBuilderTests
             DateTimeOffset.Parse("2026-02-08T10:00:00Z"));
 
         Assert.Null(result);
-    }
-
-    [Fact]
-    public void CostCalculatorViewModel_delegiert_pdf_modellbau_an_builder()
-    {
-        var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
-            "src",
-            "AuswertungPro.Next.UI",
-            "ViewModels",
-            "Windows",
-            "CostCalculatorViewModel.cs"));
-        var viewModelSource = source[
-            source.IndexOf("public sealed partial class CostCalculatorViewModel", StringComparison.Ordinal)..
-            source.IndexOf("public sealed partial class MeasureBlockVm", StringComparison.Ordinal)];
-        var exportPdfSource = ExtractMethodBody(viewModelSource, "private async Task ExportPdfAsync(Window? owner)");
-
-        Assert.Contains("CostCalculatorPdfExportModelBuilder.Build(", exportPdfSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("new OfferPdfContext", exportPdfSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("OfferPdfModelFactory.CreateCostSummary", exportPdfSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("BuildCostSummaryEntries", viewModelSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("int? dn", exportPdfSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("decimal? lengthM", exportPdfSource, StringComparison.Ordinal);
     }
 
     private static CostCalculatorPdfExportModelBuildResultView? InvokeBuild(

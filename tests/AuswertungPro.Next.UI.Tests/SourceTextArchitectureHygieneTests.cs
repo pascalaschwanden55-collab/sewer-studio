@@ -1244,7 +1244,6 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("ArchitectureFitnessTests.cs")]
     [InlineData("CostCalculatorLineSuggestionArchitectureTests.cs")]
     [InlineData("CostCalculatorMeasureInputArchitectureTests.cs")]
-    [InlineData("CostCalculatorPdfExportModelBuilderTests.cs")]
     [InlineData("DataPageDragStartPolicyTests.cs")]
     [InlineData("DataPageDropReorderControllerTests.cs")]
     [InlineData("DataPageOriginalPdfArchitectureTests.cs")]
