@@ -98,9 +98,57 @@ internal static class ProjectPhotoReferenceNormalizer
 
         var central = Path.Combine(projectRoot, "Fotos", "Haltungen", holdingSan, fileName);
         if (!File.Exists(central))
-            return null;
+        {
+            var renamed = FindUniqueRenamedHoldingPhoto(projectRoot, holdingSan, fileName);
+            if (string.IsNullOrWhiteSpace(renamed))
+                return null;
+
+            return ProjectPathResolver.MakeRelative(renamed, projectRoot);
+        }
 
         return ProjectPathResolver.MakeRelative(central, projectRoot);
+    }
+
+    private static string? FindUniqueRenamedHoldingPhoto(string projectRoot, string holdingSan, string staleFileName)
+    {
+        var suffix = TryExtractTrailingPhotoSuffix(staleFileName);
+        if (string.IsNullOrWhiteSpace(suffix))
+            return null;
+
+        var photoDir = Path.Combine(projectRoot, "Fotos", "Haltungen", holdingSan);
+        if (!Directory.Exists(photoDir))
+            return null;
+
+        try
+        {
+            var matches = Directory.EnumerateFiles(photoDir, "*" + suffix, SearchOption.TopDirectoryOnly)
+                .Where(path => Path.GetFileName(path).EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                .Take(2)
+                .ToList();
+            return matches.Count == 1 ? matches[0] : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? TryExtractTrailingPhotoSuffix(string fileName)
+    {
+        var stem = Path.GetFileNameWithoutExtension(fileName);
+        var ext = Path.GetExtension(fileName);
+        if (string.IsNullOrWhiteSpace(stem) || string.IsNullOrWhiteSpace(ext))
+            return null;
+
+        var idx = stem.LastIndexOf('_');
+        if (idx < 0 || idx == stem.Length - 1)
+            return null;
+
+        var number = stem[(idx + 1)..];
+        if (number.Length == 0 || number.Any(ch => ch < '0' || ch > '9'))
+            return null;
+
+        return "_" + number + ext;
     }
 
     private static int DeduplicatePhotoPaths(IList<string> paths)

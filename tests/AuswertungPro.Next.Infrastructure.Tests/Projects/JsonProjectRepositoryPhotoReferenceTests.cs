@@ -59,6 +59,31 @@ public sealed class JsonProjectRepositoryPhotoReferenceTests
         Assert.Equal("Fotos/Haltungen/06-001/H_06-001_002.jpg", Assert.Single(record.VsaFindings).FotoPath);
     }
 
+    [Fact]
+    public void Save_NormalizesRenamedHoldingPhotoReferencesByPhotoSuffix()
+    {
+        using var temp = new TempDir();
+        var projectFile = Path.Combine(temp.Path, "Projektdateien", "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(projectFile)!);
+
+        var oldPhoto = Path.Combine(temp.Path, "Importdateien", "XTF", "Foto", "H_22147-547.01_116.jpg");
+        var project = BuildProjectWithRenamedHoldingPhoto(oldPhoto);
+
+        var photoDir = Path.Combine(temp.Path, "Fotos", "Haltungen", "22147-22151");
+        Directory.CreateDirectory(photoDir);
+        File.WriteAllText(Path.Combine(photoDir, "H_22147-22151_116.jpg"), "bild");
+
+        var repo = new JsonProjectRepository();
+        var save = repo.Save(project, projectFile);
+        var load = repo.Load(projectFile);
+
+        Assert.True(save.Ok, save.ErrorMessage);
+        Assert.True(load.Ok, load.ErrorMessage);
+        var record = Assert.Single(load.Value!.Data);
+        Assert.Equal("Fotos/Haltungen/22147-22151/H_22147-22151_116.jpg", Assert.Single(record.Protocol!.Current.Entries[0].FotoPaths));
+        Assert.Equal("Fotos/Haltungen/22147-22151/H_22147-22151_116.jpg", Assert.Single(record.VsaFindings).FotoPath);
+    }
+
     private static Project BuildProjectWithStalePhoto(string stalePath)
     {
         var project = new Project();
@@ -67,6 +92,21 @@ public sealed class JsonProjectRepositoryPhotoReferenceTests
         record.Protocol = new ProtocolDocument();
         var entry = new ProtocolEntry { Code = "BAA" };
         entry.FotoPaths.Add("Fotos/Haltungen/06-001/H_06-001_002.jpg");
+        entry.FotoPaths.Add(stalePath);
+        record.Protocol.Current.Entries.Add(entry);
+        record.VsaFindings.Add(new VsaFinding { KanalSchadencode = "BAA", FotoPath = stalePath });
+        project.Data.Add(record);
+        return project;
+    }
+
+    private static Project BuildProjectWithRenamedHoldingPhoto(string stalePath)
+    {
+        var project = new Project();
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "22147-22151", FieldSource.Xtf, userEdited: false);
+        record.Protocol = new ProtocolDocument();
+        var entry = new ProtocolEntry { Code = "BAA" };
+        entry.FotoPaths.Add("Fotos/Haltungen/22147-22151/H_22147-22151_116.jpg");
         entry.FotoPaths.Add(stalePath);
         record.Protocol.Current.Entries.Add(entry);
         record.VsaFindings.Add(new VsaFinding { KanalSchadencode = "BAA", FotoPath = stalePath });

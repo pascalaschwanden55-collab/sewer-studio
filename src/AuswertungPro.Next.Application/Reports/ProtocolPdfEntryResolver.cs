@@ -89,20 +89,28 @@ internal static class ProtocolPdfEntryResolver
         var existingFileNames = new HashSet<string>(
             target.FotoPaths.Select(PhotoFileNameKey).Where(p => !string.IsNullOrWhiteSpace(p))!,
             StringComparer.OrdinalIgnoreCase);
+        var existingPhotoIdentities = new HashSet<string>(
+            target.FotoPaths.Select(PhotoDuplicateIdentityKey).Where(p => !string.IsNullOrWhiteSpace(p))!,
+            StringComparer.OrdinalIgnoreCase);
 
         foreach (var path in source.FotoPaths)
         {
             var normalized = NormalizePhotoPathKey(path);
             var fileName = PhotoFileNameKey(path);
+            var photoIdentity = PhotoDuplicateIdentityKey(path);
             if (existing.Contains(normalized))
                 continue;
             if (!string.IsNullOrWhiteSpace(fileName) && existingFileNames.Contains(fileName))
+                continue;
+            if (!string.IsNullOrWhiteSpace(photoIdentity) && existingPhotoIdentities.Contains(photoIdentity))
                 continue;
 
             target.FotoPaths.Add(path);
             existing.Add(normalized);
             if (!string.IsNullOrWhiteSpace(fileName))
                 existingFileNames.Add(fileName);
+            if (!string.IsNullOrWhiteSpace(photoIdentity))
+                existingPhotoIdentities.Add(photoIdentity);
         }
     }
 
@@ -118,6 +126,41 @@ internal static class ProtocolPdfEntryResolver
         var idx = normalized.LastIndexOf('/');
         return idx >= 0 ? normalized[(idx + 1)..] : normalized;
     }
+
+    private static string? PhotoDuplicateIdentityKey(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return null;
+
+        var normalized = path.Replace('\\', '/');
+        if (!LooksLikeKnownProjectPhotoPath(normalized))
+            return null;
+
+        var fileName = PhotoFileNameKey(normalized);
+        if (string.IsNullOrWhiteSpace(fileName))
+            return null;
+
+        var stem = Path.GetFileNameWithoutExtension(fileName);
+        var ext = Path.GetExtension(fileName);
+        if (string.IsNullOrWhiteSpace(stem) || string.IsNullOrWhiteSpace(ext))
+            return null;
+
+        var firstUnderscore = stem.IndexOf('_');
+        var lastUnderscore = stem.LastIndexOf('_');
+        if (firstUnderscore <= 0 || lastUnderscore <= firstUnderscore || lastUnderscore == stem.Length - 1)
+            return null;
+
+        var prefix = stem[..firstUnderscore];
+        var number = stem[(lastUnderscore + 1)..];
+        if (number.Length == 0 || number.Any(ch => ch < '0' || ch > '9'))
+            return null;
+
+        return prefix + "|_" + number + ext;
+    }
+
+    private static bool LooksLikeKnownProjectPhotoPath(string normalizedPath)
+        => normalizedPath.Contains("Fotos/Haltungen/", StringComparison.OrdinalIgnoreCase)
+           || normalizedPath.Contains("Importdateien/XTF/Foto/", StringComparison.OrdinalIgnoreCase);
 
     private static List<ProtocolEntry> BuildImportedEntriesFromFindings(IReadOnlyList<VsaFinding> findings)
     {
