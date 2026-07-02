@@ -179,6 +179,36 @@ public sealed class PlayerWindowRuntimeArchitectureTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_session_state_creation_lives_in_factory()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var sessionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
+        var factoryPath = Path.Combine(uiRoot, "Services", "CodingSessionStateFactory.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSessionStateCreationWorkflow.cs");
+
+        Assert.True(File.Exists(factoryPath), "Codier-Session-State-Aufbau soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(workflowPath), "Codier-Session-State-Erzeugungsreihenfolge soll ausserhalb von PlayerWindow liegen.");
+
+        var session = File.ReadAllText(sessionPath);
+        var factory = File.ReadAllText(factoryPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
+
+        Assert.DoesNotContain("CodingSessionStateFactory.Create", session);
+        Assert.Contains("CodingSessionStateCreationWorkflow.Execute", session);
+        Assert.Contains("CodingSessionStateFactory.Create", workflow);
+        Assert.Contains("actions.SetSessionService(state.SessionService)", workflow);
+        Assert.Contains("actions.SetOverlayService(state.OverlayService)", workflow);
+        Assert.Contains("actions.SetViewModel(state.ViewModel, true)", workflow);
+        Assert.DoesNotContain("new OverlayToolService", session);
+        Assert.DoesNotContain("new CodingSessionViewModel", session);
+        Assert.DoesNotContain("CodingFeedbackRecorder", session);
+        Assert.Contains("new OverlayToolService", factory);
+        Assert.Contains("new CodingSessionViewModel", factory);
+        Assert.Contains("new CodingFeedbackRecorder", factory);
+    }
+
+    [Fact]
     public void PlayerWindow_service_provider_access_lives_behind_dependencies()
     {
         var root = FindRepositoryRoot();

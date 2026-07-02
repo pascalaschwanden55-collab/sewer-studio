@@ -132,7 +132,8 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_detection_confirmation_buffer_owns_pending_detection_state",
             "PlayerWindow_coding_analysis_cts_lifecycle_lives_in_helper",
             "PlayerWindow_coding_session_service_is_owned_by_runtime_owner",
-            "PlayerWindow_service_provider_access_lives_behind_dependencies"
+            "PlayerWindow_service_provider_access_lives_behind_dependencies",
+            "PlayerWindow_coding_session_state_creation_lives_in_factory"
         };
 
         foreach (var methodName in methodNames)
@@ -729,6 +730,7 @@ public sealed class SourceTextArchitectureHygieneTests
         var focused = File.ReadAllText(focusedPath);
         var methodNames = new[]
         {
+            "PlayerWindow_coding_ai_runtime_creation_lives_in_factory",
             "PlayerWindow_coding_live_ai_wiring_lives_in_live_partial",
             "PlayerWindow_coding_health_monitoring_lives_in_monitoring_partial",
             "PlayerWindow_coding_ai_shared_helpers_live_in_helpers_partial",

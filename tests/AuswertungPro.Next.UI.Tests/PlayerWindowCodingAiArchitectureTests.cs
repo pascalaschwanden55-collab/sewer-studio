@@ -6,6 +6,69 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerWindowCodingAiArchitectureTests
 {
     [Fact]
+    public void PlayerWindow_coding_ai_runtime_creation_lives_in_factory()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var healthPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Health.cs");
+        var monitoringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Health.Monitoring.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "CodingAiRuntimeFactory.cs");
+        var initializationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiInitializationWorkflow.cs");
+        var creationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiRuntimeCreationWorkflow.cs");
+        var healthMonitorCreationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiHealthMonitorCreationWorkflow.cs");
+        var multiModelEnsureWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiMultiModelEnsureWorkflow.cs");
+        var settingsLoaderPath = Path.Combine(uiRoot, "Ai", "PlayerAiSettingsLoader.cs");
+
+        Assert.True(File.Exists(factoryPath), "Coding-AI-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(initializationWorkflowPath), "Coding-AI-Initialisierungsentscheidungen sollen ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(creationWorkflowPath), "Coding-AI-Runtime-Verdrahtung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(healthMonitorCreationWorkflowPath), "Coding-AI-Health-Monitor-Verdrahtung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(multiModelEnsureWorkflowPath), "Coding-AI-MultiModel-Service-Erzeugung soll ausserhalb von PlayerWindow liegen.");
+        Assert.True(File.Exists(settingsLoaderPath), "Player-AI-Settings-Erzeugung soll ausserhalb von PlayerWindow liegen.");
+
+        var health = File.ReadAllText(healthPath);
+        var monitoring = File.ReadAllText(monitoringPath);
+        var factory = File.ReadAllText(factoryPath);
+        var initializationWorkflow = File.ReadAllText(initializationWorkflowPath);
+        var creationWorkflow = File.Exists(creationWorkflowPath) ? File.ReadAllText(creationWorkflowPath) : string.Empty;
+        var healthMonitorCreationWorkflow = File.Exists(healthMonitorCreationWorkflowPath) ? File.ReadAllText(healthMonitorCreationWorkflowPath) : string.Empty;
+        var multiModelEnsureWorkflow = File.Exists(multiModelEnsureWorkflowPath) ? File.ReadAllText(multiModelEnsureWorkflowPath) : string.Empty;
+        var settingsLoader = File.ReadAllText(settingsLoaderPath);
+
+        Assert.DoesNotContain("PlayerAiSettingsLoader.LoadPlatformSettings", health);
+        Assert.Contains("CodingAiInitializationWorkflow.ExecuteAsync", health);
+        Assert.Contains("CodingAiRuntimeCreationWorkflow.Create", health);
+        Assert.DoesNotContain("runtime.RuntimeSettings", health);
+        Assert.DoesNotContain("runtime.MultiModelAvailable", health);
+        Assert.DoesNotContain("runtime.MultiModelError", health);
+        Assert.DoesNotContain("catch (Exception", health);
+        Assert.Contains("runtime.RuntimeSettings", initializationWorkflow);
+        Assert.Contains("runtime.MultiModelAvailable", initializationWorkflow);
+        Assert.Contains("runtime.MultiModelError", initializationWorkflow);
+        Assert.DoesNotContain("AppSettingsAiSettingsProvider", health);
+        Assert.DoesNotContain("CodingAiRuntimeFactory.Create(", health);
+        Assert.Contains("PlayerAiSettingsLoader.LoadPlatformSettings", creationWorkflow);
+        Assert.Contains("CodingAiRuntimeFactory.Create(", creationWorkflow);
+        Assert.DoesNotContain("CodingAiRuntimeFactory.CreateHealthMonitor", health);
+        Assert.Contains("CodingAiHealthMonitorCreationWorkflow.Create", health);
+        Assert.Contains("CodingAiRuntimeFactory.CreateHealthMonitor", healthMonitorCreationWorkflow);
+        Assert.DoesNotContain("new OllamaClient", health);
+        Assert.DoesNotContain("new LiveDetectionService", health);
+        Assert.DoesNotContain("new EnhancedVisionAnalysisService", health);
+        Assert.DoesNotContain("new QualityGateService", health);
+        Assert.DoesNotContain("new VisionPipelineClient", health);
+        Assert.DoesNotContain("new SingleFrameMultiModelService", health);
+        Assert.DoesNotContain("new MarkBoxSegmentationService", health);
+        Assert.DoesNotContain("new SingleFrameMultiModelService", monitoring);
+        Assert.DoesNotContain("CodingAiRuntimeFactory.CreateMultiModelService", monitoring);
+        Assert.Contains("CodingAiMultiModelEnsureWorkflow.Ensure", monitoring);
+        Assert.Contains("CodingAiRuntimeFactory.CreateMultiModelService", multiModelEnsureWorkflow);
+        Assert.Contains("new OllamaClient", factory);
+        Assert.Contains("new VisionPipelineClient", factory);
+        Assert.Contains("new AppSettingsAiSettingsProvider", settingsLoader);
+    }
+
+    [Fact]
     public void PlayerWindow_live_ai_timer_intervals_live_in_settings()
     {
         var root = FindRepositoryRoot();
