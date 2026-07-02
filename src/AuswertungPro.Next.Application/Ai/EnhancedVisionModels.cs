@@ -1,6 +1,3 @@
-using System.Net.Http;
-using System.Net.Sockets;
-
 namespace AuswertungPro.Next.Application.Ai;
 
 public enum AnalysisOutcome
@@ -38,7 +35,7 @@ public sealed record EnhancedFrameAnalysis(
     {
         if (ex is TimeoutException or TaskCanceledException)
             return AnalysisOutcome.Timeout;
-        if (ex is HttpRequestException or SocketException)
+        if (ex is SidecarUnavailableException)
             return AnalysisOutcome.ModelUnavailable;
         return AnalysisOutcome.ModelUnavailable;
     }

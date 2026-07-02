@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.Pipeline.Tests;
@@ -55,6 +56,18 @@ public class VisionPipelineClientTests
         var second = new VisionPipelineClient(new Uri("http://127.0.0.1:8100"), shared);
         var health = await second.HealthCheckAsync();
         Assert.NotNull(health);
+    }
+
+    [Fact]
+    public async Task DetectYoloAsync_Transportfehler_wird_als_SidecarUnavailableException_gemeldet()
+    {
+        var http = new HttpClient(new ThrowingHandler(new HttpRequestException("connection refused")));
+        var client = new VisionPipelineClient(new Uri("http://127.0.0.1:8100"), http);
+
+        var ex = await Assert.ThrowsAsync<SidecarUnavailableException>(
+            () => client.DetectYoloAsync(new YoloRequest("abc", 0.25)));
+
+        Assert.Contains("connection refused", ex.Message);
     }
 
     [Fact]
@@ -118,6 +131,19 @@ public class VisionPipelineClientTests
         await client.ClassifyYoloAsync(new YoloClassifyRequest("abc", 1));
 
         Assert.Null(handler.LastSidecarToken);
+    }
+
+    [Fact]
+    public async Task ClassifyYoloAsync_HttpFehler_WirftSidecarUnavailableException()
+    {
+        var client = new VisionPipelineClient(
+            new Uri("http://127.0.0.1:8100"),
+            new HttpClient(new StatusCodeHandler(HttpStatusCode.InternalServerError, "boom")));
+
+        var ex = await Assert.ThrowsAsync<SidecarUnavailableException>(
+            () => client.ClassifyYoloAsync(new YoloClassifyRequest("abc", 1)));
+
+        Assert.Contains("/classify/yolo", ex.Message);
     }
 
     [Fact]
@@ -316,5 +342,24 @@ public class VisionPipelineClientTests
             };
             return Task.FromResult(response);
         }
+    }
+
+    private sealed class StatusCodeHandler(HttpStatusCode statusCode, string body) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+            => Task.FromResult(new HttpResponseMessage(statusCode)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json")
+            });
+    }
+
+    private sealed class ThrowingHandler(Exception exception) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+            => Task.FromException<HttpResponseMessage>(exception);
     }
 }

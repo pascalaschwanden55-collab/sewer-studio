@@ -1,10 +1,12 @@
 using System;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
@@ -159,6 +161,12 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(1500), ct).ConfigureAwait(false);
             }
+            catch (Exception ex) when (IsSidecarUnavailableError(ex))
+            {
+                throw new SidecarUnavailableException(
+                    $"Vision-Sidecar {endpoint} ist nicht verfuegbar: {ex.Message}",
+                    ex);
+            }
         }
     }
 
@@ -166,6 +174,11 @@ public sealed class VisionPipelineClient : IVisionPipelineClient
         => ex is HttpRequestException hre
            && (hre.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable
                || hre.StatusCode is null); // null = Transportfehler (Verbindung abgelehnt/abgerissen)
+
+    private static bool IsSidecarUnavailableError(Exception ex)
+        => ex is HttpRequestException
+           || ex is SocketException
+           || ex.InnerException is SocketException;
 
     private async Task<TResponse> PostOnceAsync<TResponse>(
         string endpoint, string json, CancellationToken ct)

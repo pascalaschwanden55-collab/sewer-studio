@@ -41,13 +41,30 @@ public sealed class EnhancedVisionAnalysisServiceTests
     }
 
     [Fact]
-    public void EmptyFromException_MapsHttpRequestToModelUnavailable()
+    public void EmptyFromException_MapsSidecarUnavailableToModelUnavailable()
     {
-        var result = EnhancedFrameAnalysis.EmptyFromException(new HttpRequestException("connection refused"));
+        var result = EnhancedFrameAnalysis.EmptyFromException(
+            new SidecarUnavailableException("connection refused"));
 
         Assert.Equal(AnalysisOutcome.ModelUnavailable, result.Outcome);
         Assert.False(result.IsTrainableNegative);
         Assert.Contains("connection refused", result.Error);
+    }
+
+    [Fact]
+    public void EnhancedFrameAnalysis_KenntKeineTransportExceptions()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "AuswertungPro.Next.Application",
+            "Ai",
+            "EnhancedVisionModels.cs"));
+
+        Assert.DoesNotContain("System.Net.Http", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("System.Net.Sockets", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("SocketException", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -290,5 +307,18 @@ public sealed class EnhancedVisionAnalysisServiceTests
                 Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
             });
         }
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "AuswertungPro.sln")))
+                return dir.FullName;
+            dir = dir.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Repository-Root mit AuswertungPro.sln nicht gefunden.");
     }
 }
