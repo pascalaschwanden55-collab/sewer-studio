@@ -583,6 +583,30 @@ public sealed class SourceTextArchitectureHygieneTests
     }
 
     [Fact]
+    public void Player_window_live_detection_marking_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowLiveDetectionMarkingArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "LiveDetection-Marking-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        var methodNames = new[]
+        {
+            "PlayerWindow_manual_mark_bbox_mapping_lives_in_mapper",
+            "PlayerWindow_mark_box_quantification_mapping_lives_in_policy",
+            "PlayerWindow_mark_segmentation_lives_in_segmentation_partial"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
+    [Fact]
     public void Player_window_inline_defect_guards_live_in_focused_suite()
     {
         var root = SourceTextTestHelpers.FindRepositoryRoot();
@@ -980,6 +1004,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowInlineDefectArchitectureTests.cs")]
     [InlineData("PlayerWindowLiveDetectionArchitectureTests.cs")]
     [InlineData("PlayerWindowLiveDetectionConfirmationArchitectureTests.cs")]
+    [InlineData("PlayerWindowLiveDetectionMarkingArchitectureTests.cs")]
     [InlineData("PlayerWindowMediaInfrastructureArchitectureTests.cs")]
     [InlineData("PlayerWindowOverlayInputArchitectureTests.cs")]
     [InlineData("PlayerWindowPlaybackArchitectureTests.cs")]
