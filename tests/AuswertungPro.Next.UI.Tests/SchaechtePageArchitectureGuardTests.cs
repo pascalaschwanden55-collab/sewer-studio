@@ -186,4 +186,48 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("ZustandsklasseValue_Click", schachtansichtXaml);
         Assert.Contains("ZkBrushConv", schachtansichtXaml);
     }
+
+    [Fact]
+    public void SchaechtePage_context_menus_can_reveal_schacht_folder()
+    {
+        var root = FindRepositoryRoot();
+        var pageXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "SchaechtePage.xaml"));
+        var pageCode = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "SchaechtePage.xaml.cs"));
+        var schachtansichtXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "Schachtansicht",
+            "SchachtansichtView.xaml"));
+        var schachtansichtCode = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "Schachtansicht",
+            "SchachtansichtView.xaml.cs"));
+
+        Assert.Contains("Header=\"Gehe zu Ordner\"", pageXaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"OpenContainingFolderMenu_Click\"", pageXaml, StringComparison.Ordinal);
+        Assert.Contains("Header=\"Gehe zu Ordner\"", schachtansichtXaml, StringComparison.Ordinal);
+        Assert.Contains("CtxOpenFolder_Click", schachtansichtXaml, StringComparison.Ordinal);
+        Assert.Contains("RaiseAction(\"openfolder\")", schachtansichtCode, StringComparison.Ordinal);
+        Assert.Contains("case \"openfolder\":", pageCode, StringComparison.Ordinal);
+        Assert.Contains("ExplorerRevealService.TryReveal", pageCode, StringComparison.Ordinal);
+    }
 }

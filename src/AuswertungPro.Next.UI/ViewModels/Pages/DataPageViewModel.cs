@@ -91,6 +91,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public IRelayCommand<HaltungRecord?> OpenVideoAiPipelineCommand { get; }
     public IRelayCommand<HaltungRecord?> RelinkVideoCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenOriginalPdfCommand { get; }
+    public IRelayCommand<HaltungRecord?> OpenContainingFolderCommand { get; }
     public IRelayCommand<HaltungRecord?> PrintAwuHaltungsprotokollCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenCostsCommand { get; }
     public IRelayCommand<HaltungRecord?> RestoreCostsCommand { get; }
@@ -348,6 +349,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         OpenVideoAiPipelineCommand = new RelayCommand<HaltungRecord?>(OpenVideoAiPipeline);
         RelinkVideoCommand = new RelayCommand<HaltungRecord?>(RelinkVideo);
         OpenOriginalPdfCommand = new RelayCommand<HaltungRecord?>(OpenOriginalPdf);
+        OpenContainingFolderCommand = new RelayCommand<HaltungRecord?>(OpenContainingFolder);
         PrintAwuHaltungsprotokollCommand = new RelayCommand<HaltungRecord?>(PrintAwuHaltungsprotokollPdf);
         OpenCostsCommand = new RelayCommand<HaltungRecord?>(OpenCosts, CanOpenCosts);
         RestoreCostsCommand = new RelayCommand<HaltungRecord?>(RestoreCosts, CanRestoreCosts);
@@ -873,6 +875,34 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private void OpenOriginalPdf(HaltungRecord? record)
     {
         _originalPdfController.Open(record);
+    }
+
+    private void OpenContainingFolder(HaltungRecord? record)
+    {
+        if (record is null)
+            return;
+
+        var target = ResolveExistingPath(record.GetFieldValue(FieldKeys.Link))
+                     ?? EnsureProtocolPath(record);
+
+        if (string.IsNullOrWhiteSpace(target))
+        {
+            var projectFolder = _shell.GetProjectFolder() ?? "";
+            var paths = DataPageProtocolPathResolver.ResolveOriginalPdfPaths(record, projectFolder);
+            target = paths.Count > 0 ? paths[0] : null;
+        }
+
+        if (string.IsNullOrWhiteSpace(target))
+        {
+            var name = record.GetFieldValue(FieldKeys.HoldingName) ?? "(unbekannt)";
+            _sp.Dialogs.Info(
+                $"Kein Datei- oder Ordnerpfad gefunden fuer Haltung '{name}'.",
+                "Ordner");
+            return;
+        }
+
+        if (!ExplorerRevealService.TryReveal(target, out var error))
+            _sp.Dialogs.Warn($"Ordner konnte nicht geoeffnet werden:\n{error}", "Ordner");
     }
 
     private SchachtRecord? FindSchachtByNummer(string? nummer)

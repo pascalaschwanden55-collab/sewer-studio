@@ -419,6 +419,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
             case "beobachtungen": BeobachtungenMenu_Click(this, e); break;
             case "printawu": PrintAwuHaltungsprotokollMenu_Click(this, e); break;
             case "openpdf": OpenOriginalPdfMenu_Click(this, e); break;
+            case "openfolder": OpenContainingFolderMenu_Click(this, e); break;
             case "costs": CostsMenu_Click(this, e); break;
             case "moveup": MoveRecordUpMenu_Click(this, e); break;
             case "movedown": MoveRecordDownMenu_Click(this, e); break;
@@ -1059,6 +1060,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
 
         ExecuteRecordMenuCommand(sender, vm, vm.OpenOriginalPdfCommand, "PDF");
+    }
+
+    private void OpenContainingFolderMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+
+        ExecuteRecordMenuCommand(sender, vm, vm.OpenContainingFolderCommand, "Ordner");
     }
 
     private void RestoreCostsMenu_Click(object sender, RoutedEventArgs e)

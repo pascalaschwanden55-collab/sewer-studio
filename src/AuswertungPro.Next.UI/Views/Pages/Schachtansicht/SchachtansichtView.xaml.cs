@@ -175,5 +175,6 @@ public partial class SchachtansichtView : UserControl
     private void CtxMoveDown_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("movedown"); }
     private void CtxDetails_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("details"); }
     private void CtxOpenPdf_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("openpdf"); }
+    private void CtxOpenFolder_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("openfolder"); }
     private void CtxDelete_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("delete"); }
 }

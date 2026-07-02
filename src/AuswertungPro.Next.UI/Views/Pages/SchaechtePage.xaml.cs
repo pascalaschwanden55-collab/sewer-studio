@@ -710,6 +710,9 @@ public partial class SchaechtePage : UserControl
             case "openpdf":
                 ProtokollMenu_Click(this, e);
                 break;
+            case "openfolder":
+                OpenContainingFolderMenu_Click(this, e);
+                break;
             case "moveup":
                 _vm.MoveUpCommand.Execute(null);
                 break;
@@ -1047,6 +1050,37 @@ public partial class SchaechtePage : UserControl
         }
     }
 
+    private void OpenContainingFolderMenu_Click(object sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+
+        if (_vm is null)
+            return;
+
+        var record = _vm.Selected;
+        if (record is null)
+        {
+            DialogHost.Current.Info("Keine Zeile ausgewählt. Bitte direkt auf eine Zeile rechtsklicken.", "Ordner");
+            return;
+        }
+
+        var target = ResolveExplorerTarget(record);
+        if (string.IsNullOrWhiteSpace(target))
+        {
+            var schacht = GetSchachtNumber(record);
+            DialogHost.Current.Info(
+                string.IsNullOrWhiteSpace(schacht)
+                    ? "Kein Datei- oder Ordnerpfad verknüpft."
+                    : $"Kein Datei- oder Ordnerpfad verknüpft für Schacht {schacht}.",
+                "Ordner");
+            return;
+        }
+
+        if (!AuswertungPro.Next.UI.Services.ExplorerRevealService.TryReveal(target, out var error))
+            DialogHost.Current.Error($"Ordner konnte nicht geöffnet werden:\n{error}", "Ordner");
+    }
+
     private void DetailsMenu_Click(object sender, RoutedEventArgs e)
     {
         _ = sender;
@@ -1094,12 +1128,48 @@ public partial class SchaechtePage : UserControl
         return null;
     }
 
+    private string? ResolveExplorerTarget(SchachtRecord record)
+    {
+        var pdfPath = ResolvePdfPath(record);
+        if (!string.IsNullOrWhiteSpace(pdfPath))
+            return pdfPath;
+
+        var projectPath = Services.Settings.LastProjectPath;
+        foreach (var raw in EnumerateExplorerPathCandidates(record))
+        {
+            var resolved = TryResolveRelativePath(raw, projectPath);
+            if (!string.IsNullOrWhiteSpace(resolved))
+                return resolved;
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<string> EnumerateExplorerPathCandidates(SchachtRecord record)
+    {
+        foreach (var field in new[] { FieldKeys.PdfPath, FieldKeys.PdfAll, FieldKeys.PdfEigen, FieldKeys.Link })
+        {
+            var raw = record.GetFieldValue(field);
+            if (string.IsNullOrWhiteSpace(raw))
+                continue;
+
+            foreach (var part in raw.Split(';', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var trimmed = part.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmed))
+                    yield return trimmed;
+            }
+        }
+    }
+
     private static string? TryResolveRelativePath(string? raw, string? lastProjectPath)
     {
         var path = raw?.Trim();
         if (string.IsNullOrWhiteSpace(path))
             return null;
         if (System.IO.File.Exists(path))
+            return path;
+        if (System.IO.Directory.Exists(path))
             return path;
         if (!System.IO.Path.IsPathRooted(path) && !string.IsNullOrWhiteSpace(lastProjectPath))
         {
@@ -1108,6 +1178,8 @@ public partial class SchaechtePage : UserControl
             {
                 var combined = System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, path));
                 if (System.IO.File.Exists(combined))
+                    return combined;
+                if (System.IO.Directory.Exists(combined))
                     return combined;
             }
         }

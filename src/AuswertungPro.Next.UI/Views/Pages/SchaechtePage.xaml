@@ -228,6 +228,7 @@
                     <MenuItem Header="Details anzeigen..." Click="DetailsMenu_Click" />
                     <Separator/>
                     <MenuItem Header="Protokoll (PDF)..." Click="ProtokollMenu_Click" />
+                    <MenuItem Header="Gehe zu Ordner" Click="OpenContainingFolderMenu_Click" />
                 </ContextMenu>
             </DataGrid.ContextMenu>
         </DataGrid>

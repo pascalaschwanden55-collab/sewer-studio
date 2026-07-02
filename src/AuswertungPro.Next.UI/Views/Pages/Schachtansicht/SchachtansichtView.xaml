@@ -38,6 +38,7 @@
                     <Separator/>
                     <MenuItem Header="Details anzeigen..." Click="CtxDetails_Click"/>
                     <MenuItem Header="Protokoll (PDF)..." Click="CtxOpenPdf_Click"/>
+                    <MenuItem Header="Gehe zu Ordner" Click="CtxOpenFolder_Click"/>
                     <Separator/>
                     <MenuItem Header="Schacht l&#x00F6;schen" Click="CtxDelete_Click" Foreground="OrangeRed"/>
                 </ContextMenu>

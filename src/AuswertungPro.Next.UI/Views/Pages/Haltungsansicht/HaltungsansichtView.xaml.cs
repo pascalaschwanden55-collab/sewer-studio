@@ -129,6 +129,7 @@ public partial class HaltungsansichtView : UserControl
     private void CtxPlay_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("play"); }
     private void CtxPrintAwu_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("printawu"); }
     private void CtxOpenPdf_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("openpdf"); }
+    private void CtxOpenFolder_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("openfolder"); }
     private void CtxCosts_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("costs"); }
     private void CtxDelete_Click(object sender, RoutedEventArgs e) { _ = sender; _ = e; RaiseAction("delete"); }
 
