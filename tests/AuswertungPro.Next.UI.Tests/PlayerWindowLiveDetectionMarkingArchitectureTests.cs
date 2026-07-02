@@ -84,6 +84,86 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
     }
 
     [Fact]
+    public void PlayerWindow_live_detection_marking_playback_uses_player_helper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var helperPath = Path.Combine(uiRoot, "Player", "PlayerManualMarkPlayback.cs");
+        var activationWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkActivationWorkflow.cs");
+        var catalogOpenWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogOpenWorkflow.cs");
+        var markToolsPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.MarkTools.cs");
+        var markCatalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
+
+        Assert.True(File.Exists(helperPath), "Manuelle Markier-Pause soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(activationWorkflowPath), "Manuelle Markier-Pause soll im Aktivierungsworkflow orchestriert werden.");
+        Assert.True(File.Exists(catalogOpenWorkflowPath), "Katalog-Oeffnen soll die manuelle Markier-Pause ausserhalb von PlayerWindow orchestrieren.");
+
+        var helper = File.ReadAllText(helperPath);
+        var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
+        var catalogOpenWorkflow = File.Exists(catalogOpenWorkflowPath) ? File.ReadAllText(catalogOpenWorkflowPath) : "";
+        var markTools = File.ReadAllText(markToolsPath);
+        var markCatalog = File.ReadAllText(markCatalogPath);
+
+        Assert.Contains("public static class PlayerManualMarkPlayback", helper);
+        Assert.Contains("PauseForManualMarking", helper);
+        Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", activationWorkflow);
+        Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", catalogOpenWorkflow);
+        Assert.DoesNotContain("PlayerManualMarkPlayback.PauseForManualMarking", markCatalog);
+        Assert.DoesNotContain("PlayerManualMarkPlayback.PauseForManualMarking", markTools);
+        Assert.DoesNotContain("_player.SetPause(true)", markTools);
+        Assert.DoesNotContain("_player.SetPause(false)", markTools);
+        Assert.DoesNotContain("_player.SetPause(true)", markCatalog);
+        Assert.DoesNotContain("_player.SetPause(false)", markCatalog);
+    }
+
+    [Fact]
+    public void PlayerWindow_live_detection_mark_catalog_lives_in_catalog_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
+        var catalogPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.Catalog.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogWorkflowService.cs");
+        var workflowFactoryPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogWorkflowServiceFactory.cs");
+        var displayWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogDisplayWorkflow.cs");
+        var openWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionMarkCatalogOpenWorkflow.cs");
+
+        Assert.True(File.Exists(catalogPath), "LiveDetection-Markkatalog-Wiring soll aus dem grossen Marking-Partial heraus.");
+        Assert.True(File.Exists(workflowPath), "LiveDetection-Markkatalog-Workflow soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowFactoryPath), "LiveDetection-Markkatalog-Workflow soll ueber Factory verdrahtet werden.");
+        Assert.True(File.Exists(displayWorkflowPath), "LiveDetection-Markkatalog-Serviceaufruf soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(openWorkflowPath), "LiveDetection-Markkatalog-Oeffnen soll ausserhalb von PlayerWindow entschieden werden.");
+
+        var marking = File.ReadAllText(markingPath);
+        var catalog = File.ReadAllText(catalogPath);
+        var workflow = File.ReadAllText(workflowPath);
+        var workflowFactory = File.ReadAllText(workflowFactoryPath);
+        var displayWorkflow = File.Exists(displayWorkflowPath) ? File.ReadAllText(displayWorkflowPath) : "";
+        var openWorkflow = File.Exists(openWorkflowPath) ? File.ReadAllText(openWorkflowPath) : "";
+
+        Assert.DoesNotContain("private void DetectionCanvas_MouseLeftButtonDown", marking);
+        Assert.DoesNotContain("private void OnFindingClicked", marking);
+        Assert.DoesNotContain("private void OpenCodeCatalogForMark", marking);
+        Assert.Contains("private void DetectionCanvas_MouseLeftButtonDown", catalog);
+        Assert.Contains("private void OnFindingClicked", catalog);
+        Assert.Contains("private void OpenCodeCatalogForMark", catalog);
+        Assert.Contains("LiveDetectionMarkCatalogDisplayWorkflow.TryOpen", catalog);
+        Assert.DoesNotContain("LiveDetectionMarkCatalogWorkflowServiceFactory.Create", catalog);
+        Assert.Contains("LiveDetectionMarkCatalogOpenWorkflow.ExecuteCanvasClick", catalog);
+        Assert.Contains("LiveDetectionMarkCatalogOpenWorkflow.ExecuteFindingClick", catalog);
+        Assert.DoesNotContain("LiveDetectionGeometryMapper.ClickToClockPosition", catalog);
+        Assert.DoesNotContain("CodingExplorerEntryFactory.CreateSeed", catalog);
+        Assert.Contains("LiveDetectionGeometryMapper.ClickToClockPosition", openWorkflow);
+        Assert.Contains("CodingExplorerEntryFactory.CreateSeed", workflow);
+        Assert.Contains("LiveDetectionMarkCatalogWorkflowServiceFactory.Create", displayWorkflow);
+        Assert.Contains("service.TryOpen(", displayWorkflow);
+        Assert.Contains("VsaCodeExplorerDialogServiceFactory.Create", workflowFactory);
+        Assert.Contains("LiveDetectionDialogServiceFactory.Create", workflowFactory);
+    }
+
+    [Fact]
     public void PlayerWindow_manual_mark_completion_decision_lives_in_workflow()
     {
         var root = FindRepositoryRoot();
