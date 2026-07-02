@@ -42,6 +42,11 @@ public partial class BeobachtungenWindow : Window
 
         EntriesGrid.ItemsSource = _entries;
 
+        // Hover-Foto-Vorschau: Projekt-ROOT fuer relative FotoPaths (gleiche Aufloesung wie OpenPhotoLink_Click).
+        Behaviors.PhotoHoverPreviewBehavior.SetProjectRootProvider(
+            EntriesGrid,
+            () => ProjectFileLocator.ProjectRootFromFile(_services.Settings.LastProjectPath));
+
         if (!string.IsNullOrWhiteSpace(holdingName))
         {
             Title = $"Beobachtungen - {holdingName}";

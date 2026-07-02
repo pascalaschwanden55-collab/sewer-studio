@@ -20,6 +20,13 @@ public partial class HaltungsansichtView : UserControl
         InitializeComponent();
         RestoreSchadenHeight();
         IsVisibleChanged += (_, _) => RefreshDetail();
+
+        // Hover-Foto-Vorschau: Projekt-ROOT fuer relative FotoPaths. _settings wird erst nach dem
+        // Konstruktor via Settings-Property gesetzt -> Closure liest den aktuellen Wert bei jedem Hover.
+        Behaviors.PhotoHoverPreviewBehavior.SetProjectRootProvider(
+            SchadenList,
+            () => AuswertungPro.Next.Application.Common.ProjectFileLocator
+                      .ProjectRootFromFile(_settings?.LastProjectPath));
     }
 
     public AppSettings? Settings

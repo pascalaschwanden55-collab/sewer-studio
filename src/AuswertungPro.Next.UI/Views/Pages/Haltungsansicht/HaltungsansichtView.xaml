@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht"
+             xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
              x:Name="Root">
     <UserControl.Resources>
         <local:HaltungSummaryConverter x:Key="SummaryConv"/>
@@ -125,6 +126,7 @@
                              HorizontalContentAlignment="Stretch"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
                              MouseDoubleClick="SchadenList_MouseDoubleClick">
                         <ListBox.ItemTemplate>
                             <DataTemplate>

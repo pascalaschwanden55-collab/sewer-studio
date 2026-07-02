@@ -57,6 +57,11 @@ public partial class ProtocolObservationsWindow : Window
         LoadEntries();
         EntriesGrid.ItemsSource = _entries;
 
+        // Hover-Foto-Vorschau: Projekt-ROOT fuer relative FotoPaths (gleiche Logik wie ExportPdf).
+        Behaviors.PhotoHoverPreviewBehavior.SetProjectRootProvider(
+            EntriesGrid,
+            ResolvePhotoProjectRoot);
+
         NewButton.Click += (_, _) => AddEntry();
         CopyButton.Click += (_, _) => CopyEntry();
         DeleteButton.Click += (_, _) => DeleteEntry();
@@ -359,6 +364,19 @@ public partial class ProtocolObservationsWindow : Window
         {
             _sp.Dialogs.Error($"PDF konnte nicht erstellt werden:\n{ex.Message}", "PDF");
         }
+    }
+
+    /// <summary>
+    /// Projekt-ROOT fuer die Hover-Foto-Vorschau: bevorzugt den Konstruktor-Ordner <c>_projectFolder</c>,
+    /// sonst aus dem zuletzt geoeffneten Projektpfad abgeleitet (gleiche Fallbacklogik wie <see cref="ExportPdf"/>).
+    /// </summary>
+    private string? ResolvePhotoProjectRoot()
+    {
+        var root = _projectFolder;
+        if (string.IsNullOrWhiteSpace(root) && !string.IsNullOrWhiteSpace(_sp.Settings.LastProjectPath))
+            root = AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(_sp.Settings.LastProjectPath)
+                   ?? Path.GetDirectoryName(_sp.Settings.LastProjectPath);
+        return root;
     }
 
     private static string BuildOverlayText(ProtocolEntry entry)
