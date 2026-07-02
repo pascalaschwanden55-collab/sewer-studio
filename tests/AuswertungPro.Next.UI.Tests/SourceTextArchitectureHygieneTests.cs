@@ -596,7 +596,10 @@ public sealed class SourceTextArchitectureHygieneTests
         {
             "PlayerWindow_manual_mark_bbox_mapping_lives_in_mapper",
             "PlayerWindow_mark_box_quantification_mapping_lives_in_policy",
-            "PlayerWindow_mark_segmentation_lives_in_segmentation_partial"
+            "PlayerWindow_mark_segmentation_lives_in_segmentation_partial",
+            "PlayerWindow_manual_mark_completion_decision_lives_in_workflow",
+            "PlayerWindow_manual_mark_training_save_lives_in_training_partial",
+            "PlayerWindow_mark_tool_wiring_lives_in_mark_tools_partial"
         };
 
         foreach (var methodName in methodNames)
