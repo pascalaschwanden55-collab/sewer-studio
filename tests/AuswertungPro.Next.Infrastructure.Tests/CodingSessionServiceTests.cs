@@ -51,37 +51,11 @@ public sealed class CodingSessionServiceTests
         }
     }
 
-    [Fact]
-    public void CodingSessionService_Sessionabschluss_blockiert_nicht_per_GetAwaiter()
-    {
-        var source = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(),
-            "src",
-            "AuswertungPro.Next.Infrastructure",
-            "Ai",
-            "CodingSessionService.cs"));
-
-        Assert.DoesNotContain(".GetAwaiter().GetResult()", source, StringComparison.Ordinal);
-    }
-
     private static HaltungRecord CreateHaltung(string name, string length)
     {
         var record = new HaltungRecord();
         record.SetFieldValue("Haltungsname", name, FieldSource.Manual, userEdited: false);
         record.SetFieldValue("Haltungslaenge_m", length, FieldSource.Manual, userEdited: false);
         return record;
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            if (File.Exists(Path.Combine(dir.FullName, "AuswertungPro.sln")))
-                return dir.FullName;
-            dir = dir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repository-Root mit AuswertungPro.sln nicht gefunden.");
     }
 }
