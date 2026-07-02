@@ -101,14 +101,56 @@
 
         <Grid Grid.Column="2" Margin="8,0,0,0">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*" MinHeight="120"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition x:Name="SchadenRowDef" Height="240" MinHeight="80"/>
             </Grid.RowDefinitions>
 
-            <controls:RecordDetailsView Grid.Row="0" x:Name="Detail"/>
+            <Border Grid.Row="0"
+                    Margin="0,0,0,8"
+                    Padding="10,8"
+                    Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <DockPanel LastChildFill="False">
+                    <TextBlock DockPanel.Dock="Left"
+                               Text="Zustand 0-4"
+                               Foreground="{DynamicResource TextBrush}"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"/>
+                    <ItemsControl DockPanel.Dock="Left"
+                                  ItemsSource="{Binding ZustandsklasseOptions, ElementName=Root}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Width="34"
+                                        Height="28"
+                                        Margin="0,0,6,0"
+                                        Padding="0"
+                                        Content="{Binding}"
+                                        Tag="{Binding}"
+                                        Click="ZustandsklasseValue_Click"
+                                        Foreground="#000000"
+                                        FontWeight="Bold"
+                                        ToolTip="Zustandsklasse setzen"
+                                        Background="{Binding Converter={StaticResource ZkBrushConv}}"
+                                        BorderBrush="{DynamicResource BorderBrush}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </DockPanel>
+            </Border>
 
-            <GridSplitter Grid.Row="1"
+            <controls:RecordDetailsView Grid.Row="1" x:Name="Detail"/>
+
+            <GridSplitter Grid.Row="2"
                           Height="6"
                           Margin="0,4,0,0"
                           HorizontalAlignment="Stretch"
@@ -119,7 +161,7 @@
                           DragCompleted="SchadenSplitter_DragCompleted"
                           ToolTip="Ziehen, um die H&#x00F6;he von &quot;Sch&#x00E4;den&quot; einzustellen"/>
 
-            <Border Grid.Row="2"
+            <Border Grid.Row="3"
                     Margin="0,4,0,0"
                     Padding="12"
                     Background="{DynamicResource CardBrush}"

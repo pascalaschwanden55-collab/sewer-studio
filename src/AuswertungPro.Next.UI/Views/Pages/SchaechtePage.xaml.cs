@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -37,8 +36,6 @@ public partial class SchaechtePage : UserControl
         public string RecordField { get; }
         public string OptionField { get; }
     }
-
-    private static readonly Regex NonNumericRegex = new("[^0-9]", RegexOptions.Compiled);
 
     private SchaechtePageViewModel? _vm;
     private readonly DispatcherTimer _searchDebounceTimer;
@@ -209,27 +206,17 @@ public partial class SchaechtePage : UserControl
             column.CellStyle = colorStyle;
     }
 
-    private DataGridTextColumn CreateZustandsklasseColumn(string recordField)
+    private DataGridColumn CreateZustandsklasseColumn(string recordField)
     {
-        var displayStyle = new Style(typeof(TextBlock));
-        displayStyle.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
-        displayStyle.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));
-
-        var editStyle = new Style(typeof(TextBox));
-        editStyle.Setters.Add(new Setter(TextBox.VerticalContentAlignmentProperty, VerticalAlignment.Center));
-        editStyle.Setters.Add(new EventSetter(UIElement.PreviewTextInputEvent, new TextCompositionEventHandler(ZustandsklasseTextBox_PreviewTextInput)));
-        editStyle.Setters.Add(new EventSetter(DataObject.PastingEvent, new DataObjectPastingEventHandler(ZustandsklasseTextBox_Pasting)));
-
-        return new DataGridTextColumn
+        return new DataGridComboBoxColumn
         {
             Header = GetDisplayHeader(recordField),
-            Binding = new Binding($"Fields[{recordField}]")
+            ItemsSource = ZustandsklasseColorPalette.SelectionOptions,
+            SelectedItemBinding = new Binding($"Fields[{recordField}]")
             {
                 Mode = BindingMode.TwoWay,
                 UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
             },
-            ElementStyle = displayStyle,
-            EditingElementStyle = editStyle,
             Width = DataGridLength.SizeToHeader,
             MinWidth = 90
         };
@@ -503,26 +490,6 @@ public partial class SchaechtePage : UserControl
     private static bool IsZustandsklasseColumn(string columnName)
         => Normalize(columnName).Contains("zustandsklasse", StringComparison.Ordinal);
 
-    private void ZustandsklasseTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
-    {
-        _ = sender;
-        e.Handled = NonNumericRegex.IsMatch(e.Text ?? string.Empty);
-    }
-
-    private void ZustandsklasseTextBox_Pasting(object sender, DataObjectPastingEventArgs e)
-    {
-        _ = sender;
-        if (!e.DataObject.GetDataPresent(typeof(string)))
-        {
-            e.CancelCommand();
-            return;
-        }
-
-        var text = e.DataObject.GetData(typeof(string)) as string ?? string.Empty;
-        if (NonNumericRegex.IsMatch(text))
-            e.CancelCommand();
-    }
-
     private void Grid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
     {
         _ = sender;
@@ -727,6 +694,13 @@ public partial class SchaechtePage : UserControl
             return;
 
         _vm.Selected = record;
+        if (actionKey.StartsWith("zustandsklasse:", StringComparison.Ordinal))
+        {
+            var value = actionKey["zustandsklasse:".Length..];
+            CommitSchachtDetailField(record, "Zustandsklasse", value);
+            return;
+        }
+
         var e = new RoutedEventArgs();
         switch (actionKey)
         {
@@ -814,14 +788,22 @@ public partial class SchaechtePage : UserControl
         var normalized = Normalize(fieldName);
         var isMultiline = IsPrimaryDamagesColumn(fieldName)
                           || normalized.Contains("bemerk", StringComparison.Ordinal);
-        var digitsOnly = IsZustandsklasseColumn(fieldName);
+        if (IsZustandsklasseColumn(fieldName))
+        {
+            return new RecordDetailItem(
+                label,
+                value,
+                commitValue: next => CommitSchachtDetailField(record, fieldName, next),
+                isCombo: true,
+                allowFreeText: false,
+                options: ZustandsklasseColorPalette.SelectionOptions);
+        }
 
         return new RecordDetailItem(
             label,
             value,
             commitValue: next => CommitSchachtDetailField(record, fieldName, next),
-            isMultiline: isMultiline,
-            digitsOnly: digitsOnly);
+            isMultiline: isMultiline);
     }
 
     private IEnumerable<string> ResolveOptions(string itemsSourcePath)

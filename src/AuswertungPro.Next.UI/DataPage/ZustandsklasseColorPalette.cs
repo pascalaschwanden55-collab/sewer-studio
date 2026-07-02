@@ -12,6 +12,8 @@ namespace AuswertungPro.Next.UI.DataPage;
 /// </summary>
 public static class ZustandsklasseColorPalette
 {
+    public static IReadOnlyList<string> SelectionOptions { get; } = ["0", "1", "2", "3", "4"];
+
     public static IReadOnlyDictionary<string, Brush> HaltungenPalette { get; } =
         new Dictionary<string, Brush>(StringComparer.Ordinal)
         {

@@ -6,6 +6,12 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class ZustandsklasseColorPaletteTests
 {
+    [Fact]
+    public void SelectionOptions_are_zero_to_four()
+    {
+        Assert.Equal(["0", "1", "2", "3", "4"], ZustandsklasseColorPalette.SelectionOptions);
+    }
+
     [Theory]
     [InlineData("0", 0xFF, 0x00, 0x00)] // rot
     [InlineData("4", 0x92, 0xD0, 0x50)] // gruen

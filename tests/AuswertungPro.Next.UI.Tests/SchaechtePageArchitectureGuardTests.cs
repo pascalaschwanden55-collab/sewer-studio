@@ -152,4 +152,38 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("SchachtansichtView.DamageLineBuilder = SchachtDamageLineBuilder.Build", pageCode);
         Assert.Contains("RouteSchachtansichtAction", pageCode);
     }
+
+    [Fact]
+    public void SchaechtePage_uses_zero_to_four_selection_for_zustandsklasse()
+    {
+        var root = FindRepositoryRoot();
+        var pageCode = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "SchaechtePage.xaml.cs"));
+        var schachtansichtXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "Schachtansicht",
+            "SchachtansichtView.xaml"));
+
+        var columnMethod = ExtractMethod(pageCode, "private DataGridColumn CreateZustandsklasseColumn(");
+        Assert.Contains("DataGridComboBoxColumn", columnMethod);
+        Assert.Contains("ZustandsklasseColorPalette.SelectionOptions", columnMethod);
+
+        var detailMethod = ExtractMethod(pageCode, "private RecordDetailItem CreateSchachtDetailItem(");
+        Assert.Contains("isCombo: true", detailMethod);
+        Assert.Contains("allowFreeText: false", detailMethod);
+        Assert.Contains("ZustandsklasseColorPalette.SelectionOptions", detailMethod);
+
+        Assert.Contains("Zustand 0-4", schachtansichtXaml);
+        Assert.Contains("ZustandsklasseValue_Click", schachtansichtXaml);
+        Assert.Contains("ZkBrushConv", schachtansichtXaml);
+    }
 }
