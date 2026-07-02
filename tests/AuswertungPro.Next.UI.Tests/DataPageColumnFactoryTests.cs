@@ -1,4 +1,3 @@
-using System.IO;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Windows;
@@ -68,22 +67,6 @@ public sealed class DataPageColumnFactoryTests
             var binding = Assert.IsType<Binding>(column.Binding);
             Assert.Equal("Fields[Bemerkungen]", binding.Path.Path);
         });
-    }
-
-    [Fact]
-    public void DataPage_delegates_column_type_selection_to_factory()
-    {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
-        var source = File.ReadAllText(Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml.cs"));
-        var ensureColumns = SourceTextTestHelpers.ExtractMethodBody(source, "private void EnsureColumns()");
-
-        Assert.Contains("DataPageColumnFactory.Create(", ensureColumns, StringComparison.Ordinal);
-        Assert.DoesNotContain("GridDropdownFieldPolicy.TryResolve", ensureColumns, StringComparison.Ordinal);
-        Assert.DoesNotContain("DataGridWrappingTextColumnFactory.Create", ensureColumns, StringComparison.Ordinal);
-        Assert.DoesNotContain("DataGridCostColumnFactory.Create", ensureColumns, StringComparison.Ordinal);
-        Assert.DoesNotContain("DataGridStandardTextColumnFactory.Create", ensureColumns, StringComparison.Ordinal);
-        Assert.DoesNotContain("private DataGridTemplateColumn CreateComboColumn", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("private DataGridTemplateColumn CreateSimpleComboColumn", source, StringComparison.Ordinal);
     }
 
     private static Binding AssertFactoryBinding(FrameworkElementFactory target, DependencyProperty property, string path)

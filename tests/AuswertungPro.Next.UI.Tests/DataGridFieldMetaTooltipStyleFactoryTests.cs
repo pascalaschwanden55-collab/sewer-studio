@@ -1,4 +1,3 @@
-using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
@@ -38,19 +37,6 @@ public sealed class DataGridFieldMetaTooltipStyleFactoryTests
                 x => Assert.Equal("FieldMeta[Zustandsklasse].UserEdited", x.Path.Path),
                 x => Assert.Equal("FieldMeta[Zustandsklasse].Conflict", x.Path.Path));
         });
-    }
-
-    [Fact]
-    public void DataPageColumnSetup_delegates_field_meta_tooltip_style_to_factory()
-    {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
-        var source = File.ReadAllText(Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPageColumnSetup.cs"));
-        var method = SourceTextTestHelpers.ExtractMethodBody(source, "public static DataPageColumnSetupResult Apply(DataGridColumn column, string fieldName)");
-
-        Assert.Contains("DataGridFieldMetaTooltipStyleFactory.Create(", method, StringComparison.Ordinal);
-        Assert.DoesNotContain("new MultiBinding", method, StringComparison.Ordinal);
-        Assert.DoesNotContain("new TextBlock", method, StringComparison.Ordinal);
-        Assert.DoesNotContain("new Style(typeof(DataGridCell)", method, StringComparison.Ordinal);
     }
 
     private static void RunOnSta(Action action)

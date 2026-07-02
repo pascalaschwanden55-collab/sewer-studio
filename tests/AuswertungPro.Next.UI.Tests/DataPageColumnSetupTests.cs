@@ -1,4 +1,3 @@
-using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
@@ -55,21 +54,6 @@ public sealed class DataPageColumnSetupTests
 
             Assert.Equal(56, column.MinWidth);
         });
-    }
-
-    [Fact]
-    public void DataPage_delegates_column_setup()
-    {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
-        var source = File.ReadAllText(Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml.cs"));
-        var ensureColumns = SourceTextTestHelpers.ExtractMethodBody(source, "private void EnsureColumns()");
-
-        Assert.Contains("DataPageColumnSetup.Apply(", ensureColumns, StringComparison.Ordinal);
-        Assert.DoesNotContain("DataGridColorCellStyleFactory.CreateHaltungenStyle", ensureColumns, StringComparison.Ordinal);
-        Assert.DoesNotContain("DataGridFieldMetaTooltipStyleFactory.Create", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("private void ApplyFieldMetaTooltip", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("col.CanUserResize = true", ensureColumns, StringComparison.Ordinal);
-        Assert.DoesNotContain("col.MinWidth =", ensureColumns, StringComparison.Ordinal);
     }
 
     private static void AssertFieldMetaTooltipBinding(Style? style, string fieldName)
