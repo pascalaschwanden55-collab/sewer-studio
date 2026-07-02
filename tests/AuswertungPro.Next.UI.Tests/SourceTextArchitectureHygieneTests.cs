@@ -185,6 +185,30 @@ public sealed class SourceTextArchitectureHygieneTests
     }
 
     [Fact]
+    public void Player_window_coding_lifecycle_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingLifecycleArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "Coding-Lifecycle-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        var methodNames = new[]
+        {
+            "PlayerWindow_terminal_exit_boundary_check_lives_in_policy",
+            "PlayerWindow_dn_calibration_initialization_lives_in_policy",
+            "PlayerWindow_haltungslaenge_fallback_lives_in_lifecycle_length_partial"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
+    [Fact]
     public void Player_window_overlay_cleanup_guards_live_in_focused_suite()
     {
         var root = SourceTextTestHelpers.FindRepositoryRoot();
@@ -1066,6 +1090,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowCodingStateArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingCatalogArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingImportArchitectureTests.cs")]
+    [InlineData("PlayerWindowCodingLifecycleArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingPhotoArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingTrainingArchitectureTests.cs")]
     [InlineData("PlayerWindowCoreArchitectureTests.cs")]
