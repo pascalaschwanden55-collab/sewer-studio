@@ -533,7 +533,9 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_multi_model_ai_events_live_in_multimodel_partial",
             "PlayerWindow_segmented_finding_projection_lives_in_mapper",
             "PlayerWindow_multi_model_coverage_uses_existing_policy",
-            "PlayerWindow_multi_model_quality_gate_uses_policy"
+            "PlayerWindow_multi_model_quality_gate_uses_policy",
+            "PlayerWindow_multi_model_mask_render_candidates_live_in_visibility_policy",
+            "PlayerWindow_multi_model_rendering_lives_in_rendering_partial"
         };
 
         foreach (var methodName in methodNames)
