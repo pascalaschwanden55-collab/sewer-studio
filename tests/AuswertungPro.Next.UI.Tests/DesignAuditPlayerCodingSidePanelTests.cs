@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
+using System.IO;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -296,7 +294,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var workflow = ReadUiFile("Ai", "CodingModeExitFinalizationWorkflow.cs");
         var commandWorkflow = ReadUiFile("Ai", "CodingModeExitCommandWorkflow.cs");
-        var exitBody = ExtractMethodBody(coding, "private void ExitCodingMode");
+        var exitBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
 
         Assert.Contains("CodingModeExitCommandWorkflow.Execute", exitBody);
         Assert.Contains("_liveDetectionController.PendingConfirmationFrameBytes", coding);
@@ -311,8 +309,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
         var osdController = ReadUiFile("Player", "CodingOsdMeterController.cs");
         var inferenceWorkflow = ReadUiFile("Ai", "CodingMultiModelInferenceWorkflow.cs");
-        var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
-        var resolveBody = ExtractMethodBody(coding, "private double ResolveCodingMeterForFrame");
+        var multiModelBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.MultiModel.cs");
+        var resolveBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Osd.cs");
 
         var meterStart = inferenceWorkflow.IndexOf("var currentMeterForClassifier", StringComparison.Ordinal);
         var resolveIndex = inferenceWorkflow.IndexOf("actions.ResolveCurrentMeter", StringComparison.Ordinal);
@@ -338,12 +336,12 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_ai_events_use_analyzed_frame_meter_not_stale_selected_meter()
     {
         var coding = ReadCodingPartials();
-        var runBody = ExtractMethodBody(coding, "private async Task RunCodingAnalysisAsync");
-        var multiModelBody = ExtractMethodBody(coding, "private void AddMultiModelFindingsAsEvents");
+        var runBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var multiModelBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.AiEvents.MultiModel.cs");
         var multiModelCommandWorkflow = ReadUiFile("Ai", "CodingMultiModelFindingEventCommandWorkflow.cs");
-        var qwenBody = ExtractMethodBody(coding, "private void AddAiFindingsAsEvents");
+        var qwenBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.AiEvents.Live.cs");
         var qwenCommandWorkflow = ReadUiFile("Ai", "CodingLiveFindingEventCommandWorkflow.cs");
-        var boundaryBody = ExtractMethodBody(coding, "private async Task<bool> TryHandleBoundaryClassifierResultAsync");
+        var boundaryBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.Boundary.cs");
         var boundaryCommandWorkflow = ReadUiFile("Ai", "CodingBoundaryClassifierCommandWorkflow.cs");
 
         Assert.Contains("CodingAnalysisPreflightWorkflow.Execute", runBody);
@@ -371,9 +369,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var singleModelWorkflow = ReadUiFile("Ai", "CodingSingleModelAnalysisWorkflow.cs");
         var startWorkflow = ReadUiFile("Ai", "CodingMultiModelAnalysisStartWorkflow.cs");
         var inferenceWorkflow = ReadUiFile("Ai", "CodingMultiModelInferenceWorkflow.cs");
-        var multiModelBody = ExtractMethodBody(coding, "private async Task RunCodingMultiModelAnalysisAsync");
-        var readerBody = ExtractMethodBody(coding, "private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync");
-        var helperBody = ExtractMethodBody(coding, "private async Task<double?> TryReadOsdMeterFromFrameBytesAsync");
+        var multiModelBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Ai.MultiModel.cs");
+        var readerBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Osd.Reading.cs");
+        var helperBody = readerBody;
 
         var startIndex = multiModelBody.IndexOf("CodingMultiModelAnalysisStartWorkflow.ExecuteAsync", StringComparison.Ordinal);
         var inferenceIndex = multiModelBody.IndexOf("CodingMultiModelInferenceWorkflow.ExecuteAsync", StringComparison.Ordinal);
@@ -399,15 +397,16 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var workflow = ReadUiFile("Ai", "CodingBoundaryEventWorkflow.cs");
-        var bcdBody = ExtractMethodBody(coding, "private async Task<bool> EnsureRohranfangExistsAsync");
-        var bceBody = ExtractMethodBody(coding, "private void EnsureRohrendeExists");
-        var workflowStartBody = ExtractMethodBody(workflow, "public static async Task<CodingBoundaryEventWorkflowResult> EnsureStartAsync");
-        var workflowEndBody = ExtractMethodBody(workflow, "public static CodingBoundaryEventWorkflowResult EnsureEnd");
+        var boundariesBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Boundaries.cs");
+        var startAttachIndex = workflow.IndexOf("actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, frameBytes)", StringComparison.Ordinal);
+        var startAddIndex = workflow.IndexOf("CodingBoundaryEventAppender.Apply", startAttachIndex, StringComparison.Ordinal);
+        var endAttachIndex = workflow.IndexOf("actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, request.AnalyzedFrameBytes)", StringComparison.Ordinal);
+        var endAddIndex = workflow.IndexOf("CodingBoundaryEventAppender.Apply", endAttachIndex, StringComparison.Ordinal);
 
-        Assert.Contains("CodingBoundaryEventWorkflow.EnsureStart", bcdBody);
-        Assert.Contains("CodingBoundaryEventWorkflow.EnsureEnd", bceBody);
-        AssertBoundaryFrameAttachedBeforeAddEvent(workflowStartBody);
-        AssertBoundaryFrameAttachedBeforeAddEvent(workflowEndBody);
+        Assert.Contains("CodingBoundaryEventWorkflow.EnsureStart", boundariesBody);
+        Assert.Contains("CodingBoundaryEventWorkflow.EnsureEnd", boundariesBody);
+        Assert.True(startAttachIndex >= 0 && startAddIndex > startAttachIndex, "Auto-BCD muss seinen analysierten Frame vor AddEvent bekommen.");
+        Assert.True(endAttachIndex >= 0 && endAddIndex > endAttachIndex, "Auto-BCE muss seinen analysierten Frame vor AddEvent bekommen.");
     }
 
     [Fact]
@@ -415,7 +414,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var workflow = ReadUiFile("Ai", "CodingEventSeekCommandWorkflow.cs");
-        var seekBody = ExtractMethodBody(coding, "private void CodingEventSeek_Click");
+        var seekBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Events.Actions.cs");
 
         Assert.Contains("CodingEventSeekCommandWorkflow.Execute", seekBody);
         Assert.Contains("CodingEventSeekPolicy.TryGetSeekMilliseconds(selectedEvent", workflow);
@@ -427,7 +426,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var workflow = ReadUiFile("Ai", "CodingImportEventSeekCommandWorkflow.cs");
-        var seekBody = ExtractMethodBody(coding, "private void SeekToImportEvent(object? selectedItem)");
+        var seekBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
 
         Assert.Contains("CodingImportEventSeekCommandWorkflow.Execute", seekBody);
         Assert.Contains("CodingEventSeekPolicy.TryGetSeekMilliseconds(importEvent", workflow);
@@ -439,7 +438,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var workflow = ReadUiFile("Ai", "CodingTakePhotoCommandWorkflow.cs");
-        var photoBody = ExtractMethodBody(coding, "private void CodingTakePhotoForSelectedEvent");
+        var photoBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Photos.cs");
 
         var timeIndex = workflow.IndexOf("actions.GetCurrentPlayerTimestamp()", StringComparison.Ordinal);
         var scopeIndex = workflow.IndexOf("actions.ApplyPhotoTimestamp", StringComparison.Ordinal);
@@ -487,7 +486,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var coding = ReadCodingPartials();
         var workflow = ReadUiFile("Ai", "CodingProtocolMatchCommandWorkflow.cs");
-        var runBody = ExtractMethodBody(coding, "private void RunCodingProtocolMatch()");
+        var runBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.cs");
 
         Assert.Contains("using AuswertungPro.Next.Application.Ai.Evaluation;", coding);
         Assert.Contains("private CodingProtocolMatchStateController _codingProtocolMatchState => _codingProtocolStates.ProtocolMatchState", coding);
@@ -516,9 +515,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     public void Player_green_match_training_button_reuses_import_confirm_core()
     {
         var coding = ReadCodingPartials();
-        var importConfirmBody = ExtractMethodBody(coding, "private async Task HandleImportConfirmAsync");
-        var greenBody = ExtractMethodBody(coding, "private async Task HandleCodingAcceptGreenMatchesAsync");
-        var coreBody = ExtractMethodBody(coding, "private async Task<bool> ConfirmImportAsTrainingAsync");
+        var importConfirmBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
+        var greenBody = importConfirmBody;
+        var coreBody = importConfirmBody;
         var acceptGreenCommandWorkflow = ReadUiFile("Ai", "CodingAcceptGreenMatchesCommandWorkflow.cs");
         var importConfirmCommandWorkflow = ReadUiFile("Ai", "CodingImportConfirmCommandWorkflow.cs");
         var importTrainingResultWorkflow = ReadUiFile("Ai", "CodingImportTrainingResultWorkflow.cs");
@@ -570,13 +569,13 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
     private static string ReadUiFile(params string[] relativeParts)
     {
-        var path = RepoFile(new[] { "src", "AuswertungPro.Next.UI" }.Concat(relativeParts).ToArray());
+        var path = TestRepoPaths.RepoFile(new[] { "src", "AuswertungPro.Next.UI" }.Concat(relativeParts).ToArray());
         return File.ReadAllText(path);
     }
 
     private static string ReadCodingPartials()
     {
-        var dir = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var dir = TestRepoPaths.RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows");
         var files = Directory.GetFiles(dir, "PlayerWindow.Coding*.cs")
             .Where(path => !Path.GetFileName(path).Contains("SidePanelAccessors", StringComparison.Ordinal))
             .OrderBy(path => path, StringComparer.Ordinal);
@@ -611,25 +610,6 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
             .Where(index => index >= 0)
             .DefaultIfEmpty(-1)
             .Min();
-    }
-
-    private static void AssertBoundaryFrameAttachedBeforeAddEvent(string methodBody)
-    {
-        var attachIndex = FirstIndexOf(
-            methodBody,
-            "AttachBoundaryAnalyzedFramePhoto(entry, analyzedFrameBytes)",
-            "AttachBoundaryAnalyzedFramePhoto(draft.Entry, analyzedFrameBytes)",
-            "actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, frameBytes)",
-            "actions.AttachBoundaryAnalyzedFramePhoto(draft.Entry, request.AnalyzedFrameBytes)");
-        var addIndex = FirstIndexOf(
-            methodBody,
-            "_codingSessionService.AddEvent(entry)",
-            "_codingSessionService.AddEvent(draft.Entry)",
-            "CodingBoundaryEventAppender.Apply");
-
-        Assert.True(attachIndex >= 0, "Auto-BCD/BCE muessen ihren eigenen analysierten Frame bekommen.");
-        Assert.True(addIndex >= 0, "Test erwartet AddEvent im Boundary-Pfad.");
-        Assert.True(attachIndex < addIndex, "Boundary-Frame muss vor AddEvent am ProtocolEntry haengen.");
     }
 
     private static int CountOccurrences(string source, string needle)

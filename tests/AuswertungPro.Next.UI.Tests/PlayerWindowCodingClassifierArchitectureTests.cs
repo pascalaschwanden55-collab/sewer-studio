@@ -1,5 +1,5 @@
 using System.IO;
-using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
+using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 

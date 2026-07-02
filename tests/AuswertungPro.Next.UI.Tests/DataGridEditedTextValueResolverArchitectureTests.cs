@@ -7,7 +7,7 @@ public sealed class DataGridEditedTextValueResolverArchitectureTests
     [Fact]
     public void DataPage_uses_shared_edited_text_resolver()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml.cs"));
 
         Assert.Contains("DataGridEditedTextValueResolver.Resolve(", source, StringComparison.Ordinal);
@@ -19,7 +19,7 @@ public sealed class DataGridEditedTextValueResolverArchitectureTests
     [Fact]
     public void SchaechtePage_uses_shared_edited_text_resolver()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "SchaechtePage.xaml.cs"));
 
         Assert.Contains("DataGridEditedTextValueResolver.TryResolve(", source, StringComparison.Ordinal);

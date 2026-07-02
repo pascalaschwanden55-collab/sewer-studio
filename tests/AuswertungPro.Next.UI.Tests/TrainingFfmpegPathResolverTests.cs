@@ -1,6 +1,6 @@
 using System.IO;
 using AuswertungPro.Next.UI.ViewModels.Windows;
-using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
+using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 

@@ -1,6 +1,6 @@
 using System.IO;
 using System.Text.RegularExpressions;
-using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
+using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 

@@ -9,7 +9,7 @@ public sealed class VsaCodeExplorerWindowDispatcherTests
     public void View_model_property_changes_are_dispatched_without_blocking_caller()
     {
         var source = File.ReadAllText(Path.Combine(
-            SourceTextTestHelpers.FindRepositoryRoot(),
+            TestRepoPaths.FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Views",

@@ -30,7 +30,7 @@ public sealed class DataGridStandardTextColumnFactoryTests
     public void DataPageColumnFactory_delegates_standard_text_columns_to_factory()
     {
         var source = File.ReadAllText(Path.Combine(
-            SourceTextTestHelpers.FindRepositoryRoot(),
+            TestRepoPaths.FindRepositoryRoot(),
             "src",
             "AuswertungPro.Next.UI",
             "Views",

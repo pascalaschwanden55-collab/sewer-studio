@@ -7,7 +7,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Layer_boundary_fitness_tests_live_in_fitness_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var fitness = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "ArchitectureFitnessTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -20,7 +20,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Schaechte_architecture_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "SchaechtePageArchitectureGuardTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -42,7 +42,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_controller_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowControllerArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -62,7 +62,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_wiring_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowWiringArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -75,7 +75,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_core_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCoreArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -98,7 +98,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_snapshot_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowSnapshotArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -121,7 +121,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_runtime_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowRuntimeArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -146,7 +146,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_state_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingStateArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -170,7 +170,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_tool_selection_guard_lives_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingToolSelectionArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -186,7 +186,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_schema_overlay_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowSchemaOverlayArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -209,7 +209,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_calibration_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingCalibrationArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -235,7 +235,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_lifecycle_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingLifecycleArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -261,7 +261,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_timeline_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingTimelineArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -284,7 +284,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_navigation_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingNavigationArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -307,7 +307,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_overlay_host_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowOverlayHostArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -332,7 +332,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_overlay_cleanup_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowOverlayCleanupArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -355,7 +355,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_overlay_rendering_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowOverlayRenderingArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -389,7 +389,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_visual_infrastructure_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowVisualInfrastructureArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -412,7 +412,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_media_infrastructure_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowMediaInfrastructureArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -433,7 +433,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_playback_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowPlaybackArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -464,7 +464,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_timeline_host_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowTimelineHostArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -490,7 +490,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_keyboard_action_guard_lives_in_keyboard_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowKeyboardArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -506,7 +506,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_toggle_button_guard_lives_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowToggleButtonArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -522,7 +522,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_timer_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowTimerArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -543,7 +543,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_statistics_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingStatisticsArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -556,7 +556,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_protocol_event_mapping_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowProtocolEventMappingArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -577,7 +577,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_protocol_pdf_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowProtocolPdfArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -590,7 +590,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_primary_damage_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowPrimaryDamageArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -610,7 +610,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_shell_project_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowShellProjectArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -623,7 +623,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_inline_evidence_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowInlineEvidenceArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -636,7 +636,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_stretch_damage_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowStretchDamageArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -661,7 +661,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_overlay_input_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowOverlayInputArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -694,7 +694,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_live_detection_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowLiveDetectionArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -720,7 +720,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_live_detection_confirmation_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowLiveDetectionConfirmationArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -736,7 +736,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_ai_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingAiArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -763,7 +763,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_catalog_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focused = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingCatalogArchitectureTests.cs"));
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -776,7 +776,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_classifier_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingClassifierArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -800,7 +800,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_multi_model_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingMultiModelArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -828,7 +828,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_ai_events_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingAiEventsArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -852,7 +852,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_boundary_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingBoundaryArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -875,7 +875,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_live_detection_marking_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowLiveDetectionMarkingArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -905,7 +905,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_inline_defect_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowInlineDefectArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -932,7 +932,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_photo_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingPhotoArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -960,7 +960,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_training_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingTrainingArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -976,7 +976,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_import_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingImportArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -992,7 +992,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_events_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingEventsArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1018,7 +1018,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_protocol_match_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingProtocolMatchArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1044,7 +1044,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_apply_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingApplyArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1060,7 +1060,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_event_actions_guards_live_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingEventActionsArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1076,7 +1076,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_explorer_entry_edit_guard_lives_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowExplorerEntryEditArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1092,7 +1092,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_vsa_code_explorer_guard_lives_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowVsaCodeExplorerArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1108,7 +1108,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_live_ai_status_guard_lives_in_coding_ai_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingAiArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1122,7 +1122,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_confirmation_action_guard_lives_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingConfirmationArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1138,7 +1138,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_confirmation_panel_guard_lives_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingConfirmationArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1152,7 +1152,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_confirmation_playback_guard_lives_in_focused_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingConfirmationArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1166,7 +1166,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_coding_interaction_playback_guard_lives_in_playback_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowPlaybackArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1180,7 +1180,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_live_detection_stop_playback_guard_lives_in_live_detection_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowLiveDetectionArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1194,7 +1194,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_live_ai_timer_gate_guard_lives_in_coding_ai_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingAiArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1208,7 +1208,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_live_ai_timer_interval_guard_lives_in_coding_ai_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingAiArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1222,7 +1222,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [Fact]
     public void Player_window_live_ai_timer_wiring_guard_lives_in_coding_ai_suite()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingAiArchitectureTests.cs");
         var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
 
@@ -1326,7 +1326,7 @@ public sealed class SourceTextArchitectureHygieneTests
     public void Focused_architecture_tests_use_shared_source_text_helpers(string fileName)
     {
         var source = File.ReadAllText(Path.Combine(
-            SourceTextTestHelpers.FindRepositoryRoot(),
+            TestRepoPaths.FindRepositoryRoot(),
             "tests",
             "AuswertungPro.Next.UI.Tests",
             fileName));
@@ -1336,7 +1336,5 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.DoesNotContain("private static string FindRepoFile", source);
         Assert.DoesNotContain("private static string RepoFile", source);
         Assert.DoesNotContain("internal static string RepoFile", source);
-        Assert.DoesNotContain("private static string ExtractMethod(", source);
-        Assert.DoesNotContain("private static string ExtractMethodBody", source);
     }
 }

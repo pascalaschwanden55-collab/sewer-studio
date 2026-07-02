@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai;
-using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
+using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 

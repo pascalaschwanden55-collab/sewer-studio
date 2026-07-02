@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Data;
 using AuswertungPro.Next.UI.Views.Pages;
 using Xunit;
-using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
+using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 

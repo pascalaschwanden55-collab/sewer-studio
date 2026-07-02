@@ -58,7 +58,7 @@ public sealed class DataGridColorCellStyleFactoryTests
     [Fact]
     public void DataPage_and_SchaechtePage_delegate_color_style_selection()
     {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var root = TestRepoPaths.FindRepositoryRoot();
         var pagesRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages");
         var dataPageSetup = File.ReadAllText(Path.Combine(pagesRoot, "DataPageColumnSetup.cs"));
         var schaechtePage = File.ReadAllText(Path.Combine(pagesRoot, "SchaechtePage.xaml.cs"));
