@@ -6,6 +6,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
@@ -251,7 +252,7 @@ public sealed class PdfProtocolExtractor
                     "AuswertungPro", "diag");
                 Directory.CreateDirectory(diagDir);
                 var safeName = Regex.Replace(Path.GetFileNameWithoutExtension(path), @"[^\w\-]", "_");
-                File.WriteAllText(
+                AtomicTextFileWriter.WriteAllText(
                     Path.Combine(diagDir, $"pdf_text_{safeName}.txt"),
                     text);
             }
