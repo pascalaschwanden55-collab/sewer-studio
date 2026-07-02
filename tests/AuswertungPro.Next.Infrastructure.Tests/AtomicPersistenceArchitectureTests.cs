@@ -22,6 +22,8 @@ public sealed class AtomicPersistenceArchitectureTests
         var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), relativePath));
 
         Assert.DoesNotContain("File.WriteAllText(", source, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("File.WriteAllLines(", source, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("File.WriteAllLinesAsync(", source, System.StringComparison.Ordinal);
         Assert.Contains("AtomicTextFileWriter.WriteAllText", source, System.StringComparison.Ordinal);
     }
 

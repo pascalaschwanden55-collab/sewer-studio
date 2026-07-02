@@ -105,7 +105,8 @@ public static class VsaYoloClassMap
             .OrderBy(kv => kv.Value)
             .Select(kv => kv.Key)
             .ToArray();
-        await File.WriteAllLinesAsync(outputPath, lines);
+        await AtomicTextFileWriter.WriteAllTextAsync(outputPath, BuildClassesText(lines))
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -176,11 +177,16 @@ public static class VsaYoloClassMap
             // Auto-Export classes.txt neben yolo_class_map.json (fuer YOLO-Training)
             var classesPath = Path.Combine(Path.GetDirectoryName(path)!, "classes.txt");
             var lines = _map!.OrderBy(kv => kv.Value).Select(kv => kv.Key).ToArray();
-            File.WriteAllLines(classesPath, lines);
+            AtomicTextFileWriter.WriteAllText(classesPath, BuildClassesText(lines));
         }
         catch
         {
             // Stilles Fehlschlagen — Mapping funktioniert im Speicher weiter
         }
     }
+
+    private static string BuildClassesText(IReadOnlyCollection<string> lines)
+        => lines.Count == 0
+            ? string.Empty
+            : string.Join(Environment.NewLine, lines) + Environment.NewLine;
 }
