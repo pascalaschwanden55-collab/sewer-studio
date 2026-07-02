@@ -8,6 +8,7 @@ public sealed class AtomicPersistenceArchitectureTests
     public static TheoryData<string> DirectOverwriteTargets => new()
     {
         Path.Combine("src", "AuswertungPro.Next.Application", "Protocol", "JsonCodeCatalogProvider.cs"),
+        Path.Combine("src", "AuswertungPro.Next.Application", "Ai", "Training", "StageAExporter.cs"),
         Path.Combine("src", "AuswertungPro.Next.Application", "Import", "ImportRunReportExporter.cs"),
         Path.Combine("src", "AuswertungPro.Next.Application", "Common", "ProjectFileLocator.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "MeasureRecommendationService.cs"),
@@ -27,6 +28,7 @@ public sealed class AtomicPersistenceArchitectureTests
         var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), relativePath));
 
         Assert.DoesNotContain("File.WriteAllText(", source, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("File.WriteAllTextAsync(", source, System.StringComparison.Ordinal);
         Assert.DoesNotContain("File.WriteAllLines(", source, System.StringComparison.Ordinal);
         Assert.DoesNotContain("File.WriteAllLinesAsync(", source, System.StringComparison.Ordinal);
         Assert.Contains("AtomicTextFileWriter.WriteAllText", source, System.StringComparison.Ordinal);

@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Protocol;
 
 namespace AuswertungPro.Next.Application.Ai.Training;
@@ -134,7 +135,7 @@ public sealed class StageAExporter
                 .ConfigureAwait(false);
 
             cleanSamplesPath = Path.Combine(options.OutputRoot, "clean_training_samples.json");
-            await File.WriteAllTextAsync(
+            await AtomicTextFileWriter.WriteAllTextAsync(
                     cleanSamplesPath,
                     JsonSerializer.Serialize(exported.CleanSamples, JsonOptions),
                     cancellationToken)
@@ -342,7 +343,7 @@ public sealed class StageAExporter
                     File.Copy(sample.FramePath, imagePath, overwrite: true);
 
                     var label = BuildYoloLabelLine(item.ClassId, sample);
-                    await File.WriteAllTextAsync(labelPath, label + Environment.NewLine, ct)
+                    await AtomicTextFileWriter.WriteAllTextAsync(labelPath, label + Environment.NewLine, ct)
                         .ConfigureAwait(false);
 
                     var clone = CloneSample(sample);
@@ -372,7 +373,8 @@ public sealed class StageAExporter
             $"names: [{string.Join(", ", classNames.Select(c => $"'{c}'"))}]",
         };
 
-        File.WriteAllLines(yamlPath, lines, Encoding.UTF8);
+        var content = string.Join(Environment.NewLine, lines) + Environment.NewLine;
+        AtomicTextFileWriter.WriteAllText(yamlPath, content, Encoding.UTF8);
         return yamlPath;
     }
 
@@ -417,7 +419,7 @@ public sealed class StageAExporter
             classes = classCounts,
         };
 
-        await File.WriteAllTextAsync(
+        await AtomicTextFileWriter.WriteAllTextAsync(
                 manifestPath,
                 JsonSerializer.Serialize(manifest, JsonOptions),
                 cancellationToken)
