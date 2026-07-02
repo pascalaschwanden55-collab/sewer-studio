@@ -268,4 +268,110 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.Contains("public int SuspendDepth", stateController);
         Assert.Contains("public void ResetSuspendState", stateController);
     }
+
+    [Fact]
+    public void PlayerWindow_overlay_input_create_event_state_uses_controls_adapter()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOverlayInputControls.cs");
+        var relevantPartials = new[]
+        {
+            "PlayerWindow.Coding.cs",
+            "PlayerWindow.Coding.AiEvents.cs",
+            "PlayerWindow.Coding.OverlayInput.Viewport.cs",
+            "PlayerWindow.Coding.OverlayInput.Visibility.cs",
+            "PlayerWindow.Coding.OverlayInput.Tools.cs",
+            "PlayerWindow.Coding.OverlayInput.Standard.cs",
+            "PlayerWindow.Coding.OverlayInput.Schema.cs",
+            "PlayerWindow.Coding.OverlayInput.Calibration.cs",
+            "PlayerWindow.Coding.OverlayInput.MultiPoint.cs",
+            "PlayerWindow.Coding.Eingabemarker.cs",
+            "PlayerWindow.Keyboard.cs"
+        };
+
+        Assert.True(File.Exists(controlsPath), "OverlayInput-Toollabel und Create-Event-Button sollen ausserhalb der PlayerWindow-Partials gesetzt werden.");
+
+        var joinedPartials = string.Join(
+            Environment.NewLine,
+            relevantPartials.Select(file => File.ReadAllText(Path.Combine(windowsRoot, file))));
+        var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
+
+        Assert.Contains("CodingOverlayInputControls.ApplyActiveToolSelection", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.SetCreateEventEnabled", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.CaptureCanvasMouse", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.ReleaseCanvasMouse", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.GetCanvasSize", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.SetCanvasSize", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.GetCanvasActualSize", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.IsCanvasMouseCaptured", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.IsPopupOpen", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.OpenPopup", joinedPartials);
+        Assert.Contains("CodingOverlayInputControls.ClosePopup", joinedPartials);
+        Assert.DoesNotContain("TxtActiveToolLabel.Text =", joinedPartials);
+        Assert.DoesNotContain("BtnCodingCreateEvent.IsEnabled =", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.CaptureMouse", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.ReleaseMouseCapture", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.Width", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.Height", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.ActualWidth", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.ActualHeight", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayCanvas.IsMouseCaptured", joinedPartials);
+        Assert.DoesNotContain("CodingOverlayPopup.IsOpen", joinedPartials);
+        Assert.DoesNotContain("ToolsDropdownPopup.IsOpen", joinedPartials);
+        Assert.Contains("public static class CodingOverlayInputControls", controls);
+        Assert.Contains("public static void ApplyActiveToolSelection", controls);
+        Assert.Contains("public static void SetCreateEventEnabled", controls);
+        Assert.Contains("public static void CaptureCanvasMouse", controls);
+        Assert.Contains("public static void ReleaseCanvasMouse", controls);
+        Assert.Contains("public static Size GetCanvasSize", controls);
+        Assert.Contains("public static void SetCanvasSize", controls);
+        Assert.Contains("public static Size GetCanvasActualSize", controls);
+        Assert.Contains("public static bool IsCanvasMouseCaptured", controls);
+        Assert.Contains("public static bool IsPopupOpen", controls);
+        Assert.Contains("public static void OpenPopup", controls);
+        Assert.Contains("public static void ClosePopup", controls);
+    }
+
+    [Fact]
+    public void PlayerWindow_overlay_viewport_mapping_lives_in_viewport_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
+        var viewportPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Viewport.cs");
+        var refreshWorkflowPath = Path.Combine(uiRoot, "Player", "CodingOverlayViewportRefreshWorkflow.cs");
+        var redrawWorkflowPath = Path.Combine(uiRoot, "Player", "CodingCanvasRedrawWorkflow.cs");
+
+        Assert.True(File.Exists(viewportPath), "Overlay-Viewport-Mapping soll aus dem allgemeinen OverlayInput-Partial heraus.");
+        Assert.True(File.Exists(refreshWorkflowPath), "Overlay-Viewport-Refresh-Entscheidung soll ausserhalb von PlayerWindow orchestriert werden.");
+        Assert.True(File.Exists(redrawWorkflowPath), "Canvas-Redraw-Reihenfolge soll ausserhalb von PlayerWindow orchestriert werden.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var viewport = File.ReadAllText(viewportPath);
+        var refreshWorkflow = File.Exists(refreshWorkflowPath) ? File.ReadAllText(refreshWorkflowPath) : "";
+        var redrawWorkflow = File.ReadAllText(redrawWorkflowPath);
+
+        Assert.DoesNotContain("private Rect GetCodingContentRect", overlayInput);
+        Assert.DoesNotContain("private NormalizedPoint CodingPixelToNorm", overlayInput);
+        Assert.DoesNotContain("private Point CodingNormToPixel", overlayInput);
+        Assert.DoesNotContain("private void RedrawCodingCanvas", overlayInput);
+        Assert.Contains("private Rect GetCodingContentRect", viewport);
+        Assert.Contains("CodingOverlayViewportMapper.GetContentRect", viewport);
+        Assert.Contains("CodingOverlayViewportRefreshWorkflow.Execute", viewport);
+        Assert.DoesNotContain("if (CodingOverlayCanvas.ActualWidth <= 0 || CodingOverlayCanvas.ActualHeight <= 0)", viewport);
+        Assert.Contains("if (request.ActualWidth <= 0 || request.ActualHeight <= 0)", refreshWorkflow);
+        Assert.Contains("actions.UpdateViewport()", refreshWorkflow);
+        Assert.Contains("_codingOverlayRenderController.ClearTransient", viewport);
+        Assert.Contains("_codingSessionHost", viewport);
+        Assert.DoesNotContain("_codingVm", viewport);
+        Assert.Contains("private void RedrawCodingCanvas", viewport);
+        Assert.Contains("CodingCanvasRedrawWorkflow.Execute", viewport);
+        Assert.DoesNotContain("if (_codingSchemaManager.IsActive)", viewport);
+        Assert.DoesNotContain("else if (includeManualOverlay", viewport);
+        Assert.Contains("actions.RenderActiveSchema()", redrawWorkflow);
+        Assert.Contains("actions.RenderManualOverlay()", redrawWorkflow);
+    }
 }
