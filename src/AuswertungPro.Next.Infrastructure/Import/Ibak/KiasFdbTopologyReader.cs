@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using FirebirdSql.Data.FirebirdClient;
@@ -134,25 +136,7 @@ public static class KiasFdbTopologyReader
                   FROM GISOBJECT
                   WHERE DISCRIM IN ('Lt','Sc') AND OBJ_NAME IS NOT NULL", conn);
             using var r = cmd.ExecuteReader();
-            while (r.Read())
-            {
-                var name = (r.GetValue(0)?.ToString() ?? "").Trim();
-                if (string.IsNullOrWhiteSpace(name))
-                    continue;
-
-                var discrim = (r.GetValue(1)?.ToString() ?? "").Trim();
-                double? len = r.IsDBNull(2) ? null : Convert.ToDouble(r.GetValue(2));
-                int? ph = r.IsDBNull(3) ? null : (int)Math.Round(Convert.ToDouble(r.GetValue(3)));
-                int? pw = r.IsDBNull(4) ? null : (int)Math.Round(Convert.ToDouble(r.GetValue(4)));
-                string? str3 = r.IsDBNull(5) ? null : (r.GetValue(5)?.ToString() ?? "").Trim();
-                string? str5 = r.IsDBNull(6) ? null : (r.GetValue(6)?.ToString() ?? "").Trim();
-                if (string.IsNullOrWhiteSpace(str3)) str3 = null;
-                if (string.IsNullOrWhiteSpace(str5)) str5 = null;
-
-                var key = name.Replace(" ", "");
-                if (!result.ContainsKey(key))
-                    result[key] = new StammdatenEntry(name, discrim, len, ph, pw, str3, str5);
-            }
+            result = ReadStammdatenRows(r, messages);
         }
         catch (Exception ex)
         {
@@ -160,6 +144,110 @@ public static class KiasFdbTopologyReader
         }
 
         return result;
+    }
+
+    private static Dictionary<string, StammdatenEntry> ReadStammdatenRows(DbDataReader r, List<string>? messages)
+    {
+        var result = new Dictionary<string, StammdatenEntry>(StringComparer.OrdinalIgnoreCase);
+        var badRows = 0;
+
+        while (r.Read())
+        {
+            var name = ReadText(r, 0);
+            if (string.IsNullOrWhiteSpace(name))
+                continue;
+
+            if (!TryReadNullableDouble(r, 2, out var len)
+                || !TryReadNullableRoundedInt(r, 3, out var ph)
+                || !TryReadNullableRoundedInt(r, 4, out var pw))
+            {
+                badRows++;
+                continue;
+            }
+
+            var discrim = ReadText(r, 1) ?? string.Empty;
+            var str3 = ReadText(r, 5);
+            var str5 = ReadText(r, 6);
+
+            var key = name.Replace(" ", "");
+            if (!result.ContainsKey(key))
+                result[key] = new StammdatenEntry(name, discrim, len, ph, pw, str3, str5);
+        }
+
+        if (badRows > 0)
+            messages?.Add($"KIAS-FDB: {badRows} fehlerhafte Stammdaten-Zeile(n) uebersprungen.");
+
+        return result;
+    }
+
+    private static string? ReadText(DbDataReader r, int ordinal)
+    {
+        if (r.IsDBNull(ordinal))
+            return null;
+
+        var text = (r.GetValue(ordinal)?.ToString() ?? string.Empty).Trim();
+        return string.IsNullOrWhiteSpace(text) ? null : text;
+    }
+
+    private static bool TryReadNullableRoundedInt(DbDataReader r, int ordinal, out int? value)
+    {
+        if (!TryReadNullableDouble(r, ordinal, out var number))
+        {
+            value = null;
+            return false;
+        }
+
+        value = number.HasValue ? (int)Math.Round(number.Value) : null;
+        return true;
+    }
+
+    private static bool TryReadNullableDouble(DbDataReader r, int ordinal, out double? value)
+    {
+        value = null;
+        if (r.IsDBNull(ordinal))
+            return true;
+
+        var raw = r.GetValue(ordinal);
+        if (raw is null)
+            return true;
+
+        switch (raw)
+        {
+            case double d:
+                value = d;
+                return true;
+            case float f:
+                value = f;
+                return true;
+            case decimal m:
+                value = decimal.ToDouble(m);
+                return true;
+            case byte or sbyte or short or ushort or int or uint or long or ulong:
+                value = Convert.ToDouble(raw, CultureInfo.InvariantCulture);
+                return true;
+            case string s:
+                var normalized = s.Trim();
+                if (string.IsNullOrWhiteSpace(normalized))
+                    return true;
+                if (normalized.Contains(',') && !normalized.Contains('.'))
+                    normalized = normalized.Replace(',', '.');
+                if (double.TryParse(normalized, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
+                {
+                    value = parsed;
+                    return true;
+                }
+                return false;
+            default:
+                try
+                {
+                    value = Convert.ToDouble(raw, CultureInfo.InvariantCulture);
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+        }
     }
 
     private static string? FindFdb(string exportRoot)
