@@ -350,7 +350,9 @@ public sealed class SourceTextArchitectureHygieneTests
         {
             "PlayerWindow_active_schema_rendering_delegates_to_render_controller",
             "PlayerWindow_coding_overlay_rendering_lives_in_controller",
-            "PlayerWindow_level_overlay_rendering_lives_in_level_partial"
+            "PlayerWindow_level_overlay_rendering_lives_in_level_partial",
+            "PlayerWindow_active_schema_rendering_lives_in_active_partial",
+            "PlayerWindow_reference_dn_rendering_lives_in_renderer"
         };
 
         foreach (var methodName in methodNames)

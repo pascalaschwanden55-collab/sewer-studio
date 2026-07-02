@@ -9,69 +9,6 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class UiArchitectureGuardTests
 {
     [Fact]
-    public void PlayerWindow_active_schema_rendering_lives_in_active_partial()
-    {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.cs");
-        var activePath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.Active.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingActiveSchemaRenderWorkflow.cs");
-        var rendererPath = Path.Combine(uiRoot, "Player", "CodingSchemaOverlayRenderer.cs");
-
-        Assert.True(File.Exists(activePath), "Aktive Schema-Vorschau soll aus dem allgemeinen Schema-Rendering-Partial heraus.");
-        Assert.True(File.Exists(workflowPath), "Aktive Schema-Render-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
-        Assert.True(File.Exists(rendererPath), "Schema-Canvas-Helfer sollen ausserhalb der PlayerWindow-Partials liegen.");
-
-        var schema = File.ReadAllText(schemaPath);
-        var active = File.ReadAllText(activePath);
-        var renderer = File.ReadAllText(rendererPath);
-
-        Assert.DoesNotContain("private void RenderActiveCodingSchema", schema);
-        Assert.DoesNotContain("private void RenderSchemaPipeReference", schema);
-        Assert.DoesNotContain("private void AddSchemaLabel", schema);
-        Assert.Contains("private void RenderActiveCodingSchema", active);
-        Assert.Contains("CodingActiveSchemaRenderWorkflow.Execute", active);
-        Assert.DoesNotContain("case PipeBendSchema bend", active);
-        Assert.DoesNotContain("case FillLevelSchema fill", active);
-        Assert.DoesNotContain("case IntrusionSchema intrusion", active);
-        Assert.Contains("public static class CodingSchemaOverlayRenderer", renderer);
-        Assert.Contains("AddPipeReference", renderer);
-        Assert.Contains("AddLabel", renderer);
-    }
-
-    [Fact]
-    public void PlayerWindow_reference_dn_rendering_lives_in_renderer()
-    {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.OverlayRendering.Schema.cs");
-        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
-        var rendererPath = Path.Combine(uiRoot, "Player", "ReferenceDnOverlayRenderer.cs");
-        var stateControllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayRenderStateController.cs");
-
-        Assert.True(File.Exists(rendererPath), "Ref-DN-Canvas-Rendering soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(stateControllerPath), "Ref-DN-Sichtbarkeit soll in einem kleinen Overlay-Render-State liegen.");
-
-        var schema = File.ReadAllText(schemaPath);
-        var state = File.ReadAllText(statePath);
-        var renderer = File.ReadAllText(rendererPath);
-        var stateController = File.Exists(stateControllerPath) ? File.ReadAllText(stateControllerPath) : "";
-
-        Assert.Contains("_codingOverlayRenderController.RenderReferenceDn", schema);
-        Assert.Contains("_codingOverlayRenderState.ShowReferenceDn", schema);
-        Assert.Contains("_codingOverlayRenderState", state);
-        Assert.DoesNotContain("_showReferenceDn", schema + state);
-        Assert.DoesNotContain("ReferenceDnGeometry.BuildCircleRect", schema);
-        Assert.DoesNotContain("Ref: DN", schema);
-        Assert.Contains("public static class ReferenceDnOverlayRenderer", renderer);
-        Assert.Contains("ReferenceDnGeometry.BuildCircleRect", renderer);
-        Assert.Contains("new System.Windows.Shapes.Ellipse", renderer);
-        Assert.Contains("public void ShowReferenceDiameter", stateController);
-    }
-
-    [Fact]
     public void PlayerWindow_arc_overlay_rendering_lives_in_renderer()
     {
         var root = FindRepositoryRoot();
