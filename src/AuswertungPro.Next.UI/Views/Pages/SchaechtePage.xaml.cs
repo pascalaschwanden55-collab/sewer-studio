@@ -535,14 +535,16 @@ public partial class SchaechtePage : UserControl
         if (!DataGridEditedTextValueResolver.TryResolve(e.EditingElement, out var value))
             return;
 
-        string? oldShaftNumber = null;
         if (string.Equals(recordField, "Schachtnummer", StringComparison.Ordinal))
-            oldShaftNumber = record.GetFieldValue("Schachtnummer");
-
-        record.SetFieldValue(recordField, value);
-
-        if (string.Equals(recordField, "Schachtnummer", StringComparison.Ordinal))
-            PdfCorrectionMetadata.RegisterShaftRename(GetCurrentProject(), oldShaftNumber, value);
+        {
+            var oldShaftNumber = record.GetFieldValue("Schachtnummer");
+            if (!ApplySchachtNumberChange(record, oldShaftNumber, value))
+                return;
+        }
+        else
+        {
+            record.SetFieldValue(recordField, value);
+        }
 
         if (_vm is not null)
         {
@@ -798,14 +800,16 @@ public partial class SchaechtePage : UserControl
     private void CommitSchachtDetailField(SchachtRecord record, string recordField, string? value)
     {
         var next = value ?? string.Empty;
-        string? oldShaftNumber = null;
         if (string.Equals(recordField, "Schachtnummer", StringComparison.Ordinal))
-            oldShaftNumber = record.GetFieldValue("Schachtnummer");
-
-        record.SetFieldValue(recordField, next);
-
-        if (string.Equals(recordField, "Schachtnummer", StringComparison.Ordinal))
-            PdfCorrectionMetadata.RegisterShaftRename(GetCurrentProject(), oldShaftNumber, next);
+        {
+            var oldShaftNumber = record.GetFieldValue("Schachtnummer");
+            if (!ApplySchachtNumberChange(record, oldShaftNumber, next))
+                return;
+        }
+        else
+        {
+            record.SetFieldValue(recordField, next);
+        }
 
         if (_vm is not null)
         {
@@ -816,6 +820,57 @@ public partial class SchaechtePage : UserControl
 
         MarkProjectDirty();
         ApplySearchFilter();
+    }
+
+    private bool ApplySchachtNumberChange(SchachtRecord record, string? oldValue, string? newValue)
+    {
+        var oldNumber = oldValue ?? string.Empty;
+        var newNumber = newValue ?? string.Empty;
+        if (string.Equals(oldNumber, newNumber, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var projectPath = Services.Settings.LastProjectPath;
+        var renameResult = ShaftRenameService.Rename(record, oldNumber, newNumber, projectPath);
+        if (!renameResult.Success)
+        {
+            DialogHost.Current.Error($"Umbenennen fehlgeschlagen:\n{renameResult.ErrorMessage}", "Umbenennen");
+            return false;
+        }
+
+        record.SetFieldValue("Schachtnummer", newNumber);
+        PdfCorrectionMetadata.RegisterShaftRename(GetCurrentProject(), oldNumber, newNumber);
+
+        var pdfSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void CollectPdf(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                return;
+
+            foreach (var part in raw.Split(';', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var resolved = ProjectPathResolver.ResolveFilePath(part.Trim(), projectPath);
+                if (!string.IsNullOrWhiteSpace(resolved)
+                    && resolved.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                {
+                    pdfSet.Add(resolved);
+                }
+            }
+        }
+
+        CollectPdf(record.GetFieldValue(FieldKeys.PdfPath));
+        CollectPdf(record.GetFieldValue(FieldKeys.PdfAll));
+        CollectPdf(record.GetFieldValue(FieldKeys.PdfEigen));
+        CollectPdf(record.GetFieldValue(FieldKeys.Link));
+
+        if (pdfSet.Count > 0)
+        {
+            AuswertungPro.Next.Infrastructure.HoldingFolderDistributor.RewriteHoldingInPdfFiles(
+                new List<string>(pdfSet),
+                oldNumber,
+                newNumber);
+        }
+
+        return true;
     }
 
     private static void AddSchachtGroup(

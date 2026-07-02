@@ -105,4 +105,25 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.DoesNotContain("record.Fields.Any", viewModel);
         Assert.DoesNotContain("von {Records.Count} Schaechten", viewModel);
     }
+
+    [Fact]
+    public void SchaechtePage_schachtnummer_edit_uses_rename_service()
+    {
+        var root = FindRepositoryRoot();
+        var pagePath = Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "SchaechtePage.xaml.cs");
+
+        var page = File.ReadAllText(pagePath);
+
+        Assert.Contains("private bool ApplySchachtNumberChange(", page);
+        var method = ExtractMethod(page, "private bool ApplySchachtNumberChange(");
+        Assert.Contains("ShaftRenameService.Rename(", method);
+        Assert.Contains("record.SetFieldValue(\"Schachtnummer\"", method);
+        Assert.Contains("PdfCorrectionMetadata.RegisterShaftRename", method);
+    }
 }
