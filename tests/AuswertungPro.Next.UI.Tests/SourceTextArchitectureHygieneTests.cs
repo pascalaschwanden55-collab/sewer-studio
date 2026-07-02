@@ -128,6 +128,7 @@ public sealed class SourceTextArchitectureHygieneTests
         var methodNames = new[]
         {
             "PlayerWindow_detection_confirmation_buffer_owns_pending_detection_state",
+            "PlayerWindow_coding_analysis_cts_lifecycle_lives_in_helper",
             "PlayerWindow_service_provider_access_lives_behind_dependencies"
         };
 

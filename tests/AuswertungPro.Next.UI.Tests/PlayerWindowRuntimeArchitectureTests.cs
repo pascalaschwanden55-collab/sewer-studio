@@ -39,6 +39,69 @@ public sealed class PlayerWindowRuntimeArchitectureTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_analysis_cts_lifecycle_lives_in_helper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var exitPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var wiringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Wiring.cs");
+        var playbackPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Playback.Lifecycle.cs");
+        var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
+        var codingAiControllerPath = Path.Combine(uiRoot, "Player", "CodingAiController.cs");
+        var closingWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosingWorkflow.cs");
+        var closedWorkflowPath = Path.Combine(uiRoot, "Player", "PlayerWindowClosedWorkflow.cs");
+        var analysisCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAnalysisCommandWorkflow.cs");
+        var exitTeardownWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeExitTeardownWorkflow.cs");
+        var helperPath = Path.Combine(uiRoot, "Player", "CancellationTokenSourceLifecycle.cs");
+
+        Assert.True(File.Exists(helperPath), "CancellationTokenSource-Lifecycle muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(liveControllerPath), "LiveDetection-CTS-Lifecycle soll im LiveDetectionController liegen.");
+        Assert.True(File.Exists(codingAiControllerPath), "Coding-AI-Analyse-CTS-Lifecycle soll im CodingAiController liegen.");
+        Assert.True(File.Exists(closingWorkflowPath), "Closing-Cancel-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(closedWorkflowPath), "Closed-Cleanup-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(analysisCommandWorkflowPath), "Coding-Analyse-Begin/End-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(exitTeardownWorkflowPath), "Exit-Teardown-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+
+        var ai = File.ReadAllText(aiPath);
+        var exit = File.ReadAllText(exitPath);
+        var wiring = File.ReadAllText(wiringPath);
+        var playback = File.ReadAllText(playbackPath);
+        var liveController = File.ReadAllText(liveControllerPath);
+        var codingAiController = File.ReadAllText(codingAiControllerPath);
+        var closingWorkflow = File.ReadAllText(closingWorkflowPath);
+        var closedWorkflow = File.ReadAllText(closedWorkflowPath);
+        var analysisCommandWorkflow = File.ReadAllText(analysisCommandWorkflowPath);
+        var exitTeardownWorkflow = File.Exists(exitTeardownWorkflowPath) ? File.ReadAllText(exitTeardownWorkflowPath) : "";
+        var helper = File.Exists(helperPath) ? File.ReadAllText(helperPath) : "";
+        var playerWindowText = ai + exit + wiring + playback;
+
+        Assert.Contains("TryBeginAnalysis: _codingAiRuntimeOwner.Controller.TryBeginAnalysis", ai);
+        Assert.Contains("actions.TryBeginAnalysis()", analysisCommandWorkflow);
+        Assert.Contains("actions.EndAnalysis()", analysisCommandWorkflow);
+        Assert.Contains("DisposeAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation", exit);
+        Assert.Contains("actions.DisposeAnalysisCancellation()", exitTeardownWorkflow);
+        Assert.Contains("DisposeCodingAnalysisCancellation: _codingAiRuntimeOwner.Controller.DisposeAnalysisCancellation", wiring);
+        Assert.Contains("actions.DisposeCodingAnalysisCancellation()", closedWorkflow);
+        Assert.Contains("CancelLiveDetection: _liveDetectionController.CancelDetectionIfPresent", playback);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_cancellation)", liveController);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_cancellation)", liveController);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear(_cancellation)", liveController);
+        Assert.Contains("CancelCodingAnalysis: _codingAiRuntimeOwner.Controller.CancelAnalysisIfPresent", playback);
+        Assert.Contains("actions.CancelLiveDetection()", closingWorkflow);
+        Assert.Contains("actions.CancelCodingAnalysis()", closingWorkflow);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelIfPresent(_analysisCancellation)", codingAiController);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate(_analysisCancellation)", codingAiController);
+        Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear(_analysisCancellation)", codingAiController);
+        Assert.DoesNotContain("_codingAnalysisCts?.Cancel();", playerWindowText);
+        Assert.DoesNotContain("_codingAnalysisCts?.Dispose();", playerWindowText);
+        Assert.DoesNotContain("_detectionCts?.Cancel();", playerWindowText);
+        Assert.Contains("public static void CancelIfPresent", helper);
+        Assert.Contains("public static CancellationTokenSource CancelPreviousAndCreate", helper);
+        Assert.Contains("public static CancellationTokenSource? CancelDisposeAndClear", helper);
+    }
+
+    [Fact]
     public void PlayerWindow_service_provider_access_lives_behind_dependencies()
     {
         var root = FindRepositoryRoot();
