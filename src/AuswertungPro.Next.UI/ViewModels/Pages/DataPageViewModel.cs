@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AuswertungPro.Next.Application.DataPage;
@@ -861,15 +862,17 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     private ProtocolDocument EnsureProtocolDocumentForPdf(HaltungRecord record)
         => _protocolDocumentController.EnsureForPdf(record, _sp.Protocols, ResolveCodeTitle);
 
-    private async void PrintHydraulikPdf(HaltungRecord? record)
-    {
-        await _printController.PrintHydraulikPdfAsync(record);
-    }
+    private void PrintHydraulikPdf(HaltungRecord? record)
+        => PrintHydraulikPdfAsync(record).SafeFireAndForget("PrintHydraulikPdf");
 
-    private async void PrintDossierPdf(HaltungRecord? record)
-    {
-        await _printController.PrintDossierPdfAsync(_shell.Project, record);
-    }
+    private Task PrintHydraulikPdfAsync(HaltungRecord? record)
+        => _printController.PrintHydraulikPdfAsync(record);
+
+    private void PrintDossierPdf(HaltungRecord? record)
+        => PrintDossierPdfAsync(record).SafeFireAndForget("PrintDossierPdf");
+
+    private Task PrintDossierPdfAsync(HaltungRecord? record)
+        => _printController.PrintDossierPdfAsync(_shell.Project, record);
 
     private void OpenOriginalPdf(HaltungRecord? record)
     {

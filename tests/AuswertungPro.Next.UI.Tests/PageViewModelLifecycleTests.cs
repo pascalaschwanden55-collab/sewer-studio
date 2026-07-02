@@ -32,6 +32,17 @@ public sealed class PageViewModelLifecycleTests
         Assert.Contains("LiveControlRetryBridge.Reset();", source);
     }
 
+    [Fact]
+    public void DataPage_print_commands_do_not_use_async_void_handlers()
+    {
+        var source = ReadPageViewModel("DataPageViewModel.cs");
+
+        Assert.DoesNotContain("async void PrintHydraulikPdf", source);
+        Assert.DoesNotContain("async void PrintDossierPdf", source);
+        Assert.Contains("PrintHydraulikPdfAsync(record).SafeFireAndForget(\"PrintHydraulikPdf\")", source);
+        Assert.Contains("PrintDossierPdfAsync(record).SafeFireAndForget(\"PrintDossierPdf\")", source);
+    }
+
     private static string ReadPageViewModel(string fileName)
         => File.ReadAllText(RepoFile("src", "AuswertungPro.Next.UI", "ViewModels", "Pages", fileName));
 }
