@@ -200,6 +200,7 @@ public sealed class SourceTextArchitectureHygieneTests
         var focused = File.ReadAllText(focusedPath);
         var methodNames = new[]
         {
+            "PlayerWindow_coding_lifecycle_lives_in_lifecycle_partial",
             "PlayerWindow_terminal_exit_boundary_check_lives_in_policy",
             "PlayerWindow_dn_calibration_initialization_lives_in_policy",
             "PlayerWindow_haltungslaenge_fallback_lives_in_lifecycle_length_partial"
