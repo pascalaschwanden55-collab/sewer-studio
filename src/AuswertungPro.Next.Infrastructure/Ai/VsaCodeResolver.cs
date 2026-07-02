@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Domain.VsaCatalog;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
@@ -99,16 +100,8 @@ public static class VsaCodeResolver
                 return true;
         }
 
-        if (StreckenschadenCodes.Contains(normalized))
-            return true;
-
-        for (var len = normalized.Length - 1; len >= 3; len--)
-        {
-            if (StreckenschadenCodes.Contains(normalized[..len]))
-                return true;
-        }
-
-        return false;
+        // BBD = nur Präfix-Anker, kein gültiger Basiscode; die Heuristik liegt zentral im Domain-Classifier.
+        return StreckenschadenCodeClassifier.IsStreckenschadenCode(normalized);
     }
 
     /// <summary>
@@ -386,17 +379,6 @@ public static class VsaCodeResolver
 
         return false;
     }
-
-    // Bedeutungen der BB-Codes kommen aus VsaCodeTree.Groups["BB"]; dieses Set ist nur
-    // eine Streckenschaden-Heuristik und darf keine umetikettierten Fachbedeutungen tragen.
-    private static readonly HashSet<string> StreckenschadenCodes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "BABA", "BABAB", "BABAC", "BABB", "BABBA", "BABBB", "BABBC",
-        "BABC", "BABCA", "BAFA", "BAFAE", "BAFB", "BAFC", "BAFD",
-        "BAG", "BAGA", "BBA", "BBAA", "BBAB", "BBB", "BBBA",
-        // BBD = nur Präfix-Anker, kein gültiger Basiscode.
-        "BBC", "BBCA", "BBCB", "BBCC", "BBD", "BBDA", "BBDB"
-    };
 
     private static bool HasWord(string text, string word)
     {
