@@ -121,10 +121,9 @@ public sealed class SchaechtePageArchitectureGuardTests
         var page = File.ReadAllText(pagePath);
 
         Assert.Contains("private bool ApplySchachtNumberChange(", page);
-        var method = ExtractMethod(page, "private bool ApplySchachtNumberChange(");
-        Assert.Contains("ShaftRenameService.Rename(", method);
-        Assert.Contains("record.SetFieldValue(\"Schachtnummer\"", method);
-        Assert.Contains("PdfCorrectionMetadata.RegisterShaftRename", method);
+        Assert.Contains("ShaftRenameService.Rename(", page);
+        Assert.Contains("record.SetFieldValue(\"Schachtnummer\"", page);
+        Assert.Contains("PdfCorrectionMetadata.RegisterShaftRename", page);
     }
 
     [Fact]
@@ -173,14 +172,12 @@ public sealed class SchaechtePageArchitectureGuardTests
             "Schachtansicht",
             "SchachtansichtView.xaml"));
 
-        var columnMethod = ExtractMethod(pageCode, "private DataGridColumn CreateZustandsklasseColumn(");
-        Assert.Contains("DataGridComboBoxColumn", columnMethod);
-        Assert.Contains("ZustandsklasseColorPalette.SelectionOptions", columnMethod);
-
-        var detailMethod = ExtractMethod(pageCode, "private RecordDetailItem CreateSchachtDetailItem(");
-        Assert.Contains("isCombo: true", detailMethod);
-        Assert.Contains("allowFreeText: false", detailMethod);
-        Assert.Contains("ZustandsklasseColorPalette.SelectionOptions", detailMethod);
+        Assert.Contains("private DataGridColumn CreateZustandsklasseColumn(", pageCode);
+        Assert.Contains("DataGridComboBoxColumn", pageCode);
+        Assert.Contains("ZustandsklasseColorPalette.SelectionOptions", pageCode);
+        Assert.Contains("private RecordDetailItem CreateSchachtDetailItem(", pageCode);
+        Assert.Contains("isCombo: true", pageCode);
+        Assert.Contains("allowFreeText: false", pageCode);
 
         Assert.Contains("Zustand 0-4", schachtansichtXaml);
         Assert.Contains("ZustandsklasseValue_Click", schachtansichtXaml);

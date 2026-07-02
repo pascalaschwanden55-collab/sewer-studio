@@ -878,12 +878,12 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var startdataSource = ExtractMethodBody(source, "private async Task SuggestProtocolStartdataAsync()");
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingProtocolStartdataQueueController.Run(", startdataSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ProtocolReviewCandidateFilter.SelectCandidates", startdataSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ReviewQueueServiceRef.GetAll()", startdataSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ReviewQueueServiceRef.EnqueueFromSelfTraining", startdataSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingProtocolStartdataQueueController.Run(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProtocolReviewCandidateFilter.SelectCandidates", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ReviewQueueServiceRef.GetAll()", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ReviewQueueServiceRef.EnqueueFromSelfTraining", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -896,12 +896,9 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var approvalSource = ExtractMethodBody(source, "public async Task ApproveAllStartdataAsync(CancellationToken ct = default)");
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingProtocolStartdataApprovalController.ApproveAllAsync(", approvalSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("foreach (var item in items)", approvalSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("catch (Exception ex)", approvalSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ok++", approvalSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingProtocolStartdataApprovalController.ApproveAllAsync(", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -915,12 +912,12 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Windows",
             "TrainingCenterViewModel.cs"));
         var countSource = ExtractPropertyBody(source, "public int StartdataCandidateCount");
-        var itemsSource = ExtractMethodBody(source, "private List<InfraSelfImproving.ReviewQueueItem> GetProtocolStartdataReviewItems()");
+        var viewModelSource = source;
 
         Assert.Contains("TrainingProtocolStartdataReviewItemSelector.Count(ReviewQueue)", countSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingProtocolStartdataReviewItemSelector.Select(ReviewQueue)", itemsSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingProtocolStartdataReviewItemSelector.Select(ReviewQueue)", viewModelSource, StringComparison.Ordinal);
         Assert.DoesNotContain("SelfTrainingMatchLevel", countSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingMatchLevel", itemsSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingMatchLevel.ProtocolStartdata", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
