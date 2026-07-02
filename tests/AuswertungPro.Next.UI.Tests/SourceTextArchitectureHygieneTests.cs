@@ -639,7 +639,8 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_coding_event_display_order_lives_in_policy",
             "PlayerWindow_coding_event_list_surface_uses_controls",
             "PlayerWindow_manual_code_meter_resolution_uses_policy",
-            "PlayerWindow_manual_coding_ai_context_lives_in_factory"
+            "PlayerWindow_manual_coding_ai_context_lives_in_factory",
+            "PlayerWindow_coding_select_code_handler_uses_fire_and_forget_wrapper"
         };
 
         foreach (var methodName in methodNames)

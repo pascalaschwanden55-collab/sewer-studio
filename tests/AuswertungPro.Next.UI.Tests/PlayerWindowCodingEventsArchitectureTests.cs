@@ -8,6 +8,21 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerWindowCodingEventsArchitectureTests
 {
     [Fact]
+    public void PlayerWindow_coding_select_code_handler_uses_fire_and_forget_wrapper()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+
+        var events = File.ReadAllText(eventsPath);
+
+        Assert.DoesNotContain("private async void CodingSelectCode_Click", events);
+        Assert.Contains("private void CodingSelectCode_Click", events);
+        Assert.Contains(".SafeFireAndForget(\"CodingSelectCode\")", events);
+        Assert.Contains("private async Task HandleCodingSelectCodeAsync", events);
+    }
+
+    [Fact]
     public void PlayerWindow_coding_event_display_order_lives_in_policy()
     {
         var root = FindRepositoryRoot();
