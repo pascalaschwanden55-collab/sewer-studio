@@ -511,10 +511,18 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.True(File.Exists(focusedPath), "Coding-Classifier-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
 
         var focused = File.ReadAllText(focusedPath);
-        const string methodName = "PlayerWindow_coding_classifier_results_live_in_classifier_partial";
+        var methodNames = new[]
+        {
+            "PlayerWindow_coding_classifier_results_live_in_classifier_partial",
+            "PlayerWindow_structural_classifier_finding_lives_in_factory",
+            "PlayerWindow_classifier_finding_list_items_live_in_factory"
+        };
 
-        Assert.Contains($"public void {methodName}", focused);
-        Assert.DoesNotContain($"public void {methodName}", guard);
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
     }
 
     [Fact]

@@ -62,4 +62,65 @@ public sealed class PlayerWindowCodingClassifierArchitectureTests
         Assert.DoesNotContain("CodingStructuralClassifierEventFactory.Create", structural);
         Assert.Contains("CodingStructuralClassifierEventFactory.Create", structuralWorkflow);
     }
+
+    [Fact]
+    public void PlayerWindow_structural_classifier_finding_lives_in_factory()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Classifier.Structural.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingStructuralClassifierResultWorkflow.cs");
+        var factoryPath = Path.Combine(uiRoot, "Ai", "CodingStructuralClassifierFindingFactory.cs");
+
+        Assert.True(File.Exists(factoryPath), "Structural-Classifier-Finding-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(workflowPath), "Structural-Classifier-Workflow muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var ai = File.ReadAllText(aiPath);
+        var workflow = File.ReadAllText(workflowPath);
+        var factory = File.ReadAllText(factoryPath);
+
+        Assert.Contains("CodingStructuralClassifierResultWorkflow.Execute", ai);
+        Assert.DoesNotContain("CodingStructuralClassifierFindingFactory.Create", ai);
+        Assert.DoesNotContain("CodingFindingCoveragePolicy.FindCoveringEvent", ai);
+        Assert.Contains("CodingStructuralClassifierFindingFactory.Create", workflow);
+        Assert.Contains("CodingFindingCoveragePolicy.FindCoveringEvent", workflow);
+        Assert.DoesNotContain("new LiveFrameFinding(", ai);
+        Assert.DoesNotContain("CodingFindingCoveragePolicy.IsCovered(e, meter, finding)", ai);
+        Assert.Contains("public static LiveFrameFinding Create", factory);
+        Assert.Contains("VsaCodeHint: code", factory);
+    }
+
+    [Fact]
+    public void PlayerWindow_classifier_finding_list_items_live_in_factory()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var boundaryPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Boundary.cs");
+        var structuralPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Structural.cs");
+        var factoryPath = Path.Combine(uiRoot, "Views", "Windows", "AiFindingDisplayItemFactory.cs");
+        var controlsPath = Path.Combine(uiRoot, "Views", "Windows", "CodingFindingsListControls.cs");
+
+        Assert.True(File.Exists(factoryPath), "Classifier-Befundlisten-Projektion muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(controlsPath), "Classifier-Befundlisten-Zuweisung muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var ai = File.ReadAllText(boundaryPath) + File.ReadAllText(structuralPath);
+        var factory = File.ReadAllText(factoryPath);
+        var controls = File.ReadAllText(controlsPath);
+
+        Assert.Contains("CodingFindingsListControls.ShowPossibleBoundary", ai);
+        Assert.Contains("CodingFindingsListControls.ShowBoundary", ai);
+        Assert.Contains("CodingFindingsListControls.ShowResolvedFinding", ai);
+        Assert.DoesNotContain("CodingFindingsList.ItemsSource", ai);
+        Assert.DoesNotContain("AiFindingDisplayItemFactory.ForPossibleBoundary", ai);
+        Assert.DoesNotContain("AiFindingDisplayItemFactory.ForBoundary", ai);
+        Assert.DoesNotContain("AiFindingDisplayItemFactory.ForResolvedFinding", ai);
+        Assert.DoesNotContain("new AiFindingDisplayItem", ai);
+        Assert.Contains("AiFindingDisplayItemFactory.ForPossibleBoundary", controls);
+        Assert.Contains("AiFindingDisplayItemFactory.ForBoundary", controls);
+        Assert.Contains("AiFindingDisplayItemFactory.ForResolvedFinding", controls);
+        Assert.Contains("public static IReadOnlyList<AiFindingDisplayItem> ForPossibleBoundary", factory);
+        Assert.Contains("public static IReadOnlyList<AiFindingDisplayItem> ForBoundary", factory);
+        Assert.Contains("public static IReadOnlyList<AiFindingDisplayItem> ForResolvedFinding", factory);
+    }
 }
