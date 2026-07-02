@@ -70,4 +70,38 @@ public sealed class CostCalculatorLineSuggestionStateControllerTests
 
         Assert.True(controller.ShouldMarkManualPriceChange());
     }
+
+    [Fact]
+    public void CostLineVm_SetSuggestedQty_markiert_menge_nicht_als_manuell()
+    {
+        var line = new CostLineVm();
+
+        line.SetSuggestedQty(12.5m);
+
+        Assert.Equal(12.5m, line.Qty);
+        Assert.False(line.IsQtyOverridden);
+
+        line.Qty = 13m;
+
+        Assert.True(line.IsQtyOverridden);
+    }
+
+    [Fact]
+    public void CostLineVm_SetSuggestedPrice_markiert_preis_nicht_als_manuell()
+    {
+        var line = new CostLineVm();
+
+        line.SetSuggestedPrice(42m, hasPrice: true, priceHint: "Katalog");
+
+        Assert.Equal(42m, line.UnitPrice);
+        Assert.False(line.IsPriceOverridden);
+        Assert.False(line.PriceMissing);
+        Assert.Equal("Katalog", line.PriceHint);
+
+        line.UnitPrice = 45m;
+
+        Assert.True(line.IsPriceOverridden);
+        Assert.False(line.PriceMissing);
+        Assert.Equal("", line.PriceHint);
+    }
 }
