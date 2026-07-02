@@ -485,6 +485,7 @@ public sealed class SourceTextArchitectureHygieneTests
         var methodNames = new[]
         {
             "PlayerWindow_overlay_measurement_panel_uses_formatter_state",
+            "PlayerWindow_overlay_cursor_decision_lives_in_policy",
             "PlayerWindow_overlay_input_mouseflow_keeps_only_direct_dependencies"
         };
 

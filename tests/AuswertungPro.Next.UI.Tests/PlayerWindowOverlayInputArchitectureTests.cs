@@ -29,6 +29,30 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
     }
 
     [Fact]
+    public void PlayerWindow_overlay_cursor_decision_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
+        var toolsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Tools.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "CodingOverlayCursorPolicy.cs");
+
+        Assert.True(File.Exists(toolsPath), "Overlay-Cursor-Wiring soll im Tool-Partial liegen.");
+        Assert.True(File.Exists(policyPath), "Overlay-Cursor-Entscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var tools = File.ReadAllText(toolsPath);
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.DoesNotContain("CodingOverlayCursorPolicy.ShouldUseCrossCursor", overlayInput);
+        Assert.Contains("CodingOverlayCursorPolicy.ShouldUseCrossCursor", tools);
+        Assert.DoesNotContain("var isInteractive = _codingIsCalibrating", overlayInput);
+        Assert.DoesNotContain("var isInteractive = _codingIsCalibrating", tools);
+        Assert.Contains("public static bool ShouldUseCrossCursor", policy);
+        Assert.Contains("activeTool != OverlayToolType.None", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_overlay_input_mouseflow_keeps_only_direct_dependencies()
     {
         var root = FindRepositoryRoot();
