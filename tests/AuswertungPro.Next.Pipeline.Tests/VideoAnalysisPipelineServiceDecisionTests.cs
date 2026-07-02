@@ -25,6 +25,19 @@ public sealed class VideoAnalysisPipelineServiceDecisionTests
     }
 
     [Fact]
+    public async Task ShouldUseMultiModelAsync_AutoWithKillSwitch_SkipsSidecarHealthCheck()
+    {
+        var handler = new CountingHandler(_ => throw new InvalidOperationException("Health check should not run."));
+        var service = CreateService(PipelineMode.Auto, multiModelEnabled: false, handler);
+
+        var decision = await service.ShouldUseMultiModelAsync(CancellationToken.None);
+
+        Assert.False(decision.UseMultiModel);
+        Assert.Null(decision.FallbackReason);
+        Assert.Equal(0, handler.RequestCount);
+    }
+
+    [Fact]
     public async Task ShouldUseMultiModelAsync_Auto_WhenSidecarUnavailable_FallsBackWithWarning()
     {
         var handler = new CountingHandler(_ =>
