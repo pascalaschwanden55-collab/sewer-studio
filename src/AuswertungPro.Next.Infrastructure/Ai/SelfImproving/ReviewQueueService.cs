@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
@@ -145,66 +146,67 @@ public sealed class ReviewQueueService
 
     private void LoadSelfTrainingItems()
     {
-        try
-        {
-            if (_persistPath is null || !File.Exists(_persistPath)) return;
-
-            var items = JsonSerializer.Deserialize<List<PersistedItem>>(File.ReadAllText(_persistPath));
-            if (items is null) return;
-
-            lock (_lock)
+        BestEffort.Try(
+            () =>
             {
-                foreach (var p in items)
+                if (_persistPath is null || !File.Exists(_persistPath))
+                    return;
+
+                var items = JsonSerializer.Deserialize<List<PersistedItem>>(File.ReadAllText(_persistPath));
+                if (items is null)
+                    return;
+
+                lock (_lock)
                 {
-                    if (p.SelfTrainingCaseId is null) continue; // nur Self-Training-Kandidaten
-                    _queue.Add(new ReviewQueueItem(p.Id, null, p.Priority, p.EnqueuedUtc)
+                    foreach (var p in items)
                     {
-                        SelfTrainingCaseId = p.SelfTrainingCaseId,
-                        SelfTrainingVsaCode = p.SelfTrainingVsaCode,
-                        SelfTrainingSuggestedCode = p.SelfTrainingSuggestedCode,
-                        SelfTrainingMeter = p.SelfTrainingMeter,
-                        SelfTrainingFramePath = p.SelfTrainingFramePath,
-                        SelfTrainingMatchLevel = p.SelfTrainingMatchLevel,
-                        SelfTrainingReason = p.SelfTrainingReason,
-                        SelfTrainingSampleId = p.SelfTrainingSampleId
-                    });
+                        if (p.SelfTrainingCaseId is null) continue; // nur Self-Training-Kandidaten
+                        _queue.Add(new ReviewQueueItem(p.Id, null, p.Priority, p.EnqueuedUtc)
+                        {
+                            SelfTrainingCaseId = p.SelfTrainingCaseId,
+                            SelfTrainingVsaCode = p.SelfTrainingVsaCode,
+                            SelfTrainingSuggestedCode = p.SelfTrainingSuggestedCode,
+                            SelfTrainingMeter = p.SelfTrainingMeter,
+                            SelfTrainingFramePath = p.SelfTrainingFramePath,
+                            SelfTrainingMatchLevel = p.SelfTrainingMatchLevel,
+                            SelfTrainingReason = p.SelfTrainingReason,
+                            SelfTrainingSampleId = p.SelfTrainingSampleId
+                        });
+                    }
+                    ResortByPriorityDesc();
                 }
-                ResortByPriorityDesc();
-            }
-        }
-        catch { /* best-effort: korrupte/fehlende Datei darf den Start nicht verhindern */ }
+            },
+            $"ReviewQueue laden: {_persistPath}");
     }
 
     private void PersistSelfTrainingItems()
     {
         if (_persistPath is null) return;
-        try
-        {
-            List<PersistedItem> items;
-            lock (_lock)
-            {
-                items = _queue
-                    .Where(q => q.IsFromSelfTraining)
-                    .Select(q => new PersistedItem(
-                        q.Id, q.Priority, q.EnqueuedUtc,
-                        q.SelfTrainingCaseId, q.SelfTrainingVsaCode, q.SelfTrainingSuggestedCode,
-                        q.SelfTrainingMeter, q.SelfTrainingFramePath, q.SelfTrainingMatchLevel,
-                        q.SelfTrainingReason, q.SelfTrainingSampleId))
-                    .ToList();
-            }
 
-            // Datei-Schreibzugriff prozessweit serialisieren; eindeutiger tmp-Name verhindert
-            // Kollisionen, falls mehrere Instanzen/Threads zugleich persistieren.
-            lock (_fileLock)
+        BestEffort.Try(
+            () =>
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(_persistPath)!);
-                var tmp = _persistPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
-                File.WriteAllText(tmp, JsonSerializer.Serialize(
-                    items, AuswertungPro.Next.Application.Common.JsonDefaults.Indented));
-                File.Move(tmp, _persistPath, overwrite: true);
-            }
-        }
-        catch { /* best-effort: Persistenz-Fehler darf den Lauf nicht abbrechen */ }
+                List<PersistedItem> items;
+                lock (_lock)
+                {
+                    items = _queue
+                        .Where(q => q.IsFromSelfTraining)
+                        .Select(q => new PersistedItem(
+                            q.Id, q.Priority, q.EnqueuedUtc,
+                            q.SelfTrainingCaseId, q.SelfTrainingVsaCode, q.SelfTrainingSuggestedCode,
+                            q.SelfTrainingMeter, q.SelfTrainingFramePath, q.SelfTrainingMatchLevel,
+                            q.SelfTrainingReason, q.SelfTrainingSampleId))
+                        .ToList();
+                }
+
+                lock (_fileLock)
+                {
+                    AtomicTextFileWriter.WriteAllText(
+                        _persistPath,
+                        JsonSerializer.Serialize(items, JsonDefaults.Indented));
+                }
+            },
+            $"ReviewQueue persistieren: {_persistPath}");
     }
 }
 
