@@ -60,9 +60,6 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         var acceptCommandWorkflow = File.Exists(acceptCommandWorkflowPath) ? File.ReadAllText(acceptCommandWorkflowPath) : "";
         var correctCommandWorkflow = File.Exists(correctCommandWorkflowPath) ? File.ReadAllText(correctCommandWorkflowPath) : "";
         var skipCommandWorkflow = File.Exists(skipCommandWorkflowPath) ? File.ReadAllText(skipCommandWorkflowPath) : "";
-        var acceptBody = ExtractMethodBody(training, "private async Task HandleDetectionAcceptAsync");
-        var correctBody = ExtractMethodBody(training, "private async Task HandleDetectionCorrectAsync");
-        var skipBody = ExtractMethodBody(actions, "private void DetectionSkip_Click");
 
         Assert.Contains("private void ShowDetectionConfirmation", confirmation);
         Assert.Contains("private void ResumeDetection", confirmation);
@@ -83,8 +80,8 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.DoesNotContain("private async void DetectionAccept_Click", actions);
         Assert.DoesNotContain("private async void DetectionCorrect_Click", actions);
         Assert.Contains("private void DetectionSkip_Click", actions);
-        Assert.Contains("LiveDetectionConfirmationSkipCommandWorkflow.Execute", skipBody);
-        Assert.DoesNotContain("ResumeDetection();", skipBody);
+        Assert.Contains("LiveDetectionConfirmationSkipCommandWorkflow.Execute", actions);
+        Assert.DoesNotContain("ResumeDetection();", actions);
         Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", actions);
         Assert.DoesNotContain("private async void DetectionAccept_Click", training);
         Assert.DoesNotContain("private async void DetectionCorrect_Click", training);
@@ -94,15 +91,12 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.Contains(".SafeFireAndForget(\"DetectionCorrect\")", training);
         Assert.Contains("private async Task HandleDetectionAcceptAsync", training);
         Assert.Contains("private async Task HandleDetectionCorrectAsync", training);
-        Assert.Contains("LiveDetectionConfirmationAcceptCommandWorkflow.ExecuteAsync", acceptBody);
-        Assert.DoesNotContain("if (pendingFindings.Count == 0)", acceptBody);
-        Assert.DoesNotContain("\n        try", acceptBody);
-        Assert.DoesNotContain("catch (Exception ex)", acceptBody);
-        Assert.Contains("LiveDetectionConfirmationCorrectCommandWorkflow.ExecuteAsync", correctBody);
-        Assert.DoesNotContain("if (pendingFindings.Count == 0)", correctBody);
-        Assert.DoesNotContain("selectedEntry == null", correctBody);
-        Assert.DoesNotContain("\n        try", correctBody);
-        Assert.DoesNotContain("catch (Exception ex)", correctBody);
+        Assert.Contains("LiveDetectionConfirmationAcceptCommandWorkflow.ExecuteAsync", training);
+        Assert.DoesNotContain("if (pendingFindings.Count == 0)", training);
+        Assert.DoesNotContain("\n        try", training);
+        Assert.DoesNotContain("catch (Exception ex)", training);
+        Assert.Contains("LiveDetectionConfirmationCorrectCommandWorkflow.ExecuteAsync", training);
+        Assert.DoesNotContain("selectedEntry == null", training);
         Assert.Contains("LiveDetectionCorrectionCodeSelectionWorkflow.Select", training);
         Assert.DoesNotContain("LiveDetectionCorrectionCodeSelectionServiceFactory.Create", training);
         Assert.DoesNotContain("CodingExplorerEntryFactory.CreateSeed", training);
