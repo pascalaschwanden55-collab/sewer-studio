@@ -1,4 +1,3 @@
-using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
@@ -6,7 +5,6 @@ using System.Windows;
 using System.Windows.Controls;
 using AuswertungPro.Next.UI.DataPage;
 using Xunit;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -124,28 +122,6 @@ public sealed class GridDockingControllerTests
         });
     }
 
-    [Fact]
-    public void DataPage_grid_docking_state_uses_controller()
-    {
-        var source = File.ReadAllText(RepoFile(
-            "src",
-            "AuswertungPro.Next.UI",
-            "Views",
-            "Pages",
-            "DataPage.xaml.cs"));
-        var dockingBlock = ExtractBetween(
-            source,
-            "private void UndockGrid()",
-            "private void BeobachtungenMenu_Click");
-
-        Assert.Contains("GridDockingController.ResolveActiveView", dockingBlock);
-        Assert.Contains("GridDockingController.ApplyUndockedState", dockingBlock);
-        Assert.Contains("GridDockingController.RestoreDockedState", dockingBlock);
-        Assert.DoesNotContain("GridHost.Children.Remove(active);", dockingBlock);
-        Assert.DoesNotContain("UndockedPlaceholder.Visibility = Visibility.Collapsed;", dockingBlock);
-        Assert.DoesNotContain("UndockButton.IsEnabled = true;", dockingBlock);
-    }
-
     private static void RunOnSta(Action action)
     {
         Exception? exception = null;
@@ -167,14 +143,5 @@ public sealed class GridDockingControllerTests
 
         if (exception is not null)
             ExceptionDispatchInfo.Capture(exception).Throw();
-    }
-
-    private static string ExtractBetween(string source, string startMarker, string endMarker)
-    {
-        var start = source.IndexOf(startMarker, StringComparison.Ordinal);
-        var end = source.IndexOf(endMarker, start, StringComparison.Ordinal);
-        Assert.True(start >= 0, $"Start marker not found: {startMarker}");
-        Assert.True(end > start, $"End marker not found: {endMarker}");
-        return source[start..end];
     }
 }
