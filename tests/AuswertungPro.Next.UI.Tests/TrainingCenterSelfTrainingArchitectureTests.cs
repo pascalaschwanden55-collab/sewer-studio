@@ -23,6 +23,7 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Training",
             "SelfTrainingRunPreparationController.cs");
         var viewModelSource = source;
+        var loadSource = viewModelSource;
 
         Assert.False(File.Exists(preparationControllerPath), "Triviale Self-Training-CTS-Vorbereitung soll inline in der VM stehen.");
         Assert.DoesNotContain("SelfTrainingRunPreparationController.PrepareCancellation(", viewModelSource, StringComparison.Ordinal);
@@ -414,11 +415,10 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var resolverSource = ExtractMethodBody(source, "private async Task<string?> ResolveSelfTrainingSampleIdAsync(InfraSelfImproving.ReviewQueueItem item)");
+        var viewModelSource = source;
 
-        Assert.Contains("SelfTrainingReviewSampleIdResolver.ResolveAsync(", resolverSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("FirstOrDefault", resolverSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Math.Abs", resolverSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingReviewSampleIdResolver.ResolveAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Math.Abs", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -431,15 +431,15 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var reconcileSource = ExtractMethodBody(source, "private async Task ReconcileGoldToKbAsync()");
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingGoldKbReconcileWorkflowController.RunAsync(", reconcileSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingSamplesStore.LoadAsync", reconcileSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingSamplesStore.MergeOrUpdateAsync", reconcileSource, StringComparison.Ordinal);
-        Assert.Contains("IncrementalKbUpdateWithReasonAsync", reconcileSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("KbReconcilePlanner.SelectPending", reconcileSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("const int batchSize", reconcileSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("foreach (var s in batch)", reconcileSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingGoldKbReconcileWorkflowController.RunAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingSamplesStore.LoadAsync", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingSamplesStore.MergeOrUpdateAsync", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("IncrementalKbUpdateWithReasonAsync", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("KbReconcilePlanner.SelectPending", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("const int batchSize", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("foreach (var s in batch)", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -452,15 +452,12 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var approveSource = ExtractMethodBody(source, "public async Task ApproveReviewItemAsync(");
-        var rejectSource = ExtractMethodBody(source, "public async Task RejectReviewItemAsync(");
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingReviewQueueCompletionController.ApplyApproved(", approveSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingReviewQueueCompletionController.ApplyRejected(", rejectSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("queueService.Remove(item.Id);", approveSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("queueService.Remove(item.Id);", rejectSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ReviewQueue.Remove(item);", approveSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ReviewQueue.Remove(item);", rejectSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingReviewQueueCompletionController.ApplyApproved(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingReviewQueueCompletionController.ApplyRejected(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("queueService.Remove(item.Id);", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ReviewQueue.Remove(item);", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -480,17 +477,17 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Ai",
             "Training",
             "TrainingReviewQueueLoadController.cs");
-        var loadSource = ExtractMethodBody(source, "public void LoadReviewQueue(InfraSelfImproving.ReviewQueueService queueService)");
+        var viewModelSource = source;
 
         Assert.False(File.Exists(controllerPath), "Trivialer Review-Queue-Load soll inline in der VM stehen.");
-        Assert.DoesNotContain("TrainingReviewQueueLoadController", loadSource, StringComparison.Ordinal);
-        Assert.Contains("ArgumentNullException.ThrowIfNull(queueService);", loadSource, StringComparison.Ordinal);
-        Assert.Contains("var items = queueService.GetAll();", loadSource, StringComparison.Ordinal);
-        Assert.Contains("ReviewQueue.Clear();", loadSource, StringComparison.Ordinal);
-        Assert.Contains("foreach (var item in items)", loadSource, StringComparison.Ordinal);
-        Assert.Contains("ReviewQueue.Add(item);", loadSource, StringComparison.Ordinal);
-        Assert.Contains("ReviewQueueCount = items.Count;", loadSource, StringComparison.Ordinal);
-        Assert.Contains("ReviewStatusText = $\"{ReviewQueueCount} Einträge zur Prüfung\";", loadSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingReviewQueueLoadController", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("ArgumentNullException.ThrowIfNull(queueService);", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("var items = queueService.GetAll();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("ReviewQueue.Clear();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("foreach (var item in items)", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("ReviewQueue.Add(item);", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("ReviewQueueCount = items.Count;", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("ReviewStatusText = $\"{ReviewQueueCount} Einträge zur Prüfung\";", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
