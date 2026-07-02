@@ -33,6 +33,13 @@ public interface ICodingSessionService
     /// <summary>Session abschliessen → Protokoll generieren.</summary>
     ProtocolDocument CompleteSession();
 
+    /// <summary>Session abschliessen und Trainingsdaten vor Rueckkehr persistieren.</summary>
+    Task<ProtocolDocument> CompleteSessionAsync(CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        return Task.FromResult(CompleteSession());
+    }
+
     // --- Navigation ---
 
     /// <summary>Aktueller Meter-Stand.</summary>

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
@@ -157,8 +159,50 @@ public sealed class CodingSessionService : ICodingSessionService
         doc.Current.BasedOnRevisionId = doc.Original.RevisionId;
 
         // Feedback-Loop: CodingEvents → TrainingSamples persistieren
-        // SYNCHRON WARTEN — Daten muessen gesichert sein bevor Session abgeschlossen wird
-        PersistTrainingSamplesFromEvents(_session);
+        // Alter Sync-Aufrufer: Persistierung laeuft im Hintergrund, UI nutzt CompleteSessionAsync.
+        _ = PersistTrainingSamplesFromEventsAsync(_session, CancellationToken.None);
+
+        StateChanged?.Invoke(this, _session.State);
+        return doc;
+    }
+
+    public async Task<ProtocolDocument> CompleteSessionAsync(CancellationToken ct = default)
+    {
+        EnsureSession();
+        _session!.State = CodingSessionState.Completed;
+        _session.CompletedAt = DateTimeOffset.UtcNow;
+
+        // Protokoll aus gesammelten Events generieren
+        var doc = new ProtocolDocument
+        {
+            HaltungId = _session.HaltungName
+        };
+
+        var revision = new ProtocolRevision
+        {
+            CreatedBy = "Codier-Modus",
+            Comment = $"Codier-Session {_session.StartedAt:yyyy-MM-dd HH:mm} â€“ {_session.Events.Count} Ereignisse"
+        };
+
+        foreach (var ev in _session.Events.OrderBy(e => e.MeterAtCapture))
+        {
+            revision.Entries.Add(ev.Entry);
+            revision.Changes.Add(new ProtocolChange
+            {
+                Kind = ProtocolChangeKind.Add,
+                EntryId = ev.Entry.EntryId,
+                User = "Codier-Modus"
+            });
+        }
+
+        // Rohranfang (BCD) bei 0.00m und Rohrende (BCE) sicherstellen
+        ProtocolBoundaryService.EnsureBoundaries(revision.Entries, _session.EndMeter);
+
+        doc.Original = ProtocolRevisionCloner.CloneRevision(revision, "Codier-Modus", "Original aus Codier-Session");
+        doc.Current = ProtocolRevisionCloner.CloneRevision(revision, "Codier-Modus", revision.Comment);
+        doc.Current.BasedOnRevisionId = doc.Original.RevisionId;
+
+        await PersistTrainingSamplesFromEventsAsync(_session, ct).ConfigureAwait(false);
 
         StateChanged?.Invoke(this, _session.State);
         return doc;
@@ -169,7 +213,7 @@ public sealed class CodingSessionService : ICodingSessionService
     /// und speichert sie via TrainingSamplesStore.
     /// Schliesst den Feedback-Loop: KI-Vorschlag → User-Entscheidung → Trainingsdaten.
     /// </summary>
-    private void PersistTrainingSamplesFromEvents(CodingSession session)
+    private async Task PersistTrainingSamplesFromEventsAsync(CodingSession session, CancellationToken ct)
     {
         try
         {
@@ -189,10 +233,8 @@ public sealed class CodingSessionService : ICodingSessionService
 
             if (samples.Count > 0)
             {
-                // SYNCHRON WARTEN: Samples muessen auf Disk sein bevor Session endet
-                // Verhindert Datenverlust bei sofortigem App-Schliessen nach Session
-                TrainingSamplesStore.MergeAndSaveAsync(samples)
-                    .GetAwaiter().GetResult();
+                ct.ThrowIfCancellationRequested();
+                await TrainingSamplesStore.MergeAndSaveAsync(samples).ConfigureAwait(false);
 
                 // KB-Indexierung weiterhin fire-and-forget (optional, nicht kritisch)
                 _ = IndexApprovedSamplesToKbAsync(samples);

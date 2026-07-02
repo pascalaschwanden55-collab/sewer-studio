@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -201,11 +202,11 @@ public sealed partial class CodingSessionViewModel : ObservableObject, IDisposab
     }
 
     [RelayCommand]
-    private void CompleteSession()
+    private async Task CompleteSessionAsync()
     {
         try
         {
-            var doc = _sessionService.CompleteSession();
+            var doc = await _sessionService.CompleteSessionAsync();
             SessionCompleted?.Invoke(this, doc);
         }
         catch (Exception ex)
