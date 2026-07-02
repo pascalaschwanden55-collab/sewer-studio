@@ -79,11 +79,34 @@ public static class HoldingRenameService
         //    Die Fotos liegen in einem SEPARATEN Verteil-Ort (Fotos\Haltungen\<H>\), der nicht ueber
         //    den Video-Link gefunden wird. Ordner + Dateien (Haltung im Dateinamen) mitumbenennen,
         //    damit die in Phase 3 aktualisierten FotoPath-Felder auf existierende Dateien zeigen.
-        if (RenameSiblingHoldingFolder(projectFilePath, Path.Combine("Fotos", "Haltungen"), oldSan, newSan, folder))
+        var photoRenameResult = RenameSiblingHoldingFolder(
+            projectFilePath,
+            Path.Combine("Fotos", "Haltungen"),
+            oldSan,
+            newSan,
+            folder);
+        if (!photoRenameResult.Success)
+        {
+            var rollbackMessage = string.Empty;
+            if (folderRenamed
+                && !string.IsNullOrWhiteSpace(folder)
+                && !string.IsNullOrWhiteSpace(targetFolder)
+                && Directory.Exists(targetFolder))
+            {
+                var rollback = RenameFilesystemWithRollback(targetFolder, folder, newSan, oldSan);
+                if (!rollback.Success)
+                    rollbackMessage = $" Rollback Haltungsordner fehlgeschlagen: {rollback.ErrorMessage}";
+            }
+
+            return HoldingRenameResult.Fail(
+                $"Fotos-Ordner konnte nicht umbenannt werden: {photoRenameResult.ErrorMessage}{rollbackMessage}");
+        }
+
+        if (photoRenameResult.FolderRenamed)
             folderRenamed = true;
 
         // ── Phase 3: Alle Pfad-Referenzen im Record aktualisieren ────────
-        var updated = UpdateAllPaths(record, oldSan, newSan);
+        var updated = UpdateAllPaths(record, oldSan, newSan, projectFilePath);
 
         return HoldingRenameResult.Ok(folderRenamed, updated);
     }
@@ -110,36 +133,36 @@ public static class HoldingRenameService
         return Directory.Exists(dest) ? dest : null;
     }
 
+    private sealed record SiblingRenameResult(bool Success, string? ErrorMessage, bool FolderRenamed);
+
     // Benennt einen parallelen, haltungsbenannten Verteil-Ordner um (z.B. Fotos\Haltungen\<H>\),
-    // der NICHT ueber den Link auffindbar ist. Gegen den Projekt-ROOT aufgeloest. Best-effort:
-    // schlaegt der Rename fehl, wird intern zurueckgerollt und false zurueckgegeben; die uebrige
-    // Umbenennung laeuft weiter. Gibt true zurueck, wenn der Ordner umbenannt wurde.
-    private static bool RenameSiblingHoldingFolder(
+    // der NICHT ueber den Link auffindbar ist. Gegen den Projekt-ROOT aufgeloest.
+    private static SiblingRenameResult RenameSiblingHoldingFolder(
         string? projectFilePath, string relativeParent, string oldSan, string newSan, string? alreadyRenamedFolder)
     {
         if (string.IsNullOrWhiteSpace(projectFilePath))
-            return false;
+            return new SiblingRenameResult(true, null, false);
 
         var root = ProjectFileLocator.ProjectRootFromFile(projectFilePath)
                    ?? Path.GetDirectoryName(projectFilePath);
         if (string.IsNullOrWhiteSpace(root))
-            return false;
+            return new SiblingRenameResult(true, null, false);
 
         var src = Path.Combine(root, relativeParent, oldSan);
         if (!Directory.Exists(src))
-            return false;
+            return new SiblingRenameResult(true, null, false);
 
         // Nicht denselben Ordner doppelt behandeln, den Phase 2 bereits umbenannt hat.
         if (!string.IsNullOrWhiteSpace(alreadyRenamedFolder)
             && string.Equals(Path.GetFullPath(src), Path.GetFullPath(alreadyRenamedFolder), StringComparison.OrdinalIgnoreCase))
-            return false;
+            return new SiblingRenameResult(true, null, false);
 
         var dest = Path.Combine(root, relativeParent, newSan);
         if (Directory.Exists(dest))
-            return false;   // Zielordner existiert bereits -> nicht anfassen
+            return new SiblingRenameResult(false, $"Fotos-Zielordner existiert bereits: {dest}", false);
 
         var result = RenameFilesystemWithRollback(src, dest, oldSan, newSan);
-        return result.Success;
+        return new SiblingRenameResult(result.Success, result.ErrorMessage, result.Success);
     }
 
     // ── Ordner-Suche ──────────────────────────────────────────────────────
@@ -268,9 +291,10 @@ public static class HoldingRenameService
 
     // ── Pfad-Updates (in-memory) ──────────────────────────────────────────
 
-    private static int UpdateAllPaths(HaltungRecord record, string oldSan, string newSan)
+    private static int UpdateAllPaths(HaltungRecord record, string oldSan, string newSan, string? projectFilePath)
     {
         var count = 0;
+        var projectRoot = ResolveProjectRoot(projectFilePath);
 
         // Link (Video)
         count += UpdateFieldPath(record, FieldKeys.Link, oldSan, newSan);
@@ -302,10 +326,10 @@ public static class HoldingRenameService
         if (record.Protocol != null)
         {
             record.Protocol.HaltungId = record.Protocol.HaltungId?.Replace(oldSan, newSan) ?? newSan;
-            count += UpdateRevisionPaths(record.Protocol.Original, oldSan, newSan);
-            count += UpdateRevisionPaths(record.Protocol.Current, oldSan, newSan);
+            count += UpdateRevisionPaths(record.Protocol.Original, oldSan, newSan, projectRoot);
+            count += UpdateRevisionPaths(record.Protocol.Current, oldSan, newSan, projectRoot);
             foreach (var rev in record.Protocol.History)
-                count += UpdateRevisionPaths(rev, oldSan, newSan);
+                count += UpdateRevisionPaths(rev, oldSan, newSan, projectRoot);
         }
 
         // VsaFindings
@@ -315,7 +339,7 @@ public static class HoldingRenameService
             {
                 if (!string.IsNullOrWhiteSpace(finding.FotoPath))
                 {
-                    var newPath = ReplaceHoldingInPath(finding.FotoPath, oldSan, newSan);
+                    var newPath = ReplaceHoldingPhotoPath(finding.FotoPath, oldSan, newSan, projectRoot);
                     if (!string.Equals(finding.FotoPath, newPath, StringComparison.OrdinalIgnoreCase))
                     {
                         finding.FotoPath = newPath;
@@ -342,7 +366,7 @@ public static class HoldingRenameService
         return 1;
     }
 
-    private static int UpdateRevisionPaths(ProtocolRevision revision, string oldSan, string newSan)
+    private static int UpdateRevisionPaths(ProtocolRevision revision, string oldSan, string newSan, string? projectRoot)
     {
         var count = 0;
         foreach (var entry in revision.Entries)
@@ -352,7 +376,7 @@ public static class HoldingRenameService
                 var path = entry.FotoPaths[i];
                 if (string.IsNullOrWhiteSpace(path)) continue;
 
-                var newPath = ReplaceHoldingInPath(path, oldSan, newSan);
+                var newPath = ReplaceHoldingPhotoPath(path, oldSan, newSan, projectRoot);
                 if (!string.Equals(path, newPath, StringComparison.OrdinalIgnoreCase))
                 {
                     entry.FotoPaths[i] = newPath;
@@ -361,6 +385,46 @@ public static class HoldingRenameService
             }
         }
         return count;
+    }
+
+    private static string? ResolveProjectRoot(string? projectFilePath)
+    {
+        if (string.IsNullOrWhiteSpace(projectFilePath))
+            return null;
+
+        return ProjectFileLocator.ProjectRootFromFile(projectFilePath)
+               ?? Path.GetDirectoryName(projectFilePath);
+    }
+
+    private static string ReplaceHoldingPhotoPath(string path, string oldSan, string newSan, string? projectRoot)
+    {
+        var rewritten = ReplaceHoldingInPath(path, oldSan, newSan);
+        if (string.IsNullOrWhiteSpace(projectRoot) || !LooksLikeImagePath(rewritten))
+            return rewritten;
+
+        var fileName = Path.GetFileName(rewritten.Replace('/', Path.DirectorySeparatorChar));
+        if (string.IsNullOrWhiteSpace(fileName)
+            || fileName.IndexOf(newSan, StringComparison.OrdinalIgnoreCase) < 0)
+            return rewritten;
+
+        var centralAbs = Path.Combine(projectRoot, "Fotos", "Haltungen", newSan, fileName);
+        if (!File.Exists(centralAbs))
+            return rewritten;
+
+        return Path.Combine("Fotos", "Haltungen", newSan, fileName).Replace('\\', '/');
+    }
+
+    private static bool LooksLikeImagePath(string path)
+    {
+        var ext = Path.GetExtension(path);
+        return ext.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
+               || ext.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
+               || ext.Equals(".png", StringComparison.OrdinalIgnoreCase)
+               || ext.Equals(".bmp", StringComparison.OrdinalIgnoreCase)
+               || ext.Equals(".gif", StringComparison.OrdinalIgnoreCase)
+               || ext.Equals(".tif", StringComparison.OrdinalIgnoreCase)
+               || ext.Equals(".tiff", StringComparison.OrdinalIgnoreCase)
+               || ext.Equals(".webp", StringComparison.OrdinalIgnoreCase);
     }
 
     // ── Pfad-Ersetzung (delegiert an HoldingPathRewriter) ────────────────

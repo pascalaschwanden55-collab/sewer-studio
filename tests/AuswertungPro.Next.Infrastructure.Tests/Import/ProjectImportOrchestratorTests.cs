@@ -124,6 +124,8 @@ public sealed class ProjectImportOrchestratorTests
             Assert.False(string.IsNullOrWhiteSpace(baa!.FotoPath),
                 "BAA-Befund muss FotoPath haben");
             Assert.Contains("H_06-001_002.jpg", baa.FotoPath!);
+            Assert.False(Path.IsPathRooted(baa.FotoPath!), $"BAA-FotoPath muss relativ sein: {baa.FotoPath}");
+            Assert.Equal("Fotos/Haltungen/06-001/H_06-001_002.jpg", baa.FotoPath!.Replace('\\', '/'));
             Assert.True(string.IsNullOrWhiteSpace(bcd?.FotoPath),
                 "BCD-Befund darf kein Foto haben");
 

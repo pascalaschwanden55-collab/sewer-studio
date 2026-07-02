@@ -216,6 +216,50 @@ public sealed class HoldingRenameServiceTests
     }
 
     [Fact]
+    public void Rename_VsaFindingFotoPathAusImportdateien_WirdAufZentralenFotosOrdnerUmgebogen()
+    {
+        var oldH = "22147-547.01";
+        var newH = "22147-22151";
+        var oldSan = ProjectPathResolver.SanitizePathSegment(oldH);
+        var newSan = ProjectPathResolver.SanitizePathSegment(newH);
+
+        var root = Path.Combine(Path.GetTempPath(), $"holdrename-vsafoto-{Guid.NewGuid():N}");
+        var projFile = Path.Combine(root, "Projektdateien", "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(projFile)!);
+        File.WriteAllText(projFile, "{}");
+
+        var holdingOld = Path.Combine(root, "Haltungen_Verteilt", oldSan);
+        Directory.CreateDirectory(holdingOld);
+        File.WriteAllText(Path.Combine(holdingOld, $"20260617_{oldSan}.mpg"), "x");
+
+        var fotoOld = Path.Combine(root, "Fotos", "Haltungen", oldSan);
+        Directory.CreateDirectory(fotoOld);
+        File.WriteAllText(Path.Combine(fotoOld, $"H_{oldSan}_116.jpg"), "central");
+
+        var importFoto = Path.Combine(root, "Importdateien", "XTF", "Foto", $"H_{oldSan}_116.jpg");
+        Directory.CreateDirectory(Path.GetDirectoryName(importFoto)!);
+        File.WriteAllText(importFoto, "archive");
+
+        try
+        {
+            var record = new HaltungRecord();
+            record.SetFieldValue("Haltungsname", oldH, FieldSource.Xtf, userEdited: false);
+            record.SetFieldValue("Link", Path.Combine("Haltungen_Verteilt", oldSan, $"20260617_{oldSan}.mpg"),
+                FieldSource.Xtf, userEdited: false);
+            record.VsaFindings.Add(new VsaFinding { FotoPath = importFoto });
+
+            var result = HoldingRenameService.Rename(record, oldH, newH, projFile);
+
+            Assert.True(result.Success, result.ErrorMessage);
+            var fotoPath = Assert.Single(record.VsaFindings).FotoPath!;
+            Assert.Equal($"Fotos/Haltungen/{newSan}/H_{newSan}_116.jpg", fotoPath.Replace('\\', '/'));
+            Assert.False(Path.IsPathRooted(fotoPath), $"VsaFinding-FotoPath muss relativ sein: {fotoPath}");
+            Assert.True(File.Exists(Path.Combine(root, "Fotos", "Haltungen", newSan, $"H_{newSan}_116.jpg")));
+        }
+        finally { try { Directory.Delete(root, recursive: true); } catch { } }
+    }
+
+    [Fact]
     public void Rename_FotosZielordnerExistiert_FailsWithoutChangingPhotoPaths()
     {
         var oldH = "06-001";
@@ -266,6 +310,69 @@ public sealed class HoldingRenameServiceTests
             Assert.True(File.Exists(Path.Combine(fotoOld, $"H_{oldSan}_001.jpg")));
             Assert.Equal(oldH, record.Protocol.HaltungId);
             Assert.Equal(originalPhotoPath, Assert.Single(record.Protocol.Current.Entries[0].FotoPaths));
+        }
+        finally { try { Directory.Delete(root, recursive: true); } catch { } }
+    }
+
+    [Fact]
+    public void Rename_FotosOrdnerRenameFehlt_SchlaegtFehlUndRolltHaltungsordnerZurueck()
+    {
+        var oldH = "06-001";
+        var newH = "06-999";
+        var oldSan = ProjectPathResolver.SanitizePathSegment(oldH);
+        var newSan = ProjectPathResolver.SanitizePathSegment(newH);
+
+        var root = Path.Combine(Path.GetTempPath(), $"holdrename-fotofilekollision-{Guid.NewGuid():N}");
+        var projFile = Path.Combine(root, "Projektdateien", "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(projFile)!);
+        File.WriteAllText(projFile, "{}");
+
+        var holdingOld = Path.Combine(root, "Haltungen_Verteilt", oldSan);
+        Directory.CreateDirectory(holdingOld);
+        var video = Path.Combine(holdingOld, $"20250310_{oldSan}.mpg");
+        File.WriteAllText(video, "x");
+
+        var fotoOld = Path.Combine(root, "Fotos", "Haltungen", oldSan);
+        Directory.CreateDirectory(fotoOld);
+        File.WriteAllText(Path.Combine(fotoOld, $"H_{oldSan}_001.jpg"), "old");
+        File.WriteAllText(Path.Combine(fotoOld, $"H_{newSan}_001.jpg"), "collision");
+
+        var originalPhotoPath = $"Fotos/Haltungen/{oldSan}/H_{oldSan}_001.jpg";
+        var record = new HaltungRecord
+        {
+            Protocol = new ProtocolDocument
+            {
+                HaltungId = oldH,
+                Current = new ProtocolRevision
+                {
+                    Entries =
+                    [
+                        new ProtocolEntry
+                        {
+                            FotoPaths = [originalPhotoPath]
+                        }
+                    ]
+                }
+            }
+        };
+        record.SetFieldValue("Haltungsname", oldH, FieldSource.Xtf, userEdited: false);
+        record.SetFieldValue("Link", Path.Combine("Haltungen_Verteilt", oldSan, $"20250310_{oldSan}.mpg"),
+            FieldSource.Xtf, userEdited: false);
+
+        try
+        {
+            var result = HoldingRenameService.Rename(record, oldH, newH, projFile);
+
+            Assert.False(result.Success);
+            Assert.Contains("Fotos-Ordner", result.ErrorMessage);
+            Assert.True(Directory.Exists(holdingOld), "Haltungsordner muss zurueckgerollt werden");
+            Assert.True(File.Exists(video), "Video-Dateiname muss zurueckgerollt werden");
+            Assert.True(Directory.Exists(fotoOld), "alter Fotos-Ordner muss erhalten bleiben");
+            Assert.False(Directory.Exists(Path.Combine(root, "Haltungen_Verteilt", newSan)));
+            Assert.False(Directory.Exists(Path.Combine(root, "Fotos", "Haltungen", newSan)));
+            Assert.Equal(oldH, record.Protocol.HaltungId);
+            Assert.Equal(originalPhotoPath, Assert.Single(record.Protocol.Current.Entries[0].FotoPaths));
+            Assert.Contains(oldSan, record.GetFieldValue("Link"));
         }
         finally { try { Directory.Delete(root, recursive: true); } catch { } }
     }
