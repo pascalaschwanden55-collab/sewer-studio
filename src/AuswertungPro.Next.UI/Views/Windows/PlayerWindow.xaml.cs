@@ -43,6 +43,7 @@ public partial class PlayerWindow : Window
             haltungId,
             onEntryCreated,
             haltungRecord);
+        WireCodingPhotoHoverPreview();
         _codingTrainingSamplesOwner = CodingTrainingSamplesOwner.CreateDefault(
             () => _codingSessionRuntimeOwner.Service,
             _protocolContext.Settings);

@@ -1,6 +1,8 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using AuswertungPro.Next.UI.Behaviors;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
@@ -9,6 +11,22 @@ public partial class PlayerCodingSidePanel : UserControl
     public PlayerCodingSidePanel()
     {
         InitializeComponent();
+
+        // Hover-Foto-Vorschau: Codier-/Import-Ereignisse liefern Fotos ueber ihren ProtocolEntry.
+        PhotoHoverPreviewBehavior.SetPhotoPathsSelector(
+            LstCodingEvents, PhotoHoverPreviewSelectors.CodingEventPhotos);
+        PhotoHoverPreviewBehavior.SetPhotoPathsSelector(
+            LstImportEvents, PhotoHoverPreviewSelectors.CodingEventPhotos);
+    }
+
+    /// <summary>
+    /// Setzt den Projekt-Root fuer die Aufloesung relativer Foto-Pfade der Codier-/Import-Liste.
+    /// Der Host (PlayerWindow) kennt den Projektpfad und injiziert ihn hier.
+    /// </summary>
+    public void SetCodingPhotoProjectRootProvider(Func<string?> projectRootProvider)
+    {
+        PhotoHoverPreviewBehavior.SetProjectRootProvider(LstCodingEvents, projectRootProvider);
+        PhotoHoverPreviewBehavior.SetProjectRootProvider(LstImportEvents, projectRootProvider);
     }
 
     public event RoutedEventHandler? CodingTakePhotoRequested;

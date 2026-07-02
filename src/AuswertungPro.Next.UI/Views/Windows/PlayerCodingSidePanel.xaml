@@ -1,6 +1,7 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Windows.PlayerCodingSidePanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors">
             <Border x:Name="CodingSidePanel"
                     Visibility="Collapsed"
                     Margin="8,0,0,0"
@@ -106,6 +107,7 @@
                                     </StackPanel>
 
                                     <ListBox x:Name="LstCodingEvents"
+                                             behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
                                              Background="Transparent"
                                              BorderThickness="0"
                                              FontSize="11"
@@ -328,6 +330,7 @@
                                     </DockPanel>
 
                                     <ListBox x:Name="LstImportEvents"
+                                             behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
                                              Background="Transparent"
                                              BorderThickness="0"
                                              FontSize="11"

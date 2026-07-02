@@ -44,6 +44,10 @@ public partial class MediaSearchWindow : Window
         _services = services;
         _initialFolder = initialFolder;
 
+        // Hover-Foto-Vorschau: Treffer liefern absolute Foto-Pfade (kein Projekt-Root noetig).
+        Behaviors.PhotoHoverPreviewBehavior.SetPhotoPathsSelector(
+            ResultGrid, Behaviors.PhotoHoverPreviewSelectors.MediaMatchRowPhotos);
+
         if (!string.IsNullOrWhiteSpace(_initialFolder))
             FolderBox.Text = _initialFolder;
 

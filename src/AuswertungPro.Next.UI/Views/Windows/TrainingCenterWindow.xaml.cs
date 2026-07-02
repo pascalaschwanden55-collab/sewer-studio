@@ -67,6 +67,14 @@ public partial class TrainingCenterWindow : Window
         InitializeComponent();
         WindowStateManager.Track(this);
 
+        // Hover-Foto-Vorschau: Frame-Pfade sind absolut (kein Projekt-Root noetig).
+        Behaviors.PhotoHoverPreviewBehavior.SetPhotoPathsSelector(
+            SamplesGrid, Behaviors.PhotoHoverPreviewSelectors.TrainingSamplePhotos);
+        Behaviors.PhotoHoverPreviewBehavior.SetPhotoPathsSelector(
+            ReviewQueueList, Behaviors.PhotoHoverPreviewSelectors.ReviewQueueItemPhotos);
+        Behaviors.PhotoHoverPreviewBehavior.SetPhotoPathsSelector(
+            TeacherGallery, Behaviors.PhotoHoverPreviewSelectors.TeacherAnnotationPhotos);
+
         var codeCatalog = services?.CodeCatalog;
         var kbDiagnostics = services?.KnowledgeBaseDiagnostics
             ?? new InfraKnowledgeBase.KnowledgeBaseDiagnosticsRunner();

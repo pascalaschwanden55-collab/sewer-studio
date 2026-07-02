@@ -7,7 +7,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
-using AuswertungPro.Next.Domain.Protocol;
 
 namespace AuswertungPro.Next.UI.Behaviors;
 
@@ -49,6 +48,22 @@ public static class PhotoHoverPreviewBehavior
 
     public static Func<string?>? GetProjectRootProvider(DependencyObject element)
         => (Func<string?>?)element.GetValue(ProjectRootProviderProperty);
+
+    // ── PhotoPathsSelector (nur per Code-Behind setzbar; Funcs gehen nicht in XAML) ──
+    // Ordnet einen beliebigen Listeneintrag seinen Roh-Fotopfaden zu. Ohne Selektor greift
+    // der ProtocolEntry-Fallback in PhotoHoverPreviewSelectors.ExtractPhotoPaths.
+    public static readonly DependencyProperty PhotoPathsSelectorProperty =
+        DependencyProperty.RegisterAttached(
+            "PhotoPathsSelector",
+            typeof(Func<object, IEnumerable<string>?>),
+            typeof(PhotoHoverPreviewBehavior),
+            new PropertyMetadata(null));
+
+    public static void SetPhotoPathsSelector(DependencyObject element, Func<object, IEnumerable<string>?>? value)
+        => element.SetValue(PhotoPathsSelectorProperty, value);
+
+    public static Func<object, IEnumerable<string>?>? GetPhotoPathsSelector(DependencyObject element)
+        => (Func<object, IEnumerable<string>?>?)element.GetValue(PhotoPathsSelectorProperty);
 
     // ── State (privat, pro Control eine Instanz) ──
     private static readonly DependencyProperty StateProperty =
@@ -156,7 +171,7 @@ public static class PhotoHoverPreviewBehavior
         private readonly ItemsControl _owner;
         private readonly DispatcherTimer _timer;
         private PhotoHoverPreviewPopup? _popup;
-        private ProtocolEntry? _hoverEntry;
+        private object? _hoverItem;
         private IReadOnlyList<string> _photos = Array.Empty<string>();
         private int _index;
 
@@ -188,22 +203,22 @@ public static class PhotoHoverPreviewBehavior
             // Ressourcen (Popup-HWND) freigeben; Verdrahtung bleibt, damit die Vorschau nach
             // erneutem Laden (z. B. Tab-Wechsel) weiterhin funktioniert. Popup wird lazy neu erzeugt.
             _timer.Stop();
-            _hoverEntry = null;
+            _hoverItem = null;
             _photos = Array.Empty<string>();
             DisposePopup();
         }
 
         private void OnMouseMove(object sender, MouseEventArgs e)
         {
-            var entry = EntryUnderCursor(e);
-            if (ReferenceEquals(entry, _hoverEntry))
+            var item = ItemUnderCursor(e);
+            if (ReferenceEquals(item, _hoverItem))
                 return; // gleicher Eintrag -> Timer NICHT neu starten (sonst oeffnet die Vorschau nie)
 
-            _hoverEntry = entry;
+            _hoverItem = item;
             _popup?.CloseAnimated();
             _timer.Stop();
 
-            if (entry is null)
+            if (item is null)
                 return; // Header/Scrollbar/Zwischenraum -> nur schliessen
 
             _timer.Start();
@@ -213,19 +228,20 @@ public static class PhotoHoverPreviewBehavior
         {
             _timer.Stop();
             _popup?.CloseAnimated();
-            _hoverEntry = null;
+            _hoverItem = null;
         }
 
         private void OnTick(object? sender, EventArgs e)
         {
             _timer.Stop();
 
-            var entry = _hoverEntry;
-            if (entry is null)
+            var item = _hoverItem;
+            if (item is null)
                 return;
 
             var root = GetProjectRootProvider(_owner)?.Invoke();
-            _photos = PhotoHoverPreviewLogic.ResolveExistingPhotos(entry.FotoPaths, root, File.Exists);
+            var rawPaths = PhotoHoverPreviewSelectors.ExtractPhotoPaths(item, GetPhotoPathsSelector(_owner));
+            _photos = PhotoHoverPreviewLogic.ResolveExistingPhotos(rawPaths, root, File.Exists);
             if (_photos.Count == 0)
                 return; // Eintrag ohne (existierendes) Foto -> nichts anzeigen
 
@@ -248,13 +264,15 @@ public static class PhotoHoverPreviewBehavior
             e.Handled = true;
         }
 
-        private ProtocolEntry? EntryUnderCursor(MouseEventArgs e)
+        private object? ItemUnderCursor(MouseEventArgs e)
         {
             if (e.OriginalSource is not DependencyObject source)
                 return null;
 
+            // Beliebiger Listeneintrag (nicht mehr auf ProtocolEntry beschraenkt); die
+            // konkrete Foto-Zuordnung uebernimmt der Selektor bzw. der Fallback in OnTick.
             var container = _owner.ContainerFromElement(source);
-            return container is FrameworkElement { DataContext: ProtocolEntry entry } ? entry : null;
+            return container is FrameworkElement element ? element.DataContext : null;
         }
 
         private void EnsurePopup()
