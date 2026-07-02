@@ -12,6 +12,7 @@
         <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenProjectCommand}"/>
         <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewProjectCommand}"/>
     </Window.InputBindings>
+    <Grid>
     <DockPanel>
         <!-- Kopfzeile: Menue + Knopf "Projekt wechseln"; nur im Workspace sichtbar -->
         <DockPanel DockPanel.Dock="Top">
@@ -306,4 +307,8 @@
 
     </Grid>
     </DockPanel>
+
+    <!-- Toast-Overlay: nicht-blockierende Erfolgsmeldungen unten rechts, ueber allem -->
+    <ctrl:ToastHost x:Name="ToastHostControl"/>
+    </Grid>
 </Window>

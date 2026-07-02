@@ -50,6 +50,7 @@ namespace AuswertungPro.Next.UI
         public ILoggerFactory LoggerFactory { get; }
         public ErrorCodeGenerator ErrorCodes { get; } = new();
         public IDialogService Dialogs { get; } = new DialogService();
+        public ToastService Toasts { get; } = new ToastService();
         public IPlaywrightInstallService PlaywrightInstaller { get; }
         #endregion
 

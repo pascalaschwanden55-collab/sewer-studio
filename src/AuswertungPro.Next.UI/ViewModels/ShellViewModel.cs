@@ -504,6 +504,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         {
             IsProjectReady = true;
             RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
+            _sp.Toasts.Success("Projekt gespeichert");
         }
         return res.Ok;
     }
@@ -530,7 +531,10 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         var res = _sp.Projects.Save(Project, path);
         SetStatus(res.Ok ? $"Gespeichert: {Path.GetFileName(path)}" : $"Fehler: {res.ErrorMessage}");
         if (res.Ok)
+        {
             RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
+            _sp.Toasts.Success($"Gespeichert: {Path.GetFileName(path)}");
+        }
         return res.Ok;
     }
 

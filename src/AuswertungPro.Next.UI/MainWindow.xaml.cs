@@ -15,7 +15,10 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         WindowStateManager.Track(this);
-        DataContext = new ShellViewModel(GetServiceProvider());
+        var services = GetServiceProvider();
+        // Toast-Senke mit dem sichtbaren Host verbinden (nicht-blockierende Erfolgsmeldungen).
+        services.Toasts.AttachSink((message, severity) => ToastHostControl.Enqueue(message, severity));
+        DataContext = new ShellViewModel(services);
     }
 
     private static ServiceProvider GetServiceProvider()
