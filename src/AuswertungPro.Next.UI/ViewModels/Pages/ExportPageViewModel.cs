@@ -27,6 +27,9 @@ public sealed partial class ExportPageViewModel : ObservableObject
     [ObservableProperty] private double _distributionPercent;
     [ObservableProperty] private bool _isPageBusy;
 
+    /// <summary>Lade-Overlay fuer Langlaeufer (xlsx-Export).</summary>
+    public Services.BusyState Busy { get; } = new();
+
     public IAsyncRelayCommand ExportCommand { get; }
     public IAsyncRelayCommand ExportSchaechteCommand { get; }
     public IAsyncRelayCommand DistributeHoldingsCommand { get; }
@@ -80,10 +83,13 @@ public sealed partial class ExportPageViewModel : ObservableObject
         try
         {
             IsPageBusy = true;
+            using var busy = Busy.Enter("Haltungen werden exportiert …");
             var res = await Task.Run(() =>
                 _sp.ExcelExport.ExportToTemplate(_shell.Project, templatePath, outPath, headerRow: 11, startRow: 12));
             LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
             _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
+            if (res.Ok)
+                _sp.Toasts.Success($"Haltungen exportiert: {Path.GetFileName(outPath)}");
         }
         finally
         {
@@ -107,10 +113,13 @@ public sealed partial class ExportPageViewModel : ObservableObject
         try
         {
             IsPageBusy = true;
+            using var busy = Busy.Enter("Schächte werden exportiert …");
             var res = await Task.Run(() =>
                 _sp.ExcelExport.ExportSchaechteToTemplate(_shell.Project, templatePath, outPath, headerRow: 12, startRow: 13));
             LastResult = res.Ok ? $"Exportiert: {outPath}" : $"Fehler: {res.ErrorMessage}";
             _shell.SetStatus(res.Ok ? "Exportiert" : "Export fehlgeschlagen");
+            if (res.Ok)
+                _sp.Toasts.Success($"Schächte exportiert: {Path.GetFileName(outPath)}");
         }
         finally
         {

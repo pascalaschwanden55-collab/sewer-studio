@@ -1,0 +1,40 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Controls.BusyOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+    <!-- Halbtransparenter Scrim: blockiert bewusst die Eingabe waehrend eines Langlaeufers.
+         Sichtbarkeit/Fade steuert der Code-Behind ueber die IsActive-DP. -->
+    <Grid x:Name="ScrimRoot" Visibility="Collapsed" Opacity="0" Background="#66101418">
+        <Border Background="{DynamicResource CardBrush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                CornerRadius="{DynamicResource RadiusL}" Padding="26,22"
+                MinWidth="220" MaxWidth="380"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="24" ShadowDepth="5" Opacity="0.4"/>
+            </Border.Effect>
+            <StackPanel HorizontalAlignment="Center">
+                <!-- Ring-Spinner: 3/4-Bogen, Endlos-Rotation (Code-Behind) -->
+                <Path x:Name="Spinner" Width="40" Height="40"
+                      Stroke="{DynamicResource AccentBrush}" StrokeThickness="4"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      RenderTransformOrigin="0.5,0.5"
+                      Data="M 20,3 A 17,17 0 1 1 3,20">
+                    <Path.RenderTransform>
+                        <RotateTransform x:Name="SpinRotate"/>
+                    </Path.RenderTransform>
+                </Path>
+                <TextBlock Margin="0,16,0,0"
+                           Text="{Binding Message, ElementName=Root}"
+                           HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextBrush}" FontSize="14"/>
+                <!-- Nur sichtbar, wenn CancelCommand gesetzt ist (Code-Behind) -->
+                <Button x:Name="CancelButton" Content="Abbrechen"
+                        Margin="0,16,0,0" Padding="18,6"
+                        HorizontalAlignment="Center" Visibility="Collapsed"
+                        Command="{Binding CancelCommand, ElementName=Root}"
+                        Style="{DynamicResource SecondaryButton}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
