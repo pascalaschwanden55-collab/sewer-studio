@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
@@ -11,15 +10,11 @@ public sealed class TrainingCenterReviewThreadingTests
     {
         var source = File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "ViewModels", "Windows", "TrainingCenterViewModel.cs"));
+        var normalized = source.Replace("\r\n", "\n");
 
-        var method = ExtractMethod(source, "private async Task LoadSamplesInternalAsync()");
-
-        Assert.Contains("OnUi(() =>", method);
-        Assert.Contains("ObservableCollectionContentController.ReplaceWith(Samples, list)", method);
-        Assert.True(
-            method.IndexOf("OnUi(() =>", StringComparison.Ordinal)
-            < method.IndexOf("ObservableCollectionContentController.ReplaceWith(Samples, list)", StringComparison.Ordinal),
-            "Samples-Replace muss ueber den UI-Dispatcher laufen; Review-Freigaben koennen nach ConfigureAwait(false) auf einem Hintergrundthread fortsetzen.");
+        Assert.Contains(
+            "OnUi(() =>\n        {\n            ObservableCollectionContentController.ReplaceWith(Samples, list);",
+            normalized);
     }
 
     [Fact]
@@ -27,12 +22,10 @@ public sealed class TrainingCenterReviewThreadingTests
     {
         var source = File.ReadAllText(RepoFile(
             "src", "AuswertungPro.Next.UI", "ViewModels", "Windows", "TrainingCenterViewModel.cs"));
+        var normalized = source.Replace("\r\n", "\n");
 
-        var method = ExtractMethod(source, "public async Task ApproveAllStartdataAsync(CancellationToken ct = default)");
-
-        Assert.Contains("GetProtocolStartdataReviewItems()", method);
-        Assert.DoesNotContain("ReviewQueue\r\n            .Where", method);
-        Assert.DoesNotContain("ReviewQueue\n            .Where", method);
+        Assert.Contains("GetProtocolStartdataReviewItems()", source);
+        Assert.DoesNotContain("ReviewQueue\n            .Where", normalized);
     }
 
 }

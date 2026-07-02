@@ -1316,7 +1316,6 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("TrainingCenterPersistenceGuardTests.cs")]
     [InlineData("TrainingCenterReviewCodeExplorerTests.cs")]
     [InlineData("TrainingCenterReviewSamPersistenceTests.cs")]
-    [InlineData("TrainingCenterReviewThreadingTests.cs")]
     [InlineData("TrainingFfmpegPathResolverTests.cs")]
     [InlineData("VideoLabelToolCodeBrowserTests.cs")]
     [InlineData("VideoLabelToolSelectionTests.cs")]
