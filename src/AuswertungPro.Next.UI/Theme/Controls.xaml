@@ -5,13 +5,20 @@
          MODERN ENGINEERING CONTROLS — Clean, functional
          ═══════════════════════════════════════════════════════════ -->
 
-    <Storyboard x:Key="GlowAnimation">
-        <DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="Opacity">
-            <EasingDoubleKeyFrame KeyTime="0:0:0" Value="0.2"/>
-            <EasingDoubleKeyFrame KeyTime="0:0:1" Value="0.7"/>
-            <EasingDoubleKeyFrame KeyTime="0:0:2" Value="0.2"/>
-        </DoubleAnimationUsingKeyFrames>
-    </Storyboard>
+    <!-- ═══ ANIMATIONS-TOKENS (theme-unabhaengig; nur fuer Neucode verbindlich, kein Bestandsumbau) ═══ -->
+    <!-- Dauern: Fast=Hover/Press, Normal=Ein-/Ausblenden, Slow=Seiten-/Ansichtswechsel.
+         Code-Pendant: Controls/AnimationTokens.cs (gleiche Werte). -->
+    <Duration x:Key="AnimDurationFast">0:0:0.12</Duration>
+    <Duration x:Key="AnimDurationNormal">0:0:0.18</Duration>
+    <Duration x:Key="AnimDurationSlow">0:0:0.30</Duration>
+    <!-- Easings (Freezable, teilbar) -->
+    <CubicEase x:Key="AnimEaseOut" EasingMode="EaseOut"/>
+    <CubicEase x:Key="AnimEaseIn" EasingMode="EaseIn"/>
+    <!-- Eck-Radien -->
+    <CornerRadius x:Key="RadiusS">4</CornerRadius>
+    <CornerRadius x:Key="RadiusM">6</CornerRadius>
+    <CornerRadius x:Key="RadiusL">8</CornerRadius>
+    <CornerRadius x:Key="RadiusXL">10</CornerRadius>
 
     <!-- ═══ COMBOBOX ═══ -->
     <Style TargetType="{x:Type ComboBox}">
