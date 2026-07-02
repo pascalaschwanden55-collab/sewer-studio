@@ -8,6 +8,63 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class PlayerWindowRuntimeArchitectureTests
 {
     [Fact]
+    public void PlayerWindow_overlay_service_is_owned_by_runtime_owner()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var ownerPath = Path.Combine(uiRoot, "Player", "CodingOverlayServiceOwner.cs");
+        var sessionRuntimeFactoryPath = Path.Combine(uiRoot, "Player", "CodingSessionRuntimeFactory.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
+
+        Assert.True(File.Exists(ownerPath), "OverlayService-Besitz soll in einem eigenen Player-Owner liegen.");
+        Assert.True(File.Exists(sessionRuntimeFactoryPath), "Coding-OverlayToolHost-Verdrahtung soll ausserhalb des PlayerWindow-Konstruktors liegen.");
+
+        var owner = File.ReadAllText(ownerPath);
+        var sessionRuntimeFactory = File.Exists(sessionRuntimeFactoryPath) ? File.ReadAllText(sessionRuntimeFactoryPath) : "";
+        var state = File.ReadAllText(statePath);
+        var windowRoot = File.ReadAllText(windowRootPath);
+
+        Assert.Contains("public sealed class CodingOverlayServiceOwner", owner);
+        Assert.Contains("private CodingOverlayServiceOwner _codingOverlayRuntimeOwner => _codingRuntimeStates.OverlayRuntimeOwner", state);
+        Assert.Contains("new CodingOverlayToolHost(resolveOverlayService)", sessionRuntimeFactory);
+        Assert.Contains("CodingSessionRuntimeFactory.Create", windowRoot);
+        Assert.DoesNotContain("new CodingOverlayToolHost", windowRoot);
+
+        foreach (var path in Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs"))
+        {
+            var text = File.ReadAllText(path);
+            Assert.DoesNotContain("_codingOverlayService", text);
+        }
+    }
+
+    [Fact]
+    public void PlayerWindow_coding_ai_controller_is_owned_by_runtime_owner()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var ownerPath = Path.Combine(uiRoot, "Player", "CodingAiControllerOwner.cs");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+
+        Assert.True(File.Exists(ownerPath), "CodingAiController-Besitz soll in einem eigenen Player-Owner liegen.");
+
+        var owner = File.ReadAllText(ownerPath);
+        var state = File.ReadAllText(statePath);
+
+        Assert.Contains("public sealed class CodingAiControllerOwner", owner);
+        Assert.Contains("public CodingAiController Controller", owner);
+        Assert.Contains("private CodingAiControllerOwner _codingAiRuntimeOwner => _codingAiStates.RuntimeOwner", state);
+
+        foreach (var path in Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs"))
+        {
+            var text = File.ReadAllText(path);
+            Assert.DoesNotContain("_codingAiController", text);
+        }
+    }
+
+    [Fact]
     public void PlayerWindow_detection_confirmation_buffer_owns_pending_detection_state()
     {
         var root = FindRepositoryRoot();

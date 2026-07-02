@@ -127,6 +127,8 @@ public sealed class SourceTextArchitectureHygieneTests
 
         var methodNames = new[]
         {
+            "PlayerWindow_overlay_service_is_owned_by_runtime_owner",
+            "PlayerWindow_coding_ai_controller_is_owned_by_runtime_owner",
             "PlayerWindow_detection_confirmation_buffer_owns_pending_detection_state",
             "PlayerWindow_coding_analysis_cts_lifecycle_lives_in_helper",
             "PlayerWindow_coding_session_service_is_owned_by_runtime_owner",
