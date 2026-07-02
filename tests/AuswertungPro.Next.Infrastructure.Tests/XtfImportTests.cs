@@ -128,6 +128,75 @@ public sealed class XtfImportTests
     }
 
     [Fact]
+    public void VsaKekImport_SetztLaengeDatumUndBemerkungskontext_AusUntersuchung()
+    {
+        // Charakterisierung der VSA_KEK-Hauptquelle:
+        // Stammdaten aus Untersuchung werden direkt uebernommen; Zustandsklasse wird nicht aus Einzelschadenklasse geraten.
+        var dir = Path.Combine(Path.GetTempPath(), $"vsakek-fields-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        var xtf = Path.Combine(dir, "test.xtf");
+        File.WriteAllText(xtf, """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="VSA_KEK_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <VSA_KEK_2020_LV95.KEK BID="B1">
+      <VSA_KEK_2020_LV95.KEK.Untersuchung TID="U1">
+        <Bezeichnung>12-34</Bezeichnung>
+        <Zeitpunkt>20260626</Zeitpunkt>
+        <Inspizierte_Laenge>18.75</Inspizierte_Laenge>
+        <Erfassungsart>TV</Erfassungsart>
+        <Grund>Abnahme</Grund>
+        <Witterung>trocken</Witterung>
+        <Ausfuehrender>Inspektor A</Ausfuehrender>
+        <Fahrzeug>FZ-1</Fahrzeug>
+        <Geraet>Kamera-7</Geraet>
+      </VSA_KEK_2020_LV95.KEK.Untersuchung>
+      <VSA_KEK_2020_LV95.KEK.Kanalschaden TID="S_BBA">
+        <UntersuchungRef REF="U1" />
+        <KanalSchadencode>BBA</KanalSchadencode>
+        <Distanz>4.50</Distanz>
+        <Einzelschadenklasse>4</Einzelschadenklasse>
+      </VSA_KEK_2020_LV95.KEK.Kanalschaden>
+    </VSA_KEK_2020_LV95.KEK>
+  </DATASECTION>
+</TRANSFER>
+""");
+
+        try
+        {
+            var project = new Project();
+            var svc = new LegacyXtfImportService();
+
+            var stats = svc.ImportXtfFiles(new[] { xtf }, project);
+            var debug = string.Join("\n", stats.Messages.Select(m => $"{m.Level}: {m.Message} ({m.Context})"));
+
+            Assert.True(stats.Errors == 0, debug);
+            var rec = project.Data.SingleOrDefault(r =>
+                string.Equals(r.GetFieldValue("Haltungsname"), "12-34", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(rec);
+            Assert.Equal("18.75", rec!.GetFieldValue("Haltungslaenge_m"));
+            Assert.Equal("26.06.2026", rec.GetFieldValue("Datum_Jahr"));
+            Assert.Equal("", rec.GetFieldValue("Pruefungsresultat"));
+            Assert.Equal("", rec.GetFieldValue("Zustandsklasse"));
+
+            var bemerkungen = rec.GetFieldValue("Bemerkungen");
+            Assert.Contains("Erfassung: TV", bemerkungen);
+            Assert.Contains("Grund: Abnahme", bemerkungen);
+            Assert.Contains("Witterung: trocken", bemerkungen);
+            Assert.Contains("Ausfuehrender: Inspektor A", bemerkungen);
+            Assert.Contains("Fahrzeug: FZ-1", bemerkungen);
+            Assert.Contains("Geraet: Kamera-7", bemerkungen);
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void Sia405Import_ParsesHoldingMaterialAndDn_FromSyntheticBasket()
     {
         // Minimales SYNTHETISCHES SIA405-XTF (kein echter Kundendatensatz):
