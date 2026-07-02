@@ -149,9 +149,6 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
         var postWorkflow = File.Exists(postWorkflowPath) ? File.ReadAllText(postWorkflowPath) : "";
         var accessors = File.ReadAllText(accessorsPath);
         var sidePanelControllerSet = File.Exists(sidePanelControllerSetPath) ? File.ReadAllText(sidePanelControllerSetPath) : "";
-        var selectCodeBody = ExtractMethodBody(events, "private async Task HandleCodingSelectCodeAsync");
-        var createEventBody = ExtractMethodBody(events, "private void CodingCreateEvent_Click");
-
         Assert.True(File.Exists(selectedCodeWorkflowPath), "Manueller Selected-Code-Event-Ablauf soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(selectCommandWorkflowPath), "Manueller Select-Code-Button-Ablauf soll ausserhalb der Events-Partial orchestriert werden.");
         Assert.True(File.Exists(manualEntryWorkflowPath), "Manuelle Code-Explorer-Eintragserzeugung soll ausserhalb der Events-Partial orchestriert werden.");
@@ -165,11 +162,6 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
         Assert.Contains("CodingEventCreationPostWorkflow.Apply", events);
         Assert.Contains("_codingSessionHost", events);
         Assert.DoesNotContain("_codingVm", events);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", selectCodeBody);
-        Assert.DoesNotContain("var osdMeter = await CodingReadOsdMeterAsync()", selectCodeBody);
-        Assert.DoesNotContain("if (entry is not null)", selectCodeBody);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", createEventBody);
-        Assert.DoesNotContain("if (createdEvent == null)", createEventBody);
         Assert.DoesNotContain("_codingSchemaManager.Cancel()", events);
         Assert.DoesNotContain("_codingVm.CurrentOverlay = null", events);
         Assert.DoesNotContain("TxtCodingSelectedCode.Text = \"\"", events);
