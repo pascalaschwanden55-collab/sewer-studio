@@ -1,4 +1,4 @@
-namespace AuswertungPro.Next.UI.Hydraulik;
+namespace AuswertungPro.Next.Application.Hydraulik;
 
 public sealed record MaterialOption(string Key, string Label, double KbNeu, double KbAlt)
 {

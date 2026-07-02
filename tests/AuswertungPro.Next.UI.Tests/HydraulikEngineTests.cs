@@ -1,5 +1,5 @@
 using System;
-using AuswertungPro.Next.UI.Hydraulik;
+using AuswertungPro.Next.Application.Hydraulik;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 
 namespace AuswertungPro.Next.UI.Tests;

@@ -1,10 +1,9 @@
 using System.Globalization;
-using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.Hydraulik;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.UI.Hydraulik;
 
-namespace AuswertungPro.Next.UI.DataPage;
+namespace AuswertungPro.Next.Application.DataPage;
 
 public sealed record DataPageHydraulikAvailability(double? DnMm, double? GefaellePromille)
 {
@@ -35,15 +34,14 @@ public static class DataPageHydraulikReportCalculator
 
     public static HydraulikCalcResult? BuildReportCalculation(
         HaltungRecord record,
-        AppSettings settings,
+        HydraulikPanelSettings panel,
         double? dnMm = null,
         Action? saveSettings = null)
     {
         ArgumentNullException.ThrowIfNull(record);
-        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(panel);
 
         var dn = dnMm ?? DnValueParser.TryParseMillimeters(record.GetFieldValue("DN_mm")) ?? 300d;
-        var panel = settings.HydraulikPanel ??= new HydraulikPanelSettings();
         var material = HydraulikMaterialCatalog.Resolve(record.GetFieldValue("Rohrmaterial"), panel.MaterialKey);
         var kb = panel.IsNeuzustand ? material.KbNeu : material.KbAlt;
 

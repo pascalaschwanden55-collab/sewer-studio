@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
-using AuswertungPro.Next.UI.Hydraulik;
+using AuswertungPro.Next.Application.Hydraulik;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
 

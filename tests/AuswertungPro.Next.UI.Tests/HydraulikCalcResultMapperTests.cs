@@ -1,4 +1,4 @@
-using AuswertungPro.Next.UI.Hydraulik;
+using AuswertungPro.Next.Application.Hydraulik;
 
 namespace AuswertungPro.Next.UI.Tests;
 

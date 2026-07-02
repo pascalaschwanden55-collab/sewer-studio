@@ -1,6 +1,6 @@
 using AuswertungPro.Next.Application.Reports;
 
-namespace AuswertungPro.Next.UI.Hydraulik;
+namespace AuswertungPro.Next.Application.Hydraulik;
 
 public static class HydraulikCalcResultMapper
 {

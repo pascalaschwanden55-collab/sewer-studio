@@ -272,7 +272,7 @@ public static class HydraulikPdfBuilder
 
 /// <summary>
 /// Flattened calculation result for PDF generation.
-/// Created from HydraulikResult + HydraulikInput in the UI layer.
+/// Created from HydraulikResult + HydraulikInput in the Application layer.
 /// </summary>
 public sealed record HydraulikCalcResult
 {

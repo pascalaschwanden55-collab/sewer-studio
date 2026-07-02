@@ -1,6 +1,6 @@
 using System;
 
-namespace AuswertungPro.Next.UI.Hydraulik;
+namespace AuswertungPro.Next.Application.Hydraulik;
 
 /// <summary>
 /// Hydraulik-Berechnungsengine nach DWA-A 110 / HydroDim.

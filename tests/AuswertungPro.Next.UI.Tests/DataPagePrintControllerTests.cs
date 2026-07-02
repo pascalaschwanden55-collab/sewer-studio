@@ -1,3 +1,4 @@
+using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;

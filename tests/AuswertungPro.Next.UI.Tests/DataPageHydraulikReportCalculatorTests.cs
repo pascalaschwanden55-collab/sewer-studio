@@ -1,6 +1,6 @@
 using AuswertungPro.Next.Domain.Models;
-using AuswertungPro.Next.UI;
-using AuswertungPro.Next.UI.DataPage;
+using AuswertungPro.Next.Application.DataPage;
+using AuswertungPro.Next.Application.Hydraulik;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -39,15 +39,12 @@ public sealed class DataPageHydraulikReportCalculatorTests
         var record = new HaltungRecord();
         record.SetFieldValue("DN_mm", "400", FieldSource.Manual, userEdited: true);
         record.SetFieldValue("Rohrmaterial", "PVC", FieldSource.Manual, userEdited: true);
-        var settings = new AppSettings
+        var settings = new HydraulikPanelSettings
         {
-            HydraulikPanel = new HydraulikPanelSettings
-            {
-                Gefaelle = 7,
-                Temperatur = 12,
-                IsNeuzustand = false,
-                MaterialKey = "Beton"
-            }
+            Gefaelle = 7,
+            Temperatur = 12,
+            IsNeuzustand = false,
+            MaterialKey = "Beton"
         };
 
         var calculation = DataPageHydraulikReportCalculator.BuildReportCalculation(
@@ -70,13 +67,10 @@ public sealed class DataPageHydraulikReportCalculatorTests
         var record = new HaltungRecord();
         record.SetFieldValue("DN_mm", "400", FieldSource.Manual, userEdited: true);
         record.SetFieldValue("Rohrmaterial", "PVC", FieldSource.Manual, userEdited: true);
-        var settings = new AppSettings
+        var settings = new HydraulikPanelSettings
         {
-            HydraulikPanel = new HydraulikPanelSettings
-            {
-                Wasserstand = 90,
-                MaterialKey = "Beton"
-            }
+            Wasserstand = 90,
+            MaterialKey = "Beton"
         };
         var saveCalls = 0;
 
@@ -87,8 +81,8 @@ public sealed class DataPageHydraulikReportCalculatorTests
             saveSettings: () => saveCalls++);
 
         Assert.Equal(1, saveCalls);
-        Assert.Equal(400, settings.HydraulikPanel.Dn);
-        Assert.Equal("PVC/PE", settings.HydraulikPanel.MaterialKey);
-        Assert.Equal(90, settings.HydraulikPanel.Wasserstand);
+        Assert.Equal(400, settings.Dn);
+        Assert.Equal("PVC/PE", settings.MaterialKey);
+        Assert.Equal(90, settings.Wasserstand);
     }
 }

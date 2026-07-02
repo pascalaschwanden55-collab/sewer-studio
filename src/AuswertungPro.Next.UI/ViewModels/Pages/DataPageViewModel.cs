@@ -22,7 +22,6 @@ using AuswertungPro.Next.UI.Ai.Training;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Application.Ai.Sanierung;
 using AuswertungPro.Next.UI.DataPage;
-using AuswertungPro.Next.UI.Hydraulik;
 using AuswertungPro.Next.UI.Player;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
@@ -152,13 +151,13 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
             () => _shell.GetProjectFolder(),
             record => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
-                _sp.Settings,
+                _sp.Settings.HydraulikPanel,
                 saveSettings: _sp.Settings.Save),
             getLastProjectPath: () => _sp.Settings.LastProjectPath,
             findSchachtByNummer: FindSchachtByNummer,
             buildDossierHydraulikCalculation: (record, dn) => DataPageHydraulikReportCalculator.BuildReportCalculation(
                 record,
-                _sp.Settings,
+                _sp.Settings.HydraulikPanel,
                 dn,
                 saveSettings: _sp.Settings.Save));
         _originalPdfController = new DataPageOriginalPdfController(
