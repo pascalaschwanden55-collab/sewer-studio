@@ -1,4 +1,5 @@
 using System.Text;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
@@ -58,7 +59,7 @@ public static class ProjectFieldCsvExporter
             }
         }
 
-        File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
+        AtomicTextFileWriter.WriteAllText(path, sb.ToString(), Encoding.UTF8);
         return path;
     }
 

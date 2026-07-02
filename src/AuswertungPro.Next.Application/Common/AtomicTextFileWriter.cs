@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,6 +14,21 @@ public static class AtomicTextFileWriter
         try
         {
             File.WriteAllText(write.TempPath, content);
+            CompleteWrite(write);
+        }
+        catch
+        {
+            DeleteTemp(write.TempPath);
+            throw;
+        }
+    }
+
+    public static void WriteAllText(string path, string content, Encoding encoding)
+    {
+        var write = PrepareWrite(path);
+        try
+        {
+            File.WriteAllText(write.TempPath, content, encoding);
             CompleteWrite(write);
         }
         catch
