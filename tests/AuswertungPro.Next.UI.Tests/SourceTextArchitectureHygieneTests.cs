@@ -255,7 +255,9 @@ public sealed class SourceTextArchitectureHygieneTests
         var methodNames = new[]
         {
             "PlayerWindow_coding_analysis_reads_overlay_calibration_through_host",
-            "PlayerWindow_overlay_calibration_access_is_routed_through_host"
+            "PlayerWindow_overlay_calibration_access_is_routed_through_host",
+            "PlayerWindow_overlay_tool_state_access_is_routed_through_host",
+            "PlayerWindow_overlay_input_drawing_state_access_is_routed_through_host"
         };
 
         foreach (var methodName in methodNames)
