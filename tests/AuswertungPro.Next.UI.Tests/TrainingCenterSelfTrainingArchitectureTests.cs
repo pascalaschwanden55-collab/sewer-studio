@@ -22,14 +22,14 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Ai",
             "Training",
             "SelfTrainingRunPreparationController.cs");
-        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+        var viewModelSource = source;
 
         Assert.False(File.Exists(preparationControllerPath), "Triviale Self-Training-CTS-Vorbereitung soll inline in der VM stehen.");
-        Assert.DoesNotContain("SelfTrainingRunPreparationController.PrepareCancellation(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("_selfTrainingCts?.Cancel();", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("_selfTrainingCts?.Dispose();", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("_selfTrainingCts = new CancellationTokenSource();", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("var ct = _selfTrainingCts.Token;", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingRunPreparationController.PrepareCancellation(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingCts?.Cancel();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingCts?.Dispose();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingCts = new CancellationTokenSource();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("var ct = _selfTrainingCts.Token;", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -42,15 +42,15 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+        var viewModelSource = source;
 
-        Assert.Contains("SelfTrainingAutoScanController.RunAsync(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingAutoScanController.ShouldScan(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingAutoScanController.ScanAsync(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingAutoScanController.StatusText", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("if (Cases.Count == 0 && _rootFolders.Count > 0)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("foreach (var c in autoScannedCases)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Cases.Add(c);", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingAutoScanController.RunAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingAutoScanController.ShouldScan(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingAutoScanController.ScanAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingAutoScanController.StatusText", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("if (Cases.Count == 0 && _rootFolders.Count > 0)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("foreach (var c in autoScannedCases)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Cases.Add(c);", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -71,15 +71,15 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+        var viewModelSource = source;
 
         Assert.False(File.Exists(workflowControllerPath), workflowControllerPath);
         Assert.DoesNotContain("SelfTrainingCaseSelectionWorkflowController", source, StringComparison.Ordinal);
-        Assert.Contains("if (SelectedCase is null)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("existingSamplesForSelection = await TrainingSamplesStore.LoadAsync();", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingCaseSelectionController.Select(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("SelectedCase = selectedCase;", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingCaseSelectionController.WithProtocolOrStop", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("if (SelectedCase is null)", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("existingSamplesForSelection = await TrainingSamplesStore.LoadAsync();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingCaseSelectionController.Select(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("SelectedCase = selectedCase;", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingCaseSelectionController.WithProtocolOrStop", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -100,18 +100,18 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+        var viewModelSource = source;
 
         Assert.False(File.Exists(workflowControllerPath), workflowControllerPath);
         Assert.DoesNotContain("SelfTrainingReviewQueueWorkflowController", source, StringComparison.Ordinal);
-        Assert.Contains("ReviewQueueServiceRef is not null", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingReviewCandidateSelector.HasReviewableMatches(result)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("var reviewSamples = await TrainingSamplesStore.LoadAsync();", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingReviewQueueController.EnqueueCandidates(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("LoadReviewQueue(ReviewQueueServiceRef);", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("Log(reviewQueueUpdate.LogMessage ?? \"\");", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ReviewQueueServiceRef.EnqueueFromSelfTraining(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingReviewCandidateSelector.SelectForRun(allSamplesForReview, result)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("ReviewQueueServiceRef is not null", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingReviewCandidateSelector.HasReviewableMatches(result)", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("var reviewSamples = await TrainingSamplesStore.LoadAsync();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingReviewQueueController.EnqueueCandidates(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("LoadReviewQueue(ReviewQueueServiceRef);", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("Log(reviewQueueUpdate.LogMessage ?? \"\");", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ReviewQueueServiceRef.EnqueueFromSelfTraining(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingReviewCandidateSelector.SelectForRun(allSamplesForReview, result)", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -124,15 +124,15 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+        var viewModelSource = source;
 
-        Assert.Contains("SelfTrainingKbUpdateController.RunApprovedSamplesUpdateAsync(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingKbUpdateController.ShouldRun(result)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingKbUpdateController.SelectApprovedSamplesForRun(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingKbUpdateController.MarkPendingBeforeIndex(newApproved)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingKbUpdateController.ApplyOutcome(newApproved, stOutcome)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("s.KbIndexState is KbIndexState.None or KbIndexState.Error", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("stOutcome.IndexedIds.ToHashSet()", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingKbUpdateController.RunApprovedSamplesUpdateAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingKbUpdateController.ShouldRun(result)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingKbUpdateController.SelectApprovedSamplesForRun(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingKbUpdateController.MarkPendingBeforeIndex(newApproved)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingKbUpdateController.ApplyOutcome(newApproved, stOutcome)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("s.KbIndexState is KbIndexState.None or KbIndexState.Error", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("stOutcome.IndexedIds.ToHashSet()", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
