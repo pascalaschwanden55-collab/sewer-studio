@@ -142,6 +142,119 @@ public sealed class PlayerWindowCodingStateArchitectureTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_schema_type_state_lives_in_state_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var schemaStatePath = Path.Combine(uiRoot, "Player", "CodingSchemaTypeStateController.cs");
+        var schemaStateSetPath = Path.Combine(uiRoot, "Player", "CodingSchemaStateControllerSet.cs");
+
+        Assert.True(File.Exists(schemaStatePath), "Aktiver Schema-Typ soll nicht mehr als Rohfeld im PlayerWindow liegen.");
+        Assert.True(File.Exists(schemaStateSetPath), "Schema-Zustand soll gebuendelt im PlayerWindow liegen.");
+
+        var state = File.ReadAllText(statePath);
+        var schemaState = File.Exists(schemaStatePath) ? File.ReadAllText(schemaStatePath) : "";
+        var schemaStateSet = File.Exists(schemaStateSetPath) ? File.ReadAllText(schemaStateSetPath) : "";
+
+        Assert.DoesNotContain("private SchemaType? _codingSchemaType;", state);
+        Assert.DoesNotContain("private readonly CodingSchemaTypeStateController _codingSchemaTypeState = new();", state);
+        Assert.Contains("private CodingSchemaTypeStateController _codingSchemaTypeState => _codingSchemaStates.TypeState", state);
+        Assert.Contains("public CodingSchemaTypeStateController TypeState", schemaStateSet);
+        Assert.Contains("public sealed class CodingSchemaTypeStateController", schemaState);
+        Assert.Contains("public SchemaType? ActiveSchemaType", schemaState);
+        Assert.Contains("public void Set", schemaState);
+        Assert.Contains("public void Clear", schemaState);
+    }
+
+    [Fact]
+    public void PlayerWindow_coding_baseline_signature_lives_in_state_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var baselineStatePath = Path.Combine(uiRoot, "Player", "CodingBaselineSignatureStateController.cs");
+
+        Assert.True(File.Exists(baselineStatePath), "Coding-Baseline-Signatur soll nicht mehr als Rohfeld im PlayerWindow liegen.");
+
+        var state = File.ReadAllText(statePath);
+        var baselineState = File.Exists(baselineStatePath) ? File.ReadAllText(baselineStatePath) : "";
+
+        Assert.DoesNotContain("private string _codingBaselineSignature = string.Empty;", state);
+        Assert.Contains("private CodingBaselineSignatureStateController _codingBaselineSignatureState => _codingProtocolStates.BaselineSignatureState", state);
+        Assert.Contains("public sealed class CodingBaselineSignatureStateController", baselineState);
+        Assert.Contains("public string BaselineSignature", baselineState);
+        Assert.Contains("public void Set", baselineState);
+    }
+
+    [Fact]
+    public void PlayerWindow_coding_pending_confirmation_lives_in_state_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var pendingStatePath = Path.Combine(uiRoot, "Player", "CodingPendingConfirmationStateController.cs");
+
+        Assert.True(File.Exists(pendingStatePath), "Coding-Pending-Confirmation soll nicht mehr als zwei Rohfelder im PlayerWindow liegen.");
+
+        var state = File.ReadAllText(statePath);
+        var pendingState = File.Exists(pendingStatePath) ? File.ReadAllText(pendingStatePath) : "";
+
+        Assert.DoesNotContain("private CodingEvent? _codingPendingConfirmEvent;", state);
+        Assert.DoesNotContain("private QualityGateResult? _codingPendingGateResult;", state);
+        Assert.Contains("private CodingPendingConfirmationStateController _codingPendingConfirmationState => _codingProtocolStates.PendingConfirmationState", state);
+        Assert.Contains("public sealed class CodingPendingConfirmationStateController", pendingState);
+        Assert.Contains("public CodingEvent? CodingEvent", pendingState);
+        Assert.Contains("public QualityGateResult? GateResult", pendingState);
+        Assert.Contains("public void Store", pendingState);
+        Assert.Contains("public void Clear", pendingState);
+    }
+
+    [Fact]
+    public void PlayerWindow_coding_protocol_match_state_lives_in_state_controller()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var protocolMatchPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.cs");
+        var highlightPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Highlighting.cs");
+        var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Training.cs");
+        var exitPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var importReferencePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
+        var protocolStatePath = Path.Combine(uiRoot, "Player", "CodingProtocolMatchStateController.cs");
+
+        Assert.True(File.Exists(protocolStatePath), "Coding-Protocol-Match-State soll nicht mehr als Rohfelder im PlayerWindow liegen.");
+
+        var state = File.ReadAllText(statePath);
+        var protocolMatch = File.ReadAllText(protocolMatchPath);
+        var highlight = File.ReadAllText(highlightPath);
+        var training = File.ReadAllText(trainingPath);
+        var exit = File.ReadAllText(exitPath);
+        var importReference = File.ReadAllText(importReferencePath);
+        var protocolState = File.Exists(protocolStatePath) ? File.ReadAllText(protocolStatePath) : "";
+
+        Assert.DoesNotContain("private CodingMatchRouting? _lastCodingMatch;", state);
+        Assert.DoesNotContain("private readonly Dictionary<Guid, CodingProtocolMatchBucket> _codingProtocolMatchBuckets", state);
+        Assert.Contains("private CodingProtocolMatchStateController _codingProtocolMatchState => _codingProtocolStates.ProtocolMatchState", state);
+        Assert.Contains("_codingProtocolMatchState.Buckets", protocolMatch);
+        Assert.Contains("StoreMatch: _codingProtocolMatchState.Store", protocolMatch);
+        Assert.Contains("_codingProtocolMatchState.TryGetBucket", highlight);
+        Assert.Contains("_codingProtocolMatchState.LastMatch", training);
+        Assert.Contains("_codingProtocolMatchState.Reset", exit);
+        Assert.Contains("_codingProtocolMatchState.Reset", importReference);
+        Assert.Contains("public sealed class CodingProtocolMatchStateController", protocolState);
+        Assert.Contains("public CodingMatchRouting? LastMatch", protocolState);
+        Assert.Contains("public IDictionary<Guid, CodingProtocolMatchBucket> Buckets", protocolState);
+        Assert.Contains("public void Store", protocolState);
+        Assert.Contains("public CodingMatchRouting? Reset", protocolState);
+        Assert.Contains("public bool TryGetBucket", protocolState);
+    }
+
+    [Fact]
     public void PlayerWindow_eingabemarker_state_lives_in_state_controller()
     {
         var root = FindRepositoryRoot();

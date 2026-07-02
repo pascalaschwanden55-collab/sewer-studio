@@ -152,7 +152,11 @@ public sealed class SourceTextArchitectureHygieneTests
         var methodNames = new[]
         {
             "PlayerWindow_coding_state_fields_live_in_coding_state_partial",
-            "PlayerWindow_eingabemarker_state_lives_in_state_controller"
+            "PlayerWindow_eingabemarker_state_lives_in_state_controller",
+            "PlayerWindow_coding_schema_type_state_lives_in_state_controller",
+            "PlayerWindow_coding_baseline_signature_lives_in_state_controller",
+            "PlayerWindow_coding_pending_confirmation_lives_in_state_controller",
+            "PlayerWindow_coding_protocol_match_state_lives_in_state_controller"
         };
 
         foreach (var methodName in methodNames)
