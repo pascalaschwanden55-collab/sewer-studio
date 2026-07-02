@@ -386,7 +386,7 @@ public static class YoloDetectBaselineScorer
             summary,
             threshold_sweep = thresholdSweep ?? Array.Empty<YoloDetectThresholdSummary>()
         }, JsonDefaults.Indented);
-        File.WriteAllText(path, json, new UTF8Encoding(false));
+        AtomicTextFileWriter.WriteAllText(path, json, new UTF8Encoding(false));
     }
 
     private static YoloDetectNegativeKind ClassifyNegativeKind(EvalSetBenchmarkCase c)
@@ -864,7 +864,7 @@ public static class EvalSetBenchmarkScorer
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         var json = JsonSerializer.Serialize(new { metadata, summary }, JsonDefaults.Indented);
-        File.WriteAllText(path, json, new UTF8Encoding(false));
+        AtomicTextFileWriter.WriteAllText(path, json, new UTF8Encoding(false));
     }
 
     public static void WriteByCodeCsv(string path, IReadOnlyList<EvalSetCodeSummary> summaries)

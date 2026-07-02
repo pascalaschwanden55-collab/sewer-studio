@@ -56,7 +56,7 @@ public static class EvalSetManifestHasher
         }
         manifest["hashes"] = hashes;
 
-        File.WriteAllText(manifestPath, manifest.ToJsonString(JsonDefaults.Indented));
+        AtomicTextFileWriter.WriteAllText(manifestPath, manifest.ToJsonString(JsonDefaults.Indented));
         return result;
     }
 
