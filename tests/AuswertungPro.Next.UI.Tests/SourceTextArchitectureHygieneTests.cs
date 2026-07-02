@@ -663,7 +663,9 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_eingabemarker_geometry_lives_in_policy",
             "PlayerWindow_eingabemarker_input_wiring_lives_in_input_partial",
             "PlayerWindow_eingabemarker_canvas_state_uses_controls_adapter",
-            "PlayerWindow_overlay_canvas_cursor_uses_controls_adapter"
+            "PlayerWindow_overlay_canvas_cursor_uses_controls_adapter",
+            "PlayerWindow_eingabemarker_submission_lives_in_submission_partial",
+            "PlayerWindow_overlay_viewport_size_decision_lives_in_policy"
         };
 
         foreach (var methodName in methodNames)
