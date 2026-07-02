@@ -93,6 +93,22 @@ public sealed class WinCanDbImportSchachtTests
             VALUES('OBS1', 'obs001.jpg', 'JPG');");
     }
 
+    private static void FuegeBeobachtungMitNullOptionalsEin(string db3Path)
+    {
+        using var conn = new SqliteConnection($"Data Source={db3Path};");
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"INSERT INTO SECOBS(
+            OBS_PK, OBS_Inspection_FK, OBS_OpCode, OBS_Observation, OBS_Distance,
+            OBS_ContDefectLength, OBS_TimeCtr, OBS_Q1_Value, OBS_Q2_Value, OBS_Q3_Value,
+            OBS_U1_Value, OBS_U2_Value, OBS_U3_Value, OBS_Char1, OBS_Char2,
+            OBS_C1_Value, OBS_C2_Value, OBS_ClockPos1, OBS_ClockPos2, OBS_SortOrder)
+            VALUES('OBS_NULLS', 'INS1', 'BAA', NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                   NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1);";
+        cmd.ExecuteNonQuery();
+    }
+
     [Fact]
     public void WinCanImport_SetztSchachtObenUnten_AusFromToNodeRefs()
     {
@@ -200,6 +216,51 @@ public sealed class WinCanDbImportSchachtTests
             var datum = rec!.GetFieldValue("Datum_Jahr") ?? "";
             Assert.Contains("2024", datum);
             Assert.DoesNotContain("1998", datum);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void WinCanImport_BeobachtungMitDbNullOptionalfeldern_BleibtImportierbar()
+    {
+        // WinCan-.db3-Dateien enthalten in der Praxis oft NULL in optionalen Beobachtungsspalten.
+        // Charakterisierung: Code bleibt erhalten, optionale Meter/Zeit/Parameter werden nicht kuenstlich gefuellt.
+        var root = Path.Combine(Path.GetTempPath(), $"wincan-nullobs-{Guid.NewGuid():N}");
+        var dbDir = Path.Combine(root, "DB");
+        Directory.CreateDirectory(dbDir);
+        var db3 = Path.Combine(dbDir, "projekt.db3");
+        try
+        {
+            ErzeugeMiniDb3(db3, inspectionDir: "D");
+            FuegeBeobachtungMitNullOptionalsEin(db3);
+
+            var project = new Project();
+            var svc = new WinCanDbImportService();
+            var result = svc.ImportWinCanExport(root, project);
+            Assert.True(result.Ok, result.ErrorMessage);
+
+            var rec = project.Data.FirstOrDefault(r =>
+                string.Equals(r.GetFieldValue("Haltungsname"), "06-001", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(rec);
+
+            var entry = Assert.Single(rec!.Protocol!.Current.Entries);
+            Assert.Equal("BAA", entry.Code);
+            Assert.Equal("", entry.Beschreibung);
+            Assert.Null(entry.MeterStart);
+            Assert.Null(entry.MeterEnd);
+            Assert.False(entry.IsStreckenschaden);
+            Assert.Null(entry.Zeit);
+            Assert.Null(entry.CodeMeta);
+
+            var finding = Assert.Single(rec.VsaFindings);
+            Assert.Equal("BAA", finding.KanalSchadencode);
+            Assert.Null(finding.MeterStart);
+            Assert.Null(finding.MeterEnd);
+            Assert.Null(finding.FotoPath);
         }
         finally
         {
