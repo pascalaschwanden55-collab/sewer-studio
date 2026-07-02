@@ -81,6 +81,62 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
     }
 
     [Fact]
+    public void PlayerWindow_stretch_damage_action_input_lives_in_builder()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var streckenPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Streckenschaden.cs");
+        var builderPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionInputBuilder.cs");
+        var applierPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionApplier.cs");
+
+        Assert.True(File.Exists(builderPath), "Mapper-Eingabe fuer Streckenschaden-Aktionen muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(applierPath), "Streckenschaden-Aktionsausfuehrung muss den Action-Input-Builder nutzen.");
+
+        var ai = File.ReadAllText(aiPath);
+        var strecken = File.ReadAllText(streckenPath);
+        var builder = File.ReadAllText(builderPath);
+        var applier = File.ReadAllText(applierPath);
+
+        Assert.Contains("CodingStreckenschadenActionInputBuilder.BuildOpenEntries", applier);
+        Assert.DoesNotContain(".Where(e => e.Entry.IsStreckenschaden", ai + strecken);
+        Assert.DoesNotContain("StreckenschadenActionMapper.OpenEntry(", ai + strecken);
+        Assert.Contains("public static IReadOnlyList<StreckenschadenActionMapper.OpenEntry> BuildOpenEntries", builder);
+    }
+
+    [Fact]
+    public void PlayerWindow_stretch_damage_action_application_lives_in_applier()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var streckenPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Streckenschaden.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionApplyCommandWorkflow.cs");
+        var applierPath = Path.Combine(uiRoot, "Ai", "CodingStreckenschadenActionApplier.cs");
+
+        Assert.True(File.Exists(workflowPath), "Streckenschaden-Aktions-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(applierPath), "Streckenschaden-Aktionen muessen ausserhalb der PlayerWindow-Partials angewendet werden.");
+
+        var ai = File.ReadAllText(aiPath);
+        var strecken = File.ReadAllText(streckenPath);
+        var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
+        var applier = File.ReadAllText(applierPath);
+
+        Assert.Contains("CodingStreckenschadenActionApplyCommandWorkflow.Execute", strecken);
+        Assert.Contains("CodingStreckenschadenActionApplier.Apply", strecken);
+        Assert.DoesNotContain("private void ApplyStreckenschadenActions", ai + strecken);
+        Assert.DoesNotContain("if (codingSessionService == null || codingEvents == null || actions.Count == 0)", strecken);
+        Assert.DoesNotContain("StreckenschadenActionMapper.MapAll", ai + strecken);
+        Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", strecken);
+        Assert.DoesNotContain("codingSessionService.UpdateEvent", strecken);
+        Assert.Contains("if (!request.HasCodingSessionService || !request.HasCodingEvents || !request.HasActions)", workflow);
+        Assert.Contains("actions.ApplyActions()", workflow);
+        Assert.Contains("StreckenschadenActionMapper.MapAll", applier);
+        Assert.Contains("codingSessionService.AddEvent(draft.Entry)", applier);
+        Assert.Contains("codingSessionService.UpdateEvent", applier);
+    }
+
+    [Fact]
     public void PlayerWindow_stretch_damage_close_marker_lives_in_factory()
     {
         var root = FindRepositoryRoot();
