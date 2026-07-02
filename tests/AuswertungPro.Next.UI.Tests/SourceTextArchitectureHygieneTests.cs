@@ -387,6 +387,8 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_open_stretch_damage_prompt_lives_in_policy",
             "PlayerWindow_stretch_damage_action_input_lives_in_builder",
             "PlayerWindow_stretch_damage_action_application_lives_in_applier",
+            "PlayerWindow_stretch_damage_observation_projection_lives_in_builder",
+            "PlayerWindow_stretch_damage_tracking_lives_in_ai_stretch_damage_partial",
             "PlayerWindow_stretch_damage_close_marker_lives_in_factory",
             "PlayerWindow_stretch_damage_close_decision_lives_in_policy"
         };
