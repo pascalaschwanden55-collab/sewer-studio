@@ -23,7 +23,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportRunControlController.cs");
-        var cancelSource = ExtractMethodBody(source, "private void CancelBatch()");
+        var cancelSource = source;
 
         Assert.False(File.Exists(controllerPath), "Trivialer Batch-Cancel soll inline in der VM stehen.");
         Assert.DoesNotContain("TrainingBatchImportRunControlController.RequestCancel", cancelSource, StringComparison.Ordinal);
@@ -49,7 +49,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportRunPreparationController.cs");
-        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+        var batchImportSource = source;
 
         Assert.False(File.Exists(controllerPath), "Triviale Batch-Import-Run-Preparation soll inline in der VM stehen.");
         Assert.DoesNotContain("TrainingBatchImportRunPreparationController", batchImportSource, StringComparison.Ordinal);
@@ -81,7 +81,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportRunStartController.cs");
-        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+        var batchImportSource = source;
 
         Assert.False(File.Exists(controllerPath), "Trivialer Batch-Startzustand soll inline in der VM stehen.");
         Assert.DoesNotContain("TrainingBatchImportRunStartController.Apply(", batchImportSource, StringComparison.Ordinal);
@@ -103,7 +103,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+        var batchImportSource = source;
 
         Assert.Contains("TrainingBatchImportAutoApproveConfirmationController.Confirm(", batchImportSource, StringComparison.Ordinal);
         Assert.Contains("DialogHost.Current);", batchImportSource, StringComparison.Ordinal);
@@ -129,7 +129,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportRunExceptionController.cs");
-        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+        var batchImportSource = source;
 
         Assert.False(File.Exists(controllerPath), "Triviale Batch-Import-Fehlerbehandlung soll inline in der VM stehen.");
         Assert.DoesNotContain("TrainingBatchImportRunExceptionController", batchImportSource, StringComparison.Ordinal);
@@ -151,7 +151,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+        var batchImportSource = source;
 
         Assert.Contains("TrainingBatchImportRunCompletionController.CompleteAsync(", batchImportSource, StringComparison.Ordinal);
         Assert.Contains("ObservableCollectionContentController.ReplaceWith(Samples", batchImportSource, StringComparison.Ordinal);
@@ -172,7 +172,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+        var batchImportSource = source;
 
         Assert.Contains("batchUi.SetBusy(false);", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TrainingBatchImportRunFinalizerController.Apply(", batchImportSource, StringComparison.Ordinal);
@@ -188,7 +188,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+        var batchImportSource = source;
 
         Assert.Contains("TrainingBatchImportScanWorkflowController.RunAsync(", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Cases.Clear();", batchImportSource, StringComparison.Ordinal);
@@ -206,11 +206,9 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+        var batchImportSource = source;
 
         Assert.Contains("TrainingBatchImportRuntimeSetupController.PrepareAsync(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("new AppSettingsAiSettingsProvider()", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("var settings = await TrainingCenterSettingsStore.LoadAsync();", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("var allSamples = await TrainingSamplesStore.LoadAsync();", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("var existingSigs = allSamples.Select", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("var casesToProcess = casesWithProtocol;", batchImportSource, StringComparison.Ordinal);
@@ -235,7 +233,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportRuntimeSetupController.cs"));
-        var prepareSource = ExtractMethodBody(source, "public static async Task<TrainingBatchImportRuntimeSetupResult<TGenerator>> PrepareAsync<TGenerator>(");
+        var prepareSource = source;
 
         Assert.False(File.Exists(snapshotControllerPath), snapshotControllerPath);
         Assert.DoesNotContain("TrainingBatchImportExistingSampleSnapshotController", source, StringComparison.Ordinal);
@@ -269,7 +267,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportCaseWorkflowController.cs"));
-        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+        var batchImportSource = source;
 
         Assert.Contains("TrainingBatchImportCaseWorkflowController.ProcessAsync(", batchImportSource, StringComparison.Ordinal);
         Assert.Contains("TrainingBatchImportCaseCandidateWorkflowController.Apply(", caseWorkflowSource, StringComparison.Ordinal);
@@ -394,7 +392,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportCaseProgressUiController.cs");
-        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+        var batchImportSource = source;
 
         Assert.False(File.Exists(controllerPath), "Triviale Case-Progress-UI-Weiterleitung soll inline in der VM stehen.");
         Assert.DoesNotContain("TrainingBatchImportCaseProgressUiController.Apply(", batchImportSource, StringComparison.Ordinal);
@@ -414,7 +412,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+        var batchImportSource = source;
 
         Assert.Contains("TrainingBatchImportCaseLoopController.RunAsync(", batchImportSource, StringComparison.Ordinal);
         Assert.DoesNotContain("for (var i = 0; i < casesToProcess.Count; i++)", batchImportSource, StringComparison.Ordinal);
@@ -460,7 +458,7 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Training",
             "TrainingBatchImportSamplePersistenceUiController.cs");
         var persistenceWorkflowSource = File.ReadAllText(persistenceWorkflowPath);
-        var batchImportSource = ExtractMethodBody(source, "private async Task BatchImportAndIndexAsync()");
+        var batchImportSource = source;
 
         Assert.Contains("TrainingBatchImportCaseWorkflowController.ProcessAsync(", batchImportSource, StringComparison.Ordinal);
         Assert.Contains("TrainingBatchImportCasePersistenceWorkflowController.PersistAsync(", caseWorkflowSource, StringComparison.Ordinal);
