@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.Application.Ai.Teacher;
 using AuswertungPro.Next.Application.Ai.Training;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Ai.Training.Services;
 
@@ -156,16 +157,17 @@ public sealed class FewShotExampleBuilder
 
         // Header-Infos extrahieren (Material, Profil)
         string? material = null, profile = null;
-        try
-        {
-            using var doc = UglyToad.PdfPig.PdfDocument.Open(pdfPath);
-            var firstPageText = string.Join(" ", doc.GetPage(1).Letters.Select(l => l.Value));
-            var matMatch = MaterialRegex.Match(firstPageText);
-            if (matMatch.Success) material = matMatch.Groups[1].Value.Trim();
-            var profMatch = ProfileRegex.Match(firstPageText);
-            if (profMatch.Success) profile = profMatch.Groups[1].Value.Trim();
-        }
-        catch { /* Header-Parsing ist optional */ }
+        BestEffort.Try(
+            () =>
+            {
+                using var doc = UglyToad.PdfPig.PdfDocument.Open(pdfPath);
+                var firstPageText = string.Join(" ", doc.GetPage(1).Letters.Select(l => l.Value));
+                var matMatch = MaterialRegex.Match(firstPageText);
+                if (matMatch.Success) material = matMatch.Groups[1].Value.Trim();
+                var profMatch = ProfileRegex.Match(firstPageText);
+                if (profMatch.Success) profile = profMatch.Groups[1].Value.Trim();
+            },
+            $"FewShot PDF-Header parsen: {pdfPath}");
 
         int added = 0, skipped = 0;
 
@@ -236,12 +238,13 @@ public sealed class FewShotExampleBuilder
         }
 
         // Temporaere Frames aufraeumen (die Bilder sind jetzt im Knowledge-Ordner)
-        try
-        {
-            if (Directory.Exists(framesDir))
-                Directory.Delete(framesDir, recursive: true);
-        }
-        catch { /* best effort */ }
+        BestEffort.Try(
+            () =>
+            {
+                if (Directory.Exists(framesDir))
+                    Directory.Delete(framesDir, recursive: true);
+            },
+            $"FewShot temporaere Frames loeschen: {framesDir}");
 
         return (added, skipped);
     }
@@ -359,20 +362,22 @@ public sealed class FewShotExampleBuilder
 
         foreach (var dir in EnumerateAllDirs(rootFolder))
         {
-            try
-            {
-                var pdfs = Directory.EnumerateFiles(dir, "*.pdf", SearchOption.TopDirectoryOnly).ToList();
-                if (pdfs.Count == 0) continue;
+            BestEffort.Try(
+                () =>
+                {
+                    var pdfs = Directory.EnumerateFiles(dir, "*.pdf", SearchOption.TopDirectoryOnly).ToList();
+                    if (pdfs.Count == 0)
+                        return;
 
-                // Groesstes PDF nehmen (das ist typischerweise das Protokoll, nicht ein Deckblatt)
-                var bestPdf = pdfs
-                    .Select(p => new FileInfo(p))
-                    .OrderByDescending(fi => fi.Length)
-                    .First().FullName;
+                    // Groesstes PDF nehmen (das ist typischerweise das Protokoll, nicht ein Deckblatt)
+                    var bestPdf = pdfs
+                        .Select(p => new FileInfo(p))
+                        .OrderByDescending(fi => fi.Length)
+                        .First().FullName;
 
-                results.Add((dir, bestPdf));
-            }
-            catch { }
+                    results.Add((dir, bestPdf));
+                },
+                $"FewShot PDF-Ordner pruefen: {dir}");
         }
 
         return results;

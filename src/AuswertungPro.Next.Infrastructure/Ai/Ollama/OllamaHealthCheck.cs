@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Ollama;
 
@@ -50,19 +51,20 @@ public sealed class OllamaHealthCheck(HttpClient http, OllamaConfig config)
     private static IReadOnlyList<string> ParseModels(string json)
     {
         var list = new List<string>();
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("models", out var models))
+        BestEffort.Try(
+            () =>
             {
-                foreach (var m in models.EnumerateArray())
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("models", out var models))
                 {
-                    if (m.TryGetProperty("name", out var name))
-                        list.Add(name.GetString() ?? "");
+                    foreach (var m in models.EnumerateArray())
+                    {
+                        if (m.TryGetProperty("name", out var name))
+                            list.Add(name.GetString() ?? "");
+                    }
                 }
-            }
-        }
-        catch { }
+            },
+            "OllamaHealthCheck Modellliste parsen");
         return list;
     }
 }
