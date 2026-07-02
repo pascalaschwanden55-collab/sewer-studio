@@ -32,4 +32,17 @@ public sealed class SchachtDamageLineBuilderTests
         Assert.Equal("", line.Component);
         Assert.Equal("\u00fcberdeckt, 2 Einl\u00e4ufe", line.Text);
     }
+
+    [Fact]
+    public void Build_TreatsBemerkungenAsDamageLines()
+    {
+        var record = new SchachtRecord();
+        record.SetFieldValue("Bemerkungen", "Ablagerung\nkorrodiert");
+
+        var lines = SchachtDamageLineBuilder.Build(record);
+
+        Assert.Equal(2, lines.Count);
+        Assert.Equal("Ablagerung", lines[0].Text);
+        Assert.Equal("korrodiert", lines[1].Text);
+    }
 }

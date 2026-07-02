@@ -14,29 +14,42 @@ public static class SchachtDamageLineBuilder
         "Prim\u00c3\u00a4re Sch\u00c3\u00a4den"
     ];
 
+    private static readonly string[] RemarkFieldCandidates =
+    [
+        "Bemerkungen",
+        "Bemerkung"
+    ];
+
     public static IReadOnlyList<SchachtDamageLine> Build(SchachtRecord record)
     {
-        var raw = ResolveDamageText(record);
-        if (string.IsNullOrWhiteSpace(raw))
-            return Array.Empty<SchachtDamageLine>();
-
-        return raw.Replace("\r\n", "\n")
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+        return ResolveDamageTextBlocks(record)
+            .SelectMany(raw => raw.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries))
             .Select(ParseLine)
             .Where(line => !string.IsNullOrWhiteSpace(line.Text) || !string.IsNullOrWhiteSpace(line.Component))
             .ToList();
     }
 
     public static string ResolveDamageText(SchachtRecord record)
+        => string.Join('\n', ResolveDamageTextBlocks(record));
+
+    private static IEnumerable<string> ResolveDamageTextBlocks(SchachtRecord record)
     {
         foreach (var field in DamageFieldCandidates)
         {
             var value = record.GetFieldValue(field);
             if (!string.IsNullOrWhiteSpace(value))
-                return value.Trim();
+            {
+                yield return value.Trim();
+                break;
+            }
         }
 
-        return string.Empty;
+        foreach (var field in RemarkFieldCandidates)
+        {
+            var value = record.GetFieldValue(field);
+            if (!string.IsNullOrWhiteSpace(value))
+                yield return value.Trim();
+        }
     }
 
     private static SchachtDamageLine ParseLine(string raw)
