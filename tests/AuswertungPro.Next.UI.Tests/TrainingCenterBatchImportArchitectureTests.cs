@@ -23,13 +23,13 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportRunControlController.cs");
-        var cancelSource = source;
+        var viewModelSource = source;
 
         Assert.False(File.Exists(controllerPath), "Trivialer Batch-Cancel soll inline in der VM stehen.");
-        Assert.DoesNotContain("TrainingBatchImportRunControlController.RequestCancel", cancelSource, StringComparison.Ordinal);
-        Assert.Contains("_genCts?.Cancel();", cancelSource, StringComparison.Ordinal);
-        Assert.Contains("StatusText = \"Abbruch angefordert...\";", cancelSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("TrainingBatchImportTerminalPresentationBuilder.BuildCancelRequestedStatus", cancelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportRunControlController.RequestCancel", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("_genCts?.Cancel();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = \"Abbruch angefordert...\";", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportTerminalPresentationBuilder.BuildCancelRequestedStatus", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -49,19 +49,19 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportRunPreparationController.cs");
-        var batchImportSource = source;
+        var viewModelSource = source;
 
         Assert.False(File.Exists(controllerPath), "Triviale Batch-Import-Run-Preparation soll inline in der VM stehen.");
-        Assert.DoesNotContain("TrainingBatchImportRunPreparationController", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("if (IsBusy) return;", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("_rootFolders.Count", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("StatusText = \"Bitte zuerst einen oder mehrere Ordner wählen.\";", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("_genCts?.Cancel();", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("_genCts?.Dispose();", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("var runCts = new CancellationTokenSource();", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("runCts.Dispose();", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("_genCts = runCts;", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("var ct = runCts.Token;", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportRunPreparationController", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("if (IsBusy) return;", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("_rootFolders.Count", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = \"Bitte zuerst einen oder mehrere Ordner wählen.\";", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("_genCts?.Cancel();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("_genCts?.Dispose();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("var runCts = new CancellationTokenSource();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("runCts.Dispose();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("_genCts = runCts;", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("var ct = runCts.Token;", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -81,16 +81,16 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportRunStartController.cs");
-        var batchImportSource = source;
+        var viewModelSource = source;
 
         Assert.False(File.Exists(controllerPath), "Trivialer Batch-Startzustand soll inline in der VM stehen.");
-        Assert.DoesNotContain("TrainingBatchImportRunStartController.Apply(", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("batchUi.SetBusy(true);", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("batchUi.SetLogText(\"\");", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("batchUi.SetProgressValue(0);", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("batchUi.SetProgressMax(1);", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("ClearLivePreview();", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("ResetSelfTrainingVisuals();", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportRunStartController.Apply(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetBusy(true);", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetLogText(\"\");", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetProgressValue(0);", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetProgressMax(1);", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("ClearLivePreview();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("ResetSelfTrainingVisuals();", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -103,13 +103,13 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var batchImportSource = source;
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingBatchImportAutoApproveConfirmationController.Confirm(", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("DialogHost.Current);", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("var bestaetigung = DialogHost.Current.ConfirmWarn(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Trotzdem unge", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Batch-Import + KB (", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportAutoApproveConfirmationController.Confirm(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("DialogHost.Current);", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("var bestaetigung = DialogHost.Current.ConfirmWarn(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Trotzdem unge", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Batch-Import + KB (", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -129,16 +129,16 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportRunExceptionController.cs");
-        var batchImportSource = source;
+        var viewModelSource = source;
 
         Assert.False(File.Exists(controllerPath), "Triviale Batch-Import-Fehlerbehandlung soll inline in der VM stehen.");
-        Assert.DoesNotContain("TrainingBatchImportRunExceptionController", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("runSummary.RecordError(ex.Message);", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("batchUi.Log($\"  FEHLER: {ex.Message}\");", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("batchUi.Log(\"Batch-Import abgebrochen durch Benutzer.\");", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("batchUi.SetStatusText(\"Batch-Import abgebrochen.\");", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("batchUi.Log($\"FATALER FEHLER: {ex.Message}\");", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("batchUi.SetStatusText($\"Fehler beim Batch-Import: {ex.Message}\");", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportRunExceptionController", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("runSummary.RecordError(ex.Message);", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.Log($\"  FEHLER: {ex.Message}\");", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.Log(\"Batch-Import abgebrochen durch Benutzer.\");", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetStatusText(\"Batch-Import abgebrochen.\");", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.Log($\"FATALER FEHLER: {ex.Message}\");", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetStatusText($\"Fehler beim Batch-Import: {ex.Message}\");", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -151,15 +151,15 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var batchImportSource = source;
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingBatchImportRunCompletionController.CompleteAsync(", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("ObservableCollectionContentController.ReplaceWith(Samples", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("runSummary.BuildNoNewStatus(casesToProcess.Count)", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("runSummary.BuildCompletionStatus()", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Samples.Clear", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Samples.Add", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Log(\"F", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportRunCompletionController.CompleteAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("ObservableCollectionContentController.ReplaceWith(Samples", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("runSummary.BuildNoNewStatus(casesToProcess.Count)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("runSummary.BuildCompletionStatus()", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Samples.Clear", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Samples.Add", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Log(\"F", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -172,10 +172,10 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var batchImportSource = source;
+        var viewModelSource = source;
 
-        Assert.Contains("batchUi.SetBusy(false);", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("TrainingBatchImportRunFinalizerController.Apply(", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetBusy(false);", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportRunFinalizerController.Apply(", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -188,12 +188,12 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var batchImportSource = source;
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingBatchImportScanWorkflowController.RunAsync(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Cases.Clear();", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("STOP: Keine Ordner mit Protokoll-Dateien gefunden.", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("TrainingBatchImportScanPresentationBuilder.BuildSummary(found.Count, casesWithProtocol.Count)", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportScanWorkflowController.RunAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Cases.Clear();", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("STOP: Keine Ordner mit Protokoll-Dateien gefunden.", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportScanPresentationBuilder.BuildSummary(found.Count, casesWithProtocol.Count)", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -206,13 +206,13 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var batchImportSource = source;
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingBatchImportRuntimeSetupController.PrepareAsync(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("var allSamples = await TrainingSamplesStore.LoadAsync();", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("var existingSigs = allSamples.Select", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("var casesToProcess = casesWithProtocol;", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("var runSummary = new TrainingBatchImportRunSummary();", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportRuntimeSetupController.PrepareAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("var allSamples = await TrainingSamplesStore.LoadAsync();", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("var existingSigs = allSamples.Select", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("var casesToProcess = casesWithProtocol;", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("var runSummary = new TrainingBatchImportRunSummary();", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -233,14 +233,14 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportRuntimeSetupController.cs"));
-        var prepareSource = source;
+        var controllerSource = source;
 
         Assert.False(File.Exists(snapshotControllerPath), snapshotControllerPath);
         Assert.DoesNotContain("TrainingBatchImportExistingSampleSnapshotController", source, StringComparison.Ordinal);
-        Assert.Contains("var allSamples = await loadSamplesAsync().ConfigureAwait(false);", prepareSource, StringComparison.Ordinal);
-        Assert.Contains("var existingSigs = allSamples.Select(s => s.Signature)", prepareSource, StringComparison.Ordinal);
-        Assert.Contains("ToHashSet(StringComparer.Ordinal)", prepareSource, StringComparison.Ordinal);
-        Assert.Contains("log($\"Bestehende Samples: {allSamples.Count} ({existingSigs.Count} Signaturen)\");", prepareSource, StringComparison.Ordinal);
+        Assert.Contains("var allSamples = await loadSamplesAsync().ConfigureAwait(false);", controllerSource, StringComparison.Ordinal);
+        Assert.Contains("var existingSigs = allSamples.Select(s => s.Signature)", controllerSource, StringComparison.Ordinal);
+        Assert.Contains("ToHashSet(StringComparer.Ordinal)", controllerSource, StringComparison.Ordinal);
+        Assert.Contains("log($\"Bestehende Samples: {allSamples.Count} ({existingSigs.Count} Signaturen)\");", controllerSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -267,9 +267,9 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportCaseWorkflowController.cs"));
-        var batchImportSource = source;
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingBatchImportCaseWorkflowController.ProcessAsync(", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportCaseWorkflowController.ProcessAsync(", viewModelSource, StringComparison.Ordinal);
         Assert.Contains("TrainingBatchImportCaseCandidateWorkflowController.Apply(", caseWorkflowSource, StringComparison.Ordinal);
         Assert.Contains("TrainingBatchImportGeneratedCaseUiController.Apply(", candidateWorkflowSource, StringComparison.Ordinal);
         Assert.DoesNotContain("generatedCasePlan.Kind == TrainingBatchImportGeneratedCaseKind.Skipped", candidateWorkflowSource, StringComparison.Ordinal);
@@ -392,14 +392,14 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Ai",
             "Training",
             "TrainingBatchImportCaseProgressUiController.cs");
-        var batchImportSource = source;
+        var viewModelSource = source;
 
         Assert.False(File.Exists(controllerPath), "Triviale Case-Progress-UI-Weiterleitung soll inline in der VM stehen.");
-        Assert.DoesNotContain("TrainingBatchImportCaseProgressUiController.Apply(", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("batchUi.SetProgressValue(caseIndex + 1);", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingBatchImportCaseProgressPresentationBuilder.Build(", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("batchUi.SetStatusText(progressPresentation.StatusText);", batchImportSource, StringComparison.Ordinal);
-        Assert.Contains("foreach (var line in progressPresentation.LogLines)", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportCaseProgressUiController.Apply(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetProgressValue(caseIndex + 1);", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportCaseProgressPresentationBuilder.Build(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("batchUi.SetStatusText(progressPresentation.StatusText);", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("foreach (var line in progressPresentation.LogLines)", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -412,11 +412,11 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var batchImportSource = source;
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingBatchImportCaseLoopController.RunAsync(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("for (var i = 0; i < casesToProcess.Count; i++)", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("catch (Exception ex) when (ex is not OperationCanceledException)", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportCaseLoopController.RunAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("for (var i = 0; i < casesToProcess.Count; i++)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("catch (Exception ex) when (ex is not OperationCanceledException)", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -458,9 +458,9 @@ public sealed class TrainingCenterBatchImportArchitectureTests
             "Training",
             "TrainingBatchImportSamplePersistenceUiController.cs");
         var persistenceWorkflowSource = File.ReadAllText(persistenceWorkflowPath);
-        var batchImportSource = source;
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingBatchImportCaseWorkflowController.ProcessAsync(", batchImportSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingBatchImportCaseWorkflowController.ProcessAsync(", viewModelSource, StringComparison.Ordinal);
         Assert.Contains("TrainingBatchImportCasePersistenceWorkflowController.PersistAsync(", caseWorkflowSource, StringComparison.Ordinal);
         Assert.False(File.Exists(stateSaveControllerPath), "Triviale Best-Effort-State-Save-Logik soll im Persistence-Workflow leben.");
         Assert.False(File.Exists(persistenceUiControllerPath), "Triviale Persistence-UI-Weiterleitung soll im Persistence-Workflow leben.");
@@ -472,15 +472,15 @@ public sealed class TrainingCenterBatchImportArchitectureTests
         Assert.Contains("caseUi.SetSampleCount(persistence.SampleCount);", persistenceWorkflowSource, StringComparison.Ordinal);
         Assert.Contains("caseUi.SetCodesCovered(persistence.CodesCovered);", persistenceWorkflowSource, StringComparison.Ordinal);
         Assert.Contains("caseUi.Log(persistence.StoredLogMessage);", persistenceWorkflowSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("TrainingBatchImportCasePersistenceWorkflowController.PersistAsync(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("TrainingBatchImportSamplePersistenceController.SaveCandidatesAsync(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("TrainingBatchImportSamplePersistenceUiController.Apply(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("TrainingBatchImportCaseStateSaveController.SaveIfDueAsync(", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("void UpdateCounters()", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("KbSampleCount = persistence.SampleCount", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("KbCodesCovered = persistence.CodesCovered", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Log(persistence.CandidateLogMessage)", batchImportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Log(persistence.StoredLogMessage)", batchImportSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportCasePersistenceWorkflowController.PersistAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportSamplePersistenceController.SaveCandidatesAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportSamplePersistenceUiController.Apply(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingBatchImportCaseStateSaveController.SaveIfDueAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("void UpdateCounters()", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("KbSampleCount = persistence.SampleCount", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("KbCodesCovered = persistence.CodesCovered", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Log(persistence.CandidateLogMessage)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Log(persistence.StoredLogMessage)", viewModelSource, StringComparison.Ordinal);
     }
 
 }
