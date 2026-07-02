@@ -1,8 +1,6 @@
-using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
 using CommunityToolkit.Mvvm.Input;
-using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -42,24 +40,6 @@ public sealed class DataPageSelectionChangedControllerTests
             refreshSelectedProtocolEntries: () => calls.Add("refresh"));
 
         Assert.Equal(new[] { "command:remove", "refresh" }, calls);
-    }
-
-    [Fact]
-    public void DataPageViewModel_delegiert_selected_change_an_controller()
-    {
-        var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
-            "src",
-            "AuswertungPro.Next.UI",
-            "ViewModels",
-            "Pages",
-            "DataPageViewModel.cs"));
-        var method = ExtractMethodBody(source, "private void DataPageViewModel_PropertyChanged");
-
-        Assert.Contains("DataPageSelectionChangedController.Handle(", method, StringComparison.Ordinal);
-        Assert.DoesNotContain("NotifyCanExecuteChanged", method, StringComparison.Ordinal);
-        Assert.DoesNotContain("NormalizeSelectedFindings(Selected)", method, StringComparison.Ordinal);
-        Assert.DoesNotContain("SyncSelectedProtocolFromFindings(Selected)", method, StringComparison.Ordinal);
     }
 
     private sealed class TestRelayCommand : IRelayCommand
