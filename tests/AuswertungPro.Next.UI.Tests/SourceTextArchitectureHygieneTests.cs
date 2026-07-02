@@ -271,7 +271,8 @@ public sealed class SourceTextArchitectureHygieneTests
         var methodNames = new[]
         {
             "PlayerWindow_timer_creation_uses_factory",
-            "PlayerWindow_timer_shutdown_uses_stopper"
+            "PlayerWindow_timer_shutdown_uses_stopper",
+            "PlayerWindow_osd_timer_gate_uses_policy"
         };
 
         foreach (var methodName in methodNames)
