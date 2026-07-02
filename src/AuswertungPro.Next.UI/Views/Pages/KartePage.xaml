@@ -21,19 +21,19 @@
                     <TextBlock Text="Zustand: " FontSize="12" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextBrush}"/>
 
-                    <Border Width="14" Height="14" Background="Green" CornerRadius="2" Margin="4,0,2,0"/>
+                    <Border Width="14" Height="14" Background="{DynamicResource Severity1Brush}" CornerRadius="2" Margin="4,0,2,0"/>
                     <TextBlock Text="Gut" FontSize="12" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextBrush}" Margin="0,0,8,0"/>
 
-                    <Border Width="14" Height="14" Background="Orange" CornerRadius="2" Margin="0,0,2,0"/>
+                    <Border Width="14" Height="14" Background="{DynamicResource Severity3Brush}" CornerRadius="2" Margin="0,0,2,0"/>
                     <TextBlock Text="Mittel" FontSize="12" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextBrush}" Margin="0,0,8,0"/>
 
-                    <Border Width="14" Height="14" Background="Red" CornerRadius="2" Margin="0,0,2,0"/>
+                    <Border Width="14" Height="14" Background="{DynamicResource Severity5Brush}" CornerRadius="2" Margin="0,0,2,0"/>
                     <TextBlock Text="Schlecht" FontSize="12" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextBrush}" Margin="0,0,8,0"/>
 
-                    <Border Width="14" Height="14" Background="Gray" CornerRadius="2" Margin="0,0,2,0"/>
+                    <Border Width="14" Height="14" Background="{DynamicResource MutedBrush}" CornerRadius="2" Margin="0,0,2,0"/>
                     <TextBlock Text="Unbekannt" FontSize="12" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextBrush}" Margin="0,0,16,0"/>
                 </StackPanel>

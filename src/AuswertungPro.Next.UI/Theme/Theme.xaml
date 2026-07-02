@@ -55,6 +55,22 @@
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource ColorWarning}"/>
     <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource ColorInfo}"/>
 
+    <!-- ── DESIGNSTUDIE: Zweit-Akzent (Teal), Severity-Skala, Akzent-Verlauf — dunkel abgestimmt ── -->
+    <Color x:Key="ColorSecondaryAccent">#FF22D3EE</Color>
+    <Color x:Key="ColorSecondaryAccentHover">#FF67E8F9</Color>
+    <SolidColorBrush x:Key="SecondaryAccentBrush" Color="{StaticResource ColorSecondaryAccent}"/>
+    <SolidColorBrush x:Key="SecondaryAccentHoverBrush" Color="{StaticResource ColorSecondaryAccentHover}"/>
+    <SolidColorBrush x:Key="SecondaryAccentSubtleBrush" Color="#FF164E5C"/>
+    <SolidColorBrush x:Key="Severity1Brush" Color="#FF3FB950"/>
+    <SolidColorBrush x:Key="Severity2Brush" Color="#FF84CC16"/>
+    <SolidColorBrush x:Key="Severity3Brush" Color="#FFD29922"/>
+    <SolidColorBrush x:Key="Severity4Brush" Color="#FFF0883E"/>
+    <SolidColorBrush x:Key="Severity5Brush" Color="#FFF85149"/>
+    <LinearGradientBrush x:Key="AccentBarBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#FF539BF5" Offset="0"/>
+        <GradientStop Color="#FF22D3EE" Offset="1"/>
+    </LinearGradientBrush>
+
     <!-- ── GRADIENT BRUSHES ── -->
     <LinearGradientBrush x:Key="BgBrush" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Color="#FF21262D" Offset="0"/>

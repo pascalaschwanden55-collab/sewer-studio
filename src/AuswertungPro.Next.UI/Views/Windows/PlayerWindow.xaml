@@ -643,7 +643,7 @@
 
             <!-- YOLO-Statusanzeige -->
             <Border x:Name="YoloStatusBar" Visibility="Collapsed"
-                    Background="{DynamicResource SurfaceBrush}" CornerRadius="4"
+                    Background="{DynamicResource SurfaceSubtleBrush}" CornerRadius="4"
                     Padding="10,4" Margin="0,0,0,8">
                 <StackPanel Orientation="Horizontal">
                     <Ellipse x:Name="YoloDot" Width="8" Height="8"
