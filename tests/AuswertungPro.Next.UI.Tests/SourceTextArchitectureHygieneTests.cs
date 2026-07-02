@@ -247,7 +247,8 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_coding_lifecycle_lives_in_lifecycle_partial",
             "PlayerWindow_terminal_exit_boundary_check_lives_in_policy",
             "PlayerWindow_dn_calibration_initialization_lives_in_policy",
-            "PlayerWindow_haltungslaenge_fallback_lives_in_lifecycle_length_partial"
+            "PlayerWindow_haltungslaenge_fallback_lives_in_lifecycle_length_partial",
+            "PlayerWindow_coding_mode_dialogs_live_in_service"
         };
 
         foreach (var methodName in methodNames)
@@ -267,10 +268,17 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.True(File.Exists(focusedPath), "Coding-Timeline-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
 
         var focused = File.ReadAllText(focusedPath);
-        const string methodName = "PlayerWindow_timeline_marker_accessors_live_in_policy";
+        var methodNames = new[]
+        {
+            "PlayerWindow_timeline_marker_accessors_live_in_policy",
+            "PlayerWindow_meter_timeline_uses_controls_adapter"
+        };
 
-        Assert.Contains($"public void {methodName}", focused);
-        Assert.DoesNotContain($"public void {methodName}", guard);
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
     }
 
     [Fact]
@@ -283,10 +291,17 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.True(File.Exists(focusedPath), "Coding-Navigation-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
 
         var focused = File.ReadAllText(focusedPath);
-        const string methodName = "PlayerWindow_coding_navigation_lives_in_navigation_partial";
+        var methodNames = new[]
+        {
+            "PlayerWindow_coding_navigation_lives_in_navigation_partial",
+            "PlayerWindow_current_code_badge_uses_controls_adapter"
+        };
 
-        Assert.Contains($"public void {methodName}", focused);
-        Assert.DoesNotContain($"public void {methodName}", guard);
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
     }
 
     [Fact]
@@ -823,7 +838,8 @@ public sealed class SourceTextArchitectureHygieneTests
         var methodNames = new[]
         {
             "PlayerWindow_live_ai_events_live_in_live_partial",
-            "PlayerWindow_coding_ai_finding_filtering_lives_in_filtering_partial"
+            "PlayerWindow_coding_ai_finding_filtering_lives_in_filtering_partial",
+            "PlayerWindow_ai_event_partials_read_session_state_through_session_host"
         };
 
         foreach (var methodName in methodNames)

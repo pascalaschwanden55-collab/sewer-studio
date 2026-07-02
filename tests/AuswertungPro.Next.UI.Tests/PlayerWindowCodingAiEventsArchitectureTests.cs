@@ -155,4 +155,27 @@ public sealed class PlayerWindowCodingAiEventsArchitectureTests
         Assert.Contains("public static CodingWarmupResultSelection Select", warmupPolicy);
         Assert.Contains("public static IReadOnlyList<LiveFrameFinding> Select", overlaySelector);
     }
+
+    [Fact]
+    public void PlayerWindow_ai_event_partials_read_session_state_through_session_host()
+    {
+        var root = FindRepositoryRoot();
+        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
+        var paths = new[]
+        {
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.Live.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.MultiModel.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Boundary.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Classifier.Structural.cs"),
+            Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Streckenschaden.cs")
+        };
+
+        foreach (var path in paths)
+        {
+            Assert.True(File.Exists(path), $"{Path.GetFileName(path)} muss als PlayerWindow-Partial existieren.");
+            var text = File.ReadAllText(path);
+            Assert.Contains("_codingSessionHost", text);
+            Assert.DoesNotContain("_codingVm", text);
+        }
+    }
 }
