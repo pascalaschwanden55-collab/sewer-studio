@@ -102,6 +102,26 @@ public sealed class PlayerWindowRuntimeArchitectureTests
     }
 
     [Fact]
+    public void PlayerWindow_coding_session_service_is_owned_by_runtime_owner()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var ownerPath = Path.Combine(uiRoot, "Player", "CodingSessionServiceOwner.cs");
+
+        Assert.True(File.Exists(ownerPath), "CodingSessionService-Besitz soll in einem eigenen Player-Owner liegen.");
+
+        var owner = File.ReadAllText(ownerPath);
+        Assert.Contains("public sealed class CodingSessionServiceOwner", owner);
+
+        foreach (var path in Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs"))
+        {
+            var text = File.ReadAllText(path);
+            Assert.DoesNotContain("_codingSessionService", text);
+        }
+    }
+
+    [Fact]
     public void PlayerWindow_service_provider_access_lives_behind_dependencies()
     {
         var root = FindRepositoryRoot();

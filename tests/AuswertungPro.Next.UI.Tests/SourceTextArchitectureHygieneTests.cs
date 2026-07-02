@@ -129,6 +129,7 @@ public sealed class SourceTextArchitectureHygieneTests
         {
             "PlayerWindow_detection_confirmation_buffer_owns_pending_detection_state",
             "PlayerWindow_coding_analysis_cts_lifecycle_lives_in_helper",
+            "PlayerWindow_coding_session_service_is_owned_by_runtime_owner",
             "PlayerWindow_service_provider_access_lives_behind_dependencies"
         };
 
@@ -220,6 +221,22 @@ public sealed class SourceTextArchitectureHygieneTests
 
         var focused = File.ReadAllText(focusedPath);
         const string methodName = "PlayerWindow_timeline_marker_accessors_live_in_policy";
+
+        Assert.Contains($"public void {methodName}", focused);
+        Assert.DoesNotContain($"public void {methodName}", guard);
+    }
+
+    [Fact]
+    public void Player_window_coding_navigation_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowCodingNavigationArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "Coding-Navigation-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        const string methodName = "PlayerWindow_coding_navigation_lives_in_navigation_partial";
 
         Assert.Contains($"public void {methodName}", focused);
         Assert.DoesNotContain($"public void {methodName}", guard);
@@ -1121,6 +1138,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowCodingAiEventsArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingEventActionsArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingMultiModelArchitectureTests.cs")]
+    [InlineData("PlayerWindowCodingNavigationArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingStatisticsArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingStateArchitectureTests.cs")]
     [InlineData("PlayerWindowCodingCatalogArchitectureTests.cs")]
