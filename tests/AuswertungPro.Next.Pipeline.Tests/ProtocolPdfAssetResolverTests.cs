@@ -76,4 +76,34 @@ public sealed class ProtocolPdfAssetResolverTests
             try { Directory.Delete(temp, recursive: true); } catch { /* best-effort */ }
         }
     }
+
+    [Fact]
+    public void ResolvePhotoPaths_deduplicates_relative_and_archived_paths_resolving_to_same_photo()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "sewerfoto_" + Guid.NewGuid().ToString("N"));
+        var haltungDir = Path.Combine(temp, "Fotos", "Haltungen", "H1");
+        Directory.CreateDirectory(haltungDir);
+        var real = Path.Combine(haltungDir, "L_H1_001.jpg");
+        File.WriteAllBytes(real, new byte[] { 1 });
+        try
+        {
+            var relative = Path.Combine("Fotos", "Haltungen", "H1", "L_H1_001.jpg");
+            var archived = Path.Combine(temp, "Importdateien", "XTF", "Foto", "L_H1_001.jpg");
+            var cache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+            var resolved = ProtocolPdfAssetResolver.ResolvePhotoPaths(
+                new[] { relative, archived },
+                temp,
+                maxPhotos: 3,
+                cache,
+                preferredFolder: haltungDir);
+
+            var only = Assert.Single(resolved);
+            Assert.Equal(real, only);
+        }
+        finally
+        {
+            try { Directory.Delete(temp, recursive: true); } catch { /* best-effort */ }
+        }
+    }
 }

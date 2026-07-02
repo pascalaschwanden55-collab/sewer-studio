@@ -49,6 +49,7 @@ internal static class ProtocolPdfAssetResolver
         string? preferredFolder = null)
     {
         var list = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var raw in photoPaths)
         {
             if (string.IsNullOrWhiteSpace(raw))
@@ -58,12 +59,28 @@ internal static class ProtocolPdfAssetResolver
             if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
                 continue;
 
+            var key = NormalizeResolvedPhotoKey(resolved);
+            if (!seen.Add(key))
+                continue;
+
             list.Add(resolved);
             if (list.Count >= maxPhotos)
                 break;
         }
 
         return list;
+    }
+
+    private static string NormalizeResolvedPhotoKey(string path)
+    {
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch
+        {
+            return path.Replace('/', Path.DirectorySeparatorChar);
+        }
     }
 
     internal static string ResolvePhotoPath(
