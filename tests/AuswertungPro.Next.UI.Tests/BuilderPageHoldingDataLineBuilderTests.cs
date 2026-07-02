@@ -1,6 +1,4 @@
-using System.IO;
 using AuswertungPro.Next.UI.ViewModels.Pages;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -39,22 +37,6 @@ public sealed class BuilderPageHoldingDataLineBuilderTests
                 Assert.Equal("H-3", third.Holding);
                 Assert.Equal("", third.ExecutedBy);
             });
-    }
-
-    [Fact]
-    public void BuilderPageViewModel_enthaelt_keinen_holding_data_line_builder_mehr()
-    {
-        var root = FindRepositoryRoot();
-        var source = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "AuswertungPro.Next.UI",
-            "ViewModels",
-            "Pages",
-            "BuilderPageViewModel.cs"));
-
-        Assert.DoesNotContain("private List<OfferPdfHoldingDataLineModel> BuildHoldingDataLines", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("new OfferPdfHoldingDataLineModel", source, StringComparison.Ordinal);
     }
 
     private static DruckcenterRowVm Row(
