@@ -181,6 +181,64 @@ public sealed class XtfImportTests
     }
 
     [Fact]
+    public void Sia405Import_UeberschreibtUserEditedFieldsNicht()
+    {
+        // Charakterisierung der Import-Prioritaet:
+        // UserEdit > SIA405. Die Anreicherung darf vorhandene manuelle Werte nicht ersetzen.
+        var tempPath = Path.Combine(Path.GetTempPath(), $"sia405-useredit-{Guid.NewGuid():N}.xtf");
+        File.WriteAllText(tempPath, """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="SewerStudioTest" VERSION="2.3">
+    <MODELS><MODEL NAME="SIA405_Abwasser_2015_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <SIA405_Abwasser.SIA405_Abwasser BID="B1">
+      <Kanal TID="K1">
+        <Bezeichnung>K-1</Bezeichnung>
+        <Standortname>Dorfstrasse</Standortname>
+      </Kanal>
+      <Haltung TID="H1">
+        <Bezeichnung>80638-80631</Bezeichnung>
+        <LaengeEffektiv>22.5</LaengeEffektiv>
+        <Lichte_Hoehe>300</Lichte_Hoehe>
+        <Material>Steinzeug</Material>
+        <AbwasserbauwerkRef REF="K1" />
+      </Haltung>
+    </SIA405_Abwasser.SIA405_Abwasser>
+  </DATASECTION>
+</TRANSFER>
+""");
+
+        try
+        {
+            var project = new Project();
+            var existing = new HaltungRecord();
+            existing.SetFieldValue("Haltungsname", "80638-80631", FieldSource.Manual, userEdited: true);
+            existing.SetFieldValue("Rohrmaterial", "Kunststoff", FieldSource.Manual, userEdited: true);
+            existing.SetFieldValue("DN_mm", "250", FieldSource.Manual, userEdited: true);
+            existing.SetFieldValue("Haltungslaenge_m", "99.9", FieldSource.Manual, userEdited: true);
+            project.AddRecord(existing);
+
+            var svc = new LegacyXtfImportService();
+            var stats = svc.ImportXtfFiles(new[] { tempPath }, project);
+            var debug = string.Join("\n", stats.Messages.Select(m => $"{m.Level}: {m.Message} ({m.Context})"));
+
+            Assert.True(stats.Errors == 0, debug);
+            Assert.Single(project.Data);
+            Assert.Equal("Kunststoff", existing.GetFieldValue("Rohrmaterial"));
+            Assert.Equal("250", existing.GetFieldValue("DN_mm"));
+            Assert.Equal("99.9", existing.GetFieldValue("Haltungslaenge_m"));
+            Assert.Equal("Dorfstrasse", existing.GetFieldValue("Strasse"));
+            Assert.True(stats.Conflicts >= 3, $"Erwartete Konflikte fuer UserEdit-Felder.\n{debug}");
+        }
+        finally
+        {
+            try { File.Delete(tempPath); } catch { }
+        }
+    }
+
+    [Fact]
     public void Sia405Import_SetztFunktionHierarchisch_AusKanal()
     {
         // SIA405-Kanal liefert Funktionhierarchisch; Haltung verweist via AbwasserbauwerkRef.
