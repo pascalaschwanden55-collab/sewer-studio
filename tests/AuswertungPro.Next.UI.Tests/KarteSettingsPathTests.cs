@@ -1,26 +1,31 @@
-using System.IO;
+using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.ViewModels.Pages;
+using Microsoft.Extensions.Logging;
 using Xunit;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class KarteSettingsPathTests
 {
     [Fact]
-    public void KarteViewModel_NutztSettingsStattHartkodierteQgisPfade()
+    public void KarteViewModel_NutztSettingsPfadeAusServiceProvider()
     {
-        var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
-            "src",
-            "AuswertungPro.Next.UI",
-            "ViewModels",
-            "Pages",
-            "KarteViewModel.cs"));
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var settings = new AppSettings
+        {
+            AbwasserkatasterXtfPath = @"C:\SewerStudio-Test\netz.xtf",
+            QgisTilesPath = @"C:\SewerStudio-Test\tiles"
+        };
+        var services = new ServiceProvider(
+            settings,
+            new DiagnosticsOptions(),
+            loggerFactory.CreateLogger("test"),
+            loggerFactory);
+        var viewModel = new KarteViewModel(shell: null!, services);
 
-        Assert.DoesNotContain(@"D:\QGIS_V4", source, System.StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("AbwasserkatasterXtfPath", source, System.StringComparison.Ordinal);
-        Assert.Contains("QgisTilesPath", source, System.StringComparison.Ordinal);
+        Assert.Equal(settings.AbwasserkatasterXtfPath, ReadPrivateStringProperty(viewModel, "XtfPath"));
+        Assert.Equal(settings.QgisTilesPath, ReadPrivateStringProperty(viewModel, "QgisTilesPath"));
     }
 
     [Fact]
@@ -31,4 +36,9 @@ public sealed class KarteSettingsPathTests
         Assert.False(string.IsNullOrWhiteSpace(settings.QgisTilesPath));
         Assert.Contains("tiles_test", settings.QgisTilesPath, System.StringComparison.OrdinalIgnoreCase);
     }
+
+    private static string? ReadPrivateStringProperty(object instance, string name)
+        => instance.GetType()
+            .GetProperty(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?.GetValue(instance) as string;
 }
