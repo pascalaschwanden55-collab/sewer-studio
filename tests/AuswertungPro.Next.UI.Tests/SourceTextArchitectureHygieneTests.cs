@@ -637,7 +637,8 @@ public sealed class SourceTextArchitectureHygieneTests
         var methodNames = new[]
         {
             "PlayerWindow_coding_event_display_order_lives_in_policy",
-            "PlayerWindow_coding_event_list_surface_uses_controls"
+            "PlayerWindow_coding_event_list_surface_uses_controls",
+            "PlayerWindow_manual_code_meter_resolution_uses_policy"
         };
 
         foreach (var methodName in methodNames)

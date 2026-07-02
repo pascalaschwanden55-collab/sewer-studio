@@ -9,30 +9,6 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class UiArchitectureGuardTests
 {
     [Fact]
-    public void PlayerWindow_manual_code_meter_resolution_uses_policy()
-    {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
-        var markingTrainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Training.cs");
-        var manualMarkWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingWorkflow.cs");
-        var resolverPath = Path.Combine(uiRoot, "Ai", "CodingCurrentMeterResolver.cs");
-
-        var events = File.ReadAllText(eventsPath);
-        var markingTraining = File.ReadAllText(markingTrainingPath);
-        var manualMarkWorkflow = File.Exists(manualMarkWorkflowPath) ? File.ReadAllText(manualMarkWorkflowPath) : "";
-        var resolver = File.ReadAllText(resolverPath);
-
-        Assert.Contains("CodingCurrentMeterResolver.ResolveManualEntry", events);
-        Assert.DoesNotContain("CodingCurrentMeterResolver.ParseDisplayedMeterOrZero", markingTraining);
-        Assert.Contains("CodingCurrentMeterResolver.ParseDisplayedMeterOrZero", manualMarkWorkflow);
-        Assert.DoesNotContain("Math.Round(Math.Max(0, osdMeter", events);
-        Assert.DoesNotContain("TxtCodingMeter?.Text?.Replace(\"m\"", markingTraining);
-        Assert.Contains("public static double ResolveManualEntry", resolver);
-        Assert.Contains("public static double ParseDisplayedMeterOrZero", resolver);
-    }
-
-    [Fact]
     public void PlayerWindow_manual_coding_ai_context_lives_in_factory()
     {
         var root = FindRepositoryRoot();
