@@ -90,7 +90,7 @@ public sealed class PositionTemplateEditorLogicTests
         Assert.Equal(2, copies.Count);
         Assert.Equal("G1", copies[0].Name);
         Assert.Equal("G2", copies[1].Name);
-        Assert.Equal(1, copies[0].Positions.Count);
+        Assert.Single(copies[0].Positions);
     }
 
     // ---------------------------------------------------------------------------
