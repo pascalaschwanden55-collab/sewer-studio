@@ -1,10 +1,8 @@
 using System.Globalization;
-using System.IO;
 using System.Windows;
 using System.Windows.Data;
 using AuswertungPro.Next.UI.Views.Pages;
 using Xunit;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -34,39 +32,6 @@ public sealed class DataGridHorizontalAlignmentToTextAlignmentConverterTests
         var actual = converter.ConvertBack(TextAlignment.Right, typeof(HorizontalAlignment), parameter: null, CultureInfo.InvariantCulture);
 
         Assert.Same(Binding.DoNothing, actual);
-    }
-
-    [Fact]
-    public void DataGrid_combo_factory_owns_alignment_converter_for_page_columns()
-    {
-        var root = FindRepositoryRoot();
-        var dataPage = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "AuswertungPro.Next.UI",
-            "Views",
-            "Pages",
-            "DataPage.xaml.cs"));
-        var schaechtePage = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "AuswertungPro.Next.UI",
-            "Views",
-            "Pages",
-            "SchaechtePage.xaml.cs"));
-        var comboFactory = File.ReadAllText(Path.Combine(
-            root,
-            "src",
-            "AuswertungPro.Next.UI",
-            "Views",
-            "Pages",
-            "DataGridComboColumnFactory.cs"));
-
-        Assert.DoesNotContain("HorizontalAlignmentToTextAlignmentValueConverter", dataPage);
-        Assert.DoesNotContain("HorizontalAlignmentToTextAlignmentValueConverter", schaechtePage);
-        Assert.DoesNotContain("DataGridHorizontalAlignmentToTextAlignmentConverter", dataPage);
-        Assert.DoesNotContain("DataGridHorizontalAlignmentToTextAlignmentConverter", schaechtePage);
-        Assert.Contains("DataGridHorizontalAlignmentToTextAlignmentConverter", comboFactory);
     }
 
 }

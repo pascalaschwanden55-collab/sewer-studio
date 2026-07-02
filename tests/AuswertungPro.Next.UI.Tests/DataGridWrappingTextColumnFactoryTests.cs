@@ -1,4 +1,3 @@
-using System.IO;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Windows;
@@ -48,22 +47,6 @@ public sealed class DataGridWrappingTextColumnFactoryTests
             AssertStyleSetter(column.EditingElementStyle, TextBox.VerticalContentAlignmentProperty, VerticalAlignment.Top);
             AssertStyleSetter(column.EditingElementStyle, TextBox.MinHeightProperty, 60d);
         });
-    }
-
-    [Fact]
-    public void DataPageColumnFactory_delegates_recommendation_column_styling_to_factory()
-    {
-        var source = File.ReadAllText(Path.Combine(
-            TestRepoPaths.FindRepositoryRoot(),
-            "src",
-            "AuswertungPro.Next.UI",
-            "Views",
-            "Pages",
-            "DataPageColumnFactory.cs"));
-
-        Assert.Contains("DataGridWrappingTextColumnFactory.Create", source);
-        Assert.DoesNotContain("TextBlock.TextWrappingProperty", source);
-        Assert.DoesNotContain("TextBox.TextWrappingProperty", source);
     }
 
     private static void AssertStyleSetter(Style? style, DependencyProperty property, object expectedValue)

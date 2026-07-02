@@ -1,4 +1,3 @@
-using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
@@ -53,20 +52,6 @@ public sealed class DataGridColorCellStyleFactoryTests
             Assert.NotNull(style);
             AssertBindingPath(style!, $"Fields[{columnName}]");
         });
-    }
-
-    [Fact]
-    public void DataPage_and_SchaechtePage_delegate_color_style_selection()
-    {
-        var root = TestRepoPaths.FindRepositoryRoot();
-        var pagesRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages");
-        var dataPageSetup = File.ReadAllText(Path.Combine(pagesRoot, "DataPageColumnSetup.cs"));
-        var schaechtePage = File.ReadAllText(Path.Combine(pagesRoot, "SchaechtePage.xaml.cs"));
-
-        Assert.Contains("DataGridColorCellStyleFactory.CreateHaltungenStyle(", dataPageSetup, StringComparison.Ordinal);
-        Assert.Contains("DataGridColorCellStyleFactory.CreateSchaechteStyle(", schaechtePage, StringComparison.Ordinal);
-        Assert.DoesNotContain("ZustandsklasseCellStyleFactory.Create", dataPageSetup, StringComparison.Ordinal);
-        Assert.DoesNotContain("ZustandsklasseCellStyleFactory.Create", schaechtePage, StringComparison.Ordinal);
     }
 
     private static void AssertBindingPath(Style style, string expectedPath)

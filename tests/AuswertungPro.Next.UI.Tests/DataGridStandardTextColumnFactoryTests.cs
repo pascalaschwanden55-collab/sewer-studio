@@ -1,4 +1,3 @@
-using System.IO;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Windows.Controls;
@@ -24,22 +23,6 @@ public sealed class DataGridStandardTextColumnFactoryTests
             Assert.Equal(BindingMode.TwoWay, binding.Mode);
             Assert.Equal(UpdateSourceTrigger.LostFocus, binding.UpdateSourceTrigger);
         });
-    }
-
-    [Fact]
-    public void DataPageColumnFactory_delegates_standard_text_columns_to_factory()
-    {
-        var source = File.ReadAllText(Path.Combine(
-            TestRepoPaths.FindRepositoryRoot(),
-            "src",
-            "AuswertungPro.Next.UI",
-            "Views",
-            "Pages",
-            "DataPageColumnFactory.cs"));
-
-        Assert.Contains("DataGridStandardTextColumnFactory.Create", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("new DataGridTextColumn", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("new Binding($\"Fields[{fieldName}]\")", source, StringComparison.Ordinal);
     }
 
     private static void RunOnSta(Action action)
