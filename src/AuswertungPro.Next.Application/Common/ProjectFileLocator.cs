@@ -58,7 +58,7 @@ public static class ProjectFileLocator
         try
         {
             var rel = Path.GetRelativePath(projectFolder, projectFilePath);
-            File.WriteAllText(Path.Combine(projectFolder, RootPointerFileName), rel);
+            AtomicTextFileWriter.WriteAllText(Path.Combine(projectFolder, RootPointerFileName), rel);
         }
         catch
         {
