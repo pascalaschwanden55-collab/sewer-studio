@@ -623,7 +623,10 @@ public sealed class SourceTextArchitectureHygieneTests
         {
             "PlayerWindow_coding_snapshot_target_lives_in_policy",
             "PlayerWindow_coding_photo_capture_lives_in_capture_partial",
-            "PlayerWindow_frame_extraction_lives_in_service"
+            "PlayerWindow_frame_extraction_lives_in_service",
+            "PlayerWindow_photo_display_paths_live_in_policy",
+            "PlayerWindow_photo_viewer_lives_in_viewer_partial",
+            "PlayerWindow_manual_photo_slot_logic_lives_in_policy"
         };
 
         foreach (var methodName in methodNames)
