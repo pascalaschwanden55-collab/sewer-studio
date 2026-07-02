@@ -183,6 +183,29 @@ public sealed class SourceTextArchitectureHygieneTests
     }
 
     [Fact]
+    public void Player_window_schema_overlay_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowSchemaOverlayArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "Schema-Overlay-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        var methodNames = new[]
+        {
+            "PlayerWindow_schema_overlay_wiring_lives_in_schema_partial",
+            "PlayerWindow_schema_mouse_wheel_lives_in_schema_partial"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
+    [Fact]
     public void Player_window_coding_calibration_guards_live_in_focused_suite()
     {
         var root = SourceTextTestHelpers.FindRepositoryRoot();
@@ -1244,6 +1267,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowProtocolEventMappingArchitectureTests.cs")]
     [InlineData("PlayerWindowResourceDictionaryTests.cs")]
     [InlineData("PlayerWindowRuntimeArchitectureTests.cs")]
+    [InlineData("PlayerWindowSchemaOverlayArchitectureTests.cs")]
     [InlineData("PlayerWindowSnapshotArchitectureTests.cs")]
     [InlineData("PlayerWindowShellProjectArchitectureTests.cs")]
     [InlineData("PlayerWindowStretchDamageArchitectureTests.cs")]
