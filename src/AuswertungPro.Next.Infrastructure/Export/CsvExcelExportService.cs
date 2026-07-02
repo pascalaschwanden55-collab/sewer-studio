@@ -26,7 +26,7 @@ public sealed class CsvExcelExportService : IExcelExportService
                 sb.AppendLine(string.Join(";", values));
             }
 
-            File.WriteAllText(outputPath, sb.ToString(), Encoding.UTF8);
+            AtomicTextFileWriter.WriteAllText(outputPath, sb.ToString(), Encoding.UTF8);
             return Result.Success();
         }
         catch (Exception ex)
@@ -55,7 +55,7 @@ public sealed class CsvExcelExportService : IExcelExportService
                 sb.AppendLine(string.Join(";", values));
             }
 
-            File.WriteAllText(outputPath, sb.ToString(), Encoding.UTF8);
+            AtomicTextFileWriter.WriteAllText(outputPath, sb.ToString(), Encoding.UTF8);
             return Result.Success();
         }
         catch (Exception ex)
