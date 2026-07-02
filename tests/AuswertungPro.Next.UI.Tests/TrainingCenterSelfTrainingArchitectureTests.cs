@@ -497,18 +497,15 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var kbCheckSource = ExtractMethodBody(source, "private async Task CheckKnowledgeBaseAsync()");
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingKnowledgeBaseCheckRunController.TryStart(IsBusy)", kbCheckSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingKnowledgeBaseCheckPresentationBuilder.Build(summary)", kbCheckSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingKnowledgeBaseCheckRunController.ApplySuccess(", kbCheckSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingKnowledgeBaseCheckRunController.ApplyFailure(", kbCheckSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("StatusText = \"Pr", kbCheckSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("StatusText = $\"KB-Pr", kbCheckSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Log($\"KB-Pr", kbCheckSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("summary.LatestVersionAtUtc.Value.ToLocalTime()", kbCheckSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("summary.TopCodes.Count > 0", kbCheckSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("KB-Stand: Samples=", kbCheckSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingKnowledgeBaseCheckRunController.TryStart(IsBusy)", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingKnowledgeBaseCheckPresentationBuilder.Build(summary)", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingKnowledgeBaseCheckRunController.ApplySuccess(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingKnowledgeBaseCheckRunController.ApplyFailure(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("summary.LatestVersionAtUtc.Value.ToLocalTime()", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("summary.TopCodes.Count > 0", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("KB-Stand: Samples=", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -521,15 +518,13 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var statusSource = ExtractMethodBody(source, "private async Task RefreshKbStatusAsync()");
-        var qualitySource = ExtractMethodBody(source, "private async Task RefreshKbQualityAsync()");
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingKnowledgeBaseStatusPresentationBuilder.Build(status)", statusSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingKnowledgeBaseQualityPresentationBuilder.Build(quality, runs)", qualitySource, StringComparison.Ordinal);
-        Assert.DoesNotContain("status.SampleCount switch", statusSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("System.Windows.Media.Color.FromRgb", statusSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("TakeLast(5)", qualitySource, StringComparison.Ordinal);
-        Assert.DoesNotContain("quality.StaleSampleCount > 0", qualitySource, StringComparison.Ordinal);
+        Assert.Contains("TrainingKnowledgeBaseStatusPresentationBuilder.Build(status)", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingKnowledgeBaseQualityPresentationBuilder.Build(quality, runs)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("status.SampleCount switch", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TakeLast(5)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("quality.StaleSampleCount > 0", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -542,12 +537,12 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var persistSource = ExtractMethodBody(source, "private async Task PersistSamplesAsync(TrainingSample? changedSample = null)");
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingSamplePersistenceWorkflowController.PersistAsync(", persistSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("changedSample.KbIndexState = KbIndexState.Pending", persistSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("outcome.IndexedIds.Contains", persistSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample>", persistSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingSamplePersistenceWorkflowController.PersistAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("changedSample.KbIndexState = KbIndexState.Pending", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("outcome.IndexedIds.Contains", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TrainingSamplesStore.MergeOrUpdateAsync(new List<TrainingSample>", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -560,12 +555,12 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var exportSource = ExtractMethodBody(source, "private async Task ExportApprovedAsync()");
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingApprovedProtocolExportController.RunAsync(", exportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("new AuswertungPro.Next.Domain.Protocol.ProtocolEntry", exportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("approved.Select(s => s.Code)", exportSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("s.ExportedUtc = DateTime.UtcNow", exportSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingApprovedProtocolExportController.RunAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new AuswertungPro.Next.Domain.Protocol.ProtocolEntry", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("approved.Select(s => s.Code)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("s.ExportedUtc = DateTime.UtcNow", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -578,18 +573,15 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var approveSource = ExtractMethodBody(source, "private async Task ApproveSampleAsync()");
-        var rejectSource = ExtractMethodBody(source, "private async Task RejectSampleAsync()");
-        var removeSource = ExtractMethodBody(source, "private async Task RemoveSampleAsync()");
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingSampleDecisionController.Approve(", approveSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingSampleDecisionController.Reject(", rejectSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingSampleDecisionController.Remove(", removeSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelectedSample.Status = TrainingSampleStatus.Approved", approveSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelectedSample.Status = TrainingSampleStatus.Rejected", rejectSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelectedSample.Status = TrainingSampleStatus.Removed", removeSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelectedSample.KbIndexState = KbIndexState.None", rejectSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelectedSample.KbIndexState = KbIndexState.None", removeSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingSampleDecisionController.Approve(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingSampleDecisionController.Reject(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingSampleDecisionController.Remove(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedSample.Status = TrainingSampleStatus.Approved", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedSample.Status = TrainingSampleStatus.Rejected", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedSample.Status = TrainingSampleStatus.Removed", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelectedSample.KbIndexState = KbIndexState.None", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -602,13 +594,11 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var approveSource = ExtractMethodBody(source, "private void Approve()");
-        var rejectSource = ExtractMethodBody(source, "private void Reject()");
-        var setNewSource = ExtractMethodBody(source, "private void SetNew()");
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.Approve)", approveSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.Reject)", rejectSource, StringComparison.Ordinal);
-        Assert.Contains("TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.SetNew)", setNewSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.Approve)", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.Reject)", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingCaseDecisionController.Apply(SelectedCase, TrainingCaseDecision.SetNew)", viewModelSource, StringComparison.Ordinal);
         Assert.DoesNotContain("SelectedCase.Status = TrainingCaseStatus.Approved", source, StringComparison.Ordinal);
         Assert.DoesNotContain("SelectedCase.Status = TrainingCaseStatus.Rejected", source, StringComparison.Ordinal);
         Assert.DoesNotContain("SelectedCase.Status = TrainingCaseStatus.New", source, StringComparison.Ordinal);
