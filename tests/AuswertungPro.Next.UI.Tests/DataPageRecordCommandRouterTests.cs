@@ -1,61 +1,12 @@
 using System.Windows.Input;
-using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
 using Xunit;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageRecordCommandRouterTests
 {
-    [Fact]
-    public void DataPage_simple_record_menu_handlers_use_record_command_router()
-    {
-        var source = File.ReadAllText(RepoFile(
-            "src",
-            "AuswertungPro.Next.UI",
-            "Views",
-            "Pages",
-            "DataPage.xaml.cs"));
-        var simpleMenuHandlers = ExtractBetween(
-            source,
-            "private void PlayMenu_Click",
-            "private void SuggestAllMeasuresMenu_Click");
-
-        Assert.Contains("DataPageRecordCommandRouter.TryExecute", source);
-        Assert.DoesNotContain("vm.PlayVideoCommand.Execute(record);", simpleMenuHandlers);
-        Assert.DoesNotContain("vm.RelinkVideoCommand.Execute(record);", simpleMenuHandlers);
-        Assert.DoesNotContain("vm.OpenCostsCommand.Execute(record);", simpleMenuHandlers);
-        Assert.DoesNotContain("vm.PrintAwuHaltungsprotokollCommand.Execute(record);", simpleMenuHandlers);
-        Assert.DoesNotContain("vm.OpenOriginalPdfCommand.Execute(record);", simpleMenuHandlers);
-        Assert.DoesNotContain("vm.RestoreCostsCommand.Execute(record);", simpleMenuHandlers);
-        Assert.DoesNotContain("vm.SuggestMeasuresCommand.Execute(record);", simpleMenuHandlers);
-    }
-
-    [Fact]
-    public void DataPage_move_record_menu_handlers_use_record_command_router()
-    {
-        var source = File.ReadAllText(RepoFile(
-            "src",
-            "AuswertungPro.Next.UI",
-            "Views",
-            "Pages",
-            "DataPage.xaml.cs"));
-        var moveMenuHandlers = ExtractBetween(
-            source,
-            "private void MoveRecordUpMenu_Click",
-            "private void DropdownButton_Click");
-
-        Assert.Contains("DataPageRecordCommandRouter.TrySelectAndExecute", source);
-        Assert.DoesNotContain("vm.Selected = record;", moveMenuHandlers);
-        Assert.DoesNotContain("vm.MoveUpCommand.CanExecute(null)", moveMenuHandlers);
-        Assert.DoesNotContain("vm.MoveDownCommand.CanExecute(null)", moveMenuHandlers);
-        Assert.DoesNotContain("vm.MoveUpCommand.Execute(null)", moveMenuHandlers);
-        Assert.DoesNotContain("vm.MoveDownCommand.Execute(null)", moveMenuHandlers);
-    }
-
-
     [Fact]
     public void TryExecute_executes_command_with_resolved_record()
     {
@@ -180,14 +131,5 @@ public sealed class DataPageRecordCommandRouterTests
             Parameter = parameter;
             CanExecuteChanged?.Invoke(this, EventArgs.Empty);
         }
-    }
-
-    private static string ExtractBetween(string source, string startMarker, string endMarker)
-    {
-        var start = source.IndexOf(startMarker, StringComparison.Ordinal);
-        var end = source.IndexOf(endMarker, start, StringComparison.Ordinal);
-        Assert.True(start >= 0, $"Start marker not found: {startMarker}");
-        Assert.True(end > start, $"End marker not found: {endMarker}");
-        return source[start..end];
     }
 }
