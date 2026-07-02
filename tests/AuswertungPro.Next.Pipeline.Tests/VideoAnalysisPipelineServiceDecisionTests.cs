@@ -42,6 +42,23 @@ public sealed class VideoAnalysisPipelineServiceDecisionTests
     }
 
     [Fact]
+    public async Task ShouldUseMultiModelAsync_Auto_WhenSidecarHealthy_UsesMultiModel()
+    {
+        var handler = new CountingHandler(_ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"status":"ok","version":"1.0.0","gpu":null}""")
+            });
+        var service = CreateService(PipelineMode.Auto, multiModelEnabled: true, handler);
+
+        var decision = await service.ShouldUseMultiModelAsync(CancellationToken.None);
+
+        Assert.True(decision.UseMultiModel);
+        Assert.Null(decision.FallbackReason);
+        Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Fact]
     public async Task ShouldUseMultiModelAsync_MultiModel_WhenSidecarUnavailable_Throws()
     {
         var handler = new CountingHandler(_ =>
