@@ -1,0 +1,183 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.Schachtansicht.SchachtansichtView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
+             xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Schachtansicht"
+             x:Name="Root">
+    <UserControl.Resources>
+        <local:SchachtSummaryConverter x:Key="SummaryConv"/>
+        <local:SchachtZustandsklasseBrushConverter x:Key="ZkBrushConv"/>
+    </UserControl.Resources>
+
+    <Grid Margin="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320" MinWidth="240"/>
+            <ColumnDefinition Width="6"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <ListBox Grid.Column="0"
+                 x:Name="SchachtList"
+                 HorizontalContentAlignment="Stretch"
+                 ItemsSource="{Binding Records}"
+                 SelectedItem="{Binding Selected, Mode=TwoWay}"
+                 SelectionChanged="SchachtList_SelectionChanged"
+                 PreviewMouseRightButtonDown="SchachtList_PreviewMouseRightButtonDown"
+                 Background="{DynamicResource CardBrush}"
+                 BorderBrush="{DynamicResource BorderBrush}"
+                 BorderThickness="1"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 VirtualizingStackPanel.IsVirtualizing="True"
+                 VirtualizingStackPanel.VirtualizationMode="Recycling"
+                 ScrollViewer.CanContentScroll="True">
+            <ListBox.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Position nach oben" Click="CtxMoveUp_Click"/>
+                    <MenuItem Header="Position nach unten" Click="CtxMoveDown_Click"/>
+                    <Separator/>
+                    <MenuItem Header="Details anzeigen..." Click="CtxDetails_Click"/>
+                    <MenuItem Header="Protokoll (PDF)..." Click="CtxOpenPdf_Click"/>
+                    <Separator/>
+                    <MenuItem Header="Schacht l&#x00F6;schen" Click="CtxDelete_Click" Foreground="OrangeRed"/>
+                </ContextMenu>
+            </ListBox.ContextMenu>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="2,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Fields[NR.]}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontSize="11"
+                                           Margin="0,0,8,0"
+                                           MinWidth="16"
+                                           TextAlignment="Right"/>
+                                <TextBlock Text="{Binding Fields[Schachtnummer]}"
+                                           Foreground="{DynamicResource TextBrush}"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
+                                       FontSize="12"
+                                       TextTrimming="CharacterEllipsis"
+                                       Margin="0,2,0,0">
+                                <TextBlock.Text>
+                                    <MultiBinding Converter="{StaticResource SummaryConv}">
+                                        <Binding Path="Fields[Funktion]"/>
+                                        <Binding Path="Fields[Strasse]"/>
+                                        <Binding Path="Fields[Eigent&#x00FC;mer]"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </StackPanel>
+                        <Border Grid.Column="1"
+                                Width="32"
+                                Height="22"
+                                CornerRadius="4"
+                                VerticalAlignment="Center"
+                                Margin="8,0,4,0"
+                                Background="{Binding Fields[Zustandsklasse], Converter={StaticResource ZkBrushConv}}">
+                            <TextBlock Text="{Binding Fields[Zustandsklasse]}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="#000000"
+                                       FontSize="12"
+                                       FontWeight="Bold"/>
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <GridSplitter Grid.Column="1"
+                      Width="6"
+                      HorizontalAlignment="Stretch"
+                      Background="{DynamicResource BorderBrush}"/>
+
+        <Grid Grid.Column="2" Margin="8,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" MinHeight="120"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition x:Name="SchadenRowDef" Height="240" MinHeight="80"/>
+            </Grid.RowDefinitions>
+
+            <controls:RecordDetailsView Grid.Row="0" x:Name="Detail"/>
+
+            <GridSplitter Grid.Row="1"
+                          Height="6"
+                          Margin="0,4,0,0"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Center"
+                          ResizeDirection="Rows"
+                          ResizeBehavior="PreviousAndNext"
+                          Background="{DynamicResource BorderBrush}"
+                          DragCompleted="SchadenSplitter_DragCompleted"
+                          ToolTip="Ziehen, um die H&#x00F6;he von &quot;Sch&#x00E4;den&quot; einzustellen"/>
+
+            <Border Grid.Row="2"
+                    Margin="0,4,0,0"
+                    Padding="12"
+                    Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="0,0,0,8">
+                        <TextBlock DockPanel.Dock="Left"
+                                   Text="Sch&#x00E4;den"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextBrush}"
+                                   VerticalAlignment="Center"/>
+                        <Button DockPanel.Dock="Right"
+                                Content="Details"
+                                Padding="10,4"
+                                Click="DamageDetails_Click"
+                                ToolTip="Schacht-Details &#x00F6;ffnen"/>
+                    </DockPanel>
+
+                    <ListBox x:Name="DamageList"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             HorizontalContentAlignment="Stretch"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             MouseDoubleClick="DamageList_MouseDoubleClick">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="0,2"
+                                        Padding="8,5"
+                                        Background="{DynamicResource HeaderBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding Component}"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource SuccessBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Text}"
+                                                   Margin="8,0,0,0"
+                                                   Foreground="{DynamicResource TextBrush}"
+                                                   TextWrapping="Wrap"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

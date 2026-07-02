@@ -70,6 +70,9 @@ public sealed class AppSettings : IAiStartupSettings
     // Haltungsansicht: per GridSplitter einstellbare Hoehe des "Primaere Schaeden"-Panels (in px).
     public double HaltungsansichtSchadenHeight { get; set; } = 240d;
 
+    // Schachtansicht: per GridSplitter einstellbare Hoehe des "Schaeden"-Panels (in px).
+    public double SchachtansichtSchadenHeight { get; set; } = 240d;
+
     // Window position/size persistence
     public Dictionary<string, WindowBounds> WindowStates { get; set; } = new();
 
