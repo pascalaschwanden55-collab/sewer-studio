@@ -346,10 +346,18 @@ public sealed class SourceTextArchitectureHygieneTests
         Assert.True(File.Exists(focusedPath), "Overlay-Rendering-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
 
         var focused = File.ReadAllText(focusedPath);
-        const string methodName = "PlayerWindow_active_schema_rendering_delegates_to_render_controller";
+        var methodNames = new[]
+        {
+            "PlayerWindow_active_schema_rendering_delegates_to_render_controller",
+            "PlayerWindow_coding_overlay_rendering_lives_in_controller",
+            "PlayerWindow_level_overlay_rendering_lives_in_level_partial"
+        };
 
-        Assert.Contains($"public void {methodName}", focused);
-        Assert.DoesNotContain($"public void {methodName}", guard);
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
     }
 
     [Fact]
