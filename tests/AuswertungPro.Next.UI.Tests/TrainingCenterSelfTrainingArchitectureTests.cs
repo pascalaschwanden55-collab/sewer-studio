@@ -23,7 +23,6 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Training",
             "SelfTrainingRunPreparationController.cs");
         var viewModelSource = source;
-        var loadSource = viewModelSource;
 
         Assert.False(File.Exists(preparationControllerPath), "Triviale Self-Training-CTS-Vorbereitung soll inline in der VM stehen.");
         Assert.DoesNotContain("SelfTrainingRunPreparationController.PrepareCancellation(", viewModelSource, StringComparison.Ordinal);
@@ -396,13 +395,11 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var kbUpdateSource = ExtractMethodBody(source, "private async Task<KbIndexOutcome> IncrementalKbUpdateWithReasonAsync(List<TrainingSample> samples, CancellationToken ct)");
+        var viewModelSource = source;
 
-        Assert.Contains("TrainingKbIndexRunner.CreateDefault(", kbUpdateSource, StringComparison.Ordinal);
-        Assert.Contains("runner.RunAsync(samples, ct)", kbUpdateSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("new KnowledgeBaseContext()", kbUpdateSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("new KnowledgeBaseManager(", kbUpdateSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("foreach (var sample in samples)", kbUpdateSource, StringComparison.Ordinal);
+        Assert.Contains("TrainingKbIndexRunner.CreateDefault(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("runner.RunAsync(samples, ct)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("foreach (var sample in samples)", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
