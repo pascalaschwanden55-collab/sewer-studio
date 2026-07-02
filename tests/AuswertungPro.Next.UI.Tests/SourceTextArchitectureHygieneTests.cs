@@ -426,6 +426,7 @@ public sealed class SourceTextArchitectureHygieneTests
         var methodNames = new[]
         {
             "PlayerWindow_live_detection_model_selection_lives_in_policy",
+            "PlayerWindow_live_detection_confirmation_threshold_lives_in_policy",
             "PlayerWindow_live_detection_status_lives_in_status_partial",
             "PlayerWindow_live_detection_lifecycle_lives_in_lifecycle_partial",
             "PlayerWindow_live_detection_dialogs_live_in_service",

@@ -36,6 +36,32 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
     }
 
     [Fact]
+    public void PlayerWindow_live_detection_confirmation_threshold_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var liveDetectionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.cs");
+        var workflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionResultWorkflow.cs");
+        var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRunCommandWorkflow.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "LiveDetectionConfirmationPolicy.cs");
+
+        Assert.True(File.Exists(workflowPath), "LiveDetection-Ergebnisentscheidung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(runCommandWorkflowPath), "LiveDetection-Run-Orchestrierung soll das Ergebnisworkflow aufrufen.");
+        Assert.True(File.Exists(policyPath), "LiveDetection-Bestaetigungsschwelle muss ausserhalb der PlayerWindow-Partials liegen.");
+
+        var liveDetection = File.ReadAllText(liveDetectionPath);
+        var workflow = File.ReadAllText(workflowPath);
+        var runCommandWorkflow = File.Exists(runCommandWorkflowPath) ? File.ReadAllText(runCommandWorkflowPath) : "";
+        var policy = File.ReadAllText(policyPath);
+
+        Assert.Contains("LiveDetectionResultWorkflow.Execute", runCommandWorkflow);
+        Assert.DoesNotContain("LiveDetectionConfirmationPolicy.SelectSignificantFindings", liveDetection);
+        Assert.Contains("LiveDetectionConfirmationPolicy.SelectSignificantFindings", workflow);
+        Assert.DoesNotContain("Severity >= 2", liveDetection);
+        Assert.Contains("MinimumConfirmationSeverity", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_live_detection_stop_playback_uses_player_helper()
     {
         var root = FindRepositoryRoot();
