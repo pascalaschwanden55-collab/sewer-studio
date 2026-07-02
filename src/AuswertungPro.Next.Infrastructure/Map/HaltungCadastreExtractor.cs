@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Map;
 
@@ -113,18 +114,20 @@ public static class HaltungCadastreExtractor
 
         var count = 0;
         var fi = new FileInfo(xtfPath);
-        using var writer = new StreamWriter(outTablePath, append: false, new UTF8Encoding(false));
-        // Metazeile fuer Staleness-Pruefung (Quelle + Groesse + Aenderungszeit).
-        writer.WriteLine($"# source={xtfPath}\tbytes={fi.Length}\tmtimeUtc={fi.LastWriteTimeUtc:O}");
-        writer.WriteLine(TableHeader);
-
-        foreach (var h in Extract(xtfPath))
+        AtomicTextFileWriter.Write(outTablePath, writer =>
         {
-            writer.WriteLine(string.Join('\t',
-                Escape(h.Bezeichnung), Escape(h.ShaftA), Escape(h.ShaftB),
-                Escape(h.Laenge), Escape(h.LichteHoehe), Escape(h.Material)));
-            count++;
-        }
+            // Metazeile fuer Staleness-Pruefung (Quelle + Groesse + Aenderungszeit).
+            writer.WriteLine($"# source={xtfPath}\tbytes={fi.Length}\tmtimeUtc={fi.LastWriteTimeUtc:O}");
+            writer.WriteLine(TableHeader);
+
+            foreach (var h in Extract(xtfPath))
+            {
+                writer.WriteLine(string.Join('\t',
+                    Escape(h.Bezeichnung), Escape(h.ShaftA), Escape(h.ShaftB),
+                    Escape(h.Laenge), Escape(h.LichteHoehe), Escape(h.Material)));
+                count++;
+            }
+        }, new UTF8Encoding(false));
 
         return count;
     }

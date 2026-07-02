@@ -8,6 +8,29 @@ namespace AuswertungPro.Next.Application.Common;
 
 public static class AtomicTextFileWriter
 {
+    public static void Write(string path, Action<TextWriter> write, Encoding? encoding = null)
+    {
+        ArgumentNullException.ThrowIfNull(write);
+
+        var atomicWrite = PrepareWrite(path);
+        try
+        {
+            using (var writer = encoding is null
+                       ? new StreamWriter(atomicWrite.TempPath)
+                       : new StreamWriter(atomicWrite.TempPath, append: false, encoding))
+            {
+                write(writer);
+            }
+
+            CompleteWrite(atomicWrite);
+        }
+        catch
+        {
+            DeleteTemp(atomicWrite.TempPath);
+            throw;
+        }
+    }
+
     public static void WriteAllText(string path, string content)
     {
         var write = PrepareWrite(path);

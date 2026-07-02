@@ -17,6 +17,7 @@ public sealed class AtomicPersistenceArchitectureTests
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Export", "CsvExcelExportService.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "HoldingFolderDistributor.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Import", "ProjectFieldCsvExporter.cs"),
+        Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Map", "HaltungCadastreExtractor.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Map", "NetworkGeometryCache.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "YoloDatasetExportService.cs"),
         Path.Combine("src", "AuswertungPro.Next.Infrastructure", "Ai", "Training", "Services", "PdfProtocolExtractor.cs"),
@@ -36,8 +37,11 @@ public sealed class AtomicPersistenceArchitectureTests
         Assert.DoesNotContain("File.WriteAllTextAsync(", source, System.StringComparison.Ordinal);
         Assert.DoesNotContain("File.WriteAllLines(", source, System.StringComparison.Ordinal);
         Assert.DoesNotContain("File.WriteAllLinesAsync(", source, System.StringComparison.Ordinal);
-        Assert.DoesNotContain("new StreamWriter(path", source, System.StringComparison.Ordinal);
-        Assert.Contains("AtomicTextFileWriter.WriteAllText", source, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("new StreamWriter(", source, System.StringComparison.Ordinal);
+        Assert.True(
+            source.Contains("AtomicTextFileWriter.WriteAllText", System.StringComparison.Ordinal)
+            || source.Contains("AtomicTextFileWriter.Write(", System.StringComparison.Ordinal),
+            "Persistente Textausgaben muessen ueber AtomicTextFileWriter laufen.");
     }
 
     private static string FindRepositoryRoot()

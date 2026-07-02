@@ -19,6 +19,42 @@ public sealed class AtomicTextFileWriterTests
     }
 
     [Fact]
+    public void Write_WithTextWriter_ReplacesFileAndKeepsBackup()
+    {
+        using var temp = new TempDir();
+        var path = Path.Combine(temp.Path, "data.tsv");
+
+        AtomicTextFileWriter.Write(path, writer => writer.WriteLine("old"));
+        AtomicTextFileWriter.Write(path, writer =>
+        {
+            writer.WriteLine("header");
+            writer.WriteLine("row");
+        });
+
+        Assert.Equal("header" + Environment.NewLine + "row" + Environment.NewLine, File.ReadAllText(path));
+        Assert.Equal("old" + Environment.NewLine, File.ReadAllText(path + ".bak"));
+        Assert.Empty(Directory.EnumerateFiles(temp.Path, "*.tmp"));
+    }
+
+    [Fact]
+    public void Write_WithTextWriter_WhenWriterFails_KeepsExistingFileAndDeletesTemp()
+    {
+        using var temp = new TempDir();
+        var path = Path.Combine(temp.Path, "data.tsv");
+        File.WriteAllText(path, "old");
+
+        Assert.Throws<InvalidOperationException>(() =>
+            AtomicTextFileWriter.Write(path, writer =>
+            {
+                writer.WriteLine("new");
+                throw new InvalidOperationException("boom");
+            }));
+
+        Assert.Equal("old", File.ReadAllText(path));
+        Assert.Empty(Directory.EnumerateFiles(temp.Path, "*.tmp"));
+    }
+
+    [Fact]
     public async Task WriteAllTextAsync_WhenCancelled_DoesNotLeaveTempFile()
     {
         using var temp = new TempDir();
