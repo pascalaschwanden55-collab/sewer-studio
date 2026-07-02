@@ -135,5 +135,11 @@ public sealed class TemporalCodeVotingServiceTests
         voting.RegisterAndVote("BAJ", 0.43);
         voting.Reset();
         Assert.Null(voting.RegisterAndVote(null, 0.43));
+        Assert.Equal(0.0, GetLastConfirmedMeter(voting));
     }
+
+    private static double GetLastConfirmedMeter(TemporalCodeVotingService voting)
+        => (double)typeof(TemporalCodeVotingService)
+            .GetField("_lastConfirmedMeter", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .GetValue(voting)!;
 }

@@ -394,6 +394,7 @@ public static class VsaCodeResolver
         "BABA", "BABAB", "BABAC", "BABB", "BABBA", "BABBB", "BABBC",
         "BABC", "BABCA", "BAFA", "BAFAE", "BAFB", "BAFC", "BAFD",
         "BAG", "BAGA", "BBA", "BBAA", "BBAB", "BBB", "BBBA",
+        // BBD = nur Präfix-Anker, kein gültiger Basiscode.
         "BBC", "BBCA", "BBCB", "BBCC", "BBD", "BBDA", "BBDB"
     };
 

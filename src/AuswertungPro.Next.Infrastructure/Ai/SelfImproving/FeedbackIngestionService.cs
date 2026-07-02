@@ -103,9 +103,11 @@ public sealed class FeedbackIngestionService
             {
                 await _weightLearner.ReLearnAsync(ct).ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex)
             {
                 // Weight learning failure is non-critical.
+                System.Diagnostics.Debug.WriteLine(
+                    $"[FeedbackIngestion] Weight-Learning fehlgeschlagen: {ex.Message}");
             }
         }
     }

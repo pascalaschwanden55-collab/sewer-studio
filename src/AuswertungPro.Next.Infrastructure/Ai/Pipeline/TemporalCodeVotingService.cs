@@ -84,5 +84,6 @@ public sealed class TemporalCodeVotingService : ITemporalCodeVotingService
     {
         _window.Clear();
         _lastConfirmedCode = null;
+        _lastConfirmedMeter = 0;
     }
 }
