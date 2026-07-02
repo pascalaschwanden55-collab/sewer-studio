@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai;
 
 namespace AuswertungPro.Next.Infrastructure.Ai.Teacher;
@@ -38,7 +39,7 @@ public sealed class TrainingAnnotationExportService(
 
             var labelName = $"{baseName}.txt";
             result.YoloAnnotationPath = Path.Combine(labelsDir, labelName);
-            await File.WriteAllTextAsync(result.YoloAnnotationPath, bbox.ToYoloLine(classId), ct);
+            await AtomicTextFileWriter.WriteAllTextAsync(result.YoloAnnotationPath, bbox.ToYoloLine(classId), ct);
 
             result.Success = true;
         }
