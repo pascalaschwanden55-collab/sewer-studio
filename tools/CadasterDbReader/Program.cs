@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CadasterDbReader;
 using FirebirdSql.Data.FirebirdClient;
 
 const string Schema = "cadaster-db-pilot-v1";

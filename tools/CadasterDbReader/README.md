@@ -20,11 +20,12 @@ Pipeline-Grenze:
 
 ## Wichtige technische Eigenheit
 
-Die ueblichen Firebird-Embedded-Bibliotheken im Feld sind 32-bit. Deshalb muss
-das Tool mit dem 32-bit .NET 6 Runtime gestartet werden:
+Die ueblichen Firebird-Embedded-Bibliotheken im Feld sind 32-bit. Deshalb bleibt
+das Tool bewusst separat auf `net8.0` und muss mit der 32-bit .NET Runtime
+gestartet werden:
 
 ```powershell
-& 'C:\Program Files (x86)\dotnet\dotnet.exe' tools\CadasterDbReader\bin\Debug\net6.0\CadasterDbReader.dll --root "D:\Videoprojekte" --out tools\CadasterDbReader\output\full
+& 'C:\Program Files (x86)\dotnet\dotnet.exe' tools\CadasterDbReader\bin\Debug\net8.0\CadasterDbReader.dll --root "D:\Videoprojekte" --out tools\CadasterDbReader\output\full
 ```
 
 Bei FDB-Pfaden mit Umlauten kopiert das Tool die jeweilige Datenbank in einen
@@ -39,16 +40,16 @@ unangetastet.
 dotnet build tools\CadasterDbReader\CadasterDbReader.csproj -v minimal
 
 # Alle Arizona.fdb unter D:\Videoprojekte lesen
-& 'C:\Program Files (x86)\dotnet\dotnet.exe' tools\CadasterDbReader\bin\Debug\net6.0\CadasterDbReader.dll --root "D:\Videoprojekte" --out tools\CadasterDbReader\output\full
+& 'C:\Program Files (x86)\dotnet\dotnet.exe' tools\CadasterDbReader\bin\Debug\net8.0\CadasterDbReader.dll --root "D:\Videoprojekte" --out tools\CadasterDbReader\output\full
 
 # Zusaetzlich cadaster-manifest-v1 mit Beobachtung + Foto/Video-Bezug schreiben
-& 'C:\Program Files (x86)\dotnet\dotnet.exe' tools\CadasterDbReader\bin\Debug\net6.0\CadasterDbReader.dll --root "D:\Videoprojekte" --out tools\CadasterDbReader\output\manifest-full --export-manifest
+& 'C:\Program Files (x86)\dotnet\dotnet.exe' tools\CadasterDbReader\bin\Debug\net8.0\CadasterDbReader.dll --root "D:\Videoprojekte" --out tools\CadasterDbReader\output\manifest-full --export-manifest
 
 # Zusaetzlich haltung-topology-v1 fuer den Verteilungs-Validator schreiben
-& 'C:\Program Files (x86)\dotnet\dotnet.exe' tools\CadasterDbReader\bin\Debug\net6.0\CadasterDbReader.dll --fdb "G:\<projekt>\...\Data\Arizona.fdb" --root "G:\<projekt>" --fbclient "D:\Videoprojekte\...\Bin\Bin\Bin\fbembed.dll" --out tools\CadasterDbReader\output\<projekt> --export-topology --topology-out tools\HaltungTopologyExtractor\output
+& 'C:\Program Files (x86)\dotnet\dotnet.exe' tools\CadasterDbReader\bin\Debug\net8.0\CadasterDbReader.dll --fdb "G:\<projekt>\...\Data\Arizona.fdb" --root "G:\<projekt>" --fbclient "D:\Videoprojekte\...\Bin\Bin\Bin\fbembed.dll" --out tools\CadasterDbReader\output\<projekt> --export-topology --topology-out tools\HaltungTopologyExtractor\output
 
 # Einzelne FDB lesen
-& 'C:\Program Files (x86)\dotnet\dotnet.exe' tools\CadasterDbReader\bin\Debug\net6.0\CadasterDbReader.dll --fdb "D:\Videoprojekte\...\Data\Arizona.fdb" --root "D:\Videoprojekte" --out tools\CadasterDbReader\output\single
+& 'C:\Program Files (x86)\dotnet\dotnet.exe' tools\CadasterDbReader\bin\Debug\net8.0\CadasterDbReader.dll --fdb "D:\Videoprojekte\...\Data\Arizona.fdb" --root "D:\Videoprojekte" --out tools\CadasterDbReader\output\single
 ```
 
 ## Env-Variablen
