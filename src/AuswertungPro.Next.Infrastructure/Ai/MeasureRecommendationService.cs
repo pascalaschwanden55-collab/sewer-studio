@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using AuswertungPro.Next.Application.Ai;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Ai;
@@ -338,7 +339,7 @@ public sealed class MeasureRecommendationService : IMeasureRecommendationService
         };
 
         var json = JsonSerializer.Serialize(saveModel, JsonOptions);
-        File.WriteAllText(_storePath, json);
+        AtomicTextFileWriter.WriteAllText(_storePath, json);
     }
 
     private bool TryLoadModelUnsafe()

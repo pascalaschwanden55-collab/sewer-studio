@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Map;
 
@@ -51,7 +52,7 @@ public sealed class NetworkGeometryCache
 
         var items = _extractor.Extract(xtfPath).ToList();
         Directory.CreateDirectory(Path.GetDirectoryName(_cacheFilePath)!);
-        File.WriteAllText(_cacheFilePath,
+        AtomicTextFileWriter.WriteAllText(_cacheFilePath,
             JsonSerializer.Serialize(new CacheFile(CurrentFormatVersion, xtfPath, xtfTicks, items), JsonOpts));
         return items;
     }

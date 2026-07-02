@@ -461,7 +461,7 @@ public sealed class TrainingCenterImportService
                     catch
                     {
                         // Fallback: Pfad-Datei schreiben (Windows Symlinks brauchen Adminrechte)
-                        File.WriteAllText(videoTarget + ".link", matchedVideo);
+                        AtomicTextFileWriter.WriteAllText(videoTarget + ".link", matchedVideo);
                         videoTarget = matchedVideo; // Original-Pfad verwenden
                     }
                 }
@@ -578,7 +578,7 @@ public sealed class TrainingCenterImportService
         };
 
         var json = JsonSerializer.Serialize(root, JsonDefaults.Indented);
-        File.WriteAllText(path, json);
+        AtomicTextFileWriter.WriteAllText(path, json);
     }
 
     private static string SafeRelativeId(string root, string folder)

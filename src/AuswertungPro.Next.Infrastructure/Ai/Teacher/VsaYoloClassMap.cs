@@ -171,7 +171,7 @@ public static class VsaYoloClassMap
             if (dir != null) Directory.CreateDirectory(dir);
 
             var json = JsonSerializer.Serialize(_map, JsonDefaults.Indented);
-            File.WriteAllText(path, json);
+            AtomicTextFileWriter.WriteAllText(path, json);
 
             // Auto-Export classes.txt neben yolo_class_map.json (fuer YOLO-Training)
             var classesPath = Path.Combine(Path.GetDirectoryName(path)!, "classes.txt");

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AuswertungPro.Next.Application.Common;
 
 namespace AuswertungPro.Next.Application.Protocol;
 
@@ -147,7 +148,7 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
             Directory.CreateDirectory(directory);
 
         var json = JsonSerializer.Serialize(document, _jsonOptions);
-        File.WriteAllText(_catalogPath, json);
+        AtomicTextFileWriter.WriteAllText(_catalogPath, json);
         _codes = normalized;
     }
 
@@ -197,7 +198,7 @@ public sealed class JsonCodeCatalogProvider : ICodeCatalogProvider
             Version = 1,
             Codes = new List<CodeDefinition>()
         };
-        File.WriteAllText(_catalogPath, JsonSerializer.Serialize(empty, _jsonOptions));
+        AtomicTextFileWriter.WriteAllText(_catalogPath, JsonSerializer.Serialize(empty, _jsonOptions));
     }
 
     private void LoadFromDisk()
