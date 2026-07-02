@@ -48,6 +48,14 @@ public static class HoldingRenameService
         string? targetFolder = null;
         var folderRenamed = false;
 
+        var fotosCollision = FindSiblingHoldingFolderCollision(
+            projectFilePath,
+            Path.Combine("Fotos", "Haltungen"),
+            oldSan,
+            newSan);
+        if (!string.IsNullOrWhiteSpace(fotosCollision))
+            return HoldingRenameResult.Fail($"Fotos-Zielordner existiert bereits: {fotosCollision}");
+
         // ── Phase 2: Dateisystem-Rename (mit Rollback) ───────────────────
         if (!string.IsNullOrWhiteSpace(folder) && Directory.Exists(folder))
         {
@@ -78,6 +86,28 @@ public static class HoldingRenameService
         var updated = UpdateAllPaths(record, oldSan, newSan);
 
         return HoldingRenameResult.Ok(folderRenamed, updated);
+    }
+
+    private static string? FindSiblingHoldingFolderCollision(
+        string? projectFilePath,
+        string relativeParent,
+        string oldSan,
+        string newSan)
+    {
+        if (string.IsNullOrWhiteSpace(projectFilePath))
+            return null;
+
+        var root = ProjectFileLocator.ProjectRootFromFile(projectFilePath)
+                   ?? Path.GetDirectoryName(projectFilePath);
+        if (string.IsNullOrWhiteSpace(root))
+            return null;
+
+        var src = Path.Combine(root, relativeParent, oldSan);
+        if (!Directory.Exists(src))
+            return null;
+
+        var dest = Path.Combine(root, relativeParent, newSan);
+        return Directory.Exists(dest) ? dest : null;
     }
 
     // Benennt einen parallelen, haltungsbenannten Verteil-Ordner um (z.B. Fotos\Haltungen\<H>\),

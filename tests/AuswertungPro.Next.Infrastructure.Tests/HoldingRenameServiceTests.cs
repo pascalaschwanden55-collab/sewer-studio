@@ -216,6 +216,61 @@ public sealed class HoldingRenameServiceTests
     }
 
     [Fact]
+    public void Rename_FotosZielordnerExistiert_FailsWithoutChangingPhotoPaths()
+    {
+        var oldH = "06-001";
+        var newH = "06-999";
+        var oldSan = ProjectPathResolver.SanitizePathSegment(oldH);
+        var newSan = ProjectPathResolver.SanitizePathSegment(newH);
+
+        var root = Path.Combine(Path.GetTempPath(), $"holdrename-fotokollision-{Guid.NewGuid():N}");
+        var projFile = Path.Combine(root, "Projektdateien", "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(projFile)!);
+        File.WriteAllText(projFile, "{}");
+
+        var fotoOld = Path.Combine(root, "Fotos", "Haltungen", oldSan);
+        var fotoNew = Path.Combine(root, "Fotos", "Haltungen", newSan);
+        Directory.CreateDirectory(fotoOld);
+        Directory.CreateDirectory(fotoNew);
+        File.WriteAllText(Path.Combine(fotoOld, $"H_{oldSan}_001.jpg"), "old");
+        File.WriteAllText(Path.Combine(fotoNew, $"H_{newSan}_999.jpg"), "new");
+
+        var originalPhotoPath = $"Fotos/Haltungen/{oldSan}/H_{oldSan}_001.jpg";
+        var record = new HaltungRecord
+        {
+            Protocol = new ProtocolDocument
+            {
+                HaltungId = oldH,
+                Current = new ProtocolRevision
+                {
+                    Entries =
+                    [
+                        new ProtocolEntry
+                        {
+                            FotoPaths = [originalPhotoPath]
+                        }
+                    ]
+                }
+            }
+        };
+        record.SetFieldValue("Haltungsname", oldH, FieldSource.Xtf, userEdited: false);
+
+        try
+        {
+            var result = HoldingRenameService.Rename(record, oldH, newH, projFile);
+
+            Assert.False(result.Success);
+            Assert.Contains("Fotos-Zielordner", result.ErrorMessage);
+            Assert.True(Directory.Exists(fotoOld), "alter Fotos-Ordner muss erhalten bleiben");
+            Assert.True(Directory.Exists(fotoNew), "bestehender Zielordner darf nicht geloescht werden");
+            Assert.True(File.Exists(Path.Combine(fotoOld, $"H_{oldSan}_001.jpg")));
+            Assert.Equal(oldH, record.Protocol.HaltungId);
+            Assert.Equal(originalPhotoPath, Assert.Single(record.Protocol.Current.Entries[0].FotoPaths));
+        }
+        finally { try { Directory.Delete(root, recursive: true); } catch { } }
+    }
+
+    [Fact]
     public void Rename_LegacyUnderscoreDashGSchema_StillRenamesFiles()
     {
         // Regression: altes Schema JJJJMMTT_<Haltung>-g.mp4 muss weiter umbenannt werden.
