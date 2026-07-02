@@ -5,7 +5,10 @@ namespace AuswertungPro.Next.UI.Views.Pages;
 
 public static class DataGridStandardTextColumnFactory
 {
-    public static DataGridTextColumn Create(string fieldName, string header)
+    public static DataGridTextColumn Create(
+        string fieldName,
+        string header,
+        UpdateSourceTrigger updateSourceTrigger = UpdateSourceTrigger.LostFocus)
     {
         return new DataGridTextColumn
         {
@@ -13,7 +16,7 @@ public static class DataGridStandardTextColumnFactory
             Binding = new Binding($"Fields[{fieldName}]")
             {
                 Mode = BindingMode.TwoWay,
-                UpdateSourceTrigger = UpdateSourceTrigger.LostFocus
+                UpdateSourceTrigger = updateSourceTrigger
             },
             Width = DataGridLength.SizeToHeader
         };

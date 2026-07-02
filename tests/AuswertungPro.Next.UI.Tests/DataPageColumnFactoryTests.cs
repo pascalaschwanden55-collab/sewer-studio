@@ -69,6 +69,23 @@ public sealed class DataPageColumnFactoryTests
         });
     }
 
+    [Fact]
+    public void Create_preserves_old_haltungsname_until_rename_commit()
+    {
+        RunOnSta(() =>
+        {
+            var column = Assert.IsType<DataGridTextColumn>(DataPageColumnFactory.Create(
+                "Haltungsname",
+                "Haltungsname",
+                NoKeyboardFocus,
+                NoSelectionChanged));
+
+            var binding = Assert.IsType<Binding>(column.Binding);
+            Assert.Equal("Fields[Haltungsname]", binding.Path.Path);
+            Assert.Equal(UpdateSourceTrigger.Explicit, binding.UpdateSourceTrigger);
+        });
+    }
+
     private static Binding AssertFactoryBinding(FrameworkElementFactory target, DependencyProperty property, string path)
     {
         var binding = Assert.IsType<Binding>(GetFactoryValue(target, property));

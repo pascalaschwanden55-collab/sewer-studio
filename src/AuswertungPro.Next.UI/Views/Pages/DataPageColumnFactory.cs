@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using AuswertungPro.Next.UI.DataPage;
 
@@ -25,7 +26,10 @@ public static class DataPageColumnFactory
         if (fieldName == "Kosten")
             return DataGridCostColumnFactory.Create(fieldName, header);
 
-        return DataGridStandardTextColumnFactory.Create(fieldName, header);
+        var updateSourceTrigger = fieldName == "Haltungsname"
+            ? UpdateSourceTrigger.Explicit
+            : UpdateSourceTrigger.LostFocus;
+        return DataGridStandardTextColumnFactory.Create(fieldName, header, updateSourceTrigger);
     }
 
     private static DataGridTemplateColumn CreateManagedComboColumn(
