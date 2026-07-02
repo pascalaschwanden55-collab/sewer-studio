@@ -382,6 +382,32 @@ public sealed class SourceTextArchitectureHygieneTests
     }
 
     [Fact]
+    public void Player_window_timeline_host_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowTimelineHostArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "TimelineHost-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        var methodNames = new[]
+        {
+            "PlayerWindow_coding_osd_reads_player_timeline_through_host",
+            "PlayerWindow_coding_event_and_ai_partials_read_player_timeline_through_host",
+            "PlayerWindow_remaining_coding_timeline_partials_read_player_timeline_through_host",
+            "PlayerWindow_live_detection_marking_reads_player_timeline_through_host",
+            "Player_timeline_overlay_controllers_seek_through_timeline_host"
+        };
+
+        foreach (var methodName in methodNames)
+        {
+            Assert.Contains($"public void {methodName}", focused);
+            Assert.DoesNotContain($"public void {methodName}", guard);
+        }
+    }
+
+    [Fact]
     public void Player_window_keyboard_action_guard_lives_in_keyboard_suite()
     {
         var root = SourceTextTestHelpers.FindRepositoryRoot();
@@ -1197,6 +1223,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowSnapshotArchitectureTests.cs")]
     [InlineData("PlayerWindowShellProjectArchitectureTests.cs")]
     [InlineData("PlayerWindowStretchDamageArchitectureTests.cs")]
+    [InlineData("PlayerWindowTimelineHostArchitectureTests.cs")]
     [InlineData("PlayerWindowTimerArchitectureTests.cs")]
     [InlineData("PlayerWindowVisualInfrastructureArchitectureTests.cs")]
     [InlineData("PlayerWindowVsaCodeExplorerArchitectureTests.cs")]
