@@ -42,6 +42,43 @@ public sealed class FewShotExampleStoreTests
         });
     }
 
+    [Fact]
+    public async Task RemoveAsync_WhenImageDeleteFails_ReportsBestEffortError()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        await WithTempKnowledgeRoot(async () =>
+        {
+            string? captured = null;
+            var store = new FewShotExampleStore(message => captured = message);
+            var example = await store.AddExampleAsync(
+                imageBytes: [1, 2, 3],
+                imageExtension: ".png",
+                vsaCode: "BAB",
+                description: "Laengsriss sichtbar",
+                clockPosition: "12",
+                meterPosition: 1.2,
+                material: "Beton",
+                profile: "DN300",
+                source: "test");
+
+            var imagePath = store.GetImagePath(example);
+            await using var locked = new FileStream(
+                imagePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.None);
+
+            await store.RemoveAsync(example.Id);
+
+            Assert.NotNull(captured);
+            Assert.Contains("FewShot Bild loeschen", captured);
+            Assert.Contains("BAB", captured);
+            Assert.DoesNotContain(example, store.Examples);
+        });
+    }
+
     private static async Task WithTempKnowledgeRoot(Func<Task> body)
     {
         var previous = Environment.GetEnvironmentVariable("SEWERSTUDIO_KNOWLEDGE_ROOT");

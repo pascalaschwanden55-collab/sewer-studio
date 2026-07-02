@@ -71,14 +71,16 @@ public sealed class FewShotExampleStore
 
     private readonly string _indexPath;
     private readonly string _imagesDir;
+    private readonly Action<string>? _bestEffortErrorSink;
     private List<FewShotExample> _examples = new();
     private bool _loaded;
 
-    public FewShotExampleStore()
+    public FewShotExampleStore(Action<string>? bestEffortErrorSink = null)
     {
         var root = KnowledgeBasePaths.GetRoot();
         _indexPath = Path.Combine(root, "fewshot_examples.json");
         _imagesDir = Path.Combine(root, "fewshot_images");
+        _bestEffortErrorSink = bestEffortErrorSink;
     }
 
     /// <summary>Alle geladenen Beispiele.</summary>
@@ -267,7 +269,10 @@ public sealed class FewShotExampleStore
         var imgPath = GetImagePath(ex);
         if (File.Exists(imgPath))
         {
-            try { File.Delete(imgPath); } catch { }
+            BestEffort.Try(
+                () => File.Delete(imgPath),
+                $"FewShot Bild loeschen ({ex.VsaCode}): {imgPath}",
+                _bestEffortErrorSink);
         }
 
         _examples.Remove(ex);
