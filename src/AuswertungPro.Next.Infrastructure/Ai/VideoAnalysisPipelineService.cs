@@ -200,7 +200,7 @@ public sealed class VideoAnalysisPipelineService : IVideoAnalysisPipelineService
     /// - Auto: check sidecar health, use if available, fall back to Ollama otherwise.
     /// - MultiModel: require sidecar (error if not reachable).
     /// </summary>
-    private async Task<(bool UseMultiModel, PipelineConfig Config, string? FallbackReason)> ShouldUseMultiModelAsync(CancellationToken ct)
+    internal async Task<(bool UseMultiModel, PipelineConfig Config, string? FallbackReason)> ShouldUseMultiModelAsync(CancellationToken ct)
     {
         var pipelineCfg = _pipelineCfg;
 
