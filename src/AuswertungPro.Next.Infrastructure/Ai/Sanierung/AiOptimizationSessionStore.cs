@@ -23,7 +23,7 @@ public static class AiOptimizationSessionStore
             all.Add(session);
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
             var json = JsonSerializer.Serialize(all, _jsonOpts);
-            await File.WriteAllTextAsync(FilePath, json).ConfigureAwait(false);
+            await AtomicTextFileWriter.WriteAllTextAsync(FilePath, json).ConfigureAwait(false);
         }
         finally
         {
