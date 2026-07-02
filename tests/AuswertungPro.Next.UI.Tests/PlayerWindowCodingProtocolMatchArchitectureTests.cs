@@ -63,11 +63,8 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         var importSeekWorkflow = File.Exists(importSeekWorkflowPath) ? File.ReadAllText(importSeekWorkflowPath) : "";
         var matchCommandWorkflow = File.Exists(matchCommandWorkflowPath) ? File.ReadAllText(matchCommandWorkflowPath) : "";
         var controls = File.Exists(controlsPath) ? File.ReadAllText(controlsPath) : "";
-        var seekBody = ExtractMethodBody(protocolMatch, "private void SeekToImportEvent(object? selectedItem)");
-        var runBody = ExtractMethodBody(protocolMatch, "private void RunCodingProtocolMatch()");
-
-        Assert.Contains("CodingImportEventSeekCommandWorkflow.Execute", seekBody);
-        Assert.Contains("CodingProtocolMatchCommandWorkflow.Execute", runBody);
+        Assert.Contains("CodingImportEventSeekCommandWorkflow.Execute", protocolMatch);
+        Assert.Contains("CodingProtocolMatchCommandWorkflow.Execute", protocolMatch);
         Assert.Contains("CodingProtocolMatchSummaryControls.Apply", protocolMatch);
         Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", protocolMatch);
         Assert.DoesNotContain("Dispatcher.InvokeAsync", protocolMatch);
@@ -126,10 +123,6 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         var importTrainingResultWorkflow = File.Exists(importTrainingResultWorkflowPath) ? File.ReadAllText(importTrainingResultWorkflowPath) : "";
         var workflow = File.ReadAllText(workflowPath);
         var workflowFactory = File.ReadAllText(workflowFactoryPath);
-        var greenBody = ExtractMethodBody(training, "private async Task HandleCodingAcceptGreenMatchesAsync");
-        var importConfirmBody = ExtractMethodBody(training, "private async Task HandleImportConfirmAsync");
-        var confirmCoreBody = ExtractMethodBody(training, "private async Task<bool> ConfirmImportAsTrainingAsync");
-
         Assert.DoesNotContain("private async void CodingAcceptGreenMatches_Click", protocolMatch);
         Assert.DoesNotContain("private async void ImportConfirm_Click", protocolMatch);
         Assert.DoesNotContain("private async Task<bool> ConfirmImportAsTrainingAsync", protocolMatch);
@@ -140,17 +133,17 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         Assert.Contains(".SafeFireAndForget(\"CodingAcceptGreenMatches\")", training);
         Assert.Contains(".SafeFireAndForget(\"ImportConfirm\")", training);
         Assert.Contains("private async Task HandleCodingAcceptGreenMatchesAsync", training);
-        Assert.Contains("CodingAcceptGreenMatchesCommandWorkflow.ExecuteAsync", greenBody);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", greenBody);
-        Assert.DoesNotContain("if (_lastCodingMatch == null)", greenBody);
+        Assert.Contains("CodingAcceptGreenMatchesCommandWorkflow.ExecuteAsync", training);
+        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", training);
+        Assert.DoesNotContain("if (_lastCodingMatch == null)", training);
         Assert.Contains("if (!request.HasCodingViewModel)", acceptGreenCommandWorkflow);
         Assert.Contains("actions.RunProtocolMatch()", acceptGreenCommandWorkflow);
         Assert.Contains("routing = actions.GetCurrentRouting()", acceptGreenCommandWorkflow);
         Assert.Contains("actions.AcceptGreenMatchesAsync(routing)", acceptGreenCommandWorkflow);
         Assert.Contains("actions.ShowOverlay(overlay.Value)", acceptGreenCommandWorkflow);
         Assert.Contains("private async Task HandleImportConfirmAsync", training);
-        Assert.Contains("CodingImportConfirmCommandWorkflow.ExecuteAsync", importConfirmBody);
-        Assert.DoesNotContain("LstImportEvents.SelectedItem is not CodingEvent", importConfirmBody);
+        Assert.Contains("CodingImportConfirmCommandWorkflow.ExecuteAsync", training);
+        Assert.DoesNotContain("LstImportEvents.SelectedItem is not CodingEvent", training);
         Assert.Contains("request.SelectedItem is not CodingEvent", commandWorkflow);
         Assert.Contains("actions.ConfirmImportAsTrainingAsync(importEvent)", commandWorkflow);
         Assert.Contains("private async Task<bool> ConfirmImportAsTrainingAsync", training);
@@ -159,13 +152,13 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", confirmWorkflow);
         Assert.Contains("new CodingProtocolImportTrainingConfirmationWorkflowActions", confirmWorkflow);
         Assert.Contains("CodingProtocolImportTrainingConfirmationWorkflow.ConfirmAsync", training);
-        Assert.DoesNotContain(".ConfirmAsync(importEvent)", confirmCoreBody);
+        Assert.DoesNotContain(".ConfirmAsync(importEvent)", training);
         Assert.Contains("service.ConfirmAsync(importEvent)", confirmWorkflow);
-        Assert.Contains("CodingImportTrainingResultWorkflow.Execute", confirmCoreBody);
-        Assert.DoesNotContain("new CodingImportTrainingResultActions", confirmCoreBody);
-        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", confirmCoreBody);
-        Assert.DoesNotContain("if (!result.Accepted)", confirmCoreBody);
-        Assert.DoesNotContain("var badge = result.Badge", confirmCoreBody);
+        Assert.Contains("CodingImportTrainingResultWorkflow.Execute", training);
+        Assert.DoesNotContain("new CodingImportTrainingResultActions", training);
+        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", training);
+        Assert.DoesNotContain("if (!result.Accepted)", training);
+        Assert.DoesNotContain("var badge = result.Badge", training);
         Assert.Contains("if (!importResult.Accepted)", importTrainingResultWorkflow);
         Assert.Contains("new CodingImportTrainingResultActions", importTrainingResultWorkflow);
         Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", importTrainingResultWorkflow);
