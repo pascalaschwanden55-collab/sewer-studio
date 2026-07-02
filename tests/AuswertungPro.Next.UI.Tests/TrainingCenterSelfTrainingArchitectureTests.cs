@@ -275,13 +275,13 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+        var viewModelSource = source;
 
         Assert.False(File.Exists(controllerPath), controllerPath);
-        Assert.DoesNotContain("SelfTrainingRunExecutionController.RunAsync(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("selfTrainingSetup.Session.Orchestrator.RunAsync(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingHistorySnapshotBuilder.Build(result, DateTime.UtcNow)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingHistoryStore.AppendRunAsync(snapshot)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingRunExecutionController.RunAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("selfTrainingSetup.Session.Orchestrator.RunAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingHistorySnapshotBuilder.Build(result, DateTime.UtcNow)", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingHistoryStore.AppendRunAsync(snapshot)", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -928,12 +928,12 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+        var viewModelSource = source;
 
-        Assert.Contains("SelfTrainingKbUpdateController.RunApprovedSamplesUpdateAsync(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingKbUpdateController.SelectApprovedSamplesForRun(allSamples, result)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingKbUpdateController.MarkPendingBeforeIndex(newApproved)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingKbUpdateController.ApplyOutcome(newApproved, stOutcome)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingKbUpdateController.RunApprovedSamplesUpdateAsync(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingKbUpdateController.SelectApprovedSamplesForRun(allSamples, result)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingKbUpdateController.MarkPendingBeforeIndex(newApproved)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingKbUpdateController.ApplyOutcome(newApproved, stOutcome)", viewModelSource, StringComparison.Ordinal);
     }
 
     private static string ExtractPropertyBody(string source, string signature)
