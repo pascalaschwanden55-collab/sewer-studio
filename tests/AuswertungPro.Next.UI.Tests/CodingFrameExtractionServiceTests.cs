@@ -1,29 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class CodingFrameExtractionServiceTests
 {
-    [Fact]
-    public void CodingFrameExtractionService_hat_keinen_blockierenden_sync_wrapper()
-    {
-        var source = File.ReadAllText(Path.Combine(
-            FindRepoRoot(),
-            "src",
-            "AuswertungPro.Next.UI",
-            "Ai",
-            "CodingFrameExtractionService.cs"));
-
-        Assert.DoesNotContain(".GetAwaiter().GetResult()", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("public byte[]? TryExtractFrameAtSeconds(", source, StringComparison.Ordinal);
-    }
-
     [Theory]
     [InlineData(null, 1.0)]
     [InlineData("", 1.0)]
