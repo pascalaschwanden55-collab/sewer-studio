@@ -63,7 +63,24 @@ public sealed class SchachtPdfParsingTests
     }
 
     [Fact]
-    public void DistributeShaftFiles_SplitsGesamtauszug_BySingleDigitSchachtProHeaders()
+    public void ParseSchachtPdfPage_ExtractsDottedShortShaftNumber_FromSchachtProHeader()
+    {
+        var text = string.Join("\n", new[]
+        {
+            "Projekt: Fuerlauwi Meiental Datum: 18.06.2026",
+            "Schachtprotokoll Schacht Nr. 3.01",
+            "STAMMDATEN & SKIZZE"
+        });
+
+        var parsed = HoldingFolderDistributor.ParseSchachtPdfPage(text);
+
+        Assert.True(parsed.Success, parsed.Message);
+        Assert.Equal("3.01", parsed.ShaftNumber);
+        Assert.Equal(new DateTime(2026, 6, 18), parsed.Date);
+    }
+
+    [Fact]
+    public void DistributeShaftFiles_SplitsGesamtauszug_ByDottedShortSchachtProHeaders()
     {
         var tempRoot = Path.Combine(Path.GetTempPath(), $"shaft-split-{Guid.NewGuid():N}");
         var source = Path.Combine(tempRoot, "source");
@@ -77,19 +94,19 @@ public sealed class SchachtPdfParsingTests
             WriteMultiPagePdf(
                 pdf,
                 "Schachtprotokoll Schacht Nr. 22152",
-                "Schachtprotokoll Schacht Nr. 3",
-                "Schachtprotokoll Schacht Nr. 4");
+                "Schachtprotokoll Schacht Nr. 3.01",
+                "Schachtprotokoll Schacht Nr. 4.01");
 
             var results = HoldingFolderDistributor.DistributeShaftFiles(new[] { pdf }, dest);
 
             Assert.Equal(3, results.Count);
             Assert.All(results, r => Assert.True(r.Success, r.Message));
             Assert.Contains(results, r => r.HoldingFolder is not null && r.HoldingFolder.EndsWith($"{Path.DirectorySeparatorChar}22152", StringComparison.Ordinal));
-            Assert.Contains(results, r => r.HoldingFolder is not null && r.HoldingFolder.EndsWith($"{Path.DirectorySeparatorChar}3", StringComparison.Ordinal));
-            Assert.Contains(results, r => r.HoldingFolder is not null && r.HoldingFolder.EndsWith($"{Path.DirectorySeparatorChar}4", StringComparison.Ordinal));
+            Assert.Contains(results, r => r.HoldingFolder is not null && r.HoldingFolder.EndsWith($"{Path.DirectorySeparatorChar}3.01", StringComparison.Ordinal));
+            Assert.Contains(results, r => r.HoldingFolder is not null && r.HoldingFolder.EndsWith($"{Path.DirectorySeparatorChar}4.01", StringComparison.Ordinal));
             Assert.True(File.Exists(Path.Combine(dest, "22152", "20260618_22152.pdf")));
-            Assert.True(File.Exists(Path.Combine(dest, "3", "20260618_3.pdf")));
-            Assert.True(File.Exists(Path.Combine(dest, "4", "20260618_4.pdf")));
+            Assert.True(File.Exists(Path.Combine(dest, "3.01", "20260618_3.01.pdf")));
+            Assert.True(File.Exists(Path.Combine(dest, "4.01", "20260618_4.01.pdf")));
         }
         finally
         {
