@@ -43,8 +43,9 @@ internal static class SchachtProtocolParser
             return m.Success ? m.Groups["v"].Value.Trim() : null;
         }
 
-        var schachtNummer = GetFirst(@"\bNr\.?\s*[:\-]?\s*(?<v>\d{3,})\b")
-                            ?? GetFirst(@"\bSchachtnummer\s*[:\-]?\s*(?<v>\d{3,})\b");
+        var schachtNummer = GetFirst(@"\b(?:Schachtprotokoll\s*)?(?:Zustandsaufnahme\s*)?Schacht\s*Nr\.?\s*[:\-]?\s*(?<v>\d{1,10}(?:\.\d{1,10})*)\b")
+                            ?? GetFirst(@"\bSchachtnummer\s*[:\-]?\s*(?<v>\d{1,10}(?:\.\d{1,10})*)\b")
+                            ?? GetFirst(@"\bNr\.?\s*[:\-]?\s*(?<v>\d{3,}(?:\.\d{1,10})*)\b");
 
         var dateRaw = GetFirst(@"\bDatum\s*[:\-]?\s*(?<v>" + SewerTextPatterns.GermanDateCore + @")\b");
         var datum = NormalizeDate(dateRaw);

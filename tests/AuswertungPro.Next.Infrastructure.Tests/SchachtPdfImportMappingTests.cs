@@ -136,6 +136,59 @@ public sealed class SchachtPdfImportMappingTests
     }
 
     [Fact]
+    public void ImportPdf_ImportsEverySchachtFromGesamtauszug()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"schacht-pdf-import-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+        var pdfPath = Path.Combine(tempRoot, "Gesamtauszug.pdf");
+
+        try
+        {
+            WriteMultiPagePdf(
+                pdfPath,
+                new[]
+                {
+                    "Projekt: Fuerlauwi Meiental Datum: 18.06.2026",
+                    "Schachtprotokoll Schacht Nr. 22149",
+                    "Schachtfunktion            Kontrollschacht",
+                    "ZUSTAND DER SCHACHTBAUTEILE",
+                    "Schachtrohr                korrodiert"
+                },
+                new[]
+                {
+                    "Projekt: Fuerlauwi Meiental Datum: 18.06.2026",
+                    "Schachtprotokoll Schacht Nr. 1061114",
+                    "Schachtfunktion            Kontrollschacht",
+                    "ZUSTAND DER SCHACHTBAUTEILE",
+                    "Bankett                    Ablagerungen"
+                },
+                new[]
+                {
+                    "Projekt: Fuerlauwi Meiental Datum: 18.06.2026",
+                    "Schachtprotokoll Schacht Nr. 3.01",
+                    "Schachtfunktion            Kontrollschacht",
+                    "ZUSTAND DER SCHACHTBAUTEILE",
+                    "Schacht                    Ueberdeckt"
+                });
+
+            var project = new Project();
+            var stats = new LegacyPdfImportService().ImportPdf(pdfPath, project);
+
+            Assert.Equal(0, stats.Errors);
+            Assert.Equal(3, stats.Found);
+            Assert.Equal(3, stats.CreatedRecords);
+            Assert.Equal(3, project.SchaechteData.Count);
+            Assert.Contains(project.SchaechteData, r => r.GetFieldValue("Schachtnummer") == "22149");
+            Assert.Contains(project.SchaechteData, r => r.GetFieldValue("Schachtnummer") == "1061114");
+            Assert.Contains(project.SchaechteData, r => r.GetFieldValue("Schachtnummer") == "3.01");
+        }
+        finally
+        {
+            TryDeleteDirectory(tempRoot);
+        }
+    }
+
+    [Fact]
     public void ParseSchachtFields_ExtractsMarkedPrimaryDamages_WhenMarkerAfterDamage()
     {
         var text = string.Join("\n", new[]
@@ -251,6 +304,25 @@ public sealed class SchachtPdfImportMappingTests
         {
             page.AddText(line, 12, new PdfPoint(40, y), font);
             y -= 18;
+        }
+
+        File.WriteAllBytes(path, builder.Build());
+    }
+
+    private static void WriteMultiPagePdf(string path, params string[][] pages)
+    {
+        using var builder = new PdfDocumentBuilder();
+        var font = builder.AddStandard14Font(Standard14Font.Helvetica);
+
+        foreach (var lines in pages)
+        {
+            var page = builder.AddPage(PageSize.A4);
+            var y = 780m;
+            foreach (var line in lines)
+            {
+                page.AddText(line, 12, new PdfPoint(40, y), font);
+                y -= 18;
+            }
         }
 
         File.WriteAllBytes(path, builder.Build());

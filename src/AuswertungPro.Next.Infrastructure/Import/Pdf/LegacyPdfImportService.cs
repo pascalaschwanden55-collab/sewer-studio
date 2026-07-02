@@ -67,7 +67,7 @@ public sealed class LegacyPdfImportService
 
             if (LooksLikeSchachtProtokoll(fullText))
             {
-                ImportSchachtPdf(pdfPath, fullText, project, stats, ctx);
+                ImportSchachtPdfPages(pdfPath, effectivePages, fullText, project, stats, ctx);
                 return stats;
             }
 
@@ -485,7 +485,7 @@ public sealed class LegacyPdfImportService
     private static void ImportSchachtPdf(string pdfPath, string fullText, Project project, ImportStats stats, ImportRunContext? ctx = null)
     {
         var parsed = ParseSchachtFields(fullText);
-        stats.Found = 1;
+        stats.Found++;
 
         if (string.IsNullOrWhiteSpace(parsed.SchachtNummer))
         {
@@ -594,6 +594,64 @@ public sealed class LegacyPdfImportService
             Context = "PDF-SCHACHT",
             Message = $"Schacht importiert: {Path.GetFileName(pdfPath)} | Schacht={key} | Felder={string.Join(", ", imported)}"
         });
+    }
+
+    private static void ImportSchachtPdfPages(
+        string pdfPath,
+        IReadOnlyList<string> pages,
+        string fullText,
+        Project project,
+        ImportStats stats,
+        ImportRunContext? ctx)
+    {
+        var chunks = SplitSchachtPdfPages(pages);
+        if (chunks.Count == 0)
+        {
+            ImportSchachtPdf(pdfPath, fullText, project, stats, ctx);
+            return;
+        }
+
+        foreach (var chunk in chunks)
+            ImportSchachtPdf(pdfPath, chunk.Text, project, stats, ctx);
+    }
+
+    private sealed record SchachtPdfTextChunk(string Text);
+
+    private static IReadOnlyList<SchachtPdfTextChunk> SplitSchachtPdfPages(IReadOnlyList<string> pages)
+    {
+        var chunks = new List<SchachtPdfTextChunk>();
+        var currentPages = new List<string>();
+        HoldingFolderDistributor.ParsedShaftPdf? currentParsed = null;
+
+        foreach (var page in pages)
+        {
+            var parsed = HoldingFolderDistributor.ParseSchachtPdfPage(page);
+            if (!parsed.Success || string.IsNullOrWhiteSpace(parsed.ShaftNumber))
+            {
+                if (currentParsed is not null)
+                    currentPages.Add(page);
+                continue;
+            }
+
+            if (currentParsed is not null
+                && string.Equals(parsed.ShaftNumber, currentParsed.ShaftNumber, StringComparison.OrdinalIgnoreCase)
+                && parsed.Date == currentParsed.Date)
+            {
+                currentPages.Add(page);
+                continue;
+            }
+
+            if (currentParsed is not null && currentPages.Count > 0)
+                chunks.Add(new SchachtPdfTextChunk(string.Join("\n\n", currentPages)));
+
+            currentParsed = parsed;
+            currentPages = new List<string> { page };
+        }
+
+        if (currentParsed is not null && currentPages.Count > 0)
+            chunks.Add(new SchachtPdfTextChunk(string.Join("\n\n", currentPages)));
+
+        return chunks;
     }
 
     public sealed record ParsedSchachtFields(
