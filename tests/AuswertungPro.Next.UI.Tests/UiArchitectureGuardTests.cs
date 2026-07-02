@@ -218,56 +218,6 @@ public sealed class UiArchitectureGuardTests
     }
 
     [Fact]
-    public void PlayerWindow_media_host_wiring_lives_in_factory()
-    {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowRootPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.xaml.cs");
-        var factoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaHostFactory.cs");
-        var runtimeFactoryPath = Path.Combine(uiRoot, "Player", "PlayerMediaRuntimeFactory.cs");
-        var runtimePath = Path.Combine(uiRoot, "Player", "PlayerMediaRuntime.cs");
-
-        Assert.True(File.Exists(factoryPath), "Timeline/Playback/Marquee/Snapshot-Hosts sollen in einer Factory verdrahtet werden.");
-        Assert.True(File.Exists(runtimeFactoryPath), "Media-Runtime-Erzeugung soll ausserhalb des PlayerWindow-Konstruktors liegen.");
-        Assert.True(File.Exists(runtimePath), "Media-Runtime und Hosts sollen in einem Runtime-Objekt gebuendelt werden.");
-
-        var windowRoot = File.ReadAllText(windowRootPath);
-        var factory = File.Exists(factoryPath) ? File.ReadAllText(factoryPath) : "";
-        var runtimeFactory = File.Exists(runtimeFactoryPath) ? File.ReadAllText(runtimeFactoryPath) : "";
-        var runtime = File.Exists(runtimePath) ? File.ReadAllText(runtimePath) : "";
-
-        Assert.Contains("var normalizedOptions = PlayerWindowOptions.Normalize(options)", windowRoot);
-        Assert.Contains("PlayerMediaRuntimeFactory.Create(normalizedOptions)", windowRoot);
-        Assert.DoesNotContain("_options", windowRoot);
-        Assert.Contains("_playerMediaHosts = _playerMediaRuntime.Hosts", windowRoot);
-        Assert.Contains("_playerMediaRuntime.AttachVideoView(VideoView)", windowRoot);
-        Assert.DoesNotContain("var playerMediaHosts", windowRoot);
-        Assert.DoesNotContain("TimelineHost = playerMediaHosts", windowRoot);
-        Assert.DoesNotContain("PlaybackControlHost = playerMediaHosts", windowRoot);
-        Assert.DoesNotContain("MarqueeOverlayHost = playerMediaHosts", windowRoot);
-        Assert.DoesNotContain("SnapshotCaptureHost = playerMediaHosts", windowRoot);
-        Assert.DoesNotContain("new PlayerTimelineHost", windowRoot);
-        Assert.DoesNotContain("new PlayerPlaybackControlHost", windowRoot);
-        Assert.DoesNotContain("new PlayerMarqueeOverlayHost", windowRoot);
-        Assert.DoesNotContain("new PlayerSnapshotCaptureHost", windowRoot);
-        Assert.DoesNotContain("_player.", windowRoot);
-        Assert.DoesNotContain("_libVlc", windowRoot);
-        Assert.DoesNotContain("new MediaPlayer", windowRoot);
-        Assert.DoesNotContain("VideoView.MediaPlayer", windowRoot);
-        Assert.Contains("public sealed record PlayerMediaHosts", factory);
-        Assert.Contains("public static PlayerMediaHosts Create", factory);
-        Assert.Contains("new PlayerTimelineHost", factory);
-        Assert.Contains("new PlayerPlaybackControlHost", factory);
-        Assert.Contains("new PlayerMarqueeOverlayHost", factory);
-        Assert.Contains("new PlayerSnapshotCaptureHost", factory);
-        Assert.Contains("PlayerMediaHostFactory.Create", runtimeFactory);
-        Assert.Contains("public sealed class PlayerMediaRuntime", runtime);
-        Assert.Contains("PlayerPlaybackResourceCleaner.DisposeMediaPlayer", runtime);
-        Assert.Contains("PlayerPlaybackResourceCleaner.DisposeLibVlc", runtime);
-        Assert.DoesNotContain("public MediaPlayer", runtime);
-    }
-
-    [Fact]
     public void PlayerWindow_live_detection_and_timers_read_playback_through_hosts()
     {
         var root = FindRepositoryRoot();

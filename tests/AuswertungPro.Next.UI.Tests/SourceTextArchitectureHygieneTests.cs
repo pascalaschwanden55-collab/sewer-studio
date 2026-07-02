@@ -341,7 +341,8 @@ public sealed class SourceTextArchitectureHygieneTests
         var methodNames = new[]
         {
             "PlayerWindow_slider_track_bounds_live_in_policy",
-            "PlayerWindow_libvlc_creation_lives_in_factory"
+            "PlayerWindow_libvlc_creation_lives_in_factory",
+            "PlayerWindow_media_host_wiring_lives_in_factory"
         };
 
         foreach (var methodName in methodNames)
