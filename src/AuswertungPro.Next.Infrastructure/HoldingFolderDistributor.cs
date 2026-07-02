@@ -227,7 +227,7 @@ public static partial class HoldingFolderDistributor
 
                 var destTxtName = $"{dateStamp}_{haltung}.txt";
                 var destTxtPath = EnsureUniquePath(Path.Combine(holdingFolder, destTxtName), overwrite);
-                File.WriteAllText(destTxtPath, section.SectionText);
+                AtomicTextFileWriter.WriteAllText(destTxtPath, section.SectionText);
 
                 VideoFindResult videoFind = !string.IsNullOrWhiteSpace(section.VideoFileName)
                     ? FindVideo(section.VideoFileName, videoSourceFolder, haltung, dateStamp, recursiveVideoSearch, videoFilesCache)
@@ -278,13 +278,13 @@ public static partial class HoldingFolderDistributor
                     var infoName = $"{dateStamp}_{haltung}_VIDEO_MISSING.txt";
                     infoPath = EnsureUniquePath(Path.Combine(holdingFolder, infoName), overwrite);
                     var filmName = string.IsNullOrWhiteSpace(section.VideoFileName) ? "<nicht gefunden>" : section.VideoFileName;
-                    File.WriteAllText(infoPath, BuildMissingInfo(section.SourceTxtPath, filmName, date, haltungRaw));
+                    AtomicTextFileWriter.WriteAllText(infoPath, BuildMissingInfo(section.SourceTxtPath, filmName, date, haltungRaw));
                 }
                 else if (videoFind.Status == VideoMatchStatus.Ambiguous)
                 {
                     var infoName = $"{dateStamp}_{haltung}_VIDEO_AMBIGUOUS.txt";
                     infoPath = EnsureUniquePath(Path.Combine(holdingFolder, infoName), overwrite);
-                    File.WriteAllText(infoPath, BuildAmbiguousInfo(section.SourceTxtPath, section.VideoFileName, date, haltungRaw, videoFind.Candidates));
+                    AtomicTextFileWriter.WriteAllText(infoPath, BuildAmbiguousInfo(section.SourceTxtPath, section.VideoFileName, date, haltungRaw, videoFind.Candidates));
                     var unmatchedFolder = Path.Combine(destGemeindeFolder, unmatchedFolderName, haltung);
                     Directory.CreateDirectory(unmatchedFolder);
                     CopyCandidatesToUnmatched(unmatchedFolder, dateStamp, haltung, videoFind.Candidates);
@@ -1085,14 +1085,14 @@ public static partial class HoldingFolderDistributor
                     var infoName = $"{dateStamp}_{haltung}_VIDEO_MISSING.txt";
                     infoPath = EnsureUniquePath(Path.Combine(holdingFolder, infoName), overwrite);
                     var filmName = string.IsNullOrWhiteSpace(parsed.VideoFile) ? "<nicht gefunden>" : parsed.VideoFile!;
-                    File.WriteAllText(infoPath, BuildMissingInfo(sourcePdfPath, filmName, date, haltungRaw));
+                    AtomicTextFileWriter.WriteAllText(infoPath, BuildMissingInfo(sourcePdfPath, filmName, date, haltungRaw));
                 }
                 else if (videoFind.Status == VideoMatchStatus.Ambiguous || videoFindG.Status == VideoMatchStatus.Ambiguous)
                 {
                     var infoName = $"{dateStamp}_{haltung}_VIDEO_AMBIGUOUS.txt";
                     infoPath = EnsureUniquePath(Path.Combine(holdingFolder, infoName), overwrite);
                     var candidates = videoFind.Status == VideoMatchStatus.Ambiguous ? videoFind.Candidates : videoFindG.Candidates;
-                    File.WriteAllText(infoPath, BuildAmbiguousInfo(sourcePdfPath, parsed.VideoFile!, date, haltungRaw, candidates));
+                    AtomicTextFileWriter.WriteAllText(infoPath, BuildAmbiguousInfo(sourcePdfPath, parsed.VideoFile!, date, haltungRaw, candidates));
                     var unmatchedFolder = Path.Combine(destGemeindeFolder, unmatchedFolderName, haltung);
                     Directory.CreateDirectory(unmatchedFolder);
                     CopyCandidatesToUnmatched(unmatchedFolder, dateStamp, haltung, candidates);
