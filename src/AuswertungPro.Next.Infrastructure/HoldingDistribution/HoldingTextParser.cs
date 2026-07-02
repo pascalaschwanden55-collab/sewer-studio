@@ -391,9 +391,11 @@ internal static class HoldingTextParser
     {
         var lines = text.Replace("\r\n", "\n").Split('\n');
 
-        // Bevorzugtes Muster: "Zustandsaufnahme Schacht Nr: <Nummer>"
+        // Bevorzugtes Muster: "Schachtprotokoll Schacht Nr. <Nummer>" /
+        // "Zustandsaufnahme Schacht Nr: <Nummer>". Explizite Schacht-Header
+        // duerfen auch kurze Nummern wie "3" oder "4" tragen.
         var headerRx = new Regex(
-            @"Zustandsaufnahme\s*Schacht\s*Nr\.?\s*[:\-]?\s*(?<nr>\d{3,10})\b",
+            @"\b(?:Schachtprotokoll\s*)?(?:Zustandsaufnahme\s*)?Schacht\s*Nr\.?\s*[:\-]?\s*(?<nr>\d{1,10})\b",
             RegexOptions.IgnoreCase);
         var headerMatch = headerRx.Match(text);
         if (headerMatch.Success)
