@@ -62,3 +62,16 @@ def test_resolve_env_token_wins(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "auth_token_file", str(tmp_path / "ignored"), raising=False)
 
     assert main._resolve_or_create_token() == "env-token"
+
+
+def test_resolve_fails_when_generated_token_cannot_be_persisted(monkeypatch, tmp_path):
+    from sidecar.config import settings
+    import sidecar.main as main
+
+    blocking_parent = tmp_path / "not-a-directory"
+    blocking_parent.write_text("blockiert", encoding="utf-8")
+    monkeypatch.setattr(settings, "auth_token", "", raising=False)
+    monkeypatch.setattr(settings, "auth_token_file", str(blocking_parent / ".sidecar_token"), raising=False)
+
+    with pytest.raises(RuntimeError, match="Sidecar-Token konnte nicht geschrieben werden"):
+        main._resolve_or_create_token()

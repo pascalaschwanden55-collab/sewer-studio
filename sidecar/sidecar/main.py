@@ -3,7 +3,6 @@
 import hmac
 import logging
 import os
-import secrets
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -11,6 +10,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from .auth_token import resolve_or_create_token
 from .config import settings
 from .gpu_manager import gpu_manager
 from .routes import health, yolo, dino, sam, training, warmup
@@ -126,27 +126,7 @@ def _token_file_path() -> Path:
 def _resolve_or_create_token() -> str:
     """Effektives Auth-Token: env (SEWER_SIDECAR_AUTH_TOKEN) -> Token-Datei -> neu erzeugen
     und schreiben. Eine vorhandene Datei wird wiederverwendet (kein Aussperren des Clients)."""
-    env_token = (settings.auth_token or "").strip()
-    if env_token:
-        return env_token
-
-    path = _token_file_path()
-    try:
-        if path.exists():
-            existing = path.read_text(encoding="utf-8").strip()
-            if existing:
-                return existing
-    except OSError as exc:
-        logger.warning("Sidecar-Token-Datei nicht lesbar (%s): %s", path, exc)
-
-    token = secrets.token_urlsafe(32)
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(token, encoding="utf-8")
-        logger.info("Neues Sidecar-Token erzeugt: %s", path)
-    except OSError as exc:
-        logger.error("Sidecar-Token konnte nicht geschrieben werden (%s): %s", path, exc)
-    return token
+    return resolve_or_create_token(settings.auth_token, _token_file_path(), logger)
 
 
 def _auth_token() -> str:
