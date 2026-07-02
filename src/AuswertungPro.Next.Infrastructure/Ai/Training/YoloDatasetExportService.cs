@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Application.Protocol;
 
@@ -106,7 +107,7 @@ public sealed class YoloDatasetExportService
                 yc,
                 w,
                 h);
-            await File.WriteAllTextAsync(lblDest, labelLine + "\n", ct).ConfigureAwait(false);
+            await AtomicTextFileWriter.WriteAllTextAsync(lblDest, labelLine + "\n", ct).ConfigureAwait(false);
 
             if (isTrain) trainExported++;
             else valExported++;
@@ -128,7 +129,8 @@ public sealed class YoloDatasetExportService
             $"nc: {classNames.Count}",
             $"names: [{string.Join(", ", classNames.Select(c => $"'{c}'"))}]"
         };
-        await File.WriteAllLinesAsync(yamlPath, yamlLines, ct).ConfigureAwait(false);
+        var yaml = string.Join(Environment.NewLine, yamlLines) + Environment.NewLine;
+        await AtomicTextFileWriter.WriteAllTextAsync(yamlPath, yaml, ct).ConfigureAwait(false);
 
         var totalExported = trainExported + valExported;
         progress?.Invoke(100, $"Fertig: {totalExported} Samples, {classNames.Count} Klassen");
