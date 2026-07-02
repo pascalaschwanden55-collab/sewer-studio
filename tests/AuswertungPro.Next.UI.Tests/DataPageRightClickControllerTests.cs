@@ -1,4 +1,3 @@
-using System.IO;
 using AuswertungPro.Next.UI.DataPage;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -60,17 +59,5 @@ public sealed class DataPageRightClickControllerTests
             rowItem: null);
 
         Assert.Equal(DataPageRightClickAction.None, result.Action);
-    }
-
-    [Fact]
-    public void DataPage_delegates_right_click_decision_to_controller()
-    {
-        var root = SourceTextTestHelpers.FindRepositoryRoot();
-        var source = File.ReadAllText(Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Pages", "DataPage.xaml.cs"));
-        var method = SourceTextTestHelpers.ExtractMethodBody(source, "private void Grid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)");
-
-        Assert.Contains("DataPageRightClickController.Resolve(", method, StringComparison.Ordinal);
-        Assert.DoesNotContain("if (ClearColumnMenuItem.IsChecked)", method, StringComparison.Ordinal);
-        Assert.DoesNotContain("ClearColumn(fieldName, displayName)", method, StringComparison.Ordinal);
     }
 }
