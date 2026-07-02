@@ -133,6 +133,13 @@ internal static class ProtocolPdfAssetResolver
             var projectMatch = FindFileByName(projectRootAbs, fileName, resolveCache);
             if (!string.IsNullOrWhiteSpace(projectMatch))
                 return projectMatch;
+
+            // Rename-Fallback fuer alte Projekte: Der Haltungsname wurde im Datagrid geaendert,
+            // aber der Foto-Ordner bzw. die Foto-Dateien wurden damals noch nicht mitbenannt.
+            // Nur bei eindeutiger Foto-Nummer innerhalb Fotos\Haltungen verwenden.
+            var renamedHoldingPhoto = FindUniqueRenamedHoldingPhoto(projectRootAbs, normalized, fileName, resolveCache);
+            if (!string.IsNullOrWhiteSpace(renamedHoldingPhoto))
+                return renamedHoldingPhoto;
         }
 
         return Path.IsPathRooted(normalized) ? normalized : Path.Combine(projectRootAbs, normalized);
@@ -166,6 +173,84 @@ internal static class ProtocolPdfAssetResolver
 
         cache[cacheKey] = found;
         return found;
+    }
+
+    private static string? FindUniqueRenamedHoldingPhoto(
+        string projectRootAbs,
+        string normalizedPath,
+        string fileName,
+        Dictionary<string, string?> cache)
+    {
+        if (string.IsNullOrWhiteSpace(projectRootAbs)
+            || string.IsNullOrWhiteSpace(normalizedPath)
+            || string.IsNullOrWhiteSpace(fileName)
+            || !LooksLikeGroupedHoldingPhotoPath(normalizedPath))
+            return null;
+
+        var suffix = TryExtractTrailingPhotoSuffix(fileName);
+        if (string.IsNullOrWhiteSpace(suffix))
+            return null;
+
+        var fotoRoot = Path.Combine(projectRootAbs, "Fotos", "Haltungen");
+        if (!Directory.Exists(fotoRoot))
+            return null;
+
+        var cacheKey = $"renamed-holding-photo|{fotoRoot}|{suffix}";
+        if (cache.TryGetValue(cacheKey, out var cached))
+            return cached;
+
+        string? found = null;
+        try
+        {
+            var matches = Common.SafeFileEnumeration
+                .EnumerateFilesSafe(fotoRoot, "*" + suffix, recursive: true)
+                .Where(path => Path.GetFileName(path).EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                .Take(2)
+                .ToList();
+
+            found = matches.Count == 1 ? matches[0] : null;
+        }
+        catch
+        {
+            found = null;
+        }
+
+        cache[cacheKey] = found;
+        return found;
+    }
+
+    private static bool LooksLikeGroupedHoldingPhotoPath(string normalizedPath)
+    {
+        var parts = normalizedPath.Split(
+            new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+            StringSplitOptions.RemoveEmptyEntries);
+
+        for (var i = 0; i < parts.Length - 1; i++)
+        {
+            if (string.Equals(parts[i], "Fotos", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(parts[i + 1], "Haltungen", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static string? TryExtractTrailingPhotoSuffix(string fileName)
+    {
+        var stem = Path.GetFileNameWithoutExtension(fileName);
+        var ext = Path.GetExtension(fileName);
+        if (string.IsNullOrWhiteSpace(stem) || string.IsNullOrWhiteSpace(ext))
+            return null;
+
+        var idx = stem.LastIndexOf('_');
+        if (idx < 0 || idx == stem.Length - 1)
+            return null;
+
+        var number = stem[(idx + 1)..];
+        if (number.Length == 0 || number.Any(ch => ch < '0' || ch > '9'))
+            return null;
+
+        return "_" + number + ext;
     }
 
     internal static byte[]? SafeReadAllBytes(string path)

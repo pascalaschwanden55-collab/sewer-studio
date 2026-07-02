@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 using Xunit;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
@@ -158,6 +159,58 @@ public sealed class HoldingRenameServiceTests
             Assert.True(Directory.Exists(fotoNew), "Fotos-Ordner wurde nicht umbenannt");
             Assert.False(Directory.Exists(fotoOld), "alter Fotos-Ordner existiert noch");
             Assert.True(File.Exists(Path.Combine(fotoNew, $"H_{newSan}_034.jpg")), "Foto-Datei nicht umbenannt");
+        }
+        finally { try { Directory.Delete(root, recursive: true); } catch { } }
+    }
+
+    [Fact]
+    public void Rename_AktualisiertAuchProtocolFotoPaths()
+    {
+        var oldH = "22147-547.01";
+        var newH = "22147-22151";
+        var oldSan = ProjectPathResolver.SanitizePathSegment(oldH);
+        var newSan = ProjectPathResolver.SanitizePathSegment(newH);
+
+        var root = Path.Combine(Path.GetTempPath(), $"holdrename-fotopaths-{Guid.NewGuid():N}");
+        var projFile = Path.Combine(root, "Projektdateien", "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(projFile)!);
+        File.WriteAllText(projFile, "{}");
+
+        var fotoOld = Path.Combine(root, "Fotos", "Haltungen", oldSan);
+        Directory.CreateDirectory(fotoOld);
+        File.WriteAllText(Path.Combine(fotoOld, $"H_{oldSan}_116.jpg"), "x");
+
+        try
+        {
+            var record = new HaltungRecord
+            {
+                Protocol = new ProtocolDocument
+                {
+                    HaltungId = oldH,
+                    Current = new ProtocolRevision
+                    {
+                        Entries =
+                        [
+                            new ProtocolEntry
+                            {
+                                FotoPaths =
+                                [
+                                    $"Fotos/Haltungen/{oldSan}/H_{oldSan}_116.jpg"
+                                ]
+                            }
+                        ]
+                    }
+                }
+            };
+            record.SetFieldValue("Haltungsname", oldH, FieldSource.Xtf, userEdited: false);
+
+            var result = HoldingRenameService.Rename(record, oldH, newH, projFile);
+
+            Assert.True(result.Success, result.ErrorMessage);
+            Assert.Equal(newH, record.Protocol.HaltungId);
+            var fotoPath = Assert.Single(record.Protocol.Current.Entries[0].FotoPaths);
+            Assert.Equal($"Fotos/Haltungen/{newSan}/H_{newSan}_116.jpg", fotoPath);
+            Assert.True(File.Exists(Path.Combine(root, "Fotos", "Haltungen", newSan, $"H_{newSan}_116.jpg")));
         }
         finally { try { Directory.Delete(root, recursive: true); } catch { } }
     }

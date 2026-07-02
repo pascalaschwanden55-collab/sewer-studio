@@ -106,4 +106,28 @@ public sealed class ProtocolPdfAssetResolverTests
             try { Directory.Delete(temp, recursive: true); } catch { /* best-effort */ }
         }
     }
+
+    [Fact]
+    public void ResolvePhotoPath_finds_uniquely_renamed_holding_photo_when_folder_was_not_synced()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "sewerfoto_" + Guid.NewGuid().ToString("N"));
+        var oldDir = Path.Combine(temp, "Fotos", "Haltungen", "22147-547.01");
+        var newDir = Path.Combine(temp, "Fotos", "Haltungen", "22147-22151");
+        Directory.CreateDirectory(oldDir);
+        var real = Path.Combine(oldDir, "H_22147-547.01_116.jpg");
+        File.WriteAllBytes(real, new byte[] { 1 });
+        try
+        {
+            var stored = "Fotos/Haltungen/22147-22151/H_22147-22151_116.jpg";
+            var cache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+            var resolved = ProtocolPdfAssetResolver.ResolvePhotoPath(temp, stored, cache, preferredFolder: newDir);
+
+            Assert.Equal(real, resolved);
+        }
+        finally
+        {
+            try { Directory.Delete(temp, recursive: true); } catch { /* best-effort */ }
+        }
+    }
 }
