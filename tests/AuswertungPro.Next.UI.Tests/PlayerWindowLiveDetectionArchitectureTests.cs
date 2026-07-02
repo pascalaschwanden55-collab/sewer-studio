@@ -62,6 +62,72 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
     }
 
     [Fact]
+    public void PlayerWindow_live_detection_timer_gate_lives_in_policy()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var liveDetectionPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.cs");
+        var liveControllerPath = Path.Combine(uiRoot, "Player", "LiveDetectionController.cs");
+        var policyPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTimerPolicy.cs");
+        var dispatchWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTimerDispatchWorkflow.cs");
+        var runCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionRunCommandWorkflow.cs");
+        var tickStartWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionTickStartWorkflow.cs");
+        var inferenceWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionInferenceWorkflow.cs");
+
+        Assert.True(File.Exists(policyPath), "LiveDetection-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(dispatchWorkflowPath), "LiveDetection-Timer-Dispatch muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(runCommandWorkflowPath), "LiveDetection-Tick-Orchestrierung muss ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(liveControllerPath), "LiveDetection-Timer-Gate soll vom LiveDetectionController aufgerufen werden.");
+        Assert.True(File.Exists(tickStartWorkflowPath), "LiveDetection-Tick-Start-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
+        Assert.True(File.Exists(inferenceWorkflowPath), "LiveDetection-Inferenz-Gate soll ausserhalb der PlayerWindow-Partials liegen.");
+
+        var liveDetection = File.ReadAllText(liveDetectionPath);
+        var liveController = File.ReadAllText(liveControllerPath);
+        var policy = File.ReadAllText(policyPath);
+        var dispatchWorkflow = File.ReadAllText(dispatchWorkflowPath);
+        var runCommandWorkflow = File.Exists(runCommandWorkflowPath) ? File.ReadAllText(runCommandWorkflowPath) : "";
+        var tickStartWorkflow = File.ReadAllText(tickStartWorkflowPath);
+        var inferenceWorkflow = File.ReadAllText(inferenceWorkflowPath);
+
+        Assert.DoesNotContain("private async void DetectionTimer_Tick", liveDetection);
+        Assert.Contains("private void DetectionTimer_Tick", liveDetection);
+        Assert.Contains("LiveDetectionTimerDispatchWorkflow.Execute", liveDetection);
+        Assert.Contains("SafeFireAndForget", liveDetection);
+        Assert.Contains("private async Task RunDetectionAsync", liveDetection);
+        Assert.Contains("LiveDetectionRunCommandWorkflow.ExecuteAsync", liveDetection);
+        Assert.Contains("_liveDetectionController.ShouldRunTick", liveDetection);
+        Assert.DoesNotContain("LiveDetectionTickStartWorkflow.Start", liveDetection);
+        Assert.DoesNotContain("LiveDetectionSnapshotWorkflow.Handle", liveDetection);
+        Assert.DoesNotContain("LiveDetectionInferenceWorkflow.ExecuteAsync", liveDetection);
+        Assert.DoesNotContain("LiveDetectionResultWorkflow.Execute", liveDetection);
+        Assert.DoesNotContain("LiveDetectionErrorWorkflow.Execute", liveDetection);
+        Assert.DoesNotContain("catch (Exception ex)", liveDetection);
+        Assert.DoesNotContain("finally", liveDetection);
+        Assert.Contains("_liveDetectionController.CreateAnalyzeFrameAsync()", liveDetection);
+        Assert.DoesNotContain("| Snapshot", liveDetection);
+        Assert.DoesNotContain("| Inferenz", liveDetection);
+        Assert.DoesNotContain("_liveDetectionController.Service", liveDetection);
+        Assert.DoesNotContain(".AnalyzeFrameAsync(", liveDetection);
+        Assert.Contains("| Snapshot", tickStartWorkflow);
+        Assert.Contains("| Inferenz", inferenceWorkflow);
+        Assert.Contains("LiveDetectionTickStartWorkflow.Start", runCommandWorkflow);
+        Assert.Contains("LiveDetectionSnapshotWorkflow.Handle", runCommandWorkflow);
+        Assert.Contains("LiveDetectionInferenceWorkflow.ExecuteAsync", runCommandWorkflow);
+        Assert.Contains("LiveDetectionResultWorkflow.Execute", runCommandWorkflow);
+        Assert.Contains("LiveDetectionErrorWorkflow.Execute", runCommandWorkflow);
+        Assert.Contains("request.IsClosing", dispatchWorkflow);
+        Assert.Contains("request.IsPlaybackDisposed", dispatchWorkflow);
+        Assert.Contains("\"DetectionTimer\"", dispatchWorkflow);
+        Assert.Contains("actions.Dispatch", dispatchWorkflow);
+        Assert.Contains("LiveDetectionTimerPolicy.ShouldRunTick", liveController);
+        Assert.Contains("CreateAnalyzeFrameAsync", liveController);
+        Assert.DoesNotContain("_isDetectionInFlight || _liveDetectionService is null || _detectionCts is null", liveDetection);
+        Assert.DoesNotContain("!_player.IsPlaying", liveDetection);
+        Assert.DoesNotContain("if (_detectionPendingFindings != null)", liveDetection);
+        Assert.Contains("public static bool ShouldRunTick", policy);
+    }
+
+    [Fact]
     public void PlayerWindow_live_detection_stop_playback_uses_player_helper()
     {
         var root = FindRepositoryRoot();
