@@ -639,8 +639,8 @@ public sealed class LegacyPdfImportService
             "Link" => new[] { "Link" },
             "NR." => new[] { "NR.", "Nr." },
             "Nr." => new[] { "Nr.", "NR." },
-            "Ausfuehrung Datum/Jahr" => new[] { "Ausführung Datum/Jahr", "Ausfuehrung Datum/Jahr", "AusfÃ¼hrung Datum/Jahr" },
-            "Status offen/abgeschlossen" => new[] { "Status offen/abgeschlossen" },
+            "Ausfuehrung Datum/Jahr" => new[] { "Ausführung Datum/Jahr", "Ausführung\nDatum/Jahr", "Ausfuehrung Datum/Jahr", "Ausfuehrung\nDatum/Jahr", "AusfÃ¼hrung Datum/Jahr" },
+            "Status offen/abgeschlossen" => new[] { "Status offen/abgeschlossen", "Status\noffen/abgeschlossen" },
             _ => new[] { logicalField }
         };
     }

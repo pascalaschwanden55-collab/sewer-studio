@@ -1,4 +1,9 @@
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
+using AuswertungPro.Next.Domain.Models;
+using UglyToad.PdfPig.Content;
+using UglyToad.PdfPig.Core;
+using UglyToad.PdfPig.Fonts.Standard14Fonts;
+using UglyToad.PdfPig.Writer;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -23,7 +28,7 @@ public sealed class SchachtPdfImportMappingTests
         Assert.Equal("02.10.2025", parsed.Datum);
         Assert.Equal("Kontrollschacht", parsed.Funktion);
         Assert.Equal("Maengelfrei", parsed.PrimaereSchaeden);
-        Assert.Equal("ohne Auffaelligkeiten", parsed.Bemerkungen);
+        Assert.Null(parsed.Bemerkungen);
     }
 
     [Fact]
@@ -42,6 +47,92 @@ public sealed class SchachtPdfImportMappingTests
 
         Assert.Contains("Deckelrahmen: ausgebrochen", parsed.PrimaereSchaeden);
         Assert.Contains("Schachthals: korrodiert", parsed.PrimaereSchaeden);
+    }
+
+    [Fact]
+    public void ParseSchachtFields_ExtractsSchachtProFreeDamageRows()
+    {
+        var text = string.Join("\n", new[]
+        {
+            "Projekt: Fuerlauwi Meiental Datum: 18.06.2026",
+            "Schachtprotokoll Schacht Nr. 22152",
+            "Schachtfunktion            Kontrollschacht",
+            "ZUSTAND DER SCHACHTBAUTEILE",
+            "Konus                      In\uFB01ltration \u2022 Fugen mangelhaft verputzt",
+            "Bankett                    Ausgebrochen \u2022 Riss",
+            "Durchlaufrinne             Bemerkung: Ablagerung",
+            "Leiter                     fehlt",
+            "Tauchbogen                 nicht notwendig"
+        });
+
+        var parsed = LegacyPdfImportService.ParseSchachtFields(text);
+
+        Assert.Equal("22152", parsed.SchachtNummer);
+        Assert.Equal("18.06.2026", parsed.Datum);
+        Assert.Equal("Kontrollschacht", parsed.Funktion);
+        Assert.Contains("Konus: Infiltration", parsed.PrimaereSchaeden);
+        Assert.Contains("Konus: Fugen mangelhaft verputzt", parsed.PrimaereSchaeden);
+        Assert.Contains("Bankett: Ausgebrochen", parsed.PrimaereSchaeden);
+        Assert.Contains("Bankett: Riss", parsed.PrimaereSchaeden);
+        Assert.Contains("Durchlaufrinne: Ablagerung", parsed.PrimaereSchaeden);
+        Assert.Contains("Leiter/Steigeisen: fehlt", parsed.PrimaereSchaeden);
+        Assert.DoesNotContain("Tauchbogen: nicht notwendig", parsed.PrimaereSchaeden);
+    }
+
+    [Fact]
+    public void ParseSchachtFields_MovesSchachtBemerkungenIntoPrimaryDamages()
+    {
+        var text = string.Join("\n", new[]
+        {
+            "Schachtprotokoll Schacht Nr. 1085605",
+            "Schachtfunktion            Kontrollschacht",
+            "Bemerkungen                überdeckt, 2 Einläufe",
+            "ZUSTAND DER SCHACHTBAUTEILE",
+            "Schacht                    Überdeckt"
+        });
+
+        var parsed = LegacyPdfImportService.ParseSchachtFields(text);
+
+        Assert.Null(parsed.Bemerkungen);
+        Assert.Contains("Schacht: Überdeckt", parsed.PrimaereSchaeden);
+        Assert.Contains("Bemerkungen: überdeckt, 2 Einläufe", parsed.PrimaereSchaeden);
+    }
+
+    [Fact]
+    public void ImportPdf_FillsVisibleTemplateAliases_AndKeepsRemarksOutOfBemerkungen()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"schacht-pdf-import-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+        var pdfPath = Path.Combine(tempRoot, "20260618_1085605.pdf");
+
+        try
+        {
+            WritePdf(
+                pdfPath,
+                "Projekt: Fuerlauwi Meiental Datum: 18.06.2026",
+                "Schachtprotokoll Schacht Nr. 1085605",
+                "Schachtfunktion            Kontrollschacht",
+                "Bemerkungen                ueberdeckt, 2 Einlaeufe",
+                "ZUSTAND DER SCHACHTBAUTEILE",
+                "Schacht                    Ueberdeckt");
+
+            var project = new Project();
+            var stats = new LegacyPdfImportService().ImportPdf(pdfPath, project);
+
+            Assert.Equal(0, stats.Errors);
+            var record = Assert.Single(project.SchaechteData);
+            Assert.Equal("1085605", record.GetFieldValue("Schachtnummer"));
+            Assert.Equal("Kontrollschacht", record.GetFieldValue("Funktion"));
+            Assert.Equal("18.06.2026", record.GetFieldValue("Ausführung\nDatum/Jahr"));
+            Assert.Equal("offen", record.GetFieldValue("Status\noffen/abgeschlossen"));
+            Assert.Contains("Schacht: Ueberdeckt", record.GetFieldValue("Primäre Schäden"));
+            Assert.Contains("Bemerkungen: ueberdeckt, 2 Einlaeufe", record.GetFieldValue("Primäre Schäden"));
+            Assert.Equal("", record.GetFieldValue("Bemerkungen"));
+        }
+        finally
+        {
+            TryDeleteDirectory(tempRoot);
+        }
     }
 
     [Fact]
@@ -147,5 +238,34 @@ public sealed class SchachtPdfImportMappingTests
         Assert.True(lastDeckelrahmen >= 0, "Deckelrahmen-Eintrag fehlt.");
         Assert.True(firstSchachthals >= 0, "Schachthals-Eintrag fehlt.");
         Assert.True(lastDeckelrahmen < firstSchachthals, "Deckelrahmen muss vor Schachthals gelistet sein.");
+    }
+
+    private static void WritePdf(string path, params string[] lines)
+    {
+        using var builder = new PdfDocumentBuilder();
+        var font = builder.AddStandard14Font(Standard14Font.Helvetica);
+        var page = builder.AddPage(PageSize.A4);
+
+        var y = 780m;
+        foreach (var line in lines)
+        {
+            page.AddText(line, 12, new PdfPoint(40, y), font);
+            y -= 18;
+        }
+
+        File.WriteAllBytes(path, builder.Build());
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+                Directory.Delete(path, recursive: true);
+        }
+        catch
+        {
+            // Best effort cleanup for Windows file handles during failed test runs.
+        }
     }
 }

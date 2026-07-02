@@ -36,6 +36,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     private string? _lastReportPath;
 
     public IAsyncRelayCommand ImportPdfCommand { get; }
+    public IAsyncRelayCommand ImportSchachtPdfsFolderCommand { get; }
     public IAsyncRelayCommand ImportXtfCommand { get; }
     public IAsyncRelayCommand ImportWinCanCommand { get; }
     public IAsyncRelayCommand ImportIbakCommand { get; }
@@ -56,6 +57,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
         _sp = sp;
 
         ImportPdfCommand = new AsyncRelayCommand(ImportPdfAsync, CanStartImport);
+        ImportSchachtPdfsFolderCommand = new AsyncRelayCommand(ImportSchachtPdfsFolderAsync, CanStartImport);
         ImportXtfCommand = new AsyncRelayCommand(ImportXtfAsync, CanStartImport);
         ImportWinCanCommand = new AsyncRelayCommand(ImportWinCanAsync, CanStartImport);
         ImportIbakCommand = new AsyncRelayCommand(ImportIbakAsync, CanStartImport);
@@ -80,6 +82,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     {
         _ = value;
         ImportPdfCommand.NotifyCanExecuteChanged();
+        ImportSchachtPdfsFolderCommand.NotifyCanExecuteChanged();
         ImportXtfCommand.NotifyCanExecuteChanged();
         ImportWinCanCommand.NotifyCanExecuteChanged();
         ImportIbakCommand.NotifyCanExecuteChanged();
@@ -215,6 +218,42 @@ public sealed partial class ImportPageViewModel : ObservableObject
         // Auto-Save nach Commit wie bei WinCan/IBAK/KINS — Import-Arbeit nicht nur im RAM (Audit H4)
         await RunImportWithOptionalPreviewAsync(
             "PDF",
+            paths,
+            ImportPdfCore,
+            postImportAsync: PostImportPdfAsync,
+            saveProjectAfterCommit: true);
+    }
+
+    private async Task ImportSchachtPdfsFolderAsync()
+    {
+        var projectFolder = _shell.GetProjectFolder();
+        var initialFolder = !string.IsNullOrWhiteSpace(projectFolder)
+            ? Path.Combine(projectFolder, ProjectStructure.SchaechteVerteilt)
+            : null;
+        if (string.IsNullOrWhiteSpace(initialFolder) || !Directory.Exists(initialFolder))
+            initialFolder = projectFolder;
+
+        var folder = _sp.Dialogs.SelectFolder("Schachtprotokoll-Ordner waehlen", initialFolder);
+        if (string.IsNullOrWhiteSpace(folder))
+            return;
+
+        var paths = EnumerateProjectFiles(
+                folder,
+                new[] { ".pdf" },
+                includeRoot: true,
+                includeDirs: Array.Empty<string>())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (paths.Length == 0)
+        {
+            _sp.Dialogs.Info("Keine PDF-Dateien im gewaehlten Ordner gefunden.", "Schachtprotokolle");
+            return;
+        }
+
+        await RunImportWithOptionalPreviewAsync(
+            "Schacht-PDF",
             paths,
             ImportPdfCore,
             postImportAsync: PostImportPdfAsync,
