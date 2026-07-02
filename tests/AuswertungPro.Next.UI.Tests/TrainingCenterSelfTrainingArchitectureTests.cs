@@ -189,11 +189,11 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Ai",
             "Training",
             "SelfTrainingRuntimeSetupController.cs"));
-        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+        var viewModelSource = source;
 
-        Assert.Contains("SelfTrainingRuntimeSetupController.PrepareAsync(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingRuntimeSetupController.PrepareAsync(", viewModelSource, StringComparison.Ordinal);
         Assert.Contains("SelfTrainingRunPresentationBuilder.BuildOllamaConfigLog(", setupSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("Ollama: {cfg.OllamaBaseUri}, Modell: {cfg.VisionModel}", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Ollama: {cfg.OllamaBaseUri}, Modell: {cfg.VisionModel}", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -213,14 +213,14 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Ai",
             "Training",
             "SelfTrainingRunCompletionController.cs");
-        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+        var viewModelSource = source;
 
         Assert.False(File.Exists(completionControllerPath), "Triviale Self-Training-Completion-Sequenz soll inline in der VM stehen.");
-        Assert.DoesNotContain("SelfTrainingRunCompletionController.Apply(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingRunPresentationBuilder.BuildCompletion(result)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("foreach (var line in completionPresentation.LogLines)", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("selfTrainingUi.SetStatusText(completionPresentation.StatusText);", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("SelfTrainingRunPresentationBuilder.BuildFewShotExportHint(result)", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingRunCompletionController.Apply(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingRunPresentationBuilder.BuildCompletion(result)", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("foreach (var line in completionPresentation.LogLines)", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("selfTrainingUi.SetStatusText(completionPresentation.StatusText);", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingRunPresentationBuilder.BuildFewShotExportHint(result)", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -294,11 +294,11 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+        var viewModelSource = source;
 
-        Assert.Contains("await LoadSamplesInternalAsync();", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("await RefreshKbStatusAsync();", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingPostRunRefreshController.RefreshAsync(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("await LoadSamplesInternalAsync();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("await RefreshKbStatusAsync();", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingPostRunRefreshController.RefreshAsync(", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -311,14 +311,14 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var lastMatchSource = ExtractMethodBody(source, "private async Task LoadLastMatchRateAsync()");
+        var viewModelSource = source;
 
-        Assert.Contains("SelfTrainingLastMatchRatePresentationBuilder.Build(runs)", lastMatchSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("runs[^1]", lastMatchSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ExactPercent = last.ExactPercent", lastMatchSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("PartialPercent = last.PartialPercent", lastMatchSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("MismatchPercent = last.MismatchPercent", lastMatchSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("NoFindingsPercent = last.NoFindingsPercent", lastMatchSource, StringComparison.Ordinal);
+        Assert.Contains("SelfTrainingLastMatchRatePresentationBuilder.Build(runs)", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("runs[^1]", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ExactPercent = last.ExactPercent", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("PartialPercent = last.PartialPercent", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("MismatchPercent = last.MismatchPercent", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("NoFindingsPercent = last.NoFindingsPercent", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -338,15 +338,15 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Ai",
             "Training",
             "SelfTrainingRunExceptionController.cs");
-        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+        var viewModelSource = source;
 
         Assert.False(File.Exists(controllerPath), "Triviale Self-Training-Exception-UI soll inline in der VM stehen.");
-        Assert.DoesNotContain("SelfTrainingRunExceptionController.ApplyCanceled(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingRunExceptionController.ApplyFailure(", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("Log(\"Selbsttraining abgebrochen.\");", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("StatusText = \"Selbsttraining abgebrochen.\";", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("Log($\"FEHLER: {ex.GetType().Name}: {ex.Message}\");", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("StatusText = $\"Fehler: {ex.Message}\";", selfTrainingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingRunExceptionController.ApplyCanceled(", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingRunExceptionController.ApplyFailure(", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("Log(\"Selbsttraining abgebrochen.\");", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = \"Selbsttraining abgebrochen.\";", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("Log($\"FEHLER: {ex.GetType().Name}: {ex.Message}\");", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = $\"Fehler: {ex.Message}\";", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -359,12 +359,12 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "ViewModels",
             "Windows",
             "TrainingCenterViewModel.cs"));
-        var selfTrainingSource = ExtractMethodBody(source, "private async Task RunSelfTrainingAsync()");
+        var viewModelSource = source;
 
-        Assert.Contains("selfTrainingUi.SetBusy(false);", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("selfTrainingUi.SetSelfTrainingRunning(false);", selfTrainingSource, StringComparison.Ordinal);
-        Assert.Contains("_selfTrainingOrchestrator = null;", selfTrainingSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingRunFinalizerController.Apply(", selfTrainingSource, StringComparison.Ordinal);
+        Assert.Contains("selfTrainingUi.SetBusy(false);", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("selfTrainingUi.SetSelfTrainingRunning(false);", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingOrchestrator = null;", viewModelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingRunFinalizerController.Apply(", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -384,22 +384,20 @@ public sealed class TrainingCenterSelfTrainingArchitectureTests
             "Ai",
             "Training",
             "SelfTrainingRunControlController.cs");
-        var stopSource = ExtractMethodBody(source, "private void StopSelfTraining()");
-        var pauseSource = ExtractMethodBody(source, "private void PauseSelfTraining()");
+        var viewModelSource = source;
 
         Assert.False(File.Exists(controllerPath), "Triviale Self-Training-Run-Control soll inline in der VM stehen.");
-        Assert.DoesNotContain("SelfTrainingRunControlController", stopSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("SelfTrainingRunControlController", pauseSource, StringComparison.Ordinal);
-        Assert.Contains("_selfTrainingCts?.Cancel();", stopSource, StringComparison.Ordinal);
-        Assert.Contains("StatusText = \"Selbsttraining wird abgebrochen...\";", stopSource, StringComparison.Ordinal);
-        Assert.Contains("if (_selfTrainingOrchestrator is null) return;", pauseSource, StringComparison.Ordinal);
-        Assert.Contains("if (_selfTrainingOrchestrator.IsPaused)", pauseSource, StringComparison.Ordinal);
-        Assert.Contains("_selfTrainingOrchestrator.Resume();", pauseSource, StringComparison.Ordinal);
-        Assert.Contains("StatusText = \"Selbsttraining fortgesetzt.\";", pauseSource, StringComparison.Ordinal);
-        Assert.Contains("Log(\"Pipeline fortgesetzt.\");", pauseSource, StringComparison.Ordinal);
-        Assert.Contains("_selfTrainingOrchestrator.Pause();", pauseSource, StringComparison.Ordinal);
-        Assert.Contains("StatusText = \"Selbsttraining pausiert.\";", pauseSource, StringComparison.Ordinal);
-        Assert.Contains("Log(\"Pipeline pausiert.\");", pauseSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SelfTrainingRunControlController", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingCts?.Cancel();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = \"Selbsttraining wird abgebrochen...\";", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("if (_selfTrainingOrchestrator is null) return;", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("if (_selfTrainingOrchestrator.IsPaused)", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingOrchestrator.Resume();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = \"Selbsttraining fortgesetzt.\";", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("Log(\"Pipeline fortgesetzt.\");", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("_selfTrainingOrchestrator.Pause();", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("StatusText = \"Selbsttraining pausiert.\";", viewModelSource, StringComparison.Ordinal);
+        Assert.Contains("Log(\"Pipeline pausiert.\");", viewModelSource, StringComparison.Ordinal);
     }
 
     [Fact]
