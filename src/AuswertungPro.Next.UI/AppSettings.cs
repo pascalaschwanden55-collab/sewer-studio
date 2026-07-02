@@ -95,6 +95,9 @@ public sealed class AppSettings : IAiStartupSettings
     // Fehlt die Datei, laeuft die Verteilung wie bisher (kein Kataster-Abgleich).
     public string AbwasserkatasterXtfPath { get; set; } = @"D:\QGIS_V4\Export_Sewer_Studio\Abwasserkataster_Uri_korrigiert.xtf";
 
+    // Lokale QGIS-XYZ-Kacheln fuer die Kartenansicht. Fehlt der Ordner, bleibt es beim WMS.
+    public string QgisTilesPath { get; set; } = @"D:\QGIS_V4\Export_Sewer_Studio\tiles_test";
+
     // VSA Zustandklassifizierung v2: Shadow-Vergleich gegen Legacy-Engine.
     // Null bedeutet Default an.
     public bool? VsaClassificationShadowEnabled { get; set; }

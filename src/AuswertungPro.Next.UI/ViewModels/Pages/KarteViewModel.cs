@@ -21,13 +21,11 @@ public sealed partial class KarteViewModel : ObservableObject
     private readonly ShellViewModel _shell;
     private readonly ServiceProvider _services;
 
-    // Pfad zur Netz-XTF; kein Settings-Eintrag vorhanden → Konstante.
-    // Korrigierte Fassung: vollstaendigerer Netzplan (110'224 Haltungen statt 94'109).
-    private readonly string _xtfPath = @"D:\QGIS_V4\Export_Sewer_Studio\Abwasserkataster_Uri_korrigiert.xtf";
+    private string XtfPath => _services.Settings.AbwasserkatasterXtfPath;
 
     // Lokale QGIS-Kacheln (von qgis_process erzeugt). Vorhanden = werden als Hintergrund
     // ueber dem WMS gezeigt; fehlt der Ordner, bleibt es beim WMS allein.
-    private readonly string _qgisTilesPath = @"D:\QGIS_V4\Export_Sewer_Studio\tiles_test";
+    private string QgisTilesPath => _services.Settings.QgisTilesPath;
 
     // Skalierung: false = VSA-Skala (0=gut); true = EZ-Skala (0=schlecht/4=gut)
     private bool _invertiert = true;
@@ -80,9 +78,9 @@ public sealed partial class KarteViewModel : ObservableObject
         // QGIS-Optik als XYZ-Kacheln ueber dem WMS; ausserhalb des Exports leer.
         try
         {
-            if (Directory.Exists(_qgisTilesPath))
+            if (!string.IsNullOrWhiteSpace(QgisTilesPath) && Directory.Exists(QgisTilesPath))
             {
-                var tileSource = new AuswertungPro.Next.UI.Mapping.LocalXyzTileSource(_qgisTilesPath, "QGIS");
+                var tileSource = new AuswertungPro.Next.UI.Mapping.LocalXyzTileSource(QgisTilesPath, "QGIS");
                 map.Layers.Add(new Mapsui.Tiling.Layers.TileLayer(tileSource) { Name = "QGIS" });
             }
         }
@@ -92,16 +90,16 @@ public sealed partial class KarteViewModel : ObservableObject
         }
 
         // ── Netz-Geometrie laden ──────────────────────────────────────────────
-        if (!File.Exists(_xtfPath))
+        if (string.IsNullOrWhiteSpace(XtfPath) || !File.Exists(XtfPath))
         {
-            StatusText = $"Netz-Datei nicht gefunden: {_xtfPath}";
+            StatusText = $"Netz-Datei nicht gefunden: {XtfPath}";
         }
         else
         {
             try
             {
                 // XTF-Parsing im Hintergrundthread (kann groß sein)
-                var geometrien = await Task.Run(() => new NetworkGeometryCache().Load(_xtfPath));
+                var geometrien = await Task.Run(() => new NetworkGeometryCache().Load(XtfPath));
                 _projectedGeometrien = await Task.Run(() => NetworkViewportFilter.Project(geometrien));
 
                 // Zustandsfarben aus dem aktuellen Projekt
