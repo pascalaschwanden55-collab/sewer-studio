@@ -9,68 +9,6 @@ namespace AuswertungPro.Next.UI.Tests;
 public sealed class UiArchitectureGuardTests
 {
     [Fact]
-    public void PlayerWindow_ai_overlay_shape_rendering_lives_in_player_renderers()
-    {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var aiOverlayPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.cs");
-        var rectanglePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiOverlayRendering.Rectangle.cs");
-        var cleanupPolicyPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupPolicy.cs");
-        var renderCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiOverlayRenderCommandWorkflow.cs");
-        var aiRendererPath = Path.Combine(uiRoot, "Player", "CodingAiOverlayRenderer.cs");
-        var primitiveRendererPath = Path.Combine(uiRoot, "Player", "CodingAiPrimitiveOverlayRenderer.cs");
-        var rectangleRendererPath = Path.Combine(uiRoot, "Player", "CodingAiRectangleOverlayRenderer.cs");
-
-        Assert.False(File.Exists(rectanglePath), "AI-Rechteck-Overlay soll nicht mehr als PlayerWindow-Partial leben.");
-        Assert.True(File.Exists(cleanupPolicyPath), "AI-Overlay-Cleanup-Regel soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(renderCommandWorkflowPath), "AI-Overlay-Render-Gate soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(aiRendererPath), "AI-Overlay-Orchestrierung soll ausserhalb der PlayerWindow-Partials liegen.");
-        Assert.True(File.Exists(primitiveRendererPath), "AI-Primitive sollen ausserhalb der PlayerWindow-Partials gerendert werden.");
-        Assert.True(File.Exists(rectangleRendererPath), "AI-Rechteck-Overlay mit Label soll ausserhalb der PlayerWindow-Partials gerendert werden.");
-
-        var aiOverlay = File.ReadAllText(aiOverlayPath);
-        var cleanupPolicy = File.ReadAllText(cleanupPolicyPath);
-        var renderCommandWorkflow = File.Exists(renderCommandWorkflowPath) ? File.ReadAllText(renderCommandWorkflowPath) : "";
-        var aiRenderer = File.ReadAllText(aiRendererPath);
-        var primitiveRenderer = File.ReadAllText(primitiveRendererPath);
-        var rectangleRenderer = File.ReadAllText(rectangleRendererPath);
-
-        Assert.DoesNotContain("RenderAiRectangleOverlay(", aiOverlay);
-        Assert.Contains("CodingAiOverlayRenderCommandWorkflow.Execute", aiOverlay);
-        Assert.Contains("_codingOverlayRenderController.RenderAiOverlays", aiOverlay);
-        Assert.Contains("_codingSessionHost", aiOverlay);
-        Assert.DoesNotContain("_codingVm", aiOverlay);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", aiOverlay);
-        Assert.DoesNotContain("CodingAiRectangleOverlayRenderer.Render", aiOverlay);
-        Assert.DoesNotContain("CodingAiPrimitiveOverlayRenderer.Render", aiOverlay);
-        Assert.DoesNotContain("CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag", aiOverlay);
-        Assert.DoesNotContain("CodingAiOverlayDisplayPolicy.StrokeColor", aiOverlay);
-        Assert.DoesNotContain("switch (geo.ToolType)", aiOverlay);
-        Assert.DoesNotContain("StartsWith(OverlayTags.AiPrefix", aiOverlay);
-        Assert.DoesNotContain("var labelBorder = new Border", aiOverlay);
-        Assert.DoesNotContain("CodingAiOverlayDisplayPolicy.LabelText", aiOverlay);
-        Assert.DoesNotContain("new System.Windows.Shapes.Line", aiOverlay);
-        Assert.DoesNotContain("new System.Windows.Shapes.Ellipse", aiOverlay);
-        Assert.Contains("if (!request.HasCodingViewModel)", renderCommandWorkflow);
-        Assert.Contains("actions.RenderAiOverlays()", renderCommandWorkflow);
-        Assert.Contains("public static bool ShouldRemoveAiOverlayTag", cleanupPolicy);
-        Assert.Contains("StartsWith(OverlayTags.AiPrefix", cleanupPolicy);
-        Assert.Contains("public static class CodingAiOverlayRenderer", aiRenderer);
-        Assert.Contains("CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag", aiRenderer);
-        Assert.Contains("CodingAiOverlayDisplayPolicy.StrokeColor", aiRenderer);
-        Assert.Contains("CodingAiPrimitiveOverlayRenderer.Render", aiRenderer);
-        Assert.Contains("CodingAiRectangleOverlayRenderer.Render", aiRenderer);
-        Assert.Contains("CodingArcOverlayRenderer.Render", aiRenderer);
-        Assert.Contains("public static class CodingAiPrimitiveOverlayRenderer", primitiveRenderer);
-        Assert.Contains("new System.Windows.Shapes.Line", primitiveRenderer);
-        Assert.Contains("new System.Windows.Shapes.Ellipse", primitiveRenderer);
-        Assert.Contains("public static class CodingAiRectangleOverlayRenderer", rectangleRenderer);
-        Assert.Contains("var labelBorder = new Border", rectangleRenderer);
-        Assert.Contains("CodingAiOverlayDisplayPolicy.LabelText", rectangleRenderer);
-    }
-
-    [Fact]
     public void PlayerWindow_eingabemarker_geometry_lives_in_policy()
     {
         var root = FindRepositoryRoot();

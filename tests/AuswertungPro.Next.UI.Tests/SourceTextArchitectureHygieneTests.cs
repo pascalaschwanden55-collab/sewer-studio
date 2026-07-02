@@ -359,7 +359,8 @@ public sealed class SourceTextArchitectureHygieneTests
             "PlayerWindow_lateral_circle_overlay_rendering_lives_in_lateral_circle_partial",
             "PlayerWindow_overlay_measurement_panel_lives_in_measurement_panel_partial",
             "PlayerWindow_overlay_measurement_label_lives_in_renderer",
-            "PlayerWindow_basic_overlay_shape_rendering_lives_in_renderer"
+            "PlayerWindow_basic_overlay_shape_rendering_lives_in_renderer",
+            "PlayerWindow_ai_overlay_shape_rendering_lives_in_player_renderers"
         };
 
         foreach (var methodName in methodNames)
