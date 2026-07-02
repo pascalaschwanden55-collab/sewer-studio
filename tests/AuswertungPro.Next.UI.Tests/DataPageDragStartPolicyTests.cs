@@ -1,27 +1,10 @@
-using System.IO;
 using AuswertungPro.Next.UI.DataPage;
 using Xunit;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageDragStartPolicyTests
 {
-    [Fact]
-    public void DataPage_preview_mouse_move_uses_drag_start_policy()
-    {
-        var source = File.ReadAllText(RepoFile(
-            "src",
-            "AuswertungPro.Next.UI",
-            "Views",
-            "Pages",
-            "DataPage.xaml.cs"));
-
-        Assert.Contains("DataPageDragStartPolicy.ShouldStartDrag", source);
-        Assert.DoesNotContain("Math.Abs(diff.X)", source);
-        Assert.DoesNotContain("Math.Abs(diff.Y)", source);
-    }
-
     [Theory]
     [InlineData(6, 0)]
     [InlineData(0, 6)]

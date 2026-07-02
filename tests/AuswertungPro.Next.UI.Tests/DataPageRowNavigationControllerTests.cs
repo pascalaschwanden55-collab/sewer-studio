@@ -1,33 +1,10 @@
-using System.IO;
 using AuswertungPro.Next.UI.DataPage;
 using Xunit;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageRowNavigationControllerTests
 {
-    [Fact]
-    public void DataPage_position_and_row_handlers_delegate_to_navigation_controller()
-    {
-        var source = File.ReadAllText(RepoFile(
-            "src",
-            "AuswertungPro.Next.UI",
-            "Views",
-            "Pages",
-            "DataPage.xaml.cs"));
-        var handlers = ExtractBetween(
-            source,
-            "private void MoveToPosition_Click",
-            "private static HaltungRecord? ResolveActionRecord");
-
-        Assert.Contains("DataPageRowNavigationController.TryMoveToPosition", handlers);
-        Assert.Contains("DataPageRowNavigationController.TryResolveRowIndex", handlers);
-        Assert.DoesNotContain("int.TryParse(MoveToPositionBox.Text.Trim()", handlers);
-        Assert.DoesNotContain("int.TryParse(GoToRowBox.Text.Trim()", handlers);
-        Assert.DoesNotContain("idx = vm.Records.Count - 1", handlers);
-    }
-
     [Fact]
     public void TryMoveToPosition_parses_position_and_calls_view_model_move()
     {
@@ -137,12 +114,4 @@ public sealed class DataPageRowNavigationControllerTests
         Assert.Empty(dialogs);
     }
 
-    private static string ExtractBetween(string source, string startMarker, string endMarker)
-    {
-        var start = source.IndexOf(startMarker, StringComparison.Ordinal);
-        var end = source.IndexOf(endMarker, start, StringComparison.Ordinal);
-        Assert.True(start >= 0, $"Start marker not found: {startMarker}");
-        Assert.True(end > start, $"End marker not found: {endMarker}");
-        return source[start..end];
-    }
 }

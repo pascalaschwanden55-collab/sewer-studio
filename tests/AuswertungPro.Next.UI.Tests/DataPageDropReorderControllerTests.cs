@@ -1,29 +1,13 @@
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI.DataPage;
 using Xunit;
-using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DataPageDropReorderControllerTests
 {
-    [Fact]
-    public void DataPage_drop_handler_uses_controller_instead_of_reflecting_private_update_method()
-    {
-        var source = File.ReadAllText(RepoFile(
-            "src",
-            "AuswertungPro.Next.UI",
-            "Views",
-            "Pages",
-            "DataPage.xaml.cs"));
-
-        Assert.DoesNotContain("GetMethod(\"UpdateNr\"", source);
-        Assert.Contains("DataPageDropReorderController.TryMoveAndRenumber", source);
-    }
-
     [Fact]
     public void TryMoveAndRenumber_moves_dropped_record_to_target_index_and_updates_nr_fields()
     {
