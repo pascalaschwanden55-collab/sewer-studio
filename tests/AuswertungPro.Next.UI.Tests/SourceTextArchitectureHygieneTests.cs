@@ -442,6 +442,22 @@ public sealed class SourceTextArchitectureHygieneTests
     }
 
     [Fact]
+    public void Player_window_live_detection_confirmation_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowLiveDetectionConfirmationArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "LiveDetection-Confirmation-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        const string methodName = "PlayerWindow_live_detection_confirmation_actions_live_in_actions_partial";
+
+        Assert.Contains($"public void {methodName}", focused);
+        Assert.DoesNotContain($"public void {methodName}", guard);
+    }
+
+    [Fact]
     public void Player_window_coding_ai_guards_live_in_focused_suite()
     {
         var root = SourceTextTestHelpers.FindRepositoryRoot();
@@ -934,6 +950,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowInlineEvidenceArchitectureTests.cs")]
     [InlineData("PlayerWindowInlineDefectArchitectureTests.cs")]
     [InlineData("PlayerWindowLiveDetectionArchitectureTests.cs")]
+    [InlineData("PlayerWindowLiveDetectionConfirmationArchitectureTests.cs")]
     [InlineData("PlayerWindowMediaInfrastructureArchitectureTests.cs")]
     [InlineData("PlayerWindowOverlayInputArchitectureTests.cs")]
     [InlineData("PlayerWindowPlaybackArchitectureTests.cs")]
