@@ -81,6 +81,13 @@ public partial class SchaechtePage : UserControl
             ApplySearchFilter,
             RecordPropertyChanged);
 
+        SchachtansichtView.DetailBuilder = BuildRecordDetailsForAnsicht;
+        SchachtansichtView.DamageLineBuilder = SchachtDamageLineBuilder.Build;
+        SchachtansichtView.ActionRequested = RouteSchachtansichtAction;
+        SchachtansichtToggle.IsChecked = true;
+        SchachtansichtView.Visibility = Visibility.Visible;
+        Grid.Visibility = Visibility.Collapsed;
+
         DataContextChanged += OnDataContextChanged;
         Grid.AddHandler(DataGridColumnHeader.ClickEvent, new RoutedEventHandler(Grid_ColumnHeaderClick), true);
         Grid.ColumnReordered += Grid_ColumnReordered;
@@ -105,9 +112,11 @@ public partial class SchaechtePage : UserControl
         if (_vm is null)
         {
             _subscriptionController.Detach();
+            SchachtansichtView.Settings = null;
             return;
         }
 
+        SchachtansichtView.Settings = _vm.Services.Settings;
         _subscriptionController.Switch(_vm.Columns, _vm.Records, () => _vm.Records);
     }
 
@@ -698,6 +707,48 @@ public partial class SchaechtePage : UserControl
             Owner = Window.GetWindow(this)
         };
         window.Show();
+    }
+
+    private List<RecordDetailGroup> BuildRecordDetailsForAnsicht(SchachtRecord record)
+        => BuildRecordDetails(record);
+
+    private void SchachtansichtToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        var showAnsicht = SchachtansichtToggle.IsChecked == true;
+        SchachtansichtView.Visibility = showAnsicht ? Visibility.Visible : Visibility.Collapsed;
+        Grid.Visibility = showAnsicht ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void RouteSchachtansichtAction(string actionKey, SchachtRecord record)
+    {
+        if (_vm is null)
+            return;
+
+        _vm.Selected = record;
+        var e = new RoutedEventArgs();
+        switch (actionKey)
+        {
+            case "details":
+                ShowRecordDetails(record);
+                break;
+            case "openpdf":
+                ProtokollMenu_Click(this, e);
+                break;
+            case "moveup":
+                _vm.MoveUpCommand.Execute(null);
+                break;
+            case "movedown":
+                _vm.MoveDownCommand.Execute(null);
+                break;
+            case "delete":
+                _vm.RemoveCommand.Execute(null);
+                break;
+            default:
+                System.Diagnostics.Debug.Fail($"Unbekannter actionKey: {actionKey}");
+                break;
+        }
     }
 
     private List<RecordDetailGroup> BuildRecordDetails(SchachtRecord record)

@@ -126,4 +126,30 @@ public sealed class SchaechtePageArchitectureGuardTests
         Assert.Contains("record.SetFieldValue(\"Schachtnummer\"", method);
         Assert.Contains("PdfCorrectionMetadata.RegisterShaftRename", method);
     }
+
+    [Fact]
+    public void SchaechtePage_embeds_and_wires_schachtansicht()
+    {
+        var root = FindRepositoryRoot();
+        var pageXaml = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "SchaechtePage.xaml"));
+        var pageCode = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "AuswertungPro.Next.UI",
+            "Views",
+            "Pages",
+            "SchaechtePage.xaml.cs"));
+
+        Assert.Contains("SchachtansichtView", pageXaml);
+        Assert.Contains("SchachtansichtToggle_Changed", pageXaml);
+        Assert.Contains("SchachtansichtView.DetailBuilder = BuildRecordDetailsForAnsicht", pageCode);
+        Assert.Contains("SchachtansichtView.DamageLineBuilder = SchachtDamageLineBuilder.Build", pageCode);
+        Assert.Contains("RouteSchachtansichtAction", pageCode);
+    }
 }

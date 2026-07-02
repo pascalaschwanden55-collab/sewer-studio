@@ -1,6 +1,7 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SchaechtePage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:schachtansicht="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Schachtansicht">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -12,6 +13,21 @@
             <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     Padding="4,3" CornerRadius="8">
                 <StackPanel Orientation="Horizontal">
+                    <ToggleButton x:Name="SchachtansichtToggle"
+                                  Style="{StaticResource CompactToggleButton}"
+                                  Margin="0,0,6,0"
+                                  Checked="SchachtansichtToggle_Changed"
+                                  Unchecked="SchachtansichtToggle_Changed"
+                                  ToolTip="Zwischen Tabelle und Schachtansicht umschalten">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7F4;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                       VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Schachtansicht" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ToggleButton>
+
+                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="6,4"/>
+
                     <Button Command="{Binding SaveCommand}" Style="{StaticResource ToolbarButtonAccent}" Margin="0,0,2,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -216,6 +232,10 @@
             </DataGrid.ContextMenu>
         </DataGrid>
 
+        <schachtansicht:SchachtansichtView x:Name="SchachtansichtView"
+                                           Grid.Row="1"
+                                           Visibility="Collapsed"/>
+
         <Border Grid.Row="1"
                 IsHitTestVisible="False"
                 Background="{DynamicResource CardBrush}"
@@ -240,7 +260,7 @@
                     </Style.Triggers>
                 </Style>
             </Border.Style>
-            <TextBlock Text="Noch keine Haltungen - über Import einlesen"
+            <TextBlock Text="Noch keine Sch&#x00E4;chte - &#x00FC;ber Import einlesen"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        FontSize="14"
                        FontWeight="SemiBold"/>
