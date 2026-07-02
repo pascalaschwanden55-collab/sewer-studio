@@ -147,4 +147,75 @@ public sealed class PlayerWindowCodingCalibrationArchitectureTests
         Assert.Contains("public NormalizedPoint? Start", stateController);
         Assert.Contains("public void Reset", stateController);
     }
+
+    [Fact]
+    public void PlayerWindow_manual_calibration_wiring_lives_in_calibration_partial()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
+        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
+        var calibrationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Calibration.cs");
+        var pointerWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCalibrationPointerWorkflow.cs");
+
+        Assert.True(File.Exists(calibrationPath), "Manuelle Kalibrierungs-Verdrahtung soll aus dem allgemeinen OverlayInput-Partial heraus.");
+        Assert.True(File.Exists(pointerWorkflowPath), "Manueller Kalibrierungs-Pointerflow soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var calibration = File.ReadAllText(calibrationPath);
+        var pointerWorkflow = File.Exists(pointerWorkflowPath) ? File.ReadAllText(pointerWorkflowPath) : "";
+
+        Assert.DoesNotContain("private void CodingCalibrate_Click", overlayInput);
+        Assert.DoesNotContain("private void ApplyCodingCalibration", overlayInput);
+        Assert.DoesNotContain("private bool TryStartCodingCalibration", overlayInput);
+        Assert.DoesNotContain("private bool TryPreviewCodingCalibration", overlayInput);
+        Assert.DoesNotContain("private bool TryFinishCodingCalibration", overlayInput);
+        Assert.Contains("private void CodingCalibrate_Click", calibration);
+        Assert.Contains("private void ApplyCodingCalibration", calibration);
+        Assert.Contains("private bool TryStartCodingCalibration", calibration);
+        Assert.Contains("private bool TryPreviewCodingCalibration", calibration);
+        Assert.Contains("private bool TryFinishCodingCalibration", calibration);
+        Assert.Contains("CodingCalibrationPointerWorkflow.Start", calibration);
+        Assert.Contains("CodingCalibrationPointerWorkflow.Preview", calibration);
+        Assert.Contains("CodingCalibrationPointerWorkflow.Finish", calibration);
+        Assert.Contains("_codingSessionHost", calibration);
+        Assert.DoesNotContain("_codingVm", calibration);
+        Assert.Contains("CodingManualCalibrationApplyWorkflow.Execute", calibration);
+        Assert.Contains("CodingCalibrationToggleWorkflow.Execute", calibration);
+        Assert.Contains("CodingManualCalibrationPolicy.Build", calibration);
+        Assert.Contains("CodingManualCalibrationWorkflow.Apply", calibration);
+        Assert.DoesNotContain("if (!_codingIsCalibrating)", calibration);
+        Assert.DoesNotContain("if (!_codingIsCalibrating || _codingCalibStart == null)", calibration);
+        Assert.Contains("actions.SetCalibrationStart()", pointerWorkflow);
+        Assert.Contains("actions.RenderPreview()", pointerWorkflow);
+        Assert.Contains("actions.ApplyCalibration()", pointerWorkflow);
+    }
+
+    [Fact]
+    public void PlayerWindow_calibration_preview_line_rendering_lives_in_renderer()
+    {
+        var root = FindRepositoryRoot();
+        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
+        var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
+        var calibrationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Calibration.cs");
+        var rendererPath = Path.Combine(uiRoot, "Player", "CodingCalibrationPreviewLineRenderer.cs");
+        var renderControllerPath = Path.Combine(uiRoot, "Player", "CodingOverlayRenderController.cs");
+
+        Assert.True(File.Exists(rendererPath), "Kalibrierungs-Vorschaulinie muss ausserhalb der PlayerWindow-Partials gerendert werden.");
+        Assert.True(File.Exists(renderControllerPath), "Kalibrierungs-Vorschaulinie muss ueber den Overlay-RenderController orchestriert werden.");
+
+        var overlayInput = File.ReadAllText(overlayInputPath);
+        var calibration = File.ReadAllText(calibrationPath);
+        var renderer = File.ReadAllText(rendererPath);
+        var renderController = File.Exists(renderControllerPath) ? File.ReadAllText(renderControllerPath) : "";
+
+        Assert.Contains("_codingOverlayRenderController.RenderCalibrationPreview", calibration);
+        Assert.DoesNotContain("CodingCalibrationPreviewLineRenderer.Render", calibration);
+        Assert.Contains("CodingCalibrationPreviewLineRenderer.Render", renderController);
+        Assert.DoesNotContain("new System.Windows.Shapes.Line", overlayInput + calibration);
+        Assert.DoesNotContain("StrokeDashArray = new DoubleCollection", overlayInput + calibration);
+        Assert.DoesNotContain("Brushes.Magenta", overlayInput + calibration);
+        Assert.Contains("public static Line Render", renderer);
+        Assert.Contains("OverlayTags.Preview", renderer);
+    }
 }

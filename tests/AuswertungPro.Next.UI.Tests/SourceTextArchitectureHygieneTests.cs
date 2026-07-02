@@ -172,7 +172,9 @@ public sealed class SourceTextArchitectureHygieneTests
         {
             "PlayerWindow_segmented_finding_calibration_lives_in_policy",
             "PlayerWindow_auto_calibration_workflow_lives_outside_window",
-            "PlayerWindow_manual_calibration_math_lives_in_policy"
+            "PlayerWindow_manual_calibration_math_lives_in_policy",
+            "PlayerWindow_manual_calibration_wiring_lives_in_calibration_partial",
+            "PlayerWindow_calibration_preview_line_rendering_lives_in_renderer"
         };
 
         foreach (var methodName in methodNames)
