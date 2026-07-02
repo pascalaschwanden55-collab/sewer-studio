@@ -74,6 +74,50 @@ public sealed class CodingAnalyzedFramePhotoAttachmentWorkflowTests
         Assert.Equal(["preferred", "buffered", "attach:buffered"], calls);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_awaits_preferred_frame_without_using_sync_capture()
+    {
+        var calls = new List<string>();
+        var preferred = new byte[] { 7, 8, 9 };
+        var entry = new ProtocolEntry();
+        var preferredCompletion = new TaskCompletionSource<byte[]?>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var pending = CodingAnalyzedFramePhotoAttachmentWorkflow.ExecuteAsync(
+            entry,
+            new CodingAnalyzedFramePhotoAttachmentAsyncActions(
+                GetPreferredFrameBytesAsync: () =>
+                {
+                    calls.Add("preferred-start");
+                    return preferredCompletion.Task;
+                },
+                GetBufferedFrameBytes: () =>
+                {
+                    calls.Add("buffered");
+                    return null;
+                },
+                AttachAnalyzedFramePhoto: frameBytes =>
+                {
+                    Assert.Same(preferred, frameBytes);
+                    calls.Add("attach:preferred");
+                    return "async.png";
+                },
+                CaptureSnapshot: () =>
+                {
+                    calls.Add("snapshot");
+                    return "snapshot.png";
+                }));
+
+        Assert.False(pending.IsCompleted);
+        preferredCompletion.SetResult(preferred);
+
+        var result = await pending;
+
+        Assert.Equal(CodingAnalyzedFramePhotoAttachmentOutcome.AttachedAnalyzedFrame, result.Outcome);
+        Assert.Equal("async.png", result.PhotoPath);
+        Assert.Equal(["preferred-start", "attach:preferred"], calls);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

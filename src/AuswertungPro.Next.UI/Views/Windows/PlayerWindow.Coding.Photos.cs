@@ -1,26 +1,34 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.Ai;
+using AuswertungPro.Next.UI.Helpers;
 
 namespace AuswertungPro.Next.UI.Views.Windows;
 
 public partial class PlayerWindow
 {
-    private string? AttachAnalyzedFramePhoto(ProtocolEntry entry)
+    private void AttachAnalyzedFramePhoto(ProtocolEntry entry)
+        => AttachAnalyzedFramePhotoAsync(entry).SafeFireAndForget("AttachAnalyzedFramePhoto");
+
+    private async Task<string?> AttachAnalyzedFramePhotoAsync(ProtocolEntry entry)
     {
-        var result = CodingAnalyzedFramePhotoAttachmentWorkflow.Execute(
+        var result = await CodingAnalyzedFramePhotoAttachmentWorkflow.ExecuteAsync(
             entry,
-            new CodingAnalyzedFramePhotoAttachmentActions(
-                GetPreferredFrameBytes: TryExtractAnalyzedFrameBytes,
+            new CodingAnalyzedFramePhotoAttachmentAsyncActions(
+                GetPreferredFrameBytesAsync: TryExtractAnalyzedFrameBytesAsync,
                 GetBufferedFrameBytes: () => _liveDetectionController.PendingConfirmationFrameBytes,
                 AttachAnalyzedFramePhoto: frameBytes => CodingAnalyzedFramePhotoAttacher.Attach(
                     entry,
                     frameBytes,
                     _playbackContext.VideoPath),
                 CaptureSnapshot: () => CodingCaptureSnapshot(entry)));
+
+        if (!string.IsNullOrWhiteSpace(result.PhotoPath))
+            RefreshCodingEventsList();
 
         return result.PhotoPath;
     }

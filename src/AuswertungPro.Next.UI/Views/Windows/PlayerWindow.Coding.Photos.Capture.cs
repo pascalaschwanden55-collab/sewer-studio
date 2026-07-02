@@ -14,17 +14,12 @@ public partial class PlayerWindow
     private CodingFrameExtractionService CodingFrameExtractionService
         => _codingPhotoCaptureServicesOwner.FrameExtractionService;
 
-    private byte[]? TryExtractAnalyzedFrameBytes()
+    private Task<byte[]?> TryExtractAnalyzedFrameBytesAsync()
     {
         var sec = CodingAnalyzedFrameTimestampPolicy.Resolve(
             _liveDetectionController.PendingConfirmationTimestampSeconds,
             _codingFrameReadinessController.FirstCleanFrameSeconds);
-        return TryExtractFrameAtSeconds(sec);
-    }
-
-    private byte[]? TryExtractFrameAtSeconds(double? sec)
-    {
-        return CodingFrameExtractionService.TryExtractFrameAtSeconds(_playbackContext.VideoPath, sec);
+        return TryExtractFrameAtSecondsAsync(sec);
     }
 
     private Task<byte[]?> TryExtractFrameAtSecondsAsync(double? sec)

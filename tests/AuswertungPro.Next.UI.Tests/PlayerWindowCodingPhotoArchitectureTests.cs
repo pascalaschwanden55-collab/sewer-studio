@@ -64,12 +64,14 @@ public sealed class PlayerWindowCodingPhotoArchitectureTests
         var photos = File.ReadAllText(photosPath);
         var capture = File.ReadAllText(capturePath);
 
-        Assert.DoesNotContain("private byte[]? TryExtractAnalyzedFrameBytes", photos);
-        Assert.DoesNotContain("private byte[]? TryExtractFrameAtSeconds", photos);
+        Assert.DoesNotContain("private Task<byte[]?> TryExtractAnalyzedFrameBytesAsync", photos);
+        Assert.DoesNotContain("private Task<byte[]?> TryExtractFrameAtSecondsAsync", photos);
         Assert.DoesNotContain("private TimeSpan? GetCurrentPlayerTimestamp", photos);
         Assert.DoesNotContain("private string? CodingCaptureSnapshot", photos);
-        Assert.Contains("private byte[]? TryExtractAnalyzedFrameBytes", capture);
-        Assert.Contains("private byte[]? TryExtractFrameAtSeconds", capture);
+        Assert.Contains("private Task<byte[]?> TryExtractAnalyzedFrameBytesAsync", capture);
+        Assert.DoesNotContain("private byte[]? TryExtractAnalyzedFrameBytes", capture);
+        Assert.Contains("private Task<byte[]?> TryExtractFrameAtSecondsAsync", capture);
+        Assert.DoesNotContain("private byte[]? TryExtractFrameAtSeconds", capture);
         Assert.Contains("private TimeSpan? GetCurrentPlayerTimestamp", capture);
         Assert.Contains("private string? CodingCaptureSnapshot", capture);
         Assert.Contains("CodingFrameExtractionService", capture);

@@ -30,9 +30,6 @@ public sealed class CodingFrameExtractionService
         _log = log ?? (_ => { });
     }
 
-    public byte[]? TryExtractFrameAtSeconds(string? videoPath, double? seconds)
-        => TryExtractFrameAtSecondsAsync(videoPath, seconds).GetAwaiter().GetResult();
-
     public async Task<byte[]?> TryExtractFrameAtSecondsAsync(
         string? videoPath,
         double? seconds,

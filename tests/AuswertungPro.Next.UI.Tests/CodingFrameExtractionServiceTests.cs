@@ -1,19 +1,35 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AuswertungPro.Next.UI.Ai;
+using static AuswertungPro.Next.UI.Tests.SourceTextTestHelpers;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class CodingFrameExtractionServiceTests
 {
+    [Fact]
+    public void CodingFrameExtractionService_hat_keinen_blockierenden_sync_wrapper()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "AuswertungPro.Next.UI",
+            "Ai",
+            "CodingFrameExtractionService.cs"));
+
+        Assert.DoesNotContain(".GetAwaiter().GetResult()", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("public byte[]? TryExtractFrameAtSeconds(", source, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(null, 1.0)]
     [InlineData("", 1.0)]
     [InlineData("video.mp4", null)]
     [InlineData("video.mp4", -1.0)]
-    public void TryExtractFrameAtSeconds_returns_null_for_invalid_input(string? videoPath, double? seconds)
+    public async Task TryExtractFrameAtSecondsAsync_returns_null_for_invalid_input(string? videoPath, double? seconds)
     {
         var extractorCalled = false;
         var service = new CodingFrameExtractionService(
@@ -24,26 +40,26 @@ public sealed class CodingFrameExtractionServiceTests
                 return Task.FromResult<byte[]?>(new byte[] { 1 });
             });
 
-        var result = service.TryExtractFrameAtSeconds(videoPath, seconds);
+        var result = await service.TryExtractFrameAtSecondsAsync(videoPath, seconds);
 
         Assert.Null(result);
         Assert.False(extractorCalled);
     }
 
     [Fact]
-    public void TryExtractFrameAtSeconds_returns_null_when_ffmpeg_is_missing()
+    public async Task TryExtractFrameAtSecondsAsync_returns_null_when_ffmpeg_is_missing()
     {
         var service = new CodingFrameExtractionService(
             () => "",
             (_, _, _, _) => throw new InvalidOperationException("Extractor must not run."));
 
-        var result = service.TryExtractFrameAtSeconds("video.mp4", 2.5);
+        var result = await service.TryExtractFrameAtSecondsAsync("video.mp4", 2.5);
 
         Assert.Null(result);
     }
 
     [Fact]
-    public void TryExtractFrameAtSeconds_calls_extractor_with_resolved_values()
+    public async Task TryExtractFrameAtSecondsAsync_calls_extractor_with_resolved_values()
     {
         string? capturedFfmpeg = null;
         string? capturedVideo = null;
@@ -60,7 +76,7 @@ public sealed class CodingFrameExtractionServiceTests
                 return Task.FromResult<byte[]?>(new byte[] { 4, 5, 6 });
             });
 
-        var result = service.TryExtractFrameAtSeconds("video.mp4", 2.5);
+        var result = await service.TryExtractFrameAtSecondsAsync("video.mp4", 2.5);
 
         Assert.Equal(new byte[] { 4, 5, 6 }, result);
         Assert.Equal("ffmpeg.exe", capturedFfmpeg);
@@ -86,7 +102,7 @@ public sealed class CodingFrameExtractionServiceTests
     }
 
     [Fact]
-    public void TryExtractFrameAtSeconds_logs_and_returns_null_when_extractor_fails()
+    public async Task TryExtractFrameAtSecondsAsync_logs_and_returns_null_when_extractor_fails()
     {
         var logs = new List<string>();
         var service = new CodingFrameExtractionService(
@@ -94,7 +110,7 @@ public sealed class CodingFrameExtractionServiceTests
             (_, _, _, _) => throw new InvalidOperationException("kaputt"),
             logs.Add);
 
-        var result = service.TryExtractFrameAtSeconds("video.mp4", 1.0);
+        var result = await service.TryExtractFrameAtSecondsAsync("video.mp4", 1.0);
 
         Assert.Null(result);
         var log = Assert.Single(logs);
