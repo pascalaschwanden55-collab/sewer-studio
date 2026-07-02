@@ -233,6 +233,22 @@ public sealed class SourceTextArchitectureHygieneTests
     }
 
     [Fact]
+    public void Player_window_overlay_rendering_guards_live_in_focused_suite()
+    {
+        var root = SourceTextTestHelpers.FindRepositoryRoot();
+        var focusedPath = Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "PlayerWindowOverlayRenderingArchitectureTests.cs");
+        var guard = File.ReadAllText(Path.Combine(root, "tests", "AuswertungPro.Next.UI.Tests", "UiArchitectureGuardTests.cs"));
+
+        Assert.True(File.Exists(focusedPath), "Overlay-Rendering-Architekturguards sollen in einer eigenen fokussierten Testdatei liegen.");
+
+        var focused = File.ReadAllText(focusedPath);
+        const string methodName = "PlayerWindow_active_schema_rendering_delegates_to_render_controller";
+
+        Assert.Contains($"public void {methodName}", focused);
+        Assert.DoesNotContain($"public void {methodName}", guard);
+    }
+
+    [Fact]
     public void Player_window_visual_infrastructure_guards_live_in_focused_suite()
     {
         var root = SourceTextTestHelpers.FindRepositoryRoot();
@@ -1107,6 +1123,7 @@ public sealed class SourceTextArchitectureHygieneTests
     [InlineData("PlayerWindowMediaInfrastructureArchitectureTests.cs")]
     [InlineData("PlayerWindowOverlayCleanupArchitectureTests.cs")]
     [InlineData("PlayerWindowOverlayInputArchitectureTests.cs")]
+    [InlineData("PlayerWindowOverlayRenderingArchitectureTests.cs")]
     [InlineData("PlayerWindowPlaybackArchitectureTests.cs")]
     [InlineData("PlayerWindowPrimaryDamageArchitectureTests.cs")]
     [InlineData("PlayerWindowProtocolPdfArchitectureTests.cs")]
