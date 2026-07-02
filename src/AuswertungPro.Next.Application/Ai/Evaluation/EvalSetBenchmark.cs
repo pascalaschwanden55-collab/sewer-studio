@@ -308,11 +308,11 @@ public static class YoloDetectBaselineScorer
     public static void WriteCsv(string path, IReadOnlyList<YoloDetectBaselineRow> rows)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
-        writer.WriteLine("frame,expected_code,expected_has_label,negative_kind,detected,detection_count,top_class,top_confidence,roundtrip_ms,inference_ms,queue_wait_ms,model_name,model_backend,device,vram_allocated_gb,vram_total_gb,gpu_utilization_percent,frame_class,error");
+        var sb = new StringBuilder();
+        sb.AppendLine("frame,expected_code,expected_has_label,negative_kind,detected,detection_count,top_class,top_confidence,roundtrip_ms,inference_ms,queue_wait_ms,model_name,model_backend,device,vram_allocated_gb,vram_total_gb,gpu_utilization_percent,frame_class,error");
         foreach (var r in rows)
         {
-            writer.WriteLine(string.Join(",",
+            sb.AppendLine(string.Join(",",
                 Csv(r.FrameFileName),
                 Csv(r.ExpectedFullCode),
                 Bool(r.ExpectedHasLabel),
@@ -333,17 +333,18 @@ public static class YoloDetectBaselineScorer
                 Csv(r.FrameClass ?? ""),
                 Csv(r.Error ?? "")));
         }
+        AtomicTextFileWriter.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
     }
 
     public static void WriteSweepCsv(string path, IReadOnlyList<YoloDetectThresholdSummary> sweep)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
-        writer.WriteLine("threshold,total,expected_positive,expected_negative,no_damage_negative,unlabeled_visible_or_other_code,detected_frames,true_positive,false_negative,false_positive,true_negative,total_detections,recall,precision,fp_per_frame,fp_rate,avg_roundtrip_ms,p50_roundtrip_ms,p95_roundtrip_ms,avg_inference_ms,p50_inference_ms,p95_inference_ms,avg_queue_wait_ms,max_vram_allocated_gb,max_vram_total_gb,max_gpu_utilization_percent");
+        var sb = new StringBuilder();
+        sb.AppendLine("threshold,total,expected_positive,expected_negative,no_damage_negative,unlabeled_visible_or_other_code,detected_frames,true_positive,false_negative,false_positive,true_negative,total_detections,recall,precision,fp_per_frame,fp_rate,avg_roundtrip_ms,p50_roundtrip_ms,p95_roundtrip_ms,avg_inference_ms,p50_inference_ms,p95_inference_ms,avg_queue_wait_ms,max_vram_allocated_gb,max_vram_total_gb,max_gpu_utilization_percent");
         foreach (var s in sweep)
         {
             var r = s.Summary;
-            writer.WriteLine(string.Join(",",
+            sb.AppendLine(string.Join(",",
                 s.ConfidenceThreshold.ToString(CultureInfo.InvariantCulture),
                 r.Total.ToString(CultureInfo.InvariantCulture),
                 r.ExpectedPositiveFrames.ToString(CultureInfo.InvariantCulture),
@@ -371,6 +372,7 @@ public static class YoloDetectBaselineScorer
                 NullableDouble(r.MaxVramTotalGb),
                 NullableDouble(r.MaxGpuUtilizationPercent)));
         }
+        AtomicTextFileWriter.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
     }
 
     public static void WriteSummaryJson(
@@ -839,11 +841,11 @@ public static class EvalSetBenchmarkScorer
     public static void WriteCsv(string path, IReadOnlyList<EvalSetBenchmarkRow> rows)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
-        writer.WriteLine("frame,gt_full,gt_main,kategorie,pred,exact,main,group,null_resp,negativ_correct,time_ms,severity,error");
+        var sb = new StringBuilder();
+        sb.AppendLine("frame,gt_full,gt_main,kategorie,pred,exact,main,group,null_resp,negativ_correct,time_ms,severity,error");
         foreach (var r in rows)
         {
-            writer.WriteLine(string.Join(",",
+            sb.AppendLine(string.Join(",",
                 Csv(r.FrameFileName),
                 Csv(r.ExpectedFullCode),
                 Csv(r.ExpectedMainCode),
@@ -858,6 +860,7 @@ public static class EvalSetBenchmarkScorer
                 r.Severity.ToString(CultureInfo.InvariantCulture),
                 Csv(r.Error ?? "")));
         }
+        AtomicTextFileWriter.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
     }
 
     public static void WriteSummaryJson(string path, EvalSetBenchmarkSummary summary, object metadata)
@@ -870,11 +873,11 @@ public static class EvalSetBenchmarkScorer
     public static void WriteByCodeCsv(string path, IReadOnlyList<EvalSetCodeSummary> summaries)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
-        writer.WriteLine("expected,total,exact_correct,main_correct,group_correct,null_responses,predicted_leer,exact_accuracy,top_prediction,top_prediction_count");
+        var sb = new StringBuilder();
+        sb.AppendLine("expected,total,exact_correct,main_correct,group_correct,null_responses,predicted_leer,exact_accuracy,top_prediction,top_prediction_count");
         foreach (var s in summaries)
         {
-            writer.WriteLine(string.Join(",",
+            sb.AppendLine(string.Join(",",
                 Csv(s.ExpectedCode),
                 s.Total.ToString(CultureInfo.InvariantCulture),
                 s.ExactCorrect.ToString(CultureInfo.InvariantCulture),
@@ -886,20 +889,22 @@ public static class EvalSetBenchmarkScorer
                 Csv(s.TopPrediction),
                 s.TopPredictionCount.ToString(CultureInfo.InvariantCulture)));
         }
+        AtomicTextFileWriter.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
     }
 
     public static void WriteConfusionCsv(string path, IReadOnlyList<EvalSetConfusionEntry> entries)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        using var writer = new StreamWriter(path, false, new UTF8Encoding(false));
-        writer.WriteLine("expected,predicted,count");
+        var sb = new StringBuilder();
+        sb.AppendLine("expected,predicted,count");
         foreach (var c in entries)
         {
-            writer.WriteLine(string.Join(",",
+            sb.AppendLine(string.Join(",",
                 Csv(c.ExpectedCode),
                 Csv(c.PredictedCode),
                 c.Count.ToString(CultureInfo.InvariantCulture)));
         }
+        AtomicTextFileWriter.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
     }
 
     private static bool SameGroup(string predicted, string expected)

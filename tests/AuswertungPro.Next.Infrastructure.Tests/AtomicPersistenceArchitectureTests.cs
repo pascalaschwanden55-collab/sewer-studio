@@ -36,6 +36,7 @@ public sealed class AtomicPersistenceArchitectureTests
         Assert.DoesNotContain("File.WriteAllTextAsync(", source, System.StringComparison.Ordinal);
         Assert.DoesNotContain("File.WriteAllLines(", source, System.StringComparison.Ordinal);
         Assert.DoesNotContain("File.WriteAllLinesAsync(", source, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("new StreamWriter(path", source, System.StringComparison.Ordinal);
         Assert.Contains("AtomicTextFileWriter.WriteAllText", source, System.StringComparison.Ordinal);
     }
 
