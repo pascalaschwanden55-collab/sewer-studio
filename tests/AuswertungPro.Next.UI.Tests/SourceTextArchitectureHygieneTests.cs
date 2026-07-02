@@ -530,7 +530,10 @@ public sealed class SourceTextArchitectureHygieneTests
         var methodNames = new[]
         {
             "PlayerWindow_multi_model_analysis_sequence_lives_in_command_workflow",
-            "PlayerWindow_multi_model_ai_events_live_in_multimodel_partial"
+            "PlayerWindow_multi_model_ai_events_live_in_multimodel_partial",
+            "PlayerWindow_segmented_finding_projection_lives_in_mapper",
+            "PlayerWindow_multi_model_coverage_uses_existing_policy",
+            "PlayerWindow_multi_model_quality_gate_uses_policy"
         };
 
         foreach (var methodName in methodNames)
