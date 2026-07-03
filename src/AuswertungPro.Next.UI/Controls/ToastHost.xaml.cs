@@ -83,8 +83,21 @@ public partial class ToastHost : UserControl
         var duration = new Duration(AnimationTokens.Normal);
 
         border.BeginAnimation(OpacityProperty, new DoubleAnimation(0d, 1d, duration) { EasingFunction = ease });
-        if (border.RenderTransform is TranslateTransform translate)
-            translate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(12d, 0d, duration) { EasingFunction = ease });
+        var translate = EnsureMutableTranslateTransform(border);
+        translate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(12d, 0d, duration) { EasingFunction = ease });
+    }
+
+    private static TranslateTransform EnsureMutableTranslateTransform(Border border)
+    {
+        if (border.RenderTransform is TranslateTransform { IsFrozen: false } translate)
+            return translate;
+
+        var mutable = border.RenderTransform is TranslateTransform frozen
+            ? frozen.CloneCurrentValue()
+            : new TranslateTransform { Y = 12d };
+
+        border.RenderTransform = mutable;
+        return mutable;
     }
 
     private void Toast_Click(object sender, MouseButtonEventArgs e)
