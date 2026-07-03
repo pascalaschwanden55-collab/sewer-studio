@@ -66,6 +66,16 @@ public partial class PipeGraphTimeline : UserControl
         DependencyProperty.Register(nameof(IsRejectedAccessor), typeof(Func<object, bool>), typeof(PipeGraphTimeline),
             new PropertyMetadata(null, OnMarkersChanged));
 
+    /// <summary>Optional: End-Meter fuer Streckenschaeden — Marker wird als Balken von Meter bis Ende gezeichnet.</summary>
+    public static readonly DependencyProperty EndMeterAccessorProperty =
+        DependencyProperty.Register(nameof(EndMeterAccessor), typeof(Func<object, double?>), typeof(PipeGraphTimeline),
+            new PropertyMetadata(null, OnMarkersChanged));
+
+    /// <summary>Optional: explizite Markerfarbe — ueberschreibt die QualityGate-Klassifizierung (Schadensband).</summary>
+    public static readonly DependencyProperty ColorKindAccessorProperty =
+        DependencyProperty.Register(nameof(ColorKindAccessor), typeof(Func<object, MarkerColorKind?>), typeof(PipeGraphTimeline),
+            new PropertyMetadata(null, OnMarkersChanged));
+
     public double TotalLength { get => (double)GetValue(TotalLengthProperty); set => SetValue(TotalLengthProperty, value); }
     public double CurrentMeter { get => (double)GetValue(CurrentMeterProperty); set => SetValue(CurrentMeterProperty, value); }
     public IEnumerable? Markers { get => (IEnumerable?)GetValue(MarkersProperty); set => SetValue(MarkersProperty, value); }
@@ -75,6 +85,8 @@ public partial class PipeGraphTimeline : UserControl
     public Func<object, string>? CodeAccessor { get => (Func<object, string>?)GetValue(CodeAccessorProperty); set => SetValue(CodeAccessorProperty, value); }
     public Func<object, double>? ConfidenceAccessor { get => (Func<object, double>?)GetValue(ConfidenceAccessorProperty); set => SetValue(ConfidenceAccessorProperty, value); }
     public Func<object, bool>? IsRejectedAccessor { get => (Func<object, bool>?)GetValue(IsRejectedAccessorProperty); set => SetValue(IsRejectedAccessorProperty, value); }
+    public Func<object, double?>? EndMeterAccessor { get => (Func<object, double?>?)GetValue(EndMeterAccessorProperty); set => SetValue(EndMeterAccessorProperty, value); }
+    public Func<object, MarkerColorKind?>? ColorKindAccessor { get => (Func<object, MarkerColorKind?>?)GetValue(ColorKindAccessorProperty); set => SetValue(ColorKindAccessorProperty, value); }
 
     // ═══════ Farben (QualityGate) ═══════
 
@@ -191,28 +203,41 @@ public partial class PipeGraphTimeline : UserControl
             string code = CodeAccessor?.Invoke(item) ?? "?";
             double conf = ConfidenceAccessor?.Invoke(item) ?? -1;
             bool rejected = IsRejectedAccessor?.Invoke(item) ?? false;
+            double? endMeter = EndMeterAccessor?.Invoke(item);
 
             double x = TimelineScaleCalculator.MeterToX(meter, TotalLength, canvasW);
 
-            // Farbe nach QualityGate-Zone
-            var color = MarkerColorClassifier.Classify(rejected, conf);
+            // Farbe: explizit (Schadensband) oder QualityGate-Zone
+            var color = ColorKindAccessor?.Invoke(item)
+                        ?? MarkerColorClassifier.Classify(rejected, conf);
             Brush fill = BrushForMarkerColor(color);
 
-            // Vertikaler Balken (wie im Mockup)
+            // Streckenschaden: Balken von Meter bis Ende; sonst schmaler Punkt-Marker
+            var istStrecke = endMeter is double em && em > meter;
+            double breite = 6;
+            if (istStrecke)
+            {
+                double x2 = TimelineScaleCalculator.MeterToX(endMeter!.Value, TotalLength, canvasW);
+                breite = Math.Max(6, x2 - x);
+            }
+
+            var normalOpacity = rejected ? 0.4 : (istStrecke ? 0.55 : 0.9);
             var bar = new Border
             {
-                Width = 6,
+                Width = breite,
                 Height = 28,
                 CornerRadius = new CornerRadius(3),
                 Background = fill,
-                ToolTip = $"{code}  {meter:F2}m" + (conf >= 0 ? $"  ({conf * 100:F0}%)" : ""),
+                ToolTip = istStrecke
+                    ? $"{code}  {meter:F2}–{endMeter!.Value:F2}m"
+                    : $"{code}  {meter:F2}m" + (conf >= 0 ? $"  ({conf * 100:F0}%)" : ""),
                 Cursor = Cursors.Hand,
-                Opacity = rejected ? 0.4 : 0.9
+                Opacity = normalOpacity
             };
 
             // Hover-Effekt
             bar.MouseEnter += (s, _) => { if (s is Border b) { b.Opacity = 1.0; b.Height = 34; } };
-            bar.MouseLeave += (s, _) => { if (s is Border b) { b.Opacity = rejected ? 0.4 : 0.9; b.Height = 28; } };
+            bar.MouseLeave += (s, _) => { if (s is Border b) { b.Opacity = normalOpacity; b.Height = 28; } };
 
             // Klick auf Marker
             var capturedItem = item;
@@ -222,13 +247,14 @@ public partial class PipeGraphTimeline : UserControl
                 MarkerClickedCommand?.Execute(capturedItem);
             };
 
-            Canvas.SetLeft(bar, x - 3);
+            Canvas.SetLeft(bar, istStrecke ? x : x - 3);
             Canvas.SetTop(bar, 4);
             MarkerCanvas.Children.Add(bar);
 
             // Code-Label unter dem Balken (nur wenn genug Platz)
             if (canvasW > 200)
             {
+                var labelX = istStrecke ? x + breite / 2 : x;
                 var label = new TextBlock
                 {
                     Text = code,
@@ -237,7 +263,7 @@ public partial class PipeGraphTimeline : UserControl
                     Foreground = fill,
                     TextAlignment = TextAlignment.Center
                 };
-                Canvas.SetLeft(label, x - 14);
+                Canvas.SetLeft(label, labelX - 14);
                 Canvas.SetTop(label, 34);
                 MarkerCanvas.Children.Add(label);
             }

@@ -21,6 +21,13 @@ public partial class HaltungsansichtView : UserControl
         RestoreSchadenHeight();
         IsVisibleChanged += (_, _) => RefreshDetail();
 
+        // Schadensband: Marker-Klick selektiert den Eintrag in der Schaeden-Liste.
+        Schadensband.MarkerClicked += quelle =>
+        {
+            SchadenList.SelectedItem = quelle;
+            SchadenList.ScrollIntoView(quelle);
+        };
+
         // Hover-Foto-Vorschau: Projekt-ROOT fuer relative FotoPaths. _settings wird erst nach dem
         // Konstruktor via Settings-Property gesetzt -> Closure liest den aktuellen Wert bei jedem Hover.
         Behaviors.PhotoHoverPreviewBehavior.SetProjectRootProvider(
@@ -144,6 +151,8 @@ public partial class HaltungsansichtView : UserControl
     {
         if (!IsVisible)
             return;
+
+        Schadensband.Update(HaltungList.SelectedItem as HaltungRecord);
 
         if (HaltungList.SelectedItem is not HaltungRecord record || DetailBuilder is null)
         {

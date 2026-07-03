@@ -1,6 +1,7 @@
 namespace AuswertungPro.Next.UI.Controls;
 
-internal enum MarkerColorKind
+// Public: wird auch vom HaltungSchadensbandBuilder (Schadensband der Haltungsansicht) geliefert.
+public enum MarkerColorKind
 {
     Green,
     Yellow,
