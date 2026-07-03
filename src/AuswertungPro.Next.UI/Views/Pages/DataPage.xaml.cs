@@ -1062,6 +1062,14 @@ public partial class DataPage : System.Windows.Controls.UserControl
         ExecuteRecordMenuCommand(sender, vm, vm.OpenOriginalPdfCommand, "PDF");
     }
 
+    private void OpenDichtheitPdfMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+
+        ExecuteRecordMenuCommand(sender, vm, vm.OpenDichtheitPdfCommand, "Dichtheitspruefung");
+    }
+
     private void OpenContainingFolderMenu_Click(object sender, RoutedEventArgs e)
     {
         if (DataContext is not DataPageViewModel vm)

@@ -1,0 +1,128 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Common;
+
+namespace AuswertungPro.Next.Infrastructure.Import;
+
+/// <summary>
+/// Verteilt beim Ein-Knopf-Import Dichtheitspruefungsprotokolle (DP) aus der
+/// Quelle in die Haltungsordner — Dateiname &lt;JJJJMMTT&gt;_&lt;Haltung&gt;_DP.pdf.
+/// Kandidaten sind PDFs aus Ordnern mit DP-/Dichtheits-Hinweis im Namen
+/// (z.B. 048473_DP_Gross, 048473_DP_klein). Die Haltungszuordnung uebernimmt
+/// die bestehende Logik <see cref="HoldingFolderDistributor.DistributeDichtheitFiles"/>
+/// (liest die Schaechte aus dem PDF-Inhalt). Kanalfernseh- und DP-Protokolle
+/// liegen damit gemeinsam im Haltungen_Verteilt-Ordner.
+/// </summary>
+public static class DichtheitImportDistributor
+{
+    public sealed record Result(
+        int Verteilt,
+        int NichtZugeordnet,
+        int Uebersprungen,
+        IReadOnlyList<string> Messages);
+
+    // Ordnersegment weist auf Dichtheitspruefung hin: "DP" als eigenes Wort
+    // (048473_DP_Gross) oder "Dichtheit..." im Namen.
+    private static readonly Regex DpOrdnerRegex = new(
+        @"(^|[_\-\s])DP($|[_\-\s])|Dichtheit",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    public static Result Distribute(Project project, string projectFolder, string sourceFolder)
+    {
+        var messages = new List<string>();
+        var kandidaten = FindeKandidaten(sourceFolder);
+        if (kandidaten.Count == 0)
+            return new Result(0, 0, 0, messages);
+
+        var zielRoot = Path.Combine(projectFolder, ProjectStructure.HaltungenVerteilt);
+
+        // Idempotenz-Guard: bereits verteilte DP-Protokolle (gleiche Dateigroesse)
+        // nicht erneut kopieren — DistributeDichtheitFiles wuerde sonst bei jedem
+        // Lauf _01-Duplikate anlegen.
+        var vorhandeneGroessen = LeseVorhandeneDpGroessen(zielRoot);
+        var neue = new List<string>();
+        var uebersprungen = 0;
+        foreach (var kandidat in kandidaten)
+        {
+            long groesse;
+            try { groesse = new FileInfo(kandidat).Length; }
+            catch { continue; }
+
+            if (vorhandeneGroessen.Contains(groesse))
+                uebersprungen++;
+            else
+                neue.Add(kandidat);
+        }
+
+        if (neue.Count == 0)
+            return new Result(0, 0, uebersprungen, messages);
+
+        var results = HoldingFolderDistributor.DistributeDichtheitFiles(neue, zielRoot, project: project);
+
+        var verteilt = results.Count(r => r.Success);
+        var nichtZugeordnet = 0;
+        foreach (var r in results.Where(r => !r.Success))
+        {
+            nichtZugeordnet++;
+            messages.Add($"DP nicht zugeordnet: {Path.GetFileName(r.SourcePdfPath ?? "?")} — {r.Message}");
+        }
+
+        return new Result(verteilt, nichtZugeordnet, uebersprungen, messages);
+    }
+
+    /// <summary>PDFs aus DP-/Dichtheits-Ordnern der Quelle (rekursiv).</summary>
+    internal static IReadOnlyList<string> FindeKandidaten(string sourceFolder)
+    {
+        if (string.IsNullOrWhiteSpace(sourceFolder) || !Directory.Exists(sourceFolder))
+            return Array.Empty<string>();
+
+        try
+        {
+            return SafeFileEnumeration.EnumerateFilesSafe(sourceFolder, "*.pdf", recursive: true)
+                .Where(p => LiegtInDpOrdner(p, sourceFolder))
+                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
+    }
+
+    private static bool LiegtInDpOrdner(string pdfPath, string sourceFolder)
+    {
+        var dir = Path.GetDirectoryName(pdfPath);
+        while (!string.IsNullOrEmpty(dir)
+               && dir.StartsWith(sourceFolder, StringComparison.OrdinalIgnoreCase)
+               && !string.Equals(dir, sourceFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            if (DpOrdnerRegex.IsMatch(Path.GetFileName(dir)))
+                return true;
+            dir = Path.GetDirectoryName(dir);
+        }
+
+        return false;
+    }
+
+    private static HashSet<long> LeseVorhandeneDpGroessen(string zielRoot)
+    {
+        var groessen = new HashSet<long>();
+        if (!Directory.Exists(zielRoot))
+            return groessen;
+
+        try
+        {
+            foreach (var pfad in SafeFileEnumeration.EnumerateFilesSafe(zielRoot, "*_DP*.pdf", recursive: true))
+            {
+                try { groessen.Add(new FileInfo(pfad).Length); } catch { }
+            }
+        }
+        catch { }
+
+        return groessen;
+    }
+}

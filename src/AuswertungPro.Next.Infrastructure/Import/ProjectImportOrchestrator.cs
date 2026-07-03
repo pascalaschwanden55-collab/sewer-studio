@@ -201,16 +201,13 @@ public sealed class ProjectImportOrchestrator
         // ------------------------------------------------------------------
         // Schritt 5b: KINS-Anreicherung (Namen, Timecodes/Laenge, DBF-Stammdaten)
         // ------------------------------------------------------------------
-        IReadOnlyDictionary<string, HaltungRecord> kinsBezeichnungen =
-            new Dictionary<string, HaltungRecord>(StringComparer.OrdinalIgnoreCase);
         if (det.Format == KanalExportFormat.Kins)
         {
             try
             {
                 // 1. Numerische XTF-Bezeichnungen → "{Schacht_oben}-{Schacht_unten}"
-                //    (merkt die Bezeichnung fuer die PDF-Zuordnung, raeumt Re-Import-Duplikate ab)
+                //    (merkt die Bezeichnung, raeumt Re-Import-Duplikate ab)
                 var nameResult = Kins.KinsHoldingNameNormalizer.Apply(project, ctx);
-                kinsBezeichnungen = nameResult.RecordsProBezeichnung;
                 messages.AddRange(nameResult.Messages);
                 if (nameResult.Umbenannt > 0 || nameResult.DuplikateEntfernt > 0)
                     messages.Add($"KINS-Namen: {nameResult.Umbenannt} normalisiert, {nameResult.DuplikateEntfernt} Re-Import-Duplikate entfernt.");
@@ -317,7 +314,7 @@ public sealed class ProjectImportOrchestrator
             //     KINS: Der Seiten-Split laeuft auf dem expliziten Gesamtprotokoll aus der Quelle
             //     (*_Protokoll.pdf) — die Auto-Wahl "groesste Archiv-PDF" traefe sonst Plaene/fremde PDFs.
             var kinsGesamtprotokoll = det.Format == KanalExportFormat.Kins
-                ? Kins.KinsProtocolPdfDistributor.FindeGesamtprotokoll(sourceFolder)
+                ? Kins.KinsGesamtprotokollLocator.Finde(sourceFolder)
                 : null;
             var archivedPdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
             var distResult = KanalImportDistributor.Distribute(
@@ -327,16 +324,14 @@ public sealed class ProjectImportOrchestrator
             messages.AddRange(distResult.Messages);
             errors += distResult.Errors;
 
-            // 7c-KINS) Einzelprotokoll-PDFs (…Haltung<N>.pdf) aus der QUELLE als Luecken-Fallback:
-            //     versorgt nur Haltungen, denen der Gesamt-PDF-Split kein Protokoll zugeordnet hat.
-            if (det.Format == KanalExportFormat.Kins)
-            {
-                var pdfResult = Kins.KinsProtocolPdfDistributor.Distribute(
-                    project, projectFolder, sourceFolder, kinsBezeichnungen);
-                messages.AddRange(pdfResult.Messages);
-                errors += pdfResult.Errors;
-                messages.Add($"KINS-PDF: {pdfResult.PdfsVerteilt} Einzelprotokolle als Fallback verteilt.");
-            }
+            // 7c) Dichtheitspruefungsprotokolle (DP) aus der Quelle je Haltung verteilen
+            //     (<JJJJMMTT>_<H>_DP.pdf) — Kanalfernseh- UND DP-Protokolle liegen damit
+            //     gemeinsam im Haltungen_Verteilt-Ordner. Kandidaten kommen aus Ordnern
+            //     mit DP-/Dichtheits-Hinweis (z.B. 048473_DP_Gross); ohne solche Ordner no-op.
+            var dpResult = DichtheitImportDistributor.Distribute(project, projectFolder, sourceFolder);
+            messages.AddRange(dpResult.Messages);
+            if (dpResult.Verteilt > 0 || dpResult.NichtZugeordnet > 0 || dpResult.Uebersprungen > 0)
+                messages.Add($"Dichtheitspruefung: {dpResult.Verteilt} Protokolle verteilt, {dpResult.NichtZugeordnet} nicht zugeordnet, {dpResult.Uebersprungen} bereits vorhanden.");
 
             // HINWEIS: Schächte verteilt der Import bewusst NICHT (includeSchacht:false oben) — das macht der
             // Anwender manuell über „Schacht Verteilen" mit dem separaten Schacht-Gesamtauszug-PDF, damit kein

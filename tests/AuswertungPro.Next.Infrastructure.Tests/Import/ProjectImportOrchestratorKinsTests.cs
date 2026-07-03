@@ -180,13 +180,9 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
         Assert.False(Path.IsPathRooted(link), $"Link nicht relativ: {link}");
         Assert.True(File.Exists(Path.Combine(projectDir, link!)), $"Video fehlt: {link}");
 
-        // Einzelprotokoll-PDF (Haltung10.pdf, NICHT Haltung1.pdf) verteilt + relativ
-        var pdf = record.GetFieldValue("PDF_Path");
-        Assert.False(string.IsNullOrWhiteSpace(pdf), "PDF_Path leer");
-        Assert.False(Path.IsPathRooted(pdf), $"PDF_Path nicht relativ: {pdf}");
-        var pdfVoll = Path.Combine(projectDir, pdf!);
-        Assert.True(File.Exists(pdfVoll), $"PDF fehlt: {pdf}");
-        Assert.Equal("%PDF-1.4 dummy", File.ReadAllText(pdfVoll));
+        // DP-Kandidaten aus dem DP_Gross-Ordner wurden angefasst (Fake-PDFs sind
+        // inhaltlich nicht zuordenbar → als nicht zugeordnet gemeldet, kein Absturz).
+        Assert.Contains(result.Messages, m => m.StartsWith("Dichtheitspruefung:", StringComparison.Ordinal));
 
         // XTF archiviert
         Assert.True(
@@ -219,7 +215,7 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
     {
         var (sourceDir, _) = ErstelleMiniKinsFixture();
 
-        var gefunden = KinsProtocolPdfDistributor.FindeGesamtprotokoll(sourceDir);
+        var gefunden = KinsGesamtprotokollLocator.Finde(sourceDir);
 
         Assert.NotNull(gefunden);
         Assert.EndsWith("048473_Protokoll.pdf", gefunden);
@@ -232,7 +228,35 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "irgendwas.pdf"), "%PDF");
 
-        Assert.Null(KinsProtocolPdfDistributor.FindeGesamtprotokoll(dir));
+        Assert.Null(KinsGesamtprotokollLocator.Finde(dir));
+    }
+
+    [Fact]
+    public void DichtheitKandidaten_NurAusDpOrdnern()
+    {
+        var (sourceDir, _) = ErstelleMiniKinsFixture();
+
+        var kandidaten = DichtheitImportDistributor.FindeKandidaten(sourceDir);
+
+        // Beide PDFs aus 048473_DP_Gross, aber nichts aus 048473_PDF oder VSAKEK.
+        Assert.Equal(2, kandidaten.Count);
+        Assert.All(kandidaten, k => Assert.Contains("DP_Gross", k));
+    }
+
+    [Fact]
+    public void DichtheitVerteilung_UeberspringtBereitsVorhandene()
+    {
+        // Idempotenz-Guard: liegt im Ziel schon eine *_DP*.pdf gleicher Groesse,
+        // wird der Kandidat nicht erneut verteilt (keine _01-Duplikate).
+        var (sourceDir, projectDir) = ErstelleMiniKinsFixture();
+        var quelle = Path.Combine(sourceDir, "048473_DP_Gross", "048473-Haltung10.pdf");
+        var zielDir = Path.Combine(projectDir, "Haltungen_Verteilt", "58951-58950");
+        Directory.CreateDirectory(zielDir);
+        File.Copy(quelle, Path.Combine(zielDir, "20260622_58951-58950_DP.pdf"));
+
+        var result = DichtheitImportDistributor.Distribute(new Project(), projectDir, sourceDir);
+
+        Assert.Equal(1, result.Uebersprungen);
     }
 
     [Fact]
@@ -256,8 +280,6 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
 
         var link = record.GetFieldValue("Link");
         Assert.True(File.Exists(Path.Combine(projectDir, link!)), $"Video nach Rename nicht auffindbar: {link}");
-        var pdf = record.GetFieldValue("PDF_Path");
-        Assert.True(File.Exists(Path.Combine(projectDir, pdf!)), $"PDF nach Rename nicht auffindbar: {pdf}");
     }
 
     [Fact]

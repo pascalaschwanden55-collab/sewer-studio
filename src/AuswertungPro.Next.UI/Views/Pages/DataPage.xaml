@@ -490,6 +490,7 @@
                         <MenuItem Header="Play (Gegeninspektion)" Click="PlayGegenMenu_Click" />
                         <MenuItem Header="Haltungsprotokoll AWU drucken..." Click="PrintAwuHaltungsprotokollMenu_Click" />
                         <MenuItem Header="Haltungsprotokoll Original (PDF) öffnen..." Click="OpenOriginalPdfMenu_Click" />
+                        <MenuItem Header="Dichtheitsprüfung (PDF) öffnen..." Click="OpenDichtheitPdfMenu_Click" />
                         <MenuItem Header="Gehe zu Ordner" Click="OpenContainingFolderMenu_Click" />
                         <MenuItem Header="Sanierungsmaßnahmen..." Click="CostsMenu_Click" />
                         <Separator/>

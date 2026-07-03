@@ -91,6 +91,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
     public IRelayCommand<HaltungRecord?> OpenVideoAiPipelineCommand { get; }
     public IRelayCommand<HaltungRecord?> RelinkVideoCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenOriginalPdfCommand { get; }
+    public IRelayCommand<HaltungRecord?> OpenDichtheitPdfCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenContainingFolderCommand { get; }
     public IRelayCommand<HaltungRecord?> PrintAwuHaltungsprotokollCommand { get; }
     public IRelayCommand<HaltungRecord?> OpenCostsCommand { get; }
@@ -349,6 +350,7 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         OpenVideoAiPipelineCommand = new RelayCommand<HaltungRecord?>(OpenVideoAiPipeline);
         RelinkVideoCommand = new RelayCommand<HaltungRecord?>(RelinkVideo);
         OpenOriginalPdfCommand = new RelayCommand<HaltungRecord?>(OpenOriginalPdf);
+        OpenDichtheitPdfCommand = new RelayCommand<HaltungRecord?>(OpenDichtheitPdf);
         OpenContainingFolderCommand = new RelayCommand<HaltungRecord?>(OpenContainingFolder);
         PrintAwuHaltungsprotokollCommand = new RelayCommand<HaltungRecord?>(PrintAwuHaltungsprotokollPdf);
         OpenCostsCommand = new RelayCommand<HaltungRecord?>(OpenCosts, CanOpenCosts);
@@ -879,20 +881,37 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         _originalPdfController.Open(record);
     }
 
+    /// <summary>Oeffnet das neueste verteilte Dichtheitspruefungsprotokoll der Haltung (…_DP.pdf).</summary>
+    private void OpenDichtheitPdf(HaltungRecord? record)
+    {
+        record ??= Selected;
+        var pdfs = DataPageDichtheitPdfResolver.Resolve(record, _shell.GetProjectFolder());
+        if (pdfs.Count == 0)
+        {
+            var name = record?.GetFieldValue(FieldKeys.HoldingName) ?? "(unbekannt)";
+            _sp.Dialogs.Info(
+                $"Kein Dichtheitspruefungsprotokoll fuer Haltung '{name}' gefunden.\n" +
+                "Dichtheitsprotokolle werden beim Kanalfernseh-Import automatisch verteilt (…_DP.pdf).",
+                "Dichtheitspruefung");
+            return;
+        }
+
+        var (ok, fehler) = DataPageOriginalPdfController.TryShellOpen(pdfs[0]);
+        if (!ok)
+            _sp.Dialogs.Warn($"Dichtheitspruefung konnte nicht geoeffnet werden:\n{fehler}", "Dichtheitspruefung");
+    }
+
     private void OpenContainingFolder(HaltungRecord? record)
     {
         if (record is null)
             return;
 
-        var target = ResolveExistingPath(record.GetFieldValue(FieldKeys.Link))
-                     ?? EnsureProtocolPath(record);
-
-        if (string.IsNullOrWhiteSpace(target))
-        {
-            var projectFolder = _shell.GetProjectFolder() ?? "";
-            var paths = DataPageProtocolPathResolver.ResolveOriginalPdfPaths(record, projectFolder);
-            target = paths.Count > 0 ? paths[0] : null;
-        }
+        var target = DataPageContainingFolderTargetResolver.Resolve(
+            record,
+            ResolveExistingPath,
+            EnsureProtocolPath,
+            () => _shell.GetProjectFolder(),
+            DataPageProtocolPathResolver.ResolveOriginalPdfPaths);
 
         if (string.IsNullOrWhiteSpace(target))
         {

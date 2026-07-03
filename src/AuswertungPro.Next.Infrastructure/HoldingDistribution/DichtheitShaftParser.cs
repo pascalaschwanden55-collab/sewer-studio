@@ -14,6 +14,17 @@ internal static class DichtheitShaftParser
         @"unterer\s*Schacht\s*[:\-]?\s*(?<v>" + SchachtIdPattern + ")",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    // KINS-Dichtheitsprotokolle (kleine Leitungen): "von Schacht: X" / "nach Schacht: Y".
+    // Ohne dieses Muster griff der Heuristik-Fallback die Norm-Referenz aus der
+    // Kopfzeile ("Dichtheitspruefung nach SIA190:2017") als Schachtnummer ab.
+    private static readonly Regex VonSchachtRegex = new(
+        @"\bvon\s+Schacht\s*[:\-]?\s*(?<v>" + SchachtIdPattern + ")",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static readonly Regex NachSchachtRegex = new(
+        @"\bnach\s+Schacht\s*[:\-]?\s*(?<v>" + SchachtIdPattern + ")",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     private static readonly Regex ShaftTopRegex = new(
         @"Schacht\s*oben\s*[:\-]?\s*(?<v>" + SchachtIdPattern + ")",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -62,6 +73,16 @@ internal static class DichtheitShaftParser
         {
             var a = top.Groups["v"].Value;
             var b = bottom.Groups["v"].Value;
+            if (!string.Equals(a, b, StringComparison.OrdinalIgnoreCase))
+                return (a, b);
+        }
+
+        var von = VonSchachtRegex.Match(text);
+        var nach = NachSchachtRegex.Match(text);
+        if (von.Success && nach.Success)
+        {
+            var a = von.Groups["v"].Value;
+            var b = nach.Groups["v"].Value;
             if (!string.Equals(a, b, StringComparison.OrdinalIgnoreCase))
                 return (a, b);
         }
