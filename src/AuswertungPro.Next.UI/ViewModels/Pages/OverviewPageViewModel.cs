@@ -70,6 +70,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         {
             if (e.PropertyName == nameof(ShellViewModel.Project) ||
                 e.PropertyName == nameof(ShellViewModel.IsProjectReady) ||
+                e.PropertyName == nameof(ShellViewModel.HasPersistedProject) ||
                 e.PropertyName == nameof(ShellViewModel.IsDirty))
             {
                 OnPropertyChanged(nameof(Project));
@@ -116,7 +117,19 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
                 using var stream = File.OpenRead(file);
                 using var doc = JsonDocument.Parse(stream);
                 var root = doc.RootElement;
-                var name = root.TryGetProperty("Name", out var n) ? n.GetString() : Path.GetFileNameWithoutExtension(file);
+
+                // Namens-Fallback: "projekt.json" heisst wie der Projektordner, nicht "projekt".
+                var fallbackName = Path.GetFileNameWithoutExtension(file);
+                if (string.Equals(fallbackName, "projekt", StringComparison.OrdinalIgnoreCase))
+                {
+                    var projectRoot = AuswertungPro.Next.Application.Common.ProjectFileLocator.ProjectRootFromFile(file);
+                    if (!string.IsNullOrWhiteSpace(projectRoot))
+                        fallbackName = Path.GetFileName(projectRoot);
+                }
+
+                var name = root.TryGetProperty("Name", out var n) && !string.IsNullOrWhiteSpace(n.GetString())
+                    ? n.GetString()
+                    : fallbackName;
                 var desc = root.TryGetProperty("Description", out var d) ? d.GetString() : "";
                 var modified = TryReadModifiedAt(root) ?? File.GetLastWriteTimeUtc(file);
 
@@ -127,7 +140,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
                 entries.Add(new ProjectOverviewEntry
                 {
-                    Name = name ?? Path.GetFileNameWithoutExtension(file),
+                    Name = name ?? fallbackName,
                     Description = desc ?? string.Empty,
                     Path = file,
                     ModifiedAtUtc = modified,
@@ -146,39 +159,18 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
         foreach (var recentPath in _sp.Settings.RecentProjectPaths)
             AddEntry(recentPath, string.Equals(recentPath, LastProjectPath, StringComparison.OrdinalIgnoreCase));
 
-        // 3. Konfiguriertes Projekte-Verzeichnis + Standard-Scan-Ordner
-        var rootDirs = ProjectScanRoots
-            .Resolve(Directory.GetCurrentDirectory(), _sp.Settings.ProjectsRootDirectory)
-            .ToList();
+        // 3. Dateisystem-Scan als Wahrheitsquelle: gelernte Wurzeln (letztes Projekt,
+        //    Merkliste), konfiguriertes Verzeichnis und Standard-Fallbacks. Findet
+        //    Alt-Projekte UND die neue Struktur <Projekt>\Projektdateien\projekt.json —
+        //    auch wenn die Settings-Merkliste verloren ging.
+        var baseDirs = ProjectScanRoots.ResolveAll(
+            Directory.GetCurrentDirectory(),
+            _sp.Settings.ProjectsRootDirectory,
+            _sp.Settings.LastProjectPath,
+            _sp.Settings.RecentProjectPaths);
 
-        // 4. Fallback-Speicherorte: den Ordner selbst UND seine direkten Unterordner scannen
-        var projektBases = new List<string> { @"D:\Projekt", @"C:\Projekt" };
-        if (!string.IsNullOrWhiteSpace(_sp.Settings.ProjectsRootDirectory))
-            projektBases.Insert(0, _sp.Settings.ProjectsRootDirectory!);
-
-        foreach (var projektDir in projektBases)
-        {
-            if (!Directory.Exists(projektDir))
-                continue;
-            rootDirs.Add(projektDir);
-            try
-            {
-                foreach (var subDir in Directory.GetDirectories(projektDir))
-                    rootDirs.Add(subDir);
-            }
-            catch { /* Zugriff verweigert */ }
-        }
-
-        foreach (var dir in rootDirs)
-        {
-            if (!Directory.Exists(dir)) continue;
-            try
-            {
-                foreach (var file in Directory.GetFiles(dir, "*.json"))
-                    AddEntry(file, false);
-            }
-            catch { /* Zugriff verweigert */ }
-        }
+        foreach (var file in ProjectFileDiscovery.FindProjectFiles(baseDirs))
+            AddEntry(file, false);
 
         _allEntries = entries
             .OrderByDescending(e => e.IsLastProject)
@@ -190,9 +182,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
     }
 
     private string BuildProjectStatus()
-        => !IsProjectReady ? "Projekt noch nicht gespeichert"
-           : _shell.Project.Dirty ? "Ungespeicherte Aenderungen"
-           : "Projekt gespeichert";
+        => OverviewProjectStatusPolicy.Build(_shell.Project.Dirty, _shell.HasPersistedProject);
 
     private void NewProject()
     {
@@ -217,8 +207,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             return;
         if (!_shell.TryOpenProject(path))
             return;
-        _sp.Settings.AddRecentProject(path);
-        _sp.Settings.Save();
+        // Merkliste pflegt TryOpenProject selbst.
         LastProjectPath = _sp.Settings.LastProjectPath;
         ProjectStatus = BuildProjectStatus();
         LoadAllProjects();

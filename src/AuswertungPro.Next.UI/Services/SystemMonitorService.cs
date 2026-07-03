@@ -28,6 +28,7 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 {
     private readonly DispatcherTimer _timer;
     private readonly Dispatcher _dispatcher;
+    private readonly bool _enableHardwareSensorInit;
     private int _disposed;
 
     // CPU delta tracking
@@ -74,8 +75,9 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
     private string _sensorBlockedReason = "";
     public string SensorBlockedReason { get => _sensorBlockedReason; private set => Set(ref _sensorBlockedReason, value); }
 
-    public SystemMonitorService()
+    public SystemMonitorService(bool enableHardwareSensorInit = true)
     {
+        _enableHardwareSensorInit = enableHardwareSensorInit;
         _dispatcher = Dispatcher.CurrentDispatcher;
         _timer = new DispatcherTimer(DispatcherPriority.Background, _dispatcher)
         {
@@ -103,8 +105,10 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
             Log($"nvidia-smi: {_nvidiaSmiPath}");
         }
 
-        // Init LibreHardwareMonitor (async to not block UI)
-        Task.Run(InitHardwareMonitor);
+        // Init LibreHardwareMonitor (async to not block UI). Tests can disable this because
+        // some native hardware telemetry drivers crash the process instead of throwing.
+        if (_enableHardwareSensorInit)
+            Task.Run(InitHardwareMonitor);
     }
 
     // ── Properties ───────────────────────────────────────────────────────
@@ -277,6 +281,9 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
     private void InitHardwareMonitor()
     {
+        if (!_enableHardwareSensorInit)
+            return;
+
         if (Volatile.Read(ref _disposed) != 0)
             return;
 
@@ -448,6 +455,9 @@ public sealed class SystemMonitorService : INotifyPropertyChanged, IDisposable
 
     private void PollHardwareMonitor()
     {
+        if (!_enableHardwareSensorInit)
+            return;
+
         if (_computer is null)
         {
             // If init finished but failed, retry once after ~30 seconds

@@ -49,7 +49,8 @@ namespace AuswertungPro.Next.UI
         public ILogger Logger { get; }
         public ILoggerFactory LoggerFactory { get; }
         public ErrorCodeGenerator ErrorCodes { get; } = new();
-        public IDialogService Dialogs { get; } = new DialogService();
+        // Setter nur fuer Tests (InternalsVisibleTo): echte Dialoge durch Fakes ersetzen.
+        public IDialogService Dialogs { get; internal set; } = new DialogService();
         public ToastService Toasts { get; } = new ToastService();
         public IPlaywrightInstallService PlaywrightInstaller { get; }
         #endregion

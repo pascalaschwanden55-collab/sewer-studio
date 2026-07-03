@@ -38,7 +38,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     [ObservableProperty] private string _subtitle = "Bereit";
 
     /// <summary>System resource monitor (CPU, RAM, GPU) — polls every 2s.</summary>
-    public SystemMonitorService Monitor { get; } = new();
+    public SystemMonitorService Monitor { get; }
 
     public Project Project => _project;
     private Project _project = new();
@@ -71,6 +71,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     public IRelayCommand ToggleFocusModeCommand { get; }
     public IRelayCommand SwitchProjectCommand { get; }
     [ObservableProperty] private bool _isProjectReady;
+
+    /// <summary>Echter Persistenz-Zustand: Das aktuelle Projekt hat eine Datei auf der Platte.
+    /// Anders als IsProjectReady wird dies beim Wechsel in den Launcher NICHT zurueckgesetzt.</summary>
+    [ObservableProperty] private bool _hasPersistedProject;
+
     [ObservableProperty] private bool _isFocusMode;
     [ObservableProperty] private bool _isAiWorking;
     [ObservableProperty] private string _aiStatusLabel = "";
@@ -93,11 +98,12 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
     /// diesen Lock halten, damit der UI-Thread nicht waehrend einer Mutation enumeriert.</summary>
     public object CollectionLock => _collectionLock;
 
-    public ShellViewModel(ServiceProvider services)
+    public ShellViewModel(ServiceProvider services, SystemMonitorService? monitor = null)
     {
         ArgumentNullException.ThrowIfNull(services);
 
         _sp = services;
+        Monitor = monitor ?? new SystemMonitorService();
         EnableCollectionSync(_project);
 
         NavItems = new List<NavItem>
@@ -330,6 +336,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
         ReplaceProject(new Project { Name = string.Empty });
         ResetProjectReady();
+        HasPersistedProject = false;
         _suppressLeaveGuard = true;
         SelectedNavItem = null;
         _suppressLeaveGuard = false;
@@ -399,6 +406,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         _sp.Settings.AddRecentProject(projektJsonPath);
         _sp.Settings.Save();
         MarkProjectReady();
+        HasPersistedProject = true;
         SetStatus($"Neues Projekt: {name}");
         EnterWorkspaceOn("Import");
         return true;
@@ -430,11 +438,21 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
             return false;
         }
 
-        _sp.Settings.LastProjectPath = path;
+        // Jedes erfolgreiche Oeffnen pflegt die Merkliste (setzt auch LastProjectPath) —
+        // egal ob Dialog, Drag&Drop oder "Letztes Projekt fortsetzen". Sonst bleiben
+        // Projekte fuer die Projektuebersicht unsichtbar.
+        _sp.Settings.AddRecentProject(path);
         _sp.Settings.Save();
         MarkProjectReady();
+        HasPersistedProject = true;
 
         ReplaceProject(res.Value);
+        if (Project.Dirty && !TrySaveProject())
+        {
+            SetStatus($"Geladen mit ungespeicherter Reparatur: {Path.GetFileName(path)}");
+            return true;
+        }
+
         SetStatus($"Geladen: {Path.GetFileName(path)}");
         return true;
     }
@@ -479,9 +497,11 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
     public bool TrySaveProject()
     {
-        // Save uses last path if present, else Save As
+        // Save nutzt den letzten Pfad NUR, wenn das aktuelle Projekt wirklich von dort
+        // stammt (HasPersistedProject). Sonst zeigt LastProjectPath noch auf das zuvor
+        // geoeffnete Projekt und "Speichern" wuerde dessen Datei still ueberschreiben.
         var path = NormalizeProjectPath(_sp.Settings.LastProjectPath);
-        if (string.IsNullOrWhiteSpace(path))
+        if (string.IsNullOrWhiteSpace(path) || !HasPersistedProject)
         {
             var defaultName = MakeSafeFileName(Project.Name);
             path = _sp.Dialogs.SaveFile("Projekt speichern", "Projekt (*.json)|*.json", ".json", defaultName);
@@ -490,7 +510,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
                 SetStatus("Speichern abgebrochen");
                 return false;
             }
-            _sp.Settings.LastProjectPath = NormalizeProjectPath(path);
+            _sp.Settings.AddRecentProject(NormalizeProjectPath(path)); // setzt auch LastProjectPath
             _sp.Settings.Save();
         }
 
@@ -503,6 +523,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         if (res.Ok)
         {
             IsProjectReady = true;
+            HasPersistedProject = true;
             RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
             _sp.Toasts.Success("Projekt gespeichert");
         }
@@ -520,7 +541,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         }
 
         path = NormalizeProjectPath(path);
-        _sp.Settings.LastProjectPath = path;
+        _sp.Settings.AddRecentProject(path); // Merkliste pflegen (setzt auch LastProjectPath)
         _sp.Settings.Save();
         MarkProjectReady();
 
@@ -532,6 +553,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         SetStatus(res.Ok ? $"Gespeichert: {Path.GetFileName(path)}" : $"Fehler: {res.ErrorMessage}");
         if (res.Ok)
         {
+            HasPersistedProject = true;
             RefreshTitleAndDirty(); // Save setzt Project.Dirty=false -> Marker entfernen
             _sp.Toasts.Success($"Gespeichert: {Path.GetFileName(path)}");
         }
