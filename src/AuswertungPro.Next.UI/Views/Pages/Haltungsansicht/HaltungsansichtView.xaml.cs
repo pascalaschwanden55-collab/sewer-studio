@@ -154,6 +154,15 @@ public partial class HaltungsansichtView : UserControl
 
         Schadensband.Update(HaltungList.SelectedItem as HaltungRecord);
 
+        // Foto-Galerie: alle Schadensfotos der gewaehlten Haltung (gleiche Quelle wie die Hover-Vorschau).
+        var projectRoot = AuswertungPro.Next.Application.Common.ProjectFileLocator
+            .ProjectRootFromFile(_settings?.LastProjectPath);
+        var fotos = AuswertungPro.Next.UI.Controls.HaltungFotoGalerieBuilder
+            .Build(HaltungList.SelectedItem as HaltungRecord, projectRoot);
+        FotoGalerie.Update(fotos);
+        FotoExpanderHeader.Text = $"Fotos ({fotos.Count})";
+        FotoExpander.Visibility = fotos.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
         if (HaltungList.SelectedItem is not HaltungRecord record || DetailBuilder is null)
         {
             Detail.Header = "Keine Haltung gewählt";
