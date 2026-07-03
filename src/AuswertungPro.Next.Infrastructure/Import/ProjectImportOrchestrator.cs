@@ -41,12 +41,17 @@ public sealed class ProjectImportOrchestrator
     private readonly IKinsImportService? _kins;
     private readonly IIbakImportService? _ibak;
 
+    // R4: optionaler KI-Schiedsrichter (Qwen via Ollama) fuer unklare PDFs.
+    private readonly PdfKiSchiedsrichter? _kiSchiedsrichter;
+
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
         IWinCanDbImportService winCan,
         IKinsImportService? kins = null,
-        IIbakImportService? ibak = null)
+        IIbakImportService? ibak = null,
+        PdfKiSchiedsrichter? kiSchiedsrichter = null)
     {
+        _kiSchiedsrichter = kiSchiedsrichter;
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
         _winCan = winCan ?? throw new ArgumentNullException(nameof(winCan));
         _kins   = kins;
@@ -364,7 +369,7 @@ public sealed class ProjectImportOrchestrator
             //     (<JJJJMMTT>_<H>_DP.pdf) — Kanalfernseh- UND DP-Protokolle liegen damit
             //     gemeinsam im Haltungen_Verteilt-Ordner. Kandidaten kommen aus Ordnern
             //     mit DP-/Dichtheits-Hinweis (z.B. 048473_DP_Gross); ohne solche Ordner no-op.
-            var dpResult = DichtheitImportDistributor.Distribute(project, projectFolder, sourceFolder);
+            var dpResult = DichtheitImportDistributor.Distribute(project, projectFolder, sourceFolder, _kiSchiedsrichter);
             messages.AddRange(dpResult.Messages);
             if (dpResult.Verteilt > 0 || dpResult.NichtZugeordnet > 0 || dpResult.Uebersprungen > 0)
                 messages.Add($"Dichtheitspruefung: {dpResult.Verteilt} Protokolle verteilt, {dpResult.NichtZugeordnet} nicht zugeordnet, {dpResult.Uebersprungen} bereits vorhanden.");

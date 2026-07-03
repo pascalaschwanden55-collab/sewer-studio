@@ -674,7 +674,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
             new XtfImportServiceAdapter(),
             new AuswertungPro.Next.Infrastructure.Import.WinCan.WinCanDbImportService(),
             _sp.KinsImport,
-            _sp.IbakImport);
+            _sp.IbakImport,
+            ErzeugeKiSchiedsrichter());
         var result = await Task.Run(() => orchestrator.Import(src!, projectFolder!, _shell.Project));
         ImportProgress = "";
 
@@ -698,6 +699,47 @@ public sealed partial class ImportPageViewModel : ObservableObject
         if (result.Messages.Count > 0)
             DetailsText += "\n\nKanalfernseh-Import:\n" + string.Join("\n", result.Messages.Take(80));
         _sp.Dialogs.Info(summary, "Import Kanalfernseh-Projekt");
+    }
+
+    /// <summary>
+    /// R4: KI-Schiedsrichter fuer unklare PDFs — nur wenn die KI aktiviert ist.
+    /// Nutzt das laufende Qwen-Textmodell via Ollama mit striktem JSON-Schema;
+    /// bei Fehlern (Ollama aus) laeuft der Import ohne KI weiter.
+    /// </summary>
+    private AuswertungPro.Next.Infrastructure.Import.PdfKiSchiedsrichter? ErzeugeKiSchiedsrichter()
+    {
+        try
+        {
+            var platform = AuswertungPro.Next.Infrastructure.Ai.Configuration.AiSettingsFactory.Load(
+                AuswertungPro.Next.UI.Services.AppSettingsAiSettingsProvider.ToSource(_sp.Settings));
+            if (!platform.Enabled)
+                return null;
+
+            var http = new System.Net.Http.HttpClient { Timeout = System.TimeSpan.FromSeconds(60) };
+            var ollama = new AuswertungPro.Next.Infrastructure.Ai.OllamaClient(
+                platform.OllamaBaseUri,
+                http,
+                System.TimeSpan.FromSeconds(45),
+                keepAlive: platform.OllamaKeepAlive,
+                numCtx: platform.OllamaNumCtx);
+            var schema = System.Text.Json.JsonDocument
+                .Parse(AuswertungPro.Next.Infrastructure.Import.PdfKiSchiedsrichter.JsonSchema)
+                .RootElement.Clone();
+
+            return new AuswertungPro.Next.Infrastructure.Import.PdfKiSchiedsrichter(async (prompt, ct) =>
+            {
+                var antwort = await ollama.ChatStructuredAsync<System.Text.Json.JsonElement>(
+                    platform.TextModel,
+                    new[] { new AuswertungPro.Next.Infrastructure.Ai.OllamaClient.ChatMessage("user", prompt) },
+                    schema,
+                    ct);
+                return antwort.GetRawText();
+            });
+        }
+        catch
+        {
+            return null; // KI optional — Import funktioniert auch ohne
+        }
     }
 
     // Schreibt einen einfachen Textreport des Ein-Knopf-Imports nach <Projekt>\__IMPORT_REPORTS\.

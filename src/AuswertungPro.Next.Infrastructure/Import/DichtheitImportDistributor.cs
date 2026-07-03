@@ -31,10 +31,26 @@ public static class DichtheitImportDistributor
         @"(^|[_\-\s])DP($|[_\-\s])|Dichtheit",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    public static Result Distribute(Project project, string projectFolder, string sourceFolder)
+    public static Result Distribute(Project project, string projectFolder, string sourceFolder, PdfKiSchiedsrichter? ki = null)
     {
         var messages = new List<string>();
-        var kandidaten = FindeKandidaten(sourceFolder);
+        var kandidaten = new List<string>(FindeKandidaten(sourceFolder));
+
+        // R4: KI-Zweitmeinung fuer DP-Ordner-PDFs, die die deterministische
+        // Typ-Erkennung NICHT sicher zuordnen konnte (nur Vorschlag, im Report gekennzeichnet).
+        if (ki is not null)
+        {
+            foreach (var unsicher in FindeUnsichereKandidaten(sourceFolder))
+            {
+                var klassifikation = FrageKi(ki, unsicher);
+                if (klassifikation?.Typ == PdfDokumentTyp.Dichtheitspruefung)
+                {
+                    kandidaten.Add(unsicher);
+                    messages.Add($"Per KI als Dichtheitspruefung klassifiziert: {Path.GetFileName(unsicher)}");
+                }
+            }
+        }
+
         if (kandidaten.Count == 0)
             return new Result(0, 0, 0, messages);
 
@@ -67,11 +83,92 @@ public static class DichtheitImportDistributor
         var nichtZugeordnet = 0;
         foreach (var r in results.Where(r => !r.Success))
         {
+            // R4: Wenn der Inhalt-Parser das Schachtpaar nicht fand, darf die KI
+            // einen Vorschlag machen — Zuordnung wird im Report als "per KI" gekennzeichnet.
+            if (ki is not null && !string.IsNullOrWhiteSpace(r.SourcePdfPath)
+                && VerteilePerKi(ki, r.SourcePdfPath!, zielRoot, messages))
+            {
+                verteilt++;
+                continue;
+            }
+
             nichtZugeordnet++;
             messages.Add($"DP nicht zugeordnet: {Path.GetFileName(r.SourcePdfPath ?? "?")} — {r.Message}");
         }
 
         return new Result(verteilt, nichtZugeordnet, uebersprungen, messages);
+    }
+
+    /// <summary>KI-Aufruf synchron mit hartem Timeout — Ollama-Ausfall stoppt den Import nie.</summary>
+    private static PdfKiKlassifikation? FrageKi(PdfKiSchiedsrichter ki, string pdfPath)
+    {
+        try
+        {
+            using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(25));
+            return ki.KlassifiziereAsync(pdfPath, cts.Token).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Legt ein per KI zugeordnetes DP-Protokoll unter dem erkannten Schachtpaar ab.</summary>
+    private static bool VerteilePerKi(PdfKiSchiedsrichter ki, string pdfPath, string zielRoot, List<string> messages)
+    {
+        var k = FrageKi(ki, pdfPath);
+        if (k is null
+            || string.IsNullOrWhiteSpace(k.SchachtVon)
+            || string.IsNullOrWhiteSpace(k.SchachtBis))
+            return false;
+
+        try
+        {
+            var haltung = AuswertungPro.Next.Application.Common.ProjectPathResolver
+                .SanitizePathSegment($"{k.SchachtVon}-{k.SchachtBis}");
+            var stamp = "00000000";
+            if (DateTime.TryParseExact(k.Datum ?? "", "dd.MM.yyyy",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var datum))
+                stamp = datum.ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture);
+
+            var dir = Path.Combine(zielRoot, haltung);
+            Directory.CreateDirectory(dir);
+            var ziel = Path.Combine(dir, $"{stamp}_{haltung}_DP.pdf");
+            if (!(File.Exists(ziel) && new FileInfo(ziel).Length == new FileInfo(pdfPath).Length))
+            {
+                ziel = KanalImportDistributor.UniquePath(ziel);
+                File.Copy(pdfPath, ziel, overwrite: false);
+            }
+
+            messages.Add($"DP per KI zugeordnet: {Path.GetFileName(pdfPath)} → {haltung}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            messages.Add($"DP-KI-Zuordnung fehlgeschlagen ({Path.GetFileName(pdfPath)}): {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>DP-Ordner-PDFs, deren Typ die deterministische Erkennung NICHT bestimmen konnte.</summary>
+    internal static IReadOnlyList<string> FindeUnsichereKandidaten(string sourceFolder)
+    {
+        if (string.IsNullOrWhiteSpace(sourceFolder) || !Directory.Exists(sourceFolder))
+            return Array.Empty<string>();
+
+        try
+        {
+            return SafeFileEnumeration.EnumerateFilesSafe(sourceFolder, "*.pdf", recursive: true)
+                .Where(p => LiegtInDpOrdner(p, sourceFolder))
+                .Where(p => PdfDokumentTypErkennung.ErkenneDatei(p) == PdfDokumentTyp.Unbekannt)
+                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch
+        {
+            return Array.Empty<string>();
+        }
     }
 
     /// <summary>PDFs aus DP-/Dichtheits-Ordnern der Quelle (rekursiv).</summary>
