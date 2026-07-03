@@ -44,14 +44,16 @@ public static class HoldingRenameService
             return HoldingRenameResult.Ok(false, 0);
 
         // ── Phase 1: Haltungsordner lokalisieren ──────────────────────────
-        var folder = LocateHoldingFolder(record, oldSan, projectFilePath);
+        var searchAliases = BuildAliases(oldSan, BuildReversedNumericHoldingAlias(oldSan));
+        var folder = LocateHoldingFolder(record, searchAliases, projectFilePath);
+        var oldAliases = BuildAliases(oldSan, BuildReversedNumericHoldingAlias(oldSan), Path.GetFileName(folder ?? string.Empty));
         string? targetFolder = null;
         var folderRenamed = false;
 
         var fotosCollision = FindSiblingHoldingFolderCollision(
             projectFilePath,
             Path.Combine("Fotos", "Haltungen"),
-            oldSan,
+            oldAliases,
             newSan);
         if (!string.IsNullOrWhiteSpace(fotosCollision))
             return HoldingRenameResult.Fail($"Fotos-Zielordner existiert bereits: {fotosCollision}");
@@ -68,7 +70,7 @@ public static class HoldingRenameService
             if (Directory.Exists(targetFolder))
                 return HoldingRenameResult.Fail($"Zielordner existiert bereits: {targetFolder}");
 
-            var rollbackResult = RenameFilesystemWithRollback(folder, targetFolder, oldSan, newSan);
+            var rollbackResult = RenameFilesystemWithRollback(folder, targetFolder, oldAliases, newSan);
             if (!rollbackResult.Success)
                 return HoldingRenameResult.Fail(rollbackResult.ErrorMessage!);
 
@@ -82,7 +84,7 @@ public static class HoldingRenameService
         var photoRenameResult = RenameSiblingHoldingFolder(
             projectFilePath,
             Path.Combine("Fotos", "Haltungen"),
-            oldSan,
+            oldAliases,
             newSan,
             folder);
         if (!photoRenameResult.Success)
@@ -93,7 +95,7 @@ public static class HoldingRenameService
                 && !string.IsNullOrWhiteSpace(targetFolder)
                 && Directory.Exists(targetFolder))
             {
-                var rollback = RenameFilesystemWithRollback(targetFolder, folder, newSan, oldSan);
+                var rollback = RenameFilesystemWithRollback(targetFolder, folder, BuildAliases(newSan), oldSan);
                 if (!rollback.Success)
                     rollbackMessage = $" Rollback Haltungsordner fehlgeschlagen: {rollback.ErrorMessage}";
             }
@@ -106,7 +108,7 @@ public static class HoldingRenameService
             folderRenamed = true;
 
         // ── Phase 3: Alle Pfad-Referenzen im Record aktualisieren ────────
-        var updated = UpdateAllPaths(record, oldSan, newSan, projectFilePath);
+        var updated = UpdateAllPaths(record, oldAliases, newSan, projectFilePath);
 
         return HoldingRenameResult.Ok(folderRenamed, updated);
     }
@@ -114,7 +116,7 @@ public static class HoldingRenameService
     private static string? FindSiblingHoldingFolderCollision(
         string? projectFilePath,
         string relativeParent,
-        string oldSan,
+        IReadOnlyCollection<string> oldAliases,
         string newSan)
     {
         if (string.IsNullOrWhiteSpace(projectFilePath))
@@ -125,7 +127,9 @@ public static class HoldingRenameService
         if (string.IsNullOrWhiteSpace(root))
             return null;
 
-        var src = Path.Combine(root, relativeParent, oldSan);
+        var src = oldAliases
+            .Select(alias => Path.Combine(root, relativeParent, alias))
+            .FirstOrDefault(Directory.Exists);
         if (!Directory.Exists(src))
             return null;
 
@@ -138,7 +142,11 @@ public static class HoldingRenameService
     // Benennt einen parallelen, haltungsbenannten Verteil-Ordner um (z.B. Fotos\Haltungen\<H>\),
     // der NICHT ueber den Link auffindbar ist. Gegen den Projekt-ROOT aufgeloest.
     private static SiblingRenameResult RenameSiblingHoldingFolder(
-        string? projectFilePath, string relativeParent, string oldSan, string newSan, string? alreadyRenamedFolder)
+        string? projectFilePath,
+        string relativeParent,
+        IReadOnlyCollection<string> oldAliases,
+        string newSan,
+        string? alreadyRenamedFolder)
     {
         if (string.IsNullOrWhiteSpace(projectFilePath))
             return new SiblingRenameResult(true, null, false);
@@ -148,7 +156,9 @@ public static class HoldingRenameService
         if (string.IsNullOrWhiteSpace(root))
             return new SiblingRenameResult(true, null, false);
 
-        var src = Path.Combine(root, relativeParent, oldSan);
+        var src = oldAliases
+            .Select(alias => Path.Combine(root, relativeParent, alias))
+            .FirstOrDefault(Directory.Exists);
         if (!Directory.Exists(src))
             return new SiblingRenameResult(true, null, false);
 
@@ -161,58 +171,52 @@ public static class HoldingRenameService
         if (Directory.Exists(dest))
             return new SiblingRenameResult(false, $"Fotos-Zielordner existiert bereits: {dest}", false);
 
-        var result = RenameFilesystemWithRollback(src, dest, oldSan, newSan);
+        var result = RenameFilesystemWithRollback(src, dest, oldAliases, newSan);
         return new SiblingRenameResult(result.Success, result.ErrorMessage, result.Success);
     }
 
     // ── Ordner-Suche ──────────────────────────────────────────────────────
 
-    private static string? LocateHoldingFolder(HaltungRecord record, string oldSan, string? projectFilePath)
+    private static string? LocateHoldingFolder(
+        HaltungRecord record,
+        IReadOnlyCollection<string> oldAliases,
+        string? projectFilePath)
     {
-        // 1) Ueber Link-Feld
-        var link = record.GetFieldValue(FieldKeys.Link)?.Trim();
-        if (!string.IsNullOrWhiteSpace(link))
+        var projectDir = !string.IsNullOrWhiteSpace(projectFilePath)
+            ? ProjectFileLocator.ProjectRootFromFile(projectFilePath) ?? Path.GetDirectoryName(projectFilePath)
+            : null;
+
+        // 1) Ueber gespeicherte Datei-Pfade. Wenn der physische Ordner anders heisst
+        // als der alte Datenwert (z.B. umgekehrte Schachtreihenfolge), zaehlt der
+        // tatsaechliche Ordner unter Haltungen_Verteilt/Haltungen als Quelle.
+        foreach (var raw in EnumeratePathValues(record))
         {
-            var resolved = ProjectPathResolver.ResolveFilePath(link, projectFilePath);
-            if (!string.IsNullOrWhiteSpace(resolved))
-            {
-                var dir = Path.GetDirectoryName(resolved);
-                // Link zeigt oft in Video/-Unterordner -> eine Ebene hoch pruefen
-                if (!string.IsNullOrWhiteSpace(dir))
-                {
-                    var dirName = Path.GetFileName(dir);
-                    if (string.Equals(dirName, oldSan, StringComparison.OrdinalIgnoreCase))
-                        return dir;
-                    var parent = Path.GetDirectoryName(dir);
-                    if (!string.IsNullOrWhiteSpace(parent)
-                        && string.Equals(Path.GetFileName(parent), oldSan, StringComparison.OrdinalIgnoreCase))
-                        return parent;
-                }
-            }
+            var resolved = ProjectPathResolver.ResolveFilePath(raw, projectFilePath);
+            var fromPath = FindHoldingFolderFromFile(resolved, oldAliases, projectDir);
+            if (!string.IsNullOrWhiteSpace(fromPath))
+                return fromPath;
         }
 
         // 2) Fallback: im Verteil-Ordner suchen (neue Struktur Haltungen_Verteilt\, alte Haltungen\).
         //    Gegen den Projekt-ROOT (nicht GetDirectoryName der projekt.json, die unter Projektdateien\
         //    liegen kann).
-        if (!string.IsNullOrWhiteSpace(projectFilePath))
+        if (!string.IsNullOrWhiteSpace(projectDir))
         {
-            var projectDir = ProjectFileLocator.ProjectRootFromFile(projectFilePath)
-                             ?? Path.GetDirectoryName(projectFilePath);
-            if (!string.IsNullOrWhiteSpace(projectDir))
+            foreach (var rootName in new[] { "Haltungen_Verteilt", "Haltungen" })
             {
-                foreach (var rootName in new[] { "Haltungen_Verteilt", "Haltungen" })
-                {
-                    var holdingsRoot = Path.Combine(projectDir, rootName);
-                    if (!Directory.Exists(holdingsRoot))
-                        continue;
+                var holdingsRoot = Path.Combine(projectDir, rootName);
+                if (!Directory.Exists(holdingsRoot))
+                    continue;
 
-                    var direct = Path.Combine(holdingsRoot, oldSan);
+                foreach (var oldAlias in oldAliases)
+                {
+                    var direct = Path.Combine(holdingsRoot, oldAlias);
                     if (Directory.Exists(direct))
                         return direct;
 
                     try
                     {
-                        var found = Directory.EnumerateDirectories(holdingsRoot, oldSan, SearchOption.TopDirectoryOnly)
+                        var found = Directory.EnumerateDirectories(holdingsRoot, oldAlias, SearchOption.TopDirectoryOnly)
                             .FirstOrDefault();
                         if (!string.IsNullOrWhiteSpace(found))
                             return found;
@@ -225,12 +229,93 @@ public static class HoldingRenameService
         return null;
     }
 
+    private static IEnumerable<string> EnumeratePathValues(HaltungRecord record)
+    {
+        foreach (var field in new[] { FieldKeys.Link, "Link_G", FieldKeys.PdfPath, FieldKeys.PdfEigen })
+        {
+            var raw = record.GetFieldValue(field);
+            if (!string.IsNullOrWhiteSpace(raw))
+                yield return raw;
+        }
+
+        var pdfAll = record.GetFieldValue(FieldKeys.PdfAll);
+        if (string.IsNullOrWhiteSpace(pdfAll))
+            yield break;
+
+        foreach (var part in pdfAll.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var trimmed = part.Trim();
+            if (!string.IsNullOrWhiteSpace(trimmed))
+                yield return trimmed;
+        }
+    }
+
+    private static string? FindHoldingFolderFromFile(
+        string? filePath,
+        IReadOnlyCollection<string> oldAliases,
+        string? projectDir)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return null;
+
+        var dir = Path.GetDirectoryName(filePath);
+        if (string.IsNullOrWhiteSpace(dir))
+            return null;
+
+        if (oldAliases.Contains(Path.GetFileName(dir), StringComparer.OrdinalIgnoreCase))
+            return dir;
+
+        var parent = Path.GetDirectoryName(dir);
+        if (!string.IsNullOrWhiteSpace(parent)
+            && oldAliases.Contains(Path.GetFileName(parent), StringComparer.OrdinalIgnoreCase))
+            return parent;
+
+        return FindHoldingFolderUnderKnownRoot(dir, projectDir);
+    }
+
+    private static string? FindHoldingFolderUnderKnownRoot(string directory, string? projectDir)
+    {
+        if (string.IsNullOrWhiteSpace(projectDir))
+            return null;
+
+        foreach (var rootName in new[] { "Haltungen_Verteilt", "Haltungen" })
+        {
+            var root = Path.Combine(projectDir, rootName);
+            if (!Directory.Exists(root))
+                continue;
+
+            var rootFull = NormalizeDirectory(root);
+            var dirFull = Path.GetFullPath(directory);
+            if (!dirFull.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var relative = Path.GetRelativePath(root, dirFull);
+            if (relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative))
+                continue;
+
+            var firstSegment = relative
+                .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+            if (string.IsNullOrWhiteSpace(firstSegment))
+                continue;
+
+            var holdingFolder = Path.Combine(root, firstSegment);
+            if (Directory.Exists(holdingFolder))
+                return holdingFolder;
+        }
+
+        return null;
+    }
+
     // ── Dateisystem-Rename mit Rollback ───────────────────────────────────
 
     private sealed record FsResult(bool Success, string? ErrorMessage);
 
     private static FsResult RenameFilesystemWithRollback(
-        string folder, string targetFolder, string oldSan, string newSan)
+        string folder,
+        string targetFolder,
+        IReadOnlyCollection<string> oldAliases,
+        string newSan)
     {
         var renamedFiles = new List<(string OldPath, string NewPath)>();
         var folderMoved = false;
@@ -253,11 +338,13 @@ public static class HoldingRenameService
                 if (string.IsNullOrWhiteSpace(name)) continue;
 
                 var stem = Path.GetFileNameWithoutExtension(name);
-                if (stem.IndexOf(oldSan, StringComparison.OrdinalIgnoreCase) < 0)
+                var oldAlias = oldAliases.FirstOrDefault(alias =>
+                    stem.IndexOf(alias, StringComparison.OrdinalIgnoreCase) >= 0);
+                if (string.IsNullOrWhiteSpace(oldAlias))
                     continue;
 
                 var ext = Path.GetExtension(name);
-                var newStem = stem.Replace(oldSan, newSan, StringComparison.OrdinalIgnoreCase);
+                var newStem = stem.Replace(oldAlias, newSan, StringComparison.OrdinalIgnoreCase);
                 var dest = Path.Combine(folder, newStem + ext);
 
                 if (!string.Equals(f, dest, StringComparison.OrdinalIgnoreCase))
@@ -291,29 +378,33 @@ public static class HoldingRenameService
 
     // ── Pfad-Updates (in-memory) ──────────────────────────────────────────
 
-    private static int UpdateAllPaths(HaltungRecord record, string oldSan, string newSan, string? projectFilePath)
+    private static int UpdateAllPaths(
+        HaltungRecord record,
+        IReadOnlyCollection<string> oldAliases,
+        string newSan,
+        string? projectFilePath)
     {
         var count = 0;
         var projectRoot = ResolveProjectRoot(projectFilePath);
 
         // Link (Video)
-        count += UpdateFieldPath(record, FieldKeys.Link, oldSan, newSan);
+        count += UpdateFieldPath(record, FieldKeys.Link, oldAliases, newSan);
 
         // Link_G (Gegeninspektions-Video)
-        count += UpdateFieldPath(record, "Link_G", oldSan, newSan);
+        count += UpdateFieldPath(record, "Link_G", oldAliases, newSan);
 
         // PDF_Path (Original-Protokoll)
-        count += UpdateFieldPath(record, FieldKeys.PdfPath, oldSan, newSan);
+        count += UpdateFieldPath(record, FieldKeys.PdfPath, oldAliases, newSan);
 
         // PDF_Eigen (generiertes _E-Protokoll)
-        count += UpdateFieldPath(record, FieldKeys.PdfEigen, oldSan, newSan);
+        count += UpdateFieldPath(record, FieldKeys.PdfEigen, oldAliases, newSan);
 
         // PDF_All (Semikolon-getrennt)
         var pdfAll = record.GetFieldValue(FieldKeys.PdfAll);
         if (!string.IsNullOrWhiteSpace(pdfAll))
         {
             var parts = pdfAll.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            var newParts = parts.Select(p => ReplaceHoldingInPath(p.Trim(), oldSan, newSan)).ToArray();
+            var newParts = parts.Select(p => ReplaceHoldingInPath(p.Trim(), oldAliases, newSan)).ToArray();
             var newVal = string.Join(";", newParts);
             if (!string.Equals(pdfAll, newVal, StringComparison.OrdinalIgnoreCase))
             {
@@ -325,11 +416,11 @@ public static class HoldingRenameService
         // Protocol
         if (record.Protocol != null)
         {
-            record.Protocol.HaltungId = record.Protocol.HaltungId?.Replace(oldSan, newSan) ?? newSan;
-            count += UpdateRevisionPaths(record.Protocol.Original, oldSan, newSan, projectRoot);
-            count += UpdateRevisionPaths(record.Protocol.Current, oldSan, newSan, projectRoot);
+            record.Protocol.HaltungId = ReplaceFirstAlias(record.Protocol.HaltungId, oldAliases, newSan) ?? newSan;
+            count += UpdateRevisionPaths(record.Protocol.Original, oldAliases, newSan, projectRoot);
+            count += UpdateRevisionPaths(record.Protocol.Current, oldAliases, newSan, projectRoot);
             foreach (var rev in record.Protocol.History)
-                count += UpdateRevisionPaths(rev, oldSan, newSan, projectRoot);
+                count += UpdateRevisionPaths(rev, oldAliases, newSan, projectRoot);
         }
 
         // VsaFindings
@@ -339,7 +430,7 @@ public static class HoldingRenameService
             {
                 if (!string.IsNullOrWhiteSpace(finding.FotoPath))
                 {
-                    var newPath = ReplaceHoldingPhotoPath(finding.FotoPath, oldSan, newSan, projectRoot);
+                    var newPath = ReplaceHoldingPhotoPath(finding.FotoPath, oldAliases, newSan, projectRoot);
                     if (!string.Equals(finding.FotoPath, newPath, StringComparison.OrdinalIgnoreCase))
                     {
                         finding.FotoPath = newPath;
@@ -352,13 +443,17 @@ public static class HoldingRenameService
         return count;
     }
 
-    private static int UpdateFieldPath(HaltungRecord record, string fieldName, string oldSan, string newSan)
+    private static int UpdateFieldPath(
+        HaltungRecord record,
+        string fieldName,
+        IReadOnlyCollection<string> oldAliases,
+        string newSan)
     {
         var raw = record.GetFieldValue(fieldName)?.Trim();
         if (string.IsNullOrWhiteSpace(raw))
             return 0;
 
-        var updated = ReplaceHoldingInPath(raw, oldSan, newSan);
+        var updated = ReplaceHoldingInPath(raw, oldAliases, newSan);
         if (string.Equals(raw, updated, StringComparison.OrdinalIgnoreCase))
             return 0;
 
@@ -366,7 +461,11 @@ public static class HoldingRenameService
         return 1;
     }
 
-    private static int UpdateRevisionPaths(ProtocolRevision revision, string oldSan, string newSan, string? projectRoot)
+    private static int UpdateRevisionPaths(
+        ProtocolRevision revision,
+        IReadOnlyCollection<string> oldAliases,
+        string newSan,
+        string? projectRoot)
     {
         var count = 0;
         foreach (var entry in revision.Entries)
@@ -376,7 +475,7 @@ public static class HoldingRenameService
                 var path = entry.FotoPaths[i];
                 if (string.IsNullOrWhiteSpace(path)) continue;
 
-                var newPath = ReplaceHoldingPhotoPath(path, oldSan, newSan, projectRoot);
+                var newPath = ReplaceHoldingPhotoPath(path, oldAliases, newSan, projectRoot);
                 if (!string.Equals(path, newPath, StringComparison.OrdinalIgnoreCase))
                 {
                     entry.FotoPaths[i] = newPath;
@@ -416,9 +515,13 @@ public static class HoldingRenameService
                ?? Path.GetDirectoryName(projectFilePath);
     }
 
-    private static string ReplaceHoldingPhotoPath(string path, string oldSan, string newSan, string? projectRoot)
+    private static string ReplaceHoldingPhotoPath(
+        string path,
+        IReadOnlyCollection<string> oldAliases,
+        string newSan,
+        string? projectRoot)
     {
-        var rewritten = ReplaceHoldingInPath(path, oldSan, newSan);
+        var rewritten = ReplaceHoldingInPath(path, oldAliases, newSan);
         if (string.IsNullOrWhiteSpace(projectRoot) || !LooksLikeImagePath(rewritten))
             return rewritten;
 
@@ -457,18 +560,70 @@ public static class HoldingRenameService
     /// Rename auf eine nicht existierende Datei (Ordner neu, Dateiname alt).
     /// </summary>
     internal static string ReplaceHoldingInPath(string path, string oldSan, string newSan)
+        => ReplaceHoldingInPath(path, BuildAliases(oldSan, BuildReversedNumericHoldingAlias(oldSan)), newSan);
+
+    private static string ReplaceHoldingInPath(string path, IReadOnlyCollection<string> oldAliases, string newSan)
     {
         if (string.IsNullOrWhiteSpace(path))
             return path;
 
-        var result = HoldingPathRewriter.ReplaceHoldingInPath(path, oldSan, newSan);
+        var result = path;
+        foreach (var oldAlias in oldAliases)
+            result = HoldingPathRewriter.ReplaceHoldingInPath(result, oldAlias, newSan);
 
         var sepIdx = result.LastIndexOfAny(new[] { '/', '\\' });
         var dir = sepIdx >= 0 ? result[..(sepIdx + 1)] : string.Empty;
         var file = sepIdx >= 0 ? result[(sepIdx + 1)..] : result;
-        if (file.IndexOf(oldSan, StringComparison.OrdinalIgnoreCase) >= 0)
-            file = file.Replace(oldSan, newSan, StringComparison.OrdinalIgnoreCase);
+        foreach (var oldAlias in oldAliases)
+        {
+            if (file.IndexOf(oldAlias, StringComparison.OrdinalIgnoreCase) >= 0)
+                file = file.Replace(oldAlias, newSan, StringComparison.OrdinalIgnoreCase);
+        }
 
         return dir + file;
+    }
+
+    private static string? ReplaceFirstAlias(string? value, IReadOnlyCollection<string> oldAliases, string newSan)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return value;
+
+        foreach (var oldAlias in oldAliases)
+        {
+            if (value.IndexOf(oldAlias, StringComparison.OrdinalIgnoreCase) >= 0)
+                return value.Replace(oldAlias, newSan, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return value;
+    }
+
+    private static IReadOnlyCollection<string> BuildAliases(params string?[] aliases)
+        => aliases
+            .Where(alias => !string.IsNullOrWhiteSpace(alias))
+            .Select(alias => alias!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    private static string? BuildReversedNumericHoldingAlias(string? holding)
+    {
+        if (string.IsNullOrWhiteSpace(holding))
+            return null;
+
+        var parts = holding.Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length != 2 || !IsNumericHoldingEndpoint(parts[0]) || !IsNumericHoldingEndpoint(parts[1]))
+            return null;
+
+        return $"{parts[1]}-{parts[0]}";
+    }
+
+    private static bool IsNumericHoldingEndpoint(string value)
+        => value.Any(char.IsDigit) && value.All(c => char.IsDigit(c) || c == '.');
+
+    private static string NormalizeDirectory(string directory)
+    {
+        var full = Path.GetFullPath(directory);
+        return full.EndsWith(Path.DirectorySeparatorChar)
+            ? full
+            : full + Path.DirectorySeparatorChar;
     }
 }

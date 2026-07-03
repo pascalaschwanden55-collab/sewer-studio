@@ -33,6 +33,9 @@ public static class ProjectStructure
     /// <summary>Ordner fuer schachtweise verteilte Dateien.</summary>
     public const string SchaechteVerteilt = "Schächte_Verteilt";
 
+    /// <summary>Ordner fuer importierte Plan-PDFs.</summary>
+    public const string Plaene = "Pläne";
+
     /// <summary>Wurzel-Ordner fuer Foto-Sammlungen.</summary>
     public const string Fotos = "Fotos";
 
@@ -69,6 +72,7 @@ public static class ProjectStructure
         // Haltungen/Schächte verteilt
         Directory.CreateDirectory(Path.Combine(projectFolder, HaltungenVerteilt));
         Directory.CreateDirectory(Path.Combine(projectFolder, SchaechteVerteilt));
+        Directory.CreateDirectory(Path.Combine(projectFolder, Plaene));
 
         // Fotos
         Directory.CreateDirectory(Path.Combine(projectFolder, Fotos, FotosHaltungen));
@@ -99,6 +103,13 @@ public static class ProjectStructure
     public static string SchachtVerteiltDir(string projectFolder, string san)
         => Path.Combine(projectFolder, SchaechteVerteilt,
             ProjectPathResolver.SanitizePathSegment(san));
+
+    /// <summary>
+    /// Gibt den zentralen Ordner fuer importierte Plan-PDFs zurueck.
+    /// Beispiel: proj\Pläne
+    /// </summary>
+    public static string PlaeneDir(string projectFolder)
+        => Path.Combine(projectFolder, Plaene);
 
     /// <summary>
     /// Gibt den Fotos-Haltungs-Unterordner fuer ein sanitisiertes Segment zurueck.

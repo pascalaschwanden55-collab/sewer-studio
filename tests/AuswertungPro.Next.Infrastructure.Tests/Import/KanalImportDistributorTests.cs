@@ -42,4 +42,25 @@ public sealed class KanalImportDistributorTests
         }
         finally { try { Directory.Delete(dir, recursive: true); } catch { } }
     }
+
+    [Fact]
+    public void SelectPrimaryProtocolPdf_BevorzugtTvProtokollVorPlanUndDichtheit()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"primarypdf-typ-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var plan = Path.Combine(dir, "AWU_Plan.pdf");
+            var dp = Path.Combine(dir, "048473_DP.pdf");
+            var tv = Path.Combine(dir, "Gesamtprotokoll.pdf");
+            File.WriteAllText(plan, "DW\nLeitungsende Veschlossen\nDachwasser angeschlossen");
+            File.WriteAllText(dp, "Dichtheitspruefung nach SIA190:2017 / VSA RL Dicht:2023\nvon Schacht: 1\nnach Schacht: 2");
+            File.WriteAllText(tv, "Haltungsinspektion - 22.06.2026 - 10081-8993\nLeitungsbericht\n0.00 BCD Rohranfang");
+
+            var primary = KanalImportDistributor.SelectPrimaryProtocolPdf(dir);
+
+            Assert.Equal(tv, primary, ignoreCase: true);
+        }
+        finally { try { Directory.Delete(dir, recursive: true); } catch { } }
+    }
 }

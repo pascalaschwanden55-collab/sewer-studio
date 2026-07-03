@@ -84,6 +84,7 @@ public static class DichtheitImportDistributor
         {
             return SafeFileEnumeration.EnumerateFilesSafe(sourceFolder, "*.pdf", recursive: true)
                 .Where(p => LiegtInDpOrdner(p, sourceFolder))
+                .Where(p => PdfDokumentTypErkennung.ErkenneDatei(p) == PdfDokumentTyp.Dichtheitspruefung)
                 .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }

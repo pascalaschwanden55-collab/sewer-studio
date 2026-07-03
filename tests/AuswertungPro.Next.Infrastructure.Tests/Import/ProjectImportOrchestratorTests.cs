@@ -2,9 +2,14 @@ using System;
 using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Import.Ibak;
 using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
 using AuswertungPro.Next.Infrastructure.Import.WinCan;
+using UglyToad.PdfPig.Content;
+using UglyToad.PdfPig.Core;
+using UglyToad.PdfPig.Fonts.Standard14Fonts;
+using UglyToad.PdfPig.Writer;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
 
@@ -86,6 +91,8 @@ public sealed class ProjectImportOrchestratorTests
                 "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC"));
         // Video-Inhalt beliebig (wird nur kopiert, nicht dekodiert).
         File.WriteAllText(Path.Combine(sourceDir, "Film", "H_06-001.mpg"), "dummy-video");
+        File.WriteAllText(Path.Combine(sourceDir, "AWU_Mini_Plan.pdf"),
+            "DW\nLeitungsende Veschlossen\nDachwasser angeschlossen");
 
         return (sourceDir, projectDir);
     }
@@ -141,6 +148,10 @@ public sealed class ProjectImportOrchestratorTests
             Assert.True(
                 Directory.Exists(fotoDir) && Directory.GetFiles(fotoDir).Length > 0,
                 $"Kein Foto unter {fotoDir} nach Verteilung");
+
+            // Plan-PDFs werden aus dem archivierten PDF-Bestand in den Projektordner Pläne uebernommen.
+            var planPath = Path.Combine(projectDir, "Pläne", "AWU_Mini_Plan.pdf");
+            Assert.True(File.Exists(planPath), $"Plan-PDF nicht importiert: {planPath}");
 
             // Video muss FLACH + datumsbenannt im Haltungsordner liegen (JJJJMMTT_06-001.mpg),
             // NICHT in einem Video\-Unterordner (wie "Haltung Verteilen").
@@ -305,5 +316,144 @@ public sealed class ProjectImportOrchestratorTests
         {
             try { Directory.Delete(Path.GetDirectoryName(sourceDir)!, recursive: true); } catch { }
         }
+    }
+
+    [Fact]
+    public void Import_IkasOhneXtf_LegtHaltungenAusVerteiltemOriginalPdfAn()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"orch-ikas-pdf-only-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "source");
+        var projectDir = Path.Combine(root, "projekt");
+        Directory.CreateDirectory(sourceDir);
+        Directory.CreateDirectory(projectDir);
+        Directory.CreateDirectory(Path.Combine(sourceDir, "Film"));
+        File.WriteAllText(Path.Combine(sourceDir, "Arizona.fdb"), "fdb");
+        File.WriteAllText(Path.Combine(sourceDir, "Film", "Daten.txt"), "daten");
+        WritePdf(
+            Path.Combine(sourceDir, "Gesamtprotokoll.pdf"),
+            "Haltungsinspektion - 22.06.2026 - 10081-8993",
+            "Film H_10081-8993.mpg",
+            "Leitungsbericht",
+            "0.00 BCD Rohranfang");
+
+        try
+        {
+            var project = new Project();
+            var orch = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new WinCanDbImportService());
+
+            var result = orch.Import(sourceDir, projectDir, project);
+
+            Assert.Equal(KanalExportFormat.Ibak, result.Format);
+            Assert.Equal(1, result.Found);
+            Assert.Equal(1, result.Created);
+            var rec = Assert.Single(project.Data);
+            Assert.Equal("10081-8993", rec.GetFieldValue("Haltungsname"));
+            var pdfPath = rec.GetFieldValue("PDF_Path");
+            Assert.False(string.IsNullOrWhiteSpace(pdfPath));
+            Assert.False(Path.IsPathRooted(pdfPath), $"PDF_Path muss relativ sein: {pdfPath}");
+            Assert.True(File.Exists(Path.Combine(projectDir, pdfPath!)));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void Import_IkasOhneXtf_NutztIbakDatenTxtAlsHerstellerQuelle()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"orch-ikas-datentxt-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "source");
+        var projectDir = Path.Combine(root, "projekt");
+        Directory.CreateDirectory(projectDir);
+        Directory.CreateDirectory(Path.Combine(sourceDir, "Film"));
+        File.WriteAllText(Path.Combine(sourceDir, "Arizona.fdb"), "fdb");
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+        File.WriteAllText(
+            Path.Combine(sourceDir, "Film", "Daten.txt"),
+            "SS 10081-SS 8993\n" +
+            "\t00:00:05    0.00 m  BCD     Rohranfang@!$ibak$!SS 10081-SS 8993$H\n" +
+            "\t00:01:47    8.20 m  BCE     Rohrende@!$ibak$!SS 10081-SS 8993$H\n",
+            System.Text.Encoding.GetEncoding(1252));
+
+        try
+        {
+            var project = new Project();
+            var orch = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new WinCanDbImportService(),
+                kins: null,
+                ibak: new IbakExportImportService());
+
+            var result = orch.Import(sourceDir, projectDir, project);
+
+            Assert.Equal(KanalExportFormat.Ibak, result.Format);
+            Assert.Equal(1, result.Found);
+            Assert.Equal(1, result.Created);
+            var rec = Assert.Single(project.Data);
+            Assert.Equal("10081-8993", rec.GetFieldValue("Haltungsname"));
+            Assert.Equal("8.2", rec.GetFieldValue("Haltungslaenge_m"));
+            Assert.Contains(result.Messages, m => m.Contains("IBAK", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void Import_MeldetWarnungWennDatenquelleAberNullHaltungen()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"orch-zero-warning-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "source");
+        var projectDir = Path.Combine(root, "projekt");
+        Directory.CreateDirectory(sourceDir);
+        Directory.CreateDirectory(projectDir);
+        File.WriteAllText(Path.Combine(sourceDir, "leer.xtf"), """
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="Test" VERSION="2.3">
+    <MODELS><MODEL NAME="VSA_KEK_2020_LV95" /></MODELS>
+  </HEADERSECTION>
+  <DATASECTION />
+</TRANSFER>
+""");
+
+        try
+        {
+            var project = new Project();
+            var orch = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new WinCanDbImportService());
+
+            var result = orch.Import(sourceDir, projectDir, project);
+
+            Assert.Equal(KanalExportFormat.Ikas, result.Format);
+            Assert.Equal(0, result.Found);
+            Assert.Contains(result.Messages, m => m.StartsWith("Erkanntes Format:", StringComparison.Ordinal));
+            Assert.Contains(result.Messages, m => m.StartsWith("Hauptquelle:", StringComparison.Ordinal));
+            Assert.Contains(result.Messages, m => m.StartsWith("WARNUNG: 0 Haltungen", StringComparison.Ordinal));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    private static void WritePdf(string path, params string[] lines)
+    {
+        using var builder = new PdfDocumentBuilder();
+        var font = builder.AddStandard14Font(Standard14Font.Helvetica);
+        var page = builder.AddPage(PageSize.A4);
+        var y = 780m;
+        foreach (var line in lines)
+        {
+            page.AddText(line, 12, new PdfPoint(40, y), font);
+            y -= 18;
+        }
+
+        File.WriteAllBytes(path, builder.Build());
     }
 }

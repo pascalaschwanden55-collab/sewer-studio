@@ -84,7 +84,7 @@ public sealed class IbakExportImportService : IIbakImportService
                 {
                     // Auto-Create: Neue Haltung aus IBAK-Daten anlegen
                     record = new HaltungRecord();
-                    record.SetFieldValue("Haltungsname", holding.Holding, FieldSource.Legacy, userEdited: false);
+                    record.SetFieldValue("Haltungsname", key, FieldSource.Legacy, userEdited: false);
                     ApplyHeaderFields(record, holding.Entries);
                     if (ctx is null)
                         project.Data.Add(record);
@@ -110,8 +110,8 @@ public sealed class IbakExportImportService : IIbakImportService
                 ApplyProtocol(record, holding.Entries, protocolService);
                 BuildPrimaryDamagesText(record, holding.Entries);
                 UpdateFindings(record, holding.Entries);
-                LinkVideo(record, holding.Holding, fileIndex);
-                LinkHoldingPdf(record, holding.Holding, fileIndex);
+                LinkVideo(record, key, fileIndex);
+                LinkHoldingPdf(record, key, fileIndex);
 
                 updated++;
             }

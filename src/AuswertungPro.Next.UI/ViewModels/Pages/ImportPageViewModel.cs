@@ -673,7 +673,8 @@ public sealed partial class ImportPageViewModel : ObservableObject
         var orchestrator = new ProjectImportOrchestrator(
             new XtfImportServiceAdapter(),
             new AuswertungPro.Next.Infrastructure.Import.WinCan.WinCanDbImportService(),
-            _sp.KinsImport);
+            _sp.KinsImport,
+            _sp.IbakImport);
         var result = await Task.Run(() => orchestrator.Import(src!, projectFolder!, _shell.Project));
         ImportProgress = "";
 

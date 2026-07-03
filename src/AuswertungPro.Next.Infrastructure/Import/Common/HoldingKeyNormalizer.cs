@@ -28,7 +28,7 @@ internal static class HoldingKeyNormalizer
 
     /// <summary>
     /// Wie <see cref="Normalize"/>, entfernt zusaetzlich IBAK-spezifische Dateinamen-Prefixe
-    /// (L__, L_, H__), die IBAK-Exporte vor den Haltungsnamen setzen.
+    /// (L__, L_, H__, H_) und SS-Schachtpraefixe, die IBAK-Exporte vor Haltungsnamen setzen.
     /// </summary>
     public static string NormalizeIbak(string? value)
     {
@@ -37,11 +37,15 @@ internal static class HoldingKeyNormalizer
             return v;
 
         if (v.StartsWith("L__", StringComparison.OrdinalIgnoreCase))
-            return v[3..];
-        if (v.StartsWith("L_", StringComparison.OrdinalIgnoreCase))
-            return v[2..];
-        if (v.StartsWith("H__", StringComparison.OrdinalIgnoreCase))
-            return v[3..];
+            v = v[3..];
+        else if (v.StartsWith("L_", StringComparison.OrdinalIgnoreCase))
+            v = v[2..];
+        else if (v.StartsWith("H__", StringComparison.OrdinalIgnoreCase))
+            v = v[3..];
+        else if (v.StartsWith("H_", StringComparison.OrdinalIgnoreCase))
+            v = v[2..];
+
+        v = Regex.Replace(v, @"(?i)(^|-)SS(?=\d)", "$1");
 
         return v;
     }

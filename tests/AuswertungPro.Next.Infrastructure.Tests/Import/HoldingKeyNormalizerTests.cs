@@ -63,6 +63,10 @@ public class HoldingKeyNormalizerTests
         => Assert.Equal("1028055-1064892", HoldingKeyNormalizer.NormalizeIbak("H__1028055-1064892"));
 
     [Fact]
+    public void NormalizeIbak_HEinfachUnterstr_PrefixEntfernt()
+        => Assert.Equal("1028055-1064892", HoldingKeyNormalizer.NormalizeIbak("H_1028055-1064892"));
+
+    [Fact]
     public void NormalizeIbak_OhnePrefix_UnveraendertNormalisiert()
         => Assert.Equal("1028055-1064892", HoldingKeyNormalizer.NormalizeIbak("1028055-1064892"));
 
@@ -71,12 +75,21 @@ public class HoldingKeyNormalizerTests
         => Assert.Equal("1028055-1064892", HoldingKeyNormalizer.NormalizeIbak("L__1028055/1064892"));
 
     [Fact]
+    public void NormalizeIbak_SchachtSchachtPrefixe_WerdenEntfernt()
+        => Assert.Equal("10081-8993", HoldingKeyNormalizer.NormalizeIbak("SS 10081-SS 8993"));
+
+    [Fact]
+    public void NormalizeIbak_DateiprefixUndSchachtPrefixe_WerdenKombiniertEntfernt()
+        => Assert.Equal("10081-8993", HoldingKeyNormalizer.NormalizeIbak("H_SS 10081-SS 8993"));
+
+    [Fact]
     public void NormalizeIbak_PrefixCaseInsensitive()
     {
         // Gross- und Kleinschreibung wird akzeptiert
         Assert.Equal("abc", HoldingKeyNormalizer.NormalizeIbak("l__abc"));
         Assert.Equal("abc", HoldingKeyNormalizer.NormalizeIbak("L_abc"));
         Assert.Equal("abc", HoldingKeyNormalizer.NormalizeIbak("h__abc"));
+        Assert.Equal("abc", HoldingKeyNormalizer.NormalizeIbak("h_abc"));
     }
 
     [Fact]

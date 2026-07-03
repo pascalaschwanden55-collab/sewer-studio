@@ -17,6 +17,9 @@ public enum KanalExportFormat
     /// <summary>IKAS/IBAK-Export (VSA_KEK-XTF und/oder KiasExportPattern erkannt).</summary>
     Ikas,
 
+    /// <summary>IBAK/KIAS-Export (Arizona.fdb + Film/Daten.txt oder Report-PDFs, ohne VSA_KEK-XTF).</summary>
+    Ibak,
+
     /// <summary>WinCan-Export (*.db3 in einem DB-Unterordner gefunden).</summary>
     WinCan,
 
@@ -75,9 +78,9 @@ public static class KanalExportDetector
 
         // --- IKAS-Suche ---
         var (vsaKekPath, sia405Path, vsaKekAnyPath) = FindXtfFiles(sourceFolder);
-        var isIkasByXtf    = vsaKekPath is not null;
-        var isIkasByPattern = KiasExportPattern.Detect(sourceFolder).IsKias;
-        var isIkas = isIkasByXtf || isIkasByPattern;
+        var isIkasByXtf = vsaKekPath is not null;
+        var isIbakByPattern = KiasExportPattern.Detect(sourceFolder).IsKias;
+        var isIkasOrIbak = isIkasByXtf || isIbakByPattern;
 
         // --- Format bestimmen ---
         KanalExportFormat format;
@@ -107,27 +110,30 @@ public static class KanalExportDetector
                 kinsTxtPath);
         }
 
-        if (db3Path is not null && isIkas)
+        if (db3Path is not null && isIkasOrIbak)
         {
             format = KanalExportFormat.Ambiguous;
-            reason = "Sowohl WinCan (.db3 in DB/) als auch IKAS-Signale vorhanden";
+            reason = "Sowohl WinCan (.db3 in DB/) als auch IKAS/IBAK-Signale vorhanden";
         }
         else if (db3Path is not null)
         {
             format = KanalExportFormat.WinCan;
             reason = $"WinCan erkannt: {Path.GetFileName(db3Path)}";
         }
-        else if (isIkas)
+        else if (isIkasByXtf)
         {
             format = KanalExportFormat.Ikas;
-            reason = isIkasByXtf
-                ? $"IKAS erkannt: VSA_KEK-XTF {Path.GetFileName(vsaKekPath)}"
-                : "IKAS erkannt: KiasExportPattern";
+            reason = $"IKAS erkannt: VSA_KEK-XTF {Path.GetFileName(vsaKekPath)}";
+        }
+        else if (isIbakByPattern)
+        {
+            format = KanalExportFormat.Ibak;
+            reason = "IBAK/KIAS erkannt: KiasExportPattern";
         }
         else
         {
             format = KanalExportFormat.Unknown;
-            reason = "Kein WinCan (.db3 in DB/) und kein IKAS-Signal gefunden";
+            reason = "Kein WinCan (.db3 in DB/) und kein IKAS/IBAK-Signal gefunden";
         }
 
         return new KanalExportDetection(format, db3Path, vsaKekPath, sia405Path, reason);

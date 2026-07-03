@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Import.Common;
 
 namespace AuswertungPro.Next.Infrastructure.Import;
 
@@ -90,7 +91,10 @@ public static class KanalImportDistributor
                         r.HoldingFolder!.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
                     var record = FindRecordBySanitizedHaltung(project, folderName);
                     if (record is null)
-                        continue;
+                    {
+                        record = CreateRecordFromDistributedFolder(project, folderName);
+                        messages.Add($"Haltung aus Original-Protokoll angelegt: {folderName}");
+                    }
 
                     // PDF_Path = verteiltes ORIGINAL-Protokoll (Menü „Haltungsprotokoll Original öffnen").
                     record.SetFieldValue(FieldKeys.PdfPath, r.DestPdfPath!, FieldSource.Legacy, userEdited: false);
@@ -178,10 +182,43 @@ public static class KanalImportDistributor
         }
 
         return pdfs
-            .OrderByDescending(p => !IsDuplicateVariant(p))                 // Nicht-Duplikate zuerst
-            .ThenByDescending(p => { try { return new FileInfo(p).Length; } catch { return 0L; } })
-            .ThenBy(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault();
+            .Select(p =>
+            {
+                var text = PdfDokumentTypErkennung.ReadPdfTextPrefix(p, maxPages: 6);
+                var typ = PdfDokumentTypErkennung.ErkenneText(text, Path.GetFileName(p));
+                return new
+                {
+                    Path = p,
+                    Score = ScoreProtocolCandidate(typ, IsDuplicateVariant(p)),
+                    Length = SafeLength(p)
+                };
+            })
+            .OrderByDescending(p => p.Score)
+            .ThenByDescending(p => p.Length)
+            .ThenBy(p => Path.GetFileName(p.Path), StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault()
+            ?.Path;
+    }
+
+    private static int ScoreProtocolCandidate(PdfDokumentTyp typ, bool isDuplicateVariant)
+    {
+        var score = typ switch
+        {
+            PdfDokumentTyp.TvProtokoll => 100,
+            PdfDokumentTyp.PlanSituation => -1000,
+            PdfDokumentTyp.Dichtheitspruefung => -900,
+            PdfDokumentTyp.Deckblatt => -800,
+            _ => 0
+        };
+        if (isDuplicateVariant)
+            score -= 10;
+        return score;
+    }
+
+    private static long SafeLength(string path)
+    {
+        try { return new FileInfo(path).Length; }
+        catch { return 0L; }
     }
 
     // Record über den sanitisierten Haltungsnamen (== Ordnername) finden.
@@ -190,11 +227,23 @@ public static class KanalImportDistributor
         if (string.IsNullOrWhiteSpace(sanitizedFolderName))
             return null;
 
+        var wanted = HoldingKeyNormalizer.NormalizeIbak(sanitizedFolderName);
         return project.Data.FirstOrDefault(x =>
-            string.Equals(
-                ProjectPathResolver.SanitizePathSegment((x.GetFieldValue(FieldKeys.HoldingName) ?? "").Trim()),
-                sanitizedFolderName,
-                StringComparison.OrdinalIgnoreCase));
+        {
+            var raw = (x.GetFieldValue(FieldKeys.HoldingName) ?? "").Trim();
+            var sanitized = ProjectPathResolver.SanitizePathSegment(raw);
+            return string.Equals(HoldingKeyNormalizer.NormalizeIbak(sanitized), wanted, StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
+    private static HaltungRecord CreateRecordFromDistributedFolder(Project project, string sanitizedFolderName)
+    {
+        var record = new HaltungRecord();
+        record.SetFieldValue(FieldKeys.HoldingName, sanitizedFolderName, FieldSource.Legacy, userEdited: false);
+        project.Data.Add(record);
+        project.ModifiedAtUtc = DateTime.UtcNow;
+        project.Dirty = true;
+        return record;
     }
 
     // Relativiert ein Pfadfeld NUR, wenn es absolut ist UND unter dem Projektordner liegt (verteilte

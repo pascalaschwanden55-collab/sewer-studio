@@ -39,15 +39,18 @@ public sealed class ProjectImportOrchestrator
     private readonly IXtfImportService _xtf;
     private readonly IWinCanDbImportService _winCan;
     private readonly IKinsImportService? _kins;
+    private readonly IIbakImportService? _ibak;
 
     public ProjectImportOrchestrator(
         IXtfImportService xtf,
         IWinCanDbImportService winCan,
-        IKinsImportService? kins = null)
+        IKinsImportService? kins = null,
+        IIbakImportService? ibak = null)
     {
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
         _winCan = winCan ?? throw new ArgumentNullException(nameof(winCan));
         _kins   = kins;
+        _ibak   = ibak;
     }
 
     /// <summary>
@@ -133,6 +136,8 @@ public sealed class ProjectImportOrchestrator
                 det.Format, found, created, updated, errors, conflictCount, messages);
         }
 
+        messages.AddRange(BuildSourceDecisionMessages(det));
+
         // ------------------------------------------------------------------
         // Schritt 4: Quelldateien archivieren
         // ------------------------------------------------------------------
@@ -142,6 +147,17 @@ public sealed class ProjectImportOrchestrator
             messages.AddRange(archiveResult.Messages);
             messages.Add(
                 $"Archiviert: {archiveResult.Copied} neu, {archiveResult.Reused} wiederverwendet.");
+
+            var archivePdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
+            var planResult = PlanPdfImporter.ImportFromArchivedPdfFolder(archivePdfDir, projectFolder);
+            messages.AddRange(planResult.Messages);
+            errors += planResult.Errors;
+            if (planResult.Copied > 0 || planResult.Reused > 0 || planResult.Errors > 0)
+            {
+                messages.Add(
+                    $"Pläne: {planResult.Copied} neu, {planResult.Reused} wiederverwendet, " +
+                    $"{planResult.Errors} Fehler.");
+            }
         }
         catch (Exception ex)
         {
@@ -159,6 +175,18 @@ public sealed class ProjectImportOrchestrator
             if (det.Format == KanalExportFormat.Ikas)
             {
                 parseResult = _xtf.ImportXtfFiles(new[] { det.VsaKekXtfPath! }, project, ctx);
+            }
+            else if (det.Format == KanalExportFormat.Ibak)
+            {
+                parseResult = _ibak is not null
+                    ? _ibak.ImportIbakExport(sourceFolder, project, ctx)
+                    : Result<ImportStats>.Success(new ImportStats(
+                        Found: 0,
+                        Created: 0,
+                        Updated: 0,
+                        Errors: 0,
+                        Uncertain: 0,
+                        Messages: new[] { "IBAK/KIAS erkannt; IBAK-Daten.txt-Importer nicht konfiguriert, nur PDF-Fallback." }));
             }
             else if (det.Format == KanalExportFormat.Kins)
             {
@@ -317,12 +345,20 @@ public sealed class ProjectImportOrchestrator
                 ? Kins.KinsGesamtprotokollLocator.Finde(sourceFolder)
                 : null;
             var archivedPdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
+            var recordCountBeforeDistribution = project.Data.Count;
             var distResult = KanalImportDistributor.Distribute(
                 project, projectFolder, archivedPdfDir, sourceFolder,
                 splitPdf: det.Format != KanalExportFormat.Kins || kinsGesamtprotokoll is not null,
                 primaryProtocolPdf: kinsGesamtprotokoll);
             messages.AddRange(distResult.Messages);
             errors += distResult.Errors;
+            var recordsCreatedByDistribution = Math.Max(0, project.Data.Count - recordCountBeforeDistribution);
+            if (recordsCreatedByDistribution > 0)
+            {
+                found += recordsCreatedByDistribution;
+                created += recordsCreatedByDistribution;
+                messages.Add($"PDF-Fallback: {recordsCreatedByDistribution} Haltungen aus Original-Protokollen angelegt.");
+            }
 
             // 7c) Dichtheitspruefungsprotokolle (DP) aus der Quelle je Haltung verteilen
             //     (<JJJJMMTT>_<H>_DP.pdf) — Kanalfernseh- UND DP-Protokolle liegen damit
@@ -353,7 +389,82 @@ public sealed class ProjectImportOrchestrator
         // ------------------------------------------------------------------
         project.Dirty = true;
 
+        if (found == 0 && HasDataSourceSignal(det, sourceFolder))
+        {
+            messages.Add(
+                "WARNUNG: 0 Haltungen importiert, obwohl Datenquellen erkannt wurden. " +
+                "Bitte Report pruefen; die Herstellerquelle wurde vermutlich nicht gelesen oder enthaelt ein unbekanntes Schema.");
+        }
+
         return new OneClickImportResult(
             det.Format, found, created, updated, errors, conflictCount, messages);
+    }
+
+    private static IReadOnlyList<string> BuildSourceDecisionMessages(KanalExportDetection det)
+    {
+        var messages = new List<string>
+        {
+            $"Erkanntes Format: {det.Format} - {det.Reason}"
+        };
+
+        switch (det.Format)
+        {
+            case KanalExportFormat.WinCan:
+                messages.Add($"Hauptquelle: WinCan .db3 ({Path.GetFileName(det.Db3Path ?? "")}).");
+                messages.Add("PDF/TXT/XTF: archiviert; nicht als Stammdaten-Hauptquelle gelesen.");
+                break;
+
+            case KanalExportFormat.Ikas:
+                messages.Add($"Hauptquelle: IKAS VSA_KEK-XTF ({Path.GetFileName(det.VsaKekXtfPath ?? "")}).");
+                messages.Add(det.Sia405XtfPath is null
+                    ? "SIA405: nicht vorhanden."
+                    : $"SIA405: Whitelist-Anreicherung aus {Path.GetFileName(det.Sia405XtfPath)}.");
+                messages.Add("FDB/Daten.txt/PDF: archiviert; PDF nur fuer Plan-Import und Protokoll-Verteilung.");
+                break;
+
+            case KanalExportFormat.Ibak:
+                messages.Add("Hauptquelle: IBAK/KIAS Daten.txt (Arizona.fdb/PDF werden archiviert und ergaenzend genutzt, falls Service es unterstuetzt).");
+                messages.Add("PDF: archiviert; TV-Protokoll nur fuer Verteilung, Plan-PDF nur fuer den Ordner Plaene.");
+                break;
+
+            case KanalExportFormat.Kins:
+                if (!string.IsNullOrWhiteSpace(det.VsaKekXtfPath))
+                    messages.Add($"Hauptquelle: KINS VSA_KEK-XTF ({Path.GetFileName(det.VsaKekXtfPath)}).");
+                else
+                    messages.Add($"Hauptquelle: KINS kiDVDaten.txt ({Path.GetFileName(det.KinsDataTxtPath ?? "")}).");
+                messages.Add("KINS-Zusatzquellen: kiDVDaten.txt/DBF nur fuer Timecodes, Laengen, Schaechte und Whitelist-Felder.");
+                break;
+        }
+
+        return messages;
+    }
+
+    private static bool HasDataSourceSignal(KanalExportDetection det, string sourceFolder)
+        => !string.IsNullOrWhiteSpace(det.Db3Path)
+           || !string.IsNullOrWhiteSpace(det.VsaKekXtfPath)
+           || !string.IsNullOrWhiteSpace(det.KinsDataTxtPath)
+           || AnyFile(sourceFolder, "Daten.txt")
+           || AnyFile(sourceFolder, "*.fdb")
+           || AnyFile(sourceFolder, "*.xtf");
+
+    private static bool AnyFile(string root, string pattern)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
+                return false;
+
+            var opts = new EnumerationOptions
+            {
+                RecurseSubdirectories = true,
+                IgnoreInaccessible = true,
+                MatchCasing = MatchCasing.CaseInsensitive
+            };
+            return Directory.EnumerateFiles(root, pattern, opts).Any();
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

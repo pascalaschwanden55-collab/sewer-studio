@@ -20,6 +20,7 @@ public sealed class ProjectStructureTests
             Assert.True(Directory.Exists(Path.Combine(root, "Importdateien", "TXT")));
             Assert.True(Directory.Exists(Path.Combine(root, "Haltungen_Verteilt")));
             Assert.True(Directory.Exists(Path.Combine(root, "Schächte_Verteilt")));
+            Assert.True(Directory.Exists(Path.Combine(root, "Pläne")));
             Assert.True(Directory.Exists(Path.Combine(root, "Fotos", "Haltungen")));
             Assert.True(Directory.Exists(Path.Combine(root, "Fotos", "Schächte")));
             Assert.True(Directory.Exists(Path.Combine(root, "Projektdateien")));
@@ -71,6 +72,15 @@ public sealed class ProjectStructureTests
     }
 
     [Fact]
+    public void PlaeneDir_ReturnsCorrectPath()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ps-{Guid.NewGuid():N}");
+        Assert.Equal(
+            Path.Combine(root, "Pläne"),
+            ProjectStructure.PlaeneDir(root));
+    }
+
+    [Fact]
     public void ImportdateienDir_Datenbanken_ReturnsCorrectPath()
     {
         var root = Path.Combine(Path.GetTempPath(), $"ps-{Guid.NewGuid():N}");
@@ -98,6 +108,7 @@ public sealed class ProjectStructureTests
         Assert.Equal("TXT", ProjectStructure.TxtDir);
         Assert.Equal("Haltungen_Verteilt", ProjectStructure.HaltungenVerteilt);
         Assert.Equal("Schächte_Verteilt", ProjectStructure.SchaechteVerteilt);
+        Assert.Equal("Pläne", ProjectStructure.Plaene);
         Assert.Equal("Fotos", ProjectStructure.Fotos);
         Assert.Equal("Haltungen", ProjectStructure.FotosHaltungen);
         Assert.Equal("Schächte", ProjectStructure.FotosSchaechte);

@@ -107,8 +107,10 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
         File.WriteAllText(Path.Combine(sourceDir, "VSAKEK", "048473-EXPORT.XTF"), xtf);
 
         File.WriteAllText(Path.Combine(sourceDir, "video1.mp4"), "dummy-video");
-        File.WriteAllText(Path.Combine(sourceDir, "048473_DP_Gross", "048473-Haltung10.pdf"), "%PDF-1.4 dummy");
-        File.WriteAllText(Path.Combine(sourceDir, "048473_DP_Gross", "048473-Haltung1.pdf"), "%PDF-1.4 andere");
+        File.WriteAllText(Path.Combine(sourceDir, "048473_DP_Gross", "048473-Haltung10.pdf"),
+            "Dichtheitspruefung nach SIA190:2017 / VSA RL Dicht:2023\nvon Schacht: 58951\nnach Schacht: 58950");
+        File.WriteAllText(Path.Combine(sourceDir, "048473_DP_Gross", "048473-Haltung1.pdf"),
+            "Dichtheitspruefung nach SIA190:2017 / VSA RL Dicht:2023\nvon Schacht: 111\nnach Schacht: 222");
 
         // Gesamtprotokoll + Deckblatt (Fake — der Seiten-Split scheitert daran kontrolliert,
         // der Einzel-PDF-Fallback muss trotzdem liefern).
