@@ -268,7 +268,12 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(nrCol))
             rec.Fields[nrCol] = (Records.Count + 1).ToString();
 
-        Records.Add(rec);
+        // WPF-Sync-Vertrag: SchaechteData nutzt EnableCollectionSynchronization —
+        // JEDE Mutation (auch vom UI-Thread) muss den gemeinsamen Lock halten.
+        lock (_shell.CollectionLock)
+        {
+            Records.Add(rec);
+        }
         Selected = rec;
         UpdateSearchResultInfo(Records.Count);
         _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
@@ -280,12 +285,18 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         if (Selected is null)
             return;
 
-        var idx = Records.IndexOf(Selected);
-        if (idx < 0)
-            return;
+        SchachtRecord? neueAuswahl;
+        lock (_shell.CollectionLock)
+        {
+            var idx = Records.IndexOf(Selected);
+            if (idx < 0)
+                return;
 
-        Records.RemoveAt(idx);
-        Selected = idx < Records.Count ? Records[idx] : Records.LastOrDefault();
+            Records.RemoveAt(idx);
+            neueAuswahl = idx < Records.Count ? Records[idx] : Records.LastOrDefault();
+        }
+
+        Selected = neueAuswahl;
         UpdateNr();
         UpdateSearchResultInfo(Records.Count);
         _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
@@ -315,11 +326,14 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         if (Selected is null)
             return;
 
-        var idx = Records.IndexOf(Selected);
-        if (idx <= 0)
-            return;
+        lock (_shell.CollectionLock)
+        {
+            var idx = Records.IndexOf(Selected);
+            if (idx <= 0)
+                return;
 
-        Records.Move(idx, idx - 1);
+            Records.Move(idx, idx - 1);
+        }
         UpdateNr();
         _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
         _shell.Project.Dirty = true;
@@ -332,11 +346,14 @@ public sealed partial class SchaechtePageViewModel : ObservableObject
         if (Selected is null)
             return;
 
-        var idx = Records.IndexOf(Selected);
-        if (idx < 0 || idx >= Records.Count - 1)
-            return;
+        lock (_shell.CollectionLock)
+        {
+            var idx = Records.IndexOf(Selected);
+            if (idx < 0 || idx >= Records.Count - 1)
+                return;
 
-        Records.Move(idx, idx + 1);
+            Records.Move(idx, idx + 1);
+        }
         UpdateNr();
         _shell.Project.ModifiedAtUtc = DateTime.UtcNow;
         _shell.Project.Dirty = true;
