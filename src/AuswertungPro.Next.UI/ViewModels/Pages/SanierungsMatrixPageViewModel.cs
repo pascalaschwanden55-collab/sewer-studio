@@ -461,6 +461,10 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     [ObservableProperty] private string _pageTitle = "Sanierungs-Matrix";
     [ObservableProperty] private string _pageSubtitle = "Pro Haltung eine Hauptarbeit waehlen - Meter, DN und Anschluesse kommen automatisch.";
     [ObservableProperty] private decimal _gesamtTotal;
+
+    /// <summary>Teuerstes Zeilen-Total — Bezugsgroesse fuer die Kostenbalken-Spalte.</summary>
+    [ObservableProperty] private decimal _maxRowTotal;
+
     [ObservableProperty] private int _belegteHaltungen;
     [ObservableProperty] private string _status = "";
     [ObservableProperty] private SanierungMatrixRowVm? _selectedRow;
@@ -749,6 +753,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
     private void RecomputeGesamt()
     {
         GesamtTotal = Rows.Sum(r => r.Total);
+        MaxRowTotal = Rows.Count == 0 ? 0m : Rows.Max(r => r.Total);
         BelegteHaltungen = Rows.Count(r => r.SelectedMeasure?.Id is not null);
     }
 

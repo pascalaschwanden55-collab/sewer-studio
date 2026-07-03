@@ -58,17 +58,32 @@
                 </MenuItem>
             </Menu>
         </DockPanel>
+        <!-- Statusleiste: links Status, rechts Projektname + Haltungszahl (bleibt auch in F11 sichtbar) -->
         <Border DockPanel.Dock="Bottom"
                 Height="24"
                 Padding="12,0"
                 Background="{DynamicResource BgLightBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="0,1,0,0">
-            <TextBlock Text="{Binding Subtitle}"
-                       Foreground="{DynamicResource TextSecondaryBrush}"
-                       FontSize="11"
-                       VerticalAlignment="Center"
-                       TextTrimming="CharacterEllipsis"/>
+            <DockPanel LastChildFill="True">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Project.Name}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" MaxWidth="260"/>
+                    <TextBlock Text="{Binding Project.Data.Count, StringFormat='  ·  {0} Haltungen'}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="11" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Project.SchaechteData.Count, StringFormat='  ·  {0} Schächte'}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                </StackPanel>
+                <TextBlock Text="{Binding Subtitle}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           FontSize="11"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+            </DockPanel>
         </Border>
     <Grid>
         <Grid.ColumnDefinitions>

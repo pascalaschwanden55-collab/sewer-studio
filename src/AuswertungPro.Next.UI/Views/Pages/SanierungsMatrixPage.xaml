@@ -1,6 +1,10 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.SanierungsMatrixPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls">
+    <UserControl.Resources>
+        <uc:KostenBalkenBreiteConverter x:Key="KostenBalkenConv"/>
+    </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -202,6 +206,28 @@
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
+
+                    <!-- Kostenbalken: Breite proportional zum teuersten Zeilen-Total -->
+                    <DataGridTemplateColumn Header="" Width="120" IsReadOnly="True">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Grid x:Name="BalkenHost" Margin="4,6">
+                                    <Border HorizontalAlignment="Left" CornerRadius="2"
+                                            Background="{DynamicResource AccentBrush}" Opacity="0.35"
+                                            ToolTip="{Binding Total, StringFormat='{}{0:N2} CHF'}">
+                                        <Border.Width>
+                                            <MultiBinding Converter="{StaticResource KostenBalkenConv}">
+                                                <Binding Path="Total"/>
+                                                <Binding Path="DataContext.MaxRowTotal"
+                                                         RelativeSource="{RelativeSource AncestorType=DataGrid}"/>
+                                                <Binding Path="ActualWidth" ElementName="BalkenHost"/>
+                                            </MultiBinding>
+                                        </Border.Width>
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
 
                     <DataGridTextColumn Header="Hinweis" Binding="{Binding Hinweis}" IsReadOnly="True" Width="150"/>
                 </DataGrid.Columns>
