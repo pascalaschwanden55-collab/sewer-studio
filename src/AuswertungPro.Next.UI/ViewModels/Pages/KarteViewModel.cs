@@ -39,13 +39,20 @@ public sealed partial class KarteViewModel : ObservableObject
     [ObservableProperty] private string _statusText = "Karte wird geladen…";
     [ObservableProperty] private string? _selectedHaltungsname;
 
+    /// <summary>Infopanel-Daten der angeklickten Haltung; null = Panel zu.</summary>
+    [ObservableProperty] private KarteHaltungInfo? _selectedInfo;
+
     public IRelayCommand OpenInspektionCommand { get; }
+    public IRelayCommand OpenDetailCommand { get; }
+    public IRelayCommand SchliesseInfoCommand { get; }
 
     public KarteViewModel(ShellViewModel shell, ServiceProvider services)
     {
         _shell = shell;
         _services = services;
         OpenInspektionCommand = new RelayCommand(OpenInspektion);
+        OpenDetailCommand = new RelayCommand(OpenDetail);
+        SchliesseInfoCommand = new RelayCommand(() => SelectedInfo = null);
     }
 
     /// <summary>
@@ -131,7 +138,11 @@ public sealed partial class KarteViewModel : ObservableObject
             {
                 var mi = e.GetMapInfo(new[] { capturedLayer });
                 if (mi?.Feature is GeometryFeature gf && gf["Haltungsname"] is string name)
+                {
                     SelectedHaltungsname = name;
+                    // Infopanel mit den Stammdaten der Haltung fuellen (null = nicht im Projekt).
+                    SelectedInfo = KarteHaltungInfoBuilder.Build(FindeRecord(name));
+                }
             };
         }
 
@@ -223,6 +234,14 @@ public sealed partial class KarteViewModel : ObservableObject
         return bounds.Grow(marginX, marginY);
     }
 
+    private HaltungRecord? FindeRecord(string? haltungsname)
+        => string.IsNullOrWhiteSpace(haltungsname)
+            ? null
+            : _shell.Project.Data.FirstOrDefault(r => string.Equals(
+                r.GetFieldValue("Haltungsname"),
+                haltungsname,
+                StringComparison.OrdinalIgnoreCase));
+
     private void OpenInspektion()
     {
         if (string.IsNullOrWhiteSpace(SelectedHaltungsname))
@@ -231,12 +250,7 @@ public sealed partial class KarteViewModel : ObservableObject
             return;
         }
 
-        var record = _shell.Project.Data
-            .FirstOrDefault(r => string.Equals(
-                r.GetFieldValue("Haltungsname"),
-                SelectedHaltungsname,
-                StringComparison.OrdinalIgnoreCase));
-
+        var record = FindeRecord(SelectedHaltungsname);
         if (record is null)
         {
             StatusText = $"Haltung '{SelectedHaltungsname}' nicht im Projekt gefunden.";
@@ -244,6 +258,21 @@ public sealed partial class KarteViewModel : ObservableObject
         }
 
         OpenInspektionForRecord(record);
+    }
+
+    /// <summary>Springt zur Haltungen-Seite und selektiert die angeklickte Haltung.</summary>
+    private void OpenDetail()
+    {
+        var record = FindeRecord(SelectedHaltungsname);
+        if (record is null)
+        {
+            StatusText = $"Haltung '{SelectedHaltungsname}' nicht im Projekt gefunden.";
+            return;
+        }
+
+        _shell.NavigateTo("Haltungen");
+        if (_shell.CurrentPage is DataPageViewModel dataPage)
+            dataPage.Selected = record;
     }
 
     private void OpenInspektionForRecord(HaltungRecord record)

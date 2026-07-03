@@ -11,6 +11,56 @@
         <!-- ═══ KARTE ═══ -->
         <mapsui:MapControl x:Name="MapControl" Grid.Row="0"/>
 
+        <!-- ═══ INFOPANEL: Stammdaten der angeklickten Haltung (oben rechts) ═══ -->
+        <Border Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                Margin="0,12,12,0" Padding="14" Width="250"
+                Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1" CornerRadius="10">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding SelectedInfo}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel>
+                <DockPanel Margin="0,0,0,8">
+                    <Button DockPanel.Dock="Right" Content="✕" Width="22" Height="22" Padding="0"
+                            FontSize="11" Command="{Binding SchliesseInfoCommand}"
+                            Style="{StaticResource SecondaryButton}" ToolTip="Schließen"/>
+                    <TextBlock Text="{Binding SelectedInfo.Name}" FontSize="14" FontWeight="Bold"
+                               Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                </DockPanel>
+
+                <UniformGrid Columns="2" Margin="0,0,0,10">
+                    <TextBlock Text="Nennweite" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <TextBlock Text="{Binding SelectedInfo.Dn}" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"/>
+                    <TextBlock Text="Material" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <TextBlock Text="{Binding SelectedInfo.Material}" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="Länge" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <TextBlock Text="{Binding SelectedInfo.Laenge}" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"/>
+                    <TextBlock Text="Zustandsklasse" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    <TextBlock Text="{Binding SelectedInfo.Zustandsklasse}" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextBrush}"/>
+                </UniformGrid>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Video" Command="{Binding OpenInspektionCommand}"
+                            IsEnabled="{Binding SelectedInfo.HatVideo}"
+                            Style="{StaticResource PrimaryButton}" Padding="12,4" Margin="0,0,8,0"/>
+                    <Button Content="Detail öffnen" Command="{Binding OpenDetailCommand}"
+                            Style="{StaticResource SecondaryButton}" Padding="12,4"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
         <!-- ═══ LEGENDE + STATUSLEISTE ═══ -->
         <Border Grid.Row="1" Padding="10,6" Background="{DynamicResource CardBrush}"
                 BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BorderLightBrush}">
