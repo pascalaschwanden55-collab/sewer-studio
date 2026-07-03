@@ -160,6 +160,71 @@ public sealed class ProtocolPdfEntryResolverTests
     }
 
     [Fact]
+    public void ResolveEntriesForExport_nutzt_schadenlage_nicht_als_meterende()
+    {
+        var record = new HaltungRecord();
+        record.VsaFindings.Add(new VsaFinding
+        {
+            KanalSchadencode = "BAIZ",
+            MeterStart = 0.6,
+            SchadenlageAnfang = 12,
+            SchadenlageEnde = 12,
+            Raw = "Einragendes Dichtungsmaterial",
+            FotoPath = "Fotos/Haltungen/H1/L_H1_003.jpg"
+        });
+
+        var entries = ProtocolPdfEntryResolver.ResolveEntriesForExport(record, new ProtocolDocument());
+
+        var entry = Assert.Single(entries);
+        Assert.Equal(0.6, entry.MeterStart);
+        Assert.Null(entry.MeterEnd);
+        Assert.False(entry.IsStreckenschaden);
+        Assert.Equal("12", entry.CodeMeta!.Parameters["vsa.uhr.von"]);
+        Assert.Equal("12", entry.CodeMeta.Parameters["vsa.uhr.bis"]);
+    }
+
+    [Fact]
+    public void ResolveEntriesForExport_repariert_gespeichertes_uhrlage_meterende()
+    {
+        var record = new HaltungRecord();
+        record.VsaFindings.Add(new VsaFinding
+        {
+            KanalSchadencode = "BAIZ",
+            MeterStart = 0.6,
+            SchadenlageAnfang = 12,
+            SchadenlageEnde = 12,
+            Raw = "Einragendes Dichtungsmaterial"
+        });
+
+        var existing = new ProtocolEntry
+        {
+            Code = "BAIZ",
+            Beschreibung = "Einragendes Dichtungsmaterial",
+            MeterStart = 0.6,
+            MeterEnd = 12,
+            IsStreckenschaden = true,
+            Source = ProtocolEntrySource.Imported
+        };
+        var doc = new ProtocolDocument
+        {
+            Current = new ProtocolRevision
+            {
+                Entries = { existing }
+            }
+        };
+
+        var entries = ProtocolPdfEntryResolver.ResolveEntriesForExport(record, doc);
+
+        var entry = Assert.Single(entries);
+        Assert.Same(existing, entry);
+        Assert.Equal(0.6, entry.MeterStart);
+        Assert.Null(entry.MeterEnd);
+        Assert.False(entry.IsStreckenschaden);
+        Assert.Equal("12", entry.CodeMeta!.Parameters["vsa.uhr.von"]);
+        Assert.Equal("12", entry.CodeMeta.Parameters["vsa.uhr.bis"]);
+    }
+
+    [Fact]
     public void ResolveHoldingLength_prefers_record_length_before_entry_maximum()
     {
         var record = new HaltungRecord();

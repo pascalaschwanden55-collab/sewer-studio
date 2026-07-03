@@ -29,6 +29,9 @@ internal static class ProtocolPdfEntryResolver
     {
         var current = doc.Current?.Entries ?? new List<ProtocolEntry>();
         var active = current.Where(e => !e.IsDeleted).ToList();
+        var fromFindings = BuildImportedEntriesFromFindings(record.VsaFindings);
+        RepairExistingImportedEntries(active, fromFindings);
+
         var deletedKeys = new HashSet<string>(current.Where(e => e.IsDeleted).Select(BuildEntryKey));
         var existingKeys = new HashSet<string>(active.Select(BuildEntryKey));
 
@@ -41,7 +44,6 @@ internal static class ProtocolPdfEntryResolver
 
         var result = new List<ProtocolEntry>(active);
 
-        var fromFindings = BuildImportedEntriesFromFindings(record.VsaFindings);
         foreach (var entry in fromFindings)
         {
             var key = BuildEntryKey(entry);
@@ -77,6 +79,64 @@ internal static class ProtocolPdfEntryResolver
         // Redundante Fortsetzungs-/Quantifizierungszeilen zu einer Beobachtung falten
         // (Merge statt Drop, kein Datenverlust) -> Protokoll wie das Original schlank halten.
         return ObservationCollapser.Collapse(result);
+    }
+
+    private static void RepairExistingImportedEntries(
+        IReadOnlyList<ProtocolEntry> active,
+        IReadOnlyList<ProtocolEntry> importedFromFindings)
+    {
+        if (active.Count == 0 || importedFromFindings.Count == 0)
+            return;
+
+        foreach (var existing in active)
+        {
+            var imported = importedFromFindings.FirstOrDefault(f => LooksLikeSameObservation(existing, f));
+            if (imported is null)
+                continue;
+
+            if (existing.MeterEnd.HasValue && imported.MeterEnd is null)
+            {
+                existing.MeterEnd = null;
+                existing.IsStreckenschaden = false;
+            }
+
+            if (existing.MeterStart is null && imported.MeterStart.HasValue)
+                existing.MeterStart = imported.MeterStart;
+
+            MergeCodeMeta(existing, imported);
+            MergePhotoPaths(existing, imported);
+        }
+    }
+
+    private static bool LooksLikeSameObservation(ProtocolEntry left, ProtocolEntry right)
+    {
+        if (!string.Equals(left.Code?.Trim(), right.Code?.Trim(), StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var leftMeter = left.MeterStart ?? left.MeterEnd;
+        var rightMeter = right.MeterStart ?? right.MeterEnd;
+        if (leftMeter.HasValue && rightMeter.HasValue && Math.Abs(leftMeter.Value - rightMeter.Value) > 0.01)
+            return false;
+
+        var leftDesc = NormalizeKeyText(left.Beschreibung ?? string.Empty);
+        var rightDesc = NormalizeKeyText(right.Beschreibung ?? string.Empty);
+        return string.IsNullOrWhiteSpace(leftDesc)
+               || string.IsNullOrWhiteSpace(rightDesc)
+               || string.Equals(leftDesc, rightDesc, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void MergeCodeMeta(ProtocolEntry target, ProtocolEntry source)
+    {
+        if (source.CodeMeta?.Parameters is null || source.CodeMeta.Parameters.Count == 0)
+            return;
+
+        target.CodeMeta ??= new ProtocolEntryCodeMeta { Code = target.Code };
+        target.CodeMeta.Parameters ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in source.CodeMeta.Parameters)
+        {
+            if (!string.IsNullOrWhiteSpace(kv.Value))
+                target.CodeMeta.Parameters[kv.Key] = kv.Value;
+        }
     }
 
     private static void MergePhotoPaths(ProtocolEntry target, ProtocolEntry source)
@@ -173,8 +233,8 @@ internal static class ProtocolPdfEntryResolver
             if (string.IsNullOrWhiteSpace(f.KanalSchadencode))
                 continue;
 
-            var mStart = f.MeterStart ?? f.SchadenlageAnfang;
-            var mEnd = f.MeterEnd ?? f.SchadenlageEnde;
+            var mStart = f.MeterStart;
+            var mEnd = f.MeterEnd;
             if (mStart is null && !string.IsNullOrWhiteSpace(f.Raw))
                 mStart = TryParseMeterFromRaw(f.Raw);
             if (mEnd is null && !string.IsNullOrWhiteSpace(f.Raw))
@@ -200,16 +260,28 @@ internal static class ProtocolPdfEntryResolver
                 Source = ProtocolEntrySource.Imported
             };
 
-            if (!string.IsNullOrWhiteSpace(f.Quantifizierung1) || !string.IsNullOrWhiteSpace(f.Quantifizierung2))
+            if (!string.IsNullOrWhiteSpace(f.Quantifizierung1)
+                || !string.IsNullOrWhiteSpace(f.Quantifizierung2)
+                || TryFormatClock(f.SchadenlageAnfang) is not null
+                || TryFormatClock(f.SchadenlageEnde) is not null)
             {
+                var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["Quantifizierung1"] = f.Quantifizierung1 ?? string.Empty,
+                    ["Quantifizierung2"] = f.Quantifizierung2 ?? string.Empty
+                };
+
+                var uhrVon = TryFormatClock(f.SchadenlageAnfang);
+                var uhrBis = TryFormatClock(f.SchadenlageEnde);
+                if (!string.IsNullOrWhiteSpace(uhrVon))
+                    parameters["vsa.uhr.von"] = uhrVon;
+                if (!string.IsNullOrWhiteSpace(uhrBis))
+                    parameters["vsa.uhr.bis"] = uhrBis;
+
                 entry.CodeMeta = new ProtocolEntryCodeMeta
                 {
                     Code = entry.Code,
-                    Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                    {
-                        ["Quantifizierung1"] = f.Quantifizierung1 ?? string.Empty,
-                        ["Quantifizierung2"] = f.Quantifizierung2 ?? string.Empty
-                    },
+                    Parameters = parameters,
                     UpdatedAt = DateTimeOffset.UtcNow
                 };
             }
@@ -222,6 +294,11 @@ internal static class ProtocolPdfEntryResolver
 
         return list;
     }
+
+    private static string? TryFormatClock(double? value)
+        => value is > 0 and <= 12
+            ? value.Value.ToString("0.##", CultureInfo.InvariantCulture)
+            : null;
 
     private static List<ProtocolEntry> ParsePrimaryDamagesToEntries(string? rawText)
     {

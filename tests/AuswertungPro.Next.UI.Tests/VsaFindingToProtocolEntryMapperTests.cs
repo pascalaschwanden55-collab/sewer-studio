@@ -42,20 +42,24 @@ public sealed class VsaFindingToProtocolEntryMapperTests
     }
 
     [Fact]
-    public void BuildEntries_faellt_auf_schadenlage_meter_zurueck()
+    public void BuildEntries_nutzt_schadenlage_nicht_als_meter()
     {
         var finding = new VsaFinding
         {
             KanalSchadencode = "BAB",
             Raw = "Riss",
+            MeterStart = 2.0,
             SchadenlageAnfang = 2.0,
-            SchadenlageEnde = 8.0,
+            SchadenlageEnde = 8.0
         };
 
         var entry = Single(VsaFindingToProtocolEntryMapper.BuildEntries(new[] { finding }, NoTitle));
 
         Assert.Equal(2.0, entry.MeterStart);
-        Assert.Equal(8.0, entry.MeterEnd);
+        Assert.Null(entry.MeterEnd);
+        Assert.False(entry.IsStreckenschaden);
+        Assert.Equal("2", entry.CodeMeta!.Parameters["vsa.uhr.von"]);
+        Assert.Equal("8", entry.CodeMeta.Parameters["vsa.uhr.bis"]);
     }
 
     [Fact]

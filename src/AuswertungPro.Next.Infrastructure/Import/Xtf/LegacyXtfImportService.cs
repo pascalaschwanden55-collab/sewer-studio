@@ -990,16 +990,28 @@ public sealed class LegacyXtfImportService
                 Source = ProtocolEntrySource.Imported
             };
 
-            if (!string.IsNullOrWhiteSpace(f.Quantifizierung1) || !string.IsNullOrWhiteSpace(f.Quantifizierung2))
+            if (!string.IsNullOrWhiteSpace(f.Quantifizierung1)
+                || !string.IsNullOrWhiteSpace(f.Quantifizierung2)
+                || TryFormatClock(f.SchadenlageAnfang) is not null
+                || TryFormatClock(f.SchadenlageEnde) is not null)
             {
+                var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["Quantifizierung1"] = f.Quantifizierung1 ?? string.Empty,
+                    ["Quantifizierung2"] = f.Quantifizierung2 ?? string.Empty
+                };
+
+                var uhrVon = TryFormatClock(f.SchadenlageAnfang);
+                var uhrBis = TryFormatClock(f.SchadenlageEnde);
+                if (!string.IsNullOrWhiteSpace(uhrVon))
+                    parameters["vsa.uhr.von"] = uhrVon;
+                if (!string.IsNullOrWhiteSpace(uhrBis))
+                    parameters["vsa.uhr.bis"] = uhrBis;
+
                 entry.CodeMeta = new ProtocolEntryCodeMeta
                 {
                     Code = entry.Code,
-                    Parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                    {
-                        ["Quantifizierung1"] = f.Quantifizierung1 ?? string.Empty,
-                        ["Quantifizierung2"] = f.Quantifizierung2 ?? string.Empty
-                    },
+                    Parameters = parameters,
                     UpdatedAt = DateTimeOffset.UtcNow
                 };
             }
@@ -1012,6 +1024,11 @@ public sealed class LegacyXtfImportService
 
         return list;
     }
+
+    private static string? TryFormatClock(double? value)
+        => value is > 0 and <= 12
+            ? value.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)
+            : null;
 
     private static void SyncRevisionImportedEntries(ProtocolRevision revision, IReadOnlyList<VsaFinding> findings)
     {

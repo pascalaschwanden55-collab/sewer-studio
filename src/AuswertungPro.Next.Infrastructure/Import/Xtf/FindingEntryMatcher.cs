@@ -73,14 +73,16 @@ internal static class FindingEntryMatcher
     }
 
     /// <summary>
-    /// Gibt den effektiven Meterstart eines Befunds zurueck (MeterStart bevorzugt, Fallback SchadenlageAnfang).
+    /// Gibt den effektiven Meterstart eines Befunds zurueck.
+    /// SchadenlageAnfang ist VSA-Uhrlage, kein Meterwert.
     /// </summary>
     public static double? GetFindingMeterStart(VsaFinding finding)
-        => finding.MeterStart ?? finding.SchadenlageAnfang;
+        => finding.MeterStart;
 
     /// <summary>
-    /// Gibt das effektive Meterende eines Befunds zurueck (MeterEnd bevorzugt, Fallback SchadenlageEnde).
+    /// Gibt das effektive Meterende eines Befunds zurueck.
+    /// SchadenlageEnde ist VSA-Uhrlage, kein Meterwert.
     /// </summary>
     public static double? GetFindingMeterEnd(VsaFinding finding)
-        => finding.MeterEnd ?? finding.SchadenlageEnde;
+        => finding.MeterEnd;
 }

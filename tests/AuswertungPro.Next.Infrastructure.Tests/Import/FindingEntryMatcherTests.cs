@@ -21,10 +21,10 @@ public sealed class FindingEntryMatcherTests
     }
 
     [Fact]
-    public void GetFindingMeterStart_FallsBackToSchadenlageAnfang_WhenMeterStartNull()
+    public void GetFindingMeterStart_IgnoriertSchadenlageAnfang_WhenMeterStartNull()
     {
         var finding = new VsaFinding { MeterStart = null, SchadenlageAnfang = 10.0 };
-        Assert.Equal(10.0, FindingEntryMatcher.GetFindingMeterStart(finding));
+        Assert.Null(FindingEntryMatcher.GetFindingMeterStart(finding));
     }
 
     [Fact]
@@ -42,10 +42,10 @@ public sealed class FindingEntryMatcherTests
     }
 
     [Fact]
-    public void GetFindingMeterEnd_FallsBackToSchadenlageEnde_WhenMeterEndNull()
+    public void GetFindingMeterEnd_IgnoriertSchadenlageEnde_WhenMeterEndNull()
     {
         var finding = new VsaFinding { MeterEnd = null, SchadenlageEnde = 12.0 };
-        Assert.Equal(12.0, FindingEntryMatcher.GetFindingMeterEnd(finding));
+        Assert.Null(FindingEntryMatcher.GetFindingMeterEnd(finding));
     }
 
     // ===================== FindBestFindingForEntry =====================
