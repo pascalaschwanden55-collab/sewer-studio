@@ -21,7 +21,10 @@ public enum KanalExportFormat
     WinCan,
 
     /// <summary>Sowohl WinCan- als auch IKAS-Signale gefunden — mehrdeutig.</summary>
-    Ambiguous
+    Ambiguous,
+
+    /// <summary>KINS-DVD-Export (kiDVDaten.txt gefunden; VSAKEK-XTF optional dabei).</summary>
+    Kins
 }
 
 /// <summary>
@@ -30,9 +33,10 @@ public enum KanalExportFormat
 public sealed record KanalExportDetection(
     KanalExportFormat Format,
     string?           Db3Path,        // WinCan: groesste .db3 unter \DB\
-    string?           VsaKekXtfPath,  // IKAS: VSA_KEK-XTF
+    string?           VsaKekXtfPath,  // IKAS/KINS: VSA_KEK-XTF
     string?           Sia405XtfPath,  // IKAS: SIA405-XTF (optional)
-    string?           Reason);
+    string?           Reason,
+    string?           KinsDataTxtPath = null); // KINS: kiDVDaten.txt
 
 /// <summary>
 /// Erkennt das Format eines Kanal-TV-Exportordners (WinCan vs. IKAS)
@@ -63,11 +67,14 @@ public static class KanalExportDetector
                 KanalExportFormat.Unknown, null, null, null,
                 "Pfad nicht vorhanden oder leer");
 
+        // --- KINS-Suche (kiDVDaten.txt = eindeutiger DVD-Marker) ---
+        var kinsTxtPath = FindKinsDataTxt(sourceFolder);
+
         // --- WinCan-Suche ---
         var db3Path = FindWinCanDb3(sourceFolder);
 
         // --- IKAS-Suche ---
-        var (vsaKekPath, sia405Path) = FindXtfFiles(sourceFolder);
+        var (vsaKekPath, sia405Path, vsaKekAnyPath) = FindXtfFiles(sourceFolder);
         var isIkasByXtf    = vsaKekPath is not null;
         var isIkasByPattern = KiasExportPattern.Detect(sourceFolder).IsKias;
         var isIkas = isIkasByXtf || isIkasByPattern;
@@ -75,6 +82,30 @@ public static class KanalExportDetector
         // --- Format bestimmen ---
         KanalExportFormat format;
         string reason;
+
+        // KINS gewinnt vor IKAS: KINS-Exporte enthalten oft ein VSAKEK-XTF,
+        // dessen Header auch die SIA405-Modelle listet — ohne diesen Vorrang
+        // liefe der Ordner faelschlich als IKAS/Unknown.
+        if (kinsTxtPath is not null && db3Path is not null)
+        {
+            return new KanalExportDetection(
+                KanalExportFormat.Ambiguous, db3Path, vsaKekPath ?? vsaKekAnyPath, sia405Path,
+                "Sowohl KINS (kiDVDaten.txt) als auch WinCan (.db3 in DB/) vorhanden",
+                kinsTxtPath);
+        }
+
+        if (kinsTxtPath is not null)
+        {
+            // Fuer KINS zaehlt jedes XTF mit VSA_KEK-Modell — auch wenn der
+            // Header zusaetzlich SIA405-Modelle referenziert.
+            var kinsXtf = vsaKekPath ?? vsaKekAnyPath;
+            return new KanalExportDetection(
+                KanalExportFormat.Kins, db3Path, kinsXtf, sia405Path,
+                kinsXtf is not null
+                    ? $"KINS erkannt: kiDVDaten.txt + VSA_KEK-XTF {Path.GetFileName(kinsXtf)}"
+                    : "KINS erkannt: kiDVDaten.txt (kein VSAKEK-XTF)",
+                kinsTxtPath);
+        }
 
         if (db3Path is not null && isIkas)
         {
@@ -171,10 +202,11 @@ public static class KanalExportDetector
     // IKAS: VSA_KEK-XTF und SIA405-XTF suchen
     // -------------------------------------------------------------------------
 
-    private static (string? vsaKekPath, string? sia405Path) FindXtfFiles(string root)
+    private static (string? vsaKekPath, string? sia405Path, string? vsaKekAnyPath) FindXtfFiles(string root)
     {
         string? vsaKekPath = null;
         string? sia405Path = null;
+        string? vsaKekAnyPath = null; // VSA_KEK-Modell vorhanden, egal ob auch SIA405 im Header (KINS-Fall)
 
         try
         {
@@ -189,6 +221,9 @@ public static class KanalExportDetector
             {
                 var content = ReadXtfHeader(path);
                 if (content is null) continue;
+
+                if (content.Contains("VSA_KEK_2020_LV95", StringComparison.OrdinalIgnoreCase))
+                    vsaKekAnyPath ??= path;
 
                 // SIA405-XTF: Inhalt enthaelt "SIA405"
                 if (content.Contains("SIA405", StringComparison.OrdinalIgnoreCase))
@@ -206,7 +241,30 @@ public static class KanalExportDetector
         }
         catch { /* ignore */ }
 
-        return (vsaKekPath, sia405Path);
+        return (vsaKekPath, sia405Path, vsaKekAnyPath);
+    }
+
+    // -------------------------------------------------------------------------
+    // KINS: kiDVDaten.txt suchen (Marker der Kanal-Info-DVD)
+    // -------------------------------------------------------------------------
+
+    private static string? FindKinsDataTxt(string root)
+    {
+        try
+        {
+            var opts = new EnumerationOptions
+            {
+                RecurseSubdirectories = true,
+                IgnoreInaccessible    = true,
+                MatchCasing           = MatchCasing.CaseInsensitive
+            };
+
+            foreach (var path in Directory.EnumerateFiles(root, "kiDVDaten.txt", opts))
+                return path;
+        }
+        catch { /* ignore */ }
+
+        return null;
     }
 
     /// <summary>

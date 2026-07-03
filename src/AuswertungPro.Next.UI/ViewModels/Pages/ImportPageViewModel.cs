@@ -650,7 +650,7 @@ public sealed partial class ImportPageViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Ein-Knopf-Import: Quellordner der Kanalfernsehdaten waehlen → Format erkennen (WinCan/IKAS) →
+    /// Ein-Knopf-Import: Quellordner der Kanalfernsehdaten waehlen → Format erkennen (WinCan/IKAS/KINS) →
     /// massgebliche Quelle importieren (inkl. Pro-Beobachtung-Fotos) → Rohdaten archivieren →
     /// Filme/PDFs verteilen → Fotos zentral gruppieren → relativ verlinken. Nutzt den getesteten
     /// ProjectImportOrchestrator. Die 5 manuellen Format-Knoepfe bleiben als Spezialfall.
@@ -665,14 +665,15 @@ public sealed partial class ImportPageViewModel : ObservableObject
         }
 
         var src = _sp.Dialogs.SelectFolder(
-            "Quellordner der Kanalfernsehdaten waehlen (WinCan- oder IKAS-Projektordner)", null);
+            "Quellordner der Kanalfernsehdaten waehlen (WinCan-, IKAS- oder KINS-Projektordner)", null);
         if (string.IsNullOrWhiteSpace(src))
             return;
 
         ImportProgress = "Kanalfernseh-Projekt importieren: erkennen → archivieren → parsen → verteilen...";
         var orchestrator = new ProjectImportOrchestrator(
             new XtfImportServiceAdapter(),
-            new AuswertungPro.Next.Infrastructure.Import.WinCan.WinCanDbImportService());
+            new AuswertungPro.Next.Infrastructure.Import.WinCan.WinCanDbImportService(),
+            _sp.KinsImport);
         var result = await Task.Run(() => orchestrator.Import(src!, projectFolder!, _shell.Project));
         ImportProgress = "";
 

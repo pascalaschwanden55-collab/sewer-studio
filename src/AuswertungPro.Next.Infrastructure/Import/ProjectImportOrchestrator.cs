@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,7 +24,7 @@ public sealed record OneClickImportResult(
 /// Orchestriert den vollstaendigen Ein-Knopf-Import:
 ///   1. Projektstruktur sicherstellen
 ///   2. Restore-Point anlegen
-///   3. Formatentkennung (WinCan / IKAS)
+///   3. Formatentkennung (WinCan / IKAS / KINS)
 ///   4. Quelldateien archivieren
 ///   5. Parsen (XTF oder WinCan)
 ///   6. SIA405-Whitelist-Anreicherung (nur IKAS)
@@ -38,11 +38,16 @@ public sealed class ProjectImportOrchestrator
 {
     private readonly IXtfImportService _xtf;
     private readonly IWinCanDbImportService _winCan;
+    private readonly IKinsImportService? _kins;
 
-    public ProjectImportOrchestrator(IXtfImportService xtf, IWinCanDbImportService winCan)
+    public ProjectImportOrchestrator(
+        IXtfImportService xtf,
+        IWinCanDbImportService winCan,
+        IKinsImportService? kins = null)
     {
         _xtf    = xtf    ?? throw new ArgumentNullException(nameof(xtf));
         _winCan = winCan ?? throw new ArgumentNullException(nameof(winCan));
+        _kins   = kins;
     }
 
     /// <summary>
@@ -51,7 +56,7 @@ public sealed class ProjectImportOrchestrator
     /// <param name="sourceFolder">Quellordner des Kanalfernsehen-Exports.</param>
     /// <param name="projectFolder">Projektstammordner (wird angelegt falls nicht vorhanden).</param>
     /// <param name="project">Offenes Projekt-Objekt.</param>
-    /// <param name="ctx">Optionaler Lauf-Kontext (CancellationToken, Log, …).</param>
+    /// <param name="ctx">Optionaler Lauf-Kontext (CancellationToken, Log, â€¦).</param>
     public OneClickImportResult Import(
         string sourceFolder,
         string projectFolder,
@@ -155,6 +160,18 @@ public sealed class ProjectImportOrchestrator
             {
                 parseResult = _xtf.ImportXtfFiles(new[] { det.VsaKekXtfPath! }, project, ctx);
             }
+            else if (det.Format == KanalExportFormat.Kins)
+            {
+                // KINS: massgebliche Quelle ist das VSAKEK-XTF (wie IKAS);
+                // alte DVDs ohne XTF laufen ueber den kiDVDaten.txt-Import.
+                if (det.VsaKekXtfPath is not null)
+                    parseResult = _xtf.ImportXtfFiles(new[] { det.VsaKekXtfPath }, project, ctx);
+                else if (_kins is not null)
+                    parseResult = _kins.ImportKinsExport(sourceFolder, project, ctx);
+                else
+                    parseResult = Result<ImportStats>.Fail(
+                        "KINS_SERVICE_MISSING", "KINS ohne XTF erkannt, aber kein KINS-Importservice verfuegbar.");
+            }
             else // WinCan
             {
                 parseResult = _winCan.ImportWinCanExport(sourceFolder, project, ctx);
@@ -179,6 +196,43 @@ public sealed class ProjectImportOrchestrator
         {
             errors++;
             messages.Add($"Parse-Ausnahme: {ex.Message}");
+        }
+
+        // ------------------------------------------------------------------
+        // Schritt 5b: KINS-Anreicherung (Namen, Timecodes/Laenge, DBF-Stammdaten)
+        // ------------------------------------------------------------------
+        IReadOnlyDictionary<string, HaltungRecord> kinsBezeichnungen =
+            new Dictionary<string, HaltungRecord>(StringComparer.OrdinalIgnoreCase);
+        if (det.Format == KanalExportFormat.Kins)
+        {
+            try
+            {
+                // 1. Numerische XTF-Bezeichnungen â†’ "{Schacht_oben}-{Schacht_unten}"
+                //    (merkt die Bezeichnung fuer die PDF-Zuordnung, raeumt Re-Import-Duplikate ab)
+                var nameResult = Kins.KinsHoldingNameNormalizer.Apply(project, ctx);
+                kinsBezeichnungen = nameResult.RecordsProBezeichnung;
+                messages.AddRange(nameResult.Messages);
+                if (nameResult.Umbenannt > 0 || nameResult.DuplikateEntfernt > 0)
+                    messages.Add($"KINS-Namen: {nameResult.Umbenannt} normalisiert, {nameResult.DuplikateEntfernt} Re-Import-Duplikate entfernt.");
+
+                // 2. kiDVDaten.txt: Video-Timecodes je Beobachtung + inspizierte Laenge + Datum
+                if (det.KinsDataTxtPath is not null)
+                {
+                    var txtResult = Kins.KinsDvdTextEnricher.Apply(project, det.KinsDataTxtPath);
+                    messages.AddRange(txtResult.Messages);
+                    messages.Add($"KINS-TXT: {txtResult.TimecodesGesetzt} Timecodes, {txtResult.LaengenGesetzt} Laengen, {txtResult.DatumGesetzt} Daten gesetzt.");
+                }
+
+                // 3. FoxPro-DBF: Schachtliste + Whitelist fuer leere Stammdaten
+                var dbfResult = Kins.KinsDbfWhitelistEnricher.Apply(project, sourceFolder, ctx);
+                messages.AddRange(dbfResult.Messages);
+                messages.Add($"KINS-DBF: {dbfResult.HaltungsfelderGesetzt} Haltungsfelder, {dbfResult.SchaechteNeu} Schaechte neu, {dbfResult.SchaechteAktualisiert} aktualisiert.");
+            }
+            catch (Exception ex)
+            {
+                errors++;
+                messages.Add($"KINS-Anreicherung fehlgeschlagen: {ex.Message}");
+            }
         }
 
         // ------------------------------------------------------------------
@@ -242,8 +296,8 @@ public sealed class ProjectImportOrchestrator
         // ------------------------------------------------------------------
         try
         {
-            // 7a) Fotos zentral gruppiert (Fotos\Haltungen\) — KEINE Videos/Original-PDFs und KEINE Schacht-
-            //     Kopie (Schächte kommen in 7c als seiten-gruppierte Protokolle; Videos/Protokolle in 7b).
+            // 7a) Fotos zentral gruppiert (Fotos\Haltungen\) â€” KEINE Videos/Original-PDFs und KEINE Schacht-
+            //     Kopie (SchÃ¤chte kommen in 7c als seiten-gruppierte Protokolle; Videos/Protokolle in 7b).
             var mediaResult = new MediaDistributionService()
                 .DistributeImportedMedia(
                     projectFolder,
@@ -257,17 +311,31 @@ public sealed class ProjectImportOrchestrator
                     includeSchacht: false);
             messages.AddRange(mediaResult.Messages);
 
-            // 7b) Video + ORIGINAL-Protokoll (NUR das maßgebliche PDF, ein PDF/Haltung) flach+datumsbenannt
+            // 7b-KINS) Einzelprotokoll-PDFs (â€¦Haltung<N>.pdf) aus der QUELLE je Haltung verteilen â€”
+            //     vor dem Distributor, damit PDF_Path gesetzt ist und kein Gesamt-PDF-Split noetig wird.
+            if (det.Format == KanalExportFormat.Kins)
+            {
+                var pdfResult = Kins.KinsProtocolPdfDistributor.Distribute(
+                    project, projectFolder, sourceFolder, kinsBezeichnungen);
+                messages.AddRange(pdfResult.Messages);
+                errors += pdfResult.Errors;
+                messages.Add($"KINS-PDF: {pdfResult.PdfsVerteilt} Einzelprotokolle verteilt.");
+            }
+
+            // 7b) Video + ORIGINAL-Protokoll (NUR das maÃŸgebliche PDF, ein PDF/Haltung) flach+datumsbenannt
             //     verteilen; beide relativ verlinkt (PDF_Path = Original). Das eigene _E-Protokoll wird hier
-            //     NICHT erzeugt — das macht der ProtocolRegenerationService („Protokoll neu generieren").
+            //     NICHT erzeugt â€” das macht der ProtocolRegenerationService (â€žProtokoll neu generieren").
+            //     KINS: kein Gesamt-PDF-Split (Einzel-PDFs kommen aus 7b-KINS), aber Video-Kopie + Relativierung.
             var archivedPdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
-            var distResult = KanalImportDistributor.Distribute(project, projectFolder, archivedPdfDir, sourceFolder);
+            var distResult = KanalImportDistributor.Distribute(
+                project, projectFolder, archivedPdfDir, sourceFolder,
+                splitPdf: det.Format != KanalExportFormat.Kins);
             messages.AddRange(distResult.Messages);
             errors += distResult.Errors;
 
-            // HINWEIS: Schächte verteilt der Import bewusst NICHT (includeSchacht:false oben) — das macht der
-            // Anwender manuell über „Schacht Verteilen" mit dem separaten Schacht-Gesamtauszug-PDF, damit kein
-            // falsches/ganzes PDF automatisch an die Schächte gehängt wird.
+            // HINWEIS: SchÃ¤chte verteilt der Import bewusst NICHT (includeSchacht:false oben) â€” das macht der
+            // Anwender manuell Ã¼ber â€žSchacht Verteilen" mit dem separaten Schacht-Gesamtauszug-PDF, damit kein
+            // falsches/ganzes PDF automatisch an die SchÃ¤chte gehÃ¤ngt wird.
 
             messages.Add(
                 $"Verteilung: {mediaResult.FilesCopied} Fotos/Dateien, {distResult.VideosDistributed} Videos, " +

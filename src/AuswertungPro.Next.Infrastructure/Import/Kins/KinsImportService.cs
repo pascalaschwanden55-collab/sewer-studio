@@ -351,7 +351,8 @@ public sealed class KinsImportService : IKinsImportService
         }
     }
 
-    private static List<string> ReadTextLines(string path)
+    // Auch vom KinsDvdTextEnricher genutzt (gleiches Encoding-Verhalten).
+    internal static List<string> ReadTextLines(string path)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
@@ -412,7 +413,8 @@ public sealed class KinsImportService : IKinsImportService
         return new VideoResolveResult(null, list);
     }
 
-    private static DateTime? TryReadRecordingDate(string exportRoot)
+    // Auch vom KinsDvdTextEnricher genutzt (Datum aus kiDVinfo.txt).
+    internal static DateTime? TryReadRecordingDate(string exportRoot)
     {
         var infoFile = EnumerateFilesSafe(exportRoot, "kiDVinfo.txt").FirstOrDefault();
         if (string.IsNullOrWhiteSpace(infoFile))

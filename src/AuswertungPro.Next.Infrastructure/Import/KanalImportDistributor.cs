@@ -41,7 +41,9 @@ public static class KanalImportDistributor
     /// <param name="projectFolder">Absoluter Projektstammordner.</param>
     /// <param name="archivedPdfDir">Ordner mit dem/den archivierten Original-Protokoll-PDF(s) (i. d. R. Importdateien\PDF).</param>
     /// <param name="sourceVideoDir">Quellordner, in dem die Videos liegen (Export-Root, rekursiv).</param>
-    public static Result Distribute(Project project, string projectFolder, string archivedPdfDir, string sourceVideoDir)
+    /// <param name="splitPdf">false = Gesamt-PDF-Split ueberspringen (KINS: Einzel-PDFs kommen bereits
+    /// aus der Quelle via KinsProtocolPdfDistributor); Relativierung + Video-Fallback laufen trotzdem.</param>
+    public static Result Distribute(Project project, string projectFolder, string archivedPdfDir, string sourceVideoDir, bool splitPdf = true)
     {
         var messages = new List<string>();
         int videos = 0, origs = 0, errors = 0;
@@ -50,7 +52,7 @@ public static class KanalImportDistributor
         // 1) Original-Protokoll pro Haltung splitten + Video matchen (die echte „Haltung Verteilen"-Logik).
         //    HoldingFolderDistributor liefert bei leerem PDF-Ordner ein Fehlerergebnis (Success=false) und
         //    fasst dann kein Video an — die Videos übernimmt in diesem Fall der Fallback in Schritt 3.
-        if (Directory.Exists(archivedPdfDir))
+        if (splitPdf && Directory.Exists(archivedPdfDir))
         {
             try
             {
