@@ -57,6 +57,30 @@ Außerdem bereits vorhanden (Alt-Audit überholt): DialogService-Zentralisierung
 - SchaechteData/Data-Mutationen immer unter `_shell.CollectionLock` (WPF-Sync-Vertrag, Guard-Test existiert).
 - WPF-Smoke für Phase 1+2 steht noch aus (Band, Galerie, Karte, Chips, Statusleiste, Icon, Kostenbalken).
 
+## Import-Robustheit (Pakete R1–R4, vom User skizziert 2026-07-03)
+
+Ziel: ein Import-Knopf, intern saubere Hersteller-Lanes (WinCan/.db3, IKAS/VSA_KEK-XTF,
+IBAK-KIAS/Daten.txt+FDB, KINS/kiDVDaten.txt+XTF — Lanes existieren bereits im
+`ProjectImportOrchestrator`). Formaterkennung bleibt DETERMINISTISCH (Marker-Dateien
+sind eindeutig — hier keine KI).
+
+- **R1 PDF-Typ-Klassifizierer (deterministisch):** `PdfDokumentTypErkennung` (pur, Text
+  der ersten Seite via PdfPig): Dichtheitspruefung (SIA190/VSA RL Dicht), TV-Protokoll
+  (VSA-Code-Tabelle), Plan/Situation, Deckblatt, Unbekannt. Einsatz in Verteilung/Archiv
+  (DP-Verteilung nur echte DP; Plaene nie als Protokoll splitten).
+- **R2 Report-Haertung:** Pflichtzeilen: erkanntes Format, verwendete Hauptquelle,
+  uebersprungene Quellen MIT Grund, nicht zugeordnete Dateien, LAUTE Warnung wenn
+  0 Haltungen trotz vorhandener Datenquellen ("nie still 0").
+- **R3 Haltungsnamen-Normalisierer (zentral):** `SS 10081-SS 8993` = `10081-8993` =
+  `H_10081-8993` = `L__10081-8993` → ein Schluessel; fuer Quellen-Merge und
+  PDF/Video-Zuordnung (bestehende NormalizeHoldingKey/HoldingKeyMatch konsolidieren).
+- **R4 KI-Schiedsrichter (Stufe 2, KEIN neues Modell):** Nur fuer PDFs, die R1 nicht
+  sicher zuordnet: vorhandenes Qwen3-VL (Ollama) bekommt Seite 1 als Bild + striktes
+  JSON-Schema {typ, schacht_von, schacht_bis, datum}; Ergebnis als Vorschlag mit
+  Report-Kennzeichnung "per KI klassifiziert", nie stille Wahrheit. Bonus: liest
+  Schachtnummern wo Regex scheitert (SIA190-Fall). Muster: JSON-Schema-Zwang wie
+  ueberall bei Qwen-Outputs; VRAM-Budget beachten (Modell laeuft ohnehin).
+
 ## Bewusst NICHT bauen
 
-3D/IFC-Visualisierung, SonarScan, Berichtsdesigner (begründet verworfen — Solo-Nutzer, Aufwand/Nutzen).
+3D/IFC-Visualisierung, SonarScan, Berichtsdesigner (begründet verworfen — Solo-Nutzer, Aufwand/Nutzen). Eigenes trainiertes PDF-Klassifikations-Modell (Overkill — Qwen3-VL reicht fuer Dokumenttyp-Erkennung; zu wenig Trainingsbeispiele je Typ).
