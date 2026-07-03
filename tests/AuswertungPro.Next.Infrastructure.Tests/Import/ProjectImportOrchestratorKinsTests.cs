@@ -110,6 +110,12 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
         File.WriteAllText(Path.Combine(sourceDir, "048473_DP_Gross", "048473-Haltung10.pdf"), "%PDF-1.4 dummy");
         File.WriteAllText(Path.Combine(sourceDir, "048473_DP_Gross", "048473-Haltung1.pdf"), "%PDF-1.4 andere");
 
+        // Gesamtprotokoll + Deckblatt (Fake — der Seiten-Split scheitert daran kontrolliert,
+        // der Einzel-PDF-Fallback muss trotzdem liefern).
+        Directory.CreateDirectory(Path.Combine(sourceDir, "048473_PDF"));
+        File.WriteAllText(Path.Combine(sourceDir, "048473_PDF", "048473_Protokoll.pdf"), "%PDF-1.4 gesamtprotokoll-fake");
+        File.WriteAllText(Path.Combine(sourceDir, "048473_PDF", "048473_Deckblatt.pdf"), "%PDF-1.4 deckblatt");
+
         new DbfTestFileBuilder()
             .Feld("NR", 'I', 4)
             .Feld("BEZ", 'C', 25)
@@ -206,6 +212,27 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
             .Where(f => Path.GetFileNameWithoutExtension(f).EndsWith("_1", StringComparison.Ordinal))
             .ToList();
         Assert.Empty(duplikate);
+    }
+
+    [Fact]
+    public void FindeGesamtprotokoll_BevorzugtProtokollPdf_IgnoriertDeckblatt()
+    {
+        var (sourceDir, _) = ErstelleMiniKinsFixture();
+
+        var gefunden = KinsProtocolPdfDistributor.FindeGesamtprotokoll(sourceDir);
+
+        Assert.NotNull(gefunden);
+        Assert.EndsWith("048473_Protokoll.pdf", gefunden);
+    }
+
+    [Fact]
+    public void FindeGesamtprotokoll_OhneProtokollPdf_LiefertNull()
+    {
+        var dir = Path.Combine(_root, "leer-quelle");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "irgendwas.pdf"), "%PDF");
+
+        Assert.Null(KinsProtocolPdfDistributor.FindeGesamtprotokoll(dir));
     }
 
     [Fact]

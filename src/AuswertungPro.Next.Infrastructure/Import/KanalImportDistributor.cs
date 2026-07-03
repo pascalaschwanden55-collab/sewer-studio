@@ -41,9 +41,16 @@ public static class KanalImportDistributor
     /// <param name="projectFolder">Absoluter Projektstammordner.</param>
     /// <param name="archivedPdfDir">Ordner mit dem/den archivierten Original-Protokoll-PDF(s) (i. d. R. Importdateien\PDF).</param>
     /// <param name="sourceVideoDir">Quellordner, in dem die Videos liegen (Export-Root, rekursiv).</param>
-    /// <param name="splitPdf">false = Gesamt-PDF-Split ueberspringen (KINS: Einzel-PDFs kommen bereits
-    /// aus der Quelle via KinsProtocolPdfDistributor); Relativierung + Video-Fallback laufen trotzdem.</param>
-    public static Result Distribute(Project project, string projectFolder, string archivedPdfDir, string sourceVideoDir, bool splitPdf = true)
+    /// <param name="splitPdf">false = Gesamt-PDF-Split ueberspringen; Relativierung + Video-Fallback laufen trotzdem.</param>
+    /// <param name="primaryProtocolPdf">Explizites Gesamtprotokoll fuer den Split (KINS: *_Protokoll.pdf aus der
+    /// Quelle). Null = automatische Wahl aus dem Archivordner (SelectPrimaryProtocolPdf).</param>
+    public static Result Distribute(
+        Project project,
+        string projectFolder,
+        string archivedPdfDir,
+        string sourceVideoDir,
+        bool splitPdf = true,
+        string? primaryProtocolPdf = null)
     {
         var messages = new List<string>();
         int videos = 0, origs = 0, errors = 0;
@@ -52,13 +59,15 @@ public static class KanalImportDistributor
         // 1) Original-Protokoll pro Haltung splitten + Video matchen (die echte „Haltung Verteilen"-Logik).
         //    HoldingFolderDistributor liefert bei leerem PDF-Ordner ein Fehlerergebnis (Success=false) und
         //    fasst dann kein Video an — die Videos übernimmt in diesem Fall der Fallback in Schritt 3.
-        if (splitPdf && Directory.Exists(archivedPdfDir))
+        if (splitPdf && (primaryProtocolPdf is not null || Directory.Exists(archivedPdfDir)))
         {
             try
             {
                 // NUR das maßgebliche Inspektionsprotokoll splitten (nicht alle PDFs im Ordner) —
                 // sonst entstehen aus mehreren Gesamt-PDFs Duplikate (<H>.pdf + <H>_01.pdf).
-                var primaryPdf = SelectPrimaryProtocolPdf(archivedPdfDir);
+                var primaryPdf = primaryProtocolPdf is not null && File.Exists(primaryProtocolPdf)
+                    ? primaryProtocolPdf
+                    : SelectPrimaryProtocolPdf(archivedPdfDir);
                 var results = string.IsNullOrWhiteSpace(primaryPdf)
                     ? (IReadOnlyList<HoldingFolderDistributor.DistributionResult>)System.Array.Empty<HoldingFolderDistributor.DistributionResult>()
                     : HoldingFolderDistributor.DistributeFiles(

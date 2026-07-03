@@ -20,6 +20,33 @@ public static class KinsProtocolPdfDistributor
 {
     public sealed record Result(int PdfsVerteilt, int Errors, IReadOnlyList<string> Messages);
 
+    /// <summary>
+    /// Findet das KINS-Gesamtprotokoll in der Quelle (z.B. 048473_PDF\048473_Protokoll.pdf):
+    /// groesste PDF mit "Protokoll" im Namen (Deckblatt ausgeschlossen). Es ist die Basis
+    /// fuer den Seiten-Split je Haltung — die automatische Wahl "groesste PDF im Archiv"
+    /// wuerde bei KINS sonst Plaene/fremde PDFs treffen.
+    /// </summary>
+    public static string? FindeGesamtprotokoll(string sourceFolder)
+    {
+        try
+        {
+            return Infrastructure.Common.SafeFileEnumeration.EnumerateFilesSafe(sourceFolder, "*.pdf", recursive: true)
+                .Where(p =>
+                {
+                    var name = Path.GetFileNameWithoutExtension(p);
+                    return name.Contains("Protokoll", StringComparison.OrdinalIgnoreCase)
+                        && !name.Contains("Deckblatt", StringComparison.OrdinalIgnoreCase);
+                })
+                .OrderByDescending(p => { try { return new FileInfo(p).Length; } catch { return 0L; } })
+                .ThenBy(p => p, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public static Result Distribute(
         Project project,
         string projectFolder,

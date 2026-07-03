@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -56,7 +56,7 @@ public sealed class ProjectImportOrchestrator
     /// <param name="sourceFolder">Quellordner des Kanalfernsehen-Exports.</param>
     /// <param name="projectFolder">Projektstammordner (wird angelegt falls nicht vorhanden).</param>
     /// <param name="project">Offenes Projekt-Objekt.</param>
-    /// <param name="ctx">Optionaler Lauf-Kontext (CancellationToken, Log, â€¦).</param>
+    /// <param name="ctx">Optionaler Lauf-Kontext (CancellationToken, Log, …).</param>
     public OneClickImportResult Import(
         string sourceFolder,
         string projectFolder,
@@ -207,7 +207,7 @@ public sealed class ProjectImportOrchestrator
         {
             try
             {
-                // 1. Numerische XTF-Bezeichnungen â†’ "{Schacht_oben}-{Schacht_unten}"
+                // 1. Numerische XTF-Bezeichnungen → "{Schacht_oben}-{Schacht_unten}"
                 //    (merkt die Bezeichnung fuer die PDF-Zuordnung, raeumt Re-Import-Duplikate ab)
                 var nameResult = Kins.KinsHoldingNameNormalizer.Apply(project, ctx);
                 kinsBezeichnungen = nameResult.RecordsProBezeichnung;
@@ -296,8 +296,8 @@ public sealed class ProjectImportOrchestrator
         // ------------------------------------------------------------------
         try
         {
-            // 7a) Fotos zentral gruppiert (Fotos\Haltungen\) â€” KEINE Videos/Original-PDFs und KEINE Schacht-
-            //     Kopie (SchÃ¤chte kommen in 7c als seiten-gruppierte Protokolle; Videos/Protokolle in 7b).
+            // 7a) Fotos zentral gruppiert (Fotos\Haltungen\) — KEINE Videos/Original-PDFs und KEINE Schacht-
+            //     Kopie (Schächte kommen in 7c als seiten-gruppierte Protokolle; Videos/Protokolle in 7b).
             var mediaResult = new MediaDistributionService()
                 .DistributeImportedMedia(
                     projectFolder,
@@ -311,31 +311,36 @@ public sealed class ProjectImportOrchestrator
                     includeSchacht: false);
             messages.AddRange(mediaResult.Messages);
 
-            // 7b-KINS) Einzelprotokoll-PDFs (â€¦Haltung<N>.pdf) aus der QUELLE je Haltung verteilen â€”
-            //     vor dem Distributor, damit PDF_Path gesetzt ist und kein Gesamt-PDF-Split noetig wird.
+            // 7b) Video + ORIGINAL-Protokoll (NUR das maßgebliche PDF, ein PDF/Haltung) flach+datumsbenannt
+            //     verteilen; beide relativ verlinkt (PDF_Path = Original). Das eigene _E-Protokoll wird hier
+            //     NICHT erzeugt — das macht der ProtocolRegenerationService („Protokoll neu generieren").
+            //     KINS: Der Seiten-Split laeuft auf dem expliziten Gesamtprotokoll aus der Quelle
+            //     (*_Protokoll.pdf) — die Auto-Wahl "groesste Archiv-PDF" traefe sonst Plaene/fremde PDFs.
+            var kinsGesamtprotokoll = det.Format == KanalExportFormat.Kins
+                ? Kins.KinsProtocolPdfDistributor.FindeGesamtprotokoll(sourceFolder)
+                : null;
+            var archivedPdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
+            var distResult = KanalImportDistributor.Distribute(
+                project, projectFolder, archivedPdfDir, sourceFolder,
+                splitPdf: det.Format != KanalExportFormat.Kins || kinsGesamtprotokoll is not null,
+                primaryProtocolPdf: kinsGesamtprotokoll);
+            messages.AddRange(distResult.Messages);
+            errors += distResult.Errors;
+
+            // 7c-KINS) Einzelprotokoll-PDFs (…Haltung<N>.pdf) aus der QUELLE als Luecken-Fallback:
+            //     versorgt nur Haltungen, denen der Gesamt-PDF-Split kein Protokoll zugeordnet hat.
             if (det.Format == KanalExportFormat.Kins)
             {
                 var pdfResult = Kins.KinsProtocolPdfDistributor.Distribute(
                     project, projectFolder, sourceFolder, kinsBezeichnungen);
                 messages.AddRange(pdfResult.Messages);
                 errors += pdfResult.Errors;
-                messages.Add($"KINS-PDF: {pdfResult.PdfsVerteilt} Einzelprotokolle verteilt.");
+                messages.Add($"KINS-PDF: {pdfResult.PdfsVerteilt} Einzelprotokolle als Fallback verteilt.");
             }
 
-            // 7b) Video + ORIGINAL-Protokoll (NUR das maÃŸgebliche PDF, ein PDF/Haltung) flach+datumsbenannt
-            //     verteilen; beide relativ verlinkt (PDF_Path = Original). Das eigene _E-Protokoll wird hier
-            //     NICHT erzeugt â€” das macht der ProtocolRegenerationService (â€žProtokoll neu generieren").
-            //     KINS: kein Gesamt-PDF-Split (Einzel-PDFs kommen aus 7b-KINS), aber Video-Kopie + Relativierung.
-            var archivedPdfDir = ProjectStructure.ImportdateienDir(projectFolder, ProjectStructure.PdfDir);
-            var distResult = KanalImportDistributor.Distribute(
-                project, projectFolder, archivedPdfDir, sourceFolder,
-                splitPdf: det.Format != KanalExportFormat.Kins);
-            messages.AddRange(distResult.Messages);
-            errors += distResult.Errors;
-
-            // HINWEIS: SchÃ¤chte verteilt der Import bewusst NICHT (includeSchacht:false oben) â€” das macht der
-            // Anwender manuell Ã¼ber â€žSchacht Verteilen" mit dem separaten Schacht-Gesamtauszug-PDF, damit kein
-            // falsches/ganzes PDF automatisch an die SchÃ¤chte gehÃ¤ngt wird.
+            // HINWEIS: Schächte verteilt der Import bewusst NICHT (includeSchacht:false oben) — das macht der
+            // Anwender manuell über „Schacht Verteilen" mit dem separaten Schacht-Gesamtauszug-PDF, damit kein
+            // falsches/ganzes PDF automatisch an die Schächte gehängt wird.
 
             messages.Add(
                 $"Verteilung: {mediaResult.FilesCopied} Fotos/Dateien, {distResult.VideosDistributed} Videos, " +
