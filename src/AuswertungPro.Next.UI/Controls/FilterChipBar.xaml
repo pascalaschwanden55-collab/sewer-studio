@@ -1,0 +1,38 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Controls.FilterChipBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Filter-Chips fuers Haltungen-Grid: reiner View-Filter (NR bleibt Position).
+         Ein Zustandsklassen-Chip zur Zeit; Video/Schaeden kombinieren mit UND. -->
+    <WrapPanel VerticalAlignment="Center">
+        <TextBlock Text="Filter:" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"
+                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+
+        <TextBlock Text="ZK" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"
+                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+        <ToggleButton x:Name="Zk0" Content="0" Margin="0,0,2,0" Padding="8,2" FontSize="12"
+                      Checked="ZkChip_Changed" Unchecked="ZkChip_Changed" ToolTip="Nur Zustandsklasse 0"/>
+        <ToggleButton x:Name="Zk1" Content="1" Margin="0,0,2,0" Padding="8,2" FontSize="12"
+                      Checked="ZkChip_Changed" Unchecked="ZkChip_Changed" ToolTip="Nur Zustandsklasse 1"/>
+        <ToggleButton x:Name="Zk2" Content="2" Margin="0,0,2,0" Padding="8,2" FontSize="12"
+                      Checked="ZkChip_Changed" Unchecked="ZkChip_Changed" ToolTip="Nur Zustandsklasse 2"/>
+        <ToggleButton x:Name="Zk3" Content="3" Margin="0,0,2,0" Padding="8,2" FontSize="12"
+                      Checked="ZkChip_Changed" Unchecked="ZkChip_Changed" ToolTip="Nur Zustandsklasse 3"/>
+        <ToggleButton x:Name="Zk4" Content="4" Margin="0,0,10,0" Padding="8,2" FontSize="12"
+                      Checked="ZkChip_Changed" Unchecked="ZkChip_Changed" ToolTip="Nur Zustandsklasse 4"/>
+
+        <ToggleButton x:Name="ChipVideo" Content="mit Video" Margin="0,0,4,0" Padding="10,2" FontSize="12"
+                      Checked="Chip_Changed" Unchecked="Chip_Changed"/>
+        <ToggleButton x:Name="ChipSchaeden" Content="mit Schäden" Margin="0,0,10,0" Padding="10,2" FontSize="12"
+                      Checked="Chip_Changed" Unchecked="Chip_Changed"/>
+
+        <Button x:Name="ResetButton" Content="✕ Filter aus" Padding="10,2" FontSize="12"
+                Visibility="Collapsed" Click="Reset_Click"
+                Style="{StaticResource SecondaryButton}"/>
+
+        <TextBlock x:Name="TrefferText" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0"
+                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+        <TextBlock x:Name="SperrHinweis" Text="(Verschieben bei aktivem Filter gesperrt)"
+                   FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="Collapsed"
+                   Foreground="{DynamicResource MutedBrush}"/>
+    </WrapPanel>
+</UserControl>

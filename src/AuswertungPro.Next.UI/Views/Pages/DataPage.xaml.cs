@@ -39,6 +39,7 @@ public partial class DataPage : System.Windows.Controls.UserControl
     public DataPage()
     {
         InitializeComponent();
+        FilterChips.FilterGeaendert += WendeChipFilterAn;
         _haltungDetailItemFactory = new DataPageDetailItemFactory(
             ResolveManagedComboSpec,
             CommitHaltungDetailField);
@@ -1068,6 +1069,25 @@ public partial class DataPage : System.Windows.Controls.UserControl
             return;
 
         ExecuteRecordMenuCommand(sender, vm, vm.OpenDichtheitPdfCommand, "Dichtheitspruefung");
+    }
+
+    /// <summary>
+    /// Chip-Filter auf die Grid-Sicht anwenden. Reiner View-Filter: die
+    /// Records-Reihenfolge (= NR-Laufnummer) bleibt unangetastet; Zeilen-
+    /// Verschieben per Drag&amp;Drop wird bei aktivem Filter gesperrt.
+    /// </summary>
+    private void WendeChipFilterAn(DataPageFilter filter)
+    {
+        if (DataContext is not DataPageViewModel vm)
+            return;
+
+        var view = System.Windows.Data.CollectionViewSource.GetDefaultView(vm.Records);
+        view.Filter = filter.IstAktiv
+            ? o => filter.Passt(o as HaltungRecord)
+            : null;
+
+        Grid.AllowDrop = !filter.IstAktiv;
+        FilterChips.SetTrefferInfo(view.Cast<object>().Count(), vm.Records.Count);
     }
 
     private void OpenContainingFolderMenu_Click(object sender, RoutedEventArgs e)
