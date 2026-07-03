@@ -7,7 +7,8 @@ public static class CodingProtocolImportTrainingWorkflowServiceFactory
 {
     public static CodingProtocolImportTrainingWorkflowService Create(
         Action<CodingEvent> seekToImportEvent,
-        Func<string?> captureSnapshot)
+        Func<string?> captureSnapshot,
+        Func<string, CodingEvent, Task<CodingProtocolVerificationResult?>>? verifyProtocolAsync = null)
         => new(
             async importEvent =>
             {
@@ -19,5 +20,6 @@ public static class CodingProtocolImportTrainingWorkflowServiceFactory
             () => Guid.NewGuid().ToString("N")[..12],
             CodingProtocolTrainingSnapshotStoreFactory.Create(),
             LiveDetectionTeacherAnnotationFactory.CreateImportConfirmation,
-            annotation => InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation));
+            annotation => InfraTeacher.TeacherAnnotationStore.AppendAsync(annotation),
+            verifyProtocolAsync);
 }

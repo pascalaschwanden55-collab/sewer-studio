@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using AuswertungPro.Next.Application.Ai;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Player;
 
@@ -18,16 +19,21 @@ public sealed class CodingAiControllerTests
             new OllamaClient(new Uri("http://127.0.0.1:11434")),
             "vision-test:latest");
         var qualityGate = new QualityGateService();
+        var verifier = new GuidedVerificationService(
+            new OllamaClient(new Uri("http://127.0.0.1:11434")),
+            "vision-test:latest");
         var runtime = Runtime(
             enabled: true,
             liveDetection,
             enhancedVision: null,
-            qualityGate);
+            qualityGate,
+            verifier);
 
         controller.ApplyRuntime(runtime);
 
         Assert.Same(liveDetection, controller.LiveDetection);
         Assert.Same(qualityGate, controller.QualityGate);
+        Assert.Same(verifier, controller.ProtocolVerifier);
         Assert.Same(runtime.PipelineConfig, controller.PipelineConfig);
         Assert.Equal("vision-test:latest", controller.ModelName);
         Assert.True(controller.QwenAvailable);
@@ -58,6 +64,7 @@ public sealed class CodingAiControllerTests
         Assert.Null(controller.LiveDetection);
         Assert.Null(controller.EnhancedVision);
         Assert.Null(controller.QualityGate);
+        Assert.Null(controller.ProtocolVerifier);
         Assert.False(controller.QwenAvailable);
         Assert.False(controller.TryBeginAnalysis());
         Assert.Null(controller.AnalysisCancellation);
@@ -97,7 +104,8 @@ public sealed class CodingAiControllerTests
         bool enabled,
         LiveDetectionService? liveDetection,
         EnhancedVisionAnalysisService? enhancedVision,
-        QualityGateService? qualityGate)
+        QualityGateService? qualityGate,
+        GuidedVerificationService? protocolVerifier = null)
         => new(
             new AiRuntimeSettings(
                 enabled,
@@ -124,6 +132,7 @@ public sealed class CodingAiControllerTests
             liveDetection,
             enhancedVision,
             qualityGate,
+            protocolVerifier,
             VisionClient: null,
             MultiModel: null,
             BoxSegmentation: null,

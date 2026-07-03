@@ -42,7 +42,8 @@ public partial class PlayerWindow
         var result = await CodingProtocolImportTrainingConfirmationWorkflow.ConfirmAsync(
             importEvent,
             SeekToImportEvent,
-            () => TryTakeSnapshot(out var snapshotPath) ? snapshotPath : null);
+            () => TryTakeSnapshot(out var snapshotPath) ? snapshotPath : null,
+            CodingProtocolGuidedVerificationAdapter.Create(_codingAiRuntimeOwner.Controller.ProtocolVerifier));
         return CodingImportTrainingResultWorkflow.Execute(
             result,
             new CodingImportTrainingResultDisplayActions(

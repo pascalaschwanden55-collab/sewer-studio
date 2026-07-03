@@ -53,8 +53,17 @@ public static class CodingProtocolMatchDisplayPolicy
             _ => "Abgleich"
         };
 
-    public static CodingImportConfirmationBadgeState BuildImportConfirmationBadge(string? code, double meter)
-        => new($"? {code} @ {meter:F1}m bestaetigt", TimeSpan.FromSeconds(3));
+    public static CodingImportConfirmationBadgeState BuildImportConfirmationBadge(
+        string? code,
+        double meter,
+        CodingProtocolVerificationResult? verification = null)
+    {
+        var text = $"? {code} @ {meter:F1}m bestaetigt";
+        if (!string.IsNullOrWhiteSpace(verification?.ConfirmationLevel))
+            text += $" | Qwen: {verification.ConfirmationLevel}";
+
+        return new(text, TimeSpan.FromSeconds(3));
+    }
 
     public static CodingProtocolMatchOverlayState BuildAcceptedGreenMatchesOverlay(int accepted)
         => new($"{accepted} gruene Treffer als Training uebernommen", TimeSpan.FromSeconds(4));

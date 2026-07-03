@@ -152,6 +152,8 @@ public sealed class PlayerWindowCodingProtocolMatchArchitectureTests
         Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", confirmWorkflow);
         Assert.Contains("new CodingProtocolImportTrainingConfirmationWorkflowActions", confirmWorkflow);
         Assert.Contains("CodingProtocolImportTrainingConfirmationWorkflow.ConfirmAsync", training);
+        Assert.Contains("CodingProtocolGuidedVerificationAdapter.Create", training);
+        Assert.Contains("_codingAiRuntimeOwner.Controller.ProtocolVerifier", training);
         Assert.DoesNotContain(".ConfirmAsync(importEvent)", training);
         Assert.Contains("service.ConfirmAsync(importEvent)", confirmWorkflow);
         Assert.Contains("CodingImportTrainingResultWorkflow.Execute", training);

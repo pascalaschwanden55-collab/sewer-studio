@@ -16,6 +16,7 @@ public sealed class CodingAiRuntimeFactoryTests
         Assert.Null(runtime.LiveDetection);
         Assert.Null(runtime.EnhancedVision);
         Assert.Null(runtime.QualityGate);
+        Assert.Null(runtime.ProtocolVerifier);
         Assert.Null(runtime.VisionClient);
         Assert.Null(runtime.MultiModel);
         Assert.Null(runtime.BoxSegmentation);
@@ -40,6 +41,7 @@ public sealed class CodingAiRuntimeFactoryTests
         Assert.NotNull(runtime.LiveDetection);
         Assert.NotNull(runtime.EnhancedVision);
         Assert.NotNull(runtime.QualityGate);
+        Assert.NotNull(runtime.ProtocolVerifier);
         Assert.NotNull(runtime.VisionClient);
         Assert.NotNull(runtime.MultiModel);
         Assert.NotNull(runtime.BoxSegmentation);

@@ -6,6 +6,7 @@ using AuswertungPro.Next.Application.Ai.QualityGate;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.UI.Ai;
 
 namespace AuswertungPro.Next.UI.Player;
@@ -18,6 +19,7 @@ public sealed class CodingAiController
 
     public LiveDetectionService? LiveDetection { get; private set; }
     public EnhancedVisionAnalysisService? EnhancedVision { get; private set; }
+    public GuidedVerificationService? ProtocolVerifier { get; private set; }
     public CancellationTokenSource? AnalysisCancellation => _analysisCancellation;
     public bool IsAnalyzing { get; private set; }
     public string ModelName { get; private set; } = string.Empty;
@@ -40,6 +42,7 @@ public sealed class CodingAiController
         ModelName = runtime.ModelName;
         LiveDetection = runtime.LiveDetection;
         EnhancedVision = runtime.EnhancedVision;
+        ProtocolVerifier = runtime.ProtocolVerifier;
         QualityGate = runtime.QualityGate;
         VisionClient = runtime.VisionClient;
         MultiModel = runtime.MultiModel;

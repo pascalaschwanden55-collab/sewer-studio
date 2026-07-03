@@ -53,6 +53,7 @@ public sealed class CodingAiMultiModelEnsureWorkflowTests
             LiveDetection: null,
             EnhancedVision: null,
             QualityGate: null,
+            ProtocolVerifier: null,
             VisionClient: visionClient,
             MultiModel: null,
             BoxSegmentation: null,

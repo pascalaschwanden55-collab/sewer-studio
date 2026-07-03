@@ -53,6 +53,13 @@ public sealed class TeacherAnnotation
     // --- Masse (aus Kalibrierung) ---
     public double? WidthMm { get; set; }
     public double? HeightMm { get; set; }
+
+    // --- Protokollverifikation (Qwen/GUIDED) ---
+    public string? ProtocolVerificationLevel { get; set; }
+    public bool? ProtocolDamageVisible { get; set; }
+    public string? ProtocolVerificationCode { get; set; }
+    public double? ProtocolVerificationMeter { get; set; }
+    public string? ProtocolVerificationExplanation { get; set; }
 }
 
 // NormalizedBoundingBox ist jetzt in AuswertungPro.Next.Application.Ai definiert (einheitliches Modell).

@@ -266,6 +266,7 @@ public sealed class CodingAiInitializationWorkflowTests
             LiveDetection: null,
             EnhancedVision: null,
             QualityGate: null,
+            ProtocolVerifier: null,
             VisionClient: visionClient,
             MultiModel: multiModel,
             BoxSegmentation: boxSegmentation,

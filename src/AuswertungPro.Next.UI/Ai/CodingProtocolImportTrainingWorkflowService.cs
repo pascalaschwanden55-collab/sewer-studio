@@ -5,7 +5,15 @@ namespace AuswertungPro.Next.UI.Ai;
 
 public sealed record CodingProtocolImportTrainingResult(
     bool Accepted,
-    CodingImportConfirmationBadgeState Badge);
+    CodingImportConfirmationBadgeState Badge,
+    CodingProtocolVerificationResult? Verification = null);
+
+public sealed record CodingProtocolVerificationResult(
+    string ConfirmationLevel,
+    bool DamageVisible,
+    string? ActualCode,
+    double? MeterReading,
+    string Explanation);
 
 public sealed class CodingProtocolImportTrainingWorkflowService
 {
@@ -16,6 +24,7 @@ public sealed class CodingProtocolImportTrainingWorkflowService
     private readonly CodingProtocolTrainingSnapshotStore _snapshotStore;
     private readonly Func<string, CodingEvent, string, TeacherAnnotation> _createAnnotation;
     private readonly Func<TeacherAnnotation, Task> _appendAnnotation;
+    private readonly Func<string, CodingEvent, Task<CodingProtocolVerificationResult?>>? _verifyProtocolAsync;
 
     public CodingProtocolImportTrainingWorkflowService(
         Func<CodingEvent, Task> seekAndWait,
@@ -24,7 +33,8 @@ public sealed class CodingProtocolImportTrainingWorkflowService
         Func<string> createAnnotationId,
         CodingProtocolTrainingSnapshotStore snapshotStore,
         Func<string, CodingEvent, string, TeacherAnnotation> createAnnotation,
-        Func<TeacherAnnotation, Task> appendAnnotation)
+        Func<TeacherAnnotation, Task> appendAnnotation,
+        Func<string, CodingEvent, Task<CodingProtocolVerificationResult?>>? verifyProtocolAsync = null)
     {
         _seekAndWait = seekAndWait ?? throw new ArgumentNullException(nameof(seekAndWait));
         _captureSnapshot = captureSnapshot ?? throw new ArgumentNullException(nameof(captureSnapshot));
@@ -33,6 +43,7 @@ public sealed class CodingProtocolImportTrainingWorkflowService
         _snapshotStore = snapshotStore ?? throw new ArgumentNullException(nameof(snapshotStore));
         _createAnnotation = createAnnotation ?? throw new ArgumentNullException(nameof(createAnnotation));
         _appendAnnotation = appendAnnotation ?? throw new ArgumentNullException(nameof(appendAnnotation));
+        _verifyProtocolAsync = verifyProtocolAsync;
     }
 
     public async Task<CodingProtocolImportTrainingResult> ConfirmAsync(CodingEvent importEvent)
@@ -48,14 +59,46 @@ public sealed class CodingProtocolImportTrainingWorkflowService
         if (destFrame == null)
             return FailFrameCapture();
 
+        var verification = await VerifyProtocolAsync(destFrame, importEvent);
         var annotation = _createAnnotation(annotationId, importEvent, destFrame);
+        ApplyVerification(annotation, verification);
         await _appendAnnotation(annotation);
 
         _snapshotStore.DeleteSnapshot(snapshotPath);
         var badge = CodingProtocolMatchDisplayPolicy.BuildImportConfirmationBadge(
             importEvent.Entry.Code,
-            importEvent.MeterAtCapture);
-        return new CodingProtocolImportTrainingResult(true, badge);
+            importEvent.MeterAtCapture,
+            verification);
+        return new CodingProtocolImportTrainingResult(true, badge, verification);
+    }
+
+    private async Task<CodingProtocolVerificationResult?> VerifyProtocolAsync(string framePath, CodingEvent importEvent)
+    {
+        if (_verifyProtocolAsync is null)
+            return null;
+
+        try
+        {
+            return await _verifyProtocolAsync(framePath, importEvent);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void ApplyVerification(
+        TeacherAnnotation annotation,
+        CodingProtocolVerificationResult? verification)
+    {
+        if (verification is null)
+            return;
+
+        annotation.ProtocolVerificationLevel = verification.ConfirmationLevel;
+        annotation.ProtocolDamageVisible = verification.DamageVisible;
+        annotation.ProtocolVerificationCode = verification.ActualCode;
+        annotation.ProtocolVerificationMeter = verification.MeterReading;
+        annotation.ProtocolVerificationExplanation = verification.Explanation;
     }
 
     private CodingProtocolImportTrainingResult FailFrameCapture()

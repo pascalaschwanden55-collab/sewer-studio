@@ -65,6 +65,74 @@ public sealed class CodingProtocolImportTrainingWorkflowServiceTests
     }
 
     [Fact]
+    public async Task ConfirmAsync_runs_protocol_verification_before_appending_annotation()
+    {
+        var calls = new List<string>();
+        var importEvent = new CodingEvent
+        {
+            Entry = new ProtocolEntry { Code = "BAG", Beschreibung = "Versatz" },
+            MeterAtCapture = 12.34,
+            VideoTimestamp = TimeSpan.FromSeconds(8)
+        };
+        TeacherAnnotation? appended = null;
+        var verification = new CodingProtocolVerificationResult(
+            ConfirmationLevel: "bestaetigt",
+            DamageVisible: true,
+            ActualCode: "BAG",
+            MeterReading: 12.3,
+            Explanation: "Qwen sieht den protokollierten Versatz.");
+
+        var service = new CodingProtocolImportTrainingWorkflowService(
+            seekAndWait: _ =>
+            {
+                calls.Add("seek");
+                return Task.CompletedTask;
+            },
+            captureSnapshot: () =>
+            {
+                calls.Add("capture");
+                return @"C:\temp\snap.png";
+            },
+            showFrameCaptureFailed: () => throw new InvalidOperationException("Failure dialog must not be shown."),
+            createAnnotationId: () => "abc123",
+            snapshotStore: new CodingProtocolTrainingSnapshotStore(
+                () => @"C:\teacher\images",
+                path => path == @"C:\temp\snap.png",
+                (_, destination, _) =>
+                {
+                    Assert.Equal(@"C:\teacher\images\mark_abc123.png", destination);
+                    calls.Add("copy");
+                },
+                _ => calls.Add("delete")),
+            createAnnotation: LiveDetectionTeacherAnnotationFactory.CreateImportConfirmation,
+            appendAnnotation: annotation =>
+            {
+                calls.Add("append");
+                appended = annotation;
+                return Task.CompletedTask;
+            },
+            verifyProtocolAsync: (framePath, actualEvent) =>
+            {
+                Assert.Equal(@"C:\teacher\images\mark_abc123.png", framePath);
+                Assert.Same(importEvent, actualEvent);
+                calls.Add("verify");
+                return Task.FromResult<CodingProtocolVerificationResult?>(verification);
+            });
+
+        var result = await service.ConfirmAsync(importEvent);
+
+        Assert.True(result.Accepted);
+        Assert.Same(verification, result.Verification);
+        Assert.NotNull(appended);
+        Assert.Equal("bestaetigt", appended.ProtocolVerificationLevel);
+        Assert.True(appended.ProtocolDamageVisible);
+        Assert.Equal("BAG", appended.ProtocolVerificationCode);
+        Assert.Equal(12.3, appended.ProtocolVerificationMeter);
+        Assert.Equal("Qwen sieht den protokollierten Versatz.", appended.ProtocolVerificationExplanation);
+        Assert.Equal(["seek", "capture", "copy", "verify", "append", "delete"], calls);
+    }
+
+    [Fact]
     public async Task ConfirmAsync_shows_failure_and_returns_not_accepted_when_snapshot_is_missing()
     {
         var failureShown = false;

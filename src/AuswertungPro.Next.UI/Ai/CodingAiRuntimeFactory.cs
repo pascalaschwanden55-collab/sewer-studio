@@ -4,6 +4,7 @@ using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai;
 using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.QualityGate;
+using AuswertungPro.Next.Infrastructure.Ai.Training;
 
 namespace AuswertungPro.Next.UI.Ai;
 
@@ -14,6 +15,7 @@ public sealed record CodingAiRuntime(
     LiveDetectionService? LiveDetection,
     EnhancedVisionAnalysisService? EnhancedVision,
     QualityGateService? QualityGate,
+    GuidedVerificationService? ProtocolVerifier,
     IVisionPipelineClient? VisionClient,
     SingleFrameMultiModelService? MultiModel,
     MarkBoxSegmentationService? BoxSegmentation,
@@ -47,6 +49,7 @@ public static class CodingAiRuntimeFactory
 
         var liveDetection = new LiveDetectionService(ollamaClient, runtimeSettings.VisionModel);
         var enhancedVision = new EnhancedVisionAnalysisService(ollamaClient, runtimeSettings.VisionModel, codeCatalog);
+        var protocolVerifier = new GuidedVerificationService(ollamaClient, runtimeSettings.VisionModel, codeCatalog);
         var qualityGate = new QualityGateService();
 
         try
@@ -64,6 +67,7 @@ public static class CodingAiRuntimeFactory
                 liveDetection,
                 enhancedVision,
                 qualityGate,
+                protocolVerifier,
                 visionClient,
                 multiModel,
                 boxSegmentation,
@@ -78,6 +82,7 @@ public static class CodingAiRuntimeFactory
                 liveDetection,
                 enhancedVision,
                 qualityGate,
+                protocolVerifier,
                 VisionClient: null,
                 MultiModel: null,
                 BoxSegmentation: null,
@@ -106,6 +111,7 @@ public static class CodingAiRuntimeFactory
             LiveDetection: null,
             EnhancedVision: null,
             QualityGate: null,
+            ProtocolVerifier: null,
             VisionClient: null,
             MultiModel: null,
             BoxSegmentation: null,

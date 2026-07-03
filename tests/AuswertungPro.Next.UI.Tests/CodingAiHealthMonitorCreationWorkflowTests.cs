@@ -68,6 +68,7 @@ public sealed class CodingAiHealthMonitorCreationWorkflowTests
             LiveDetection: null,
             EnhancedVision: null,
             QualityGate: null,
+            ProtocolVerifier: null,
             VisionClient: visionClient,
             MultiModel: null,
             BoxSegmentation: null,

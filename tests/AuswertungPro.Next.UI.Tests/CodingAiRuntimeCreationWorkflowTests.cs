@@ -18,6 +18,7 @@ public sealed class CodingAiRuntimeCreationWorkflowTests
             LiveDetection: null,
             EnhancedVision: null,
             QualityGate: null,
+            ProtocolVerifier: null,
             VisionClient: null,
             MultiModel: null,
             BoxSegmentation: null,
