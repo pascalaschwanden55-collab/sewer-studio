@@ -655,6 +655,30 @@ public static class PhotoMeasurementGeometryService
     }
 
     /// <summary>
+    /// Plant einen Kreisbogen ohne WPF-Typen.
+    /// </summary>
+    public static PhotoMeasurementArcPlan BuildArcPlan(
+        double centerX,
+        double centerY,
+        double radius,
+        double startRad,
+        double endRad)
+    {
+        double sweep = endRad - startRad;
+
+        return new PhotoMeasurementArcPlan(
+            Start: new PhotoMeasurementCanvasPoint(
+                centerX + Math.Cos(startRad) * radius,
+                centerY + Math.Sin(startRad) * radius),
+            End: new PhotoMeasurementCanvasPoint(
+                centerX + Math.Cos(endRad) * radius,
+                centerY + Math.Sin(endRad) * radius),
+            Radius: radius,
+            IsLargeArc: Math.Abs(sweep) > Math.PI,
+            IsClockwise: sweep > 0);
+    }
+
+    /// <summary>
     /// Reine Zeichengeometrie fuer die Bogen-Vorschau.
     /// </summary>
     public static PhotoMeasurementBendOverlayPlan BuildBendOverlayPlan(
@@ -791,6 +815,13 @@ public sealed record PhotoMeasurementLateralOverlayPlan(
     double ArcStartRad,
     double ArcEndRad,
     PhotoMeasurementCanvasPoint LabelPosition);
+
+public sealed record PhotoMeasurementArcPlan(
+    PhotoMeasurementCanvasPoint Start,
+    PhotoMeasurementCanvasPoint End,
+    double Radius,
+    bool IsLargeArc,
+    bool IsClockwise);
 
 public sealed record PhotoMeasurementBendRing(
     PhotoMeasurementCanvasPoint Center,

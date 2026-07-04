@@ -860,6 +860,39 @@ public sealed class PhotoMeasurementGeometryServiceTests
     }
 
     [Fact]
+    public void BuildArcPlan_KleinerUhrzeigersinnbogen_RechnetStartEndeUndFlags()
+    {
+        var plan = PhotoMeasurementGeometryService.BuildArcPlan(
+            centerX: 100,
+            centerY: 100,
+            radius: 50,
+            startRad: 0,
+            endRad: Math.PI / 2.0);
+
+        Assert.Equal(150, plan.Start.X, precision: 6);
+        Assert.Equal(100, plan.Start.Y, precision: 6);
+        Assert.Equal(100, plan.End.X, precision: 6);
+        Assert.Equal(150, plan.End.Y, precision: 6);
+        Assert.Equal(50, plan.Radius, precision: 6);
+        Assert.False(plan.IsLargeArc);
+        Assert.True(plan.IsClockwise);
+    }
+
+    [Fact]
+    public void BuildArcPlan_GrosserGegenuhrzeigersinnbogen_RechnetFlags()
+    {
+        var plan = PhotoMeasurementGeometryService.BuildArcPlan(
+            centerX: 100,
+            centerY: 100,
+            radius: 50,
+            startRad: Math.PI,
+            endRad: -Math.PI);
+
+        Assert.True(plan.IsLargeArc);
+        Assert.False(plan.IsClockwise);
+    }
+
+    [Fact]
     public void BuildBendOverlayPlan_RechnetRingeUndAchse()
     {
         var plan = PhotoMeasurementGeometryService.BuildBendOverlayPlan(

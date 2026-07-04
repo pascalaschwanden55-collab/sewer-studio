@@ -1130,24 +1130,18 @@ public partial class PhotoMeasurementWindow : Window
     private void DrawArc(double cx, double cy, double radius,
         double startRad, double endRad, Brush stroke, double thickness, string tag)
     {
+        var plan = PhotoMeasurementGeometryService.BuildArcPlan(cx, cy, radius, startRad, endRad);
         var pathFig = new PathFigure
         {
-            StartPoint = new Point(
-                cx + Math.Cos(startRad) * radius,
-                cy + Math.Sin(startRad) * radius)
+            StartPoint = new Point(plan.Start.X, plan.Start.Y)
         };
 
-        double sweep = endRad - startRad;
-        bool isLargeArc = Math.Abs(sweep) > Math.PI;
-
         pathFig.Segments.Add(new ArcSegment(
-            new Point(
-                cx + Math.Cos(endRad) * radius,
-                cy + Math.Sin(endRad) * radius),
-            new Size(radius, radius),
+            new Point(plan.End.X, plan.End.Y),
+            new Size(plan.Radius, plan.Radius),
             0,
-            isLargeArc,
-            sweep > 0 ? SweepDirection.Clockwise : SweepDirection.Counterclockwise,
+            plan.IsLargeArc,
+            plan.IsClockwise ? SweepDirection.Clockwise : SweepDirection.Counterclockwise,
             true));
 
         var pathGeo = new PathGeometry(new[] { pathFig });
