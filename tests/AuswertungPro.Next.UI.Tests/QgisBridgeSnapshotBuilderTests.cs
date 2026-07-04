@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.UI.QgisBridge;
 using Xunit;
 
@@ -20,9 +21,9 @@ public sealed class QgisBridgeSnapshotBuilderTests
     {
         using var fixture = QgisBridgeFixture.Create();
         var sut = fixture.CreateBuilder();
-        var project = CreateProjectWithDamage();
+        var snapshot = QgisProjectSnapshot.Capture(CreateProjectWithImportedDamage(), "A-B");
 
-        var status = sut.BuildStatus(project, "A-B");
+        var status = sut.BuildStatus(snapshot);
 
         Assert.True(status.Ok);
         Assert.Equal("A-B", status.CurrentHolding);
@@ -37,12 +38,13 @@ public sealed class QgisBridgeSnapshotBuilderTests
     {
         using var fixture = QgisBridgeFixture.Create();
         var sut = fixture.CreateBuilder();
-        var project = CreateProjectWithDamage();
+        var snapshot = QgisProjectSnapshot.Capture(CreateProjectWithImportedDamage(), "A-B");
 
-        var geoJson = sut.BuildCurrentGeoJson(project, "A-B");
+        var geoJson = sut.BuildCurrentGeoJson(snapshot);
 
         var feature = Assert.Single(geoJson.Features);
         Assert.Equal("A-B", feature.Properties["haltung"]);
+        Assert.Equal(1, feature.Properties["schaden_count"]);
         var line = Assert.IsType<GeoJsonLineString>(feature.Geometry);
         Assert.Equal(2, line.Coordinates.Length);
         Assert.InRange(line.Coordinates[0][0], 8.61, 8.63);
@@ -54,16 +56,61 @@ public sealed class QgisBridgeSnapshotBuilderTests
     {
         using var fixture = QgisBridgeFixture.Create();
         var sut = fixture.CreateBuilder();
-        var project = CreateProjectWithDamage();
+        var snapshot = QgisProjectSnapshot.Capture(CreateProjectWithImportedDamage(), null);
 
-        var geoJson = sut.BuildDamagesGeoJson(project);
+        var geoJson = sut.BuildDamagesGeoJson(snapshot);
 
         var feature = Assert.Single(geoJson.Features);
         Assert.Equal("A-B", feature.Properties["haltung"]);
         Assert.Equal("BAB", feature.Properties["code"]);
+        Assert.Equal("import", feature.Properties["source"]);
         var point = Assert.IsType<GeoJsonPoint>(feature.Geometry);
         Assert.InRange(point.Coordinates[0], 8.61, 8.63);
         Assert.InRange(point.Coordinates[1], 46.85, 46.90);
+    }
+
+    [Fact]
+    public void BuildDamagesGeoJson_prefers_protocol_entries_over_imported_findings()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+        var project = CreateProjectWithImportedDamage();
+        var record = project.Data[0];
+        record.Protocol = new ProtocolDocument
+        {
+            HaltungId = "A-B",
+            Current = new ProtocolRevision
+            {
+                Entries =
+                {
+                    new ProtocolEntry
+                    {
+                        Code = "BBA",
+                        Beschreibung = "Wurzeln im Rohr",
+                        MeterStart = 2.0,
+                        MeterEnd = 8.0,
+                        IsStreckenschaden = true
+                    },
+                    new ProtocolEntry { Code = "GELOESCHT", MeterStart = 1.0, IsDeleted = true }
+                }
+            }
+        };
+
+        var geoJson = sut.BuildDamagesGeoJson(QgisProjectSnapshot.Capture(project, null));
+
+        // Nur der aktive Protokolleintrag zaehlt: importierte Findings und
+        // geloeschte Eintraege duerfen nicht doppelt erscheinen.
+        var feature = Assert.Single(geoJson.Features);
+        Assert.Equal("BBA", feature.Properties["code"]);
+        Assert.Equal("Wurzeln im Rohr", feature.Properties["beschreibung"]);
+        Assert.Equal("protokoll", feature.Properties["source"]);
+        Assert.Equal(true, feature.Properties["streckenschaden"]);
+
+        // Streckenschaden 2-8 m wird als Mittelpunkt (5 m) auf der 10-m-Linie verortet.
+        var point = Assert.IsType<GeoJsonPoint>(feature.Geometry);
+        var lineStart = AuswertungPro.Next.Infrastructure.Map.CoordinateTransform.Lv95ToWgs84(2690000, 1190000);
+        var lineEnd = AuswertungPro.Next.Infrastructure.Map.CoordinateTransform.Lv95ToWgs84(2690010, 1190000);
+        Assert.InRange(point.Coordinates[0], lineStart.Lon, lineEnd.Lon);
     }
 
     [Fact]
@@ -71,11 +118,11 @@ public sealed class QgisBridgeSnapshotBuilderTests
     {
         using var fixture = QgisBridgeFixture.Create();
         var sut = fixture.CreateBuilder();
-        var project = CreateProjectWithDamage();
+        var snapshot = QgisProjectSnapshot.Capture(CreateProjectWithImportedDamage(), "A-B");
         var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-        var currentJson = JsonSerializer.Serialize(sut.BuildCurrentGeoJson(project, "A-B"), options);
-        var damagesJson = JsonSerializer.Serialize(sut.BuildDamagesGeoJson(project), options);
+        var currentJson = JsonSerializer.Serialize(sut.BuildCurrentGeoJson(snapshot), options);
+        var damagesJson = JsonSerializer.Serialize(sut.BuildDamagesGeoJson(snapshot), options);
 
         Assert.Contains("\"type\":\"FeatureCollection\"", currentJson);
         Assert.Contains("\"type\":\"LineString\"", currentJson);
@@ -83,7 +130,29 @@ public sealed class QgisBridgeSnapshotBuilderTests
         Assert.Contains("\"type\":\"Point\"", damagesJson);
     }
 
-    private static Project CreateProjectWithDamage()
+    [Fact]
+    public void Capture_falls_back_to_findings_when_protocol_only_has_deleted_entries()
+    {
+        var project = CreateProjectWithImportedDamage();
+        var record = project.Data[0];
+        record.Protocol = new ProtocolDocument
+        {
+            HaltungId = "A-B",
+            Current = new ProtocolRevision
+            {
+                Entries = { new ProtocolEntry { Code = "X", MeterStart = 1.0, IsDeleted = true } }
+            }
+        };
+
+        var snapshot = QgisProjectSnapshot.Capture(project, null);
+
+        var haltung = Assert.Single(snapshot.Haltungen);
+        var damage = Assert.Single(haltung.Schaeden);
+        Assert.Equal("import", damage.Source);
+        Assert.Equal("BAB", damage.Code);
+    }
+
+    private static Project CreateProjectWithImportedDamage()
     {
         var project = new Project { Name = "Bridge-Test" };
         var record = new HaltungRecord();

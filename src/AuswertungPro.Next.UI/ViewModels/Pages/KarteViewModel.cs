@@ -264,6 +264,10 @@ public sealed partial class KarteViewModel : ObservableObject
         return bounds.Grow(marginX, marginY);
     }
 
+    // Angeklickte Haltung an die QGIS-Bridge melden (gilt auch fuer das separate KarteWindow).
+    partial void OnSelectedHaltungsnameChanged(string? value)
+        => QgisBridge.QgisBridgeSelection.Set(value);
+
     private HaltungRecord? FindeRecord(string? haltungsname)
         => string.IsNullOrWhiteSpace(haltungsname)
             ? null

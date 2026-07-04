@@ -83,9 +83,16 @@ namespace AuswertungPro.Next.UI
                     b.AddProvider(new FileLoggerProvider(logPath));
                 });
                 var logger = loggerFactory.CreateLogger("App");
+                // QGIS-Bridge-Verarbeitung: gemeinsam fuer Live-Control-Server (gleicher Port)
+                // und den eigenstaendigen Bridge-Host weiter unten.
+                var qgisBridgeProcessor = new QgisBridgeRequestProcessor(
+                    this,
+                    settings,
+                    loggerFactory.CreateLogger<QgisBridgeRequestProcessor>());
                 _liveControlServer = LiveControlServer.TryStartFromEnvironment(
                     this,
-                    loggerFactory.CreateLogger<LiveControlServer>());
+                    loggerFactory.CreateLogger<LiveControlServer>(),
+                    qgisBridgeProcessor);
 
                 var diagnostics = new DiagnosticsOptions
                 {
@@ -138,10 +145,14 @@ namespace AuswertungPro.Next.UI
                 };
                 MainWindow = mainWindow;
                 mainWindow.Show();
-                _qgisBridgeServer = QgisBridgeServer.TryStart(
-                    mainWindow,
-                    (ServiceProvider)_services!,
-                    loggerFactory.CreateLogger<QgisBridgeServer>());
+                // Haelt Live-Control bereits Port 8765, liefert ER die /qgis-Endpunkte mit aus —
+                // dann braucht es keinen zweiten Listener (Port-Konflikt).
+                if (_liveControlServer is null)
+                {
+                    _qgisBridgeServer = QgisBridgeServer.TryStart(
+                        qgisBridgeProcessor,
+                        loggerFactory.CreateLogger<QgisBridgeServer>());
+                }
                 if (settings.AiStartOnProgramStart)
                     _ = StartAiOnStartupAsync(settings, logger, mainWindow);
 

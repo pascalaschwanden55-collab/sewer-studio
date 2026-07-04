@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.UI.QgisBridge;
 using Microsoft.Extensions.Logging;
 
 namespace AuswertungPro.Next.UI.LiveControl;
@@ -31,20 +32,33 @@ public sealed class LiveControlServer : IDisposable
     private readonly ILogger _logger;
     private readonly int _port;
     private readonly string? _token;
+    private readonly QgisBridgeRequestProcessor? _qgisProcessor;
     private readonly CancellationTokenSource _cts = new();
     private TcpListener? _listener;
     private Task? _loopTask;
 
-    private LiveControlServer(System.Windows.Application app, Dispatcher dispatcher, ILogger logger, int port, string? token)
+    private LiveControlServer(
+        System.Windows.Application app,
+        Dispatcher dispatcher,
+        ILogger logger,
+        int port,
+        string? token,
+        QgisBridgeRequestProcessor? qgisProcessor)
     {
         _app = app;
         _dispatcher = dispatcher;
         _logger = logger;
         _port = port;
         _token = string.IsNullOrWhiteSpace(token) ? null : token;
+        _qgisProcessor = qgisProcessor;
     }
 
-    public static LiveControlServer? TryStartFromEnvironment(System.Windows.Application app, ILogger logger)
+    // internal statt public: der optionale QGIS-Processor ist ein interner Typ,
+    // und gestartet wird der Server ohnehin nur aus App.xaml.cs (gleiche Assembly).
+    internal static LiveControlServer? TryStartFromEnvironment(
+        System.Windows.Application app,
+        ILogger logger,
+        QgisBridgeRequestProcessor? qgisProcessor = null)
     {
         if (!string.Equals(
                 Environment.GetEnvironmentVariable("SEWERSTUDIO_LIVE_CONTROL"),
@@ -63,7 +77,7 @@ public sealed class LiveControlServer : IDisposable
         // legen ihn in einer Datei ab, die der lokale Aufrufer (MCP-Server) liest. So laeuft
         // Live-Control nie ohne Auth - frueher war der Token null, womit die Pruefung uebersprungen wurde.
         var token = ResolveOrCreateToken(logger);
-        var server = new LiveControlServer(app, app.Dispatcher, logger, port, token);
+        var server = new LiveControlServer(app, app.Dispatcher, logger, port, token, qgisProcessor);
         server.Start();
         return server;
     }
@@ -143,8 +157,7 @@ public sealed class LiveControlServer : IDisposable
                 return;
 
             var response = await DispatchAsync(request.Value).ConfigureAwait(false);
-            await WriteJsonResponseAsync(stream, response.StatusCode, response.Payload, cancellationToken)
-                .ConfigureAwait(false);
+            await WriteResponseAsync(stream, response, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -209,6 +222,17 @@ public sealed class LiveControlServer : IDisposable
 
     private async Task<LiveHttpResponse> DispatchAsync(LiveHttpRequest request)
     {
+        // QGIS-Bridge: rein lesende GET-Endpunkte OHNE Token, damit das QGIS-Plugin
+        // (kennt keinen Token) seine Layer auch dann bekommt, wenn Live-Control
+        // denselben Port haelt. Die Steuer-Endpunkte darunter bleiben Token-geschuetzt.
+        if (_qgisProcessor is not null
+            && request.Method == "GET"
+            && QgisBridgeRequestProcessor.IsBridgePath(request.Path))
+        {
+            var bridge = await _qgisProcessor.HandleAsync(request.Path).ConfigureAwait(false);
+            return new LiveHttpResponse(bridge.StatusCode, Payload: null, RawBody: bridge.Body, ContentType: bridge.ContentType);
+        }
+
         // Pflicht-Token mit zeitkonstantem Vergleich (gegen Timing-Angriffe). _token ist beim Start
         // immer gesetzt (Env oder automatisch erzeugt), daher gibt es keinen Auth-freien Pfad mehr.
         var expectedToken = Encoding.UTF8.GetBytes(_token ?? "");
@@ -376,17 +400,17 @@ public sealed class LiveControlServer : IDisposable
 
     private static LiveHttpResponse Ok(object payload) => new(200, payload);
 
-    private static async Task WriteJsonResponseAsync(
+    private static async Task WriteResponseAsync(
         NetworkStream stream,
-        int statusCode,
-        object payload,
+        LiveHttpResponse response,
         CancellationToken cancellationToken)
     {
-        var json = JsonSerializer.Serialize(payload, JsonOptions);
-        var body = Encoding.UTF8.GetBytes(json);
-        var reason = statusCode == 200 ? "OK" : "Error";
+        // Entweder vorgefertigter Body (QGIS-Bridge) oder JSON-Serialisierung des Payloads.
+        var body = response.RawBody
+                   ?? Encoding.UTF8.GetBytes(JsonSerializer.Serialize(response.Payload, JsonOptions));
+        var reason = response.StatusCode == 200 ? "OK" : "Error";
         var header = Encoding.UTF8.GetBytes(
-            $"HTTP/1.1 {statusCode} {reason}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {body.Length}\r\nConnection: close\r\n\r\n");
+            $"HTTP/1.1 {response.StatusCode} {reason}\r\nContent-Type: {response.ContentType}\r\nContent-Length: {body.Length}\r\nConnection: close\r\n\r\n");
 
         await stream.WriteAsync(header, cancellationToken).ConfigureAwait(false);
         await stream.WriteAsync(body, cancellationToken).ConfigureAwait(false);
@@ -400,7 +424,11 @@ public sealed class LiveControlServer : IDisposable
     }
 
     private readonly record struct LiveHttpRequest(string Method, string Path, string Body, string? Token);
-    private readonly record struct LiveHttpResponse(int StatusCode, object Payload);
+    private readonly record struct LiveHttpResponse(
+        int StatusCode,
+        object? Payload,
+        byte[]? RawBody = null,
+        string ContentType = "application/json; charset=utf-8");
     private sealed record SetResourceBrushRequest(string? Key, string? Color);
     private sealed record SetButtonBackgroundRequest(string? Target, string? Color, int? MaxMatches);
     private sealed record RetryHoldingRequest(string? Haltungsname);

@@ -448,6 +448,9 @@ public sealed partial class DataPageViewModel : ObservableObject, IDisposable
         PersistDataPageBasicUiSettings();
     }
 
+    partial void OnSelectedChanged(HaltungRecord? value)
+        => QgisBridge.QgisBridgeSelection.Set(value?.GetFieldValue("Haltungsname"));
+
     private void DataPageViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(Selected))

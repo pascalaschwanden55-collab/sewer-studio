@@ -46,12 +46,24 @@ Lokale Dateien im Datenordner:
 - `schaeden.geojson` oder `damages.geojson`
 - `netzbewertung.geojson` oder `network.geojson`
 
-HTTP-Bridge, falls SewerStudio sie bereitstellt:
+HTTP-Bridge (liefert SewerStudio ab Version 4.5 live auf `http://127.0.0.1:8765`):
 
-- `GET /qgis/status.json`
-- `GET /qgis/current.geojson`
-- `GET /qgis/damages.geojson`
-- `GET /qgis/network.geojson`
+- `GET /qgis/status.json` — Status inkl. aktuell gewaehlter Haltung (`currentHolding`)
+- `GET /qgis/current.geojson` — Linie der aktuell gewaehlten Haltung
+- `GET /qgis/damages.geojson` — alle Schaeden des Projekts als Punkte (Protokoll-Eintraege
+  bevorzugt, importierte VSA-Feststellungen als Fallback), verortet ueber den Meterstand
+  entlang der Kataster-Geometrie
+- `GET /qgis/network.geojson` — ganzes Netz mit Zustandsklasse/-farbe
+
+Hinweise zum Bridge-Server:
+
+- Laeuft automatisch mit der App; abschaltbar mit `SEWERSTUDIO_QGIS_BRIDGE=0`,
+  Port aenderbar mit `SEWERSTUDIO_QGIS_BRIDGE_PORT`.
+- Ist Live-Control aktiv (`SEWERSTUDIO_LIVE_CONTROL=1`), teilt sich die Bridge den
+  Port 8765 mit Live-Control: die `/qgis`-Endpunkte sind dort ohne Token lesbar,
+  die Steuer-Endpunkte bleiben Token-geschuetzt.
+- Die "aktuelle Haltung" folgt der Auswahl auf der Haltungen-Seite und in der Karte
+  (auch im separaten Kartenfenster) und bleibt beim Seitenwechsel erhalten.
 
 Bestehende Shapefile-Exporte werden ebenfalls erkannt. Das Plugin sucht im
 Datenordner den neuesten Unterordner mit `*.shp` und laedt u. a. `Haltungen*`,

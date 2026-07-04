@@ -1,0 +1,134 @@
+using System.Globalization;
+using AuswertungPro.Next.Domain.Models;
+
+namespace AuswertungPro.Next.UI.QgisBridge;
+
+/// <summary>
+/// Unveraenderliche Momentaufnahme der Projektdaten fuer die QGIS-Bridge.
+/// Wird auf dem UI-Thread erstellt (billige Feld-Kopien), damit der GeoJSON-Bau
+/// danach gefahrlos im Hintergrund laufen kann (Project.Data ist UI-gebunden).
+/// </summary>
+internal sealed record QgisProjectSnapshot(
+    Guid ProjectId,
+    string ProjectName,
+    string CurrentHolding,
+    IReadOnlyList<QgisHaltungSnapshot> Haltungen)
+{
+    public static QgisProjectSnapshot Empty { get; } =
+        new(Guid.Empty, "", "", Array.Empty<QgisHaltungSnapshot>());
+
+    public static QgisProjectSnapshot Capture(Project? project, string? currentHolding)
+    {
+        var holding = currentHolding?.Trim() ?? "";
+        if (project is null)
+            return Empty with { CurrentHolding = holding };
+
+        var haltungen = new List<QgisHaltungSnapshot>(project.Data.Count);
+        foreach (var record in project.Data)
+        {
+            var name = record.GetFieldValue("Haltungsname")?.Trim();
+            if (string.IsNullOrEmpty(name))
+                continue;
+
+            haltungen.Add(new QgisHaltungSnapshot(
+                name,
+                TryParseCondition(record.GetFieldValue("Zustandsklasse")),
+                CaptureDamages(record)));
+        }
+
+        return new QgisProjectSnapshot(project.Id, project.Name, holding, haltungen);
+    }
+
+    /// <summary>
+    /// Schaeden einer Haltung: das kuratierte Protokoll (inkl. manueller und KI-Eintraege)
+    /// hat Vorrang; nur wenn keines existiert, dienen die importierten VSA-Feststellungen
+    /// als Fallback. So spiegelt QGIS immer den aktuellen Stand aus SewerStudio.
+    /// </summary>
+    private static IReadOnlyList<QgisDamageSnapshot> CaptureDamages(HaltungRecord record)
+    {
+        var entries = record.Protocol?.Current?.Entries;
+        if (entries is { Count: > 0 })
+        {
+            var fromProtocol = new List<QgisDamageSnapshot>(entries.Count);
+            foreach (var entry in entries)
+            {
+                if (entry.IsDeleted)
+                    continue;
+
+                fromProtocol.Add(new QgisDamageSnapshot(
+                    Code: EmptyToNull(entry.Code),
+                    Beschreibung: EmptyToNull(entry.Beschreibung),
+                    MeterStart: entry.MeterStart,
+                    MeterEnd: entry.MeterEnd,
+                    IsStreckenschaden: entry.IsStreckenschaden,
+                    Severity: EmptyToNull(entry.CodeMeta?.Severity),
+                    Mpeg: EmptyToNull(entry.Mpeg),
+                    Raw: null,
+                    Quantifizierung1: null,
+                    Quantifizierung2: null,
+                    EZD: null,
+                    EZS: null,
+                    EZB: null,
+                    Source: "protokoll"));
+            }
+
+            if (fromProtocol.Count > 0)
+                return fromProtocol;
+        }
+
+        var findings = record.VsaFindings;
+        if (findings is null || findings.Count == 0)
+            return Array.Empty<QgisDamageSnapshot>();
+
+        var fromFindings = new List<QgisDamageSnapshot>(findings.Count);
+        foreach (var finding in findings)
+        {
+            fromFindings.Add(new QgisDamageSnapshot(
+                Code: EmptyToNull(finding.KanalSchadencode),
+                Beschreibung: null,
+                MeterStart: finding.MeterStart ?? finding.SchadenlageAnfang,
+                MeterEnd: finding.MeterEnd ?? finding.SchadenlageEnde,
+                IsStreckenschaden: false,
+                Severity: null,
+                Mpeg: EmptyToNull(finding.MPEG),
+                Raw: EmptyToNull(finding.Raw),
+                Quantifizierung1: EmptyToNull(finding.Quantifizierung1),
+                Quantifizierung2: EmptyToNull(finding.Quantifizierung2),
+                EZD: finding.EZD,
+                EZS: finding.EZS,
+                EZB: finding.EZB,
+                Source: "import"));
+        }
+
+        return fromFindings;
+    }
+
+    private static int? TryParseCondition(string? raw)
+        => int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+            ? value
+            : null;
+
+    private static string? EmptyToNull(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
+
+internal sealed record QgisHaltungSnapshot(
+    string Haltungsname,
+    int? Zustandsklasse,
+    IReadOnlyList<QgisDamageSnapshot> Schaeden);
+
+internal sealed record QgisDamageSnapshot(
+    string? Code,
+    string? Beschreibung,
+    double? MeterStart,
+    double? MeterEnd,
+    bool IsStreckenschaden,
+    string? Severity,
+    string? Mpeg,
+    string? Raw,
+    string? Quantifizierung1,
+    string? Quantifizierung2,
+    int? EZD,
+    int? EZS,
+    int? EZB,
+    string Source);

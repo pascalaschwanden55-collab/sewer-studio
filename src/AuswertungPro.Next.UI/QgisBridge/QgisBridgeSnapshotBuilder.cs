@@ -1,11 +1,15 @@
 using System.IO;
-using System.Globalization;
-using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.UI.Mapping;
 
 namespace AuswertungPro.Next.UI.QgisBridge;
 
+/// <summary>
+/// Baut Status- und GeoJSON-Payloads fuer die QGIS-Bridge aus einem
+/// <see cref="QgisProjectSnapshot"/> (UI-frei, darf im Hintergrund laufen).
+/// Die Netz-Geometrie kommt aus dem Kataster-XTF und wird gecacht, bis sich
+/// Pfad oder Aenderungszeit der Datei aendern.
+/// </summary>
 internal sealed class QgisBridgeSnapshotBuilder
 {
     private readonly AppSettings _settings;
@@ -23,17 +27,17 @@ internal sealed class QgisBridgeSnapshotBuilder
         _networkCacheFilePath = networkCacheFilePath;
     }
 
-    public QgisStatusPayload BuildStatus(Project project, string? currentHolding)
+    public QgisStatusPayload BuildStatus(QgisProjectSnapshot snapshot)
     {
         var network = LoadNetwork();
-        var damageStats = CountExportableDamages(project, network.GeometryByHolding);
+        var damageStats = CountExportableDamages(snapshot, network.GeometryByHolding);
 
         return new QgisStatusPayload(
             Ok: true,
             App: "SewerStudio",
-            CurrentHolding: NormalizeHolding(currentHolding),
-            ProjectName: project.Name,
-            ProjectHoldingCount: project.Data.Count,
+            CurrentHolding: snapshot.CurrentHolding,
+            ProjectName: snapshot.ProjectName,
+            ProjectHoldingCount: snapshot.Haltungen.Count,
             NetworkFeatureCount: network.Geometries.Count,
             DamageFeatureCount: damageStats.Exportable,
             SkippedDamageFeatureCount: damageStats.Skipped,
@@ -41,10 +45,10 @@ internal sealed class QgisBridgeSnapshotBuilder
             XtfFound: network.XtfFound);
     }
 
-    public GeoJsonFeatureCollection BuildNetworkGeoJson(Project project)
+    public GeoJsonFeatureCollection BuildNetworkGeoJson(QgisProjectSnapshot snapshot)
     {
         var network = LoadNetwork();
-        var conditions = HaltungConditionProvider.Build(project.Data);
+        var conditions = BuildConditionIndex(snapshot);
         var features = new List<GeoJsonFeature>(network.Geometries.Count);
 
         foreach (var geometry in network.Geometries)
@@ -67,9 +71,9 @@ internal sealed class QgisBridgeSnapshotBuilder
         return new GeoJsonFeatureCollection(features);
     }
 
-    public GeoJsonFeatureCollection BuildCurrentGeoJson(Project project, string? currentHolding)
+    public GeoJsonFeatureCollection BuildCurrentGeoJson(QgisProjectSnapshot snapshot)
     {
-        var holding = NormalizeHolding(currentHolding);
+        var holding = snapshot.CurrentHolding;
         if (string.IsNullOrWhiteSpace(holding))
             return GeoJsonFeatureCollection.Empty;
 
@@ -77,42 +81,37 @@ internal sealed class QgisBridgeSnapshotBuilder
         if (!network.GeometryByHolding.TryGetValue(holding, out var geometry))
             return GeoJsonFeatureCollection.Empty;
 
-        var record = FindRecord(project, holding);
-        var condition = TryParseCondition(record);
+        var record = FindHaltung(snapshot, holding);
         var feature = CreateLineFeature(
             geometry,
             new Dictionary<string, object?>
             {
                 ["haltung"] = holding,
                 ["current"] = true,
-                ["zustandsklasse"] = condition,
-                ["zustand_farbe"] = MapConditionColor(condition),
-                ["schaden_count"] = record?.VsaFindings?.Count ?? 0,
+                ["zustandsklasse"] = record?.Zustandsklasse,
+                ["zustand_farbe"] = MapConditionColor(record?.Zustandsklasse),
+                ["schaden_count"] = record?.Schaeden.Count ?? 0,
                 ["source"] = "sewerstudio_selection"
             });
 
         return new GeoJsonFeatureCollection(new[] { feature });
     }
 
-    public GeoJsonFeatureCollection BuildDamagesGeoJson(Project project)
+    public GeoJsonFeatureCollection BuildDamagesGeoJson(QgisProjectSnapshot snapshot)
     {
         var network = LoadNetwork();
-        if (network.GeometryByHolding.Count == 0 || project.Data.Count == 0)
+        if (network.GeometryByHolding.Count == 0 || snapshot.Haltungen.Count == 0)
             return GeoJsonFeatureCollection.Empty;
 
         var features = new List<GeoJsonFeature>();
-        foreach (var record in project.Data)
+        foreach (var haltung in snapshot.Haltungen)
         {
-            var holding = NormalizeHolding(record.GetFieldValue("Haltungsname"));
-            if (string.IsNullOrWhiteSpace(holding))
+            if (!network.GeometryByHolding.TryGetValue(haltung.Haltungsname, out var geometry))
                 continue;
 
-            if (!network.GeometryByHolding.TryGetValue(holding, out var geometry))
-                continue;
-
-            foreach (var finding in record.VsaFindings)
+            foreach (var damage in haltung.Schaeden)
             {
-                var meter = GetFindingMeterForMap(finding);
+                var meter = GetDamageMeterForMap(damage);
                 if (meter is null)
                     continue;
 
@@ -125,19 +124,22 @@ internal sealed class QgisBridgeSnapshotBuilder
                     new GeoJsonPoint(new[] { lon, lat }),
                     new Dictionary<string, object?>
                     {
-                        ["haltung"] = holding,
-                        ["code"] = EmptyToNull(finding.KanalSchadencode),
-                        ["meter_start"] = finding.MeterStart,
-                        ["meter_end"] = finding.MeterEnd,
-                        ["mpeg"] = EmptyToNull(finding.MPEG),
-                        ["raw"] = EmptyToNull(finding.Raw),
-                        ["quantifizierung1"] = EmptyToNull(finding.Quantifizierung1),
-                        ["quantifizierung2"] = EmptyToNull(finding.Quantifizierung2),
-                        ["ezd"] = finding.EZD,
-                        ["ezs"] = finding.EZS,
-                        ["ezb"] = finding.EZB,
-                        ["zustandsklasse"] = TryParseCondition(record),
-                        ["source"] = "sewerstudio_project"
+                        ["haltung"] = haltung.Haltungsname,
+                        ["code"] = damage.Code,
+                        ["beschreibung"] = damage.Beschreibung,
+                        ["meter_start"] = damage.MeterStart,
+                        ["meter_end"] = damage.MeterEnd,
+                        ["streckenschaden"] = damage.IsStreckenschaden,
+                        ["severity"] = damage.Severity,
+                        ["mpeg"] = damage.Mpeg,
+                        ["raw"] = damage.Raw,
+                        ["quantifizierung1"] = damage.Quantifizierung1,
+                        ["quantifizierung2"] = damage.Quantifizierung2,
+                        ["ezd"] = damage.EZD,
+                        ["ezs"] = damage.EZS,
+                        ["ezb"] = damage.EZB,
+                        ["zustandsklasse"] = haltung.Zustandsklasse,
+                        ["source"] = damage.Source
                     }));
             }
         }
@@ -177,6 +179,14 @@ internal sealed class QgisBridgeSnapshotBuilder
         }
     }
 
+    private static IReadOnlyDictionary<string, int?> BuildConditionIndex(QgisProjectSnapshot snapshot)
+    {
+        var map = new Dictionary<string, int?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var haltung in snapshot.Haltungen)
+            map[haltung.Haltungsname] = haltung.Zustandsklasse;
+        return map;
+    }
+
     private static GeoJsonFeature CreateLineFeature(HaltungGeometry geometry, Dictionary<string, object?> properties)
     {
         var coordinates = geometry.Points
@@ -190,17 +200,9 @@ internal sealed class QgisBridgeSnapshotBuilder
         return new GeoJsonFeature(new GeoJsonLineString(coordinates), properties);
     }
 
-    private static HaltungRecord? FindRecord(Project project, string holding)
-        => project.Data.FirstOrDefault(r => string.Equals(
-            NormalizeHolding(r.GetFieldValue("Haltungsname")),
-            holding,
-            StringComparison.OrdinalIgnoreCase));
-
-    private static int? TryParseCondition(HaltungRecord? record)
-        => record is not null
-           && int.TryParse(record.GetFieldValue("Zustandsklasse"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
-            ? value
-            : null;
+    private static QgisHaltungSnapshot? FindHaltung(QgisProjectSnapshot snapshot, string holding)
+        => snapshot.Haltungen.FirstOrDefault(h =>
+            string.Equals(h.Haltungsname, holding, StringComparison.OrdinalIgnoreCase));
 
     private static string MapConditionColor(int? condition)
         => ZustandColorMapper.Map(condition, invertiert: true) switch
@@ -211,11 +213,12 @@ internal sealed class QgisBridgeSnapshotBuilder
             _ => "unbekannt"
         };
 
-    private static double? GetFindingMeterForMap(VsaFinding finding)
+    /// <summary>Kartenposition eines Schadens: Streckenschaeden als Mittelpunkt der Strecke.</summary>
+    private static double? GetDamageMeterForMap(QgisDamageSnapshot damage)
     {
-        if (finding.MeterStart is double start && double.IsFinite(start))
+        if (damage.MeterStart is double start && double.IsFinite(start))
         {
-            if (finding.MeterEnd is double end && double.IsFinite(end) && end > start)
+            if (damage.MeterEnd is double end && double.IsFinite(end) && end > start)
                 return (start + end) / 2.0;
 
             return start;
@@ -258,20 +261,18 @@ internal sealed class QgisBridgeSnapshotBuilder
     }
 
     private static DamageStats CountExportableDamages(
-        Project project,
+        QgisProjectSnapshot snapshot,
         IReadOnlyDictionary<string, HaltungGeometry> geometryByHolding)
     {
         var exportable = 0;
         var skipped = 0;
 
-        foreach (var record in project.Data)
+        foreach (var haltung in snapshot.Haltungen)
         {
-            var holding = NormalizeHolding(record.GetFieldValue("Haltungsname"));
-            var hasGeometry = !string.IsNullOrWhiteSpace(holding) && geometryByHolding.ContainsKey(holding);
-
-            foreach (var finding in record.VsaFindings)
+            var hasGeometry = geometryByHolding.ContainsKey(haltung.Haltungsname);
+            foreach (var damage in haltung.Schaeden)
             {
-                if (hasGeometry && GetFindingMeterForMap(finding) is not null)
+                if (hasGeometry && GetDamageMeterForMap(damage) is not null)
                     exportable++;
                 else
                     skipped++;
@@ -280,12 +281,6 @@ internal sealed class QgisBridgeSnapshotBuilder
 
         return new DamageStats(exportable, skipped);
     }
-
-    private static string NormalizeHolding(string? value)
-        => value?.Trim() ?? string.Empty;
-
-    private static string? EmptyToNull(string? value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private sealed record NetworkLoadResult(
         string XtfPath,
