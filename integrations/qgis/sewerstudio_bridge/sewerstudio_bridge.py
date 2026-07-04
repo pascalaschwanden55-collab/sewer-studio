@@ -93,6 +93,8 @@ class SewerStudioBridgeDock(QDockWidget):
         self.timer.timeout.connect(self.refresh_remote_layers)
         self.cache_dir = Path(tempfile.gettempdir()) / "sewerstudio_qgis_bridge"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        # Auto-Zoom nur beim Wechsel der aktuellen Haltung, nicht bei jedem Poll.
+        self._last_zoomed_holding = None
         self.setObjectName("SewerStudioBridgeDock")
         self._build_ui()
         self._load_settings()
@@ -187,6 +189,7 @@ class SewerStudioBridgeDock(QDockWidget):
         loaded = 0
 
         status = self._fetch_json("/qgis/status.json")
+        holding = self._holding_from_payload(status) if status is not None else None
         if status is not None:
             self._set_status_from_payload(status)
 
@@ -197,11 +200,19 @@ class SewerStudioBridgeDock(QDockWidget):
 
             target = self.cache_dir / f"{layer_key}.geojson"
             target.write_bytes(data)
-            layer = self._replace_vector_layer(layer_name, target)
+            layer = self._update_or_create_layer(layer_name, target)
             if layer is not None:
                 loaded += 1
-                if layer_key == "current" and self.auto_zoom_check.isChecked():
+                # Nur zoomen, wenn die aktuelle Haltung wirklich gewechselt hat —
+                # sonst springt die Karte bei jedem Poll und stoert das Arbeiten.
+                if (
+                    layer_key == "current"
+                    and self.auto_zoom_check.isChecked()
+                    and holding
+                    and holding != self._last_zoomed_holding
+                ):
                     self._zoom_to_layer(layer)
+                    self._last_zoomed_holding = holding
 
         if loaded == 0 and status is None:
             self._set_status("Kein Live-Bridge-Feed erreichbar. Lokale Export-Layer koennen trotzdem geladen werden.")
@@ -220,14 +231,14 @@ class SewerStudioBridgeDock(QDockWidget):
             file_path = self._first_existing(data_root, filenames)
             if file_path is None:
                 continue
-            if self._replace_vector_layer(layer_name, file_path) is not None:
+            if self._update_or_create_layer(layer_name, file_path) is not None:
                 loaded += 1
 
         export_dir = self._find_latest_shapefile_export(data_root)
         if export_dir is not None:
             for prefix, layer_name in LOCAL_SHAPEFILE_PATTERNS:
                 shp = self._find_first_shapefile(export_dir, prefix)
-                if shp is not None and self._replace_vector_layer(layer_name, shp) is not None:
+                if shp is not None and self._update_or_create_layer(layer_name, shp) is not None:
                     loaded += 1
 
         if loaded == 0:
@@ -262,9 +273,30 @@ class SewerStudioBridgeDock(QDockWidget):
             self._log_warning(f"Bridge nicht erreichbar: {url} ({ex})")
             return None
 
-    def _replace_vector_layer(self, layer_name, file_path):
+    def _update_or_create_layer(self, layer_name, file_path):
+        # WICHTIG: Bestehende Layer werden NIE entfernt und neu angelegt.
+        # Ein geloeschter Layer laesst offene QGIS-Dialoge (z.B. Layer-Eigenschaften)
+        # mit einem toten Zeiger zurueck -> Access Violation / QGIS-Absturz.
+        # Stattdessen: Datenquelle in-place neu laden; Styling bleibt so auch erhalten.
         file_path = Path(file_path)
         if not file_path.exists():
+            return None
+
+        existing = self._find_layer_named(layer_name)
+        if existing is not None:
+            if self._same_source(existing, file_path):
+                existing.reload()
+                existing.updateExtents()
+                existing.triggerRepaint()
+                return existing
+
+            if self._switch_layer_source(existing, file_path, layer_name):
+                return existing
+
+            self._log_warning(
+                f"Layer '{layer_name}' behaelt alte Quelle (setDataSource nicht verfuegbar); "
+                f"bitte Layer manuell entfernen und neu laden: {file_path}"
+            )
             return None
 
         layer = QgsVectorLayer(str(file_path), layer_name, "ogr")
@@ -272,15 +304,45 @@ class SewerStudioBridgeDock(QDockWidget):
             self._log_warning(f"Layer nicht ladbar: {file_path}")
             return None
 
-        self._remove_layers_named(layer_name)
         QgsProject.instance().addMapLayer(layer)
         return layer
 
-    def _remove_layers_named(self, layer_name):
-        project = QgsProject.instance()
-        for layer in list(project.mapLayers().values()):
+    @staticmethod
+    def _find_layer_named(layer_name):
+        for layer in QgsProject.instance().mapLayers().values():
             if layer.name() == layer_name:
-                project.removeMapLayer(layer.id())
+                return layer
+        return None
+
+    @staticmethod
+    def _same_source(layer, file_path):
+        # ogr-Quellen koennen Optionen anhaengen ("pfad|layername=..."), daher nur den Pfadteil vergleichen.
+        source = (layer.source() or "").split("|")[0]
+        return os.path.normcase(os.path.normpath(source)) == os.path.normcase(os.path.normpath(str(file_path)))
+
+    def _switch_layer_source(self, layer, file_path, layer_name):
+        # Quelle wechseln, ohne den Layer zu zerstoeren (z.B. neuer Shapefile-Exportordner).
+        try:
+            layer.setDataSource(str(file_path), layer_name, "ogr")
+        except TypeError:
+            try:
+                from qgis.core import QgsDataProvider
+
+                layer.setDataSource(str(file_path), layer_name, "ogr", QgsDataProvider.ProviderOptions())
+            except Exception as ex:
+                self._log_warning(f"setDataSource fehlgeschlagen: {ex}")
+                return False
+        except Exception as ex:
+            self._log_warning(f"setDataSource fehlgeschlagen: {ex}")
+            return False
+
+        if not layer.isValid():
+            self._log_warning(f"Layer nach Quellwechsel ungueltig: {file_path}")
+            return False
+
+        layer.updateExtents()
+        layer.triggerRepaint()
+        return True
 
     def _zoom_to_layer(self, layer):
         extent = layer.extent()
@@ -290,8 +352,12 @@ class SewerStudioBridgeDock(QDockWidget):
         canvas.setExtent(extent)
         canvas.refresh()
 
+    @staticmethod
+    def _holding_from_payload(payload):
+        return payload.get("currentHolding") or payload.get("current_holding") or payload.get("haltung")
+
     def _set_status_from_payload(self, payload):
-        holding = payload.get("currentHolding") or payload.get("current_holding") or payload.get("haltung")
+        holding = self._holding_from_payload(payload)
         if holding:
             self._set_status(f"Verbunden. Aktuelle Haltung: {holding}")
         else:

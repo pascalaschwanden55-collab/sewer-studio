@@ -47,6 +47,22 @@ public sealed class QgisPluginPackagingTests
     }
 
     [Fact]
+    public void Plugin_refreshes_layers_in_place_instead_of_replacing()
+    {
+        var source = ReadPluginFile("sewerstudio_bridge.py");
+
+        // Absturz-Schutz: Layer duerfen beim Poll NIE entfernt/neu angelegt werden.
+        // removeMapLayer zerstoert das Layer-Objekt; offene Dialoge (Layer-Eigenschaften)
+        // halten dann tote Zeiger -> Access Violation beim Schliessen (QGIS-Crash 04.07.2026).
+        Assert.DoesNotContain("removeMapLayer", source);
+        Assert.Contains("def _update_or_create_layer", source);
+        Assert.Contains(".reload()", source);
+
+        // Auto-Zoom nur bei Haltungs-Wechsel, nicht bei jedem 3-s-Poll.
+        Assert.Contains("_last_zoomed_holding", source);
+    }
+
+    [Fact]
     public void Install_script_can_copy_plugin_to_qgis_profiles()
     {
         var script = File.ReadAllText(RepoFile("integrations", "qgis", "install-sewerstudio-bridge.ps1"));
