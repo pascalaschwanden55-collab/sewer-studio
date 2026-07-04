@@ -3,13 +3,20 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
+using AuswertungPro.Next.Infrastructure.Ai.Configuration;
+using AuswertungPro.Next.UI.Settings;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 
 public sealed partial class SettingsPageViewModel : ObservableObject
 {
+    private const double DefaultYoloConfidence = 0.25d;
+    private const double DefaultDinoBoxThreshold = 0.25d;
+    private const double DefaultDinoTextThreshold = 0.20d;
+
     private readonly ServiceProvider _sp;
 
     [ObservableProperty] private bool _enableDiagnostics;
@@ -17,6 +24,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty] private string? _projectPath;
     [ObservableProperty] private string? _projectsRootDirectory;
     [ObservableProperty] private string? _videoFolder;
+    [ObservableProperty] private string? _kantonUriXtfDirectory;
     [ObservableProperty] private AutoSaveMode _dataAutoSaveMode;
     [ObservableProperty] private bool _enableRestorePoints;
     [ObservableProperty] private bool _videoHwDecoding;
@@ -29,11 +37,19 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty] private string _uiTheme = ThemeManager.Light;
     [ObservableProperty] private bool _isDarkTheme;
     [ObservableProperty] private bool _startAiOnProgramStart;
+    [ObservableProperty] private double _pipelineYoloConfidence = DefaultYoloConfidence;
+    [ObservableProperty] private double _pipelineDinoBoxThreshold = DefaultDinoBoxThreshold;
+    [ObservableProperty] private double _pipelineDinoTextThreshold = DefaultDinoTextThreshold;
 
     [ObservableProperty] private string _dataFolderPath = string.Empty;
     [ObservableProperty] private string _logsFolderPath = string.Empty;
     [ObservableProperty] private string _restorePointsFolderPath = string.Empty;
     [ObservableProperty] private string _backupStatusText = string.Empty;
+    [ObservableProperty] private string _fullBackupStatusText = string.Empty;
+    [ObservableProperty] private double _fullBackupPercent;
+    [ObservableProperty] private bool _isFullBackupRunning;
+    [ObservableProperty] private string _fullBackupCurrentFile = string.Empty;
+    [ObservableProperty] private string _lastFullBackupInfo = string.Empty;
     [ObservableProperty] private string _aiStartupStatusText = string.Empty;
     // true, solange "KI starten" laeuft -> Fortschrittsbalken sichtbar, Knopf gesperrt.
     [ObservableProperty] private bool _isAiStarting;
@@ -76,14 +92,20 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     public IRelayCommand BrowseProjectPathCommand { get; }
     public IRelayCommand BrowseProjectsRootCommand { get; }
     public IRelayCommand BrowseVideoFolderCommand { get; }
+    public IRelayCommand BrowseKantonUriXtfDirectoryCommand { get; }
     public IRelayCommand OpenDataFolderCommand { get; }
     public IRelayCommand OpenLogsFolderCommand { get; }
     public IRelayCommand OpenRestorePointsFolderCommand { get; }
     public IRelayCommand ApplyThemeCommand { get; }
     public IRelayCommand SaveCommand { get; }
+    public IRelayCommand ResetYoloConfidenceCommand { get; }
+    public IRelayCommand ResetDinoBoxThresholdCommand { get; }
+    public IRelayCommand ResetDinoTextThresholdCommand { get; }
     public IAsyncRelayCommand StartAiCommand { get; }
     public IAsyncRelayCommand ExportBackupCommand { get; }
     public IAsyncRelayCommand ImportBackupCommand { get; }
+    public AsyncRelayCommand CreateFullBackupCommand { get; }
+    public IRelayCommand CancelFullBackupCommand { get; }
 
     public SettingsPageViewModel(ServiceProvider sp)
     {
@@ -93,78 +115,70 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         ProjectPath = _sp.Settings.LastProjectPath;
         ProjectsRootDirectory = _sp.Settings.ProjectsRootDirectory;
         VideoFolder = _sp.Settings.LastVideoSourceFolder ?? _sp.Settings.LastVideoFolder;
+        KantonUriXtfDirectory = _sp.Settings.KantonUriXtfDirectory;
         DataAutoSaveMode = _sp.Settings.DataAutoSaveMode.Normalize();
         EnableRestorePoints = _sp.Settings.EnableRestorePoints;
         VideoHwDecoding = _sp.Settings.VideoHwDecoding;
         VideoDropLateFrames = _sp.Settings.VideoDropLateFrames;
         VideoSkipFrames = _sp.Settings.VideoSkipFrames;
-        VideoFileCachingMs = ClampCaching(_sp.Settings.VideoFileCachingMs);
-        VideoNetworkCachingMs = ClampCaching(_sp.Settings.VideoNetworkCachingMs);
-        VideoCodecThreads = ClampCodecThreads(_sp.Settings.VideoCodecThreads);
-        VideoOutput = NormalizeVideoOutput(_sp.Settings.VideoOutput);
+        VideoFileCachingMs = SettingsSaveWorkflow.ClampCaching(_sp.Settings.VideoFileCachingMs);
+        VideoNetworkCachingMs = SettingsSaveWorkflow.ClampCaching(_sp.Settings.VideoNetworkCachingMs);
+        VideoCodecThreads = SettingsSaveWorkflow.ClampCodecThreads(_sp.Settings.VideoCodecThreads);
+        VideoOutput = SettingsSaveWorkflow.NormalizeVideoOutput(_sp.Settings.VideoOutput);
         UiTheme = ThemeManager.NormalizeTheme(_sp.Settings.UiTheme);
         IsDarkTheme = string.Equals(UiTheme, ThemeManager.Dark, StringComparison.Ordinal);
         StartAiOnProgramStart = _sp.Settings.AiStartOnProgramStart;
+        var pipelineConfig = AiSettingsFactory
+            .Load(AppSettingsAiSettingsProvider.ToSource(_sp.Settings))
+            .ToPipelineConfig();
+        PipelineYoloConfidence = SettingsSaveWorkflow.ClampThreshold(pipelineConfig.YoloConfidence);
+        PipelineDinoBoxThreshold = SettingsSaveWorkflow.ClampThreshold(pipelineConfig.DinoBoxThreshold);
+        PipelineDinoTextThreshold = SettingsSaveWorkflow.ClampThreshold(pipelineConfig.DinoTextThreshold);
 
         DataFolderPath = AppSettings.AppDataDir;
         LogsFolderPath = Path.Combine(AppSettings.AppDataDir, "logs");
         RestorePointsFolderPath = RestorePointService.SettingsRestoreRoot;
+        LastFullBackupInfo = SettingsFullBackupPresentationBuilder.BuildLastBackupInfo(
+            _sp.Settings.LastFullBackupUtc,
+            _sp.Settings.LastFullBackupPath,
+            _sp.Settings.LastFullBackupSizeBytes);
 
         BrowsePdfToTextCommand = new RelayCommand(BrowsePdfToText);
         BrowseProjectPathCommand = new RelayCommand(BrowseProjectPath);
         BrowseProjectsRootCommand = new RelayCommand(BrowseProjectsRoot);
         BrowseVideoFolderCommand = new RelayCommand(BrowseVideoFolder);
+        BrowseKantonUriXtfDirectoryCommand = new RelayCommand(BrowseKantonUriXtfDirectory);
         OpenDataFolderCommand = new RelayCommand(OpenDataFolder);
         OpenLogsFolderCommand = new RelayCommand(OpenLogsFolder);
         OpenRestorePointsFolderCommand = new RelayCommand(OpenRestorePointsFolder);
         ApplyThemeCommand = new RelayCommand(ApplyTheme);
         SaveCommand = new RelayCommand(Save);
+        ResetYoloConfidenceCommand = new RelayCommand(() => PipelineYoloConfidence = DefaultYoloConfidence);
+        ResetDinoBoxThresholdCommand = new RelayCommand(() => PipelineDinoBoxThreshold = DefaultDinoBoxThreshold);
+        ResetDinoTextThresholdCommand = new RelayCommand(() => PipelineDinoTextThreshold = DefaultDinoTextThreshold);
         StartAiCommand = new AsyncRelayCommand(StartAiAsync);
         ExportBackupCommand = new AsyncRelayCommand(ExportBackupAsync);
         ImportBackupCommand = new AsyncRelayCommand(ImportBackupAsync);
+        CreateFullBackupCommand = new AsyncRelayCommand(CreateFullBackupAsync, () => !IsFullBackupRunning);
+        CancelFullBackupCommand = new RelayCommand(
+            () => CreateFullBackupCommand.Cancel(),
+            () => IsFullBackupRunning);
+    }
+
+    partial void OnIsFullBackupRunningChanged(bool value)
+    {
+        CreateFullBackupCommand?.NotifyCanExecuteChanged();
+        CancelFullBackupCommand?.NotifyCanExecuteChanged();
     }
 
     partial void OnUiThemeChanged(string value)
     {
-        if (_syncingThemeState)
-            return;
-
-        _syncingThemeState = true;
-        try
-        {
-            var normalized = ThemeManager.NormalizeTheme(value);
-            if (!string.Equals(normalized, value, StringComparison.Ordinal))
-            {
-                UiTheme = normalized;
-                return;
-            }
-
-            var shouldBeDark = string.Equals(normalized, ThemeManager.Dark, StringComparison.Ordinal);
-            if (IsDarkTheme != shouldBeDark)
-                IsDarkTheme = shouldBeDark;
-        }
-        finally
-        {
-            _syncingThemeState = false;
-        }
+        SettingsThemeWorkflow.SyncUiThemeChanged(value, ThemeUi());
     }
 
     partial void OnIsDarkThemeChanged(bool value)
     {
-        if (_syncingThemeState)
-            return;
-
-        _syncingThemeState = true;
-        try
-        {
-            var targetTheme = value ? ThemeManager.Dark : ThemeManager.Light;
-            if (!string.Equals(UiTheme, targetTheme, StringComparison.Ordinal))
-                UiTheme = targetTheme;
-        }
-        finally
-        {
-            _syncingThemeState = false;
-        }
+        SettingsThemeWorkflow.SyncIsDarkThemeChanged(value, ThemeUi());
     }
 
     private void OpenDataFolder() => OpenFolder(DataFolderPath);
@@ -172,38 +186,18 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     private void OpenLogsFolder() => OpenFolder(LogsFolderPath);
     private void OpenRestorePointsFolder() => OpenFolder(RestorePointsFolderPath);
 
-    private void OpenFolder(string path)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(path))
-                return;
-
-            Directory.CreateDirectory(path);
-
-            if (!AuswertungPro.Next.UI.Services.SafeShellOpen.TryOpen(path, out var error))
-                throw new InvalidOperationException(error);
-        }
-        catch (Exception ex)
-        {
-            _sp.Dialogs.Error($"Ordner konnte nicht geöffnet werden:\n{ex.Message}", "SewerStudio");
-        }
-    }
+    private void OpenFolder(string path) => SettingsPathWorkflow.OpenFolder(path, _sp.Dialogs);
 
     private void BrowsePdfToText()
     {
-        var p = _sp.Dialogs.OpenFile("pdftotext.exe waehlen", "pdftotext.exe|pdftotext.exe|Alle Dateien|*.*");
+        var p = SettingsPathWorkflow.SelectPdfToText(_sp.Dialogs);
         if (p is null) return;
         PdfToTextPath = p;
     }
 
     private void BrowseProjectPath()
     {
-        var currentName = string.IsNullOrWhiteSpace(ProjectPath)
-            ? "Projekt"
-            : Path.GetFileNameWithoutExtension(ProjectPath);
-
-        var p = _sp.Dialogs.SaveFile("Projektpfad waehlen", "Projekt (*.json)|*.json", ".json", currentName);
+        var p = SettingsPathWorkflow.SelectProjectPath(_sp.Dialogs, ProjectPath);
         if (p is null)
             return;
 
@@ -212,202 +206,114 @@ public sealed partial class SettingsPageViewModel : ObservableObject
 
     private void BrowseVideoFolder()
     {
-        var p = _sp.Dialogs.SelectFolder("Video-Ordner (Haltungen) waehlen", VideoFolder);
+        var p = SettingsPathWorkflow.SelectVideoFolder(_sp.Dialogs, VideoFolder);
         if (p is null) return;
         VideoFolder = p;
     }
 
     private void BrowseProjectsRoot()
     {
-        // Ordner-Auswahl fuer das Basisverzeichnis neuer Projekte
-        var p = _sp.Dialogs.SelectFolder("Projekte-Verzeichnis waehlen", ProjectsRootDirectory);
+        var p = SettingsPathWorkflow.SelectProjectsRoot(_sp.Dialogs, ProjectsRootDirectory);
         if (p is null) return;
         ProjectsRootDirectory = p;
     }
 
+    private void BrowseKantonUriXtfDirectory()
+    {
+        var p = SettingsPathWorkflow.SelectKantonUriXtfDirectory(_sp.Dialogs, KantonUriXtfDirectory);
+        if (p is null) return;
+        KantonUriXtfDirectory = p;
+    }
+
     private void Save()
     {
-        _sp.Settings.EnableDiagnostics = EnableDiagnostics;
-        _sp.Settings.PdfToTextPath = PdfToTextPath;
-        _sp.Settings.LastProjectPath = NormalizeProjectPath(ProjectPath);
-        _sp.Settings.ProjectsRootDirectory = string.IsNullOrWhiteSpace(ProjectsRootDirectory)
-            ? null
-            : ProjectsRootDirectory.Trim();
-        _sp.Settings.LastVideoSourceFolder = VideoFolder;
-        _sp.Settings.LastVideoFolder = VideoFolder; // legacy compatibility
-        _sp.Settings.DataAutoSaveMode = DataAutoSaveMode.Normalize();
-        _sp.Settings.EnableRestorePoints = EnableRestorePoints;
-        _sp.Settings.VideoHwDecoding = VideoHwDecoding;
-        _sp.Settings.VideoDropLateFrames = VideoDropLateFrames;
-        _sp.Settings.VideoSkipFrames = VideoSkipFrames;
-        _sp.Settings.VideoFileCachingMs = ClampCaching(VideoFileCachingMs);
-        _sp.Settings.VideoNetworkCachingMs = ClampCaching(VideoNetworkCachingMs);
-        _sp.Settings.VideoCodecThreads = ClampCodecThreads(VideoCodecThreads);
-        _sp.Settings.VideoOutput = NormalizeVideoOutput(VideoOutput);
-        _sp.Settings.UiTheme = ThemeManager.NormalizeTheme(UiTheme);
-        _sp.Settings.AiStartOnProgramStart = StartAiOnProgramStart;
-        _sp.Settings.Save();
-
-        _sp.Diagnostics.EnableDiagnostics = EnableDiagnostics;
-        _sp.Diagnostics.ExplicitPdfToTextPath = PdfToTextPath;
+        SettingsSaveWorkflow.Save(new SettingsSaveWorkflowRequest(
+            _sp.Settings,
+            _sp.Diagnostics,
+            new SettingsSaveValues(
+                EnableDiagnostics,
+                PdfToTextPath,
+                ProjectPath,
+                ProjectsRootDirectory,
+                VideoFolder,
+                KantonUriXtfDirectory,
+                DataAutoSaveMode,
+                EnableRestorePoints,
+                VideoHwDecoding,
+                VideoDropLateFrames,
+                VideoSkipFrames,
+                VideoFileCachingMs,
+                VideoNetworkCachingMs,
+                VideoCodecThreads,
+                VideoOutput,
+                UiTheme,
+                StartAiOnProgramStart,
+                PipelineYoloConfidence,
+                PipelineDinoBoxThreshold,
+                PipelineDinoTextThreshold),
+            _sp.Settings.Save));
     }
 
     private async Task StartAiAsync()
     {
-        if (IsAiStarting)
-            return;
-
-        IsAiStarting = true;
-        AiStartupStatusText = "Starte KI...";
-
-        try
-        {
-            // Fortschritt live in den Status-Text leiten, damit der Knopf waehrend des langen
-            // Kaltstarts (Sidecar bis 2 Min, Modell-Laden) nicht stumm wirkt ("haengt").
-            var progress = new Progress<string>(step => AiStartupStatusText = step);
-            var result = await AiStartupService.StartAsync(_sp.Settings, progress);
-            _sp.Settings.SaveImmediate();
-
-            AiStartupStatusText = result.HasWarnings
-                ? "KI-Start mit Warnung."
-                : "KI gestartet.";
-
-            var summary = result.Summary;
-            if (result.HasWarnings)
-                _sp.Dialogs.Info(summary, "KI starten");
-        }
-        catch (Exception ex)
-        {
-            AiStartupStatusText = $"KI-Start fehlgeschlagen: {ex.Message}";
-            _sp.Dialogs.Error(AiStartupStatusText, "KI starten");
-        }
-        finally
-        {
-            IsAiStarting = false;
-        }
+        await SettingsAiStartupWorkflow.RunAsync(
+            _sp.Settings,
+            _sp.Dialogs,
+            new SettingsAiStartupWorkflowUi(
+                () => IsAiStarting,
+                value => IsAiStarting = value,
+                value => AiStartupStatusText = value),
+            _sp.Settings.SaveImmediate).ConfigureAwait(true);
     }
 
     private void ApplyTheme()
     {
-        var normalized = ThemeManager.NormalizeTheme(UiTheme);
-        _sp.Settings.UiTheme = normalized;
-        _sp.Settings.SaveImmediate();
-
-        // Live-Switch: tauscht das Theme-Dictionary in Application.Resources aus.
-        // DynamicResource-Bindings rendern sofort neu; StaticResource-Pages
-        // bekommen das neue Theme beim naechsten Page-Wechsel (DataTemplate-Reinstanz).
-        var app = System.Windows.Application.Current;
-        if (app != null)
-            ThemeManager.ApplyTheme(app.Resources, normalized);
+        SettingsThemeWorkflow.ApplyTheme(_sp.Settings, UiTheme, _sp.Settings.SaveImmediate);
     }
 
-    private static string? NormalizeProjectPath(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        var trimmed = value.Trim();
-        if (!trimmed.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-            trimmed += ".json";
-        return trimmed;
-    }
-
-    private static int ClampCaching(int value)
-        => Math.Clamp(value, 100, 10000);
-
-    private static int ClampCodecThreads(int value)
-        => Math.Clamp(value, 1, 16);
-
-    private static string NormalizeVideoOutput(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return "direct3d11";
-
-        var normalized = value.Trim().ToLowerInvariant();
-        return normalized is "direct3d11" or "direct3d9" or "any"
-            ? normalized
-            : "direct3d11";
-    }
+    private SettingsThemeWorkflowUi ThemeUi()
+        => new(
+            () => _syncingThemeState,
+            value => _syncingThemeState = value,
+            () => UiTheme,
+            value => UiTheme = value,
+            () => IsDarkTheme,
+            value => IsDarkTheme = value);
 
     private async Task ExportBackupAsync()
     {
-        var defaultName = $"SewerStudio_KI_Backup_{DateTime.Now:yyyy-MM-dd}";
-        var path = _sp.Dialogs.SaveFile(
-            "KI-Wissen exportieren",
-            "ZIP-Archiv (*.zip)|*.zip",
-            ".zip",
-            defaultName);
-        if (path is null) return;
-
-        BackupStatusText = "Exportiere...";
-        try
-        {
-            var result = await KnowledgeBackupService.ExportAsync(
-                path, new Progress<string>(msg => BackupStatusText = msg));
-
-            if (result.Success)
-            {
-                var sizeMb = result.SizeBytes / (1024.0 * 1024.0);
-                BackupStatusText = $"Export OK: {result.FileCount} Dateien, {sizeMb:F1} MB";
-                _sp.Dialogs.Info(
-                    $"KI-Wissen erfolgreich exportiert.\n\n" +
-                    $"Dateien: {result.FileCount}\n" +
-                    $"Groesse: {sizeMb:F1} MB\n" +
-                    $"Pfad: {path}",
-                    "SewerStudio");
-            }
-            else
-            {
-                BackupStatusText = $"Fehler: {result.Error}";
-                _sp.Dialogs.Error($"Export fehlgeschlagen:\n{result.Error}",
-                    "SewerStudio");
-            }
-        }
-        catch (Exception ex)
-        {
-            BackupStatusText = $"Fehler: {ex.Message}";
-        }
+        await SettingsKnowledgeBackupWorkflow.ExportAsync(
+            _sp.Dialogs,
+            value => BackupStatusText = value,
+            () => DateTime.Now).ConfigureAwait(true);
     }
 
     private async Task ImportBackupAsync()
     {
-        var path = _sp.Dialogs.OpenFile(
-            "KI-Wissen importieren",
-            "ZIP-Archiv (*.zip)|*.zip");
-        if (path is null) return;
+        await SettingsKnowledgeBackupWorkflow.ImportAsync(
+            _sp.Dialogs,
+            value => BackupStatusText = value,
+            () => DateTime.Now).ConfigureAwait(true);
+    }
 
-        var confirm = _sp.Dialogs.Confirm(
-            "Vorhandene KI-Daten und Einstellungen werden ueberschrieben.\n\n" +
-            "Nach dem Import muss die Anwendung neu gestartet werden.\n\n" +
-            "Fortfahren?",
-            "SewerStudio");
-        if (!confirm) return;
-
-        BackupStatusText = "Importiere...";
-        try
-        {
-            var result = await KnowledgeBackupService.ImportAsync(
-                path, new Progress<string>(msg => BackupStatusText = msg));
-
-            if (result.Success)
-            {
-                BackupStatusText = $"Import OK: {result.FileCount} Dateien";
-                _sp.Dialogs.Info(
-                    $"KI-Wissen erfolgreich importiert ({result.FileCount} Dateien).\n\n" +
-                    "Bitte starten Sie die Anwendung neu.",
-                    "SewerStudio");
-            }
-            else
-            {
-                BackupStatusText = $"Fehler: {result.Error}";
-                _sp.Dialogs.Error($"Import fehlgeschlagen:\n{result.Error}",
-                    "SewerStudio");
-            }
-        }
-        catch (Exception ex)
-        {
-            BackupStatusText = $"Fehler: {ex.Message}";
-        }
+    private async Task CreateFullBackupAsync(CancellationToken ct)
+    {
+        await SettingsFullBackupWorkflow.RunAsync(
+            new SettingsFullBackupWorkflowRequest(
+                _sp.Settings,
+                _sp.FullBackup,
+                _sp.Dialogs,
+                _sp.Toasts,
+                new SettingsFullBackupWorkflowUi(
+                    value => IsFullBackupRunning = value,
+                    value => FullBackupPercent = value,
+                    value => FullBackupCurrentFile = value,
+                    value => FullBackupStatusText = value,
+                    value => LastFullBackupInfo = value),
+                AppSettings.FlushPendingSave,
+                _sp.Settings.SaveImmediate,
+                () => DateTime.UtcNow),
+            ct).ConfigureAwait(true);
     }
 
     public sealed record AutoSaveModeOption(AutoSaveMode Value, string Label);

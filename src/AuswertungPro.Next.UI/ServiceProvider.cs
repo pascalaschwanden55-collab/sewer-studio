@@ -10,9 +10,12 @@ using AuswertungPro.Next.Application.Import;
 using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Projects;
 using AuswertungPro.Next.Application.Protocol;
+using AuswertungPro.Next.Application.Backup;
+using AuswertungPro.Next.Application.Common;
 // using AuswertungPro.Next.Application.Reports; // entfernt, da bereits oben vorhanden
 using AuswertungPro.Next.Application.Vsa;
 
+using AuswertungPro.Next.Infrastructure.Backup;
 using AuswertungPro.Next.Infrastructure.Export;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
 using AuswertungPro.Next.Infrastructure.Import.Pdf;
@@ -53,6 +56,7 @@ namespace AuswertungPro.Next.UI
         public IDialogService Dialogs { get; internal set; } = new DialogService();
         public ToastService Toasts { get; } = new ToastService();
         public IPlaywrightInstallService PlaywrightInstaller { get; }
+        public IFullBackupService FullBackup { get; }
         #endregion
 
         #region Persistenz
@@ -121,6 +125,10 @@ namespace AuswertungPro.Next.UI
             ProtocolPdfExporter = new ProtocolPdfExporter();
 
             PlaywrightInstaller = new PlaywrightInstallService(loggerFactory.CreateLogger<PlaywrightInstallService>());
+            FullBackup = new FullBackupService(
+                FullBackupSourcesFactory.ErmittleAktuelleQuellen,
+                KnowledgeWalCheckpoint.TryCheckpoint,
+                ct => OllamaListAsync(ct));
 
 
 
@@ -259,6 +267,7 @@ namespace AuswertungPro.Next.UI
 
         public object? GetService(Type serviceType)
         {
+            if (serviceType == typeof(IFullBackupService)) return FullBackup;
             if (serviceType == typeof(IProjectRepository)) return Projects;
             if (serviceType == typeof(IPdfImportService)) return PdfImport;
             if (serviceType == typeof(IXtfImportService)) return XtfImport;
@@ -274,6 +283,24 @@ namespace AuswertungPro.Next.UI
             if (serviceType == typeof(ILogger)) return Logger;
             if (serviceType == typeof(ILoggerFactory)) return LoggerFactory;
             return null;
+        }
+
+        private static async Task<string?> OllamaListAsync(CancellationToken ct)
+        {
+            try
+            {
+                var result = await ExternalProcessRunner.RunAsync(
+                    "ollama",
+                    new[] { "list" },
+                    TimeSpan.FromSeconds(10),
+                    cancellationToken: ct).ConfigureAwait(false);
+
+                return result.Success ? result.StdOut : null;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

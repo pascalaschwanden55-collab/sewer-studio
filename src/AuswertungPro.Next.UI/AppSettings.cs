@@ -14,6 +14,7 @@ namespace AuswertungPro.Next.UI;
 public sealed class AppSettings : IAiStartupSettings
 {
     private const int SaveDebounceMs = 750;
+    public const string DefaultKantonUriXtfDirectory = @"D:\QGIS_V4\Export_Sewer_Studio";
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -65,6 +66,9 @@ public sealed class AppSettings : IAiStartupSettings
     public int VideoNetworkCachingMs { get; set; } = 3000;
     public int VideoCodecThreads { get; set; } = 2;
     public string VideoOutput { get; set; } = "direct3d11";
+    public int PlayerVolume { get; set; } = 80;
+    public bool PlayerMuted { get; set; }
+    public double PlayerOverlayOpacity { get; set; } = 1d;
     public DataPageLayoutSettings DataPageLayout { get; set; } = new();
     public DataPageLayoutSettings SchaechtePageLayout { get; set; } = new();
 
@@ -73,6 +77,9 @@ public sealed class AppSettings : IAiStartupSettings
 
     // Schachtansicht: per GridSplitter einstellbare Hoehe des "Schaeden"-Panels (in px).
     public double SchachtansichtSchadenHeight { get; set; } = 240d;
+
+    // Foto-Galerie: Kachelbreite im Haltungs-/Schachtdetail.
+    public double PhotoGalleryTileSize { get; set; } = 124d;
 
     // Window position/size persistence
     public Dictionary<string, WindowBounds> WindowStates { get; set; } = new();
@@ -95,6 +102,9 @@ public sealed class AppSettings : IAiStartupSettings
     // Schacht-Paar (auch vertauscht) wird hierueber der korrekten Haltung zugeordnet.
     // Fehlt die Datei, laeuft die Verteilung wie bisher (kein Kataster-Abgleich).
     public string AbwasserkatasterXtfPath { get; set; } = @"D:\QGIS_V4\Export_Sewer_Studio\Abwasserkataster_Uri_korrigiert.xtf";
+
+    // Vollstaendiger XTF-Datenbestand Kanton Uri (Leitungen und Schaechte).
+    public string KantonUriXtfDirectory { get; set; } = DefaultKantonUriXtfDirectory;
 
     // Lokale QGIS-XYZ-Kacheln fuer die Kartenansicht. Fehlt der Ordner, bleibt es beim WMS.
     public string QgisTilesPath { get; set; } = @"D:\QGIS_V4\Export_Sewer_Studio\tiles_test";
@@ -130,6 +140,11 @@ public sealed class AppSettings : IAiStartupSettings
 
     // Hydraulik-Panel letzte Eingaben
     public HydraulikPanelSettings HydraulikPanel { get; set; } = new();
+
+    // Komplette Datensicherung (PC-Ausfall-Schutz)
+    public DateTime? LastFullBackupUtc { get; set; }
+    public string? LastFullBackupPath { get; set; }
+    public long? LastFullBackupSizeBytes { get; set; }
 
     public static string AppDataDir
         => AppDataPathResolver.Resolve(AppIdentity.ProductName);
@@ -239,7 +254,11 @@ public sealed class AppSettings : IAiStartupSettings
             settings.LastVideoSourceFolder = settings.LastVideoFolder;
         if (string.IsNullOrWhiteSpace(settings.LastVideoFolder))
             settings.LastVideoFolder = settings.LastVideoSourceFolder;
+        settings.KantonUriXtfDirectory ??= DefaultKantonUriXtfDirectory;
         settings.UiTheme = ThemeManager.NormalizeTheme(settings.UiTheme);
+        settings.PhotoGalleryTileSize = Math.Clamp(settings.PhotoGalleryTileSize, 80d, 260d);
+        settings.PlayerVolume = Math.Clamp(settings.PlayerVolume, 0, 100);
+        settings.PlayerOverlayOpacity = Math.Clamp(settings.PlayerOverlayOpacity, 0.35d, 1d);
         return settings;
     }
 

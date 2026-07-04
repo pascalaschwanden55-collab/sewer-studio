@@ -11,6 +11,9 @@
 
     <AssemblyName>SewerStudio</AssemblyName>
     <Product>SewerStudio</Product>
+    <Version>4.5.0</Version>
+    <FileVersion>4.5.0.0</FileVersion>
+    <AssemblyVersion>4.5.0.0</AssemblyVersion>
   </PropertyGroup>
 
 
