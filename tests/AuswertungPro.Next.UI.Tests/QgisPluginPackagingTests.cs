@@ -71,6 +71,9 @@ public sealed class QgisPluginPackagingTests
         // Zoom bei jedem Auswahl-Klick (Stempel), nicht nur bei Haltungswechsel.
         Assert.Contains("selectionStamp", source);
         Assert.Contains("_last_zoom_stamp", source);
+
+        // Ehrliches Feedback, wenn die aktuelle Haltung keine Geometrie hat.
+        Assert.Contains("currentHoldingHasGeometry", source);
     }
 
     [Fact]

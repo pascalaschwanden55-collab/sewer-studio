@@ -395,10 +395,18 @@ class SewerStudioBridgeDock(QDockWidget):
 
     def _set_status_from_payload(self, payload):
         holding = self._holding_from_payload(payload)
-        if holding:
-            self._set_status(f"Verbunden. Aktuelle Haltung: {holding}")
-        else:
+        if not holding:
             self._set_status("Verbunden. Kein aktiver Haltungsname gemeldet.")
+            return
+
+        # Ehrliches Feedback: ohne aufloesbare Geometrie gibt es nichts zu zoomen.
+        has_geometry = payload.get("currentHoldingHasGeometry")
+        if has_geometry is False:
+            self._set_status(
+                f"Verbunden. Aktuelle Haltung: {holding} — keine Geometrie im Kataster (kein Zoom moeglich)."
+            )
+        else:
+            self._set_status(f"Verbunden. Aktuelle Haltung: {holding}")
 
     def _set_status(self, text):
         self.status_label.setText(text)

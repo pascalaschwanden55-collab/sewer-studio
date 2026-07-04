@@ -14,7 +14,13 @@ public sealed class QgisBridgeSnapshotBuilderTests
   <a.Haltung TID='h1'><Bezeichnung>A-B</Bezeichnung>
     <Verlauf><POLYLINE><COORD><C1>2690000</C1><C2>1190000</C2></COORD>
     <COORD><C1>2690010</C1><C2>1190000</C2></COORD></POLYLINE></Verlauf>
-  </a.Haltung></X></DATASECTION></TRANSFER>";
+  </a.Haltung>
+  <a.Abwasserknoten TID='k1'><Bezeichnung>S1</Bezeichnung>
+    <Lage><COORD><C1>2690100</C1><C2>1190000</C2></COORD></Lage>
+  </a.Abwasserknoten>
+  <a.Abwasserknoten TID='k2'><Bezeichnung>S2</Bezeichnung>
+    <Lage><COORD><C1>2690100</C1><C2>1190020</C2></COORD></Lage>
+  </a.Abwasserknoten></X></DATASECTION></TRANSFER>";
 
     [Fact]
     public void BuildStatus_reports_live_project_and_xtf_counts()
@@ -163,6 +169,51 @@ public sealed class QgisBridgeSnapshotBuilderTests
     }
 
     [Fact]
+    public void Haltung_ohne_katasterkante_faellt_auf_schachtlinie_zurueck()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+
+        // "S1-S2" existiert im Kataster nicht als Haltung — aber beide Schaechte
+        // haben Koordinaten. Erwartet: gerade Naeherungslinie S1 -> S2 (20 m).
+        var project = new Project { Name = "Fallback-Test" };
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "S1-S2", FieldSource.Manual, userEdited: true);
+        record.VsaFindings.Add(new VsaFinding { KanalSchadencode = "BAB", MeterStart = 5.0 });
+        project.Data.Add(record);
+        var snapshot = QgisProjectSnapshot.Capture(project, "S1-S2");
+
+        var current = sut.BuildCurrentGeoJson(snapshot);
+        var damages = sut.BuildDamagesGeoJson(snapshot);
+        var status = sut.BuildStatus(snapshot);
+
+        var line = Assert.Single(current.Features);
+        Assert.Equal("schacht_naeherung", line.Properties["geometrie_quelle"]);
+        Assert.Null(line.Properties["haltung_kataster"]);
+
+        // Schaden bei 5 m auf der 20-m-Linie (1190000 -> 1190020) => bei 1190005.
+        var damage = Assert.Single(damages.Features);
+        var point = Assert.IsType<GeoJsonPoint>(damage.Geometry);
+        Assert.Equal(2690100, point.Coordinates[0], precision: 3);
+        Assert.Equal(1190005, point.Coordinates[1], precision: 3);
+
+        Assert.True(status.CurrentHoldingHasGeometry);
+        Assert.Equal(1, status.DamageFeatureCount);
+    }
+
+    [Fact]
+    public void Status_meldet_fehlende_geometrie_der_aktuellen_haltung()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+        var project = CreateProjectWithImportedDamage();
+
+        var status = sut.BuildStatus(QgisProjectSnapshot.Capture(project, "GIBTSNICHT-99"));
+
+        Assert.False(status.CurrentHoldingHasGeometry);
+    }
+
+    [Fact]
     public void Richtungswechsel_invalidiert_den_damages_fingerprint()
     {
         var before = QgisProjectSnapshot.Capture(CreateProjectWithImportedDamage(), null).DamagesFingerprint(1);
@@ -264,7 +315,11 @@ public sealed class QgisBridgeSnapshotBuilderTests
                 KantonUriXtfDirectory = DirectoryPath
             };
 
-            return new QgisBridgeSnapshotBuilder(settings, CachePath);
+            // Beide Caches in den Temp-Ordner umleiten (nie den echten AppData-Cache anfassen).
+            return new QgisBridgeSnapshotBuilder(
+                settings,
+                CachePath,
+                Path.Combine(DirectoryPath, "manhole_cache.json"));
         }
 
         public void Dispose()

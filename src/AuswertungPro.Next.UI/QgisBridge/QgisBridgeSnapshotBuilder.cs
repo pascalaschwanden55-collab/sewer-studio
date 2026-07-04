@@ -25,22 +25,36 @@ internal sealed class QgisBridgeSnapshotBuilder
     // Fliessrichtung ist der Projektname gegenlaeufig zum Kataster.
     private IReadOnlyDictionary<string, string> _cachedReversedNames =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    // Schacht-Punkte (Abwasserknoten) fuer die Fallback-Geometrie, wenn das Kataster
+    // die Haltung selbst nicht kennt (z.B. Anschluss ueber Sonderbauwerk).
+    private readonly string? _manholeCacheFilePath;
+    private IReadOnlyDictionary<string, ManholeGeometry> _cachedManholes =
+        new Dictionary<string, ManholeGeometry>(StringComparer.OrdinalIgnoreCase);
 
-    public QgisBridgeSnapshotBuilder(AppSettings settings, string? networkCacheFilePath = null)
+    public QgisBridgeSnapshotBuilder(
+        AppSettings settings,
+        string? networkCacheFilePath = null,
+        string? manholeCacheFilePath = null)
     {
         _settings = settings;
         _networkCacheFilePath = networkCacheFilePath;
+        _manholeCacheFilePath = manholeCacheFilePath;
     }
 
     public QgisStatusPayload BuildStatus(QgisProjectSnapshot snapshot)
     {
         var network = LoadNetwork();
         var damageStats = CountExportableDamages(snapshot, network);
+        // true auch ohne Auswahl, damit das Plugin nur bei einer konkreten Haltung
+        // OHNE aufloesbarer Geometrie warnt.
+        var currentHasGeometry = string.IsNullOrWhiteSpace(snapshot.CurrentHolding)
+                                 || Resolve(network, snapshot.CurrentHolding) is not null;
 
         return new QgisStatusPayload(
             Ok: true,
             App: "SewerStudio",
             CurrentHolding: snapshot.CurrentHolding,
+            CurrentHoldingHasGeometry: currentHasGeometry,
             SelectionStamp: snapshot.SelectionStamp,
             ProjectName: snapshot.ProjectName,
             ProjectHoldingCount: snapshot.Haltungen.Count,
@@ -84,18 +98,23 @@ internal sealed class QgisBridgeSnapshotBuilder
             return GeoJsonFeatureCollection.Empty;
 
         var network = LoadNetwork();
-        if (!TryResolveGeometry(network, holding, out var geometry, out var katasterName, out var reversedName))
+        var resolved = Resolve(network, holding);
+        if (resolved is null)
             return GeoJsonFeatureCollection.Empty;
 
         var record = FindHaltung(snapshot, holding);
-        var fromEnd = reversedName || (record?.GegenFliessrichtung ?? false);
+        var fromEnd = !resolved.IsFallback
+                      && (resolved.ReversedName || (record?.GegenFliessrichtung ?? false));
         var feature = CreateLineFeature(
-            geometry,
+            resolved.Geometry,
             new Dictionary<string, object?>
             {
                 ["haltung"] = holding,
-                ["haltung_kataster"] = katasterName,
-                ["richtung"] = fromEnd ? "gegen_fliessrichtung" : "in_fliessrichtung",
+                ["haltung_kataster"] = resolved.IsFallback ? null : resolved.KatasterName,
+                ["richtung"] = resolved.IsFallback
+                    ? "aufnahmerichtung"
+                    : fromEnd ? "gegen_fliessrichtung" : "in_fliessrichtung",
+                ["geometrie_quelle"] = resolved.IsFallback ? "schacht_naeherung" : "kataster",
                 ["current"] = true,
                 ["zustandsklasse"] = record?.Zustandsklasse,
                 ["zustand_farbe"] = MapConditionColor(record?.Zustandsklasse),
@@ -115,13 +134,15 @@ internal sealed class QgisBridgeSnapshotBuilder
         var features = new List<GeoJsonFeature>();
         foreach (var haltung in snapshot.Haltungen)
         {
-            if (!TryResolveGeometry(network, haltung.Haltungsname, out var geometry, out var katasterName, out var reversedName))
+            var resolved = Resolve(network, haltung.Haltungsname);
+            if (resolved is null)
                 continue;
 
             // Meterstand zaehlt ab dem Start-Schacht der AUFNAHME. Die Kataster-Polyline
             // laeuft in Fliessrichtung — bei gegenlaeufigem Namen oder Inspektion gegen
             // die Fliessrichtung wird darum vom Polyline-Ende her gemessen.
-            var fromEnd = reversedName || haltung.GegenFliessrichtung;
+            // Die Fallback-Linie ist bereits in Aufnahmerichtung gebaut -> immer vorwaerts.
+            var fromEnd = !resolved.IsFallback && (resolved.ReversedName || haltung.GegenFliessrichtung);
 
             foreach (var damage in haltung.Schaeden)
             {
@@ -129,7 +150,7 @@ internal sealed class QgisBridgeSnapshotBuilder
                 if (meter is null)
                     continue;
 
-                var point = InterpolateLv95(geometry, meter.Value, fromEnd);
+                var point = InterpolateLv95(resolved.Geometry, meter.Value, fromEnd);
                 if (point is null)
                     continue;
 
@@ -138,8 +159,11 @@ internal sealed class QgisBridgeSnapshotBuilder
                     new Dictionary<string, object?>
                     {
                         ["haltung"] = haltung.Haltungsname,
-                        ["haltung_kataster"] = katasterName,
-                        ["richtung"] = fromEnd ? "gegen_fliessrichtung" : "in_fliessrichtung",
+                        ["haltung_kataster"] = resolved.IsFallback ? null : resolved.KatasterName,
+                        ["richtung"] = resolved.IsFallback
+                            ? "aufnahmerichtung"
+                            : fromEnd ? "gegen_fliessrichtung" : "in_fliessrichtung",
+                        ["geometrie_quelle"] = resolved.IsFallback ? "schacht_naeherung" : "kataster",
                         ["code"] = damage.Code,
                         ["beschreibung"] = damage.Beschreibung,
                         ["meter_start"] = damage.MeterStart,
@@ -181,7 +205,8 @@ internal sealed class QgisBridgeSnapshotBuilder
         if (string.IsNullOrWhiteSpace(xtfPath) || !File.Exists(xtfPath))
             return new NetworkLoadResult(xtfPath, XtfFound: false, Array.Empty<HaltungGeometry>(),
                 new Dictionary<string, HaltungGeometry>(StringComparer.OrdinalIgnoreCase),
-                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, ManholeGeometry>(StringComparer.OrdinalIgnoreCase));
 
         var ticks = File.GetLastWriteTimeUtc(xtfPath).Ticks;
         lock (_cacheSync)
@@ -190,7 +215,8 @@ internal sealed class QgisBridgeSnapshotBuilder
                 && _cachedXtfTicks == ticks)
             {
                 return new NetworkLoadResult(
-                    xtfPath, XtfFound: true, _cachedGeometries, _cachedGeometryByHolding, _cachedReversedNames);
+                    xtfPath, XtfFound: true, _cachedGeometries, _cachedGeometryByHolding,
+                    _cachedReversedNames, _cachedManholes);
             }
 
             var geometries = new NetworkGeometryCache(_networkCacheFilePath)
@@ -205,9 +231,15 @@ internal sealed class QgisBridgeSnapshotBuilder
                 .GroupBy(g => g.Haltungsname, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
             _cachedReversedNames = BuildReversedNameIndex(_cachedGeometryByHolding);
+            _cachedManholes = new ManholeGeometryCache(_manholeCacheFilePath)
+                .Load(xtfPath)
+                .Where(m => !string.IsNullOrWhiteSpace(m.Bezeichnung))
+                .GroupBy(m => m.Bezeichnung.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
             return new NetworkLoadResult(
-                xtfPath, XtfFound: true, _cachedGeometries, _cachedGeometryByHolding, _cachedReversedNames);
+                xtfPath, XtfFound: true, _cachedGeometries, _cachedGeometryByHolding,
+                _cachedReversedNames, _cachedManholes);
         }
     }
 
@@ -245,37 +277,44 @@ internal sealed class QgisBridgeSnapshotBuilder
         return reversed;
     }
 
+    /// <summary>Aufgeloeste Geometrie inkl. Herkunft (Kataster-Kante oder Schacht-Naeherung).</summary>
+    private sealed record ResolvedGeometry(
+        HaltungGeometry Geometry,
+        string KatasterName,
+        bool ReversedName,
+        bool IsFallback);
+
     /// <summary>
-    /// Loest den Projekt-Haltungsnamen zur Kataster-Geometrie auf.
-    /// reversedName = true, wenn der Projektname gegenlaeufig zum Kataster benannt ist
-    /// (Aufnahme startete am Kataster-"nach"-Schacht, also am Ende der Polyline).
+    /// Loest den Projekt-Haltungsnamen zur Geometrie auf:
+    /// 1. Kataster-Kante (direkter Name), 2. Kataster-Kante (umgekehrter Name),
+    /// 3. Fallback: gerade Linie zwischen den beiden Schacht-Punkten — fuer Haltungen,
+    ///    die das Kataster nicht als Kante kennt (z.B. Anschluss ueber Sonderbauwerk).
     /// </summary>
-    private static bool TryResolveGeometry(
-        NetworkLoadResult network,
-        string holdingName,
-        out HaltungGeometry geometry,
-        out string katasterName,
-        out bool reversedName)
+    private static ResolvedGeometry? Resolve(NetworkLoadResult network, string holdingName)
     {
-        if (network.GeometryByHolding.TryGetValue(holdingName, out geometry!))
-        {
-            katasterName = geometry.Haltungsname;
-            reversedName = false;
-            return true;
-        }
+        if (network.GeometryByHolding.TryGetValue(holdingName, out var direct))
+            return new ResolvedGeometry(direct, direct.Haltungsname, ReversedName: false, IsFallback: false);
 
         if (network.ReversedNames.TryGetValue(holdingName, out var kataster)
-            && network.GeometryByHolding.TryGetValue(kataster, out geometry!))
+            && network.GeometryByHolding.TryGetValue(kataster, out var reversed))
         {
-            katasterName = kataster;
-            reversedName = true;
-            return true;
+            return new ResolvedGeometry(reversed, kataster, ReversedName: true, IsFallback: false);
         }
 
-        geometry = null!;
-        katasterName = "";
-        reversedName = false;
-        return false;
+        // Fallback ueber die Schacht-Punkte: Linie in NAMENS-Reihenfolge (= Aufnahmerichtung),
+        // Meterstand laeuft darum immer vorwaerts ab dem ersten Schacht.
+        var (von, nach) = HaltungCadastreExtractor.SplitShaftPair(holdingName);
+        if (string.IsNullOrEmpty(von) || string.IsNullOrEmpty(nach))
+            return null;
+
+        if (!network.Manholes.TryGetValue(von, out var start)
+            || !network.Manholes.TryGetValue(nach, out var end))
+        {
+            return null;
+        }
+
+        var line = new HaltungGeometry(holdingName, new[] { (start.X, start.Y), (end.X, end.Y) });
+        return new ResolvedGeometry(line, KatasterName: "", ReversedName: false, IsFallback: true);
     }
 
     private static IReadOnlyDictionary<string, int?> BuildConditionIndex(QgisProjectSnapshot snapshot)
@@ -385,7 +424,7 @@ internal sealed class QgisBridgeSnapshotBuilder
 
         foreach (var haltung in snapshot.Haltungen)
         {
-            var hasGeometry = TryResolveGeometry(network, haltung.Haltungsname, out _, out _, out _);
+            var hasGeometry = Resolve(network, haltung.Haltungsname) is not null;
             foreach (var damage in haltung.Schaeden)
             {
                 if (hasGeometry && GetDamageMeterForMap(damage) is not null)
@@ -403,7 +442,8 @@ internal sealed class QgisBridgeSnapshotBuilder
         bool XtfFound,
         IReadOnlyList<HaltungGeometry> Geometries,
         IReadOnlyDictionary<string, HaltungGeometry> GeometryByHolding,
-        IReadOnlyDictionary<string, string> ReversedNames);
+        IReadOnlyDictionary<string, string> ReversedNames,
+        IReadOnlyDictionary<string, ManholeGeometry> Manholes);
 
     private readonly record struct DamageStats(int Exportable, int Skipped);
 }
@@ -412,6 +452,7 @@ internal sealed record QgisStatusPayload(
     bool Ok,
     string App,
     string CurrentHolding,
+    bool CurrentHoldingHasGeometry,
     long SelectionStamp,
     string ProjectName,
     int ProjectHoldingCount,
