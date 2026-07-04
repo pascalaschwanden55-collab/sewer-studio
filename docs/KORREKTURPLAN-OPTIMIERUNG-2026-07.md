@@ -64,7 +64,7 @@ v4.5 „Fluent & Flow" hat die Lücken des UI-Audits geschlossen (Mica, Scrollba
 ### 9. Wartbarkeit
 | Befund | Beleg | Schwere | Aufwand |
 |---|---|---|---|
-| Veraltete Doku: Referenzen auf nicht existierenden `DevisGenerator`/`DevisExcelExporter` (u. a. Architektur-Notizen/Skills) | Grep 04.07: 0 Treffer in src | Niedrig | S |
+| Veraltete Doku: Referenzen auf nicht vorhandene Devis-/Excel-Export-Komponenten (u. a. Architektur-Notizen/Skills) | Grep 04.07: 0 Treffer in src | Niedrig | S |
 | Einheiten-Erkennung string-verstreut („m"/„Stk"/„h" vs „Std") → K7 UnitKinds | Audit 04.07 | Mittel | S |
 | Doppelte Statistik-Klassifizierer UI vs. PDF → K6 | Audit 04.07 | Mittel | M |
 
@@ -95,7 +95,7 @@ v4.5 „Fluent & Flow" hat die Lücken des UI-Audits geschlossen (Mica, Scrollba
 13. **K6**: EIN Spezialstatistik-Klassifizierer (UI-Resolver löschen/delegieren) + Cross-Test UI==PDF; MwSt-Altbestands-Hinweis mit Recompute-Angebot.
 14. **K7 UnitKinds** (Längen-/Stunden-/Stück-Synonyme zentral) + Theory-Tests.
 15. Sidecar-Fehlermeldung differenzieren: „läuft nicht" vs „Token/401" (bekannte Falle) — kleine UI-Meldung + Test. Abhängigkeit: keine.
-16. Doku-Hygiene: DevisGenerator-Referenzen aus Doku/Notizen entfernen; DiagnosticsPage entweder füllen (Log-Viewer-Kachel) oder Nav-Eintrag ausblenden.
+16. Doku-Hygiene: veraltete Devis-/Excel-Export-Referenzen aus Doku/Notizen entfernen; DiagnosticsPage entweder füllen (Log-Viewer-Kachel) oder Nav-Eintrag ausblenden.
 
 ### Welle 3 — Größere Umbauten (L, NUR nach Diskussion mit dem User)
 17. V3-Q9: Logik-Controller UI → Application (Fahrplan-Lane CLAUDE führt).

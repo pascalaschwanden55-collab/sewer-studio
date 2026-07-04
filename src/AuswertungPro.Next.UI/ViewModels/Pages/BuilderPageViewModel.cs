@@ -177,6 +177,11 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             return;
         }
 
+        if (!OfferRecomputeCostsForCurrentCatalog(filteredRows))
+            return;
+
+        filteredRows = Rows.ToList();
+
         var safeProjectName = SanitizeFilePart(_shell.Project.Name);
         var defaultName = $"Druckcenter_{safeProjectName}_{DateTime.Now:yyyyMMdd}.pdf";
         var output = _sp.Dialogs.SaveFile(
@@ -282,6 +287,10 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             return;
         }
 
+        if (!OfferRecomputeCostsForCurrentCatalog(filteredRows))
+            return;
+
+        filteredRows = Rows.ToList();
         var entries = BuilderPageSummaryEntryBuilder.Build(filteredRows, _vatRate);
         var holdings = entries
             .Where(e => e.Cost is not null)
@@ -304,10 +313,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
         var projectPath = _sp.Settings.LastProjectPath ?? "";
         var catalog = _catalogStore.LoadMerged(projectPath);
-        var catalogDict = catalog.Items
-            .Where(i => !string.IsNullOrWhiteSpace(i.Key))
-            .GroupBy(i => i.Key.Trim(), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        var catalogDict = BuildCatalogMap(catalog);
 
         var positions = ProjectPositionAggregator.Aggregate(holdingsForLv, catalogDict);
         if (positions.Count == 0 && excludedPauschaleTotal <= 0m)
@@ -601,6 +607,71 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
         ApplyFilters();
     }
+
+    private bool OfferRecomputeCostsForCurrentCatalog(IReadOnlyList<DruckcenterRowVm> filteredRows)
+    {
+        var oldRates = FindMismatchedVatRates(filteredRows, _vatRate);
+        if (oldRates.Count == 0)
+            return true;
+
+        var decision = _sp.Dialogs.ConfirmCancel(
+            BuildVatRecomputePrompt(oldRates, _vatRate),
+            "Druckcenter");
+        if (decision == DialogConfirm.Cancel)
+            return false;
+        if (decision == DialogConfirm.No)
+            return true;
+
+        return RecomputeStoredCostsWithCurrentCatalog();
+    }
+
+    private bool RecomputeStoredCostsWithCurrentCatalog()
+    {
+        var projectPath = _sp.Settings.LastProjectPath ?? "";
+        if (string.IsNullOrWhiteSpace(projectPath))
+        {
+            _sp.Dialogs.Info("Projekt bitte zuerst speichern, um Kosten neu zu berechnen.", "Druckcenter");
+            return false;
+        }
+
+        var store = _costRepo.Load(projectPath, out var loadError);
+        if (!string.IsNullOrWhiteSpace(loadError))
+        {
+            _sp.Dialogs.Error(
+                $"Kosten konnten nicht neu berechnet werden, weil costs.json nicht sauber geladen werden konnte:\n{loadError}",
+                "Druckcenter");
+            return false;
+        }
+
+        var catalog = _catalogStore.LoadMerged(projectPath);
+        var vatRate = catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate;
+        var changedHoldings = CatalogPriceApplier.ApplyCatalogPricesToStoredCosts(
+            store,
+            BuildCatalogMap(catalog),
+            vatRate);
+
+        if (changedHoldings.Count > 0 && !_costRepo.Save(projectPath, store, out var saveError))
+        {
+            _sp.Dialogs.Error($"Kosten konnten nicht gespeichert werden:\n{saveError}", "Druckcenter");
+            return false;
+        }
+
+        _vatRate = vatRate;
+        _costStore = store;
+        RefreshData();
+
+        LastResult = changedHoldings.Count == 0
+            ? "Kosten waren bereits aktuell."
+            : $"Kosten neu berechnet: {changedHoldings.Count} Haltung(en).";
+        _shell.SetStatus(LastResult);
+        return true;
+    }
+
+    private static Dictionary<string, CostCatalogItem> BuildCatalogMap(CostCatalog catalog)
+        => catalog.Items
+            .Where(i => !string.IsNullOrWhiteSpace(i.Key))
+            .GroupBy(i => i.Key.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
     private List<DruckcenterRowVm> BuildRows()
     {
@@ -1056,6 +1127,23 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             + $"; aktueller Katalogsatz ist {FormatVatRate(currentVatRate)}. "
             + "Kosten neu berechnen, wenn der aktuelle Satz gelten soll.";
     }
+
+    private static IReadOnlyList<decimal> FindMismatchedVatRates(IEnumerable<DruckcenterRowVm> rows, decimal currentVatRate)
+        => rows
+            .Select(row => row.StoredCost?.MwstRate ?? 0m)
+            .Where(rate => rate > 0m && rate != currentVatRate)
+            .Distinct()
+            .OrderBy(rate => rate)
+            .ToList();
+
+    private static string BuildVatRecomputePrompt(IReadOnlyList<decimal> oldRates, decimal currentVatRate)
+        => "Die gefilterte Ausgabe enthaelt gespeicherte Kosten mit altem MwSt-Satz "
+           + string.Join(", ", oldRates.Select(FormatVatRate))
+           + $".\nAktueller Katalogsatz ist {FormatVatRate(currentVatRate)}.\n\n"
+           + "Ja = alle gespeicherten Sanierungskosten jetzt mit aktuellem Katalog/MwSt neu berechnen\n"
+           + "Nein = Ausgabe mit gespeicherten Saetzen fortsetzen\n"
+           + "Abbrechen = Export abbrechen\n\n"
+           + "Manuelle Preis-Overrides bleiben unangetastet.";
 
     private static string FormatVatRate(decimal rate)
         => $"{rate * 100m:0.0}%";

@@ -8,7 +8,7 @@ Das Rechen-Rückgrat ist konsistent — Matrix, Einzelfenster (Kostenrechner) un
 
 **Fachreferenz:** `D:\Fachwissen\Revision_NPK135.pdf` (NPK 135) und `D:\Fachwissen\Offerten` (echte Offerten) — für Paket K3 als Abgleichsquelle lesen.
 
-**Wichtiger Kontext:** Einen `DevisGenerator`/`DevisExcelExporter` gibt es NICHT (toter Code-Verdacht in älteren Notizen). Die realen Ausgabewege sind: (1) Druckcenter-PDF „Kostenzusammenstellung" (`BuilderPageViewModel.ExportPdfAsync:163` → `cost_summary.sbnhtml` → Scriban+Playwright), (2) NPK-Leistungsverzeichnis-CSV (`ExportNpkLeistungsverzeichnis:268` → `ProjectPositionAggregator` + `NpkLeistungsverzeichnisExporter`), (3) Kostenrechner-Einzel-PDF, (4) Haltungsdossier (QuestPDF) mit optionaler Kostenschätzung. `offer.sbnhtml`/`offer_profi.sbnhtml` + `CostCalculationService.CalculateOffer/CalculateCombinedOffer` + `LegacyOfferTotalsCalculator` haben KEINEN Aufrufer.
+**Wichtiger Kontext:** Die realen Ausgabewege sind: (1) Druckcenter-PDF „Kostenzusammenstellung" (`BuilderPageViewModel.ExportPdfAsync:163` → `cost_summary.sbnhtml` → Scriban+Playwright), (2) NPK-Leistungsverzeichnis-CSV (`ExportNpkLeistungsverzeichnis:268` → `ProjectPositionAggregator` + `NpkLeistungsverzeichnisExporter`), (3) Kostenrechner-Einzel-PDF, (4) Haltungsdossier (QuestPDF) mit optionaler Kostenschätzung. Der alte Legacy-Offertenpfad wurde entfernt; eine echte NPK-Offerte bleibt ein eigenes neues Feature.
 
 ## Regeln
 

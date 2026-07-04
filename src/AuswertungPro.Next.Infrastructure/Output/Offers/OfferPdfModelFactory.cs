@@ -13,61 +13,6 @@ public static class OfferPdfModelFactory
     private static readonly CultureInfo Ch = CultureInfo.GetCultureInfo("de-CH");
     private const string MissingPriceText = "Preis fehlt";
 
-    // ---------- Legacy: from CalculatedOffer (old CostCalculationService) ----------
-    public static OfferPdfModel Create(CalculatedOffer offer, OfferPdfContext ctx, DateTimeOffset now)
-    {
-        var currency = string.IsNullOrWhiteSpace(ctx.Currency) ? "CHF" : ctx.Currency;
-        string Money(decimal v) => ChfFormat.Money(v, currency);
-        string Qty(decimal v) => v.ToString("0.###", Ch);
-
-        var model = new OfferPdfModel
-        {
-            DocumentKindLabel = "Offerte",
-            OfferNo = string.IsNullOrWhiteSpace(ctx.OfferNo)
-                ? $"OFF-{now:yyyyMMdd-HHmmss}"
-                : ctx.OfferNo,
-            DateText = now.ToLocalTime().ToString("dd.MM.yyyy", Ch),
-            ValidityText = ctx.ValidityText ?? "",
-
-            SenderBlock = BuildSenderBlockAbwasserUri(),
-            CustomerBlock = ctx.CustomerBlock ?? "",
-            ObjectBlock = ctx.ObjectBlock ?? "",
-
-            ProjectTitle = ctx.ProjectTitle ?? "",
-            VariantTitle = ctx.VariantTitle ?? "",
-            FilterSummaryText = ctx.FilterSummaryText ?? "",
-
-            Totals = new OfferPdfTotalsModel
-            {
-                NetText = Money(offer.Totals.NetExclMwst),
-                VatText = Money(offer.Totals.Mwst),
-                GrossText = Money(offer.Totals.TotalInclMwst)
-            },
-            TextBlocks = (ctx.TextBlocks is { Count: > 0 } ? ctx.TextBlocks : DefaultTextBlocks()).ToList(),
-        };
-
-        foreach (var line in offer.Lines)
-        {
-            var unitPrice = line.UnitPrice ?? 0m;
-            var amount = line.Amount ?? (line.Qty * unitPrice);
-            var missingPrice = line.UnitPrice is null || unitPrice == 0m;
-
-            model.Lines.Add(new OfferPdfLineModel
-            {
-                GroupLabel = string.IsNullOrWhiteSpace(line.Group) ? (line.Measure ?? "") : line.Group,
-                Text = line.Label ?? "",
-                Note = line.Source ?? "",
-                QtyText = Qty(line.Qty),
-                Unit = line.Unit ?? "",
-                UnitPriceText = missingPrice ? MissingPriceText : Money(unitPrice),
-                TotalText = missingPrice ? MissingPriceText : Money(amount),
-            });
-        }
-
-        return model;
-    }
-
-    // ---------- New: from HoldingCost (new CostCalculator system) ----------
     public static OfferPdfModel CreateFromHoldingCost(
         HoldingCost cost,
         OfferPdfContext ctx,

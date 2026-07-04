@@ -108,6 +108,64 @@ public sealed class CatalogPriceApplierTests
     }
 
     [Fact]
+    public void ApplyPrices_aktualisiert_MwSt_wenn_nur_Satz_alt_ist()
+    {
+        var catalog = new Dictionary<string, CostCatalogItem>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["GFK"] = FixedItem(100m),
+        };
+
+        var store = StoreWith(
+            "H1",
+            Line("GFK", qty: 10m, price: 100m, overridden: false),
+            storedVatRate: 0.077m);
+        var changed = ApplyToStore(store, catalog, vatRate: 0.081m);
+
+        var cost = store.ByHolding["H1"];
+        Assert.Equal(new[] { "H1" }, changed);
+        Assert.Equal(1000m, cost.Total);
+        Assert.Equal(0.081m, cost.MwstRate);
+        Assert.Equal(81m, cost.MwstAmount);
+        Assert.Equal(1081m, cost.TotalInclMwst);
+    }
+
+    [Fact]
+    public void ApplyPrices_aktualisiert_MwSt_ohne_Zeilen_und_erhaelt_Massnahmentotal()
+    {
+        var oldTotals = CostCalculatorLogicService.CalculateTotals(250m, 0.077m);
+        var store = new ProjectCostStore();
+        store.ByHolding["H1"] = new HoldingCost
+        {
+            Holding = "H1",
+            Measures =
+            [
+                new MeasureCost
+                {
+                    MeasureId = "MANUELL",
+                    MeasureName = "Manuelle Massnahme",
+                    Total = 250m
+                }
+            ],
+            Total = oldTotals.Total,
+            MwstRate = 0.077m,
+            MwstAmount = oldTotals.MwstAmount,
+            TotalInclMwst = oldTotals.TotalInclMwst
+        };
+
+        var changed = ApplyToStore(
+            store,
+            new Dictionary<string, CostCatalogItem>(StringComparer.OrdinalIgnoreCase),
+            vatRate: 0.081m);
+
+        var cost = store.ByHolding["H1"];
+        Assert.Equal(new[] { "H1" }, changed);
+        Assert.Equal(250m, cost.Measures[0].Total);
+        Assert.Equal(250m, cost.Total);
+        Assert.Equal(20.25m, cost.MwstAmount);
+        Assert.Equal(270.25m, cost.TotalInclMwst);
+    }
+
+    [Fact]
     public void ApplyPrices_aktualisiert_Total_und_MwSt_nach_Preisaenderung()
     {
         var catalog = new Dictionary<string, CostCatalogItem>(StringComparer.OrdinalIgnoreCase)
@@ -239,9 +297,11 @@ public sealed class CatalogPriceApplierTests
             }
         };
 
-    private static ProjectCostStore StoreWith(string holding, CostLine line)
+    private static ProjectCostStore StoreWith(string holding, CostLine line, decimal storedVatRate = 0.081m)
     {
         var store = new ProjectCostStore();
+        var measureTotal = line.Selected ? line.Qty * line.UnitPrice : 0m;
+        var totals = CostCalculatorLogicService.CalculateTotals(measureTotal, storedVatRate);
         store.ByHolding[holding] = new HoldingCost
         {
             Holding = holding,
@@ -251,9 +311,13 @@ public sealed class CatalogPriceApplierTests
                 {
                     MeasureId = "M1",
                     Lines = new List<CostLine> { line },
-                    Total = line.Selected ? line.Qty * line.UnitPrice : 0m,
+                    Total = measureTotal,
                 }
             },
+            Total = totals.Total,
+            MwstRate = storedVatRate,
+            MwstAmount = totals.MwstAmount,
+            TotalInclMwst = totals.TotalInclMwst,
         };
         return store;
     }

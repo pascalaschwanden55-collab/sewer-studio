@@ -161,7 +161,7 @@ erzeugt und aus bestätigten Befunden eine selbstlernende Wissensdatenbank aufba
   nicht als zentrale Architektur; es gibt nur `TemporalCodeVotingService` + `TemporalFindingDeduplicator`.
 - **InferenceOrchestratorService in C#:** existiert nicht; GPU-Slots liegen im Sidecar (`gpu_manager.py`).
 - **Automatische 8B→32B-Laufzeit-Eskalation pro Frame:** existiert NICHT. Modellwahl ist statisch nach VRAM.
-- **`DevisGenerator` / dedizierter Devis-Excel-Export:** im HEAD nicht als eigener Service (Kostenexport
+- **Dedizierter Devis-/Excel-Export:** im HEAD nicht als eigener Service (Kostenexport
   läuft über Excel/CSV).
 
 ### Wegweiser durch dieses Dokument
@@ -1594,7 +1594,7 @@ Ein **vierter** Pfad ist `HoldingFolderDistributor` / `HoldingFolderDistributor.
 
 - **Excel:** `IExcelExportService` (`src/.../Application/Export/IExportServices.cs`) mit `ExportToTemplate` und `ExportSchaechteToTemplate(project, templatePath, outputPath, headerRow, startRow)`. Produktiv-Implementierung `ExcelTemplateExportService` (`src/.../Export/Excel/`, **ClosedXML**): öffnet eine vorhandene `.xlsx`-Vorlage, sucht das Worksheet „Haltungen“, liest die Header-Zeile (`headerRow`, Default 11), mappt Spalten-Überschriften über Aliasse (`"Haltungsnahme (ID)"→Haltungsname`, `"Fliessrichtung"→Inspektionsrichtung`) und `FieldCatalog.Definitions` (Label/Key, normalisiert) auf logische Feldnamen, leert ab `startRow` (Default 12) und schreibt die Records sortiert nach `NR` dann `Haltungsname`, Spaltenreihenfolge aus `FieldCatalog.ColumnOrder`. `CsvExcelExportService` ist die einfache CSV-Fallback-Implementierung desselben Interfaces (Semikolon-getrennt, alle `FieldCatalog.ColumnOrder`-Felder, UTF-8).
 - **PDF:** `ProtocolPdfExporter` (`src/.../Application/Reports/`, **QuestPDF** Community-Lizenz). `BuildPdf(projectTitle, ProtocolDocument doc, projectRootAbs, ProtocolPdfExportOptions)` → `byte[]`. Rendert A4-Protokoll mit Header (Projekt, `Haltung: doc.HaltungId`, Revision), optionaler KI-Zusammenfassung und einem Block je nicht-gelöschtem `ProtocolEntry` (Code, „Meter/Strecke“-Bereich), plus Haltungsgrafik (feste Pixelmaße `770×520`, Schachtknoten oben/unten).
-- **Devis/Kostenvoranschlag:** Es gibt im aktuellen HEAD **keine** Klasse `DevisGenerator` und keinen dedizierten Devis-Excel-Export — Kostenvoranschlags-Export läuft über die Excel-Template-/CSV-Wege bzw. ist noch nicht als eigener Service implementiert (in Doku nur als Vorschlag, „CPM“ offen).
+- **Devis/Kostenvoranschlag:** Es gibt im aktuellen HEAD keinen dedizierten Devis-/Excel-Export als eigenen Service — Kostenvoranschlags-Export läuft über die Excel-Template-/CSV-Wege bzw. ist noch nicht als eigener Service implementiert (in Doku nur als Vorschlag, „CPM“ offen).
 
 ### Relevante Dateipfade
 

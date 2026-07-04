@@ -25,7 +25,7 @@ AKTUELLER ARBEITSSTAND (wichtig, sonst falsche Schlüsse!)
   Sanierungsmatrix-Brüche K1–K7 inkl. NPK-Dubletten und Checker≠Engine
   (docs/SANIERUNGSMATRIX-KONSISTENZ-PLAN.md); NpkLeistungsverzeichnis-
   Exporter ohne Tests; PlayerWindow-God-Klasse (eigenes laufendes Vorhaben);
-  „DevisGenerator" existiert NICHT (veraltete Doku-Referenzen ignorieren).
+  veraltete Referenzen auf einen dedizierten Devis-Service ignorieren.
 
 ZWINGEND ZUERST LESEN (bevor du irgendetwas behauptest)
 1. CLAUDE.md im Repo-Root (Ist-Zustand der KI-Pipeline, Architektur-Prinzipien,

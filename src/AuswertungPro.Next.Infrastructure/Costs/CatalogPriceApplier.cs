@@ -17,7 +17,7 @@ namespace AuswertungPro.Next.Infrastructure.Costs;
 public static class CatalogPriceApplier
 {
     /// <summary>
-    /// Aktualisiert Katalogpreise auf allen gespeicherten HoldingCost-Eintraegen.
+    /// Aktualisiert Katalogpreise und Totals/MwSt auf allen gespeicherten HoldingCost-Eintraegen.
     /// Zeilen mit <see cref="CostLine.IsPriceOverridden"/> werden uebersprungen.
     /// Gibt die geaenderten Haltungsnamen zurueck (Aufrufer kann _touchedHoldings befuellen).
     /// </summary>
@@ -68,9 +68,27 @@ public static class CatalogPriceApplier
                 }
             }
 
-            if (changed)
+            foreach (var measure in cost.Measures)
             {
-                var totals = CostCalculatorLogicService.CalculateTotals(cost.Measures.Sum(m => m.Total), vatRate);
+                if (measure.Lines.Count == 0)
+                    continue;
+
+                var measureTotal = measure.Lines.Where(l => l.Selected).Sum(l => l.Qty * l.UnitPrice);
+                if (measureTotal != measure.Total)
+                {
+                    measure.Total = measureTotal;
+                    changed = true;
+                }
+            }
+
+            var netTotal = cost.Measures.Count > 0 ? cost.Measures.Sum(m => m.Total) : cost.Total;
+            var totals = CostCalculatorLogicService.CalculateTotals(netTotal, vatRate);
+            if (changed ||
+                cost.Total != totals.Total ||
+                cost.MwstRate != vatRate ||
+                cost.MwstAmount != totals.MwstAmount ||
+                cost.TotalInclMwst != totals.TotalInclMwst)
+            {
                 cost.Total = totals.Total;
                 cost.MwstRate = vatRate;
                 cost.MwstAmount = totals.MwstAmount;
