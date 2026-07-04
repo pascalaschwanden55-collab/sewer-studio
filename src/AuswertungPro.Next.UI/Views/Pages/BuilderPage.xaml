@@ -485,9 +485,15 @@
                             </Style>
                         </Button.Style>
                     </Button>
+                    <Button Content="NPK-Offerte (PDF)"
+                            Command="{Binding ExportNpkOfferPdfCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            Margin="8,0,0,0"
+                            ToolTip="Formatierte NPK-135-Offerte mit Deckblatt, Konditionen, Kapitelübersicht und Positionen."/>
                     <Button Content="NPK-Leistungsverzeichnis (CSV)"
                             Command="{Binding ExportNpkLeistungsverzeichnisCommand}"
                             Style="{StaticResource PrimaryButton}"
+                            Margin="8,0,0,0"
                             ToolTip="Eine NPK-Positionsliste über alle gefilterten Haltungen (Mengen zusammengezählt, ByDN je DN getrennt)."/>
                 </StackPanel>
             </DockPanel>

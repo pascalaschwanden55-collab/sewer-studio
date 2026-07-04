@@ -101,7 +101,9 @@ v4.5 „Fluent & Flow" hat die Lücken des UI-Audits geschlossen (Mica, Scrollba
 17. V3-Q9: Logik-Controller UI → Application (Fahrplan-Lane CLAUDE führt).
 18. V3-Q10: CostCalculator entzerren.
 19. PlayerWindow-Decomposition fortsetzen (Muster: exklusiver Zustand→Controller).
-20. Echte NPK-135-**Offerten-Vorlage** (Deckblatt/Konditionen, `D:\Fachwissen\Offerten` als Referenz) — neues Feature, eigener Brainstorm.
+20. Echte NPK-135-**Offerten-Vorlage** (Deckblatt/Konditionen, `D:\Fachwissen\Offerten` als Referenz) — **umgesetzt 2026-07-04** als eigener Druckcenter-Export "NPK-Offerte (PDF)" mit Deckblatt, Konditionen, Kapiteluebersicht, NPK-Positionen, MwSt-/Totalblock und Pauschalen-Fussnote.
+
+**Status nach Umsetzung 2026-07-04:** Punkt 20 ist erledigt. Punkte 17–19 bleiben bewusst eigene Architektur-Lanes: Der V3-Fahrplan verlangt dort Backend-/Application-Handoff und getrennte Worktrees; kein mechanischer Gross-Move im laufenden Feature-Workspace.
 
 **Test-Strategie überall:** jede Logik-Änderung mit fokussiertem Test im selben Commit; nach jedem Punkt `dotnet build` + betroffene Testprojekte; Summen-Änderungen mit Vorher/Nachher-Zahl im Commit-Text.
 

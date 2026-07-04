@@ -360,6 +360,117 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         }
     }
 
+    [RelayCommand]
+    private async Task ExportNpkOfferPdfAsync()
+    {
+        if (IsPdfExportInProgress)
+            return;
+
+        RefreshData();
+        var filteredRows = Rows.ToList();
+        if (filteredRows.Count == 0)
+        {
+            _sp.Dialogs.Info("Keine Daten fuer den aktuellen Filter gefunden.", "NPK-Offerte");
+            return;
+        }
+
+        if (!OfferRecomputeCostsForCurrentCatalog(filteredRows))
+            return;
+
+        filteredRows = Rows.ToList();
+        var entries = BuilderPageSummaryEntryBuilder.Build(filteredRows, _vatRate);
+        var holdings = entries
+            .Where(e => e.Cost is not null)
+            .Select(e => e.Cost)
+            .ToList();
+        var pauschaleHoldings = holdings
+            .Where(TablePauschaleCostHelper.IsFallbackPauschale)
+            .ToList();
+        var holdingsForOffer = holdings
+            .Where(h => !TablePauschaleCostHelper.IsFallbackPauschale(h))
+            .ToList();
+        var excludedPauschaleTotal = pauschaleHoldings.Sum(h => h.Total);
+
+        var projectPath = _sp.Settings.LastProjectPath ?? "";
+        var catalog = _catalogStore.LoadMerged(projectPath);
+        var positions = ProjectPositionAggregator.Aggregate(holdingsForOffer, BuildCatalogMap(catalog));
+        if (positions.Count == 0)
+        {
+            var pauschaleHint = excludedPauschaleTotal > 0m
+                ? "\n\nEs gibt nur Pauschalkosten ohne NPK-Position; diese koennen nicht als echte NPK-135-Offerte ausgegeben werden."
+                : "";
+            _sp.Dialogs.Info(
+                "Keine NPK-Positionen gefunden. Die gefilterten Haltungen haben keine Massnahmen-Positionen mit Mengen." + pauschaleHint,
+                "NPK-Offerte");
+            return;
+        }
+
+        var safeProjectName = SanitizeFilePart(_shell.Project.Name);
+        var defaultName = $"NPK-Offerte_{safeProjectName}_{DateTime.Now:yyyyMMdd}.pdf";
+        var output = _sp.Dialogs.SaveFile(
+            "NPK-Offerte als PDF speichern",
+            "PDF (*.pdf)|*.pdf",
+            defaultExt: "pdf",
+            defaultFileName: defaultName);
+        if (string.IsNullOrWhiteSpace(output))
+            return;
+
+        IsPdfExportInProgress = true;
+        PdfExportProgress = "NPK-Offerte wird vorbereitet...";
+
+        try
+        {
+            await Task.Yield();
+            var projectMeta = _shell.Project.Metadata;
+            var ctx = new NpkOfferPdfContext
+            {
+                ProjectTitle = "NPK-135-Offerte Kanalsanierung",
+                VariantTitle = _shell.Project.Name,
+                CustomerBlock = BuilderPagePdfBlockBuilder.BuildProjectCustomerBlock(projectMeta),
+                ObjectBlock = BuilderPagePdfBlockBuilder.BuildObjectBlock(projectMeta, filteredRows.Count),
+                ReferenceBlock = BuildReferenceBlock(projectMeta),
+                FilterSummaryText = BuildFilterSummaryText(),
+                Currency = "CHF",
+                VatRate = catalog.VatRate > 0m ? catalog.VatRate : CostCalculatorLogicService.DefaultVatRate,
+                DiscountPercent = 0m,
+                SkontoPercent = 0m
+            };
+
+            var model = NpkOfferPdfModelFactory.Create(
+                positions,
+                ctx,
+                DateTimeOffset.Now,
+                excludedPauschaleTotal,
+                pauschaleHoldings.Count);
+
+            var templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "npk_offer.sbnhtml");
+            var logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "Brand", "abwasser-uri-logo.png");
+            var renderer = new OfferHtmlToPdfRenderer();
+            PdfExportProgress = "NPK-Offerte wird gerendert...";
+            await renderer.RenderAsync(model, templatePath, output, logoPath);
+
+            LastExportedPdfPath = output;
+            LastExportedAt = DateTimeOffset.Now;
+            LastExportScopeSummary = BuildExportScopeSummary(filteredRows);
+            IsLastExportCurrent = true;
+            _lastExportProjectPath = _sp.Settings.LastProjectPath ?? "";
+            LastResult = $"NPK-Offerte erstellt: {Path.GetFileName(output)}";
+            _shell.SetStatus("NPK-Offerte erstellt");
+            PdfExportProgress = "NPK-Offerte fertig.";
+            _sp.Dialogs.Info($"NPK-Offerte wurde erstellt:\n{output}", "NPK-Offerte");
+        }
+        catch (Exception ex)
+        {
+            LastResult = $"Fehler: {ex.Message}";
+            PdfExportProgress = "NPK-Offerte fehlgeschlagen.";
+            _sp.Dialogs.Error($"NPK-Offerte konnte nicht erstellt werden:\n{ex.Message}", "NPK-Offerte");
+        }
+        finally
+        {
+            IsPdfExportInProgress = false;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanPrintPdf))]
     private void PrintPdf()
     {
@@ -1147,6 +1258,31 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
     private static string FormatVatRate(decimal rate)
         => $"{rate * 100m:0.0}%";
+
+    private static string BuildReferenceBlock(IReadOnlyDictionary<string, string> metadata)
+    {
+        var lines = new List<string>();
+        AddReferenceLine(lines, "Ihre Referenz", metadata, "Referenz", "IhreReferenz", "AuftraggeberReferenz");
+        AddReferenceLine(lines, "Unsere Referenz", metadata, "Bearbeiter", "UnsereReferenz");
+        AddReferenceLine(lines, "Auftrag-Nr.", metadata, "AuftragNr");
+        return string.Join("\n", lines);
+    }
+
+    private static void AddReferenceLine(
+        List<string> lines,
+        string label,
+        IReadOnlyDictionary<string, string> metadata,
+        params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!metadata.TryGetValue(key, out var value) || string.IsNullOrWhiteSpace(value))
+                continue;
+
+            lines.Add($"{label}: {value.Trim()}");
+            return;
+        }
+    }
 
     private static bool IsSanierenYes(string value)
     {

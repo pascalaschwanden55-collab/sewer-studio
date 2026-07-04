@@ -19,7 +19,17 @@ public sealed class OfferHtmlToPdfRenderer
         string outputPdfPath,
         string? logoPngPath,
         CancellationToken ct = default)
+        => await RenderAsync((object)model, templatePath, outputPdfPath, logoPngPath, ct);
+
+    public async Task RenderAsync(
+        object model,
+        string templatePath,
+        string outputPdfPath,
+        string? logoPngPath,
+        CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(model);
+
         if (string.IsNullOrWhiteSpace(templatePath) || !File.Exists(templatePath))
             throw new FileNotFoundException("Offer template not found", templatePath);
 
@@ -33,9 +43,11 @@ public sealed class OfferHtmlToPdfRenderer
             throw new InvalidOperationException("Template errors: " + msg);
         }
 
-        model.LogoDataUri = string.IsNullOrWhiteSpace(logoPngPath) || !File.Exists(logoPngPath)
-            ? BuildDefaultLogoDataUri()
-            : LoadPngAsDataUri(logoPngPath);
+        SetLogoDataUri(
+            model,
+            string.IsNullOrWhiteSpace(logoPngPath) || !File.Exists(logoPngPath)
+                ? BuildDefaultLogoDataUri()
+                : LoadPngAsDataUri(logoPngPath));
 
         var html = template.Render(model, memberRenamer: m => m.Name);
 
@@ -137,6 +149,13 @@ public sealed class OfferHtmlToPdfRenderer
         var bytes = File.ReadAllBytes(path);
         var b64 = Convert.ToBase64String(bytes);
         return $"data:image/png;base64,{b64}";
+    }
+
+    private static void SetLogoDataUri(object model, string value)
+    {
+        var property = model.GetType().GetProperty("LogoDataUri");
+        if (property is not null && property.CanWrite && property.PropertyType == typeof(string))
+            property.SetValue(model, value);
     }
 
     private static string BuildDefaultLogoDataUri()
