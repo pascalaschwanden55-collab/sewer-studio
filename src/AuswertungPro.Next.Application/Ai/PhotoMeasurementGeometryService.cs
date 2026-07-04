@@ -163,6 +163,83 @@ public static class PhotoMeasurementGeometryService
     /// Wandelt eine Winkelposition in Grad (0–360, 0° = 12 Uhr) in Uhrlage (0.0–12.0) um.
     /// Formel: positionDeg / 30.
     /// </summary>
+    /// <summary>
+    /// Berechnet die manuelle Rohrkalibrierung aus einer gezogenen Referenzlinie.
+    /// </summary>
+    public static PhotoMeasurementCalibrationGeometry? BuildCalibrationGeometry(
+        NormalizedPoint start,
+        NormalizedPoint end,
+        double imageAspect,
+        double minNormalizedLength = 0.01)
+    {
+        double normalizedDiameter = PipeCalibration.AspectCorrectedDistance(start, end, imageAspect);
+        if (normalizedDiameter < minNormalizedLength)
+            return null;
+
+        return new PhotoMeasurementCalibrationGeometry(
+            NormalizedDiameter: normalizedDiameter,
+            PipeCenter: new NormalizedPoint(
+                (start.X + end.X) / 2.0,
+                (start.Y + end.Y) / 2.0));
+    }
+
+    /// <summary>
+    /// Baut die fachliche Rechteck-Geometrie fuer eine Foto-Markierung.
+    /// </summary>
+    public static OverlayGeometry? BuildMarkRectangleGeometry(
+        NormalizedPoint start,
+        NormalizedPoint end,
+        double minNormalizedSize = 0.01)
+    {
+        double minX = Math.Min(start.X, end.X), maxX = Math.Max(start.X, end.X);
+        double minY = Math.Min(start.Y, end.Y), maxY = Math.Max(start.Y, end.Y);
+        if (maxX - minX < minNormalizedSize || maxY - minY < minNormalizedSize)
+            return null;
+
+        return new OverlayGeometry
+        {
+            ToolType = OverlayToolType.Rectangle,
+            Points = new List<NormalizedPoint>
+            {
+                new(minX, minY), new(maxX, minY),
+                new(maxX, maxY), new(minX, maxY)
+            }
+        };
+    }
+
+    /// <summary>
+    /// Baut die fachliche Linien-/Lineal-Geometrie inklusive Millimeterwert.
+    /// </summary>
+    public static PhotoMeasurementLineGeometry? BuildLineGeometry(
+        OverlayToolType toolType,
+        NormalizedPoint start,
+        NormalizedPoint end,
+        PipeCalibration calibration,
+        double imageAspect,
+        double minNormalizedLength = 0.005)
+    {
+        ArgumentNullException.ThrowIfNull(calibration);
+
+        if (toolType is not (OverlayToolType.Line or OverlayToolType.Ruler))
+            throw new ArgumentOutOfRangeException(nameof(toolType), toolType, "Only Line and Ruler are supported.");
+
+        double normalizedLength = PipeCalibration.AspectCorrectedDistance(start, end, imageAspect);
+        if (normalizedLength < minNormalizedLength)
+            return null;
+
+        double millimeters = calibration.NormToMm(normalizedLength);
+        var geometry = new OverlayGeometry
+        {
+            ToolType = toolType,
+            Points = new List<NormalizedPoint> { start, end },
+            Q1Mm = Math.Round(millimeters, 1),
+            ClockFrom = calibration.PointToClockHour(start),
+            ClockTo = calibration.PointToClockHour(end)
+        };
+
+        return new PhotoMeasurementLineGeometry(geometry, millimeters, normalizedLength);
+    }
+
     public static double PositionDegToClockHour(double positionDeg)
         => positionDeg / 30.0;
 
@@ -303,6 +380,15 @@ public sealed record PhotoMeasurementAngleGeometry(
     double PositionRad,
     double ClockHour,
     NormalizedPoint EdgePoint);
+
+public sealed record PhotoMeasurementCalibrationGeometry(
+    double NormalizedDiameter,
+    NormalizedPoint PipeCenter);
+
+public sealed record PhotoMeasurementLineGeometry(
+    OverlayGeometry Geometry,
+    double Millimeters,
+    double NormalizedLength);
 
 public sealed record PhotoMeasurementCanvasPoint(double X, double Y);
 

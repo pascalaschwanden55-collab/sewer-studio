@@ -507,13 +507,11 @@ public partial class PhotoMeasurementWindow : Window
 
     private void FinalizeCalibration(NormalizedPoint start, NormalizedPoint end)
     {
-        // Aspect-Ratio-korrigierte Distanz fuer korrekte Kalibrierung
-        double normLen = PipeCalibration.AspectCorrectedDistance(start, end, _imageAspect);
-        if (normLen < 0.01) return;
+        var geometry = PhotoMeasurementGeometryService.BuildCalibrationGeometry(start, end, _imageAspect);
+        if (geometry is null) return;
 
-        _calibration.NormalizedDiameter = normLen;
-        _calibration.PipeCenter = new NormalizedPoint(
-            (start.X + end.X) / 2.0, (start.Y + end.Y) / 2.0);
+        _calibration.NormalizedDiameter = geometry.NormalizedDiameter;
+        _calibration.PipeCenter = geometry.PipeCenter;
         _calibration.WasManuallyCalibrated = true;
         _calibration.Source = CalibrationSource.Manual;   // manuelle Referenzlinie = verlaesslich
 
@@ -524,7 +522,7 @@ public partial class PhotoMeasurementWindow : Window
         // OK bei mm-Werkzeugen aktivieren
         BtnOk.IsEnabled = true;
 
-        TxtMeasureInfo.Text = $"Kalibriert: {normLen:F3}";
+        TxtMeasureInfo.Text = $"Kalibriert: {geometry.NormalizedDiameter:F3}";
         TxtStatus.Text = "Kalibrierung abgeschlossen. Rohrkreis angepasst.";
     }
 
@@ -534,22 +532,15 @@ public partial class PhotoMeasurementWindow : Window
 
     private void FinalizeMarkRect(NormalizedPoint start, NormalizedPoint end)
     {
-        double minX = Math.Min(start.X, end.X), maxX = Math.Max(start.X, end.X);
-        double minY = Math.Min(start.Y, end.Y), maxY = Math.Max(start.Y, end.Y);
-        if (maxX - minX < 0.01 || maxY - minY < 0.01) return;
+        var geometry = PhotoMeasurementGeometryService.BuildMarkRectangleGeometry(start, end);
+        if (geometry is null) return;
 
-        _currentGeometry = new OverlayGeometry
-        {
-            ToolType = OverlayToolType.Rectangle,
-            Points = new List<NormalizedPoint>
-            {
-                new(minX, minY), new(maxX, minY),
-                new(maxX, maxY), new(minX, maxY)
-            }
-        };
+        _currentGeometry = geometry;
 
         // Overlay zeichnen
         ClearByTag(TagOverlay);
+        double minX = geometry.Points[0].X, minY = geometry.Points[0].Y;
+        double maxX = geometry.Points[2].X, maxY = geometry.Points[2].Y;
         var p1 = NormToCanvas(minX, minY);
         var p2 = NormToCanvas(maxX, maxY);
 
@@ -576,20 +567,19 @@ public partial class PhotoMeasurementWindow : Window
 
     private void FinalizeLine(NormalizedPoint start, NormalizedPoint end)
     {
-        double normLen = PipeCalibration.AspectCorrectedDistance(start, end, _imageAspect);
-        if (normLen < 0.005) return;
+        var toolType = _activeTool == PhotoTool.Connection
+            ? OverlayToolType.Line
+            : OverlayToolType.Ruler;
+        var lineGeometry = PhotoMeasurementGeometryService.BuildLineGeometry(
+            toolType,
+            start,
+            end,
+            _calibration,
+            _imageAspect);
+        if (lineGeometry is null) return;
 
-        double mm = _calibration.NormToMm(normLen);
-
-        _currentGeometry = new OverlayGeometry
-        {
-            ToolType = _activeTool == PhotoTool.Connection
-                ? OverlayToolType.Line : OverlayToolType.Ruler,
-            Points = new List<NormalizedPoint> { start, end },
-            Q1Mm = Math.Round(mm, 1),
-            ClockFrom = _calibration.PointToClockHour(start),
-            ClockTo = _calibration.PointToClockHour(end)
-        };
+        _currentGeometry = lineGeometry.Geometry;
+        double mm = lineGeometry.Millimeters;
 
         // Overlay zeichnen
         ClearByTag(TagOverlay);

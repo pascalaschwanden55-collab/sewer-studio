@@ -287,6 +287,97 @@ public sealed class PhotoMeasurementGeometryServiceTests
     }
 
     [Fact]
+    public void BuildCalibrationGeometry_BerechnetDurchmesserUndMitte()
+    {
+        var result = PhotoMeasurementGeometryService.BuildCalibrationGeometry(
+            new NormalizedPoint(0.2, 0.4),
+            new NormalizedPoint(0.8, 0.4),
+            imageAspect: 1.0);
+
+        Assert.NotNull(result);
+        Assert.Equal(0.6, result.NormalizedDiameter, precision: 6);
+        Assert.Equal(0.5, result.PipeCenter.X, precision: 6);
+        Assert.Equal(0.4, result.PipeCenter.Y, precision: 6);
+    }
+
+    [Fact]
+    public void BuildCalibrationGeometry_ZuKurzeLinie_GibtNull()
+    {
+        var result = PhotoMeasurementGeometryService.BuildCalibrationGeometry(
+            new NormalizedPoint(0.2, 0.4),
+            new NormalizedPoint(0.205, 0.4),
+            imageAspect: 1.0);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void BuildMarkRectangleGeometry_NormalisiertPunkte()
+    {
+        var geometry = PhotoMeasurementGeometryService.BuildMarkRectangleGeometry(
+            new NormalizedPoint(0.8, 0.7),
+            new NormalizedPoint(0.2, 0.3));
+
+        Assert.NotNull(geometry);
+        Assert.Equal(OverlayToolType.Rectangle, geometry.ToolType);
+        Assert.Equal(4, geometry.Points.Count);
+        Assert.Equal(0.2, geometry.Points[0].X, precision: 6);
+        Assert.Equal(0.3, geometry.Points[0].Y, precision: 6);
+        Assert.Equal(0.8, geometry.Points[2].X, precision: 6);
+        Assert.Equal(0.7, geometry.Points[2].Y, precision: 6);
+    }
+
+    [Fact]
+    public void BuildMarkRectangleGeometry_ZuKlein_GibtNull()
+    {
+        var geometry = PhotoMeasurementGeometryService.BuildMarkRectangleGeometry(
+            new NormalizedPoint(0.2, 0.3),
+            new NormalizedPoint(0.205, 0.7));
+
+        Assert.Null(geometry);
+    }
+
+    [Fact]
+    public void BuildLineGeometry_BerechnetMillimeterUndUhrlagen()
+    {
+        var calibration = new PipeCalibration
+        {
+            NominalDiameterMm = 300,
+            NormalizedDiameter = 0.6,
+            PipeCenter = new NormalizedPoint(0.5, 0.5)
+        };
+
+        var result = PhotoMeasurementGeometryService.BuildLineGeometry(
+            OverlayToolType.Ruler,
+            new NormalizedPoint(0.5, 0.2),
+            new NormalizedPoint(0.5, 0.8),
+            calibration,
+            imageAspect: 1.0);
+
+        Assert.NotNull(result);
+        Assert.Equal(300, result.Millimeters, precision: 6);
+        Assert.Equal(0.6, result.NormalizedLength, precision: 6);
+        Assert.Equal(OverlayToolType.Ruler, result.Geometry.ToolType);
+        Assert.Equal(300, result.Geometry.Q1Mm);
+        Assert.Equal(0, result.Geometry.ClockFrom);
+        Assert.Equal(6, result.Geometry.ClockTo);
+    }
+
+    [Fact]
+    public void BuildLineGeometry_InvalidesWerkzeug_Wirft()
+    {
+        var calibration = new PipeCalibration { NormalizedDiameter = 0.6 };
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            PhotoMeasurementGeometryService.BuildLineGeometry(
+                OverlayToolType.Rectangle,
+                new NormalizedPoint(0.5, 0.2),
+                new NormalizedPoint(0.5, 0.8),
+                calibration,
+                imageAspect: 1.0));
+    }
+
+    [Fact]
     public void BuildAngleGeometry_Lateral_RechnetEndpunktUndUhrlage()
     {
         var center = new NormalizedPoint(0.5, 0.5);
