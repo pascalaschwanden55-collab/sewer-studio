@@ -10,6 +10,7 @@ using AuswertungPro.Next.Infrastructure;
 using AuswertungPro.Next.Infrastructure.HoldingDistribution;
 using AuswertungPro.Next.Infrastructure.Map;
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.UI.Mapping;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -429,7 +430,7 @@ public sealed partial class ExportPageViewModel : ObservableObject
             IHaltungCadastreResolver? cadastre = null;
             try
             {
-                var katasterPfad = _sp.Settings.AbwasserkatasterXtfPath;
+                var katasterPfad = KatasterXtfPathResolver.Resolve(_sp.Settings);
                 if (!string.IsNullOrWhiteSpace(katasterPfad))
                     cadastre = await Task.Run(() => HaltungCadastreIndex.EnsureAndLoad(katasterPfad));
             }

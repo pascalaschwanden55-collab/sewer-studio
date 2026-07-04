@@ -2,6 +2,7 @@ using AuswertungPro.Next.Application.Diagnostics;
 using AuswertungPro.Next.UI;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Settings;
+using System.IO;
 
 namespace AuswertungPro.Next.UI.Tests;
 
@@ -103,6 +104,29 @@ public sealed class SettingsSaveWorkflowTests
         Assert.Equal(ThemeManager.Light, settings.UiTheme);
     }
 
+    [Fact]
+    public void Save_resolves_kataster_xtf_from_kanton_uri_directory_when_file_path_is_stale()
+    {
+        using var dir = new TempDirectory();
+        var expected = Path.Combine(dir.Path, "Abwasserkataster_Uri_korrigiert.xtf");
+        File.WriteAllText(expected, "<TRANSFER />");
+        var settings = new AppSettings();
+        var diagnostics = new DiagnosticsOptions();
+
+        SettingsSaveWorkflow.Save(new SettingsSaveWorkflowRequest(
+            Settings: settings,
+            Diagnostics: diagnostics,
+            Values: MinimalValues with
+            {
+                AbwasserkatasterXtfPath = @"D:\QGIS_V4\Export_Sewer_Studio\Abwasserkataster_Uri_korrigiert.xtf",
+                KantonUriXtfDirectory = dir.Path
+            },
+            SaveSettings: () => { }));
+
+        Assert.Equal(expected, settings.AbwasserkatasterXtfPath);
+        Assert.Equal(dir.Path, settings.KantonUriXtfDirectory);
+    }
+
     private static SettingsSaveValues MinimalValues => new(
         EnableDiagnostics: true,
         PdfToTextPath: null,
@@ -125,4 +149,15 @@ public sealed class SettingsSaveWorkflowTests
         PipelineYoloConfidence: 0.25,
         PipelineDinoBoxThreshold: 0.25,
         PipelineDinoTextThreshold: 0.20);
+
+    private sealed class TempDirectory : IDisposable
+    {
+        public string Path { get; } = Directory.CreateTempSubdirectory().FullName;
+
+        public void Dispose()
+        {
+            if (Directory.Exists(Path))
+                Directory.Delete(Path, recursive: true);
+        }
+    }
 }

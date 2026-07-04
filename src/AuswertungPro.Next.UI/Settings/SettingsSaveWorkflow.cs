@@ -1,5 +1,6 @@
 using System;
 using AuswertungPro.Next.Application.Diagnostics;
+using AuswertungPro.Next.UI.Mapping;
 using AuswertungPro.Next.UI.Services;
 
 namespace AuswertungPro.Next.UI.Settings;
@@ -46,10 +47,12 @@ public static class SettingsSaveWorkflow
         settings.PdfToTextPath = values.PdfToTextPath;
         settings.LastProjectPath = NormalizeProjectPath(values.ProjectPath);
         settings.ProjectsRootDirectory = NormalizeOptionalPath(values.ProjectsRootDirectory);
-        settings.AbwasserkatasterXtfPath = NormalizeRequiredPath(values.AbwasserkatasterXtfPath);
+        var katasterXtfPath = NormalizeRequiredPath(values.AbwasserkatasterXtfPath);
+        var kantonUriXtfDirectory = NormalizeRequiredPath(values.KantonUriXtfDirectory);
+        settings.AbwasserkatasterXtfPath = KatasterXtfPathResolver.Resolve(katasterXtfPath, kantonUriXtfDirectory);
         settings.LastVideoSourceFolder = values.VideoFolder;
         settings.LastVideoFolder = values.VideoFolder;
-        settings.KantonUriXtfDirectory = NormalizeRequiredPath(values.KantonUriXtfDirectory);
+        settings.KantonUriXtfDirectory = kantonUriXtfDirectory;
         settings.DataAutoSaveMode = values.DataAutoSaveMode.Normalize();
         settings.EnableRestorePoints = values.EnableRestorePoints;
         settings.VideoHwDecoding = values.VideoHwDecoding;

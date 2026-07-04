@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using System.IO;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Map;
+using AuswertungPro.Next.UI.Mapping;
 using AuswertungPro.Next.UI.Player;
 using Mapsui;
 using Mapsui.Extensions;
@@ -21,7 +22,7 @@ public sealed partial class KarteViewModel : ObservableObject
     private readonly ShellViewModel _shell;
     private readonly ServiceProvider _services;
 
-    private string XtfPath => _services.Settings.AbwasserkatasterXtfPath;
+    private string XtfPath => KatasterXtfPathResolver.Resolve(_services.Settings);
 
     // Lokale QGIS-Kacheln (von qgis_process erzeugt). Vorhanden = werden als Hintergrund
     // ueber dem WMS gezeigt; fehlt der Ordner, bleibt es beim WMS allein.
