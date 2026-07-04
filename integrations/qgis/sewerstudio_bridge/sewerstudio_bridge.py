@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import tempfile
@@ -95,6 +96,9 @@ class SewerStudioBridgeDock(QDockWidget):
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         # Auto-Zoom nur beim Wechsel der aktuellen Haltung, nicht bei jedem Poll.
         self._last_zoomed_holding = None
+        # Speichercache: Hash der zuletzt geladenen Daten je Layer.
+        # Unveraenderte Antworten werden uebersprungen (kein Reload, kein Neuzeichnen).
+        self._last_payload_hash = {}
         self.setObjectName("SewerStudioBridgeDock")
         self._build_ui()
         self._load_settings()
@@ -193,14 +197,25 @@ class SewerStudioBridgeDock(QDockWidget):
         if status is not None:
             self._set_status_from_payload(status)
 
+        updated = 0
         for layer_key, layer_name, endpoint in REMOTE_LAYERS:
             data = self._fetch_bytes(endpoint)
             if data is None:
                 continue
 
-            target = self.cache_dir / f"{layer_key}.geojson"
-            target.write_bytes(data)
-            layer = self._update_or_create_layer(layer_name, target)
+            digest = hashlib.sha256(data).hexdigest()
+            existing = self._find_layer_named(layer_name)
+            if existing is not None and self._last_payload_hash.get(layer_key) == digest:
+                # Unveraendert: nichts schreiben, nichts neu laden, nichts neu zeichnen.
+                layer = existing
+            else:
+                target = self.cache_dir / f"{layer_key}.geojson"
+                target.write_bytes(data)
+                layer = self._update_or_create_layer(layer_name, target)
+                if layer is not None:
+                    self._last_payload_hash[layer_key] = digest
+                    updated += 1
+
             if layer is not None:
                 loaded += 1
                 # Nur zoomen, wenn die aktuelle Haltung wirklich gewechselt hat —
@@ -217,7 +232,7 @@ class SewerStudioBridgeDock(QDockWidget):
         if loaded == 0 and status is None:
             self._set_status("Kein Live-Bridge-Feed erreichbar. Lokale Export-Layer koennen trotzdem geladen werden.")
         elif loaded > 0:
-            self._set_status(f"{loaded} Live-Layer aktualisiert.")
+            self._set_status(f"{loaded} Live-Layer aktuell ({updated} neu geladen).")
 
     def load_local_export_layers(self):
         self._save_settings()

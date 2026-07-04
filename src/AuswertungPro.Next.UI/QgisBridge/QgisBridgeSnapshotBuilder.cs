@@ -147,6 +147,19 @@ internal sealed class QgisBridgeSnapshotBuilder
         return new GeoJsonFeatureCollection(features);
     }
 
+    /// <summary>
+    /// Aenderungsstand der Kataster-Datei (0 = keine Datei) — Teil des Cache-Fingerprints,
+    /// damit ein neues XTF die gecachten GeoJSON-Bytes sofort ungueltig macht.
+    /// </summary>
+    public long GetNetworkStampTicks()
+    {
+        var xtfPath = KatasterXtfPathResolver.Resolve(_settings);
+        if (string.IsNullOrWhiteSpace(xtfPath) || !File.Exists(xtfPath))
+            return 0;
+
+        return File.GetLastWriteTimeUtc(xtfPath).Ticks;
+    }
+
     private NetworkLoadResult LoadNetwork()
     {
         var xtfPath = KatasterXtfPathResolver.Resolve(_settings);

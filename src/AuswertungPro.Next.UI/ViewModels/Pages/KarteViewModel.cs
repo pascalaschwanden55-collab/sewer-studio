@@ -33,6 +33,10 @@ public sealed partial class KarteViewModel : ObservableObject
 
     private IReadOnlyList<ProjectedHaltungGeometry> _projectedGeometrien = Array.Empty<ProjectedHaltungGeometry>();
     private IReadOnlyDictionary<string, int?> _kondition = new Dictionary<string, int?>(StringComparer.OrdinalIgnoreCase);
+    // Feature-Cache: Mapsui-Features werden EINMAL gebaut (Geometrie + Farbe).
+    // Bei Zoom/Pan wird nur noch nach Sichtbereich gefiltert statt alles neu zu erzeugen.
+    private IReadOnlyList<(MapBounds Bounds, GeometryFeature Feature)> _featureCache =
+        Array.Empty<(MapBounds, GeometryFeature)>();
     private MemoryLayer? _netzLayer;
     private Map? _map;
     private MapBounds? _loadedBounds;
@@ -76,7 +80,9 @@ public sealed partial class KarteViewModel : ObservableObject
             provider.AddLayer("basemaps:basemap_av_farbe");
             provider.SetImageFormat("image/png");
             var wmsLayer = new ImageLayer("WMS") { DataSource = provider, Style = new RasterStyle() };
-            map.Layers.Add(wmsLayer);
+            // Speichercache: WMS wird als Kacheln gerendert und im RAM behalten —
+            // beim Zoomen/Verschieben werden bekannte Ausschnitte nicht neu vom Server geladen.
+            map.Layers.Add(new Mapsui.Tiling.Layers.RasterizingTileLayer(wmsLayer) { Name = "WMS" });
         }
         catch (Exception ex)
         {
@@ -115,6 +121,13 @@ public sealed partial class KarteViewModel : ObservableObject
 
                 // Zustandsfarben aus dem aktuellen Projekt
                 _kondition = HaltungConditionProvider.Build(_shell.Project.Data);
+
+                // Alle Features einmal im Hintergrund bauen (Speichercache) —
+                // spaeter wird bei Zoom/Pan nur noch gefiltert, nicht neu erzeugt.
+                var projected = _projectedGeometrien;
+                _featureCache = await Task.Run(() => projected
+                    .Select(g => (g.Bounds, CreateFeature(g)))
+                    .ToList());
 
                 _netzLayer = new MemoryLayer("Netz") { Features = Array.Empty<GeometryFeature>(), Style = null };
                 map.Layers.Add(_netzLayer);
@@ -192,7 +205,7 @@ public sealed partial class KarteViewModel : ObservableObject
 
     public void RefreshVisibleNetworkLayer(bool force)
     {
-        if (_map is null || _netzLayer is null || _projectedGeometrien.Count == 0)
+        if (_map is null || _netzLayer is null || _featureCache.Count == 0)
             return;
 
         var viewport = TryGetViewportBounds(_map);
@@ -202,15 +215,20 @@ public sealed partial class KarteViewModel : ObservableObject
         if (!force && _loadedBounds is { } loadedBounds && loadedBounds.Contains(viewport.Value))
             return;
 
+        // Nur noch filtern: die Features kommen fertig aus dem Speichercache.
         var paddedViewport = GrowByRatio(viewport.Value, ViewportPaddingRatio);
-        var visibleGeometrien = NetworkViewportFilter.FilterByViewport(_projectedGeometrien, paddedViewport);
-        var features = visibleGeometrien.Select(CreateFeature).ToList();
+        var features = new List<GeometryFeature>();
+        foreach (var (bounds, feature) in _featureCache)
+        {
+            if (bounds.Intersects(paddedViewport))
+                features.Add(feature);
+        }
 
         _netzLayer.Features = features;
         _netzLayer.DataHasChanged();
         _loadedBounds = paddedViewport;
 
-        StatusText = $"{features.Count} von {_projectedGeometrien.Count} Haltungen im sichtbaren Ausschnitt";
+        StatusText = $"{features.Count} von {_featureCache.Count} Haltungen im sichtbaren Ausschnitt";
         _map.RefreshGraphics();
     }
 

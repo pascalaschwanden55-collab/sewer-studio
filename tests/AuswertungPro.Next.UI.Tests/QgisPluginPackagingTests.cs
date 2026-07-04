@@ -60,6 +60,10 @@ public sealed class QgisPluginPackagingTests
 
         // Auto-Zoom nur bei Haltungs-Wechsel, nicht bei jedem 3-s-Poll.
         Assert.Contains("_last_zoomed_holding", source);
+
+        // Speichercache: unveraenderte Antworten werden per Hash erkannt und uebersprungen.
+        Assert.Contains("hashlib", source);
+        Assert.Contains("_last_payload_hash", source);
     }
 
     [Fact]

@@ -110,7 +110,66 @@ internal sealed record QgisProjectSnapshot(
 
     private static string? EmptyToNull(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    // ── Fingerprints fuer den Payload-Cache ─────────────────────────────────
+    // Aendert sich der Fingerprint nicht, kann der Server die zuletzt
+    // serialisierten GeoJSON-Bytes wiederverwenden statt sie neu zu bauen.
+
+    /// <summary>Fingerprint fuer network.geojson: Haltungsnamen + Zustandsklassen + XTF-Stand.</summary>
+    public QgisPayloadFingerprint NetworkFingerprint(long xtfTicks)
+    {
+        var hash = new HashCode();
+        foreach (var haltung in Haltungen)
+        {
+            hash.Add(haltung.Haltungsname, StringComparer.OrdinalIgnoreCase);
+            hash.Add(haltung.Zustandsklasse);
+        }
+
+        return new QgisPayloadFingerprint(xtfTicks, hash.ToHashCode(), Haltungen.Count);
+    }
+
+    /// <summary>Fingerprint fuer damages.geojson: alle Schadenfelder + XTF-Stand.</summary>
+    public QgisPayloadFingerprint DamagesFingerprint(long xtfTicks)
+    {
+        var hash = new HashCode();
+        var count = 0;
+        foreach (var haltung in Haltungen)
+        {
+            hash.Add(haltung.Haltungsname, StringComparer.OrdinalIgnoreCase);
+            hash.Add(haltung.Zustandsklasse);
+            foreach (var damage in haltung.Schaeden)
+            {
+                hash.Add(damage.Code);
+                hash.Add(damage.Beschreibung);
+                hash.Add(damage.MeterStart);
+                hash.Add(damage.MeterEnd);
+                hash.Add(damage.IsStreckenschaden);
+                hash.Add(damage.Severity);
+                hash.Add(damage.Source);
+                count++;
+            }
+        }
+
+        return new QgisPayloadFingerprint(xtfTicks, hash.ToHashCode(), count);
+    }
+
+    /// <summary>Fingerprint fuer current.geojson: gewaehlte Haltung + deren Zustand/Schadenzahl + XTF-Stand.</summary>
+    public QgisPayloadFingerprint CurrentFingerprint(long xtfTicks)
+    {
+        var record = Haltungen.FirstOrDefault(h =>
+            string.Equals(h.Haltungsname, CurrentHolding, StringComparison.OrdinalIgnoreCase));
+
+        var hash = new HashCode();
+        hash.Add(CurrentHolding, StringComparer.OrdinalIgnoreCase);
+        hash.Add(record?.Zustandsklasse);
+        hash.Add(record?.Schaeden.Count ?? -1);
+
+        return new QgisPayloadFingerprint(xtfTicks, hash.ToHashCode(), 1);
+    }
 }
+
+/// <summary>Cache-Schluessel eines serialisierten Bridge-Payloads (Wertegleichheit).</summary>
+internal readonly record struct QgisPayloadFingerprint(long XtfTicks, int Hash, int Count);
 
 internal sealed record QgisHaltungSnapshot(
     string Haltungsname,

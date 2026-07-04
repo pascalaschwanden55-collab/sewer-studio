@@ -25,6 +25,11 @@ internal sealed class QgisBridgeRequestProcessor
     private readonly ILogger _logger;
     private readonly QgisBridgeSnapshotBuilder _builder;
 
+    // Speichercache: fertige GeoJSON-Bytes je Endpunkt. Solange sich Projektdaten
+    // (Fingerprint) und XTF-Stand nicht aendern, wird nichts neu gebaut/serialisiert.
+    private readonly object _cacheGate = new();
+    private readonly Dictionary<string, (QgisPayloadFingerprint Fingerprint, QgisBridgeResponse Response)> _payloadCache = new();
+
     public QgisBridgeRequestProcessor(System.Windows.Application app, AppSettings settings, ILogger logger)
     {
         _app = app;
@@ -66,15 +71,52 @@ internal sealed class QgisBridgeRequestProcessor
         }).Task;
 
     private QgisBridgeResponse BuildResponse(string path, QgisProjectSnapshot snapshot)
-        => path switch
+    {
+        switch (path)
         {
-            "/" or "/qgis" or "/qgis/" or "/qgis/status.json"
-                => Json(200, _builder.BuildStatus(snapshot)),
-            "/qgis/current.geojson" => GeoJson(_builder.BuildCurrentGeoJson(snapshot)),
-            "/qgis/damages.geojson" => GeoJson(_builder.BuildDamagesGeoJson(snapshot)),
-            "/qgis/network.geojson" => GeoJson(_builder.BuildNetworkGeoJson(snapshot)),
-            _ => Error(404, "Unbekannter QGIS-Bridge-Endpunkt.")
-        };
+            case "/" or "/qgis" or "/qgis/" or "/qgis/status.json":
+                // Status ist billig (nur Zaehler) und soll immer frisch sein.
+                return Json(200, _builder.BuildStatus(snapshot));
+
+            case "/qgis/current.geojson":
+                return GetOrBuildGeoJson(
+                    "current",
+                    snapshot.CurrentFingerprint(_builder.GetNetworkStampTicks()),
+                    () => _builder.BuildCurrentGeoJson(snapshot));
+
+            case "/qgis/damages.geojson":
+                return GetOrBuildGeoJson(
+                    "damages",
+                    snapshot.DamagesFingerprint(_builder.GetNetworkStampTicks()),
+                    () => _builder.BuildDamagesGeoJson(snapshot));
+
+            case "/qgis/network.geojson":
+                return GetOrBuildGeoJson(
+                    "network",
+                    snapshot.NetworkFingerprint(_builder.GetNetworkStampTicks()),
+                    () => _builder.BuildNetworkGeoJson(snapshot));
+
+            default:
+                return Error(404, "Unbekannter QGIS-Bridge-Endpunkt.");
+        }
+    }
+
+    private QgisBridgeResponse GetOrBuildGeoJson(
+        string cacheKey,
+        QgisPayloadFingerprint fingerprint,
+        Func<object> build)
+    {
+        lock (_cacheGate)
+        {
+            if (_payloadCache.TryGetValue(cacheKey, out var hit) && hit.Fingerprint.Equals(fingerprint))
+                return hit.Response;
+        }
+
+        var response = GeoJson(build());
+        lock (_cacheGate)
+            _payloadCache[cacheKey] = (fingerprint, response);
+        return response;
+    }
 
     private static QgisBridgeResponse Json(int statusCode, object payload)
         => new(statusCode, "application/json; charset=utf-8",
