@@ -22,6 +22,7 @@ public sealed class SettingsSaveWorkflowTests
                 PdfToTextPath: @"C:\Tools\pdftotext.exe",
                 ProjectPath: @"  D:\Projekte\Uri  ",
                 ProjectsRootDirectory: @"  D:\Projekte  ",
+                AbwasserkatasterXtfPath: @"  D:\QGIS_V4.03\Export_Sewer_Studio\Abwasserkataster_Uri_korrigiert.xtf  ",
                 VideoFolder: @"D:\Videos",
                 KantonUriXtfDirectory: @"  D:\Uri\XTF  ",
                 DataAutoSaveMode: (AutoSaveMode)999,
@@ -44,6 +45,7 @@ public sealed class SettingsSaveWorkflowTests
         Assert.Equal(@"C:\Tools\pdftotext.exe", settings.PdfToTextPath);
         Assert.Equal(@"D:\Projekte\Uri.json", settings.LastProjectPath);
         Assert.Equal(@"D:\Projekte", settings.ProjectsRootDirectory);
+        Assert.Equal(@"D:\QGIS_V4.03\Export_Sewer_Studio\Abwasserkataster_Uri_korrigiert.xtf", settings.AbwasserkatasterXtfPath);
         Assert.Equal(@"D:\Videos", settings.LastVideoSourceFolder);
         Assert.Equal(@"D:\Videos", settings.LastVideoFolder);
         Assert.Equal(@"D:\Uri\XTF", settings.KantonUriXtfDirectory);
@@ -73,6 +75,7 @@ public sealed class SettingsSaveWorkflowTests
         {
             LastProjectPath = @"D:\Alt.json",
             ProjectsRootDirectory = @"D:\Alt",
+            AbwasserkatasterXtfPath = @"D:\Alt\Kataster.xtf",
             KantonUriXtfDirectory = @"D:\Alt\XTF",
             VideoOutput = "direct3d9"
         };
@@ -85,6 +88,7 @@ public sealed class SettingsSaveWorkflowTests
             {
                 ProjectPath = " ",
                 ProjectsRootDirectory = " ",
+                AbwasserkatasterXtfPath = " ",
                 KantonUriXtfDirectory = " ",
                 VideoOutput = "unbekannt",
                 UiTheme = "hell"
@@ -93,6 +97,7 @@ public sealed class SettingsSaveWorkflowTests
 
         Assert.Null(settings.LastProjectPath);
         Assert.Null(settings.ProjectsRootDirectory);
+        Assert.Equal("", settings.AbwasserkatasterXtfPath);
         Assert.Equal("", settings.KantonUriXtfDirectory);
         Assert.Equal("direct3d11", settings.VideoOutput);
         Assert.Equal(ThemeManager.Light, settings.UiTheme);
@@ -103,6 +108,7 @@ public sealed class SettingsSaveWorkflowTests
         PdfToTextPath: null,
         ProjectPath: null,
         ProjectsRootDirectory: null,
+        AbwasserkatasterXtfPath: null,
         VideoFolder: null,
         KantonUriXtfDirectory: null,
         DataAutoSaveMode: AutoSaveMode.OnEachChange,

@@ -32,6 +32,21 @@ public sealed class SettingsPathWorkflowTests
     }
 
     [Fact]
+    public void SelectAbwasserkatasterXtfPath_uses_xtf_filter_and_current_directory()
+    {
+        var dialogs = new DialogFake { OpenPath = @"D:\QGIS_V4.03\Export_Sewer_Studio\netz.xtf" };
+
+        var selected = SettingsPathWorkflow.SelectAbwasserkatasterXtfPath(
+            dialogs,
+            @"D:\QGIS_V4.03\Export_Sewer_Studio\Abwasserkataster_Uri_korrigiert.xtf");
+
+        Assert.Equal(@"D:\QGIS_V4.03\Export_Sewer_Studio\netz.xtf", selected);
+        Assert.Equal("Abwasserkataster-XTF waehlen", dialogs.OpenTitle);
+        Assert.Equal("XTF-Dateien (*.xtf)|*.xtf|Alle Dateien|*.*", dialogs.OpenFilter);
+        Assert.Equal(@"D:\QGIS_V4.03\Export_Sewer_Studio", dialogs.OpenInitialDirectory);
+    }
+
+    [Fact]
     public void OpenFolder_blank_path_does_not_create_or_open()
     {
         var dialogs = new DialogFake();
@@ -91,6 +106,10 @@ public sealed class SettingsPathWorkflowTests
     private sealed class DialogFake : IDialogService
     {
         public string? SavePath { get; set; }
+        public string? OpenPath { get; set; }
+        public string? OpenTitle { get; private set; }
+        public string? OpenFilter { get; private set; }
+        public string? OpenInitialDirectory { get; private set; }
         public string? SaveTitle { get; private set; }
         public string? SaveFilter { get; private set; }
         public string? DefaultExt { get; private set; }
@@ -98,7 +117,13 @@ public sealed class SettingsPathWorkflowTests
         public List<string> Errors { get; } = new();
         public List<string> ErrorTitles { get; } = new();
 
-        public string? OpenFile(string title, string filter, string? initialDirectory = null) => null;
+        public string? OpenFile(string title, string filter, string? initialDirectory = null)
+        {
+            OpenTitle = title;
+            OpenFilter = filter;
+            OpenInitialDirectory = initialDirectory;
+            return OpenPath;
+        }
 
         public string? SaveFile(string title, string filter, string? defaultExt = null, string? defaultFileName = null)
         {

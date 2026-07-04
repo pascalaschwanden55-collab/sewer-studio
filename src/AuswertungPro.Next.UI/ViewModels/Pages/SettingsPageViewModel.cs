@@ -23,6 +23,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty] private string? _pdfToTextPath;
     [ObservableProperty] private string? _projectPath;
     [ObservableProperty] private string? _projectsRootDirectory;
+    [ObservableProperty] private string? _abwasserkatasterXtfPath;
     [ObservableProperty] private string? _videoFolder;
     [ObservableProperty] private string? _kantonUriXtfDirectory;
     [ObservableProperty] private AutoSaveMode _dataAutoSaveMode;
@@ -91,6 +92,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     public IRelayCommand BrowsePdfToTextCommand { get; }
     public IRelayCommand BrowseProjectPathCommand { get; }
     public IRelayCommand BrowseProjectsRootCommand { get; }
+    public IRelayCommand BrowseAbwasserkatasterXtfPathCommand { get; }
     public IRelayCommand BrowseVideoFolderCommand { get; }
     public IRelayCommand BrowseKantonUriXtfDirectoryCommand { get; }
     public IRelayCommand OpenDataFolderCommand { get; }
@@ -114,6 +116,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         PdfToTextPath = _sp.Settings.PdfToTextPath;
         ProjectPath = _sp.Settings.LastProjectPath;
         ProjectsRootDirectory = _sp.Settings.ProjectsRootDirectory;
+        AbwasserkatasterXtfPath = _sp.Settings.AbwasserkatasterXtfPath;
         VideoFolder = _sp.Settings.LastVideoSourceFolder ?? _sp.Settings.LastVideoFolder;
         KantonUriXtfDirectory = _sp.Settings.KantonUriXtfDirectory;
         DataAutoSaveMode = _sp.Settings.DataAutoSaveMode.Normalize();
@@ -146,6 +149,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         BrowsePdfToTextCommand = new RelayCommand(BrowsePdfToText);
         BrowseProjectPathCommand = new RelayCommand(BrowseProjectPath);
         BrowseProjectsRootCommand = new RelayCommand(BrowseProjectsRoot);
+        BrowseAbwasserkatasterXtfPathCommand = new RelayCommand(BrowseAbwasserkatasterXtfPath);
         BrowseVideoFolderCommand = new RelayCommand(BrowseVideoFolder);
         BrowseKantonUriXtfDirectoryCommand = new RelayCommand(BrowseKantonUriXtfDirectory);
         OpenDataFolderCommand = new RelayCommand(OpenDataFolder);
@@ -218,6 +222,13 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         ProjectsRootDirectory = p;
     }
 
+    private void BrowseAbwasserkatasterXtfPath()
+    {
+        var p = SettingsPathWorkflow.SelectAbwasserkatasterXtfPath(_sp.Dialogs, AbwasserkatasterXtfPath);
+        if (p is null) return;
+        AbwasserkatasterXtfPath = p;
+    }
+
     private void BrowseKantonUriXtfDirectory()
     {
         var p = SettingsPathWorkflow.SelectKantonUriXtfDirectory(_sp.Dialogs, KantonUriXtfDirectory);
@@ -235,6 +246,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
                 PdfToTextPath,
                 ProjectPath,
                 ProjectsRootDirectory,
+                AbwasserkatasterXtfPath,
                 VideoFolder,
                 KantonUriXtfDirectory,
                 DataAutoSaveMode,

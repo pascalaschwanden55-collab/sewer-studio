@@ -14,7 +14,9 @@ namespace AuswertungPro.Next.UI;
 public sealed class AppSettings : IAiStartupSettings
 {
     private const int SaveDebounceMs = 750;
-    public const string DefaultKantonUriXtfDirectory = @"D:\QGIS_V4\Export_Sewer_Studio";
+    public const string DefaultQgisExportDirectory = @"D:\QGIS_V4.03\Export_Sewer_Studio";
+    public const string DefaultAbwasserkatasterXtfPath = DefaultQgisExportDirectory + @"\Abwasserkataster_Uri_korrigiert.xtf";
+    public const string DefaultKantonUriXtfDirectory = DefaultQgisExportDirectory;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -101,13 +103,13 @@ public sealed class AppSettings : IAiStartupSettings
     // Amtlicher Abwasserkataster (SIA405-XTF) fuer die Haltungs-Zuordnung bei der Verteilung.
     // Schacht-Paar (auch vertauscht) wird hierueber der korrekten Haltung zugeordnet.
     // Fehlt die Datei, laeuft die Verteilung wie bisher (kein Kataster-Abgleich).
-    public string AbwasserkatasterXtfPath { get; set; } = @"D:\QGIS_V4\Export_Sewer_Studio\Abwasserkataster_Uri_korrigiert.xtf";
+    public string AbwasserkatasterXtfPath { get; set; } = DefaultAbwasserkatasterXtfPath;
 
     // Vollstaendiger XTF-Datenbestand Kanton Uri (Leitungen und Schaechte).
     public string KantonUriXtfDirectory { get; set; } = DefaultKantonUriXtfDirectory;
 
     // Lokale QGIS-XYZ-Kacheln fuer die Kartenansicht. Fehlt der Ordner, bleibt es beim WMS.
-    public string QgisTilesPath { get; set; } = @"D:\QGIS_V4\Export_Sewer_Studio\tiles_test";
+    public string QgisTilesPath { get; set; } = DefaultQgisExportDirectory + @"\tiles_test";
 
     // VSA Zustandklassifizierung v2: Shadow-Vergleich gegen Legacy-Engine.
     // Null bedeutet Default an.
@@ -254,6 +256,7 @@ public sealed class AppSettings : IAiStartupSettings
             settings.LastVideoSourceFolder = settings.LastVideoFolder;
         if (string.IsNullOrWhiteSpace(settings.LastVideoFolder))
             settings.LastVideoFolder = settings.LastVideoSourceFolder;
+        settings.AbwasserkatasterXtfPath ??= DefaultAbwasserkatasterXtfPath;
         settings.KantonUriXtfDirectory ??= DefaultKantonUriXtfDirectory;
         settings.UiTheme = ThemeManager.NormalizeTheme(settings.UiTheme);
         settings.PhotoGalleryTileSize = Math.Clamp(settings.PhotoGalleryTileSize, 80d, 260d);

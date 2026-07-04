@@ -9,6 +9,7 @@ public sealed record SettingsSaveValues(
     string? PdfToTextPath,
     string? ProjectPath,
     string? ProjectsRootDirectory,
+    string? AbwasserkatasterXtfPath,
     string? VideoFolder,
     string? KantonUriXtfDirectory,
     AutoSaveMode DataAutoSaveMode,
@@ -45,6 +46,7 @@ public static class SettingsSaveWorkflow
         settings.PdfToTextPath = values.PdfToTextPath;
         settings.LastProjectPath = NormalizeProjectPath(values.ProjectPath);
         settings.ProjectsRootDirectory = NormalizeOptionalPath(values.ProjectsRootDirectory);
+        settings.AbwasserkatasterXtfPath = NormalizeRequiredPath(values.AbwasserkatasterXtfPath);
         settings.LastVideoSourceFolder = values.VideoFolder;
         settings.LastVideoFolder = values.VideoFolder;
         settings.KantonUriXtfDirectory = NormalizeRequiredPath(values.KantonUriXtfDirectory);

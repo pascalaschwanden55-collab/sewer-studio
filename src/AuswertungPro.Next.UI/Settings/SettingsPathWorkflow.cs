@@ -38,6 +38,12 @@ public static class SettingsPathWorkflow
     public static string? SelectProjectsRoot(IDialogService dialogs, string? currentPath)
         => dialogs.SelectFolder("Projekte-Verzeichnis waehlen", currentPath);
 
+    public static string? SelectAbwasserkatasterXtfPath(IDialogService dialogs, string? currentPath)
+        => dialogs.OpenFile(
+            "Abwasserkataster-XTF waehlen",
+            "XTF-Dateien (*.xtf)|*.xtf|Alle Dateien|*.*",
+            InitialDirectoryFromFilePath(currentPath));
+
     public static string? SelectKantonUriXtfDirectory(IDialogService dialogs, string? currentPath)
         => dialogs.SelectFolder("XTF-Ordner Kanton Uri waehlen", currentPath);
 
@@ -75,4 +81,7 @@ public static class SettingsPathWorkflow
         => SafeShellOpen.TryOpen(path, out var error)
             ? new SettingsOpenFolderResult(true, null)
             : new SettingsOpenFolderResult(false, error);
+
+    private static string? InitialDirectoryFromFilePath(string? path)
+        => string.IsNullOrWhiteSpace(path) ? null : Path.GetDirectoryName(path);
 }

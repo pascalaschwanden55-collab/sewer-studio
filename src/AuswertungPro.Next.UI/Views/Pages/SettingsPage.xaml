@@ -382,6 +382,7 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Projektpfad (*.json)" Style="{StaticResource SettingsFieldLabel}"/>
@@ -403,6 +404,16 @@
                                         Command="{Binding BrowseProjectsRootCommand}"
                                         Style="{StaticResource SettingsBrowseButton}"
                                         ToolTip="Standardordner fuer Projekte auswaehlen."/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Kataster-XTF (*.xtf)" Style="{StaticResource SettingsFieldLabel}"/>
+                                <TextBox Grid.Row="2" Grid.Column="1"
+                                         Text="{Binding AbwasserkatasterXtfPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource SettingsTextInput}"/>
+                                <Button Grid.Row="2" Grid.Column="2"
+                                        Content="..."
+                                        Command="{Binding BrowseAbwasserkatasterXtfPathCommand}"
+                                        Style="{StaticResource SettingsBrowseButton}"
+                                        ToolTip="Abwasserkataster-XTF fuer die Kartenansicht auswaehlen."/>
                             </Grid>
                         </GroupBox>
 

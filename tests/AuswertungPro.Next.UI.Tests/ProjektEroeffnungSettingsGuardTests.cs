@@ -30,6 +30,23 @@ public sealed class ProjektEroeffnungSettingsGuardTests
     }
 
     [Fact]
+    public void Vm_exposes_abwasserkataster_xtf_path()
+    {
+        var vm = Vm();
+        Assert.Contains("AbwasserkatasterXtfPath", vm);
+        Assert.Contains("BrowseAbwasserkatasterXtfPathCommand", vm);
+    }
+
+    [Fact]
+    public void Xaml_has_abwasserkataster_xtf_path_field()
+    {
+        var xaml = Xaml();
+        Assert.Contains("Kataster-XTF (*.xtf)", xaml);
+        Assert.Contains("AbwasserkatasterXtfPath", xaml);
+        Assert.Contains("BrowseAbwasserkatasterXtfPathCommand", xaml);
+    }
+
+    [Fact]
     public void Vm_exposes_kanton_uri_xtf_directory()
     {
         var vm = Vm();
