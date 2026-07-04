@@ -16,10 +16,14 @@ public partial class StartupSplashWindow : Window
 {
     private const int NodeCount = 112;
     private const int ConnectionsPerNode = 3;
-    private const int MaxActivePulses = 14;
+    private const int MaxActivePulses = 24;
     private const int MaxActiveFlares = 3;
-    private const double PulseIntervalSeconds = 0.11;
+    private const int MaxCascadeGeneration = 3;
+    private const double PulseIntervalSeconds = 0.18;
     private const double FlareIntervalSeconds = 0.78;
+    private const double WaveIntervalSeconds = 2.7;
+    private const double WaveDurationSeconds = 1.5;
+    private const double WaveBandWidth = 48;
     private const double GoldenAngle = 2.39996322972865332;
     private const double CanvasCenterX = 220;
     private const double CanvasCenterY = 260;
@@ -27,7 +31,7 @@ public partial class StartupSplashWindow : Window
     private const double CameraDistance = 4.6;
     private const double ProgressFullWidth = 920;
     private const double ProgressReadyWidth = ProgressFullWidth * 0.9;
-    private static readonly TimeSpan MinimumDisplayTime = TimeSpan.FromMilliseconds(3500);
+    private static readonly TimeSpan MinimumDisplayTime = TimeSpan.FromMilliseconds(8000);
     private static readonly TimeSpan ReadyProgressDuration = TimeSpan.FromMilliseconds(260);
 
     private readonly DispatcherTimer _statusTimer;
@@ -37,6 +41,8 @@ public partial class StartupSplashWindow : Window
     private readonly List<NeuralConnection> _connections = new();
     private readonly List<ActivePulse> _activePulses = new();
     private readonly List<NodeFlare> _flares = new();
+    private readonly List<RingSatellite> _satellites = new();
+    private List<int>[] _adjacency = Array.Empty<List<int>>();
 
     // Wird gesetzt, sobald der Fortschrittsbalken durchgelaufen ist (oder das Fenster schliesst).
     // App.xaml.cs wartet darauf, damit die Startanimation nicht abgeschnitten wird.
@@ -57,6 +63,7 @@ public partial class StartupSplashWindow : Window
     private RotateTransform? _ringMiddleRotate;
     private RotateTransform? _ringOuterRotate;
     private ScaleTransform? _coreGlowScale;
+    private Rectangle? _scanLine;
 
     private int _statusIndex;
     private int _pulseColorCursor;
@@ -67,6 +74,9 @@ public partial class StartupSplashWindow : Window
     private double _lastFrameSeconds;
     private double _pulseAccumulator;
     private double _flareAccumulator;
+    // Inferenz-Welle: -1 = inaktiv, 0..1 = Fortschritt des Sweeps durch das Netz.
+    private double _waveT = -1;
+    private double _waveCooldown = 1.6;
     private bool _renderLoopActive;
     private bool _emitPulses;
     private bool _skipRequested;
@@ -127,12 +137,14 @@ public partial class StartupSplashWindow : Window
 
     private sealed class ActivePulse
     {
-        public ActivePulse(int connectionIndex, Ellipse visual, Color color, double speed)
+        public ActivePulse(int connectionIndex, Ellipse visual, Color color, double speed, bool reverse, int generation)
         {
             ConnectionIndex = connectionIndex;
             Visual = visual;
             Color = color;
             Speed = speed;
+            Reverse = reverse;
+            Generation = generation;
         }
 
         public int ConnectionIndex { get; }
@@ -140,6 +152,26 @@ public partial class StartupSplashWindow : Window
         public Color Color { get; }
         public double T { get; set; }
         public double Speed { get; }
+        // Impulse laufen entlang der Verbindung in beide Richtungen (A->B oder B->A).
+        public bool Reverse { get; }
+        // Kaskaden-Tiefe: ankommende Impulse feuern begrenzt weiter (Signalausbreitung).
+        public int Generation { get; }
+    }
+
+    private sealed class RingSatellite
+    {
+        public RingSatellite(Ellipse visual, double radius, double speed, double angle)
+        {
+            Visual = visual;
+            Radius = radius;
+            Speed = speed;
+            Angle = angle;
+        }
+
+        public Ellipse Visual { get; }
+        public double Radius { get; }
+        public double Speed { get; }
+        public double Angle { get; set; }
     }
 
     private sealed class NodeFlare
@@ -160,7 +192,9 @@ public partial class StartupSplashWindow : Window
     private static readonly string[] StatusMessages =
     [
         "Initialisiere Anwendung...",
+        "Neural Core hochfahren...",
         "Lokale KI-Modelle vorbereiten...",
+        "Synapsen kalibrieren...",
         "3D-Neuralnetz synchronisieren...",
         "VSA-Kataloge und Wissensbasis verbinden...",
         "SewerStudio " + AppIdentity.DisplayVersion + " bereit"
@@ -175,7 +209,7 @@ public partial class StartupSplashWindow : Window
         Width = SystemParameters.PrimaryScreenWidth;
         Height = SystemParameters.PrimaryScreenHeight;
 
-        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1900) };
+        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1250) };
         _statusTimer.Tick += OnStatusTick;
 
         Loaded += OnLoaded;
@@ -206,9 +240,9 @@ public partial class StartupSplashWindow : Window
         BuildNeuralNetwork();
         RenderFrame();
         AnimateNetworkFadeIn();
-        RevealTitle(2400);
-        FadeIn(SubText, 3000, 900);
-        FadeIn(VersionText, 3350, 700);
+        RevealTitle(2600);
+        FadeIn(SubText, 3400, 900);
+        FadeIn(VersionText, 3900, 700);
         FadeIn(StatusText, 1100, 650);
         FadeIn(StatusDot, 1100, 650);
         StartProgressBar();
@@ -249,6 +283,7 @@ public partial class StartupSplashWindow : Window
         _connections.Clear();
         _activePulses.Clear();
         _flares.Clear();
+        _satellites.Clear();
 
         BuildBackdrop();
         BuildSphere();
@@ -292,6 +327,58 @@ public partial class StartupSplashWindow : Window
         _ringOuter = CreateRing(420, 18, AccentDeep, out _ringOuterRotate);
         _ringMiddle = CreateRing(340, 14, AccentBlue, out _ringMiddleRotate);
         _ringInner = CreateRing(260, 10, AccentCyan, out _ringInnerRotate);
+
+        // Scanline der Inferenz-Welle: laeuft synchron zum Aktivierungs-Sweep durchs Netz.
+        _scanLine = new Rectangle
+        {
+            Width = 110,
+            Height = 520,
+            Opacity = 0,
+            IsHitTestVisible = false,
+            Fill = new LinearGradientBrush
+            {
+                StartPoint = new Point(0, 0),
+                EndPoint = new Point(1, 0),
+                GradientStops =
+                {
+                    new GradientStop(Color.FromArgb(0, AccentCyan.R, AccentCyan.G, AccentCyan.B), 0.0),
+                    new GradientStop(Color.FromArgb(46, AccentCyan.R, AccentCyan.G, AccentCyan.B), 0.5),
+                    new GradientStop(Color.FromArgb(0, AccentCyan.R, AccentCyan.G, AccentCyan.B), 1.0)
+                }
+            }
+        };
+        Canvas.SetTop(_scanLine, 0);
+        Canvas.SetLeft(_scanLine, CanvasCenterX - 230);
+        Panel.SetZIndex(_scanLine, 3);
+        NeuralCanvas.Children.Add(_scanLine);
+
+        // Orbitierende Satelliten auf den Ringen (Radius = halber Ringdurchmesser).
+        AddSatellite(210, 0.35, 0.0, AccentDeep, 5);
+        AddSatellite(210, 0.35, Math.PI, AccentBlue, 4);
+        AddSatellite(170, -0.55, 1.1, AccentCyan, 4);
+        AddSatellite(130, 0.85, 2.4, AccentCyan, 3.5);
+    }
+
+    private void AddSatellite(double radius, double speed, double startAngle, Color color, double size)
+    {
+        var dot = new Ellipse
+        {
+            Width = size,
+            Height = size,
+            Opacity = 0,
+            Fill = new SolidColorBrush(Color.FromArgb(220, color.R, color.G, color.B)),
+            Effect = new DropShadowEffect
+            {
+                BlurRadius = 10,
+                ShadowDepth = 0,
+                Color = color,
+                Opacity = 0.8
+            },
+            IsHitTestVisible = false
+        };
+        Panel.SetZIndex(dot, 6);
+        NeuralCanvas.Children.Add(dot);
+        _satellites.Add(new RingSatellite(dot, radius, speed, startAngle));
     }
 
     private Ellipse CreateRing(double diameter, byte alpha, Color color, out RotateTransform rotate)
@@ -376,6 +463,16 @@ public partial class StartupSplashWindow : Window
                 if (b > i)
                     AddConnection(i, b);
             }
+        }
+
+        // Adjazenzliste fuer die Signalausbreitung: Knoten -> abgehende Verbindungen.
+        _adjacency = new List<int>[_nodes.Count];
+        for (int i = 0; i < _nodes.Count; i++)
+            _adjacency[i] = new List<int>();
+        for (int c = 0; c < _connections.Count; c++)
+        {
+            _adjacency[_connections[c].A].Add(c);
+            _adjacency[_connections[c].B].Add(c);
         }
     }
 
@@ -466,6 +563,7 @@ public partial class StartupSplashWindow : Window
             {
                 NeuralCanvas.Children.Remove(pulse.Visual);
                 _activePulses.RemoveAt(i);
+                OnPulseArrived(pulse);
             }
         }
 
@@ -487,7 +585,66 @@ public partial class StartupSplashWindow : Window
             SpawnFlare(_rng.Next(_nodes.Count));
         }
 
+        // Inferenz-Welle: periodischer Sweep, der wie ein Forward-Pass durchs Netz laeuft.
+        if (_waveT >= 0)
+        {
+            _waveT += dt / WaveDurationSeconds;
+            if (_waveT >= 1.0)
+            {
+                _waveT = -1;
+                _waveCooldown = WaveIntervalSeconds;
+                if (_scanLine is not null)
+                    _scanLine.Opacity = 0;
+            }
+        }
+        else if (_emitPulses)
+        {
+            _waveCooldown -= dt;
+            if (_waveCooldown <= 0)
+                _waveT = 0;
+        }
+
+        foreach (var satellite in _satellites)
+            satellite.Angle += satellite.Speed * dt;
+
         RenderFrame();
+    }
+
+    private void OnPulseArrived(ActivePulse pulse)
+    {
+        if (pulse.ConnectionIndex < 0 || pulse.ConnectionIndex >= _connections.Count)
+            return;
+
+        var connection = _connections[pulse.ConnectionIndex];
+        var nodeIndex = pulse.Reverse ? connection.A : connection.B;
+        _nodes[nodeIndex].Activation = 1.0;
+
+        // Signalausbreitung wie im echten Netz: ankommende Impulse feuern
+        // mit abnehmender Wahrscheinlichkeit entlang der Synapsen weiter.
+        if (!_emitPulses || pulse.Generation >= MaxCascadeGeneration)
+            return;
+        if (nodeIndex >= _adjacency.Length || _adjacency[nodeIndex].Count == 0)
+            return;
+
+        var outgoing = _adjacency[nodeIndex];
+        var chance = 0.75 / (pulse.Generation + 1);
+        var branches = _rng.NextDouble() < 0.35 ? 2 : 1;
+        for (int b = 0; b < branches; b++)
+        {
+            if (_activePulses.Count >= MaxActivePulses)
+                return;
+            if (_rng.NextDouble() > chance)
+                continue;
+
+            var connIdx = outgoing[_rng.Next(outgoing.Count)];
+            if (connIdx == pulse.ConnectionIndex)
+                continue;
+
+            var next = _connections[connIdx];
+            var reverse = next.B == nodeIndex;
+            var color = Blend(pulse.Color, AccentCyan, 0.35);
+            FirePulse(connIdx, color, reverse, pulse.Generation + 1);
+        }
     }
 
     private void RenderFrame()
@@ -502,6 +659,11 @@ public partial class StartupSplashWindow : Window
         var cosZ = Math.Cos(_rotationZ);
         var sinZ = Math.Sin(_rotationZ);
 
+        // Position und Staerke der Inferenz-Welle (Sweep von links nach rechts).
+        var waveActive = _waveT >= 0 && _waveT <= 1.0;
+        var waveX = CanvasCenterX - 230 + _waveT * 460;
+        var waveStrength = waveActive ? Math.Sin(Math.PI * _waveT) : 0;
+
         for (int i = 0; i < _nodes.Count; i++)
         {
             var node = _nodes[i];
@@ -512,6 +674,17 @@ public partial class StartupSplashWindow : Window
             _screenX[i] = px;
             _screenY[i] = py;
             _screenDepth[i] = depth;
+
+            if (waveActive)
+            {
+                var waveDist = Math.Abs(px - waveX);
+                if (waveDist < WaveBandWidth)
+                {
+                    var boost = (1.0 - waveDist / WaveBandWidth) * 0.95 * waveStrength;
+                    if (boost > node.Activation)
+                        node.Activation = boost;
+                }
+            }
 
             var depth01 = Clamp01((depth + 1.0) / 2.0);
             var size = (4.0 + perspective * 3.4 + depth01 * 3.0) * (1.0 + node.Activation * 0.7);
@@ -532,6 +705,19 @@ public partial class StartupSplashWindow : Window
         {
             var a = connection.A;
             var b = connection.B;
+
+            if (waveActive)
+            {
+                var midX = (_screenX[a] + _screenX[b]) / 2.0;
+                var waveDist = Math.Abs(midX - waveX);
+                if (waveDist < WaveBandWidth)
+                {
+                    var boost = (1.0 - waveDist / WaveBandWidth) * 0.45 * waveStrength;
+                    if (boost > connection.Activation)
+                        connection.Activation = boost;
+                }
+            }
+
             var depth01 = Clamp01((_screenDepth[a] + _screenDepth[b] + 2.0) / 4.0);
             var alpha = (byte)Math.Clamp(18 + depth01 * 70 + connection.Activation * 160, 0, 235);
             var color = Blend(LineAccent, AccentCyan, connection.Activation * 0.85 + depth01 * 0.20);
@@ -548,6 +734,39 @@ public partial class StartupSplashWindow : Window
         UpdateActivePulseVisuals();
         UpdateFlareVisuals();
         UpdateBackdrop();
+        UpdateScanLine(waveActive, waveX, waveStrength);
+        UpdateSatellites();
+    }
+
+    private void UpdateScanLine(bool waveActive, double waveX, double waveStrength)
+    {
+        if (_scanLine is null)
+            return;
+
+        if (!waveActive)
+        {
+            _scanLine.Opacity = 0;
+            return;
+        }
+
+        Canvas.SetLeft(_scanLine, waveX - _scanLine.Width / 2.0);
+        _scanLine.Opacity = 0.9 * waveStrength;
+    }
+
+    private void UpdateSatellites()
+    {
+        var breath = 0.5 + 0.5 * Math.Sin(_breathPhase);
+        // Weich einblenden, synchron zum Fade-in der Ringe.
+        var fadeIn = Clamp01((_animationClock.Elapsed.TotalSeconds - 0.6) / 1.2);
+        foreach (var satellite in _satellites)
+        {
+            var px = CanvasCenterX + Math.Cos(satellite.Angle) * satellite.Radius;
+            var py = CanvasCenterY + Math.Sin(satellite.Angle) * satellite.Radius;
+            var size = satellite.Visual.Width;
+            Canvas.SetLeft(satellite.Visual, px - size / 2.0);
+            Canvas.SetTop(satellite.Visual, py - size / 2.0);
+            satellite.Visual.Opacity = (0.45 + breath * 0.35) * fadeIn;
+        }
     }
 
     private static void Project(
@@ -589,7 +808,7 @@ public partial class StartupSplashWindow : Window
             var connection = _connections[pulse.ConnectionIndex];
             var a = connection.A;
             var b = connection.B;
-            var t = pulse.T;
+            var t = pulse.Reverse ? 1.0 - pulse.T : pulse.T;
             var px = _screenX[a] + (_screenX[b] - _screenX[a]) * t;
             var py = _screenY[a] + (_screenY[b] - _screenY[a]) * t;
             var depth = _screenDepth[a] + (_screenDepth[b] - _screenDepth[a]) * t;
@@ -650,12 +869,12 @@ public partial class StartupSplashWindow : Window
             _ringInner.Opacity = 0.55 + breath * 0.22;
     }
 
-    private void FirePulse(int connectionIndex, Color color)
+    private void FirePulse(int connectionIndex, Color color, bool reverse = false, int generation = 0)
     {
         var connection = _connections[connectionIndex];
         connection.Activation = 1.0;
-        _nodes[connection.A].Activation = Math.Max(_nodes[connection.A].Activation, 0.85);
-        _nodes[connection.B].Activation = 1.0;
+        var sourceIndex = reverse ? connection.B : connection.A;
+        _nodes[sourceIndex].Activation = Math.Max(_nodes[sourceIndex].Activation, 0.85);
 
         var particle = new Ellipse
         {
@@ -675,8 +894,9 @@ public partial class StartupSplashWindow : Window
         Panel.SetZIndex(particle, 90);
         NeuralCanvas.Children.Add(particle);
 
-        var speed = 0.038 + _rng.NextDouble() * 0.026;
-        _activePulses.Add(new ActivePulse(connectionIndex, particle, color, speed));
+        // Kaskaden-Impulse laufen etwas schneller, damit die Ausbreitung als Kette lesbar bleibt.
+        var speed = (0.038 + _rng.NextDouble() * 0.026) * (1.0 + generation * 0.15);
+        _activePulses.Add(new ActivePulse(connectionIndex, particle, color, speed, reverse, generation));
     }
 
     private void SpawnFlare(int nodeIndex)
@@ -864,30 +1084,17 @@ public partial class StartupSplashWindow : Window
 
     private void OnStatusTick(object? sender, EventArgs e)
     {
-        _statusIndex++;
-        if (_statusIndex >= StatusMessages.Length)
+        // Die letzte Meldung ("bereit") setzt ausschliesslich CompleteProgressCoreAsync,
+        // damit der Text nie "bereit" zeigt, bevor die Anwendung es wirklich ist.
+        if (_statusIndex >= StatusMessages.Length - 2)
         {
             _statusTimer.Stop();
             return;
         }
 
+        _statusIndex++;
         StatusText.Text = StatusMessages[_statusIndex];
-
-        if (_statusIndex == StatusMessages.Length - 1)
-        {
-            StatusText.Foreground = new SolidColorBrush(ReadyAccent);
-            StatusDot.Fill = new SolidColorBrush(ReadyAccent);
-            _statusTimer.Stop();
-            _emitPulses = false;
-        }
-        else if (_statusIndex >= 2)
-        {
-            StatusDot.Fill = new SolidColorBrush(AccentCyan);
-        }
-        else
-        {
-            StatusDot.Fill = new SolidColorBrush(AccentBlue);
-        }
+        StatusDot.Fill = new SolidColorBrush(_statusIndex >= 3 ? AccentCyan : AccentBlue);
     }
 
     private static void FadeIn(UIElement element, int startMs, int durMs)
