@@ -739,37 +739,31 @@ public partial class PhotoMeasurementWindow : Window
 
     private void FinalizeDeformation()
     {
-        // Automatisch sortieren: nach Uhr-Position relativ zur Rohrmitte
-        // Oben = naechster Punkt an 12h, Unten = naechster an 6h, Links = 9h, Rechts = 3h
-        var (top, bottom, right, left) = PhotoMeasurementGeometryService.SortDeformationPoints(
-            _clickPoints, _calibration.PipeCenter.X, _calibration.PipeCenter.Y);
+        var r = GetImageRenderedRect(PhotoImage);
+        var deformation = PhotoMeasurementGeometryService.BuildDeformationPlan(
+            _clickPoints,
+            _calibration,
+            _imageAspect,
+            r.X,
+            r.Y,
+            r.Width,
+            r.Height);
+        if (deformation is null) return;
 
-        double deformPct = PhotoMeasurementGeometryService.DeformationPercent(
-            top, bottom, left, right, _imageAspect, _calibration.NormalizedDiameter);
-
-        _currentGeometry = new OverlayGeometry
-        {
-            ToolType = OverlayToolType.Ellipse, // Deformation = ovale Verformung
-            Points = _clickPoints.Select(p => new NormalizedPoint(p.X, p.Y)).ToList(),
-            FillPercent = Math.Round(deformPct, 1)
-        };
-
-        // Kreuzlinien zeichnen
-        var pTop = NormToCanvas(top.X, top.Y);
-        var pBot = NormToCanvas(bottom.X, bottom.Y);
-        var pLeft = NormToCanvas(left.X, left.Y);
-        var pRight = NormToCanvas(right.X, right.Y);
+        _currentGeometry = deformation.Geometry;
 
         var vLine = new Line
         {
-            X1 = pTop.X, Y1 = pTop.Y, X2 = pBot.X, Y2 = pBot.Y,
+            X1 = deformation.Top.X, Y1 = deformation.Top.Y,
+            X2 = deformation.Bottom.X, Y2 = deformation.Bottom.Y,
             Stroke = Brushes.Orange, StrokeThickness = 2,
             StrokeDashArray = new DoubleCollection { 4, 2 },
             Tag = TagOverlay
         };
         var hLine = new Line
         {
-            X1 = pLeft.X, Y1 = pLeft.Y, X2 = pRight.X, Y2 = pRight.Y,
+            X1 = deformation.Left.X, Y1 = deformation.Left.Y,
+            X2 = deformation.Right.X, Y2 = deformation.Right.Y,
             Stroke = Brushes.Orange, StrokeThickness = 2,
             StrokeDashArray = new DoubleCollection { 4, 2 },
             Tag = TagOverlay
@@ -777,15 +771,16 @@ public partial class PhotoMeasurementWindow : Window
         OverlayCanvas.Children.Add(vLine);
         OverlayCanvas.Children.Add(hLine);
 
-        var center = new Point((pTop.X + pBot.X) / 2, (pTop.Y + pBot.Y) / 2);
-        AddCanvasLabel($"Deform: {deformPct:F1}%", center.X, center.Y - 20, TagOverlay);
+        AddCanvasLabel(
+            $"Deform: {deformation.DeformationPercent:F1}%",
+            deformation.LabelPosition.X,
+            deformation.LabelPosition.Y,
+            TagOverlay);
 
-        // Strecken fuer Statuszeile berechnen (Aspect-korrigiert)
-        double dV = PipeCalibration.AspectCorrectedDistance(top, bottom, _imageAspect);
-        double dH = PipeCalibration.AspectCorrectedDistance(left, right, _imageAspect);
-
-        TxtMeasureInfo.Text = $"Deform: {deformPct:F1}%";
-        TxtStatus.Text = $"Deformation: {deformPct:F1}% (V={dV:F3}, H={dH:F3})";
+        TxtMeasureInfo.Text = $"Deform: {deformation.DeformationPercent:F1}%";
+        TxtStatus.Text =
+            $"Deformation: {deformation.DeformationPercent:F1}% " +
+            $"(V={deformation.VerticalDistance:F3}, H={deformation.HorizontalDistance:F3})";
     }
 
     // ═══════════════════════════════════════════════

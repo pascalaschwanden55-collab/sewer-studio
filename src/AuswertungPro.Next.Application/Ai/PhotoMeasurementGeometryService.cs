@@ -109,6 +109,121 @@ public static class PhotoMeasurementGeometryService
         return dNominal > 0 ? ((dMax - dMin) / dNominal) * 100.0 : 0;
     }
 
+    /// <summary>
+    /// Baut die fachliche Deformations-Geometrie aus vier Messpunkten.
+    /// </summary>
+    public static PhotoMeasurementDeformationGeometry? BuildDeformationGeometry(
+        IReadOnlyList<NormalizedPoint> points,
+        PipeCalibration calibration,
+        double imageAspect)
+    {
+        ArgumentNullException.ThrowIfNull(points);
+        ArgumentNullException.ThrowIfNull(calibration);
+
+        if (points.Count < 4)
+            return null;
+
+        var (top, bottom, right, left) = SortDeformationPoints(
+            points,
+            calibration.PipeCenter.X,
+            calibration.PipeCenter.Y);
+
+        double deformationPercent = DeformationPercent(
+            top,
+            bottom,
+            left,
+            right,
+            imageAspect,
+            calibration.NormalizedDiameter);
+        double verticalDistance = PipeCalibration.AspectCorrectedDistance(top, bottom, imageAspect);
+        double horizontalDistance = PipeCalibration.AspectCorrectedDistance(left, right, imageAspect);
+
+        var geometry = new OverlayGeometry
+        {
+            ToolType = OverlayToolType.Ellipse,
+            Points = points.Select(p => new NormalizedPoint(p.X, p.Y)).ToList(),
+            FillPercent = Math.Round(deformationPercent, 1)
+        };
+
+        return new PhotoMeasurementDeformationGeometry(
+            Geometry: geometry,
+            DeformationPercent: deformationPercent,
+            VerticalDistance: verticalDistance,
+            HorizontalDistance: horizontalDistance,
+            Top: top,
+            Bottom: bottom,
+            Right: right,
+            Left: left);
+    }
+
+    /// <summary>
+    /// Baut den fachlichen Plan fuer eine 4-Punkt-Deformationsmessung.
+    /// </summary>
+    public static PhotoMeasurementDeformationPlan? BuildDeformationPlan(
+        IReadOnlyList<NormalizedPoint> points,
+        PipeCalibration calibration,
+        double imageAspect,
+        double renderedX,
+        double renderedY,
+        double renderedWidth,
+        double renderedHeight)
+    {
+        ArgumentNullException.ThrowIfNull(points);
+        ArgumentNullException.ThrowIfNull(calibration);
+
+        if (renderedWidth <= 0 || renderedHeight <= 0)
+            return null;
+
+        var deformation = BuildDeformationGeometry(
+            points,
+            calibration,
+            imageAspect);
+        if (deformation is null)
+            return null;
+
+        var topCanvas = ToCanvasPoint(
+            renderedX,
+            renderedY,
+            renderedWidth,
+            renderedHeight,
+            deformation.Top.X,
+            deformation.Top.Y);
+        var bottomCanvas = ToCanvasPoint(
+            renderedX,
+            renderedY,
+            renderedWidth,
+            renderedHeight,
+            deformation.Bottom.X,
+            deformation.Bottom.Y);
+        var leftCanvas = ToCanvasPoint(
+            renderedX,
+            renderedY,
+            renderedWidth,
+            renderedHeight,
+            deformation.Left.X,
+            deformation.Left.Y);
+        var rightCanvas = ToCanvasPoint(
+            renderedX,
+            renderedY,
+            renderedWidth,
+            renderedHeight,
+            deformation.Right.X,
+            deformation.Right.Y);
+
+        return new PhotoMeasurementDeformationPlan(
+            Geometry: deformation.Geometry,
+            DeformationPercent: deformation.DeformationPercent,
+            VerticalDistance: deformation.VerticalDistance,
+            HorizontalDistance: deformation.HorizontalDistance,
+            Top: topCanvas,
+            Bottom: bottomCanvas,
+            Left: leftCanvas,
+            Right: rightCanvas,
+            LabelPosition: new PhotoMeasurementCanvasPoint(
+                (topCanvas.X + bottomCanvas.X) / 2.0,
+                ((topCanvas.Y + bottomCanvas.Y) / 2.0) - 20.0));
+    }
+
     // ═══════════════════════════════════════════════════════════════════
     // Querschnittsverminderung (Shoelace-Polygon)
     // ═══════════════════════════════════════════════════════════════════
@@ -537,6 +652,16 @@ public sealed record PhotoMeasurementAngleGeometry(
     double ClockHour,
     NormalizedPoint EdgePoint);
 
+public sealed record PhotoMeasurementDeformationGeometry(
+    OverlayGeometry Geometry,
+    double DeformationPercent,
+    double VerticalDistance,
+    double HorizontalDistance,
+    NormalizedPoint Top,
+    NormalizedPoint Bottom,
+    NormalizedPoint Right,
+    NormalizedPoint Left);
+
 public sealed record PhotoMeasurementCalibrationGeometry(
     double NormalizedDiameter,
     NormalizedPoint PipeCenter);
@@ -556,6 +681,17 @@ public sealed record PhotoMeasurementLineGeometry(
 public sealed record PhotoMeasurementCanvasPoint(double X, double Y);
 
 public sealed record PhotoMeasurementCanvasRect(double X, double Y, double Width, double Height);
+
+public sealed record PhotoMeasurementDeformationPlan(
+    OverlayGeometry Geometry,
+    double DeformationPercent,
+    double VerticalDistance,
+    double HorizontalDistance,
+    PhotoMeasurementCanvasPoint Top,
+    PhotoMeasurementCanvasPoint Bottom,
+    PhotoMeasurementCanvasPoint Left,
+    PhotoMeasurementCanvasPoint Right,
+    PhotoMeasurementCanvasPoint LabelPosition);
 
 public sealed record PhotoMeasurementPipeCirclePlan(
     PhotoMeasurementCanvasPoint Center,

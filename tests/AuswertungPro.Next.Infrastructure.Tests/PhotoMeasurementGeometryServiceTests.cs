@@ -161,6 +161,128 @@ public sealed class PhotoMeasurementGeometryServiceTests
     }
 
     [Fact]
+    public void BuildDeformationGeometry_BautOverlaySortierungUndDistanzen()
+    {
+        var calibration = new PipeCalibration
+        {
+            NormalizedDiameter = 0.6,
+            PipeCenter = new NormalizedPoint(0.5, 0.5)
+        };
+        var points = new List<NormalizedPoint>
+        {
+            new(0.2, 0.5),
+            new(0.5, 0.7),
+            new(0.8, 0.5),
+            new(0.5, 0.3)
+        };
+
+        var result = PhotoMeasurementGeometryService.BuildDeformationGeometry(
+            points,
+            calibration,
+            imageAspect: 1.0);
+
+        Assert.NotNull(result);
+        Assert.Equal(OverlayToolType.Ellipse, result.Geometry.ToolType);
+        Assert.Equal(4, result.Geometry.Points.Count);
+        Assert.Equal(33.333333, result.DeformationPercent, precision: 6);
+        Assert.Equal(33.3, result.Geometry.FillPercent);
+        Assert.Equal(0.4, result.VerticalDistance, precision: 6);
+        Assert.Equal(0.6, result.HorizontalDistance, precision: 6);
+        Assert.Equal(0.3, result.Top.Y, precision: 6);
+        Assert.Equal(0.7, result.Bottom.Y, precision: 6);
+        Assert.Equal(0.8, result.Right.X, precision: 6);
+        Assert.Equal(0.2, result.Left.X, precision: 6);
+    }
+
+    [Fact]
+    public void BuildDeformationGeometry_ZuWenigePunkte_GibtNull()
+    {
+        var calibration = new PipeCalibration
+        {
+            NormalizedDiameter = 0.6,
+            PipeCenter = new NormalizedPoint(0.5, 0.5)
+        };
+        var points = new List<NormalizedPoint>
+        {
+            new(0.2, 0.5),
+            new(0.5, 0.7),
+            new(0.8, 0.5)
+        };
+
+        Assert.Null(PhotoMeasurementGeometryService.BuildDeformationGeometry(
+            points,
+            calibration,
+            imageAspect: 1.0));
+    }
+
+    [Fact]
+    public void BuildDeformationPlan_BerechnetCanvasPunkteUndLabel()
+    {
+        var calibration = new PipeCalibration
+        {
+            NormalizedDiameter = 0.6,
+            PipeCenter = new NormalizedPoint(0.5, 0.5)
+        };
+        var points = new List<NormalizedPoint>
+        {
+            new(0.2, 0.5),
+            new(0.5, 0.7),
+            new(0.8, 0.5),
+            new(0.5, 0.3)
+        };
+
+        var plan = PhotoMeasurementGeometryService.BuildDeformationPlan(
+            points,
+            calibration,
+            imageAspect: 1.0,
+            renderedX: 10,
+            renderedY: 20,
+            renderedWidth: 200,
+            renderedHeight: 100);
+
+        Assert.NotNull(plan);
+        Assert.Equal(110, plan.Top.X, precision: 6);
+        Assert.Equal(50, plan.Top.Y, precision: 6);
+        Assert.Equal(110, plan.Bottom.X, precision: 6);
+        Assert.Equal(90, plan.Bottom.Y, precision: 6);
+        Assert.Equal(50, plan.Left.X, precision: 6);
+        Assert.Equal(70, plan.Left.Y, precision: 6);
+        Assert.Equal(170, plan.Right.X, precision: 6);
+        Assert.Equal(70, plan.Right.Y, precision: 6);
+        Assert.Equal(110, plan.LabelPosition.X, precision: 6);
+        Assert.Equal(50, plan.LabelPosition.Y, precision: 6);
+        Assert.Equal(33.3, plan.Geometry.FillPercent);
+        Assert.Equal(0.4, plan.VerticalDistance, precision: 6);
+        Assert.Equal(0.6, plan.HorizontalDistance, precision: 6);
+    }
+
+    [Fact]
+    public void BuildDeformationPlan_UngueltigeRendergroesse_GibtNull()
+    {
+        var calibration = new PipeCalibration
+        {
+            NormalizedDiameter = 0.6,
+            PipeCenter = new NormalizedPoint(0.5, 0.5)
+        };
+        var points = new List<NormalizedPoint>
+        {
+            new(0.2, 0.5),
+            new(0.5, 0.7),
+            new(0.8, 0.5),
+            new(0.5, 0.3)
+        };
+
+        Assert.Null(PhotoMeasurementGeometryService.BuildDeformationPlan(
+            points,
+            calibration,
+            imageAspect: 1.0,
+            renderedX: 10,
+            renderedY: 20,
+            renderedWidth: 0,
+            renderedHeight: 100));
+    }
+
+    [Fact]
     public void DeformationPercent_OhneNominalDurchmesser_FaelltAufMaxDistanceZurueck()
     {
         var top    = new NormalizedPoint(0.5, 0.3);
