@@ -17,9 +17,9 @@ public sealed class DataPageTrainingCaseIndexTests
             null
         });
 
-        Assert.Contains("06.24341-35625", index.TrainedHaltungen);
-        Assert.Contains("07.1028055-10.1064892", index.TrainedHaltungen);
-        Assert.DoesNotContain("", index.TrainedHaltungen);
+        Assert.Equal(
+            new[] { "06.24341-35625", "07.1028055-10.1064892" },
+            index.TrainedHaltungen.OrderBy(x => x, StringComparer.Ordinal).ToArray());
     }
 
     [Fact]
@@ -30,8 +30,7 @@ public sealed class DataPageTrainingCaseIndexTests
 
         index.ReplaceCaseIds(new[] { "20260101_07.1028055-10.1064892" });
 
-        Assert.DoesNotContain("06.24341-35625", index.TrainedHaltungen);
-        Assert.Contains("07.1028055-10.1064892", index.TrainedHaltungen);
+        Assert.Equal("07.1028055-10.1064892", Assert.Single(index.TrainedHaltungen));
     }
 
     [Theory]

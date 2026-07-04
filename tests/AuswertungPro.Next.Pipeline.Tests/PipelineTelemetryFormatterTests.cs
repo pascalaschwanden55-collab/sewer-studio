@@ -51,11 +51,11 @@ public sealed class PipelineTelemetryFormatterTests
             WallClockMs: 12000);
 
         var result = PipelineTelemetryFormatter.Format(t);
-        Assert.Contains("YOLO:", result);
-        Assert.Contains("DINO:", result);
-        Assert.Contains("SAM:", result);
-        Assert.DoesNotContain("Vision:", result);  // Qwen deaktiviert
-        Assert.Contains("Total/Frame:", result);
+        Assert.Equal(
+            "Wall: 12.0s  |  Frames: 100 (0 skipped)  |  Extraction: Mean=10ms  P95=20ms  |  " +
+            "YOLO: Mean=50ms  P95=90ms  |  DINO: Mean=107ms  P95=150ms  |  " +
+            "SAM: Mean=30ms  P95=60ms  |  Total/Frame: Mean=200ms  P95=300ms",
+            result);
     }
 
     [Fact]

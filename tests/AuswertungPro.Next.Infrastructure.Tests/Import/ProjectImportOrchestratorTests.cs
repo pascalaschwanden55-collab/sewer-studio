@@ -404,6 +404,168 @@ public sealed class ProjectImportOrchestratorTests
     }
 
     [Fact]
+    public void Import_IbakVerteiltHUnterstrichSchachtSchachtFotosZentral()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"orch-ibak-foto-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "source");
+        var projectDir = Path.Combine(root, "projekt");
+        Directory.CreateDirectory(projectDir);
+        Directory.CreateDirectory(Path.Combine(sourceDir, "Film"));
+        Directory.CreateDirectory(Path.Combine(sourceDir, "Foto"));
+        File.WriteAllText(Path.Combine(sourceDir, "Arizona.fdb"), "fdb");
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+        File.WriteAllText(
+            Path.Combine(sourceDir, "Film", "Daten.txt"),
+            "SS 10081-SS 8993\n" +
+            "\t00:00:05    0.00 m  BCD     Rohranfang Foto 1@!$ibak$!SS 10081-SS 8993$H\n",
+            System.Text.Encoding.GetEncoding(1252));
+        var sourceFoto = Path.Combine(sourceDir, "Foto", "H_SS 10081-SS 8993_001.jpg");
+        File.WriteAllText(sourceFoto, "bild");
+
+        try
+        {
+            var project = new Project();
+            var orch = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new WinCanDbImportService(),
+                kins: null,
+                ibak: new IbakExportImportService());
+
+            var result = orch.Import(sourceDir, projectDir, project);
+
+            Assert.Equal(KanalExportFormat.Ibak, result.Format);
+            var record = Assert.Single(project.Data);
+            var entry = Assert.Single(record.Protocol!.Current.Entries);
+            var relFoto = Assert.Single(entry.FotoPaths);
+            Assert.False(Path.IsPathRooted(relFoto), $"FotoPath muss relativ sein: {relFoto}");
+            Assert.Equal("Fotos/Haltungen/10081-8993/H_SS 10081-SS 8993_001.jpg", relFoto.Replace('\\', '/'));
+            Assert.True(File.Exists(Path.Combine(projectDir, relFoto)), $"Foto nicht verteilt: {relFoto}");
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void Import_IbakVerteiltHUnterstrichFotosAuchOhneFotoMarker()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"orch-ibak-foto-nomarker-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "source");
+        var projectDir = Path.Combine(root, "projekt");
+        Directory.CreateDirectory(projectDir);
+        Directory.CreateDirectory(Path.Combine(sourceDir, "Film"));
+        Directory.CreateDirectory(Path.Combine(sourceDir, "Foto"));
+        File.WriteAllText(Path.Combine(sourceDir, "Arizona.fdb"), "fdb");
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+        File.WriteAllText(
+            Path.Combine(sourceDir, "Film", "Daten.txt"),
+            "SS 10081-SS 8993\n" +
+            "\t00:00:05    0.00 m  BCD     Rohranfang@!$ibak$!SS 10081-SS 8993$H\n" +
+            "\t00:00:55    2.90 m  BCC     Pos: 6; Bogen nach unten, Winkel = 10°@!$ibak$!SS 10081-SS 8993$H\n",
+            System.Text.Encoding.GetEncoding(1252));
+        File.WriteAllText(Path.Combine(sourceDir, "Foto", "H_SS 10081-SS 8993_001.jpg"), "bild1");
+        File.WriteAllText(Path.Combine(sourceDir, "Foto", "H_SS 10081-SS 8993_002.jpg"), "bild2");
+
+        try
+        {
+            var project = new Project();
+            var orch = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new WinCanDbImportService(),
+                kins: null,
+                ibak: new IbakExportImportService());
+
+            var result = orch.Import(sourceDir, projectDir, project);
+
+            Assert.Equal(KanalExportFormat.Ibak, result.Format);
+            Assert.DoesNotContain(result.Messages, m => m.Contains("Nicht zugeordnete Fotos", StringComparison.OrdinalIgnoreCase));
+            var record = Assert.Single(project.Data);
+            var fotos = record.Protocol!.Current.Entries
+                .SelectMany(e => e.FotoPaths)
+                .Select(p => p.Replace('\\', '/'))
+                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            Assert.Equal(
+                new[]
+                {
+                    "Fotos/Haltungen/10081-8993/H_SS 10081-SS 8993_001.jpg",
+                    "Fotos/Haltungen/10081-8993/H_SS 10081-SS 8993_002.jpg"
+                },
+                fotos);
+            foreach (var relFoto in fotos)
+                Assert.True(File.Exists(Path.Combine(projectDir, relFoto)), $"Foto nicht verteilt: {relFoto}");
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void Import_IbakFotoFallback_VerteiltFotosAufEchteBefundeStattRohranfang()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"orch-ibak-foto-real-{Guid.NewGuid():N}");
+        var sourceDir = Path.Combine(root, "source");
+        var projectDir = Path.Combine(root, "projekt");
+        Directory.CreateDirectory(projectDir);
+        Directory.CreateDirectory(Path.Combine(sourceDir, "Film"));
+        Directory.CreateDirectory(Path.Combine(sourceDir, "Foto"));
+        File.WriteAllText(Path.Combine(sourceDir, "Arizona.fdb"), "fdb");
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+        File.WriteAllText(
+            Path.Combine(sourceDir, "Film", "Daten.txt"),
+            "SS 10081-SS 8993\n" +
+            "\t00:00:05    0.00 m  BCD     Rohranfang@!$ibak$!SS 10081-SS 8993$H\n" +
+            "\t00:00:07    0.00 m  BCB     Anfang Inliner@!$ibak$!SS 10081-SS 8993$H\n" +
+            "\t00:00:55    2.90 m  BCC     Bogen nach unten@!$ibak$!SS 10081-SS 8993$H\n" +
+            "\t00:01:44    8.20 m  BCB     Ende Inliner@!$ibak$!SS 10081-SS 8993$H\n" +
+            "\t00:01:47    8.20 m  BCE     Rohrende@!$ibak$!SS 10081-SS 8993$H\n",
+            System.Text.Encoding.GetEncoding(1252));
+        File.WriteAllText(Path.Combine(sourceDir, "Foto", "H_SS 10081-SS 8993_001.jpg"), "bild1");
+        File.WriteAllText(Path.Combine(sourceDir, "Foto", "H_SS 10081-SS 8993_002.jpg"), "bild2");
+        File.WriteAllText(Path.Combine(sourceDir, "Foto", "H_SS 10081-SS 8993_003.jpg"), "bild3");
+
+        try
+        {
+            var project = new Project();
+            var orch = new ProjectImportOrchestrator(
+                new XtfImportServiceAdapter(),
+                new WinCanDbImportService(),
+                kins: null,
+                ibak: new IbakExportImportService());
+
+            var result = orch.Import(sourceDir, projectDir, project);
+
+            Assert.Equal(KanalExportFormat.Ibak, result.Format);
+            Assert.DoesNotContain(result.Messages, m => m.Contains("Nicht zugeordnete Fotos", StringComparison.OrdinalIgnoreCase));
+            var entries = Assert.Single(project.Data).Protocol!.Current.Entries;
+
+            Assert.Empty(entries.Single(e => e.Code == "BCD").FotoPaths);
+            Assert.Empty(entries.Single(e => e.Code == "BCE").FotoPaths);
+
+            var fotos = entries
+                .Where(e => e.Code == "BCB" || e.Code == "BCC")
+                .SelectMany(e => e.FotoPaths)
+                .Select(p => p.Replace('\\', '/'))
+                .ToArray();
+
+            Assert.Equal(
+                new[]
+                {
+                    "Fotos/Haltungen/10081-8993/H_SS 10081-SS 8993_001.jpg",
+                    "Fotos/Haltungen/10081-8993/H_SS 10081-SS 8993_002.jpg",
+                    "Fotos/Haltungen/10081-8993/H_SS 10081-SS 8993_003.jpg"
+                },
+                fotos);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public void Import_MeldetWarnungWennDatenquelleAberNullHaltungen()
     {
         var root = Path.Combine(Path.GetTempPath(), $"orch-zero-warning-{Guid.NewGuid():N}");

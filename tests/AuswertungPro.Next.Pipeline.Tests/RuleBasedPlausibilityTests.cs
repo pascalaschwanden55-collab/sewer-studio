@@ -160,7 +160,7 @@ public class RuleBasedPlausibilityTests
 
         Assert.Equal("BAGA", result.SuggestedCode);
         Assert.Equal(0.9, result.Confidence);
-        Assert.DoesNotContain(result.Warnings ?? Array.Empty<string>(), w => w.Contains("PL01"));
+        Assert.Empty(result.Warnings ?? Array.Empty<string>());
     }
 
     [Fact]

@@ -97,8 +97,7 @@ public sealed class RetrievalEvalFilterTests : IDisposable
                 var filtered = new RetrievalService(db, FakeEmbedder(), evalKeys);
                 var results = await filtered.RetrieveAsync("Riss", topK: 10, CancellationToken.None);
 
-                Assert.DoesNotContain(results, r => r.Sample.CaseId == evalHaltung);
-                Assert.Contains(results, r => r.Sample.CaseId == cleanHaltung);
+                Assert.Equal(new[] { cleanHaltung }, results.Select(r => r.Sample.CaseId).ToArray());
             }
         }
         finally

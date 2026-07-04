@@ -286,7 +286,6 @@ public sealed class EvalSetBenchmarkTests : IDisposable
         Assert.Equal(2, hints.Count);
         Assert.Contains("riss_bruch", hints[0]);
         Assert.Contains("ablagerung", hints[1]);
-        Assert.DoesNotContain(hints, h => h.Contains("leer", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

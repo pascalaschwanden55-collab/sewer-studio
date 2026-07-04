@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AuswertungPro.Next.Infrastructure.Import.Common;
 
 namespace AuswertungPro.Next.Infrastructure;
 
@@ -100,7 +101,7 @@ internal static class HoldingVideoMatching
             return new HoldingFolderDistributor.VideoFindResult(HoldingFolderDistributor.VideoMatchStatus.Ambiguous, null, exact, "Multiple matches for date_haltung");
 
         // Strategy 2: Contains both Haltung and Date in filename (normalized)
-        var hKey = NormalizeKey(haltung);
+        var hKey = NormalizeHoldingVideoKey(haltung);
         var dateKey = NormalizeKey(dateStamp);
         // Gegeninspektions-Marker: Videos, deren Name direkt nach der Haltung ein 'g' fuehrt
         // (Konvention z.B. H__<Haltung>_G.mp4), gehoeren zur Gegeninspektion und duerfen die
@@ -110,7 +111,7 @@ internal static class HoldingVideoMatching
         var gKey = hKey + "g";
         var containing = files.Where(f =>
         {
-            var nameKey = NormalizeKey(Path.GetFileNameWithoutExtension(f));
+            var nameKey = NormalizeHoldingVideoKey(Path.GetFileNameWithoutExtension(f));
             return nameKey.Contains(hKey, StringComparison.OrdinalIgnoreCase)
                    && !nameKey.Contains(gKey, StringComparison.OrdinalIgnoreCase)
                    && nameKey.Contains(dateKey, StringComparison.OrdinalIgnoreCase);
@@ -126,7 +127,7 @@ internal static class HoldingVideoMatching
         // Import-Report etikettiert (Sicherheitsnetz statt zusaetzlicher UI).
         var haltungOnly = files.Where(f =>
         {
-            var nameKey = NormalizeKey(Path.GetFileNameWithoutExtension(f));
+            var nameKey = NormalizeHoldingVideoKey(Path.GetFileNameWithoutExtension(f));
             return nameKey.Contains(hKey, StringComparison.OrdinalIgnoreCase)
                    && !nameKey.Contains(gKey, StringComparison.OrdinalIgnoreCase);
         }).ToList();
@@ -272,4 +273,7 @@ internal static class HoldingVideoMatching
     // Delegiert an HoldingTextNormalizer – identische Logik, jetzt mit Null-Guard.
     private static string NormalizeKey(string value)
         => HoldingTextNormalizer.NormalizeKey(value);
+
+    private static string NormalizeHoldingVideoKey(string? value)
+        => HoldingTextNormalizer.NormalizeKey(HoldingKeyNormalizer.NormalizeIbak(value));
 }

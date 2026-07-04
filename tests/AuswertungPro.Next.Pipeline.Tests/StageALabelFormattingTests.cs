@@ -28,8 +28,7 @@ public sealed class StageALabelFormattingTests
     public void SanitizeFileName_ErsetztUngueltigeZeichen()
     {
         var result = StageALabelFormatting.SanitizeFileName("sample:name|test");
-        Assert.DoesNotContain(':', result);
-        Assert.DoesNotContain('|', result);
+        Assert.Equal("sample_name_test", result);
     }
 
     [Fact]

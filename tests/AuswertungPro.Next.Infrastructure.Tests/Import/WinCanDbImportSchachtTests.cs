@@ -214,8 +214,7 @@ public sealed class WinCanDbImportSchachtTests
                 string.Equals(r.GetFieldValue("Haltungsname"), "06-001", StringComparison.OrdinalIgnoreCase));
             Assert.NotNull(rec);
             var datum = rec!.GetFieldValue("Datum_Jahr") ?? "";
-            Assert.Contains("2024", datum);
-            Assert.DoesNotContain("1998", datum);
+            Assert.Equal("15.01.2024", datum);
         }
         finally
         {

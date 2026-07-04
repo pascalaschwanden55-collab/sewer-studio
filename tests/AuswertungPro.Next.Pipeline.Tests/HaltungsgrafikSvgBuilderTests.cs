@@ -55,7 +55,7 @@ public sealed class HaltungsgrafikSvgBuilderTests
         var svg = HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(
             50.0, Array.Empty<ProtocolEntry>(), null, null, null, null, overrideHeight: 700);
         Assert.Contains("height='700'", svg);
-        Assert.DoesNotContain("height='520'", svg);
+        Assert.StartsWith("<svg xmlns='http://www.w3.org/2000/svg' width='770' height='700'", svg);
     }
 
     // --- Schachtknoten ---
@@ -109,7 +109,7 @@ public sealed class HaltungsgrafikSvgBuilderTests
     {
         var svg = HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(
             50.0, Array.Empty<ProtocolEntry>(), null, null, null, flowDown: null);
-        Assert.DoesNotContain("Fliessrichtung", svg);
+        Assert.Equal(0, svg.Split(new[] { "Fliessrichtung" }, StringSplitOptions.None).Length - 1);
     }
 
     // --- Eintraege ---
@@ -153,7 +153,7 @@ public sealed class HaltungsgrafikSvgBuilderTests
         var svg = HaltungsgrafikSvgBuilder.BuildHaltungsgrafikSvg(
             50.0, Array.Empty<ProtocolEntry>(), null, "Knoten & Test", null, null);
         Assert.Contains("Knoten &amp; Test", svg);
-        Assert.DoesNotContain("Knoten & Test", svg.Replace("&amp;", ""));
+        Assert.Equal(1, svg.Split(new[] { "Knoten &amp; Test" }, StringSplitOptions.None).Length - 1);
     }
 
     [Fact]

@@ -56,12 +56,11 @@ public sealed class TeacherAnnotationStoreTests
             var ids = (await TeacherAnnotationStore.LoadAsync())
                 .Select(a => a.AnnotationId).ToHashSet(StringComparer.Ordinal);
 
-            Assert.Contains("survivor", ids);
-            for (int i = 0; i < n; i++)
-            {
-                Assert.Contains($"add-{i}", ids);          // kein Append verloren
-                Assert.DoesNotContain($"del-{i}", ids);    // alle Deletes wirksam
-            }
+            var expected = Enumerable.Range(0, n)
+                .Select(i => $"add-{i}")
+                .Append("survivor")
+                .ToHashSet(StringComparer.Ordinal);
+            Assert.True(ids.SetEquals(expected), $"Unerwartete Annotationen: {string.Join(", ", ids.OrderBy(x => x))}");
         });
     }
 

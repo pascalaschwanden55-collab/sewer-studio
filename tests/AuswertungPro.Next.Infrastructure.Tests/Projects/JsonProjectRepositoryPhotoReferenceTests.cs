@@ -84,6 +84,40 @@ public sealed class JsonProjectRepositoryPhotoReferenceTests
         Assert.Equal("Fotos/Haltungen/22147-22151/H_22147-22151_116.jpg", Assert.Single(record.VsaFindings).FotoPath);
     }
 
+    [Fact]
+    public void Save_NormalizesOriginalProtocolPhotoReferences()
+    {
+        using var temp = new TempDir();
+        var projectFile = Path.Combine(temp.Path, "Projektdateien", "projekt.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(projectFile)!);
+
+        var photoDir = Path.Combine(temp.Path, "Fotos", "Haltungen", "06-001");
+        Directory.CreateDirectory(photoDir);
+        File.WriteAllText(Path.Combine(photoDir, "H_06-001_002.jpg"), "bild");
+
+        var stale = Path.Combine(temp.Path, "Importdateien", "XTF", "Foto", "H_06-001_002.jpg");
+        var project = new Project();
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "06-001", FieldSource.Xtf, userEdited: false);
+        record.Protocol = new ProtocolDocument();
+        record.Protocol.Original.Entries.Add(new ProtocolEntry
+        {
+            FotoPaths = { stale }
+        });
+        project.Data.Add(record);
+
+        var repo = new JsonProjectRepository();
+        var save = repo.Save(project, projectFile);
+        var load = repo.Load(projectFile);
+
+        Assert.True(save.Ok, save.ErrorMessage);
+        Assert.True(load.Ok, load.ErrorMessage);
+        var loadedRecord = Assert.Single(load.Value!.Data);
+        Assert.Equal(
+            "Fotos/Haltungen/06-001/H_06-001_002.jpg",
+            Assert.Single(loadedRecord.Protocol!.Original.Entries[0].FotoPaths));
+    }
+
     private static Project BuildProjectWithStalePhoto(string stalePath)
     {
         var project = new Project();

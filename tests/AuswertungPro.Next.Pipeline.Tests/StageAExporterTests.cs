@@ -241,7 +241,7 @@ public sealed class StageAExporterTests : IDisposable
             s.Code == "BDBA"
             && s.CodeMeta?.Code == "BDBA"
             && s.CodeMeta.Parameters["catalog.standardAnnotation"] == "A");
-        Assert.DoesNotContain(clean, s => s.Code == "BCCYY");
+        Assert.Equal(new[] { "BAGA", "BDBA" }, clean.Select(s => s.Code).OrderBy(c => c, StringComparer.Ordinal).ToArray());
     }
 
     [Fact]

@@ -42,8 +42,7 @@ public sealed class ShaftRenameServiceTests
             Assert.True(File.Exists(Path.Combine(newFolder, $"20260618_{newSan}.pdf")), "PDF-Datei wurde nicht umbenannt.");
 
             var pdfPath = record.GetFieldValue("PDF_Path");
-            Assert.Contains(newSan, pdfPath, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain(oldSan, pdfPath, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal($"Sch\u00e4chte_Verteilt/{newSan}/20260618_{newSan}.pdf", pdfPath);
             Assert.False(Path.IsPathRooted(pdfPath), $"PDF_Path soll relativ bleiben: {pdfPath}");
 
             var resolved = ProjectPathResolver.ResolveFilePath(pdfPath, projectFile);
@@ -92,9 +91,7 @@ public sealed class ShaftRenameServiceTests
             Assert.True(File.Exists(newPdf), "PDF-Datei wurde nicht auf die neue Schachtnummer umbenannt.");
 
             var pdfPath = record.GetFieldValue("PDF_Path");
-            Assert.Contains(newSan, pdfPath, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain(existingFolderName, pdfPath, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("457", pdfPath, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal($"Sch\u00e4chte_Verteilt/{newSan}/20260618_{newSan}.pdf", pdfPath);
 
             var resolved = ProjectPathResolver.ResolveFilePath(pdfPath, projectFile);
             Assert.Equal(newPdf, resolved);

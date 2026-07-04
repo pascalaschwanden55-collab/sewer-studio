@@ -72,6 +72,8 @@ public sealed class IbakFdbSchemaHeuristicsTests
     [InlineData("L__100-200_001.jpg", "100-200")]
     [InlineData("L_100-200_001.jpg", "100-200")]
     [InlineData("H__100-200_001.jpg", "100-200")]
+    [InlineData("H_100-200_001.jpg", "100-200")]
+    [InlineData("H_SS 10081-SS 8993_001.jpg", "10081-8993")]
     [InlineData("L__haltung_a_001.jpg", "haltung_a")]
     [InlineData("no_match.jpg", "")]
     [InlineData("", "")]

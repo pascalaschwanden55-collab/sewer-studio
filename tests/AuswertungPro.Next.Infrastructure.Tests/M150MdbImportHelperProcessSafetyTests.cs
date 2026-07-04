@@ -1,33 +1,24 @@
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
+using static TestRepoPaths;
+
 public sealed class M150MdbImportHelperProcessSafetyTests
 {
     [Fact]
     public void M150MdbImportHelperUsesSharedTimeoutProcessRunner()
     {
-        var source = File.ReadAllText(FindRepoFile("src", "AuswertungPro.Next.Infrastructure", "Import", "Xtf", "M150MdbImportHelper.cs"));
+        var source = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.Infrastructure", "Import", "Xtf", "M150MdbImportHelper.cs"));
 
         Assert.Contains("ExternalProcessRunner.RunAsync", source);
-        Assert.DoesNotContain("WaitForExit(", source);
+        AssertNoForbiddenTokens(source, "WaitForExit(");
     }
 
-    private static string FindRepoFile(params string[] relativeParts)
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
     {
-        foreach (var start in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory(), Path.GetDirectoryName(SourceFilePath())! }.Distinct())
-        {
-            var dir = new DirectoryInfo(start);
-            while (dir is not null)
-            {
-                var candidate = Path.Combine(new[] { dir.FullName }.Concat(relativeParts).ToArray());
-                if (File.Exists(candidate))
-                    return candidate;
-                dir = dir.Parent;
-            }
-        }
+        var hits = forbiddenTokens
+            .Where(token => source.Contains(token, StringComparison.Ordinal))
+            .ToArray();
 
-        throw new FileNotFoundException("Repo-Datei nicht gefunden.", Path.Combine(relativeParts));
+        Assert.True(hits.Length == 0, "Verbotene blockierende Prozess-APIs gefunden: " + string.Join(", ", hits));
     }
-
-    private static string SourceFilePath([System.Runtime.CompilerServices.CallerFilePath] string sourceFilePath = "")
-        => sourceFilePath;
 }

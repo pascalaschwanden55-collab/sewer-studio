@@ -977,6 +977,20 @@ public static partial class HoldingFolderDistributor
                 holdingLabelAdjusted = true;
             }
         }
+
+        if (!holdingLabelAdjusted
+            && videoFind.Status == VideoMatchStatus.Matched
+            && videoFind.VideoPath is not null)
+        {
+            var mappedHolding = TryResolveHoldingFromMatchedVideoName(project, videoFind.VideoPath, haltung);
+            if (!string.IsNullOrWhiteSpace(mappedHolding))
+            {
+                haltungRaw = mappedHolding;
+                haltung = SanitizePathSegment(NormalizeHaltungId(mappedHolding));
+                holdingLabelAdjusted = true;
+            }
+        }
+
         try
         {
             var holdingFolder = Path.Combine(destGemeindeFolder, haltung);

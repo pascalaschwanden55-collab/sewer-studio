@@ -350,8 +350,8 @@ public sealed class IbakExportImportService : IIbakImportService
     private static Dictionary<string, List<string>> BuildPhotoMapFromFiles(Dictionary<string, List<string>> index)
     {
         var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-        // Unterstützt L_, L__ und H__ Prefix (verschiedene IBAK-Versionen)
-        var rx = new Regex(@"^(?:L__|L_|H__)(.+?)_(\d+)\.(jpg|jpeg|png|bmp)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        // Unterstuetzt L_, L__, H_ und H__ Prefix (verschiedene IBAK-Versionen).
+        var rx = new Regex(@"^(?:L__|L_|H__|H_)(.+?)_(\d+)\.(jpg|jpeg|png|bmp)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         foreach (var fileName in index.Keys)
         {
@@ -412,13 +412,52 @@ public sealed class IbakExportImportService : IIbakImportService
             for (var i = 0; i < wantCount && queue.Count > 0; i++)
             {
                 var photo = queue.Dequeue();
-                if (!string.IsNullOrWhiteSpace(photo))
-                    entry.FotoPaths.Add(photo);
+                AddPhotoPath(entry, photo);
+            }
+        }
+
+        if (queue.Count > 0 && entries.Count > 0)
+        {
+            // Wenn IBAK keine expliziten Foto-Marker in Daten.txt schreibt, gehoeren die
+            // Bilder zu den echten Beobachtungen, nicht pauschal an Rohranfang/Rohrende.
+            var fallbackTargets = entries.Where(IsPhotoFallbackTarget).ToList();
+            if (fallbackTargets.Count == 0)
+                fallbackTargets = entries;
+
+            var targetIndex = 0;
+            while (queue.Count > 0)
+            {
+                AddPhotoPath(fallbackTargets[Math.Min(targetIndex, fallbackTargets.Count - 1)], queue.Dequeue());
+                if (targetIndex < fallbackTargets.Count - 1)
+                    targetIndex++;
             }
         }
 
         if (queue.Count > 0)
             messages.Add($"IBAK: Nicht zugeordnete Fotos fuer Haltung {holdingKey}: {queue.Count}");
+    }
+
+    private static void AddPhotoPath(ProtocolEntry entry, string? photo)
+    {
+        if (string.IsNullOrWhiteSpace(photo))
+            return;
+
+        if (!entry.FotoPaths.Any(p => string.Equals(p, photo, StringComparison.OrdinalIgnoreCase)))
+            entry.FotoPaths.Add(photo);
+    }
+
+    private static bool IsPhotoFallbackTarget(ProtocolEntry entry)
+    {
+        var code = (entry.Code ?? "").Trim().ToUpperInvariant();
+        if (code is "BCD" or "BCE")
+            return false;
+
+        var text = (entry.Beschreibung ?? "").Trim();
+        if (text.Contains("Rohranfang", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("Rohrende", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return true;
     }
 
     private static bool EntryWantsPhoto(ProtocolEntry entry)

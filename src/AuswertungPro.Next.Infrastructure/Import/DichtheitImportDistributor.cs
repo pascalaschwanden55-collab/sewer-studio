@@ -11,11 +11,13 @@ namespace AuswertungPro.Next.Infrastructure.Import;
 /// <summary>
 /// Verteilt beim Ein-Knopf-Import Dichtheitspruefungsprotokolle (DP) aus der
 /// Quelle in die Haltungsordner — Dateiname &lt;JJJJMMTT&gt;_&lt;Haltung&gt;_DP.pdf.
-/// Kandidaten sind PDFs aus Ordnern mit DP-/Dichtheits-Hinweis im Namen
-/// (z.B. 048473_DP_Gross, 048473_DP_klein). Die Haltungszuordnung uebernimmt
-/// die bestehende Logik <see cref="HoldingFolderDistributor.DistributeDichtheitFiles"/>
-/// (liest die Schaechte aus dem PDF-Inhalt). Kanalfernseh- und DP-Protokolle
-/// liegen damit gemeinsam im Haltungen_Verteilt-Ordner.
+/// Kandidaten sind PDFs, deren Inhalt deterministisch als Dichtheitspruefung
+/// erkannt wird. Die KI-Zweitmeinung bleibt auf DP-/Dichtheits-Ordner
+/// begrenzt, damit normale Dokumentenordner nicht breit geraten werden.
+/// Die Haltungszuordnung uebernimmt die bestehende Logik
+/// <see cref="HoldingFolderDistributor.DistributeDichtheitFiles"/> (liest die
+/// Schaechte aus dem PDF-Inhalt). Kanalfernseh- und DP-Protokolle liegen damit
+/// gemeinsam im Haltungen_Verteilt-Ordner.
 /// </summary>
 public static class DichtheitImportDistributor
 {
@@ -171,7 +173,7 @@ public static class DichtheitImportDistributor
         }
     }
 
-    /// <summary>PDFs aus DP-/Dichtheits-Ordnern der Quelle (rekursiv).</summary>
+    /// <summary>Sicher erkannte Dichtheitspruefungs-PDFs der Quelle (rekursiv).</summary>
     internal static IReadOnlyList<string> FindeKandidaten(string sourceFolder)
     {
         if (string.IsNullOrWhiteSpace(sourceFolder) || !Directory.Exists(sourceFolder))
@@ -180,8 +182,7 @@ public static class DichtheitImportDistributor
         try
         {
             return SafeFileEnumeration.EnumerateFilesSafe(sourceFolder, "*.pdf", recursive: true)
-                .Where(p => LiegtInDpOrdner(p, sourceFolder))
-                .Where(p => PdfDokumentTypErkennung.ErkenneDatei(p) == PdfDokumentTyp.Dichtheitspruefung)
+                .Where(p => IstDichtheitsKandidat(p, sourceFolder))
                 .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
@@ -189,6 +190,21 @@ public static class DichtheitImportDistributor
         {
             return Array.Empty<string>();
         }
+    }
+
+    private static bool IstDichtheitsKandidat(string pdfPath, string sourceFolder)
+    {
+        var text = PdfDokumentTypErkennung.ReadPdfTextPrefix(pdfPath, maxPages: 6);
+        var typMitDateiname = PdfDokumentTypErkennung.ErkenneText(text, Path.GetFileName(pdfPath));
+        if (typMitDateiname != PdfDokumentTyp.Dichtheitspruefung)
+            return false;
+
+        if (LiegtInDpOrdner(pdfPath, sourceFolder))
+            return true;
+
+        // In neutralen Ordnern wie "Dokumente" reicht ein Dateiname mit "dicht"
+        // nicht aus; der Inhalt muss selbst eine Dichtheitspruefung belegen.
+        return PdfDokumentTypErkennung.ErkenneText(text, fileName: null) == PdfDokumentTyp.Dichtheitspruefung;
     }
 
     private static bool LiegtInDpOrdner(string pdfPath, string sourceFolder)

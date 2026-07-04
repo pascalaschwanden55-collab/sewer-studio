@@ -34,7 +34,7 @@ public sealed class VsaKekCatalogBuilderTests
         {
             var def = RequireCode(manifest, code);
             Assert.Equal("BDB", def.CanonicalCode);
-            Assert.DoesNotContain(def.Parameters, p => string.Equals(p.DataKey, "Q1", StringComparison.OrdinalIgnoreCase));
+            Assert.Empty(def.Parameters.Where(p => string.Equals(p.DataKey, "Q1", StringComparison.OrdinalIgnoreCase)));
         }
 
         Assert.Equal("A", RequireCode(manifest, "BDBA").StandardAnnotation);
@@ -49,16 +49,19 @@ public sealed class VsaKekCatalogBuilderTests
         {
             new InMemoryCodeCatalogProvider(manifest.Codes)
         });
-        Assert.Contains("BAGA", provider.AllowedCodes());
-        Assert.DoesNotContain("BAG", provider.AllowedCodes());
-        Assert.DoesNotContain("BCCYY", provider.AllowedCodes());
+        var allowedCodes = provider.AllowedCodes();
+        Assert.Equal("BAGA", Assert.Single(allowedCodes.Where(code =>
+            string.Equals(code, "BAG", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(code, "BAGA", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(code, "BCCYY", StringComparison.OrdinalIgnoreCase))));
         Assert.True(provider.TryGet("BCCYY", out _));
 
         var selectionCatalog = new CodeCatalogSelectionCatalog(provider);
         Assert.Equal("Anschluss einragend", selectionCatalog.Groups["BA"].Codes["BAGA"].Label);
         Assert.True(selectionCatalog.Groups["BA"].Codes.ContainsKey("BAGA"));
-        Assert.DoesNotContain(selectionCatalog.Groups.Values.SelectMany(g => g.Codes.Keys),
-            code => string.Equals(code, "BCCYY", StringComparison.OrdinalIgnoreCase));
+        Assert.Empty(selectionCatalog.Groups.Values
+            .SelectMany(g => g.Codes.Keys)
+            .Where(code => string.Equals(code, "BCCYY", StringComparison.OrdinalIgnoreCase)));
         var (treeQ1, treeQ2) = selectionCatalog.GetQuantRule("BAGA", null);
         Assert.NotNull(treeQ1);
         Assert.Equal("P", treeQ1!.Pflicht);

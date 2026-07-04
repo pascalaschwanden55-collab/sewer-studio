@@ -134,7 +134,6 @@ public sealed class ObservationZustandBuilderTests
         var text = ObservationZustandBuilder.Build(entry, catalog);
 
         Assert.Equal("Bogen nach rechts, Winkel = 45°", text);
-        Assert.DoesNotContain("Q1", text);
     }
 
     [Fact]

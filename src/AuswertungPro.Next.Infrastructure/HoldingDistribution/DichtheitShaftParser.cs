@@ -4,7 +4,7 @@ namespace AuswertungPro.Next.Infrastructure.HoldingDistribution;
 
 internal static class DichtheitShaftParser
 {
-    private const string SchachtIdPattern = @"[A-Za-z]{0,3}[\-]?\d{2,}(?:[.\-]\d{2,})?";
+    private const string SchachtIdPattern = @"[A-Za-z]{0,3}\s*[\-]?\s*(?:\d{1,2}\.)?\d{2,}(?:[.\-]\d{2,})?";
 
     private static readonly Regex UpperShaftRegex = new(
         @"oberer\s*Schacht\s*[:\-]?\s*(?<v>" + SchachtIdPattern + ")",
@@ -61,8 +61,8 @@ internal static class DichtheitShaftParser
         var lower = LowerShaftRegex.Match(text);
         if (upper.Success && lower.Success)
         {
-            var a = upper.Groups["v"].Value;
-            var b = lower.Groups["v"].Value;
+            var a = NormalizeSchachtId(upper.Groups["v"].Value);
+            var b = NormalizeSchachtId(lower.Groups["v"].Value);
             if (!string.Equals(a, b, StringComparison.OrdinalIgnoreCase))
                 return (a, b);
         }
@@ -71,8 +71,8 @@ internal static class DichtheitShaftParser
         var bottom = ShaftBottomRegex.Match(text);
         if (top.Success && bottom.Success)
         {
-            var a = top.Groups["v"].Value;
-            var b = bottom.Groups["v"].Value;
+            var a = NormalizeSchachtId(top.Groups["v"].Value);
+            var b = NormalizeSchachtId(bottom.Groups["v"].Value);
             if (!string.Equals(a, b, StringComparison.OrdinalIgnoreCase))
                 return (a, b);
         }
@@ -81,12 +81,26 @@ internal static class DichtheitShaftParser
         var nach = NachSchachtRegex.Match(text);
         if (von.Success && nach.Success)
         {
-            var a = von.Groups["v"].Value;
-            var b = nach.Groups["v"].Value;
+            var a = NormalizeSchachtId(von.Groups["v"].Value);
+            var b = NormalizeSchachtId(nach.Groups["v"].Value);
             if (!string.Equals(a, b, StringComparison.OrdinalIgnoreCase))
                 return (a, b);
         }
 
         return (null, null);
+    }
+
+    private static string NormalizeSchachtId(string value)
+    {
+        var text = value.Trim();
+        var ssPrefix = Regex.Match(
+            text,
+            @"^SS\s*[-]?\s*(?<id>(?:\d{1,2}\.)?\d{2,}(?:[.\-]\d{2,})?)$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        if (ssPrefix.Success)
+            return ssPrefix.Groups["id"].Value;
+
+        return Regex.Replace(text, @"\s+", "");
     }
 }

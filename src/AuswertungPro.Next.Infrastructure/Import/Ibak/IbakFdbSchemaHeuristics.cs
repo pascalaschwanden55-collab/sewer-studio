@@ -75,11 +75,11 @@ internal static class IbakFdbSchemaHeuristics
 
     /// <summary>
     /// Extrahiert den normalisierten Haltungsschlüssel aus einem IBAK-Fotoname
-    /// (unterstützt L__, L_ und H__ Präfixe).
+    /// (unterstuetzt L__, L_, H__ und H_ Praefixe).
     /// </summary>
     internal static string ExtractHoldingFromPhoto(string fileName)
     {
-        var m = Regex.Match(fileName, @"^(?:L__|L_|H__)(.+?)_(\d+)\.(jpg|jpeg|png|bmp)$", RegexOptions.IgnoreCase);
+        var m = Regex.Match(fileName, @"^(?:L__|L_|H__|H_)(.+?)_(\d+)\.(jpg|jpeg|png|bmp)$", RegexOptions.IgnoreCase);
         if (m.Success)
             return Common.HoldingKeyNormalizer.NormalizeIbak(m.Groups[1].Value);
         return "";

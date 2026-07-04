@@ -65,7 +65,7 @@ public sealed class CatalogMetadataWriterTests
     {
         var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         CatalogMetadataWriter.AddCatalogMetadata(parameters, MakeDef(source: "   "));
-        Assert.DoesNotContain("catalog.source", parameters.Keys);
+        Assert.Empty(parameters);
     }
 
     [Fact]

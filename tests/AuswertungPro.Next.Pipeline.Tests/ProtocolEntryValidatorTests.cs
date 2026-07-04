@@ -239,6 +239,6 @@ public sealed class ProtocolEntryValidatorTests
         var inputs = EmptyInputs() with { Distanz = "5.0", Q1 = "25" };
         var result = ProtocolEntryValidator.ValidateVsaFields("BAB", inputs, def);
         Assert.True(result.Q1Ok);
-        Assert.DoesNotContain(result.Errors, e => e.Contains("Quantifizierung 1"));
+        Assert.Empty(result.Errors);
     }
 }

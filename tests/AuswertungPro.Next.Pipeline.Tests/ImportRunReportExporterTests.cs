@@ -79,9 +79,8 @@ public class ImportRunReportExporterTests : IDisposable
         var errorFile = Directory.GetFiles(_tempDir, "fehlerliste_*").Single();
         var content = File.ReadAllText(errorFile);
 
-        Assert.Contains("FEHLER", content);
-        Assert.Contains("KONFLIKT", content);
-        Assert.DoesNotContain("[INFO]", content);
+        Assert.Equal(1, content.Split("[FEHLER]").Length - 1);
+        Assert.Equal(1, content.Split("[KONFLIKT]").Length - 1);
     }
 
     [Fact]

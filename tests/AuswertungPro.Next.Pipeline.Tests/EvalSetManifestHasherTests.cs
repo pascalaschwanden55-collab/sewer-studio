@@ -44,11 +44,9 @@ public sealed class EvalSetManifestHasherTests : IDisposable
 
         Assert.Equal("sha256", result.Algorithm);
         Assert.Equal(3, result.HashesCount);
-        Assert.Contains(result.Hashes, h => h.RelativePath == "_candidates.json");
-        Assert.Contains(result.Hashes, h => h.RelativePath == "images/a.png");
-        Assert.Contains(result.Hashes, h => h.RelativePath == "labels/a.txt");
-        Assert.DoesNotContain(result.Hashes, h => h.RelativePath == "_manifest.json");
-        Assert.DoesNotContain(result.Hashes, h => h.RelativePath == "metrics_old.csv");
+        Assert.Equal(
+            new[] { "_candidates.json", "images/a.png", "labels/a.txt" },
+            result.Hashes.Select(h => h.RelativePath).ToArray());
         Assert.All(result.Hashes, h => Assert.Equal(64, h.Sha256Hex.Length));
     }
 

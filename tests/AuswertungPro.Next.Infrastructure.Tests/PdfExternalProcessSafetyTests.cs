@@ -1,38 +1,27 @@
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
+using static TestRepoPaths;
+
 public sealed class PdfExternalProcessSafetyTests
 {
     [Fact]
     public void PdfExtractorsUseSharedAsyncTimeoutProcessRunner()
     {
-        var textExtractor = File.ReadAllText(FindRepoFile("src", "AuswertungPro.Next.Infrastructure", "Import", "Pdf", "PdfTextExtractor.cs"));
-        var ocrExtractor = File.ReadAllText(FindRepoFile("src", "AuswertungPro.Next.Infrastructure", "Import", "Pdf", "PdfOcrExtractor.cs"));
+        var textExtractor = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.Infrastructure", "Import", "Pdf", "PdfTextExtractor.cs"));
+        var ocrExtractor = File.ReadAllText(RepoFile("src", "AuswertungPro.Next.Infrastructure", "Import", "Pdf", "PdfOcrExtractor.cs"));
 
         Assert.Contains("ExternalProcessRunner.RunAsync", textExtractor);
         Assert.Contains("ExternalProcessRunner.RunAsync", ocrExtractor);
-        Assert.DoesNotContain(".ReadToEnd()", textExtractor);
-        Assert.DoesNotContain(".ReadToEnd()", ocrExtractor);
-        Assert.DoesNotContain("WaitForExit()", textExtractor);
-        Assert.DoesNotContain("WaitForExit(timeoutMs)", ocrExtractor);
+        AssertNoForbiddenTokens(textExtractor, ".ReadToEnd()", "WaitForExit()");
+        AssertNoForbiddenTokens(ocrExtractor, ".ReadToEnd()", "WaitForExit(timeoutMs)");
     }
 
-    private static string FindRepoFile(params string[] relativeParts)
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
     {
-        foreach (var start in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory(), Path.GetDirectoryName(SourceFilePath())! }.Distinct())
-        {
-            var dir = new DirectoryInfo(start);
-            while (dir is not null)
-            {
-                var candidate = Path.Combine(new[] { dir.FullName }.Concat(relativeParts).ToArray());
-                if (File.Exists(candidate))
-                    return candidate;
-                dir = dir.Parent;
-            }
-        }
+        var hits = forbiddenTokens
+            .Where(token => source.Contains(token, StringComparison.Ordinal))
+            .ToArray();
 
-        throw new FileNotFoundException("Repo-Datei nicht gefunden.", Path.Combine(relativeParts));
+        Assert.True(hits.Length == 0, "Verbotene blockierende Prozess-APIs gefunden: " + string.Join(", ", hits));
     }
-
-    private static string SourceFilePath([System.Runtime.CompilerServices.CallerFilePath] string sourceFilePath = "")
-        => sourceFilePath;
 }

@@ -309,8 +309,10 @@ public sealed class HoldingMeasureFactoryTests
 
         Assert.NotNull(cost);
         var lines = cost!.Measures[0].Lines;
-        // Falsche UV-Zeile muss entfernt worden sein
-        Assert.DoesNotContain(lines, l => l.ItemKey == "INSTALL_UV_ANLAGE");
+        Assert.Equal(
+            new[] { "INSTALL_HL_ANLAGE", "SCHLAUCHLINER_NADELFILZ" },
+            lines.Select(l => l.ItemKey).OrderBy(k => k, StringComparer.Ordinal).ToArray());
+
         // Richtige HL-Zeile muss vorhanden und aktiv sein
         var hlInstall = lines.FirstOrDefault(l => l.ItemKey == "INSTALL_HL_ANLAGE");
         Assert.NotNull(hlInstall);

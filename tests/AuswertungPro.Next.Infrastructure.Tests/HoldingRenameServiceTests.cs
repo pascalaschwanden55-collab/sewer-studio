@@ -54,8 +54,7 @@ public sealed class HoldingRenameServiceTests
 
             // Link zeigt auf das umbenannte Video im umbenannten Ordner (Ordner UND Dateiname).
             var link = record.GetFieldValue("Link") ?? "";
-            Assert.Contains(newSan, link, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain(oldSan, link, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(Path.Combine(newFolder, $"20250310-{newSan}.mp4"), link);
             Assert.True(File.Exists(link), $"Link zeigt auf nicht existierende Datei: {link}");
         }
         finally
@@ -110,8 +109,7 @@ public sealed class HoldingRenameServiceTests
 
             // Link ist relativ aktualisiert und ueber den Root auf die existierende Datei aufloesbar.
             var link = record.GetFieldValue("Link") ?? "";
-            Assert.Contains(newSan, link, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain(oldSan, link, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(Path.Combine("Haltungen_Verteilt", newSan, $"20250310_{newSan}.mpg"), link);
             Assert.False(Path.IsPathRooted(link), $"Link soll relativ bleiben: {link}");
             var resolved = ProjectPathResolver.ResolveFilePath(link, projFile);
             Assert.False(string.IsNullOrWhiteSpace(resolved), "Link nicht gegen Root aufloesbar");

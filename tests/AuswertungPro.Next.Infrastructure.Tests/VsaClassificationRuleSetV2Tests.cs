@@ -21,9 +21,10 @@ public sealed class VsaClassificationRuleSetV2Tests
 
         Assert.Equal(2, rules.SchemaVersion);
         Assert.Equal("channel", rules.AssetKind);
-        Assert.Contains(rules.NonAssessableCodes, code => code.Code == "BCA" && code.CodeMatch == "prefix");
-        Assert.Contains(rules.NonAssessableCodes, code => code.Code == "BDA" && code.CodeMatch == "prefix");
-        Assert.DoesNotContain(rules.NonAssessableCodes, code => code.Code is "BDD" or "BDE");
+        Assert.Equal(
+            new[] { "AEC", "AED", "AEF", "BCA", "BCB", "BCC", "BCD", "BCE", "BDA", "BDB", "BDC", "BDG" },
+            rules.NonAssessableCodes.Select(code => code.Code).ToArray());
+        Assert.All(rules.NonAssessableCodes, code => Assert.Equal("prefix", code.CodeMatch));
         Assert.Contains(rules.NonAssessableRequirements, rule =>
             rule.Code == "BAP" && rule.Requirement == "B" && rule.CodeMatch == "prefix");
         Assert.Contains(rules.NonAssessableRequirements, rule =>
@@ -59,7 +60,7 @@ public sealed class VsaClassificationRuleSetV2Tests
 
         var bbaRoots = rules.Rules.Where(rule => rule.Code == "BBA").ToList();
         Assert.NotEmpty(bbaRoots);
-        Assert.All(bbaRoots, rule => Assert.DoesNotContain("deformation", string.Join(' ', rule.Notes), StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(new[] { "D", "B" }, bbaRoots.Select(rule => rule.Requirement).ToArray());
 
         Assert.Contains(rules.Rules, rule => rule.Status == "not-assessable"
                                              && rule.Classification.Mode == "missing");

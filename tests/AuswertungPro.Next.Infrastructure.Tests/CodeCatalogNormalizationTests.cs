@@ -133,8 +133,7 @@ public sealed class CodeCatalogNormalizationTests
 
         var result = CodeCatalogNormalization.AllowedCodes(codes);
 
-        Assert.Contains("BAB", result);
-        Assert.DoesNotContain("BCA", result);
+        Assert.Equal(new[] { "BAB" }, result);
     }
 
     [Fact]
@@ -148,8 +147,7 @@ public sealed class CodeCatalogNormalizationTests
 
         var result = CodeCatalogNormalization.AllowedCodes(codes);
 
-        Assert.Contains("BAB", result);
-        Assert.DoesNotContain("EXT", result);
+        Assert.Equal(new[] { "BAB" }, result);
     }
 
     [Fact]

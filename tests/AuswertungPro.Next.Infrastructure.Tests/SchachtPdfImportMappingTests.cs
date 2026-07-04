@@ -70,13 +70,19 @@ public sealed class SchachtPdfImportMappingTests
         Assert.Equal("22152", parsed.SchachtNummer);
         Assert.Equal("18.06.2026", parsed.Datum);
         Assert.Equal("Kontrollschacht", parsed.Funktion);
-        Assert.Contains("Konus: Infiltration", parsed.PrimaereSchaeden);
-        Assert.Contains("Konus: Fugen mangelhaft verputzt", parsed.PrimaereSchaeden);
-        Assert.Contains("Bankett: Ausgebrochen", parsed.PrimaereSchaeden);
-        Assert.Contains("Bankett: Riss", parsed.PrimaereSchaeden);
-        Assert.Contains("Durchlaufrinne: Ablagerung", parsed.PrimaereSchaeden);
-        Assert.Contains("Leiter/Steigeisen: fehlt", parsed.PrimaereSchaeden);
-        Assert.DoesNotContain("Tauchbogen: nicht notwendig", parsed.PrimaereSchaeden);
+        Assert.NotNull(parsed.PrimaereSchaeden);
+        var primaereSchaeden = parsed.PrimaereSchaeden;
+        Assert.Equal(
+            new[]
+            {
+                "Konus: Infiltration",
+                "Konus: Fugen mangelhaft verputzt",
+                "Bankett: Riss",
+                "Bankett: Ausgebrochen",
+                "Durchlaufrinne: Ablagerung",
+                "Leiter/Steigeisen: fehlt"
+            },
+            primaereSchaeden.Split('\n', StringSplitOptions.RemoveEmptyEntries));
     }
 
     [Fact]

@@ -75,7 +75,7 @@ public sealed class FewShotExampleStoreTests
             Assert.NotNull(captured);
             Assert.Contains("FewShot Bild loeschen", captured);
             Assert.Contains("BAB", captured);
-            Assert.DoesNotContain(example, store.Examples);
+            Assert.Empty(store.Examples);
         });
     }
 

@@ -37,9 +37,7 @@ public class PrimaryDamagesTextBuilderTests
         var entries = new[] { Entry("A01", "BBC Harte Ablagerungen", 2.0) };
         var result = PrimaryDamagesTextBuilder.Build(entries, skipAePrefix: false);
         Assert.NotNull(result);
-        // Marker wird zu BBC aufgeloest
-        Assert.Contains("BBC", result!);
-        Assert.DoesNotContain("A01", result);
+        Assert.Equal("2.00m BBC Harte Ablagerungen", result);
     }
 
     [Fact]
@@ -66,10 +64,7 @@ public class PrimaryDamagesTextBuilderTests
             Entry("BBC", "Ablagerung", 5.0)
         };
         var result = PrimaryDamagesTextBuilder.Build(entries, skipAePrefix: true);
-        Assert.NotNull(result);
-        Assert.DoesNotContain("AEC", result!);
-        Assert.DoesNotContain("AED", result);
-        Assert.Contains("BBC", result);
+        Assert.Equal("5.00m BBC Ablagerung", result);
     }
 
     [Fact]
@@ -105,8 +100,6 @@ public class PrimaryDamagesTextBuilderTests
     {
         var entries = new[] { Entry("BCD", "Rohranfang", null) };
         var result = PrimaryDamagesTextBuilder.Build(entries, skipAePrefix: false);
-        Assert.NotNull(result);
-        Assert.DoesNotContain("m ", result!.TrimStart());
-        Assert.Contains("BCD", result);
+        Assert.Equal("BCD Rohranfang", result);
     }
 }

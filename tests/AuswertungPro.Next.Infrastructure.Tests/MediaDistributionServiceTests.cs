@@ -320,7 +320,7 @@ public sealed class MediaDistributionServiceTests
         var haltungen = Directory.GetDirectories(Path.Combine(projectFolder, "Haltungen_Verteilt"));
         var ordnerName = Path.GetFileName(Assert.Single(haltungen));
         Assert.Equal(MediaDistributionService.SanitizePathSegment("06.1<2>3:45-67"), ordnerName);
-        Assert.DoesNotContain(ordnerName, c => Path.GetInvalidFileNameChars().Contains(c));
+        Assert.Empty(ordnerName.Where(c => Path.GetInvalidFileNameChars().Contains(c)));
     }
 
     [Fact]

@@ -54,9 +54,16 @@ public sealed class YoloDatasetExportServiceTests : IDisposable
         Assert.Single(Directory.EnumerateFiles(Path.Combine(output, "images"), "*.png", SearchOption.AllDirectories));
 
         var yaml = await File.ReadAllTextAsync(result.YamlPath!);
-        Assert.Contains("'BBA'", yaml);
-        Assert.DoesNotContain("BZZ", yaml);
-        Assert.DoesNotContain("BCC", yaml);
+        var yamlLines = yaml.Split(Environment.NewLine);
+        Assert.StartsWith("# SewerStudio YOLO Dataset - ", yamlLines[0], StringComparison.Ordinal);
+        Assert.Equal("# 1 Samples (0 train, 1 val), 1 Klassen", yamlLines[1]);
+        Assert.Equal($"path: {output}", yamlLines[2]);
+        Assert.Equal("train: images/train", yamlLines[3]);
+        Assert.Equal("val: images/val", yamlLines[4]);
+        Assert.Equal("", yamlLines[5]);
+        Assert.Equal("nc: 1", yamlLines[6]);
+        Assert.Equal("names: ['BBA']", yamlLines[7]);
+        Assert.Equal("", yamlLines[8]);
     }
 
     private static TrainingSample MakeSample(string sampleId, string code, string framePath)

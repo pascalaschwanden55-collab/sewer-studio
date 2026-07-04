@@ -99,10 +99,15 @@ public sealed class ProtocolEntryFactoryTests
 
         var result = ProtocolEntryFactory.BuildKnowledgeQuery(det, req);
 
-        // Kein Uhrlage-, Ausdehnung- oder Einragungs-Segment
-        Assert.DoesNotContain("Uhrlage", result);
-        Assert.DoesNotContain("Ausdehnung", result);
-        Assert.DoesNotContain("Einragung", result);
+        Assert.Equal(
+            new[]
+            {
+                "Riss",
+                $"Meter {10.0:0.00}-{10.5:0.00}",
+                "Severity mid",
+                "Haltung H-001"
+            },
+            result.Split(" | "));
     }
 
     [Fact]
@@ -186,9 +191,12 @@ public sealed class ProtocolEntryFactoryTests
 
         var result = ProtocolEntryFactory.BuildPrompt(det, req, string.Empty, kbExamples);
 
-        // "Vier" darf nicht enthalten sein
-        Assert.DoesNotContain("Vier", result);
-        Assert.Contains("Eins", result);
+        var exampleDescriptions = result
+            .Split(Environment.NewLine)
+            .Where(line => line.StartsWith("- Code=", StringComparison.Ordinal))
+            .Select(line => line[(line.IndexOf("Text=", StringComparison.Ordinal) + "Text=".Length)..])
+            .ToArray();
+        Assert.Equal(new[] { "Eins", "Zwei", "Drei" }, exampleDescriptions);
     }
 
     // ── AddClockParameters ──────────────────────────────────────────────────

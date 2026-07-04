@@ -54,17 +54,18 @@ public sealed class EnhancedVisionAnalysisServiceTests
     [Fact]
     public void EnhancedFrameAnalysis_KenntKeineTransportExceptions()
     {
-        var source = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(),
+        var source = File.ReadAllText(TestRepoPaths.RepoFile(
             "src",
             "AuswertungPro.Next.Application",
             "Ai",
             "EnhancedVisionModels.cs"));
 
-        Assert.DoesNotContain("System.Net.Http", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("System.Net.Sockets", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("HttpRequestException", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("SocketException", source, StringComparison.Ordinal);
+        AssertNoForbiddenTokens(
+            source,
+            "System.Net.Http",
+            "System.Net.Sockets",
+            "HttpRequestException",
+            "SocketException");
     }
 
     [Fact]
@@ -195,15 +196,25 @@ public sealed class EnhancedVisionAnalysisServiceTests
 
         await service.AnalyzeAsync(Convert.ToBase64String([1, 2, 3]));
 
-        Assert.Contains("BBA = Wurzeln", StaticOllamaHandler.LastRequestJson);
-        Assert.Contains("BBB = Anhaftende Stoffe", StaticOllamaHandler.LastRequestJson);
-        Assert.Contains("BAA = Verformung", StaticOllamaHandler.LastRequestJson);
-        Assert.Contains("BAF = Oberflaechenschaden", StaticOllamaHandler.LastRequestJson);
-        Assert.Contains("BAJ = Verschobene Rohrverbindung", StaticOllamaHandler.LastRequestJson);
-        Assert.DoesNotContain("BBB = Bewuchs/Wurzeln", StaticOllamaHandler.LastRequestJson);
-        Assert.DoesNotContain("BBA = Inkrustation", StaticOllamaHandler.LastRequestJson);
-        Assert.DoesNotContain("BAF = Deformation", StaticOllamaHandler.LastRequestJson);
-        Assert.DoesNotContain("BAJ = Ausbrueche/Abplatzungen", StaticOllamaHandler.LastRequestJson);
+        var relevantCatalogLines = LastPrompt()
+            .Split(Environment.NewLine)
+            .Where(line =>
+                line.StartsWith("- BAA =", StringComparison.Ordinal)
+                || line.StartsWith("- BAJ =", StringComparison.Ordinal)
+                || line.StartsWith("- BAF =", StringComparison.Ordinal)
+                || line.StartsWith("- BBA =", StringComparison.Ordinal)
+                || line.StartsWith("- BBB =", StringComparison.Ordinal))
+            .ToArray();
+        Assert.Equal(
+            new[]
+            {
+                "- BAA = Verformung (vertikal oder horizontal)",
+                "- BAJ = Verschobene Rohrverbindung (Rohrverbindung versetzt oder Knick)",
+                "- BAF = Oberflaechenschaden (rauhe Rohrwandung, chemischer Angriff, Korrosion)",
+                "- BBA = Wurzeln (Wurzeleinwuchs/Bewuchs)",
+                "- BBB = Anhaftende Stoffe (Inkrustation/Fett/anhaftende Stoffe)"
+            },
+            relevantCatalogLines);
     }
 
     [Fact]
@@ -309,16 +320,21 @@ public sealed class EnhancedVisionAnalysisServiceTests
         }
     }
 
-    private static string FindRepositoryRoot()
+    private static string LastPrompt()
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            if (File.Exists(Path.Combine(dir.FullName, "AuswertungPro.sln")))
-                return dir.FullName;
-            dir = dir.Parent;
-        }
+        using var doc = JsonDocument.Parse(StaticOllamaHandler.LastRequestJson);
+        return doc.RootElement
+            .GetProperty("messages")[0]
+            .GetProperty("content")
+            .GetString()!;
+    }
 
-        throw new DirectoryNotFoundException("Repository-Root mit AuswertungPro.sln nicht gefunden.");
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = forbiddenTokens
+            .Where(token => source.Contains(token, StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.True(hits.Length == 0, "Verbotene Transport-Typen in Application gefunden: " + string.Join(", ", hits));
     }
 }

@@ -5,6 +5,7 @@ using System.Linq;
 using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.DataPage;
 using AuswertungPro.Next.Domain.Models;
+using UglyToad.PdfPig;
 
 namespace AuswertungPro.Next.UI.DataPage;
 
@@ -90,6 +91,14 @@ public static class DataPageProtocolPathResolver
             var fromHoldings = TryFindProtocolFromRoot(Path.Combine(projectDir, "Haltungen"), holdingTokens);
             if (!string.IsNullOrWhiteSpace(fromHoldings))
                 return fromHoldings;
+
+            var fromImportPdf = TryFindProtocolFromRoot(Path.Combine(projectDir, "Importdateien", "PDF"), holdingTokens);
+            if (!string.IsNullOrWhiteSpace(fromImportPdf))
+                return fromImportPdf;
+
+            var fromImportFiles = TryFindProtocolFromRoot(Path.Combine(projectDir, "Importdateien"), holdingTokens);
+            if (!string.IsNullOrWhiteSpace(fromImportFiles))
+                return fromImportFiles;
 
             var fromStored = TryFindProtocolFromStoredPdfFiles(storedFilesRaw, projectDir, holdingTokens);
             if (!string.IsNullOrWhiteSpace(fromStored))
@@ -318,7 +327,100 @@ public static class DataPageProtocolPathResolver
             return null;
 
         var files = SafeEnumerateFiles(directory, "*.pdf", searchOption);
-        return PickBestPdfCandidate(files, holdingTokens);
+        return PickBestProtocolPdfCandidate(files, holdingTokens);
+    }
+
+    private enum ProtocolPdfCandidateKind
+    {
+        Unknown,
+        Protocol,
+        Plan
+    }
+
+    private static string? PickBestProtocolPdfCandidate(IEnumerable<string> candidates, IReadOnlyList<string> holdingTokens)
+    {
+        var list = candidates
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (list.Count == 0)
+            return null;
+
+        var classified = list
+            .Select(path => new { Path = path, Kind = ClassifyProtocolPdfCandidate(path, holdingTokens) })
+            .ToList();
+
+        var protocols = classified
+            .Where(x => x.Kind == ProtocolPdfCandidateKind.Protocol)
+            .Select(x => x.Path)
+            .ToList();
+        if (protocols.Count > 0)
+            return PickBestPdfCandidate(protocols, holdingTokens);
+
+        var unknown = classified
+            .Where(x => x.Kind == ProtocolPdfCandidateKind.Unknown)
+            .Select(x => x.Path)
+            .ToList();
+
+        return PickBestPdfCandidate(unknown, holdingTokens);
+    }
+
+    private static ProtocolPdfCandidateKind ClassifyProtocolPdfCandidate(string path, IReadOnlyList<string> holdingTokens)
+    {
+        var text = ReadPdfTextPrefix(path, maxPages: 6);
+        if (string.IsNullOrWhiteSpace(text))
+            return ProtocolPdfCandidateKind.Unknown;
+
+        var hasToken = holdingTokens.Any(token =>
+            !string.IsNullOrWhiteSpace(token) &&
+            text.Contains(token, StringComparison.OrdinalIgnoreCase));
+        var hasProtocolMarker =
+            text.Contains("Haltungsinspektion", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("Haltungsbilder", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("Leitungs-Stammdaten", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("Leitungsbericht", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("Leitungsgrafik", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("Leitungsbildbericht", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("Insp.-Datum", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("Kanalinspektion", StringComparison.OrdinalIgnoreCase);
+
+        if (hasToken && hasProtocolMarker)
+            return ProtocolPdfCandidateKind.Protocol;
+
+        var fileName = Path.GetFileName(path);
+        var looksLikePlan =
+            fileName.Contains("plan", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("Leitungsende", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("Dachwasser angeschlossen", StringComparison.OrdinalIgnoreCase);
+
+        if (looksLikePlan && !hasProtocolMarker)
+            return ProtocolPdfCandidateKind.Plan;
+
+        return ProtocolPdfCandidateKind.Unknown;
+    }
+
+    private static string? ReadPdfTextPrefix(string path, int maxPages)
+    {
+        try
+        {
+            using var document = PdfDocument.Open(path);
+            return string.Join(
+                "\n",
+                document.GetPages()
+                    .Take(Math.Max(1, maxPages))
+                    .Select(page => page.Text));
+        }
+        catch
+        {
+            try
+            {
+                return File.ReadAllText(path);
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 
     private static IReadOnlyList<string> SafeEnumerateFiles(string directory, string pattern, SearchOption searchOption)

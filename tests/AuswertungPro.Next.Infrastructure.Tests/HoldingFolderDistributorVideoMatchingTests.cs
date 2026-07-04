@@ -4,6 +4,10 @@ using System.IO;
 using System.Reflection;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure;
+using UglyToad.PdfPig.Content;
+using UglyToad.PdfPig.Core;
+using UglyToad.PdfPig.Fonts.Standard14Fonts;
+using UglyToad.PdfPig.Writer;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -59,6 +63,75 @@ public sealed class HoldingFolderDistributorVideoMatchingTests
         Assert.NotNull(result);
         Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.Matched, result!.Status);
         Assert.Equal(only, result.VideoPath);
+    }
+
+    [Fact]
+    public void FindVideoByHaltungDate_MatchesIbakSsPrefixedVideoName()
+    {
+        // IBAK/KIAS kann das Video roh als "H_SS 10081-SS 8993.mpg" liefern,
+        // waehrend die importierte Haltung zentral zu "10081-8993" normalisiert ist.
+        var method = Type.GetType("AuswertungPro.Next.Infrastructure.HoldingVideoMatching, AuswertungPro.Next.Infrastructure")!
+            .GetMethod("FindVideoByHaltungDate", BindingFlags.Public | BindingFlags.Static,
+                binder: null,
+                types: new[] { typeof(string), typeof(string), typeof(IReadOnlyList<string>) },
+                modifiers: null);
+        Assert.NotNull(method);
+
+        var only = Path.Combine(Path.GetTempPath(), "H_SS 10081-SS 8993.mpg");
+        var files = new List<string> { only };
+
+        var result = (HoldingFolderDistributor.VideoFindResult?)method!.Invoke(
+            null,
+            new object?[] { "10081-8993", "20260703", files });
+
+        Assert.NotNull(result);
+        Assert.Equal(HoldingFolderDistributor.VideoMatchStatus.Matched, result!.Status);
+        Assert.Equal(only, result.VideoPath);
+    }
+
+    [Fact]
+    public void Distribute_UsesExistingNormalizedIbakRecordFromMatchedVideoInsteadOfParsedDuplicate()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"ibak-video-redirect-{Guid.NewGuid():N}");
+        var pdfDir = Path.Combine(root, "pdf");
+        var videoDir = Path.Combine(root, "video");
+        var destDir = Path.Combine(root, "dest");
+        Directory.CreateDirectory(pdfDir);
+        Directory.CreateDirectory(videoDir);
+        Directory.CreateDirectory(destDir);
+
+        var pdfPath = Path.Combine(pdfDir, "Gesamtprotokoll.pdf");
+        var videoPath = Path.Combine(videoDir, "H_SS 10081-SS 8993.mpg");
+        WritePdf(
+            pdfPath,
+            "Haltungsinspektion - 03.07.2026 - 10081-10081",
+            "Film H_SS 10081-SS 8993.mpg",
+            "Leitungsbericht");
+        File.WriteAllText(videoPath, "dummy-video");
+
+        try
+        {
+            var project = new Project();
+            var record = new HaltungRecord();
+            record.SetFieldValue("Haltungsname", "10081-8993", FieldSource.Legacy, userEdited: false);
+            project.AddRecord(record);
+
+            var result = Assert.Single(HoldingFolderDistributor.DistributeFiles(
+                new[] { pdfPath },
+                videoDir,
+                destDir,
+                project: project));
+
+            Assert.True(result.Success, result.Message);
+            Assert.EndsWith(Path.Combine("dest", "10081-8993"), result.HoldingFolder);
+            Assert.True(Directory.Exists(Path.Combine(destDir, "10081-8993")));
+            Assert.False(Directory.Exists(Path.Combine(destDir, "10081-10081")));
+            Assert.Single(project.Data);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
     }
 
     [Fact]
@@ -261,6 +334,21 @@ public sealed class HoldingFolderDistributorVideoMatchingTests
         {
             try { Directory.Delete(tempDir, recursive: true); } catch { }
         }
+    }
+
+    private static void WritePdf(string path, params string[] lines)
+    {
+        using var builder = new PdfDocumentBuilder();
+        var font = builder.AddStandard14Font(Standard14Font.Helvetica);
+        var page = builder.AddPage(PageSize.A4);
+        var y = 780m;
+        foreach (var line in lines)
+        {
+            page.AddText(line, 12, new PdfPoint(40, y), font);
+            y -= 18;
+        }
+
+        File.WriteAllBytes(path, builder.Build());
     }
 }
 

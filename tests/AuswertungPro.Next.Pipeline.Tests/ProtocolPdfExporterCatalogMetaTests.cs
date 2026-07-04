@@ -43,11 +43,7 @@ public sealed class ProtocolPdfExporterCatalogMetaTests
 
         var caption = ProtocolPdfObservationText.BuildPhotoCaptionLine2(entry);
 
-        Assert.StartsWith("BAGA", caption, StringComparison.Ordinal);
-        Assert.Contains("Q1=12 mm", caption, StringComparison.Ordinal);
-        Assert.DoesNotContain("catalog.", caption, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("VSA-KEK-2020-ILI", caption, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("canonicalCode", caption, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("BAGA Q1=12 mm", caption);
     }
 
 }

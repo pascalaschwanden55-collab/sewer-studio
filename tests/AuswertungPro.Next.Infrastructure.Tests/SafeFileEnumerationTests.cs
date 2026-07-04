@@ -45,7 +45,7 @@ public sealed class SafeFileEnumerationTests
             // (kein Fehlalarm auf Umgebungen, die die Deny-ACL nicht durchsetzen).
             if (denyApplied && DenyIsEffective(lockedDir))
             {
-                Assert.DoesNotContain(files, f => f.EndsWith("secret.txt", StringComparison.OrdinalIgnoreCase));
+                Assert.Equal(new[] { "ok.txt" }, files.Select(Path.GetFileName).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray());
                 Assert.Contains(skipped, d => d.EndsWith("locked", StringComparison.OrdinalIgnoreCase));
             }
         }
@@ -78,8 +78,7 @@ public sealed class SafeFileEnumerationTests
             Assert.Contains(files, f => f.EndsWith("deep.txt", StringComparison.OrdinalIgnoreCase));
 
             var flat = SafeFileEnumeration.EnumerateFilesSafe(root, "*.txt", recursive: false).ToList();
-            Assert.Contains(flat, f => f.EndsWith("top.txt", StringComparison.OrdinalIgnoreCase));
-            Assert.DoesNotContain(flat, f => f.EndsWith("deep.txt", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal(new[] { "top.txt" }, flat.Select(Path.GetFileName).OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray());
         }
         finally
         {

@@ -90,8 +90,7 @@ public class MaskLabelTextBuilderTests
         // Wenn extent > 0 und qr > 0: nur extent wird gezeigt
         var q = Quant(extent: 20, qr: 40);
         string text = MaskLabelTextBuilder.BuildMeasurementText(q);
-        Assert.Contains("20%", text);
-        Assert.DoesNotContain("QR:", text);
+        Assert.Equal("20%", text);
     }
 
     [Fact]
@@ -100,8 +99,7 @@ public class MaskLabelTextBuilderTests
         // Wenn qr > 0 und intrusion > 0: nur qr wird gezeigt
         var q = Quant(qr: 40, intrusion: 15);
         string text = MaskLabelTextBuilder.BuildMeasurementText(q);
-        Assert.Contains("QR:40%", text);
-        Assert.DoesNotContain("Einr:", text);
+        Assert.Equal("QR:40%", text);
     }
 
     [Fact]

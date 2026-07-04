@@ -30,6 +30,19 @@ public sealed class DichtheitShaftParserKinsTests
     }
 
     [Fact]
+    public void TryExtractShafts_LiestSsPraefixMitAbstandAusFretzPruefprotokoll()
+    {
+        var (a, b) = DichtheitShaftParser.TryExtractShafts(
+            "Dichtheitspruefung nach SIA190/VSA (Verfahren Luft)\n" +
+            "von Schacht: SS 8993\n" +
+            "nach Schacht: SS 10081\n" +
+            "Pruefverfahren: Rohrleitungspruefung Pruefdruck: 200.0 mbar\n");
+
+        Assert.Equal("8993", a);
+        Assert.Equal("10081", b);
+    }
+
+    [Fact]
     public void TryExtractShafts_GreiftNieDieNormReferenzAlsSchacht()
     {
         // Nur Kopfzeile, keine Labels: lieber gar nichts als SIA190.

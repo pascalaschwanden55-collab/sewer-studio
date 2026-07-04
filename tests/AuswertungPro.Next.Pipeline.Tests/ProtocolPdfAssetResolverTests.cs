@@ -108,6 +108,40 @@ public sealed class ProtocolPdfAssetResolverTests
     }
 
     [Fact]
+    public void ResolvePhotoPaths_prefers_renamed_central_photo_over_existing_old_archive_copy()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), "sewerfoto_" + Guid.NewGuid().ToString("N"));
+        var haltungDir = Path.Combine(temp, "Fotos", "Haltungen", "22147-22151");
+        var archiveDir = Path.Combine(temp, "Importdateien", "XTF", "Foto");
+        Directory.CreateDirectory(haltungDir);
+        Directory.CreateDirectory(archiveDir);
+
+        var central = Path.Combine(haltungDir, "H_22147-22151_116.jpg");
+        var archivedOld = Path.Combine(archiveDir, "H_22147-547.01_116.jpg");
+        File.WriteAllBytes(central, new byte[] { 1 });
+        File.WriteAllBytes(archivedOld, new byte[] { 2 });
+        try
+        {
+            var relativeCentral = Path.Combine("Fotos", "Haltungen", "22147-22151", "H_22147-22151_116.jpg");
+            var cache = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+            var resolved = ProtocolPdfAssetResolver.ResolvePhotoPaths(
+                new[] { relativeCentral, archivedOld },
+                temp,
+                maxPhotos: 3,
+                cache,
+                preferredFolder: haltungDir);
+
+            var only = Assert.Single(resolved);
+            Assert.Equal(central, only);
+        }
+        finally
+        {
+            try { Directory.Delete(temp, recursive: true); } catch { /* best-effort */ }
+        }
+    }
+
+    [Fact]
     public void ResolvePhotoPath_finds_uniquely_renamed_holding_photo_when_folder_was_not_synced()
     {
         var temp = Path.Combine(Path.GetTempPath(), "sewerfoto_" + Guid.NewGuid().ToString("N"));

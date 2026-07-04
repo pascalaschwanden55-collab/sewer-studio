@@ -67,9 +67,7 @@ public sealed class ProtocolZustandTextTests
     public void NormalizeZustandDescription_entfernt_richtungsaenderung_redundant()
     {
         var result = ProtocolZustandText.NormalizeZustandDescription("Bogen Richtungsänderung", null);
-        // "Bogen" bleibt, "Richtungsänderung" wird entfernt
-        Assert.DoesNotContain("Richtungsänderung", result);
-        Assert.Contains("Bogen", result);
+        Assert.Equal("Bogen", result);
     }
 
     [Fact]
@@ -127,8 +125,7 @@ public sealed class ProtocolZustandTextTests
         var lang = new string('A', 200);
         var entry = new ProtocolEntry { Code = "BAB", Beschreibung = lang };
         var result = ProtocolZustandText.BuildObservationZustandTextLong(entry);
-        Assert.DoesNotContain("…", result);
-        Assert.Equal(200, result.Length);
+        Assert.Equal(lang, result);
     }
 
     [Fact]

@@ -65,7 +65,7 @@ public sealed class PrimaryDamageLineParserTests
         var result = PrimaryDamageLineParser.ParsePrimaryDamageLine("2.24m BCCBA Bogen (Details) Q1=15");
         Assert.NotNull(result);
         Assert.Equal("BCCBA", result!.Value.Code);
-        Assert.DoesNotContain("Q1=15", result!.Value.Description);
+        Assert.Equal("Bogen (Details)", result.Value.Description);
     }
 
     [Theory]
@@ -87,7 +87,7 @@ public sealed class PrimaryDamageLineParserTests
         var result = PrimaryDamageLineParser.ParsePrimaryDamageLine("0.00  BCD  Rohranfang  00:00:00");
         Assert.NotNull(result);
         Assert.Equal("BCD", result!.Value.Code);
-        Assert.DoesNotContain("00:00:00", result!.Value.Description);
+        Assert.Equal("Rohranfang", result.Value.Description);
     }
 
     [Fact]

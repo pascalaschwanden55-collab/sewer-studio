@@ -100,6 +100,10 @@ internal static class ProtocolPdfAssetResolver
             var preferred = Path.Combine(preferredFolder, fileName);
             if (File.Exists(preferred))
                 return preferred;
+
+            var renamedPreferred = FindUniquePhotoBySuffix(preferredFolder, fileName, resolveCache);
+            if (!string.IsNullOrWhiteSpace(renamedPreferred))
+                return renamedPreferred;
         }
 
         // 2) Absoluter Pfad, falls die Datei dort noch liegt.
@@ -143,6 +147,44 @@ internal static class ProtocolPdfAssetResolver
         }
 
         return Path.IsPathRooted(normalized) ? normalized : Path.Combine(projectRootAbs, normalized);
+    }
+
+    private static string? FindUniquePhotoBySuffix(
+        string preferredFolder,
+        string fileName,
+        Dictionary<string, string?> cache)
+    {
+        if (string.IsNullOrWhiteSpace(preferredFolder)
+            || string.IsNullOrWhiteSpace(fileName)
+            || !Directory.Exists(preferredFolder))
+            return null;
+
+        var suffix = TryExtractTrailingPhotoSuffix(fileName);
+        if (string.IsNullOrWhiteSpace(suffix))
+            return null;
+
+        var cacheKey = $"preferred-photo-suffix|{preferredFolder}|{suffix}";
+        if (cache.TryGetValue(cacheKey, out var cached))
+            return cached;
+
+        string? found = null;
+        try
+        {
+            var matches = Common.SafeFileEnumeration
+                .EnumerateFilesSafe(preferredFolder, "*" + suffix, recursive: false)
+                .Where(path => Path.GetFileName(path).EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                .Take(2)
+                .ToList();
+
+            found = matches.Count == 1 ? matches[0] : null;
+        }
+        catch
+        {
+            found = null;
+        }
+
+        cache[cacheKey] = found;
+        return found;
     }
 
     internal static string? FindFileByName(

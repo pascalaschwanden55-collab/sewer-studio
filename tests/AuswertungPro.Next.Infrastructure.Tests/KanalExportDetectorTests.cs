@@ -51,8 +51,7 @@ public sealed class KanalExportDetectorTests
         // Assert
         Assert.Equal(KanalExportFormat.WinCan, result.Format);
         Assert.NotNull(result.Db3Path);
-        Assert.EndsWith("proj.db3", result.Db3Path, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("_Meta", result.Db3Path, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(System.IO.Path.Combine(dbDir, "proj.db3"), result.Db3Path);
         Assert.Null(result.VsaKekXtfPath);
         Assert.Null(result.Sia405XtfPath);
     }
@@ -167,7 +166,7 @@ public sealed class KanalExportDetectorTests
     }
 
     [Fact]
-    public void Detect_Ikas_KiasPatternOhneXtf_GibtIkas()
+    public void Detect_Ibak_KiasPatternOhneXtf_GibtIbak()
     {
         // Arrange: echtes KIAS-Pattern (Arizona.fdb + Film + Daten.txt), kein XTF
         using var tmp = new TempDir();
@@ -180,7 +179,7 @@ public sealed class KanalExportDetectorTests
         var result = KanalExportDetector.Detect(tmp.Path);
 
         // Assert
-        Assert.Equal(KanalExportFormat.Ikas, result.Format);
+        Assert.Equal(KanalExportFormat.Ibak, result.Format);
         Assert.Null(result.VsaKekXtfPath);
         Assert.Null(result.Sia405XtfPath);
         Assert.Null(result.Db3Path);

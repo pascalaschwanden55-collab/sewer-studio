@@ -9,6 +9,7 @@ using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Media;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
+using AuswertungPro.Next.Infrastructure.Import.Common;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
@@ -209,6 +210,27 @@ public static partial class HoldingFolderDistributor
             return null;
 
         return candidate;
+    }
+
+    private static string? TryResolveHoldingFromMatchedVideoName(
+        AuswertungPro.Next.Domain.Models.Project? project,
+        string? videoPath,
+        string parsedHolding)
+    {
+        if (project is null || string.IsNullOrWhiteSpace(videoPath))
+            return null;
+
+        var stem = Path.GetFileNameWithoutExtension(videoPath);
+        var candidate = NormalizeHaltungId(HoldingKeyNormalizer.NormalizeIbak(stem));
+        if (!IsValidHaltungId(candidate))
+            return null;
+
+        if (string.Equals(candidate, parsedHolding, StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        // Nur gegen einen bereits vorhandenen Record umbiegen. Ohne diese
+        // Eindeutigkeit wuerde der Dateiname allein neue Haltungen erfinden.
+        return FindRecordByHolding(project, candidate) is null ? null : candidate;
     }
 
 

@@ -52,18 +52,12 @@ public class ProjectPathResolverTests
         => Assert.Equal(erwartet, ProjectPathResolver.SanitizePathSegment(input));
 
     [Theory]
-    [InlineData("../..")]
-    [InlineData("..\\..")]
-    [InlineData("..\\..\\Windows")]
-    public void SanitizePathSegment_ErzeugtNieEinTraversalSegment(string input)
+    [InlineData("../..", "_")]
+    [InlineData("..\\..", "_")]
+    [InlineData("..\\..\\Windows", "_.._Windows")]
+    public void SanitizePathSegment_ErzeugtNieEinTraversalSegment(string input, string erwartet)
     {
-        // Sicherheits-Eigenschaft: keine Pfadtrenner und nicht exakt "."/".." ->
-        // ueber Path.Combine kann damit nicht aus dem Zielordner ausgebrochen werden.
-        var result = ProjectPathResolver.SanitizePathSegment(input);
-        Assert.DoesNotContain('/', result);
-        Assert.DoesNotContain('\\', result);
-        Assert.NotEqual(".", result);
-        Assert.NotEqual("..", result);
+        Assert.Equal(erwartet, ProjectPathResolver.SanitizePathSegment(input));
     }
 
     [Theory]

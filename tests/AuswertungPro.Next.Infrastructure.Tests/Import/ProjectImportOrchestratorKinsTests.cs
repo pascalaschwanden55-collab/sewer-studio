@@ -7,6 +7,10 @@ using AuswertungPro.Next.Infrastructure.Import;
 using AuswertungPro.Next.Infrastructure.Import.Kins;
 using AuswertungPro.Next.Infrastructure.Import.WinCan;
 using AuswertungPro.Next.Infrastructure.Import.Xtf;
+using UglyToad.PdfPig.Content;
+using UglyToad.PdfPig.Core;
+using UglyToad.PdfPig.Fonts.Standard14Fonts;
+using UglyToad.PdfPig.Writer;
 using Xunit;
 
 namespace AuswertungPro.Next.Infrastructure.Tests.Import;
@@ -143,6 +147,21 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
             new WinCanDbImportService(),
             new KinsImportService(new WinCanDbImportService(), new FakeIbak()));
 
+    private static void WritePdf(string path, params string[] lines)
+    {
+        using var builder = new PdfDocumentBuilder();
+        var font = builder.AddStandard14Font(Standard14Font.Helvetica);
+        var page = builder.AddPage(PageSize.A4);
+        var y = 780m;
+        foreach (var line in lines)
+        {
+            page.AddText(line, 12, new PdfPoint(40, y), font);
+            y -= 18;
+        }
+
+        File.WriteAllBytes(path, builder.Build());
+    }
+
     /// <summary>Minimaler IBAK-Fake — der KINS-TXT-Pfad braucht IBAK nie.</summary>
     private sealed class FakeIbak : AuswertungPro.Next.Application.Import.IIbakImportService
     {
@@ -234,15 +253,85 @@ public sealed class ProjectImportOrchestratorKinsTests : IDisposable
     }
 
     [Fact]
-    public void DichtheitKandidaten_NurAusDpOrdnern()
+    public void DichtheitKandidaten_ErkenntSichereDpPdfAusKinsFixture()
     {
         var (sourceDir, _) = ErstelleMiniKinsFixture();
 
         var kandidaten = DichtheitImportDistributor.FindeKandidaten(sourceDir);
 
-        // Beide PDFs aus 048473_DP_Gross, aber nichts aus 048473_PDF oder VSAKEK.
+        // Beide sicher erkannten PDFs aus 048473_DP_Gross, aber nichts aus 048473_PDF oder VSAKEK.
         Assert.Equal(2, kandidaten.Count);
         Assert.All(kandidaten, k => Assert.Contains("DP_Gross", k));
+    }
+
+    [Fact]
+    public void DichtheitKandidaten_ErkenntDichtheitspruefungAuchInDokumenteOrdner()
+    {
+        var sourceDir = Path.Combine(_root, "ibas-dokumente-dp");
+        var dokumente = Path.Combine(sourceDir, "Dokumente");
+        Directory.CreateDirectory(dokumente);
+        var pruefprotokoll = Path.Combine(dokumente, "260622131802.pdf");
+        File.WriteAllText(
+            pruefprotokoll,
+            "Dichtheitspruefung nach SIA190/VSA (Verfahren Luft)\n" +
+            "von Schacht: SS 8993\n" +
+            "nach Schacht: SS 10081\n" +
+            "Pruefdruck: 200.0 mbar\n" +
+            "Pruefresultat: Pruefung bestanden\n" +
+            "22.06.2026");
+
+        var kandidaten = DichtheitImportDistributor.FindeKandidaten(sourceDir);
+
+        Assert.Contains(pruefprotokoll, kandidaten);
+    }
+
+    [Fact]
+    public void DichtheitKandidaten_IgnoriertDichtDateinameOhneDichtheitsInhaltInDokumenteOrdner()
+    {
+        var sourceDir = Path.Combine(_root, "dokumente-dicht-name");
+        var dokumente = Path.Combine(sourceDir, "Dokumente");
+        Directory.CreateDirectory(dokumente);
+        File.WriteAllText(
+            Path.Combine(dokumente, "Dichtheitskonzept_Plan.pdf"),
+            "Sanierungsplan\nLeitungsende\nNetzplan");
+
+        var kandidaten = DichtheitImportDistributor.FindeKandidaten(sourceDir);
+
+        Assert.Empty(kandidaten);
+    }
+
+    [Fact]
+    public void DichtheitVerteilung_DokumentePruefprotokollMitSsPraefixLandetInBestehenderHaltung()
+    {
+        var sourceDir = Path.Combine(_root, "fretz-dokumente-dp");
+        var dokumente = Path.Combine(sourceDir, "Dokumente");
+        var projectDir = Path.Combine(_root, "projekt-dp");
+        Directory.CreateDirectory(dokumente);
+        Directory.CreateDirectory(Path.Combine(projectDir, "Haltungen_Verteilt", "10081-8993"));
+
+        var pruefprotokoll = Path.Combine(dokumente, "260622131802.pdf");
+        WritePdf(
+            pruefprotokoll,
+            "Dichtheitspruefung nach SIA190/VSA (Verfahren Luft)",
+            "von Schacht: SS 8993",
+            "nach Schacht: SS 10081",
+            "Beginn Pruefung: 22.06.2026 13:19:48",
+            "Pruefverfahren: Rohrleitungspruefung Pruefdruck: 200.0 mbar",
+            "Pruefresultat: Pruefung bestanden");
+        var project = new Project();
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "10081-8993", FieldSource.Manual, userEdited: false);
+        project.Data.Add(record);
+
+        var result = DichtheitImportDistributor.Distribute(project, projectDir, sourceDir);
+
+        Assert.True(result.Verteilt == 1, string.Join(Environment.NewLine, result.Messages));
+        Assert.Equal(0, result.NichtZugeordnet);
+        Assert.True(File.Exists(Path.Combine(
+            projectDir,
+            "Haltungen_Verteilt",
+            "10081-8993",
+            "20260622_10081-8993_DP.pdf")));
     }
 
     [Fact]

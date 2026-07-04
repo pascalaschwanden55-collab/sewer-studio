@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using ClosedXML.Excel;
 using AuswertungPro.Next.Infrastructure.Export.Excel;
+using static AuswertungPro.Next.Infrastructure.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -10,9 +11,8 @@ public sealed class SchaechteTemplateColumnReaderTests
     [Fact]
     public void Only_export_excel_reader_exists()
     {
-        var root = FindRepositoryRoot();
         var duplicateImportReader = Path.Combine(
-            root,
+            RepoRoot(),
             "src",
             "AuswertungPro.Next.Infrastructure",
             "Import",
@@ -91,19 +91,5 @@ public sealed class SchaechteTemplateColumnReaderTests
             worksheet.Cell(headerRow, i + 1).Value = headers[i];
 
         workbook.SaveAs(path);
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "AuswertungPro.sln")))
-                return directory.FullName;
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Repository root not found.");
     }
 }

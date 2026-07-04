@@ -68,8 +68,7 @@ public sealed class RetrievalQualityFilterTests
 
         var res = Rank(cands, topK: 2, RetrievalQualityPolicy.Default, out _);
 
-        Assert.Equal(2, res.Count);
-        Assert.DoesNotContain(res, x => x.Sample.SampleId == "r");
+        Assert.Equal(new[] { "g", "y" }, res.Select(x => x.Sample.SampleId).ToArray());
     }
 
     [Fact]

@@ -24,6 +24,20 @@ public static class ProtocolPathResolver
     public static IReadOnlyList<string> BuildHoldingTokens(HaltungRecord record)
     {
         var holdingRaw = (record.GetFieldValue("Haltungsname") ?? string.Empty).Trim();
-        return PdfCandidateSelector.BuildHoldingTokens(holdingRaw);
+        var tokens = new List<string>();
+        tokens.AddRange(PdfCandidateSelector.BuildHoldingTokens(holdingRaw));
+
+        var oben = (record.GetFieldValue("Schacht_oben") ?? string.Empty).Trim();
+        var unten = (record.GetFieldValue("Schacht_unten") ?? string.Empty).Trim();
+        if (!string.IsNullOrWhiteSpace(oben) && !string.IsNullOrWhiteSpace(unten))
+        {
+            tokens.AddRange(PdfCandidateSelector.BuildHoldingTokens($"{oben}-{unten}"));
+            tokens.AddRange(PdfCandidateSelector.BuildHoldingTokens($"{unten}-{oben}"));
+        }
+
+        return tokens
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }

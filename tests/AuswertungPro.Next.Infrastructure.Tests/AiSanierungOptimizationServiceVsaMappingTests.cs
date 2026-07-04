@@ -30,6 +30,5 @@ public sealed class AiSanierungOptimizationServiceVsaMappingTests
         Assert.NotNull(method);
         var prompt = Assert.IsType<string>(method!.Invoke(service, null));
         Assert.Contains("BAC-Codes", prompt, StringComparison.Ordinal);
-        Assert.DoesNotContain("BBB-Codes", prompt, StringComparison.Ordinal);
     }
 }

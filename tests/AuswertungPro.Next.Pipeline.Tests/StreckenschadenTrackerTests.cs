@@ -74,8 +74,9 @@ public sealed class StreckenschadenTrackerTests
         t.Update([Obs("BBA", 12, 5.0)], 5.0);
         // Luecke: anderer Code, BBA fehlt, aber nur 0.5 m weiter -> BBA bleibt offen.
         var lueckenActions = t.Update([Obs("BBC", 6, 5.5)], 5.5);
-        Assert.DoesNotContain(lueckenActions, x => x.MainCode == "BBA");
-        Assert.Contains(lueckenActions, x => x.Type == StreckenschadenTracker.SegmentActionType.Open && x.MainCode == "BBC");
+        var open = Assert.Single(lueckenActions);
+        Assert.Equal(StreckenschadenTracker.SegmentActionType.Open, open.Type);
+        Assert.Equal("BBC", open.MainCode);
 
         // BBA wieder da bei 6.2 -> dieselbe offene Strecke wird fortgesetzt (kein neuer Anfang).
         var wiederDa = t.Update([Obs("BBA", 12, 6.2)], 6.2);
@@ -91,8 +92,9 @@ public sealed class StreckenschadenTrackerTests
         // (<= Toleranz) und bleibt offen. Also nur Open, beide offen.
         var actions = t.Update([Obs("BBA", 9, 5.5)], 5.5);
 
-        Assert.Contains(actions, x => x.Type == StreckenschadenTracker.SegmentActionType.Open && x.ClockHour == 9);
-        Assert.DoesNotContain(actions, x => x.Type == StreckenschadenTracker.SegmentActionType.Close);
+        var open = Assert.Single(actions);
+        Assert.Equal(StreckenschadenTracker.SegmentActionType.Open, open.Type);
+        Assert.Equal(9, open.ClockHour);
         Assert.Equal(2, t.OpenCount); // beide Strecken (3 Uhr noch in Toleranz, 9 Uhr neu)
     }
 

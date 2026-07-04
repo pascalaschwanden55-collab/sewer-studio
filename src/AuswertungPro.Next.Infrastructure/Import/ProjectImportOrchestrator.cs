@@ -367,8 +367,9 @@ public sealed class ProjectImportOrchestrator
 
             // 7c) Dichtheitspruefungsprotokolle (DP) aus der Quelle je Haltung verteilen
             //     (<JJJJMMTT>_<H>_DP.pdf) — Kanalfernseh- UND DP-Protokolle liegen damit
-            //     gemeinsam im Haltungen_Verteilt-Ordner. Kandidaten kommen aus Ordnern
-            //     mit DP-/Dichtheits-Hinweis (z.B. 048473_DP_Gross); ohne solche Ordner no-op.
+            //     gemeinsam im Haltungen_Verteilt-Ordner. Sicher erkannte DP-PDFs
+            //     duerfen auch in neutralen Dokumente-Ordnern liegen; die KI-Zweitmeinung
+            //     bleibt auf DP-/Dichtheits-Ordner begrenzt.
             var dpResult = DichtheitImportDistributor.Distribute(project, projectFolder, sourceFolder, _kiSchiedsrichter);
             messages.AddRange(dpResult.Messages);
             if (dpResult.Verteilt > 0 || dpResult.NichtZugeordnet > 0 || dpResult.Uebersprungen > 0)

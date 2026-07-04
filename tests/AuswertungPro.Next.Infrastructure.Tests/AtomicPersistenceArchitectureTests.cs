@@ -1,5 +1,6 @@
 using System.IO;
 using Xunit;
+using static AuswertungPro.Next.Infrastructure.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.Infrastructure.Tests;
 
@@ -31,29 +32,27 @@ public sealed class AtomicPersistenceArchitectureTests
     [MemberData(nameof(DirectOverwriteTargets))]
     public void PersistenteStores_verwenden_atomaren_TextWriter(string relativePath)
     {
-        var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), relativePath));
+        var source = File.ReadAllText(RepoFile(relativePath));
 
-        Assert.DoesNotContain("File.WriteAllText(", source, System.StringComparison.Ordinal);
-        Assert.DoesNotContain("File.WriteAllTextAsync(", source, System.StringComparison.Ordinal);
-        Assert.DoesNotContain("File.WriteAllLines(", source, System.StringComparison.Ordinal);
-        Assert.DoesNotContain("File.WriteAllLinesAsync(", source, System.StringComparison.Ordinal);
-        Assert.DoesNotContain("new StreamWriter(", source, System.StringComparison.Ordinal);
+        AssertNoForbiddenTokens(
+            source,
+            "File.WriteAllText(",
+            "File.WriteAllTextAsync(",
+            "File.WriteAllLines(",
+            "File.WriteAllLinesAsync(",
+            "new StreamWriter(");
         Assert.True(
             source.Contains("AtomicTextFileWriter.WriteAllText", System.StringComparison.Ordinal)
             || source.Contains("AtomicTextFileWriter.Write(", System.StringComparison.Ordinal),
             "Persistente Textausgaben muessen ueber AtomicTextFileWriter laufen.");
     }
 
-    private static string FindRepositoryRoot()
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            if (File.Exists(Path.Combine(dir.FullName, "AuswertungPro.sln")))
-                return dir.FullName;
-            dir = dir.Parent;
-        }
+        var hits = forbiddenTokens
+            .Where(token => source.Contains(token, StringComparison.Ordinal))
+            .ToArray();
 
-        throw new DirectoryNotFoundException("Repository-Root mit AuswertungPro.sln nicht gefunden.");
+        Assert.True(hits.Length == 0, "Verbotene direkte Schreib-APIs gefunden: " + string.Join(", ", hits));
     }
 }

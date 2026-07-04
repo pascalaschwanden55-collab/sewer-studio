@@ -135,7 +135,9 @@ public sealed class VsaShadowReportTests
             Assert.Equal(2, report.TotalDifferences);
             Assert.Equal(1, report.ExpectedDifferences);
             Assert.Equal(1, report.UnexpectedDifferences);
-            Assert.DoesNotContain(report.Groups, group => group.Code == "BAN");
+            Assert.Equal(
+                new[] { "BAAA", "BAP" },
+                report.Groups.Select(group => group.Code).OrderBy(code => code, StringComparer.Ordinal).ToArray());
         }
         finally
         {

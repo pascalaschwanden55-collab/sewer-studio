@@ -151,10 +151,9 @@ public sealed class GroundTruthFieldParserTests
     {
         var result = GroundTruthFieldParser.NormalizeKnownVsaCode("BAF.B");
 
-        // Hängt davon ab ob BAF.B oder BAFB bekannt ist – wir testen was Ist-Verhalten ist
-        // Wenn normalisiert => kein Punkt mehr im Ergebnis
+        // Haengt davon ab ob BAF.B oder BAFB bekannt ist - wir testen was Ist-Verhalten ist.
         if (result is not null)
-            Assert.DoesNotContain(".", result);
+            Assert.Equal(result.Replace(".", ""), result);
     }
 
     [Fact]
