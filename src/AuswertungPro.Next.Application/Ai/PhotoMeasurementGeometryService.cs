@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Ai;
@@ -166,6 +167,37 @@ public static class PhotoMeasurementGeometryService
     /// <summary>
     /// Berechnet die manuelle Rohrkalibrierung aus einer gezogenen Referenzlinie.
     /// </summary>
+    /// <summary>
+    /// Baut die fachliche Querschnittsverminderung aus einem Freihand-Polygon.
+    /// </summary>
+    public static PhotoMeasurementCrossSectionGeometry? BuildCrossSectionGeometry(
+        IReadOnlyList<NormalizedPoint> points,
+        double renderWidth,
+        double renderHeight,
+        double normalizedDiameter)
+    {
+        if (points.Count < 3 || renderWidth <= 0 || renderHeight <= 0)
+            return null;
+
+        double polygonAreaPx = ShoelaceAreaPx(points, renderWidth, renderHeight);
+        double pipeRadiusPx = PipeRadiusPx(normalizedDiameter, renderWidth, renderHeight);
+        double reductionPercent = CrossSectionPercent(polygonAreaPx, pipeRadiusPx);
+
+        var geometry = new OverlayGeometry
+        {
+            ToolType = OverlayToolType.CrossSection,
+            Points = points.Select(p => new NormalizedPoint(p.X, p.Y)).ToList(),
+            FillPercent = Math.Round(reductionPercent, 1)
+        };
+
+        return new PhotoMeasurementCrossSectionGeometry(
+            Geometry: geometry,
+            ReductionPercent: reductionPercent,
+            LabelPoint: new NormalizedPoint(points.Average(p => p.X), points.Average(p => p.Y)),
+            PolygonAreaPx: polygonAreaPx,
+            PipeRadiusPx: pipeRadiusPx);
+    }
+
     public static PhotoMeasurementCalibrationGeometry? BuildCalibrationGeometry(
         NormalizedPoint start,
         NormalizedPoint end,
@@ -457,6 +489,13 @@ public sealed record PhotoMeasurementAngleGeometry(
 public sealed record PhotoMeasurementCalibrationGeometry(
     double NormalizedDiameter,
     NormalizedPoint PipeCenter);
+
+public sealed record PhotoMeasurementCrossSectionGeometry(
+    OverlayGeometry Geometry,
+    double ReductionPercent,
+    NormalizedPoint LabelPoint,
+    double PolygonAreaPx,
+    double PipeRadiusPx);
 
 public sealed record PhotoMeasurementLineGeometry(
     OverlayGeometry Geometry,

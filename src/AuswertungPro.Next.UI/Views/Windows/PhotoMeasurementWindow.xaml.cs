@@ -837,22 +837,16 @@ public partial class PhotoMeasurementWindow : Window
         if (_clickPoints.Count < 3) return;
         _polygonClosed = true;
 
-        // Polygon-Flaeche (Shoelace in Pixel-Koordinaten fuer korrekte Aspect-Ratio)
         var r = GetImageRenderedRect(PhotoImage);
-        double area = PhotoMeasurementGeometryService.ShoelaceAreaPx(_clickPoints, r.Width, r.Height);
+        var crossSection = PhotoMeasurementGeometryService.BuildCrossSectionGeometry(
+            _clickPoints,
+            r.Width,
+            r.Height,
+            _calibration.NormalizedDiameter);
+        if (crossSection is null) return;
 
-        // Rohr-Querschnittsflaeche (in Pixel-Raum)
-        double pipeRPx = PhotoMeasurementGeometryService.PipeRadiusPx(
-            _calibration.NormalizedDiameter, r.Width, r.Height);
-
-        double reductionPct = PhotoMeasurementGeometryService.CrossSectionPercent(area, pipeRPx);
-
-        _currentGeometry = new OverlayGeometry
-        {
-            ToolType = OverlayToolType.CrossSection,
-            Points = _clickPoints.Select(p => new NormalizedPoint(p.X, p.Y)).ToList(),
-            FillPercent = Math.Round(reductionPct, 1)
-        };
+        _currentGeometry = crossSection.Geometry;
+        double reductionPct = crossSection.ReductionPercent;
 
         // Polygon zeichnen
         ClearByTag(TagOverlay);
@@ -871,9 +865,7 @@ public partial class PhotoMeasurementWindow : Window
         OverlayCanvas.Children.Add(polygon);
 
         // Schwerpunkt fuer Label
-        double centroidX = _clickPoints.Average(p => p.X);
-        double centroidY = _clickPoints.Average(p => p.Y);
-        var labelPos = NormToCanvas(centroidX, centroidY);
+        var labelPos = NormToCanvas(crossSection.LabelPoint.X, crossSection.LabelPoint.Y);
         AddCanvasLabel($"Quersch: {reductionPct:F1}%", labelPos.X, labelPos.Y - 12, TagOverlay);
 
         TxtMeasureInfo.Text = $"Quersch: {reductionPct:F1}%";

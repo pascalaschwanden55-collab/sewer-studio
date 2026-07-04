@@ -264,6 +264,53 @@ public sealed class PhotoMeasurementGeometryServiceTests
     // Winkel-Umrechnung
     // ═══════════════════════════════════════════════════════════════════
 
+    [Fact]
+    public void BuildCrossSectionGeometry_BerechnetFlaecheProzentUndLabelpunkt()
+    {
+        var points = new List<NormalizedPoint>
+        {
+            new(0.25, 0.25),
+            new(0.75, 0.25),
+            new(0.75, 0.75),
+            new(0.25, 0.75)
+        };
+
+        var result = PhotoMeasurementGeometryService.BuildCrossSectionGeometry(
+            points,
+            renderWidth: 200,
+            renderHeight: 200,
+            normalizedDiameter: 1.0);
+
+        Assert.NotNull(result);
+        Assert.Equal(OverlayToolType.CrossSection, result.Geometry.ToolType);
+        Assert.Equal(4, result.Geometry.Points.Count);
+        Assert.Equal(10000, result.PolygonAreaPx, precision: 6);
+        Assert.Equal(100, result.PipeRadiusPx, precision: 6);
+        Assert.Equal(31.830989, result.ReductionPercent, precision: 6);
+        Assert.Equal(31.8, result.Geometry.FillPercent);
+        Assert.Equal(0.5, result.LabelPoint.X, precision: 6);
+        Assert.Equal(0.5, result.LabelPoint.Y, precision: 6);
+    }
+
+    [Fact]
+    public void BuildCrossSectionGeometry_UngueltigeEingaben_GibtNull()
+    {
+        var twoPoints = new List<NormalizedPoint> { new(0, 0), new(1, 0) };
+
+        Assert.Null(PhotoMeasurementGeometryService.BuildCrossSectionGeometry(
+            twoPoints,
+            renderWidth: 100,
+            renderHeight: 100,
+            normalizedDiameter: 1.0));
+
+        var triangle = new List<NormalizedPoint> { new(0, 0), new(1, 0), new(0, 1) };
+        Assert.Null(PhotoMeasurementGeometryService.BuildCrossSectionGeometry(
+            triangle,
+            renderWidth: 0,
+            renderHeight: 100,
+            normalizedDiameter: 1.0));
+    }
+
     [Theory]
     [InlineData(0, 0)]       // 0° → 0h
     [InlineData(90, 3)]      // 90° → 3h
