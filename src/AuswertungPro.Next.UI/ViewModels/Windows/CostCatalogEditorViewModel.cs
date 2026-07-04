@@ -35,6 +35,7 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
 
         _catalog = _store.LoadMerged(projectPath);
         Items = new ObservableCollection<CostCatalogItem>(_catalog.Items);
+        WarnDuplicateNpkCodes();
 
         AddCommand = new RelayCommand(Add);
         RemoveCommand = new RelayCommand(Remove, () => SelectedItem is not null);
@@ -84,6 +85,7 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
             .Where(i => !string.IsNullOrWhiteSpace(i.Key))
             .Select(i => i)
             .ToList();
+        WarnDuplicateNpkCodes();
 
         // Audit W18: projectPath mitgeben, damit unveraenderte NPK-Metadaten nicht im
         // Override eingefroren werden (Default-Korrekturen sollen weiter durchschlagen).
@@ -113,5 +115,20 @@ public sealed partial class CostCatalogEditorViewModel : ObservableObject
                 return candidate;
             index++;
         }
+    }
+
+    private void WarnDuplicateNpkCodes()
+    {
+        var warnings = CostCatalogStore.FindDuplicateNpkCodesWithDifferentUnits(_catalog);
+        if (warnings.Count == 0)
+            return;
+
+        var lines = warnings
+            .Select(w => $"{w.NpkCode}: Einheiten {string.Join(", ", w.Units)} ({string.Join(", ", w.ItemKeys)})");
+        _dialogs.Warn(
+            "Der Katalog enthaelt gleiche NPK-Nummern mit unterschiedlichen Einheiten:\n\n" +
+            string.Join("\n", lines) +
+            "\n\nBitte fachlich pruefen; Speichern wird nicht blockiert.",
+            "NPK-Katalog");
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Costs;
@@ -217,7 +218,7 @@ public static class CostCalculatorLogicService
     }
 
     public static bool IsMeterUnit(string? unit)
-        => string.Equals(unit?.Trim(), "m", StringComparison.OrdinalIgnoreCase);
+        => UnitKinds.IsLength(unit);
 
     public static bool IsConnectionLine(string? itemKey, string? text)
     {

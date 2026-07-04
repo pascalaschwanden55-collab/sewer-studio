@@ -682,7 +682,6 @@ public static class HaltungsDossierPdfBuilder
             {
                 ("Sanieren", record.GetFieldValue("Sanieren_JaNein")),
                 ("Empfohlene Massnahme", record.GetFieldValue("Empfohlene_Sanierungsmassnahmen")),
-                ("Kosten (exkl. MWST)", record.GetFieldValue("Kosten")),
                 ("Zustandsklasse", record.GetFieldValue("Zustandsklasse")),
             };
 
@@ -725,13 +724,13 @@ public static class HaltungsDossierPdfBuilder
                                 table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).Text(line.Text).FontSize(8);
                                 table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).Text(line.Unit).FontSize(8);
                                 table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).AlignRight().Text(FmtDec(line.Qty)).FontSize(8);
-                                table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).AlignRight().Text(FmtDec(line.UnitPrice)).FontSize(8);
-                                table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).AlignRight().Text(FmtDec(lineTotal)).FontSize(8).Bold();
+                                table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).AlignRight().Text(ChfFormat.Money(line.UnitPrice)).FontSize(8);
+                                table.Cell().BorderBottom(0.3f).BorderColor("#E5E7EB").Padding(2).AlignRight().Text(ChfFormat.Money(lineTotal)).FontSize(8).Bold();
                             }
                         });
 
                         col.Item().PaddingTop(2).AlignRight()
-                            .Text($"Zwischentotal: {FmtDec(measure.Total)} CHF").FontSize(9).Bold();
+                            .Text($"Zwischentotal: {ChfFormat.Money(measure.Total)}").FontSize(9).Bold();
                     }
                 }
 
@@ -743,19 +742,19 @@ public static class HaltungsDossierPdfBuilder
                         totalCol.Item().Row(row =>
                         {
                             row.RelativeItem().Text("Netto").FontSize(10);
-                            row.AutoItem().Text($"{FmtDec(holdingCost.Total)} CHF").FontSize(10).Bold();
+                            row.AutoItem().Text(ChfFormat.Money(holdingCost.Total)).FontSize(10).Bold();
                         });
                         totalCol.Item().Row(row =>
                         {
                             // Rate ist als Faktor gespeichert (0.081) -> fuer die Anzeige *100 (Audit W10: "0.1%" statt "8.1%")
                             row.RelativeItem().Text($"MwSt ({holdingCost.MwstRate * 100:0.0}%)").FontSize(10);
-                            row.AutoItem().Text($"{FmtDec(holdingCost.MwstAmount)} CHF").FontSize(10);
+                            row.AutoItem().Text(ChfFormat.Money(holdingCost.MwstAmount)).FontSize(10);
                         });
                     }
                     totalCol.Item().Row(row =>
                     {
                         row.RelativeItem().Text("Gesamttotal").FontSize(11).Bold();
-                        row.AutoItem().Text($"{FmtDec(holdingCost.TotalInclMwst > 0 ? holdingCost.TotalInclMwst : holdingCost.Total)} CHF").FontSize(11).Bold();
+                        row.AutoItem().Text(ChfFormat.Money(holdingCost.TotalInclMwst > 0 ? holdingCost.TotalInclMwst : holdingCost.Total)).FontSize(11).Bold();
                     });
                 });
             }

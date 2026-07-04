@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
@@ -21,7 +22,7 @@ public static class BuilderPageHoldingDataLineBuilder
                 Sanieren = row.Sanieren,
                 Material = row.Material,
                 Zustand = row.Zustand,
-                NetText = $"{row.NetCost:0.00} CHF",
+                NetText = ChfFormat.Money(row.NetCost),
                 DetailText = row.CostSource,
                 MeasuresText = row.MeasuresPreview
             })

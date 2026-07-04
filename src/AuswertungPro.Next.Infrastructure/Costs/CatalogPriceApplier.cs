@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AuswertungPro.Next.Application.Cost;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Costs;
@@ -39,12 +40,16 @@ public static class CatalogPriceApplier
                     if (!catalog.TryGetValue(line.ItemKey.Trim(), out var item) || !item.Active)
                         continue;
 
-                    var price = ResolveExactCatalogPrice(item, measure.Dn, line.Qty);
-                    if (price is decimal p)
+                    var price = CatalogPriceResolver.Resolve(
+                        item,
+                        measure.Dn,
+                        line.Qty,
+                        CatalogPriceResolveMode.Exact);
+                    if (price.HasPrice)
                     {
-                        if (p != line.UnitPrice)
+                        if (price.UnitPrice != line.UnitPrice)
                         {
-                            line.UnitPrice = p;
+                            line.UnitPrice = price.UnitPrice;
                             measureChanged = true;
                         }
 
@@ -82,18 +87,7 @@ public static class CatalogPriceApplier
     /// Bewusst KEIN Naechster-DN-Fallback — lieber Preis stehen lassen als stil falsch ersetzen.
     /// </summary>
     public static decimal? ResolveExactCatalogPrice(CostCatalogItem item, int? dn, decimal qty)
-    {
-        if (item.DnPrices is { Count: > 0 })
-        {
-            if (dn is not int d)
-                return null;
-            var bucket = item.DnPrices.FirstOrDefault(b =>
-                d >= b.DnFrom && d <= b.DnTo
-                && (!b.QtyFrom.HasValue || qty >= b.QtyFrom.Value)
-                && (!b.QtyTo.HasValue || qty <= b.QtyTo.Value));
-            return bucket?.Price;
-        }
-
-        return item.Price;
-    }
+        => CatalogPriceResolver.Resolve(item, dn, qty, CatalogPriceResolveMode.Exact) is { HasPrice: true } result
+            ? result.UnitPrice
+            : null;
 }

@@ -57,6 +57,26 @@ public sealed class CostCalculatorPdfExportModelBuilderTests
         Assert.Null(result);
     }
 
+    [Fact]
+    public void Build_markiert_abweichenden_gespeicherten_mwst_satz()
+    {
+        var cost = Cost("06.1-2", selected: true);
+        cost.MwstRate = 0.077m;
+
+        var result = InvokeBuild(
+            "06.1-2",
+            new DateTime(2026, 2, 8),
+            cost,
+            new[] { new MeasureBlockVm(null, new Dictionary<string, CostCatalogItem>()) },
+            new Dictionary<string, string>(),
+            DateTimeOffset.Parse("2026-02-08T10:00:00Z"));
+
+        Assert.NotNull(result);
+        Assert.Contains(result.Model.TextBlocks, text =>
+            text.Contains("gespeicherten MwSt-Satz 7.7%", StringComparison.Ordinal)
+            && text.Contains("aktueller Katalogsatz ist 8.1%", StringComparison.Ordinal));
+    }
+
     private static CostCalculatorPdfExportModelBuildResultView? InvokeBuild(
         string holding,
         DateTime? date,

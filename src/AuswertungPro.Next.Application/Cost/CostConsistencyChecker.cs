@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Application.Cost;
@@ -139,7 +140,7 @@ public sealed class CostConsistencyChecker
             if (line.Selected && line.UnitPrice > 0 && !line.PriceMissing
                 && catalog.TryGetValue(line.ItemKey ?? "", out var catalogItem))
             {
-                var catalogPrice = ResolveCatalogPrice(catalogItem, block.DnText);
+                var catalogPrice = ResolveCatalogPrice(catalogItem, block.DnText, line.Qty);
                 if (catalogPrice.HasValue && catalogPrice.Value > 0)
                 {
                     var deviation = Math.Abs(line.UnitPrice - catalogPrice.Value) / catalogPrice.Value;
@@ -171,12 +172,11 @@ public sealed class CostConsistencyChecker
                 });
             }
 
-            // KK12: "Kanalroboter" im Text, aber Einheit != "Std"/"h"
+            // KK12: "Kanalroboter" im Text, aber keine Stunden-Einheit.
             if (line.Selected && !string.IsNullOrWhiteSpace(line.Text)
                 && line.Text.Contains("Kanalroboter", StringComparison.OrdinalIgnoreCase)
                 && !string.IsNullOrWhiteSpace(line.Unit)
-                && !string.Equals(line.Unit.Trim(), "Std", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(line.Unit.Trim(), "h", StringComparison.OrdinalIgnoreCase))
+                && !UnitKinds.IsHour(line.Unit))
             {
                 warnings.Add(new ConsistencyWarning
                 {
@@ -184,7 +184,7 @@ public sealed class CostConsistencyChecker
                     Severity = ConsistencyWarningSeverity.Warning,
                     MeasureId = block.MeasureId,
                     ItemKey = line.ItemKey,
-                    Message = $"Position '{Truncate(line.Text)}': Text enthaelt 'Kanalroboter' aber Einheit ist '{line.Unit}' statt 'Std'."
+                    Message = $"Position '{Truncate(line.Text)}': Text enthaelt 'Kanalroboter' aber Einheit ist '{line.Unit}' statt 'Std/h'."
                 });
             }
 
@@ -266,7 +266,7 @@ public sealed class CostConsistencyChecker
 
                 if (catalog.TryGetValue(tmplLine.ItemKey, out var tmplCatItem))
                 {
-                    var expectedPrice = ResolveCatalogPrice(tmplCatItem, block.DnText);
+                    var expectedPrice = ResolveCatalogPrice(tmplCatItem, block.DnText, matchingLine.Qty);
                     if (expectedPrice.HasValue && expectedPrice.Value > 0 && matchingLine.UnitPrice == 0m)
                     {
                         warnings.Add(new ConsistencyWarning
@@ -344,27 +344,21 @@ public sealed class CostConsistencyChecker
     /// <summary>
     /// Loest den effektiven Katalogpreis auf (Fixed direkt; ByDN anhand DN-Text).
     /// </summary>
-    internal static decimal? ResolveCatalogPrice(CostCatalogItem item, string? dnText)
+    internal static decimal? ResolveCatalogPrice(CostCatalogItem item, string? dnText, decimal qty = 0m)
     {
-        if (string.Equals(item.Type, "Fixed", StringComparison.OrdinalIgnoreCase))
-            return item.Price;
-
-        if (string.Equals(item.Type, "ByDN", StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrWhiteSpace(dnText)
-            && int.TryParse(dnText.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var dn))
-        {
-            var match = item.DnPrices.FirstOrDefault(d => dn >= d.DnFrom && dn <= d.DnTo);
-            return match?.Price;
-        }
-
-        return null;
+        var resolved = CatalogPriceResolver.Resolve(
+            item,
+            CatalogPriceResolver.ParseDn(dnText),
+            qty,
+            CatalogPriceResolveMode.WithNearestDnFallback);
+        return resolved.HasPrice ? resolved.UnitPrice : null;
     }
 
     /// <summary>
-    /// Gibt true zurueck, wenn die Einheit eine Laengeneinheit ("m") ist.
+    /// Gibt true zurueck, wenn die Einheit eine Laengeneinheit ist.
     /// </summary>
     internal static bool IsMeterUnit(string? unit)
-        => string.Equals(unit?.Trim(), "m", StringComparison.OrdinalIgnoreCase);
+        => UnitKinds.IsLength(unit);
 
     /// <summary>
     /// Gibt true zurueck, wenn die Zeile eine Anschluss-Position ist.

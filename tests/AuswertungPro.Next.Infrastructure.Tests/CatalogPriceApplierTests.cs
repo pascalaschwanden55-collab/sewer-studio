@@ -125,6 +125,27 @@ public sealed class CatalogPriceApplierTests
         Assert.Equal(108.10m, cost.TotalInclMwst);
     }
 
+    [Fact]
+    public void ApplyPrices_ersetzt_FallbackHint_wenn_exakter_DnPreis_vorhanden_ist()
+    {
+        var catalog = new Dictionary<string, CostCatalogItem>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["GFK"] = ByDnItem(500, 500, 200m),
+        };
+
+        var store = StoreWith("H1", Line("GFK", qty: 5m, price: 180m, overridden: false));
+        var measure = store.ByHolding["H1"].Measures[0];
+        measure.Dn = 500;
+        measure.Lines[0].PriceHint = "Preis von DN 400 uebernommen";
+
+        var changed = ApplyToStore(store, catalog, vatRate: 0.081m);
+
+        var line = measure.Lines[0];
+        Assert.Equal(new[] { "H1" }, changed);
+        Assert.Equal(200m, line.UnitPrice);
+        Assert.Equal("", line.PriceHint);
+    }
+
     // --- BuildRowHinweis-Charakterisierung ---
 
     [Fact]
@@ -149,8 +170,7 @@ public sealed class CatalogPriceApplierTests
     {
         var cost = CostWith(selected: true, qty: 5m, price: 50m);
         var hinweis = BuildHinweis(anschluesse: 3, cost);
-        Assert.Contains("3 Anschluss", hinweis);
-        Assert.DoesNotContain("Preis fehlt", hinweis);
+        Assert.Equal("3 Anschluss(e)", hinweis);
     }
 
     [Fact]

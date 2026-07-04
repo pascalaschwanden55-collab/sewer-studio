@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Output.Offers;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -61,6 +62,20 @@ public sealed class BuilderPageSpecialStatsCalculatorTests
         Assert.Equal("LEM Linerendmanschette", stat.Position);
         Assert.Equal("stk", stat.Unit);
         Assert.Equal(4m, result.Linerendmanschetten);
+    }
+
+    [Fact]
+    public void Compute_zaehlt_Element_Nicht_Als_Lem_Und_Stimmt_Mit_PdfClassifier_Ueberein()
+    {
+        var line = Line("", "Element reparieren", "", 5m);
+        var rows = new[] { Row("H-1", Cost(line)) };
+
+        var result = BuilderPageSpecialStatsCalculator.Compute(rows);
+        var pdfClassified = SpecialStatsClassifier.TryResolveSpecialStatsCategory(line, out _);
+
+        Assert.False(pdfClassified);
+        Assert.Equal(0m, result.Linerendmanschetten);
+        Assert.Empty(result.PositionStats);
     }
 
     private static DruckcenterRowVm Row(string holding, HoldingCost? cost)

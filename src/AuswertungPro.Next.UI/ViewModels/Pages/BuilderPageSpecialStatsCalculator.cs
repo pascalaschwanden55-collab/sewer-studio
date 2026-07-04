@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using AuswertungPro.Next.Infrastructure.Output.Offers;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages;
 

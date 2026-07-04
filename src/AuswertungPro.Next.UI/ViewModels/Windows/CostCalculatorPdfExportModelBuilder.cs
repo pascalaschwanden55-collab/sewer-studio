@@ -1,4 +1,5 @@
 using AuswertungPro.Next.Domain.Models;
+using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
 
 namespace AuswertungPro.Next.UI.ViewModels.Windows;
@@ -26,6 +27,16 @@ public static class CostCalculatorPdfExportModelBuilder
             return null;
 
         var (dn, lengthM) = ResolveFirstDnAndLength(selectedMeasures);
+        var textBlocks = new List<string>
+        {
+            "Kosten je Massnahme: Nettobetraege fuer die aktuell ausgewaehlte Haltung.",
+            "Kostenzusammenstellung nach Eigentuemer und Gesamtpositionen fuer diese Haltung.",
+            "Diese Ausgabe ersetzt eine Offerte und dient als Kostenuebersicht."
+        };
+        var vatMismatchHint = BuildVatMismatchHint(currentHoldingCost.MwstRate, CostCalculatorLogicService.DefaultVatRate);
+        if (vatMismatchHint.Length > 0)
+            textBlocks.Insert(1, vatMismatchHint);
+
         var context = new OfferPdfContext
         {
             ProjectTitle = "Abwasser Uri - Kostenzusammenstellung",
@@ -35,12 +46,7 @@ public static class CostCalculatorPdfExportModelBuilder
             FilterSummaryText = "Eigentuemer: Alle",
             Currency = "CHF",
             OfferNo = "",
-            TextBlocks = new List<string>
-            {
-                "Kosten je Massnahme: Nettobetraege fuer die aktuell ausgewaehlte Haltung.",
-                "Kostenzusammenstellung nach Eigentuemer und Gesamtpositionen fuer diese Haltung.",
-                "Diese Ausgabe ersetzt eine Offerte und dient als Kostenuebersicht."
-            }
+            TextBlocks = textBlocks
         };
 
         var model = OfferPdfModelFactory.CreateCostSummary(
@@ -52,6 +58,19 @@ public static class CostCalculatorPdfExportModelBuilder
 
         return new CostCalculatorPdfExportModelBuildResult(entries, model);
     }
+
+    private static string BuildVatMismatchHint(decimal storedVatRate, decimal currentVatRate)
+    {
+        if (storedVatRate <= 0m || storedVatRate == currentVatRate)
+            return "";
+
+        return $"Hinweis: Diese Ausgabe nutzt den gespeicherten MwSt-Satz {FormatVatRate(storedVatRate)}; "
+            + $"aktueller Katalogsatz ist {FormatVatRate(currentVatRate)}. "
+            + "Kosten neu berechnen, wenn der aktuelle Satz gelten soll.";
+    }
+
+    private static string FormatVatRate(decimal rate)
+        => $"{rate * 100m:0.0}%";
 
     private static (int? Dn, decimal? LengthM) ResolveFirstDnAndLength(
         IEnumerable<MeasureBlockVm> selectedMeasures)

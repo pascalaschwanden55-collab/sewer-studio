@@ -60,6 +60,8 @@
 
     table { width: 100%; border-collapse: collapse; margin-top: 4px; }
     th, td { padding: 7px 8px; vertical-align: top; }
+    thead { display: table-header-group; }
+    tr, .chart-row, .info-card, .textblocks .tb, .totals { break-inside: avoid; page-break-inside: avoid; }
     thead th {
       background: #0b5e7a;
       color: #fff;
@@ -71,6 +73,7 @@
     tbody td { border-bottom: 1px solid #e8eaec; }
     .right { text-align: right; }
     .muted { color: #666; font-size: 9pt; }
+    .price-missing { color: #a13a1a; font-weight: 700; }
     .empty-box {
       border: 1px dashed #c8cdd2;
       background: #fafbfc;

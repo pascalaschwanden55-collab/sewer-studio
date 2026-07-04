@@ -88,6 +88,27 @@ public sealed class SanierungsMatrixDetailEditSessionTests
         Assert.False(session.IsDirty);
     }
 
+    [Fact]
+    public void ApplyManualOverrides_erhaelt_handpreis_bei_neuberechneter_matrixzeile()
+    {
+        var oldCost = Holding(
+            Measure("GFK", "GFK", Line("Hauptarbeit", "GFK", "GFK-Liner", "m", 10m, 123m, true) with
+            {
+                IsPriceOverridden = true,
+                PriceHint = ""
+            }));
+        var recomputed = Holding(
+            Measure("GFK", "GFK", Line("Hauptarbeit", "GFK", "GFK-Liner", "m", 10m, 90m, true)));
+
+        SanierungsMatrixDetailOverrideMerger.ApplyManualOverrides(recomputed, oldCost);
+
+        var line = recomputed.Measures[0].Lines[0];
+        Assert.Equal(123m, line.UnitPrice);
+        Assert.True(line.IsPriceOverridden);
+        Assert.Equal(1230m, recomputed.Total);
+        Assert.Equal(99.63m, recomputed.MwstAmount);
+    }
+
     private static HoldingCost Holding(params MeasureCost[] measures)
     {
         return new HoldingCost

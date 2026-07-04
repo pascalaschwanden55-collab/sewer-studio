@@ -24,13 +24,19 @@ public static class NpkLeistungsverzeichnisExporter
         NumberGroupSeparator = ""
     };
 
-    public static string BuildCsv(IReadOnlyList<AggregatedPosition> positions, string currency = "CHF")
+    public static string BuildCsv(
+        IReadOnlyList<AggregatedPosition> positions,
+        string currency = "CHF",
+        decimal excludedPauschaleTotal = 0m,
+        int excludedPauschaleHoldingCount = 0)
     {
         var cur = string.IsNullOrWhiteSpace(currency) ? "CHF" : currency.Trim();
         var sb = new StringBuilder();
         // Hinweis: BOM/Encoding macht die Datei-Schicht (UTF8Encoding mit BOM),
         // damit der reine CSV-String testbar bleibt.
         sb.AppendLine($"NPK;Position;DN;Menge;Einheit;EP {cur};Total {cur};Haltungen");
+        foreach (var warning in BuildDuplicateNpkUnitWarnings(positions))
+            sb.AppendLine($";WARNUNG: {Csv(warning)};;;;;;");
 
         var grandTotal = 0m;
 
@@ -67,6 +73,14 @@ public static class NpkLeistungsverzeichnisExporter
         }
 
         sb.AppendLine($";TOTAL (exkl. MwSt.);;;;;{grandTotal.ToString("0.00", Nf)};");
+        if (excludedPauschaleTotal > 0m)
+        {
+            var countText = excludedPauschaleHoldingCount > 0
+                ? $" ({excludedPauschaleHoldingCount} Haltung(en))"
+                : "";
+            sb.AppendLine($";Nicht enthaltene Pauschalkosten{countText};;;;;{excludedPauschaleTotal.ToString("0.00", Nf)};");
+        }
+
         return sb.ToString();
     }
 
@@ -112,4 +126,22 @@ public static class NpkLeistungsverzeichnisExporter
     /// </summary>
     private static string CsvText(string? value)
         => string.IsNullOrEmpty(value) ? "" : "=\"" + value.Replace("\"", "\"\"") + "\"";
+
+    private static IEnumerable<string> BuildDuplicateNpkUnitWarnings(IReadOnlyList<AggregatedPosition>? positions)
+    {
+        return (positions ?? new List<AggregatedPosition>())
+            .Where(p => !string.IsNullOrWhiteSpace(p.NpkCode))
+            .GroupBy(p => p.NpkCode.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(g => new
+            {
+                Code = g.Key,
+                Units = g.Select(p => (p.Unit ?? "").Trim())
+                    .Where(u => u.Length > 0)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(u => u, StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+            })
+            .Where(x => x.Units.Count > 1)
+            .Select(x => $"NPK {x.Code} kommt mit unterschiedlichen Einheiten vor: {string.Join(", ", x.Units)}");
+    }
 }

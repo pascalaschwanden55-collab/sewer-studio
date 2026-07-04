@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using AuswertungPro.Next.Application.Cost;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Costs;
@@ -74,42 +75,17 @@ public static class MeasurePricingEngine
                 continue;
             }
 
-            var candidates = item.DnPrices
-                .Where(x => dn >= x.DnFrom && dn <= x.DnTo)
-                .ToList();
-            var usedNearestFallback = false;
-
-            if (candidates.Count == 0)
-            {
-                candidates = CostCalculatorLogicService.FindNearestDnCandidates(item.DnPrices, dn.Value);
-                usedNearestFallback = candidates.Count > 0;
-                if (candidates.Count == 0)
-                {
-                    if (!onlyQtyBased)
-                        results[i] = new LinePriceResult(line.ItemKey, 0m, HasPrice: false, "");
-                    continue;
-                }
-            }
-
-            DnPrice? match;
-            if (hasQtyRules)
-            {
-                match = candidates.FirstOrDefault(x => CostCalculatorLogicService.QtyMatches(x, line.Qty));
-                match ??= candidates.FirstOrDefault(x => !x.QtyFrom.HasValue && !x.QtyTo.HasValue);
-                match ??= candidates[0];
-            }
-            else
-            {
-                match = candidates[0];
-            }
+            var resolved = CatalogPriceResolver.Resolve(
+                item,
+                dn,
+                line.Qty,
+                CatalogPriceResolveMode.WithNearestDnFallback);
 
             results[i] = new LinePriceResult(
                 line.ItemKey,
-                match?.Price ?? 0m,
-                HasPrice: match is not null,
-                PriceHint: usedNearestFallback && match is not null
-                    ? CostCalculatorLogicService.BuildNearestDnPriceHint(match)
-                    : "");
+                resolved.UnitPrice,
+                HasPrice: resolved.HasPrice,
+                PriceHint: resolved.PriceHint);
         }
 
         return results;

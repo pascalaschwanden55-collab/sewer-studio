@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Models.Costs;
 
@@ -10,12 +11,13 @@ namespace AuswertungPro.Next.Infrastructure.Output.Offers;
 public static class OfferPdfModelFactory
 {
     private static readonly CultureInfo Ch = CultureInfo.GetCultureInfo("de-CH");
+    private const string MissingPriceText = "Preis fehlt";
 
     // ---------- Legacy: from CalculatedOffer (old CostCalculationService) ----------
     public static OfferPdfModel Create(CalculatedOffer offer, OfferPdfContext ctx, DateTimeOffset now)
     {
         var currency = string.IsNullOrWhiteSpace(ctx.Currency) ? "CHF" : ctx.Currency;
-        string Money(decimal v) => v.ToString("N2", Ch) + " " + currency;
+        string Money(decimal v) => ChfFormat.Money(v, currency);
         string Qty(decimal v) => v.ToString("0.###", Ch);
 
         var model = new OfferPdfModel
@@ -48,6 +50,7 @@ public static class OfferPdfModelFactory
         {
             var unitPrice = line.UnitPrice ?? 0m;
             var amount = line.Amount ?? (line.Qty * unitPrice);
+            var missingPrice = line.UnitPrice is null || unitPrice == 0m;
 
             model.Lines.Add(new OfferPdfLineModel
             {
@@ -56,8 +59,8 @@ public static class OfferPdfModelFactory
                 Note = line.Source ?? "",
                 QtyText = Qty(line.Qty),
                 Unit = line.Unit ?? "",
-                UnitPriceText = line.UnitPrice is null ? "?" : Money(unitPrice),
-                TotalText = line.Amount is null ? "?" : Money(amount),
+                UnitPriceText = missingPrice ? MissingPriceText : Money(unitPrice),
+                TotalText = missingPrice ? MissingPriceText : Money(amount),
             });
         }
 
@@ -71,7 +74,7 @@ public static class OfferPdfModelFactory
         DateTimeOffset now)
     {
         var currency = string.IsNullOrWhiteSpace(ctx.Currency) ? "CHF" : ctx.Currency;
-        string Money(decimal v) => v.ToString("N2", Ch) + " " + currency;
+        string Money(decimal v) => ChfFormat.Money(v, currency);
         string Qty(decimal v) => v.ToString("0.###", Ch);
 
         var model = new OfferPdfModel
@@ -108,6 +111,7 @@ public static class OfferPdfModelFactory
                     continue;
 
                 var lineTotal = line.Qty * line.UnitPrice;
+                var missingPrice = IsMissingPrice(line);
 
                 model.Lines.Add(new OfferPdfLineModel
                 {
@@ -116,8 +120,8 @@ public static class OfferPdfModelFactory
                     Note = "",
                     QtyText = Qty(line.Qty),
                     Unit = line.Unit,
-                    UnitPriceText = Money(line.UnitPrice),
-                    TotalText = Money(lineTotal),
+                    UnitPriceText = missingPrice ? MissingPriceText : Money(line.UnitPrice),
+                    TotalText = missingPrice ? MissingPriceText : Money(lineTotal),
                 });
             }
         }
@@ -135,7 +139,7 @@ public static class OfferPdfModelFactory
         IReadOnlyList<OfferPdfHoldingDataLineModel>? holdingDataLines = null)
     {
         var currency = string.IsNullOrWhiteSpace(ctx.Currency) ? "CHF" : ctx.Currency;
-        string Money(decimal v) => v.ToString("N2", Ch) + " " + currency;
+        string Money(decimal v) => ChfFormat.Money(v, currency);
         string Qty(decimal v) => v.ToString("0.###", Ch);
 
         var list = (entries ?? Array.Empty<CostSummaryEntry>())
@@ -248,6 +252,7 @@ public static class OfferPdfModelFactory
                 foreach (var line in selectedLines)
                 {
                     var lineTotal = line.Qty * line.UnitPrice;
+                    var missingPrice = IsMissingPrice(line);
 
                     model.Lines.Add(new OfferPdfLineModel
                     {
@@ -256,8 +261,8 @@ public static class OfferPdfModelFactory
                         Note = measureName,
                         QtyText = Qty(line.Qty),
                         Unit = line.Unit ?? "",
-                        UnitPriceText = Money(line.UnitPrice),
-                        TotalText = Money(lineTotal),
+                        UnitPriceText = missingPrice ? MissingPriceText : Money(line.UnitPrice),
+                        TotalText = missingPrice ? MissingPriceText : Money(lineTotal),
                     });
 
                     var group = string.IsNullOrWhiteSpace(line.Group) ? "Sonstiges" : line.Group.Trim();
@@ -280,6 +285,8 @@ public static class OfferPdfModelFactory
                     positionBucket.TotalNet += lineTotal;
                     positionBucket.Holdings.Add(holding);
                     positionBucket.UnitPrices.Add(line.UnitPrice);
+                    if (missingPrice)
+                        positionBucket.HasMissingPrice = true;
 
                     if (SpecialStatsClassifier.TryResolveSpecialStatsCategory(line, out var category) &&
                         specialStats.TryGetValue(category, out var statBucket))
@@ -373,7 +380,9 @@ public static class OfferPdfModelFactory
                          .OrderBy(p => p.Value.Group, StringComparer.OrdinalIgnoreCase)
                          .ThenBy(p => p.Value.Text, StringComparer.OrdinalIgnoreCase))
             {
-                var unitPriceText = pair.Value.UnitPrices.Count == 1
+                var unitPriceText = pair.Value.HasMissingPrice
+                    ? MissingPriceText
+                    : pair.Value.UnitPrices.Count == 1
                     ? Money(pair.Value.UnitPrices.First())
                     : "variabel";
 
@@ -384,7 +393,7 @@ public static class OfferPdfModelFactory
                     QtyText = Qty(pair.Value.TotalQty),
                     Unit = pair.Value.Unit,
                     UnitPriceText = unitPriceText,
-                    TotalText = Money(pair.Value.TotalNet),
+                    TotalText = pair.Value.HasMissingPrice ? MissingPriceText : Money(pair.Value.TotalNet),
                     HoldingCountText = pair.Value.Holdings.Count.ToString(CultureInfo.InvariantCulture)
                 });
             }
@@ -392,6 +401,9 @@ public static class OfferPdfModelFactory
 
         return model;
     }
+
+    private static bool IsMissingPrice(CostLine line)
+        => line.UnitPrice == 0m;
 
     /// <summary>Builds object block text from pipe/holding metadata.</summary>
     public static string BuildObjectBlock(string holding, int? dn, decimal? lengthM, DateTime? date)
@@ -484,6 +496,7 @@ public static class OfferPdfModelFactory
         public decimal TotalNet { get; set; }
         public HashSet<string> Holdings { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<decimal> UnitPrices { get; } = new();
+        public bool HasMissingPrice { get; set; }
     }
 
 }

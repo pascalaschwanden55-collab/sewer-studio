@@ -71,7 +71,7 @@
     {
       "key": "VORARBEIT_FRAESEN",
       "name": "Fräsen / Hindernisse entfernen",
-      "npkCode": "311.110",
+      "npkCode": "",
       "chapter": "300",
       "unit": "m",
       "type": "Fixed",
@@ -104,7 +104,7 @@
     {
       "key": "VORARBEIT_TV_VORKONTROLLE",
       "name": "TV Vorkontrolle / Referenzaufnahme",
-      "npkCode": "221.110",
+      "npkCode": "",
       "chapter": "200",
       "unit": "m",
       "type": "Fixed",
@@ -289,7 +289,7 @@
     {
       "key": "HAUPTARBEIT_HINDERNISSE_ROBOTER",
       "name": "Ablagerungen / Hindernisse mit Roboter fräsen",
-      "npkCode": "311.110",
+      "npkCode": "",
       "chapter": "300",
       "unit": "h",
       "type": "Fixed",
@@ -311,7 +311,7 @@
     {
       "key": "QK_TV_ABNAHME",
       "name": "TV Abnahme nach Sanierung (VSA-QUICK)",
-      "npkCode": "221.110",
+      "npkCode": "",
       "chapter": "200",
       "unit": "m",
       "type": "Fixed",

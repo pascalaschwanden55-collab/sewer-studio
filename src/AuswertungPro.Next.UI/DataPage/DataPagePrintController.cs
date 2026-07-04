@@ -165,6 +165,9 @@ public sealed class DataPagePrintController
         if (selectedOptions is null)
             return;
 
+        if (project.Dirty && !ConfirmDirtyDossierPrint())
+            return;
+
         var defaultName = $"Dossier_{SanitizeFilenamePart(holdingLabel)}_{_now():yyyyMMdd}.pdf";
         var output = _dialogs.SaveFile(
             "Haltungsdossier als PDF speichern",
@@ -231,6 +234,13 @@ public sealed class DataPagePrintController
             _dialogs.Error($"Dossier konnte nicht erstellt werden:\n{ex.Message}", "Dossier");
         }
     }
+
+    private bool ConfirmDirtyDossierPrint()
+        => _dialogs.ConfirmWarn(
+            "ACHTUNG: Es gibt ungespeicherte Aenderungen im Projekt.\n\n" +
+            "Das Dossier verwendet den zuletzt gespeicherten Stand der Sanierungs-Matrix. Trotzdem drucken?",
+            "Dossier",
+            defaultNo: true);
 
     public async Task PrintHydraulikPdfAsync(HaltungRecord? record)
     {

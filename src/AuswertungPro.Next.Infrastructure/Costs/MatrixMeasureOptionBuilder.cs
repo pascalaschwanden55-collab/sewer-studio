@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Costs;
@@ -53,9 +54,8 @@ public static class MatrixMeasureOptionBuilder
             catalog.TryGetValue(hauptKey, out var hauptItem);
             var unit = hauptItem?.Unit ?? "";
 
-            // Manuelle Menge bei Stk (Reparatur) ODER h (Roboter-Stunden); m -> Haltungslaenge.
-            var manuelleMenge = string.Equals(unit, "Stk", StringComparison.OrdinalIgnoreCase)
-                             || string.Equals(unit, "h", StringComparison.OrdinalIgnoreCase);
+            // Manuelle Menge bei Stueck oder Stunden; Laengeneinheiten verwenden die Haltungslaenge.
+            var manuelleMenge = UnitKinds.IsPiece(unit) || UnitKinds.IsHour(unit);
             var baseName = string.IsNullOrWhiteSpace(tpl.Name) ? id : tpl.Name;
 
             // Name ohne Praefix - die Kategorie zeigt der ComboBox-Gruppen-Header.

@@ -198,4 +198,56 @@ public sealed class OfferPdfModelFactoryTests
         Assert.Empty(model.OwnerSummaryLines);
         Assert.Empty(model.PositionSummaryLines);
     }
+
+    [Fact]
+    public void CreateCostSummary_markiert_nullpreis_als_preis_fehlt()
+    {
+        var entries = new List<CostSummaryEntry>
+        {
+            new()
+            {
+                Holding = "H-1",
+                Owner = "Privat",
+                Cost = new HoldingCost
+                {
+                    Holding = "H-1",
+                    MwstRate = 0.081m,
+                    Measures = new List<MeasureCost>
+                    {
+                        new()
+                        {
+                            MeasureId = "M1",
+                            MeasureName = "Roboter",
+                            Lines = new List<CostLine>
+                            {
+                                new()
+                                {
+                                    Group = "Hauptarbeit",
+                                    ItemKey = "ROBOTER",
+                                    Text = "Kanalroboter",
+                                    Unit = "h",
+                                    Qty = 1m,
+                                    UnitPrice = 0m,
+                                    Selected = true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var model = OfferPdfModelFactory.CreateCostSummary(
+            entries,
+            new OfferPdfContext { Currency = "CHF" },
+            DateTimeOffset.Parse("2026-02-08T10:00:00Z"));
+
+        var line = Assert.Single(model.Lines);
+        Assert.Equal("Preis fehlt", line.UnitPriceText);
+        Assert.Equal("Preis fehlt", line.TotalText);
+
+        var position = Assert.Single(model.PositionSummaryLines);
+        Assert.Equal("Preis fehlt", position.UnitPriceText);
+        Assert.Equal("Preis fehlt", position.TotalText);
+    }
 }

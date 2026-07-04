@@ -13,6 +13,8 @@ using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
 using AuswertungPro.Next.Infrastructure.Output.Offers;
@@ -109,7 +111,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(ExportStateText))]
     private DateTimeOffset? _lastExportedAt;
 
-    public string NetTotalText => $"{NetTotal:N2} CHF";
+    public string NetTotalText => ChfFormat.Money(NetTotal);
     public string StatsInlinerGfkText => $"{StatsInlinerGfk:0.00} m";
     public string StatsInlinerNadelfilzText => $"{StatsInlinerNadelfilz:0.00} m";
     public string StatsManschettenText => $"{StatsManschetten:0.##} stk";
@@ -201,6 +203,15 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             var qualityHint = RowsWithDetailedCosts == FilteredRowsCount
                 ? "Alle gefilterten Haltungen haben Positionsdetails."
                 : $"{FilteredRowsCount - RowsWithDetailedCosts} Haltung(en) ohne Positionsdetails (Pauschalwerte aus Tabelle).";
+            var textBlocks = new List<string>
+            {
+                qualityHint,
+                "Die Statistik fuer Inliner/Manschetten basiert auf vorhandenen Positionsdetails.",
+                "Kostenzusammenstellung nach Eigentuemer und Gesamtpositionen ist im Ausdruck enthalten."
+            };
+            var vatMismatchHint = BuildVatMismatchHint(entries, _vatRate);
+            if (vatMismatchHint.Length > 0)
+                textBlocks.Insert(1, vatMismatchHint);
 
             var ctx = new OfferPdfContext
             {
@@ -211,12 +222,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
                 FilterSummaryText = filterSummary,
                 Currency = "CHF",
                 OfferNo = "",
-                TextBlocks = new List<string>
-                {
-                    qualityHint,
-                    "Die Statistik fuer Inliner/Manschetten basiert auf vorhandenen Positionsdetails.",
-                    "Kostenzusammenstellung nach Eigentuemer und Gesamtpositionen ist im Ausdruck enthalten."
-                }
+                TextBlocks = textBlocks
             };
 
             var model = OfferPdfModelFactory.CreateCostSummary(
@@ -281,6 +287,20 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             .Where(e => e.Cost is not null)
             .Select(e => e.Cost!)
             .ToList();
+        var pauschaleHoldings = holdings
+            .Where(TablePauschaleCostHelper.IsFallbackPauschale)
+            .ToList();
+        var includePauschalen = pauschaleHoldings.Count > 0 && _sp.Dialogs.ConfirmWarn(
+            "Pauschalen ohne echte NPK-Position im Leistungsverzeichnis ausweisen?\n\n" +
+            "Ja = als uebrige Positionen aufnehmen.\nNein = im LV weglassen und unten als nicht enthaltene Pauschalkosten ausweisen.",
+            "NPK-Leistungsverzeichnis",
+            defaultNo: true);
+
+        var holdingsForLv = includePauschalen
+            ? holdings
+            : holdings.Where(h => !TablePauschaleCostHelper.IsFallbackPauschale(h)).ToList();
+        var excludedPauschaleTotal = includePauschalen ? 0m : pauschaleHoldings.Sum(h => h.Total);
+        var excludedPauschaleCount = includePauschalen ? 0 : pauschaleHoldings.Count;
 
         var projectPath = _sp.Settings.LastProjectPath ?? "";
         var catalog = _catalogStore.LoadMerged(projectPath);
@@ -289,8 +309,8 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
             .GroupBy(i => i.Key.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        var positions = ProjectPositionAggregator.Aggregate(holdings, catalogDict);
-        if (positions.Count == 0)
+        var positions = ProjectPositionAggregator.Aggregate(holdingsForLv, catalogDict);
+        if (positions.Count == 0 && excludedPauschaleTotal <= 0m)
         {
             _sp.Dialogs.Info(
                 "Keine NPK-Positionen gefunden. Die gefilterten Haltungen haben keine Massnahmen-Positionen mit Mengen.",
@@ -310,7 +330,11 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
 
         try
         {
-            var csv = NpkLeistungsverzeichnisExporter.BuildCsv(positions, "CHF");
+            var csv = NpkLeistungsverzeichnisExporter.BuildCsv(
+                positions,
+                "CHF",
+                excludedPauschaleTotal,
+                excludedPauschaleCount);
             File.WriteAllText(output, csv, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
             LastResult = $"Leistungsverzeichnis erstellt: {Path.GetFileName(output)} ({positions.Count} Positionen)";
             _shell.SetStatus("NPK-Leistungsverzeichnis erstellt");
@@ -320,7 +344,7 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
                 ? "\n\nACHTUNG: Es gibt ungespeicherte Aenderungen im Projekt — das LV entspricht dem zuletzt GESPEICHERTEN Stand der Sanierungs-Matrix."
                 : "\n\nDaten-Stand: zuletzt gespeicherte Sanierungs-Matrix (costs.json).";
             _sp.Dialogs.Info(
-                $"NPK-Leistungsverzeichnis wurde erstellt:\n{output}\n\n{positions.Count} Positionen ueber {holdings.Count} Haltung(en).{standHinweis}",
+                $"NPK-Leistungsverzeichnis wurde erstellt:\n{output}\n\n{positions.Count} Positionen ueber {holdingsForLv.Count} Haltung(en).{standHinweis}",
                 "Druckcenter");
         }
         catch (Exception ex)
@@ -938,26 +962,10 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
     }
 
     private static bool HasSelectedLines(HoldingCost cost)
-        => cost.Measures.Any(m => m.Lines.Any(l => l.Selected));
+        => TablePauschaleCostHelper.HasDetailedCost(cost);
 
     private static decimal ResolveNetTotal(HoldingCost cost)
-    {
-        if (cost.Total > 0m)
-            return cost.Total;
-
-        var selectedLineTotal = cost.Measures
-            .SelectMany(m => m.Lines)
-            .Where(l => l.Selected)
-            .Sum(l => l.Qty * l.UnitPrice);
-
-        if (selectedLineTotal > 0m)
-            return selectedLineTotal;
-
-        if (cost.TotalInclMwst > 0m && cost.MwstRate > 0m)
-            return Math.Round(cost.TotalInclMwst / (1m + cost.MwstRate), 2, MidpointRounding.AwayFromZero);
-
-        return cost.TotalInclMwst;
-    }
+        => TablePauschaleCostHelper.ResolveNetTotal(cost);
 
     private static string SafeText(string? value)
         => (value ?? "").Trim();
@@ -1029,7 +1037,28 @@ public sealed partial class BuilderPageViewModel : ObservableObject, IDisposable
         return name;
     }
 
-    private static string Money(decimal value) => value.ToString("N2", Ch) + " CHF";
+    private static string Money(decimal value) => ChfFormat.Money(value);
+
+    private static string BuildVatMismatchHint(IReadOnlyList<CostSummaryEntry> entries, decimal currentVatRate)
+    {
+        var oldRates = entries
+            .Select(e => e.Cost.MwstRate)
+            .Where(rate => rate > 0m && rate != currentVatRate)
+            .Distinct()
+            .OrderBy(rate => rate)
+            .Select(FormatVatRate)
+            .ToList();
+        if (oldRates.Count == 0)
+            return "";
+
+        return "Hinweis: Diese Ausgabe enthaelt gespeicherte MwSt-Saetze "
+            + string.Join(", ", oldRates)
+            + $"; aktueller Katalogsatz ist {FormatVatRate(currentVatRate)}. "
+            + "Kosten neu berechnen, wenn der aktuelle Satz gelten soll.";
+    }
+
+    private static string FormatVatRate(decimal rate)
+        => $"{rate * 100m:0.0}%";
 
     private static bool IsSanierenYes(string value)
     {
@@ -1069,7 +1098,7 @@ public sealed class DruckcenterRowVm
     public string CostSource { get; init; } = "";
     public string MeasuresRaw { get; init; } = "";
     public string MeasuresPreview { get; init; } = "";
-    public string NetCostText => NetCost.ToString("N2", CultureInfo.GetCultureInfo("de-CH")) + " CHF";
+    public string NetCostText => ChfFormat.Money(NetCost);
 }
 
 public sealed class SpecialPositionStatVm
@@ -1100,7 +1129,7 @@ public sealed class ChartBarVm
         var safeAmount = amount < 0m ? 0m : amount;
         var safeTotal = totalAmount < 0m ? 0m : totalAmount;
         Percent = safeTotal > 0m ? (double)(safeAmount * 100m / safeTotal) : 0.0;
-        ValueText = $"{safeAmount:N2} CHF ({Percent:0.#}%)";
+        ValueText = $"{ChfFormat.Money(safeAmount)} ({Percent:0.#}%)";
     }
 
     public string Label { get; }

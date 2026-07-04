@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Common;
 using AuswertungPro.Next.Application.Costs;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Infrastructure.Costs;
@@ -279,6 +280,49 @@ public sealed partial class SanierungsMatrixDetailEditSession : ObservableObject
     }
 }
 
+public static class SanierungsMatrixDetailOverrideMerger
+{
+    public static void ApplyManualOverrides(HoldingCost target, HoldingCost? source)
+    {
+        if (source is null)
+            return;
+
+        var sourceLines = source.Measures
+            .SelectMany(m => m.Lines)
+            .Where(l => !string.IsNullOrWhiteSpace(l.ItemKey))
+            .GroupBy(l => l.ItemKey.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var targetLine in target.Measures.SelectMany(m => m.Lines))
+        {
+            var key = (targetLine.ItemKey ?? "").Trim();
+            if (key.Length == 0 || !sourceLines.TryGetValue(key, out var oldLine))
+                continue;
+
+            if (oldLine.IsPriceOverridden)
+            {
+                targetLine.UnitPrice = oldLine.UnitPrice;
+                targetLine.IsPriceOverridden = true;
+                targetLine.PriceHint = "";
+            }
+
+            if (oldLine.IsQtyOverridden)
+            {
+                targetLine.Qty = oldLine.Qty;
+                targetLine.IsQtyOverridden = true;
+            }
+        }
+
+        foreach (var measure in target.Measures)
+            measure.Total = measure.Lines.Where(l => l.Selected).Sum(l => l.Qty * l.UnitPrice);
+
+        var totals = CostCalculatorLogicService.CalculateTotals(target.Measures.Sum(m => m.Total), target.MwstRate);
+        target.Total = totals.Total;
+        target.MwstAmount = totals.MwstAmount;
+        target.TotalInclMwst = totals.TotalInclMwst;
+    }
+}
+
 /// <summary>Eine Haltungs-Zeile in der Sanierungs-Matrix.</summary>
 public sealed partial class SanierungMatrixRowVm : ObservableObject
 {
@@ -456,11 +500,16 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
 
     public ObservableCollection<SanierungMatrixRowVm> Rows { get; } = new();
     public ObservableCollection<MeasureOption> MeasureOptions { get; } = new();
+    public string? ProjectRootPath => ProjectFileLocator.ProjectRootFromFile(_sp.Settings.LastProjectPath);
 
     [ObservableProperty] private bool _isSingleHoldingMode;
     [ObservableProperty] private string _pageTitle = "Sanierungs-Matrix";
     [ObservableProperty] private string _pageSubtitle = "Pro Haltung eine Hauptarbeit waehlen - Meter, DN und Anschluesse kommen automatisch.";
     [ObservableProperty] private decimal _gesamtTotal;
+    [ObservableProperty] private decimal _pauschalenTotal;
+    [ObservableProperty] private int _pauschalenHaltungen;
+    [ObservableProperty] private bool _hasPauschalen;
+    [ObservableProperty] private string _pauschalenText = "";
 
     /// <summary>Teuerstes Zeilen-Total — Bezugsgroesse fuer die Kostenbalken-Spalte.</summary>
     [ObservableProperty] private decimal _maxRowTotal;
@@ -689,6 +738,8 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
             return;
         }
 
+        var preservedDetailCost = ResolveDirtyDetailForRowRecompute(row);
+
         var measureId = row.SelectedMeasure?.Id;
         if (string.IsNullOrWhiteSpace(measureId))
         {
@@ -738,6 +789,7 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         }
         else
         {
+            SanierungsMatrixDetailOverrideMerger.ApplyManualOverrides(cost, preservedDetailCost);
             _store.ByHolding[row.Holding] = cost;
             _touchedHoldings.Add(row.Holding);
             _hasUnsavedChanges = true;
@@ -750,11 +802,42 @@ public sealed partial class SanierungsMatrixPageViewModel : ObservableObject, IC
         RecomputeGesamt();
     }
 
+    private HoldingCost? ResolveDirtyDetailForRowRecompute(SanierungMatrixRowVm row)
+    {
+        if (!ReferenceEquals(_detailRow, row) || _detailSession is null || !IsDetailDirty)
+            return null;
+
+        var keep = _sp.Dialogs.Confirm(
+            "Ungespeicherte Detail-Aenderungen an dieser Haltung gefunden.\n\n" +
+            "Ja = Detail-Aenderungen uebernehmen und neu berechnen.\n" +
+            "Nein = Detail-Aenderungen verwerfen und neu berechnen.",
+            PageTitle);
+
+        if (!keep)
+            return null;
+
+        var updated = _detailSession.ToHoldingCost(row.Holding, row.StoredCost?.Date, _vatRate);
+        _detailSession.MarkClean();
+        IsDetailDirty = false;
+        return updated;
+    }
+
     private void RecomputeGesamt()
     {
         GesamtTotal = Rows.Sum(r => r.Total);
         MaxRowTotal = Rows.Count == 0 ? 0m : Rows.Max(r => r.Total);
         BelegteHaltungen = Rows.Count(r => r.SelectedMeasure?.Id is not null);
+        var pauschalen = TablePauschaleCostHelper.SummarizeRows(Rows.Select(r =>
+        {
+            var tableCost = TablePauschaleCostHelper.ParseTableNetCost(r.Record.GetFieldValue("Kosten"));
+            return (r.StoredCost, tableCost);
+        }));
+        PauschalenTotal = pauschalen.Total;
+        PauschalenHaltungen = pauschalen.HoldingCount;
+        HasPauschalen = PauschalenTotal > 0m;
+        PauschalenText = HasPauschalen
+            ? $"+ Pauschalen aus Tabelle: {PauschalenTotal:N2} CHF ({PauschalenHaltungen} Haltungen)"
+            : "";
     }
 
     /// <summary>

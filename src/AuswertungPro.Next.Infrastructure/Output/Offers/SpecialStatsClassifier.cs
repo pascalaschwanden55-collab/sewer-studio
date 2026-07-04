@@ -118,7 +118,27 @@ public static class SpecialStatsClassifier
     {
         if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(token))
             return false;
-        return text.Contains(token.Trim(), System.StringComparison.OrdinalIgnoreCase);
+
+        var needle = token.Trim();
+        if (needle.Length == 0)
+            return false;
+
+        if (needle.Contains('_'))
+            return text.Contains(needle, System.StringComparison.OrdinalIgnoreCase);
+
+        var index = 0;
+        while ((index = text.IndexOf(needle, index, System.StringComparison.OrdinalIgnoreCase)) >= 0)
+        {
+            var beforeOk = index == 0 || !char.IsLetterOrDigit(text[index - 1]);
+            var afterIndex = index + needle.Length;
+            var afterOk = afterIndex >= text.Length || !char.IsLetterOrDigit(text[afterIndex]);
+            if (beforeOk && afterOk)
+                return true;
+
+            index = afterIndex;
+        }
+
+        return false;
     }
 
     /// <summary>Normalisiert eine Einheit: Trim + Lowercase. Leer bleibt leer.</summary>

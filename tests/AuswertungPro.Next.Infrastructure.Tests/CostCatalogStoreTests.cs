@@ -102,6 +102,28 @@ public sealed class CostCatalogStoreTests
         Assert.Equal("", item.Chapter);
     }
 
+    [Fact]
+    public void FindDuplicateNpkCodesWithDifferentUnits_Warnt_Nur_Bei_Unterschiedlichen_Einheiten()
+    {
+        var catalog = new CostCatalog
+        {
+            Items =
+            {
+                new CostCatalogItem { Key = "A", NpkCode = "311.111", Unit = "h", Active = true },
+                new CostCatalogItem { Key = "B", NpkCode = "311.111", Unit = "m", Active = true },
+                new CostCatalogItem { Key = "C", NpkCode = "612.111", Unit = "m", Active = true },
+                new CostCatalogItem { Key = "D", NpkCode = "612.111", Unit = "m", Active = true },
+                new CostCatalogItem { Key = "E", NpkCode = "999.999", Unit = "Stk", Active = false }
+            }
+        };
+
+        var warning = Assert.Single(CostCatalogStore.FindDuplicateNpkCodesWithDifferentUnits(catalog));
+
+        Assert.Equal("311.111", warning.NpkCode);
+        Assert.Equal(new[] { "h", "m" }, warning.Units);
+        Assert.Equal(new[] { "A", "B" }, warning.ItemKeys);
+    }
+
     private sealed class TempDir : IDisposable
     {
         public string Path { get; }

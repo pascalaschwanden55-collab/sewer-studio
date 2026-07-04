@@ -25,6 +25,19 @@ public sealed class CostConsistencyCheckerTests
     private static IReadOnlyDictionary<string, MeasureTemplate> EmptyTemplates()
         => new Dictionary<string, MeasureTemplate>(System.StringComparer.OrdinalIgnoreCase);
 
+    private static void AssertRuleIds(IEnumerable<ConsistencyWarning> warnings, params string[] expectedRuleIds)
+    {
+        var actual = warnings
+            .Select(w => w.RuleId)
+            .OrderBy(id => id, System.StringComparer.Ordinal)
+            .ToArray();
+        var expected = expectedRuleIds
+            .OrderBy(id => id, System.StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(expected, actual);
+    }
+
     /// <summary>Erstellt einen minimalen Block mit einer Zeile.</summary>
     private static MeasureBlockView OneLineBlock(
         ICostLineView line,
@@ -80,6 +93,19 @@ public sealed class CostConsistencyCheckerTests
             }
         };
 
+    private static CostCatalogItem ByDnItemWithQtySteps(string key, int dnFrom, int dnTo)
+        => new()
+        {
+            Key = key,
+            Name = key,
+            Type = "ByDN",
+            DnPrices = new List<DnPrice>
+            {
+                new() { DnFrom = dnFrom, DnTo = dnTo, QtyFrom = 0m, QtyTo = 50m, Price = 120m },
+                new() { DnFrom = dnFrom, DnTo = dnTo, QtyFrom = 50.01m, Price = 90m }
+            }
+        };
+
     // ---------------------------------------------------------------------------
     // KK01: Preis 0, obwohl Katalog einen Preis hat
     // ---------------------------------------------------------------------------
@@ -105,7 +131,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, EmptyCatalog(), EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK01");
+        AssertRuleIds(result, "KK09", "KK14");
     }
 
     [Fact]
@@ -120,8 +146,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, catalog, EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK01");
-        Assert.Contains(result, w => w.RuleId == "KK02");
+        AssertRuleIds(result, "KK02", "KK09", "KK14");
     }
 
     // ---------------------------------------------------------------------------
@@ -145,7 +170,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, EmptyCatalog(), EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK02");
+        AssertRuleIds(result, "KK09");
     }
 
     // ---------------------------------------------------------------------------
@@ -169,7 +194,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, EmptyCatalog(), EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK03");
+        AssertRuleIds(result, "KK09");
     }
 
     // ---------------------------------------------------------------------------
@@ -193,7 +218,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, EmptyCatalog(), EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK04");
+        AssertRuleIds(result, "KK09");
     }
 
     // ---------------------------------------------------------------------------
@@ -252,7 +277,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, catalog, templates, null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK05");
+        AssertRuleIds(result, "KK01", "KK09", "KK14");
     }
 
     // ---------------------------------------------------------------------------
@@ -286,7 +311,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, catalog, EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK06");
+        AssertRuleIds(result, "KK09");
     }
 
     [Fact]
@@ -300,7 +325,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, catalog, EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK06");
+        AssertRuleIds(result, "KK09");
     }
 
     [Fact]
@@ -318,6 +343,23 @@ public sealed class CostConsistencyCheckerTests
         var result = Checker().CheckAll(new[] { block }, catalog, EmptyTemplates(), null, null);
 
         Assert.Contains(result, w => w.RuleId == "KK06");
+    }
+
+    [Fact]
+    public void KK06_ByDn_Mengenstaffel_Korrekter_Staffelpreis_ErzeugtKeineAbweichung()
+    {
+        var catalog = new Dictionary<string, CostCatalogItem>(System.StringComparer.OrdinalIgnoreCase)
+        {
+            ["ITEM_B"] = ByDnItemWithQtySteps("ITEM_B", 200, 400)
+        };
+        var block = OneLineBlock(
+            line: Line(itemKey: "ITEM_B", unit: "m", qty: 60m, unitPrice: 90m),
+            dnText: "300",
+            lengthText: "60");
+
+        var result = Checker().CheckAll(new[] { block }, catalog, EmptyTemplates(), null, null);
+
+        AssertRuleIds(result);
     }
 
     // ---------------------------------------------------------------------------
@@ -341,7 +383,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, EmptyCatalog(), EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK07");
+        AssertRuleIds(result, "KK09");
     }
 
     // ---------------------------------------------------------------------------
@@ -373,7 +415,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, catalog, EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK08");
+        AssertRuleIds(result, "KK09");
     }
 
     // ---------------------------------------------------------------------------
@@ -397,7 +439,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, EmptyCatalog(), EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK09");
+        AssertRuleIds(result);
     }
 
     [Fact]
@@ -407,7 +449,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, EmptyCatalog(), EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK09");
+        AssertRuleIds(result);
     }
 
     // ---------------------------------------------------------------------------
@@ -460,7 +502,7 @@ public sealed class CostConsistencyCheckerTests
             System.Array.Empty<IMeasureBlockView>(), EmptyCatalog(), EmptyTemplates(),
             store, "H1");
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK10");
+        AssertRuleIds(result);
     }
 
     [Fact]
@@ -472,7 +514,7 @@ public sealed class CostConsistencyCheckerTests
             System.Array.Empty<IMeasureBlockView>(), EmptyCatalog(), EmptyTemplates(),
             store, "H1");
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK10");
+        AssertRuleIds(result);
     }
 
     [Fact]
@@ -482,7 +524,7 @@ public sealed class CostConsistencyCheckerTests
             System.Array.Empty<IMeasureBlockView>(), EmptyCatalog(), EmptyTemplates(),
             null, "H1");
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK10");
+        AssertRuleIds(result);
     }
 
     // ---------------------------------------------------------------------------
@@ -506,7 +548,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, EmptyCatalog(), EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK11");
+        AssertRuleIds(result, "KK09");
     }
 
     // ---------------------------------------------------------------------------
@@ -530,7 +572,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, EmptyCatalog(), EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK12");
+        AssertRuleIds(result);
     }
 
     [Fact]
@@ -540,7 +582,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, EmptyCatalog(), EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK12");
+        AssertRuleIds(result);
     }
 
     // ---------------------------------------------------------------------------
@@ -601,7 +643,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, EmptyCatalog(), EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK13");
+        AssertRuleIds(result);
     }
 
     // ---------------------------------------------------------------------------
@@ -661,7 +703,7 @@ public sealed class CostConsistencyCheckerTests
 
         var result = Checker().CheckAll(new[] { block }, EmptyCatalog(), EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK14");
+        AssertRuleIds(result, "KK09");
     }
 
     [Fact]
@@ -670,7 +712,7 @@ public sealed class CostConsistencyCheckerTests
         var result = Checker().CheckAll(
             System.Array.Empty<IMeasureBlockView>(), EmptyCatalog(), EmptyTemplates(), null, null);
 
-        Assert.DoesNotContain(result, w => w.RuleId == "KK14");
+        AssertRuleIds(result);
     }
 
     // ---------------------------------------------------------------------------
@@ -694,11 +736,11 @@ public sealed class CostConsistencyCheckerTests
     }
 
     [Fact]
-    public void ResolveCatalogPrice_ByDn_DnAusserhalb_GibtNullZurueck()
+    public void ResolveCatalogPrice_ByDn_DnAusserhalb_NutztNaechstenDnFallback()
     {
         var item = ByDnItem("X", 200, 400, 180m);
         var price = CostConsistencyChecker.ResolveCatalogPrice(item, "600");
-        Assert.Null(price);
+        Assert.Equal(180m, price);
     }
 
     [Fact]
@@ -707,6 +749,16 @@ public sealed class CostConsistencyCheckerTests
         var item = ByDnItem("X", 200, 400, 180m);
         var price = CostConsistencyChecker.ResolveCatalogPrice(item, null);
         Assert.Null(price);
+    }
+
+    [Fact]
+    public void ResolveCatalogPrice_ByDn_Beruecksichtigt_Mengenstaffel()
+    {
+        var item = ByDnItemWithQtySteps("X", 200, 400);
+
+        var price = CostConsistencyChecker.ResolveCatalogPrice(item, "300", qty: 60m);
+
+        Assert.Equal(90m, price);
     }
 
     // ---------------------------------------------------------------------------

@@ -7,6 +7,11 @@ using AuswertungPro.Next.Domain.Models;
 
 namespace AuswertungPro.Next.Infrastructure.Costs;
 
+public sealed record CostCatalogNpkDuplicateWarning(
+    string NpkCode,
+    IReadOnlyList<string> Units,
+    IReadOnlyList<string> ItemKeys);
+
 public sealed class CostCatalogStore
 {
     private readonly string? _userOverridePath;
@@ -207,6 +212,30 @@ public sealed class CostCatalogStore
 
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         return Path.Combine(appData, "AuswertungPro", "cost_catalog.user.json");
+    }
+
+    public static IReadOnlyList<CostCatalogNpkDuplicateWarning> FindDuplicateNpkCodesWithDifferentUnits(CostCatalog catalog)
+    {
+        return (catalog.Items ?? new List<CostCatalogItem>())
+            .Where(i => i.Active && !string.IsNullOrWhiteSpace(i.NpkCode))
+            .GroupBy(i => i.NpkCode.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(g => new
+            {
+                Code = g.Key,
+                Units = g.Select(i => (i.Unit ?? "").Trim())
+                    .Where(u => u.Length > 0)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(u => u, StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                Keys = g.Select(i => (i.Key ?? "").Trim())
+                    .Where(k => k.Length > 0)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(k => k, StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+            })
+            .Where(x => x.Units.Count > 1)
+            .Select(x => new CostCatalogNpkDuplicateWarning(x.Code, x.Units, x.Keys))
+            .ToList();
     }
 
     private CostCatalog ReadCatalog(string path, bool rememberUserOverrideError = false)

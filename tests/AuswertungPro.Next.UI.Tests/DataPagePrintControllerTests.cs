@@ -327,6 +327,30 @@ public sealed class DataPagePrintControllerTests
     }
 
     [Fact]
+    public async Task PrintDossierPdfAsync_warnt_bei_dirty_project_und_bricht_bei_nein_ab()
+    {
+        var dialogs = new CapturingDialogService { ConfirmWarnResult = false };
+        var buildCalled = false;
+        var controller = CreateController(
+            dialogs,
+            selectDossierPrintOptions: _ => EmptyDossierOptions() with { IncludeDeckblatt = true },
+            buildDossierPdfAsync: (_, _, _, _, _, _, _) =>
+            {
+                buildCalled = true;
+                return Task.FromResult(Array.Empty<byte>());
+            });
+
+        await controller.PrintDossierPdfAsync(new Project { Dirty = true }, Record("12/34"));
+
+        Assert.False(buildCalled);
+        Assert.Empty(dialogs.SaveFileCalls);
+        var call = Assert.Single(dialogs.ConfirmWarnCalls);
+        Assert.Equal("Dossier", call.Title);
+        Assert.Contains("ungespeicherte Aenderungen", call.Message);
+        Assert.True(call.DefaultNo);
+    }
+
+    [Fact]
     public async Task PrintDossierPdfAsync_meldet_nicht_druckbare_auswahl_ohne_pdf_build()
     {
         var dialogs = new CapturingDialogService { SaveFileResult = "C:\\out\\dossier.pdf" };
@@ -579,6 +603,8 @@ public sealed class DataPagePrintControllerTests
     {
         public string? SaveFileResult { get; set; } = "C:\\out\\awu.pdf";
         public List<(string Title, string Filter, string? DefaultExt, string? DefaultFileName)> SaveFileCalls { get; } = new();
+        public bool ConfirmWarnResult { get; set; } = true;
+        public List<(string Message, string Title, bool DefaultNo)> ConfirmWarnCalls { get; } = new();
         public (string Message, string Title)? LastInfo { get; private set; }
         public (string Message, string Title)? LastWarn { get; private set; }
         public (string Message, string Title)? LastError { get; private set; }
@@ -611,7 +637,10 @@ public sealed class DataPagePrintControllerTests
             => throw new NotSupportedException();
 
         public bool ConfirmWarn(string message, string title = "Bestaetigung", bool defaultNo = true)
-            => throw new NotSupportedException();
+        {
+            ConfirmWarnCalls.Add((message, title, defaultNo));
+            return ConfirmWarnResult;
+        }
 
         public DialogConfirm ConfirmCancel(string message, string title = "Bestaetigung")
             => throw new NotSupportedException();
