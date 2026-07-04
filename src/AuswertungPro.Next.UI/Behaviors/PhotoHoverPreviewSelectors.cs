@@ -5,6 +5,8 @@ using AuswertungPro.Next.Application.Ai.Training;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.Domain.Protocol;
 using AuswertungPro.Next.Infrastructure.Ai.SelfImproving;
+using AuswertungPro.Next.UI.Controls;
+using AuswertungPro.Next.UI.ViewModels.Pages;
 using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Behaviors;
@@ -49,6 +51,25 @@ public static class PhotoHoverPreviewSelectors
     public static IEnumerable<string>? MediaMatchRowPhotos(object item)
         => item is MediaMatchRow row ? row.Match.FotoPaths : null;
 
+    /// <summary>Haltungs-/Schacht-Fotogalerie -> das bereits aufgeloeste Thumbnail-Bild.</summary>
+    public static IEnumerable<string>? GalerieFotoPhotos(object item)
+        => item is GalerieFoto foto ? new[] { foto.Pfad } : null;
+
+    /// <summary>Haltung -> alle aktuellen Protokollfotos, Legacy-Eintrag und importierte VSA-Fotos.</summary>
+    public static IEnumerable<string>? HaltungRecordPhotos(object item)
+    {
+        if (item is not HaltungRecord record)
+            return null;
+
+        return EnumerateHaltungRecordPhotos(record);
+    }
+
+    /// <summary>Sanierungs-Matrix-Zeile -> Fotos der zugrunde liegenden Haltung.</summary>
+    public static IEnumerable<string>? SanierungsMatrixRowPhotos(object item)
+        => item is SanierungMatrixRowVm row
+            ? EnumerateHaltungRecordPhotos(row.Record)
+            : null;
+
     /// <summary>Trainingssample -> Frame, dann Beweisbild, dann Zusatzbilder (leere/null verworfen).</summary>
     public static IEnumerable<string>? TrainingSamplePhotos(object item)
     {
@@ -83,5 +104,29 @@ public static class PhotoHoverPreviewSelectors
 
         var path = annotation.CroppedRegionPath ?? annotation.FullFramePath;
         return path is null ? Array.Empty<string>() : new[] { path };
+    }
+
+    private static IEnumerable<string> EnumerateHaltungRecordPhotos(HaltungRecord record)
+    {
+        foreach (var entry in record.Protocol?.Current?.Entries ?? Enumerable.Empty<ProtocolEntry>())
+        {
+            if (entry.IsDeleted)
+                continue;
+
+            foreach (var path in entry.FotoPaths)
+                yield return path;
+        }
+
+        if (record.ProtocolEntry is { } legacyEntry && !legacyEntry.IsDeleted)
+        {
+            foreach (var path in legacyEntry.FotoPaths)
+                yield return path;
+        }
+
+        foreach (var finding in record.VsaFindings)
+        {
+            if (!string.IsNullOrWhiteSpace(finding.FotoPath))
+                yield return finding.FotoPath!;
+        }
     }
 }

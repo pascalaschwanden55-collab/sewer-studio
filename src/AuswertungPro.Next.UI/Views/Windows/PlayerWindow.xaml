@@ -151,6 +151,17 @@
                                    Foreground="{DynamicResource TextBrush}"
                                    FontSize="12"
                                    TextAlignment="Right"/>
+                        <Button HorizontalAlignment="Right"
+                                Width="28"
+                                Height="24"
+                                MinWidth="28"
+                                Padding="0"
+                                Margin="0,6,0,0"
+                                Style="{StaticResource ToolbarButton}"
+                                Click="ShowShortcutOverlay_Click"
+                                ToolTip="Tastenkürzel anzeigen">
+                            <TextBlock Text="?" FontSize="13" FontWeight="Bold"/>
+                        </Button>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -366,6 +377,7 @@
                     <ColumnDefinition Width="Auto"/>   <!-- Meter-Anzeige -->
                     <ColumnDefinition Width="Auto"/>   <!-- Werkzeuge -->
                     <ColumnDefinition Width="Auto"/>   <!-- KI-Status + Analyse -->
+                    <ColumnDefinition Width="Auto"/>   <!-- Overlay -->
                     <ColumnDefinition Width="*"/>      <!-- Findings -->
                     <ColumnDefinition Width="Auto"/>   <!-- Beenden -->
                 </Grid.ColumnDefinitions>
@@ -566,8 +578,34 @@
                     </Border>
                 </StackPanel>
 
+                <!-- Overlay-Deckkraft -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <Border Width="1" Height="28" Background="{DynamicResource BorderBrush}" Margin="0,0,8,0"/>
+                    <TextBlock Text="Overlay"
+                               Style="{StaticResource PlayerLabelText}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0"/>
+                    <Slider x:Name="OverlayOpacitySlider"
+                            Width="92"
+                            Minimum="0.35"
+                            Maximum="1"
+                            Value="1"
+                            TickFrequency="0.05"
+                            IsMoveToPointEnabled="True"
+                            ValueChanged="OverlayOpacitySlider_ValueChanged"
+                            ToolTip="Deckkraft der Codier-Overlays einstellen"/>
+                    <TextBlock x:Name="OverlayOpacityText"
+                               Width="38"
+                               Text="100%"
+                               FontFamily="Consolas, Cascadia Mono"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               VerticalAlignment="Center"
+                               TextAlignment="Right"/>
+                </StackPanel>
+
                 <!-- Aktuelle Position: Code am Zeitstempel (aus DataGrid) -->
-                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- Naechster Code am aktuellen Meter -->
                     <Border x:Name="CodingCurrentCodeBadge"
                             Background="{DynamicResource HeaderBrush}" CornerRadius="8"
@@ -620,7 +658,7 @@
                 </StackPanel>
 
                 <!-- Uebernehmen + Beenden -->
-                <StackPanel Grid.Column="4" Orientation="Horizontal" Margin="8,0,0,0">
+                <StackPanel Grid.Column="5" Orientation="Horizontal" Margin="8,0,0,0">
                     <Button Style="{StaticResource PlayerPrimaryButton}"
                             Padding="10,5"
                             Click="CodingApply_Click"
@@ -666,6 +704,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
@@ -837,27 +876,106 @@
                                Visibility="Collapsed"/>
                 </WrapPanel>
 
-                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,18,0">
                     <TextBlock Text="Wiedergabegeschwindigkeit"
                                Style="{StaticResource PlayerLabelText}"
                                Margin="0,0,0,6"/>
-                    <WrapPanel>
-                        <ToggleButton x:Name="Speed05Button" Style="{StaticResource SpeedToggleButton}" Content="0.5x" Click="Speed05_Click"
-                                      ToolTip="Halbe Geschwindigkeit - für detaillierte Inspektion"/>
-                        <ToggleButton x:Name="Speed1Button" Style="{StaticResource SpeedToggleButton}" Content="1x" Click="Speed1_Click"
-                                      ToolTip="Normale Wiedergabegeschwindigkeit"/>
-                        <ToggleButton x:Name="Speed15Button" Style="{StaticResource SpeedToggleButton}" Content="1.5x" Click="Speed15_Click"
-                                      ToolTip="1.5-fache Geschwindigkeit"/>
-                        <ToggleButton x:Name="Speed2Button" Style="{StaticResource SpeedToggleButton}" Content="2x" Click="Speed2_Click"
-                                      ToolTip="Doppelte Geschwindigkeit"/>
-                        <ToggleButton x:Name="Speed4Button" Style="{StaticResource SpeedToggleButton}" Content="4x" Click="Speed4_Click"
-                                      ToolTip="4-fache Geschwindigkeit - schneller Überblick"/>
-                        <ToggleButton x:Name="Speed8Button" Style="{StaticResource SpeedToggleButton}" Content="8x" Margin="0" Click="Speed8_Click"
-                                      ToolTip="8-fache Geschwindigkeit - maximaler Schnellvorlauf"/>
-                    </WrapPanel>
+                    <DockPanel LastChildFill="True" Width="260">
+                        <ToggleButton x:Name="SpeedPresetButton"
+                                      DockPanel.Dock="Right"
+                                      Style="{StaticResource SpeedToggleButton}"
+                                      MinHeight="28"
+                                      Padding="8,3"
+                                      Margin="8,0,0,0"
+                                      ToolTip="Geschwindigkeitsstufen anzeigen">
+                            <TextBlock Text="&#xE712;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                        </ToggleButton>
+                        <Slider x:Name="SpeedSlider"
+                                Minimum="0.25"
+                                Maximum="8"
+                                Value="1"
+                                Ticks="0.25,0.5,1,1.5,2,4,8"
+                                TickPlacement="BottomRight"
+                                IsSnapToTickEnabled="True"
+                                IsMoveToPointEnabled="True"
+                                ValueChanged="SpeedSlider_ValueChanged"
+                                ToolTip="Wiedergabegeschwindigkeit als Slider setzen"/>
+                    </DockPanel>
+                    <Popup PlacementTarget="{Binding ElementName=SpeedPresetButton}"
+                           Placement="Top"
+                           StaysOpen="False"
+                           AllowsTransparency="True"
+                           IsOpen="{Binding IsChecked, ElementName=SpeedPresetButton, Mode=TwoWay}">
+                        <Border Background="{DynamicResource CardBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="8">
+                            <WrapPanel>
+                                <ToggleButton x:Name="Speed05Button" Style="{StaticResource SpeedToggleButton}" Content="0.5x" Click="Speed05_Click"
+                                              ToolTip="Halbe Geschwindigkeit - für detaillierte Inspektion"/>
+                                <ToggleButton x:Name="Speed1Button" Style="{StaticResource SpeedToggleButton}" Content="1x" Click="Speed1_Click"
+                                              ToolTip="Normale Wiedergabegeschwindigkeit"/>
+                                <ToggleButton x:Name="Speed15Button" Style="{StaticResource SpeedToggleButton}" Content="1.5x" Click="Speed15_Click"
+                                              ToolTip="1.5-fache Geschwindigkeit"/>
+                                <ToggleButton x:Name="Speed2Button" Style="{StaticResource SpeedToggleButton}" Content="2x" Click="Speed2_Click"
+                                              ToolTip="Doppelte Geschwindigkeit"/>
+                                <ToggleButton x:Name="Speed4Button" Style="{StaticResource SpeedToggleButton}" Content="4x" Click="Speed4_Click"
+                                              ToolTip="4-fache Geschwindigkeit - schneller Überblick"/>
+                                <ToggleButton x:Name="Speed8Button" Style="{StaticResource SpeedToggleButton}" Content="8x" Margin="0" Click="Speed8_Click"
+                                              ToolTip="8-fache Geschwindigkeit - maximaler Schnellvorlauf"/>
+                            </WrapPanel>
+                        </Border>
+                    </Popup>
                 </StackPanel>
 
-                <Border Grid.Column="2"
+                <StackPanel Grid.Column="2" VerticalAlignment="Center" Width="170" Margin="0,0,18,0">
+                    <TextBlock Text="Lautstärke"
+                               Style="{StaticResource PlayerLabelText}"
+                               Margin="0,0,0,6"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="42"/>
+                        </Grid.ColumnDefinitions>
+                        <ToggleButton x:Name="MuteButton"
+                                      Grid.Column="0"
+                                      Style="{StaticResource SpeedToggleButton}"
+                                      Width="32"
+                                      MinHeight="28"
+                                      Padding="0"
+                                      Margin="0,0,8,0"
+                                      Click="MuteButton_Click"
+                                      ToolTip="Ton stummschalten">
+                            <TextBlock x:Name="MuteIconText"
+                                       Text="&#xE767;"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       FontSize="13"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </ToggleButton>
+                        <Slider x:Name="VolumeSlider"
+                                Grid.Column="1"
+                                Minimum="0"
+                                Maximum="100"
+                                Value="80"
+                                TickFrequency="10"
+                                IsMoveToPointEnabled="True"
+                                ValueChanged="VolumeSlider_ValueChanged"
+                                ToolTip="Lautstärke 0 bis 100 Prozent"/>
+                        <TextBlock x:Name="VolumeText"
+                                   Grid.Column="2"
+                                   Text="80%"
+                                   FontFamily="Consolas, Cascadia Mono"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center"
+                                   TextAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+
+                <Border Grid.Column="3"
                         Style="{StaticResource PlayerMetaCard}"
                         VerticalAlignment="Center">
                     <StackPanel>
@@ -873,6 +991,63 @@
                     </StackPanel>
                 </Border>
             </Grid>
+        </Border>
+        <Border x:Name="ShortcutOverlay"
+                Grid.RowSpan="6"
+                Visibility="Collapsed"
+                Background="#B8000000"
+                CornerRadius="8"
+                MouseDown="CloseShortcutOverlay_Click">
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Width="620"
+                    MaxWidth="760"
+                    Style="{StaticResource PlayerCard}"
+                    MouseDown="ShortcutOverlayCard_MouseDown">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,14">
+                        <Button DockPanel.Dock="Right"
+                                Width="30"
+                                Height="28"
+                                MinWidth="30"
+                                Padding="0"
+                                Style="{StaticResource ToolbarButton}"
+                                Click="CloseShortcutOverlay_Click"
+                                ToolTip="Schliessen">
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="11"/>
+                        </Button>
+                        <TextBlock Text="Tastenkürzel"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextBrush}"/>
+                    </DockPanel>
+
+                    <UniformGrid Columns="2" Rows="4" Margin="0,0,0,4">
+                        <StackPanel Margin="0,0,18,12">
+                            <TextBlock Text="Wiedergabe" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                            <TextBlock Text="Space  Play/Pause" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="S      Stop" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="P / R  Pause / Weiter" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,12">
+                            <TextBlock Text="Navigation" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                            <TextBlock Text="← / →  5 Sekunden springen" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="+ / -  Geschwindigkeit" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,18,12">
+                            <TextBlock Text="Codierung" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                            <TextBlock Text="D      Live-Erkennung" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="M      Markierwerkzeug" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="Esc    Overlay abbrechen" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,0,12">
+                            <TextBlock Text="Hilfe" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+                            <TextBlock Text="F1 / ? Diese Übersicht" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                            <TextBlock Text="Esc    Übersicht schliessen" Foreground="{DynamicResource TextBrush}" FontFamily="Consolas, Cascadia Mono"/>
+                        </StackPanel>
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
         </Border>
     </Grid>
 </Window>

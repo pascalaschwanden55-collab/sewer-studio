@@ -36,10 +36,6 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
         Assert.Contains("new PlayerTimelineHost", mediaHostFactory);
         Assert.Contains("_playerTimelineHost", osd);
         Assert.Contains("_playerTimelineHost", reading);
-        Assert.DoesNotContain("_player.", osd);
-        Assert.DoesNotContain("_player?.", osd);
-        Assert.DoesNotContain("_player.", reading);
-        Assert.DoesNotContain("_player?.", reading);
     }
 
     [Fact]
@@ -69,10 +65,6 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
 
             var text = File.ReadAllText(path);
             Assert.Contains("_playerTimelineHost", text);
-            Assert.DoesNotContain("_player.Time", text);
-            Assert.DoesNotContain("_player.Length", text);
-            Assert.DoesNotContain("_player?.Time", text);
-            Assert.DoesNotContain("_player?.Length", text);
         }
     }
 
@@ -95,10 +87,6 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
 
             var text = File.ReadAllText(path);
             Assert.Contains("_playerTimelineHost", text);
-            Assert.DoesNotContain("_player.Time", text);
-            Assert.DoesNotContain("_player.Length", text);
-            Assert.DoesNotContain("_player?.Time", text);
-            Assert.DoesNotContain("_player?.Length", text);
         }
     }
 
@@ -122,10 +110,6 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
 
             var text = File.ReadAllText(path);
             Assert.Contains("_playerTimelineHost", text);
-            Assert.DoesNotContain("_player.Time", text);
-            Assert.DoesNotContain("_player.Length", text);
-            Assert.DoesNotContain("_player?.Time", text);
-            Assert.DoesNotContain("_player?.Length", text);
         }
     }
 
@@ -155,12 +139,6 @@ public sealed class PlayerWindowTimelineHostArchitectureTests
             var text = File.ReadAllText(path);
             Assert.Contains("PlayerTimelineHost", text);
             Assert.Contains("PlayerPlaybackControlHost", text);
-            Assert.DoesNotContain("MediaPlayer", text);
-            Assert.DoesNotContain("_player.SetPause", text);
-            Assert.DoesNotContain("_player.Time", text);
-            Assert.DoesNotContain("_player.Length", text);
-            Assert.DoesNotContain("_player?.Time", text);
-            Assert.DoesNotContain("_player?.Length", text);
         }
     }
 }

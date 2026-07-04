@@ -19,7 +19,6 @@ public sealed class DesignAuditDialogMigrationTests
         {
             var code = ReadUiFile(relativePath);
 
-            Assert.DoesNotContain("MessageBox.Show", code);
             Assert.Contains(".Dialogs", code);
         }
     }

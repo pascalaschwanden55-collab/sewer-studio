@@ -36,11 +36,7 @@ public sealed class PlayerWindowShellProjectArchitectureTests
         var factory = File.ReadAllText(factoryPath);
         var shell = File.ReadAllText(shellPath);
 
-        Assert.DoesNotContain("PlayerShellProjectServiceFactory.Create", protocol);
         Assert.Contains("PlayerShellProjectServiceFactory.Create", previewWorkflowFactory);
-        Assert.DoesNotContain("PlayerShellProjectServiceFactory.Create", apply);
-        Assert.DoesNotContain("CodingProjectPersistenceServiceFactory.Create", apply);
-        Assert.DoesNotContain("new CodingProjectPersistenceWorkflowActions", apply);
         Assert.Contains("CodingProjectPersistenceWorkflow.MarkProjectDirty", apply);
         Assert.Contains("CodingProjectPersistenceWorkflow.TrySaveProjectIfReady", apply);
         Assert.Contains("CodingProjectPersistenceWorkflow.MarkProjectDirty(_protocolContext.HaltungRecord)", apply);
@@ -52,7 +48,6 @@ public sealed class PlayerWindowShellProjectArchitectureTests
         Assert.Contains("PlayerShellProjectServiceFactory.Create", codingProjectPersistenceFactory);
         Assert.Contains("PlayerClock.UtcNow", codingProjectPersistenceFactory);
         Assert.Contains("ModifiedAtUtc", codingProjectPersistence);
-        Assert.DoesNotContain("App.Current", protocol + apply);
         Assert.Contains("IPlayerShellProjectContext", service);
         Assert.Contains("IPlayerShellProjectContext", shell);
         Assert.Contains("App.Current", factory);

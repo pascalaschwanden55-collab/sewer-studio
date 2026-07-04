@@ -284,20 +284,32 @@
 
                     <!-- ═══ Row 0: Start/Stop/Pause Buttons ═══ -->
                     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
-                        <Button Content="▶ Selbsttraining starten"
-                                Command="{Binding RunSelfTrainingCommand}"
+                        <Button Command="{Binding RunSelfTrainingCommand}"
                                 Background="{DynamicResource SuccessBrush}" Foreground="White" FontWeight="SemiBold"
-                                Padding="16,6" Margin="0,0,8,0" Cursor="Hand"/>
-                        <Button Content="⏸ Pause / Fortsetzen"
-                                Command="{Binding PauseSelfTrainingCommand}"
+                                Padding="16,6" Margin="0,0,8,0" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                <TextBlock Text="Selbsttraining starten"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding PauseSelfTrainingCommand}"
                                 IsEnabled="{Binding IsSelfTrainingRunning}"
                                 Background="{DynamicResource WarningBrush}" Foreground="White" FontWeight="SemiBold"
-                                Padding="16,6" Margin="0,0,8,0" Cursor="Hand"/>
-                        <Button Content="⏹ Abbrechen"
-                                Command="{Binding StopSelfTrainingCommand}"
+                                Padding="16,6" Margin="0,0,8,0" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE769;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                <TextBlock Text="Pause / Fortsetzen"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding StopSelfTrainingCommand}"
                                 IsEnabled="{Binding IsSelfTrainingRunning}"
                                 Background="{DynamicResource DangerBrush}" Foreground="White" FontWeight="SemiBold"
-                                Padding="16,6" Cursor="Hand"/>
+                                Padding="16,6" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE71A;" FontFamily="Segoe MDL2 Assets" FontSize="12" Margin="0,0,6,0"/>
+                                <TextBlock Text="Abbrechen"/>
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
 
                     <!-- ═══ Row 2: Pipeline-Stage-Leiste ═══ -->

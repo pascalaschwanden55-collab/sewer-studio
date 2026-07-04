@@ -21,6 +21,7 @@ public static class PlayerWindowControllerSetInitializer
                 CurrentTimeText: window.CurrentTimeText,
                 DurationText: window.DurationText,
                 RateText: window.RateText,
+                SpeedSlider: window.SpeedSlider,
                 Speed05Button: window.Speed05Button,
                 Speed1Button: window.Speed1Button,
                 Speed15Button: window.Speed15Button,

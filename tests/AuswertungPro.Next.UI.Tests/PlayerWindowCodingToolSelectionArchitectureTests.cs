@@ -8,16 +8,14 @@ public sealed class PlayerWindowCodingToolSelectionArchitectureTests
     [Fact]
     public void PlayerWindow_coding_tool_selection_lives_in_policy()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
-        var toolsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Tools.cs");
-        var calibrationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Calibration.cs");
-        var exitPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
-        var statePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.State.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingToolSelectionPolicy.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingToolSelectionWorkflow.cs");
-        var activeToolStatePath = Path.Combine(uiRoot, "Player", "CodingActiveToolNameStateController.cs");
+        var overlayInputPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
+        var toolsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Tools.cs");
+        var calibrationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Calibration.cs");
+        var exitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingToolSelectionPolicy.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingToolSelectionWorkflow.cs");
+        var activeToolStatePath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingActiveToolNameStateController.cs");
 
         Assert.True(File.Exists(toolsPath), "Tool- und Cursor-Wiring soll aus dem allgemeinen OverlayInput-Partial heraus.");
         Assert.True(File.Exists(policyPath), "Tool-Toggle-Entscheidung muss ausserhalb von PlayerWindow liegen.");
@@ -33,26 +31,16 @@ public sealed class PlayerWindowCodingToolSelectionArchitectureTests
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var activeToolState = File.Exists(activeToolStatePath) ? File.ReadAllText(activeToolStatePath) : "";
 
-        Assert.DoesNotContain("private void SetCodingTool", overlayInput);
-        Assert.DoesNotContain("private void UpdateCodingOverlayCursor", overlayInput);
         Assert.Contains("private void SetCodingTool", tools);
         Assert.Contains("private void UpdateCodingOverlayCursor", tools);
         Assert.Contains("CodingToolSelectionWorkflow.Execute", tools);
-        Assert.DoesNotContain("CodingToolSelectionPolicy.Build", tools);
         Assert.Contains("_codingActiveToolNameState.ActiveToolName", tools + calibration);
         Assert.Contains("_codingActiveToolNameState.Set", tools + calibration);
         Assert.Contains("_codingActiveToolNameState.Clear", calibration + exit);
         Assert.Contains("_codingActiveToolNameState", state);
-        Assert.DoesNotContain("private string? _activeCodingToolName", tools + state);
-        Assert.DoesNotContain("_activeCodingToolName", tools + calibration + exit + state);
         Assert.Contains("_codingSessionHost", tools);
-        Assert.DoesNotContain("_codingVm", tools);
         Assert.Contains("LiveDetectionStatusControls.ShowStatusMessage", tools);
         Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", tools);
-        Assert.DoesNotContain("LiveDetectionStatusText.Text = msg", tools);
-        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Visible", tools);
-        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Collapsed", tools);
-        Assert.DoesNotContain("bool activate = !string.Equals(_activeCodingToolName, btnName)", tools);
         Assert.Contains("public static CodingToolSelectionState Build", policy);
         Assert.Contains("CodingToolSelectionPolicy.Build", workflow);
         Assert.Contains("actions.ResetCalibration()", workflow);

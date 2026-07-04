@@ -6,7 +6,7 @@ public static class AppIdentity
 
     // Zentrale Versionsnummer der Anwendung — einzige Quelle der Wahrheit.
     // Wird in der Startanimation und in den Einstellungen angezeigt.
-    public const string Version = "4.4";
+    public const string Version = "4.5";
 
     // Anzeige-Variante mit "v"-Praefix (z.B. fuer Splash und Einstellungen).
     public const string DisplayVersion = "v" + Version;

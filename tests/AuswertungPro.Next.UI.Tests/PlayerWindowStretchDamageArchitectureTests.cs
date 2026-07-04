@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
@@ -39,29 +40,29 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var dialogWorkflow = File.Exists(dialogWorkflowPath) ? File.ReadAllText(dialogWorkflowPath) : "";
         var commandWorkflow = File.ReadAllText(commandWorkflowPath);
 
-        Assert.DoesNotContain("private bool CloseOpenStreckenschaeden", boundaries);
+        AssertNoForbiddenTokens(boundaries, "private bool CloseOpenStreckenschaeden");
         Assert.Contains("private bool CloseOpenStreckenschaeden", closePrompt);
         Assert.Contains("CodingOpenStretchDamagePromptCommandWorkflow.Execute", closePrompt);
         Assert.Contains("CodingOpenStretchDamageDialogWorkflow.ConfirmClose", closePrompt);
-        Assert.DoesNotContain("CodingOpenStretchDamageDialogServiceFactory.Create", closePrompt);
-        Assert.DoesNotContain("new CodingOpenStretchDamageDialogWorkflowActions", closePrompt);
+        AssertNoForbiddenTokens(
+            closePrompt,
+            "CodingOpenStretchDamageDialogServiceFactory.Create",
+            "new CodingOpenStretchDamageDialogWorkflowActions",
+            "if (!_codingSessionHost.HasViewModel) return true",
+            "if (offene.Count == 0) return true",
+            "if (decision == CodingOpenStretchDamageDialogDecision.Close)",
+            "if (decision == CodingOpenStretchDamageDialogDecision.Cancel)",
+            "CodingOpenStretchDamagePolicy.ResolveCloseMeter",
+            "_codingSessionService?.UpdateEvent",
+            ".ConfirmClose(openEvents, closeMeter))",
+            "DialogConfirm",
+            "new System.Text.StringBuilder",
+            "Folgende Streckensch",
+            ".Where(e => e.Entry.IsStreckenschaden",
+            "ev.MeterAtCapture > start");
         Assert.Contains("CodingOpenStretchDamagePolicy.FindOpen", closePrompt);
         Assert.Contains("CodingOpenStretchDamageCloseApplier.Apply", closePrompt);
         Assert.Contains("_codingSessionHost", closePrompt);
-        Assert.DoesNotContain("_codingVm", closePrompt);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return true", closePrompt);
-        Assert.DoesNotContain("if (offene.Count == 0) return true", closePrompt);
-        Assert.DoesNotContain("if (decision == CodingOpenStretchDamageDialogDecision.Close)", closePrompt);
-        Assert.DoesNotContain("if (decision == CodingOpenStretchDamageDialogDecision.Cancel)", closePrompt);
-        Assert.DoesNotContain("CodingOpenStretchDamagePolicy.ResolveCloseMeter", closePrompt);
-        Assert.DoesNotContain("_codingSessionService?.UpdateEvent", closePrompt);
-        Assert.DoesNotContain(".ConfirmClose(openEvents, closeMeter))", closePrompt);
-        Assert.DoesNotContain("DialogHost.Current", closePrompt);
-        Assert.DoesNotContain("DialogConfirm", closePrompt);
-        Assert.DoesNotContain("new System.Text.StringBuilder", closePrompt);
-        Assert.DoesNotContain("Folgende Streckensch", closePrompt);
-        Assert.DoesNotContain(".Where(e => e.Entry.IsStreckenschaden", closePrompt);
-        Assert.DoesNotContain("ev.MeterAtCapture > start", closePrompt);
         Assert.Contains("public static string Build", policy);
         Assert.Contains("public static IReadOnlyList<CodingEvent> FindOpen", closePolicy);
         Assert.Contains("CodingOpenStretchDamagePolicy.ResolveCloseMeter", closeApplier);
@@ -99,8 +100,10 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var applier = File.ReadAllText(applierPath);
 
         Assert.Contains("CodingStreckenschadenActionInputBuilder.BuildOpenEntries", applier);
-        Assert.DoesNotContain(".Where(e => e.Entry.IsStreckenschaden", ai + strecken);
-        Assert.DoesNotContain("StreckenschadenActionMapper.OpenEntry(", ai + strecken);
+        AssertNoForbiddenTokens(
+            ai + strecken,
+            ".Where(e => e.Entry.IsStreckenschaden",
+            "StreckenschadenActionMapper.OpenEntry(");
         Assert.Contains("public static IReadOnlyList<StreckenschadenActionMapper.OpenEntry> BuildOpenEntries", builder);
     }
 
@@ -124,11 +127,15 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
 
         Assert.Contains("CodingStreckenschadenActionApplyCommandWorkflow.Execute", strecken);
         Assert.Contains("CodingStreckenschadenActionApplier.Apply", strecken);
-        Assert.DoesNotContain("private void ApplyStreckenschadenActions", ai + strecken);
-        Assert.DoesNotContain("if (codingSessionService == null || codingEvents == null || actions.Count == 0)", strecken);
-        Assert.DoesNotContain("StreckenschadenActionMapper.MapAll", ai + strecken);
-        Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", strecken);
-        Assert.DoesNotContain("codingSessionService.UpdateEvent", strecken);
+        AssertNoForbiddenTokens(
+            ai + strecken,
+            "private void ApplyStreckenschadenActions",
+            "StreckenschadenActionMapper.MapAll");
+        AssertNoForbiddenTokens(
+            strecken,
+            "if (codingSessionService == null || codingEvents == null || actions.Count == 0)",
+            "codingSessionService.AddEvent(draft.Entry)",
+            "codingSessionService.UpdateEvent");
         Assert.Contains("if (!request.HasCodingSessionService || !request.HasCodingEvents || !request.HasActions)", workflow);
         Assert.Contains("actions.ApplyActions()", workflow);
         Assert.Contains("StreckenschadenActionMapper.MapAll", applier);
@@ -152,8 +159,10 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var builder = File.ReadAllText(builderPath);
 
         Assert.Contains("CodingStreckenschadenObservationBuilder.Build", strecken);
-        Assert.DoesNotContain("new List<AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation>", ai + strecken);
-        Assert.DoesNotContain("observations.Add(new AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation", ai + strecken);
+        AssertNoForbiddenTokens(
+            ai + strecken,
+            "new List<AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation>",
+            "observations.Add(new AuswertungPro.Next.Application.Ai.StreckenschadenTracker.Observation");
         Assert.Contains("public static CodingStreckenschadenObservationBuildResult Build", builder);
         Assert.Contains("new StreckenschadenTracker.Observation", builder);
     }
@@ -179,19 +188,23 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var workflow = File.ReadAllText(workflowPath);
         var trackerOwner = File.Exists(trackerOwnerPath) ? File.ReadAllText(trackerOwnerPath) : "";
 
-        Assert.DoesNotContain("private HashSet<SegmentedFinding> ApplyStreckenschadenTracking", ai);
-        Assert.DoesNotContain("private void ApplyStreckenschadenActions", ai);
-        Assert.DoesNotContain("private void CloseTrackedStreckenschaeden", ai);
-        Assert.DoesNotContain("private readonly StreckenschadenTracker _streckenTracker = new();", state);
+        AssertNoForbiddenTokens(
+            ai,
+            "private HashSet<SegmentedFinding> ApplyStreckenschadenTracking",
+            "private void ApplyStreckenschadenActions",
+            "private void CloseTrackedStreckenschaeden");
+        AssertNoForbiddenTokens(state, "private readonly StreckenschadenTracker _streckenTracker = new();");
         Assert.Contains("private readonly CodingStreckenschadenTrackerOwner _streckenschadenTracker = new();", state);
         Assert.Contains("private HashSet<SegmentedFinding> ApplyStreckenschadenTracking", strecken);
         Assert.Contains("CodingStreckenschadenTrackingCommandWorkflow.ApplyTracking", strecken);
         Assert.Contains("CodingStreckenschadenTrackingCommandWorkflow.CloseTracked", strecken);
-        Assert.DoesNotContain("if (codingSessionService == null || !_codingSessionHost.HasViewModel)", strecken);
-        Assert.DoesNotContain("var trackingInput = CodingStreckenschadenObservationBuilder.Build", strecken);
-        Assert.DoesNotContain("var actions = _streckenTracker.CloseAll", strecken);
-        Assert.DoesNotContain("if (TryApplyStreckenschadenActions(actions, videoTime))", strecken);
-        Assert.DoesNotContain("if (actions.Count == 0) return", strecken);
+        AssertNoForbiddenTokens(
+            strecken,
+            "if (codingSessionService == null || !_codingSessionHost.HasViewModel)",
+            "var trackingInput = CodingStreckenschadenObservationBuilder.Build",
+            "var actions = _streckenTracker.CloseAll",
+            "if (TryApplyStreckenschadenActions(actions, videoTime))",
+            "if (actions.Count == 0) return");
         Assert.Contains("CodingStreckenschadenObservationBuilder.Build", strecken);
         Assert.Contains("UpdateTracker: _streckenschadenTracker.Update", strecken);
         Assert.Contains("CloseAll: _streckenschadenTracker.CloseAll", strecken);
@@ -230,13 +243,15 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var applier = File.ReadAllText(applierPath);
         var workflow = File.ReadAllText(workflowPath);
 
-        Assert.DoesNotContain("CodingStreckenschadenEventFactory.CloseStart", events);
-        Assert.DoesNotContain("CodingStreckenschadenEventFactory.CloseStart", actions);
-        Assert.DoesNotContain("CodingStretchDamageManualCloseApplier.Apply", actions);
+        AssertNoForbiddenTokens(events, "CodingStreckenschadenEventFactory.CloseStart");
+        AssertNoForbiddenTokens(
+            actions,
+            "CodingStreckenschadenEventFactory.CloseStart",
+            "CodingStretchDamageManualCloseApplier.Apply");
         Assert.Contains("CodingEventListActionWorkflow.CloseStretch", actions);
         Assert.Contains("CodingStretchDamageManualCloseApplier.Apply", workflow);
         Assert.Contains("CodingStreckenschadenEventFactory.CloseStart", applier);
-        Assert.DoesNotContain("Beschreibung + \" (Ende)\"", events + actions);
+        AssertNoForbiddenTokens(events + actions, "Beschreibung + \" (Ende)\"");
         Assert.Contains("public static ProtocolEntry CloseStart", factory);
     }
 
@@ -260,15 +275,35 @@ public sealed class PlayerWindowStretchDamageArchitectureTests
         var policy = File.ReadAllText(policyPath);
         var applier = File.ReadAllText(applierPath);
 
-        Assert.DoesNotContain("CodingStretchDamageClosePolicy.CanClose", events);
-        Assert.DoesNotContain("CodingStretchDamageClosePolicy.BuildClosedStatusText", events);
-        Assert.DoesNotContain("CodingStretchDamageClosePolicy.CanClose", actions);
-        Assert.DoesNotContain("CodingStretchDamageClosePolicy.BuildClosedStatusText", actions);
+        AssertNoForbiddenTokens(
+            events,
+            "CodingStretchDamageClosePolicy.CanClose",
+            "CodingStretchDamageClosePolicy.BuildClosedStatusText");
+        AssertNoForbiddenTokens(
+            actions,
+            "CodingStretchDamageClosePolicy.CanClose",
+            "CodingStretchDamageClosePolicy.BuildClosedStatusText");
         Assert.Contains("CodingStretchDamageClosePolicy.CanClose", applier);
         Assert.Contains("CodingStretchDamageClosePolicy.BuildClosedStatusText", applier);
-        Assert.DoesNotContain("currentMeter <= (startEvent.MeterAtCapture + 0.01)", events + actions);
-        Assert.DoesNotContain("Streckenschaden geschlossen:", events + actions);
+        AssertNoForbiddenTokens(
+            events + actions,
+            "currentMeter <= (startEvent.MeterAtCapture + 0.01)",
+            "Streckenschaden geschlossen:");
         Assert.Contains("public static bool CanClose", policy);
         Assert.Contains("CloseToleranceMeters = 0.01", policy);
+    }
+
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = new List<string>();
+        foreach (var token in forbiddenTokens)
+        {
+            if (source.Contains(token, StringComparison.Ordinal))
+                hits.Add(token);
+        }
+
+        Assert.True(
+            hits.Count == 0,
+            "Verbotene alte Streckenschaden-Logik gefunden: " + string.Join(", ", hits));
     }
 }

@@ -1,0 +1,64 @@
+<UserControl x:Class="AuswertungPro.Next.UI.Controls.EmptyStateControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vc="clr-namespace:AuswertungPro.Next.UI.Views.Controls"
+             x:Name="Root"
+             Opacity="0">
+    <UserControl.Resources>
+        <vc:NullToCollapsedConverter x:Key="NullToCollapsed"/>
+    </UserControl.Resources>
+    <UserControl.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard>
+                <Storyboard>
+                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                     From="0"
+                                     To="1"
+                                     Duration="0:0:0.22"/>
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </UserControl.Triggers>
+
+    <StackPanel HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                MaxWidth="440"
+                Margin="24"
+                TextElement.Foreground="{DynamicResource TextBrush}">
+        <Border Width="72"
+                Height="72"
+                CornerRadius="36"
+                Background="{DynamicResource AccentSubtleBrush}"
+                BorderBrush="{DynamicResource AccentBrush}"
+                BorderThickness="1"
+                HorizontalAlignment="Center"
+                Margin="0,0,0,14">
+            <TextBlock Text="{Binding Icon, ElementName=Root}"
+                       FontFamily="Segoe MDL2 Assets"
+                       FontSize="30"
+                       Foreground="{DynamicResource AccentBrush}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+        </Border>
+        <TextBlock Text="{Binding Title, ElementName=Root}"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center"
+                   Margin="0,0,0,4"/>
+        <TextBlock Text="{Binding Message, ElementName=Root}"
+                   FontSize="12"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   LineHeight="18"
+                   Margin="0,0,0,12"/>
+        <Button Content="{Binding ActionText, ElementName=Root}"
+                Command="{Binding ActionCommand, ElementName=Root}"
+                Style="{StaticResource SecondaryButton}"
+                HorizontalAlignment="Center"
+                MinWidth="140"
+                Visibility="{Binding ActionCommand, ElementName=Root, Converter={StaticResource NullToCollapsed}}"/>
+    </StackPanel>
+</UserControl>

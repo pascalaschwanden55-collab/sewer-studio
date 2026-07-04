@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using AuswertungPro.Next.Application.Dashboard;
 
 namespace AuswertungPro.Next.UI.ViewModels.Pages
 {
@@ -20,6 +21,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
 
         public Project Project => _shell.Project;
         public bool IsProjectReady => _shell.IsProjectReady;
+        public DashboardStatistics Dashboard => DashboardStatisticsBuilder.Build(Project.Data);
 
         [ObservableProperty] private string? _lastProjectPath;
         [ObservableProperty] private string _projectStatus = string.Empty;
@@ -75,6 +77,7 @@ namespace AuswertungPro.Next.UI.ViewModels.Pages
             {
                 OnPropertyChanged(nameof(Project));
                 OnPropertyChanged(nameof(IsProjectReady));
+                OnPropertyChanged(nameof(Dashboard));
                 ProjectStatus = BuildProjectStatus();
                 LastProjectPath = _sp.Settings.LastProjectPath;
                 if (e.PropertyName == nameof(ShellViewModel.IsProjectReady))

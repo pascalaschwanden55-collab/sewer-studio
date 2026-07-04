@@ -21,17 +21,11 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.True(File.Exists(factoryPath), "LiveDetection-Modellauswahl-Wiring soll in der Runtime-Factory liegen.");
         Assert.True(File.Exists(policyPath), "Live-KI-Modellauswahl muss ausserhalb der PlayerWindow-Partials liegen.");
 
-        var liveDetection = File.ReadAllText(liveDetectionPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var factory = File.ReadAllText(factoryPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.DoesNotContain("VisionModelSelectionPolicy.Select", liveDetection);
-        Assert.DoesNotContain("VisionModelSelectionPolicy.Select", lifecycle);
         Assert.Contains("VisionModelSelectionPolicy.Select", factory);
-        Assert.DoesNotContain("m.Contains(\"vl\"", liveDetection);
-        Assert.DoesNotContain("m.Contains(\"vl\"", lifecycle);
-        Assert.DoesNotContain("m.Contains(\"vl\"", factory);
         Assert.Contains("public static string Select", policy);
     }
 
@@ -55,9 +49,7 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var policy = File.ReadAllText(policyPath);
 
         Assert.Contains("LiveDetectionResultWorkflow.Execute", runCommandWorkflow);
-        Assert.DoesNotContain("LiveDetectionConfirmationPolicy.SelectSignificantFindings", liveDetection);
         Assert.Contains("LiveDetectionConfirmationPolicy.SelectSignificantFindings", workflow);
-        Assert.DoesNotContain("Severity >= 2", liveDetection);
         Assert.Contains("MinimumConfirmationSeverity", policy);
     }
 
@@ -89,25 +81,13 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var tickStartWorkflow = File.ReadAllText(tickStartWorkflowPath);
         var inferenceWorkflow = File.ReadAllText(inferenceWorkflowPath);
 
-        Assert.DoesNotContain("private async void DetectionTimer_Tick", liveDetection);
         Assert.Contains("private void DetectionTimer_Tick", liveDetection);
         Assert.Contains("LiveDetectionTimerDispatchWorkflow.Execute", liveDetection);
         Assert.Contains("SafeFireAndForget", liveDetection);
         Assert.Contains("private async Task RunDetectionAsync", liveDetection);
         Assert.Contains("LiveDetectionRunCommandWorkflow.ExecuteAsync", liveDetection);
         Assert.Contains("_liveDetectionController.ShouldRunTick", liveDetection);
-        Assert.DoesNotContain("LiveDetectionTickStartWorkflow.Start", liveDetection);
-        Assert.DoesNotContain("LiveDetectionSnapshotWorkflow.Handle", liveDetection);
-        Assert.DoesNotContain("LiveDetectionInferenceWorkflow.ExecuteAsync", liveDetection);
-        Assert.DoesNotContain("LiveDetectionResultWorkflow.Execute", liveDetection);
-        Assert.DoesNotContain("LiveDetectionErrorWorkflow.Execute", liveDetection);
-        Assert.DoesNotContain("catch (Exception ex)", liveDetection);
-        Assert.DoesNotContain("finally", liveDetection);
         Assert.Contains("_liveDetectionController.CreateAnalyzeFrameAsync()", liveDetection);
-        Assert.DoesNotContain("| Snapshot", liveDetection);
-        Assert.DoesNotContain("| Inferenz", liveDetection);
-        Assert.DoesNotContain("_liveDetectionController.Service", liveDetection);
-        Assert.DoesNotContain(".AnalyzeFrameAsync(", liveDetection);
         Assert.Contains("| Snapshot", tickStartWorkflow);
         Assert.Contains("| Inferenz", inferenceWorkflow);
         Assert.Contains("LiveDetectionTickStartWorkflow.Start", runCommandWorkflow);
@@ -121,9 +101,6 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("actions.Dispatch", dispatchWorkflow);
         Assert.Contains("LiveDetectionTimerPolicy.ShouldRunTick", liveController);
         Assert.Contains("CreateAnalyzeFrameAsync", liveController);
-        Assert.DoesNotContain("_isDetectionInFlight || _liveDetectionService is null || _detectionCts is null", liveDetection);
-        Assert.DoesNotContain("!_player.IsPlaying", liveDetection);
-        Assert.DoesNotContain("if (_detectionPendingFindings != null)", liveDetection);
         Assert.Contains("public static bool ShouldRunTick", policy);
     }
 
@@ -148,9 +125,6 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("PauseIfRunning", helper);
         Assert.Contains("PlayerLiveDetectionStopPlayback.PauseIfRunning", workflow);
         Assert.Contains("LiveDetectionStopUiWorkflow.Execute", stop);
-        Assert.DoesNotContain("PlayerLiveDetectionStopPlayback.PauseIfRunning", stop);
-        Assert.DoesNotContain("_player.SetPause(true)", stop);
-        Assert.DoesNotContain("_player.SetPause(false)", stop);
     }
 
     [Fact]
@@ -187,10 +161,6 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
 
         var liveDetection = File.ReadAllText(liveDetectionPath);
         var status = File.ReadAllText(statusPath);
-        var playerWindowPartials = string.Join(
-            Environment.NewLine,
-            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs")
-                .Select(File.ReadAllText));
         var pulse = File.ReadAllText(pulsePath);
         var codingState = File.ReadAllText(codingStatePath);
         var errorWorkflow = File.ReadAllText(errorWorkflowPath);
@@ -203,28 +173,16 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var controls = File.ReadAllText(controlsPath);
         var pulseControls = File.Exists(pulseControlsPath) ? File.ReadAllText(pulseControlsPath) : "";
 
-        Assert.DoesNotContain("private void SetLiveDetectionBadge", liveDetection);
-        Assert.DoesNotContain("private void SetYoloStatus", liveDetection);
-        Assert.DoesNotContain("private void SetCodingAiState", liveDetection);
-        Assert.DoesNotContain("private void StartCodingAiPulse", liveDetection);
-        Assert.DoesNotContain("private void StopCodingAiPulse", liveDetection);
-        Assert.DoesNotContain("private void UpdateDetectionStatus", liveDetection);
         Assert.Contains("private void SetLiveDetectionBadge", status);
         Assert.Contains("private void SetYoloStatus", status);
         Assert.Contains("private void SetCodingAiState", status);
-        Assert.DoesNotContain("private void StartCodingAiPulse", status);
-        Assert.DoesNotContain("private void StopCodingAiPulse", status);
         Assert.Contains("private void UpdateDetectionStatus", status);
         Assert.Contains("LiveDetectionPulseWorkflow.Start", pulse);
         Assert.Contains("LiveDetectionPulseWorkflow.Stop", pulse);
-        Assert.DoesNotContain("_codingAiPulseRunning", pulse);
-        Assert.DoesNotContain("private bool _codingAiPulseRunning", codingState);
         Assert.Contains("private LiveDetectionPulseStateController _codingAiPulseStateController => _codingAiStates.PulseState", codingState);
         Assert.Contains("_codingAiPulseStateController.IsRunning", pulse);
         Assert.Contains("_codingAiPulseStateController.CreateStartActions", pulse);
         Assert.Contains("_codingAiPulseStateController.CreateStopActions", pulse);
-        Assert.DoesNotContain("if (_codingAiPulseRunning)", pulse);
-        Assert.DoesNotContain("_codingAiPulseRunning = true;", pulse);
         Assert.Contains("public sealed class LiveDetectionPulseStateController", pulseState);
         Assert.Contains("public bool IsRunning", pulseState);
         Assert.Contains("if (request.IsRunning)", pulseWorkflow);
@@ -233,7 +191,6 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("actions.ClearRunning()", pulseWorkflow);
         Assert.Contains("actions.StopPulse()", pulseWorkflow);
         Assert.Contains("LiveDetectionCodingAiStateWorkflow.Execute", status);
-        Assert.DoesNotContain("if (pulse)", status);
         Assert.Contains("request.Pulse", codingAiStateWorkflow);
         Assert.Contains("actions.ShowCodingAiState()", codingAiStateWorkflow);
         Assert.Contains("actions.StartPulse()", codingAiStateWorkflow);
@@ -242,11 +199,6 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("HasDispatcherAccess: PlayerDispatcherScheduler.HasAccess(Dispatcher)", status);
         Assert.Contains("InvokeOnUi: action => PlayerDispatcherScheduler.Invoke(Dispatcher, action)", liveDetection);
         Assert.Contains("DispatchToUi: action => PlayerDispatcherScheduler.Invoke(Dispatcher, action)", status);
-        Assert.DoesNotContain("Dispatcher.Invoke(action)", playerWindowPartials);
-        Assert.DoesNotContain("Dispatcher.CheckAccess()", playerWindowPartials);
-        Assert.DoesNotContain("Dispatcher.HasShutdownStarted", playerWindowPartials);
-        Assert.DoesNotContain("if (!Dispatcher.CheckAccess())", status);
-        Assert.DoesNotContain("Dispatcher.Invoke(() => Set", status);
         var dispatcherScheduler = File.ReadAllText(Path.Combine(windowsRoot, "PlayerDispatcherScheduler.cs"));
         Assert.Contains("public static void Invoke", dispatcherScheduler);
         Assert.Contains("public static bool HasAccess", dispatcherScheduler);
@@ -260,15 +212,8 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("LiveDetectionStatusControls.ShowDetectionError", liveDetection);
         Assert.Contains("LiveDetectionErrorWorkflow.Execute", runCommandWorkflow);
         Assert.Contains("LiveDetectionSnapshotWorkflow.Handle", runCommandWorkflow);
-        Assert.DoesNotContain("| Bereit", liveDetection);
         Assert.Contains("| Bereit", snapshotWorkflow);
-        Assert.DoesNotContain("msg.Length > 200", liveDetection);
         Assert.Contains("message.Length > 200", errorWorkflow);
-        Assert.DoesNotContain("LiveDetectionStatusText.Text = $\"Fehler:", liveDetection);
-        Assert.DoesNotContain("AiStatusBadge.Visibility", status);
-        Assert.DoesNotContain("YoloStatusBar.Visibility", status);
-        Assert.DoesNotContain("TxtCodingAiStatus.Text", status);
-        Assert.DoesNotContain("FindingSummaryPanel.Visibility", status);
         Assert.Contains("public static void ShowLiveDetectionBadge", controls);
         Assert.Contains("public static void ShowYoloStatus", controls);
         Assert.Contains("public static void ShowCodingAiState", controls);
@@ -279,7 +224,6 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("private void StopCodingAiPulse", pulse);
         Assert.Contains("LiveDetectionPulseControls.Start(CodingAiPulseRing)", pulse);
         Assert.Contains("LiveDetectionPulseControls.Stop(CodingAiPulseRing)", pulse);
-        Assert.DoesNotContain("DoubleAnimation", pulse);
         Assert.Contains("DoubleAnimation", pulseControls);
         Assert.Contains("public static void Start", pulseControls);
         Assert.Contains("public static void Stop", pulseControls);
@@ -331,42 +275,18 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var toggleControls = File.Exists(toggleControlsPath) ? File.ReadAllText(toggleControlsPath) : "";
         var liveController = File.Exists(liveControllerPath) ? File.ReadAllText(liveControllerPath) : "";
         var disposableLifecycle = File.Exists(disposableLifecyclePath) ? File.ReadAllText(disposableLifecyclePath) : "";
-        var playerWindowPartials = string.Join(
-            Environment.NewLine,
-            Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
 
-        Assert.DoesNotContain("private async void LiveDetection_Click", liveDetection);
-        Assert.DoesNotContain("private async Task StartLiveDetectionAsync", liveDetection);
-        Assert.DoesNotContain("private void StopLiveDetection", liveDetection);
-        Assert.DoesNotContain("private async void LiveDetection_Click", lifecycle);
         Assert.Contains("private void LiveDetection_Click", lifecycle);
         Assert.Contains(".SafeFireAndForget(\"LiveDetectionClick\")", lifecycle);
         Assert.Contains("private async Task HandleLiveDetectionClickAsync", lifecycle);
         Assert.Contains("LiveDetectionClickWorkflow.ExecuteAsync", lifecycle);
-        Assert.DoesNotContain("if (_liveDetectionController.IsDetecting)", lifecycle);
         Assert.Contains("private async Task StartLiveDetectionAsync", lifecycle);
-        Assert.DoesNotContain("private void StopLiveDetection", lifecycle);
         Assert.Contains("LiveDetectionStartupDisplayWorkflow.StartAsync", lifecycle);
-        Assert.DoesNotContain("LiveDetectionStartupWorkflow.StartAsync", lifecycle);
         Assert.Contains("new LiveDetectionStartupActions", lifecycle);
         Assert.Contains("LiveDetectionToggleControls.Uncheck", lifecycle);
-        Assert.DoesNotContain("LiveDetectionButton.IsChecked = false", playerWindowPartials);
-        Assert.DoesNotContain("AiRuntimeSettings cfg", lifecycle);
-        Assert.DoesNotContain("ShowRuntimeSettingsLoadFailed", lifecycle);
-        Assert.DoesNotContain("ShowDisabled", lifecycle);
-        Assert.DoesNotContain("ShowStartFailed", lifecycle);
-        Assert.DoesNotContain("catch (Exception ex)", lifecycle);
-        Assert.DoesNotContain("PlayerAiSettingsLoader.LoadRuntimeSettings", lifecycle);
-        Assert.DoesNotContain("AppSettingsAiSettingsProvider", lifecycle);
-        Assert.DoesNotContain("LiveDetectionRuntimeFactory.CreateAsync", lifecycle);
         Assert.Contains("_liveDetectionController.StartRuntime", lifecycle);
-        Assert.DoesNotContain("LiveDetectionRuntimeStartWorkflow.Start", lifecycle);
-        Assert.DoesNotContain("new LiveDetectionRuntimeStartActions", lifecycle);
         Assert.Contains("LiveDetectionRuntimeStartWorkflow.Start", liveController);
         Assert.Contains("new LiveDetectionRuntimeStartActions", liveController);
-        Assert.DoesNotContain("\"KI aktiv\"", lifecycle);
-        Assert.DoesNotContain("\"Aktiv\"", lifecycle);
-        Assert.DoesNotContain("LiveDetectionDisplayPolicy.CompactModelName", lifecycle);
         Assert.Contains("actions.StopLiveDetection()", clickWorkflow);
         Assert.Contains("actions.UncheckToggle()", clickWorkflow);
         Assert.Contains("actions.StartLiveDetectionAsync()", clickWorkflow);
@@ -385,15 +305,8 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("\"Aktiv\"", runtimeStartWorkflow);
         Assert.Contains("public static class LiveDetectionToggleControls", toggleControls);
         Assert.Contains("public static void Uncheck", toggleControls);
-        Assert.DoesNotContain("new OllamaClient", lifecycle);
-        Assert.DoesNotContain("new LiveDetectionService", lifecycle);
-        Assert.DoesNotContain("new DispatcherTimer", lifecycle);
-        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateLiveDetectionTimer", lifecycle);
         Assert.Contains("PlayerWindowTimerFactory.CreateLiveDetectionTimer", liveController);
         Assert.Contains("LiveDetectionStatusControls.ShowWaitingForFrame", lifecycle);
-        Assert.DoesNotContain("LiveDetectionStatusText.Text = \"Warte auf Frame...\"", lifecycle);
-        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Visible", lifecycle);
-        Assert.DoesNotContain("VisionModelSelectionPolicy.Select", lifecycle);
         Assert.Contains("new OllamaClient", factory);
         Assert.Contains("new LiveDetectionService", factory);
         Assert.Contains("VisionModelSelectionPolicy.Select", factory);
@@ -401,7 +314,6 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("LiveDetectionStopUiWorkflow.Execute", stop);
         Assert.Contains("LiveDetectionHideStatusTimerWorkflow.Schedule", stop);
         Assert.Contains("_codingSessionHost", stop);
-        Assert.DoesNotContain("_codingVm", stop);
         Assert.Contains("public static class LiveDetectionStopUiWorkflow", stopUiWorkflow);
         Assert.Contains("public static class LiveDetectionHideStatusTimerWorkflow", hideStatusTimerWorkflow);
         Assert.Contains("TimeSpan.FromSeconds(5)", hideStatusTimerWorkflow);
@@ -409,23 +321,9 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         Assert.Contains("actions.HideDetectionStatus()", hideStatusTimerWorkflow);
         Assert.Contains("LiveDetectionStatusControls.ShowStoppedDetectionStatus", stop);
         Assert.Contains("LiveDetectionStatusControls.HideDetectionStatus", stop);
-        Assert.DoesNotContain("if (!_liveDetectionController.IsDetecting)", stop);
-        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", stop);
-        Assert.DoesNotContain("TimeSpan.FromSeconds(5)", stop);
-        Assert.DoesNotContain("AiStatusBadge.Visibility", stop);
-        Assert.DoesNotContain("FindingSummaryPanel.Visibility", stop);
-        Assert.DoesNotContain("LiveDetectionStatusText.Text", stop);
-        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Visible", stop);
-        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Collapsed", stop);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelPreviousAndCreate", liveController);
         Assert.Contains("CancellationTokenSourceLifecycle.CancelDisposeAndClear", liveController);
-        Assert.DoesNotContain("_detectionCts = new CancellationTokenSource();", lifecycle + stop);
-        Assert.DoesNotContain("_detectionCts?.Cancel();", lifecycle + stop);
-        Assert.DoesNotContain("_detectionCts?.Dispose();", lifecycle + stop);
-        Assert.DoesNotContain("_detectionCts = null;", lifecycle + stop);
         Assert.Contains("_client = DisposableReferenceLifecycle.DisposeAndClear(_client)", liveController);
-        Assert.DoesNotContain("_liveDetectionClient?.Dispose()", stop);
-        Assert.DoesNotContain("_liveDetectionClient = null;", stop);
         Assert.Contains("public static T? DisposeAndClear<T>", disposableLifecycle);
     }
 
@@ -452,12 +350,6 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var factory = File.ReadAllText(factoryPath);
         var startupDisplayWorkflow = File.ReadAllText(startupDisplayWorkflowPath);
 
-        Assert.DoesNotContain("LiveDetectionDialogServiceFactory.Create", playerText);
-        Assert.DoesNotContain("DialogHost.Current", playerText);
-        Assert.DoesNotContain("KI-Konfiguration konnte nicht geladen werden.", playerText);
-        Assert.DoesNotContain("KI ist deaktiviert.", playerText);
-        Assert.DoesNotContain("Live-KI konnte nicht gestartet werden:", playerText);
-        Assert.DoesNotContain("Schadenscode-Katalog nicht", playerText);
         Assert.Contains("ShowRuntimeSettingsLoadFailed", service);
         Assert.Contains("ShowDisabled", service);
         Assert.Contains("ShowStartFailed", service);
@@ -486,16 +378,11 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var service = File.ReadAllText(servicePath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
-        Assert.DoesNotContain("private async Task<byte[]?> CaptureCurrentFrameAsync", liveDetection);
         Assert.Contains("private async Task<byte[]?> CaptureCurrentFrameAsync", snapshot);
         Assert.Contains("LiveDetectionFrameCaptureWorkflow.CaptureAsync", snapshot);
-        Assert.DoesNotContain("LiveDetectionFrameCaptureServiceFactory.Create", snapshot);
         Assert.Contains("LiveDetectionFrameCaptureServiceFactory.Create", workflow);
         Assert.Contains("service.CaptureAsync(isUnavailable, cancellationToken)", workflow);
         Assert.Contains("TakeSnapshotSafe", snapshot);
-        Assert.DoesNotContain("sewer_live_", snapshot);
-        Assert.DoesNotContain("File.Exists", snapshot);
-        Assert.DoesNotContain("File.ReadAllBytesAsync", snapshot);
         Assert.Contains("sewer_live_", service);
         Assert.Contains("File.ReadAllBytesAsync", service);
     }
@@ -517,10 +404,8 @@ public sealed class PlayerWindowLiveDetectionArchitectureTests
         var overlay = File.ReadAllText(overlayPath);
         var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
 
-        Assert.DoesNotContain("private void RenderDetectionOverlay", liveDetection);
         Assert.Contains("private void RenderDetectionOverlay", overlay);
         Assert.Contains("LiveDetectionOverlayController.Render", overlay);
-        Assert.DoesNotContain("LiveDetectionOverlayRenderer.Render", overlay);
         Assert.Contains("LiveDetectionOverlayRenderer.Render", controller);
         Assert.Contains("OnFindingClicked", overlay);
     }

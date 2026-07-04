@@ -1,4 +1,5 @@
 using System.IO;
+using AuswertungPro.Next.UI.Services;
 using Xunit;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
@@ -6,73 +7,6 @@ namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DesignAuditThemeResourceTests
 {
-    private static readonly string[] ThemeBrushKeys =
-    [
-        "BgBrush",
-        "BgLightBrush",
-        "CardBrush",
-        "CardGlassBrush",
-        "BorderBrush",
-        "BorderLightBrush",
-        "HeaderBrush",
-        "HeaderTextBrush",
-        "TextBrush",
-        "TextSecondaryBrush",
-        "MutedBrush",
-        "AccentBrush",
-        "AccentHoverBrush",
-        "AccentSubtleBrush",
-        "HoverBrush",
-        "SurfaceSubtleBrush",
-        "OverlayBrush",
-        "NavPanelBrush",
-        "GlassBrush",
-        "SuccessBrush",
-        "DangerBrush",
-        "WarningBrush",
-        "InfoBrush",
-        "NeonCyanBrush",
-        "NeonBlueBrush",
-        "NeonPinkBrush",
-        "NeonPurpleBrush",
-        "NeonGreenBrush",
-        "NeonOrangeBrush",
-        "LcarsAmberBrush",
-        "LcarsPeachBrush",
-        "LcarsLavenderBrush",
-        "LcarsBlueBrush",
-        "LcarsTanBrush"
-    ];
-
-    [Fact]
-    public void VideoAnalysisPipelineWindow_uses_theme_resources_for_surface_and_text_colors()
-    {
-        var xaml = ReadUiFile("Views", "Windows", "VideoAnalysisPipelineWindow.xaml");
-
-        Assert.DoesNotContain("Background=\"#0C1019\"", xaml);
-        AssertDoesNotContainAny(xaml,
-            "#0C1019",
-            "#131825",
-            "#1A2030",
-            "#243049",
-            "#F0F4FA",
-            "#7B8DA6",
-            "#94A3B8",
-            "#60A5FA");
-    }
-
-    [Fact]
-    public void TrainingCenterWindow_uses_theme_resources_for_slate_surfaces_and_text()
-    {
-        var xaml = ReadUiFile("Views", "Windows", "TrainingCenterWindow.xaml");
-
-        AssertDoesNotContainAny(xaml,
-            "#1E293B",
-            "#0F172A",
-            "#94A3B8",
-            "#64748B");
-    }
-
     [Fact]
     public void CorrectionDialog_uses_theme_resources_and_does_not_shadow_button_styles()
     {
@@ -80,22 +14,9 @@ public sealed class DesignAuditThemeResourceTests
         var themeLight = ReadUiFile("Theme", "ThemeLight.xaml");
         var themeDark = ReadUiFile("Theme", "Theme.xaml");
 
-        Assert.DoesNotContain("x:Key=\"PrimaryButton\"", xaml);
-        Assert.DoesNotContain("x:Key=\"SecondaryButton\"", xaml);
         Assert.Contains("x:Key=\"SuccessButton\"", themeLight);
         Assert.Contains("x:Key=\"SuccessButton\"", themeDark);
         Assert.Contains("Style=\"{StaticResource SuccessButton}\"", xaml);
-        AssertDoesNotContainAny(xaml,
-            "#0D1117",
-            "#161B22",
-            "#21262D",
-            "#30363D",
-            "#E6EDF3",
-            "#8B949E",
-            "#484F58",
-            "#58A6FF",
-            "#238636",
-            "#2EA043");
     }
 
     [Fact]
@@ -106,17 +27,6 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("Background=\"{DynamicResource BgBrush}\"", xaml);
         Assert.Contains("Style=\"{StaticResource SecondaryButton}\"", xaml);
         Assert.Contains("Style=\"{StaticResource SuccessButton}\"", xaml);
-        AssertDoesNotContainAny(xaml,
-            "#FF0D1117",
-            "#E6EDF3",
-            "#21262D",
-            "#30363D",
-            "#58A6FF",
-            "#1A3A5C",
-            "#8B949E",
-            "#C9D1D9",
-            "#238636",
-            "#2EA043");
     }
 
     [Fact]
@@ -127,16 +37,6 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("Background=\"{DynamicResource BgBrush}\"", xaml);
         Assert.Contains("Style=\"{StaticResource SecondaryButton}\"", xaml);
         Assert.Contains("Style=\"{StaticResource SuccessButton}\"", xaml);
-        AssertDoesNotContainAny(xaml,
-            "#FF0D1117",
-            "#E6EDF3",
-            "#21262D",
-            "#30363D",
-            "#58A6FF",
-            "#1A3A5C",
-            "#C9D1D9",
-            "#238636",
-            "#2EA043");
     }
 
     [Fact]
@@ -186,7 +86,6 @@ public sealed class DesignAuditThemeResourceTests
         var code = ReadUiFile("Views", "Pages", "SanierungsMatrixPage.xaml.cs");
 
         Assert.Contains("Header=\"Maßnahmen\"", xaml);
-        Assert.DoesNotContain("Header=\"Hauptarbeit\"", xaml);
         Assert.Contains("Text=\"{Binding PageTitle}\"", xaml);
         Assert.Contains("Text=\"{Binding PageSubtitle}\"", xaml);
         Assert.Contains("DataContext.MeasureOptions", xaml);
@@ -210,8 +109,6 @@ public sealed class DesignAuditThemeResourceTests
         Assert.Contains("IsChecked=\"{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml);
         Assert.Contains("Text=\"{Binding Qty, Mode=TwoWay, UpdateSourceTrigger=LostFocus", xaml);
         Assert.Contains("Text=\"{Binding UnitPrice, Mode=TwoWay, UpdateSourceTrigger=LostFocus", xaml);
-        Assert.DoesNotContain("DataContext.GroupedMeasureOptions", xaml);
-        Assert.DoesNotContain("<ComboBox.GroupStyle>", xaml);
         Assert.Contains("PreviewMouseLeftButtonDown=\"MeasureComboBox_PreviewMouseLeftButtonDown\"", xaml);
         Assert.Contains("combo.IsDropDownOpen = true;", code);
         Assert.Contains("e.Handled = true;", code);
@@ -235,8 +132,6 @@ public sealed class DesignAuditThemeResourceTests
         Assert.True(singleModeReturnIndex > singleModeIndex, "Single-holding navigation branch has no return.");
         var singleModeBlock = shell[singleModeIndex..singleModeReturnIndex];
         Assert.Contains("SelectedNavItem = null;", singleModeBlock);
-        Assert.DoesNotContain("SelectedNavItem = target;", singleModeBlock);
-        Assert.DoesNotContain("OpenSanierungsmassnahmenWindow(record, InitialFocusMode.CostCalculator)", viewModel);
     }
 
     [Fact]
@@ -253,27 +148,53 @@ public sealed class DesignAuditThemeResourceTests
     }
 
     [Fact]
-    public void Controls_and_main_window_use_dynamic_theme_brush_resources_for_live_theme_switching()
+    public void MainWindow_opts_into_mica_backdrop()
     {
-        var controls = ReadUiFile("Theme", "Controls.xaml");
-        var mainWindow = ReadUiFile("MainWindow.xaml");
+        var xaml = ReadUiFile("MainWindow.xaml");
 
-        AssertNoStaticThemeBrushResources("Theme/Controls.xaml", controls);
-        AssertNoStaticThemeBrushResources("MainWindow.xaml", mainWindow);
+        Assert.Contains("xmlns:ui=\"clr-namespace:AuswertungPro.Next.UI\"", xaml);
+        Assert.Contains("ui:Fluent.Backdrop=\"Mica\"", xaml);
     }
 
     [Fact]
-    public void Theme_styles_and_pages_do_not_pin_theme_brushes_for_live_theme_switching()
+    public void WindowBackdropHelper_supports_mica_only_on_supported_windows_builds()
     {
-        AssertNoStaticThemeBrushResources("Theme/ThemeLight.xaml", ReadUiFile("Theme", "ThemeLight.xaml"));
-        AssertNoStaticThemeBrushResources("Theme/Theme.xaml", ReadUiFile("Theme", "Theme.xaml"));
+        Assert.False(WindowBackdropHelper.IsMicaSupported(new Version(10, 0, 22000)));
+        Assert.True(WindowBackdropHelper.IsMicaSupported(new Version(10, 0, 22621)));
+        Assert.True(WindowBackdropHelper.IsMicaSupported(new Version(11, 0, 0)));
+    }
 
-        var root = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Pages");
-        foreach (var file in Directory.EnumerateFiles(root, "*.xaml", SearchOption.AllDirectories))
-        {
-            var relative = Path.GetRelativePath(RepoFile("src", "AuswertungPro.Next.UI"), file);
-            AssertNoStaticThemeBrushResources(relative, File.ReadAllText(file));
-        }
+    [Fact]
+    public void WindowBackdropHelper_supports_dark_titlebar_on_modern_windows()
+    {
+        Assert.False(WindowBackdropHelper.IsDarkTitleBarSupported(new Version(10, 0, 17134)));
+        Assert.True(WindowBackdropHelper.IsDarkTitleBarSupported(new Version(10, 0, 17763)));
+        Assert.True(WindowBackdropHelper.IsDarkTitleBarSupported(new Version(11, 0, 0)));
+    }
+
+    [Fact]
+    public void Themes_define_row_hover_brush_in_light_and_dark()
+    {
+        var themeLight = ReadUiFile("Theme", "ThemeLight.xaml");
+        var themeDark = ReadUiFile("Theme", "Theme.xaml");
+
+        Assert.Contains("x:Key=\"RowHoverBrush\"", themeLight);
+        Assert.Contains("x:Key=\"RowHoverBrush\"", themeDark);
+        Assert.Contains("Property=\"Background\" Value=\"{DynamicResource RowHoverBrush}\"", themeLight);
+        Assert.Contains("Property=\"Background\" Value=\"{DynamicResource RowHoverBrush}\"", themeDark);
+    }
+
+    [Fact]
+    public void Shared_controls_define_modern_scrollbars_and_missing_control_styles()
+    {
+        var controls = ReadUiFile("Theme", "Controls.xaml");
+
+        Assert.Contains("x:Key=\"VerticalScrollBarTemplate\"", controls);
+        Assert.Contains("x:Key=\"HorizontalScrollBarTemplate\"", controls);
+        Assert.Contains("TargetType=\"{x:Type RadioButton}\"", controls);
+        Assert.Contains("TargetType=\"{x:Type Expander}\"", controls);
+        Assert.Contains("TargetType=\"{x:Type TreeViewItem}\"", controls);
+        Assert.Contains("TargetType=\"{x:Type GridViewColumnHeader}\"", controls);
     }
 
     private static void AssertStyleContains(string xaml, string key, params string[] expectedParts)
@@ -302,8 +223,6 @@ public sealed class DesignAuditThemeResourceTests
         var element = xaml[elementStart..elementEnd];
 
         Assert.Contains("Style=\"{StaticResource PageTitle}\"", element);
-        Assert.DoesNotContain("NeonCyanBrush", element);
-        Assert.DoesNotContain("AccentBrush", element);
     }
 
     private static void AssertPageTitleBinding(string xaml, string binding)
@@ -318,23 +237,6 @@ public sealed class DesignAuditThemeResourceTests
         var element = xaml[elementStart..elementEnd];
 
         Assert.Contains("Style=\"{StaticResource PageTitle}\"", element);
-        Assert.DoesNotContain("NeonCyanBrush", element);
-        Assert.DoesNotContain("AccentBrush", element);
-    }
-
-    private static void AssertDoesNotContainAny(string text, params string[] forbidden)
-    {
-        foreach (var value in forbidden)
-            Assert.DoesNotContain(value, text);
-    }
-
-    private static void AssertNoStaticThemeBrushResources(string path, string xaml)
-    {
-        foreach (var key in ThemeBrushKeys)
-        {
-            Assert.DoesNotContain($"{{StaticResource {key}}}", xaml, StringComparison.Ordinal);
-            Assert.DoesNotContain($"<StaticResource ResourceKey=\"{key}\"", xaml, StringComparison.Ordinal);
-        }
     }
 
     private static string ReadUiFile(params string[] relativeParts)

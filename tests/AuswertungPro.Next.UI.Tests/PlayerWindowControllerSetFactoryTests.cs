@@ -23,6 +23,7 @@ public sealed class PlayerWindowControllerSetFactoryTests
                 CurrentTimeText: new TextBlock(),
                 DurationText: new TextBlock(),
                 RateText: new TextBlock(),
+                SpeedSlider: new Slider(),
                 Speed05Button: new ToggleButton(),
                 Speed1Button: new ToggleButton(),
                 Speed15Button: new ToggleButton(),
@@ -45,6 +46,10 @@ public sealed class PlayerWindowControllerSetFactoryTests
                 stop: () => { },
                 readRate: () => 1.0f,
                 setRate: _ => 0,
+                readVolume: () => 80,
+                setVolume: _ => { },
+                readMute: () => false,
+                setMute: _ => { },
                 shouldStartPlayback: () => false,
                 playPath: _ => { });
             var timelineHost = new PlayerTimelineHost(

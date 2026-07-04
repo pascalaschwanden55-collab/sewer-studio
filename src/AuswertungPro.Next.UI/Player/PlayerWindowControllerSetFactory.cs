@@ -28,6 +28,7 @@ public sealed record PlayerWindowControllerSetControls(
     TextBlock CurrentTimeText,
     TextBlock DurationText,
     TextBlock RateText,
+    Slider SpeedSlider,
     ToggleButton Speed05Button,
     ToggleButton Speed1Button,
     ToggleButton Speed15Button,
@@ -106,6 +107,7 @@ public static class PlayerWindowControllerSetFactory
             timerController,
             new PlayerSpeedControls(
                 controls.RateText,
+                controls.SpeedSlider,
                 controls.Speed05Button,
                 controls.Speed1Button,
                 controls.Speed15Button,

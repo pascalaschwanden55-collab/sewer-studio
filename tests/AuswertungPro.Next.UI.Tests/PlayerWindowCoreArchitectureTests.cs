@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
@@ -21,8 +22,10 @@ public sealed class PlayerWindowCoreArchitectureTests
         var guard = File.ReadAllText(guardPath);
 
         Assert.Contains("PlayerVideoPathGuard.Validate", windowRoot);
-        Assert.DoesNotContain("File.Exists(videoPath)", windowRoot);
-        Assert.DoesNotContain("Path.GetFileName(videoPath)", windowRoot);
+        AssertNoForbiddenTokens(
+            windowRoot,
+            "File.Exists(videoPath)",
+            "Path.GetFileName(videoPath)");
         Assert.Contains("new FileNotFoundException", guard);
         Assert.Contains("Path.GetFileName", guard);
     }
@@ -56,40 +59,47 @@ public sealed class PlayerWindowCoreArchitectureTests
         var playbackContext = File.Exists(playbackContextPath) ? File.ReadAllText(playbackContextPath) : "";
         var protocolContext = File.Exists(protocolContextPath) ? File.ReadAllText(protocolContextPath) : "";
 
-        Assert.DoesNotContain("using LibVLCSharp.Shared", windowRoot);
-        Assert.DoesNotContain("using LibVLCSharp.Shared", state);
-        Assert.DoesNotContain("private readonly LibVLC _libVlc", windowRoot);
-        Assert.DoesNotContain("private readonly LibVLC _libVlc", state);
-        Assert.DoesNotContain("private readonly MediaPlayer _player", state);
-        Assert.DoesNotContain("private OllamaClient? _liveDetectionClient", windowRoot);
-        Assert.DoesNotContain("private OllamaClient? _liveDetectionClient", state);
-        Assert.DoesNotContain("private static PlayerWindow? _lastOpened", windowRoot);
-        Assert.DoesNotContain("private static PlayerWindow? _lastOpened", state);
-        Assert.DoesNotContain("_lastOpened", playerWindowPartials);
-        Assert.DoesNotContain("_closing", playerWindowPartials);
-        Assert.DoesNotContain("_playbackDisposed", playerWindowPartials);
-        Assert.DoesNotContain("_videoPath", playerWindowPartials);
-        Assert.DoesNotContain("_initialOverlayText", playerWindowPartials);
-        Assert.DoesNotContain("_damageOverlay", playerWindowPartials);
-        Assert.DoesNotContain("_options", playerWindowPartials);
-        Assert.DoesNotContain("_dependencies", playerWindowPartials);
-        Assert.DoesNotContain("_haltungId", playerWindowPartials);
-        Assert.DoesNotContain("_onEntryCreated", playerWindowPartials);
-        Assert.DoesNotContain("_haltungRecord", playerWindowPartials);
+        AssertNoForbiddenTokens(
+            windowRoot,
+            "using LibVLCSharp.Shared",
+            "private readonly LibVLC _libVlc",
+            "private OllamaClient? _liveDetectionClient",
+            "private static PlayerWindow? _lastOpened");
+        AssertNoForbiddenTokens(
+            state,
+            "using LibVLCSharp.Shared",
+            "private readonly LibVLC _libVlc",
+            "private readonly MediaPlayer _player",
+            "private OllamaClient? _liveDetectionClient",
+            "private static PlayerWindow? _lastOpened",
+            "private readonly PlayerTimelineHost _playerTimelineHost",
+            "private readonly PlayerPlaybackControlHost _playerPlaybackControlHost",
+            "private readonly PlayerMarqueeOverlayHost _playerMarqueeOverlayHost",
+            "private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost",
+            "private readonly PlayerPositionControls _positionControls",
+            "private readonly PlayerSpeedControls _speedControls",
+            "private readonly PlayerMarkToolControls _markToolControls",
+            "private readonly DamageMarkerController _damageMarkerController",
+            "private readonly QuickScanController _quickScanController",
+            "private readonly CodingOverlayRenderController _codingOverlayRenderController",
+            "private readonly LiveDetectionController _liveDetectionController = new();",
+            "private readonly PlayerWindowShutdownStateController _shutdownState = new();");
+        AssertNoForbiddenTokens(
+            playerWindowPartials,
+            "_lastOpened",
+            "_closing",
+            "_playbackDisposed",
+            "_videoPath",
+            "_initialOverlayText",
+            "_damageOverlay",
+            "_options",
+            "_dependencies",
+            "_haltungId",
+            "_onEntryCreated",
+            "_haltungRecord");
         Assert.Contains("private readonly PlayerMediaRuntime _playerMediaRuntime", state);
         Assert.Contains("private readonly PlayerMediaHosts _playerMediaHosts", state);
-        Assert.DoesNotContain("private readonly PlayerTimelineHost _playerTimelineHost", state);
-        Assert.DoesNotContain("private readonly PlayerPlaybackControlHost _playerPlaybackControlHost", state);
-        Assert.DoesNotContain("private readonly PlayerMarqueeOverlayHost _playerMarqueeOverlayHost", state);
-        Assert.DoesNotContain("private readonly PlayerSnapshotCaptureHost _playerSnapshotCaptureHost", state);
         Assert.Contains("private readonly PlayerWindowControllerSet _playerControllers", state);
-        Assert.DoesNotContain("private readonly PlayerPositionControls _positionControls", state);
-        Assert.DoesNotContain("private readonly PlayerSpeedControls _speedControls", state);
-        Assert.DoesNotContain("private readonly PlayerMarkToolControls _markToolControls", state);
-        Assert.DoesNotContain("private readonly DamageMarkerController _damageMarkerController", state);
-        Assert.DoesNotContain("private readonly QuickScanController _quickScanController", state);
-        Assert.DoesNotContain("private readonly CodingOverlayRenderController _codingOverlayRenderController", state);
-        Assert.DoesNotContain("private readonly LiveDetectionController _liveDetectionController = new();", state);
         Assert.Contains("private PlayerPositionControls _positionControls => _playerControllers.PositionControls", state);
         Assert.Contains("private PlayerSpeedControls _speedControls => _playerControllers.SpeedControls", state);
         Assert.Contains("private PlayerMarkToolControls _markToolControls => _playerControllers.MarkToolControls", state);
@@ -99,7 +109,6 @@ public sealed class PlayerWindowCoreArchitectureTests
         Assert.Contains("private LiveDetectionController _liveDetectionController => _playerControllers.LiveDetectionController", state);
         Assert.Contains("private readonly PlayerWindowPlaybackContext _playbackContext", state);
         Assert.Contains("private readonly PlayerWindowProtocolContext _protocolContext", state);
-        Assert.DoesNotContain("private readonly PlayerWindowShutdownStateController _shutdownState = new();", state);
         Assert.Contains("private PlayerWindowShutdownStateController _shutdownState => _playerControllers.ShutdownStateController", state);
         Assert.Contains("PlayerLastOpenedWindowOwner<PlayerWindow>", state);
         Assert.Contains("LastOpenedWindow.Set(this)", windowRoot);
@@ -133,14 +142,18 @@ public sealed class PlayerWindowCoreArchitectureTests
                 .Select(File.ReadAllText));
 
         Assert.Contains("PlayerBoundsControls.EnsureVisibleOnScreen(this)", wiring);
-        Assert.DoesNotContain("private void EnsureVisibleOnScreen", playback);
-        Assert.DoesNotContain("SystemParameters.WorkArea", playerWindowPartials);
-        Assert.DoesNotContain("new Rect(Left, Top, Width, Height)", playerWindowPartials);
-        Assert.DoesNotContain("Left = bounds.Left", playerWindowPartials);
-        Assert.DoesNotContain("Top = bounds.Top", playerWindowPartials);
-        Assert.DoesNotContain("Width = bounds.Width", playerWindowPartials);
-        Assert.DoesNotContain("Height = bounds.Height", playerWindowPartials);
-        Assert.DoesNotContain("if (Left + Width > area.Right)", playback);
+        AssertNoForbiddenTokens(
+            playback,
+            "private void EnsureVisibleOnScreen",
+            "if (Left + Width > area.Right)");
+        AssertNoForbiddenTokens(
+            playerWindowPartials,
+            "SystemParameters.WorkArea",
+            "new Rect(Left, Top, Width, Height)",
+            "Left = bounds.Left",
+            "Top = bounds.Top",
+            "Width = bounds.Width",
+            "Height = bounds.Height");
         Assert.Contains("public static Rect ClampToWorkArea", policy);
         Assert.Contains("PlayerWindowBoundsPolicy.ClampToWorkArea", controls);
         Assert.Contains("public static void ApplyBounds", controls);
@@ -164,8 +177,10 @@ public sealed class PlayerWindowCoreArchitectureTests
         var trace = File.ReadAllText(tracePath);
 
         Assert.Contains("PlayerTrace.WriteLine", playerWindowText);
-        Assert.DoesNotContain("Debug.WriteLine", playerWindowText);
-        Assert.DoesNotContain("System.Diagnostics.Debug.WriteLine", playerWindowText);
+        AssertNoForbiddenTokens(
+            playerWindowText,
+            "Debug.WriteLine",
+            "System.Diagnostics.Debug.WriteLine");
         Assert.Contains("Debug.WriteLine", trace);
     }
 
@@ -186,12 +201,28 @@ public sealed class PlayerWindowCoreArchitectureTests
                 .Select(File.ReadAllText));
         var clock = File.ReadAllText(clockPath);
 
-        Assert.DoesNotContain("DateTime.Now", playerWindowText);
-        Assert.DoesNotContain("DateTime.UtcNow", playerWindowText);
-        Assert.DoesNotContain("DateTimeOffset.Now", playerWindowText);
+        AssertNoForbiddenTokens(
+            playerWindowText,
+            "DateTime.Now",
+            "DateTime.UtcNow",
+            "DateTimeOffset.Now");
         Assert.Contains("PlayerClock.Now", playerWindowText);
         Assert.Contains("PlayerClock.UtcNow", playerWindowText);
         Assert.Contains("PlayerClock.NowOffset", playerWindowText);
         Assert.Contains("TimeProvider.System", clock);
+    }
+
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = new List<string>();
+        foreach (var token in forbiddenTokens)
+        {
+            if (source.Contains(token, StringComparison.Ordinal))
+                hits.Add(token);
+        }
+
+        Assert.True(
+            hits.Count == 0,
+            "Verbotene alte PlayerWindow-Core-Logik gefunden: " + string.Join(", ", hits));
     }
 }

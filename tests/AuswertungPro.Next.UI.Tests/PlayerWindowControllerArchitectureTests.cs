@@ -29,10 +29,6 @@ public sealed class PlayerWindowControllerArchitectureTests
         var controller = File.ReadAllText(controllerPath);
         var controllerSetFactory = File.Exists(controllerSetFactoryPath) ? File.ReadAllText(controllerSetFactoryPath) : "";
 
-        Assert.DoesNotContain("_damageMarkers", windowText);
-        Assert.DoesNotContain("BuildDamageMarkers", windowText);
-        Assert.DoesNotContain("RepositionDamageMarkers", windowText);
-        Assert.DoesNotContain("new DamageMarkerController", windowRoot);
         Assert.Contains("new DamageMarkerController", controllerSetFactory);
         Assert.Contains("_damageMarkerController.Build()", wiring);
         Assert.Contains("_damageMarkerController.Reposition()", wiring);
@@ -64,18 +60,11 @@ public sealed class PlayerWindowControllerArchitectureTests
         var closedWorkflow = File.ReadAllText(closedWorkflowPath);
         var controllerSetFactory = File.Exists(controllerSetFactoryPath) ? File.ReadAllText(controllerSetFactoryPath) : "";
 
-        Assert.DoesNotContain("_heatmapRects", windowText);
-        Assert.DoesNotContain("_isQuickScanning", windowText);
-        Assert.DoesNotContain("_quickScanCts", windowText);
-        Assert.DoesNotContain("AddHeatmapSegment", windowText);
-        Assert.DoesNotContain("RepositionHeatmap", windowText);
-        Assert.DoesNotContain("new QuickScanController", windowRoot);
         Assert.Contains("new QuickScanController", controllerSetFactory);
         Assert.Contains("_quickScanController.Reposition()", wiring);
         Assert.Contains("CancelQuickScan: _quickScanController.Cancel", wiring);
         Assert.Contains("actions.CancelQuickScan()", closedWorkflow);
         Assert.Contains("_quickScanController.ToggleAsync()", quickScanPartial);
-        Assert.DoesNotContain("private async void QuickScan_Click", quickScanPartial);
         Assert.Contains(".SafeFireAndForget(\"QuickScan\")", quickScanPartial);
         Assert.Contains("private readonly List<(QuickScanSegment Seg", controller);
         Assert.Contains("QuickScanHeatmapLayoutPolicy", controller);

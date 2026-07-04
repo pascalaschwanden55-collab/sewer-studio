@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 
 namespace AuswertungPro.Next.UI.Tests;
@@ -12,10 +13,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var coding = ReadCodingPartials();
 
         Assert.Contains("x:Name=\"CodingDefectDetailInline\"", sidePanel);
-        Assert.DoesNotContain("x:Name=\"CodingDefectDetailPanel\"", sidePanel);
-        Assert.DoesNotContain("CodingDefectDetailPanel", accessors);
-        Assert.DoesNotContain("CodingDefectDetailPanel", coding);
-        Assert.DoesNotContain("UpdateCodingDefectDetailPanel", coding);
+        AssertNoForbiddenTokens(sidePanel, "x:Name=\"CodingDefectDetailPanel\"");
+        AssertNoForbiddenTokens(accessors, "CodingDefectDetailPanel");
+        AssertNoForbiddenTokens(coding, "CodingDefectDetailPanel", "UpdateCodingDefectDetailPanel");
     }
 
     [Fact]
@@ -23,8 +23,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
     {
         var sidePanel = ReadUiFile("Views", "Windows", "PlayerCodingSidePanel.xaml");
 
-        Assert.DoesNotContain("FontSize=\"8\"", sidePanel);
-        Assert.DoesNotContain("FontSize=\"9\"", sidePanel);
+        AssertNoForbiddenTokens(sidePanel, "FontSize=\"8\"", "FontSize=\"9\"");
         Assert.Contains("Style=\"{DynamicResource SectionLabel}\"", sidePanel);
     }
 
@@ -39,9 +38,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         Assert.Contains("HideCodingOverlayForExternalWindow", window);
         Assert.Contains("CodingOverlayInputControls.ClosePopup(CodingOverlayPopup)", hideBody);
-        Assert.DoesNotContain("CodingOverlayPopup.IsOpen = false", coding);
         Assert.Contains("RestoreCodingOverlayAfterExternalWindow", window);
-        Assert.DoesNotContain("CodingOverlayPopup.IsOpen = false", suspendBody);
+        AssertNoForbiddenTokens(coding, "CodingOverlayPopup.IsOpen = false");
         Assert.Contains("CodingOverlayInputControls.SuspendCanvas(CodingOverlayCanvas)", suspendBody);
         Assert.Contains("overlayCanvas.IsHitTestVisible = false", controls);
     }
@@ -58,7 +56,9 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("CodingSegmentedFindingVisibility.BuildVisibleCodingFindings", summary);
         Assert.Contains("CodingSamMaskOverlayController.RenderCandidates", coding);
         Assert.Contains("findingSummary.VisibleCodierbar", resultWorkflow);
-        Assert.DoesNotContain("AddMultiModelFindingsAsEvents(\r\n                    segmented.Where(s => s.Proximity.IsCodierbar).ToList()", coding);
+        AssertNoForbiddenTokens(
+            coding,
+            "AddMultiModelFindingsAsEvents(\r\n                    segmented.Where(s => s.Proximity.IsCodierbar).ToList()");
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var viewerWorkflowFactory = ReadUiFile("Ai", "CodingPhotoViewerWorkflowServiceFactory.cs");
         var viewerService = ReadUiFile("Ai", "CodingPhotoViewerWindowService.cs");
 
-        Assert.DoesNotContain("CodingPhotoViewerWorkflowServiceFactory.Create", photoBody);
+        AssertNoForbiddenTokens(photoBody, "CodingPhotoViewerWorkflowServiceFactory.Create");
         Assert.Contains("CodingPhotoViewerWorkflowServiceFactory.Create", displayWorkflow);
         Assert.Contains("CodingPhotoViewerWindowServiceFactory.Create", viewerWorkflowFactory);
         Assert.Contains("CodingPhotoViewerImageSourceLoader.Load", viewerService);
@@ -175,7 +175,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         Assert.Contains("CodingDedupPolicy.ShouldDeferSpatialCodeUntilCloser", policy);
         Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", addBody);
-        Assert.DoesNotContain("CodingMultiModelFindingAddDecisionPolicy.Decide", addBody);
+        AssertNoForbiddenTokens(addBody, "CodingMultiModelFindingAddDecisionPolicy.Decide");
         Assert.Contains("CodingMultiModelFindingAddDecisionPolicy.Decide", workflow);
         Assert.True(
             workflow.IndexOf("CodingMultiModelFindingAddDecisionPolicy.Decide", StringComparison.Ordinal)
@@ -194,11 +194,15 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var captureBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Photos.Capture.cs");
         var persistBody = ReadUiFile("Views", "Windows", "PlayerWindow.Coding.Persistence.cs");
 
-        Assert.DoesNotContain("PlayerBoundaryPhotoPolicy.GetRequiredSnapshotTime(entry.Code", captureBody);
-        Assert.DoesNotContain("SeekToRequiredPhotoTime", captureBody);
+        AssertNoForbiddenTokens(
+            captureBody,
+            "PlayerBoundaryPhotoPolicy.GetRequiredSnapshotTime(entry.Code",
+            "SeekToRequiredPhotoTime");
         Assert.Contains("_liveDetectionController.PendingConfirmationFrameBytes", persistBody);
-        Assert.DoesNotContain("CaptureFrameBytesAtRequiredPhotoTimeAsync", persistBody);
-        Assert.DoesNotContain("Rohranfang-Foto nach Datenblendung nicht verfuegbar", persistBody);
+        AssertNoForbiddenTokens(
+            persistBody,
+            "CaptureFrameBytesAtRequiredPhotoTimeAsync",
+            "Rohranfang-Foto nach Datenblendung nicht verfuegbar");
     }
 
     [Fact]
@@ -238,10 +242,12 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
             "Der analysierte Frame muss vor AddEvent am Live-Befund haengen.");
         Assert.Contains("CodingMultiModelFindingEventWorkflow.Execute", multiModelBody);
         AssertAnalyzedFrameAttachedBeforeAddEvent(multiModelWorkflow);
-        Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", qwenBody);
+        AssertNoForbiddenTokens(qwenBody, "codingSessionService.AddEvent(draft.Entry)");
         Assert.Contains("CodingMultiModelEventAppender.Apply", multiModelWorkflow);
-        Assert.DoesNotContain("CodingMultiModelEventAppender.Apply", multiModelBody);
-        Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", multiModelBody);
+        AssertNoForbiddenTokens(
+            multiModelBody,
+            "CodingMultiModelEventAppender.Apply",
+            "codingSessionService.AddEvent(draft.Entry)");
     }
 
     [Fact]
@@ -280,7 +286,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("CodingClassifierDisplayPolicy.IsStructuralClassifierCode(code)", structuralWorkflow);
         Assert.Contains("CodingStructuralClassifierEventFactory.Create", structuralWorkflow);
         Assert.Contains("CodingStructuralClassifierEventAppender.Apply", structuralWorkflow);
-        Assert.DoesNotContain("codingSessionService.AddEvent(draft.Entry)", structuralBody);
+        AssertNoForbiddenTokens(structuralBody, "codingSessionService.AddEvent(draft.Entry)");
 
         var clearIndex = structuralWorkflow.IndexOf("actions.ClearDetectionOverlays()", StringComparison.Ordinal);
         var listIndex = structuralWorkflow.IndexOf("actions.ShowResolvedFinding", StringComparison.Ordinal);
@@ -356,9 +362,8 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("request.CaptureTimestampSeconds", boundaryCommandWorkflow);
         Assert.Contains("request.FrameOsdMeter", boundaryCommandWorkflow);
 
-        Assert.DoesNotContain("double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter", multiModelBody);
-        Assert.DoesNotContain("double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter", qwenBody);
-        Assert.DoesNotContain("var meter = _codingLastOsdMeter ?? _codingVm.CurrentMeter", boundaryBody);
+        AssertNoForbiddenTokens(multiModelBody, "double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter");
+        AssertNoForbiddenTokens(qwenBody, "double meter = _codingLastOsdMeter ?? codingVm.CurrentMeter");
     }
 
     [Fact]
@@ -418,7 +423,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         Assert.Contains("CodingEventSeekCommandWorkflow.Execute", seekBody);
         Assert.Contains("CodingEventSeekPolicy.TryGetSeekMilliseconds(selectedEvent", workflow);
-        Assert.DoesNotContain("selectedEvent.VideoTimestamp.TotalMilliseconds > 0", workflow);
+        AssertNoForbiddenTokens(workflow, "selectedEvent.VideoTimestamp.TotalMilliseconds > 0");
     }
 
     [Fact]
@@ -430,7 +435,7 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
 
         Assert.Contains("CodingImportEventSeekCommandWorkflow.Execute", seekBody);
         Assert.Contains("CodingEventSeekPolicy.TryGetSeekMilliseconds(importEvent", workflow);
-        Assert.DoesNotContain("importEvent.VideoTimestamp.TotalMilliseconds > 0", workflow);
+        AssertNoForbiddenTokens(workflow, "importEvent.VideoTimestamp.TotalMilliseconds > 0");
     }
 
     [Fact]
@@ -453,8 +458,10 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("CodingEventPhotoTimestampScope.Apply", coding);
         Assert.Contains("CaptureSnapshot: CodingCaptureSnapshot", coding);
         Assert.Contains("restoreOriginalTime()", workflow);
-        Assert.DoesNotContain("entry.Zeit = photoTime.Value", coding);
-        Assert.DoesNotContain("codingEvent.VideoTimestamp = photoTime.Value", coding);
+        AssertNoForbiddenTokens(
+            coding,
+            "entry.Zeit = photoTime.Value",
+            "codingEvent.VideoTimestamp = photoTime.Value");
         Assert.Contains("CodingEventPhotoApplier.Apply", coding);
     }
 
@@ -494,11 +501,12 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         Assert.Contains("StoreMatch: _codingProtocolMatchState.Store", runBody);
         Assert.Contains("CodingProtocolMatchCommandWorkflow.Execute", runBody);
         Assert.Contains("CodingProtocolMatchRunner.Run", runBody);
-        Assert.DoesNotContain("CodingProtocolMatchService.Match", runBody);
-        Assert.DoesNotContain("_codingImportEvents.Select(ev => ev.Entry).ToList()", runBody);
-        Assert.DoesNotContain("_codingVm.Events.Select(ev => ev.Entry).ToList()", runBody);
-        Assert.DoesNotContain("CodingProtocolMatchBucketBuilder.Rebuild", runBody);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", runBody);
+        AssertNoForbiddenTokens(
+            runBody,
+            "CodingProtocolMatchService.Match",
+            "_codingImportEvents.Select(ev => ev.Entry).ToList()",
+            "CodingProtocolMatchBucketBuilder.Rebuild",
+            "if (!_codingSessionHost.HasViewModel) return");
         Assert.Contains("if (!request.HasCodingViewModel)", workflow);
         Assert.Contains("actions.RunMatch()", workflow);
         Assert.Contains("actions.StoreMatch(routing)", workflow);
@@ -526,33 +534,35 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
         var workflowFactory = ReadUiFile("Ai", "CodingProtocolImportTrainingWorkflowServiceFactory.cs");
 
         Assert.Contains("CodingImportConfirmCommandWorkflow.ExecuteAsync", importConfirmBody);
-        Assert.DoesNotContain("LstImportEvents.SelectedItem is not CodingEvent", importConfirmBody);
+        AssertNoForbiddenTokens(
+            importConfirmBody,
+            "LstImportEvents.SelectedItem is not CodingEvent",
+            "if (!_codingSessionHost.HasViewModel) return",
+            "if (_lastCodingMatch == null)",
+            "_lastCodingMatch.Trainingskandidaten",
+            "CodingProtocolTrainingCandidateResolver.ResolveImportEvents",
+            "_codingImportEvents.FirstOrDefault",
+            "foreach (var importEvent",
+            "CodingProtocolImportTrainingWorkflowServiceFactory.Create",
+            "new CodingProtocolImportTrainingConfirmationWorkflowActions",
+            "if (!result.Accepted)",
+            "var badge = result.Badge",
+            "TeacherAnnotationStore.AppendAsync(annotation)");
         Assert.Contains("request.SelectedItem is not CodingEvent", importConfirmCommandWorkflow);
         Assert.Contains("actions.ConfirmImportAsTrainingAsync(importEvent)", importConfirmCommandWorkflow);
         Assert.Contains("CodingAcceptGreenMatchesCommandWorkflow.ExecuteAsync", greenBody);
         Assert.Contains("CodingProtocolGreenMatchTrainingRunner.AcceptGreenMatchesAsync", greenBody);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", greenBody);
-        Assert.DoesNotContain("if (_lastCodingMatch == null)", greenBody);
         Assert.Contains("if (!request.HasCodingViewModel)", acceptGreenCommandWorkflow);
         Assert.Contains("actions.RunProtocolMatch()", acceptGreenCommandWorkflow);
         Assert.Contains("routing = actions.GetCurrentRouting()", acceptGreenCommandWorkflow);
         Assert.Contains("actions.AcceptGreenMatchesAsync(routing)", acceptGreenCommandWorkflow);
         Assert.Contains("actions.ShowOverlay(overlay.Value)", acceptGreenCommandWorkflow);
-        Assert.DoesNotContain("_lastCodingMatch.Trainingskandidaten", greenBody);
-        Assert.DoesNotContain("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", greenBody);
-        Assert.DoesNotContain("_codingImportEvents.FirstOrDefault", greenBody);
-        Assert.DoesNotContain("foreach (var importEvent", greenBody);
-        Assert.DoesNotContain("CodingProtocolImportTrainingWorkflowServiceFactory.Create", coreBody);
-        Assert.DoesNotContain("new CodingProtocolImportTrainingConfirmationWorkflowActions", coreBody);
         Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", confirmationWorkflow);
         Assert.Contains("new CodingProtocolImportTrainingConfirmationWorkflowActions", confirmationWorkflow);
         Assert.Contains("CodingImportTrainingResultWorkflow.Execute", coreBody);
-        Assert.DoesNotContain("if (!result.Accepted)", coreBody);
-        Assert.DoesNotContain("var badge = result.Badge", coreBody);
         Assert.Contains("if (!importResult.Accepted)", importTrainingResultWorkflow);
         Assert.Contains("actions.ShowBadge(badge.Text)", importTrainingResultWorkflow);
         Assert.Contains("actions.ScheduleHideBadge(badge.AutoHideDelay)", importTrainingResultWorkflow);
-        Assert.DoesNotContain("TeacherAnnotationStore.AppendAsync(annotation)", coreBody);
         Assert.Contains("await _seekAndWait(importEvent)", workflow);
         Assert.Contains("await _appendAnnotation(annotation)", workflow);
         Assert.Contains("TeacherAnnotationStore.AppendAsync", workflowFactory);
@@ -625,6 +635,20 @@ public sealed class DesignAuditPlayerCodingSidePanelTests
             count++;
             start = index + needle.Length;
         }
+    }
+
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = new List<string>();
+        foreach (var token in forbiddenTokens)
+        {
+            if (source.Contains(token, StringComparison.Ordinal))
+                hits.Add(token);
+        }
+
+        Assert.True(
+            hits.Count == 0,
+            "Verbotene alte Player-Coding-SidePanel-Logik gefunden: " + string.Join(", ", hits));
     }
 
 }

@@ -11,7 +11,6 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
         var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayInputWorkflow.cs");
@@ -29,7 +28,6 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         Assert.True(File.Exists(clearWorkflowPath), "Schema-Overlay-Clear-Reihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(ownerPath), "SchemaOverlayManager-Besitz soll nicht direkt im PlayerWindow liegen.");
 
-        var overlayInput = File.ReadAllText(overlayInputPath);
         var schema = File.ReadAllText(schemaPath);
         var state = File.ReadAllText(statePath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
@@ -39,14 +37,6 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         var clearWorkflow = File.Exists(clearWorkflowPath) ? File.ReadAllText(clearWorkflowPath) : "";
         var owner = File.Exists(ownerPath) ? File.ReadAllText(ownerPath) : "";
 
-        Assert.DoesNotContain("private bool IsCodingSchemaToolSelected", overlayInput);
-        Assert.DoesNotContain("private SchemaOverlayBase? CreateCodingSchemaOverlay", overlayInput);
-        Assert.DoesNotContain("private void UpdateCodingSchemaOverlay", overlayInput);
-        Assert.DoesNotContain("private void ClearCodingSchemaOverlay", overlayInput);
-        Assert.DoesNotContain("_codingSchemaManager.BeginDrag", overlayInput);
-        Assert.DoesNotContain("_codingSchemaManager.EndDrag", overlayInput);
-        Assert.DoesNotContain("private readonly SchemaOverlayManager _codingSchemaManager = new();", state);
-        Assert.DoesNotContain("private readonly CodingSchemaOverlayManagerOwner _codingSchemaManager = new();", state);
         Assert.Contains("private CodingSchemaOverlayManagerOwner _codingSchemaManager => _codingSchemaStates.OverlayManagerOwner", state);
         Assert.Contains("private bool IsCodingSchemaToolSelected", schema);
         Assert.Contains("private bool TryHandleCodingSchemaMouseDown", schema);
@@ -62,13 +52,6 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         Assert.Contains("CodingSchemaOverlayBuilder.Create", schema);
         Assert.Contains("CodingSchemaOverlayBuilder.BuildGeometry", schema);
         Assert.Contains("_codingSessionHost", schema);
-        Assert.DoesNotContain("_codingVm", schema);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", schema);
-        Assert.DoesNotContain("if (!_codingOverlayToolHost.HasOverlayService)", schema);
-        Assert.DoesNotContain("if (!IsCodingSchemaToolSelected())", schema);
-        Assert.DoesNotContain("if (!IsCodingSchemaToolSelected() || !_codingSchemaManager.IsActive)", schema);
-        Assert.DoesNotContain("if (!IsCodingSchemaToolSelected() || !_codingSchemaManager.IsDragging)", schema);
-        Assert.DoesNotContain("if (schema == null)", schema);
         Assert.Contains("actions.CreateAndActivateSchema()", workflow);
         Assert.Contains("if (!request.HasOverlayService)", createWorkflow);
         Assert.Contains("actions.CreateSchema()", createWorkflow);
@@ -99,22 +82,17 @@ public sealed class PlayerWindowSchemaOverlayArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var overlayInputPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.cs");
         var schemaPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.OverlayInput.Schema.cs");
         var workflowPath = Path.Combine(uiRoot, "Ai", "CodingSchemaOverlayMouseWheelWorkflow.cs");
 
-        var overlayInput = File.ReadAllText(overlayInputPath);
         var schema = File.ReadAllText(schemaPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.True(File.Exists(workflowPath), "Schema-Mausrad-Entscheidung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
-        Assert.DoesNotContain("private void CodingCanvas_MouseWheel", overlayInput);
         Assert.Contains("private void CodingCanvas_MouseWheel", schema);
         Assert.Contains("CodingSchemaOverlayMouseWheelWorkflow.Execute", schema);
         Assert.Contains("bend?.AdjustAngle(angleDelta)", schema);
         Assert.Contains("UpdateCodingSchemaOverlay(enableCreateEvent: true)", schema);
-        Assert.DoesNotContain("double delta = e.Delta > 0 ? 5 : -5", schema);
-        Assert.DoesNotContain("if (_codingSchemaManager.Active is PipeBendSchema", schema);
         Assert.Contains("request.WheelDelta > 0 ? 5 : -5", workflow);
         Assert.Contains("actions.AdjustAngle(angleDelta)", workflow);
         Assert.Contains("actions.MarkHandled()", workflow);

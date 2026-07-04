@@ -11,6 +11,8 @@ public static class ThemeManager
     private const string ThemeLightSource = "Theme/ThemeLight.xaml";
     private const string ThemeDarkSource = "Theme/Theme.xaml";
 
+    public static string CurrentTheme { get; private set; } = Light;
+
     public static string NormalizeTheme(string? value)
         => string.Equals(value, Dark, StringComparison.OrdinalIgnoreCase) ? Dark : Light;
 
@@ -23,8 +25,9 @@ public static class ThemeManager
 
     public static void ApplyTheme(ResourceDictionary rootResources, string? theme)
     {
+        var normalized = NormalizeTheme(theme);
         var merged = rootResources.MergedDictionaries;
-        var replacement = new ResourceDictionary { Source = GetThemeUri(theme) };
+        var replacement = new ResourceDictionary { Source = GetThemeUri(normalized) };
         var existingIndex = -1;
 
         for (var i = 0; i < merged.Count; i++)
@@ -39,10 +42,14 @@ public static class ThemeManager
         if (existingIndex >= 0)
         {
             merged[existingIndex] = replacement;
+            CurrentTheme = normalized;
+            WindowBackdropHelper.ApplyToOpenWindows(normalized);
             return;
         }
 
         merged.Insert(0, replacement);
+        CurrentTheme = normalized;
+        WindowBackdropHelper.ApplyToOpenWindows(normalized);
     }
 
     private static bool IsThemeDictionary(ResourceDictionary dictionary)

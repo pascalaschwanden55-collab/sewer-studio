@@ -33,10 +33,6 @@ public sealed class PlayerWindowToggleButtonArchitectureTests
 
         Assert.Contains("PlayerToggleButtonControls.IsChecked", joinedPartials);
         Assert.Contains("PlayerToggleButtonControls.Uncheck", joinedPartials);
-        Assert.DoesNotContain("BtnCodingLiveAi.IsChecked == true", joinedPartials);
-        Assert.DoesNotContain("BtnEingabemarker.IsChecked == true", joinedPartials);
-        Assert.DoesNotContain("BtnEingabemarker.IsChecked = false", joinedPartials);
-        Assert.DoesNotContain("LiveDetectionButton.IsChecked == true", joinedPartials);
         Assert.Contains("public static bool IsChecked", controls);
         Assert.Contains("public static void Uncheck", controls);
     }

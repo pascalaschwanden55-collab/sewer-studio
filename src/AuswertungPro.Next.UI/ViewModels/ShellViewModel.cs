@@ -634,9 +634,7 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
 
     private void OpenTemplateEditor()
     {
-        var projectRoot = System.AppContext.BaseDirectory;
-        var costService = new Infrastructure.Costs.CostCalculationService(projectRoot);
-        var vm = new Windows.MeasureTemplateEditorViewModel(costService);
+        var vm = new Windows.MeasureTemplateEditorViewModel(_sp.Settings.LastProjectPath, _sp.Dialogs);
         var window = new Views.Windows.MeasureTemplateEditorWindow
         {
             DataContext = vm
@@ -659,6 +657,25 @@ public sealed partial class ShellViewModel : ObservableObject, IDisposable, IPla
         public string Icon { get; }
 
         public string Title { get; }
+
+        public string ToolTipDescription => Title switch
+        {
+            "Projekt" => "Projektstammdaten, Speicherort und Bearbeitungsdaten pflegen.",
+            "Haltungen" => "Haltungen pruefen, filtern, Videos und Protokolle oeffnen.",
+            "Schaechte" => "Schachtdaten anzeigen, kontrollieren und zugehoerige Protokolle oeffnen.",
+            "Import" => "Inspektionsdaten, PDFs, Videos und Zusatzquellen ins Projekt uebernehmen.",
+            "Export" => "Excel- und PDF-Ausgaben fuer Auswertung und Weitergabe erzeugen.",
+            "Karte" => "Haltungen raeumlich ansehen und von der Karte aus oeffnen.",
+            "Medienkonflikte" => "Fehlende, doppelte oder mehrdeutige Medienzuordnungen klaeren.",
+            "Druckcenter" => "Dossiers und Berichte fuer Haltungen oder Projektumfang erstellen.",
+            "Sanierungs-Matrix" => "Massnahmen, Kosten und Varianten fuer Sanierung bearbeiten.",
+            "VSA" => "VSA-Zustandsklassen und Bewertungsdaten kontrollieren.",
+            "Diagnose" => "Logs, Diagnoseinformationen und technische Details pruefen.",
+            "Einstellungen" => "Pfade, Theme, KI-Start und Programmverhalten konfigurieren.",
+            _ => "Ansicht oeffnen."
+        };
+
+        public string ToolTipShortcut => string.Empty;
 
         public Func<object> CreatePage { get; }
 

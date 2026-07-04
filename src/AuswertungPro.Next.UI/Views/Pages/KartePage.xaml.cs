@@ -58,4 +58,30 @@ public partial class KartePage : UserControl
                 DispatcherPriority.Loaded);
         };
     }
+
+    private void ZoomIn_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        MapControl.Map?.Navigator.ZoomIn(250);
+        _vm?.RefreshVisibleNetworkLayer(force: true);
+        MapControl.ForceUpdate();
+    }
+
+    private void ZoomOut_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        MapControl.Map?.Navigator.ZoomOut(250);
+        _vm?.RefreshVisibleNetworkLayer(force: true);
+        MapControl.ForceUpdate();
+    }
+
+    private void ZoomToNetwork_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        _ = sender;
+        _ = e;
+        _vm?.ZoomToNetworkAndRefresh();
+        MapControl.ForceUpdate();
+    }
 }

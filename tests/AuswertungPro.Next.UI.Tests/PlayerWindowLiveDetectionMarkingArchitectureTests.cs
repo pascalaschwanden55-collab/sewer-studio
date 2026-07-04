@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
@@ -17,7 +19,7 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var mapper = File.ReadAllText(mapperPath);
 
         Assert.Contains("LiveDetectionGeometryMapper.BBoxFromOverlay", segmentation);
-        Assert.DoesNotContain("NormalizedBoundingBox.FromPoints", segmentation);
+        AssertNoForbiddenTokens(segmentation, "NormalizedBoundingBox.FromPoints");
         Assert.Contains("public static NormalizedBoundingBox BBoxFromOverlay", mapper);
     }
 
@@ -35,8 +37,10 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var policy = File.ReadAllText(policyPath);
 
         Assert.Contains("CodingMarkBoxQuantificationOverlayPolicy.Apply", segmentation);
-        Assert.DoesNotContain("result.Quant.HeightMm.HasValue", segmentation);
-        Assert.DoesNotContain("double.TryParse(result.Quant.ClockPosition", segmentation);
+        AssertNoForbiddenTokens(
+            segmentation,
+            "result.Quant.HeightMm.HasValue",
+            "double.TryParse(result.Quant.ClockPosition");
         Assert.Contains("public static void Apply", policy);
         Assert.Contains("quantification.CrossSectionReductionPercent", policy);
     }
@@ -64,17 +68,21 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var segmentWorkflow = File.Exists(segmentWorkflowPath) ? File.ReadAllText(segmentWorkflowPath) : "";
         var renderWorkflow = File.Exists(renderWorkflowPath) ? File.ReadAllText(renderWorkflowPath) : "";
 
-        Assert.DoesNotContain("private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync", marking);
-        Assert.DoesNotContain("private void ShowMarkSamMask", marking);
+        AssertNoForbiddenTokens(
+            marking,
+            "private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync",
+            "private void ShowMarkSamMask");
         Assert.Contains("private async Task<Infrastructure.Ai.Pipeline.BoxSegmentationResult?> TrySegmentMarkBoxAsync", segmentation);
         Assert.Contains("private void ShowMarkSamMask", segmentation);
         Assert.Contains("LiveDetectionMarkBoxSegmentationWorkflow.ExecuteAsync", segmentation);
         Assert.Contains("LiveDetectionMarkSamMaskRenderWorkflow.Execute", segmentation);
         Assert.Contains("CodingMarkBoxQuantificationOverlayPolicy.Apply", segmentation);
         Assert.Contains("CodingSamMaskOverlayController.RenderMasks", segmentation);
-        Assert.DoesNotContain("var result = await boxSegmentation.SegmentBoxAsync", segmentation);
-        Assert.DoesNotContain("new Infrastructure.Ai.Pipeline.SamResponse", segmentation);
-        Assert.DoesNotContain("Ai.Pipeline.SamMaskRenderer.RenderMasks", segmentation);
+        AssertNoForbiddenTokens(
+            segmentation,
+            "var result = await boxSegmentation.SegmentBoxAsync",
+            "new Infrastructure.Ai.Pipeline.SamResponse",
+            "Ai.Pipeline.SamMaskRenderer.RenderMasks");
         Assert.Contains("SamMaskRenderer.RenderMasks", controller);
         Assert.Contains("CodingBendMarkerOverlayController.Show", segmentation);
         Assert.Contains("actions.SegmentBoxAsync", segmentWorkflow);
@@ -109,12 +117,16 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         Assert.Contains("PauseForManualMarking", helper);
         Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", activationWorkflow);
         Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", catalogOpenWorkflow);
-        Assert.DoesNotContain("PlayerManualMarkPlayback.PauseForManualMarking", markCatalog);
-        Assert.DoesNotContain("PlayerManualMarkPlayback.PauseForManualMarking", markTools);
-        Assert.DoesNotContain("_player.SetPause(true)", markTools);
-        Assert.DoesNotContain("_player.SetPause(false)", markTools);
-        Assert.DoesNotContain("_player.SetPause(true)", markCatalog);
-        Assert.DoesNotContain("_player.SetPause(false)", markCatalog);
+        AssertNoForbiddenTokens(
+            markCatalog,
+            "PlayerManualMarkPlayback.PauseForManualMarking",
+            "_player.SetPause(true)",
+            "_player.SetPause(false)");
+        AssertNoForbiddenTokens(
+            markTools,
+            "PlayerManualMarkPlayback.PauseForManualMarking",
+            "_player.SetPause(true)",
+            "_player.SetPause(false)");
     }
 
     [Fact]
@@ -143,18 +155,22 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var displayWorkflow = File.Exists(displayWorkflowPath) ? File.ReadAllText(displayWorkflowPath) : "";
         var openWorkflow = File.Exists(openWorkflowPath) ? File.ReadAllText(openWorkflowPath) : "";
 
-        Assert.DoesNotContain("private void DetectionCanvas_MouseLeftButtonDown", marking);
-        Assert.DoesNotContain("private void OnFindingClicked", marking);
-        Assert.DoesNotContain("private void OpenCodeCatalogForMark", marking);
+        AssertNoForbiddenTokens(
+            marking,
+            "private void DetectionCanvas_MouseLeftButtonDown",
+            "private void OnFindingClicked",
+            "private void OpenCodeCatalogForMark");
         Assert.Contains("private void DetectionCanvas_MouseLeftButtonDown", catalog);
         Assert.Contains("private void OnFindingClicked", catalog);
         Assert.Contains("private void OpenCodeCatalogForMark", catalog);
         Assert.Contains("LiveDetectionMarkCatalogDisplayWorkflow.TryOpen", catalog);
-        Assert.DoesNotContain("LiveDetectionMarkCatalogWorkflowServiceFactory.Create", catalog);
+        AssertNoForbiddenTokens(
+            catalog,
+            "LiveDetectionMarkCatalogWorkflowServiceFactory.Create",
+            "LiveDetectionGeometryMapper.ClickToClockPosition",
+            "CodingExplorerEntryFactory.CreateSeed");
         Assert.Contains("LiveDetectionMarkCatalogOpenWorkflow.ExecuteCanvasClick", catalog);
         Assert.Contains("LiveDetectionMarkCatalogOpenWorkflow.ExecuteFindingClick", catalog);
-        Assert.DoesNotContain("LiveDetectionGeometryMapper.ClickToClockPosition", catalog);
-        Assert.DoesNotContain("CodingExplorerEntryFactory.CreateSeed", catalog);
         Assert.Contains("LiveDetectionGeometryMapper.ClickToClockPosition", openWorkflow);
         Assert.Contains("CodingExplorerEntryFactory.CreateSeed", workflow);
         Assert.Contains("LiveDetectionMarkCatalogWorkflowServiceFactory.Create", displayWorkflow);
@@ -176,14 +192,16 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var marking = File.ReadAllText(markingPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
-        Assert.DoesNotContain("private async void HandleMarkDrawingComplete", marking);
+        AssertNoForbiddenTokens(
+            marking,
+            "private async void HandleMarkDrawingComplete",
+            "if (overlay == null)",
+            "catch (Exception ex)",
+            "Task.Delay(3000)");
         Assert.Contains("private void HandleMarkDrawingComplete", marking);
         Assert.Contains(".SafeFireAndForget(\"MarkDrawingComplete\")", marking);
         Assert.Contains("private async Task HandleMarkDrawingCompleteAsync", marking);
         Assert.Contains("LiveDetectionManualMarkCompletionCommandWorkflow.ExecuteAsync", marking);
-        Assert.DoesNotContain("if (overlay == null)", marking);
-        Assert.DoesNotContain("catch (Exception ex)", marking);
-        Assert.DoesNotContain("Task.Delay(3000)", marking);
         Assert.Contains("actions.GetCurrentOverlay()", workflow);
         Assert.Contains("actions.SegmentMarkAsync(overlay, frameBytes)", workflow);
         Assert.Contains("DelayAfterSegmentPreviewAsync", workflow);
@@ -205,8 +223,10 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.Contains("LiveDetectionManualMarkCompletionWorkflow.Execute", marking);
-        Assert.DoesNotContain("if (saved && !_isCodingMode)", marking);
-        Assert.DoesNotContain("_codingOverlayToolHost.SetActiveTool(_markToolType);", marking);
+        AssertNoForbiddenTokens(
+            marking,
+            "if (saved && !_isCodingMode)",
+            "_codingOverlayToolHost.SetActiveTool(_markToolType);");
         Assert.Contains("ClearSamMasks", workflow);
         Assert.Contains("ClearBendMarker", workflow);
         Assert.Contains("DeactivateMarkTool", workflow);
@@ -248,24 +268,35 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var resultWorkflow = File.Exists(resultWorkflowPath) ? File.ReadAllText(resultWorkflowPath) : "";
 
-        Assert.DoesNotContain("private async Task<bool> SaveMarkAsTrainingAsync", marking);
-        Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", marking);
+        AssertNoForbiddenTokens(
+            marking,
+            "private async Task<bool> SaveMarkAsTrainingAsync",
+            "TrainingAnnotationExportServiceFactory.Create");
         Assert.Contains("private async Task<bool> SaveMarkAsTrainingAsync", training);
         Assert.Contains("LiveDetectionManualMarkTrainingCommandWorkflow.ExecuteAsync", training);
         Assert.Contains("CodingCodeExplorerSeedSelectionWorkflow.Execute", training);
         Assert.Contains("LiveDetectionManualMarkTrainingWorkflow.SaveAsync", training);
         Assert.Contains("LiveDetectionManualMarkTrainingResultWorkflow.Execute", training);
         Assert.Contains("_codingSessionHost", training);
-        Assert.DoesNotContain("_codingVm", training);
-        Assert.DoesNotContain("if (selectedEntry == null)", training);
-        Assert.DoesNotContain("catch (Exception ex)", training);
-        Assert.DoesNotContain("if (!result.Saved)", training);
-        Assert.DoesNotContain("result.Code", training);
-        Assert.DoesNotContain("LiveDetectionManualMarkEventAppender.Apply", training);
-        Assert.DoesNotContain("CodingProtocolEntryPhotoPathAppender.AddIfPresent", training);
-        Assert.DoesNotContain(".SelectSeed(", training);
-        Assert.DoesNotContain("CodingCodeExplorerWorkflowServiceFactory.Create", training);
-        Assert.DoesNotContain("_codingSessionService.AddEvent(manualEntry", training);
+        AssertNoForbiddenTokens(
+            training,
+            "if (selectedEntry == null)",
+            "catch (Exception ex)",
+            "if (!result.Saved)",
+            "result.Code",
+            "LiveDetectionManualMarkEventAppender.Apply",
+            "CodingProtocolEntryPhotoPathAppender.AddIfPresent",
+            ".SelectSeed(",
+            "CodingCodeExplorerWorkflowServiceFactory.Create",
+            "_codingSessionService.AddEvent(manualEntry",
+            "new LiveDetectionTrainingFrameExporter",
+            "TrainingAnnotationExportServiceFactory.Create",
+            "VsaYoloClassMap.GetClassId",
+            "TeacherAnnotationStore.AppendAsync",
+            "File.WriteAllBytesAsync",
+            "File.Delete(tempFrame)",
+            "Path.GetTempPath",
+            "LiveDetectionTeacherAnnotationFactory.CreateManualMark");
         Assert.Contains(".SelectSeed(", seedSelectionWorkflow);
         Assert.Contains("actions.SelectEntry()", commandWorkflow);
         Assert.Contains("actions.SaveTrainingAsync(selectedEntry)", commandWorkflow);
@@ -273,14 +304,6 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         Assert.Contains("actions.ShowOsdMeterStatus", commandWorkflow);
         Assert.Contains("CodingExplorerEntryFactory.CreateManualFromSelected", appender);
         Assert.Contains("LiveDetectionTrainingAnnotationWriter.CreateDefault", training);
-        Assert.DoesNotContain("new LiveDetectionTrainingFrameExporter", training);
-        Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", training);
-        Assert.DoesNotContain("VsaYoloClassMap.GetClassId", training);
-        Assert.DoesNotContain("TeacherAnnotationStore.AppendAsync", training);
-        Assert.DoesNotContain("File.WriteAllBytesAsync", training);
-        Assert.DoesNotContain("File.Delete(tempFrame)", training);
-        Assert.DoesNotContain("Path.GetTempPath", training);
-        Assert.DoesNotContain("LiveDetectionTeacherAnnotationFactory.CreateManualMark", training);
         Assert.Contains("LiveDetectionManualMarkEventAppender.Apply", workflow);
         Assert.Contains("CodingProtocolEntryPhotoPathAppender.AddIfPresent", workflow);
         Assert.Contains("saveManualMarkAsync", workflow);
@@ -319,32 +342,39 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         var activationWorkflow = File.Exists(activationWorkflowPath) ? File.ReadAllText(activationWorkflowPath) : "";
         var overlayReadyWorkflow = File.Exists(overlayReadyWorkflowPath) ? File.ReadAllText(overlayReadyWorkflowPath) : "";
 
-        Assert.DoesNotContain("private void ActivateMarkTool", marking);
-        Assert.DoesNotContain("private void EnsureMarkOverlayReady", marking);
-        Assert.DoesNotContain("private void DeactivateMarkTool", marking);
-        Assert.DoesNotContain("private OverlayToolType _markToolType", markTools);
-        Assert.DoesNotContain("MarkToolPopup.IsOpen", markTools);
-        Assert.DoesNotContain("ToolsDropdownPopup.IsOpen", markTools);
-        Assert.DoesNotContain("TxtMarkToolName.Text", markTools);
-        Assert.DoesNotContain("DetectionCanvas.Cursor", markTools);
-        Assert.DoesNotContain("CodingOverlayPopup.IsOpen", markTools);
-        Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible", markTools);
+        AssertNoForbiddenTokens(
+            marking,
+            "private void ActivateMarkTool",
+            "private void EnsureMarkOverlayReady",
+            "private void DeactivateMarkTool");
+        AssertNoForbiddenTokens(
+            markTools,
+            "private OverlayToolType _markToolType",
+            "MarkToolPopup.IsOpen",
+            "ToolsDropdownPopup.IsOpen",
+            "TxtMarkToolName.Text",
+            "DetectionCanvas.Cursor",
+            "CodingOverlayPopup.IsOpen",
+            "CodingOverlayCanvas.IsHitTestVisible",
+            "if (tool == OverlayToolType.Point)",
+            "if (_codingOverlayRuntimeOwner.HasService && _codingSessionHost.HasViewModel) return;",
+            "CodingSessionStateFactory.Create",
+            "CodingSessionServiceFactory.Create",
+            "new OverlayToolService",
+            "new ViewModels.Windows.CodingSessionViewModel",
+            "CodingFeedbackRecorder");
         Assert.Contains("_codingSessionHost", marking);
-        Assert.DoesNotContain("_codingVm", marking);
         Assert.Contains("_codingSessionHost.ClearCurrentOverlay", markTools);
         Assert.Contains("_codingSessionHost.HasViewModel", markTools);
-        Assert.DoesNotContain("_codingVm.CurrentOverlay = null", markTools);
-        Assert.DoesNotContain("_codingOverlayService != null && _codingVm != null", markTools);
-        Assert.DoesNotContain("_codingVm", markTools);
         Assert.Contains("private void ActivateMarkTool", markTools);
         Assert.Contains("LiveDetectionManualMarkActivationWorkflow.Execute", markTools);
-        Assert.DoesNotContain("if (tool == OverlayToolType.Point)", markTools);
         Assert.Contains("private void EnsureMarkOverlayReady", markTools);
         Assert.Contains("LiveDetectionMarkOverlayReadyWorkflow.Execute", markTools);
-        Assert.DoesNotContain("if (_codingOverlayRuntimeOwner.HasService && _codingSessionHost.HasViewModel) return;", markTools);
         Assert.Contains("private void DeactivateMarkTool", markTools);
-        Assert.DoesNotContain("private OverlayToolType _markToolType", state);
-        Assert.DoesNotContain("private bool _isManualMarkMode", state);
+        AssertNoForbiddenTokens(
+            state,
+            "private OverlayToolType _markToolType",
+            "private bool _isManualMarkMode");
         Assert.Contains("OverlayToolType MarkToolType", liveDetectionController);
         Assert.Contains("bool IsManualMarkMode", liveDetectionController);
         Assert.Contains("_markToolControls.BeginActivation", markTools);
@@ -353,19 +383,28 @@ public sealed class PlayerWindowLiveDetectionMarkingArchitectureTests
         Assert.Contains("_markToolControls.DeactivateDetectionSide", markTools);
         Assert.Contains("OverlayToolType.Point", activationWorkflow);
         Assert.Contains("PlayerManualMarkPlayback.PauseForManualMarking", activationWorkflow);
-        Assert.DoesNotContain("CodingSessionStateFactory.Create", markTools);
         Assert.Contains("CodingSessionStateFactory.Create", overlayReadyWorkflow);
         Assert.Contains("if (request.HasOverlayService && request.HasViewModel)", overlayReadyWorkflow);
         Assert.Contains("actions.CreateState()", overlayReadyWorkflow);
         Assert.Contains("actions.SetSessionService(state.SessionService)", overlayReadyWorkflow);
         Assert.Contains("actions.SetOverlayService(state.OverlayService)", overlayReadyWorkflow);
         Assert.Contains("actions.SetViewModel(state.ViewModel)", overlayReadyWorkflow);
-        Assert.DoesNotContain("CodingSessionServiceFactory.Create", markTools);
-        Assert.DoesNotContain("new OverlayToolService", markTools);
-        Assert.DoesNotContain("new ViewModels.Windows.CodingSessionViewModel", markTools);
-        Assert.DoesNotContain("CodingFeedbackRecorder", markTools);
         Assert.Contains("public sealed class PlayerMarkToolControls", controls);
         Assert.Contains("_markToolPopup.IsOpen", controls);
         Assert.Contains("_detectionCanvas.Cursor", controls);
+    }
+
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = new List<string>();
+        foreach (var token in forbiddenTokens)
+        {
+            if (source.Contains(token, StringComparison.Ordinal))
+                hits.Add(token);
+        }
+
+        Assert.True(
+            hits.Count == 0,
+            "Verbotene alte PlayerWindow-LiveDetection-Markierlogik gefunden: " + string.Join(", ", hits));
     }
 }

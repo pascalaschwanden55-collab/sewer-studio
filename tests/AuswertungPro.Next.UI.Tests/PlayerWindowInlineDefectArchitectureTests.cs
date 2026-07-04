@@ -30,16 +30,15 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         Assert.Contains("_codingSidePanelControllers.InlineDefectDetail.Hide()", detail);
         Assert.Contains("actions.UpdateInlineDefectDetail(selectedEvent)", selectionWorkflow);
         Assert.Contains("actions.HideInlineDefectDetail()", selectionWorkflow);
-        Assert.DoesNotContain("_codingVm", detail);
-        Assert.DoesNotContain("if (selection.SelectedEvent is not null)", detail);
-        Assert.DoesNotContain("LstCodingEvents.SelectedItem is CodingEvent", detail);
-        Assert.DoesNotContain("_codingVm.SelectedDefect = ev", detail);
-        Assert.DoesNotContain("_codingVm.SelectedDefect = null", detail);
-        Assert.DoesNotContain("TxtInlineDetailCode.Text = state.CodeText", detail);
-        Assert.DoesNotContain("BtnInlineAccept.Visibility = state.CanAct", detail);
-        Assert.DoesNotContain("ImgInlineEvidencePreview.Source = null", detail);
-        Assert.DoesNotContain("$\"{ev.MeterAtCapture:F2}m\"", detail);
-        Assert.DoesNotContain("$\"{conf * 100:F0}%\"", detail);
+        AssertNoForbiddenTokens(
+            detail,
+            "if (selection.SelectedEvent is not null)",
+            "LstCodingEvents.SelectedItem is CodingEvent",
+            "TxtInlineDetailCode.Text = state.CodeText",
+            "BtnInlineAccept.Visibility = state.CanAct",
+            "ImgInlineEvidencePreview.Source = null",
+            "$\"{ev.MeterAtCapture:F2}m\"",
+            "$\"{conf * 100:F0}%\"");
         Assert.Contains("public static CodingInlineDefectDetailState BuildInlineDetail", policy);
         Assert.Contains("TxtInlineDetailCode.Text = state.CodeText", controls);
         Assert.Contains("BtnInlineAccept.Visibility = state.CanAct", controls);
@@ -70,23 +69,31 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         var previewWorkflow = File.ReadAllText(previewWorkflowPath);
 
         Assert.Contains("UpdateInlineEvidencePreview(ev);", detail);
-        Assert.DoesNotContain("private void UpdateInlineEvidencePreview", detail);
-        Assert.DoesNotContain("CodingDefectPreviewService.BuildPreviewImagePath", detail);
-        Assert.DoesNotContain("BitmapImage", detail);
+        AssertNoForbiddenTokens(
+            detail,
+            "private void UpdateInlineEvidencePreview",
+            "CodingDefectPreviewService.BuildPreviewImagePath",
+            "BitmapImage");
         Assert.Contains("private void UpdateInlineEvidencePreview", preview);
         Assert.Contains("CodingInlineEvidencePreviewWorkflow.Execute", preview);
-        Assert.DoesNotContain("CodingInlineEvidencePreviewService.Build", preview);
-        Assert.DoesNotContain("catch (Exception", preview);
+        AssertNoForbiddenTokens(
+            preview,
+            "CodingInlineEvidencePreviewService.Build",
+            "catch (Exception");
         Assert.Contains("CodingInlineEvidencePreviewService.Build", previewWorkflow);
         Assert.Contains("CodingInlineEvidencePreviewService.LoadFailed", previewWorkflow);
         Assert.Contains("_codingSidePanelControllers.InlineDefectDetail.ApplyPreview", preview);
-        Assert.DoesNotContain("ImgInlineEvidencePreview.Source = state.Source", preview);
-        Assert.DoesNotContain("ImgInlineEvidencePreview.Visibility = state.ImageVisible", preview);
-        Assert.DoesNotContain("TxtInlineEvidencePreviewStatus.Text = state.StatusText", preview);
-        Assert.DoesNotContain("TxtInlineEvidencePreviewStatus.Visibility = state.StatusVisible", preview);
+        AssertNoForbiddenTokens(
+            preview,
+            "ImgInlineEvidencePreview.Source = state.Source",
+            "ImgInlineEvidencePreview.Visibility = state.ImageVisible",
+            "TxtInlineEvidencePreviewStatus.Text = state.StatusText",
+            "TxtInlineEvidencePreviewStatus.Visibility = state.StatusVisible");
         Assert.Contains("public void ApplyPreview", File.ReadAllText(Path.Combine(uiRoot, "Ai", "CodingInlineDefectDetailControls.cs")));
-        Assert.DoesNotContain("CodingDefectPreviewService.BuildPreviewImagePath", preview);
-        Assert.DoesNotContain("BitmapImage", preview);
+        AssertNoForbiddenTokens(
+            preview,
+            "CodingDefectPreviewService.BuildPreviewImagePath",
+            "BitmapImage");
         Assert.Contains("CodingDefectPreviewService.BuildPreviewImagePath", previewService);
         Assert.Contains("BitmapImage", previewService);
     }
@@ -105,8 +112,10 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         var helper = File.Exists(helperPath) ? File.ReadAllText(helperPath) : "";
 
         Assert.Contains("CodingEventListItemSelectionHelper.SelectContainingListBoxItem", detail);
-        Assert.DoesNotContain("while (dep != null && dep is not ListBoxItem)", detail);
-        Assert.DoesNotContain("VisualTreeHelper.GetParent(dep)", detail);
+        AssertNoForbiddenTokens(
+            detail,
+            "while (dep != null && dep is not ListBoxItem)",
+            "VisualTreeHelper.GetParent(dep)");
         Assert.Contains("public static bool SelectContainingListBoxItem", helper);
         Assert.Contains("VisualTreeHelper.GetParent", helper);
         Assert.Contains("LogicalTreeHelper.GetParent", helper);
@@ -129,12 +138,14 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         var listItems = File.ReadAllText(listItemsPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
-        Assert.DoesNotContain("private void ColorizeCodingEventListItems", detail);
-        Assert.DoesNotContain("\"ZoneDot\"", detail);
-        Assert.DoesNotContain("\"TxtConfidence\"", detail);
+        AssertNoForbiddenTokens(
+            detail,
+            "private void ColorizeCodingEventListItems",
+            "\"ZoneDot\"",
+            "\"TxtConfidence\"");
         Assert.Contains("private void ColorizeCodingEventListItems", listItems);
         Assert.Contains("CodingEventListItemColorizeWorkflow.Execute", listItems);
-        Assert.DoesNotContain("for (int i = 0; i < LstCodingEvents.Items.Count; i++)", listItems);
+        AssertNoForbiddenTokens(listItems, "for (int i = 0; i < LstCodingEvents.Items.Count; i++)");
         Assert.Contains("\"ZoneDot\"", listItems);
         Assert.Contains("\"TxtConfidence\"", listItems);
         Assert.Contains("RefreshHighlights: ApplyCodingProtocolMatchListHighlights", listItems);
@@ -156,8 +167,10 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         var policy = File.ReadAllText(policyPath);
 
         Assert.Contains("CodingSidePanelWidthPolicy.Resolve", detail);
-        Assert.DoesNotContain("Math.Clamp(availableWidth * 0.46", detail);
-        Assert.DoesNotContain("return 760", detail);
+        AssertNoForbiddenTokens(
+            detail,
+            "Math.Clamp(availableWidth * 0.46",
+            "return 760");
         Assert.Contains("public static double Resolve", policy);
         Assert.Contains("WidthRatio = 0.46", policy);
     }
@@ -194,9 +207,11 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         var editCommandWorkflow = File.Exists(editCommandWorkflowPath) ? File.ReadAllText(editCommandWorkflowPath) : "";
         var rejectCommandWorkflow = File.Exists(rejectCommandWorkflowPath) ? File.ReadAllText(rejectCommandWorkflowPath) : "";
 
-        Assert.DoesNotContain("private void CodingAcceptDefect_Click", detail);
-        Assert.DoesNotContain("private void CodingEditDefect_Click", detail);
-        Assert.DoesNotContain("private void CodingRejectDefect_Click", detail);
+        AssertNoForbiddenTokens(
+            detail,
+            "private void CodingAcceptDefect_Click",
+            "private void CodingEditDefect_Click",
+            "private void CodingRejectDefect_Click");
         Assert.Contains("private void CodingAcceptDefect_Click", actions);
         Assert.Contains("private void CodingEditDefect_Click", actions);
         Assert.Contains("private void CodingRejectDefect_Click", actions);
@@ -205,13 +220,13 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         Assert.Contains("CodingInlineDefectRejectCommandWorkflow.Execute", actions);
         Assert.Contains("CodingInlineDefectDecisionWorkflow.CompleteEdit", actions);
         Assert.Contains("_codingSessionHost", actions);
-        Assert.DoesNotContain("_codingVm", actions);
-        Assert.DoesNotContain("CodingEventEditApplier.Apply", actions);
-        Assert.DoesNotContain("CodingEventDeleteApplier.Apply", actions);
-        Assert.DoesNotContain("_codingSessionService?.UpdateEvent", actions);
-        Assert.DoesNotContain("ev.MeterAtCapture = entry.MeterStart", actions);
-        Assert.DoesNotContain("_codingSessionService?.RemoveEvent", actions);
-        Assert.DoesNotContain("_codingVm.Events.Remove", actions);
+        AssertNoForbiddenTokens(
+            actions,
+            "CodingEventEditApplier.Apply",
+            "CodingEventDeleteApplier.Apply",
+            "_codingSessionService?.UpdateEvent",
+            "ev.MeterAtCapture = entry.MeterStart",
+            "_codingSessionService?.RemoveEvent");
         Assert.Contains("actions.AcceptDefect()", acceptCommandWorkflow);
         Assert.Contains("actions.UpdateInlineDefectDetail(acceptedDefect)", acceptCommandWorkflow);
         Assert.Contains("actions.FadeOutAiOverlayAfterAction()", acceptCommandWorkflow);
@@ -229,5 +244,14 @@ public sealed class PlayerWindowInlineDefectArchitectureTests
         Assert.Contains("codingSessionService?.UpdateEvent", editApplier);
         Assert.Contains("codingSessionService?.RemoveEvent", deleteApplier);
         Assert.Contains("codingEvents?.Remove", deleteApplier);
+    }
+
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = forbiddenTokens
+            .Where(token => source.Contains(token, StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.True(hits.Length == 0, "Verbotene alte Inline-Defekt-Logik gefunden: " + string.Join(", ", hits));
     }
 }

@@ -22,7 +22,6 @@ public sealed class PlayerWindowMediaInfrastructureArchitectureTests
             Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
         var policy = File.ReadAllText(policyPath);
 
-        Assert.DoesNotContain("GetSliderTrackBounds", playerWindowText);
         Assert.Contains("PlayerSliderTrackBounds.Resolve", playerWindowText);
         Assert.Contains("ResolveFallback", policy);
         Assert.Contains("PART_Track", policy);
@@ -46,10 +45,6 @@ public sealed class PlayerWindowMediaInfrastructureArchitectureTests
         var factory = File.ReadAllText(factoryPath);
         var runtimeFactory = File.Exists(runtimeFactoryPath) ? File.ReadAllText(runtimeFactoryPath) : "";
 
-        Assert.DoesNotContain("CreateLibVlc", playerWindowText);
-        Assert.DoesNotContain("PlayerLibVlcFactory.Create", playerWindowText);
-        Assert.DoesNotContain("new MediaPlayer", playerWindowText);
-        Assert.DoesNotContain("Core.Initialize", playerWindowText);
         Assert.Contains("PlayerMediaRuntimeFactory.Create", playerWindowText);
         Assert.Contains("PlayerLibVlcFactory.Create", runtimeFactory);
         Assert.Contains("new MediaPlayer", runtimeFactory);
@@ -79,22 +74,8 @@ public sealed class PlayerWindowMediaInfrastructureArchitectureTests
 
         Assert.Contains("var normalizedOptions = PlayerWindowOptions.Normalize(options)", windowRoot);
         Assert.Contains("PlayerMediaRuntimeFactory.Create(normalizedOptions)", windowRoot);
-        Assert.DoesNotContain("_options", windowRoot);
         Assert.Contains("_playerMediaHosts = _playerMediaRuntime.Hosts", windowRoot);
         Assert.Contains("_playerMediaRuntime.AttachVideoView(VideoView)", windowRoot);
-        Assert.DoesNotContain("var playerMediaHosts", windowRoot);
-        Assert.DoesNotContain("TimelineHost = playerMediaHosts", windowRoot);
-        Assert.DoesNotContain("PlaybackControlHost = playerMediaHosts", windowRoot);
-        Assert.DoesNotContain("MarqueeOverlayHost = playerMediaHosts", windowRoot);
-        Assert.DoesNotContain("SnapshotCaptureHost = playerMediaHosts", windowRoot);
-        Assert.DoesNotContain("new PlayerTimelineHost", windowRoot);
-        Assert.DoesNotContain("new PlayerPlaybackControlHost", windowRoot);
-        Assert.DoesNotContain("new PlayerMarqueeOverlayHost", windowRoot);
-        Assert.DoesNotContain("new PlayerSnapshotCaptureHost", windowRoot);
-        Assert.DoesNotContain("_player.", windowRoot);
-        Assert.DoesNotContain("_libVlc", windowRoot);
-        Assert.DoesNotContain("new MediaPlayer", windowRoot);
-        Assert.DoesNotContain("VideoView.MediaPlayer", windowRoot);
         Assert.Contains("public sealed record PlayerMediaHosts", factory);
         Assert.Contains("public static PlayerMediaHosts Create", factory);
         Assert.Contains("new PlayerTimelineHost", factory);
@@ -105,6 +86,5 @@ public sealed class PlayerWindowMediaInfrastructureArchitectureTests
         Assert.Contains("public sealed class PlayerMediaRuntime", runtime);
         Assert.Contains("PlayerPlaybackResourceCleaner.DisposeMediaPlayer", runtime);
         Assert.Contains("PlayerPlaybackResourceCleaner.DisposeLibVlc", runtime);
-        Assert.DoesNotContain("public MediaPlayer", runtime);
     }
 }

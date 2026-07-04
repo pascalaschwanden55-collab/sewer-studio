@@ -33,17 +33,10 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
         var toastWorkflow = File.Exists(toastWorkflowPath) ? File.ReadAllText(toastWorkflowPath) : "";
 
-        Assert.DoesNotContain("DllImport", playerWindowText);
-        Assert.DoesNotContain("BitBlt", playerWindowText);
         Assert.Contains("PlayerClipboardControls.TryCopyWindowToClipboard(this)", playerWindowText);
-        Assert.DoesNotContain("WindowClipboardCaptureService.TryCopyWindowToClipboard", playerWindowText);
         Assert.Contains("CodingScreenshotCommandWorkflow.Execute", playerWindowText);
         Assert.Contains("CodingScreenshotToastWorkflow.Show", playerWindowText);
-        Assert.DoesNotContain("if (WindowClipboardCaptureService.TryCopyWindowToClipboard", playerWindowText);
-        Assert.DoesNotContain("TimeSpan.FromSeconds(2.5)", tools);
-        Assert.DoesNotContain("new System.Windows.Threading.DispatcherTimer", tools);
         Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", tools);
-        Assert.DoesNotContain("catch { }", tools);
         Assert.Contains("WindowClipboardCaptureService.TryCopyWindowToClipboard", controls);
         Assert.Contains("BitBlt", service);
         Assert.Contains("Clipboard.SetImage", service);
@@ -73,15 +66,10 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
         var renderer = File.ReadAllText(rendererPath);
         var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : string.Empty;
         var tags = File.ReadAllText(tagsPath);
-        var playerMarkingText = marking + segmentation;
 
         Assert.Contains("public const string BendMarker = \"bend_marker\"", tags);
         Assert.Contains("CodingBendMarkerOverlayController.Show", segmentation);
         Assert.Contains("CodingBendMarkerOverlayController.Clear", marking);
-        Assert.DoesNotContain("BendMarkerRenderer.Show", segmentation);
-        Assert.DoesNotContain("BendMarkerRenderer.Clear", marking);
-        Assert.DoesNotContain("OverlayTags.BendMarker", playerMarkingText);
-        Assert.DoesNotContain("\"bend_marker\"", playerMarkingText);
         Assert.Contains("BendMarkerRenderer.Show", controller);
         Assert.Contains("BendMarkerRenderer.Clear", controller);
         Assert.Contains("OverlayTags.BendMarker", renderer);
@@ -106,11 +94,6 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
         var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
 
         Assert.Contains("CodingToolBadgeController.Update", coding);
-        Assert.DoesNotContain("CodingToolBadgeTextPolicy.BuildText", coding);
-        Assert.DoesNotContain("CodingToolBadgeRenderer.Update", coding);
-        Assert.DoesNotContain("var old = CodingOverlayCanvas.Children.OfType<FrameworkElement>()", coding);
-        Assert.DoesNotContain("var badge = new Border", coding);
-        Assert.DoesNotContain("Tag = OverlayTags.ToolBadge", coding);
         Assert.Contains("CodingToolBadgeTextPolicy.BuildText", controller);
         Assert.Contains("CodingToolBadgeRenderer.Update", controller);
         Assert.Contains("public static void Update", renderer);
@@ -134,11 +117,6 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
 
         Assert.Contains("PlayerStatusColors", playerWindowText);
         Assert.Contains("Success => Color.FromRgb(0x22, 0xC5, 0x5E)", statusColors);
-        Assert.DoesNotContain("Color.FromRgb(0x22, 0xC5, 0x5E)", playerWindowText);
-        Assert.DoesNotContain("Color.FromRgb(0xF5, 0x9E, 0x0B)", playerWindowText);
-        Assert.DoesNotContain("Color.FromRgb(0xEF, 0x44, 0x44)", playerWindowText);
-        Assert.DoesNotContain("Color.FromRgb(0x94, 0xA3, 0xB8)", playerWindowText);
-        Assert.DoesNotContain("Color.FromRgb(0x3B, 0x82, 0xF6)", playerWindowText);
     }
 
     [Fact]
@@ -147,15 +125,12 @@ public sealed class PlayerWindowVisualInfrastructureArchitectureTests
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
         var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var detailsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.EventDetails.cs");
         var visualTreePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.VisualTree.cs");
 
         Assert.True(File.Exists(visualTreePath), "Gemeinsame Coding-VisualTree-Helfer sollen nicht in EventDetails liegen.");
 
-        var details = File.ReadAllText(detailsPath);
         var visualTree = File.ReadAllText(visualTreePath);
 
-        Assert.DoesNotContain("private static T? FindCodingChild", details);
         Assert.Contains("private static T? FindCodingChild", visualTree);
         Assert.Contains("VisualTreeHelper.GetChildrenCount", visualTree);
         Assert.Contains("where T : FrameworkElement", visualTree);

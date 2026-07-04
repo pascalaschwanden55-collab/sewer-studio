@@ -14,6 +14,10 @@ public sealed class PlayerPlaybackControlHostTests
             stop: () => { },
             readRate: () => 1.0f,
             setRate: _ => 0,
+            readVolume: () => 80,
+            setVolume: _ => { },
+            readMute: () => false,
+            setMute: _ => { },
             shouldStartPlayback: () => false,
             playPath: _ => { });
 
@@ -33,6 +37,10 @@ public sealed class PlayerPlaybackControlHostTests
             stop: () => stopCount++,
             readRate: () => 1.0f,
             setRate: _ => 0,
+            readVolume: () => 80,
+            setVolume: _ => { },
+            readMute: () => false,
+            setMute: _ => { },
             shouldStartPlayback: () => false,
             playPath: _ => { });
 
@@ -60,6 +68,10 @@ public sealed class PlayerPlaybackControlHostTests
                 rateSeen = rate;
                 return 0;
             },
+            readVolume: () => 80,
+            setVolume: _ => { },
+            readMute: () => false,
+            setMute: _ => { },
             shouldStartPlayback: () => false,
             playPath: _ => { });
 
@@ -81,6 +93,10 @@ public sealed class PlayerPlaybackControlHostTests
             stop: () => { },
             readRate: () => 1.0f,
             setRate: _ => 0,
+            readVolume: () => 80,
+            setVolume: _ => { },
+            readMute: () => false,
+            setMute: _ => { },
             shouldStartPlayback: () => true,
             playPath: path => pathSeen = path);
 
@@ -88,5 +104,33 @@ public sealed class PlayerPlaybackControlHostTests
 
         Assert.True(host.ShouldStartPlayback);
         Assert.Equal("video.mp4", pathSeen);
+    }
+
+    [Fact]
+    public void Host_exposes_volume_and_forwards_mute()
+    {
+        int? volumeSeen = null;
+        bool? muteSeen = null;
+        var host = new PlayerPlaybackControlHost(
+            readIsPlaying: () => false,
+            setPause: _ => { },
+            play: () => { },
+            stop: () => { },
+            readRate: () => 1.0f,
+            setRate: _ => 0,
+            readVolume: () => 55,
+            setVolume: volume => volumeSeen = volume,
+            readMute: () => true,
+            setMute: mute => muteSeen = mute,
+            shouldStartPlayback: () => false,
+            playPath: _ => { });
+
+        host.SetVolume(120);
+        host.SetMute(false);
+
+        Assert.Equal(55, host.Volume);
+        Assert.True(host.IsMuted);
+        Assert.Equal(100, volumeSeen);
+        Assert.False(muteSeen);
     }
 }

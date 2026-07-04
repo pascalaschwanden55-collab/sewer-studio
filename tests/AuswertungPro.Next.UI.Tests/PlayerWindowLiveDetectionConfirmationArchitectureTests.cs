@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
@@ -65,26 +66,56 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.Contains("private void ResumeDetection", confirmation);
         Assert.Contains("LiveDetectionConfirmationDisplayWorkflow.Show", confirmation);
         Assert.Contains("LiveDetectionConfirmationDisplayWorkflow.Resume", confirmation);
-        Assert.DoesNotContain("PlayerConfirmationPlayback.PauseLiveDetectionConfirmation", confirmation);
-        Assert.DoesNotContain("if (_detectionConfirmationBuffer.TimestampSeconds.HasValue)", confirmation);
-        Assert.DoesNotContain("if (!_playerPlaybackControlHost.IsPlaying)", confirmation);
+        AssertNoForbiddenTokens(
+            confirmation,
+            "PlayerConfirmationPlayback.PauseLiveDetectionConfirmation",
+            "if (_detectionConfirmationBuffer.TimestampSeconds.HasValue)",
+            "if (!_playerPlaybackControlHost.IsPlaying)",
+            "TxtDetectionFinding.Text",
+            "TxtDetectionDetail.Text",
+            "DetectionConfirmationPanel.Visibility = Visibility.Visible",
+            "DetectionConfirmationPanel.Visibility = Visibility.Collapsed",
+            "private async void DetectionAccept_Click",
+            "private async void DetectionCorrect_Click",
+            "private void DetectionSkip_Click");
         Assert.Contains("LiveDetectionStatusControls.ShowDetectionConfirmation", confirmation);
         Assert.Contains("LiveDetectionStatusControls.HideDetectionConfirmation", confirmation);
-        Assert.DoesNotContain("TxtDetectionFinding.Text", confirmation);
-        Assert.DoesNotContain("TxtDetectionDetail.Text", confirmation);
-        Assert.DoesNotContain("DetectionConfirmationPanel.Visibility = Visibility.Visible", confirmation);
-        Assert.DoesNotContain("DetectionConfirmationPanel.Visibility = Visibility.Collapsed", confirmation);
-        Assert.DoesNotContain("private async void DetectionAccept_Click", confirmation);
-        Assert.DoesNotContain("private async void DetectionCorrect_Click", confirmation);
-        Assert.DoesNotContain("private void DetectionSkip_Click", confirmation);
-        Assert.DoesNotContain("private async void DetectionAccept_Click", actions);
-        Assert.DoesNotContain("private async void DetectionCorrect_Click", actions);
+        AssertNoForbiddenTokens(
+            actions,
+            "private async void DetectionAccept_Click",
+            "private async void DetectionCorrect_Click",
+            "ResumeDetection();",
+            "TrainingAnnotationExportServiceFactory.Create");
         Assert.Contains("private void DetectionSkip_Click", actions);
         Assert.Contains("LiveDetectionConfirmationSkipCommandWorkflow.Execute", actions);
-        Assert.DoesNotContain("ResumeDetection();", actions);
-        Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", actions);
-        Assert.DoesNotContain("private async void DetectionAccept_Click", training);
-        Assert.DoesNotContain("private async void DetectionCorrect_Click", training);
+        AssertNoForbiddenTokens(
+            training,
+            "private async void DetectionAccept_Click",
+            "private async void DetectionCorrect_Click",
+            "if (pendingFindings.Count == 0)",
+            "\n        try",
+            "catch (Exception ex)",
+            "selectedEntry == null",
+            "LiveDetectionCorrectionCodeSelectionServiceFactory.Create",
+            "CodingExplorerEntryFactory.CreateSeed",
+            "VsaCodeExplorerDialogServiceFactory.Create",
+            "if (!result.Saved)",
+            "result.SavedCount",
+            "result.Code",
+            "foreach (var finding in _detectionPendingFindings)",
+            "annotationWriter.SaveAcceptedAsync",
+            "annotationWriter.SaveCorrectedAsync",
+            "TrainingAnnotationExportServiceFactory.Create",
+            "LiveDetectionTrainingFrameExporter",
+            "LiveDetectionTrainingExportPlanner.BuildAccepted",
+            "LiveDetectionTrainingExportPlanner.BuildCorrected",
+            "VsaYoloClassMap.GetClassId",
+            "BBoxFromClockPosition",
+            "det_corr_",
+            "File.WriteAllBytesAsync",
+            "File.Delete",
+            "Path.GetTempPath",
+            "TeacherAnnotationStore.AppendAsync");
         Assert.Contains("private void DetectionAccept_Click", training);
         Assert.Contains("private void DetectionCorrect_Click", training);
         Assert.Contains(".SafeFireAndForget(\"DetectionAccept\")", training);
@@ -92,15 +123,8 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.Contains("private async Task HandleDetectionAcceptAsync", training);
         Assert.Contains("private async Task HandleDetectionCorrectAsync", training);
         Assert.Contains("LiveDetectionConfirmationAcceptCommandWorkflow.ExecuteAsync", training);
-        Assert.DoesNotContain("if (pendingFindings.Count == 0)", training);
-        Assert.DoesNotContain("\n        try", training);
-        Assert.DoesNotContain("catch (Exception ex)", training);
         Assert.Contains("LiveDetectionConfirmationCorrectCommandWorkflow.ExecuteAsync", training);
-        Assert.DoesNotContain("selectedEntry == null", training);
         Assert.Contains("LiveDetectionCorrectionCodeSelectionWorkflow.Select", training);
-        Assert.DoesNotContain("LiveDetectionCorrectionCodeSelectionServiceFactory.Create", training);
-        Assert.DoesNotContain("CodingExplorerEntryFactory.CreateSeed", training);
-        Assert.DoesNotContain("VsaCodeExplorerDialogServiceFactory.Create", training);
         Assert.Contains("LiveDetectionTrainingAnnotationWriter.CreateDefault", training);
         Assert.Contains("LiveDetectionConfirmationTrainingWorkflow.SaveAcceptedAsync", training);
         Assert.Contains("LiveDetectionConfirmationTrainingWorkflow.SaveCorrectedAsync", training);
@@ -116,31 +140,14 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2717 Fehler: {ex.Message}\", false)", correctCommandWorkflow);
         Assert.Contains("actions.ResumeDetection()", correctCommandWorkflow);
         Assert.Contains("actions.ResumeDetection()", skipCommandWorkflow);
-        Assert.DoesNotContain("if (!result.Saved)", training);
-        Assert.DoesNotContain("result.SavedCount", training);
-        Assert.DoesNotContain("result.Code", training);
         Assert.Contains("public static void ShowDetectionConfirmation", statusControls);
         Assert.Contains("public static void HideDetectionConfirmation", statusControls);
         Assert.Contains("PlayerConfirmationPlayback.PauseLiveDetectionConfirmation", displayWorkflow);
         Assert.Contains("SeekMilliseconds", displayWorkflow);
-        Assert.DoesNotContain("foreach (var finding in _detectionPendingFindings)", training);
-        Assert.DoesNotContain("annotationWriter.SaveAcceptedAsync", training);
-        Assert.DoesNotContain("annotationWriter.SaveCorrectedAsync", training);
         Assert.Contains("CodingExplorerEntryFactory.CreateSeed", correctionSelection);
         Assert.Contains("VsaCodeExplorerDialogServiceFactory.Create", correctionSelectionFactory);
         Assert.Contains("LiveDetectionCorrectionCodeSelectionServiceFactory.Create", correctionSelectionWorkflow);
         Assert.Contains("service.Select(", correctionSelectionWorkflow);
-        Assert.DoesNotContain("TrainingAnnotationExportServiceFactory.Create", training);
-        Assert.DoesNotContain("LiveDetectionTrainingFrameExporter", training);
-        Assert.DoesNotContain("LiveDetectionTrainingExportPlanner.BuildAccepted", training);
-        Assert.DoesNotContain("LiveDetectionTrainingExportPlanner.BuildCorrected", training);
-        Assert.DoesNotContain("VsaYoloClassMap.GetClassId", training);
-        Assert.DoesNotContain("BBoxFromClockPosition", training);
-        Assert.DoesNotContain("det_corr_", training);
-        Assert.DoesNotContain("File.WriteAllBytesAsync", training);
-        Assert.DoesNotContain("File.Delete", training);
-        Assert.DoesNotContain("Path.GetTempPath", training);
-        Assert.DoesNotContain("TeacherAnnotationStore.AppendAsync", training);
         Assert.Contains("public sealed class LiveDetectionTrainingFrameExporter", frameExporter);
         Assert.Contains("File.WriteAllBytesAsync", frameExporter);
         Assert.Contains("BestEffort.Try", frameExporter);
@@ -158,5 +165,19 @@ public sealed class PlayerWindowLiveDetectionConfirmationArchitectureTests
         Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2713 {trainingResult.SavedCount} Befund(e) gespeichert\", true)", trainingResultWorkflow);
         Assert.Contains("actions.ShowOsdMeterStatus($\"\\u2713 Training: {trainingResult.Code} (korrigiert)\", true)", trainingResultWorkflow);
         Assert.Contains("actions.ResumeDetection()", trainingResultWorkflow);
+    }
+
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = new List<string>();
+        foreach (var token in forbiddenTokens)
+        {
+            if (source.Contains(token, StringComparison.Ordinal))
+                hits.Add(token);
+        }
+
+        Assert.True(
+            hits.Count == 0,
+            "Verbotene alte LiveDetection-Confirmation-Logik gefunden: " + string.Join(", ", hits));
     }
 }

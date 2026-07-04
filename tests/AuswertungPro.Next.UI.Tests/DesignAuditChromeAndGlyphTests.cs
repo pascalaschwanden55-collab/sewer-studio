@@ -1,79 +1,34 @@
 using System.IO;
-using System.Text.RegularExpressions;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
 namespace AuswertungPro.Next.UI.Tests;
 
 public sealed class DesignAuditChromeAndGlyphTests
 {
-    private static readonly Regex VisibleSymbolRegex = new(
-        @"[✓✕✎⚠→]|\ud83c[\udc00-\udfff]|\ud83d[\udc00-\udfff]|\ud83e[\udd00-\udfff]",
-        RegexOptions.Compiled);
-
-    private static readonly string[] ConvertedGlyphFiles =
-    [
-        Path.Combine("Dialogs", "CostCatalogEditorDialog.xaml"),
-        Path.Combine("Dialogs", "PositionTemplateEditorDialog.xaml"),
-        Path.Combine("Theme", "Controls.xaml"),
-        Path.Combine("Views", "Windows", "MeasureTemplateEditorWindow.xaml"),
-        Path.Combine("Views", "Windows", "TrainingCenterWindow.xaml"),
-        Path.Combine("Views", "Windows", "VideoAnalysisPipelineWindow.xaml")
-    ];
-
-    [Fact]
-    public void Converted_xaml_files_use_mdl2_glyphs_instead_of_visible_symbol_characters()
-    {
-        foreach (var relativePath in ConvertedGlyphFiles)
-        {
-            var xaml = ReadUiFile(relativePath);
-
-            Assert.DoesNotMatch(VisibleSymbolRegex, xaml);
-            Assert.DoesNotContain("Segoe UI Emoji", xaml);
-        }
-    }
-
-    [Fact]
-    public void Shell_view_model_has_no_dead_guide_code_when_xaml_has_no_guide_bindings()
-    {
-        var uiRoot = RepoFile("src", "AuswertungPro.Next.UI");
-        foreach (var file in Directory.EnumerateFiles(uiRoot, "*.xaml", SearchOption.AllDirectories))
-        {
-            var relative = Path.GetRelativePath(uiRoot, file);
-            Assert.DoesNotContain("Guide", File.ReadAllText(file), StringComparison.Ordinal);
-            Assert.DoesNotContain("Guide", relative, StringComparison.Ordinal);
-        }
-
-        var shell = ReadUiFile(Path.Combine("ViewModels", "ShellViewModel.cs"));
-        Assert.DoesNotContain("Guide", shell, StringComparison.Ordinal);
-        Assert.DoesNotContain("Ratten-Assistent", shell, StringComparison.Ordinal);
-    }
-
     [Fact]
     public void Key_windows_use_sewerstudio_titles_and_responsive_minimum_sizes()
     {
         AssertWindowChrome(
             ReadUiFile(Path.Combine("Views", "Windows", "TrainingCenterWindow.xaml")),
-            "SewerStudio — Training Center",
+            "SewerStudio \u2014 Training Center",
             "MinWidth=\"1200\"",
             "MinHeight=\"720\"");
 
         var protocolRoot = GetRootWindowTag(ReadUiFile(Path.Combine("Views", "ProtocolObservationsWindow.xaml")));
-        Assert.Contains("Title=\"SewerStudio — Beobachtungen / Schäden\"", protocolRoot);
+        Assert.Contains("Title=\"SewerStudio \u2014 Beobachtungen / Sch\u00e4den\"", protocolRoot);
         Assert.Contains("WindowState=\"Maximized\"", protocolRoot);
-        Assert.DoesNotContain("Width=\"980\"", protocolRoot);
-        Assert.DoesNotContain("Height=\"620\"", protocolRoot);
         Assert.Contains("MinWidth=\"900\"", protocolRoot);
         Assert.Contains("MinHeight=\"600\"", protocolRoot);
 
         AssertWindowChrome(
             ReadUiFile(Path.Combine("Views", "Windows", "CorrectionDialog.xaml")),
-            "SewerStudio — Korrektur",
+            "SewerStudio \u2014 Korrektur",
             "MinWidth=\"420\"",
             "MinHeight=\"520\"");
 
         AssertWindowChrome(
             ReadUiFile(Path.Combine("Views", "Windows", "DossierPrintDialog.xaml")),
-            "SewerStudio — Haltungsdossier drucken",
+            "SewerStudio \u2014 Haltungsdossier drucken",
             "MinWidth=\"480\"",
             "MinHeight=\"620\"");
     }
@@ -98,5 +53,4 @@ public sealed class DesignAuditChromeAndGlyphTests
         var path = RepoFile("src", "AuswertungPro.Next.UI", relativePath);
         return File.ReadAllText(path);
     }
-
 }

@@ -43,6 +43,7 @@ public partial class PlayerWindow : Window
             haltungId,
             onEntryCreated,
             haltungRecord);
+        _playerSettings = _protocolContext.Settings ?? AppSettings.Load();
         WireCodingPhotoHoverPreview();
         _codingTrainingSamplesOwner = CodingTrainingSamplesOwner.CreateDefault(
             () => _codingSessionRuntimeOwner.Service,
@@ -66,6 +67,8 @@ public partial class PlayerWindow : Window
                 ScrubSeekToSlider: ScrubSeekToSlider,
                 ResolveSliderTrackBounds: () => PlayerSliderTrackBounds.Resolve(PositionSlider, DamageMarkerCanvas),
                 MapCodingOverlayPoint: CodingNormToPixel));
+        ApplyPersistedPlayerControlSettings();
+        _playerControlEventsEnabled = true;
         WirePositionSliderEvents();
         WireWindowLifecycleEvents();
         WireWindowSurfaceEvents();

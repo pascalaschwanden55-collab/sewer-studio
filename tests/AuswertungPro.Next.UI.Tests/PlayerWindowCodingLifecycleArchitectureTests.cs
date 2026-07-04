@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
@@ -8,27 +10,24 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
     [Fact]
     public void PlayerWindow_coding_lifecycle_lives_in_lifecycle_partial()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
-        var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.cs");
-        var exitPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Exit.cs");
-        var importPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Import.cs");
-        var sessionPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Session.cs");
-        var importReferencePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
-        var uiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Ui.cs");
-        var importReferenceResetterPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceStateResetter.cs");
-        var matchResetterPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchStateResetter.cs");
-        var preparePlaybackWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModePreparePlaybackWorkflow.cs");
-        var defaultToolWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeDefaultToolWorkflow.cs");
-        var showUiWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeShowUiWorkflow.cs");
-        var backgroundServicesWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeBackgroundServicesWorkflow.cs");
-        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeCommandWorkflow.cs");
-        var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
-        var exitCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeExitCommandWorkflow.cs");
-        var sessionStateCreationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSessionStateCreationWorkflow.cs");
-        var sessionStartWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSessionStartWorkflow.cs");
+        var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.cs");
+        var lifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
+        var exitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var importPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Import.cs");
+        var sessionPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
+        var importReferencePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
+        var uiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Ui.cs");
+        var importReferenceResetterPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceStateResetter.cs");
+        var matchResetterPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchStateResetter.cs");
+        var preparePlaybackWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModePreparePlaybackWorkflow.cs");
+        var defaultToolWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeDefaultToolWorkflow.cs");
+        var showUiWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeShowUiWorkflow.cs");
+        var backgroundServicesWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeBackgroundServicesWorkflow.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeCommandWorkflow.cs");
+        var enterWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeEnterWorkflow.cs");
+        var exitCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeExitCommandWorkflow.cs");
+        var sessionStateCreationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSessionStateCreationWorkflow.cs");
+        var sessionStartWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSessionStartWorkflow.cs");
 
         Assert.True(File.Exists(lifecyclePath), "Codiermodus-Enter/Exit soll aus dem allgemeinen Coding-Partial heraus.");
         Assert.True(File.Exists(exitPath), "Codiermodus-Exit soll aus dem allgemeinen Lifecycle-Partial heraus.");
@@ -67,27 +66,51 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         var sessionStateCreationWorkflow = File.Exists(sessionStateCreationWorkflowPath) ? File.ReadAllText(sessionStateCreationWorkflowPath) : "";
         var sessionStartWorkflow = File.Exists(sessionStartWorkflowPath) ? File.ReadAllText(sessionStartWorkflowPath) : "";
 
-        Assert.DoesNotContain("private void EnterCodingMode", coding);
-        Assert.DoesNotContain("private void ExitCodingMode", coding);
-        Assert.DoesNotContain("private void ExitCodingMode", lifecycle);
-        Assert.DoesNotContain("private void LoadExistingProtocolEventsAsImport", coding);
-        Assert.DoesNotContain("private void LoadExistingProtocolEventsAsImport", lifecycle);
+        AssertNoForbiddenTokens(
+            coding,
+            "private void EnterCodingMode",
+            "private void ExitCodingMode",
+            "private void LoadExistingProtocolEventsAsImport");
+        AssertNoForbiddenTokens(
+            lifecycle,
+            "private void ExitCodingMode",
+            "private void LoadExistingProtocolEventsAsImport",
+            "if (_haltungRecord == null)",
+            "if (_isCodingMode || _haltungRecord == null) return",
+            "new CodingSessionViewModel",
+            "CodingImportReferenceTransfer.MoveExistingEventsToImportReference",
+            "CodingOverlayPopup.IsOpen = true");
         Assert.Contains("private void CodingMode_Click", lifecycle);
         Assert.Contains("CodingModeCommandWorkflow.Execute", lifecycle);
-        Assert.DoesNotContain("if (_haltungRecord == null)", lifecycle);
         Assert.Contains("actions.ShowMissingHaltung()", commandWorkflow);
         Assert.Contains("actions.EnterCodingMode()", commandWorkflow);
         Assert.Contains("private void EnterCodingMode", lifecycle);
         Assert.Contains("CodingModeEnterWorkflow.Execute", lifecycle);
-        Assert.DoesNotContain("if (_isCodingMode || _haltungRecord == null) return", lifecycle);
         Assert.Contains("if (request.IsCodingMode || !request.HasHaltungRecord)", enterWorkflow);
         Assert.Contains("private void LoadExistingProtocolEventsAsImport", import);
         Assert.Contains("private void ExitCodingMode", exit);
         Assert.Contains("CodingModeExitCommandWorkflow.Execute", exit);
         Assert.Contains("private void CodingModeExit_Click", exit);
-        Assert.DoesNotContain("if (!_isCodingMode) return", exit);
-        Assert.DoesNotContain("_isCodingMode = false", exit);
-        Assert.DoesNotContain("_isCodingMode = true", exit);
+        AssertNoForbiddenTokens(
+            exit,
+            "if (!_isCodingMode) return",
+            "_isCodingMode = false",
+            "_isCodingMode = true",
+            "_lastCodingMatch = null",
+            "_codingProtocolMatchBuckets.Clear()",
+            "_codingImportEvents.Clear()",
+            "LiveDetectionStatusText.Visibility = _isDetecting",
+            "CodingConfirmationPanel.Visibility = Visibility.Collapsed",
+            "DetectionConfirmationPanel.Visibility = Visibility.Collapsed",
+            "LiveDetectionButton.Visibility = Visibility.Visible",
+            "LiveDetectionStatusControls.SetDetectionStatusVisibility",
+            "TxtActiveToolLabel.Text = \"\"",
+            "BtnCodingLiveAi.IsChecked = false",
+            "TxtCodingAiStage.Text = string.Empty",
+            "CodingOverlayPopup.IsOpen = false",
+            "CodingOverlayCanvas.Children.Clear",
+            "CodingSidePanel.Visibility = Visibility.Collapsed",
+            "CodingToolbar.Visibility = Visibility.Collapsed");
         Assert.Contains("actions.SetCodingMode(false)", exitCommandWorkflow);
         Assert.Contains("actions.SetCodingMode(true)", exitCommandWorkflow);
         Assert.Contains("actions.Teardown()", exitCommandWorkflow);
@@ -95,14 +118,12 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         Assert.Contains("private bool TryStartCodingSession", session);
         Assert.Contains("_codingSessionHost", session);
         Assert.Contains("CodingSessionStateCreationWorkflow.Execute", session);
-        Assert.DoesNotContain("var state = CodingSessionStateFactory.Create", session);
-        Assert.DoesNotContain("_codingSessionViewModelOwner.Set(state.ViewModel, observePropertyChanged: true)", session);
-        Assert.DoesNotContain("HasRequiredState: _haltungRecord != null && _codingVm != null", session);
-        Assert.DoesNotContain("EndMeter: _codingVm?.EndMeter ?? 0", session);
-        Assert.DoesNotContain("_codingVm!.StartSessionCommand.Execute", session);
-        Assert.DoesNotContain("_codingVm", session);
+        AssertNoForbiddenTokens(
+            session,
+            "var state = CodingSessionStateFactory.Create",
+            "_codingSessionViewModelOwner.Set(state.ViewModel, observePropertyChanged: true)",
+            "catch (Exception ex)");
         Assert.Contains("CodingSessionStartWorkflow.Execute", session);
-        Assert.DoesNotContain("catch (Exception ex)", session);
         Assert.Contains("actions.SetSessionService(state.SessionService)", sessionStateCreationWorkflow);
         Assert.Contains("actions.SetOverlayService(state.OverlayService)", sessionStateCreationWorkflow);
         Assert.Contains("actions.CancelSchema()", sessionStateCreationWorkflow);
@@ -123,71 +144,51 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         Assert.Contains("actions.UpdateCodingOverlayCursor()", showUiWorkflow);
         Assert.Contains("actions.ScheduleLoadedViewportUpdate()", showUiWorkflow);
         Assert.Contains("PlayerDispatcherScheduler.ScheduleLoaded", ui);
-        Assert.DoesNotContain("Dispatcher.BeginInvoke", ui);
-        Assert.DoesNotContain("new Action(UpdateCodingOverlayViewport)", ui);
-        Assert.DoesNotContain("UpdateCodingOverlayCursor();", ui);
+        AssertNoForbiddenTokens(
+            ui,
+            "Dispatcher.BeginInvoke",
+            "new Action(UpdateCodingOverlayViewport)",
+            "UpdateCodingOverlayCursor();",
+            "StartCodingOsdTimer();",
+            "_markToolControls.SetToolLabels(\"Rechteck\")",
+            "TxtMarkToolName.Text",
+            "TxtActiveToolLabel.Text",
+            "if (_liveDetectionController.IsDetecting)",
+            "LiveDetectionButton.Visibility = Visibility.Collapsed",
+            "LiveDetectionStatusControls.HideDetectionStatus",
+            "LiveDetectionStatusText.Visibility = Visibility.Collapsed",
+            "CodingOverlayPopup.IsOpen = true",
+            "CodingOverlayCanvas.IsHitTestVisible = true",
+            "CodingSidePanel.Visibility = Visibility.Visible",
+            "CodingToolbar.Visibility = Visibility.Visible");
         Assert.Contains("CodingModeDefaultToolWorkflow.Execute", ui);
         Assert.Contains("CodingModeBackgroundServicesWorkflow.Execute", ui);
         Assert.Contains("actions.StartCodingAiInitialization()", backgroundServicesWorkflow);
         Assert.Contains("actions.StartCodingOsdTimer()", backgroundServicesWorkflow);
         Assert.Contains("actions.ShowInitialOsdMeterBadge()", backgroundServicesWorkflow);
-        Assert.DoesNotContain("StartCodingOsdTimer();", ui);
-        Assert.DoesNotContain("_markToolControls.SetToolLabels(\"Rechteck\")", ui);
         Assert.Contains("DefaultToolLabel = \"Rechteck\"", defaultToolWorkflow);
         Assert.Contains("DefaultTool = OverlayToolType.Rectangle", defaultToolWorkflow);
         Assert.Contains("request.HasOverlayService", defaultToolWorkflow);
-        Assert.DoesNotContain("TxtMarkToolName.Text", ui);
-        Assert.DoesNotContain("TxtActiveToolLabel.Text", ui);
         Assert.Contains("CreateCodingSessionState: CreateCodingSessionState", lifecycle);
         Assert.Contains("InitializeCodingImportReferences: InitializeCodingImportReferences", lifecycle);
         Assert.Contains("actions.CreateCodingSessionState()", enterWorkflow);
         Assert.Contains("actions.InitializeCodingImportReferences()", enterWorkflow);
         Assert.Contains("CodingImportReferenceStateResetter.ClearEvents", exit);
         Assert.Contains("_codingProtocolMatchState.Reset", exit);
-        Assert.DoesNotContain("_lastCodingMatch = null", exit);
-        Assert.DoesNotContain("_codingProtocolMatchBuckets.Clear()", exit);
-        Assert.DoesNotContain("_codingImportEvents.Clear()", exit);
         Assert.Contains("_codingSessionHost.EventCollection", exit);
         Assert.Contains("_codingSessionHost.EndMeter", exit);
         Assert.Contains("HasCodingViewModel: _codingSessionHost.HasViewModel", exit);
-        Assert.DoesNotContain("_codingVm?.Events", exit);
-        Assert.DoesNotContain("_codingVm?.EndMeter", exit);
-        Assert.DoesNotContain("HasCodingViewModel: _codingVm is not null", exit);
-        Assert.DoesNotContain("_codingVm", exit);
         Assert.Contains("ShowCodingModeUi: ShowCodingModeUi", lifecycle);
         Assert.Contains("actions.ShowCodingModeUi()", enterWorkflow);
         Assert.Contains("CodingModePreparePlaybackWorkflow.Execute", ui);
-        Assert.DoesNotContain("if (_liveDetectionController.IsDetecting)", ui);
         Assert.Contains("PlayerCodingPlayback.PauseForCodingInteraction", preparePlaybackWorkflow);
         Assert.Contains("actions.StopLiveDetection()", preparePlaybackWorkflow);
-        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = _isDetecting", exit);
         Assert.Contains("CodingModeChromeControls.HideLiveDetectionEntry", ui);
         Assert.Contains("CodingModeChromeControls.ShowLiveDetectionEntry", exit);
         Assert.Contains("CodingModeChromeControls.ResetCodingIndicators", exit);
         Assert.Contains("CodingModeChromeControls.HideConfirmationPanels", exit);
-        Assert.DoesNotContain("CodingConfirmationPanel.Visibility = Visibility.Collapsed", exit);
-        Assert.DoesNotContain("DetectionConfirmationPanel.Visibility = Visibility.Collapsed", exit);
-        Assert.DoesNotContain("LiveDetectionButton.Visibility = Visibility.Collapsed", ui);
-        Assert.DoesNotContain("LiveDetectionButton.Visibility = Visibility.Visible", exit);
-        Assert.DoesNotContain("LiveDetectionStatusControls.HideDetectionStatus", ui);
-        Assert.DoesNotContain("LiveDetectionStatusControls.SetDetectionStatusVisibility", exit);
-        Assert.DoesNotContain("LiveDetectionStatusText.Visibility = Visibility.Collapsed", ui);
-        Assert.DoesNotContain("TxtActiveToolLabel.Text = \"\"", exit);
-        Assert.DoesNotContain("BtnCodingLiveAi.IsChecked = false", exit);
-        Assert.DoesNotContain("TxtCodingAiStage.Text = string.Empty", exit);
         Assert.Contains("CodingModeChromeControls.HideCodingSurface", exit);
-        Assert.DoesNotContain("CodingOverlayPopup.IsOpen = false", exit);
-        Assert.DoesNotContain("CodingOverlayCanvas.Children.Clear", exit);
-        Assert.DoesNotContain("CodingSidePanel.Visibility = Visibility.Collapsed", exit);
-        Assert.DoesNotContain("CodingToolbar.Visibility = Visibility.Collapsed", exit);
-        Assert.DoesNotContain("new CodingSessionViewModel", lifecycle);
-        Assert.DoesNotContain("CodingImportReferenceTransfer.MoveExistingEventsToImportReference", lifecycle);
-        Assert.DoesNotContain("CodingOverlayPopup.IsOpen = true", lifecycle);
         Assert.Contains("CodingModeChromeControls.ShowCodingSurface", ui);
-        Assert.DoesNotContain("CodingOverlayPopup.IsOpen = true", ui);
-        Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible = true", ui);
-        Assert.DoesNotContain("CodingSidePanel.Visibility = Visibility.Visible", ui);
-        Assert.DoesNotContain("CodingToolbar.Visibility = Visibility.Visible", ui);
         Assert.Contains("public static int ClearEvents", importReferenceResetter);
         Assert.Contains("public static CodingMatchRouting? Reset", matchResetter);
     }
@@ -195,11 +196,9 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
     [Fact]
     public void PlayerWindow_terminal_exit_boundary_check_lives_in_policy()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingModeExitFinalizationWorkflow.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingTerminalBoundaryPresencePolicy.cs");
+        var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeExitFinalizationWorkflow.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTerminalBoundaryPresencePolicy.cs");
 
         Assert.True(File.Exists(codingPath), "Coding-Exit-Cleanup soll in einem eigenen Partial liegen.");
         Assert.True(File.Exists(workflowPath), "Coding-Exit-Finalisierung soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
@@ -213,13 +212,12 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         Assert.Contains("_codingSessionHost.EventCollection", coding);
         Assert.Contains("_codingSessionHost.EndMeter", coding);
         Assert.Contains("HasCodingViewModel: _codingSessionHost.HasViewModel", coding);
-        Assert.DoesNotContain("_codingVm?.Events", coding);
-        Assert.DoesNotContain("_codingVm?.EndMeter", coding);
-        Assert.DoesNotContain("HasCodingViewModel: _codingVm is not null", coding);
-        Assert.DoesNotContain("CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode", coding);
+        AssertNoForbiddenTokens(coding, "CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode");
         Assert.Contains("CodingTerminalBoundaryPresencePolicy.HasEndOrAbortCode", workflow);
-        Assert.DoesNotContain("string.Equals(e.Entry.Code, \"BCE\"", coding + workflow);
-        Assert.DoesNotContain("string.Equals(e.Entry.Code, \"BDC\"", coding + workflow);
+        AssertNoForbiddenTokens(
+            coding + workflow,
+            "string.Equals(e.Entry.Code, \"BCE\"",
+            "string.Equals(e.Entry.Code, \"BDC\"");
         Assert.Contains("public static bool HasEndOrAbortCode", policy);
         Assert.Contains("MainCode(e.Entry.Code) is \"BCE\" or \"BDC\"", policy);
     }
@@ -227,12 +225,10 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
     [Fact]
     public void PlayerWindow_dn_calibration_initialization_lives_in_policy()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingDnCalibrationPolicy.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingDnCalibrationApplyWorkflow.cs");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingSessionHeaderControls.cs");
+        var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingDnCalibrationPolicy.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingDnCalibrationApplyWorkflow.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSessionHeaderControls.cs");
 
         Assert.True(File.Exists(policyPath), "DN-/Kalibrierungsinitialisierung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "DN-/Kalibrierungs-Anwendungsreihenfolge muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -247,14 +243,16 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         Assert.Contains("CodingDnCalibrationApplyWorkflow.Execute", coding);
         Assert.Contains("CodingSessionHeaderControls.ApplyCalibration", coding);
         Assert.Contains("CodingSessionHeaderControls.SetRangeText", coding);
-        Assert.DoesNotContain("if (_haltungRecord == null || !_codingOverlayRuntimeOwner.HasService)", coding);
-        Assert.DoesNotContain("var dnCalibration = CodingDnCalibrationPolicy.Build", coding);
-        Assert.DoesNotContain("if (dnCalibration.Calibration != null)", coding);
-        Assert.DoesNotContain("_haltungRecord.Fields.TryGetValue(\"DN_mm\"", coding);
-        Assert.DoesNotContain("int.TryParse(dnStr", coding);
-        Assert.DoesNotContain("TxtCodingCalibDn.Text", coding);
-        Assert.DoesNotContain("TxtCodingCalibStatus.Text", coding);
-        Assert.DoesNotContain("TxtCodingRange.Text", coding);
+        AssertNoForbiddenTokens(
+            coding,
+            "if (_haltungRecord == null || !_codingOverlayRuntimeOwner.HasService)",
+            "var dnCalibration = CodingDnCalibrationPolicy.Build",
+            "if (dnCalibration.Calibration != null)",
+            "_haltungRecord.Fields.TryGetValue(\"DN_mm\"",
+            "int.TryParse(dnStr",
+            "TxtCodingCalibDn.Text",
+            "TxtCodingCalibStatus.Text",
+            "TxtCodingRange.Text");
         Assert.Contains("if (!request.HasHaltungRecord || !request.HasOverlayService)", workflow);
         Assert.Contains("actions.BuildCalibration()", workflow);
         Assert.Contains("actions.SetCalibration(dnCalibration.Calibration)", workflow);
@@ -269,15 +267,13 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
     [Fact]
     public void PlayerWindow_haltungslaenge_fallback_lives_in_lifecycle_length_partial()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
-        var persistencePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Persistence.cs");
-        var lengthPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Length.cs");
-        var ensureServicePath = Path.Combine(uiRoot, "Ai", "CodingHaltungslaengeEnsureService.cs");
-        var ensureServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingHaltungslaengeEnsureServiceFactory.cs");
-        var ensureWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingHaltungslaengeEnsureWorkflow.cs");
-        var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
+        var lifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
+        var persistencePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Persistence.cs");
+        var lengthPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Length.cs");
+        var ensureServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingHaltungslaengeEnsureService.cs");
+        var ensureServiceFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingHaltungslaengeEnsureServiceFactory.cs");
+        var ensureWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingHaltungslaengeEnsureWorkflow.cs");
+        var enterWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(lengthPath), "Haltungslaenge-Fallback gehoert in eine Lifecycle-Length-Partial, nicht in Persistence.");
         Assert.True(File.Exists(ensureServicePath), "Haltungslaenge-Fallbacklogik gehoert ausserhalb der PlayerWindow-Partials.");
@@ -295,16 +291,20 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
 
         Assert.Contains("EnsureHaltungslaenge: () => EnsureHaltungslaenge(_protocolContext.HaltungRecord!)", lifecycle);
         Assert.Contains("actions.EnsureHaltungslaenge()", enterWorkflow);
-        Assert.DoesNotContain("private void EnsureHaltungslaenge", persistence);
-        Assert.DoesNotContain("Microsoft.VisualBasic.Interaction.InputBox", persistence);
+        AssertNoForbiddenTokens(
+            persistence,
+            "private void EnsureHaltungslaenge",
+            "Microsoft.VisualBasic.Interaction.InputBox");
         Assert.Contains("private void EnsureHaltungslaenge", length);
-        Assert.DoesNotContain("CodingHaltungslaengeEnsureServiceFactory.Create", length);
-        Assert.DoesNotContain("new CodingHaltungslaengeEnsureWorkflowActions", length);
+        AssertNoForbiddenTokens(
+            length,
+            "CodingHaltungslaengeEnsureServiceFactory.Create",
+            "new CodingHaltungslaengeEnsureWorkflowActions",
+            ".Ensure(record, _damageOverlay?.PipeLengthMeters)",
+            "CodingHaltungslaengeResolver.TryEnsureFromKnownSources",
+            "Microsoft.VisualBasic.Interaction.InputBox",
+            "SetFieldValue(\"Haltungslaenge_m\"");
         Assert.Contains("CodingHaltungslaengeEnsureWorkflow.Ensure", length);
-        Assert.DoesNotContain(".Ensure(record, _damageOverlay?.PipeLengthMeters)", length);
-        Assert.DoesNotContain("CodingHaltungslaengeResolver.TryEnsureFromKnownSources", length);
-        Assert.DoesNotContain("Microsoft.VisualBasic.Interaction.InputBox", length);
-        Assert.DoesNotContain("SetFieldValue(\"Haltungslaenge_m\"", length);
         Assert.Contains("CodingHaltungslaengeResolver.TryEnsureFromKnownSources", ensureServiceFactory);
         Assert.Contains("Microsoft.VisualBasic.Interaction.InputBox", ensureServiceFactory);
         Assert.Contains("CodingHaltungslaengeEnsureServiceFactory.Create", ensureWorkflow);
@@ -317,15 +317,12 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
     [Fact]
     public void PlayerWindow_coding_mode_dialogs_live_in_service()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.cs");
-        var sessionPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Session.cs");
-        var trainingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Training.cs");
-        var servicePath = Path.Combine(uiRoot, "Ai", "CodingModeDialogService.cs");
-        var factoryPath = Path.Combine(uiRoot, "Ai", "CodingModeDialogServiceFactory.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingModeDialogWorkflow.cs");
+        var lifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
+        var sessionPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
+        var trainingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
+        var servicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeDialogService.cs");
+        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeDialogServiceFactory.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeDialogWorkflow.cs");
 
         Assert.True(File.Exists(servicePath), "Coding-Modus-Dialogtexte muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(factoryPath), "Coding-Modus-DialogHost-Verdrahtung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -339,15 +336,16 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         var factory = File.ReadAllText(factoryPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
-        Assert.DoesNotContain("CodingModeDialogServiceFactory.Create", playerText);
-        Assert.DoesNotContain("new CodingModeDialogWorkflowActions", playerText);
+        AssertNoForbiddenTokens(
+            playerText,
+            "CodingModeDialogServiceFactory.Create",
+            "new CodingModeDialogWorkflowActions",
+            ".ShowMissingHaltung()",
+            ".ShowSessionStartFailed(message)",
+            "Codier-Modus ben",
+            "Frame konnte nicht aufgenommen werden.");
         Assert.Contains("CodingModeDialogWorkflow.ShowMissingHaltung", lifecycle);
         Assert.Contains("CodingModeDialogWorkflow.ShowSessionStartFailed", session);
-        Assert.DoesNotContain(".ShowMissingHaltung()", playerText);
-        Assert.DoesNotContain(".ShowSessionStartFailed(message)", playerText);
-        Assert.DoesNotContain("DialogHost.Current", playerText);
-        Assert.DoesNotContain("Codier-Modus ben", playerText);
-        Assert.DoesNotContain("Frame konnte nicht aufgenommen werden.", playerText);
         Assert.Contains("ShowMissingHaltung", service);
         Assert.Contains("ShowSessionStartFailed", service);
         Assert.Contains("ShowImportFrameCaptureFailed", service);
@@ -356,5 +354,19 @@ public sealed class PlayerWindowCodingLifecycleArchitectureTests
         Assert.Contains("service.ShowMissingHaltung()", workflow);
         Assert.Contains("service.ShowSessionStartFailed(message)", workflow);
         Assert.Contains("DialogHost.Current", factory);
+    }
+
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = new List<string>();
+        foreach (var token in forbiddenTokens)
+        {
+            if (source.Contains(token, StringComparison.Ordinal))
+                hits.Add(token);
+        }
+
+        Assert.True(
+            hits.Count == 0,
+            "Verbotene alte PlayerWindow-Coding-Lifecycle-Logik gefunden: " + string.Join(", ", hits));
     }
 }

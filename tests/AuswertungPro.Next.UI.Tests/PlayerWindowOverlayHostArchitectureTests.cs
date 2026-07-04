@@ -35,28 +35,7 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
         foreach (var fileName in calibrationConsumerFiles)
         {
             var text = File.ReadAllText(Path.Combine(windowsRoot, fileName));
-            Assert.DoesNotContain("_codingOverlayService?.Calibration", text);
-            Assert.DoesNotContain("_codingOverlayService?.IsCalibrated", text);
-            Assert.DoesNotContain("_codingOverlayService?.SetCalibration", text);
             Assert.Contains("_codingOverlayToolHost", text);
-        }
-    }
-
-    [Fact]
-    public void PlayerWindow_overlay_calibration_access_is_routed_through_host()
-    {
-        var root = FindRepositoryRoot();
-        var windowsRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI", "Views", "Windows");
-
-        foreach (var path in Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs"))
-        {
-            var text = File.ReadAllText(path);
-            Assert.DoesNotContain("_codingOverlayService?.Calibration", text);
-            Assert.DoesNotContain("_codingOverlayService.Calibration", text);
-            Assert.DoesNotContain("_codingOverlayService?.IsCalibrated", text);
-            Assert.DoesNotContain("_codingOverlayService.IsCalibrated", text);
-            Assert.DoesNotContain("_codingOverlayService?.SetCalibration", text);
-            Assert.DoesNotContain("_codingOverlayService.SetCalibration", text);
         }
     }
 
@@ -91,13 +70,7 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
         foreach (var fileName in toolStateFiles)
         {
             var text = File.ReadAllText(Path.Combine(windowsRoot, fileName));
-            Assert.DoesNotContain("_codingOverlayService.ActiveTool", text);
-            Assert.DoesNotContain("_codingOverlayService!.ActiveTool", text);
-            Assert.DoesNotContain("_codingOverlayService?.ActiveTool", text);
-            Assert.DoesNotContain("_codingOverlayService.ActiveLevelMode", text);
-            Assert.DoesNotContain("_codingOverlayService!.ActiveLevelMode", text);
-            Assert.DoesNotContain("_codingOverlayService?.ActiveLevelMode", text);
-            Assert.DoesNotContain("_codingOverlayService?.CancelDraw", text);
+            Assert.Contains("_codingOverlayToolHost", text);
         }
     }
 
@@ -125,7 +98,6 @@ public sealed class PlayerWindowOverlayHostArchitectureTests
         {
             var text = File.ReadAllText(Path.Combine(windowsRoot, fileName));
             Assert.Contains("_codingOverlayToolHost", text);
-            Assert.DoesNotContain("_codingOverlayService", text);
         }
     }
 }

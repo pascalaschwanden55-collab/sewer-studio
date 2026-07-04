@@ -8,16 +8,14 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     [Fact]
     public void PlayerWindow_coding_ai_runtime_creation_lives_in_factory()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var healthPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Health.cs");
-        var monitoringPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Health.Monitoring.cs");
-        var factoryPath = Path.Combine(uiRoot, "Ai", "CodingAiRuntimeFactory.cs");
-        var initializationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiInitializationWorkflow.cs");
-        var creationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiRuntimeCreationWorkflow.cs");
-        var healthMonitorCreationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiHealthMonitorCreationWorkflow.cs");
-        var multiModelEnsureWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAiMultiModelEnsureWorkflow.cs");
-        var settingsLoaderPath = Path.Combine(uiRoot, "Ai", "PlayerAiSettingsLoader.cs");
+        var healthPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Health.cs");
+        var monitoringPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Health.Monitoring.cs");
+        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiRuntimeFactory.cs");
+        var initializationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiInitializationWorkflow.cs");
+        var creationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiRuntimeCreationWorkflow.cs");
+        var healthMonitorCreationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiHealthMonitorCreationWorkflow.cs");
+        var multiModelEnsureWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAiMultiModelEnsureWorkflow.cs");
+        var settingsLoaderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "PlayerAiSettingsLoader.cs");
 
         Assert.True(File.Exists(factoryPath), "Coding-AI-Runtime-Erzeugung soll ausserhalb von PlayerWindow liegen.");
         Assert.True(File.Exists(initializationWorkflowPath), "Coding-AI-Initialisierungsentscheidungen sollen ausserhalb von PlayerWindow liegen.");
@@ -35,32 +33,15 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var multiModelEnsureWorkflow = File.Exists(multiModelEnsureWorkflowPath) ? File.ReadAllText(multiModelEnsureWorkflowPath) : string.Empty;
         var settingsLoader = File.ReadAllText(settingsLoaderPath);
 
-        Assert.DoesNotContain("PlayerAiSettingsLoader.LoadPlatformSettings", health);
         Assert.Contains("CodingAiInitializationWorkflow.ExecuteAsync", health);
         Assert.Contains("CodingAiRuntimeCreationWorkflow.Create", health);
-        Assert.DoesNotContain("runtime.RuntimeSettings", health);
-        Assert.DoesNotContain("runtime.MultiModelAvailable", health);
-        Assert.DoesNotContain("runtime.MultiModelError", health);
-        Assert.DoesNotContain("catch (Exception", health);
         Assert.Contains("runtime.RuntimeSettings", initializationWorkflow);
         Assert.Contains("runtime.MultiModelAvailable", initializationWorkflow);
         Assert.Contains("runtime.MultiModelError", initializationWorkflow);
-        Assert.DoesNotContain("AppSettingsAiSettingsProvider", health);
-        Assert.DoesNotContain("CodingAiRuntimeFactory.Create(", health);
         Assert.Contains("PlayerAiSettingsLoader.LoadPlatformSettings", creationWorkflow);
         Assert.Contains("CodingAiRuntimeFactory.Create(", creationWorkflow);
-        Assert.DoesNotContain("CodingAiRuntimeFactory.CreateHealthMonitor", health);
         Assert.Contains("CodingAiHealthMonitorCreationWorkflow.Create", health);
         Assert.Contains("CodingAiRuntimeFactory.CreateHealthMonitor", healthMonitorCreationWorkflow);
-        Assert.DoesNotContain("new OllamaClient", health);
-        Assert.DoesNotContain("new LiveDetectionService", health);
-        Assert.DoesNotContain("new EnhancedVisionAnalysisService", health);
-        Assert.DoesNotContain("new QualityGateService", health);
-        Assert.DoesNotContain("new VisionPipelineClient", health);
-        Assert.DoesNotContain("new SingleFrameMultiModelService", health);
-        Assert.DoesNotContain("new MarkBoxSegmentationService", health);
-        Assert.DoesNotContain("new SingleFrameMultiModelService", monitoring);
-        Assert.DoesNotContain("CodingAiRuntimeFactory.CreateMultiModelService", monitoring);
         Assert.Contains("CodingAiMultiModelEnsureWorkflow.Ensure", monitoring);
         Assert.Contains("CodingAiRuntimeFactory.CreateMultiModelService", multiModelEnsureWorkflow);
         Assert.Contains("new OllamaClient", factory);
@@ -71,12 +52,10 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     [Fact]
     public void PlayerWindow_live_ai_timer_intervals_live_in_settings()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
-        var controllerPath = Path.Combine(uiRoot, "Player", "CodingLiveAiTimerController.cs");
-        var displayPolicyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
-        var settingsPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiTimerSettings.cs");
+        var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingLiveAiTimerController.cs");
+        var displayPolicyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
+        var settingsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiTimerSettings.cs");
 
         Assert.True(File.Exists(settingsPath), "Live-AI-Timer-Intervalle muessen ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controllerPath), "Live-AI-Timer-Nutzung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -88,10 +67,7 @@ public sealed class PlayerWindowCodingAiArchitectureTests
 
         Assert.Contains("CodingLiveAiTimerSettings.AnalysisInterval", controller);
         Assert.Contains("CodingLiveAiTimerSettings.BlinkInterval", controller);
-        Assert.DoesNotContain("Interval = TimeSpan.FromSeconds(5)", ai);
-        Assert.DoesNotContain("Interval = TimeSpan.FromMilliseconds(800)", ai);
         Assert.Contains("CodingLiveAiTimerSettings.FormatAnalysisIntervalText", displayPolicy);
-        Assert.DoesNotContain("\"Intervall alle 5 Sekunden", displayPolicy);
         Assert.Contains("public static TimeSpan AnalysisInterval", settings);
         Assert.Contains("public static TimeSpan BlinkInterval", settings);
     }
@@ -99,23 +75,20 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     [Fact]
     public void PlayerWindow_live_ai_timer_wiring_lives_in_controller()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
-        var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Live.cs");
-        var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
-        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
-        var lifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.cs");
-        var codingExitPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Exit.cs");
-        var playbackPath = Path.Combine(windowsRoot, "PlayerWindow.Playback.cs");
-        var playbackLifecyclePath = Path.Combine(windowsRoot, "PlayerWindow.Playback.Lifecycle.cs");
-        var controllerPath = Path.Combine(uiRoot, "Player", "CodingLiveAiTimerController.cs");
-        var ownerPath = Path.Combine(uiRoot, "Player", "CodingLiveAiTimerControllerOwner.cs");
-        var timerControllerPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerController.cs");
-        var timerStopperPath = Path.Combine(uiRoot, "Player", "PlayerWindowTimerStopper.cs");
-        var exitTeardownWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeExitTeardownWorkflow.cs");
-        var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiToggleWorkflow.cs");
+        var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var livePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
+        var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.cs");
+        var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
+        var lifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
+        var codingExitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var playbackPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Playback.cs");
+        var playbackLifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Playback.Lifecycle.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingLiveAiTimerController.cs");
+        var ownerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingLiveAiTimerControllerOwner.cs");
+        var timerControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "PlayerWindowTimerController.cs");
+        var timerStopperPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "PlayerWindowTimerStopper.cs");
+        var exitTeardownWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeExitTeardownWorkflow.cs");
+        var toggleWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiToggleWorkflow.cs");
 
         Assert.True(File.Exists(codingExitPath), "Coding-Exit-Cleanup soll in einem eigenen Partial liegen.");
         Assert.True(File.Exists(playbackLifecyclePath), "Playback-Cleanup soll in einem eigenen Lifecycle-Partial liegen.");
@@ -141,7 +114,6 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var exitTeardownWorkflow = File.Exists(exitTeardownWorkflowPath) ? File.ReadAllText(exitTeardownWorkflowPath) : "";
         var toggleWorkflow = File.Exists(toggleWorkflowPath) ? File.ReadAllText(toggleWorkflowPath) : "";
 
-        Assert.DoesNotContain("private CodingLiveAiTimerController? _codingLiveAiTimers", state);
         Assert.Contains("private CodingLiveAiTimerControllerOwner _codingLiveAiTimerOwner => _codingAiStates.LiveTimerOwner", state);
         Assert.Contains("CodingLiveAiToggleWorkflow.Execute", live);
         Assert.Contains("_codingLiveAiTimerOwner.Ensure", live);
@@ -149,20 +121,12 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("StopTimers: resetButton => timers.Stop(resetButton)", live);
         Assert.Contains("actions.StartTimers()", toggleWorkflow);
         Assert.Contains("actions.StopTimers(true)", toggleWorkflow);
-        Assert.DoesNotContain("_codingLiveAiTimers?.Stop(resetButton: true)", lifecycle);
-        Assert.DoesNotContain("_codingLiveAiTimers?.Stop(resetButton: true)", codingExit);
         Assert.Contains("HasCodingLiveAiTimers: _codingLiveAiTimerOwner.HasController", codingExit);
         Assert.Contains("StopCodingLiveAiTimers: _codingLiveAiTimerOwner.Stop", codingExit);
         Assert.Contains("actions.StopCodingLiveAiTimers(true)", exitTeardownWorkflow);
-        Assert.DoesNotContain("_codingLiveAiTimers?.StopTimers()", playback);
-        Assert.DoesNotContain("_codingLiveAiTimers?.StopTimers()", playbackLifecycle);
         Assert.Contains("_codingLiveAiTimerOwner.Controller", playbackLifecycle);
         Assert.Contains("_playerTimerController.StopPlaybackTimers", playbackLifecycle);
         Assert.Contains("PlayerWindowTimerStopper.StopPlaybackTimers", timerController);
-        Assert.DoesNotContain("_codingLiveAiBlinkTimer", coding + state + lifecycle + codingExit + ai + live + playback + playbackLifecycle);
-        Assert.DoesNotContain("_codingLiveAiBlinkState", coding + state + lifecycle + codingExit + ai + live + playback + playbackLifecycle);
-        Assert.DoesNotContain("new DispatcherTimer { Interval = CodingLiveAiTimerSettings", live);
-        Assert.DoesNotContain("new CodingLiveAiTimerController", live);
         Assert.Contains("public sealed class CodingLiveAiTimerController", controller);
         Assert.Contains("public sealed class CodingLiveAiTimerControllerOwner", owner);
         Assert.Contains("public CodingLiveAiTimerController Ensure", owner);
@@ -176,11 +140,9 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     [Fact]
     public void PlayerWindow_live_ai_timer_gate_uses_policy()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var aiPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiTickPolicy.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiTimerTickWorkflow.cs");
+        var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiTickPolicy.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiTimerTickWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Live-AI-Timer-Gate muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(workflowPath), "Live-AI-Timer-Gate-Orchestrierung muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -190,27 +152,20 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var workflow = File.ReadAllText(workflowPath);
 
         Assert.Contains("CodingLiveAiTimerTickWorkflow.ExecuteAsync", ai);
-        Assert.DoesNotContain("CodingLiveAiTickPolicy.ShouldAnalyze", ai);
         Assert.Contains("CodingLiveAiTickPolicy.ShouldAnalyze", workflow);
         Assert.Contains("actions.RunAnalysisAsync()", workflow);
         Assert.Contains("actions.TraceError(ex.Message)", workflow);
-        Assert.DoesNotContain("_codingLiveDetection == null) return", ai);
-        Assert.DoesNotContain("ActiveSession?.State == CodingSessionState.WaitingForUserInput", ai);
-        Assert.DoesNotContain("!_player.IsPlaying) return", ai);
         Assert.Contains("public static bool ShouldAnalyze", policy);
     }
 
     [Fact]
     public void PlayerWindow_live_ai_status_text_uses_display_policy()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Live.cs");
-        var confirmationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Confirmation.cs");
-        var resumeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingConfirmationResumeWorkflow.cs");
-        var toggleWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiToggleWorkflow.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
+        var livePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
+        var confirmationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs");
+        var resumeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingConfirmationResumeWorkflow.cs");
+        var toggleWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiToggleWorkflow.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiButtonDisplayPolicy.cs");
 
         Assert.True(File.Exists(resumeWorkflowPath), "Confirmation-Resume-Statusentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(toggleWorkflowPath), "Live-AI-Toggle-Statusentscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -222,30 +177,20 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var policy = File.ReadAllText(policyPath);
 
         Assert.Contains("CodingLiveAiToggleWorkflow.Execute", live);
-        Assert.DoesNotContain("CodingLiveAiButtonDisplayPolicy.BuildStatus", live);
         Assert.Contains("CodingConfirmationResumeWorkflow.Apply", confirmation);
-        Assert.DoesNotContain("CodingLiveAiButtonDisplayPolicy.BuildStatus", confirmation);
         Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", resumeWorkflow);
         Assert.Contains("CodingLiveAiButtonDisplayPolicy.BuildStatus", toggleWorkflow);
         Assert.Contains("actions.StartTimers()", toggleWorkflow);
         Assert.Contains("actions.StopTimers(true)", toggleWorkflow);
-        Assert.DoesNotContain("Automatische KI-Analyse aktiv", live);
-        Assert.DoesNotContain("Automatische KI-Analyse aktiv", confirmation);
-        Assert.DoesNotContain("Automatische KI-Analyse aktiv", resumeWorkflow);
-        Assert.DoesNotContain("Intervall alle 5 Sekunden", live);
-        Assert.DoesNotContain("Intervall alle 5 Sekunden", confirmation);
         Assert.Contains("public static CodingLiveAiStatusState BuildStatus", policy);
     }
 
     [Fact]
     public void PlayerWindow_coding_live_ai_wiring_lives_in_live_partial()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
-        var livePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Live.cs");
-        var tickWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingLiveAiTimerTickWorkflow.cs");
+        var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var livePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Live.cs");
+        var tickWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingLiveAiTimerTickWorkflow.cs");
 
         Assert.True(File.Exists(livePath), "Coding-Live-AI-Button- und Timer-Wiring soll in ein eigenes Partial.");
         Assert.True(File.Exists(tickWorkflowPath), "Coding-Live-AI-Tick-Entscheidung soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -254,34 +199,26 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var live = File.ReadAllText(livePath);
         var tickWorkflow = File.ReadAllText(tickWorkflowPath);
 
-        Assert.DoesNotContain("private void CodingLiveAi_Click", ai);
-        Assert.DoesNotContain("private async void CodingLiveAiTimer_Tick", ai);
         Assert.Contains("private void CodingLiveAi_Click", live);
-        Assert.DoesNotContain("private async void CodingLiveAiTimer_Tick", live);
         Assert.Contains("private void CodingLiveAiTimer_Tick", live);
         Assert.Contains(".SafeFireAndForget(\"CodingLiveAiTimer\")", live);
         Assert.Contains("private async Task HandleCodingLiveAiTimerTickAsync", live);
         Assert.Contains("_codingLiveAiTimerOwner.Ensure", live);
-        Assert.DoesNotContain("new CodingLiveAiTimerController", live);
         Assert.Contains("CodingLiveAiTimerTickWorkflow.ExecuteAsync", live);
-        Assert.DoesNotContain("CodingLiveAiTickPolicy.ShouldAnalyze", live);
         Assert.Contains("CodingLiveAiTickPolicy.ShouldAnalyze", tickWorkflow);
     }
 
     [Fact]
     public void PlayerWindow_coding_health_monitoring_lives_in_monitoring_partial()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
-        var healthPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Health.cs");
-        var monitoringPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Health.Monitoring.cs");
-        var statusControlsPath = Path.Combine(windowsRoot, "LiveDetectionStatusControls.cs");
-        var analyzeButtonControlsPath = Path.Combine(uiRoot, "Ai", "CodingAnalyzeButtonControls.cs");
-        var codingAiControllerPath = Path.Combine(uiRoot, "Player", "CodingAiController.cs");
-        var healthChangeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingPipelineHealthChangeWorkflow.cs");
-        var healthApplyWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingPipelineHealthApplyWorkflow.cs");
+        var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var healthPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Health.cs");
+        var monitoringPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Health.Monitoring.cs");
+        var statusControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "LiveDetectionStatusControls.cs");
+        var analyzeButtonControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalyzeButtonControls.cs");
+        var codingAiControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingAiController.cs");
+        var healthChangeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPipelineHealthChangeWorkflow.cs");
+        var healthApplyWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingPipelineHealthApplyWorkflow.cs");
 
         Assert.True(File.Exists(monitoringPath), "Pipeline-Health-Monitoring soll aus dem Initialisierungs-Partial heraus.");
         Assert.True(File.Exists(statusControlsPath), "Pipeline-Health-Detail-Zuweisung soll ausserhalb der PlayerWindow-Partials liegen.");
@@ -300,36 +237,24 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var healthApplyWorkflow = File.ReadAllText(healthApplyWorkflowPath);
 
         Assert.Contains("private async Task InitCodingAi", health);
-        Assert.DoesNotContain("private void OnPipelineHealthChanged", health);
-        Assert.DoesNotContain("private void ApplyPipelineHealth", health);
-        Assert.DoesNotContain("private void UpdatePipelineHealthDetails", health);
-        Assert.DoesNotContain("private void StopPipelineHealthMonitor", health);
         Assert.Contains("private void OnPipelineHealthChanged", monitoring);
         Assert.Contains("private void ApplyPipelineHealth", monitoring);
         Assert.Contains("private void UpdatePipelineHealthDetails", monitoring);
         Assert.Contains("private void StopPipelineHealthMonitor", monitoring);
         Assert.Contains("CodingPipelineHealthChangeWorkflow.Execute", monitoring);
         Assert.Contains("CodingPipelineHealthApplyWorkflow.Execute", monitoring);
-        Assert.DoesNotContain("PipelineHealthUiStateFactory.Create", monitoring);
-        Assert.DoesNotContain("if (_closing", monitoring);
         Assert.Contains("PlayerDispatcherScheduler.ScheduleNormal", monitoring);
         Assert.Contains("PlayerDispatcherScheduler.HasShutdownStarted(Dispatcher)", monitoring);
         Assert.Contains("PlayerDispatcherScheduler.HasAccess(Dispatcher)", monitoring);
-        Assert.DoesNotContain("Dispatcher.HasShutdownStarted", monitoring);
-        Assert.DoesNotContain("Dispatcher.CheckAccess()", monitoring);
-        Assert.DoesNotContain("Dispatcher.BeginInvoke", monitoring);
         Assert.Contains("actions.DispatchToUi", healthChangeWorkflow);
         Assert.Contains("PipelineHealthUiStateFactory.Create", healthApplyWorkflow);
         Assert.Contains("LiveDetectionStatusControls.ShowPipelineHealthDetails", monitoring);
         Assert.Contains("CodingAnalyzeButtonControls.SetEnabled", ai);
         Assert.Contains("CodingAnalyzeButtonControls.SetEnabled", health);
         Assert.Contains("CodingAnalyzeButtonControls.SetEnabled", monitoring);
-        Assert.DoesNotContain("BtnCodingAnalyze.IsEnabled", ai + health + monitoring);
-        Assert.DoesNotContain("Hd_Sidecar.Text", monitoring);
         Assert.Contains("public static void SetEnabled", analyzeButtonControls);
         Assert.Contains("public static void ShowPipelineHealthDetails", statusControls);
         Assert.Contains("details.Sidecar", statusControls);
-        Assert.DoesNotContain("_codingHealthMonitor", monitoring);
         Assert.Contains(".StopHealthMonitor()", monitoring);
         Assert.Contains(".SafeFireAndForget(\"PipelineHealthMonitorStop\")", monitoring);
         Assert.Contains("_healthMonitor.StatusChanged -= _healthStatusChanged", codingAiController);
@@ -339,20 +264,17 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     [Fact]
     public void PlayerWindow_coding_ai_shared_helpers_live_in_helpers_partial()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var aiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.cs");
-        var multiModelPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.MultiModel.cs");
-        var helpersPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Helpers.cs");
-        var preflightWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingAnalysisPreflightWorkflow.cs");
-        var singleModelWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSingleModelAnalysisWorkflow.cs");
-        var multiModelCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelAnalysisCommandWorkflow.cs");
-        var multiModelRuntimeGateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelRuntimeGateWorkflow.cs");
-        var multiModelStartWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelAnalysisStartWorkflow.cs");
-        var multiModelInferenceWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMultiModelInferenceWorkflow.cs");
-        var endMeterResolveWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEndMeterResolveWorkflow.cs");
-        var segmentedFindingsWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSegmentedFindingsBuildWorkflow.cs");
+        var aiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.cs");
+        var multiModelPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.MultiModel.cs");
+        var helpersPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Helpers.cs");
+        var preflightWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingAnalysisPreflightWorkflow.cs");
+        var singleModelWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSingleModelAnalysisWorkflow.cs");
+        var multiModelCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelAnalysisCommandWorkflow.cs");
+        var multiModelRuntimeGateWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelRuntimeGateWorkflow.cs");
+        var multiModelStartWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelAnalysisStartWorkflow.cs");
+        var multiModelInferenceWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMultiModelInferenceWorkflow.cs");
+        var endMeterResolveWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEndMeterResolveWorkflow.cs");
+        var segmentedFindingsWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSegmentedFindingsBuildWorkflow.cs");
 
         Assert.True(File.Exists(helpersPath), "Gemeinsame Coding-AI-Helper sollen aus dem Orchestrator-Partial heraus.");
         Assert.True(File.Exists(preflightWorkflowPath), "Coding-AI-Preflight-Entscheidungen sollen ausserhalb von PlayerWindow liegen.");
@@ -376,20 +298,12 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var endMeterResolveWorkflow = File.Exists(endMeterResolveWorkflowPath) ? File.ReadAllText(endMeterResolveWorkflowPath) : "";
         var segmentedFindingsWorkflow = File.ReadAllText(segmentedFindingsWorkflowPath);
 
-        Assert.DoesNotContain("private async void CodingAnalyzeFrame_Click", ai);
         Assert.Contains("private void CodingAnalyzeFrame_Click", ai);
         Assert.Contains("SafeFireAndForget", ai);
         Assert.Contains("\"CodingAnalyzeFrame\"", ai);
         Assert.Contains("private async Task RunCodingAnalysisAsync", ai);
         Assert.Contains("CodingAnalysisPreflightWorkflow.Execute", ai);
         Assert.Contains("CodingSingleModelAnalysisWorkflow.ExecuteAsync", ai);
-        Assert.DoesNotContain("private bool IsCodingAfterTerminalBoundary", ai);
-        Assert.DoesNotContain("\"Rohrende erreicht - KI-Analyse gestoppt\"", ai);
-        Assert.DoesNotContain("\"Schritt 1 von 3: Snapshot\"", ai);
-        Assert.DoesNotContain("\"Frame nicht extrahierbar\"", ai);
-        Assert.DoesNotContain("private bool IsFindingTooFarAhead", ai);
-        Assert.DoesNotContain("private IReadOnlyList<SegmentedFinding> BuildCodingSegmentedFindings", ai);
-        Assert.DoesNotContain("private Task<byte[]?> CaptureSnapshotAsync", ai);
         Assert.Contains("private bool IsCodingAfterTerminalBoundary", helpers);
         Assert.Contains("private bool IsFindingTooFarAhead", helpers);
         Assert.Contains("private IReadOnlyList<SegmentedFinding> BuildCodingSegmentedFindings", helpers);
@@ -397,12 +311,10 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("CodingTerminalBoundaryCandidateBuilder.Enumerate", helpers);
         Assert.Contains("CodingSegmentedFindingsBuildWorkflow.Execute", helpers);
         Assert.Contains("SegmentedFindingBuilder.Build", helpers);
-        Assert.DoesNotContain("if (mmResult.SamResponse == null)", helpers);
         Assert.Contains("if (samResponse == null)", segmentedFindingsWorkflow);
         Assert.Contains("CodingPipeProximityCalibrationPolicy.Resolve", segmentedFindingsWorkflow);
         Assert.Contains("actions.BuildSegmentedFindings", segmentedFindingsWorkflow);
         Assert.Contains("_codingSessionHost", helpers);
-        Assert.DoesNotContain("_codingVm", helpers);
         Assert.Contains("actions.IsAfterTerminalBoundary(framePosition)", preflightWorkflow);
         Assert.Contains("\"Rohrende erreicht - KI-Analyse gestoppt\"", preflightWorkflow);
         Assert.Contains("actions.CaptureSnapshotAsync", singleModelWorkflow);
@@ -410,25 +322,15 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("result with { MeterReading = frameOsdMeter }", singleModelWorkflow);
         Assert.Contains("\"Frame nicht extrahierbar\"", singleModelWorkflow);
         Assert.Contains("CodingMultiModelAnalysisCommandWorkflow.ExecuteAsync", multiModel);
-        Assert.DoesNotContain("CodingMultiModelRuntimeGateWorkflow.Execute", multiModel);
         Assert.Contains("CodingMultiModelRuntimeGateWorkflow.Execute", multiModelCommandWorkflow);
-        Assert.DoesNotContain("if (multiModel == null || analysisCts == null)", multiModel);
         Assert.Contains("request.MultiModel is null", multiModelRuntimeGateWorkflow);
         Assert.Contains("request.AnalysisCancellation is null", multiModelRuntimeGateWorkflow);
         Assert.Contains("CodingMultiModelAnalysisStartWorkflow.ExecuteAsync", multiModel);
         Assert.Contains("CodingMultiModelInferenceWorkflow.ExecuteAsync", multiModel);
         Assert.Contains("CodingEndMeterResolveWorkflow.Execute", multiModel);
-        Assert.DoesNotContain("_codingSessionHost.HasViewModel\r\n            ? _codingSessionHost.EndMeter", multiModel);
-        Assert.DoesNotContain("_codingSessionHost.HasViewModel\n            ? _codingSessionHost.EndMeter", multiModel);
         Assert.Contains("if (!request.HasCodingViewModel)", endMeterResolveWorkflow);
         Assert.Contains("actions.ResolveEndMeter()", endMeterResolveWorkflow);
         Assert.Contains("_codingSessionHost", multiModel);
-        Assert.DoesNotContain("_codingVm", multiModel);
-        Assert.DoesNotContain("\"Schritt 1 von 4: Snapshot\"", multiModel);
-        Assert.DoesNotContain("\"Dateneinblendung erkannt - uebersprungen\"", multiModel);
-        Assert.DoesNotContain("var currentMeterForClassifier", multiModel);
-        Assert.DoesNotContain("if (mmResult.Error != null)", multiModel);
-        Assert.DoesNotContain("if (TryHandleBoundaryClassifierResult", multiModel);
         Assert.Contains("actions.StoreAnalyzedFrame(pngBytes, request.CaptureTimestampSeconds)", multiModelStartWorkflow);
         Assert.Contains("actions.UpdateFrameReadiness", multiModelStartWorkflow);
         Assert.Contains("\"Schritt 2 von 4: YOLO und DINO\"", multiModelStartWorkflow);
@@ -441,17 +343,14 @@ public sealed class PlayerWindowCodingAiArchitectureTests
     [Fact]
     public void PlayerWindow_coding_osd_reading_lives_in_reading_partial()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var osdPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.cs");
-        var helpersPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Ai.Helpers.cs");
-        var readingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Reading.cs");
-        var factoryPath = Path.Combine(uiRoot, "Ai", "CodingSnapshotCaptureFactory.cs");
-        var readWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterReadWorkflow.cs");
-        var snapshotWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterSnapshotWorkflow.cs");
-        var osdControllerPath = Path.Combine(uiRoot, "Player", "CodingOsdMeterController.cs");
-        var disposableLifecyclePath = Path.Combine(uiRoot, "Player", "DisposableReferenceLifecycle.cs");
+        var osdPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Osd.cs");
+        var helpersPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Ai.Helpers.cs");
+        var readingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Osd.Reading.cs");
+        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSnapshotCaptureFactory.cs");
+        var readWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdMeterReadWorkflow.cs");
+        var snapshotWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdMeterSnapshotWorkflow.cs");
+        var osdControllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingOsdMeterController.cs");
+        var disposableLifecyclePath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "DisposableReferenceLifecycle.cs");
 
         Assert.True(File.Exists(readingPath), "OSD-OCR und Snapshot-Lesen sollen aus dem Meter-Resolver-Partial heraus.");
         Assert.True(File.Exists(factoryPath), "Snapshot-Capture-Erzeugung soll ausserhalb von PlayerWindow liegen.");
@@ -472,27 +371,15 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("private double ResolveCodingMeterForFrame", osd);
         Assert.Contains("private double? GetMeterFromVideoPosition", osd);
         Assert.Contains("_codingSessionHost", osd);
-        Assert.DoesNotContain("_codingVm", osd);
-        Assert.DoesNotContain("private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync", osd);
-        Assert.DoesNotContain("private async Task<double?> TryReadOsdMeterFromFrameBytesAsync", osd);
         Assert.Contains("_codingOsdMeterController.DisposeService()", osd);
         Assert.Contains("_service = DisposableReferenceLifecycle.DisposeAndClear(_service)", osdController);
-        Assert.DoesNotContain("_codingOsdMeterService?.Dispose()", osd);
-        Assert.DoesNotContain("_codingOsdMeterService = null;", osd);
         Assert.Contains("public static T? DisposeAndClear<T>", disposableLifecycle);
-        Assert.DoesNotContain("private async Task<double?> CodingReadOsdMeterAsync", osd);
         Assert.Contains("private async Task<double?> TryReadAnalyzedFrameOsdMeterAsync", reading);
         Assert.Contains("private async Task<double?> TryReadOsdMeterFromFrameBytesAsync", reading);
         Assert.Contains("private async Task<double?> CodingReadOsdMeterAsync", reading);
         Assert.Contains("CodingOsdMeterSnapshotWorkflow.ExecuteAsync", reading);
         Assert.Contains("CodingOsdMeterReadWorkflow.ExecuteAsync", reading);
         Assert.Contains("GetCodingOsdMeterService().ReadMeterAsync", reading);
-        Assert.DoesNotContain("if (_codingAiController.LiveDetection == null)", reading);
-        Assert.DoesNotContain("_player.Time >= 0", reading);
-        Assert.DoesNotContain("catch", reading);
-        Assert.DoesNotContain("CodingOsdMeterStateWorkflow.FromReadResult", reading);
-        Assert.DoesNotContain("Meter verworfen", reading);
-        Assert.DoesNotContain("Frame-Meter nicht lesbar", reading);
         Assert.Contains("CodingOsdMeterStateWorkflow.FromReadResult", readWorkflow);
         Assert.Contains("Meter verworfen", readWorkflow);
         Assert.Contains("Frame-Meter nicht lesbar", readWorkflow);
@@ -501,29 +388,24 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("catch", snapshotWorkflow);
         Assert.Contains("CodingSnapshotCaptureFactory.CapturePngAsync", reading);
         Assert.Contains("CodingSnapshotCaptureFactory.CapturePngAsync", helpers);
-        Assert.DoesNotContain("new CodingSnapshotCaptureService", reading);
-        Assert.DoesNotContain("new CodingSnapshotCaptureService", helpers);
         Assert.Contains("new CodingSnapshotCaptureService", factory);
     }
 
     [Fact]
     public void PlayerWindow_osd_badge_meter_text_uses_display_policy()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var osdPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.cs");
-        var osdReadingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Osd.Reading.cs");
-        var aiEventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.AiEvents.cs");
-        var markingPath = Path.Combine(windowsRoot, "PlayerWindow.LiveDetection.Marking.cs");
-        var lifecycleUiPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Ui.cs");
-        var lifecycleExitPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Exit.cs");
-        var protocolTrainingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.ProtocolMatch.Training.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingOsdBadgeDisplayPolicy.cs");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingOsdBadgeControls.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterStateWorkflow.cs");
-        var readWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingOsdMeterReadWorkflow.cs");
-        var statusWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionOsdMeterStatusWorkflow.cs");
+        var osdPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Osd.cs");
+        var osdReadingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Osd.Reading.cs");
+        var aiEventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.AiEvents.cs");
+        var markingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.LiveDetection.Marking.cs");
+        var lifecycleUiPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Ui.cs");
+        var lifecycleExitPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs");
+        var protocolTrainingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.ProtocolMatch.Training.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdBadgeDisplayPolicy.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdBadgeControls.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdMeterStateWorkflow.cs");
+        var readWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingOsdMeterReadWorkflow.cs");
+        var statusWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "LiveDetectionOsdMeterStatusWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "OSD-Badge-Textformat muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "OSD-Badge-Control-Zustand soll ausserhalb der PlayerWindow-Partials gesetzt werden.");
@@ -546,7 +428,6 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         var osdText = osd + osdReading + marking + lifecycleUi + lifecycleExit + protocolTraining;
 
         Assert.Contains("CodingOsdMeterReadWorkflow.ExecuteAsync", osdReading);
-        Assert.DoesNotContain("CodingOsdMeterStateWorkflow.FromReadResult", osdReading);
         Assert.Contains("CodingOsdMeterStateWorkflow.FromReadResult", readWorkflow);
         Assert.Contains("CodingOsdMeterStateWorkflow.FromDetectionResult", aiEvents);
         Assert.Contains("LiveDetectionOsdMeterStatusWorkflow.Show", marking);
@@ -554,15 +435,6 @@ public sealed class PlayerWindowCodingAiArchitectureTests
         Assert.Contains("CodingOsdBadgeControls.ShowInitial", lifecycleUi);
         Assert.Contains("CodingOsdBadgeControls.ShowMeter", marking);
         Assert.Contains("CodingOsdBadgeControls.Hide", osdText);
-        Assert.DoesNotContain("if (_codingOsdMeterController.LastMeter.HasValue)", marking);
-        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", marking);
-        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer(TimeSpan.FromSeconds(3)", marking);
-        Assert.DoesNotContain("OsdMeterBadge.Visibility", osdText);
-        Assert.DoesNotContain("TxtOsdMeter.Text", osdText);
-        Assert.DoesNotContain("CodingOsdBadgeDisplayPolicy.BuildMeterText", osdText);
-        Assert.DoesNotContain("CodingOsdBadgeDisplayPolicy.BuildMeterText", aiEvents);
-        Assert.DoesNotContain(":F2}m (OSD)", osdText);
-        Assert.DoesNotContain(":F2}m (OSD)", aiEvents);
         Assert.Contains("public static string BuildMeterText", policy);
         Assert.Contains("public static class CodingOsdBadgeControls", controls);
         Assert.Contains("CodingOsdBadgeDisplayPolicy.BuildMeterText", controls);

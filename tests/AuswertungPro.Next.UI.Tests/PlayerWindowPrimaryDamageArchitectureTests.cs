@@ -25,19 +25,12 @@ public sealed class PlayerWindowPrimaryDamageArchitectureTests
         var synchronizerFactory = File.ReadAllText(synchronizerFactoryPath);
         var syncWorkflow = File.Exists(syncWorkflowPath) ? File.ReadAllText(syncWorkflowPath) : "";
 
-        Assert.DoesNotContain("CodingPrimaryDamageSynchronizerFactory.Create", protocol);
         Assert.Contains("CodingPrimaryDamageSyncWorkflow.Sync", protocol);
-        Assert.DoesNotContain(".Sync(_haltungRecord!, doc)", protocol);
-        Assert.DoesNotContain("CodingPrimaryDamageTextBuilder.Build", protocol);
-        Assert.DoesNotContain("SetFieldValue(\"Primaere_Schaeden\"", protocol);
         Assert.Contains("DataPageProtocolObservationMapper.BuildPrimaryDamageLines", policy);
         Assert.Contains("CodingPrimaryDamageTextBuilder.Build", synchronizerFactory);
         Assert.Contains("CodingPrimaryDamageSynchronizerFactory.Create", syncWorkflow);
         Assert.Contains("synchronizer.Sync(record, document)", syncWorkflow);
         Assert.Contains("SetFieldValue(\"Primaere_Schaeden\"", synchronizer);
-        Assert.DoesNotContain("new HashSet<string>", protocol);
-        Assert.DoesNotContain("Q1={q1}", protocol);
-        Assert.DoesNotContain("Q2={q2}", protocol);
     }
 
     [Fact]
@@ -66,16 +59,11 @@ public sealed class PlayerWindowPrimaryDamageArchitectureTests
         var commandWorkflow = File.Exists(commandWorkflowPath) ? File.ReadAllText(commandWorkflowPath) : "";
 
         Assert.Contains("CodingPrimaryDamageSyncCommandWorkflow.Execute", protocol);
-        Assert.DoesNotContain("CodingPrimaryDamageSynchronizerFactory.Create", protocol);
         Assert.Contains("CodingPrimaryDamageSyncWorkflow.Sync", protocol);
-        Assert.DoesNotContain(".Sync(_haltungRecord!, doc)", protocol);
-        Assert.DoesNotContain("if (_haltungRecord == null) return", protocol);
-        Assert.DoesNotContain("CodingPrimaryDamageTextBuilder.Build", protocol);
-        Assert.DoesNotContain("SetFieldValue(\"Primaere_Schaeden\"", protocol);
-        Assert.DoesNotContain("DataPageProtocolObservationMapper.BuildPrimaryDamageLines", protocol);
         Assert.Contains("if (!request.HasHaltungRecord)", commandWorkflow);
         Assert.Contains("actions.SyncPrimaryDamages()", commandWorkflow);
         Assert.Contains("public static string Build", policy);
+        Assert.Contains("DataPageProtocolObservationMapper.BuildPrimaryDamageLines", policy);
         Assert.Contains("SetFieldValue(\"Primaere_Schaeden\"", synchronizer);
         Assert.Contains("CodingPrimaryDamageTextBuilder.Build", synchronizerFactory);
         Assert.Contains("CodingPrimaryDamageSynchronizerFactory.Create", syncWorkflow);

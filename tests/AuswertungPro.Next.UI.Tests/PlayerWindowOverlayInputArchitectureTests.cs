@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
@@ -22,10 +23,12 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
 
         Assert.Contains("CodingOverlayMeasurementFormatter.BuildPanelState", overlay);
         Assert.Contains("CodingMeasurementPanelControls.Apply", overlay);
-        Assert.DoesNotContain("overlay.Q1Mm.HasValue ? $\"Q1:", overlay);
-        Assert.DoesNotContain("overlay.ToolType == OverlayToolType.Level && overlay.FillPercent.HasValue", overlay);
-        Assert.DoesNotContain("TxtCodingQ1.Text", overlay);
-        Assert.DoesNotContain("CodingMeasurementPanel.Visibility", overlay);
+        AssertNoForbiddenTokens(
+            overlay,
+            "overlay.Q1Mm.HasValue ? $\"Q1:",
+            "overlay.ToolType == OverlayToolType.Level && overlay.FillPercent.HasValue",
+            "TxtCodingQ1.Text",
+            "CodingMeasurementPanel.Visibility");
         Assert.Contains("public static CodingOverlayMeasurementPanelState BuildPanelState", formatter);
         Assert.Contains("public static void Apply", controls);
     }
@@ -46,10 +49,10 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var tools = File.ReadAllText(toolsPath);
         var policy = File.ReadAllText(policyPath);
 
-        Assert.DoesNotContain("CodingOverlayCursorPolicy.ShouldUseCrossCursor", overlayInput);
+        AssertNoForbiddenTokens(overlayInput, "CodingOverlayCursorPolicy.ShouldUseCrossCursor");
         Assert.Contains("CodingOverlayCursorPolicy.ShouldUseCrossCursor", tools);
-        Assert.DoesNotContain("var isInteractive = _codingIsCalibrating", overlayInput);
-        Assert.DoesNotContain("var isInteractive = _codingIsCalibrating", tools);
+        AssertNoForbiddenTokens(overlayInput, "var isInteractive = _codingIsCalibrating");
+        AssertNoForbiddenTokens(tools, "var isInteractive = _codingIsCalibrating");
         Assert.Contains("public static bool ShouldUseCrossCursor", policy);
         Assert.Contains("activeTool != OverlayToolType.None", policy);
     }
@@ -65,16 +68,16 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
 
         Assert.Contains("using System.Windows.Input;", overlayInput);
         Assert.Contains("using AuswertungPro.Next.Domain.Models;", overlayInput);
-        Assert.DoesNotContain("using System.Collections", overlayInput);
-        Assert.DoesNotContain("using System.Globalization", overlayInput);
-        Assert.DoesNotContain("using System.IO", overlayInput);
-        Assert.DoesNotContain("using System.Threading", overlayInput);
-        Assert.DoesNotContain("AuswertungPro.Next.Application", overlayInput);
-        Assert.DoesNotContain("AuswertungPro.Next.Infrastructure", overlayInput);
-        Assert.DoesNotContain("AuswertungPro.Next.UI.Services", overlayInput);
-        Assert.DoesNotContain("InfraTeacher", overlayInput);
+        AssertNoForbiddenTokens(
+            overlayInput,
+            "using System.Collections",
+            "using System.Globalization",
+            "using System.IO",
+            "using System.Threading",
+            "AuswertungPro.Next.Application",
+            "AuswertungPro.Next.Infrastructure",
+            "InfraTeacher");
         Assert.Contains("_codingSessionHost", overlayInput);
-        Assert.DoesNotContain("_codingVm", overlayInput);
     }
 
     [Fact]
@@ -94,21 +97,26 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var multiPoint = File.ReadAllText(multiPointPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
-        Assert.DoesNotContain("OnCanvasMultiPointClick", overlayInput);
-        Assert.DoesNotContain("OnCanvasMultiPointMove", overlayInput);
+        AssertNoForbiddenTokens(
+            overlayInput,
+            "OnCanvasMultiPointClick",
+            "OnCanvasMultiPointMove");
         Assert.Contains("private void HandleCodingMultiPointMouseDown", multiPoint);
         Assert.Contains("private bool TryHandleCodingMultiPointMouseMove", multiPoint);
         Assert.Contains("CodingMultiPointOverlayDrawWorkflow.MouseDown", multiPoint);
         Assert.Contains("CodingMultiPointOverlayDrawWorkflow.MouseMove", multiPoint);
         Assert.Contains("_codingSessionHost", multiPoint);
-        Assert.DoesNotContain("_codingVm", multiPoint);
-        Assert.DoesNotContain("OnCanvasMultiPointClick", multiPoint);
-        Assert.DoesNotContain("OnCanvasMultiPointMove", multiPoint);
+        AssertNoForbiddenTokens(
+            multiPoint,
+            "OnCanvasMultiPointClick",
+            "OnCanvasMultiPointMove");
         Assert.Contains("AddMultiPointOverlayPoint", multiPoint);
         Assert.Contains("UpdateMultiPointOverlayPreview", multiPoint);
-        Assert.DoesNotContain("if (!_codingOverlayToolHost.HasOverlayService", multiPoint);
-        Assert.DoesNotContain("if (_codingOverlayToolHost.DrawPointCount == 0)", multiPoint);
-        Assert.DoesNotContain("if (BtnCodingLiveAi.IsChecked == true", multiPoint);
+        AssertNoForbiddenTokens(
+            multiPoint,
+            "if (!_codingOverlayToolHost.HasOverlayService",
+            "if (_codingOverlayToolHost.DrawPointCount == 0)",
+            "if (BtnCodingLiveAi.IsChecked == true");
         Assert.Contains("actions.AddMultiPointOverlayPoint()", workflow);
         Assert.Contains("actions.RenderPreviewOverlay()", workflow);
         Assert.Contains("actions.RenderFinalOverlay()", workflow);
@@ -132,12 +140,14 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.Contains("CodingOverlayInputMouseWorkflow.MouseDown", overlayInput);
         Assert.Contains("CodingOverlayInputMouseWorkflow.MouseMove", overlayInput);
         Assert.Contains("CodingOverlayInputMouseWorkflow.MouseUp", overlayInput);
-        Assert.DoesNotContain("if (_eingabemarkerPhase", overlayInput);
-        Assert.DoesNotContain("if (!_codingOverlayToolHost.HasOverlayService", overlayInput);
-        Assert.DoesNotContain("if (TryStartCodingCalibration", overlayInput);
-        Assert.DoesNotContain("if (_codingOverlayToolHost.ActiveTool", overlayInput);
-        Assert.DoesNotContain("if (TryHandleCodingSchemaMouseDown", overlayInput);
-        Assert.DoesNotContain("if (_codingOverlayToolHost.IsMultiPointTool", overlayInput);
+        AssertNoForbiddenTokens(
+            overlayInput,
+            "if (_eingabemarkerPhase",
+            "if (!_codingOverlayToolHost.HasOverlayService",
+            "if (TryStartCodingCalibration",
+            "if (_codingOverlayToolHost.ActiveTool",
+            "if (TryHandleCodingSchemaMouseDown",
+            "if (_codingOverlayToolHost.IsMultiPointTool");
         Assert.Contains("request.EingabemarkerState", workflow);
         Assert.Contains("actions.TryStartCalibration()", workflow);
         Assert.Contains("actions.TryHandleSchemaMouseDown()", workflow);
@@ -162,9 +172,11 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var standard = File.ReadAllText(standardPath);
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
-        Assert.DoesNotContain("OnCanvasMouseDown(norm)", overlayInput);
-        Assert.DoesNotContain("OnCanvasMouseMove(norm)", overlayInput);
-        Assert.DoesNotContain("OnCanvasMouseUp(norm)", overlayInput);
+        AssertNoForbiddenTokens(
+            overlayInput,
+            "OnCanvasMouseDown(norm)",
+            "OnCanvasMouseMove(norm)",
+            "OnCanvasMouseUp(norm)");
         Assert.Contains("private void HandleCodingStandardMouseDown", standard);
         Assert.Contains("private bool TryHandleCodingStandardMouseMove", standard);
         Assert.Contains("private bool TryHandleCodingStandardMouseUp", standard);
@@ -173,10 +185,11 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.Contains("CodingStandardOverlayDrawWorkflow.MouseUp", standard);
         Assert.Contains("HandleMarkDrawingComplete", standard);
         Assert.Contains("_codingSessionHost", standard);
-        Assert.DoesNotContain("_codingVm", standard);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel)", standard);
-        Assert.DoesNotContain("if (!_codingOverlayToolHost.HasOverlayService", standard);
-        Assert.DoesNotContain("_ = AnalyzeWithOverlayHintAsync", standard);
+        AssertNoForbiddenTokens(
+            standard,
+            "if (!_codingSessionHost.HasViewModel)",
+            "if (!_codingOverlayToolHost.HasOverlayService",
+            "_ = AnalyzeWithOverlayHintAsync");
         Assert.Contains("AnalyzeWithOverlayHintAsync(_codingSessionHost.CurrentOverlay!)", standard);
         Assert.Contains(".SafeFireAndForget(\"OverlayHint\")", standard);
         Assert.Contains("actions.BeginOverlayDraw()", workflow);
@@ -219,10 +232,12 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
                 .Where(path => !string.Equals(path, visibilityPath, StringComparison.OrdinalIgnoreCase))
                 .Select(File.ReadAllText));
 
-        Assert.DoesNotContain("private void SuspendCodingOverlayInput", overlayInput);
-        Assert.DoesNotContain("private void ResumeCodingOverlayInput", overlayInput);
-        Assert.DoesNotContain("private void HideCodingOverlayForExternalWindow", overlayInput);
-        Assert.DoesNotContain("private void RestoreCodingOverlayAfterExternalWindow", overlayInput);
+        AssertNoForbiddenTokens(
+            overlayInput,
+            "private void SuspendCodingOverlayInput",
+            "private void ResumeCodingOverlayInput",
+            "private void HideCodingOverlayForExternalWindow",
+            "private void RestoreCodingOverlayAfterExternalWindow");
         Assert.Contains("private void SuspendCodingOverlayInput", visibility);
         Assert.Contains("CodingOverlayInputVisibilityWorkflow.Suspend", visibility);
         Assert.Contains("CodingOverlayInputVisibilityWorkflow.Resume", visibility);
@@ -230,33 +245,40 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.Contains("CodingOverlayInputVisibilityWorkflow.RestoreAfterExternalWindow", visibility);
         Assert.Contains("_codingOverlayInputVisibilityState", visibility);
         Assert.Contains("_codingOverlayInputVisibilityState", playerState + lifecycleExit + wiring);
-        Assert.DoesNotContain("private int _codingOverlaySuspendDepth", playerState);
-        Assert.DoesNotContain("private bool _codingOverlayWasOpenBeforeSuspend", playerState);
-        Assert.DoesNotContain("private bool _codingOverlayWasOpenBeforeExternalHide", playerState);
-        Assert.DoesNotContain("private bool _deactivatedByExternalWindow", playerState);
-        Assert.DoesNotContain("_codingOverlaySuspendDepth++", visibility);
-        Assert.DoesNotContain("if (_codingOverlaySuspendDepth > 1)", visibility);
-        Assert.DoesNotContain("_codingOverlaySuspendDepth", visibility + lifecycleExit + wiring);
-        Assert.DoesNotContain("_codingOverlayWasOpenBeforeSuspend", visibility + lifecycleExit);
-        Assert.DoesNotContain("_codingOverlayWasOpenBeforeExternalHide", visibility);
-        Assert.DoesNotContain("_deactivatedByExternalWindow", wiring);
+        AssertNoForbiddenTokens(
+            playerState,
+            "private int _codingOverlaySuspendDepth",
+            "private bool _codingOverlayWasOpenBeforeSuspend",
+            "private bool _codingOverlayWasOpenBeforeExternalHide",
+            "private bool _deactivatedByExternalWindow");
+        AssertNoForbiddenTokens(
+            visibility,
+            "_codingOverlaySuspendDepth++",
+            "if (_codingOverlaySuspendDepth > 1)",
+            "_codingOverlayWasOpenBeforeExternalHide");
+        AssertNoForbiddenTokens(visibility + lifecycleExit + wiring, "_codingOverlaySuspendDepth");
+        AssertNoForbiddenTokens(visibility + lifecycleExit, "_codingOverlayWasOpenBeforeSuspend");
+        AssertNoForbiddenTokens(wiring, "_deactivatedByExternalWindow");
         Assert.Contains("CodingOverlayInputControls.SuspendCanvas", visibility);
         Assert.Contains("CodingOverlayInputControls.ResumeCanvas", visibility);
         Assert.Contains("_codingSessionHost", visibility);
-        Assert.DoesNotContain("_codingVm", visibility);
-        Assert.DoesNotContain("CodingOverlayCanvas.Visibility = Visibility.Hidden", visibility);
-        Assert.DoesNotContain("CodingOverlayCanvas.Visibility = Visibility.Visible", visibility);
-        Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible = false", visibility);
-        Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible = true", visibility);
+        AssertNoForbiddenTokens(
+            visibility,
+            "CodingOverlayCanvas.Visibility = Visibility.Hidden",
+            "CodingOverlayCanvas.Visibility = Visibility.Visible",
+            "CodingOverlayCanvas.IsHitTestVisible = false",
+            "CodingOverlayCanvas.IsHitTestVisible = true");
         Assert.Contains("CodingOverlayInputControls.IsPopupOpen", visibility);
         Assert.Contains("CodingOverlayInputControls.OpenPopup", visibility);
         Assert.Contains("CodingOverlayInputControls.ClosePopup", visibility);
-        Assert.DoesNotContain("CodingOverlayPopup.IsOpen", visibility);
+        AssertNoForbiddenTokens(visibility, "CodingOverlayPopup.IsOpen");
         Assert.Contains("private void RestoreCodingOverlayAfterExternalWindow", visibility);
         Assert.Contains("CodingOverlayInputInteractionWorkflow.Run", visibility);
         Assert.Contains("CodingOverlayInputInteractionWorkflow.RunAsync", visibility);
-        Assert.DoesNotContain("SuspendCodingOverlayInput();", codingPartialsWithoutVisibility);
-        Assert.DoesNotContain("ResumeCodingOverlayInput();", codingPartialsWithoutVisibility);
+        AssertNoForbiddenTokens(
+            codingPartialsWithoutVisibility,
+            "SuspendCodingOverlayInput();",
+            "ResumeCodingOverlayInput();");
         Assert.Contains("request.SuspendDepth", visibilityWorkflow);
         Assert.Contains("actions.SuspendCanvas()", visibilityWorkflow);
         Assert.Contains("actions.ResumeCanvas()", visibilityWorkflow);
@@ -309,17 +331,19 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.Contains("CodingOverlayInputControls.IsPopupOpen", joinedPartials);
         Assert.Contains("CodingOverlayInputControls.OpenPopup", joinedPartials);
         Assert.Contains("CodingOverlayInputControls.ClosePopup", joinedPartials);
-        Assert.DoesNotContain("TxtActiveToolLabel.Text =", joinedPartials);
-        Assert.DoesNotContain("BtnCodingCreateEvent.IsEnabled =", joinedPartials);
-        Assert.DoesNotContain("CodingOverlayCanvas.CaptureMouse", joinedPartials);
-        Assert.DoesNotContain("CodingOverlayCanvas.ReleaseMouseCapture", joinedPartials);
-        Assert.DoesNotContain("CodingOverlayCanvas.Width", joinedPartials);
-        Assert.DoesNotContain("CodingOverlayCanvas.Height", joinedPartials);
-        Assert.DoesNotContain("CodingOverlayCanvas.ActualWidth", joinedPartials);
-        Assert.DoesNotContain("CodingOverlayCanvas.ActualHeight", joinedPartials);
-        Assert.DoesNotContain("CodingOverlayCanvas.IsMouseCaptured", joinedPartials);
-        Assert.DoesNotContain("CodingOverlayPopup.IsOpen", joinedPartials);
-        Assert.DoesNotContain("ToolsDropdownPopup.IsOpen", joinedPartials);
+        AssertNoForbiddenTokens(
+            joinedPartials,
+            "TxtActiveToolLabel.Text =",
+            "BtnCodingCreateEvent.IsEnabled =",
+            "CodingOverlayCanvas.CaptureMouse",
+            "CodingOverlayCanvas.ReleaseMouseCapture",
+            "CodingOverlayCanvas.Width",
+            "CodingOverlayCanvas.Height",
+            "CodingOverlayCanvas.ActualWidth",
+            "CodingOverlayCanvas.ActualHeight",
+            "CodingOverlayCanvas.IsMouseCaptured",
+            "CodingOverlayPopup.IsOpen",
+            "ToolsDropdownPopup.IsOpen");
         Assert.Contains("public static class CodingOverlayInputControls", controls);
         Assert.Contains("public static void ApplyActiveToolSelection", controls);
         Assert.Contains("public static void SetCreateEventEnabled", controls);
@@ -354,23 +378,26 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var refreshWorkflow = File.Exists(refreshWorkflowPath) ? File.ReadAllText(refreshWorkflowPath) : "";
         var redrawWorkflow = File.ReadAllText(redrawWorkflowPath);
 
-        Assert.DoesNotContain("private Rect GetCodingContentRect", overlayInput);
-        Assert.DoesNotContain("private NormalizedPoint CodingPixelToNorm", overlayInput);
-        Assert.DoesNotContain("private Point CodingNormToPixel", overlayInput);
-        Assert.DoesNotContain("private void RedrawCodingCanvas", overlayInput);
+        AssertNoForbiddenTokens(
+            overlayInput,
+            "private Rect GetCodingContentRect",
+            "private NormalizedPoint CodingPixelToNorm",
+            "private Point CodingNormToPixel",
+            "private void RedrawCodingCanvas");
         Assert.Contains("private Rect GetCodingContentRect", viewport);
         Assert.Contains("CodingOverlayViewportMapper.GetContentRect", viewport);
         Assert.Contains("CodingOverlayViewportRefreshWorkflow.Execute", viewport);
-        Assert.DoesNotContain("if (CodingOverlayCanvas.ActualWidth <= 0 || CodingOverlayCanvas.ActualHeight <= 0)", viewport);
+        AssertNoForbiddenTokens(viewport, "if (CodingOverlayCanvas.ActualWidth <= 0 || CodingOverlayCanvas.ActualHeight <= 0)");
         Assert.Contains("if (request.ActualWidth <= 0 || request.ActualHeight <= 0)", refreshWorkflow);
         Assert.Contains("actions.UpdateViewport()", refreshWorkflow);
         Assert.Contains("_codingOverlayRenderController.ClearTransient", viewport);
         Assert.Contains("_codingSessionHost", viewport);
-        Assert.DoesNotContain("_codingVm", viewport);
         Assert.Contains("private void RedrawCodingCanvas", viewport);
         Assert.Contains("CodingCanvasRedrawWorkflow.Execute", viewport);
-        Assert.DoesNotContain("if (_codingSchemaManager.IsActive)", viewport);
-        Assert.DoesNotContain("else if (includeManualOverlay", viewport);
+        AssertNoForbiddenTokens(
+            viewport,
+            "if (_codingSchemaManager.IsActive)",
+            "else if (includeManualOverlay");
         Assert.Contains("actions.RenderActiveSchema()", redrawWorkflow);
         Assert.Contains("actions.RenderManualOverlay()", redrawWorkflow);
     }
@@ -394,19 +421,23 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var canvasWorkflow = File.ReadAllText(canvasWorkflowPath);
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.DoesNotContain("CodingEingabemarkerGeometryPolicy.BuildPreviewRect", marker);
-        Assert.DoesNotContain("CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection", marker);
+        AssertNoForbiddenTokens(
+            marker,
+            "CodingEingabemarkerGeometryPolicy.BuildPreviewRect",
+            "CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection");
         Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildPreviewRect", canvasWorkflow);
         Assert.Contains("CodingEingabemarkerGeometryPolicy.BuildNormalizedSelection", canvasWorkflow);
         Assert.Contains("CodingEingabemarkerPreviewRenderer.Create", marker);
         Assert.Contains("CodingEingabemarkerPreviewRenderer.Update", marker);
         Assert.Contains("CodingEingabemarkerPreviewRenderer.Clear", marker);
-        Assert.DoesNotContain("Math.Min(_eingabemarkerDragStart.X", marker);
-        Assert.DoesNotContain("Math.Abs(canvasPos.X - _eingabemarkerDragStart.X)", marker);
-        Assert.DoesNotContain("Math.Max(_eingabemarkerDragStart.X", marker);
-        Assert.DoesNotContain("new System.Windows.Shapes.Rectangle", marker);
-        Assert.DoesNotContain("Canvas.SetLeft(_eingabemarkerPreviewRect", marker);
-        Assert.DoesNotContain("CodingOverlayCanvas.Children.Remove(_eingabemarkerPreviewRect)", marker);
+        AssertNoForbiddenTokens(
+            marker,
+            "Math.Min(_eingabemarkerDragStart.X",
+            "Math.Abs(canvasPos.X - _eingabemarkerDragStart.X)",
+            "Math.Max(_eingabemarkerDragStart.X",
+            "new System.Windows.Shapes.Rectangle",
+            "Canvas.SetLeft(_eingabemarkerPreviewRect",
+            "CodingOverlayCanvas.Children.Remove(_eingabemarkerPreviewRect)");
         Assert.Contains("public static Rect BuildPreviewRect", policy);
         Assert.Contains("public static Rect? BuildNormalizedSelection", policy);
         Assert.Contains("public static class CodingEingabemarkerPreviewRenderer", renderer);
@@ -439,21 +470,25 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var inputWorkflow = File.Exists(inputWorkflowPath) ? File.ReadAllText(inputWorkflowPath) : "";
         var canvasWorkflow = File.Exists(canvasWorkflowPath) ? File.ReadAllText(canvasWorkflowPath) : "";
 
-        Assert.DoesNotContain("private void CmbEingabemarker_KeyDown", marker);
-        Assert.DoesNotContain("private void CmbEingabemarker_SelectionChanged", marker);
-        Assert.DoesNotContain("private static string? ResolveEingabemarkerCodeHint", marker);
+        AssertNoForbiddenTokens(
+            marker,
+            "private void CmbEingabemarker_KeyDown",
+            "private void CmbEingabemarker_SelectionChanged",
+            "private static string? ResolveEingabemarkerCodeHint");
         Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseDown", marker);
         Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseMove", marker);
         Assert.Contains("CodingEingabemarkerCanvasInputWorkflow.MouseUp", marker);
-        Assert.DoesNotContain("if (_eingabemarkerPhase != EingabemarkerPhase.Drawing)", marker);
+        AssertNoForbiddenTokens(marker, "if (_eingabemarkerPhase != EingabemarkerPhase.Drawing)");
         Assert.Contains("PlayerDispatcherScheduler.ScheduleInput", marker);
         Assert.Contains("PlayerFocusControls.FocusElement", marker);
-        Assert.DoesNotContain("Dispatcher.BeginInvoke", marker);
-        Assert.DoesNotContain("new Action(() => TxtEingabemarker.Focus())", marker);
-        Assert.DoesNotContain("TxtEingabemarker.Focus()", marker);
-        Assert.DoesNotContain("System.Windows.Threading.DispatcherPriority.Input", marker);
-        Assert.DoesNotContain("_eingabemarkerPreviewRect == null", marker);
-        Assert.DoesNotContain("if (normalizedRect is null)", marker);
+        AssertNoForbiddenTokens(
+            marker,
+            "Dispatcher.BeginInvoke",
+            "new Action(() => TxtEingabemarker.Focus())",
+            "TxtEingabemarker.Focus()",
+            "System.Windows.Threading.DispatcherPriority.Input",
+            "_eingabemarkerPreviewRect == null",
+            "if (normalizedRect is null)");
         Assert.Contains("CodingEingabemarkerPopupControls.ShowInput", marker);
         Assert.Contains("CodingEingabemarkerPopupControls.Hide", marker);
         Assert.Contains("CodingEingabemarkerPopupControls.IsVisible", input);
@@ -461,15 +496,19 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         Assert.Contains("CodingEingabemarkerPopupControls.ResolveSelectedText", input);
         Assert.Contains("CodingEingabemarkerKeyInputWorkflow.Execute", input);
         Assert.Contains("CodingEingabemarkerSelectionInputWorkflow.Execute", input);
-        Assert.DoesNotContain("if (e.Key == Key.Escape)", input);
-        Assert.DoesNotContain("if (e.Key != Key.Enter)", input);
-        Assert.DoesNotContain("CmbEingabemarker.SelectedItem is ComboBoxItem", input);
-        Assert.DoesNotContain("EingabemarkerPopup.Visibility = Visibility.Visible", marker);
-        Assert.DoesNotContain("EingabemarkerPopup.Visibility = Visibility.Collapsed", marker);
-        Assert.DoesNotContain("TxtEingabemarker.Text = \"\"", marker);
-        Assert.DoesNotContain("TxtEingabemarker.Text = text", input);
-        Assert.DoesNotContain("CmbEingabemarker.SelectedIndex = -1", marker);
-        Assert.DoesNotContain("EingabemarkerPopup.Visibility != Visibility.Visible", input);
+        AssertNoForbiddenTokens(
+            input,
+            "if (e.Key == Key.Escape)",
+            "if (e.Key != Key.Enter)",
+            "CmbEingabemarker.SelectedItem is ComboBoxItem",
+            "TxtEingabemarker.Text = text",
+            "EingabemarkerPopup.Visibility != Visibility.Visible");
+        AssertNoForbiddenTokens(
+            marker,
+            "EingabemarkerPopup.Visibility = Visibility.Visible",
+            "EingabemarkerPopup.Visibility = Visibility.Collapsed",
+            "TxtEingabemarker.Text = \"\"",
+            "CmbEingabemarker.SelectedIndex = -1");
         Assert.Contains("private void CmbEingabemarker_KeyDown", input);
         Assert.Contains("private void CmbEingabemarker_SelectionChanged", input);
         Assert.Contains("private static string? ResolveEingabemarkerCodeHint", input);
@@ -508,12 +547,14 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var toggleWorkflow = File.Exists(toggleWorkflowPath) ? File.ReadAllText(toggleWorkflowPath) : "";
 
         Assert.Contains("CodingEingabemarkerToggleWorkflow.Execute", marker);
-        Assert.DoesNotContain("if (BtnEingabemarker.IsChecked == true)", marker);
+        AssertNoForbiddenTokens(marker, "if (BtnEingabemarker.IsChecked == true)");
         Assert.Contains("CodingOverlayInputControls.EnableDrawingCanvas", marker);
         Assert.Contains("CodingOverlayInputControls.DisableDrawingCanvas", marker);
         Assert.Contains("CodingOverlayInputControls.ResetCanvasCursor", marker);
-        Assert.DoesNotContain("CodingOverlayCanvas.IsHitTestVisible =", marker);
-        Assert.DoesNotContain("CodingOverlayCanvas.Cursor =", marker);
+        AssertNoForbiddenTokens(
+            marker,
+            "CodingOverlayCanvas.IsHitTestVisible =",
+            "CodingOverlayCanvas.Cursor =");
         Assert.Contains("request.IsChecked", toggleWorkflow);
         Assert.Contains("actions.PauseForCodingInteraction()", toggleWorkflow);
         Assert.Contains("actions.SetDrawingPhase()", toggleWorkflow);
@@ -541,7 +582,7 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
 
         Assert.Contains("CodingOverlayInputControls.ApplyCanvasCursor", tools);
         Assert.Contains("CodingOverlayInputControls.ApplyCanvasCursor", marking);
-        Assert.DoesNotContain("CodingOverlayCanvas.Cursor =", joinedPartials);
+        AssertNoForbiddenTokens(joinedPartials, "CodingOverlayCanvas.Cursor =");
         Assert.Contains("public static void ApplyCanvasCursor", controls);
     }
 
@@ -566,25 +607,30 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var submissionWorkflow = File.Exists(submissionWorkflowPath) ? File.ReadAllText(submissionWorkflowPath) : "";
         var directEventWorkflow = File.Exists(directEventWorkflowPath) ? File.ReadAllText(directEventWorkflowPath) : "";
 
-        Assert.DoesNotContain("private async Task SubmitEingabemarker", marker);
-        Assert.DoesNotContain("CodingEingabemarkerDuplicatePolicy.FindDuplicate", marker);
+        AssertNoForbiddenTokens(
+            marker,
+            "private async Task SubmitEingabemarker",
+            "CodingEingabemarkerDuplicatePolicy.FindDuplicate");
         Assert.Contains("private async Task SubmitEingabemarker", submission);
         Assert.Contains("CodingEingabemarkerSubmissionWorkflow.ExecuteAsync", submission);
         Assert.Contains("CodingEingabemarkerDirectEventWorkflow.Execute", submission);
         Assert.Contains("CodingEingabemarkerDuplicatePolicy.FindDuplicate", submission);
-        Assert.DoesNotContain("CodingEingabemarkerEventFactory.CreateAccepted", submission);
-        Assert.DoesNotContain("CodingProtocolEntryPhotoPathAppender.AddIfPresent", submission);
-        Assert.DoesNotContain("CodingEingabemarkerEventAppender.Apply", submission);
+        AssertNoForbiddenTokens(
+            submission,
+            "CodingEingabemarkerEventFactory.CreateAccepted",
+            "CodingProtocolEntryPhotoPathAppender.AddIfPresent",
+            "CodingEingabemarkerEventAppender.Apply");
         Assert.Contains("_codingSessionHost", submission);
-        Assert.DoesNotContain("_codingVm", submission);
-        Assert.DoesNotContain("_codingSessionService.AddEvent(draft.Entry", submission);
+        AssertNoForbiddenTokens(submission, "_codingSessionService.AddEvent(draft.Entry");
         Assert.Contains("CodingEingabemarkerPopupControls.Hide", submission);
-        Assert.DoesNotContain("EingabemarkerPopup.Visibility = Visibility.Collapsed", submission);
+        AssertNoForbiddenTokens(submission, "EingabemarkerPopup.Visibility = Visibility.Collapsed");
         Assert.Contains("RunCodingAnalysisAsync", submission);
-        Assert.DoesNotContain("if (string.IsNullOrEmpty(keyword))", submission);
-        Assert.DoesNotContain("if (_codingSessionHost.HasViewModel && codeHint != null)", submission);
-        Assert.DoesNotContain("if (codeHint != null && _codingSessionHost.HasViewModel", submission);
-        Assert.DoesNotContain("catch (Exception ex)", submission);
+        AssertNoForbiddenTokens(
+            submission,
+            "if (string.IsNullOrEmpty(keyword))",
+            "if (_codingSessionHost.HasViewModel && codeHint != null)",
+            "if (codeHint != null && _codingSessionHost.HasViewModel",
+            "catch (Exception ex)");
         Assert.Contains("request.RawKeyword", submissionWorkflow);
         Assert.Contains("actions.ShowDuplicateStatus", submissionWorkflow);
         Assert.Contains("actions.AddDirectEvent", submissionWorkflow);
@@ -614,9 +660,25 @@ public sealed class PlayerWindowOverlayInputArchitectureTests
         var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
 
         Assert.Contains("CodingOverlayViewportController.Update", playerCoding);
-        Assert.DoesNotContain("CodingOverlayViewportSizePolicy.Build", playerCoding);
-        Assert.DoesNotContain("double.IsNaN(w)", playerCoding);
+        AssertNoForbiddenTokens(
+            playerCoding,
+            "CodingOverlayViewportSizePolicy.Build",
+            "double.IsNaN(w)");
         Assert.Contains("public static CodingOverlayViewportSizeUpdate Build", policy);
         Assert.Contains("CodingOverlayViewportSizePolicy.Build", controller);
+    }
+
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = new List<string>();
+        foreach (var token in forbiddenTokens)
+        {
+            if (source.Contains(token, StringComparison.Ordinal))
+                hits.Add(token);
+        }
+
+        Assert.True(
+            hits.Count == 0,
+            "Verbotene alte PlayerWindow-OverlayInput-Logik gefunden: " + string.Join(", ", hits));
     }
 }

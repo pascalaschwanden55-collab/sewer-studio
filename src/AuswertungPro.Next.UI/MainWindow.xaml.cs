@@ -1,5 +1,10 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using AuswertungPro.Next.UI.Controls;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels;
 using AuswertungPro.Next.UI.ViewModels.Windows;
@@ -10,6 +15,7 @@ namespace AuswertungPro.Next.UI;
 public partial class MainWindow : Window
 {
     private bool _isDataContextDisposed;
+    private bool _startupEntrancePlayed;
 
     public MainWindow()
     {
@@ -19,6 +25,50 @@ public partial class MainWindow : Window
         // Toast-Senke mit dem sichtbaren Host verbinden (nicht-blockierende Erfolgsmeldungen).
         services.Toasts.AttachSink((message, severity) => ToastHostControl.Enqueue(message, severity));
         DataContext = new ShellViewModel(services);
+    }
+
+    public async Task PlayStartupEntranceAsync()
+    {
+        if (_startupEntrancePlayed || SidebarNavList.Visibility != Visibility.Visible)
+            return;
+
+        _startupEntrancePlayed = true;
+        SidebarNavList.UpdateLayout();
+
+        var containers = new ListBoxItem[SidebarNavList.Items.Count];
+        for (var i = 0; i < containers.Length; i++)
+        {
+            if (SidebarNavList.ItemContainerGenerator.ContainerFromIndex(i) is not ListBoxItem item)
+                continue;
+
+            item.Opacity = 0;
+            item.RenderTransform = new TranslateTransform(-8, 0);
+            containers[i] = item;
+        }
+
+        for (var i = 0; i < containers.Length; i++)
+        {
+            var item = containers[i];
+            if (item is null)
+                continue;
+
+            var fade = new DoubleAnimation(0, 1, AnimationTokens.Normal)
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            item.BeginAnimation(OpacityProperty, fade);
+
+            if (item.RenderTransform is TranslateTransform slide)
+            {
+                var move = new DoubleAnimation(-8, 0, AnimationTokens.Slow)
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                };
+                slide.BeginAnimation(TranslateTransform.XProperty, move);
+            }
+
+            await Task.Delay(30);
+        }
     }
 
     private static ServiceProvider GetServiceProvider()
@@ -128,6 +178,34 @@ public partial class MainWindow : Window
             Owner = this,
             DataContext = new ViewModels.Pages.KarteViewModel(shell, GetServiceProvider())
         };
+        window.Show();
+    }
+
+    private void OpenSystemMonitor_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not ShellViewModel shell)
+            return;
+
+        var panel = new SystemMonitorPanel
+        {
+            DataContext = shell.Monitor,
+            Margin = new Thickness(12)
+        };
+
+        var window = new Window
+        {
+            Title = "System-Monitor",
+            Owner = this,
+            Width = 420,
+            Height = 520,
+            MinWidth = 360,
+            MinHeight = 420,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = panel,
+            Background = TryFindResource("BgBrush") as Brush ?? Background
+        };
+
+        WindowStateManager.Track(window);
         window.Show();
     }
 

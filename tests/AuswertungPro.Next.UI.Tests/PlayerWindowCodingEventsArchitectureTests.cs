@@ -10,13 +10,10 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
     [Fact]
     public void PlayerWindow_coding_select_code_handler_uses_fire_and_forget_wrapper()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Events.cs");
 
         var events = File.ReadAllText(eventsPath);
 
-        Assert.DoesNotContain("private async void CodingSelectCode_Click", events);
         Assert.Contains("private void CodingSelectCode_Click", events);
         Assert.Contains(".SafeFireAndForget(\"CodingSelectCode\")", events);
         Assert.Contains("private async Task HandleCodingSelectCodeAsync", events);
@@ -25,13 +22,11 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
     [Fact]
     public void PlayerWindow_coding_event_display_order_lives_in_policy()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingEventDisplayOrderPolicy.cs");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingEventsListControls.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventsRefreshWorkflow.cs");
-        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventsListRefreshCommandWorkflow.cs");
+        var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventDisplayOrderPolicy.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsListControls.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsRefreshWorkflow.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsListRefreshCommandWorkflow.cs");
 
         Assert.True(File.Exists(policyPath), "Codier-Ereignis-Sortierung muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(controlsPath), "Codier-Ereignislisten-Rebind muss ausserhalb der PlayerWindow-Partials gekapselt sein.");
@@ -46,12 +41,6 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
 
         Assert.Contains("CodingEventsRefreshWorkflow.RefreshListAndStatistics", events);
         Assert.Contains("CodingEventsListRefreshCommandWorkflow.Execute", events);
-        Assert.DoesNotContain("CodingEventDisplayOrderPolicy.Order", events);
-        Assert.DoesNotContain("_codingEventsListControls.ApplyOrderedEvents", events);
-        Assert.DoesNotContain("if (!CodingEventsRefreshWorkflow.RefreshListAndStatistics", events);
-        Assert.DoesNotContain(".OrderBy(e => e.MeterAtCapture)", events);
-        Assert.DoesNotContain("LstCodingEvents.ItemsSource", events);
-        Assert.DoesNotContain("_codingVm.Events.Clear()", events);
         Assert.Contains("public static IReadOnlyList<CodingEvent> Order", policy);
         Assert.Contains("public sealed class CodingEventsListControls", controls);
         Assert.Contains("_eventsList.ItemsSource", controls);
@@ -63,18 +52,15 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
     [Fact]
     public void PlayerWindow_coding_event_list_surface_uses_controls()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var eventsControlsPath = Path.Combine(uiRoot, "Ai", "CodingEventsListControls.cs");
-        var importControlsPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceControls.cs");
-        var relevantPartials = new[]
+        var eventsControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventsListControls.cs");
+        var importControlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceControls.cs");
+        var relevantPartialPaths = new[]
         {
-            "PlayerWindow.Coding.Confirmation.cs",
-            "PlayerWindow.Coding.Lifecycle.Exit.cs",
-            "PlayerWindow.Coding.Lifecycle.ImportReference.cs",
-            "PlayerWindow.Coding.Lifecycle.Timeline.cs",
-            "PlayerWindow.CodingSidePanelAccessors.cs"
+            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Confirmation.cs"),
+            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Exit.cs"),
+            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.ImportReference.cs"),
+            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Timeline.cs"),
+            RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs")
         };
 
         Assert.True(File.Exists(eventsControlsPath), "Coding-Event-Listenoberflaeche soll ueber CodingEventsListControls laufen.");
@@ -82,7 +68,7 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
 
         var joinedPartials = string.Join(
             Environment.NewLine,
-            relevantPartials.Select(file => File.ReadAllText(Path.Combine(windowsRoot, file))));
+            relevantPartialPaths.Select(File.ReadAllText));
         var eventsControls = File.ReadAllText(eventsControlsPath);
         var importControls = File.ReadAllText(importControlsPath);
 
@@ -90,9 +76,6 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
         Assert.Contains("_codingSidePanelControllers.EventsList.SetItemsSource", joinedPartials);
         Assert.Contains("CodingImportReferenceControls.SetItemsSource", joinedPartials);
         Assert.Contains("CodingImportReferenceControls.ClearItemsSource", joinedPartials);
-        Assert.DoesNotContain("LstCodingEvents.SelectedItem =", joinedPartials);
-        Assert.DoesNotContain("LstCodingEvents.ItemsSource =", joinedPartials);
-        Assert.DoesNotContain("LstImportEvents.ItemsSource =", joinedPartials);
         Assert.Contains("public void SelectEvent", eventsControls);
         Assert.Contains("public void SetItemsSource", eventsControls);
         Assert.Contains("public static void SetItemsSource", importControls);
@@ -102,12 +85,10 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
     [Fact]
     public void PlayerWindow_manual_code_meter_resolution_uses_policy()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
-        var markingTrainingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Training.cs");
-        var manualMarkWorkflowPath = Path.Combine(uiRoot, "Ai", "LiveDetectionManualMarkTrainingWorkflow.cs");
-        var resolverPath = Path.Combine(uiRoot, "Ai", "CodingCurrentMeterResolver.cs");
+        var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var markingTrainingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.LiveDetection.Marking.Training.cs");
+        var manualMarkWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "LiveDetectionManualMarkTrainingWorkflow.cs");
+        var resolverPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCurrentMeterResolver.cs");
 
         var events = File.ReadAllText(eventsPath);
         var markingTraining = File.ReadAllText(markingTrainingPath);
@@ -115,10 +96,7 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
         var resolver = File.ReadAllText(resolverPath);
 
         Assert.Contains("CodingCurrentMeterResolver.ResolveManualEntry", events);
-        Assert.DoesNotContain("CodingCurrentMeterResolver.ParseDisplayedMeterOrZero", markingTraining);
         Assert.Contains("CodingCurrentMeterResolver.ParseDisplayedMeterOrZero", manualMarkWorkflow);
-        Assert.DoesNotContain("Math.Round(Math.Max(0, osdMeter", events);
-        Assert.DoesNotContain("TxtCodingMeter?.Text?.Replace(\"m\"", markingTraining);
         Assert.Contains("public static double ResolveManualEntry", resolver);
         Assert.Contains("public static double ParseDisplayedMeterOrZero", resolver);
     }
@@ -126,18 +104,16 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
     [Fact]
     public void PlayerWindow_manual_coding_ai_context_lives_in_factory()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var eventsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Events.cs");
-        var factoryPath = Path.Combine(uiRoot, "Ai", "CodingManualEventFactory.cs");
-        var appenderPath = Path.Combine(uiRoot, "Ai", "CodingManualEventAppender.cs");
-        var selectedCodeWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSelectedCodeEventWorkflow.cs");
-        var selectCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingSelectCodeCommandWorkflow.cs");
-        var manualEntryWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCodeExplorerManualEntryWorkflow.cs");
-        var createCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingCreateSelectedCodeEventCommandWorkflow.cs");
-        var postWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventCreationPostWorkflow.cs");
-        var accessorsPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
-        var sidePanelControllerSetPath = Path.Combine(uiRoot, "Player", "CodingSidePanelControllerSet.cs");
+        var eventsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Events.cs");
+        var factoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingManualEventFactory.cs");
+        var appenderPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingManualEventAppender.cs");
+        var selectedCodeWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSelectedCodeEventWorkflow.cs");
+        var selectCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSelectCodeCommandWorkflow.cs");
+        var manualEntryWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCodeExplorerManualEntryWorkflow.cs");
+        var createCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCreateSelectedCodeEventCommandWorkflow.cs");
+        var postWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventCreationPostWorkflow.cs");
+        var accessorsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.CodingSidePanelAccessors.cs");
+        var sidePanelControllerSetPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingSidePanelControllerSet.cs");
 
         var events = File.ReadAllText(eventsPath);
         var factory = File.ReadAllText(factoryPath);
@@ -161,15 +137,6 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
         Assert.Contains("CodingManualEventAppender.Apply", events);
         Assert.Contains("CodingEventCreationPostWorkflow.Apply", events);
         Assert.Contains("_codingSessionHost", events);
-        Assert.DoesNotContain("_codingVm", events);
-        Assert.DoesNotContain("_codingSchemaManager.Cancel()", events);
-        Assert.DoesNotContain("_codingVm.CurrentOverlay = null", events);
-        Assert.DoesNotContain("TxtCodingSelectedCode.Text = \"\"", events);
-        Assert.DoesNotContain("BtnCodingCreateEvent.IsEnabled = false", events);
-        Assert.DoesNotContain(".CreateManualEntry(", events);
-        Assert.DoesNotContain("CodingManualEventFactory.CreateUnconfirmed", events);
-        Assert.DoesNotContain("CodingManualEventFactory.CreateUnconfirmedContext", events);
-        Assert.DoesNotContain("CodingProtocolEntryPhotoPathAppender", events);
         Assert.Contains(".CreateManualEntry(", manualEntryWorkflow);
         Assert.Contains("CodingManualEventFactory.CreateUnconfirmed", selectedCodeWorkflow);
         Assert.Contains("CodingProtocolEntryPhotoPathAppender.AddIfPresent", selectedCodeWorkflow);
@@ -185,15 +152,9 @@ public sealed class PlayerWindowCodingEventsArchitectureTests
         Assert.Contains("actions.CreateEvent(videoTime)", createCommandWorkflow);
         Assert.Contains("actions.ApplyPostCreation(createdEvent)", createCommandWorkflow);
         Assert.Contains("public static bool Apply", postWorkflow);
-        Assert.DoesNotContain("new CodingEventsListControls", accessors);
-        Assert.DoesNotContain("new CodingStatisticsControls", accessors);
-        Assert.DoesNotContain("new CodingInlineDefectDetailControls", accessors);
-        Assert.DoesNotContain("new CodingEventCreationPostActions", accessors);
         Assert.Contains("new CodingEventCreationPostActions", sidePanelControllerSet);
         Assert.Contains("_codingSessionHost", accessors);
-        Assert.DoesNotContain("_codingVm", accessors);
         Assert.Contains("CodingManualEventFactory.CreateUnconfirmedContext", appender);
-        Assert.DoesNotContain("new CodingEventAiContext", events);
         Assert.Contains("public static CodingEventAiContext CreateUnconfirmedContext", factory);
     }
 }

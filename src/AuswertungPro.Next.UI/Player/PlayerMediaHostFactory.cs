@@ -28,6 +28,10 @@ public static class PlayerMediaHostFactory
             stop: () => player.Stop(),
             readRate: () => player.Rate,
             setRate: player.SetRate,
+            readVolume: () => player.Volume,
+            setVolume: volume => player.Volume = volume,
+            readMute: () => player.Mute,
+            setMute: mute => player.Mute = mute,
             shouldStartPlayback: () =>
             {
                 var state = player.State;

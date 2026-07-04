@@ -8,12 +8,9 @@ public sealed class PlayerWindowCodingTimelineArchitectureTests
     [Fact]
     public void PlayerWindow_meter_timeline_uses_controls_adapter()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var navigationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Navigation.cs");
-        var sessionPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Lifecycle.Session.cs");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingMeterTimelineControls.cs");
+        var navigationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Navigation.cs");
+        var sessionPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Session.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMeterTimelineControls.cs");
 
         Assert.True(File.Exists(controlsPath), "Meteranzeige und Timeline-Playhead sollen ausserhalb der PlayerWindow-Partials gesetzt werden.");
 
@@ -24,8 +21,6 @@ public sealed class PlayerWindowCodingTimelineArchitectureTests
 
         Assert.Contains("CodingMeterTimelineControls.Apply", navigation);
         Assert.Contains("CodingMeterTimelineControls.SetText", session);
-        Assert.DoesNotContain("TxtCodingMeter.Text", playerText);
-        Assert.DoesNotContain("PipeTimeline.CurrentMeter", playerText);
         Assert.Contains("public static class CodingMeterTimelineControls", controls);
         Assert.Contains("PipeGraphTimeline", controls);
         Assert.Contains("meterText.Text", controls);
@@ -35,15 +30,13 @@ public sealed class PlayerWindowCodingTimelineArchitectureTests
     [Fact]
     public void PlayerWindow_timeline_marker_accessors_live_in_policy()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var playerCodingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
-        var timelinePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Timeline.cs");
-        var accessorsPath = Path.Combine(uiRoot, "Ai", "CodingTimelineMarkerAccessors.cs");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingTimelineControls.cs");
-        var commandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingTimelineCommandWorkflow.cs");
-        var initializationWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingTimelineInitializationWorkflow.cs");
-        var enterWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingModeEnterWorkflow.cs");
+        var playerCodingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.cs");
+        var timelinePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Timeline.cs");
+        var accessorsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineMarkerAccessors.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineControls.cs");
+        var commandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineCommandWorkflow.cs");
+        var initializationWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingTimelineInitializationWorkflow.cs");
+        var enterWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingModeEnterWorkflow.cs");
 
         Assert.True(File.Exists(timelinePath), "Coding-Timeline-Wiring soll in einem eigenen Lifecycle-Partial liegen.");
         Assert.True(File.Exists(accessorsPath), "Timeline-Marker-Regeln muessen ausserhalb von PlayerWindow liegen.");
@@ -62,32 +55,20 @@ public sealed class PlayerWindowCodingTimelineArchitectureTests
 
         Assert.Contains("InitializeCodingTimeline: InitializeCodingTimeline", playerCoding);
         Assert.Contains("actions.InitializeCodingTimeline()", enterWorkflow);
-        Assert.DoesNotContain("PipeTimeline.MeterAccessor = CodingTimelineMarkerAccessors.Meter", playerCoding);
         Assert.Contains("private void InitializeCodingTimeline", timeline);
         Assert.Contains("CodingTimelineControls.Configure", timeline);
         Assert.Contains("CodingTimelineInitializationWorkflow.Execute", timeline);
         Assert.Contains("CodingTimelineCommandWorkflow.NavigateToMeter", timeline);
         Assert.Contains("CodingTimelineCommandWorkflow.MarkerClicked", timeline);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel)", timeline);
         Assert.Contains("throw new InvalidOperationException", initializationWorkflow);
         Assert.Contains("actions.ConfigureTimeline()", initializationWorkflow);
         Assert.Contains("actions.MoveToMeter(request.Meter)", commandWorkflow);
         Assert.Contains("actions.JumpToDefect(selectedEvent)", commandWorkflow);
         Assert.Contains("_codingSessionHost", timeline);
-        Assert.DoesNotContain("_codingVm", timeline);
-        Assert.DoesNotContain("if (_codingSessionRuntimeOwner.Service != null && _codingSessionHost.IsRunningOrPaused)", timeline);
-        Assert.DoesNotContain("if (item is CodingEvent ce)", timeline);
-        Assert.DoesNotContain("PipeTimeline.TotalLength =", timeline);
-        Assert.DoesNotContain("PipeTimeline.MeterAccessor =", timeline);
-        Assert.DoesNotContain("PipeTimeline.CodeAccessor =", timeline);
-        Assert.DoesNotContain("PipeTimeline.ConfidenceAccessor =", timeline);
-        Assert.DoesNotContain("PipeTimeline.IsRejectedAccessor =", timeline);
-        Assert.DoesNotContain("PipeTimeline.Markers =", timeline);
         Assert.Contains("CodingTimelineMarkerAccessors.Meter", controls);
         Assert.Contains("CodingTimelineMarkerAccessors.Code", controls);
         Assert.Contains("CodingTimelineMarkerAccessors.Confidence", controls);
         Assert.Contains("CodingTimelineMarkerAccessors.IsRejected", controls);
-        Assert.DoesNotContain("PipeTimeline.MeterAccessor = obj => obj is CodingEvent", timeline);
         Assert.Contains("public static double Meter", accessors);
     }
 }

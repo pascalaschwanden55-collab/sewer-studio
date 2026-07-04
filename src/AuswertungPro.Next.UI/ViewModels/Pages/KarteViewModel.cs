@@ -38,6 +38,7 @@ public sealed partial class KarteViewModel : ObservableObject
 
     [ObservableProperty] private string _statusText = "Karte wird geladen…";
     [ObservableProperty] private string? _selectedHaltungsname;
+    [ObservableProperty] private bool _hasNetworkGeometry;
 
     /// <summary>Infopanel-Daten der angeklickten Haltung; null = Panel zu.</summary>
     [ObservableProperty] private KarteHaltungInfo? _selectedInfo;
@@ -61,6 +62,7 @@ public sealed partial class KarteViewModel : ObservableObject
     /// </summary>
     public async Task<Map> BuildMapAsync()
     {
+        HasNetworkGeometry = false;
         var map = new Map();
 
         // ── WMS-Hintergrundlayer ──────────────────────────────────────────────
@@ -108,6 +110,7 @@ public sealed partial class KarteViewModel : ObservableObject
                 // XTF-Parsing im Hintergrundthread (kann groß sein)
                 var geometrien = await Task.Run(() => new NetworkGeometryCache().Load(XtfPath));
                 _projectedGeometrien = await Task.Run(() => NetworkViewportFilter.Project(geometrien));
+                HasNetworkGeometry = _projectedGeometrien.Count > 0;
 
                 // Zustandsfarben aus dem aktuellen Projekt
                 _kondition = HaltungConditionProvider.Build(_shell.Project.Data);
@@ -158,6 +161,32 @@ public sealed partial class KarteViewModel : ObservableObject
         // WebMercator-Koordinaten Uri/Altdorf; Zoom-Level 14 ≈ 9.55 m/px
         _map?.Navigator.CenterOnAndZoomTo(new MPoint(960296, 5925558), 9.55);
         RefreshVisibleNetworkLayer(force: true);
+    }
+
+    public void ZoomToNetworkAndRefresh()
+    {
+        if (_map is null || _projectedGeometrien.Count == 0)
+        {
+            CenterOnUriAndRefresh();
+            return;
+        }
+
+        var points = _projectedGeometrien.SelectMany(g => g.Points).ToList();
+        if (points.Count == 0)
+        {
+            CenterOnUriAndRefresh();
+            return;
+        }
+
+        var minX = points.Min(p => p.X);
+        var minY = points.Min(p => p.Y);
+        var maxX = points.Max(p => p.X);
+        var maxY = points.Max(p => p.Y);
+        var bounds = new MRect(minX, minY, maxX, maxY).Grow(120);
+
+        _map.Navigator.ZoomToBox(bounds, MBoxFit.Fit, 300);
+        RefreshVisibleNetworkLayer(force: true);
+        _map.RefreshGraphics();
     }
 
     public void RefreshVisibleNetworkLayer(bool force)

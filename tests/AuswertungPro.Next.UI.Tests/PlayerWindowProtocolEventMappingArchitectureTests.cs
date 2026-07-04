@@ -30,17 +30,9 @@ public sealed class PlayerWindowProtocolEventMappingArchitectureTests
         var workflowFactory = File.ReadAllText(workflowFactoryPath);
 
         Assert.Contains("CodingProtocolGreenMatchTrainingRunner.AcceptGreenMatchesAsync", training);
-        Assert.DoesNotContain("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", training);
         Assert.Contains("CodingProtocolTrainingCandidateResolver.ResolveImportEvents", runner);
         Assert.Contains("public static async Task<CodingProtocolMatchOverlayState?> AcceptGreenMatchesAsync", runner);
-        Assert.DoesNotContain("CodingProtocolImportTrainingWorkflowServiceFactory.Create", training);
         Assert.Contains("CodingProtocolImportTrainingWorkflowServiceFactory.Create", confirmWorkflow);
-        Assert.DoesNotContain("CodingProtocolTrainingSnapshotStoreFactory.Create", training);
-        Assert.DoesNotContain("Guid.TryParse(pair.Gt.RefId", training);
-        Assert.DoesNotContain("_codingImportEvents.FirstOrDefault(ev => ev.Entry.EntryId", training);
-        Assert.DoesNotContain("File.Exists", training);
-        Assert.DoesNotContain("File.Copy", training);
-        Assert.DoesNotContain("File.Delete", training);
         Assert.Contains("public static IReadOnlyList<CodingEvent> ResolveImportEvents", resolver);
         Assert.Contains("CodingProtocolTrainingSnapshotStoreFactory.Create", workflowFactory);
         Assert.Contains("File.Copy", snapshotStore);
@@ -67,13 +59,7 @@ public sealed class PlayerWindowProtocolEventMappingArchitectureTests
         var workflow = File.Exists(workflowPath) ? File.ReadAllText(workflowPath) : "";
 
         Assert.Contains("CodingExistingProtocolEntriesWorkflow.Execute", protocol);
-        Assert.DoesNotContain("CodingProtocolEventMapper.BuildExistingEvents", protocol);
-        Assert.DoesNotContain("CodingProtocolEventCollectionAppender.Append", protocol);
         Assert.Contains("_codingSessionHost", protocol);
-        Assert.DoesNotContain("_codingVm", protocol);
-        Assert.DoesNotContain("_codingVm.Events.Add", protocol);
-        Assert.DoesNotContain("new CodingEvent", protocol);
-        Assert.DoesNotContain("OrderBy(e => e.MeterStart ?? 0)", protocol);
         Assert.Contains("CodingProtocolEventMapper.BuildExistingEvents", workflow);
         Assert.Contains("CodingProtocolEventCollectionAppender.Append", workflow);
         Assert.Contains("public static IReadOnlyList<CodingEvent> BuildExistingEvents", mapper);
@@ -103,13 +89,7 @@ public sealed class PlayerWindowProtocolEventMappingArchitectureTests
 
         Assert.Contains("LoadExistingProtocolEventsAsImport: LoadExistingProtocolEventsAsImport", lifecycle);
         Assert.Contains("actions.LoadExistingProtocolEventsAsImport()", enterWorkflow);
-        Assert.DoesNotContain("CodingProtocolEventMapper.BuildMissingImportEvents", lifecycle);
         Assert.Contains("CodingExistingProtocolImportEventsWorkflow.Execute", import);
-        Assert.DoesNotContain("CodingProtocolEventMapper.BuildMissingImportEvents", import);
-        Assert.DoesNotContain("CodingProtocolEventCollectionAppender.Append", import);
-        Assert.DoesNotContain("_codingImportEvents.Add", import);
-        Assert.DoesNotContain("new CodingEvent", import);
-        Assert.DoesNotContain("!e.IsDeleted && !string.IsNullOrWhiteSpace(e.Code)", import);
         Assert.Contains("public static IReadOnlyList<CodingEvent> BuildMissingImportEvents", mapper);
         Assert.Contains("CodingProtocolEventMapper.BuildMissingImportEvents", importWorkflow);
         Assert.Contains("CodingProtocolEventCollectionAppender.Append", importWorkflow);

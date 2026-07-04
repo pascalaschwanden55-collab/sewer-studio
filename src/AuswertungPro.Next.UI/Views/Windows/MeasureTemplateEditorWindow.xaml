@@ -140,8 +140,12 @@
                 <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,6,0,0">
                     <Button Command="{Binding SaveTemplateCommand}" Content="Template speichern" Width="150" Margin="0,0,6,0"/>
                     <Button Command="{Binding DeleteLineCommand}" Content="Zeile löschen" Width="120" Margin="0,0,6,0"/>
-                    <Button Command="{Binding MoveLineUpCommand}" Content="↑" Width="40" Margin="0,0,6,0"/>
-                    <Button Command="{Binding MoveLineDownCommand}" Content="↓" Width="40"/>
+                    <Button Command="{Binding MoveLineUpCommand}" Width="40" Margin="0,0,6,0" ToolTip="Nach oben">
+                        <TextBlock Text="&#xE70E;" FontFamily="Segoe MDL2 Assets"/>
+                    </Button>
+                    <Button Command="{Binding MoveLineDownCommand}" Width="40" ToolTip="Nach unten">
+                        <TextBlock Text="&#xE70D;" FontFamily="Segoe MDL2 Assets"/>
+                    </Button>
                 </StackPanel>
             </Grid>
 

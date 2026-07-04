@@ -22,6 +22,7 @@ using AuswertungPro.Next.Infrastructure.Ai.Pipeline;
 using AuswertungPro.Next.Infrastructure.Ai.Teacher;
 using AuswertungPro.Next.Infrastructure.Ai.Training;
 using AuswertungPro.Next.Infrastructure.Ai.Ollama;
+using AuswertungPro.Next.UI.Ai;
 using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.ViewModels.Windows;
 using InfraKnowledgeBase = AuswertungPro.Next.Infrastructure.Ai.KnowledgeBase;
@@ -502,33 +503,14 @@ public partial class TrainingCenterWindow : Window
 
     private async void ReviewCorrect_Click(object sender, RoutedEventArgs e)
     {
-        var item = Vm.SelectedReviewItem;
-        if (item is null) return;
-
-        var catalog = CodeSelectionCatalog;
-        if (catalog is null)
-        {
-            Dialogs.Warn("Code-Katalog nicht verfuegbar.", "Korrektur");
-            return;
-        }
-
-        var entry = BuildReviewProtocolEntry(item);
-        var explorerVm = new VsaCodeExplorerViewModel(entry, entry.MeterStart, entry.Zeit, catalog);
-        var dlg = new VsaCodeExplorerWindow(explorerVm) { Owner = this };
-        if (dlg.ShowDialog() == true && !string.IsNullOrWhiteSpace(dlg.SelectedEntry?.Code))
-        {
-            try
-            {
-                await Vm.ApplyReviewCorrectionAsync(
-                    item,
-                    dlg.SelectedEntry.Code,
-                    correctedDescription: dlg.SelectedEntry.Beschreibung);
-            }
-            catch (Exception ex)
-            {
-                Dialogs.Warn($"Fehler bei der Korrektur: {ex.Message}", "Korrektur");
-            }
-        }
+        var dialogService = VsaCodeExplorerDialogServiceFactory.Create();
+        await TrainingCenterReviewCorrectionWorkflow.ExecuteAsync(
+            new TrainingCenterReviewCorrectionRequest(Vm.SelectedReviewItem, CodeSelectionCatalog),
+            new TrainingCenterReviewCorrectionActions(
+                ShowCodeExplorer: explorerVm => dialogService.Show(explorerVm, null, null, this),
+                ApplyCorrectionAsync: (item, code, description) =>
+                    Vm.ApplyReviewCorrectionAsync(item, code, correctedDescription: description),
+                Warn: Dialogs.Warn));
     }
 
     // ── Lehrer-Annotationen Tab Event Handlers ──
@@ -561,42 +543,6 @@ public partial class TrainingCenterWindow : Window
             BtnOpenVideoLabelTool.IsEnabled = true;
         }
     }
-
-    private static ProtocolEntry BuildReviewProtocolEntry(InfraSelfImproving.ReviewQueueItem item)
-    {
-        var code = FirstNonEmpty(
-            item.SelfTrainingVsaCode,
-            item.SuggestedCode,
-            item.Entry?.SuggestedCode,
-            item.Entry?.Detection.VsaCodeHint);
-        var meterStart = item.SelfTrainingMeter ?? item.Entry?.Detection.MeterStart;
-        var meterEnd = item.SelfTrainingMeter ?? item.Entry?.Detection.MeterEnd;
-
-        var entry = new ProtocolEntry
-        {
-            Code = code,
-            Beschreibung = item.Label,
-            MeterStart = meterStart,
-            MeterEnd = meterEnd,
-            Source = ProtocolEntrySource.Manual
-        };
-
-        if (!string.IsNullOrWhiteSpace(code))
-        {
-            entry.CodeMeta = new ProtocolEntryCodeMeta { Code = code };
-        }
-
-        if (!string.IsNullOrWhiteSpace(item.SelfTrainingFramePath)
-            && File.Exists(item.SelfTrainingFramePath))
-        {
-            entry.FotoPaths.Add(item.SelfTrainingFramePath);
-        }
-
-        return entry;
-    }
-
-    private static string FirstNonEmpty(params string?[] values)
-        => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim() ?? string.Empty;
 
     private async void TeacherRefresh_Click(object sender, RoutedEventArgs e)
     {

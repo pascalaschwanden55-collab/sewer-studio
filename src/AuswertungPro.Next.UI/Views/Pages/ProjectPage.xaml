@@ -20,19 +20,24 @@
                 <!-- Im Draft-Modus: Projekt anlegen; sonst: Speichern unter -->
                 <Button Content="Projekt anlegen"
                         Command="{Binding AnlegenCommand}"
-                        Visibility="{Binding IsDraft, Converter={StaticResource BoolToVis}}"/>
+                        Visibility="{Binding IsDraft, Converter={StaticResource BoolToVis}}"
+                        ToolTip="Neues Projekt mit den eingetragenen Stammdaten erstellen."/>
                 <Button Content="Abbrechen"
                         Command="{Binding AbbrechenCommand}"
                         Margin="8,0,0,0"
                         Style="{StaticResource SecondaryButton}"
-                        Visibility="{Binding IsDraft, Converter={StaticResource BoolToVis}}"/>
+                        Visibility="{Binding IsDraft, Converter={StaticResource BoolToVis}}"
+                        ToolTip="Projektanlage abbrechen und zur Uebersicht zurueckkehren."/>
                 <Button Content="Speichern unter" Command="{Binding SaveAsCommand}" Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
-                        Visibility="{Binding IsNotDraft, Converter={StaticResource BoolToVis}}"/>
+                        Visibility="{Binding IsNotDraft, Converter={StaticResource BoolToVis}}"
+                        ToolTip="Projekt unter einem neuen Pfad speichern."/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Grid.Column="1" HorizontalAlignment="Right">
                 <Button Content="Projekt speichern" Command="{Binding SaveCommand}" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" Margin="0,0,8,0"
-                        Visibility="{Binding IsNotDraft, Converter={StaticResource BoolToVis}}" />
-                <Button Content="Programm schließen" Click="CloseButton_Click" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180" />
+                        Visibility="{Binding IsNotDraft, Converter={StaticResource BoolToVis}}"
+                        ToolTip="Alle Projektdaten speichern." />
+                <Button Content="Programm schließen" Click="CloseButton_Click" Style="{StaticResource SecondaryButton}" Width="200" MinWidth="180"
+                        ToolTip="SewerStudio beenden. Ungespeicherte Aenderungen werden vorher abgefragt." />
             </StackPanel>
         </Grid>
 

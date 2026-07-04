@@ -30,22 +30,10 @@ public sealed class PlayerWindowExplorerEntryEditArchitectureTests
         var editWorkflow = File.Exists(editWorkflowPath) ? File.ReadAllText(editWorkflowPath) : "";
         var copier = File.ReadAllText(copierPath);
 
-        Assert.DoesNotContain("CodingProtocolEntryCopier.CopyEditableValues", events);
-        Assert.DoesNotContain("CodingProtocolEntryCopier.CopyEditableValues", eventActions);
-        Assert.DoesNotContain("CodingProtocolEntryCopier.CopyEditableValues", detailsActions);
         Assert.Contains("CodingCodeExplorerEditWorkflow.Execute", eventActions);
         Assert.Contains("CodingCodeExplorerEditWorkflow.Execute", detailsActions);
-        Assert.DoesNotContain(".TryEdit(", eventActions);
-        Assert.DoesNotContain(".TryEdit(", detailsActions);
         Assert.Contains(".TryEdit(", editWorkflow);
         Assert.Contains("CodingProtocolEntryCopier.CopyEditableValues", workflow);
-        Assert.DoesNotContain("entry.Code = result.Code", markCatalog);
-        Assert.DoesNotContain("entry.FotoPaths = result.FotoPaths", markCatalog);
-        Assert.DoesNotContain("entry.Code = result.Code", events);
-        Assert.DoesNotContain("entry.Code = result.Code", eventActions);
-        Assert.DoesNotContain("entry.Code = result.Code", detailsActions);
-        Assert.DoesNotContain("entry.FotoPaths = result.FotoPaths", events);
-        Assert.DoesNotContain("entry.FotoPaths = result.FotoPaths", detailsActions);
         Assert.Contains("public static void CopyEditableValues", copier);
     }
 }

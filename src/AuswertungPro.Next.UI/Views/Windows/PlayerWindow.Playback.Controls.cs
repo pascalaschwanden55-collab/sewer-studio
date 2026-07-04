@@ -34,6 +34,49 @@ public partial class PlayerWindow
 
     private void Speed8_Click(object sender, RoutedEventArgs e) => SetSpeed(8.0f);
 
+    private void SpeedSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_playerControlEventsEnabled)
+            return;
+
+        SetSpeed((float)e.NewValue);
+    }
+
+    private void VolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_playerControlEventsEnabled)
+            return;
+
+        var volume = NormalizeVolume(e.NewValue);
+        _playerPlaybackControlHost.SetVolume(volume);
+
+        if (volume == 0)
+            SetMuted(true, persist: false);
+        else if (MuteButton.IsChecked == true)
+            SetMuted(false, persist: false);
+
+        UpdateVolumeText(volume);
+        _playerSettings.PlayerVolume = volume;
+        _playerSettings.PlayerMuted = MuteButton.IsChecked == true;
+        _playerSettings.Save();
+    }
+
+    private void MuteButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_playerControlEventsEnabled)
+            return;
+
+        SetMuted(MuteButton.IsChecked == true, persist: true);
+    }
+
+    private void OverlayOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_playerControlEventsEnabled)
+            return;
+
+        SetOverlayOpacity(e.NewValue, persist: true);
+    }
+
     private void PositionSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         => PlayerPositionSliderValueChangedWorkflow.Execute(
             new PlayerPositionSliderValueChangedWorkflowRequest(_positionSliderStateController.IsDragging),
@@ -84,4 +127,56 @@ public partial class PlayerWindow
     {
         _speedControls.Update(_playerPlaybackControlHost.Rate);
     }
+
+    private void ApplyPersistedPlayerControlSettings()
+    {
+        var volume = NormalizeVolume(_playerSettings.PlayerVolume);
+        var muted = _playerSettings.PlayerMuted || volume == 0;
+
+        VolumeSlider.Value = volume;
+        UpdateVolumeText(volume);
+        _playerPlaybackControlHost.SetVolume(volume);
+        SetMuted(muted, persist: false);
+
+        SetOverlayOpacity(_playerSettings.PlayerOverlayOpacity, persist: false);
+        UpdateRateLabel();
+    }
+
+    private void SetMuted(bool muted, bool persist)
+    {
+        _playerPlaybackControlHost.SetMute(muted);
+        MuteButton.IsChecked = muted;
+        MuteIconText.Text = muted ? "\uE74F" : "\uE767";
+        MuteButton.ToolTip = muted ? "Ton einschalten" : "Ton stummschalten";
+
+        if (!persist)
+            return;
+
+        _playerSettings.PlayerMuted = muted;
+        _playerSettings.Save();
+    }
+
+    private void SetOverlayOpacity(double opacity, bool persist)
+    {
+        var normalized = NormalizeOverlayOpacity(opacity);
+        OverlayOpacitySlider.Value = normalized;
+        OverlayOpacityText.Text = $"{normalized:P0}";
+        CodingOverlayCanvas.Opacity = normalized;
+        DetectionCanvas.Opacity = normalized;
+
+        if (!persist)
+            return;
+
+        _playerSettings.PlayerOverlayOpacity = normalized;
+        _playerSettings.Save();
+    }
+
+    private void UpdateVolumeText(int volume)
+        => VolumeText.Text = $"{volume}%";
+
+    private static int NormalizeVolume(double volume)
+        => Math.Clamp((int)Math.Round(volume), 0, 100);
+
+    private static double NormalizeOverlayOpacity(double opacity)
+        => Math.Clamp(opacity, 0.35d, 1d);
 }

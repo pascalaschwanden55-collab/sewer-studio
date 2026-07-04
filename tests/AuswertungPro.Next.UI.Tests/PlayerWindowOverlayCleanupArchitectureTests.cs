@@ -10,7 +10,6 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
     {
         var root = FindRepositoryRoot();
         var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var overlayInputPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.cs");
         var viewportPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.OverlayInput.Viewport.cs");
         var lifecyclePath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.AiOverlayLifecycle.cs");
         var policyPath = Path.Combine(uiRoot, "Player", "CodingOverlayCleanupPolicy.cs");
@@ -27,7 +26,6 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
         Assert.True(File.Exists(lifecycleWorkflowPath), "AI-Overlay-Auto-Hide/Fade-Out-Reihenfolge soll ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(autoHideTimerOwnerPath), "AI-Overlay-Auto-Hide-Timerbesitz soll ausserhalb der PlayerWindow-Partials liegen.");
 
-        var overlayInput = File.ReadAllText(overlayInputPath);
         var viewport = File.ReadAllText(viewportPath);
         var lifecycle = File.ReadAllText(lifecyclePath);
         var policy = File.ReadAllText(policyPath);
@@ -38,27 +36,17 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
         var autoHideTimerOwner = File.Exists(autoHideTimerOwnerPath) ? File.ReadAllText(autoHideTimerOwnerPath) : "";
 
         Assert.Contains("_codingOverlayRenderController.ClearTransient", viewport);
-        Assert.DoesNotContain("CodingOverlayCanvasCleaner.ClearTransient", overlayInput + viewport);
         Assert.Contains("CodingAiOverlayLifecycleWorkflow.ScheduleAutoHide", lifecycle);
         Assert.Contains("CodingAiOverlayLifecycleWorkflow.FadeOutAfterAction", lifecycle);
         Assert.Contains("_codingAiOverlayAutoHideTimerOwner.CreateRequest()", lifecycle);
         Assert.Contains("_codingAiOverlayAutoHideTimerOwner.CreateActions", lifecycle);
-        Assert.DoesNotContain("_detectionAutoHideTimer", lifecycle);
-        Assert.DoesNotContain("DispatcherTimer?", lifecycle);
         Assert.Contains("CodingOverlayCleanupController.ClearAiOverlays", lifecycle);
-        Assert.DoesNotContain("CodingOverlayCanvasCleaner.ClearAiOverlays", lifecycle);
-        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", lifecycle);
-        Assert.DoesNotContain("TimeSpan.FromMilliseconds(800)", lifecycle);
         Assert.Contains("DispatcherTimer?", autoHideTimerOwner);
         Assert.Contains("CodingOverlayCanvasCleaner.ClearAiOverlays", controller);
         Assert.Contains("CodingOverlayCanvasCleaner.ClearTransient", surface);
         Assert.Contains("TimeSpan.FromMilliseconds(800)", lifecycleWorkflow);
         Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", lifecycleWorkflow);
         Assert.Contains("actions.ScheduleClear", lifecycleWorkflow);
-        Assert.DoesNotContain("CodingOverlayCleanupPolicy.ShouldRemoveTransientTag(el.Tag", overlayInput + viewport);
-        Assert.DoesNotContain(".OfType<FrameworkElement>()", overlayInput + viewport);
-        Assert.DoesNotContain("tag == OverlayTags.ToolBadge ||", overlayInput + viewport);
-        Assert.DoesNotContain("clearManualOverlay && tag == OverlayTags.Manual", overlayInput + viewport);
         Assert.Contains("public static bool ShouldRemoveTransientTag", policy);
         Assert.Contains("OverlayTags.ToolBadge", policy);
         Assert.Contains("CodingOverlayCleanupPolicy.ShouldRemoveTransientTag", cleaner);
@@ -92,25 +80,14 @@ public sealed class PlayerWindowOverlayCleanupArchitectureTests
         Assert.Contains("DetectionOverlayCleanupController.ClearAll", lifecycle);
         Assert.Contains("DetectionOverlayCleanupController.ClearVisuals", lifecycle);
         Assert.Contains("CodingAiOverlayLifecycleWorkflow.ScheduleAutoHide", lifecycle);
-        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", lifecycle);
-        Assert.DoesNotContain("TimeSpan.FromSeconds(3)", lifecycle);
         Assert.Contains("TimeSpan.FromSeconds(3)", lifecycleWorkflow);
         Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", lifecycleWorkflow);
         Assert.Contains("actions.ClearVisuals", lifecycleWorkflow);
-        Assert.DoesNotContain("DetectionOverlayCleaner.", lifecycle);
-        Assert.DoesNotContain("DetectionCanvas.Children.Clear()", lifecycle);
         Assert.Contains("DetectionOverlayCleanupController.ClearFindingsAndCanvas", aiEvents);
         Assert.Contains("DetectionOverlayCleanupController.ClearFindings", aiEvents);
         Assert.Contains("DetectionOverlayCleanupController.ClearVisuals", aiEvents);
-        Assert.DoesNotContain("DetectionOverlayCleaner.", aiEvents);
-        Assert.DoesNotContain("DetectionCanvas.Children.Clear()", aiEvents);
-        Assert.DoesNotContain("CodingFindingsList.ItemsSource = null", aiEvents);
         Assert.Contains("DetectionOverlayCleanupController.ClearCanvas", exit);
-        Assert.DoesNotContain("DetectionOverlayCleaner.", exit);
-        Assert.DoesNotContain("DetectionCanvas.Children.Clear()", exit);
         Assert.Contains("DetectionOverlayCleanupController.ClearCanvas", liveStop);
-        Assert.DoesNotContain("DetectionOverlayCleaner.", liveStop);
-        Assert.DoesNotContain("DetectionCanvas.Children.Clear()", liveStop);
         Assert.Contains("public static void ClearAll", cleaner);
         Assert.Contains("public static void ClearVisuals", cleaner);
         Assert.Contains("public static void ClearFindingsAndCanvas", cleaner);

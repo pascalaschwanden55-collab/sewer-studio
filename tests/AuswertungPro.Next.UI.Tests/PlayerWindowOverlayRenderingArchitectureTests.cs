@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
@@ -26,12 +27,14 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
             Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs").Select(File.ReadAllText));
         var controller = File.Exists(controllerPath) ? File.ReadAllText(controllerPath) : "";
 
-        Assert.DoesNotContain("CodingOverlayGeometryRenderer.Render", playerText);
-        Assert.DoesNotContain("CodingAiOverlayRenderer.Render", playerText);
-        Assert.DoesNotContain("ReferenceDnOverlayRenderer.Render", playerText);
-        Assert.DoesNotContain("CodingActivePipeBendSchemaRenderer.Render", playerText);
-        Assert.DoesNotContain("CodingActiveFillLevelSchemaRenderer.Render", playerText);
-        Assert.DoesNotContain("CodingActiveIntrusionSchemaRenderer.Render", playerText);
+        AssertNoForbiddenTokens(
+            playerText,
+            "CodingOverlayGeometryRenderer.Render",
+            "CodingAiOverlayRenderer.Render",
+            "ReferenceDnOverlayRenderer.Render",
+            "CodingActivePipeBendSchemaRenderer.Render",
+            "CodingActiveFillLevelSchemaRenderer.Render",
+            "CodingActiveIntrusionSchemaRenderer.Render");
         Assert.Contains("public sealed class CodingOverlayRenderController", controller);
         Assert.Contains("IOverlaySurface", controller);
         Assert.Contains("IOverlayCoordinateMapper", controller);
@@ -60,9 +63,11 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var dispatcher = File.ReadAllText(dispatcherPath);
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.DoesNotContain("RenderLevelOverlay", overlayRendering);
+        AssertNoForbiddenTokens(
+            overlayRendering,
+            "RenderLevelOverlay",
+            "CodingLevelOverlayRenderer.Render");
         Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
-        Assert.DoesNotContain("CodingLevelOverlayRenderer.Render", overlayRendering);
         Assert.Contains("CodingLevelOverlayRenderer.Render", dispatcher);
         Assert.Contains("public static class CodingLevelOverlayRenderer", renderer);
         Assert.Contains("LevelMode.Obstacle", renderer);
@@ -103,20 +108,22 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
 
         Assert.Contains("CodingActiveSchemaRenderWorkflow.Execute", active);
         Assert.Contains("_codingOverlayRenderController.RenderActiveSchema", active);
-        Assert.DoesNotContain("if (!_codingSchemaManager.IsActive || _codingSchemaManager.Active == null)", active);
-        Assert.DoesNotContain("switch (_codingSchemaManager.Active)", active);
-        Assert.DoesNotContain("case PipeBendSchema bend", active);
-        Assert.DoesNotContain("case FillLevelSchema fill", active);
-        Assert.DoesNotContain("case IntrusionSchema intrusion", active);
+        AssertNoForbiddenTokens(
+            active,
+            "if (!_codingSchemaManager.IsActive || _codingSchemaManager.Active == null)",
+            "switch (_codingSchemaManager.Active)",
+            "case PipeBendSchema bend",
+            "case FillLevelSchema fill",
+            "case IntrusionSchema intrusion",
+            "RenderPipeBendOverlay(overlay, true, Brushes.Gold",
+            "new Rectangle",
+            "new System.Windows.Shapes.Polygon");
         Assert.Contains("if (!request.IsActive)", workflow);
         Assert.Contains("actions.BuildOverlay()", workflow);
         Assert.Contains("actions.RenderPipeBend", workflow);
         Assert.Contains("PipeBendSchema bend => CodingActivePipeBendSchemaRenderer.Render", controller);
         Assert.Contains("FillLevelSchema fill => CodingActiveFillLevelSchemaRenderer.Render", controller);
         Assert.Contains("IntrusionSchema intrusion => CodingActiveIntrusionSchemaRenderer.Render", controller);
-        Assert.DoesNotContain("RenderPipeBendOverlay(overlay, true, Brushes.Gold", active);
-        Assert.DoesNotContain("new Rectangle", active);
-        Assert.DoesNotContain("new System.Windows.Shapes.Polygon", active);
         Assert.Contains("public static class CodingActivePipeBendSchemaRenderer", pipeBendRenderer);
         Assert.Contains("CodingPipeBendOverlayRenderer.Render", pipeBendRenderer);
         Assert.Contains("new System.Windows.Shapes.Line", pipeBendRenderer);
@@ -150,14 +157,18 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var active = File.ReadAllText(activePath);
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.DoesNotContain("private void RenderActiveCodingSchema", schema);
-        Assert.DoesNotContain("private void RenderSchemaPipeReference", schema);
-        Assert.DoesNotContain("private void AddSchemaLabel", schema);
+        AssertNoForbiddenTokens(
+            schema,
+            "private void RenderActiveCodingSchema",
+            "private void RenderSchemaPipeReference",
+            "private void AddSchemaLabel");
         Assert.Contains("private void RenderActiveCodingSchema", active);
         Assert.Contains("CodingActiveSchemaRenderWorkflow.Execute", active);
-        Assert.DoesNotContain("case PipeBendSchema bend", active);
-        Assert.DoesNotContain("case FillLevelSchema fill", active);
-        Assert.DoesNotContain("case IntrusionSchema intrusion", active);
+        AssertNoForbiddenTokens(
+            active,
+            "case PipeBendSchema bend",
+            "case FillLevelSchema fill",
+            "case IntrusionSchema intrusion");
         Assert.Contains("public static class CodingSchemaOverlayRenderer", renderer);
         Assert.Contains("AddPipeReference", renderer);
         Assert.Contains("AddLabel", renderer);
@@ -185,9 +196,11 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         Assert.Contains("_codingOverlayRenderController.RenderReferenceDn", schema);
         Assert.Contains("_codingOverlayRenderState.ShowReferenceDn", schema);
         Assert.Contains("_codingOverlayRenderState", state);
-        Assert.DoesNotContain("_showReferenceDn", schema + state);
-        Assert.DoesNotContain("ReferenceDnGeometry.BuildCircleRect", schema);
-        Assert.DoesNotContain("Ref: DN", schema);
+        AssertNoForbiddenTokens(schema + state, "_showReferenceDn");
+        AssertNoForbiddenTokens(
+            schema,
+            "ReferenceDnGeometry.BuildCircleRect",
+            "Ref: DN");
         Assert.Contains("public static class ReferenceDnOverlayRenderer", renderer);
         Assert.Contains("ReferenceDnGeometry.BuildCircleRect", renderer);
         Assert.Contains("new System.Windows.Shapes.Ellipse", renderer);
@@ -219,12 +232,14 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var aiRenderer = File.ReadAllText(aiRendererPath);
 
         Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
-        Assert.DoesNotContain("CodingArcOverlayRenderer.Render", overlayRendering);
+        AssertNoForbiddenTokens(
+            overlayRendering,
+            "CodingArcOverlayRenderer.Render",
+            "CreateArcPath");
         Assert.Contains("CodingArcOverlayRenderer.Render", dispatcher);
         Assert.Contains("_codingOverlayRenderController.RenderAiOverlays", aiRendering);
         Assert.Contains("CodingArcOverlayRenderer.Render", aiRenderer);
-        Assert.DoesNotContain("CreateArcPath", overlayRendering);
-        Assert.DoesNotContain("CreateArcPath", aiRendering);
+        AssertNoForbiddenTokens(aiRendering, "CreateArcPath");
         Assert.Contains("public static class CodingArcOverlayRenderer", renderer);
         Assert.Contains("new System.Windows.Shapes.Path", renderer);
         Assert.Contains("new ArcSegment", renderer);
@@ -250,9 +265,11 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var dispatcher = File.ReadAllText(dispatcherPath);
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.DoesNotContain("RenderRulerOverlay", overlayRendering);
+        AssertNoForbiddenTokens(
+            overlayRendering,
+            "RenderRulerOverlay",
+            "CodingRulerOverlayRenderer.Render");
         Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
-        Assert.DoesNotContain("CodingRulerOverlayRenderer.Render", overlayRendering);
         Assert.Contains("CodingRulerOverlayRenderer.Render", dispatcher);
         Assert.Contains("public static class CodingRulerOverlayRenderer", renderer);
         Assert.Contains("new System.Windows.Shapes.Line", renderer);
@@ -286,9 +303,11 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var dotRenderer = File.ReadAllText(dotRendererPath);
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.DoesNotContain("RenderPipeBendOverlay", overlayRendering);
+        AssertNoForbiddenTokens(
+            overlayRendering,
+            "RenderPipeBendOverlay",
+            "CodingPipeBendOverlayRenderer.Render");
         Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
-        Assert.DoesNotContain("CodingPipeBendOverlayRenderer.Render", overlayRendering);
         Assert.Contains("CodingPipeBendOverlayRenderer.Render", dispatcher);
         Assert.Contains("public static class CodingOverlayDotMarkerRenderer", dotRenderer);
         Assert.Contains("new System.Windows.Shapes.Ellipse", dotRenderer);
@@ -318,9 +337,11 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var dispatcher = File.ReadAllText(dispatcherPath);
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.DoesNotContain("RenderLateralCircleOverlay", overlayRendering);
+        AssertNoForbiddenTokens(
+            overlayRendering,
+            "RenderLateralCircleOverlay",
+            "CodingLateralCircleOverlayRenderer.Render");
         Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
-        Assert.DoesNotContain("CodingLateralCircleOverlayRenderer.Render", overlayRendering);
         Assert.Contains("CodingLateralCircleOverlayRenderer.Render", dispatcher);
         Assert.Contains("public static class CodingLateralCircleOverlayRenderer", renderer);
         Assert.Contains("overlay.DnRatioPercent", renderer);
@@ -345,12 +366,14 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var measurementPanel = File.ReadAllText(measurementPanelPath);
         var controls = File.ReadAllText(controlsPath);
 
-        Assert.DoesNotContain("private void UpdateCodingOverlayInfo", overlayRendering);
+        AssertNoForbiddenTokens(overlayRendering, "private void UpdateCodingOverlayInfo");
         Assert.Contains("private void UpdateCodingOverlayInfo", measurementPanel);
         Assert.Contains("CodingOverlayMeasurementFormatter.BuildPanelState", measurementPanel);
         Assert.Contains("CodingMeasurementPanelControls.Apply", measurementPanel);
-        Assert.DoesNotContain("CodingMeasurementPanel.Visibility", measurementPanel);
-        Assert.DoesNotContain("TxtCodingMeasurement.Text", measurementPanel);
+        AssertNoForbiddenTokens(
+            measurementPanel,
+            "CodingMeasurementPanel.Visibility",
+            "TxtCodingMeasurement.Text");
         Assert.Contains("public static void Apply", controls);
     }
 
@@ -372,10 +395,12 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var renderer = File.ReadAllText(rendererPath);
 
         Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
-        Assert.DoesNotContain("CodingOverlayMeasurementLabelRenderer.Add", overlayRendering);
+        AssertNoForbiddenTokens(
+            overlayRendering,
+            "CodingOverlayMeasurementLabelRenderer.Add",
+            "new TextBlock",
+            "FontWeights.SemiBold");
         Assert.Contains("CodingOverlayMeasurementLabelRenderer.Add", dispatcher);
-        Assert.DoesNotContain("new TextBlock", overlayRendering);
-        Assert.DoesNotContain("FontWeights.SemiBold", overlayRendering);
         Assert.Contains("public static class CodingOverlayMeasurementLabelRenderer", renderer);
         Assert.Contains("new TextBlock", renderer);
         Assert.Contains("FontWeights.SemiBold", renderer);
@@ -400,18 +425,20 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var dispatcher = File.ReadAllText(dispatcherPath);
         var renderer = File.ReadAllText(rendererPath);
 
-        Assert.DoesNotContain("var rect = new Rectangle", overlayRendering);
-        Assert.DoesNotContain("var dot = new System.Windows.Shapes.Ellipse", overlayRendering);
-        Assert.DoesNotContain("var poly = new System.Windows.Shapes.Polygon", overlayRendering);
-        Assert.DoesNotContain("RenderLineOverlay", overlayRendering);
-        Assert.DoesNotContain("RenderRectangleOverlay", overlayRendering);
-        Assert.DoesNotContain("RenderPointOverlay", overlayRendering);
-        Assert.DoesNotContain("RenderEllipseOverlay", overlayRendering);
-        Assert.DoesNotContain("RenderFreehandOverlay", overlayRendering);
+        AssertNoForbiddenTokens(
+            overlayRendering,
+            "var rect = new Rectangle",
+            "var dot = new System.Windows.Shapes.Ellipse",
+            "var poly = new System.Windows.Shapes.Polygon",
+            "RenderLineOverlay",
+            "RenderRectangleOverlay",
+            "RenderPointOverlay",
+            "RenderEllipseOverlay",
+            "RenderFreehandOverlay",
+            "switch (overlay.ToolType)",
+            "new SolidColorBrush",
+            "CodingBasicOverlayRenderer.Render");
         Assert.Contains("_codingOverlayRenderController.RenderOverlayGeometry", overlayRendering);
-        Assert.DoesNotContain("switch (overlay.ToolType)", overlayRendering);
-        Assert.DoesNotContain("new SolidColorBrush", overlayRendering);
-        Assert.DoesNotContain("CodingBasicOverlayRenderer.Render", overlayRendering);
         Assert.Contains("public static class CodingOverlayGeometryRenderer", dispatcher);
         Assert.Contains("switch (overlay.ToolType)", dispatcher);
         Assert.Contains("CodingBasicOverlayRenderer.Render", dispatcher);
@@ -449,22 +476,23 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         var primitiveRenderer = File.ReadAllText(primitiveRendererPath);
         var rectangleRenderer = File.ReadAllText(rectangleRendererPath);
 
-        Assert.DoesNotContain("RenderAiRectangleOverlay(", aiOverlay);
         Assert.Contains("CodingAiOverlayRenderCommandWorkflow.Execute", aiOverlay);
         Assert.Contains("_codingOverlayRenderController.RenderAiOverlays", aiOverlay);
         Assert.Contains("_codingSessionHost", aiOverlay);
-        Assert.DoesNotContain("_codingVm", aiOverlay);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return", aiOverlay);
-        Assert.DoesNotContain("CodingAiRectangleOverlayRenderer.Render", aiOverlay);
-        Assert.DoesNotContain("CodingAiPrimitiveOverlayRenderer.Render", aiOverlay);
-        Assert.DoesNotContain("CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag", aiOverlay);
-        Assert.DoesNotContain("CodingAiOverlayDisplayPolicy.StrokeColor", aiOverlay);
-        Assert.DoesNotContain("switch (geo.ToolType)", aiOverlay);
-        Assert.DoesNotContain("StartsWith(OverlayTags.AiPrefix", aiOverlay);
-        Assert.DoesNotContain("var labelBorder = new Border", aiOverlay);
-        Assert.DoesNotContain("CodingAiOverlayDisplayPolicy.LabelText", aiOverlay);
-        Assert.DoesNotContain("new System.Windows.Shapes.Line", aiOverlay);
-        Assert.DoesNotContain("new System.Windows.Shapes.Ellipse", aiOverlay);
+        AssertNoForbiddenTokens(
+            aiOverlay,
+            "RenderAiRectangleOverlay(",
+            "if (!_codingSessionHost.HasViewModel) return",
+            "CodingAiRectangleOverlayRenderer.Render",
+            "CodingAiPrimitiveOverlayRenderer.Render",
+            "CodingOverlayCleanupPolicy.ShouldRemoveAiOverlayTag",
+            "CodingAiOverlayDisplayPolicy.StrokeColor",
+            "switch (geo.ToolType)",
+            "StartsWith(OverlayTags.AiPrefix",
+            "var labelBorder = new Border",
+            "CodingAiOverlayDisplayPolicy.LabelText",
+            "new System.Windows.Shapes.Line",
+            "new System.Windows.Shapes.Ellipse");
         Assert.Contains("if (!request.HasCodingViewModel)", renderCommandWorkflow);
         Assert.Contains("actions.RenderAiOverlays()", renderCommandWorkflow);
         Assert.Contains("public static bool ShouldRemoveAiOverlayTag", cleanupPolicy);
@@ -481,5 +509,19 @@ public sealed class PlayerWindowOverlayRenderingArchitectureTests
         Assert.Contains("public static class CodingAiRectangleOverlayRenderer", rectangleRenderer);
         Assert.Contains("var labelBorder = new Border", rectangleRenderer);
         Assert.Contains("CodingAiOverlayDisplayPolicy.LabelText", rectangleRenderer);
+    }
+
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = new List<string>();
+        foreach (var token in forbiddenTokens)
+        {
+            if (source.Contains(token, StringComparison.Ordinal))
+                hits.Add(token);
+        }
+
+        Assert.True(
+            hits.Count == 0,
+            "Verbotene alte PlayerWindow-Overlay-Rendering-Logik gefunden: " + string.Join(", ", hits));
     }
 }

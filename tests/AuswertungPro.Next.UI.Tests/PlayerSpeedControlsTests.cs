@@ -21,9 +21,11 @@ public sealed class PlayerSpeedControlsTests
             var speed2 = new ToggleButton();
             var speed4 = new ToggleButton();
             var speed8 = new ToggleButton();
+            var speedSlider = CreateSpeedSlider();
 
             var controls = new PlayerSpeedControls(
                 rateText,
+                speedSlider,
                 speed05,
                 speed1,
                 speed15,
@@ -34,6 +36,7 @@ public sealed class PlayerSpeedControlsTests
             controls.Update(1.5f);
 
             Assert.Equal("1.5x", rateText.Text);
+            Assert.Equal(1.5, speedSlider.Value);
             Assert.False(speed05.IsChecked);
             Assert.False(speed1.IsChecked);
             Assert.True(speed15.IsChecked);
@@ -55,9 +58,11 @@ public sealed class PlayerSpeedControlsTests
             var speed2 = new ToggleButton();
             var speed4 = new ToggleButton();
             var speed8 = new ToggleButton();
+            var speedSlider = CreateSpeedSlider();
 
             var controls = new PlayerSpeedControls(
                 rateText,
+                speedSlider,
                 speed05,
                 speed1,
                 speed15,
@@ -68,6 +73,7 @@ public sealed class PlayerSpeedControlsTests
             controls.Update(0f);
 
             Assert.Equal("1x", rateText.Text);
+            Assert.Equal(1.0, speedSlider.Value);
             Assert.False(speed05.IsChecked);
             Assert.True(speed1.IsChecked);
             Assert.False(speed15.IsChecked);
@@ -98,4 +104,12 @@ public sealed class PlayerSpeedControlsTests
         if (exception is not null)
             throw exception;
     }
+
+    private static Slider CreateSpeedSlider()
+        => new()
+        {
+            Minimum = 0.25,
+            Maximum = 8,
+            Value = 1
+        };
 }

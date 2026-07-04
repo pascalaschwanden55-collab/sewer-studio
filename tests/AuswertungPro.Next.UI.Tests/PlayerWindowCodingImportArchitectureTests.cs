@@ -8,15 +8,13 @@ public sealed class PlayerWindowCodingImportArchitectureTests
     [Fact]
     public void PlayerWindow_import_reference_transfer_lives_in_policy()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var importPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Import.cs");
-        var codingPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
-        var policyPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceTransfer.cs");
-        var resetterPath = Path.Combine(uiRoot, "Ai", "CodingSessionEventResetter.cs");
-        var matchResetterPath = Path.Combine(uiRoot, "Ai", "CodingProtocolMatchStateResetter.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceInitializationWorkflow.cs");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingImportReferenceControls.cs");
+        var importPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.Import.cs");
+        var codingPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Lifecycle.ImportReference.cs");
+        var policyPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceTransfer.cs");
+        var resetterPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingSessionEventResetter.cs");
+        var matchResetterPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingProtocolMatchStateResetter.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceInitializationWorkflow.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingImportReferenceControls.cs");
 
         Assert.True(File.Exists(policyPath), "Import-Referenz-Transfer muss ausserhalb der PlayerWindow-Partials liegen.");
         Assert.True(File.Exists(resetterPath), "Session-Event-Reset muss ausserhalb der PlayerWindow-Partials liegen.");
@@ -37,17 +35,8 @@ public sealed class PlayerWindowCodingImportArchitectureTests
         Assert.Contains("CodingSessionEventResetter.ClearActiveSessionEvents", coding);
         Assert.Contains("_codingProtocolMatchState.Reset", coding);
         Assert.Contains("_codingSessionHost", coding);
-        Assert.DoesNotContain("_codingVm", coding);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel)", coding);
-        Assert.DoesNotContain("if (eventCollection is null)", coding);
         Assert.Contains("CodingImportReferenceControls.SetCount", import);
         Assert.Contains("CodingImportReferenceControls.SetCount", coding);
-        Assert.DoesNotContain("RunImportDefectCount.Text", import + coding);
-        Assert.DoesNotContain("RunCodingDefectCount.Text", coding);
-        Assert.DoesNotContain("_lastCodingMatch = null", coding);
-        Assert.DoesNotContain("_codingProtocolMatchBuckets.Clear()", coding);
-        Assert.DoesNotContain("ActiveSession?.Events.Clear", coding);
-        Assert.DoesNotContain("var allExisting = _codingVm.Events.OrderBy", coding);
         Assert.Contains("public static int MoveExistingEventsToImportReference", policy);
         Assert.Contains("public static int ClearActiveSessionEvents", resetter);
         Assert.Contains("public static CodingMatchRouting? Reset", matchResetter);

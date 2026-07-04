@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Media;
 using AuswertungPro.Next.UI.DataPage;
 
 namespace AuswertungPro.Next.UI.Controls;
@@ -21,9 +22,24 @@ public partial class FilterChipBar : UserControl
     public FilterChipBar()
     {
         InitializeComponent();
+        ApplyZustandsklasseColors();
     }
 
     private ToggleButton[] ZkChips => new[] { Zk0, Zk1, Zk2, Zk3, Zk4 };
+
+    private void ApplyZustandsklasseColors()
+    {
+        foreach (var chip in ZkChips)
+        {
+            var key = chip.Content?.ToString();
+            var background = ZustandsklasseColorPalette.TryGetBackground(key);
+            if (background is null)
+                continue;
+
+            chip.Background = background;
+            chip.Foreground = Brushes.Black;
+        }
+    }
 
     /// <summary>Zustandsklassen-Chips schliessen sich gegenseitig aus.</summary>
     private void ZkChip_Changed(object sender, RoutedEventArgs e)

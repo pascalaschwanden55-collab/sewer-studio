@@ -42,7 +42,7 @@ public sealed class GridDockingControllerTests
                 undockButton,
                 viewToggle);
 
-            Assert.DoesNotContain(activeView, host.Children.OfType<UIElement>());
+            Assert.Empty(host.Children.OfType<UIElement>());
             Assert.Equal(Visibility.Visible, activeView.Visibility);
             Assert.Equal(Visibility.Visible, placeholder.Visibility);
             Assert.False(undockButton.IsEnabled);

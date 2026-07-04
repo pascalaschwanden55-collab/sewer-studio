@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
@@ -81,17 +82,25 @@ public sealed class PlayerWindowWiringArchitectureTests
         var controllerSetInitializer = File.Exists(controllerSetInitializerPath) ? File.ReadAllText(controllerSetInitializerPath) : "";
 
         Assert.Contains("_playerControllers = PlayerWindowControllerSetInitializer.Create", windowRoot);
-        Assert.DoesNotContain("new PlayerWindowControllerSetControls(", windowRoot);
+        AssertNoForbiddenTokens(
+            windowRoot,
+            "new PlayerWindowControllerSetControls(",
+            "var controllerSet = PlayerWindowControllerSetFactory.Create",
+            "= controllerSet.",
+            "new DamageMarkerController",
+            "new QuickScanController",
+            "new PlayerPositionControls",
+            "new PlayerSpeedControls",
+            "new PlayerMarkToolControls",
+            "new CodingOverlayRenderController",
+            "WindowStateManager.Track(this)",
+            "VideoNameText.Text",
+            "VideoPathText.Text",
+            "PositionSlider.AddHandler",
+            "Closed += (_, __)",
+            "Deactivated += (_, _)");
         Assert.Contains("new PlayerWindowControllerSetControls(", controllerSetInitializer);
         Assert.Contains("window.DamageMarkerCanvas", controllerSetInitializer);
-        Assert.DoesNotContain("var controllerSet = PlayerWindowControllerSetFactory.Create", windowRoot);
-        Assert.DoesNotContain("= controllerSet.", windowRoot);
-        Assert.DoesNotContain("new DamageMarkerController", windowRoot);
-        Assert.DoesNotContain("new QuickScanController", windowRoot);
-        Assert.DoesNotContain("new PlayerPositionControls", windowRoot);
-        Assert.DoesNotContain("new PlayerSpeedControls", windowRoot);
-        Assert.DoesNotContain("new PlayerMarkToolControls", windowRoot);
-        Assert.DoesNotContain("new CodingOverlayRenderController", windowRoot);
         Assert.Contains("new DamageMarkerController", controllerSetFactory);
         Assert.Contains("new QuickScanController", controllerSetFactory);
         Assert.Contains("new PlayerPositionControls", controllerSetFactory);
@@ -103,38 +112,52 @@ public sealed class PlayerWindowWiringArchitectureTests
         Assert.Contains("WireWindowSurfaceEvents();", windowRoot);
         Assert.Contains("PlayerWindowHeaderControls.ApplyVideoInfo", windowRoot);
         Assert.Contains("PlayerWindowStateControls.Track(this)", windowRoot);
-        Assert.DoesNotContain("WindowStateManager.Track(this)", windowRoot);
         Assert.Contains("WindowStateManager.Track", stateControls);
-        Assert.DoesNotContain("VideoNameText.Text", windowRoot);
-        Assert.DoesNotContain("VideoPathText.Text", windowRoot);
         Assert.Contains("public static void ApplyVideoInfo", headerControls);
-        Assert.DoesNotContain("PositionSlider.AddHandler", windowRoot);
-        Assert.DoesNotContain("Closed += (_, __)", windowRoot);
-        Assert.DoesNotContain("Deactivated += (_, _)", windowRoot);
         Assert.Contains("private void WireWindowLifecycleEvents", wiring);
         Assert.Contains("PlayerLifecycleEventBinder.Bind", wiring);
-        Assert.DoesNotContain("Loaded += PlayerWindow_EnsureVisibleOnLoaded", wiring);
-        Assert.DoesNotContain("Deactivated += PlayerWindow_Deactivated", wiring);
-        Assert.DoesNotContain("Activated += PlayerWindow_Activated", wiring);
-        Assert.DoesNotContain("Closing += OnClosing", wiring);
-        Assert.DoesNotContain("Loaded += PlayerWindow_Loaded", wiring);
-        Assert.DoesNotContain("Closed += PlayerWindow_Closed", wiring);
+        AssertNoForbiddenTokens(
+            wiring,
+            "Loaded += PlayerWindow_EnsureVisibleOnLoaded",
+            "Deactivated += PlayerWindow_Deactivated",
+            "Activated += PlayerWindow_Activated",
+            "Closing += OnClosing",
+            "Loaded += PlayerWindow_Loaded",
+            "Closed += PlayerWindow_Closed",
+            "DamageMarkerCanvas.SizeChanged +=",
+            "HeatmapCanvas.SizeChanged +=",
+            "DetectionCanvas.MouseLeftButtonDown +=",
+            "VideoView.SizeChanged +=",
+            "SizeChanged += (_, __) => UpdateCodingOverlayViewport()",
+            "LocationChanged += (_, __) => UpdateCodingOverlayViewport()",
+            "AddHandler(Keyboard.PreviewKeyDownEvent",
+            "new KeyEventHandler",
+            "Dispatcher.BeginInvoke",
+            "new Action(UpdateCodingOverlayViewport)",
+            "System.Windows.Application.Current?.MainWindow",
+            "Application.Current",
+            "Keyboard.Focus(this)",
+            "Focus();",
+            "Activate();",
+            "main!.Activate()",
+            "Focusable = true",
+            "main?.WindowState == WindowState.Minimized",
+            "main!.WindowState = WindowState.Normal",
+            "if (_codingOverlaySuspendDepth > 0)",
+            "if (!_deactivatedByExternalWindow)",
+            "if (!string.IsNullOrWhiteSpace(_initialOverlayText))",
+            "Codier-Modus sauber",
+            "Cleanup() ist idempotent",
+            "private void WirePositionSliderEvents",
+            "PositionSlider.AddHandler");
         Assert.Contains("window.Loaded += ensureVisibleOnLoaded", lifecycleEventBinder);
         Assert.Contains("window.Closing += closing", lifecycleEventBinder);
         Assert.Contains("private void WireWindowSurfaceEvents", wiring);
         Assert.Contains("PlayerSurfaceEventBinder.Bind", wiring);
-        Assert.DoesNotContain("DamageMarkerCanvas.SizeChanged +=", wiring);
-        Assert.DoesNotContain("HeatmapCanvas.SizeChanged +=", wiring);
-        Assert.DoesNotContain("DetectionCanvas.MouseLeftButtonDown +=", wiring);
-        Assert.DoesNotContain("VideoView.SizeChanged +=", wiring);
-        Assert.DoesNotContain("SizeChanged += (_, __) => UpdateCodingOverlayViewport()", wiring);
-        Assert.DoesNotContain("LocationChanged += (_, __) => UpdateCodingOverlayViewport()", wiring);
         Assert.Contains("damageMarkerSurface.SizeChanged += damageMarkerSizeChanged", surfaceEventBinder);
         Assert.Contains("window.LocationChanged += windowLocationChanged", surfaceEventBinder);
         Assert.Contains("private void WireKeyboardEvents", wiring);
         Assert.Contains("PlayerKeyboardEventBinder.Bind", wiring);
-        Assert.DoesNotContain("AddHandler(Keyboard.PreviewKeyDownEvent", wiring);
-        Assert.DoesNotContain("new KeyEventHandler", wiring);
         Assert.Contains(".AddHandler(Keyboard.PreviewKeyDownEvent", keyboardEventBinder);
         Assert.Contains("private void PlayerWindow_Closed", wiring);
         Assert.Contains("PlayerWindowActivationWorkflow.Deactivate", wiring);
@@ -149,17 +172,6 @@ public sealed class PlayerWindowWiringArchitectureTests
         Assert.Contains("PlayerChromeControls.IsMinimized(main)", wiring);
         Assert.Contains("PlayerChromeControls.RestoreNormal(main!)", wiring);
         Assert.Contains("PlayerApplicationControls.CurrentMainWindow()", wiring);
-        Assert.DoesNotContain("Dispatcher.BeginInvoke", wiring);
-        Assert.DoesNotContain("new Action(UpdateCodingOverlayViewport)", wiring);
-        Assert.DoesNotContain("System.Windows.Application.Current?.MainWindow", wiring);
-        Assert.DoesNotContain("Application.Current", wiring);
-        Assert.DoesNotContain("Keyboard.Focus(this)", wiring);
-        Assert.DoesNotContain("Focus();", wiring);
-        Assert.DoesNotContain("Activate();", wiring);
-        Assert.DoesNotContain("main!.Activate()", wiring);
-        Assert.DoesNotContain("Focusable = true", wiring);
-        Assert.DoesNotContain("main?.WindowState == WindowState.Minimized", wiring);
-        Assert.DoesNotContain("main!.WindowState = WindowState.Normal", wiring);
         Assert.Contains("DispatcherPriority.Loaded", dispatcherScheduler);
         Assert.Contains("DispatcherPriority.Input", dispatcherScheduler);
         Assert.Contains("public static bool FocusElement", focusControls);
@@ -170,9 +182,6 @@ public sealed class PlayerWindowWiringArchitectureTests
         Assert.Contains("public static void RestoreNormal", chromeControls);
         Assert.Contains("public static Window? CurrentMainWindow()", applicationControls);
         Assert.Contains("Application.Current?.MainWindow", applicationControls);
-        Assert.DoesNotContain("if (_codingOverlaySuspendDepth > 0)", wiring);
-        Assert.DoesNotContain("if (!_deactivatedByExternalWindow)", wiring);
-        Assert.DoesNotContain("if (!string.IsNullOrWhiteSpace(_initialOverlayText))", wiring);
         Assert.Contains("PlayerWindowClosedWorkflow.Execute", wiring);
         Assert.Contains("public static class PlayerWindowClosedWorkflow", closedWorkflow);
         Assert.Contains("request.CodingOverlaySuspendDepth", activationWorkflow);
@@ -183,15 +192,19 @@ public sealed class PlayerWindowWiringArchitectureTests
         Assert.Contains("actions.ShowOverlay", loadedWorkflow);
         Assert.Contains("actions.StopCodingOsdTimer()", closedWorkflow);
         Assert.Contains("actions.StopLiveDetection()", closedWorkflow);
-        Assert.DoesNotContain("Codier-Modus sauber", wiring);
-        Assert.DoesNotContain("Cleanup() ist idempotent", wiring);
-        Assert.DoesNotContain("private void WirePositionSliderEvents", wiring);
-        Assert.DoesNotContain("PositionSlider.AddHandler", wiring);
         Assert.Contains("private void WirePositionSliderEvents", slider);
         Assert.Contains("PlayerPositionSliderEventBinder.Bind", slider);
-        Assert.DoesNotContain("PositionSlider.AddHandler", slider);
-        Assert.DoesNotContain("new DragStartedEventHandler", slider);
-        Assert.DoesNotContain("new DragCompletedEventHandler", slider);
+        AssertNoForbiddenTokens(
+            slider,
+            "PositionSlider.AddHandler",
+            "new DragStartedEventHandler",
+            "new DragCompletedEventHandler",
+            "if (!_isDragging)",
+            "_isDragging = false",
+            "SetDragging: value => _isDragging = value",
+            "SetWasPlayingBeforeDrag: value => _wasPlayingBeforeDrag = value",
+            "_player.SetPause(true)",
+            "_player.SetPause(false)");
         Assert.Contains(".AddHandler(Thumb.DragStartedEvent", sliderEventBinder);
         Assert.Contains(".AddHandler(Thumb.DragCompletedEvent", sliderEventBinder);
         Assert.Contains("private void PositionSlider_DragStarted", slider);
@@ -200,27 +213,37 @@ public sealed class PlayerWindowWiringArchitectureTests
         Assert.Contains("PlayerPositionSliderDragWorkflow.Complete", slider);
         Assert.Contains("PlayerPositionSliderDragWorkflow.PreviewMouseUp", slider);
         Assert.Contains("PlayerPositionSliderDragWorkflow.LostMouseCapture", slider);
-        Assert.DoesNotContain("if (!_isDragging)", slider);
-        Assert.DoesNotContain("_isDragging = false", slider);
-        Assert.DoesNotContain("private bool _isDragging", state);
-        Assert.DoesNotContain("private bool _wasPlayingBeforeDrag", state);
-        Assert.DoesNotContain("private DateTime _lastScrubSeek", state);
-        Assert.DoesNotContain("private readonly PlayerPositionSliderStateController _positionSliderStateController = new();", state);
+        AssertNoForbiddenTokens(
+            state,
+            "private bool _isDragging",
+            "private bool _wasPlayingBeforeDrag",
+            "private DateTime _lastScrubSeek",
+            "private readonly PlayerPositionSliderStateController _positionSliderStateController = new();");
         Assert.Contains("private PlayerPositionSliderStateController _positionSliderStateController => _playerControllers.PositionSliderStateController", state);
         Assert.Contains("_positionSliderStateController.IsDragging", slider);
         Assert.Contains("_positionSliderStateController.WasPlayingBeforeDrag", slider);
         Assert.Contains("_positionSliderStateController.CreateDragActions", slider);
-        Assert.DoesNotContain("SetDragging: value => _isDragging = value", slider);
-        Assert.DoesNotContain("SetWasPlayingBeforeDrag: value => _wasPlayingBeforeDrag = value", slider);
         Assert.Contains("PlayerPositionSliderDragPlayback.Start", dragWorkflow);
         Assert.Contains("PlayerPositionSliderDragPlayback.Complete", dragWorkflow);
-        Assert.DoesNotContain("_player.SetPause(true)", slider);
-        Assert.DoesNotContain("_player.SetPause(false)", slider);
         Assert.Contains("public static class PlayerPositionSliderDragPlayback", dragPlayback);
         Assert.Contains("public static class PlayerPositionSliderDragWorkflow", dragWorkflow);
         Assert.Contains("public sealed class PlayerPositionSliderStateController", sliderStateController);
         Assert.Contains("public bool IsDragging", sliderStateController);
         Assert.Contains("public bool WasPlayingBeforeDrag", sliderStateController);
         Assert.Contains("private void WireWindowSurfaceEvents", wiring);
+    }
+
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = new List<string>();
+        foreach (var token in forbiddenTokens)
+        {
+            if (source.Contains(token, StringComparison.Ordinal))
+                hits.Add(token);
+        }
+
+        Assert.True(
+            hits.Count == 0,
+            "Verbotene alte PlayerWindow-Wiring-Logik gefunden: " + string.Join(", ", hits));
     }
 }

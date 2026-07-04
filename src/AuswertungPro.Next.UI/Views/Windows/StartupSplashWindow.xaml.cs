@@ -25,6 +25,10 @@ public partial class StartupSplashWindow : Window
     private const double CanvasCenterY = 260;
     private const double ProjectionScale = 170;
     private const double CameraDistance = 4.6;
+    private const double ProgressFullWidth = 920;
+    private const double ProgressReadyWidth = ProgressFullWidth * 0.9;
+    private static readonly TimeSpan MinimumDisplayTime = TimeSpan.FromMilliseconds(3500);
+    private static readonly TimeSpan ReadyProgressDuration = TimeSpan.FromMilliseconds(260);
 
     private readonly DispatcherTimer _statusTimer;
     private readonly Stopwatch _animationClock = new();
@@ -37,6 +41,8 @@ public partial class StartupSplashWindow : Window
     // Wird gesetzt, sobald der Fortschrittsbalken durchgelaufen ist (oder das Fenster schliesst).
     // App.xaml.cs wartet darauf, damit die Startanimation nicht abgeschnitten wird.
     private readonly TaskCompletionSource<bool> _progressDone =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<bool> _minimumDisplayDone =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private double[] _screenX = Array.Empty<double>();
@@ -63,6 +69,9 @@ public partial class StartupSplashWindow : Window
     private double _flareAccumulator;
     private bool _renderLoopActive;
     private bool _emitPulses;
+    private bool _skipRequested;
+    private bool _readySignaled;
+    private Task? _finishTask;
 
     private static readonly Color AccentDeep = Color.FromRgb(0x25, 0x63, 0xEB);
     private static readonly Color AccentBlue = Color.FromRgb(0x3B, 0x82, 0xF6);
@@ -170,9 +179,12 @@ public partial class StartupSplashWindow : Window
         _statusTimer.Tick += OnStatusTick;
 
         Loaded += OnLoaded;
+        MouseLeftButtonDown += (_, _) => RequestSkip();
+        PreviewKeyDown += (_, _) => RequestSkip();
         Closed += (_, _) =>
         {
             _progressDone.TrySetResult(true);
+            _minimumDisplayDone.TrySetResult(true);
             try { _statusTimer.Stop(); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Splash.Closed] StatusTimer: {ex.Message}"); }
             StopRenderLoop();
@@ -186,9 +198,10 @@ public partial class StartupSplashWindow : Window
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
         BeginAnimation(OpacityProperty, windowFade);
+        Focus();
 
         // Versionszeile aus der zentralen Versionsnummer aufbauen.
-        VersionText.Text = AppIdentity.DisplayVersion + "  |  Neural Network Core  |  VSA-KEK 2023  |  Local AI";
+        VersionText.Text = AppIdentity.DisplayVersion + "  |  Neural Network Core  |  VSA-KEK 2020  |  Local AI";
 
         BuildNeuralNetwork();
         RenderFrame();
@@ -707,22 +720,147 @@ public partial class StartupSplashWindow : Window
 
     private void StartProgressBar()
     {
-        var grow = new DoubleAnimation(0, 920, TimeSpan.FromMilliseconds(10500))
+        var grow = new DoubleAnimation(0, ProgressReadyWidth, MinimumDisplayTime)
         {
-            BeginTime = TimeSpan.FromMilliseconds(900),
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
-        // Signalisieren, sobald der Balken voll durchgelaufen ist.
-        grow.Completed += (_, _) => _progressDone.TrySetResult(true);
+        // Der Balken bleibt bei 90 %, bis die Anwendung wirklich bereit ist.
+        grow.Completed += (_, _) =>
+        {
+            _minimumDisplayDone.TrySetResult(true);
+            if (_readySignaled)
+                _ = CompleteProgressAsync();
+        };
         ProgressBar.BeginAnimation(WidthProperty, grow);
     }
 
     /// <summary>
-    /// Task, der abgeschlossen ist, sobald der Fortschrittsbalken vollstaendig
-    /// durchgelaufen ist (oder das Splash-Fenster geschlossen wurde). App.xaml.cs
-    /// wartet darauf, bevor der Splash ausgeblendet wird.
+    /// Meldet dem Splash, dass der ServiceProvider steht. Danach laeuft der Balken
+    /// nach der Mindestanzeigezeit auf 100 % oder endet sofort, wenn der Nutzer ueberspringt.
+    /// </summary>
+    public async Task SignalReadyAsync()
+    {
+        _readySignaled = true;
+
+        if (_skipRequested)
+        {
+            ProgressBar.BeginAnimation(WidthProperty, null);
+            ProgressBar.Width = ProgressFullWidth;
+            _progressDone.TrySetResult(true);
+            return;
+        }
+
+        await _minimumDisplayDone.Task.ConfigureAwait(true);
+        await CompleteProgressAsync().ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Task, der abgeschlossen ist, sobald die Startanimation bereit zum Ausblenden ist.
     /// </summary>
     public Task WaitForProgressAsync() => _progressDone.Task;
+
+    private void RequestSkip()
+    {
+        if (_progressDone.Task.IsCompleted)
+            return;
+
+        _skipRequested = true;
+        StatusText.Text = "Startanimation uebersprungen...";
+        ProgressBar.BeginAnimation(WidthProperty, null);
+        ProgressBar.Width = ProgressFullWidth;
+        _progressDone.TrySetResult(true);
+    }
+
+    private Task CompleteProgressAsync()
+    {
+        if (_finishTask is not null)
+            return _finishTask;
+
+        _finishTask = CompleteProgressCoreAsync();
+        return _finishTask;
+    }
+
+    private async Task CompleteProgressCoreAsync()
+    {
+        if (_progressDone.Task.IsCompleted)
+            return;
+
+        _statusTimer.Stop();
+        StatusText.Text = StatusMessages[^1];
+        StatusText.Foreground = new SolidColorBrush(ReadyAccent);
+        StatusDot.Fill = new SolidColorBrush(ReadyAccent);
+        _emitPulses = false;
+        TriggerReadyBurst();
+        await AnimateProgressToAsync(ProgressFullWidth, ReadyProgressDuration).ConfigureAwait(true);
+        _progressDone.TrySetResult(true);
+    }
+
+    private Task AnimateProgressToAsync(double width, TimeSpan duration)
+    {
+        if (duration <= TimeSpan.Zero)
+        {
+            ProgressBar.Width = width;
+            return Task.CompletedTask;
+        }
+
+        var tcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var animation = new DoubleAnimation
+        {
+            To = width,
+            Duration = duration,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        animation.Completed += (_, _) => tcs.TrySetResult(null);
+        ProgressBar.BeginAnimation(WidthProperty, animation, HandoffBehavior.SnapshotAndReplace);
+        return tcs.Task;
+    }
+
+    private void TriggerReadyBurst()
+    {
+        if (_connections.Count > 0)
+        {
+            for (var i = 0; i < 8; i++)
+                FirePulse(_rng.Next(_connections.Count), ReadyAccent);
+        }
+
+        if (_nodes.Count > 0)
+        {
+            for (var i = 0; i < 3; i++)
+                SpawnFlare(_rng.Next(_nodes.Count));
+        }
+
+        if (_coreGlowScale is not null)
+        {
+            var pulse = new DoubleAnimation(1.0, 1.16, TimeSpan.FromMilliseconds(280))
+            {
+                AutoReverse = true,
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            _coreGlowScale.BeginAnimation(ScaleTransform.ScaleXProperty, pulse);
+            _coreGlowScale.BeginAnimation(ScaleTransform.ScaleYProperty, pulse);
+        }
+
+        var titleGlow = new DropShadowEffect
+        {
+            Color = ReadyAccent,
+            BlurRadius = 0,
+            ShadowDepth = 0,
+            Opacity = 0
+        };
+        TitleText.Effect = titleGlow;
+        var blur = new DoubleAnimation(0, 20, TimeSpan.FromMilliseconds(240))
+        {
+            AutoReverse = true,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        var opacity = new DoubleAnimation(0, 0.65, TimeSpan.FromMilliseconds(240))
+        {
+            AutoReverse = true,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        titleGlow.BeginAnimation(DropShadowEffect.BlurRadiusProperty, blur);
+        titleGlow.BeginAnimation(DropShadowEffect.OpacityProperty, opacity);
+    }
 
     private void OnStatusTick(object? sender, EventArgs e)
     {

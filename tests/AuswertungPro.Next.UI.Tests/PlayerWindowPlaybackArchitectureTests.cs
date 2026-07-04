@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using static AuswertungPro.Next.UI.Tests.TestRepoPaths;
 
@@ -49,9 +50,11 @@ public sealed class PlayerWindowPlaybackArchitectureTests
 
             var text = File.ReadAllText(path);
             Assert.Contains("_playerPlaybackControlHost", text);
-            Assert.DoesNotContain("_player.SetPause", text);
-            Assert.DoesNotContain("_player.IsPlaying", text);
-            Assert.DoesNotContain("_player.Play()", text);
+            AssertNoForbiddenTokens(
+                text,
+                "_player.SetPause",
+                "_player.IsPlaying",
+                "_player.Play()");
         }
     }
 
@@ -77,13 +80,15 @@ public sealed class PlayerWindowPlaybackArchitectureTests
             Assert.True(File.Exists(path), $"{fileName} muss als PlayerWindow-Partial existieren.");
 
             var text = File.ReadAllText(path);
-            Assert.DoesNotContain("_player is", text);
-            Assert.DoesNotContain("_player?", text);
-            Assert.DoesNotContain("_player!", text);
-            Assert.DoesNotContain("var player = _player", text);
-            Assert.DoesNotContain("_player.SetPause", text);
-            Assert.DoesNotContain("_player.IsPlaying", text);
-            Assert.DoesNotContain("_player.Time", text);
+            AssertNoForbiddenTokens(
+                text,
+                "_player is",
+                "_player?",
+                "_player!",
+                "var player = _player",
+                "_player.SetPause",
+                "_player.IsPlaying",
+                "_player.Time");
         }
     }
 
@@ -119,28 +124,32 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var runtime = File.Exists(runtimePath) ? File.ReadAllText(runtimePath) : "";
         var attachment = File.Exists(attachmentPath) ? File.ReadAllText(attachmentPath) : "";
 
-        Assert.DoesNotContain("private void OnClosing", playback);
-        Assert.DoesNotContain("private void Cleanup", playback);
-        Assert.DoesNotContain("private void StopPlayerTimers", playback);
+        AssertNoForbiddenTokens(
+            playback,
+            "private void OnClosing",
+            "private void Cleanup",
+            "private void StopPlayerTimers");
         Assert.Contains("private void OnClosing", lifecycle);
         Assert.Contains("private void Cleanup", lifecycle);
         Assert.Contains("private void StopPlayerTimers", lifecycle);
         Assert.Contains("PlayerWindowClosingWorkflow.Execute", lifecycle);
         Assert.Contains("PlayerWindowCleanupWorkflow.Execute", lifecycle);
         Assert.Contains("PlayerLastOpenedClearWorkflow.Execute", lifecycle);
-        Assert.DoesNotContain("if (ReferenceEquals(_lastOpened, this))", lifecycle);
+        AssertNoForbiddenTokens(lifecycle, "if (ReferenceEquals(_lastOpened, this))");
         Assert.Contains("ConfirmUnappliedCodingChangesOnClose", lifecycle);
         Assert.Contains("_playerMediaRuntime.DetachVideoView", lifecycle);
         Assert.Contains("PlayerPlaybackResourceCleaner.StopPlayer", lifecycle);
         Assert.Contains("_playerMediaRuntime.DisposeMediaPlayer", lifecycle);
         Assert.Contains("_playerMediaRuntime.DisposeLibVlc", lifecycle);
-        Assert.DoesNotContain("PlayerPlaybackResourceCleaner.DetachVideoView", lifecycle);
-        Assert.DoesNotContain("PlayerPlaybackResourceCleaner.DisposeMediaPlayer", lifecycle);
-        Assert.DoesNotContain("PlayerPlaybackResourceCleaner.DisposeLibVlc", lifecycle);
-        Assert.DoesNotContain("VideoView.MediaPlayer", lifecycle);
-        Assert.DoesNotContain("AuswertungPro.Next.Application.Common.BestEffort.Try", lifecycle);
-        Assert.DoesNotContain("_player.Dispose()", lifecycle);
-        Assert.DoesNotContain("_libVlc.Dispose()", lifecycle);
+        AssertNoForbiddenTokens(
+            lifecycle,
+            "PlayerPlaybackResourceCleaner.DetachVideoView",
+            "PlayerPlaybackResourceCleaner.DisposeMediaPlayer",
+            "PlayerPlaybackResourceCleaner.DisposeLibVlc",
+            "VideoView.MediaPlayer",
+            "AuswertungPro.Next.Application.Common.BestEffort.Try",
+            "_player.Dispose()",
+            "_libVlc.Dispose()");
         Assert.Contains("AttachVideoView", runtime);
         Assert.Contains("DetachVideoView", runtime);
         Assert.Contains("PlayerPlaybackResourceCleaner.DetachVideoView", runtime);
@@ -185,14 +194,16 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.Contains("PauseForCodingInteraction", helper);
         Assert.Contains("PlayerCodingPlayback.PauseForCodingInteraction", workflow);
         Assert.Contains("CodingModePreparePlaybackWorkflow.Execute", lifecycleUi);
-        Assert.DoesNotContain("PlayerCodingPlayback.PauseForCodingInteraction", lifecycleUi);
+        AssertNoForbiddenTokens(lifecycleUi, "PlayerCodingPlayback.PauseForCodingInteraction");
 
         foreach (var path in codingPaths)
         {
             var text = File.ReadAllText(path);
             Assert.Contains("PlayerCodingPlayback.PauseForCodingInteraction", text);
-            Assert.DoesNotContain("_player.SetPause(true)", text);
-            Assert.DoesNotContain("_player.SetPause(false)", text);
+            AssertNoForbiddenTokens(
+                text,
+                "_player.SetPause(true)",
+                "_player.SetPause(false)");
         }
     }
 
@@ -241,33 +252,36 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", playback);
         Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", playback);
         Assert.Contains("PlayerPlaybackDialogWorkflow.ShowUnsupportedRate", playback);
-        Assert.DoesNotContain("PlayerPlaybackDialogServiceFactory.Create", playback);
-        Assert.DoesNotContain("new PlayerPlaybackDialogWorkflowActions", playback);
+        AssertNoForbiddenTokens(
+            playback,
+            "PlayerPlaybackDialogServiceFactory.Create",
+            "new PlayerPlaybackDialogWorkflowActions");
         Assert.Contains("_positionControls.ApplyPlaybackState", playback);
         Assert.Contains("_speedControls.Update", playback);
-        Assert.DoesNotContain("_player.SetPause(_player.IsPlaying)", playback);
-        Assert.DoesNotContain("PlayerPlaybackState.AddSeconds", playback);
-        Assert.DoesNotContain("PlayerPlaybackState.ResolveSliderSeekTarget", playback);
-        Assert.DoesNotContain("PlayerPlaybackState.BuildSeekPreviewText", playback);
-        Assert.DoesNotContain("PlayerPlaybackState.BuildUiState", playback);
-        Assert.DoesNotContain("PlayerPlaybackState.FormatRateLabel", playback);
-        Assert.DoesNotContain("PlayerPlaybackState.IsRateButtonChecked", playback);
-        Assert.DoesNotContain("private void ApplySliderSeekTarget", playback);
-        Assert.DoesNotContain("RateText.Text", playback);
-        Assert.DoesNotContain("CurrentTimeText.Text", playback);
-        Assert.DoesNotContain("DurationText.Text", playback);
-        Assert.DoesNotContain("Speed05Button.IsChecked", playback);
-        Assert.DoesNotContain("$\"{targetPos:P0}\"", playback);
-        Assert.DoesNotContain("$\"{rate:0.##}x\"", playback);
-        Assert.DoesNotContain("var ms = (long)Math.Max(0, time.TotalMilliseconds);", playback);
-        Assert.DoesNotContain("var time = Math.Max(0, _player.Time);", playback);
-        Assert.DoesNotContain("time = TimeSpan.FromMilliseconds", playback);
-        Assert.DoesNotContain("Math.Abs(currentRate - targetRate) < 0.01f", playback);
-        Assert.DoesNotContain("_player.Time = (long)(targetPos * length);", playback);
-        Assert.DoesNotContain("DialogHost.Current", playback);
-        Assert.DoesNotContain("nicht unterst", playback);
-        Assert.DoesNotContain(".ShowUnsupportedRate(clamped)", playback);
-        Assert.DoesNotContain("if (_playerPlaybackControlHost.ShouldStartPlayback)", playback);
+        AssertNoForbiddenTokens(
+            playback,
+            "_player.SetPause(_player.IsPlaying)",
+            "PlayerPlaybackState.AddSeconds",
+            "PlayerPlaybackState.ResolveSliderSeekTarget",
+            "PlayerPlaybackState.BuildSeekPreviewText",
+            "PlayerPlaybackState.BuildUiState",
+            "PlayerPlaybackState.FormatRateLabel",
+            "PlayerPlaybackState.IsRateButtonChecked",
+            "private void ApplySliderSeekTarget",
+            "RateText.Text",
+            "CurrentTimeText.Text",
+            "DurationText.Text",
+            "Speed05Button.IsChecked",
+            "$\"{targetPos:P0}\"",
+            "$\"{rate:0.##}x\"",
+            "var ms = (long)Math.Max(0, time.TotalMilliseconds);",
+            "var time = Math.Max(0, _player.Time);",
+            "time = TimeSpan.FromMilliseconds",
+            "Math.Abs(currentRate - targetRate) < 0.01f",
+            "_player.Time = (long)(targetPos * length);",
+            "nicht unterst",
+            ".ShowUnsupportedRate(clamped)",
+            "if (_playerPlaybackControlHost.ShouldStartPlayback)");
         Assert.Contains("request.ShouldStartPlayback", startWorkflow);
         Assert.Contains("actions.PlayPath", startWorkflow);
         Assert.Contains("actions.StartTimer()", startWorkflow);
@@ -325,39 +339,49 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var playbackStartWorkflow = File.Exists(playbackStartWorkflowPath) ? File.ReadAllText(playbackStartWorkflowPath) : "";
         var lastOpenedPlaybackWorkflow = File.Exists(lastOpenedPlaybackWorkflowPath) ? File.ReadAllText(lastOpenedPlaybackWorkflowPath) : "";
 
-        Assert.DoesNotContain("private void Play_Click", playback);
-        Assert.DoesNotContain("private void PositionSlider_ValueChanged", playback);
-        Assert.DoesNotContain("private void SetSpeed", playback);
-        Assert.DoesNotContain("private void UpdateSpeedButtons", playback);
+        AssertNoForbiddenTokens(
+            playback,
+            "private void Play_Click",
+            "private void PositionSlider_ValueChanged",
+            "private void SetSpeed",
+            "private void UpdateSpeedButtons");
         Assert.Contains("PlayerUiUpdateWorkflow.Execute", playback);
         Assert.Contains("PlayerPlaybackStartWorkflow.EnsurePlaying", playback);
         Assert.Contains("PlayerPlaybackStartWorkflow.Play", playback);
         Assert.Contains("PlayerLastOpenedPlaybackWorkflow.TryGetCurrentTime", playback);
         Assert.Contains("PlayerLastOpenedPlaybackWorkflow.TrySeekTo", playback);
-        Assert.DoesNotContain("if (_isDragging)", playback);
-        Assert.DoesNotContain("if (_isCodingMode)", playback);
-        Assert.DoesNotContain("if (_playerPlaybackControlHost.ShouldStartPlayback)", playback);
-        Assert.DoesNotContain("if (_lastOpened is null)", playback);
+        AssertNoForbiddenTokens(
+            playback,
+            "if (_isDragging)",
+            "if (_isCodingMode)",
+            "if (_playerPlaybackControlHost.ShouldStartPlayback)",
+            "if (_lastOpened is null)");
         Assert.Contains("private void Play_Click", controls);
         Assert.Contains("PlayerPlaybackCommandRunner.Play", controls);
         Assert.Contains("PlayerPlaybackCommandRunner.Pause", controls);
         Assert.Contains("PlayerPlaybackCommandRunner.Stop", controls);
         Assert.Contains("PlayerPlaybackCommandRunner.SetSpeed", controls);
-        Assert.DoesNotContain("_player.SetPause(true)", controls);
-        Assert.DoesNotContain("_player.SetPause(false)", controls);
-        Assert.DoesNotContain("_player.Stop();", controls);
-        Assert.DoesNotContain("var result = _player.SetRate", controls);
-        Assert.DoesNotContain("PlayerPlaybackState.ClampRate", controls);
+        AssertNoForbiddenTokens(
+            controls,
+            "_player.SetPause(true)",
+            "_player.SetPause(false)",
+            "_player.Stop();",
+            "var result = _player.SetRate",
+            "PlayerPlaybackState.ClampRate");
         Assert.Contains("private void PositionSlider_ValueChanged", controls);
         Assert.Contains("private void SetSpeed", controls);
-        Assert.DoesNotContain("private void UpdateSpeedButtons", controls);
-        Assert.DoesNotContain("private static void SetSpeedButtonState", controls);
+        AssertNoForbiddenTokens(
+            controls,
+            "private void UpdateSpeedButtons",
+            "private static void SetSpeedButtonState");
         Assert.Contains("PlayerSliderSeekController.SeekToSlider", controls);
         Assert.Contains("PlayerSliderSeekController.UpdateSeekPreview", controls);
         Assert.Contains("PlayerSliderSeekController.ScrubSeekToSlider", controls);
         Assert.Contains("PlayerPositionSliderValueChangedWorkflow.Execute", controls);
-        Assert.DoesNotContain("if (_isDragging)", controls);
-        Assert.DoesNotContain("PlayerPlaybackState.ResolveSliderSeekTarget", controls);
+        AssertNoForbiddenTokens(
+            controls,
+            "if (_isDragging)",
+            "PlayerPlaybackState.ResolveSliderSeekTarget");
         Assert.Contains("_speedControls.Update", controls);
         Assert.Contains("public static class PlayerPlaybackCommandRunner", commandRunner);
         Assert.Contains("public static void Play", commandRunner);
@@ -395,10 +419,12 @@ public sealed class PlayerWindowPlaybackArchitectureTests
 
             var text = File.ReadAllText(path);
             Assert.Contains("_playerTimelineHost", text);
-            Assert.DoesNotContain("_player.Time", text);
-            Assert.DoesNotContain("_player.Length", text);
-            Assert.DoesNotContain("_player?.Time", text);
-            Assert.DoesNotContain("_player?.Length", text);
+            AssertNoForbiddenTokens(
+                text,
+                "_player.Time",
+                "_player.Length",
+                "_player?.Time",
+                "_player?.Length");
         }
     }
 
@@ -423,9 +449,11 @@ public sealed class PlayerWindowPlaybackArchitectureTests
 
             var text = File.ReadAllText(path);
             Assert.Contains("_playerPlaybackControlHost", text);
-            Assert.DoesNotContain("_player.SetPause", text);
-            Assert.DoesNotContain("_player.IsPlaying", text);
-            Assert.DoesNotContain("_player.Stop", text);
+            AssertNoForbiddenTokens(
+                text,
+                "_player.SetPause",
+                "_player.IsPlaying",
+                "_player.Stop");
         }
     }
 
@@ -447,8 +475,10 @@ public sealed class PlayerWindowPlaybackArchitectureTests
 
             var text = File.ReadAllText(path);
             Assert.Contains("_playerPlaybackControlHost", text);
-            Assert.DoesNotContain("_player.Rate", text);
-            Assert.DoesNotContain("_player.SetRate", text);
+            AssertNoForbiddenTokens(
+                text,
+                "_player.Rate",
+                "_player.SetRate");
         }
     }
 
@@ -464,9 +494,11 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var playback = File.ReadAllText(playbackPath);
 
         Assert.Contains("_playerPlaybackControlHost", playback);
-        Assert.DoesNotContain("_player.State", playback);
-        Assert.DoesNotContain("_player.Play(media)", playback);
-        Assert.DoesNotContain("new Media(", playback);
+        AssertNoForbiddenTokens(
+            playback,
+            "_player.State",
+            "_player.Play(media)",
+            "new Media(");
     }
 
     [Fact]
@@ -488,7 +520,7 @@ public sealed class PlayerWindowPlaybackArchitectureTests
 
             var text = File.ReadAllText(path);
             Assert.Contains("SetPositionRatio", text);
-            Assert.DoesNotContain("_player.Position", text);
+            AssertNoForbiddenTokens(text, "_player.Position");
         }
     }
 
@@ -509,8 +541,10 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var snapshot = File.ReadAllText(snapshotPath);
 
         Assert.Contains("_playerPlaybackControlHost", snapshot);
-        Assert.DoesNotContain("_player.IsPlaying", snapshot);
-        Assert.DoesNotContain("_player.SetPause", snapshot);
+        AssertNoForbiddenTokens(
+            snapshot,
+            "_player.IsPlaying",
+            "_player.SetPause");
     }
 
     [Fact]
@@ -533,16 +567,20 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var pauseRestorer = File.Exists(pauseRestorerPath) ? File.ReadAllText(pauseRestorerPath) : "";
         var snapshotWorkflow = File.Exists(snapshotWorkflowPath) ? File.ReadAllText(snapshotWorkflowPath) : "";
 
-        Assert.DoesNotContain("public static bool TryTakeSnapshot", playback);
-        Assert.DoesNotContain("private bool TakeSnapshotSafe", playback);
+        AssertNoForbiddenTokens(
+            playback,
+            "public static bool TryTakeSnapshot",
+            "private bool TakeSnapshotSafe");
         Assert.Contains("public static bool TryTakeSnapshot", snapshot);
         Assert.Contains("private bool TakeSnapshotSafe", snapshot);
         Assert.Contains("PlayerSnapshotWorkflow.TryTakeSnapshot", snapshot);
         Assert.Contains("PlayerSnapshotWorkflow.TakeSnapshotSafe", snapshot);
         Assert.Contains("PlayerSnapshotPauseRestorer.ResumeIfNeeded", snapshot);
-        Assert.DoesNotContain("_player.SetPause(false)", snapshot);
-        Assert.DoesNotContain("AuswertungPro.Next.Application.Common.BestEffort.Try", snapshot);
-        Assert.DoesNotContain("VLC: Pause aufheben", snapshot);
+        AssertNoForbiddenTokens(
+            snapshot,
+            "_player.SetPause(false)",
+            "AuswertungPro.Next.Application.Common.BestEffort.Try",
+            "VLC: Pause aufheben");
         Assert.Contains("try", snapshotWorkflow);
         Assert.Contains("finally", snapshotWorkflow);
         Assert.Contains("public static void ResumeIfNeeded", pauseRestorer);
@@ -586,15 +624,19 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         var host = File.Exists(hostPath) ? File.ReadAllText(hostPath) : "";
         var mediaHostFactory = File.Exists(mediaHostFactoryPath) ? File.ReadAllText(mediaHostFactoryPath) : "";
 
-        Assert.DoesNotContain("private void ShowOverlay", playback);
-        Assert.DoesNotContain("public static bool TryShowOverlayOnLast", playback);
+        AssertNoForbiddenTokens(
+            playback,
+            "private void ShowOverlay",
+            "public static bool TryShowOverlayOnLast");
         Assert.Contains("private void ShowOverlay", overlay);
         Assert.Contains("public static bool TryShowOverlayOnLast", overlay);
         Assert.Contains("PlayerOverlayDisplayWorkflow.Show", overlay);
         Assert.Contains("PlayerLastOverlayDisplayWorkflow.Show", overlay);
-        Assert.DoesNotContain("if (_lastOpened is null)", overlay);
-        Assert.DoesNotContain("PlayerMarqueeOverlayPolicy.BuildShow", overlay);
-        Assert.DoesNotContain("PlayerWindowTimerFactory.CreateOneShotTimer", overlay);
+        AssertNoForbiddenTokens(
+            overlay,
+            "if (_lastOpened is null)",
+            "PlayerMarqueeOverlayPolicy.BuildShow",
+            "PlayerWindowTimerFactory.CreateOneShotTimer");
         Assert.Contains("PlayerMarqueeOverlayPolicy.BuildShow", displayWorkflow);
         Assert.Contains("actions.ScheduleDisable", displayWorkflow);
         Assert.Contains("PlayerWindowTimerFactory.CreateOneShotTimer", displayWorkflow);
@@ -607,19 +649,39 @@ public sealed class PlayerWindowPlaybackArchitectureTests
         Assert.Contains("PlayerMediaRuntimeFactory.Create", windowRoot);
         Assert.Contains("new PlayerMarqueeOverlayHost", mediaHostFactory);
         Assert.Contains("PlayerMarqueeOverlayDisabler.Disable", host);
-        Assert.DoesNotContain("_player.SetMarquee", overlay + snapshot);
-        Assert.DoesNotContain("VideoMarqueeOption", overlay + snapshot);
-        Assert.DoesNotContain("PlayerMarqueeOverlayPolicy.DisabledEnable", overlay);
-        Assert.DoesNotContain("PlayerMarqueeOverlayPolicy.DisabledEnable", snapshot);
-        Assert.DoesNotContain("VLC: Marquee deaktivieren", overlay + snapshot);
-        Assert.DoesNotContain("VideoMarqueeOption.Enable, 0", overlay);
-        Assert.DoesNotContain("VideoMarqueeOption.X, 16", overlay);
+        AssertNoForbiddenTokens(
+            overlay + snapshot,
+            "_player.SetMarquee",
+            "VideoMarqueeOption",
+            "VLC: Marquee deaktivieren");
+        AssertNoForbiddenTokens(
+            overlay,
+            "PlayerMarqueeOverlayPolicy.DisabledEnable",
+            "VideoMarqueeOption.Enable, 0",
+            "VideoMarqueeOption.X, 16");
+        AssertNoForbiddenTokens(snapshot, "PlayerMarqueeOverlayPolicy.DisabledEnable");
         Assert.Contains("PlayerMarqueeOverlayPolicy.DisabledEnable", disabler);
         Assert.Contains("AuswertungPro.Next.Application.Common.BestEffort.Try", disabler);
-        Assert.DoesNotContain("VideoMarqueeOption.Y, 16", overlay);
-        Assert.DoesNotContain("VideoMarqueeOption.Size, 24", overlay);
-        Assert.DoesNotContain("VideoMarqueeOption.Color, 0xFFFFFF", overlay);
-        Assert.DoesNotContain("VideoMarqueeOption.Opacity, 200", overlay);
+        AssertNoForbiddenTokens(
+            overlay,
+            "VideoMarqueeOption.Y, 16",
+            "VideoMarqueeOption.Size, 24",
+            "VideoMarqueeOption.Color, 0xFFFFFF",
+            "VideoMarqueeOption.Opacity, 200");
         Assert.Contains("public static PlayerMarqueeOverlayState BuildShow", policy);
+    }
+
+    private static void AssertNoForbiddenTokens(string source, params string[] forbiddenTokens)
+    {
+        var hits = new List<string>();
+        foreach (var token in forbiddenTokens)
+        {
+            if (source.Contains(token, StringComparison.Ordinal))
+                hits.Add(token);
+        }
+
+        Assert.True(
+            hits.Count == 0,
+            "Verbotene alte PlayerWindow-Playback-Logik gefunden: " + string.Join(", ", hits));
     }
 }

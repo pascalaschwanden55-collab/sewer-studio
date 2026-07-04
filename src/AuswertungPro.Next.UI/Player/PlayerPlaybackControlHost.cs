@@ -8,6 +8,10 @@ public sealed class PlayerPlaybackControlHost
     private readonly Action _stop;
     private readonly Func<float> _readRate;
     private readonly Func<float, int> _setRate;
+    private readonly Func<int> _readVolume;
+    private readonly Action<int> _setVolume;
+    private readonly Func<bool> _readMute;
+    private readonly Action<bool> _setMute;
     private readonly Func<bool> _shouldStartPlayback;
     private readonly Action<string> _playPath;
 
@@ -18,6 +22,10 @@ public sealed class PlayerPlaybackControlHost
         Action stop,
         Func<float> readRate,
         Func<float, int> setRate,
+        Func<int> readVolume,
+        Action<int> setVolume,
+        Func<bool> readMute,
+        Action<bool> setMute,
         Func<bool> shouldStartPlayback,
         Action<string> playPath)
     {
@@ -27,6 +35,10 @@ public sealed class PlayerPlaybackControlHost
         ArgumentNullException.ThrowIfNull(stop);
         ArgumentNullException.ThrowIfNull(readRate);
         ArgumentNullException.ThrowIfNull(setRate);
+        ArgumentNullException.ThrowIfNull(readVolume);
+        ArgumentNullException.ThrowIfNull(setVolume);
+        ArgumentNullException.ThrowIfNull(readMute);
+        ArgumentNullException.ThrowIfNull(setMute);
         ArgumentNullException.ThrowIfNull(shouldStartPlayback);
         ArgumentNullException.ThrowIfNull(playPath);
 
@@ -36,6 +48,10 @@ public sealed class PlayerPlaybackControlHost
         _stop = stop;
         _readRate = readRate;
         _setRate = setRate;
+        _readVolume = readVolume;
+        _setVolume = setVolume;
+        _readMute = readMute;
+        _setMute = setMute;
         _shouldStartPlayback = shouldStartPlayback;
         _playPath = playPath;
     }
@@ -43,6 +59,10 @@ public sealed class PlayerPlaybackControlHost
     public bool IsPlaying => _readIsPlaying();
 
     public float Rate => _readRate();
+
+    public int Volume => _readVolume();
+
+    public bool IsMuted => _readMute();
 
     public bool ShouldStartPlayback => _shouldStartPlayback();
 
@@ -57,6 +77,12 @@ public sealed class PlayerPlaybackControlHost
 
     public int SetRate(float rate)
         => _setRate(rate);
+
+    public void SetVolume(int volume)
+        => _setVolume(Math.Clamp(volume, 0, 100));
+
+    public void SetMute(bool mute)
+        => _setMute(mute);
 
     public void PlayPath(string path)
         => _playPath(path);

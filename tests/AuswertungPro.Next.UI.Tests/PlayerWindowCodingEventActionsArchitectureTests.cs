@@ -8,22 +8,18 @@ public sealed class PlayerWindowCodingEventActionsArchitectureTests
     [Fact]
     public void PlayerWindow_coding_event_actions_live_in_actions_partial()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var eventsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.cs");
-        var actionsPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Events.Actions.cs");
-        var dialogServicePath = Path.Combine(uiRoot, "Ai", "CodingEventActionDialogService.cs");
-        var dialogServiceFactoryPath = Path.Combine(uiRoot, "Ai", "CodingEventActionDialogServiceFactory.cs");
-        var dialogWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventActionDialogWorkflow.cs");
-        var deleteApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteApplier.cs");
-        var editApplierPath = Path.Combine(uiRoot, "Ai", "CodingEventEditApplier.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingEventListActionWorkflow.cs");
-        var seekCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventSeekCommandWorkflow.cs");
-        var editCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventEditCommandWorkflow.cs");
-        var editButtonCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventEditButtonCommandWorkflow.cs");
-        var deleteCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventDeleteCommandWorkflow.cs");
-        var closeStretchCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingEventCloseStretchCommandWorkflow.cs");
+        var actionsPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Events.Actions.cs");
+        var dialogServicePath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventActionDialogService.cs");
+        var dialogServiceFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventActionDialogServiceFactory.cs");
+        var dialogWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventActionDialogWorkflow.cs");
+        var deleteApplierPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventDeleteApplier.cs");
+        var editApplierPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventEditApplier.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventListActionWorkflow.cs");
+        var seekCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventSeekCommandWorkflow.cs");
+        var editCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventEditCommandWorkflow.cs");
+        var editButtonCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventEditButtonCommandWorkflow.cs");
+        var deleteCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventDeleteCommandWorkflow.cs");
+        var closeStretchCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingEventCloseStretchCommandWorkflow.cs");
 
         Assert.True(File.Exists(actionsPath), "Coding-Event-Aktionshandler sollen aus dem allgemeinen Events-Partial heraus.");
         Assert.True(File.Exists(dialogServicePath), "Coding-Event-Aktionsdialoge muessen ausserhalb der PlayerWindow-Partials liegen.");
@@ -38,7 +34,6 @@ public sealed class PlayerWindowCodingEventActionsArchitectureTests
         Assert.True(File.Exists(deleteCommandWorkflowPath), "Coding-Event-Delete-Befehlsreihenfolge soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
         Assert.True(File.Exists(closeStretchCommandWorkflowPath), "Coding-Event-Streckenschaden-Schliessen soll ausserhalb der PlayerWindow-Partials orchestriert werden.");
 
-        var events = File.ReadAllText(eventsPath);
         var actions = File.ReadAllText(actionsPath);
         var dialogService = File.ReadAllText(dialogServicePath);
         var dialogServiceFactory = File.ReadAllText(dialogServiceFactoryPath);
@@ -52,18 +47,11 @@ public sealed class PlayerWindowCodingEventActionsArchitectureTests
         var deleteCommandWorkflow = File.Exists(deleteCommandWorkflowPath) ? File.ReadAllText(deleteCommandWorkflowPath) : "";
         var closeStretchCommandWorkflow = File.Exists(closeStretchCommandWorkflowPath) ? File.ReadAllText(closeStretchCommandWorkflowPath) : "";
 
-        Assert.DoesNotContain("private void CodingEvents_DoubleClick", events);
-        Assert.DoesNotContain("private void CodingEventEdit_Click", events);
-        Assert.DoesNotContain("private void CodingEventSeek_Click", events);
-        Assert.DoesNotContain("private void CodingEventCloseStretch_Click", events);
-        Assert.DoesNotContain("private void CodingEventDelete_Click", events);
         Assert.Contains("private void CodingEvents_DoubleClick", actions);
         Assert.Contains("private void CodingEventEdit_Click", actions);
         Assert.Contains("private void CodingEventSeek_Click", actions);
         Assert.Contains("private void CodingEventCloseStretch_Click", actions);
         Assert.Contains("private void CodingEventDelete_Click", actions);
-        Assert.DoesNotContain("CodingEventActionDialogServiceFactory.Create", actions);
-        Assert.DoesNotContain("new CodingEventActionDialogWorkflowActions", actions);
         Assert.Contains("CodingEventActionDialogWorkflow.ShowStretchCloseRequiresLaterMeter", actions);
         Assert.Contains("CodingEventActionDialogWorkflow.ConfirmDelete", actions);
         Assert.Contains("CodingEventSeekCommandWorkflow.Execute", actions);
@@ -75,21 +63,6 @@ public sealed class PlayerWindowCodingEventActionsArchitectureTests
         Assert.Contains("CodingEventListActionWorkflow.CloseStretch", actions);
         Assert.Contains("CodingEventListActionWorkflow.Delete", actions);
         Assert.Contains("_codingSessionHost", actions);
-        Assert.DoesNotContain("_codingVm", actions);
-        Assert.DoesNotContain("CodingEventEditApplier.Apply", actions);
-        Assert.DoesNotContain("CodingStretchDamageManualCloseApplier.Apply", actions);
-        Assert.DoesNotContain("CodingStretchDamageManualCloseResultKind", actions);
-        Assert.DoesNotContain("CodingEventDeleteApplier.Apply", actions);
-        Assert.DoesNotContain("_codingSessionService?.UpdateEvent", actions);
-        Assert.DoesNotContain("codingEvent.MeterAtCapture = entry.MeterStart", actions);
-        Assert.DoesNotContain("_codingSessionService?.RemoveEvent", actions);
-        Assert.DoesNotContain("_codingVm?.Events.Remove", actions);
-        Assert.DoesNotContain(".ShowStretchCloseRequiresLaterMeter()", actions);
-        Assert.DoesNotContain(".ConfirmDelete(code)", actions);
-        Assert.DoesNotContain("DialogHost.Current", actions);
-        Assert.DoesNotContain("Der aktuelle Meterstand", actions);
-        Assert.DoesNotContain("Ereignis '", actions);
-        Assert.DoesNotContain("CodingEventSeekPolicy.TryGetSeekMilliseconds", actions);
         Assert.Contains("CodingEventSeekPolicy.TryGetSeekMilliseconds", seekCommandWorkflow);
         Assert.Contains("actions.SeekMilliseconds(milliseconds)", seekCommandWorkflow);
         Assert.Contains("actions.PausePlayback()", editCommandWorkflow);

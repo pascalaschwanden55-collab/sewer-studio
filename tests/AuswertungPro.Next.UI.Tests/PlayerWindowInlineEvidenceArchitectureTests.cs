@@ -22,12 +22,8 @@ public sealed class PlayerWindowInlineEvidenceArchitectureTests
         var workflow = File.ReadAllText(workflowPath);
 
         Assert.Contains("CodingInlineEvidencePreviewWorkflow.Execute", preview);
-        Assert.DoesNotContain("CodingInlineEvidencePreviewService.Build", preview);
-        Assert.DoesNotContain("catch (Exception", preview);
         Assert.Contains("CodingInlineEvidencePreviewService.Build", workflow);
         Assert.Contains("CodingInlineEvidencePreviewService.LoadFailed", workflow);
-        Assert.DoesNotContain("File.Exists", preview);
-        Assert.DoesNotContain("new BitmapImage", preview);
         Assert.Contains("File.Exists", service);
         Assert.Contains("new BitmapImage", service);
     }

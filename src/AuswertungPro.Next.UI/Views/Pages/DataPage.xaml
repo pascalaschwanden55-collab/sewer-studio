@@ -1,6 +1,7 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.DataPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors"
              xmlns:local="clr-namespace:AuswertungPro.Next.UI.Views.Pages"
              xmlns:uc="clr-namespace:AuswertungPro.Next.UI.Controls"
              xmlns:haltung="clr-namespace:AuswertungPro.Next.UI.Views.Pages.Haltungsansicht">
@@ -375,7 +376,7 @@
                     Padding="4" Margin="0,4,0,0" CornerRadius="4">
                 <StackPanel Orientation="Vertical">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="Suche Schacht:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Suche Haltung:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBox x:Name="SearchBox" Width="200" VerticalAlignment="Center"
                                  Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                  TextChanged="SearchBox_TextChanged"/>
@@ -448,6 +449,7 @@
                       Grid.Row="1"
                       ItemsSource="{Binding Records}"
                       SelectedItem="{Binding Selected, Mode=TwoWay}"
+                      behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
                       SelectionMode="Extended"
                       AutoGenerateColumns="False"
                       IsReadOnly="{Binding IsDataGridReadOnly}"
@@ -510,18 +512,15 @@
                 </DataGrid.ContextMenu>
             </DataGrid>
 
-            <Border x:Name="EmptyTablePlaceholder"
-                    IsHitTestVisible="False"
-                    Background="{DynamicResource CardBrush}"
-                    BorderBrush="{DynamicResource BorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="22,18"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Opacity="0.94">
-                <Border.Style>
-                    <Style TargetType="Border">
+            <uc:EmptyStateControl x:Name="EmptyTablePlaceholder"
+                                  IsHitTestVisible="False"
+                                  Icon="&#xE8A5;"
+                                  Title="Noch keine Haltungen"
+                                  Message="Importiere Inspektionsdaten, damit die Haltungen hier als Tabelle erscheinen."
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center">
+                <uc:EmptyStateControl.Style>
+                    <Style TargetType="uc:EmptyStateControl">
                         <Setter Property="Visibility" Value="Collapsed"/>
                         <Style.Triggers>
                             <MultiDataTrigger>
@@ -534,15 +533,11 @@
                             </MultiDataTrigger>
                         </Style.Triggers>
                     </Style>
-                </Border.Style>
-                <TextBlock Text="Noch keine Haltungen - über Import einlesen"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           FontSize="14"
-                           FontWeight="SemiBold"/>
-            </Border>
+                </uc:EmptyStateControl.Style>
+            </uc:EmptyStateControl>
 
             <!-- Haltungsansicht: alternative Sicht zur Tabelle, anfangs ausgeblendet -->
-            <haltung:HaltungsansichtView x:Name="HaltungsansichtView" Visibility="Collapsed"/>
+            <haltung:HaltungsansichtView x:Name="HaltungsansichtView" Grid.Row="1" Visibility="Collapsed"/>
         </Grid>
     </Grid>
 </UserControl>

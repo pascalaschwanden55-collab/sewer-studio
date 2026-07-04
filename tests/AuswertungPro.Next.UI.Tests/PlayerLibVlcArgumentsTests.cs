@@ -37,12 +37,17 @@ public sealed class PlayerLibVlcArgumentsTests
 
         var args = PlayerLibVlcArguments.Build(options);
 
-        Assert.DoesNotContain(args, arg => arg.StartsWith("--vout=", StringComparison.Ordinal));
-        Assert.Contains("--avcodec-hw=none", args);
-        Assert.Contains("--avcodec-threads=2", args);
-        Assert.Contains("--file-caching=1000", args);
-        Assert.Contains("--network-caching=2000", args);
-        Assert.DoesNotContain("--drop-late-frames", args);
-        Assert.DoesNotContain("--skip-frames", args);
+        Assert.Equal(
+            new[]
+            {
+                "--avcodec-hw=none",
+                "--avcodec-threads=2",
+                "--file-caching=1000",
+                "--network-caching=2000",
+                "--clock-jitter=0",
+                "--clock-synchro=0",
+                "--no-snapshot-preview"
+            },
+            args);
     }
 }

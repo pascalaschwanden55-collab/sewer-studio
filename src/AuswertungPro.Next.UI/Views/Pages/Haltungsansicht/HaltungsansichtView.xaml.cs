@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using AuswertungPro.Next.Domain.Models;
 using AuswertungPro.Next.UI;
+using AuswertungPro.Next.UI.Services;
 using AuswertungPro.Next.UI.Views.Windows;
 
 namespace AuswertungPro.Next.UI.Views.Pages.Haltungsansicht;
@@ -72,6 +74,37 @@ public partial class HaltungsansichtView : UserControl
 
         settings.HaltungsansichtSchadenHeight = height;
         settings.Save();
+    }
+
+    private void SchadensbandDetach_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+
+        if (HaltungList.SelectedItem is not HaltungRecord record)
+            return;
+
+        var band = new AuswertungPro.Next.UI.Controls.HaltungSchadensband
+        {
+            Margin = new Thickness(16)
+        };
+        band.Update(record);
+
+        var name = record.GetFieldValue("Haltungsname");
+        var window = new Window
+        {
+            Title = string.IsNullOrWhiteSpace(name) ? "Schadensband" : $"Schadensband - {name}",
+            Owner = Window.GetWindow(this),
+            Width = 920,
+            Height = 260,
+            MinWidth = 520,
+            MinHeight = 180,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = band,
+            Background = TryFindResource("BgBrush") as Brush
+        };
+
+        WindowStateManager.Track(window);
+        window.Show();
     }
 
     private Func<HaltungRecord, IReadOnlyList<RecordDetailGroup>>? _detailBuilder;

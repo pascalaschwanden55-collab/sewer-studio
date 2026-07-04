@@ -15,6 +15,8 @@ using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.UI.ViewModels.Pages;
 using System.IO;
 using CommunityToolkit.Mvvm.Input;
+using AuswertungPro.Next.Application.Common;
+using AuswertungPro.Next.UI.Behaviors;
 
 namespace AuswertungPro.Next.UI.Views.Pages;
 
@@ -39,6 +41,12 @@ public partial class DataPage : System.Windows.Controls.UserControl
     public DataPage()
     {
         InitializeComponent();
+        PhotoHoverPreviewBehavior.SetPhotoPathsSelector(Grid, PhotoHoverPreviewSelectors.HaltungRecordPhotos);
+        PhotoHoverPreviewBehavior.SetProjectRootProvider(
+            Grid,
+            () => DataContext is DataPageViewModel vm
+                ? ProjectFileLocator.ProjectRootFromFile(vm.Services.Settings.LastProjectPath)
+                : null);
         FilterChips.FilterGeaendert += WendeChipFilterAn;
         _haltungDetailItemFactory = new DataPageDetailItemFactory(
             ResolveManagedComboSpec,

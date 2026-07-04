@@ -92,6 +92,7 @@ namespace AuswertungPro.Next.UI
 
                 _services = new ServiceProvider(settings, diagnostics, logger, loggerFactory);
                 DialogHost.Configure(_services.Dialogs);
+                var splashReadyTask = splash.SignalReadyAsync();
 
                 // Global exception handling (after services initialized, but before first window).
                 DispatcherUnhandledException += (_, exArgs) =>
@@ -141,12 +142,14 @@ namespace AuswertungPro.Next.UI
                 // sonst wird die Startanimation bei schnellem Start abgeschnitten.
                 // Sicherheitskappe: max. 15 s, falls die Animation nicht meldet.
                 await Task.WhenAny(
+                    splashReadyTask,
                     splash.WaitForProgressAsync(),
                     Task.Delay(TimeSpan.FromMilliseconds(15000)));
 
                 await Task.WhenAll(
                     AnimateOpacityAsync(mainWindow, to: 1, duration: TimeSpan.FromMilliseconds(500), EasingMode.EaseOut),
                     splash.FadeOutAndCloseAsync(TimeSpan.FromMilliseconds(500)));
+                await mainWindow.PlayStartupEntranceAsync();
 
                 ShutdownMode = ShutdownMode.OnMainWindowClose;
 
@@ -312,16 +315,24 @@ namespace AuswertungPro.Next.UI
 
         private static void ApplyDefaultWindowIcon(object sender, RoutedEventArgs e)
         {
-            if (sender is not Window window || window.Icon is not null)
+            if (sender is not Window window)
             {
                 return;
             }
 
-            var icon = LoadDefaultWindowIcon();
-            if (icon is not null)
+            if (window.Icon is null)
             {
-                window.Icon = icon;
+                var icon = LoadDefaultWindowIcon();
+                if (icon is not null)
+                {
+                    window.Icon = icon;
+                }
             }
+
+            WindowBackdropHelper.Apply(
+                window,
+                ThemeManager.CurrentTheme,
+                Fluent.GetBackdrop(window) == FluentBackdrop.Mica);
         }
 
         private static System.Windows.Media.ImageSource? LoadDefaultWindowIcon()

@@ -6,10 +6,12 @@ namespace AuswertungPro.Next.UI.Player;
 public sealed class PlayerSpeedControls
 {
     private readonly TextBlock _rateText;
+    private readonly Slider _speedSlider;
     private readonly IReadOnlyList<(ToggleButton Button, float Rate)> _buttons;
 
     public PlayerSpeedControls(
         TextBlock rateText,
+        Slider speedSlider,
         ToggleButton speed05Button,
         ToggleButton speed1Button,
         ToggleButton speed15Button,
@@ -18,6 +20,7 @@ public sealed class PlayerSpeedControls
         ToggleButton speed8Button)
     {
         _rateText = rateText;
+        _speedSlider = speedSlider;
         _buttons =
         [
             (speed05Button, 0.5f),
@@ -33,6 +36,8 @@ public sealed class PlayerSpeedControls
     {
         var rate = PlayerPlaybackState.NormalizeRate(playerRate);
         _rateText.Text = PlayerPlaybackState.FormatRateLabel(rate);
+        if (Math.Abs(_speedSlider.Value - rate) >= 0.01)
+            _speedSlider.Value = Math.Clamp(rate, _speedSlider.Minimum, _speedSlider.Maximum);
 
         foreach (var (button, targetRate) in _buttons)
             button.IsChecked = PlayerPlaybackState.IsRateButtonChecked(rate, targetRate);

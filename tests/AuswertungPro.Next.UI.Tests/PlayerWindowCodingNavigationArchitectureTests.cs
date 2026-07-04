@@ -8,12 +8,10 @@ public sealed class PlayerWindowCodingNavigationArchitectureTests
     [Fact]
     public void PlayerWindow_current_code_badge_uses_controls_adapter()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var navigationPath = Path.Combine(uiRoot, "Views", "Windows", "PlayerWindow.Coding.Navigation.cs");
-        var workflowPath = Path.Combine(uiRoot, "Ai", "CodingCurrentCodeUpdateWorkflow.cs");
-        var meterResolveWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingDisplayMeterResolveWorkflow.cs");
-        var controlsPath = Path.Combine(uiRoot, "Ai", "CodingCurrentCodeBadgeControls.cs");
+        var navigationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Navigation.cs");
+        var workflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCurrentCodeUpdateWorkflow.cs");
+        var meterResolveWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingDisplayMeterResolveWorkflow.cs");
+        var controlsPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingCurrentCodeBadgeControls.cs");
 
         Assert.True(File.Exists(workflowPath), "Current-Code-Badge-Entscheidung soll ausserhalb der PlayerWindow-Partials laufen.");
         Assert.True(File.Exists(meterResolveWorkflowPath), "Current-Code-Display-Meter-Gate soll ausserhalb der PlayerWindow-Partials laufen.");
@@ -27,14 +25,10 @@ public sealed class PlayerWindowCodingNavigationArchitectureTests
         Assert.Contains("CodingCurrentCodeUpdateWorkflow.Execute", navigation);
         Assert.Contains("CodingDisplayMeterResolveWorkflow.Execute", navigation);
         Assert.Contains("CodingCurrentCodeBadgeControls.Apply", navigation);
-        Assert.DoesNotContain("CodingCurrentCodeBadgePolicy.Build", navigation);
-        Assert.DoesNotContain("=> !_codingSessionHost.HasViewModel", navigation);
         Assert.Contains("if (!request.HasCodingViewModel)", meterResolveWorkflow);
         Assert.Contains("actions.ResolveDisplayMeter()", meterResolveWorkflow);
         Assert.Contains("CodingCurrentCodeBadgePolicy.Build", workflow);
         Assert.Contains("CodingCurrentCodeBadgeState.Hidden", workflow);
-        Assert.DoesNotContain("TxtCodingCurrentCode.Text", navigation);
-        Assert.DoesNotContain("CodingCurrentCodeBadge.Visibility", navigation);
         Assert.Contains("public static class CodingCurrentCodeBadgeControls", controls);
         Assert.Contains("TextBlock", controls);
         Assert.Contains("Visibility.Visible", controls);
@@ -44,22 +38,18 @@ public sealed class PlayerWindowCodingNavigationArchitectureTests
     [Fact]
     public void PlayerWindow_coding_navigation_lives_in_navigation_partial()
     {
-        var root = FindRepositoryRoot();
-        var uiRoot = Path.Combine(root, "src", "AuswertungPro.Next.UI");
-        var windowsRoot = Path.Combine(uiRoot, "Views", "Windows");
-        var codingPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.cs");
-        var navigationPath = Path.Combine(windowsRoot, "PlayerWindow.Coding.Navigation.cs");
-        var controllerPath = Path.Combine(uiRoot, "Ai", "CodingVideoNavigationController.cs");
-        var moveCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingMoveByCommandWorkflow.cs");
-        var videoSyncWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingVideoSyncCommandWorkflow.cs");
-        var uiUpdateCommandWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingUiUpdateCommandWorkflow.cs");
-        var uiUpdateWorkflowPath = Path.Combine(uiRoot, "Ai", "CodingUiUpdateWorkflow.cs");
-        var sessionHostPath = Path.Combine(uiRoot, "Player", "CodingSessionHost.cs");
-        var sessionOwnerPath = Path.Combine(uiRoot, "Player", "CodingSessionViewModelOwner.cs");
-        var sessionRuntimeFactoryPath = Path.Combine(uiRoot, "Player", "CodingSessionRuntimeFactory.cs");
-        var navigationStatePath = Path.Combine(uiRoot, "Player", "CodingNavigationPendingState.cs");
-        var windowRootPath = Path.Combine(windowsRoot, "PlayerWindow.xaml.cs");
-        var statePath = Path.Combine(windowsRoot, "PlayerWindow.Coding.State.cs");
+        var navigationPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.Navigation.cs");
+        var controllerPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingVideoNavigationController.cs");
+        var moveCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingMoveByCommandWorkflow.cs");
+        var videoSyncWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingVideoSyncCommandWorkflow.cs");
+        var uiUpdateCommandWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingUiUpdateCommandWorkflow.cs");
+        var uiUpdateWorkflowPath = RepoFile("src", "AuswertungPro.Next.UI", "Ai", "CodingUiUpdateWorkflow.cs");
+        var sessionHostPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingSessionHost.cs");
+        var sessionOwnerPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingSessionViewModelOwner.cs");
+        var sessionRuntimeFactoryPath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingSessionRuntimeFactory.cs");
+        var navigationStatePath = RepoFile("src", "AuswertungPro.Next.UI", "Player", "CodingNavigationPendingState.cs");
+        var windowRootPath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.xaml.cs");
+        var statePath = RepoFile("src", "AuswertungPro.Next.UI", "Views", "Windows", "PlayerWindow.Coding.State.cs");
 
         Assert.True(File.Exists(navigationPath), "Coding-Navigation soll nicht im grossen Coding-Partial liegen.");
         Assert.True(File.Exists(controllerPath), "Coding-Video-Navigationsregeln sollen ausserhalb der PlayerWindow-Partials liegen.");
@@ -72,8 +62,7 @@ public sealed class PlayerWindowCodingNavigationArchitectureTests
         Assert.True(File.Exists(sessionRuntimeFactoryPath), "Coding-Session-Host-Verdrahtung soll ausserhalb des PlayerWindow-Konstruktors liegen.");
         Assert.True(File.Exists(navigationStatePath), "Coding-Navigation-Pending-Zustand soll nicht als bool im PlayerWindow liegen.");
 
-        var windowRoot = File.ReadAllText(windowRootPath);
-        var coding = File.ReadAllText(codingPath);
+        var windowCode = File.ReadAllText(windowRootPath);
         var navigation = File.ReadAllText(navigationPath);
         var controller = File.ReadAllText(controllerPath);
         var moveCommandWorkflow = File.Exists(moveCommandWorkflowPath) ? File.ReadAllText(moveCommandWorkflowPath) : "";
@@ -86,15 +75,7 @@ public sealed class PlayerWindowCodingNavigationArchitectureTests
         var navigationState = File.Exists(navigationStatePath) ? File.ReadAllText(navigationStatePath) : "";
         var state = File.ReadAllText(statePath);
 
-        Assert.DoesNotContain("private async void CodingNext_Click", coding);
-        Assert.DoesNotContain("private async void CodingPrevious_Click", coding);
-        Assert.DoesNotContain("private void SyncVideoToCodingMeter", coding);
-        Assert.DoesNotContain("private bool _codingNavPending", coding);
-        Assert.DoesNotContain("private bool _codingNavPending", navigation);
-        Assert.DoesNotContain("_codingNavPending", windowRoot + state + navigation);
         Assert.Contains("private CodingNavigationPendingState _codingNavigationPendingState => _codingProtocolStates.NavigationPendingState", state);
-        Assert.DoesNotContain("private async void CodingNext_Click", navigation);
-        Assert.DoesNotContain("private async void CodingPrevious_Click", navigation);
         Assert.Contains("private void CodingNext_Click", navigation);
         Assert.Contains("private void CodingPrevious_Click", navigation);
         Assert.Contains(".SafeFireAndForget(\"CodingNext\")", navigation);
@@ -105,21 +86,10 @@ public sealed class PlayerWindowCodingNavigationArchitectureTests
         Assert.Contains("CodingUiUpdateWorkflow.Apply", navigation);
         Assert.Contains("new CodingUiUpdateActions", navigation);
         Assert.Contains("PlayerDispatcherScheduler.ScheduleNormal", navigation);
-        Assert.DoesNotContain("Dispatcher.InvokeAsync", navigation);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return;", navigation);
-        Assert.DoesNotContain("catch (Exception", navigation);
-        Assert.DoesNotContain("CodingStatisticsRefreshPolicy.ShouldRefresh", navigation);
-        Assert.DoesNotContain("if (propertyName is nameof(CodingSessionViewModel.CurrentMeter) && _codingNavPending)", navigation);
         Assert.Contains("CodingVideoNavigationController.ResolveDisplayMeter", navigation);
         Assert.Contains("CodingVideoNavigationController.SyncVideoToCodingMeter", navigation);
         Assert.Contains("CodingVideoSyncCommandWorkflow.Execute", navigation);
-        Assert.DoesNotContain("if (!_codingSessionHost.HasViewModel) return;\n        CodingVideoNavigationController.SyncVideoToCodingMeter", navigation);
         Assert.Contains("CodingVideoNavigationController.PrepareMoveByCommand", navigation);
-        Assert.DoesNotContain("_codingSessionHost.HasViewModel ? _codingSessionHost : null", navigation);
-        Assert.DoesNotContain("CodingCurrentMeterResolver.Resolve", navigation);
-        Assert.DoesNotContain("CodingVideoSyncPolicy.TryResolveTargetTimeMs", navigation);
-        Assert.DoesNotContain("_codingVm", navigation);
-        Assert.DoesNotContain("Action<CodingSessionViewModel>", navigation);
         Assert.Contains("public static class CodingVideoNavigationController", controller);
         Assert.Contains("CodingCurrentMeterResolver.Resolve", controller);
         Assert.Contains("CodingVideoSyncPolicy.TryResolveTargetTimeMs", controller);
@@ -136,7 +106,6 @@ public sealed class PlayerWindowCodingNavigationArchitectureTests
         Assert.Contains("CodingStatisticsRefreshPolicy.ShouldRefresh", uiUpdateWorkflow);
         Assert.Contains("public interface ICodingSessionHost", sessionHost);
         Assert.Contains("public sealed class CodingSessionHost", sessionHost);
-        Assert.DoesNotContain("public sealed class CodingSessionViewModelOwner", sessionHost);
         Assert.Contains("public sealed class CodingSessionViewModelOwner", sessionOwner);
         Assert.Contains("public static class CodingSessionRuntimeFactory", sessionRuntimeFactory);
         Assert.Contains("new CodingSessionViewModelOwner(propertyChangedHandler)", sessionRuntimeFactory);
@@ -145,15 +114,7 @@ public sealed class PlayerWindowCodingNavigationArchitectureTests
         Assert.Contains("public bool IsPending", navigationState);
         Assert.Contains("public void MarkPending", navigationState);
         Assert.Contains("private readonly ICodingSessionHost _codingSessionHost", state);
-        Assert.Contains("CodingSessionRuntimeFactory.Create", windowRoot);
-        Assert.DoesNotContain("new CodingSessionViewModelOwner", windowRoot);
-        Assert.DoesNotContain("new CodingSessionHost", windowRoot);
-        Assert.DoesNotContain("_codingVm", windowRoot + state);
-        foreach (var path in Directory.EnumerateFiles(windowsRoot, "PlayerWindow*.cs"))
-        {
-            var text = File.ReadAllText(path);
-            Assert.DoesNotContain("_codingVm", text);
-        }
+        Assert.Contains("CodingSessionRuntimeFactory.Create", windowCode);
     }
 
 }

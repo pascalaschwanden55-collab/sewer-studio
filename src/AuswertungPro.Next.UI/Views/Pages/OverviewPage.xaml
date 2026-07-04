@@ -16,13 +16,17 @@
                        Margin="0,4,0,0" Style="{StaticResource Caption}"/>
             <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
                 <Button Content="Neues Projekt" Command="{Binding NewCommand}"
-                        Style="{StaticResource PrimaryButton}" Padding="16,8"/>
+                        Style="{StaticResource PrimaryButton}" Padding="16,8"
+                        ToolTip="Neues Projekt mit leerem Stammdatenblatt anlegen."/>
                 <Button Content="Projekt öffnen" Command="{Binding OpenCommand}"
-                        Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
+                        Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
+                        ToolTip="SewerStudio-Projektdatei auswaehlen und laden."/>
                 <Button Content="Letztes Projekt fortsetzen" Command="{Binding ContinueCommand}"
-                        Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
+                        Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
+                        ToolTip="Zuletzt verwendetes Projekt direkt oeffnen."/>
                 <Button Content="Aktualisieren" Command="{Binding RefreshCommand}"
-                        Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"/>
+                        Margin="8,0,0,0" Style="{StaticResource SecondaryButton}"
+                        ToolTip="Projektliste und zuletzt verwendete Eintraege neu laden."/>
             </StackPanel>
         </StackPanel>
 
@@ -262,6 +266,145 @@
                             </StackPanel>
                         </Border>
                     </Grid>
+
+                    <Border CornerRadius="8"
+                            Padding="12"
+                            Margin="0,0,0,12"
+                            Background="{DynamicResource BgLightBrush}"
+                            BorderBrush="{DynamicResource BorderLightBrush}"
+                            BorderThickness="1">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,10">
+                                <TextBlock Text="Dashboard"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                                <TextBlock DockPanel.Dock="Right"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           HorizontalAlignment="Right">
+                                    <Run Text="{Binding Dashboard.TotalLengthMeters, StringFormat={}{0:N0} m}"/>
+                                    <Run Text=" / "/>
+                                    <Run Text="{Binding Dashboard.TotalCost, StringFormat={}{0:N0} CHF}"/>
+                                </TextBlock>
+                            </DockPanel>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Zustandsklassen"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               Margin="0,0,0,6"/>
+                                    <ItemsControl ItemsSource="{Binding Dashboard.ConditionClasses}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,5">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="28"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="44"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Label}" FontSize="10" Foreground="{DynamicResource TextBrush}"/>
+                                                    <ProgressBar Grid.Column="1"
+                                                                 Height="6"
+                                                                 Maximum="100"
+                                                                 Value="{Binding Percent}"
+                                                                 BorderThickness="0"
+                                                                 Background="{DynamicResource BorderBrush}"
+                                                                 Foreground="{DynamicResource Severity3Brush}"
+                                                                 VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding Percent, StringFormat={}{0:0.#}%}"
+                                                               FontSize="10"
+                                                               Foreground="{DynamicResource MutedBrush}"
+                                                               HorizontalAlignment="Right"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Schadensgruppen"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               Margin="0,0,0,6"/>
+                                    <ItemsControl ItemsSource="{Binding Dashboard.DamageGroups}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,5">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="46"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="28"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Label}" FontSize="10" Foreground="{DynamicResource TextBrush}"/>
+                                                    <ProgressBar Grid.Column="1"
+                                                                 Height="6"
+                                                                 Maximum="100"
+                                                                 Value="{Binding Percent}"
+                                                                 BorderThickness="0"
+                                                                 Background="{DynamicResource BorderBrush}"
+                                                                 Foreground="{DynamicResource AccentBrush}"
+                                                                 VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding Count}"
+                                                               FontSize="10"
+                                                               Foreground="{DynamicResource MutedBrush}"
+                                                               HorizontalAlignment="Right"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="4">
+                                    <TextBlock Text="DN / Kosten"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               Margin="0,0,0,6"/>
+                                    <ItemsControl ItemsSource="{Binding Dashboard.DnCostGroups}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,5">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="54"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="58"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Label}" FontSize="10" Foreground="{DynamicResource TextBrush}"/>
+                                                    <ProgressBar Grid.Column="1"
+                                                                 Height="6"
+                                                                 Maximum="100"
+                                                                 Value="{Binding Percent}"
+                                                                 BorderThickness="0"
+                                                                 Background="{DynamicResource BorderBrush}"
+                                                                 Foreground="{DynamicResource SuccessBrush}"
+                                                                 VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding Cost, StringFormat={}{0:N0}}"
+                                                               FontSize="10"
+                                                               Foreground="{DynamicResource MutedBrush}"
+                                                               HorizontalAlignment="Right"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
 
                     <!-- Schnellaktionen -->
                     <TextBlock Text="Schnellaktionen" FontSize="13" FontWeight="SemiBold"

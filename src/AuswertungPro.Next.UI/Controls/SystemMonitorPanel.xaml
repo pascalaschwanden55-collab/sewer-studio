@@ -59,6 +59,10 @@
               BorderThickness="0">
         <Expander.Header>
             <Grid MinWidth="0" Margin="0,0,4,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -87,6 +91,19 @@
                                Margin="6,0,0,0"
                                TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
+                <Button Grid.Column="1"
+                        Grid.RowSpan="2"
+                        Width="26"
+                        Height="24"
+                        MinWidth="26"
+                        Padding="0"
+                        Margin="8,0,0,0"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource SecondaryButton}"
+                        Click="Detach_Click"
+                        ToolTip="System-Monitor in eigenem Fenster oeffnen">
+                    <TextBlock Text="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="12"/>
+                </Button>
             </Grid>
         </Expander.Header>
 
