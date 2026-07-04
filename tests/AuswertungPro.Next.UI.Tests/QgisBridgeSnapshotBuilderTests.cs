@@ -115,6 +115,66 @@ public sealed class QgisBridgeSnapshotBuilderTests
     }
 
     [Fact]
+    public void BuildDamagesGeoJson_misst_gegen_fliessrichtung_vom_anderen_ende()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+        var project = CreateProjectWithImportedDamage();
+        project.Data[0].VsaFindings[0].MeterStart = 2.0;
+        project.Data[0].SetFieldValue("Inspektionsrichtung", "Gegen Fliessrichtung", FieldSource.Manual, userEdited: true);
+
+        var geoJson = sut.BuildDamagesGeoJson(QgisProjectSnapshot.Capture(project, null));
+
+        // Aufnahme startete am "nach"-Schacht: 2 m ab Polyline-ENDE der 10-m-Linie => bei 2690008.
+        var feature = Assert.Single(geoJson.Features);
+        Assert.Equal("gegen_fliessrichtung", feature.Properties["richtung"]);
+        var point = Assert.IsType<GeoJsonPoint>(feature.Geometry);
+        Assert.Equal(2690008, point.Coordinates[0], precision: 3);
+    }
+
+    [Fact]
+    public void Umgekehrt_benannte_haltung_findet_geometrie_und_misst_vom_anderen_ende()
+    {
+        using var fixture = QgisBridgeFixture.Create();
+        var sut = fixture.CreateBuilder();
+
+        // Kataster kennt "A-B" (Fliessrichtung); die Aufnahme lief von B nach A,
+        // darum heisst die Haltung im Projekt "B-A".
+        var project = new Project { Name = "Richtung-Test" };
+        var record = new HaltungRecord();
+        record.SetFieldValue("Haltungsname", "B-A", FieldSource.Manual, userEdited: true);
+        record.VsaFindings.Add(new VsaFinding { KanalSchadencode = "BAB", MeterStart = 2.0 });
+        project.Data.Add(record);
+
+        var snapshot = QgisProjectSnapshot.Capture(project, "B-A");
+        var damages = sut.BuildDamagesGeoJson(snapshot);
+        var current = sut.BuildCurrentGeoJson(snapshot);
+
+        var feature = Assert.Single(damages.Features);
+        Assert.Equal("B-A", feature.Properties["haltung"]);
+        Assert.Equal("A-B", feature.Properties["haltung_kataster"]);
+        Assert.Equal("gegen_fliessrichtung", feature.Properties["richtung"]);
+        var point = Assert.IsType<GeoJsonPoint>(feature.Geometry);
+        Assert.Equal(2690008, point.Coordinates[0], precision: 3);
+
+        // Auch die "aktuelle Haltung" muss ueber den umgekehrten Namen gefunden werden.
+        var currentFeature = Assert.Single(current.Features);
+        Assert.Equal("A-B", currentFeature.Properties["haltung_kataster"]);
+    }
+
+    [Fact]
+    public void Richtungswechsel_invalidiert_den_damages_fingerprint()
+    {
+        var before = QgisProjectSnapshot.Capture(CreateProjectWithImportedDamage(), null).DamagesFingerprint(1);
+
+        var project = CreateProjectWithImportedDamage();
+        project.Data[0].SetFieldValue("Inspektionsrichtung", "Gegen Fliessrichtung", FieldSource.Manual, userEdited: true);
+        var after = QgisProjectSnapshot.Capture(project, null).DamagesFingerprint(1);
+
+        Assert.NotEqual(before, after);
+    }
+
+    [Fact]
     public void BuildGeoJson_serializes_geometry_types_for_qgis()
     {
         using var fixture = QgisBridgeFixture.Create();

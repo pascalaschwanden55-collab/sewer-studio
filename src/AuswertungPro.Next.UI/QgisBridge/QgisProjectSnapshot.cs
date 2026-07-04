@@ -34,6 +34,7 @@ internal sealed record QgisProjectSnapshot(
             haltungen.Add(new QgisHaltungSnapshot(
                 name,
                 TryParseCondition(record.GetFieldValue("Zustandsklasse")),
+                IsGegenFliessrichtung(record.GetFieldValue("Inspektionsrichtung")),
                 CaptureDamages(record)));
         }
 
@@ -109,6 +110,10 @@ internal sealed record QgisProjectSnapshot(
             ? value
             : null;
 
+    /// <summary>Feldwerte laut FieldCatalog: "In Fliessrichtung" / "Gegen Fliessrichtung" / leer.</summary>
+    private static bool IsGegenFliessrichtung(string? inspektionsrichtung)
+        => inspektionsrichtung?.TrimStart().StartsWith("gegen", StringComparison.OrdinalIgnoreCase) == true;
+
     private static string? EmptyToNull(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
@@ -138,6 +143,8 @@ internal sealed record QgisProjectSnapshot(
         {
             hash.Add(haltung.Haltungsname, StringComparer.OrdinalIgnoreCase);
             hash.Add(haltung.Zustandsklasse);
+            // Richtung beeinflusst die Punktpositionen -> muss den Cache invalidieren.
+            hash.Add(haltung.GegenFliessrichtung);
             foreach (var damage in haltung.Schaeden)
             {
                 hash.Add(damage.Code);
@@ -163,6 +170,7 @@ internal sealed record QgisProjectSnapshot(
         var hash = new HashCode();
         hash.Add(CurrentHolding, StringComparer.OrdinalIgnoreCase);
         hash.Add(record?.Zustandsklasse);
+        hash.Add(record?.GegenFliessrichtung ?? false);
         hash.Add(record?.Schaeden.Count ?? -1);
 
         return new QgisPayloadFingerprint(xtfTicks, hash.ToHashCode(), 1);
@@ -175,6 +183,7 @@ internal readonly record struct QgisPayloadFingerprint(long XtfTicks, int Hash, 
 internal sealed record QgisHaltungSnapshot(
     string Haltungsname,
     int? Zustandsklasse,
+    bool GegenFliessrichtung,
     IReadOnlyList<QgisDamageSnapshot> Schaeden);
 
 internal sealed record QgisDamageSnapshot(

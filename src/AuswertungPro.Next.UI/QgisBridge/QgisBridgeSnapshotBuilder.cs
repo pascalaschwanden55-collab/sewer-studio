@@ -20,6 +20,11 @@ internal sealed class QgisBridgeSnapshotBuilder
     private IReadOnlyList<HaltungGeometry> _cachedGeometries = Array.Empty<HaltungGeometry>();
     private IReadOnlyDictionary<string, HaltungGeometry> _cachedGeometryByHolding =
         new Dictionary<string, HaltungGeometry>(StringComparer.OrdinalIgnoreCase);
+    // Umgekehrter Name ("B-A") -> amtliche Kataster-Bezeichnung ("A-B"). Noetig, weil
+    // Haltungen nach Aufnahmerichtung benannt werden: bei Inspektion gegen die
+    // Fliessrichtung ist der Projektname gegenlaeufig zum Kataster.
+    private IReadOnlyDictionary<string, string> _cachedReversedNames =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
     public QgisBridgeSnapshotBuilder(AppSettings settings, string? networkCacheFilePath = null)
     {
@@ -30,7 +35,7 @@ internal sealed class QgisBridgeSnapshotBuilder
     public QgisStatusPayload BuildStatus(QgisProjectSnapshot snapshot)
     {
         var network = LoadNetwork();
-        var damageStats = CountExportableDamages(snapshot, network.GeometryByHolding);
+        var damageStats = CountExportableDamages(snapshot, network);
 
         return new QgisStatusPayload(
             Ok: true,
@@ -79,15 +84,18 @@ internal sealed class QgisBridgeSnapshotBuilder
             return GeoJsonFeatureCollection.Empty;
 
         var network = LoadNetwork();
-        if (!network.GeometryByHolding.TryGetValue(holding, out var geometry))
+        if (!TryResolveGeometry(network, holding, out var geometry, out var katasterName, out var reversedName))
             return GeoJsonFeatureCollection.Empty;
 
         var record = FindHaltung(snapshot, holding);
+        var fromEnd = reversedName || (record?.GegenFliessrichtung ?? false);
         var feature = CreateLineFeature(
             geometry,
             new Dictionary<string, object?>
             {
                 ["haltung"] = holding,
+                ["haltung_kataster"] = katasterName,
+                ["richtung"] = fromEnd ? "gegen_fliessrichtung" : "in_fliessrichtung",
                 ["current"] = true,
                 ["zustandsklasse"] = record?.Zustandsklasse,
                 ["zustand_farbe"] = MapConditionColor(record?.Zustandsklasse),
@@ -107,8 +115,13 @@ internal sealed class QgisBridgeSnapshotBuilder
         var features = new List<GeoJsonFeature>();
         foreach (var haltung in snapshot.Haltungen)
         {
-            if (!network.GeometryByHolding.TryGetValue(haltung.Haltungsname, out var geometry))
+            if (!TryResolveGeometry(network, haltung.Haltungsname, out var geometry, out var katasterName, out var reversedName))
                 continue;
+
+            // Meterstand zaehlt ab dem Start-Schacht der AUFNAHME. Die Kataster-Polyline
+            // laeuft in Fliessrichtung — bei gegenlaeufigem Namen oder Inspektion gegen
+            // die Fliessrichtung wird darum vom Polyline-Ende her gemessen.
+            var fromEnd = reversedName || haltung.GegenFliessrichtung;
 
             foreach (var damage in haltung.Schaeden)
             {
@@ -116,7 +129,7 @@ internal sealed class QgisBridgeSnapshotBuilder
                 if (meter is null)
                     continue;
 
-                var point = InterpolateLv95(geometry, meter.Value);
+                var point = InterpolateLv95(geometry, meter.Value, fromEnd);
                 if (point is null)
                     continue;
 
@@ -125,6 +138,8 @@ internal sealed class QgisBridgeSnapshotBuilder
                     new Dictionary<string, object?>
                     {
                         ["haltung"] = haltung.Haltungsname,
+                        ["haltung_kataster"] = katasterName,
+                        ["richtung"] = fromEnd ? "gegen_fliessrichtung" : "in_fliessrichtung",
                         ["code"] = damage.Code,
                         ["beschreibung"] = damage.Beschreibung,
                         ["meter_start"] = damage.MeterStart,
@@ -165,7 +180,8 @@ internal sealed class QgisBridgeSnapshotBuilder
         var xtfPath = KatasterXtfPathResolver.Resolve(_settings);
         if (string.IsNullOrWhiteSpace(xtfPath) || !File.Exists(xtfPath))
             return new NetworkLoadResult(xtfPath, XtfFound: false, Array.Empty<HaltungGeometry>(),
-                new Dictionary<string, HaltungGeometry>(StringComparer.OrdinalIgnoreCase));
+                new Dictionary<string, HaltungGeometry>(StringComparer.OrdinalIgnoreCase),
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 
         var ticks = File.GetLastWriteTimeUtc(xtfPath).Ticks;
         lock (_cacheSync)
@@ -173,7 +189,8 @@ internal sealed class QgisBridgeSnapshotBuilder
             if (string.Equals(_cachedXtfPath, xtfPath, StringComparison.OrdinalIgnoreCase)
                 && _cachedXtfTicks == ticks)
             {
-                return new NetworkLoadResult(xtfPath, XtfFound: true, _cachedGeometries, _cachedGeometryByHolding);
+                return new NetworkLoadResult(
+                    xtfPath, XtfFound: true, _cachedGeometries, _cachedGeometryByHolding, _cachedReversedNames);
             }
 
             var geometries = new NetworkGeometryCache(_networkCacheFilePath)
@@ -187,9 +204,78 @@ internal sealed class QgisBridgeSnapshotBuilder
             _cachedGeometryByHolding = geometries
                 .GroupBy(g => g.Haltungsname, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            _cachedReversedNames = BuildReversedNameIndex(_cachedGeometryByHolding);
 
-            return new NetworkLoadResult(xtfPath, XtfFound: true, _cachedGeometries, _cachedGeometryByHolding);
+            return new NetworkLoadResult(
+                xtfPath, XtfFound: true, _cachedGeometries, _cachedGeometryByHolding, _cachedReversedNames);
         }
+    }
+
+    /// <summary>
+    /// Baut den Index "umgekehrter Name -> Kataster-Bezeichnung" ("B-A" -> "A-B").
+    /// Direkte Kataster-Namen haben immer Vorrang; mehrdeutige Umkehrungen entfallen.
+    /// </summary>
+    private static IReadOnlyDictionary<string, string> BuildReversedNameIndex(
+        IReadOnlyDictionary<string, HaltungGeometry> geometryByHolding)
+    {
+        var reversed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var ambiguous = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var katasterName in geometryByHolding.Keys)
+        {
+            var (a, b) = HaltungCadastreExtractor.SplitShaftPair(katasterName);
+            if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b))
+                continue;
+
+            var reversedName = $"{b}-{a}";
+            if (geometryByHolding.ContainsKey(reversedName) || ambiguous.Contains(reversedName))
+                continue;
+
+            if (reversed.ContainsKey(reversedName))
+            {
+                // Zwei Kataster-Haltungen mit derselben Umkehrung -> nicht eindeutig.
+                reversed.Remove(reversedName);
+                ambiguous.Add(reversedName);
+                continue;
+            }
+
+            reversed[reversedName] = katasterName;
+        }
+
+        return reversed;
+    }
+
+    /// <summary>
+    /// Loest den Projekt-Haltungsnamen zur Kataster-Geometrie auf.
+    /// reversedName = true, wenn der Projektname gegenlaeufig zum Kataster benannt ist
+    /// (Aufnahme startete am Kataster-"nach"-Schacht, also am Ende der Polyline).
+    /// </summary>
+    private static bool TryResolveGeometry(
+        NetworkLoadResult network,
+        string holdingName,
+        out HaltungGeometry geometry,
+        out string katasterName,
+        out bool reversedName)
+    {
+        if (network.GeometryByHolding.TryGetValue(holdingName, out geometry!))
+        {
+            katasterName = geometry.Haltungsname;
+            reversedName = false;
+            return true;
+        }
+
+        if (network.ReversedNames.TryGetValue(holdingName, out var kataster)
+            && network.GeometryByHolding.TryGetValue(kataster, out geometry!))
+        {
+            katasterName = kataster;
+            reversedName = true;
+            return true;
+        }
+
+        geometry = null!;
+        katasterName = "";
+        reversedName = false;
+        return false;
     }
 
     private static IReadOnlyDictionary<string, int?> BuildConditionIndex(QgisProjectSnapshot snapshot)
@@ -238,7 +324,7 @@ internal sealed class QgisBridgeSnapshotBuilder
         return null;
     }
 
-    private static (double X, double Y)? InterpolateLv95(HaltungGeometry geometry, double meter)
+    private static (double X, double Y)? InterpolateLv95(HaltungGeometry geometry, double meter, bool fromEnd = false)
     {
         if (geometry.Points.Count == 0)
             return null;
@@ -247,8 +333,14 @@ internal sealed class QgisBridgeSnapshotBuilder
             return geometry.Points[0];
 
         var target = Math.Max(0, meter);
-        var walked = 0.0;
+        if (fromEnd)
+        {
+            // Meterstand ab dem Polyline-ENDE (Aufnahme gegen die Fliessrichtung):
+            // auf eine Vorwaerts-Position ab Polyline-Anfang umrechnen.
+            target = Math.Max(0, TotalLength(geometry) - target);
+        }
 
+        var walked = 0.0;
         for (var i = 1; i < geometry.Points.Count; i++)
         {
             var a = geometry.Points[i - 1];
@@ -271,16 +363,29 @@ internal sealed class QgisBridgeSnapshotBuilder
         return geometry.Points[^1];
     }
 
+    private static double TotalLength(HaltungGeometry geometry)
+    {
+        var total = 0.0;
+        for (var i = 1; i < geometry.Points.Count; i++)
+        {
+            var dx = geometry.Points[i].X - geometry.Points[i - 1].X;
+            var dy = geometry.Points[i].Y - geometry.Points[i - 1].Y;
+            total += Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        return total;
+    }
+
     private static DamageStats CountExportableDamages(
         QgisProjectSnapshot snapshot,
-        IReadOnlyDictionary<string, HaltungGeometry> geometryByHolding)
+        NetworkLoadResult network)
     {
         var exportable = 0;
         var skipped = 0;
 
         foreach (var haltung in snapshot.Haltungen)
         {
-            var hasGeometry = geometryByHolding.ContainsKey(haltung.Haltungsname);
+            var hasGeometry = TryResolveGeometry(network, haltung.Haltungsname, out _, out _, out _);
             foreach (var damage in haltung.Schaeden)
             {
                 if (hasGeometry && GetDamageMeterForMap(damage) is not null)
@@ -297,7 +402,8 @@ internal sealed class QgisBridgeSnapshotBuilder
         string XtfPath,
         bool XtfFound,
         IReadOnlyList<HaltungGeometry> Geometries,
-        IReadOnlyDictionary<string, HaltungGeometry> GeometryByHolding);
+        IReadOnlyDictionary<string, HaltungGeometry> GeometryByHolding,
+        IReadOnlyDictionary<string, string> ReversedNames);
 
     private readonly record struct DamageStats(int Exportable, int Skipped);
 }
