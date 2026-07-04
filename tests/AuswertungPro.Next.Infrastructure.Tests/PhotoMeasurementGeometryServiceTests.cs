@@ -378,6 +378,117 @@ public sealed class PhotoMeasurementGeometryServiceTests
     }
 
     [Fact]
+    public void BuildLevelOverlayPlan_Wasser_PlantUnteresSegment()
+    {
+        var geometry = new OverlayGeometry
+        {
+            LevelSubMode = LevelMode.Water,
+            Points = new List<NormalizedPoint>
+            {
+                new(0.5, 0.6),
+                new(0.5, 0.6)
+            }
+        };
+        var calibration = new PipeCalibration
+        {
+            NormalizedDiameter = 0.6,
+            PipeCenter = new NormalizedPoint(0.5, 0.5)
+        };
+
+        var plan = PhotoMeasurementGeometryService.BuildLevelOverlayPlan(
+            geometry,
+            calibration,
+            renderedX: 10,
+            renderedY: 20,
+            renderedWidth: 200,
+            renderedHeight: 100,
+            cameraHeightPercent: 50);
+
+        Assert.NotNull(plan);
+        Assert.Equal(110, plan.Center.X, precision: 6);
+        Assert.Equal(70, plan.Center.Y, precision: 6);
+        Assert.Equal(30, plan.PipeRadius, precision: 6);
+        Assert.Equal(80, plan.LevelY, precision: 6);
+        Assert.Equal(80, plan.FillRect.X, precision: 6);
+        Assert.Equal(80, plan.FillRect.Y, precision: 6);
+        Assert.Equal(60, plan.FillRect.Width, precision: 6);
+        Assert.Equal(20, plan.FillRect.Height, precision: 6);
+        Assert.Equal(28.284271, plan.ChordHalf, precision: 6);
+        Assert.Equal(81.715729, plan.LineStart.X, precision: 6);
+        Assert.Equal(138.284271, plan.LineEnd.X, precision: 6);
+        Assert.Equal(80, plan.LineStart.Y, precision: 6);
+        Assert.Equal(110, plan.LabelPosition.X, precision: 6);
+        Assert.Equal(62, plan.LabelPosition.Y, precision: 6);
+    }
+
+    [Fact]
+    public void BuildLevelOverlayPlan_Hindernis_PlantOberesSegment()
+    {
+        var geometry = new OverlayGeometry
+        {
+            LevelSubMode = LevelMode.Obstacle,
+            Points = new List<NormalizedPoint>
+            {
+                new(0.5, 0.4),
+                new(0.5, 0.4)
+            }
+        };
+        var calibration = new PipeCalibration
+        {
+            NormalizedDiameter = 0.6,
+            PipeCenter = new NormalizedPoint(0.5, 0.5)
+        };
+
+        var plan = PhotoMeasurementGeometryService.BuildLevelOverlayPlan(
+            geometry,
+            calibration,
+            renderedX: 10,
+            renderedY: 20,
+            renderedWidth: 200,
+            renderedHeight: 100,
+            cameraHeightPercent: 50);
+
+        Assert.NotNull(plan);
+        Assert.Equal(80, plan.FillRect.X, precision: 6);
+        Assert.Equal(40, plan.FillRect.Y, precision: 6);
+        Assert.Equal(60, plan.FillRect.Width, precision: 6);
+        Assert.Equal(20, plan.FillRect.Height, precision: 6);
+        Assert.Equal(60, plan.LevelY, precision: 6);
+        Assert.Equal(28.284271, plan.ChordHalf, precision: 6);
+    }
+
+    [Fact]
+    public void BuildLevelOverlayPlan_UngueltigeEingaben_GibtNull()
+    {
+        var geometry = new OverlayGeometry { LevelSubMode = LevelMode.Water };
+        var calibration = new PipeCalibration
+        {
+            NormalizedDiameter = 0.6,
+            PipeCenter = new NormalizedPoint(0.5, 0.5)
+        };
+
+        Assert.Null(PhotoMeasurementGeometryService.BuildLevelOverlayPlan(
+            geometry,
+            calibration,
+            renderedX: 0,
+            renderedY: 0,
+            renderedWidth: 100,
+            renderedHeight: 100,
+            cameraHeightPercent: 50));
+
+        geometry.Points.Add(new NormalizedPoint(0.5, 0.5));
+        geometry.Points.Add(new NormalizedPoint(0.5, 0.5));
+        Assert.Null(PhotoMeasurementGeometryService.BuildLevelOverlayPlan(
+            geometry,
+            calibration,
+            renderedX: 0,
+            renderedY: 0,
+            renderedWidth: 0,
+            renderedHeight: 100,
+            cameraHeightPercent: 50));
+    }
+
+    [Fact]
     public void BuildAngleGeometry_Lateral_RechnetEndpunktUndUhrlage()
     {
         var center = new NormalizedPoint(0.5, 0.5);

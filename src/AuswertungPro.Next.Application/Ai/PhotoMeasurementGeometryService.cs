@@ -240,6 +240,79 @@ public static class PhotoMeasurementGeometryService
         return new PhotoMeasurementLineGeometry(geometry, millimeters, normalizedLength);
     }
 
+    /// <summary>
+    /// Plant die UI-freie Geometrie fuer das Level-/Fuellstand-Overlay.
+    /// </summary>
+    public static PhotoMeasurementLevelOverlayPlan? BuildLevelOverlayPlan(
+        OverlayGeometry geometry,
+        PipeCalibration calibration,
+        double renderedX,
+        double renderedY,
+        double renderedWidth,
+        double renderedHeight,
+        double cameraHeightPercent)
+    {
+        ArgumentNullException.ThrowIfNull(geometry);
+        ArgumentNullException.ThrowIfNull(calibration);
+
+        if (geometry.Points.Count < 2 || renderedWidth <= 0 || renderedHeight <= 0)
+            return null;
+
+        double refSize = Math.Min(renderedWidth, renderedHeight);
+        double normalizedDiameter = calibration.NormalizedDiameter;
+        double pipeRadius = (normalizedDiameter / 2.0) * refSize;
+
+        double cameraRatio = (cameraHeightPercent - 50.0) / 100.0;
+        double normalizedCenterX = calibration.PipeCenter.X;
+        double normalizedCenterY = calibration.PipeCenter.Y + cameraRatio * (normalizedDiameter / 2.0) * 0.3;
+
+        var center = ToCanvasPoint(renderedX, renderedY, renderedWidth, renderedHeight, normalizedCenterX, normalizedCenterY);
+        var levelPoint = geometry.Points[0];
+        double levelY = ToCanvasPoint(renderedX, renderedY, renderedWidth, renderedHeight, levelPoint.X, levelPoint.Y).Y;
+
+        PhotoMeasurementCanvasRect fillRect;
+        if (geometry.LevelSubMode == LevelMode.Obstacle)
+        {
+            double height = Math.Max(0, levelY - (center.Y - pipeRadius));
+            fillRect = new PhotoMeasurementCanvasRect(
+                X: center.X - pipeRadius,
+                Y: center.Y - pipeRadius,
+                Width: pipeRadius * 2,
+                Height: height);
+        }
+        else
+        {
+            double height = Math.Max(0, (center.Y + pipeRadius) - levelY);
+            fillRect = new PhotoMeasurementCanvasRect(
+                X: center.X - pipeRadius,
+                Y: levelY,
+                Width: pipeRadius * 2,
+                Height: height);
+        }
+
+        double relativeY = levelY - center.Y;
+        double chordHalf = Math.Sqrt(Math.Max(0, pipeRadius * pipeRadius - relativeY * relativeY));
+
+        return new PhotoMeasurementLevelOverlayPlan(
+            Center: center,
+            PipeRadius: pipeRadius,
+            FillRect: fillRect,
+            LineStart: new PhotoMeasurementCanvasPoint(center.X - chordHalf, levelY),
+            LineEnd: new PhotoMeasurementCanvasPoint(center.X + chordHalf, levelY),
+            LabelPosition: new PhotoMeasurementCanvasPoint(center.X, levelY - 18),
+            LevelY: levelY,
+            ChordHalf: chordHalf);
+    }
+
+    private static PhotoMeasurementCanvasPoint ToCanvasPoint(
+        double renderedX,
+        double renderedY,
+        double renderedWidth,
+        double renderedHeight,
+        double normalizedX,
+        double normalizedY)
+        => new(renderedX + normalizedX * renderedWidth, renderedY + normalizedY * renderedHeight);
+
     public static double PositionDegToClockHour(double positionDeg)
         => positionDeg / 30.0;
 
@@ -391,6 +464,18 @@ public sealed record PhotoMeasurementLineGeometry(
     double NormalizedLength);
 
 public sealed record PhotoMeasurementCanvasPoint(double X, double Y);
+
+public sealed record PhotoMeasurementCanvasRect(double X, double Y, double Width, double Height);
+
+public sealed record PhotoMeasurementLevelOverlayPlan(
+    PhotoMeasurementCanvasPoint Center,
+    double PipeRadius,
+    PhotoMeasurementCanvasRect FillRect,
+    PhotoMeasurementCanvasPoint LineStart,
+    PhotoMeasurementCanvasPoint LineEnd,
+    PhotoMeasurementCanvasPoint LabelPosition,
+    double LevelY,
+    double ChordHalf);
 
 public sealed record PhotoMeasurementLateralOverlayPlan(
     PhotoMeasurementCanvasPoint OpeningCenter,

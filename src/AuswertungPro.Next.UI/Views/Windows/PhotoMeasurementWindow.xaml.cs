@@ -636,16 +636,15 @@ public partial class PhotoMeasurementWindow : Window
         var r = GetImageRenderedRect(PhotoImage);
         if (r.Width <= 0 || r.Height <= 0) return;
 
-        double refSize = Math.Min(r.Width, r.Height);
-        double normDiam = _calibration.NormalizedDiameter;
-        double pipeR = (normDiam / 2.0) * refSize;
-
-        // Kamerahoehe-Korrektur
-        double camRatio = (CameraHeightPercent - 50.0) / 100.0;
-        double normCx = _calibration.PipeCenter.X;
-        double normCy = _calibration.PipeCenter.Y + camRatio * (normDiam / 2.0) * 0.3;
-
-        var center = NormToCanvas(normCx, normCy);
+        var plan = PhotoMeasurementGeometryService.BuildLevelOverlayPlan(
+            geo,
+            _calibration,
+            r.X,
+            r.Y,
+            r.Width,
+            r.Height,
+            CameraHeightPercent);
+        if (plan is null) return;
 
         // Fuellfarbe (statisch gefroren, keine Allokation)
         Brush fillBrush = _activeLevelMode switch
@@ -656,67 +655,43 @@ public partial class PhotoMeasurementWindow : Window
             _ => Brushes.Transparent
         };
 
-        // Level-Linie Y-Position
-        if (geo.Points.Count >= 2)
+        // CombinedGeometry: Fuellung geclippt am Rohrkreis
+        var center = new Point(plan.Center.X, plan.Center.Y);
+        var pipeEllipse = new EllipseGeometry(center, plan.PipeRadius, plan.PipeRadius);
+        var fillRect = new RectangleGeometry(new Rect(
+            plan.FillRect.X,
+            plan.FillRect.Y,
+            plan.FillRect.Width,
+            plan.FillRect.Height));
+
+        var combined = new CombinedGeometry(GeometryCombineMode.Intersect, pipeEllipse, fillRect);
+        var fillPath = new System.Windows.Shapes.Path
         {
-            var levelCanvas = NormToCanvas(geo.Points[0].X, geo.Points[0].Y);
-            double levelY = levelCanvas.Y;
+            Data = combined,
+            Fill = fillBrush,
+            Tag = TagFill
+        };
+        OverlayCanvas.Children.Add(fillPath);
 
-            // CombinedGeometry: Fuellung geclippt am Rohrkreis
-            var pipeEllipse = new EllipseGeometry(center, pipeR, pipeR);
-
-            Geometry fillRect;
-            if (_activeLevelMode == LevelMode.Obstacle)
+        var levelLine = new Line
+        {
+            X1 = plan.LineStart.X, Y1 = plan.LineStart.Y,
+            X2 = plan.LineEnd.X, Y2 = plan.LineEnd.Y,
+            Stroke = _activeLevelMode switch
             {
-                // Von oben nach levelY
-                var h = Math.Max(0, levelY - (center.Y - pipeR));
-                fillRect = new RectangleGeometry(new Rect(
-                    center.X - pipeR, center.Y - pipeR,
-                    pipeR * 2, h));
-            }
-            else
-            {
-                // Von levelY nach unten
-                var h = Math.Max(0, (center.Y + pipeR) - levelY);
-                fillRect = new RectangleGeometry(new Rect(
-                    center.X - pipeR, levelY,
-                    pipeR * 2, h));
-            }
+                LevelMode.Water => Brushes.RoyalBlue,
+                LevelMode.Deposit => Brushes.Chocolate,
+                LevelMode.Obstacle => Brushes.Crimson,
+                _ => Brushes.White
+            },
+            StrokeThickness = 2,
+            Tag = TagOverlay
+        };
+        OverlayCanvas.Children.Add(levelLine);
 
-            var combined = new CombinedGeometry(GeometryCombineMode.Intersect, pipeEllipse, fillRect);
-            var fillPath = new System.Windows.Shapes.Path
-            {
-                Data = combined,
-                Fill = fillBrush,
-                Tag = TagFill
-            };
-            OverlayCanvas.Children.Add(fillPath);
-
-            // Level-Linie
-            // Chord am Kreis berechnen (Schnittpunkte der horizontalen Linie mit dem Kreis)
-            double relY = levelY - center.Y;
-            double chordHalf = Math.Sqrt(Math.Max(0, pipeR * pipeR - relY * relY));
-
-            var levelLine = new Line
-            {
-                X1 = center.X - chordHalf, Y1 = levelY,
-                X2 = center.X + chordHalf, Y2 = levelY,
-                Stroke = _activeLevelMode switch
-                {
-                    LevelMode.Water => Brushes.RoyalBlue,
-                    LevelMode.Deposit => Brushes.Chocolate,
-                    LevelMode.Obstacle => Brushes.Crimson,
-                    _ => Brushes.White
-                },
-                StrokeThickness = 2,
-                Tag = TagOverlay
-            };
-            OverlayCanvas.Children.Add(levelLine);
-
-            // Label
-            string labelText = $"{fillPercent:F1}%";
-            AddCanvasLabel(labelText, center.X, levelY - 18, TagOverlay);
-        }
+        // Label
+        string labelText = $"{fillPercent:F1}%";
+        AddCanvasLabel(labelText, plan.LabelPosition.X, plan.LabelPosition.Y, TagOverlay);
 
         TxtMeasureInfo.Text = $"{fillPercent:F1}%";
         TxtStatus.Text = $"{_activeLevelMode}: {fillPercent:F1}% | Mausrad: Kreis | Drag: Position";
