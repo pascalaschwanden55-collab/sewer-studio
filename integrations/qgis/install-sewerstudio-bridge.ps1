@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
     [string]$ProfileRoot,
-    [switch]$AllProfiles
+    [switch]$AllProfiles,
+    # Zentrales Plugin-Archiv: dort landet IMMER eine Kopie (Ordner + versioniertes ZIP).
+    [string]$BackupDir = "D:\QGIS_V4.03\AWU_Plugins"
 )
 
 $ErrorActionPreference = "Stop"
@@ -58,6 +60,32 @@ foreach ($pluginRoot in $pluginRoots) {
 
     Copy-Item -LiteralPath $source -Destination $target -Recurse
     Write-Host "SewerStudio Bridge installiert: $target"
+}
+
+# ── Sicherung ins zentrale Plugin-Archiv (AWU_Plugins) ─────────────────────────
+# Konvention: entpackter Ordner + versioniertes ZIP (sewerstudio_bridge_vX.Y.Z.zip),
+# wie bei den uebrigen AWU-Plugins. Fehlt das Laufwerk, nur warnen - nie abbrechen.
+$backupParent = Split-Path -Path $BackupDir -Parent
+if (-not [string]::IsNullOrWhiteSpace($BackupDir) -and (Test-Path -LiteralPath $backupParent)) {
+    New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
+
+    $backupFolder = Join-Path $BackupDir "sewerstudio_bridge"
+    if (Test-Path -LiteralPath $backupFolder) {
+        Remove-Item -LiteralPath $backupFolder -Recurse -Force
+    }
+    Copy-Item -LiteralPath $source -Destination $backupFolder -Recurse
+
+    $versionLine = Get-Content -LiteralPath (Join-Path $source "metadata.txt") |
+        Where-Object { $_ -match '^version=' } | Select-Object -First 1
+    $version = if ($versionLine) { $versionLine.Substring(8).Trim() } else { "unbekannt" }
+    $zipPath = Join-Path $BackupDir "sewerstudio_bridge_v$version.zip"
+    Compress-Archive -Path $source -DestinationPath $zipPath -Force
+
+    Write-Host "Sicherung aktualisiert: $backupFolder"
+    Write-Host "Sicherung aktualisiert: $zipPath"
+}
+else {
+    Write-Warning "Plugin-Archiv nicht erreichbar (kein Backup): $BackupDir"
 }
 
 Write-Host "QGIS neu starten und Plugin 'SewerStudio Bridge' aktivieren."

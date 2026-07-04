@@ -89,6 +89,11 @@ public sealed class QgisPluginPackagingTests
         Assert.Contains("sewerstudio_bridge", script);
         Assert.Contains("Nach QGIS-Update", readme);
         Assert.Contains("Datenvertrag", readme);
+
+        // Zentrale Plugin-Ablage: jede Installation sichert Ordner + versioniertes ZIP
+        // nach D:\QGIS_V4.03\AWU_Plugins (Nutzer-Konvention fuer ALLE QGIS-Plugins).
+        Assert.Contains(@"D:\QGIS_V4.03\AWU_Plugins", script);
+        Assert.Contains("Compress-Archive", script);
     }
 
     private static string ReadPluginFile(string fileName)
