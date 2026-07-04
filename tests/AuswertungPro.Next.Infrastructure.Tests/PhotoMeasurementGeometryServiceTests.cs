@@ -261,8 +261,66 @@ public sealed class PhotoMeasurementGeometryServiceTests
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // Winkel-Umrechnung
+    // Overlay-Planung und Werkzeug-Geometrie
     // ═══════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void BuildPipeCirclePlan_BerechnetMittelpunktRadiusUndFadenkreuz()
+    {
+        var calibration = new PipeCalibration
+        {
+            NormalizedDiameter = 0.6,
+            PipeCenter = new NormalizedPoint(0.25, 0.75)
+        };
+
+        var plan = PhotoMeasurementGeometryService.BuildPipeCirclePlan(
+            calibration,
+            renderedX: 10,
+            renderedY: 20,
+            renderedWidth: 200,
+            renderedHeight: 100);
+
+        Assert.NotNull(plan);
+        Assert.Equal(60, plan.Center.X, precision: 6);
+        Assert.Equal(95, plan.Center.Y, precision: 6);
+        Assert.Equal(30, plan.Radius, precision: 6);
+        Assert.Equal(54, plan.HorizontalStart.X, precision: 6);
+        Assert.Equal(66, plan.HorizontalEnd.X, precision: 6);
+        Assert.Equal(89, plan.VerticalStart.Y, precision: 6);
+        Assert.Equal(101, plan.VerticalEnd.Y, precision: 6);
+    }
+
+    [Fact]
+    public void BuildPipeCirclePlan_UngueltigeRendergroesse_GibtNull()
+    {
+        var calibration = new PipeCalibration
+        {
+            NormalizedDiameter = 0.6,
+            PipeCenter = new NormalizedPoint(0.5, 0.5)
+        };
+
+        Assert.Null(PhotoMeasurementGeometryService.BuildPipeCirclePlan(
+            calibration,
+            renderedX: 0,
+            renderedY: 0,
+            renderedWidth: 0,
+            renderedHeight: 100));
+    }
+
+    [Fact]
+    public void IsInsidePipeCenterHitArea_NutztRadiusfaktor()
+    {
+        var plan = new PhotoMeasurementPipeCirclePlan(
+            Center: new PhotoMeasurementCanvasPoint(100, 100),
+            Radius: 50,
+            HorizontalStart: new PhotoMeasurementCanvasPoint(94, 100),
+            HorizontalEnd: new PhotoMeasurementCanvasPoint(106, 100),
+            VerticalStart: new PhotoMeasurementCanvasPoint(100, 94),
+            VerticalEnd: new PhotoMeasurementCanvasPoint(100, 106));
+
+        Assert.True(PhotoMeasurementGeometryService.IsInsidePipeCenterHitArea(plan, 109, 100));
+        Assert.False(PhotoMeasurementGeometryService.IsInsidePipeCenterHitArea(plan, 110, 100));
+    }
 
     [Fact]
     public void BuildCrossSectionGeometry_BerechnetFlaecheProzentUndLabelpunkt()

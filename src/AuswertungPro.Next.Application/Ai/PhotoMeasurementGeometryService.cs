@@ -156,6 +156,57 @@ public static class PhotoMeasurementGeometryService
         return pipeRadius * Math.Min(renderWidth, renderHeight);
     }
 
+    /// <summary>
+    /// Plant Rohrkreis, Mittelpunkt und Fadenkreuz fuer die Foto-Messwerkzeuge.
+    /// </summary>
+    public static PhotoMeasurementPipeCirclePlan? BuildPipeCirclePlan(
+        PipeCalibration calibration,
+        double renderedX,
+        double renderedY,
+        double renderedWidth,
+        double renderedHeight,
+        double crosshairHalfLength = 6.0)
+    {
+        ArgumentNullException.ThrowIfNull(calibration);
+
+        if (renderedWidth <= 0 || renderedHeight <= 0)
+            return null;
+
+        double radius = PipeRadiusPx(calibration.NormalizedDiameter, renderedWidth, renderedHeight);
+        var center = ToCanvasPoint(
+            renderedX,
+            renderedY,
+            renderedWidth,
+            renderedHeight,
+            calibration.PipeCenter.X,
+            calibration.PipeCenter.Y);
+
+        return new PhotoMeasurementPipeCirclePlan(
+            Center: center,
+            Radius: radius,
+            HorizontalStart: new PhotoMeasurementCanvasPoint(center.X - crosshairHalfLength, center.Y),
+            HorizontalEnd: new PhotoMeasurementCanvasPoint(center.X + crosshairHalfLength, center.Y),
+            VerticalStart: new PhotoMeasurementCanvasPoint(center.X, center.Y - crosshairHalfLength),
+            VerticalEnd: new PhotoMeasurementCanvasPoint(center.X, center.Y + crosshairHalfLength));
+    }
+
+    /// <summary>
+    /// Prueft, ob ein Canvas-Punkt nahe genug am Rohrmittelpunkt liegt, um den Kreis zu verschieben.
+    /// </summary>
+    public static bool IsInsidePipeCenterHitArea(
+        PhotoMeasurementPipeCirclePlan plan,
+        double canvasX,
+        double canvasY,
+        double hitRadiusFactor = 0.2)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+
+        double dx = canvasX - plan.Center.X;
+        double dy = canvasY - plan.Center.Y;
+        double hitRadius = Math.Max(0, plan.Radius * hitRadiusFactor);
+        return Math.Sqrt(dx * dx + dy * dy) < hitRadius;
+    }
+
     // ═══════════════════════════════════════════════════════════════════
     // Winkel-Werkzeuge (Abzweig / Bogen)
     // ═══════════════════════════════════════════════════════════════════
@@ -505,6 +556,14 @@ public sealed record PhotoMeasurementLineGeometry(
 public sealed record PhotoMeasurementCanvasPoint(double X, double Y);
 
 public sealed record PhotoMeasurementCanvasRect(double X, double Y, double Width, double Height);
+
+public sealed record PhotoMeasurementPipeCirclePlan(
+    PhotoMeasurementCanvasPoint Center,
+    double Radius,
+    PhotoMeasurementCanvasPoint HorizontalStart,
+    PhotoMeasurementCanvasPoint HorizontalEnd,
+    PhotoMeasurementCanvasPoint VerticalStart,
+    PhotoMeasurementCanvasPoint VerticalEnd);
 
 public sealed record PhotoMeasurementLevelOverlayPlan(
     PhotoMeasurementCanvasPoint Center,

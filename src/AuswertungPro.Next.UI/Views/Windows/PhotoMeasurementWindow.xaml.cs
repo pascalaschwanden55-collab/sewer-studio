@@ -302,15 +302,16 @@ public partial class PhotoMeasurementWindow : Window
         // --- Pipe-Kreis verschieben: bei ALLEN Tools, wenn Klick nahe am Center ---
         if (_activeTool != PhotoTool.Calibration)
         {
-            var pipeCenterCanvas = NormToCanvas(
-                _calibration.PipeCenter.X, _calibration.PipeCenter.Y);
-            double distToCenter = Math.Sqrt(
-                Math.Pow(pos.X - pipeCenterCanvas.X, 2) +
-                Math.Pow(pos.Y - pipeCenterCanvas.Y, 2));
             var imgRect = GetImageRenderedRect(PhotoImage);
-            double pipeRCanvas = (_calibration.NormalizedDiameter / 2.0) * Math.Min(imgRect.Width, imgRect.Height);
+            var pipePlan = PhotoMeasurementGeometryService.BuildPipeCirclePlan(
+                _calibration,
+                imgRect.X,
+                imgRect.Y,
+                imgRect.Width,
+                imgRect.Height);
             // Nahe am Center (< 20% des Radius) = Pipe verschieben
-            if (distToCenter < pipeRCanvas * 0.2)
+            if (pipePlan is not null &&
+                PhotoMeasurementGeometryService.IsInsidePipeCenterHitArea(pipePlan, pos.X, pos.Y))
             {
                 _isDraggingPipe = true;
                 OverlayCanvas.CaptureMouse();
@@ -1059,37 +1060,39 @@ public partial class PhotoMeasurementWindow : Window
         var r = GetImageRenderedRect(PhotoImage);
         if (r.Width <= 0 || r.Height <= 0) return;
 
-        double refSize = Math.Min(r.Width, r.Height);
-        double normDiam = _calibration.NormalizedDiameter;
-        double pipeR = (normDiam / 2.0) * refSize;
-
-        var center = NormToCanvas(_calibration.PipeCenter.X, _calibration.PipeCenter.Y);
+        var plan = PhotoMeasurementGeometryService.BuildPipeCirclePlan(
+            _calibration,
+            r.X,
+            r.Y,
+            r.Width,
+            r.Height);
+        if (plan is null) return;
 
         var ellipse = new Ellipse
         {
-            Width = pipeR * 2, Height = pipeR * 2,
+            Width = plan.Radius * 2, Height = plan.Radius * 2,
             Stroke = Brushes.Cyan,
             StrokeThickness = 1.5,
             StrokeDashArray = new DoubleCollection { 6, 3 },
             Fill = Brushes.Transparent,
             Tag = TagPipeCircle
         };
-        Canvas.SetLeft(ellipse, center.X - pipeR);
-        Canvas.SetTop(ellipse, center.Y - pipeR);
+        Canvas.SetLeft(ellipse, plan.Center.X - plan.Radius);
+        Canvas.SetTop(ellipse, plan.Center.Y - plan.Radius);
         OverlayCanvas.Children.Add(ellipse);
 
         // Fadenkreuz
         var hLine = new Line
         {
-            X1 = center.X - 6, Y1 = center.Y,
-            X2 = center.X + 6, Y2 = center.Y,
+            X1 = plan.HorizontalStart.X, Y1 = plan.HorizontalStart.Y,
+            X2 = plan.HorizontalEnd.X, Y2 = plan.HorizontalEnd.Y,
             Stroke = Brushes.Cyan, StrokeThickness = 1,
             Tag = TagPipeCircle
         };
         var vLine = new Line
         {
-            X1 = center.X, Y1 = center.Y - 6,
-            X2 = center.X, Y2 = center.Y + 6,
+            X1 = plan.VerticalStart.X, Y1 = plan.VerticalStart.Y,
+            X2 = plan.VerticalEnd.X, Y2 = plan.VerticalEnd.Y,
             Stroke = Brushes.Cyan, StrokeThickness = 1,
             Tag = TagPipeCircle
         };
