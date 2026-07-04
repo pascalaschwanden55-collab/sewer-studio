@@ -63,4 +63,15 @@ public class CoordinateTransformTests
         Assert.True(System.Math.Abs(y - expectedY) < Toleranz,
             $"Y-Abweichung {System.Math.Abs(y - expectedY):F2} m > {Toleranz} m  (erwartet {expectedY}, berechnet {y:F3})");
     }
+
+    [Fact]
+    public void Lv95ToWgs84_UriAltdorf_StimmtMitReferenz()
+    {
+        var (lon, lat) = CoordinateTransform.Lv95ToWgs84(2_690_511.225, 1_194_863.079);
+
+        Assert.True(System.Math.Abs(lon - 8.626486614290537) < 0.0001,
+            $"Lon-Abweichung zu gross: {lon}");
+        Assert.True(System.Math.Abs(lat - 46.89871734160188) < 0.0001,
+            $"Lat-Abweichung zu gross: {lat}");
+    }
 }

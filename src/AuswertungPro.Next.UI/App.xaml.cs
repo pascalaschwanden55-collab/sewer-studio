@@ -24,6 +24,7 @@ using AuswertungPro.Next.Application.Protocol;
 using AuswertungPro.Next.Application.Media;
 using AuswertungPro.Next.Application.Reports;
 using AuswertungPro.Next.UI.LiveControl;
+using AuswertungPro.Next.UI.QgisBridge;
 using AuswertungPro.Next.UI.Views.Windows;
 using AuswertungPro.Next.UI.Services;
 
@@ -38,6 +39,7 @@ namespace AuswertungPro.Next.UI
         private static bool _windowIconDefaultsRegistered;
         private static System.Windows.Media.ImageSource? _appWindowIcon;
         private LiveControlServer? _liveControlServer;
+        private QgisBridgeServer? _qgisBridgeServer;
 
         // Tageslogs aelter als dieser Wert werden beim Start geloescht (Aufbewahrung).
         private const int LogRetentionDays = 60;
@@ -136,6 +138,10 @@ namespace AuswertungPro.Next.UI
                 };
                 MainWindow = mainWindow;
                 mainWindow.Show();
+                _qgisBridgeServer = QgisBridgeServer.TryStart(
+                    mainWindow,
+                    (ServiceProvider)_services!,
+                    loggerFactory.CreateLogger<QgisBridgeServer>());
                 if (settings.AiStartOnProgramStart)
                     _ = StartAiOnStartupAsync(settings, logger, mainWindow);
 
@@ -202,6 +208,7 @@ namespace AuswertungPro.Next.UI
         {
             try
             {
+                _qgisBridgeServer?.Dispose();
                 _liveControlServer?.Dispose();
                 AppSettings.FlushPendingSave();
             }
