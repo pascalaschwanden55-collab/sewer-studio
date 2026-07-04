@@ -25,7 +25,7 @@ from qgis.PyQt.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qgis.core import Qgis, QgsMessageLog, QgsProject, QgsVectorLayer
+from qgis.core import Qgis, QgsCoordinateTransform, QgsMessageLog, QgsProject, QgsVectorLayer
 
 
 PLUGIN_MENU = "&SewerStudio"
@@ -363,7 +363,21 @@ class SewerStudioBridgeDock(QDockWidget):
         extent = layer.extent()
         if extent is None or extent.isEmpty():
             return
+
         canvas = self.iface.mapCanvas()
+        # Layer-Ausdehnung in das Karten-CRS umrechnen — sonst zoomt die Karte
+        # bei abweichendem Projekt-CRS an eine voellig falsche Stelle.
+        try:
+            canvas_crs = canvas.mapSettings().destinationCrs()
+            layer_crs = layer.crs()
+            if layer_crs.isValid() and canvas_crs.isValid() and layer_crs != canvas_crs:
+                transform = QgsCoordinateTransform(layer_crs, canvas_crs, QgsProject.instance())
+                extent = transform.transformBoundingBox(extent)
+        except Exception as ex:  # Zoom ist Komfort — nie den Poll deswegen abbrechen
+            self._log_warning(f"Zoom-Transformation fehlgeschlagen: {ex}")
+            return
+
+        extent.scale(1.3)
         canvas.setExtent(extent)
         canvas.refresh()
 

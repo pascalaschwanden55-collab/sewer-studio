@@ -47,8 +47,9 @@ public sealed class QgisBridgeSnapshotBuilderTests
         Assert.Equal(1, feature.Properties["schaden_count"]);
         var line = Assert.IsType<GeoJsonLineString>(feature.Geometry);
         Assert.Equal(2, line.Coordinates.Length);
-        Assert.InRange(line.Coordinates[0][0], 8.61, 8.63);
-        Assert.InRange(line.Coordinates[0][1], 46.85, 46.90);
+        // LV95 unveraendert (EPSG:2056): exakt die Kataster-Koordinaten, keine Umrechnung.
+        Assert.Equal(2690000, line.Coordinates[0][0], precision: 3);
+        Assert.Equal(1190000, line.Coordinates[0][1], precision: 3);
     }
 
     [Fact]
@@ -65,8 +66,9 @@ public sealed class QgisBridgeSnapshotBuilderTests
         Assert.Equal("BAB", feature.Properties["code"]);
         Assert.Equal("import", feature.Properties["source"]);
         var point = Assert.IsType<GeoJsonPoint>(feature.Geometry);
-        Assert.InRange(point.Coordinates[0], 8.61, 8.63);
-        Assert.InRange(point.Coordinates[1], 46.85, 46.90);
+        // Schaden bei 5 m auf der 10-m-Linie (2690000..2690010) => exakt bei 2690005.
+        Assert.Equal(2690005, point.Coordinates[0], precision: 3);
+        Assert.Equal(1190000, point.Coordinates[1], precision: 3);
     }
 
     [Fact]
@@ -108,9 +110,7 @@ public sealed class QgisBridgeSnapshotBuilderTests
 
         // Streckenschaden 2-8 m wird als Mittelpunkt (5 m) auf der 10-m-Linie verortet.
         var point = Assert.IsType<GeoJsonPoint>(feature.Geometry);
-        var lineStart = AuswertungPro.Next.Infrastructure.Map.CoordinateTransform.Lv95ToWgs84(2690000, 1190000);
-        var lineEnd = AuswertungPro.Next.Infrastructure.Map.CoordinateTransform.Lv95ToWgs84(2690010, 1190000);
-        Assert.InRange(point.Coordinates[0], lineStart.Lon, lineEnd.Lon);
+        Assert.Equal(2690005, point.Coordinates[0], precision: 3);
     }
 
     [Fact]
@@ -128,6 +128,11 @@ public sealed class QgisBridgeSnapshotBuilderTests
         Assert.Contains("\"type\":\"LineString\"", currentJson);
         Assert.Contains("\"coordinates\"", currentJson);
         Assert.Contains("\"type\":\"Point\"", damagesJson);
+
+        // CRS-Angabe: QGIS muss die Koordinaten als LV95 (EPSG:2056) interpretieren.
+        Assert.Contains("\"crs\"", currentJson);
+        Assert.Contains("EPSG::2056", currentJson);
+        Assert.Contains("EPSG::2056", damagesJson);
     }
 
     [Fact]

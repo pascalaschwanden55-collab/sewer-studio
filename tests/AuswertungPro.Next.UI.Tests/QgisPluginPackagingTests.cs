@@ -64,6 +64,9 @@ public sealed class QgisPluginPackagingTests
         // Speichercache: unveraenderte Antworten werden per Hash erkannt und uebersprungen.
         Assert.Contains("hashlib", source);
         Assert.Contains("_last_payload_hash", source);
+
+        // Auto-Zoom muss die Layer-Ausdehnung ins Karten-CRS transformieren.
+        Assert.Contains("QgsCoordinateTransform", source);
     }
 
     [Fact]

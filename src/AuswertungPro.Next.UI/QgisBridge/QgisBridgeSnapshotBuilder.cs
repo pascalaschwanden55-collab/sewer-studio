@@ -119,9 +119,8 @@ internal sealed class QgisBridgeSnapshotBuilder
                 if (point is null)
                     continue;
 
-                var (lon, lat) = CoordinateTransform.Lv95ToWgs84(point.Value.X, point.Value.Y);
                 features.Add(new GeoJsonFeature(
-                    new GeoJsonPoint(new[] { lon, lat }),
+                    new GeoJsonPoint(new[] { point.Value.X, point.Value.Y }),
                     new Dictionary<string, object?>
                     {
                         ["haltung"] = haltung.Haltungsname,
@@ -202,12 +201,10 @@ internal sealed class QgisBridgeSnapshotBuilder
 
     private static GeoJsonFeature CreateLineFeature(HaltungGeometry geometry, Dictionary<string, object?> properties)
     {
+        // LV95 unveraendert durchreichen: keine Umrechnung = keine Naeherungsfehler.
+        // Die WGS84-Naeherungsformel (~1 m) war auf Gebaeude-Zoomstufe sichtbar daneben.
         var coordinates = geometry.Points
-            .Select(point =>
-            {
-                var (lon, lat) = CoordinateTransform.Lv95ToWgs84(point.X, point.Y);
-                return new[] { lon, lat };
-            })
+            .Select(point => new[] { point.X, point.Y })
             .ToArray();
 
         return new GeoJsonFeature(new GeoJsonLineString(coordinates), properties);
@@ -326,6 +323,16 @@ internal sealed class GeoJsonFeatureCollection
     }
 
     public string Type => "FeatureCollection";
+
+    // Legacy-GeoJSON-CRS-Angabe: RFC 7946 kennt sie nicht mehr, aber OGR/QGIS
+    // lesen sie weiterhin. Damit landen die LV95-Koordinaten (EPSG:2056) exakt
+    // und ohne Reprojektionsfehler im Schweizer Kataster-Bezugsrahmen.
+    public object Crs { get; } = new
+    {
+        type = "name",
+        properties = new { name = "urn:ogc:def:crs:EPSG::2056" }
+    };
+
     public List<GeoJsonFeature> Features { get; }
 }
 
