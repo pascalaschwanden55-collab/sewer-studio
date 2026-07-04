@@ -67,7 +67,7 @@ internal sealed class QgisBridgeRequestProcessor
             var shell = _app.MainWindow?.DataContext as ShellViewModel;
             var project = shell?.Project;
             var current = project is null ? "" : QgisBridgeSelection.CurrentFor(project.Id);
-            return QgisProjectSnapshot.Capture(project, current);
+            return QgisProjectSnapshot.Capture(project, current, QgisBridgeSelection.Stamp);
         }).Task;
 
     private QgisBridgeResponse BuildResponse(string path, QgisProjectSnapshot snapshot)

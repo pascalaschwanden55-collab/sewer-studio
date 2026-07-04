@@ -13,6 +13,7 @@ internal static class QgisBridgeSelection
     private static readonly object Gate = new();
     private static Guid _projectId = Guid.Empty;
     private static string _current = "";
+    private static long _stamp;
 
     /// <summary>Meldet eine (neue) Auswahl. Leere Werte werden ignoriert (sticky).</summary>
     public static void Set(string? haltungsname)
@@ -22,7 +23,22 @@ internal static class QgisBridgeSelection
             return;
 
         lock (Gate)
+        {
             _current = value;
+            // Jeder Klick zaehlt — auch auf dieselbe Haltung. QGIS zoomt bei jedem
+            // neuen Stempel wieder hin, nicht nur beim Haltungswechsel.
+            _stamp++;
+        }
+    }
+
+    /// <summary>Laufender Zaehler der Auswahl-Klicks (fuer den Auto-Zoom im Plugin).</summary>
+    public static long Stamp
+    {
+        get
+        {
+            lock (Gate)
+                return _stamp;
+        }
     }
 
     /// <summary>

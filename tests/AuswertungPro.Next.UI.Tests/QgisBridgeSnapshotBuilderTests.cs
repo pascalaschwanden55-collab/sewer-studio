@@ -21,12 +21,13 @@ public sealed class QgisBridgeSnapshotBuilderTests
     {
         using var fixture = QgisBridgeFixture.Create();
         var sut = fixture.CreateBuilder();
-        var snapshot = QgisProjectSnapshot.Capture(CreateProjectWithImportedDamage(), "A-B");
+        var snapshot = QgisProjectSnapshot.Capture(CreateProjectWithImportedDamage(), "A-B", selectionStamp: 7);
 
         var status = sut.BuildStatus(snapshot);
 
         Assert.True(status.Ok);
         Assert.Equal("A-B", status.CurrentHolding);
+        Assert.Equal(7, status.SelectionStamp);
         Assert.Equal(1, status.ProjectHoldingCount);
         Assert.Equal(1, status.NetworkFeatureCount);
         Assert.Equal(1, status.DamageFeatureCount);

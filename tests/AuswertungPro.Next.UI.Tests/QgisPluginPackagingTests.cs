@@ -67,6 +67,10 @@ public sealed class QgisPluginPackagingTests
 
         // Auto-Zoom muss die Layer-Ausdehnung ins Karten-CRS transformieren.
         Assert.Contains("QgsCoordinateTransform", source);
+
+        // Zoom bei jedem Auswahl-Klick (Stempel), nicht nur bei Haltungswechsel.
+        Assert.Contains("selectionStamp", source);
+        Assert.Contains("_last_zoom_stamp", source);
     }
 
     [Fact]

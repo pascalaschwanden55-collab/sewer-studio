@@ -47,6 +47,19 @@ public sealed class QgisBridgeSelectionTests : IDisposable
     }
 
     [Fact]
+    public void Jeder_klick_erhoeht_den_stempel_auch_bei_gleicher_haltung()
+    {
+        var before = QgisBridgeSelection.Stamp;
+
+        QgisBridgeSelection.Set("A-B");
+        QgisBridgeSelection.Set("A-B");
+
+        // Zwei Klicks = zwei Stempel: QGIS zoomt so auch beim erneuten Klick
+        // auf dieselbe Haltung wieder hin.
+        Assert.Equal(before + 2, QgisBridgeSelection.Stamp);
+    }
+
+    [Fact]
     public void Projektwechsel_verwirft_die_gemerkte_auswahl()
     {
         var first = Guid.NewGuid();

@@ -94,8 +94,10 @@ class SewerStudioBridgeDock(QDockWidget):
         self.timer.timeout.connect(self.refresh_remote_layers)
         self.cache_dir = Path(tempfile.gettempdir()) / "sewerstudio_qgis_bridge"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        # Auto-Zoom nur beim Wechsel der aktuellen Haltung, nicht bei jedem Poll.
+        # Auto-Zoom bei jedem Auswahl-Klick in SewerStudio (Stempel zaehlt hoch),
+        # aber nicht bei jedem Poll ohne neue Auswahl.
         self._last_zoomed_holding = None
+        self._last_zoom_stamp = None
         # Speichercache: Hash der zuletzt geladenen Daten je Layer.
         # Unveraenderte Antworten werden uebersprungen (kein Reload, kein Neuzeichnen).
         self._last_payload_hash = {}
@@ -194,6 +196,7 @@ class SewerStudioBridgeDock(QDockWidget):
 
         status = self._fetch_json("/qgis/status.json")
         holding = self._holding_from_payload(status) if status is not None else None
+        stamp = status.get("selectionStamp") if status is not None else None
         if status is not None:
             self._set_status_from_payload(status)
 
@@ -218,16 +221,21 @@ class SewerStudioBridgeDock(QDockWidget):
 
             if layer is not None:
                 loaded += 1
-                # Nur zoomen, wenn die aktuelle Haltung wirklich gewechselt hat —
-                # sonst springt die Karte bei jedem Poll und stoert das Arbeiten.
+                # Zoomen bei jedem Auswahl-Klick in SewerStudio (neuer Stempel) oder
+                # bei Haltungswechsel — aber nie einfach bei jedem Poll.
+                selection_changed = (
+                    holding != self._last_zoomed_holding
+                    or (stamp is not None and stamp != self._last_zoom_stamp)
+                )
                 if (
                     layer_key == "current"
                     and self.auto_zoom_check.isChecked()
                     and holding
-                    and holding != self._last_zoomed_holding
+                    and selection_changed
                 ):
                     self._zoom_to_layer(layer)
                     self._last_zoomed_holding = holding
+                    self._last_zoom_stamp = stamp
 
         if loaded == 0 and status is None:
             self._set_status("Kein Live-Bridge-Feed erreichbar. Lokale Export-Layer koennen trotzdem geladen werden.")

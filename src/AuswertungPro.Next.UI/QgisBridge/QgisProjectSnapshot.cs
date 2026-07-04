@@ -12,16 +12,17 @@ internal sealed record QgisProjectSnapshot(
     Guid ProjectId,
     string ProjectName,
     string CurrentHolding,
-    IReadOnlyList<QgisHaltungSnapshot> Haltungen)
+    IReadOnlyList<QgisHaltungSnapshot> Haltungen,
+    long SelectionStamp = 0)
 {
     public static QgisProjectSnapshot Empty { get; } =
         new(Guid.Empty, "", "", Array.Empty<QgisHaltungSnapshot>());
 
-    public static QgisProjectSnapshot Capture(Project? project, string? currentHolding)
+    public static QgisProjectSnapshot Capture(Project? project, string? currentHolding, long selectionStamp = 0)
     {
         var holding = currentHolding?.Trim() ?? "";
         if (project is null)
-            return Empty with { CurrentHolding = holding };
+            return Empty with { CurrentHolding = holding, SelectionStamp = selectionStamp };
 
         var haltungen = new List<QgisHaltungSnapshot>(project.Data.Count);
         foreach (var record in project.Data)
@@ -36,7 +37,7 @@ internal sealed record QgisProjectSnapshot(
                 CaptureDamages(record)));
         }
 
-        return new QgisProjectSnapshot(project.Id, project.Name, holding, haltungen);
+        return new QgisProjectSnapshot(project.Id, project.Name, holding, haltungen, selectionStamp);
     }
 
     /// <summary>
