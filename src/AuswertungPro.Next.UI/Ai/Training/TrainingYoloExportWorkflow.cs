@@ -115,10 +115,31 @@ public static class TrainingYoloExportWorkflow
             var pipelineCfg = sidecarRuntime.PipelineConfig;
             var client = sidecarRuntime.Client;
 
-            var health = await client.HealthCheckAsync(ct).ConfigureAwait(false);
-            if (health is null)
+            var healthCheck = await client.CheckHealthDetailedAsync(ct).ConfigureAwait(false);
+            if (!healthCheck.IsReachable)
             {
                 request.Log($"Sidecar nicht erreichbar ({pipelineCfg.SidecarUrl}). Versuche lokalen Export...");
+                await RunLocalExportAsync(request, approved, outputDir, ct).ConfigureAwait(false);
+                return;
+            }
+
+            if (!healthCheck.IsAuthorized)
+            {
+                var statusText = healthCheck.StatusCode is { } statusCode
+                    ? $"HTTP {statusCode}"
+                    : "Auth-Fehler";
+                request.Log($"Sidecar erreichbar, aber Token/Auth fehlgeschlagen ({statusText}: {healthCheck.Error ?? "Token fehlt oder ist ungueltig"}). Versuche lokalen Export...");
+                await RunLocalExportAsync(request, approved, outputDir, ct).ConfigureAwait(false);
+                return;
+            }
+
+            var health = healthCheck.Health;
+            if (health is null)
+            {
+                var detail = healthCheck.StatusCode is { } statusCode
+                    ? $"HTTP {statusCode}"
+                    : (healthCheck.Error ?? "keine Health-Antwort");
+                request.Log($"Sidecar erreichbar, aber Health-Check fehlgeschlagen ({detail}). Versuche lokalen Export...");
                 await RunLocalExportAsync(request, approved, outputDir, ct).ConfigureAwait(false);
                 return;
             }

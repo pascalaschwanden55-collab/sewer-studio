@@ -51,6 +51,49 @@ public sealed class TrainingYoloExportWorkflowTests
     }
 
     [Fact]
+    public async Task RunAsync_loggt_tokenfehler_getrennt_von_offline_und_nutzt_lokalen_export()
+    {
+        var state = new WorkflowState();
+        var root = Path.Combine(Path.GetTempPath(), "sewer-yolo-export-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var frame = Path.Combine(root, "frame.jpg");
+        await File.WriteAllBytesAsync(frame, [1, 2, 3]);
+        var approved = ApprovedSample(frame);
+        var localCalls = 0;
+
+        try
+        {
+            await TrainingYoloExportWorkflow.RunAsync(CreateRequest(
+                state,
+                samples: [approved],
+                client: new FakeVisionPipelineClient
+                {
+                    DetailedHealth = new PipelineHealthCheckResult(
+                        IsReachable: true,
+                        IsAuthorized: false,
+                        StatusCode: 401,
+                        Health: null,
+                        Error: "Token ungueltig/fehlt")
+                },
+                runLocalExportAsync: _ =>
+                {
+                    localCalls++;
+                    return Task.CompletedTask;
+                }));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+
+        Assert.Equal(1, localCalls);
+        Assert.Contains("Token/Auth", state.Logs[1]);
+        Assert.Contains("HTTP 401", state.Logs[1]);
+        Assert.DoesNotContain("Sidecar nicht erreichbar", state.Logs[1]);
+        Assert.Equal([true, false], state.BusyStates);
+    }
+
+    [Fact]
     public async Task RunAsync_sendet_payload_an_sidecar_und_fuehrt_completion_aus()
     {
         var state = new WorkflowState();
@@ -211,6 +254,7 @@ public sealed class TrainingYoloExportWorkflowTests
     private sealed class FakeVisionPipelineClient : IVisionPipelineClient
     {
         public SidecarHealthResponse? Health { get; set; } = new("ok", "1.0", null);
+        public PipelineHealthCheckResult? DetailedHealth { get; set; }
         public TrainingExportResponseDto ExportResponse { get; set; } = new(1, 1, 0, ["BAB"], @"D:\Yolo\data.yaml");
         public int ExportCalls { get; private set; }
 
@@ -218,7 +262,12 @@ public sealed class TrainingYoloExportWorkflowTests
             => Task.FromResult(Health);
 
         public Task<PipelineHealthCheckResult> CheckHealthDetailedAsync(CancellationToken ct = default)
-            => throw new NotSupportedException();
+            => Task.FromResult(DetailedHealth ?? new PipelineHealthCheckResult(
+                IsReachable: Health is not null,
+                IsAuthorized: true,
+                StatusCode: Health is null ? null : 200,
+                Health: Health,
+                Error: Health is null ? "offline" : null));
 
         public Task<YoloResponse> DetectYoloAsync(YoloRequest request, CancellationToken ct = default)
             => throw new NotSupportedException();
