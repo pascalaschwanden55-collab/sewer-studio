@@ -87,7 +87,7 @@ public partial class PhotoGalleryPanel : UserControl
             Content = panel
         };
 
-        WindowStateManager.Track(window);
+        WindowStateManager.Track(window, "PhotoGalleryWindow");
         window.Show();
     }
 

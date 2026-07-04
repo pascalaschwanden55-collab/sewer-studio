@@ -17,15 +17,31 @@ public static class WindowStateManager
         => _settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
     /// <summary>
-    /// Stellt gespeicherte Position/Groesse wieder her und registriert
-    /// den Closing-Event zum automatischen Speichern.
+    /// Stellt gespeicherte Position/Groesse wieder her und registriert den Closing-Event.
+    /// Schluessel = Typname (Altverhalten). Bewusst eigene Ueberladung statt optionalem
+    /// Parameter, damit die Methodengruppe weiter als <c>Action&lt;Window&gt;</c> nutzbar bleibt
+    /// (siehe PlayerWindowStateControls).
     /// </summary>
     public static void Track(Window window)
+        => TrackWithKey(window, ResolveKey(window, null));
+
+    /// <summary>
+    /// Wie <see cref="Track(Window)"/>, aber mit explizitem Schluessel. Noetig, wenn mehrere
+    /// logisch getrennte Fenster denselben Typ nutzen (z.B. generische <c>new Window</c> fuer
+    /// abgekoppelte Panels) — sonst teilen sie sich einen Positions-Eintrag.
+    /// </summary>
+    public static void Track(Window window, string stateKey)
+        => TrackWithKey(window, ResolveKey(window, stateKey));
+
+    private static void TrackWithKey(Window window, string key)
     {
-        var key = window.GetType().Name;
         RestoreBounds(window, key);
         window.Closing += (_, _) => SaveBounds(window, key);
     }
+
+    /// <summary>Schluesselaufloesung: expliziter StateKey vor Typname (Altverhalten als Default).</summary>
+    internal static string ResolveKey(Window window, string? stateKey)
+        => string.IsNullOrWhiteSpace(stateKey) ? window.GetType().Name : stateKey!;
 
     private static void RestoreBounds(Window window, string key)
     {

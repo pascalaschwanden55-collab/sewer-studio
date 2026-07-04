@@ -91,7 +91,7 @@ public sealed class DataGridColumnLayoutController
 
             foreach (var column in columnList)
             {
-                if (column.GetValue(FrameworkElement.TagProperty) is not string fieldName)
+                if (GetFieldName(column) is not { } fieldName)
                     continue;
                 if (!byField.TryGetValue(fieldName, out var state))
                     continue;
@@ -102,6 +102,10 @@ public sealed class DataGridColumnLayoutController
                     column.Width = new DataGridLength(state.WidthValue, widthType);
                 }
 
+                // Sichtbarkeit wiederherstellen (Show/Hide). Default IsVisible=true =
+                // verhaltensneutral fuer bestehende Layouts ohne dieses Feld.
+                column.Visibility = state.IsVisible ? Visibility.Visible : Visibility.Collapsed;
+
                 var horizontal = ParseHorizontalAlignment(state.HorizontalAlignment);
                 var vertical = ParseVerticalAlignment(state.VerticalAlignment);
                 SetAlignment(column, horizontal, vertical);
@@ -110,7 +114,7 @@ public sealed class DataGridColumnLayoutController
             var orderedColumns = columnList
                 .Select(column =>
                 {
-                    var field = column.GetValue(FrameworkElement.TagProperty) as string;
+                    var field = GetFieldName(column);
                     if (field is not null && byField.TryGetValue(field, out var state))
                         return new { Column = column, Target = state.DisplayIndex, HasState = true };
                     return new { Column = column, Target = column.DisplayIndex, HasState = false };
@@ -141,26 +145,35 @@ public sealed class DataGridColumnLayoutController
 
     public DataPageLayoutSettings Capture(IEnumerable<DataGridColumn> columns)
     {
-        return new DataPageLayoutSettings
-        {
-            Columns = columns
-                .Cast<DataGridColumn>()
-                .Select(column =>
+        var captured = columns
+            .Cast<DataGridColumn>()
+            .Select(column =>
+            {
+                var fieldName = GetFieldName(column) ?? "";
+                return new DataPageColumnLayout
                 {
-                    var fieldName = column.GetValue(FrameworkElement.TagProperty) as string ?? "";
-                    return new DataPageColumnLayout
-                    {
-                        FieldName = fieldName,
-                        DisplayIndex = column.DisplayIndex,
-                        WidthValue = column.Width.Value,
-                        WidthUnitType = column.Width.UnitType.ToString(),
-                        HorizontalAlignment = GetHorizontalAlignment(column).ToString(),
-                        VerticalAlignment = GetVerticalAlignment(column).ToString()
-                    };
-                })
-                .Where(x => !string.IsNullOrWhiteSpace(x.FieldName))
-                .ToList()
-        };
+                    FieldName = fieldName,
+                    DisplayIndex = column.DisplayIndex,
+                    WidthValue = column.Width.Value,
+                    WidthUnitType = column.Width.UnitType.ToString(),
+                    HorizontalAlignment = GetHorizontalAlignment(column).ToString(),
+                    VerticalAlignment = GetVerticalAlignment(column).ToString(),
+                    IsVisible = column.Visibility == Visibility.Visible
+                };
+            })
+            .Where(x => !string.IsNullOrWhiteSpace(x.FieldName))
+            .ToList();
+
+        // Sicherheitsnetz: niemals einen All-Hidden-Zustand persistieren (waere sofort
+        // nutzersichtbar und schwer rueckgaengig zu machen). Sind alle Spalten versteckt,
+        // werden alle wieder sichtbar gespeichert.
+        if (captured.Count > 0 && captured.All(c => !c.IsVisible))
+        {
+            foreach (var c in captured)
+                c.IsVisible = true;
+        }
+
+        return new DataPageLayoutSettings { Columns = captured };
     }
 
     public static void EnsureFieldBefore(
@@ -265,8 +278,18 @@ public sealed class DataGridColumnLayoutController
     private static DataGridColumn? FindColumnByFieldName(IEnumerable<DataGridColumn> columns, string fieldName)
     {
         return columns.FirstOrDefault(column =>
-            column.GetValue(FrameworkElement.TagProperty) is string tag &&
-            string.Equals(tag, fieldName, StringComparison.OrdinalIgnoreCase));
+            string.Equals(GetFieldName(column), fieldName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string? GetFieldName(DataGridColumn column)
+    {
+        if (column.GetValue(FrameworkElement.TagProperty) is string tag && !string.IsNullOrWhiteSpace(tag))
+            return tag;
+
+        if (!string.IsNullOrWhiteSpace(column.SortMemberPath))
+            return column.SortMemberPath;
+
+        return column.Header?.ToString();
     }
 
     private static TextAlignment ToTextAlignment(HorizontalAlignment alignment)

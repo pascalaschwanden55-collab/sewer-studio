@@ -65,6 +65,7 @@ namespace AuswertungPro.Next.UI
                 // Settings
                 var settings = AppSettings.Load();
                 WindowStateManager.Configure(settings);
+                ViewCustomizationStore.Configure(settings);
                 if (settings.AiStartOnProgramStart && AiStartupService.ApplyRuntimeDefaults(settings))
                     settings.SaveImmediate();
                 ThemeManager.ApplyTheme(Resources, settings.UiTheme);

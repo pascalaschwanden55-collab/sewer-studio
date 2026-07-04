@@ -34,7 +34,7 @@ public partial class SystemMonitorPanel : UserControl
             Content = panel
         };
 
-        WindowStateManager.Track(window);
+        WindowStateManager.Track(window, "SystemMonitorWindow");
         window.Show();
     }
 }

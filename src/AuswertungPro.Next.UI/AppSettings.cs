@@ -86,6 +86,10 @@ public sealed class AppSettings : IAiStartupSettings
     // Window position/size persistence
     public Dictionary<string, WindowBounds> WindowStates { get; set; } = new();
 
+    // Pro-Seite/-Fenster einstellbare Anpassungen (Spalten, Panelgroessen, gespeicherte Ansichten),
+    // keyed by ViewKey (z.B. "BuilderPage"). Erbt die komplette gehaertete settings.json-Persistenz.
+    public Dictionary<string, ViewCustomization> ViewCustomizations { get; set; } = new();
+
     // Multi-Monitor: Floating Grid Window
     public string? FloatingGridBounds { get; set; }
     public bool IsGridFloating { get; set; }
@@ -247,6 +251,7 @@ public sealed class AppSettings : IAiStartupSettings
     private static AppSettings NormalizeAfterLoad(AppSettings settings)
     {
         settings.WindowStates ??= new Dictionary<string, WindowBounds>();
+        settings.ViewCustomizations ??= new Dictionary<string, ViewCustomization>();
         settings.HydraulikPanel ??= new HydraulikPanelSettings();
         settings.DataPageLayout ??= new DataPageLayoutSettings();
         settings.DataPageLayout.Columns ??= new List<DataPageColumnLayout>();
@@ -324,6 +329,39 @@ public sealed class DataPageColumnLayout
     public string WidthUnitType { get; set; } = "Pixel";
     public string HorizontalAlignment { get; set; } = "Left";
     public string VerticalAlignment { get; set; } = "Center";
+
+    // Spalte sichtbar? Default true = verhaltensneutral fuer alle bestehenden Layouts
+    // (aeltere settings.json ohne dieses Feld deserialisieren zu true -> nichts wird versteckt).
+    public bool IsVisible { get; set; } = true;
+}
+
+/// <summary>
+/// Pro-Seite/-Fenster gespeicherte Anpassungen. Alle Felder tolerant/defaultbar,
+/// damit unbekannte oder leere Keys nie werfen.
+/// </summary>
+public sealed class ViewCustomization
+{
+    // Grid-Layouts je GridKey: traegt Spalten (inkl. Sichtbarkeit) UND Zoom/Zeilenhoehe.
+    public Dictionary<string, DataPageLayoutSettings> Grids { get; set; } = new();
+
+    // Panelgroessen je SplitterKey (Pixel).
+    public Dictionary<string, double> SplitterSizes { get; set; } = new();
+
+    // Benannte Ansichten (Filter + Spalten + Sortierung).
+    public List<SavedView> SavedViews { get; set; } = new();
+}
+
+/// <summary>
+/// Eine benannte Ansicht. Der Filter wird als JSON-String gehalten, damit AppSettings
+/// von seitenspezifischen Filter-Typen (z.B. BuilderPageFilterCriteria) entkoppelt bleibt.
+/// </summary>
+public sealed class SavedView
+{
+    public string Name { get; set; } = "";
+    public string? FilterJson { get; set; }
+    public DataPageLayoutSettings? Columns { get; set; }
+    public string? SortFieldName { get; set; }
+    public string? SortDirection { get; set; }
 }
 
 public sealed class WindowBounds

@@ -69,9 +69,11 @@ public sealed class DataGridColumnLayoutControllerTests
             var grid = new DataGrid();
             var cost = AddTextColumn(grid, "Kosten");
             var nr = AddTextColumn(grid, "NR");
+            // Spalte OHNE jede Feld-Identitaet (kein Tag, kein SortMemberPath, kein Header):
+            // wird von Capture ausgelassen. GetFieldName kennt neben Tag inzwischen auch
+            // SortMemberPath und Header als Faltback, daher darf die Fixture keinen Header tragen.
             var untagged = new DataGridTextColumn
             {
-                Header = "Internal",
                 Width = new DataGridLength(50, DataGridLengthUnitType.Pixel)
             };
             grid.Columns.Add(untagged);

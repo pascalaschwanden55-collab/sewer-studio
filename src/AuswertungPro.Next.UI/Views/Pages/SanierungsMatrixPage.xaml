@@ -7,7 +7,7 @@
         <uc:KostenBalkenBreiteConverter x:Key="KostenBalkenConv"/>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </UserControl.Resources>
-    <Grid>
+    <Grid behaviors:ViewPersonalization.ViewKey="SanierungsMatrix">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -57,7 +57,10 @@
                       ItemsSource="{Binding Rows}"
                       SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
                       behaviors:PhotoHoverPreviewBehavior.IsEnabled="True"
+                      behaviors:GridPersonalization.IsEnabled="True"
+                      behaviors:GridPersonalization.GridKey="Matrix"
                       AutoGenerateColumns="False" CanUserAddRows="False" CanUserResizeRows="False"
+                      CanUserReorderColumns="True"
                       GridLinesVisibility="All" HeadersVisibility="Column">
                 <DataGrid.Style>
                     <Style TargetType="{x:Type DataGrid}" BasedOn="{StaticResource {x:Type DataGrid}}">

@@ -1,7 +1,8 @@
 <UserControl x:Class="AuswertungPro.Next.UI.Views.Pages.BuilderPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid>
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behaviors="clr-namespace:AuswertungPro.Next.UI.Behaviors">
+    <Grid behaviors:ViewPersonalization.ViewKey="BuilderPage">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -25,8 +26,29 @@
                 <StackPanel DockPanel.Dock="Right"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
+                    <TextBlock Text="Ansicht:" VerticalAlignment="Center" Margin="0,0,6,0"
+                               Foreground="{DynamicResource MutedBrush}"/>
+                    <ComboBox x:Name="SavedViewsBox"
+                              IsEditable="True"
+                              Width="160"
+                              Margin="0,0,6,0"
+                              SelectionChanged="SavedViewsBox_SelectionChanged"
+                              ToolTip="Benannte Ansicht (Filter + Spalten + Sortierung): Name eintippen und Speichern, oder eine gespeicherte Ansicht auswählen."/>
+                    <Button Content="Ansicht speichern"
+                            Click="SaveViewButton_Click"
+                            Style="{StaticResource SecondaryButton}"
+                            Margin="0,0,6,0"/>
+                    <Button Content="Löschen"
+                            Click="DeleteViewButton_Click"
+                            Style="{StaticResource SecondaryButton}"
+                            Margin="0,0,14,0"/>
                     <Button Content="Aktualisieren"
                             Command="{Binding RefreshCommand}"
+                            Style="{StaticResource SecondaryButton}"
+                            Margin="0,0,8,0"/>
+                    <Button Content="Spalten…"
+                            Click="SpaltenButton_Click"
+                            ToolTip="Spalten ein-/ausblenden. Breite und Reihenfolge lassen sich direkt in der Tabelle ziehen; alles wird pro Ansicht gemerkt."
                             Style="{StaticResource SecondaryButton}"
                             Margin="0,0,8,0"/>
                     <Button Content="Filter zurücksetzen"
@@ -123,6 +145,7 @@
               Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="420"/>
             </Grid.ColumnDefinitions>
 
@@ -201,7 +224,21 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Column="1"
+            <GridSplitter Grid.Column="1"
+                          Width="6"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Stretch"
+                          ResizeBehavior="PreviousAndNext"
+                          ResizeDirection="Columns"
+                          Background="Transparent"
+                          ToolTip="Breite des Statistik-Bereichs ziehen (wird pro Ansicht gemerkt)"
+                          behaviors:SplitterPersistenceBehavior.IsEnabled="True"
+                          behaviors:SplitterPersistenceBehavior.SplitterKey="Stats"
+                          behaviors:SplitterPersistenceBehavior.TargetColumnIndex="2"
+                          behaviors:SplitterPersistenceBehavior.MinSize="280"
+                          behaviors:SplitterPersistenceBehavior.MaxSize="900"/>
+
+            <Border Grid.Column="2"
                     Style="{StaticResource Card}"
                     Padding="14">
                 <StackPanel>
@@ -357,11 +394,15 @@
                 Style="{StaticResource Card}"
                 Padding="8"
                 Margin="0,0,0,10">
-            <DataGrid ItemsSource="{Binding Rows}"
+            <DataGrid x:Name="RowsGrid"
+                      ItemsSource="{Binding Rows}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
                       CanUserResizeRows="False"
                       CanUserSortColumns="True"
+                      CanUserReorderColumns="True"
+                      behaviors:GridPersonalization.IsEnabled="True"
+                      behaviors:GridPersonalization.GridKey="Grid"
                       GridLinesVisibility="All"
                       VerticalGridLinesBrush="{DynamicResource BorderBrush}"
                       HorizontalGridLinesBrush="{DynamicResource BorderBrush}"
@@ -370,20 +411,53 @@
                       VirtualizingPanel.IsVirtualizing="True"
                       VirtualizingPanel.VirtualizationMode="Recycling"
                       VirtualizingPanel.ScrollUnit="Pixel"
-                      ScrollViewer.CanContentScroll="True">
+                      ScrollViewer.CanContentScroll="True"
+                      MinRowHeight="{Binding ViewOptions.GridMinRowHeight, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}">
+                <DataGrid.LayoutTransform>
+                    <ScaleTransform ScaleX="{Binding ViewOptions.GridZoom, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                    ScaleY="{Binding ViewOptions.GridZoom, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"/>
+                </DataGrid.LayoutTransform>
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                    <TextBlock Text="Zeilenhöhe:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="92"/>
+                                    <Slider Width="130" Minimum="24" Maximum="240" SmallChange="2" LargeChange="10"
+                                            Value="{Binding GridMinRowHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding GridMinRowHeight, StringFormat={}{0:0}px}"
+                                               Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="36"/>
+                                </StackPanel>
+                            </MenuItem.Header>
+                        </MenuItem>
+                        <MenuItem StaysOpenOnClick="True">
+                            <MenuItem.Header>
+                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                    <TextBlock Text="Zoom:" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="92"/>
+                                    <Slider Width="130" Minimum="0.5" Maximum="2.0" SmallChange="0.05" LargeChange="0.1"
+                                            Value="{Binding GridZoom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding GridZoom, StringFormat={}{0:0%}}"
+                                               Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="36"/>
+                                </StackPanel>
+                            </MenuItem.Header>
+                        </MenuItem>
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Haltung" Binding="{Binding Holding}" Width="170"/>
-                    <DataGridTextColumn Header="Straße" Binding="{Binding Street}" Width="170"/>
-                    <DataGridTextColumn Header="Eigentümer" Binding="{Binding Owner}" Width="160"/>
-                    <DataGridTextColumn Header="Ausgeführt durch" Binding="{Binding ExecutedBy}" Width="160"/>
-                    <DataGridTextColumn Header="Sanieren" Binding="{Binding Sanieren}" Width="90"/>
-                    <DataGridTextColumn Header="Material" Binding="{Binding Material}" Width="130"/>
-                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="130"/>
-                    <DataGridTextColumn Header="Jahr" Binding="{Binding Year}" Width="80"/>
-                    <DataGridTextColumn Header="Zustand" Binding="{Binding Zustand}" Width="90"/>
-                    <DataGridTextColumn Header="Maßnahmen (Vorschau)" Binding="{Binding MeasuresPreview}" Width="2*"/>
-                    <DataGridTextColumn Header="Kostenquelle" Binding="{Binding CostSource}" Width="140"/>
-                    <DataGridTextColumn Header="Netto" Binding="{Binding NetCostText}" Width="130">
+                    <DataGridTextColumn Header="Haltung" SortMemberPath="Holding" Binding="{Binding Holding}" Width="170"/>
+                    <DataGridTextColumn Header="Straße" SortMemberPath="Street" Binding="{Binding Street}" Width="170"/>
+                    <DataGridTextColumn Header="Eigentümer" SortMemberPath="Owner" Binding="{Binding Owner}" Width="160"/>
+                    <DataGridTextColumn Header="Ausgeführt durch" SortMemberPath="ExecutedBy" Binding="{Binding ExecutedBy}" Width="160"/>
+                    <DataGridTextColumn Header="Sanieren" SortMemberPath="Sanieren" Binding="{Binding Sanieren}" Width="90"/>
+                    <DataGridTextColumn Header="Material" SortMemberPath="Material" Binding="{Binding Material}" Width="130"/>
+                    <DataGridTextColumn Header="Status" SortMemberPath="Status" Binding="{Binding Status}" Width="130"/>
+                    <DataGridTextColumn Header="Jahr" SortMemberPath="Year" Binding="{Binding Year}" Width="80"/>
+                    <DataGridTextColumn Header="Zustand" SortMemberPath="Zustand" Binding="{Binding Zustand}" Width="90"/>
+                    <DataGridTextColumn Header="Maßnahmen (Vorschau)" SortMemberPath="MeasuresPreview" Binding="{Binding MeasuresPreview}" Width="2*"/>
+                    <DataGridTextColumn Header="Kostenquelle" SortMemberPath="CostSource" Binding="{Binding CostSource}" Width="140"/>
+                    <DataGridTextColumn Header="Netto" SortMemberPath="NetCost" Binding="{Binding NetCostText}" Width="130">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="HorizontalAlignment" Value="Right"/>
